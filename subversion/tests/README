@@ -11,37 +11,22 @@ The three goals of Subversion's automated test-suite:
       3.  It must be easy to add new tests.
 
 
-Makefile.am
------------
-
-Automake defines a TESTS variable which is a list of tests to run
-whenever someone types `make check'.
-
-However, we're not using this facility -- it's too inflexible.  It
-doesn't give us good control of results reporting.  (Specifically, we
-can't stop it from spamming the terminal.)
-
-Instead, our Makefile.am's contain a SVN_TESTS variable (a list of
-programs to run), and a home-made `check' target.
-
-A `make check` will run each program in SVN_TESTS and only print a
-description *if a test fails*.  All test results are logged to a file
-called `tests.log'.
-
 
 Definition of an SVN "test program"
----------------------------------------
+-----------------------------------
 
 A Subversion test program is any executable that contains a number of
 sub-tests it can run.  It has a standard interface:
 
 1.  If run with a numeric argument N, the program runs sub-test N.
 
-2.  If run with no arguments, the program runs *all* sub-tests.
+2.  If run with the argument `list', it will list the names of all sub-tests.
 
-3.  The program returns either 0 (success) or 1 (if any sub-test failed).
+3.  If run with no arguments, the program runs *all* sub-tests.
 
-4.  Upon finishing a test, the program reports the results in a format
+4.  The program returns either 0 (success) or 1 (if any sub-test failed).
+
+5.  Upon finishing a test, the program reports the results in a format
     which is both machine-readable (for the benefit of automatic
     regression tracking scripts), and human-readable (for the sake of
     painstaking grovelling by hand in the dead of night):
@@ -54,9 +39,15 @@ For example,
   PASS: frobtest 2: frobnicating fragile data
   [sussman@newton:~] 
 
+Note that no particular programming language is required to write a
+set of tests;  they just needs to export this user interface.
 
-How to write new tests
-----------------------
+
+
+How to write new C tests
+------------------------
+
+The C test framework tests library APIs, both internal and external.
 
 All test programs use a standard `main' function.  You write .c files
 that contain only test functions --- you should not define your own
@@ -96,6 +87,16 @@ library, in this directory, `subversion/tests'.  That library provides
 a `main' function which will check the command-line arguments, pick
 the appropriate tests to run from your `test_funcs' array, and print
 the results in the standard way.
+
+
+How to write new Python tests
+-----------------------------
+
+The python test framework exercises the command-line client as a
+"black box".
+
+To write python tests, please look at the README file inside the
+clients/cmdline/ subdirectory.
 
 
 When to write new tests
@@ -178,10 +179,32 @@ What's here
      An editor for testing drivers of svn_delta_edit_fns_t.  This
      editor's functions simply print information to stdout.
 
-    * xml/
+   * xml/
     A subdirectory containing various <delta-pkg> XML files.  If one
     of these testing trees isn't what you need, create a new one and
     put it with the others.
+
+   * clients/cmdline/
+     A collection of python scripts to test the command-line client.
+   
+
+`make check`
+------------
+
+The file `build.conf' (at the top level of the tree) defines a
+[test-scripts] section.  These are a list of scripts that will be run
+whenever someone types `make check`.
+
+Each script is expected to output sub-test information as described in
+the first section of this document;  the `make check` rule scans for
+FAIL codes, and logs all the sub-test output into a top-level file
+called `tests.log'.
+
+If you write a new C executable that contains subtests, be sure to add
+a build "target" under the TESTING TARGETS section of build.conf.
+
+If you write a new python-script, be sure to add to to the
+[test-scripts] section.
 
 
 Conclusion
@@ -202,5 +225,10 @@ Our test suite...
 
   3.  ...must be easy to add new tests.
 
-      * add your own routine to an existing test program, or
-      * add a new test program to Makefile.am, using our template .c code
+      * add your own sub-test to an existing test program, or
+      * add a new test program using template C or python code.
+
+
+
+
+
