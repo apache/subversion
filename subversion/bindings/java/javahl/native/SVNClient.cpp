@@ -1671,6 +1671,10 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     /* The main disk-caching auth providers, for both
        'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
+#ifdef WIN32
+    svn_client_get_windows_simple_provider (&provider, pool);
+    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+#endif
     svn_client_get_simple_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
     svn_client_get_username_provider (&provider, pool);
