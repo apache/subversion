@@ -67,6 +67,11 @@ Now you can run a test script over ra_dav:
    $ ./basic_tests.py --url http://localhost
    $ ./basic_tests.py 3 --url http://localhost
 
+or 
+
+   $ ./basic_tests.py --url=http://localhost
+   $ ./basic_tests.py 3 --url=http://localhost
+
 If you run httpd on a port other than 80, you can specify the port in
 the URL: "http://localhost:15835" for example.
 
@@ -74,6 +79,11 @@ To run all tests over ra_dav, pass BASE_URL when running 'make check'
 from the top of the build dir:
 
    $ make check BASE_URL=http://localhost
+
+BASE_URL=URL can also be used when running individual tests:
+
+   $ ./basic_tests.py BASE_URL=http://localhost
+   $ ./basic_tests.py 3 BASE_URL=http://localhost
 
 
 Directory Contents
