@@ -56,6 +56,7 @@ test1 (const char **msg,
        svn_boolean_t msg_only,
        apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_config_t *cfg;
   int i;
   char *key, *py_val, *c_val;
@@ -65,8 +66,9 @@ test1 (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  if (svn_config_read(&cfg, "config-test.cfg", TRUE, pool) != SVN_NO_ERROR)
-    fail(pool, "test failed: cfg NULL");
+  err = svn_config_read(&cfg, "config-test.cfg", TRUE, pool);
+  if (err != SVN_NO_ERROR)
+    return err;
 
   /* Test values retrieved from our ConfigParser instance against
      values retrieved using svn_config. */
