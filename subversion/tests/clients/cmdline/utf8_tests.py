@@ -104,9 +104,13 @@ except:
 
 # Check to see if the locale uses ISO-8859-1 encoding.  The regex is necessary
 # because some systems ommit the first hyphen or use lowercase letters for ISO.
-localeregex = re.compile('^ISO-?8859-1$', re.I)
-localematch = localeregex.search(locale.getlocale()[1])
-
+localeenc = locale.getlocale()[1]
+if localeenc:
+  localeregex = re.compile('^ISO-?8859-1$', re.I)
+  localematch = localeregex.search(localeenc)
+else:
+  localematch = None
+  
 # list all tests here, starting with None:
 test_list = [ None,
               Skip(basic_utf8_conversion, localematch is None)
