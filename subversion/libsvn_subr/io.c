@@ -687,43 +687,33 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
         }
       else
         {
-          const char *src_target, *src_target_utf8, *dst_target_utf8;
+          const char *src_target, *entryname_utf8;
 
           if (cancel_func)
             SVN_ERR (cancel_func (cancel_baton));
 
-          /* Telescope the entryname onto the source dir. */
-          src_target = svn_path_join (src, this_entry.name, subpool);
-          SVN_ERR (svn_path_cstring_to_utf8 (&src_target_utf8, src_target,
-                                             subpool));
+          SVN_ERR (svn_path_cstring_to_utf8 (&entryname_utf8,
+                                             this_entry.name, subpool));
+          src_target = svn_path_join (src, entryname_utf8, subpool);
           
           if (this_entry.filetype == APR_REG) /* regular file */
             {
-              const char *dst_target = svn_path_join (dst_path,
-                                                      this_entry.name,
+              const char *dst_target = svn_path_join (dst_path, entryname_utf8,
                                                       subpool);
-              SVN_ERR (svn_path_cstring_to_utf8 (&dst_target_utf8, dst_target,
-                                                 subpool));
-              SVN_ERR (svn_io_copy_file (src_target_utf8, dst_target_utf8,
+              SVN_ERR (svn_io_copy_file (src_target, dst_target,
                                          copy_perms, subpool));
             }
           else if (this_entry.filetype == APR_LNK) /* symlink */
             {
-              const char *dst_target = svn_path_join (dst_path,
-                                                      this_entry.name,
+              const char *dst_target = svn_path_join (dst_path, entryname_utf8,
                                                       subpool);
-              SVN_ERR (svn_path_cstring_to_utf8 (&dst_target_utf8, dst_target,
-                                                 subpool));
-              SVN_ERR (svn_io_copy_link (src_target_utf8, dst_target_utf8,
+              SVN_ERR (svn_io_copy_link (src_target, dst_target,
                                          subpool));
             }
           else if (this_entry.filetype == APR_DIR) /* recurse */
             {
-              const char *entryname_utf8;
-              SVN_ERR (svn_path_cstring_to_utf8 (&entryname_utf8,
-                                                 this_entry.name, subpool));
               SVN_ERR (svn_io_copy_dir_recursively 
-                       (src_target_utf8,
+                       (src_target,
                         dst_path,
                         entryname_utf8,
                         copy_perms,
