@@ -80,6 +80,8 @@ Greg:
    - mod_dav:
      - switch property handling to buckets/brigades
      - switch dav_stream to buckets/brigades
+     - complete the propdb API conversion (step 1; step 2 is the brigade
+       thing above)
 
    M3 ITEMS:
    - VERSION stuff. VPATH builds.
