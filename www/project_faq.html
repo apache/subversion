@@ -111,6 +111,8 @@ a <tt>file:</tt> URL?</a></li>
     file, but svn says something about "path not found".  What's going
     on?</a></li> 
 <li><a href="#digest-auth">Why doesn't HTTP Digest auth work?</a></li>
+<li><a href="#xlc-compile">Compiling with xlc on AIX, I get compilation
+    errors.  What's wrong?</a></li>
 
 
 
@@ -1447,6 +1449,21 @@ may also want to read over
    >http://subversion.tigris.org/issues/show_bug.cgi?id=1608</a>
 to see if the description there matches your symptoms.
 </p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="xlc-compile">Compiling with xlc on AIX, I get compilation
+    errors.  What's wrong?</a></h3>
+
+<p>Adding <tt>-qlanglvl=extended</tt> to the
+environment variable CFLAGS for configuration and build
+will make xlc a bit more flexible and the code should
+compile without error.  See
+<a href="http://www.contactor.se/~dast/svn/archive-2004-01/0922.shtml"
+>http://www.contactor.se/~dast/svn/archive-2004-01/0922.shtml</a> and
+its associated thread for more details.
+</p>
+ 
 
 <![CDATA[=========================================================]]>
 
