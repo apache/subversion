@@ -62,13 +62,20 @@ SPECIFIC LANGUAGE BINDINGS
        will copy your new Python libraries into the appropriate system
        location.
 
+       Note: If you don't have access to install to python's site-packages
+       directory, you can have the python modules install to your home
+       directory.  You can do this by running
+       'make install-swig-py-ext DISTUTIL_PARAM=--home=~'.
+
+       Note: If you want to install to an alterante prefix (usually only
+       if you are building packages), you can supply the prefix here.  An
+       example of doing this for building rpms looks like
+       'make install-swig-py-ext DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT/usr'.
+
        On Windows, ???
 
-   3.  Verify that an 'svn' package has been created.  It should be
-       sitting right in the current directory:  a subdir containing
-       .py files and an __init__.py.  Also verify that the package was
-       installed to a public area.  (For example, some place like
-       /usr/local/lib/python2.2/site-packages/svn)
+   3.  Verify that an 'svn' package has been installed correctly.  You can
+       do this by running python via 'python -c "from svn import client"'.
 
    4.  Try some demo programs.  From the top of your svn working copy,
        cd tools/examples/, and try running 'svnlook.py'.
