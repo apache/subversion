@@ -1559,7 +1559,7 @@ static svn_error_t *release_locks(apr_hash_t *locks,
       /* The lock may be stolen or broken sometime between
          svn_fs_commit_txn() and this post-commit cleanup.  So ignore
          any errors from this command; just free as many locks as we can. */
-      svn_repos_fs_unlock(repos, key, val, FALSE, subpool);
+      svn_error_clear (svn_repos_fs_unlock(repos, key, val, FALSE, subpool));
     }
 
   svn_pool_destroy(subpool);
