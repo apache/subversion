@@ -1794,6 +1794,171 @@ def dry_run_adds_file_with_prop(sbox):
                                        1, # please check props
                                        1) # and do a dry-run also)
 
+#----------------------------------------------------------------------
+
+# Regression test for issue #1673
+# Merge a binary file from two URL with a common ancestry
+
+def merge_binary_with_common_ancestry(sbox):
+  "merge binary files with common ancestry"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create the common ancestry path
+  I_path = os.path.join(wc_dir, 'I')
+  svntest.main.run_svn(None, 'mkdir', I_path)
+
+  # Add a binary file to the common ancestry path
+  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  theta_contents = fp.read()
+  fp.close()
+  theta_I_path = os.path.join(wc_dir, 'I', 'theta')
+  fp = open(theta_I_path, 'w')
+  fp.write(theta_contents)
+  fp.close()
+  svntest.main.run_svn(None, 'add', theta_I_path)
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', theta_I_path)
+
+  # Commit the ancestry
+  expected_output = wc.State(wc_dir, {
+    'I'       : Item(verb='Adding'),
+    'I/theta' : Item(verb='Adding  (bin)'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.add({
+    'I'       : Item(status='  ', wc_rev=2, repos_rev=2),
+    'I/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Create the first branch
+  J_path = os.path.join(wc_dir, 'J')
+  svntest.main.run_svn(None, 'copy', I_path, J_path)
+
+  # Commit the first branch
+  expected_output = wc.State(wc_dir, {
+    'J' : Item(verb='Adding'),
+    })
+
+  expected_status.tweak(repos_rev=3)
+  expected_status.add({
+    'J'       : Item(status='  ', wc_rev=3, repos_rev=3),
+    'J/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Create the path where the files will be merged
+  K_path = os.path.join(wc_dir, 'K')
+  svntest.main.run_svn(None, 'mkdir', K_path)
+
+  # Commit the new path
+  expected_output = wc.State(wc_dir, {
+    'K' : Item(verb='Adding'),
+    })
+
+  expected_status.tweak(repos_rev=4)
+  expected_status.add({
+    'K'       : Item(status='  ', wc_rev=4, repos_rev=4),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Copy 'I/theta' to 'K/'. This file will be merged later.
+  theta_K_path = os.path.join(wc_dir, 'K', 'theta')
+  svntest.main.run_svn(None, 'copy', theta_I_path, theta_K_path)
+
+  # Commit the new file
+  expected_output = wc.State(wc_dir, {
+    'K/theta' : Item(verb='Adding  (bin)'),
+    })
+
+  expected_status.tweak(repos_rev=5)
+  expected_status.add({
+    'K/theta' : Item(status='  ', wc_rev=5, repos_rev=5),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Modify the original ancestry 'I/theta'
+  svntest.main.file_append(theta_I_path, "some extra junk")
+
+  # Commit the modification
+  expected_output = wc.State(wc_dir, {
+    'I/theta' : Item(verb='Sending'),
+    })
+
+  expected_status.tweak(repos_rev=6)
+  expected_status.tweak('I/theta', wc_rev=6)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Create the second branch from the modified ancestry
+  L_path = os.path.join(wc_dir, 'L')
+  svntest.main.run_svn(None, 'copy', I_path, L_path)
+
+  # Commit the second branch
+  expected_output = wc.State(wc_dir, {
+    'L'       : Item(verb='Adding'),
+    'L/theta' : Item(verb='Adding  (bin)'),
+    })
+
+  expected_status.tweak(repos_rev=7)
+  expected_status.add({
+    'L'       : Item(status='  ', wc_rev=7, repos_rev=7),
+    'L/theta' : Item(status='  ', wc_rev=7, repos_rev=7),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Now merge first ('J/') and second ('L/') branches into 'K/'
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(K_path)
+    theta_J_url = svntest.main.current_repo_url + '/J/theta'
+    theta_L_url = svntest.main.current_repo_url + '/L/theta'
+    svntest.actions.run_and_verify_svn(None, ['U  theta\n'], [],
+                                       'merge', theta_J_url, theta_L_url)
+  finally:
+    os.chdir(saved_cwd)
+
+  expected_status.tweak('K/theta', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1816,6 +1981,7 @@ test_list = [ None,
               merge_skips_obstructions,
               merge_into_missing,
               dry_run_adds_file_with_prop,
+              merge_binary_with_common_ancestry,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

@@ -1411,6 +1411,7 @@ do_single_file_merge (const char *initial_URL1,
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   const char *URL1, *path1, *URL2, *path2;
   svn_opt_revision_t *revision1, *revision2;
+  svn_error_t *err;
 
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
 
@@ -1475,8 +1476,15 @@ do_single_file_merge (const char *initial_URL1,
                                mimetype1, mimetype2,
                                merge_b));
 
-  SVN_ERR (svn_io_remove_file (tmpfile1, pool));
-  SVN_ERR (svn_io_remove_file (tmpfile2, pool));
+  /* Ignore if temporary file not found. It may have been renamed. */
+  err = svn_io_remove_file (tmpfile1, pool);
+  if (err && ! APR_STATUS_IS_ENOENT (err->apr_err))
+    return err;
+  svn_error_clear (err);
+  err = svn_io_remove_file (tmpfile2, pool);
+  if (err && ! APR_STATUS_IS_ENOENT (err->apr_err))
+     return err;
+  svn_error_clear (err);
   
   /* Deduce property diffs, and merge those too. */
   SVN_ERR (svn_prop_diffs (&propchanges, props2, props1, pool));
