@@ -67,6 +67,10 @@
 
 */
 
+#ifndef __SVN_SVR__
+#define __SVN_SVR__
+
+
 #include <svn_types.h>
 
 
@@ -179,13 +183,6 @@ svn_delta_t * svn_svr_get_update (svn_string_t *repos,
 
 
 
-
-
-                            
-
-
-
-
 /******************************************
 
    The API for server-side "plug-ins"  (modeled after Apache)
@@ -204,12 +201,16 @@ svn_delta_t * svn_svr_get_update (svn_string_t *repos,
 
 typedef struct svn_svr_plugin
 {
-  (svn_string_t *) (* authorization_hook) (svn_string_t *repos,
-                                           svn_string_t *auth_user,
-                                           svn_string_t *auth_method,
-                                           svn_string_t *auth_domain,
-                                           svr_action action,
-                                           svn_string_t *path);
+  /* An authorization function should return NULL (failure) or
+     non-NULL (success).  If successful, it should fill in the
+     "canonical" filesystem name in the user structure.  */
+
+  char (* authorization_hook) (svn_string_t *repos,
+                               svn_user_t *user,
+                               svr_action action,
+                               svn_string_t *path);
+
+  /* This hook isn't fully fleshed out yet */
 
   (svn_delta_t *) (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
                                              int rejection_rationale);
@@ -219,11 +220,10 @@ typedef struct svn_svr_plugin
 
 
 
-
+#endif  /* __SVN_SVR__ */
 
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
- */
+ * end: */
 

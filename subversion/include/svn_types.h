@@ -61,7 +61,7 @@ typedef struct svn_string_t
 {
   char *data;                /* pointer to the bytestring */
   unsigned long len;         /* length of bytestring */
-  unsigned long blocksize;   /* total size of buffer */
+  unsigned long blocksize;   /* total size of buffer allocated */
 } svn_string_t;
 
 
@@ -143,6 +143,33 @@ typedef struct svn_ver_t
 typedef enum svr_action {add, rm, mv, checkout, 
                          commit, import, update} svr_action_t;
 
+
+
+/* This structure defines a client 'user' to be used by any security
+   plugin on the Subversion server.  This structure is created by the
+   network layer when it performs initial authentication with some
+   database.  */
+
+typdef struct svn_user_t
+{
+  /* The first three fields are filled in by the network layer */
+
+  svn_string_t auth_username;       /* the authenticated username */
+  svn_string_t auth_method;         /* the authentication system used */
+  svn_string_t auth_domain;         /* where the user comes from */
+
+
+  /* This field is used by all of the server's "wrappered" fs calls */
+
+  svn_string_t svn_username;        /* the username which will
+                                       actually be used when making
+                                       filesystem calls */
+
+  void *username_data;              /* if a security plugin needs to
+                                       store extra data, such as a
+                                       WinNT SID */
+
+} svn_user_t;
 
 
 /* temporary placeholders, till we write the real thing!  */

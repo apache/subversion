@@ -58,41 +58,51 @@
 
 
 #include <svn_types.h>   /* all of the basic data types */
+#include <svn_svr.h>     /* declarations for this library */
 #include <svn_fs.h>      /* the Subversion filesystem API */
 
 
 
-/* Return NULL if any of the authorization hooks denied access; else
-   return the last argument of the last hook (a canonical username to
-   be used) */
+/* 
+   This routine is called by each "wrappered" filesystem call in this
+   library.
 
-svn_string_t *
-call_authorization_hooks ()
+   If any authorization hooks return NULL, then return NULL.
+   Else return success (non-NULL).  
+*/
+
+char
+call_authorization_hooks (svn_string_t *repos, svn_user_t *user)
 {
   /* loop through our plugins, calling authorization hooks */
+
+  /* at the end, if all plugins are successful, make sure that
+     user->svn_username is actually filled in! */
 }
 
 
 
+/* Called by network layer.  Returns latest version of the repository,
+   or NULL if authorization failed.  */
+
 svn_ver_t * 
-svn_svr_latest (svn_string_t *repos, svn_string_t *user)
+svn_svr_latest (svn_string_t *repos, svn_user_t *user)
 {
   svn_ver_t *latest_version;
-  svn_string_t *internal_user;
-  int authorized = 0;
+  char authorized = NULL;
 
-  internal_user = call_authorization_hooks();
+  authorized = call_authorization_hooks (repos, user);
 
-  if (is_null(internal_user)) {
+  if (! authorized)
     {
       /* play sad music */
 
-      /* we need some kind of graceful authorization failure mechanism!
-         what do we return?  */
+      /* we need some kind of graceful authorization failure mechanism.
+         what do we return?  NULL?   */
     }
   else
     {
-      latest_version = svn_fs_latest (repos, user);
+      latest_version = svn_fs_latest (repos, user->svn_username);
       return latest_version;
     }
 }
