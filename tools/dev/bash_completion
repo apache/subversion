@@ -39,9 +39,9 @@ _svn()
 	fi
 
 	# options that require a parameter
+	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|-D|--date|--username|--password|--targets|\
-	           |-d|--destination|-x|--extensions|-m|--message|-F|--file|\
-		   info"
+	           |-d|--destination|-x|--extensions|-m|--message|-F|--file"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -77,11 +77,13 @@ _svn()
 		cmdOpts="--force $mOpts --targets $pOpts"
 		;;
 	diff|di)
-		# multi-occurence options added later
-		cmdOpts="$nOpts $pOpts -x --extensions"
+		cmdOpts="$nOpts $rOpts $pOpts -x --extensions"
 		;;
 	import)
 		cmdOpts="$mOpts $qOpts $nOpts $pOpts"
+		;; 
+	info)
+		cmdOpts="--targets"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts"
@@ -137,10 +139,6 @@ _svn()
 
 		# take out alternatives
 		case $opt in
-		-r)            cmdOpts=${cmdOpts/ --revision / } ;;
-		--revision)    cmdOpts=${cmdOpts/ --r / } ;;
-		-D)            cmdOpts=${cmdOpts/ --date / } ;;
-		--date)        cmdOpts=${cmdOpts/ -D / } ;;
 		-d)            cmdOpts=${cmdOpts/ --destination / } ;;
 		--destination) cmdOpts=${cmdOpts/ -d / } ;;
 		-m)            cmdOpts=${cmdOpts/ --message / } ;;
@@ -149,6 +147,12 @@ _svn()
 		--file)        cmdOpts=${cmdOpts/ -F / } ;;
 		-v)            cmdOpts=${cmdOpts/ --verbose / } ;;
 		--verbose)     cmdOpts=${cmdOpts/ -v / } ;;
+		-r|--revision|-D|--date)
+			cmdOpts=${cmdOpts/ --revision / }
+			cmdOpts=${cmdOpts/ -r / }
+			cmdOpts=${cmdOpts/ --date / }
+			cmdOpts=${cmdOpts/ -D / }
+			;;
 		esac
 
 		# skip next option if this one requires a parameter
@@ -156,11 +160,6 @@ _svn()
 			((++i))
 		fi
 	done
-
-	# add options that can occur multiple times
-	if [[ ${COMP_WORDS[1]} == "diff" ]] ; then
-		cmdOpts="$cmdOpts $rOpts"
-	fi
 
 	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
 
