@@ -1394,7 +1394,7 @@ apache's configure: "--with-dbm=db4 --with-berkeley-db=/the/db/prefix".</p>
 <p>This is not really a problem with Subversion, but it often affects
 Subversion users.</p>
 
-<p>RedHat 9 ships with a Berkeley DB library that relies on the kernel
+<p>RedHat 9 and Fedora ship with a Berkeley DB library that relies on the kernel
 support for NPTL (the Native Posix Threads Library).</p>
 
 <p>The kernels that RedHat provides have this support built in, but if you
@@ -1416,6 +1416,13 @@ This can be fixed in one of several ways:
     Subversion (Apache). (You usually would set this variable to run
     Wine or Winex on RedHat 9)</li>
 </ul>
+</p>
+<p>To use the NPTL version of Berkeley DB you also need to use a glibc
+library with NPTL support, which probably means the i686 version. See
+<a
+href="http://www.contactor.se/~dast/svnusers/archive-2004-03/0488.shtml">
+http://www.contactor.se/~dast/svnusers/archive-2004-03/0488.shtml
+</a> for details.
 </p>
 
 <![CDATA[-----------------------------------------------------------]]>
