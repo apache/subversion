@@ -195,7 +195,7 @@ svn_cl__propset (apr_getopt_t *os,
                  (pool, opt_state->recursive
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
-                  pname, target));
+                  pname, svn_path_local_style (target, pool)));
             }
         }
       svn_pool_destroy (subpool);
