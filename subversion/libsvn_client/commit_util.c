@@ -245,6 +245,7 @@ harvest_committables (apr_hash_t *committables,
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           adds_only = TRUE;
+          entry->copyfrom_rev = entry->revision;
           if (copy_mode)
             cf_url = entry->url;
           else
