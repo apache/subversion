@@ -700,7 +700,7 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
 
              ### todo: Right now, "svn dates" are not GMT, but the
              results of svn_time_from_string are.  This sucks. */
-          apr_exploded_time_t extime;
+          apr_time_exp_t extime;
           apr_time_t aprtime;
           apr_status_t apr_err;
               
