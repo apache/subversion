@@ -22,6 +22,8 @@
 
 /*** Includes. ***/
 
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include "svn_client.h"
@@ -160,11 +162,15 @@ get_password (char **password,
 {
   svn_error_t *err;
   svn_stringbuf_t *pword;
-  char *prompt = apr_psprintf (pool, "%s's password: ", username);
-
+  char *prompt;
   svn_client_auth_baton_t *ab = 
     (svn_client_auth_baton_t *) auth_baton;
 
+  if (strlen(username) > 0)
+    prompt = apr_psprintf (pool, "%s's password: ", username);
+  else
+    prompt = apr_psprintf (pool, "password: ");
+  
   if (force_prompt)
     {
       SVN_ERR (ab->prompt_callback (password, prompt,
