@@ -1,4 +1,4 @@
-%define apache_version 2.0.45-0.1
+%define apache_version 2.0.46-0.1
 %define neon_version 0.23.9
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -94,6 +94,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Tue Jun 24 2003 David Summers <david@summersoft.fay.ar.us> 0.24.2-6334
+- Now requires apache 2.0.46.
+
 * Mon Jun 16 2003 David Summers <david@summersoft.fay.ar.us> 0.24.1-6256
 - Added doxygen documentation.
 
