@@ -37,6 +37,7 @@
 ;; l     - svn-status-show-svn-log          run 'svn log'
 ;; i     - svn-status-info                  run 'svn info'
 ;; r     - svn-status-revert                run 'svn revert'
+;; V     - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add'
@@ -126,7 +127,7 @@
 ;; * propget (pget, pg)        used
 ;; * proplist (plist, pl)      implemented
 ;; * propset (pset, ps)        used
-;; * resolved
+;; * resolved                  implemented
 ;; * revert                    implemented
 ;; * status (stat, st)         implemented
 ;; * switch (sw)
@@ -445,6 +446,9 @@ for  example: '(\"revert\" \"file1\"\)"
                     (svn-status-unset-all-usermarks))
                   (svn-status-update)
                   (message "svn revert finished"))
+                 ((eq svn-process-cmd 'resolved)
+                  (svn-status-update)
+                  (message "svn resolved finished"))
                  ((eq svn-process-cmd 'mv)
                   (svn-status-update)
                   (message "svn mv finished"))
@@ -509,7 +513,7 @@ The results are used to build the `svn-status-info' variable."
       (goto-char (point-min))
       (while (< (point) (point-max))
         (cond
-         ((= (point-at-eol) (point-at-bol))	;skip blank lines
+         ((= (point-at-eol) (point-at-bol)) ;skip blank lines
           nil)
          ((or (looking-at "Head revision:[ ]+\([0-9]+\)") ;svn version < 0.29
               (looking-at "Status against revision:[ ]+\([0-9]+\)")); svn version >= 0.29
@@ -526,7 +530,7 @@ The results are used to build the `svn-status-info' variable."
           (setq svn-marks (buffer-substring (point) (+ (point) 8))
                 svn-file-mark (elt svn-marks 0)              ; 1st column
                 svn-property-mark (elt svn-marks 1)          ; 2nd column
-                ;;svn-locked-mark (elt svn-marks 2)	           ; 3rd column
+                ;;svn-locked-mark (elt svn-marks 2)            ; 3rd column
                 ;;svn-added-with-history-mark (elt svn-marks 3); 4th column
                 ;;svn-switched-mark (elt svn-marks 4)          ; 5th column
                 svn-update-mark (elt svn-marks 7))           ; 8th column
@@ -681,6 +685,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "?") 'svn-status-mark-unknown)
   (define-key svn-status-mode-mark-map (kbd "A") 'svn-status-mark-added)
   (define-key svn-status-mode-mark-map (kbd "M") 'svn-status-mark-modified)
+  (define-key svn-status-mode-mark-map (kbd "V") 'svn-status-resolved)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
@@ -726,6 +731,7 @@ A and B must be line-info's."
     ["Up Directory" svn-status-examine-parent t]
     ["Elide Directory" svn-status-toggle-elide t]
     ["svn revert" svn-status-revert t]
+    ["svn resolved" svn-status-resolved t]
     ["svn cleanup" svn-status-cleanup t]
     ["Show Process Buffer" svn-status-show-process-buffer t]
     ("Property"
@@ -1597,6 +1603,21 @@ When called with a prefix argument add the command line switch --force."
           ;(message "svn-status-cleanup %S" file-names))
           (svn-run-svn t t 'cleanup (append (list "cleanup") file-names)))
       (message "No valid file selected - No status cleanup possible"))))
+
+(defun svn-status-resolved ()
+  "Run `svn resolved' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (interactive)
+  (let* ((marked-files (svn-status-marked-files))
+         (num-of-files (length marked-files)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "Resolve %s? " (svn-status-line-info->filename (car marked-files)))
+             (format "Resolve %d files? " num-of-files)))
+      (message "resolving: %S" (svn-status-marked-file-names))
+      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+      (svn-run-svn t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
+
 
 ;; --------------------------------------------------------------------------------
 ;; Getting older revisions
