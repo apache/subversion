@@ -85,14 +85,24 @@ is_valid_revision_skel (skel_t *skel)
 
 
 static svn_boolean_t
-is_valid_transaction_skel (skel_t *skel)
+is_valid_transaction_skel (skel_t *skel, svn_fs__transaction_kind_t *kind)
 {
   int len = svn_fs__list_length (skel);
+  
+  if (len != 5)
+    return FALSE;
 
-  if (len == 5
-      && (svn_fs__matches_atom (skel->children, "transaction")
-          || svn_fs__matches_atom (skel->children, "committed"))
-      && skel->children->next->is_atom
+  /* Determine (and verify) the kind. */
+  if (svn_fs__matches_atom (skel->children, "transaction"))
+    *kind = svn_fs__transaction_kind_normal;
+  else if (svn_fs__matches_atom (skel->children, "committed"))
+    *kind = svn_fs__transaction_kind_committed;
+  else if (svn_fs__matches_atom (skel->children, "dead"))
+    *kind = svn_fs__transaction_kind_dead;
+  else
+    return FALSE;
+
+  if (skel->children->next->is_atom
       && skel->children->next->next->is_atom
       && (! skel->children->next->next->next->is_atom)
       && (! skel->children->next->next->next->next->is_atom))
@@ -117,22 +127,14 @@ is_valid_rep_delta_chunk_skel (skel_t *skel)
   /* check the window. */
   window = skel->children->next;
   len = svn_fs__list_length (window);
-  if ((len < 4) || (len > 5))
+  if ((len < 3) || (len > 4))
     return FALSE;
   if (! ((! window->children->is_atom)
          && (window->children->next->is_atom)
-         && (window->children->next->next->next->is_atom)))
+         && (window->children->next->next->is_atom)))
     return FALSE;
   if ((len == 5) 
-      && (! window->children->next->next->next->next->is_atom))
-    return FALSE;
-  
-  /* The per-chunk checksum is now obsolete and is always stored as an
-     empty list.  However, older repositories may still have real a
-     checksum list here.  We never use the checksum itself, but we
-     should at least make sure it's one of these two expected forms. */
-  if (! ((svn_fs__list_length (window->children->next->next) == 0)
-         || (is_valid_checksum_skel (window->children->next->next))))
+      && (! window->children->next->next->next->is_atom))
     return FALSE;
   
   /* check the diff. ### currently we support only svndiff version
@@ -278,7 +280,8 @@ static svn_boolean_t
 is_valid_copy_skel (skel_t *skel)
 {
   return (((svn_fs__list_length (skel) == 4)
-           && svn_fs__matches_atom (skel->children, "copy")
+           && (svn_fs__matches_atom (skel->children, "copy")
+               || svn_fs__matches_atom (skel->children, "soft-copy"))
            && skel->children->next->is_atom
            && skel->children->next->next->is_atom
            && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
@@ -396,11 +399,12 @@ svn_fs__parse_transaction_skel (svn_fs__transaction_t **transaction_p,
                                 apr_pool_t *pool)
 {
   svn_fs__transaction_t *transaction;
+  svn_fs__transaction_kind_t kind;
   skel_t *root_id, *base_id_or_rev, *proplist, *copies;
   int len;
   
   /* Validate the skel. */
-  if (! is_valid_transaction_skel (skel))
+  if (! is_valid_transaction_skel (skel, &kind))
     return skel_err ("transaction");
 
   root_id = skel->children->next;
@@ -410,20 +414,25 @@ svn_fs__parse_transaction_skel (svn_fs__transaction_t **transaction_p,
 
   /* Create the returned structure */
   transaction = apr_pcalloc (pool, sizeof (*transaction));
-  transaction->revision = SVN_INVALID_REVNUM;
 
-  /* Committed transactions have a revision number... */
-  if (svn_fs__matches_atom (skel->children, "committed"))
+  /* KIND */
+  transaction->kind = kind;
+
+  /* REVISION or BASE-ID */
+  if (kind == svn_fs__transaction_kind_committed)
     {
-      /* REV */
+      /* Committed transactions have a revision number... */
+      transaction->base_id = NULL;
       transaction->revision = atoi (apr_pstrmemdup (pool, base_id_or_rev->data,
                                                     base_id_or_rev->len));
       if (! SVN_IS_VALID_REVNUM (transaction->revision))
         return skel_err ("tranaction");
+      
     }
-  else /* ...where unfinished transactions have a base node-revision-id. */
+  else 
     {
-      /* BASE-ID */
+      /* ...where unfinished transactions have a base node-revision-id. */
+      transaction->revision = SVN_INVALID_REVNUM;
       transaction->base_id = svn_fs_parse_id (base_id_or_rev->data,
                                               base_id_or_rev->len, pool);
     }
@@ -523,33 +532,34 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
         {
           skel_t *window_skel = chunk_skel->children->next;
           skel_t *diff_skel = window_skel->children;
-          skel_t *checksum_skel = window_skel->children->next->next;
 
           /* Allocate a chunk and its window */
           chunk = apr_palloc (pool, sizeof (*chunk));
 
           /* Populate the window */
           chunk->version 
-            = (apr_byte_t) atoi (apr_pstrmemdup 
-                                 (pool,
-                                  diff_skel->children->next->data,
-                                  diff_skel->children->next->len));
+            = (apr_byte_t)atoi (apr_pstrmemdup 
+                                (pool,
+                                 diff_skel->children->next->data,
+                                 diff_skel->children->next->len));
           chunk->string_key 
             = apr_pstrmemdup (pool,
                               diff_skel->children->next->next->data,
                               diff_skel->children->next->next->len);
-          chunk->size = atoi (apr_pstrmemdup (pool,
-                                              diff_skel->next->data,
-                                              diff_skel->next->len));
-          chunk->rep_key = apr_pstrmemdup (pool, 
-                                           checksum_skel->next->data,
-                                           checksum_skel->next->len);
+          chunk->size 
+            = atoi (apr_pstrmemdup (pool,
+                                    window_skel->children->next->data,
+                                    window_skel->children->next->len));
+          chunk->rep_key 
+            = apr_pstrmemdup (pool, 
+                              window_skel->children->next->next->data,
+                              window_skel->children->next->next->len);
+          chunk->offset = 
+            apr_atoui64 (apr_pstrmemdup (pool, 
+                                         chunk_skel->children->data,
+                                         chunk_skel->children->len));
 
           /* Add this chunk to the array. */
-          chunk->offset = apr_atoui64 (
-              apr_pstrmemdup (pool, 
-                              chunk_skel->children->data,
-                              chunk_skel->children->len));
           (*((svn_fs__rep_delta_chunk_t **)(apr_array_push (chunks)))) = chunk;
 
           /* Next... */
@@ -646,6 +656,12 @@ svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
 
   /* Create the returned structure */
   copy = apr_pcalloc (pool, sizeof (*copy));
+
+  /* KIND */
+  if (svn_fs__matches_atom (skel->children, "soft-copy"))
+    copy->kind = svn_fs__copy_kind_soft;
+  else
+    copy->kind = svn_fs__copy_kind_real;
 
   /* SRC-PATH */
   copy->src_path = apr_pstrmemdup (pool,
@@ -826,33 +842,26 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
                                   apr_pool_t *pool)
 {
   skel_t *skel;
-  skel_t *proplist_skel, *copies_skel, *rev_or_base_id, *header_skel;
+  skel_t *proplist_skel, *copies_skel, *header_skel;
   svn_string_t *id_str;
+  svn_fs__transaction_kind_t kind;
 
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
 
-  /* Committed transactions have a revision number... */
-  if (SVN_IS_VALID_REVNUM (transaction->revision))
+  switch (transaction->kind)
     {
-      svn_stringbuf_t *rev_str;
-      
-      /* REV */
-      rev_str = svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
-                                       transaction->revision);
-      rev_or_base_id = svn_fs__mem_atom (rev_str->data, rev_str->len, pool);
-
-      /* "committed" */
+    case svn_fs__transaction_kind_committed:
       header_skel = svn_fs__str_atom ("committed", pool);
-    }  
-  else  /* ...where unfinished transactions have a base node revision ID. */
-    {
-      /* BASE-ID */
-      id_str = svn_fs_unparse_id (transaction->base_id, pool);
-      rev_or_base_id = svn_fs__mem_atom (id_str->data, id_str->len, pool);
-
-      /* "transaction" */
+      break;
+    case svn_fs__transaction_kind_dead:
+      header_skel = svn_fs__str_atom ("dead", pool);
+      break;
+    case svn_fs__transaction_kind_normal:
       header_skel = svn_fs__str_atom ("transaction", pool);
+      break;
+    default:
+      return skel_err ("transaction");
     }
 
   /* COPIES */
@@ -862,10 +871,10 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
       int i;
       for (i = transaction->copies->nelts - 1; i >= 0; i--)
         {
-          const char *copy_id = APR_ARRAY_IDX (transaction->copies, i, 
-                                               const char *);
-          
-          svn_fs__prepend (svn_fs__str_atom (copy_id, pool), copies_skel);
+          svn_fs__prepend (svn_fs__str_atom 
+                           (APR_ARRAY_IDX (transaction->copies, i, 
+                                           const char *), pool), 
+                           copies_skel);
         }
     }
   svn_fs__prepend (copies_skel, skel);
@@ -875,18 +884,33 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
                                           transaction->proplist, pool));
   svn_fs__prepend (proplist_skel, skel);
 
-  /* REVISION or BASE-ID (see above) */
-  svn_fs__prepend (rev_or_base_id, skel);
+  /* REVISION or BASE-ID */
+  if (transaction->kind == svn_fs__transaction_kind_committed)
+    {
+      /* Committed transactions have a revision number... */
+      svn_fs__prepend (svn_fs__str_atom 
+                       (apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, 
+                                      transaction->revision), pool), skel);
+    }  
+  else  
+    {
+      /* ...where other transactions have a base node revision ID. */
+      id_str = svn_fs_unparse_id (transaction->base_id, pool);
+      svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool),
+                       skel);
+    }
   
   /* ROOT-ID */
   id_str = svn_fs_unparse_id (transaction->root_id, pool);
   svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), skel);
   
-  /* "committed" or "transaction" (see above) */
+  /* KIND (see above) */
   svn_fs__prepend (header_skel, skel);
 
   /* Validate and return the skel. */
-  if (! is_valid_transaction_skel (skel))
+  if (! is_valid_transaction_skel (skel, &kind))
+    return skel_err ("transaction");
+  if (kind != transaction->kind)
     return skel_err ("transaction");
   *skel_p = skel;
   return SVN_NO_ERROR;
@@ -953,7 +977,6 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
           skel_t *window_skel = svn_fs__make_empty_list (pool);
           skel_t *chunk_skel = svn_fs__make_empty_list (pool);
           skel_t *diff_skel = svn_fs__make_empty_list (pool);
-          skel_t *obsolete_checksum_skel = svn_fs__make_empty_list (pool);
           const char *size_str, *offset_str, *version_str;
           svn_fs__rep_delta_chunk_t *chunk = 
             (((svn_fs__rep_delta_chunk_t **) chunks->elts)[i - 1]);
@@ -983,7 +1006,6 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
           else
             svn_fs__prepend (svn_fs__str_atom (chunk->rep_key, pool), 
                              window_skel);
-          svn_fs__prepend (obsolete_checksum_skel, window_skel);
           svn_fs__prepend (svn_fs__str_atom (size_str, pool), window_skel);
           svn_fs__prepend (diff_skel, window_skel);
           
@@ -1112,7 +1134,10 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
     svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
 
   /* "copy" */
-  svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
+  if (copy->kind == svn_fs__copy_kind_real)
+    svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
+  else
+    svn_fs__prepend (svn_fs__str_atom ("soft-copy", pool), skel);
 
   /* Validate and return the skel. */
   if (! is_valid_copy_skel (skel))

@@ -33,10 +33,43 @@
 #include "trail.h"
 #include "tree.h"
 #include "revs-txns.h"
+#include "key-gen.h"
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
 #include "bdb/copies-table.h"
 #include "bdb/changes-table.h"
+
+
+
+/*** Helpers ***/
+
+/* Set *txn_p to a transaction object allocated in TRAIL->pool for the
+   transaction in FS whose id is TXN_ID.  If EXPECT_DEAD is set, this
+   transaction must be a dead one, else an error is returned.  If
+   EXPECT_DEAD is not set, an error is thrown if the transaction is
+   *not* dead. */
+static svn_error_t *
+get_txn (svn_fs__transaction_t **txn_p,
+         svn_fs_t *fs,
+         const char *txn_id,
+         svn_boolean_t expect_dead,
+         trail_t *trail)
+{
+  svn_fs__transaction_t *txn;
+  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_id, trail));
+  if (expect_dead && (txn->kind != svn_fs__transaction_kind_dead))
+    return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
+                              "'%s'", txn_id);
+  if ((! expect_dead) && (txn->kind == svn_fs__transaction_kind_dead))
+    return svn_error_createf (SVN_ERR_FS_TRANSACTION_DEAD, 0,
+                              "'%s'", txn_id);
+  *txn_p = txn;
+  return SVN_NO_ERROR;
+}
+
+
+/* This is only for symmetry with the get_txn() helper. */
+#define put_txn svn_fs__bdb_put_txn
 
 
 
@@ -59,7 +92,7 @@ get_rev_txn (svn_fs__transaction_t **txn_p,
   if (revision->txn_id == NULL)
     return svn_fs__err_corrupt_fs_revision (fs, rev);
 
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, revision->txn_id, trail));
+  SVN_ERR (get_txn (&txn, fs, revision->txn_id, FALSE, trail));
   if (txn->revision != rev)
     return svn_fs__err_corrupt_txn (fs, revision->txn_id);
 
@@ -105,19 +138,11 @@ svn_fs__rev_get_txn_id (const char **txn_id_p,
 }
 
 
-struct youngest_rev_args {
-  svn_revnum_t youngest;
-  svn_fs_t *fs;
-};
-
-
 static svn_error_t *
 txn_body_youngest_rev (void *baton,
                        trail_t *trail)
 {
-  struct youngest_rev_args *args = baton;
-  SVN_ERR (svn_fs__bdb_youngest_rev (&(args->youngest), args->fs, trail));
-  return SVN_NO_ERROR;
+  return svn_fs__bdb_youngest_rev (baton, trail->fs, trail);
 }
 
 
@@ -126,14 +151,10 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
                      svn_fs_t *fs,
                      apr_pool_t *pool)
 {
-  struct youngest_rev_args args;
-
+  svn_revnum_t youngest;
   SVN_ERR (svn_fs__check_fs (fs));
-
-  args.fs = fs;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_youngest_rev, &args, pool));
-
-  *youngest_p = args.youngest;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_youngest_rev, &youngest, pool));
+  *youngest_p = youngest;
   return SVN_NO_ERROR;
 }
 
@@ -151,7 +172,7 @@ txn_body_revision_proplist (void *baton, trail_t *trail)
   struct revision_proplist_args *args = baton;
   svn_fs__transaction_t *txn;
 
-  SVN_ERR (get_rev_txn (&txn, NULL, args->fs, args->rev, trail));
+  SVN_ERR (get_rev_txn (&txn, NULL, trail->fs, args->rev, trail));
   *(args->table_p) = txn->proplist;
   return SVN_NO_ERROR;
 }
@@ -169,7 +190,6 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   args.table_p = &table;
-  args.fs = fs;
   args.rev = rev;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_proplist, &args, pool));
 
@@ -192,7 +212,6 @@ svn_fs_revision_prop (svn_string_t **value_p,
 
   /* Get the proplist. */
   args.table_p = &table;
-  args.fs = fs;
   args.rev = rev;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_proplist, &args, pool));
 
@@ -229,12 +248,11 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
   apr_hash_set (txn->proplist, name, APR_HASH_KEY_STRING, value);
 
   /* Overwrite the revision. */
-  return svn_fs__bdb_put_txn (fs, txn, txn_id, trail);
+  return put_txn (fs, txn, txn_id, trail);
 }
 
 
 struct change_rev_prop_args {
-  svn_fs_t *fs;
   svn_revnum_t rev;
   const char *name;
   const svn_string_t *value;
@@ -246,7 +264,7 @@ txn_body_change_rev_prop (void *baton, trail_t *trail)
 {
   struct change_rev_prop_args *args = baton;
 
-  SVN_ERR (svn_fs__set_rev_prop (args->fs, args->rev,
+  SVN_ERR (svn_fs__set_rev_prop (trail->fs, args->rev,
                                  args->name, args->value, trail));
 
   return SVN_NO_ERROR;
@@ -264,7 +282,6 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  args.fs = fs;
   args.rev = rev;
   args.name = name;
   args.value = value;
@@ -276,13 +293,6 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
 
 
 /*** Transactions ***/
-
-static svn_boolean_t 
-is_committed (svn_fs__transaction_t *txn)
-{
-  return SVN_IS_VALID_REVNUM (txn->revision);
-}
-
 
 svn_error_t *
 svn_fs__txn_make_committed (svn_fs_t *fs,
@@ -296,13 +306,14 @@ svn_fs__txn_make_committed (svn_fs_t *fs,
   assert (SVN_IS_VALID_REVNUM (revision));
 
   /* Make sure the TXN is not committed already. */
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
+  SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, trail));
+  if (txn->kind != svn_fs__transaction_kind_normal)
     return svn_fs__err_txn_not_mutable (fs, txn_name);
 
   /* Convert TXN to a committed transaction. */
   txn->revision = revision;
-  return svn_fs__bdb_put_txn (fs, txn, txn_name, trail);
+  txn->kind = svn_fs__transaction_kind_committed;
+  return put_txn (fs, txn, txn_name, trail);
 }
 
 
@@ -313,7 +324,7 @@ svn_fs__txn_get_revision (svn_revnum_t *revision,
                           trail_t *trail)
 {
   svn_fs__transaction_t *txn;
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
+  SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, trail));
   *revision = txn->revision;
   return SVN_NO_ERROR;
 }
@@ -328,8 +339,8 @@ svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
 {
   svn_fs__transaction_t *txn;
   
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
+  SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, trail));
+  if (txn->kind != svn_fs__transaction_kind_normal)
     return svn_fs__err_txn_not_mutable (fs, txn_name);
 
   *root_id_p = txn->root_id;
@@ -346,14 +357,14 @@ svn_fs__set_txn_root (svn_fs_t *fs,
 {
   svn_fs__transaction_t *txn;
 
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
+  SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, trail));
+  if (txn->kind != svn_fs__transaction_kind_normal)
     return svn_fs__err_txn_not_mutable (fs, txn_name);
 
   if (! svn_fs__id_eq (txn->root_id, new_id))
     {
       txn->root_id = new_id;
-      SVN_ERR (svn_fs__bdb_put_txn (fs, txn, txn_name, trail));
+      SVN_ERR (put_txn (fs, txn, txn_name, trail));
     }
   return SVN_NO_ERROR;
 }
@@ -367,14 +378,14 @@ svn_fs__set_txn_base (svn_fs_t *fs,
 {
   svn_fs__transaction_t *txn;
 
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
+  SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, trail));
+  if (txn->kind != svn_fs__transaction_kind_normal)
     return svn_fs__err_txn_not_mutable (fs, txn_name);
 
   if (! svn_fs__id_eq (txn->base_id, new_id))
     {
       txn->base_id = new_id;
-      SVN_ERR (svn_fs__bdb_put_txn (fs, txn, txn_name, trail));
+      SVN_ERR (put_txn (fs, txn, txn_name, trail));
     }
   return SVN_NO_ERROR;
 }
@@ -389,8 +400,8 @@ svn_fs__add_txn_copy (svn_fs_t *fs,
   svn_fs__transaction_t *txn;
 
   /* Get the transaction and ensure its mutability. */
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
+  SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, trail));
+  if (txn->kind != svn_fs__transaction_kind_normal)
     return svn_fs__err_txn_not_mutable (fs, txn_name);
 
   /* Allocate a new array if this transaction has no copies. */
@@ -401,7 +412,7 @@ svn_fs__add_txn_copy (svn_fs_t *fs,
   (*((const char **)(apr_array_push (txn->copies)))) = copy_id;
 
   /* Finally, write out the transaction. */
-  return svn_fs__bdb_put_txn (fs, txn, txn_name, trail);
+  return put_txn (fs, txn, txn_name, trail);
 }
 
 
@@ -410,7 +421,6 @@ svn_fs__add_txn_copy (svn_fs_t *fs,
 
 struct txn_proplist_args {
   apr_hash_t **table_p;
-  svn_fs_t *fs;
   const char *id;
   svn_revnum_t rev;
 };
@@ -422,9 +432,9 @@ txn_body_txn_proplist (void *baton, trail_t *trail)
   svn_fs__transaction_t *txn;
   struct txn_proplist_args *args = baton;
 
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, args->fs, args->id, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (args->fs, args->id);
+  SVN_ERR (get_txn (&txn, trail->fs, args->id, FALSE, trail));
+  if (txn->kind != svn_fs__transaction_kind_normal)
+    return svn_fs__err_txn_not_mutable (trail->fs, args->id);
 
   *(args->table_p) = txn->proplist; 
   return SVN_NO_ERROR;
@@ -443,7 +453,6 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   args.table_p = &table;
-  args.fs = fs;
   svn_fs_txn_name (&args.id, txn, pool);
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
 
@@ -466,7 +475,6 @@ svn_fs_txn_prop (svn_string_t **value_p,
 
   /* Get the proplist. */
   args.table_p = &table;
-  args.fs = fs;
   svn_fs_txn_name (&args.id, txn, pool);
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
 
@@ -496,8 +504,8 @@ svn_fs__set_txn_prop (svn_fs_t *fs,
 {
   svn_fs__transaction_t *txn;
 
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
+  SVN_ERR (get_txn (&txn, fs, txn_name, FALSE, trail));
+  if (txn->kind != svn_fs__transaction_kind_normal)
     return svn_fs__err_txn_not_mutable (fs, txn_name);
 
   /* If there's no proplist, but we're just deleting a property, exit now. */
@@ -512,7 +520,7 @@ svn_fs__set_txn_prop (svn_fs_t *fs,
   apr_hash_set (txn->proplist, name, APR_HASH_KEY_STRING, value);
 
   /* Now overwrite the transaction. */
-  return svn_fs__bdb_put_txn (fs, txn, txn_name, trail);
+  return put_txn (fs, txn, txn_name, trail);
 }
 
 
@@ -520,7 +528,7 @@ static svn_error_t *
 txn_body_change_txn_prop (void *baton, trail_t *trail)
 {
   struct change_txn_prop_args *args = baton;
-  return svn_fs__set_txn_prop (args->fs, args->id, args->name, 
+  return svn_fs__set_txn_prop (trail->fs, args->id, args->name, 
                                args->value, trail);
 }
 

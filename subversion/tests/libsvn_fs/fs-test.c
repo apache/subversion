@@ -72,8 +72,7 @@ create_berkeley_filesystem (const char **msg,
 
 /* Generic Berkeley DB error handler function. */
 static void
-berkeley_error_handler (const char *errpfx,
-                                    char *msg)
+berkeley_error_handler (const char *errpfx, char *msg)
 {
   fprintf (stderr, "%s%s\n", errpfx ? errpfx : "", msg);
 }

@@ -98,6 +98,7 @@ begin_trail (trail_t **trail_p,
   trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
 
   trail->pool = svn_pool_create (pool);
+  trail->fs = fs;
   trail->scratchpool = svn_pool_create (trail->pool);
   trail->undo = 0;
   if (use_txn)
@@ -122,10 +123,10 @@ begin_trail (trail_t **trail_p,
 
 
 static svn_error_t *
-abort_trail (trail_t *trail,
-             svn_fs_t *fs)
+abort_trail (trail_t *trail)
 {
   struct undo *undo;
+  svn_fs_t *fs = trail->fs;
 
   /* Undo those changes which should only persist when the transaction
      succeeds.  */
@@ -146,11 +147,11 @@ abort_trail (trail_t *trail,
 
 
 static svn_error_t *
-commit_trail (trail_t *trail,
-              svn_fs_t *fs)
+commit_trail (trail_t *trail)
 {
   struct undo *undo;
   int db_err;
+  svn_fs_t *fs = trail->fs;
 
   /* Undo those changes which should persist only while the
      transaction is active.  */
@@ -228,7 +229,7 @@ do_retry (svn_fs_t *fs,
       if (! svn_err)
         {
           /* The transaction succeeded!  Commit it.  */
-          SVN_ERR (commit_trail (trail, fs));
+          SVN_ERR (commit_trail (trail));
           
           if (use_txn)
             print_trail_debug (trail, txn_body_fn_name, filename, line);
@@ -245,14 +246,14 @@ do_retry (svn_fs_t *fs,
       if (! deadlocked)
         {
           /* Ignore any error returns.  The first error is more valuable.  */
-          svn_error_clear (abort_trail (trail, fs));
+          svn_error_clear (abort_trail (trail));
           return svn_err;
         }
 
       svn_error_clear (svn_err);
 
       /* We deadlocked.  Abort the transaction, and try again.  */
-      SVN_ERR (abort_trail (trail, fs));
+      SVN_ERR (abort_trail (trail));
     }
 }
 

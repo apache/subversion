@@ -409,11 +409,7 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
  * the conflict in @a txn, with the same lifetime as @a txn;
  * otherwise, set @a *conflict_p to null.
  *
- * If the commit succeeds, it frees @a txn, and any temporary resources
- * it holds.  Any root objects (see below) referring to the root
- * directory of @a txn become invalid; performing any operation on them
- * other than closing them will produce an @c SVN_ERR_FS_DEAD_TRANSACTION
- * error.
+ * If the commit succeeds, @a txn is invalid.
  *
  * If the commit fails, @a txn is still valid; you can make more
  * operations to resolve the conflict, or call @c svn_fs_abort_txn to
@@ -431,17 +427,25 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
                                 apr_pool_t *pool);
 
 
-/** Abort the transaction @a txn.  Any changes made in @a txn are discarded,
- * and the filesystem is left unchanged.
+/** Abort the transaction @a txn.  Any changes made in @a txn are
+ * discarded, and the filesystem is left unchanged.  Use @a pool for
+ * any necessary allocations.
  *
- * If the abort succeeds, it frees @a txn, and any temporary resources
- * it holds.  Any root objects referring to @a txn's root directory
- * become invalid; performing any operation on them other than closing
- * them will produce an @c SVN_ERR_FS_DEAD_TRANSACTION error.
+ * NOTE: 
  *
  * Use @a pool for any necessary allocations.
  */
 svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
+                               apr_pool_t *pool);
+
+
+/** Cleanup the dead transaction in @a fs whose ID is @a txn_id.  Use
+ * @a pool for all allocations.  If the transaction is not yet dead,
+ * the error @c SVN_ERR_FS_TRANSACTION_NOT_DEAD is returned.  (The
+ * caller probably forgot to abort the transcation.) 
+ */
+svn_error_t *svn_fs_purge_txn (svn_fs_t *fs,
+                               const char *txn_id,
                                apr_pool_t *pool);
 
 

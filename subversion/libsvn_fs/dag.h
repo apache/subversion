@@ -317,10 +317,28 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  trail_t *trail);
 
 
+/* Delete the node revision assigned to node ID from FS's `nodes'
+   table, as part of TRAIL.  Also delete any mutable representations
+   and strings associated with that node revision.  ID may refer to a
+   file or directory, which must be mutable.  TXN_ID is the Subversion
+   transaction under which this occurs.
+
+   NOTE: If ID represents a directory, and that directory has mutable
+   children, you risk orphaning those children by leaving them
+   danging, disconnected from all DAG trees.  It is assumed that
+   callers of this interface know what in the world they are doing.  */
+svn_error_t *svn_fs__dag_remove_node (svn_fs_t *fs,
+                                      const svn_fs_id_t *id,
+                                      const char *txn_id,
+                                      trail_t *trail);
+
+
 /* Delete all mutable node revisions reachable from node ID, including
-   ID itself, from FS's `nodes' table, as part of TRAIL.  ID may refer
-   to a file or directory, which may be mutable or immutable.  TXN_ID
-   is the Subversion transaction under which this occurs.  */
+   ID itself, from FS's `nodes' table, as part of TRAIL.  Also delete
+   any mutable representations and strings associated with that node
+   revision.  ID may refer to a file or directory, which may be
+   mutable or immutable.  TXN_ID is the Subversion transaction under
+   which this occurs.  */
 svn_error_t *svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
                                             const svn_fs_id_t *id,
                                             const char *txn_id,
@@ -441,18 +459,6 @@ svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
                                const char *from_path,
                                const char *txn_id, 
                                trail_t *trail);
-
-
-/* If NODE was copied from some other node, set *REV_P and *PATH_P to
-   the revision and path of the other node, as part of TRAIL.
-   Allocate *PATH_P in TRAIL->pool.
-
-   Else if NODE is not a copy, set *REV_P to SVN_INVALID_REVNUM and
-   *PATH_P to null.  */
-svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
-                                      const char **path_p,
-                                      dag_node_t *node,
-                                      trail_t *trail);
 
 
 
