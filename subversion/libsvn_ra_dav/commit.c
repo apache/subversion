@@ -591,7 +591,8 @@ really a big deal I guess.
 */
 static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   const resource_t *rsrc,
-                                  resource_baton_t *rb)
+                                  resource_baton_t *rb,
+                                  apr_pool_t *pool)
 {
   ne_request *req;
   int code;
@@ -620,13 +621,13 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 
       ne_buffer_zappend(body, "<D:set><D:prop>");
 
-      for (hi = apr_hash_first (ras->pool, rb->prop_changes);
-           hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first(pool, rb->prop_changes); 
+           hi; hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
           apr_hash_this (hi, &key, NULL, &val);
-          do_setprop(body, key, val, ras->pool);
+          do_setprop(body, key, val, pool);
         }
 
       ne_buffer_zappend(body, "</D:prop></D:set>");
@@ -663,7 +664,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                      url,
                                      207 /* Multistatus */,
                                      0 /* nothing else allowed */,
-                                     ras->pool);
+                                     pool);
 
   ne_buffer_destroy(body);
 
@@ -897,7 +898,7 @@ static svn_error_t * commit_close_dir(void *dir_baton,
 
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
-  SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir) );
+  SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir, pool) );
 
   return SVN_NO_ERROR;
 }
@@ -1203,7 +1204,7 @@ static svn_error_t * commit_close_file(void *file_baton,
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
-  SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file) );
+  SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file, pool) );
 
   return SVN_NO_ERROR;
 }
