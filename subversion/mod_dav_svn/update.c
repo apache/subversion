@@ -112,7 +112,6 @@ struct authz_read_baton
 };
 
 
-#if 0   /* #if'd out only to avoid and 'unused function' warning for now. */
 /* This implements 'svn_repos_authz_read_func_t'. */
 static svn_error_t *authz_read(svn_boolean_t *allowed,
                                svn_fs_root_t *root,
@@ -123,8 +122,8 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
   struct authz_read_baton *arb = baton;
   request_rec *subreq = NULL;
   const char *uri;
-  svn_revnum_t rev;
-  const char *revpath;
+  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  const char *revpath = NULL;
 
   /* Our ultimate goal here is to create a Version Resource (VR) url,
      which is a url that represents a path within a revision.  We then
@@ -138,7 +137,7 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
   if (svn_fs_is_txn_root(root))
     {
       /* This means svn_repos_dir_delta is comparing two txn trees,
-         rather than a txn and revision.  It must be updating a
+         rather than a txn and revision.  It's probably updating a
          working copy that contains 'disjoint urls'.  
 
          Because the 2nd transaction is likely to have all sorts of
@@ -146,22 +145,51 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
          original (rev,path) of each txn path.  That's what needs
          authorization.  */
 
-      SVN_ERR (svn_fs_copied_from (&rev, &revpath,
-                                   root, path, pool));
-      if ((! SVN_IS_VALID_REVNUM(rev))
-          || (! revpath))
+      svn_stringbuf_t *path_s = svn_stringbuf_create(path, pool);
+      const char *lopped_path = "";
+      
+      /* The path might be copied implicitly, because it's down in a
+         copied tree.  So we start at path and walk up its parents
+         asking if anyone was copied, and if so where from.  */
+      while (! (svn_path_is_empty(path_s->data)
+                || ((path_s->len == 1) && (path_s->data[0] == '/'))))
         {
-          rev = svn_fs_revision_root_revision(root);
-          revpath = path;          
-        }       
+          SVN_ERR (svn_fs_copied_from(&rev, &revpath, root,
+                                      path_s->data, pool));
+
+          if (SVN_IS_VALID_REVNUM(rev) && revpath)
+            {
+              revpath = svn_path_join(revpath, lopped_path, pool);
+              break;
+            }
+          
+          /* Lop off the basename and try again. */
+          lopped_path = svn_path_join(svn_path_basename
+                                      (path_s->data, pool), lopped_path, pool);
+          svn_path_remove_component(path_s);
+        }
+
+      /* If no copy produced this path, its path in the original
+         revision is the same as its path in this txn. */
+      if ((rev == SVN_INVALID_REVNUM) && (revpath == NULL))
+        {
+          const char *txn_name;
+          svn_fs_txn_t *txn;
+
+          txn_name = svn_fs_txn_root_name(root, pool);
+          SVN_ERR( svn_fs_open_txn (&txn, svn_fs_root_fs(root),
+                                    txn_name, pool) );
+          rev = svn_fs_txn_base_revision(txn);
+          revpath = path;
+        }
     }
-  else
+  else  /* revision root */
     {
       rev = svn_fs_revision_root_revision(root);
       revpath = path;
     }
 
-  /* Now we have a (rev, path) pair to authorize. */
+  /* We have a (rev, path) pair to check authorization on. */
 
   /* Build a Version Resource uri representing (rev, path). */
   uri = dav_svn_build_uri(arb->repos, DAV_SVN_BUILD_URI_VERSION,
@@ -181,7 +209,6 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
 
   return SVN_NO_ERROR;
 }
-#endif /* 0 */
 
 
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
@@ -1209,8 +1236,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
-                                     NULL /* authz_read */,
-                                     NULL /* &arb */,
+                                     authz_read,
+                                     &arb,
                                      resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1352,8 +1379,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */
                                      editor, &uc,
-                                     NULL /* authz_read */,
-                                     NULL /* &arb */,
+                                     authz_read,
+                                     &arb,
                                      FALSE, /* no text deltas */
                                      recurse,
                                      TRUE, /* send entryprops */
