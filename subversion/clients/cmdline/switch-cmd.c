@@ -46,6 +46,8 @@ svn_cl__switch (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
+  svn_stringbuf_t *parent_dir, *base_tgt;
+
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
@@ -86,11 +88,12 @@ svn_cl__switch (apr_getopt_t *os,
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* We want the switch to print the same letters as a regular update. */
+  SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &base_tgt, pool));
   SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
                                             &trace_edit_baton,
-                                            target, pool));
+                                            parent_dir, pool));
 
-  /* Do the update! */
+  /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch (NULL, NULL, 
                               trace_editor, trace_edit_baton,
                               auth_baton,

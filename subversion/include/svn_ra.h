@@ -407,7 +407,12 @@ typedef struct svn_ra_plugin_t
 
      The client initially provides an UPDATE_EDITOR/BATON to the RA
      layer; this editor contains knowledge of where the change will
-     begin in the working copy (when open_root() is called).
+     begin in the working copy (when open_root() is called). 
+
+     If the caller was forced to do an anchor/target split when
+     anchoring the UPDATE_EDITOR, then the ANCHOR_TARGET_SPLIT flag
+     must be set, so that the RA layer can similarly any other editors
+     that are based on SWITCH_URL.
 
      In return, the client receives a REPORTER/REPORT_BATON. The
      client then describes its working-copy revision numbers by making
@@ -430,6 +435,7 @@ typedef struct svn_ra_plugin_t
                              svn_stringbuf_t *update_target,
                              svn_boolean_t recurse,
                              svn_stringbuf_t *switch_url,
+                             svn_boolean_t anchor_target_split,
                              const svn_delta_edit_fns_t *update_editor,
                              void *update_baton);
 
