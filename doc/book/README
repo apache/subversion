@@ -48,9 +48,9 @@ II. COMPILING THE DOCS
    Download the latest version of docbook-xsl, unpack it, then
    rename the unpacked directory to tools/xsl, something like this:
 
-      $ cd subversion/doc/book/tools
+      $ cd doc/book/tools
       $ tar zxvf docbook-xsl-X.YY.Z.tar.gz
-      $ mv docbook-xsl-Z.YY.Z xsl
+      $ mv docbook-xsl-X.YY.Z xsl
 
    The default build process expects to the stylesheets to be in
    tools/xsl/.  If you already have them installed elsewhere on your
@@ -101,13 +101,14 @@ II. COMPILING THE DOCS
      installed FOP some other way, that's fine, then you can ignore
      the following recipe:
 
-        1. Download the latest from http://xml.apache.org/dist/fop/,
-           for example, fop-0.20.4-bin.tar.gz.  Just get a binary
-           distribution, there's no need for the Java source.
+        1. Download the latest from 
+           http://www.apache.org/dyn/closer.cgi/xml/fop, for example,
+           fop-0.20.4-bin.tar.gz.  Just get a binary distribution,
+           there's no need for the Java source.
 
         2. Unpack it into tools/fop/
 
-           $ cd subversion/doc/book/tools
+           $ cd doc/book/tools
            $ tar zxvf fop-0.20.4-bin.tar.gz
            $ mv fop-0.20.4 fop
 
@@ -136,7 +137,7 @@ II. COMPILING THE DOCS
      http://java.sun.com/products/jimi/, then cp the jar file into the
      same place as the FOP jar files:
 
-        $ cd subversion/doc/book/tools/
+        $ cd doc/book/tools/
         $ tar zxvf jimi1_0.tar.Z
         $ cp Jimi/examples/AppletDemo/JimiProClasses.jar fop/lib/
 
