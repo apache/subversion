@@ -27,6 +27,7 @@
 #include <apr_portable.h>
 #include <apr_xml.h>
 
+#include <ne_socket.h>
 #include <ne_basic.h>
 #include <ne_utils.h>
 #include <ne_basic.h>

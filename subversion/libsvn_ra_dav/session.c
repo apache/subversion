@@ -615,6 +615,7 @@ svn_ra_dav__open (void **session_baton,
 
           while ((file = apr_strtok(files, ";", &last)) != NULL)
             {
+              ne_ssl_certificate *ca_cert;
               files = NULL;
 #ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
 
@@ -627,7 +628,7 @@ svn_ra_dav__open (void **session_baton,
                 }
 #else
 
-              ne_ssl_certificate *ca_cert = ne_ssl_cert_read(file);
+              ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {
                   return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,

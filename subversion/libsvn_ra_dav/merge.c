@@ -23,6 +23,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include <ne_socket.h>
 #include <ne_xml.h>
 #include <ne_request.h>
 

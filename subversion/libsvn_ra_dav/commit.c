@@ -32,6 +32,7 @@
 #endif
 #include <assert.h>
 
+#include <ne_socket.h>
 #include <ne_request.h>
 #include <ne_props.h>
 #include <ne_basic.h>

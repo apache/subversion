@@ -20,6 +20,7 @@
 
 #include <apr_pools.h>
 
+#include <ne_socket.h>
 #include <ne_request.h>
 #include <ne_xml.h>
 
