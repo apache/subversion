@@ -101,7 +101,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
       else
         {
           /* If we have a single URL, then the session will be rooted at
-             it, so just send an empty stringbuf for the paths we are
+             it, so just send an empty string for the paths we are
              interested in. */
           (*((const char **)apr_array_push (condensed_targets))) = "";
         }

@@ -509,22 +509,12 @@ svn_ra_local__get_log (void *session_baton,
 
   for (i = 0; i < paths->nelts; i++)
     {
-      const char *abs_path;
-      const char *relative_path
-        = (((const char **)(paths)->elts)[i]);
+      const char *abs_path = "";
+      const char *relative_path = (((const char **)(paths)->elts)[i]);
 
-      /* ### Not sure if this counts as a workaround or not.  The
-         session baton uses the empty string to mean root, and not
-         sure that should change.  However, it would be better to use
-         a path library function to add this separator -- hardcoding
-         it is totally bogus.  See issue #559, though it may be only
-         tangentially related. */
-      if (relative_path[0] == '\0')
-        abs_path = "/";
-      else
-        abs_path = apr_pstrdup (sbaton->pool, sbaton->fs_path);
-
-      abs_path = svn_path_join (abs_path, relative_path, sbaton->pool);
+      /* Append the relative paths to the base FS path to get an
+         absolute repository path. */
+      abs_path = svn_path_join (sbaton->fs_path, relative_path, sbaton->pool);
       (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
