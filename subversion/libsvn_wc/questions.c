@@ -99,7 +99,15 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
    notice that we are *NOT* answering the question, "are the contents
    of F different than version V of F?"  While F may be at a different
    version number than its parent directory, but we're only looking
-   for local edits on F, not for consistent directory versions.  */
+   for local edits on F, not for consistent directory versions.  
+
+   TODO:  the logic of the routines on this page might change in the
+   future, as they bear some relation to the user interface.  For
+   example, if a file is removed -- without telling subversion about
+   it -- how should subversion react?  Should it copy the file back
+   out of text-base?  Should it ask whether one meant to officially
+   mark it for removal?
+*/
 
 
 
@@ -118,23 +126,23 @@ timestamps_equal_p (svn_boolean_t *equal_p,
 
   svn_path_split (filename, &dirpath, &entryname, svn_path_local_style, pool);
 
+  /* Get the timestamp from the entries file */
   err = svn_wc__entries_read (&entries, dirpath, pool);
   if (err)
     return err;
   entry = apr_hash_get (entries, entryname->data, entryname->len);
 
-  if (! entry->timestamp)
+  /* Get the timestamp from the working file */
+  err = svn_wc__file_affected_time (&wfile_time, filename, pool);
+
+  if ((! entry->timestamp) || err)
     {
-      /* This entry has no timestamp, so the only the safe thing to do
-         is return FALSE, i.e. "different" timestamps. */
+      /* TODO: If either timestamp is inaccessible, the test cannot
+         return an answer.  Assume that the timestamps are
+         different. */
       *equal_p = FALSE;
       return SVN_NO_ERROR;
     }
-
-  /* Get the timestamp from the working file */
-  err = svn_wc__file_affected_time (&wfile_time, filename, pool);
-  if (err)
-    return err;
 
   {
     /* Put the disk timestamp through a string conversion, so it's
@@ -154,13 +162,13 @@ timestamps_equal_p (svn_boolean_t *equal_p,
 
 
 
-/* Given FILENAME1 and FILENAME2, are their filesizes the same?
-   Return answer in EQUAL_P. */
+/* Given FILENAME1 and FILENAME2, are their filesizes DEFINITELY
+   different?  Return answer in DIFFERENT_P. */
 static svn_error_t *
-filesizes_equal_p (svn_boolean_t *equal_p,
-                   svn_string_t *filename1,
-                   svn_string_t *filename2,
-                   apr_pool_t *pool)
+filesizes_definitely_different_p (svn_boolean_t *different_p,
+                                  svn_string_t *filename1,
+                                  svn_string_t *filename2,
+                                  apr_pool_t *pool)
 {
   apr_finfo_t finfo1;
   apr_finfo_t finfo2;
@@ -169,21 +177,29 @@ filesizes_equal_p (svn_boolean_t *equal_p,
   /* Stat both files */
   status = apr_stat (&finfo1, filename1->data, pool);
   if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "filesizes_equal_p: apr_stat failed on `%s'", filename1->data);
+    {
+      /* If we got an error stat'ing a file, it could be because the
+         file was removed... or who knows.  Whatever the case, we
+         don't know if the filesizes are definitely different, so
+         assume that they're not. */
+      *different_p = FALSE;
+      return SVN_NO_ERROR;
+    }
 
   status = apr_stat (&finfo2, filename2->data, pool);
   if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "filesizes_equal_p: apr_stat failed on `%s'", filename2->data);
+    {
+      /* See previous comment. */
+      *different_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+
 
   /* Examine file sizes */
   if (finfo1.size == finfo2.size)
-    *equal_p = TRUE;
+    *different_p = FALSE;
   else
-    *equal_p = FALSE;
+    *different_p = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -278,42 +294,60 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
   svn_boolean_t identical_p;
   svn_error_t *err;
   svn_string_t *textbase_filename;
-  svn_boolean_t equal_filesizes, equal_timestamps;
+  svn_boolean_t different_filesizes, equal_timestamps;
                      
   /* Get the full path of the textbase version of filename */
   textbase_filename = svn_wc__text_base_path (filename, 0, pool);
 
-  /* Easy-answer attempt #1:  */
-  if (textbase_filename)
+  /* Simple case:  if there's no text-base version of the file, all we
+     can do is look at timestamps.  */
+  if (! textbase_filename)
     {
-      /* See if the the local and textbase file are the same size. */
-      err = filesizes_equal_p (&equal_filesizes,
-                               filename, textbase_filename,
-                               pool);
+      err = timestamps_equal_p (&equal_timestamps, filename, pool);
       if (err) return err;
 
-      if (! equal_filesizes) 
+      if (equal_timestamps)
+        *modified_p = FALSE;
+      else
+        *modified_p = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+  
+  /* Better case:  we have a text-base version of the file, so there
+     are at least three tests we can try in succession. */
+  else
+    {     
+      /* Easy-answer attempt #1:  */
+      
+      /* Check if the the local and textbase file have *definitely*
+         different filesizes. */
+      err = filesizes_definitely_different_p (&different_filesizes,
+                                              filename, textbase_filename,
+                                              pool);
+      if (err) return err;
+      
+      if (different_filesizes) 
         {
           *modified_p = TRUE;
           return SVN_NO_ERROR;
         }
-    }
+      
+      /* Easy-answer attempt #2:  */
+      
+      /* See if the local file's timestamp is the same as the one recorded
+         in the administrative directory.  */
+      err = timestamps_equal_p (&equal_timestamps, filename, pool);
+      if (err) return err;
+      
+      if (equal_timestamps)
+        {
+          *modified_p = FALSE;
+          return SVN_NO_ERROR;
+        }
+      
+      /* Last ditch attempt:  */
 
-  /* Easy-answer attempt #2:  */
-
-  /* See if the local file's timestamp is the same as the one recorded
-     in the administrative directory.  */
-  err = timestamps_equal_p (&equal_timestamps, filename, pool);
-  if (err) return err;
-
-  if (equal_timestamps)
-    {
-      *modified_p = FALSE;
-      return SVN_NO_ERROR;
-    }
-  
-  else 
-    {
       /* If we get here, then we know that the filesizes are the same,
          but the timestamps are different.  That's still not enough
          evidence to make a correct decision.  So we just give up and
@@ -327,7 +361,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
         *modified_p = FALSE;
       else
         *modified_p = TRUE;
-
+      
       return SVN_NO_ERROR;
     }
 }
