@@ -1187,13 +1187,9 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     svn_fs__prepend (svn_fs__str_atom (source, trail->pool), rep);
     svn_fs__prepend (header, rep);
 
-#if 0 /* Uncomment this when rep_read_range() and friends are ready. */
     /* Write out the new representation. */
     SVN_ERR (svn_fs__write_rep (fs, target, rep, trail));
     SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
-#else
-    SVN_ERR (svn_fs__string_delete (fs, new_target_baton.key, trail));
-#endif /* 0 */
   }
 
   return SVN_NO_ERROR;
