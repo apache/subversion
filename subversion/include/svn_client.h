@@ -124,6 +124,36 @@ svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
 
 
 /** Set @a *provider and @ *provider_baton to an authentication
+ *  provider of type @c svn_auth_cred_simple_t that gets/sets
+ *  information from the user's ~/.subversion configuration directory. 
+ *  
+ *  If a default username or password is available, this provider will
+ *  honor them as well, and return them when @c
+ *  svn_auth_first_credentials is called.  (see @c
+ *  SVN_AUTH_PARAM_DEFAULT_USERNAME and @c
+ *  SVN_AUTH_PARAM_DEFAULT_PASSWORD).
+ */
+void 
+svn_client_get_simple_provider (const svn_auth_provider_t **provider,
+                                void **provider_baton,
+                                apr_pool_t *pool);
+
+
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider of type @c svn_auth_cred_username_t that gets/sets
+ *  information from a user's ~/.subversion configuration directory.
+ *
+ *  If a default username is available, this provider will honor it,
+ *  and return it when @c svn_auth_first_credentials is called.  (see
+ *  @c SVN_AUTH_PARAM_DEFAULT_USERNAME).
+ */
+void 
+svn_client_get_username_provider (const svn_auth_provider_t **provider,
+                                  void **provider_baton,
+                                  apr_pool_t *pool);
+
+
+/** Set @a *provider and @ *provider_baton to an authentication
  *  provider for type @c svn_auth_cred_server_ssl_t. This provider retrieves
  *  its credentials from the configuration mechanism. The returned credential
  *  is used to override SSL security on an error.
