@@ -103,13 +103,11 @@ AC_SUBST(SVN_SUBDIRS)
 dnl Configure APR --------------------------
 
 dnl verify apr version and set apr flags
-changequote(<<, >>)
 dnl These regular expressions should not contain "\(" and "\)".
-APR_VER_REGEX="0\.9\.[5-9]"
+APR_VER_REGEX=["0\.9\.[5-9]"]
 APR_VER_REGEX_TOO="1\."
-APU_VER_REGEX="0\.9\.[5-9]"
+APU_VER_REGEX=["0\.9\.[5-9]"]
 APU_VER_REGEX_TOO="1\."
-changequote([, ])
 
 SVN_LIB_APR($APR_VER_REGEX, $APR_VER_REGEX_TOO)
 SVN_LIB_APRUTIL($APU_VER_REGEX, $APU_VER_REGEX_TOO)
@@ -528,14 +526,10 @@ if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
   dnl ### actually, debugging should be fine with the default -O2
-  changequote(,)
-  CFLAGS="`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"
-  changequote([,])
+  CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
 else
   if test "$enable_debugging" = "no" ; then
-    changequote(,)
-    CFLAGS="`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"
-    changequote([,])
+    CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
   fi
 fi
 
