@@ -354,8 +354,8 @@ def default_singleton_handler_a(a, baton):
 
 def default_singleton_handler_b(b, baton):
   "Printing SVNTreeNode B's name, then raise main.SVNTreeUnequal."
-  print "Got singleton from expected tree:", a.name
-  a.pprint()
+  print "Got singleton from expected tree:", b.name
+  b.pprint()
   raise main.SVNTreeUnequal
 
 
