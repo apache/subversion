@@ -28,6 +28,10 @@ Step 1:  Build & install the proper version of SWIG (which is
            - /usr/local/lib/libswig*.so
            - /usr/local/bin/swig
 
+      In particular, you want to make sure that libswig_py.so was
+      built and installed, since the python bindings are the most-used
+      ones at the moment.
+
 
 Step 2:  Build and Install Subversion.
 
@@ -35,6 +39,10 @@ Step 2:  Build and Install Subversion.
 
   Make sure that Subversion's ./configure script sees your installed SWIG!
   It tries to detect SWIG near the very end of its output.
+
+  If Subversion's ./configure finds a SWIG that it's happy with, then
+  it will build a special glue library to link svn to the swig-python
+  bindings:  libsvn_swig_py.so (as well as any other languages).
 
 
 SPECIFIC LANGUAGE BINDINGS
@@ -71,3 +79,14 @@ SPECIFIC LANGUAGE BINDINGS
 
 
 *  Perl?
+
+
+TROUBLESHOOTING FAQ
+
+* "When I 'make swig-py-ext', I see this error:
+       ld: can't locate file for: -lsvn_swig_py-1"
+
+    This means that step 2 (above) failed.  Subversion's ./configure
+    script probably didn't find a suitable SWIG installation, and thus
+    never built/installed libsvn_swig_py.so.
+
