@@ -81,16 +81,26 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
        "svn_client_switch: %s is not under revision control", path);
 
+  if (! entry->url)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+       "svn_client_switch: entry '%s' has no URL", path);
+
   if (entry->kind == svn_node_file)
     {
       SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
       
       /* get the parent entry */
       SVN_ERR (svn_wc_entry (&session_entry, anchor, adm_access, FALSE, pool));
-      if (! entry)
+      if (! session_entry)
         return svn_error_createf
           (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-           "svn_client_switch: %s is not under revision control", path);
+           "svn_client_switch: %s is not under revision control", anchor);
+
+      if (! session_entry->url)
+        return svn_error_createf
+          (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+           "svn_client_switch: directory '%s' has no URL", anchor);
     }
   else if (entry->kind == svn_node_dir)
     {
@@ -105,10 +115,6 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       session_entry = entry;
     }
 
-  if (! session_entry->url)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_switch: entry '%s' has no URL", path);
   URL = apr_pstrdup (pool, session_entry->url);
 
   /* Get revnum set to something meaningful, so we can fetch the
