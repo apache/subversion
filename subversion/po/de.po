@@ -72,8 +72,8 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-03-15 16:44+0100\n"
-"Last-Translator: Lübbe Onken <l.onken@rac.de>\n"
+"PO-Revision-Date: 2005-03-15 16:51+0100\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -781,7 +781,6 @@ msgstr ""
 "  werden soweit erforderlich im Projektarchiv angelegt.\n"
 
 #: clients/cmdline/main.c:349
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [PATH...]\n"
@@ -789,10 +788,11 @@ msgid ""
 "  Print information about each PATH (default: '.')\n"
 "  PATH may be either a working-copy path or URL.\n"
 msgstr ""
-"Zeigt Informationen über eine Datei oder ein Verzeichnis an.\n"
+"Zeigt Informationen über lokales oder auf dem Server befindliches Objekt an.\n"
 "Aufruf: info [PFAD...]\n"
 "\n"
 "  Gib Informationen über jeden PFAD aus (Vorgabe: '.').\n"
+"  PFAD kann entweder einer Arbeitskopie oder eine URL sein.\n"
 
 #: clients/cmdline/main.c:357
 msgid ""
@@ -2028,11 +2028,11 @@ msgstr "Versuch, mit nicht leerem Abwicklungsstapel zu entsperren"
 
 #: include/svn_error_codes.h:296
 msgid "Attempted to lock an already-locked dir"
-msgstr "Versuch, ein bereits gesperrtes Verzeichnis zu sperren"
+msgstr "Versuch, ein bereits gesperrtes Verzeichnis erneut zu sperren"
 
 #: include/svn_error_codes.h:300
 msgid "Working copy not locked; this is probably a bug, please report"
-msgstr ""
+msgstr "Arbeitskopie nicht gesperrt. Dies ist wahrscheinlich ein Fehler. Bitte melden."
 
 #: include/svn_error_codes.h:305
 msgid "Invalid lock"
@@ -2243,9 +2243,8 @@ msgid "Unknown FS type"
 msgstr "Unkannter Dateisystemtyp"
 
 #: include/svn_error_codes.h:525
-#, fuzzy
 msgid "Unsupported FS format"
-msgstr "Nicht unterstütztes Format der Arbeitskopie"
+msgstr "Nicht unterstütztes Dateisystemformat"
 
 #: include/svn_error_codes.h:531
 msgid "The repository is locked, perhaps for db recovery"
@@ -3040,9 +3039,9 @@ msgid "(local)"
 msgstr "(lokal)"
 
 #: libsvn_client/export.c:241
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not under version control or doesn't exist"
-msgstr "'%s' ist nicht unter Versionskontrolle"
+msgstr "'%s' ist nicht unter Versionskontrolle oder existiert nicht"
 
 #: libsvn_client/export.c:271
 msgid "Destination directory exists, and will not be overwritten unless forced"
@@ -3265,11 +3264,11 @@ msgstr ""
 
 #: libsvn_fs_base/bdb/changes-table.c:88
 msgid "creating change"
-msgstr ""
+msgstr "Erzeuge Änderungen"
 
 #: libsvn_fs_base/bdb/changes-table.c:114
 msgid "deleting changes"
-msgstr ""
+msgstr "Lösche Änderungen"
 
 #: libsvn_fs_base/bdb/changes-table.c:146
 #: libsvn_fs_fs/fs_fs.c:1921
@@ -3289,28 +3288,27 @@ msgstr "Ungültige Reihenfolge bei Änderung: Nicht-hinzufügende Änderung auf 
 #: libsvn_fs_base/bdb/changes-table.c:257
 #: libsvn_fs_base/bdb/changes-table.c:381
 msgid "creating cursor for reading changes"
-msgstr ""
+msgstr "Erzeuge Cursor zum Lesen der Änderungen"
 
 #: libsvn_fs_base/bdb/changes-table.c:283
 #: libsvn_fs_base/bdb/changes-table.c:402
-#, fuzzy, c-format
+#, c-format
 msgid "Error reading changes for key '%s'"
-msgstr "Fehler beim Lesen der Datei '%s'"
+msgstr "Fehler beim Lesen der Änderungen für Schlüssel '%s'"
 
 #: libsvn_fs_base/bdb/changes-table.c:342
 #: libsvn_fs_base/bdb/changes-table.c:425
 msgid "fetching changes"
-msgstr ""
+msgstr "Hole Änderungen"
 
 #: libsvn_fs_base/bdb/changes-table.c:355
 #: libsvn_fs_base/bdb/changes-table.c:438
 msgid "closing changes cursor"
-msgstr ""
+msgstr "Schließe Änderungscursor"
 
 #: libsvn_fs_base/bdb/copies-table.c:87
-#, fuzzy
 msgid "storing copy record"
-msgstr "Arbeitskopie ist beschädigt"
+msgstr ""
 
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
@@ -3325,9 +3323,8 @@ msgid "deleting entry from 'copies' table"
 msgstr ""
 
 #: libsvn_fs_base/bdb/copies-table.c:197
-#, fuzzy
 msgid "reading copy"
-msgstr "%s\t(Arbeitskopie)"
+msgstr ""
 
 #: libsvn_fs_base/bdb/nodes-table.c:99
 msgid "allocating new node ID (getting 'next-key')"
@@ -3338,9 +3335,9 @@ msgid "bumping next node ID key"
 msgstr ""
 
 #: libsvn_fs_base/bdb/nodes-table.c:154
-#, fuzzy, c-format
+#, c-format
 msgid "Successor id '%s' (for '%s') already exists in filesystem '%s'"
-msgstr "Objekt existiert bereits im Dateisystem"
+msgstr ""
 
 #: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
@@ -3348,71 +3345,61 @@ msgstr ""
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/nodes-table.c:220
-#, fuzzy
 msgid "reading node revision"
-msgstr "Eintrag hat keine Revision"
+msgstr "Lese Knotenrevision"
 
 #: libsvn_fs_base/bdb/nodes-table.c:252
-#, fuzzy
 msgid "storing node revision"
-msgstr "Fehlende Revision"
+msgstr "Speichere Knotenrevision"
 
 #: libsvn_fs_base/bdb/reps-table.c:95
 #: libsvn_fs_base/bdb/reps-table.c:202
-#, fuzzy, c-format
+#, c-format
 msgid "No such representation '%s'"
-msgstr "Kein Eintrag: '%s'"
+msgstr "Kein solche Darstellung '%s'"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:98
-#, fuzzy
 msgid "reading representation"
-msgstr "Fehlerhafter Darstellungskopf."
+msgstr "Lese Darstellung"
 
 #: libsvn_fs_base/bdb/reps-table.c:126
-#, fuzzy
 msgid "storing representation"
-msgstr "Fehlerhafter Darstellungskopf."
+msgstr "Speichere Darstellung"
 
 #: libsvn_fs_base/bdb/reps-table.c:156
 msgid "allocating new representation (getting next-key)"
 msgstr ""
 
 #: libsvn_fs_base/bdb/reps-table.c:177
-#, fuzzy
 msgid "bumping next representation key"
-msgstr "Fehlerhafter Darstellungskopf."
+msgstr "Erzeuge nächsten Darstellungsschlüssel"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:205
-#, fuzzy
 msgid "deleting representation"
-msgstr "Fehlerhafte svndiff Daten in Darstellung"
+msgstr "Lösche Darstellung"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/rev-table.c:88
-#, fuzzy
 msgid "reading filesystem revision"
-msgstr "Ungültige Revisionsnummer des Dateisystems"
+msgstr ""
 
 #: libsvn_fs_base/bdb/strings-table.c:91
 msgid "creating cursor for reading a string"
 msgstr ""
 
 #: libsvn_fs_base/bdb/txn-table.c:94
-#, fuzzy
 msgid "storing transaction record"
-msgstr "Objekt ist keine Transaktionsbasis"
+msgstr ""
 
 #: libsvn_fs_base/bdb/uuids-table.c:112
-#, fuzzy
 msgid "get repository uuid"
-msgstr "Eine Aktion im Projektarchiv schlug fehl"
+msgstr "Hole UUID des Projektarchivs"
 
 #: libsvn_fs_base/bdb/uuids-table.c:140
-#, fuzzy
 msgid "set repository uuid"
-msgstr "Deaktiviertes Merkmal des Projektarchivs"
+msgstr "Setze UUID des Projektarchivs"
 
 #: libsvn_fs_base/dag.c:313
 #, c-format
@@ -4122,18 +4109,18 @@ msgid "Could not fetch the Version Resource URL (needed during an import or when
 msgstr ""
 
 #: libsvn_ra_dav/commit.c:433
-#, fuzzy, c-format
+#, c-format
 msgid "Could not create a CHECKOUT request (%s)"
-msgstr "Konnte keine PUT Anfrage (%s) erzeugen"
+msgstr "Konnte keine CHECKOUT Anfrage (%s) erzeugen"
 
 #: libsvn_ra_dav/commit.c:505
-#, fuzzy, c-format
+#, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
-msgstr "Log-Kommando für Verzeichnis '%s' ist falsch platziert"
+msgstr ""
 
 #: libsvn_ra_dav/commit.c:513
 msgid "The CHECKOUT response did not contain a 'Location:' header"
-msgstr ""
+msgstr "Die CHECKOUT Antwort enthielt keinen 'Location:' Kopf"
 
 #: libsvn_ra_dav/commit.c:1016
 msgid "Could not write svndiff to temp file"
@@ -4192,7 +4179,6 @@ msgid "Invalid server response to dated-rev request"
 msgstr "Ungültige Antwort des Servers auf datierte Revisionsanfrage"
 
 #: libsvn_ra_dav/fetch.c:1239
-#, fuzzy
 msgid "'get-locations' REPORT not implemented"
 msgstr "'get-locations' REPORT nicht implementiert"
 
@@ -4215,7 +4201,6 @@ msgid "REPORT response handling failed to complete the editor drive"
 msgstr "Die Abwicklung der REPORT-Antwort konnte den Editorlauf nicht vollenden."
 
 #: libsvn_ra_dav/file_revs.c:360
-#, fuzzy
 msgid "'get-file-revs' REPORT not implemented"
 msgstr "'get-file-revs' REPORT nicht implementiert"
 
@@ -4559,23 +4544,20 @@ msgid "Changed-path entry not a list"
 msgstr "Eintrag für geänderte Pfade ist keine Liste"
 
 #: libsvn_ra_svn/client.c:1164
-#, fuzzy
 msgid "'stat' not implemented"
-msgstr "'get-locations' nicht implementiert"
+msgstr "'stat' nicht implementiert"
 
 #: libsvn_ra_svn/client.c:1227
-#, fuzzy
 msgid "'get-locations' request not implemented"
-msgstr "'get-locations' nicht implementiert"
+msgstr "'get-locations' Anfrage nicht implementiert"
 
 #: libsvn_ra_svn/client.c:1240
 msgid "Location entry not a list"
 msgstr "Ortseintrag ist keine Liste"
 
 #: libsvn_ra_svn/client.c:1294
-#, fuzzy
 msgid "'get-file-revs' request not implemented"
-msgstr "'get-file-revs' nicht implementiert"
+msgstr "'get-file-revs' Anfrage nicht implementiert"
 
 #: libsvn_ra_svn/client.c:1308
 msgid "Revision entry not a list"
@@ -4645,7 +4627,7 @@ msgstr "Stringlänge größer als Maximum"
 
 #: libsvn_ra_svn/marshal.c:534
 msgid "Too many nested items"
-msgstr ""
+msgstr "Zu viele verschachtelte Objekte"
 
 #: libsvn_ra_svn/marshal.c:553
 msgid "Number is larger than maximum"
@@ -5012,9 +4994,9 @@ msgid "Repository creation failed"
 msgstr "Anlegen des Projektarchivs fehlgeschlagen"
 
 #: libsvn_repos/repos.c:1094
-#, fuzzy, c-format
+#, c-format
 msgid "Expected format '%d' of repository; found format '%d'"
-msgstr "Erwartete Version '%d' des Projekarchivs; Version '%d' gefunden"
+msgstr "Erwartete Format '%d' des Projekarchivs; Format '%d' gefunden"
 
 #: libsvn_repos/repos.c:1141
 msgid "Error opening db lockfile"
@@ -7040,9 +7022,9 @@ msgstr ""
 "Gibt die neueste Revisionsnummer aus.\n"
 
 #: svnlook/main.c:566
-#, fuzzy, c-format
+#, c-format
 msgid "Error creating dir '%s' (path exists)"
-msgstr "Fehler beim Lesen der Datei '%s'"
+msgstr "Fehler beim Erzeugen von '%s' (Pfad existiert)"
 
 #: svnlook/main.c:833
 #, c-format
