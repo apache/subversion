@@ -1267,7 +1267,6 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 {
   PyObject *receiver = baton;
   PyObject *result;
-  swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
   PyObject *chpaths;
   svn_error_t *err = SVN_NO_ERROR;
  
@@ -1278,6 +1277,7 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 
   if (changed_paths)
     {
+      swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
       chpaths = svn_swig_py_convert_hash (changed_paths, tinfo);
     }
   else

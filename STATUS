@@ -114,14 +114,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: breser, philip, maxb
 
-  * r13487
-    Fix Python bindings bug that manifested only with SWIG 1.3.24
-    and threaded APR. Anything using a log_receiver callback would fail.
-    Notes:
-      Wholly within bindings/, 2 +1s suffices.
-    Votes:
-      +1: maxb, rooneg
-
   * r12630
     Dataloss bug in svndumpfilter - copyfrom information lost for files
     copied-with-modifications.
