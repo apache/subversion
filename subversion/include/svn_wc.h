@@ -35,9 +35,6 @@ extern "C" {
  *            Clients.
  */
 
-#ifndef SVN_WC_H
-#define SVN_WC_H
-
 #include <apr_tables.h>
 #include "svn_types.h"
 #include "svn_string.h"
