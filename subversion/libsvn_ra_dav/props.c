@@ -635,7 +635,6 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   svn_error_t *err = SVN_NO_ERROR;
   apr_size_t len;
   svn_stringbuf_t *path_s;
-  const char *parsed_path;
   ne_uri parsed_url;
   const char *lopped_path = "";
 
@@ -680,7 +679,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
     {
       err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                "No part of path '%s' was found in "
-                               "repository HEAD.", parsed_path);
+                               "repository HEAD.", parsed_url.path);
       goto error;
     }
 
