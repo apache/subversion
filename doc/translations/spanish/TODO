@@ -1,7 +1,3 @@
-Mejorar el script que envía un informe de estado con un porcentaje
-estimado para completar la traducción. Automatizar envío del mismo
-una vez se verifique que funciona relativamente bien.
-
 Averiguar qué versión estamos traduciendo realmente (1.0 o 1.1) y
 modificar la página web. Aparentemente estamos con la 1.1. Revisar
 si esto representa algún problema comprobando cuántos cambios se
@@ -10,6 +6,8 @@ atrás hasta la 1.0 inglesa.
 
 Integrar el fichero TRABAJO como capítulo del libro, posiblemente
 como un apéndice.
+
+Validar el HTML generado del libro.
 
 Investigar la traducción de imágenes del
 libro. En principio observar respuestas de

@@ -23,9 +23,6 @@ This is a summary of the current state of the locking implementation.
 * Decide what should happen when unlocking in commit operation if an error
   happens.
 
-* mod_authz_svn needs to learn to deal with LOCK/UNLOCK requests
-
-
 
 LIST DISCUSSIONS TO HAVE:
 
@@ -42,9 +39,8 @@ LIST DISCUSSIONS TO HAVE:
 
 DAV bugs:
 
- -- BUG:  http lock comments have tag junk in them
-          SOLUTION: mod_dav_svn looks for attributes in <D:author>.
-                    then stores either just CDATA or whole value.
+ -- Make ra_dav error on non-xml-safe lock comments,
+    and make mod_dav_svn fuzzily-escape lock-comments coming out of repos.
 
  -- BUG:  header length limits in MERGE request.
           SOLUTION:

@@ -37,3 +37,8 @@ isa_ok ($ra->rev_proplist (1), 'HASH');
 my $reporter = $ra->do_update (1, '', 1, SVN::Delta::Editor->new);
 isa_ok ($reporter, 'SVN::Ra::Reporter');
 $reporter->abort_report;
+
+END {
+diag "cleanup";
+rmtree($repospath);
+}

@@ -33,9 +33,8 @@ Introduction
 
   Inno Setup
   ----------
-  Inno Setup QuickStart Pack 4.2.5. This package gives you Inno Setup (IS)
-  4.2.5 and "Inno Setup Pre Processor" (ISPP) which works with your downloaded
-  version of IS:
+  Inno Setup QuickStart Pack 5.0.7. This package gives you Inno Setup (IS)
+  and a sutable version of "Inno Setup Pre Processor" (ISPP):
     http://www.jrsoftware.org/isdl.php
 
   UninsHs
@@ -56,10 +55,10 @@ Introduction
   Point your browser to:
     http://www.zlatkovic.com/pub/libxml/
   and grab the following packages:
-    - libxml2-2.6.4
-    - libxslt-1.1.2
+    - libxml2-2.6.17
+    - libxslt-1.1.12+
     - iconv-1.9.1
-    - zlib-1.1.4
+    - zlib-1.2.1
 
   docbook-xsl
   -----------
