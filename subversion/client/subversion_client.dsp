@@ -134,7 +134,11 @@ SOURCE=.\status.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\trace.c
+SOURCE=".\trace-commit.c"
+# End Source File
+# Begin Source File
+
+SOURCE=".\trace-update.c"
 # End Source File
 # Begin Source File
 
