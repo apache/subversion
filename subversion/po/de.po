@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-04-06 09:14+0100\n"
+"PO-Revision-Date: 2005-04-06 10:30+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -296,20 +296,20 @@ msgstr "Konflikt Eigenschaftsdatei: %s\n"
 #: clients/cmdline/info-cmd.c:184
 #, c-format
 msgid "Lock Token: %s\n"
-msgstr ""
+msgstr "Sperrmarke: %s\n"
 
 #: clients/cmdline/info-cmd.c:188
 #, c-format
 msgid "Lock Owner: %s\n"
-msgstr ""
+msgstr "Sperreigner: %s\n"
 
 #: clients/cmdline/info-cmd.c:193
 msgid "Lock Created"
-msgstr ""
+msgstr "Sperre erzeugt"
 
 #: clients/cmdline/info-cmd.c:197
 msgid "Lock Expires"
-msgstr ""
+msgstr "Sperre läuft ab"
 
 #: clients/cmdline/info-cmd.c:206
 #, c-format
@@ -317,6 +317,8 @@ msgid ""
 "Lock Comment (%i lines):\n"
 "%s\n"
 msgstr ""
+"Sperrkommentar (%i Zeilen):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:207
 #, c-format
@@ -324,6 +326,8 @@ msgid ""
 "Lock Comment (%i line):\n"
 "%s\n"
 msgstr ""
+"Sperrkommentar (%i Zeile):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:280
 #, c-format
@@ -583,7 +587,7 @@ msgstr "Maximale Anzahl Logeinträge"
 
 #: clients/cmdline/main.c:151
 msgid "don't unlock the targets"
-msgstr ""
+msgstr "Ziele nicht freigeben"
 
 #: clients/cmdline/main.c:182
 msgid ""
@@ -900,6 +904,11 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
+"Sperre Pfade in Arbeitskopie oder URLs im Projektarchiv, so dass\n"
+"kein anderer Anwender Änderungen an ihnen übertragen kann.\n"
+"Aufruf: lock PFAD...\n"
+"\n"
+"  Benutze --force, um eine bereits vorhandene Sperre zu stehlen.\n"
 
 #: clients/cmdline/main.c:394
 msgid ""
@@ -1243,7 +1252,6 @@ msgstr ""
 "  herstellen.\n"
 
 #: clients/cmdline/main.c:601
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1386,14 +1394,14 @@ msgstr ""
 "     M           965    wc/bar.c\n"
 "           *     965    wc/foo.c\n"
 "    A  +         965    wc/qax.c\n"
-"    Head revision:   981\n"
+"    Status gegenüber Revision:   981\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
 "     M           965       938 kfogel       wc/bar.c\n"
 "           *     965       922 sussman      wc/foo.c\n"
 "    A  +         965       687 joe          wc/qax.c\n"
 "                 965       687 joe          wc/zig.c\n"
-"    Head revision:   981\n"
+"    Status gegenüber Revision:   981\n"
 
 #: clients/cmdline/main.c:678
 msgid ""
@@ -1432,6 +1440,10 @@ msgid ""
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
+"Hebt Sperren von Pfaden in Arbeitskopie oder URLs auf\n"
+"Aufruf: unlock PFAD...\n"
+"\n"
+"  Benutze --force, um die Freigabe zu erzwingen.\n"
 
 #: clients/cmdline/main.c:707
 msgid ""
@@ -1712,12 +1724,12 @@ msgstr "Übertrage Daten "
 #: clients/cmdline/notify.c:351
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
-msgstr ""
+msgstr "'%s' gesperrt durch '%s'.\n"
 
 #: clients/cmdline/notify.c:357
 #, c-format
 msgid "'%s' unlocked.\n"
-msgstr ""
+msgstr "'%s' freigegeben.\n"
 
 #: clients/cmdline/prompt.c:94
 msgid "Can't open stdin"
@@ -2057,7 +2069,7 @@ msgstr "XML Daten nicht wohlgeformt"
 
 #: include/svn_error_codes.h:196
 msgid "Data cannot be safely XML-escaped"
-msgstr ""
+msgstr "Daten können nicht sicher in XML eingebettet werden"
 
 #: include/svn_error_codes.h:202
 msgid "Inconsistent line ending style"
@@ -2361,7 +2373,7 @@ msgstr "Kein Benutzer mit dem Dateisystem verbunden"
 
 #: include/svn_error_codes.h:529
 msgid "Path is locked"
-msgstr ""
+msgstr "Pfad ist gesperrt"
 
 #: include/svn_error_codes.h:534
 #: include/svn_error_codes.h:661
@@ -2370,7 +2382,7 @@ msgstr "Pfad ist nicht gesperrt"
 
 #: include/svn_error_codes.h:539
 msgid "Lock token is incorrect"
-msgstr ""
+msgstr "Sperrmarke ist fehlerhaft"
 
 #: include/svn_error_codes.h:544
 msgid "No lock token provided"
@@ -2378,7 +2390,7 @@ msgstr "Keine Sperrmarke angegeben"
 
 #: include/svn_error_codes.h:549
 msgid "Username does not match lock owner"
-msgstr ""
+msgstr "Benutzername und Sperreigner stimmen nicht überein"
 
 #: include/svn_error_codes.h:554
 msgid "Filesystem has no such lock"
@@ -2386,7 +2398,7 @@ msgstr "Dateisystem hat keine solche Sperre"
 
 #: include/svn_error_codes.h:559
 msgid "Lock has expired"
-msgstr ""
+msgstr "Sperre ist abgelaufen"
 
 #: include/svn_error_codes.h:564
 msgid "Item is out of date"
@@ -2497,9 +2509,8 @@ msgid "HTTP Path Not Found"
 msgstr "HTTP Pfad nicht gefunden"
 
 #: include/svn_error_codes.h:700
-#, fuzzy
 msgid "Failed to execute WebDAV PROPPATCH"
-msgstr "Konnte WebDAV Eigenschaftsänderung nicht ausführen"
+msgstr "Konnte WebDAV PROPPATCH nicht ausführen"
 
 #: include/svn_error_codes.h:705
 #: include/svn_error_codes.h:737
@@ -2657,7 +2668,7 @@ msgstr "Zwei versionierte Resourcen sind nicht verwandt"
 
 #: include/svn_error_codes.h:888
 msgid "Path has no lock token"
-msgstr ""
+msgstr "Pfad hat keine Sperrmarke"
 
 #: include/svn_error_codes.h:894
 msgid "A problem occurred; see later errors for details"
@@ -3266,7 +3277,7 @@ msgstr "'%s' ist nicht gesperrt"
 #: libsvn_fs/fs-loader.c:815
 #: libsvn_ra/ra_loader.c:506
 msgid "Lock comment has illegal characters"
-msgstr ""
+msgstr "Sperrkommentar enthält illegale Zeichen"
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
@@ -3503,7 +3514,7 @@ msgstr "Schließe Änderungscursor"
 
 #: libsvn_fs_base/bdb/copies-table.c:87
 msgid "storing copy record"
-msgstr ""
+msgstr "Speichere Kopiedatensatz"
 
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
@@ -3519,7 +3530,7 @@ msgstr ""
 
 #: libsvn_fs_base/bdb/copies-table.c:197
 msgid "reading copy"
-msgstr ""
+msgstr "lese Kopie"
 
 #: libsvn_fs_base/bdb/nodes-table.c:99
 msgid "allocating new node ID (getting 'next-key')"
@@ -3536,7 +3547,7 @@ msgstr ""
 
 #: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
-msgstr ""
+msgstr "Lösche Eintrag aus 'nodes' Tabelle"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/nodes-table.c:220
@@ -3578,7 +3589,7 @@ msgstr "Lösche Darstellung"
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/rev-table.c:88
 msgid "reading filesystem revision"
-msgstr ""
+msgstr "Lese Dateisystemrevision"
 
 #: libsvn_fs_base/bdb/strings-table.c:91
 msgid "creating cursor for reading a string"
@@ -3586,7 +3597,7 @@ msgstr ""
 
 #: libsvn_fs_base/bdb/txn-table.c:94
 msgid "storing transaction record"
-msgstr ""
+msgstr "Speichere Transaktionsdatensatz"
 
 #: libsvn_fs_base/bdb/uuids-table.c:112
 msgid "get repository uuid"
@@ -3672,7 +3683,7 @@ msgstr ""
 #: libsvn_fs_base/dag.c:987
 #, c-format
 msgid "Delete failed: directory has no entry '%s'"
-msgstr ""
+msgstr "Löschen fehlgeschlagen: Verzeichnis hat keinen Eintrag '%s'"
 
 #: libsvn_fs_base/dag.c:1036
 msgid "Attempted removal of immutable node"
@@ -3865,12 +3876,12 @@ msgstr "Pfad '%s' ist durch Benutzer '%s' im Dateisystem '%s' gesperrt"
 #: libsvn_fs_base/fs.c:79
 #, c-format
 msgid "Bad database version: got %d.%d.%d, should be at least %d.%d.%d"
-msgstr ""
+msgstr "Falsche Datenbankversion: %d.%d.%d, sollte mindestens %d.%d.%d sein"
 
 #: libsvn_fs_base/fs.c:90
 #, c-format
 msgid "Bad database version: compiled with %d.%d.%d, running against %d.%d.%d"
-msgstr ""
+msgstr "Falsche Datenbankversion: Übersetzt mit %d.%d.%d, läuft mit %d.%d.%d"
 
 #: libsvn_fs_base/fs.c:108
 #: libsvn_fs_fs/fs.c:50
@@ -3881,7 +3892,7 @@ msgstr "Dateisystemobjekt ist bereits geöffnet"
 #: libsvn_fs_fs/fs_fs.c:250
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
-msgstr ""
+msgstr "Erwartetes DS Format '%d'; gefunden '%d'"
 
 #: libsvn_fs_base/fs.c:1054
 #, c-format
@@ -3935,7 +3946,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1335
 msgid "Module for working with a Berkeley DB repository."
-msgstr ""
+msgstr "Modul zum Zugriff auf ein Berkeley DB (BDB) Projektarchiv."
 
 #: libsvn_fs_base/fs.c:1369
 #, c-format
@@ -3946,19 +3957,19 @@ msgstr "Nicht unterstützte Dateisystemlader Version (%d) für bdb"
 #: libsvn_fs_fs/lock.c:647
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
-msgstr ""
+msgstr "Kann Sperre für Pfad '%s' nicht prüfen; keine Benutzername verfügbar"
 
 #: libsvn_fs_base/lock.c:455
 #: libsvn_fs_fs/lock.c:653
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
-msgstr ""
+msgstr "Benutzer %s besitzt die Sperre für Pfad '%s' nicht (derzeit gesperrt durch %s)"
 
 #: libsvn_fs_base/lock.c:462
 #: libsvn_fs_fs/lock.c:660
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
-msgstr ""
+msgstr "Kann Sperre für Pfad '%s' nicht prüfen; keine entsprechende Sperrmarke verfügbar"
 
 #: libsvn_fs_base/reps-strings.c:103
 msgid "Representation is not of type 'delta'"
@@ -4018,7 +4029,7 @@ msgstr ""
 #: libsvn_fs_base/reps-strings.c:1459
 #, c-format
 msgid "Failed to calculate MD5 digest for '%s'"
-msgstr ""
+msgstr "Berechnen des MD5 Extrakts für '%s' fehlgeschlagen"
 
 #: libsvn_fs_base/revs-txns.c:65
 #: libsvn_fs_fs/revs-txns.c:58
@@ -4063,7 +4074,7 @@ msgstr "Datei existiert bereits: Dateisystem '%s', Revision %ld, Pfad '%s'"
 #: libsvn_fs_base/tree.c:428
 #: libsvn_fs_fs/tree.c:346
 msgid "Root object must be a transaction root"
-msgstr ""
+msgstr "Basisobjekt muss eine Transaktionsbasis sein"
 
 #: libsvn_fs_base/tree.c:837
 #: libsvn_fs_fs/tree.c:755
@@ -4186,7 +4197,7 @@ msgstr "Korrupte Sperrdatei für Pfad '%s' in Dateisystem '%s'"
 
 #: libsvn_fs_fs/fs.c:272
 msgid "Module for working with a plain file (FSFS) repository."
-msgstr ""
+msgstr "Modul zum Zugriff auf ein dateibasiertes (FSFS) Projektarchiv."
 
 #: libsvn_fs_fs/fs.c:306
 #, c-format
@@ -4377,14 +4388,14 @@ msgstr "Kann 'lock/entries' Hashdatei '%s' nicht zerlegen"
 
 #: libsvn_fs_fs/lock.c:743
 #: libsvn_fs_fs/lock.c:764
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' doesn't exist in HEAD revision"
-msgstr "Pfad '%s' existiert nicht in Revision %ld"
+msgstr "Pfad '%s' existiert nicht in HEAD Revision"
 
 #: libsvn_fs_fs/lock.c:769
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
-msgstr ""
+msgstr "Sperren fehlgeschlagen: eine neuere Version von '%s' existiert"
 
 #: libsvn_fs_fs/revs-txns.c:214
 msgid "Transaction cleanup failed"
@@ -4427,7 +4438,7 @@ msgstr "Konnte keine CHECKOUT Anfrage (%s) erzeugen"
 #: libsvn_ra_dav/commit.c:542
 #, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
-msgstr ""
+msgstr "Datei oder Verzeichnis '%s' ist wahrscheinlich veraltet"
 
 #: libsvn_ra_dav/commit.c:550
 msgid "The CHECKOUT response did not contain a 'Location:' header"
@@ -5106,7 +5117,7 @@ msgstr "Schreiben abgelehnt: Keine Berechtigung, alles von Revision %ld einzules
 #: libsvn_repos/fs-wrap.c:481
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
-msgstr ""
+msgstr "Kann Pfad '%s' nicht freigeben, kein angemeldeter Benutzername verfügbar"
 
 #: libsvn_repos/fs-wrap.c:495
 msgid "Unlock succeeded, but post-unlock hook failed"
@@ -5848,7 +5859,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:237
 msgid " arg"
-msgstr ""
+msgstr " par"
 
 #: libsvn_subr/opt.c:261
 #, c-format
@@ -6789,9 +6800,8 @@ msgid "set repos UUID to that found in stream, if any"
 msgstr "setze die UUID des Projektarchivs auf die im Datenstrom gefundene"
 
 #: svnadmin/main.c:257
-#, fuzzy
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr "Art des Projektarchivs: 'bdb' oder 'fsfs'"
+msgstr "Art des Projektarchivs: 'fsfs' (Standard) oder 'bdb'"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
@@ -6982,6 +6992,9 @@ msgid ""
 "\n"
 "Unconditionally remove lock from each LOCKED_PATH.\n"
 msgstr ""
+"Aufruf: svnadmin rmlocks REPOS_PFAD SPERR_PFAD...\n"
+"\n"
+"Entferne vorbehaltslos die Sperren von jedem SPERR_PFAD.\n"
 
 #: svnadmin/main.c:376
 msgid ""
@@ -7119,7 +7132,7 @@ msgstr "Genau ein Dateiparameter benötigt"
 #: svnlook/main.c:1770
 #, c-format
 msgid "UUID Token: %s\n"
-msgstr ""
+msgstr "UUID Marke: %s\n"
 
 #: svnadmin/main.c:1029
 #: svnlook/main.c:1771
@@ -7137,7 +7150,7 @@ msgstr "Erstellt: %s\n"
 #: svnlook/main.c:1773
 #, c-format
 msgid "Expires: %s\n"
-msgstr ""
+msgstr "Läuft ab: %s\n"
 
 #: svnadmin/main.c:1033
 #, c-format
@@ -7146,6 +7159,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Kommentar (%i Zeilen):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1034
 #, c-format
@@ -7154,6 +7170,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Kommentar (%i Zeile):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1101
 #, c-format
@@ -7622,6 +7641,8 @@ msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 msgstr ""
+"Kommentar (%i Zeilen):\n"
+"%s\n"
 
 #: svnlook/main.c:1777
 #, c-format
@@ -7629,6 +7650,8 @@ msgid ""
 "Comment (%i line):\n"
 "%s\n"
 msgstr ""
+"Kommentar (%i Zeile):\n"
+"%s\n"
 
 #: svnlook/main.c:1823
 msgid "Missing propname argument"
@@ -7744,6 +7767,13 @@ msgid ""
 "  auth-access = read|write|none (default write)\n"
 "Forcing all access to read-only for now\n"
 msgstr ""
+"Warnung: -R ist veraltet.\n"
+"Die Standardeinstellung für anonymen Zugriff ist Nur-Lesen.\n"
+"Ändern die Einstellung in conf/svnserve.conf im Projektarchiv:\n"
+"  [general]\n"
+"  anon-access = read|write|none (Vorgabe read)\n"
+"  auth-access = read|write|none (Vorgabe write)\n"
+"Erzwinge Nur-Lese Zugriff für alle.\n"
 
 #: svnserve/main.c:370
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
