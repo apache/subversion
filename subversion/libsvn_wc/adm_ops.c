@@ -76,7 +76,7 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
 
   /* Tweak "this_dir" */
   SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
-                                base_url, new_rev, &write_required,
+                                base_url, new_rev, FALSE, &write_required,
                                 svn_wc_adm_access_pool (dirpath)));
 
   /* Recursively loop over all children. */
@@ -108,7 +108,8 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
           || (recurse && (current_entry->deleted || current_entry->absent)))
         {
           SVN_ERR (svn_wc__tweak_entry (entries, name,
-                                        child_url, new_rev, &write_required,
+                                        child_url, new_rev, TRUE,
+                                        &write_required,
                                         svn_wc_adm_access_pool (dirpath)));
         }
       
@@ -182,7 +183,8 @@ svn_wc__do_update_cleanup (const char *path,
   if (entry == NULL)
     return SVN_NO_ERROR;
 
-  if (entry->kind == svn_node_file)
+  if (entry->kind == svn_node_file
+      || (entry->kind == svn_node_dir && (entry->deleted || entry->absent)))
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
@@ -191,7 +193,10 @@ svn_wc__do_update_cleanup (const char *path,
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
       SVN_ERR (svn_wc__tweak_entry (entries, base_name,
-                                    base_url, new_revision, &write_required,
+                                    base_url, new_revision,
+                                    FALSE, /* Parent not updated so don't
+                                              remove PATH entry */
+                                    &write_required,
                                     svn_wc_adm_access_pool (dir_access)));
       if (write_required)
         SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
