@@ -62,56 +62,69 @@
 #include "cl.h"
 
 
-
 
 /*** Command dispatch. ***/
+static svn_cl__cmd_opts_t add_opts = {
+  svn_cl__add_command,
+  "Add a new file or directory to version control." };
 
-/* Map names to commands and their help strings.
-   FIXME: the help strings could give a lot more detail... */
+static svn_cl__cmd_opts_t checkout_opts = {
+  svn_cl__checkout_command,
+  "Check out a working directory from a repository." };
+
+static svn_cl__cmd_opts_t commit_opts = {
+  svn_cl__commit_command,
+  "Commit changes from your working copy to the repository." };
+
+static svn_cl__cmd_opts_t delete_opts = {
+  svn_cl__delete_command,
+  "Remove a file or directory from version control." };
+
+static svn_cl__cmd_opts_t proplist_opts = {
+  svn_cl__proplist_command,
+  "List all properties for given files and directories." };
+
+static svn_cl__cmd_opts_t status_opts = {
+  svn_cl__status_command,
+  "Print the status of working copy files and directories." };
+
+static svn_cl__cmd_opts_t update_opts = {
+  svn_cl__update_command,
+  "Bring changes from the repository into the working copy." };
+
+
+/* Map names to command routine, option descriptor and
+   its "base" command.  */
 static svn_cl__cmd_desc_t cmd_table[] = {
-  /* add */
-  { "add",        NULL,       svn_cl__add,
-    "Add a new file or directory to version control." },
-  { "ad",         "add",      svn_cl__add,      NULL },
-  { "new",        "add",      svn_cl__add,      NULL },
+  { "add",        FALSE,  svn_cl__add,      &add_opts },
+  { "ad",         TRUE,   svn_cl__add,      &add_opts },
+  { "new",        TRUE,   svn_cl__add,      &add_opts },
 
-  /* checkout */
-  { "checkout",   NULL,       svn_cl__checkout,
-    "Check out a working directory from a repository." },
-  { "co",         "checkout", svn_cl__checkout, NULL },
+  { "checkout",   FALSE,  svn_cl__checkout, &checkout_opts },
+  { "co",         TRUE,   svn_cl__checkout, &checkout_opts },
 
-  /* commit */
-  { "commit",     NULL,       svn_cl__commit,
-    "Commit changes from your working copy to the repository." },
-  { "ci",         "commit",   svn_cl__commit,   NULL },
+  { "commit",     FALSE,  svn_cl__commit,   &commit_opts },
+  { "ci",         TRUE,   svn_cl__commit,   &commit_opts },
 
-  /* delete */
-  { "delete",     NULL,       svn_cl__delete,
-    "Remove a file or directory from version control." },
-  { "del",        "delete",   svn_cl__delete,   NULL },
-  { "remove",     "delete",   svn_cl__delete,   NULL },
-  { "rm",         "delete",   svn_cl__delete,   NULL },
+  { "delete",     FALSE,  svn_cl__delete,   &delete_opts },
+  { "del",        TRUE,   svn_cl__delete,   &delete_opts },
+  { "remove",     TRUE,   svn_cl__delete,   &delete_opts },
+  { "rm",         TRUE,   svn_cl__delete,   &delete_opts },
 
-  /* help */
-  { "help",       NULL,       svn_cl__help, 
-    "Funny you should ask." },
+  { "help",       FALSE,  svn_cl__help,     NULL },
 
-  /* proplist */
-  { "proplist",   NULL,       svn_cl__proplist,
-    "List all properties for given files and directories." },
-  { "plist",      "proplist", svn_cl__proplist, NULL },
-  { "pl",         "proplist", svn_cl__proplist, NULL },
+  { "proplist",   FALSE,  svn_cl__proplist, &proplist_opts },
+  { "plist",      TRUE,   svn_cl__proplist, &proplist_opts },
+  { "pl",         TRUE,   svn_cl__proplist, &proplist_opts },
 
-  /* status */
-  { "status",     NULL,       svn_cl__status,
-    "Print the status of working copy files and directories."},
-  { "stat",       "status",   svn_cl__status,   NULL },
-  { "st",         "status",   svn_cl__status,   NULL },
+  { "status",     FALSE,  svn_cl__status,   &status_opts },
+  { "stat",       TRUE,   svn_cl__status,   &status_opts },
+  { "st",         TRUE,   svn_cl__status,   &status_opts },
 
-  /* update */
-  { "update",     NULL,       svn_cl__update,
-    "Bring changes from the repository into the working copy." },
-  { "up",         "update",   svn_cl__update,   NULL }
+  { "update",     FALSE,  svn_cl__update,   &update_opts },
+  { "up",         TRUE,   svn_cl__update,   &update_opts },
+
+  { NULL,         FALSE }
 };
 
 
@@ -139,7 +152,11 @@ get_cmd_table_entry (const char *cmd_name)
 
   /* Regardless of the option chosen, the user gets --help :-) */
   if (cmd_name[0] == '-')
-    return NULL;
+    {
+      fputs ("svn error: the base `svn' command accepts no options\n",
+             stderr);
+      return NULL;
+    }
 
   for (i = 0; i < max; i++)
     if (strcmp (cmd_name, cmd_table[i].cmd_name) == 0)
@@ -154,128 +171,126 @@ get_cmd_table_entry (const char *cmd_name)
 
 
 /*** Option parsing. ***/
-static void
+static int
 parse_command_options (int argc,
                        char **argv,
-                       char *progname,
-                       svn_string_t **xml_file,
-                       svn_string_t **target,
-                       svn_revnum_t *revision,
-                       svn_string_t **ancestor_path,
-                       svn_boolean_t *force,
-                       apr_pool_t *pool)
+                       apr_pool_t *pool,
+                       svn_cl__opt_state_t *p_opt_st)
 {
+  static const char needs_arg[] =
+    "svn %s: \"--%s\" needs an argument\n";
+  static const char invalid_opt[] =
+    "svn %s error:  option `%s' invalid\n";
+
+  char *cmdname = argv[1];
+  svn_cl__command_t cmd_code = p_opt_st->cmd_opts->cmd_code;
   int i;
 
-  for (i = 0; i < argc; i++)
+  for (i = 2; i < argc; i++)
     {
       if (strcmp (argv[i], "--xml-file") == 0)
         {
           if (++i >= argc)
             {
-              fprintf (stderr, "%s: \"--xml-file\" needs an argument\n",
-                       progname);
-              exit (1);
+              fprintf (stderr, needs_arg, cmdname, "xml-file");
+              exit (EXIT_FAILURE);
             }
           else
-            *xml_file = svn_string_create (argv[i], pool);
+            p_opt_st->xml_file = svn_string_create (argv[i], pool);
         }
       else if (strcmp (argv[i], "--target-dir") == 0)
         {
           if (++i >= argc)
             {
-              fprintf (stderr, "%s: \"--target-dir\" needs an argument\n",
-                       progname);
-              exit (1);
+              fprintf (stderr, needs_arg, cmdname, "target-dir");
+              exit (EXIT_FAILURE);
             }
           else
-            *target = svn_string_create (argv[i], pool);
+            p_opt_st->target = svn_string_create (argv[i], pool);
         }
       else if (strcmp (argv[i], "--ancestor-path") == 0)
         {
           if (++i >= argc)
             {
-              fprintf (stderr, "%s: \"--ancestor-path\" needs an argument\n",
-                       progname);
-              exit (1);
+              fprintf (stderr, needs_arg, cmdname, "ancestor-path");
+              exit (EXIT_FAILURE);
             }
           else
-            *ancestor_path = svn_string_create (argv[i], pool);
+            p_opt_st->ancestor_path = svn_string_create (argv[i], pool);
         }
       else if (strcmp (argv[i], "--revision") == 0)
         {
           if (++i >= argc)
             {
-              fprintf (stderr, "%s: \"--revision\" needs an argument\n",
-                       progname);
-              exit (1);
+              fprintf (stderr, needs_arg, cmdname, "revision");
+              exit (EXIT_FAILURE);
             }
           else
-            *revision = (svn_revnum_t) atoi (argv[i]);
+            p_opt_st->revision = (svn_revnum_t) atoi (argv[i]);
         }
       else if (strcmp (argv[i], "--force") == 0)
-        *force = 1;
+        p_opt_st->force = 1;
+      else if (*(argv[i]) == '-')
+        {
+          fprintf (stderr, invalid_opt, cmdname, argv[i]);
+          exit (EXIT_FAILURE);
+        }
       else
-        *target = svn_string_create (argv[i], pool);
+        break;
     }
-}
-
-
-/* We'll want an off-the-shelf option parsing system soon... too bad
-   GNU getopt is out for copyright reasons (?).  In the meantime,
-   reinvent the wheel: */  
-void
-svn_cl__parse_options (int argc,
-                       char **argv,
-                       enum svn_cl__command command,
-                       svn_string_t **xml_file,
-                       svn_string_t **target,   /* dest_dir or file to add */
-                       svn_revnum_t *revision,  /* ancestral or new */
-                       svn_string_t **ancestor_path,
-                       svn_boolean_t *force,
-                       apr_pool_t *pool)
-{
-  char *s = argv[0];  /* svn progname */
-
-  /* Skip the program and subcommand names.  Parse the rest. */
-  parse_command_options (argc-2, argv+2, s,
-                         xml_file, target, revision, ancestor_path, force,
-                         pool);
 
   /* Sanity checks: make sure we got what we needed. */
   /* Any command may have an xml_file option.  Not really true, but true
-     in this framework.  In any event, the four commands that do need it
-     are: add, commit, checkout and update */
-  if ((! *xml_file)
-      && (  (command == svn_cl__commit_command)
-         || (command == svn_cl__checkout_command)
-         || (command == svn_cl__update_command)))
-    {
-      fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
-      exit (1);
-    }
-  if (*force && (command != svn_cl__delete_command))
-    {
-      fprintf (stderr, "%s: \"--force\" meaningless except for delete\n", s);
-      exit (1);
-    }
-  /* commit and update must have a valid revision */
-  if ((*revision == SVN_INVALID_REVNUM)
-      && (  (command == svn_cl__commit_command)
-         || (command == svn_cl__update_command)))
-    {
-      fprintf (stderr, "%s: please use \"--revision VER\" "
-               "to specify target revision\n", s);
-      exit (1);
-    }
-  /* checkout, update, commit, status and proplist have a default target */
-  if ((*target == NULL)
-      &&  (  (command == svn_cl__checkout_command) 
-          || (command == svn_cl__update_command)
-          || (command == svn_cl__commit_command)
-          || (command == svn_cl__status_command)
-          || (command == svn_cl__proplist_command)))
-    *target = svn_string_create (".", pool);
+     in this framework.  In any event, the commands that do need it
+     are listed here. */
+  if (p_opt_st->xml_file == NULL)
+    switch (cmd_code)
+      {
+      case svn_cl__commit_command:
+      case svn_cl__checkout_command:
+      case svn_cl__update_command:
+        fprintf (stderr, "svn %s: need \"--xml-file FILE.XML\"\n", cmdname);
+        exit (EXIT_FAILURE);
+      default:
+      }
+
+  if (p_opt_st->force)
+    switch (cmd_code)
+      {
+      case svn_cl__delete_command:
+        break;
+
+      default:
+        fprintf (stderr, invalid_opt, cmdname, "--force");
+        exit (EXIT_FAILURE);
+      }
+
+  /* make sure we have a valid revision for these commands */
+  if (p_opt_st->revision == SVN_INVALID_REVNUM)
+    switch (cmd_code)
+      {
+      case svn_cl__commit_command:
+      case svn_cl__update_command:
+        fprintf (stderr, "svn %s: please use \"--revision VER\" "
+                 "to specify target revision\n", cmdname);
+        exit (EXIT_FAILURE);
+      default:
+      }
+
+  /* Check for the need for a default target */
+  if (p_opt_st->target == NULL)
+    switch (cmd_code)
+      {
+      case svn_cl__checkout_command:
+      case svn_cl__update_command:
+      case svn_cl__commit_command:
+      case svn_cl__status_command:
+      case svn_cl__proplist_command:
+        p_opt_st->target = svn_string_create (".", pool);
+      default:
+      }
+
+  return i;
 }
 
 
@@ -294,76 +309,44 @@ get_canonical_command (const char *cmd)
 {
   svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
 
-  if ((! cmd_desc) || (! cmd_desc->short_for))
+  if (cmd_desc == NULL)
     return cmd_desc;
-  else
-    return get_cmd_table_entry (cmd_desc->short_for);
-}
 
+  while (cmd_desc->is_alias)  cmd_desc--;
 
-/* Return an apr array of the command table entries for all synonyms
- * of canonical command CMD.  The array will not include the entry for
- * CMD itself.
- */
-static apr_array_header_t *
-get_canonical_cmd_synonyms (const char *cmd, apr_pool_t *pool)
-{
-  size_t max = sizeof (cmd_table) / sizeof (cmd_table[0]);
-  apr_array_header_t *ary
-    = apr_make_array (pool, 0, sizeof (svn_cl__cmd_desc_t *));
-  int i;
-
-  for (i = 0; i < max; i++)
-    if ((cmd_table[i].short_for != NULL)
-        && (strcmp (cmd, cmd_table[i].short_for) == 0))
-      *((svn_cl__cmd_desc_t **)apr_push_array (ary)) = cmd_table + i;
-
-  return ary;
+  return cmd_desc;
 }
 
 
 static void
-print_command_and_maybe_help (const char *cmd,
-                              svn_boolean_t help,
-                              apr_pool_t *pool)
+print_command_info (const char *cmd,
+                    svn_boolean_t help,
+                    apr_pool_t *pool)
 {
   svn_cl__cmd_desc_t *canonical_cmd = get_canonical_command (cmd);
-  apr_array_header_t *synonyms;
-  int i;
 
-  if (! canonical_cmd)
+  /*  IF we get a NULL back, then an informative message has already
+      been printed.  */
+  if (canonical_cmd == NULL)
     return;
 
-  synonyms = get_canonical_cmd_synonyms (canonical_cmd->cmd_name, pool);
-
-  printf ("%s", canonical_cmd->cmd_name);
-
-  if (! (apr_is_empty_table (synonyms)))
-    printf (" (");
-  for (i = 0; i < synonyms->nelts; i++)
+  fputs (canonical_cmd->cmd_name, stdout);
+  if (canonical_cmd[1].is_alias)
     {
-      svn_cl__cmd_desc_t *this
-        = (((svn_cl__cmd_desc_t **) (synonyms)->elts)[i]);
-
-      printf ("%s", this->cmd_name);
-      if (! (i == (synonyms->nelts - 1)))
-        printf (", ");
+      svn_cl__cmd_desc_t *p_alias = canonical_cmd + 1;
+      fputs (" (", stdout);
+      for (;;)
+        {
+          fputs ((p_alias++)->cmd_name, stdout);
+          if (! p_alias->is_alias)
+            break;
+          fputs (", ", stdout);
+        }
+      fputc (')', stdout);
     }
-  if (! (apr_is_empty_table (synonyms)))
-    printf (")");
 
   if (help)
-    {
-      printf (": ");
-      printf ("%s\n", canonical_cmd->help);
-    }
-}
-
-
-static void
-print_command_help (const char *cmd, apr_pool_t *pool)
-{
-  print_command_and_maybe_help (cmd, TRUE, pool);
+    printf (": %s\n", canonical_cmd->cmd_opts->help);
 }
 
 
@@ -379,23 +362,27 @@ print_generic_help (apr_pool_t *pool)
 
   printf ("%s", usage);
   for (i = 0; i < max; i++)
-    if (cmd_table[i].short_for == NULL)
+    if (! cmd_table[i].is_alias)
       {
         printf ("   ");
-        print_command_and_maybe_help (cmd_table[i].cmd_name, FALSE, pool);
+        print_command_info (cmd_table[i].cmd_name, FALSE, pool);
         printf ("\n");
       }
 }
 
 
+/*  Unlike all the other command routines, ``help'' has its own
+    option processing.  Of course, it does not accept any options :-),
+    just command line args.  */
 svn_error_t *
-svn_cl__help (int argc, char **argv, apr_pool_t *pool)
+svn_cl__help (int argc, char **argv, apr_pool_t *pool,
+              svn_cl__opt_state_t *p_opt_state)
 {
   if (argc > 2)
     {
       int i;
       for (i = 2; i < argc; i++)
-        print_command_help (argv[i], pool);
+        print_command_info (argv[i], TRUE, pool);
     }
   else
     {
@@ -413,21 +400,34 @@ int
 main (int argc, char **argv)
 {
   svn_cl__cmd_desc_t* p_cmd = get_cmd_table_entry (argv[1]);
-  svn_error_t *err;
   apr_pool_t *pool;
+  svn_cl__opt_state_t opt_state;
 
   if (p_cmd == NULL)
     {
-      svn_cl__help (0, NULL, NULL);
+      svn_cl__help (0, NULL, NULL, NULL);
       return EXIT_FAILURE;
     }
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
+  memset ((void*)&opt_state, 0, sizeof (opt_state));
+  opt_state.cmd_opts = p_cmd->cmd_opts;
 
-  err = (*p_cmd->cmd_func) (argc, argv, pool);
-  if (err)
-    svn_handle_error (err, stdout, 0);
+  /*  IF the command descriptor has an option processing descriptor,
+      go do it.  Otherwise, the command routine promises to do the work */
+  if (p_cmd->cmd_opts != NULL)
+    {
+      int used_ct = parse_command_options (argc, argv, pool, &opt_state);
+      argc -= used_ct;
+      argv += used_ct;
+    }
+
+  {
+    svn_error_t *err = (*p_cmd->cmd_func) (argc, argv, pool, &opt_state);
+    if (err != SVN_NO_ERROR)
+      svn_handle_error (err, stdout, 0);
+  }
 
   apr_destroy_pool (pool);
 

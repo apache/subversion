@@ -62,21 +62,65 @@
 
 /*** Command dispatch. ***/
 
+/*  These are all the command procedures we currently know about.
+    The "null" entry is simply an enumerated invalid entry that makes
+    initializations easier */
+typedef enum {
+  svn_cl__null_command = 0,
+  svn_cl__add_command,
+  svn_cl__checkout_command,
+  svn_cl__commit_command,
+  svn_cl__delete_command,
+  svn_cl__help_command,
+  svn_cl__proplist_command,
+  svn_cl__status_command,
+  svn_cl__update_command
+} svn_cl__command_t;
+
+
+/*  Command option descriptor.  These are the data that are passed to
+    the option processing routine that will tell it which options are
+    acceptable or required.  */
+typedef struct svn_cl__cmd_opts_t
+{
+  /* Ultimately an option list of some sort.  For now, the smarts
+     are in the option processing routine. */
+  const svn_cl__command_t  cmd_code;
+
+  /* A brief string describing this command, for usage messages. */
+  const char *help;
+
+} svn_cl__cmd_opts_t;
+
+
+/*  Option state.  This struct defines the data that are given to
+    the command procedure describing the option state.  */
+typedef struct svn_cl__opt_state_t
+{
+  const svn_cl__cmd_opts_t *cmd_opts;
+  svn_revnum_t revision;
+  svn_string_t *xml_file;
+  svn_string_t *target;
+  svn_string_t *ancestor_path;
+  svn_boolean_t force;
+} svn_cl__opt_state_t;
+
+/* This "silly" macro will change when the above is changed to use an
+   association (hash) list or some other method of storing state. */
+#define GET_OPT_STATE(p,n)  ((p)->n)
+
+
 /* All client command procedures conform to this prototype.
 
-   The main loop is responsible for creating the base apr pool.
+   The main routine is responsible for creating the base apr pool.
    It is responsible for cleaning it up, too.
 
-   For the time being, argc and argv are passed through from
-   the command line because option processing must happen within
-   the command procedure.  Once we have option descriptors for
-   each subcommand, then the main procedure (or main loop :),
-   will be able to do the option processing and simply pass an
-   argc/argv with the post-option arguments.
+   argc/argv specify only the post-option arguments.
 
    The error result will generally be that returned by the
    command implementation procedures.  */
-typedef svn_error_t *(svn_cl__cmd_proc_t) (int argc, char **argv, apr_pool_t*);
+typedef svn_error_t *(svn_cl__cmd_proc_t) \
+  (int argc, char **argv, apr_pool_t*, svn_cl__opt_state_t*);
 
 
 /* One element of the command dispatch table. */
@@ -86,38 +130,19 @@ typedef struct svn_cl__cmd_desc_t
      "commit", or a short name, such as "ci". */
   const char *cmd_name;
 
-  /* If cmd_name is a short synonym, such as "ci", then short_for
-     would be what it abbreviates ("commit").  Else if cmd_name is not
-     an abbreviation, then short_for is NULL.  This allows us to
-     identify groups of `the same' command automatically, and list
-     them all under one canonical name when appropriate. */
-  const char *short_for;
+  /* If cmd_name is a short synonym, such as "ci", then is_alias
+     is set `TRUE'.  If it is the base command entry, then `FALSE'.
+     The alias entries will always immediately follow the base entry. */
+  svn_boolean_t is_alias;
 
   /* The function this command invokes. */
   svn_cl__cmd_proc_t *cmd_func;
 
-  /* A brief string describing this command, for usage messages.  If
-     this command is a short synonym, this should be set to NULL; the
-     canonical command desc will contain the help string. */
-  const char *help;
+  /* A pointer to something that describes the options supported by
+     this particular command.  */
+  const svn_cl__cmd_opts_t *cmd_opts;
 
 } svn_cl__cmd_desc_t;
-
-
-/*  These are all the command procedures we currently know about.
-    The "null" entry is simply an enumerated invalid entry that makes
-    initializations easier */
-enum svn_cl__command {
-  svn_cl__null_command = 0,
-  svn_cl__add_command,
-  svn_cl__commit_command,
-  svn_cl__checkout_command,
-  svn_cl__delete_command,
-  svn_cl__help_command,
-  svn_cl__proplist_command,
-  svn_cl__status_command,
-  svn_cl__update_command
-};
 
 
 /* Declare all the command procedures */
@@ -153,21 +178,6 @@ svn_error_t *svn_cl__get_trace_editor (const svn_delta_edit_fns_t **editor,
                                        svn_string_t *initial_path,
                                        apr_pool_t *pool);
 
-
-
-/*** Option parsing. ***/
-
-/* Until there is something else, this is it */
-void
-svn_cl__parse_options (int argc,
-                       char **argv,
-                       enum svn_cl__command command,
-                       svn_string_t **xml_file,
-                       svn_string_t **target,  /* dest_dir or file to add */
-                       svn_revnum_t *revision,  /* ancestral or new */
-                       svn_string_t **ancestor_path,
-                       svn_boolean_t *force,
-                       apr_pool_t *pool);
 #endif /* SVN_CL_H */
 
 

@@ -1,5 +1,5 @@
 /*
- *  ad-cmd.c - Subversion add command
+ *  add-cmd.c - Subversion add command
  *
  *  svn is free software copyrighted by CollabNet.
  *  
@@ -47,23 +47,43 @@
 #include "svn_error.h"
 #include "cl.h"
 
+static char* get_help[] = {
+  "svn", "help", "add", NULL };
+
 
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__add( int argc, char** argv, apr_pool_t* pool )
+svn_cl__add( int argc, char** argv, apr_pool_t* pool,
+             svn_cl__opt_state_t *p_opt_state )
 {
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
-  svn_string_t *xml_file = NULL;
-  svn_string_t *target = NULL;
-  svn_string_t *ancestor_path = NULL;
-  svn_boolean_t force = 0;
   svn_error_t *err = NULL;
+  svn_string_t *target = GET_OPT_STATE(p_opt_state, target);
 
-  svn_cl__parse_options (argc, argv, svn_cl__add_command,
-                 &xml_file, &target, &revision, &ancestor_path, &force,
-                 pool);
-
-  err = svn_client_add (target, pool);
+  if (target != NULL)
+    err = svn_client_add (target, pool);
+  else if (argc > 0)
+    {
+      while (--argc >= 0)
+        {
+          target = svn_string_create (*(argv++), pool);
+          err = svn_client_add (target, pool);
+          /* free (target); */
+          if (err != SVN_NO_ERROR)
+            break;
+        }
+    }
+  else
+    {
+      fputs ("svn add: object-to-add required\n", stderr);
+      err = svn_cl__help (3, get_help, pool, p_opt_state);
+    }
   return err;
 }
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end: 
+ */
