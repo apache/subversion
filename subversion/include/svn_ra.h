@@ -179,12 +179,14 @@ typedef struct svn_ra_reporter_t
    * or files not explicitly `set' above are assumed to be at the
    * baseline revision originally passed into @c do_update().
    */
-  svn_error_t *(*finish_report) (void *report_baton);
+  svn_error_t *(*finish_report) (void *report_baton,
+                                 apr_pool_t *pool);
 
   /** If an error occurs during a report, this routine should cause the
    * filesystem transaction to be aborted & cleaned up.
    */
-  svn_error_t *(*abort_report) (void *report_baton);
+  svn_error_t *(*abort_report) (void *report_baton,
+                                apr_pool_t *pool);
 
 } svn_ra_reporter_t;
 

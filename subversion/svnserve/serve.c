@@ -290,7 +290,7 @@ static svn_error_t *finish_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* No arguments to parse. */
   SVN_ERR(trivial_auth_request(conn, pool, b->sb));
   if (!b->err)
-    b->err = svn_repos_finish_report(b->report_baton);
+    b->err = svn_repos_finish_report(b->report_baton, pool);
   return SVN_NO_ERROR;
 }
 
@@ -300,7 +300,7 @@ static svn_error_t *abort_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   report_driver_baton_t *b = baton;
 
   /* No arguments to parse. */
-  svn_error_clear(svn_repos_abort_report(b->report_baton));
+  svn_error_clear(svn_repos_abort_report(b->report_baton, pool));
   return SVN_NO_ERROR;
 }
 

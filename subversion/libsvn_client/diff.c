@@ -1274,7 +1274,7 @@ do_merge (const char *URL1,
   
   SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, pool));
   
-  SVN_ERR (reporter->finish_report (report_baton));
+  SVN_ERR (reporter->finish_report (report_baton, pool));
   
   return SVN_NO_ERROR;
 }
@@ -1641,7 +1641,7 @@ diff_repos_repos (const apr_array_header_t *options,
   
   /* Drive the reporter; do the diff. */
   SVN_ERR (reporter->set_path (report_baton, "", rev1, FALSE, pool));
-  SVN_ERR (reporter->finish_report (report_baton));
+  SVN_ERR (reporter->finish_report (report_baton, pool));
 
   return SVN_NO_ERROR;
 }

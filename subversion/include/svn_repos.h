@@ -330,7 +330,8 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
  * aborted even if the editor drive fails, so the caller does not need
  * to clean up.
  */
-svn_error_t *svn_repos_finish_report (void *report_baton);
+svn_error_t *svn_repos_finish_report (void *report_baton,
+                                      apr_pool_t *pool);
 
 
 /** The report-driver is bailing, so abort the fs transaction.  This
@@ -338,7 +339,8 @@ svn_error_t *svn_repos_finish_report (void *report_baton);
  * called.  No other reporting functions should be called after calling
  * this function.
  */
-svn_error_t *svn_repos_abort_report (void *report_baton);
+svn_error_t *svn_repos_abort_report (void *report_baton,
+                                     apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/

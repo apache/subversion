@@ -563,14 +563,14 @@ svn_wc_crawl_revisions (const char *path,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  SVN_ERR (reporter->finish_report (report_baton));
+  SVN_ERR (reporter->finish_report (report_baton, pool));
 
  abort_report:
   if (err)
     {
       /* Clean up the fs transaction. */
       svn_error_t *fserr;
-      if ((fserr = reporter->abort_report (report_baton)))
+      if ((fserr = reporter->abort_report (report_baton, pool)))
         {
           fserr = svn_error_quick_wrap (fserr, "Error aborting report");
           svn_error_compose (err, fserr);

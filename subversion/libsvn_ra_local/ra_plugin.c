@@ -101,18 +101,20 @@ reporter_link_path (void *reporter_baton,
 
 
 static svn_error_t *
-reporter_finish_report (void *reporter_baton)
+reporter_finish_report (void *reporter_baton,
+                        apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_finish_report (rbaton->report_baton);
+  return svn_repos_finish_report (rbaton->report_baton, pool);
 }
 
 
 static svn_error_t *
-reporter_abort_report (void *reporter_baton)
+reporter_abort_report (void *reporter_baton,
+                       apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_abort_report (rbaton->report_baton);
+  return svn_repos_abort_report (rbaton->report_baton, pool);
 }
 
 
