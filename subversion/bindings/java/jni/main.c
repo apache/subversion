@@ -35,7 +35,6 @@
 #include "string.h"
 #include "misc.h"
 #include "hashtable.h"
-#include "item.h"
 #include "entry.h"
 
 /*** Defines. ***/
