@@ -21,6 +21,7 @@ for (( i=1; i <= $arg_count; i++ )); do
             grepargs="$grepargs $arg"
             pattern="$1"
             shift 1
+            ((i++))
         elif [ "${arg:0:1}" != "-" ]; then
             pattern="$arg"
         else
