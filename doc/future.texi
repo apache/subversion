@@ -17,6 +17,8 @@ These are things that @emph{should} be released in Subversion 1.0, if we
 really want to achieve the goal of creating a compelling replacement for
 CVS.
 
+The lists below are a bit dated;  a more recent wishlist can be found in
+@file{IDEAS} in the source-tree.
 
 @menu
 * Annotation::                  
