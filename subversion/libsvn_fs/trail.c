@@ -47,9 +47,14 @@ svn_fs__trail_debug (trail_t *trail, const char *table, const char *op)
 }
 
 static void
-print_trail_debug (trail_t *trail)
+print_trail_debug (trail_t *trail,
+                   const char *txn_body_fn_name,
+                   const char *filename, int line)
 {
   struct trail_debug_t *trail_debug;
+
+  fprintf (stderr, "(%s, %s, %u, %u): ",
+           txn_body_fn_name, filename, line, trail->db_txn ? 1 : 0);
 
   trail_debug = trail->trail_debug;
   while (trail_debug)
@@ -60,7 +65,7 @@ print_trail_debug (trail_t *trail)
   fprintf (stderr, "\n");
 }
 #else
-#define print_trail_debug(trail)
+#define print_trail_debug(trail, txn_body_fn_name, filename, line)
 #endif /* defined(SVN_FS__TRAIL_DEBUG) */
 
 
@@ -160,12 +165,55 @@ commit_trail (trail_t *trail,
   return SVN_NO_ERROR;
 }
 
+
+#if defined(SVN_FS__TRAIL_DEBUG)
+#undef svn_fs__retry
+
 svn_error_t *
 svn_fs__retry (svn_fs_t *fs,
                svn_error_t *(*txn_body) (void *baton, trail_t *trail),
                void *baton,
                int use_txn,
                apr_pool_t *pool)
+{
+  return svn_fs__retry_debug (fs, txn_body, baton, use_txn, pool,
+                              "unknown", "", 0);
+}					 
+#else
+svn_error_t *
+svn_fs__retry_debug (svn_fs_t *fs,
+                     svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+                     void *baton,
+                     int use_txn,
+                     apr_pool_t *pool,
+                     const char *txn_body_fn_name,
+                     const char *filename,
+                     int line)
+{
+  return svn_fs__retry (fs, txn_body, baton, use_txn, pool);
+}
+#endif
+
+#if !defined(SVN_FS__TRAIL_DEBUG)
+svn_error_t *
+svn_fs__retry (
+  svn_fs_t *fs,
+  svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+  void *baton,
+  int use_txn,
+  apr_pool_t *pool)
+#else
+svn_error_t *
+svn_fs__retry_debug (
+  svn_fs_t *fs,
+  svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+  void *baton,
+  int use_txn,
+  apr_pool_t *pool,
+  const char *txn_body_fn_name,
+  const char *filename,
+  int line)
+#endif
 {
   for (;;)
     {
@@ -183,7 +231,7 @@ svn_fs__retry (svn_fs_t *fs,
           /* The transaction succeeded!  Commit it.  */
           SVN_ERR (commit_trail (trail, fs));
 
-          print_trail_debug (trail);
+          print_trail_debug (trail, txn_body_fn_name, filename, line);
 
           return SVN_NO_ERROR;
         }
