@@ -288,6 +288,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	apr_size_t count;
 	CHAR *pszKey;
 	CComObject<CSVNStatus> *com_status = NULL;
+	svn_boolean_t fLockedSA = FALSE;
 
 	hash = apr_make_hash(g_pool);
 	path = svn_string_create(W2A(bstrPath), g_pool);
@@ -308,6 +309,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	hr = SafeArrayAccessData(psa, (void **)&paDisp);
 	if (FAILED(hr))
 		goto Cleanup;
+	fLockedSA = TRUE;
 
 	for (i = 0, hi = apr_hash_first(hash); hi; i++, hi = apr_hash_next(hi)) {
 		apr_hash_this(hi, (const void **)&pszKey, &klen, (void **)&status);
@@ -339,6 +341,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	}
 
 	SafeArrayUnaccessData(psa);
+	fLockedSA = FALSE;
 
 	if (rgsBound.cElements > i) {
 		rgsBound.cElements = i;
@@ -351,7 +354,8 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 
 	hr = S_OK;
 Cleanup:
-	SafeArrayUnaccessData(psa);
+	if (fLockedSA)
+		SafeArrayUnaccessData(psa);
 	delete com_status;
 	svn_pool_clear(g_pool);
 	return hr;
