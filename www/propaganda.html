@@ -166,6 +166,169 @@ organization to try Subversion, this page might help you.</p>
 
     <li>
     <strong><a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=72516"
+          >Ron Bieber</a></strong>
+          <tt>(23&nbsp;July&nbsp;2004)</tt>
+          <br/>
+ 
+      <em><p>I currently manage a group of about 20 developers for a
+          Fortune 500 company.  We used CVS from January of 2001 until
+          May of 2004 when we converted all of our repositories over
+          to Subversion.</p>
+
+      <p>The advantages we received from Subversion are immense.
+      Before our conversion to CVS from VSS, we had two full time
+      employees managing our production builds.  Upon conversion to
+      CVS we cut that resource count down to one.  This resource
+      handled all branching and merging activities, reporting
+      activities, and manipulation of the CVS repository to move files
+      while retaining history.  The CVS branching and merging was just
+      too cryptic (and took too long) for anyone to want to learn it.
+      We had two CVS "experts" in house which included me and one of
+      my direct reports.  We were constantly called in to resolve
+      issues.  I myself spent a ton of time managing the support of
+      the CVS repositories.</p>
+
+      <p>After running across Subversion by chance in May of 2003, I
+      started piloting it at home.  As I used it more, I became
+      convinced that this was a tool that my team needed in order to
+      increase our productivity.  After using it for a while, I was
+      able to come up with some specific areas that justified our
+      conversion to Subversion in order to maximize our productivity
+      and code quality:</p>
+
+      <ol>
+
+        <li>Atomic commits - The lack of atomicity in commits was a
+        huge problem for us with CVS.  Subversion gives us the
+        confidence that when we commit, everything went into the
+        repository.</li>
+
+        <li>The ability to back out changes before going to
+        production--using an activity branching model, we can allow
+        developers to branch per activity and only merge to the main
+        source base after code reviews have been performed.  If there
+        are problems, we have one revision we can back out that
+        includes the full changeset for that change. While the
+        repository level revisioning was a shift for my developers to
+        make that didn't happen immediately, it begins to make sense
+        when an activity had to be removed from the build.  In CVS we
+        had to go through each file looking for revisions that were
+        effected by a change.  Subversion now manages this for
+        us.</li>
+
+        <li>Decreased build time.  We run CruiseControl, and the
+        checkout times we were experiencing with CVS, along with our
+        requirement to tag of our source base after each build caused
+        our automated build cycle to take an inordinate amount of
+        time.  With the restriction that all production changes MUST
+        go through the build, this made emergency situations very
+        stressful.  The cheap copy functionality of Subversion
+        decreased the time it took to get a change into source
+        control, through the build system, and into deployment
+        packages by 80%, greatly increasing our response time.</li>
+
+        <li>Directory Versioning - this was a big deal that caused us
+        to actually evaluate Clearcase at one point.  The CVS Attic
+        was killing us in checkout time and build time with the
+        velocity of change we were making to the source base.  When
+        checkout times got too slow, we would have to wipe out the
+        attic, effectively wiping out the history of our source base.
+        With Subversion, we can remove something from the repository
+        and not suffer performance penalties later (and still be able
+        to get the deleted contents back).</li>
+
+        <li>Simpler (and faster) branching - we no longer have a full
+        time FTE managing branches.  We are now cycling this activity
+        through the group.  Each developer can perform this activity,
+        because it is now part of his daily work.</li>
+      </ol>
+
+      <p>As a manager, converting to Subversion was one of the best
+      decisions I have made thus far that had a such a direct and
+      highly visible impact on the productivity of my team.</p>
+
+      <p>I hope this helps you make your case for Subversion.  My
+      personal opinion is that no one should even consider CVS at this
+      point in time.  Subversion is a great product and the support
+      you get just on the mailing lists alone (from the development
+      team no less!) is second to none.</p></em>
+    </li>
+
+
+    <li>
+    <strong><a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=72348"
+          >Ross Mark of Controlling Edge
+          Inc</a></strong>
+          <tt>(22&nbsp;July&nbsp;2004)</tt>
+          <br/>
+ 
+    <em><p>For my own company Controlling Edge and at one of my
+        customers S4 Technology (www.s4-technology.com) I have been
+        running subversion since 0.17 and have never looked
+        back. While there were a few issues initially we have never
+        lost anything and currently have around 20 repositories
+        containing everything from source code, documentation to
+        complete product installations. We use subversion to install
+        and upgrade the software on our servers. Once we copy the svn
+        client onto the box the entire installation is a simple svn co
+        plus the asvn to restore symlinks, devices and file
+        permissions. Upgrading between releases with svn is great as
+        it automatically merges any changes to local configuration
+        files with new entries for the latest version. We even use svn
+        to store file system images for our embedded devices (linux
+        file system). Currently we have to check out the svn image on
+        a server and then downloaded to our embedded device via
+        rsync. We don't have the memory for a full svn client nor the
+        disk space for the working copy but one day we will write our
+        own svn client that can just do the checkout without the need
+        for the wc support files or the memory overhead.</p>
+
+    <p>For the past 9 years I had been installing CVS at customer
+    sites that required version control and wouldn't hesitate now to
+    recommend SVN instead.</p></em>
+    </li>
+
+    <li>
+    <strong><a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=72339"
+          >John Szakmeister
+          </a></strong>
+          <tt>(21&nbsp;July&nbsp;2004)</tt>
+          <br/>
+
+    <em><p>I work for a government contracting facility.  We develop
+        everything from hardware, to full-fledged software
+        applications, all of which supports mission-critical
+        activities.  We're currently using it on one of our most
+        productive teams, and houses about 3 years worth of work (for
+        about 14 developers).  We started off with CVS, and found that
+        the customer was constantly coming back with request for
+        features and upgrades.  Our small test projects would turn
+        into fully-funded applications, and as such, we had to
+        restructure them.  It was just too painful with CVS, and we
+        decided to look for something better.</p>
+
+    <p>We found Subversion when it was at version 0.17.  We started
+    with just a few developers using it, and then migrated our other
+    developers over time.  I can say without question that it has been
+    one of the best decisions that we've made.  Subversion works
+    better than CVS ever did.  We can detect corruption before it gets
+    to be a problem, we get atomic commits, and directory versioning.
+    All of which has made our development process and our ability to
+    adapt to the customers' ever-changing requirements that much
+    easier.  Plus, it natively supports both the Windows and Linux
+    platforms (versus the mixing of CVS and CVSNT that we had before),
+    which is our primary development platforms.  We've never lost any
+    data, and our developers have found it to be a very intuitive
+    tool.  Subversion has been rock-solid in our environment, and very
+    much complements our software engineering practices.  I can't
+    speak highly enough of it.</p></em>
+    </li>
+
+    <li>
+    <strong><a
     href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=10651"
           >Stuart Robertson of Absolute Systems,
           Inc</a></strong>
