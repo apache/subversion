@@ -103,7 +103,9 @@ typedef struct svn_ra_plugin_t
                         apr_pool_t *pool);
 
 
-  /* Close a repository session. */
+  /* Close a repository session.  This frees any memory used by the
+     session baton.  (To free the session baton itself, simply free
+     the pool it was created in.) */
   svn_error_t *(*close) (void *session_baton);
 
   /* Get the latest revision number from the repository. This is
@@ -113,8 +115,8 @@ typedef struct svn_ra_plugin_t
 
 
   /* Begin a commit against BASE_REVISION using LOG_MSG.  RA returns
-     *an *EDITOR and EDIT_BATON capable of transmitting a commit to
-     *the repository, which is then driven by the client.
+     an *EDITOR and *EDIT_BATON capable of transmitting a commit to
+     the repository, which is then driven by the client.
 
      RA must guarantee:
      
