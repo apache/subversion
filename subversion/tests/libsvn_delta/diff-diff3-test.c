@@ -1410,8 +1410,8 @@ random_three_way_merge (const char **msg,
    merge should work without a conflict. */
 static svn_error_t *
 merge_with_part_already_present (const char **msg,
-                                     svn_boolean_t msg_only,
-                                     apr_pool_t *pool)
+                                 svn_boolean_t msg_only,
+                                 apr_pool_t *pool)
 {
   int i;
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -1477,6 +1477,44 @@ merge_with_part_already_present (const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Merge is more "aggressive" about resolving conflicts than traditional
+ * patch or diff3.  Some people consider this behaviour to be a bug, see
+ * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=35014
+ */
+static svn_error_t *
+merge_adjacent_changes (const char **msg,
+                        svn_boolean_t msg_only,
+                        apr_pool_t *pool)
+{
+  *msg = "three way merge with adjacent changes";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (three_way_merge ("adj1", "adj2", "adj3",
+
+                            "foo\n"
+                            "bar\n"
+                            "baz\n",
+
+                            "foo\n"
+                            "new_bar\n"
+                            "baz\n",
+
+                            "zig\n"
+                            "foo\n"
+                            "bar\n"
+                            "new_baz\n",
+  
+                            "zig\n"
+                            "foo\n"
+                            "new_bar\n"
+                            "new_baz\n",
+
+                            pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* ========================================================================== */
@@ -1493,5 +1531,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (random_trivial_merge),
     SVN_TEST_PASS (random_three_way_merge),
     SVN_TEST_PASS (merge_with_part_already_present),
+    SVN_TEST_PASS (merge_adjacent_changes),
     SVN_TEST_NULL
   };
