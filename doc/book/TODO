@@ -92,6 +92,14 @@ To be fixed by sussman:
   - document mod_authz_svn!  and don't forget to mention it in the
     'svnserve vs. apache' comparison section of ch05.
 
+  - appA should mention no $Log$ keyword.  Or maybe it should mention
+    what keywords *do* exist as well.
+
+  - somehow clarify that --username has no affect on svn:// or
+    svn+ssh://.   Actually;  look at r7060.  Maybe it *does* do
+    something now.
+
+
 --------------------------------------------------------------
 
 To be fixed by kfogel:
