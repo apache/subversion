@@ -163,7 +163,7 @@ svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                                     apr_pool_t *pool);
 
 /**
- * @since New in 1.2
+ * @since New in 1.2.
  *
  * Open access batons for @c path and return in @c *anchor_access and
  * @c *target the anchor and target required to drive an editor.  Return
