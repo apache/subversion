@@ -66,6 +66,15 @@ svn_client_get_ra_library (svn_ra_plugin_t **library,
 /* These interfaces are very basic for milestone 1.  They will
    probably be changed significantly soon. */
 
+/* Perform a checkout, providing pre- and post-checkout hook editors
+   and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
+   AFTER_EDIT_BATON), the target PATH that will be the root directory
+   of your checked out working copy, an XML_SRC file to use instead of
+   an honest-to-goodness fs repository (hey, we're working on it!),
+   the ANCESTOR_PATH which describes what is being checked out
+   (relative to the repository), and the ANCESTOR_REVISION that you
+   would like to check out.  This operation will use the provided
+   memory POOL. */
 svn_error_t *
 svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
@@ -78,6 +87,12 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      apr_pool_t *pool);
 
 
+/* Perform an update, providing pre- and post-checkout hook editors
+   and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
+   AFTER_EDIT_BATON), the target PATH that will be the root directory
+   of your updated working copy, an XML_SRC file to use instead of an
+   fs repository, and the ANCESTOR_REVISION to which you would like to
+   update.  This operation will use the provided memory POOL. */
 svn_error_t *
 svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
