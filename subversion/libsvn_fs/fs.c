@@ -675,14 +675,17 @@ create_hooks (svn_fs_t *fs, const char *path)
       "# `" SVN_FS__REPOS_HOOK_PRE_COMMIT ".bat' or "
       "`" SVN_FS__REPOS_HOOK_PRE_COMMIT ".exe', but the basic idea is\n"
       "# the same.\n"
-      "# \n"
+      "#\n"
       "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
       "#\n"
       "# REPOS=${1}\n"
       "# TXN=${2}\n"
       "#\n"
-      "# commit_examiner.pl --repository ${REPOS} --txn-tree ${TXN}\n"
-      "# format-verifier.py --txn=${TXN} --format-style=curried\n";
+      "# SVNLOOK=/usr/local/svn/bin/svnlook\n"
+      "# LOG=`${SVNLOOK} ${REPOS} txn ${TXN} log`\n"
+      "# echo ${LOG} | grep \[a-zA-Z0-9]\ > /dev/null || exit 1\n"
+      "# exit 0\n"
+      "#\n";
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
