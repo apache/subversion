@@ -389,8 +389,7 @@ apr_time_t svn_wc__string_to_time (svn_string_t *timestr);
 
 
 
-/*** This will go into APR eventually. ***/
-
+/* Copy SRC to DST.  DST will be overwritten if it exists. */
 svn_error_t *svn_wc__copy_file (svn_string_t *src,
                                 svn_string_t *dst,
                                 apr_pool_t *pool);
