@@ -192,13 +192,14 @@ That is done via the env program.
 You could set it for example to '(\"LANG=C\")")
 
 (defvar svn-status-window-alist
-  '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t))
+  '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
   "An alist to specify which windows should be used for svn command outputs.
-The following keys are supported: diff, log, info, blame, proplist.
+The following keys are supported: diff, log, info, blame, proplist, update.
 The follwing values can be given:
-nil ... show in *svn-process* buffer
-t   ... show in dedicated *svn-info* buffer
-a string ... show in a buffer named string")
+nil       ... show in *svn-process* buffer
+t         ... show in dedicated *svn-info* buffer
+invisible ... don't show the buffer (eventually useful for update)
+a string  ... show in a buffer named string")
 
 (defvar svn-status-short-mod-flag-p t
   "*Whether the mark for out of date files is short or long.
@@ -585,7 +586,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                   (setq svn-status-files-to-commit nil)
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
-                  (svn-status-show-process-buffer-internal t)
+                  (svn-status-show-process-output 'update t)
                   (svn-status-update)
                   (message "svn update finished"))
                  ((eq svn-process-cmd 'add)
@@ -632,7 +633,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                       event)))
           (t
            (message "svn process had unknown event: %s" event))
-          (svn-status-show-process-buffer-internal t))))
+          (svn-status-show-process-output nil t))))
 
 (defun svn-process-filter (process str)
   (save-window-excursion
@@ -1918,28 +1919,31 @@ or (if no files were marked) the file under point."
   (other-window 1))
 
 (defun svn-status-show-process-output (cmd &optional scroll-to-top)
-"Display the result of a svn command.
+  "Display the result of a svn command.
 Consider svn-status-window-alist to choose the buffer name."
   (let ((window-mode (cadr (assoc cmd svn-status-window-alist))))
     (cond ((eq window-mode nil) ;; use *svn-process* buffer
            (setq svn-status-last-output-buffer-name "*svn-process*"))
           ((eq window-mode t) ;; use *svn-info* buffer
            (setq svn-status-last-output-buffer-name "*svn-info*"))
+          ((eq window-mode 'invisible) ;; don't display the buffer
+           (setq svn-status-last-output-buffer-name nil))
           (t
            (setq svn-status-last-output-buffer-name window-mode)))
-    (if window-mode
-        (progn
-          (when (eq (current-buffer) "*svn-status*")
-            (delete-other-windows))
-          (pop-to-buffer "*svn-process*")
-          (switch-to-buffer (get-buffer-create svn-status-last-output-buffer-name))
-          (let ((buffer-read-only nil))
-            (delete-region (point-min) (point-max))
-            (insert-buffer-substring "*svn-process*")
-            (when scroll-to-top
-              (goto-char (point-min))))
-          (other-window 1))
-      (svn-status-show-process-buffer-internal scroll-to-top))))
+    (when svn-status-last-output-buffer-name
+      (if window-mode
+          (progn
+            (when (eq (current-buffer) "*svn-status*")
+              (delete-other-windows))
+            (pop-to-buffer "*svn-process*")
+            (switch-to-buffer (get-buffer-create svn-status-last-output-buffer-name))
+            (let ((buffer-read-only nil))
+              (delete-region (point-min) (point-max))
+              (insert-buffer-substring "*svn-process*")
+              (when scroll-to-top
+                (goto-char (point-min))))
+            (other-window 1))
+        (svn-status-show-process-buffer-internal scroll-to-top)))))
 
 
 (defun svn-status-show-svn-log (arg)
@@ -2021,8 +2025,9 @@ If ARG then prompt for revision to diff against, else compare working copy with 
     (setq buffer-read-only t)))
 
 (defun svn-status-show-process-buffer ()
+  "Show the content of the *svn-process* buffer"
   (interactive)
-  (svn-status-show-process-buffer-internal))
+  (svn-status-show-process-output nil))
 
 (defun svn-status-add-file-recursively (arg)
   "Run `svn add' on all selected files.
