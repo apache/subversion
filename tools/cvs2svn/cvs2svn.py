@@ -14,13 +14,7 @@ import string
 import getopt
 import statcache
 
-from svn import fs, util, _delta, _repos
-
-### these should go somewhere else. should have SWIG export them.
-svn_node_none = 0
-svn_node_file = 1
-svn_node_dir = 2
-svn_node_unknown = 3
+from svn import fs, util, delta, repos
 
 
 trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
@@ -359,11 +353,11 @@ class Commit:
         for i in range(1, len(parts) + 1):
           # reassemble the pieces, adding a leading slash
           parent_dir = '/' + string.join(parts[:i], '/')
-          if fs.check_path(root, parent_dir, f_pool) == svn_node_none:
+          if fs.check_path(root, parent_dir, f_pool) == util.svn_node_none:
             print '    making dir:', parent_dir
             fs.make_dir(root, parent_dir, f_pool)
 
-      if fs.check_path(root, repos_path, f_pool) == svn_node_none:
+      if fs.check_path(root, repos_path, f_pool) == util.svn_node_none:
         created_file = 1
         fs.make_file(root, repos_path, f_pool)
       else:
