@@ -1,5 +1,8 @@
 								-*-text-*-
 
+SVN HEADER -> SWIG MODULE
+-------------------------
+
 Subversion has a bunch of includes files, some are interesting for
 wrapping with language bindings, and others which are simple type
 declarations and constants. Below is the table which maps each header
@@ -33,3 +36,20 @@ apr*.h		  n/a (3)
 NOTE: the bindings code is being developed using SWIG 1.3a5 (it might
 be able to work with SWIG 1.1, but the final release target will be
 SWIG 1.3)
+
+
+
+
+SWIG MODULES
+------------
+
+We will produce a number of modules, expecting the binding languages
+to organize these into a package.
+
+svn.client
+svn.delta
+svn.error
+svn.fs
+svn.io
+svn.ra
+svn.wc

@@ -21,3 +21,7 @@
 #define __attribute__(__x)
 
 typedef int apr_status_t
+typedef long apr_size_t
+typedef struct apr_pool_t apr_pool_t
+typedef struct apr_array_header_t apr_array_header_t
+typedef long apr_off_t
