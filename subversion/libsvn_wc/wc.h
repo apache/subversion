@@ -464,7 +464,7 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * The set bits in FLAGS will be OR'd into the entry's flags, unless:
  *
  *    - If FLAGS has the SVN_WC_ENTRY_CLEAR_ALL bit set, then all of
- *      the * entry's flags will be cleared,
+ *      the entry's flags will be cleared,
  *
  *    - Else if the SVN_WC_ENTRY_CLEAR_NAMED bit is set in FLAGS, then
  *      each other set bit in FLAGS will result in a clear bit in the
