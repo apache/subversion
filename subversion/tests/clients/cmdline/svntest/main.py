@@ -23,6 +23,7 @@ import re
 import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
+import time    # for time()
 
 from svntest import testcase
 from svntest import wc
@@ -206,9 +207,14 @@ def _run_command(command, error_expected, *varargs):
 
   # Log the command line
   if not quiet_mode:
-    print 'CMD:', os.path.basename(command) + args
+    print 'CMD:', os.path.basename(command) + args,
 
+  start = time.time()
   infile, outfile, errfile = os.popen3(command + args)
+  stop = time.time()
+  if not quiet_mode:
+    print '<TIME = %.6f>' % (stop - start)
+
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
 
@@ -292,10 +298,14 @@ def copy_repos(src_path, dst_path, head_revision):
   load_args = ' load "' + dst_path + '"'
   if not quiet_mode:
     print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-          '|', os.path.basename(svnadmin_binary) + load_args
+          '|', os.path.basename(svnadmin_binary) + load_args,
+  start = time.time()
   dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
   load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
-
+  stop = time.time()
+  if not quiet_mode:
+    print '<TIME = %.6f>' % (stop - start)
+  
   while 1:
     data = dump_out.read(1024*1024)  # Arbitrary buffer size
     if data == "":
