@@ -87,62 +87,53 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE="convert-size.c"
+SOURCE=".\convert-size.c"
 # End Source File
 # Begin Source File
 
-SOURCE=dbt.c
+SOURCE=.\dbt.c
 # End Source File
 # Begin Source File
 
-SOURCE=delta.c
+SOURCE=.\delta.c
 # PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
-SOURCE=dir.c
+SOURCE=.\dir.c
 # End Source File
 # Begin Source File
 
-SOURCE=err.c
+SOURCE=.\err.c
 # End Source File
 # Begin Source File
 
-SOURCE=file.c
+SOURCE=.\file.c
 # PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
-SOURCE=fs.c
-
-!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
-
-# ADD CPP /D alloca=_alloca
-
-!ENDIF 
-
+SOURCE=.\fs.c
 # End Source File
 # Begin Source File
 
-SOURCE=id.c
+SOURCE=.\id.c
 # End Source File
 # Begin Source File
 
-SOURCE=node.c
+SOURCE=.\node.c
 # End Source File
 # Begin Source File
 
-SOURCE=revision.c
+SOURCE=.\revision.c
 # End Source File
 # Begin Source File
 
-SOURCE=skel.c
+SOURCE=.\skel.c
 # End Source File
 # Begin Source File
 
-SOURCE=txn.c
+SOURCE=.\txn.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -150,47 +141,47 @@ SOURCE=txn.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE="convert-size.h"
+SOURCE=".\convert-size.h"
 # End Source File
 # Begin Source File
 
-SOURCE=dbt.h
+SOURCE=.\dbt.h
 # End Source File
 # Begin Source File
 
-SOURCE=dir.h
+SOURCE=.\dir.h
 # End Source File
 # Begin Source File
 
-SOURCE=err.h
+SOURCE=.\err.h
 # End Source File
 # Begin Source File
 
-SOURCE=file.h
+SOURCE=.\file.h
 # End Source File
 # Begin Source File
 
-SOURCE=fs.h
+SOURCE=.\fs.h
 # End Source File
 # Begin Source File
 
-SOURCE=id.h
+SOURCE=.\id.h
 # End Source File
 # Begin Source File
 
-SOURCE=node.h
+SOURCE=.\node.h
 # End Source File
 # Begin Source File
 
-SOURCE=revision.h
+SOURCE=.\revision.h
 # End Source File
 # Begin Source File
 
-SOURCE=skel.h
+SOURCE=.\skel.h
 # End Source File
 # Begin Source File
 
-SOURCE=txn.h
+SOURCE=.\txn.h
 # End Source File
 # End Group
 # End Target
