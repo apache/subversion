@@ -39,6 +39,7 @@ main (int argc, char *argv[])
   apr_pool_t *globalpool;
   apr_file_t *stdout_handle;
   apr_hash_t *targets = NULL;
+  svn_stream_t *out_stream;
 
   const svn_delta_edit_fns_t *my_editor;
   void *my_edit_baton;
@@ -89,8 +90,11 @@ main (int argc, char *argv[])
 
   else  /* human-readable output */
     {
+      /* A stream to print to stdout. */
+      out_stream = svn_stream_from_stdio (stdout, globalpool);
+
       err = svn_test_get_editor (&my_editor, &my_edit_baton,
-                                 rootdir, 59, globalpool);
+                                 out_stream, 3, rootdir, globalpool);
       if (err)
         {
           svn_handle_error (err, stderr, 0);
