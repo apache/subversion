@@ -97,15 +97,6 @@ struct dir_baton
   /* The repository URL this directory corresponds to. */
   const char *URL;
 
-  /* Gets set iff this directory has a "disjoint url", i.e. its URL is
-     not its [parent's URL + name].
-
-     ### NOTE:  this editor is now detecting disjoint files and
-     subtrees, but is not yet *using* this information.  It will when
-     we finish issue #575.
-  */
-  svn_boolean_t disjoint_url;
-
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -182,7 +173,6 @@ make_dir_baton (const char *path,
   const char *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
-  svn_boolean_t disjoint_url = FALSE;
   struct bump_dir_info *bdi;
   
   /* Don't do this.  Just do NOT do this to me. */
@@ -217,18 +207,6 @@ make_dir_baton (const char *path,
         URL = "";
       else
         URL = entry->url;
-
-      /* Is the URL disjoint from its parent's URL?  Notice that we
-         define disjointedness not just in terms of having an
-         unexpected URL, but also as a condition that is automatically
-         *inherited* from a parent baton.  */
-      if (pb) 
-        {
-          const char *parent_URL;
-          parent_URL = svn_path_join (pb->URL, d->name, pool);
-          if (pb->disjoint_url || (strcmp (parent_URL, URL) != 0))
-            disjoint_url = TRUE;
-        }
     }
 
   /* the bump information lives in the edit pool */
@@ -248,7 +226,6 @@ make_dir_baton (const char *path,
   d->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   d->added        = added;
   d->URL          = URL;
-  d->disjoint_url = disjoint_url;
   d->bump_info    = bdi;
 
   return d;
@@ -332,15 +309,6 @@ struct file_baton
   /* Set if this file is new. */
   svn_boolean_t added;
 
-  /* Gets set iff this directory has a "disjoint url", i.e. its URL is
-     not its [parent's URL + name].
-
-     ### NOTE:  this editor is now detecting disjoint files and
-     subtrees, but is not yet *using* this information.  It will when
-     we finish issue #575.
-  */
-  svn_boolean_t disjoint_url;
-
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t text_changed;
@@ -370,7 +338,6 @@ make_file_baton (struct dir_baton *pb,
   const char *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
-  svn_boolean_t disjoint_url = FALSE;
 
   /* I rather need this information, yes. */
   if (! path)
@@ -389,29 +356,18 @@ make_file_baton (struct dir_baton *pb,
     }
   else 
     {
-      const char *parent_URL;
-
       /* For updates, look in the 'entries' file */
       err = svn_wc_entry (&entry, f->path, FALSE, pool);
       if (err || (! entry) || (! entry->url))
         URL = "";
       else
         URL = entry->url;
-
-      /* Is the URL disjoint from its parent's URL?  Notice that we
-         define disjointedness not just in terms of having an
-         unexpected URL, but also as a condition that is automatically
-         *inherited* from a parent baton.  */
-      parent_URL = svn_path_join (pb->URL, f->name, pool);
-      if (pb->disjoint_url || (strcmp (parent_URL, URL) != 0))
-        disjoint_url = TRUE;
     }
 
   f->pool         = pool;
   f->edit_baton   = pb->edit_baton;
   f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   f->URL          = URL;
-  f->disjoint_url = disjoint_url;
   f->bump_info    = pb->bump_info;
   f->added        = adding;
 
