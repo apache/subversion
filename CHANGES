@@ -119,6 +119,9 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: better 'svnadmin verify  verification (r10508, r10509)
  * fixed: encoding of get_repos_url_result (r10353, 10375)
  * fixed: prevent canonicalized URIs from ending in '/' (r10317)
+ * stop using -std=c89 gcc flag (r11054)
+ * sync with apr 1.0's find_apr.m4 and find_apu.m4 files (r10560)
+ * win32 installer improvements (r10978)
  * huge improvements to python, perl, java bindings
  * huge changes to win32 build system
 
