@@ -374,6 +374,8 @@ static VALUE
 cl_import (int argc, VALUE *argv, VALUE self)
 {
   VALUE aURL, aPath, aEntry, rest;
+  svn_revnum_t committed_rev;
+  const char *committed_date, *committed_author;
   const svn_delta_edit_fns_t *before_editor = NULL;
   void *before_edit_baton = NULL;
   const svn_delta_edit_fns_t *after_editor = NULL;
@@ -413,7 +415,9 @@ cl_import (int argc, VALUE *argv, VALUE self)
   else
     log_msg = NULL;
 
-  err = svn_client_import (before_editor, before_edit_baton,
+  err = svn_client_import (&committed_rev,
+                           &committed_date, &committed_author,
+                           before_editor, before_edit_baton,
                            after_editor, after_edit_baton,
                            auth_baton, path, URL, new_entry,
                            log_msg, xml_dst, revision, pool);
@@ -422,14 +426,24 @@ cl_import (int argc, VALUE *argv, VALUE self)
       apr_pool_destroy (pool);
       svn_ruby_raise (err);
     }
+  apr_pool_destroy (pool);
 
-  return Qnil;
+  {
+    VALUE obj;
+    obj = rb_ary_new2 (3);
+    rb_ary_store (obj, 0, INT2NUM (committed_rev));
+    rb_ary_store (obj, 1, rb_str_new2 (committed_date));
+    rb_ary_store (obj, 2, rb_str_new2 (committed_author));
+    return obj;
+  }
 }
 
 static VALUE
 cl_commit (int argc, VALUE *argv, VALUE self)
 {
   VALUE aTargets, rest;
+  svn_revnum_t committed_rev;
+  const char *committed_date, *committed_author;
   const svn_delta_edit_fns_t *before_editor = NULL;
   void *before_edit_baton = NULL;
   const svn_delta_edit_fns_t *after_editor = NULL;
@@ -469,7 +483,9 @@ cl_commit (int argc, VALUE *argv, VALUE self)
   else
     log_msg = NULL;
 
-  err = svn_client_commit (before_editor, before_edit_baton,
+  err = svn_client_commit (&committed_rev,
+                           &committed_date, &committed_author,
+                           before_editor, before_edit_baton,
                            after_editor, after_edit_baton,
                            auth_baton, targets,
                            log_msg, xml_dst, revision, pool);
@@ -478,8 +494,16 @@ cl_commit (int argc, VALUE *argv, VALUE self)
       apr_pool_destroy (pool);
       svn_ruby_raise (err);
     }
+  apr_pool_destroy (pool);
 
-  return Qnil;
+  {
+    VALUE obj;
+    obj = rb_ary_new2 (3);
+    rb_ary_store (obj, 0, INT2NUM (committed_rev));
+    rb_ary_store (obj, 1, rb_str_new2 (committed_date));
+    rb_ary_store (obj, 2, rb_str_new2 (committed_author));
+    return obj;
+  }
 }
 
 static VALUE
