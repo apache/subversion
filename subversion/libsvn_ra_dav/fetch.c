@@ -427,7 +427,9 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   svn_boolean_t is_dir;
   svn_string_t bc_url;
   svn_string_t bc_relative;
+#ifdef BUSTED_CRAP
   svn_stringbuf_t *path;
+#endif
 
   /* ### if REVISION means "get latest", then we can use an expand-property
      ### REPORT rather than two PROPFINDs to reach the baseline-collection */
@@ -452,10 +454,15 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   /* The root for the checkout is the Baseline Collection root, plus the
      relative location of the public URL to its repository root. */
 
+#ifdef BUSTED_CRAP
   path = svn_stringbuf_create_from_string(&bc_url, pool);
   svn_path_add_component_nts(path, bc_relative.data, svn_path_url_style);
 
   *bc_root = path->data;
+#else
+  /* ### this is broken cuz it assumes bc_url has a trailing slash. */
+  *bc_root = apr_pstrcat(pool, bc_url.data, bc_relative.data, NULL);
+#endif
 
   return NULL;
 }
