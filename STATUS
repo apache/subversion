@@ -9,13 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10599
-    Make the perl bindings tests work before the svn libs have been installed.
-    Justification:
-      Trivial, obviously correct fix.
-    Votes:
-      +1: maxb, ghudson, clkao
-
   * r10604
     Cleanup some qsort-related stuff.
     Justification:
