@@ -1470,77 +1470,6 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 
 
 
-svn_error_t *
-svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
-                                  svn_stringbuf_t *url,
-                                  apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  svn_wc_entry_t *this_dir;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  
-  /* Read DIRPATH's entries. */
-  SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
-
-  /* Tweak THIS_DIR's URL */
-  this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR,
-                           APR_HASH_KEY_STRING);
-  fold_entry (entries, svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool),
-              SVN_WC__ENTRY_MODIFY_URL,
-              SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
-              url, NULL, subpool, NULL);
-
-  /* Recursively loop over all children. */
-  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_ssize_t keylen;
-      void *val;
-      const char *name;
-      svn_wc_entry_t *current_entry;
-      svn_stringbuf_t *child_url;
-
-      apr_hash_this (hi, &key, &keylen, &val);
-      name = (const char *) key;
-      current_entry = (svn_wc_entry_t *) val;
-
-      /* Ignore the "this dir" entry. */
-      if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
-        continue;
-
-      /* Derive the new URL for the current entry */
-      child_url = svn_stringbuf_dup (url, subpool);
-      svn_path_add_component_nts (child_url, name);
-
-      /* If a file, tweak the entry's URL. */
-      if (current_entry->kind == svn_node_file)
-        fold_entry (entries, svn_stringbuf_create (name, subpool),
-                    SVN_WC__ENTRY_MODIFY_URL,
-                    SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
-                    child_url, NULL, subpool, NULL);
-
-      /* If a dir, recurse. */
-      else if (current_entry->kind == svn_node_dir)
-        {
-          svn_stringbuf_t *child_path = svn_stringbuf_dup (dirpath, subpool);
-          svn_path_add_component_nts (child_path, name);
-
-          SVN_ERR (svn_wc__recursively_rewrite_urls 
-                   (child_path, child_url, subpool));
-        }
-    }
-
-  /* Write a shiny new entries file to disk. */
-  SVN_ERR (svn_wc__entries_write (entries, dirpath, subpool));
-
-  /* Cleanup */
-  svn_pool_destroy (subpool);
-
-  return SVN_NO_ERROR;
-}
-
-
 
 
 

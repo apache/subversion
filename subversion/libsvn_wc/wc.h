@@ -631,7 +631,7 @@ svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 svn_error_t *svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool);
 
 /* Modify the entry of working copy PATH, presumably after an update
-   completes. 
+   completes.   If PATH doesn't exist, this routine does nothing.
 
    Set the entry's 'url' and 'working revision' fields to BASE_URL and
    NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
@@ -663,24 +663,6 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const svn_stringbuf_t *new_url,
                      const svn_revnum_t new_rev,
                      apr_pool_t *pool);
-
-
-/* Set the url field of DIRPATH's entry to URL, and recursively tweak
-   all its children to have urls derived therefrom. */
-svn_error_t *svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
-                                               svn_stringbuf_t *url,
-                                               apr_pool_t *pool);
-
-
-
-/* Ensure that every file or dir underneath PATH is at REVISION.  If
-   not, bump it to exactly that value.  (Used at the end of an
-   update.) */
-svn_error_t *svn_wc__ensure_uniform_revision (svn_stringbuf_t *path,
-                                              svn_revnum_t revision,
-                                              svn_boolean_t recurse,
-                                              apr_pool_t *pool);
-
 
 
 
