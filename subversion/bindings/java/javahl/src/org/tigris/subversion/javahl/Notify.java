@@ -111,7 +111,8 @@ public interface Notify
         /** Transmitting post-fix text-delta data for a file. */
         public static final int commit_postfix_txdelta = 19;
         
- 
+        /** Processed a single revision's blame. */
+        public static final int blame_revision = 20;
 
 		private static final String[] actionNames =
 		{
@@ -134,8 +135,8 @@ public interface Notify
 			"sending added   ",
 			"sending deleted ",
 			"sending replaced",
-			"transfer"
-
+			"transfer",
+            "blame revision processed"
 		};
 		public static final String getActionName(int action)
 		{
@@ -145,7 +146,7 @@ public interface Notify
     }
     /** The type of notification that is occuring. */
     public static final class Status
-    {
+   {
         public static final int inapplicable = 0;
 
         /** Notifier doesn't know or isn't saying. */
