@@ -37,8 +37,6 @@ class Generator(gen_win.WinGeneratorBase):
         #LIB
         config_type=4
         target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
-    elif isinstance(target, gen_base.TargetExternal):
-      return
     elif isinstance(target, gen_base.TargetUtility):
       config_type=1
       target.output_name = target.name + '.exe'
@@ -135,7 +133,8 @@ class Generator(gen_win.WinGeneratorBase):
     for target in install_targets:
       name = target.name
       # These aren't working yet
-      if isinstance(target, gen_base.TargetScript) \
+      if isinstance(target, gen_base.TargetScript)      \
+         or isinstance(target, gen_base.TargetExternal) \
          or isinstance(target, gen_base.TargetSWIG):
         continue
 
