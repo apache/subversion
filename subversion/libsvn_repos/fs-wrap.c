@@ -197,17 +197,10 @@ svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               const svn_string_t *value,
                               apr_pool_t *pool)
 {
-  /* Validate the property. */
   SVN_ERR (validate_prop (name, pool));
-
-  /* Run pre-revprop-change hook */
   SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
                                                 value, pool));
-
-  /* Change the revision prop. */
   SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, value, pool));
-
-  /* Run post-revprop-change hook */
   SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
                                                  name, pool));
 
