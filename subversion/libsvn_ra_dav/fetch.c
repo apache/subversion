@@ -33,6 +33,7 @@
 #include <ne_props.h>
 #include <ne_xml.h>
 #include <ne_request.h>
+#include <ne_compress.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -443,8 +444,10 @@ static svn_error_t *custom_get_request(ne_session *sess,
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
   ne_request *req;
+  ne_decompress *decompress;
   svn_error_t *err;
   int code;
+  int decompress_rv;
 
   /* See if we can get a version URL for this resource. This will refer to
      what we already have in the working copy, thus we can get a diff against
@@ -478,7 +481,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 
   /* add in a reader to capture the body of the response. */
-  ne_add_response_body_reader(req, ne_accept_2xx, reader, &cgc);
+  decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
 
   /* complete initialization of the body reading context */
   cgc.subctx = subctx;
@@ -489,6 +492,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                      226 /* IM Used */,
                                      pool);
 
+  decompress_rv = ne_decompress_destroy(decompress);
+
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
     free(cgc.ctype.value);
@@ -498,6 +503,14 @@ static svn_error_t *custom_get_request(ne_session *sess,
   if (cgc.err)
     return cgc.err;
 
+  if (decompress_rv != 0)
+    {
+       const char *msg;
+
+       msg = apr_psprintf(pool, "GET request failed for %s", url);
+       err = svn_ra_dav__convert_error(sess, msg, decompress_rv, pool);
+    }
+  
   if (err)
     return err;
 
