@@ -798,26 +798,18 @@ class RepositoryMirror:
     for parent_item in parent_chain:
       pkey = parent_item[1]
       pval = marshal.loads(self.nodes_db[pkey])
-      if prune:
-        if (new_key == None) and is_prunable(pval):
-          pruned_count = pruned_count + 1
-          pass
-          # Do nothing more.  All the action takes place when we hit a
-          # non-prunable parent.
-        else:
-          # We hit a non-prunable, so bubble up the new gospel.
-          pval[self.mutable_flag] = 1
-          if new_key == None:
-            del pval[prev_entry_name]
-          else:
-            pval[prev_entry_name] = new_key
-          new_key = gen_key()
+      if prune and (new_key == None) and is_prunable(pval):
+        pruned_count = pruned_count + 1
+        pass
+        # Do nothing more.  All the action takes place when we hit a
+        # non-prunable parent.
       else:
+        # We hit a non-prunable, or aren't pruning, so bubble up the new gospel.
         pval[self.mutable_flag] = 1
-        if new_key:
-          pval[prev_entry_name] = new_key
-        else:
+        if new_key == None:
           del pval[prev_entry_name]
+        else:
+          pval[prev_entry_name] = new_key
         new_key = gen_key()
 
       prev_entry_name = parent_item[0]
