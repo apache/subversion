@@ -1776,7 +1776,7 @@ jane = r
   <!-- ================================================================= -->
   <sect1 id="svn-ch-6-sect-5">
     
-    <title>Using Multiple Servers</title>
+    <title>Supporting Multiple Repository Access Methods</title>
 
     <para>You've seen how a repository can be accessed in many
       different ways.  But is it possible&mdash;or safe&mdash;for your
