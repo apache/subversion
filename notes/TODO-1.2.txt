@@ -5,39 +5,27 @@ TO-DO list for svn 1.2
 
 CODING TASKS:
 
-   - Slog through Julian Foad's 1.2 API Review email.  (fitz,
-     cmpilato, sussman)
+   - Slog through Julian Foad's 1.2 API Review email.  (fitz)
 
    - finish Dan Berlin's streamy-blame stuff;  make it work with libsvn_diff.
-     (sander, philip, dberlin?)
+     (sander, philip, dberlin?) --> FILE AS 1.3 ENHANCEMENT (sussman)
 
-   - get win32 build working and passing tests.
+   - get win32 build working and passing tests. (sussman)
 
 
 BUGS:
 
-   - another issuetracker sweep of 1.2 things?
+   - new ra_dav bug from philip?  investigate. (sussman)
 
 
 QUESTIONS:
 
-   - revisit auto-repos-upgrading strategy;  see list discussion.
-     proposal:  no lock support until 'svnadmin upgrade', which (1)
-     bumps format number and (2) upgrades fs schema in-place.
-
-   - Determine what to do about the fact that if someone schedules a
-     file for deletion, and then commits it with the --no-unlock
-     switch, the repository will retain a lock on a (now) nonexistent
-     path.  One argument is that this is OK as long as we can delete
-     the lock via a URL.  The other argument is that, on a delete, the
-     lock should be unconditionally deleted.
-
 
 DOC:
 
-   - write 1.2 CHANGES entry  (sussman, in progress)
+   - write 1.1.4 and 1.2 CHANGES entries  (sussman, in progress)
 
-   - final tweaks to 1.2 releasenotes (sussman)
+   - finish the 1.2 releasenotes (sussman)
 
    - INSTALL:  explain how to build mod_dav_svn on win32 w/patch
 
@@ -48,13 +36,3 @@ TESTS:
 
    - continue testing various DAV clients against autoversioning.
 
-   - figure out what to do about utf_tests.py #1 once and for all, so
-     it passes on *all* systems.
-
-
-OTHER:
-
-   - push for a 2.0.54 release within the month, so that we don't have
-     to require win32 build patch for mod_dav?
-
-   - push for neon 0.25 release?
