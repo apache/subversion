@@ -105,7 +105,7 @@ class GeneratorBase:
             self.test_deps.append(target_ob.output)
             if parser.get(target, 'testing') != 'skip':
               self.test_progs.append(target_ob.output)
-          if install == 'fs-test':
+          elif install == 'fs-test':
             self.fs_test_deps.append(target_ob.output)
             if parser.get(target, 'testing') != 'skip':
               self.fs_test_progs.append(target_ob.output)
