@@ -398,23 +398,23 @@ change_file_prop (void *file_baton,
 
   /* Store only the magic three properties. */
   if (strcmp (name, SVN_PROP_EOL_STYLE) == 0)
-    fb->eol_style_val = svn_string_dup (value, pool);
+    fb->eol_style_val = svn_string_dup (value, fb->pool);
 
   else if (strcmp (name, SVN_PROP_KEYWORDS) == 0)
-    fb->keywords_val = svn_string_dup (value, pool);
+    fb->keywords_val = svn_string_dup (value, fb->pool);
 
   else if (strcmp (name, SVN_PROP_EXECUTABLE) == 0)
-    fb->executable_val = svn_string_dup (value, pool);
+    fb->executable_val = svn_string_dup (value, fb->pool);
 
   /* Try to fill out the baton's keywords-structure too. */
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
-    fb->revision = apr_pstrdup (pool, value->data);
+    fb->revision = apr_pstrdup (fb->pool, value->data);
 
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
-      SVN_ERR (svn_time_from_cstring (&fb->date, value->data, pool));
+      SVN_ERR (svn_time_from_cstring (&fb->date, value->data, fb->pool));
 
   else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
-    fb->author = apr_pstrdup (pool, value->data);
+    fb->author = apr_pstrdup (fb->pool, value->data);
 
   return SVN_NO_ERROR;
 }
