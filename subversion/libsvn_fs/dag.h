@@ -59,7 +59,7 @@ dag_node_t *svn_fs__dag_dup (dag_node_t *node,
 
 
 /* Return the filesystem containing NODE.  */
-const svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node);
+svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node);
 
 
 /* Return the node revision ID of NODE.  The value returned is shared
