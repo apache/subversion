@@ -24,6 +24,7 @@
 #include <apr_strings.h>
 #include <apr_network_io.h>
 #include <apr_md5.h>
+#include <apr_uri.h>
 #include <assert.h>
 
 #include "svn_types.h"
@@ -67,22 +68,18 @@ typedef struct {
   void *edit_baton;
 } ra_svn_reporter_baton_t;
 
-/* Parse an svn URL's authority section into tunnel, user, host, and
- * port components.  Return 0 on success, -1 on failure.  *tunnel
- * and *user may be set to NULL. */
-static int parse_url(const char *url, const char **tunnel, const char **user,
-                     unsigned short *port, const char **hostname,
-                     apr_pool_t *pool)
+/* Parse an svn URL's tunnel portion into tunnel, if there is a tunnel
+   portion. */
+
+static void parse_tunnel(const char *url, const char **tunnel,
+                         apr_pool_t *pool)
 {
   const char *p;
 
   *tunnel = NULL;
-  *user = NULL;
-  *port = SVN_RA_SVN_PORT;
-  *hostname = NULL;
 
   if (strncasecmp(url, "svn", 3) != 0)
-    return -1;
+    return;
   url += 3;
 
   /* Get the tunnel specification, if any. */
@@ -91,40 +88,11 @@ static int parse_url(const char *url, const char **tunnel, const char **user,
       url++;
       p = strchr(url, ':');
       if (!p)
-        return -1;
+        return;
       *tunnel = apr_pstrmemdup(pool, url, p - url);
       url = p;
     }
-
-  if (strncmp(url, "://", 3) != 0)
-    return -1;
-  url += 3;
-
-  while (1)
-    {
-      p = url + strcspn(url, "@:/");
-      if (*p == '@' && !*user)
-        *user = apr_pstrmemdup(pool, url, p - url);
-      else if (*p == ':' && !*hostname)
-        *hostname = apr_pstrmemdup(pool, url, p - url);
-      else if (*p == '/' || *p == '\0')
-        {
-          if (!*hostname)
-            *hostname = apr_pstrmemdup(pool, url, p - url);
-          else
-            *port = atoi(url);
-          break;
-        }
-      else
-        return -1;
-      url = p + 1;
-    }
-
-  /* Decode any escaped characters in the hostname and user. */
-  *hostname = svn_path_uri_decode(*hostname, pool);
-  if (*user)
-    *user = svn_path_uri_decode(*user, pool);
-  return 0;
+  return;
 }
 
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
@@ -134,7 +102,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   apr_status_t status;
 
   /* Resolve the hostname. */
-  status = apr_sockaddr_info_get(&sa, hostname, APR_INET, port, 0, pool);
+  status = apr_sockaddr_info_get(&sa, hostname, APR_UNSPEC, port, 0, pool);
   if (status)
     return svn_error_createf(status, NULL, _("Unknown hostname '%s'"),
                              hostname);
@@ -142,9 +110,10 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   /* Create the socket. */
 #ifdef MAX_SECS_TO_LINGER
   /* ### old APR interface */
-  status = apr_socket_create(sock, APR_INET, SOCK_STREAM, pool);
+  status = apr_socket_create(sock, sa->family, SOCK_STREAM, pool);
 #else
-  status = apr_socket_create(sock, APR_INET, SOCK_STREAM, APR_PROTO_TCP, pool);
+  status = apr_socket_create(sock, sa->family, SOCK_STREAM, APR_PROTO_TCP, 
+                             pool);
 #endif
   if (status)
     return svn_error_wrap_apr(status, _("Can't create socket"));
@@ -590,10 +559,20 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
-
-  if (parse_url(url, &tunnel, &user, &port, &hostname, pool) != 0)
+  apr_uri_t uri;
+  apr_status_t err;
+  
+  err = apr_uri_parse (pool, url, &uri);
+  
+  if (err != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("Illegal svn repository URL '%s'"), url);
+  
+  port = uri.port ? uri.port : SVN_RA_SVN_PORT;
+  hostname = uri.hostname;
+  user = uri.user;
+  
+  parse_tunnel (url, &tunnel, pool);
 
   if (tunnel)
     {
