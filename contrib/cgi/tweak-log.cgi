@@ -35,6 +35,7 @@ my $gReposPath = '/usr/www/repositories/svn';
 my $gActionURL = './tweak-log.cgi';
 my $gTempfilePrefix = '/tmp/tweak-cgi';
 my $gHistoryFile = './TWEAKLOG';
+my $gBypassRevpropHooks = 0; # set to 1 to bypass the repository hook system
 my $gNumRecentCommits = 20;  # number of recent commits to show on init form
 ###############################################################################
 
@@ -284,7 +285,14 @@ sub doCommitLog
     }
 
     # Now, make the mods
-    `$gSvnadminCmd setlog $gReposPath -r$rev $tempfile`;
+    if ($gBypassRevpropHooks)
+    {
+        `$gSvnadminCmd setlog $gReposPath -r$rev $tempfile --bypass-hooks`;
+    }
+    else
+    {
+        `$gSvnadminCmd setlog $gReposPath -r$rev $tempfile`;
+    }
     
     # ...and remove the tempfile.  It is, after all, temporary.
     unlink $tempfile;
