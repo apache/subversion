@@ -1236,3 +1236,13 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved)
 #define SVN_SWIG_JAVA_TERM_CACHE
 #include "swigutil_java_cache.h"
 }
+
+
+/* HACK: Assure that libtool includes the symbol for any symbols we
+   may need auto-loaded (e.g. apr_initialize()).  Preferably this
+   function would be static, but uncertain whether a compiler would
+   optimize it out entirely (since it isn't called). */
+void svn_swig_java__libtool_hack()
+{
+    apr_initialize();
+}

@@ -65,7 +65,9 @@ public class NativeResources
     private SWIGTYPE_p_apr_pool_t pool;
 
     /**
-     * Returns the single instance of this class for this
+     * Factory method.
+     *
+     * @return The single instance of this class for this
      * <code>ClassLoader</code> tree.
      */
     public static NativeResources getInstance()
@@ -84,6 +86,11 @@ public class NativeResources
     /**
      * Loads and initializes the native libraries used by this
      * instance.
+     *
+     * @throws UnsatisfiedLinkError If our native libraries cannot be
+     * loaded.  Set <code>java.library.path</code> to a set of paths
+     * containing APR's and Subversion's shared libraries to avoid
+     * this problem.
      */
     public synchronized void initialize()
     {
@@ -91,6 +98,9 @@ public class NativeResources
         {
             return;
         }
+
+        // Load the Apache Portable Runtime.
+        System.loadLibrary("apr-1");
 
         // Load the SWIG-based JNI bindings.
         System.loadLibrary("svn_swig_java-1");
