@@ -150,28 +150,28 @@ Thus, `.:base:tip' is the set of atoms in the repository waiting to be
 merged into your directory.  And `.:base:here' is the set of changes
 in your working directory waiting to be committed.
 
-sub add [-r] NAME...
-sub mkdir NAME...
-sub rm [-r] NAME...
-sub mv NAME... DIR
-sub mv NAME1 NAME2
-sub cp [-r] NAME... DIR
-sub cp [-r] NAME1 NAME2
+svn add [-r] NAME...
+svn mkdir NAME...
+svn rm [-r] NAME...
+svn mv NAME... DIR
+svn mv NAME1 NAME2
+svn cp [-r] NAME... DIR
+svn cp [-r] NAME1 NAME2
 
-`sub add', `sub rm', and `sub cp' complain if an argument is a
+`svn add', `svn rm', and `svn cp' complain if an argument is a
 directory, and `-r' isn't given.  Just as a sanity check.
 
-sub repo CMD ...
-  Same as `sub CMD ...', except that filenames are taken to apply to
+svn repo CMD ...
+  Same as `svn CMD ...', except that filenames are taken to apply to
   the current directory's repository, by default.
 
-sub checkout HOST:REPO:NAME
-  Equivalent to `sub cp -r HOST:REPO:NAME -plain .'.
+svn checkout HOST:REPO:NAME
+  Equivalent to `svn cp -r HOST:REPO:NAME -plain .'.
 
-sub import NAME1 HOST:REPO:NAME2
-  Equivalent to `sub cp -r -plain NAME1 HOST:REPO:NAME2'.
+svn import NAME1 HOST:REPO:NAME2
+  Equivalent to `svn cp -r -plain NAME1 HOST:REPO:NAME2'.
 
-sub apply NAME1[:N1[:N2]] NAME2
+svn apply NAME1[:N1[:N2]] NAME2
   Apply changes specified by NAME1[:N1[:N2]] to NAME2.
   If NAME1 form, then 
   If NAME1:N1 form, then the change applied is the difference between
@@ -179,20 +179,20 @@ sub apply NAME1[:N1[:N2]] NAME2
   If NAME1:N1:N2 form, then the change applied is the difference between
         versions N1 and N2 of NAME1.
 
-sub commit [FILE...]
+svn commit [FILE...]
   If omitted, FILE... defaults to `.'.
-  For each FILE, do `sub apply FILE:base:here FILE:base'.
+  For each FILE, do `svn apply FILE:base:here FILE:base'.
 
-sub update [FILE...]
+svn update [FILE...]
   If omitted, FILE... defaults to `.'.
-  For each FILE, do `sub apply FILE:base:tip FILE'.
+  For each FILE, do `svn apply FILE:base:tip FILE'.
 
-sub vert LOCAL-DIR REMOTE-DIR
+svn vert LOCAL-DIR REMOTE-DIR
   Turn LOCAL-DIR into a working directory with the tip of REMOTE-DIR
   as its base version, by sticking in the appropriate control files.
 
-sub script CMD ...
-  The same as "sub CMD ...", except that the rules for names are a
+svn script CMD ...
+  The same as "svn CMD ...", except that the rules for names are a
   little different, to help make scripts more reliable.  Colons lose
   their special meaning, so if the names of actual files processed by
   the script contain colons, things will still work.
@@ -207,13 +207,13 @@ sub script CMD ...
 
 
 Haven't revised these yet:
-sub diff FILE ...
-sub diff -r N FILE ...
-sub diff -r N1 -r N2 FILE ...
-sub diff -r DIR:N FILE ...
-sub diff -r DIR1:N1 -r DIR2:N2 FILE ...
-sub diff -r N1 -r N2 FILE:N3 ...
+svn diff FILE ...
+svn diff -r N FILE ...
+svn diff -r N1 -r N2 FILE ...
+svn diff -r DIR:N FILE ...
+svn diff -r DIR1:N1 -r DIR2:N2 FILE ...
+svn diff -r N1 -r N2 FILE:N3 ...
 
-sub log
-sub fix-log
+svn log
+svn fix-log
 
