@@ -126,11 +126,17 @@ merge_cmd (const char *older,
   const char *target_label = ".working";
   const char *left_label = apr_psprintf (subpool, ".r%ld", older_rev);
   const char *right_label = apr_psprintf (subpool, ".r%ld", yours_rev);
+  svn_error_t *err;
 
   /* This callback is essentially no more than a wrapper around
      svn_wc_merge().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
+
+  /* ### Remove the printf stuff below once we have the update
+     trace-editor composed with the diff editor.  But we need to
+     convert the diff editor to the "new" interface first, before we
+     can do the composition.  */
 
   /* ### <REMOVE ME> */
   const char *act = "NONE";
@@ -156,20 +162,28 @@ merge_cmd (const char *older,
 
   switch (action)
     {
-    case svn_diff_action_modify:
-      SVN_ERR (svn_wc_merge (older, yours, mine,
-                             left_label, right_label, target_label,
-                             subpool));
-      /* ### shouldn't diff_or_merge take a trace-editor option?  */
+      /* ### should all this stuff be done -loggily- like the
+         update-editor does things??  */
+
+    case svn_diff_action_modify: /* patch the file */
+      err = svn_wc_merge (older, yours, mine,
+                         left_label, right_label, target_label,
+                         subpool);
+      if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
+        return err;  
       break;
       
     case svn_diff_action_add:
-      /* copy yours to mine */
-      /* svn_client_add(mine) */
+      SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
+      SVN_ERR (svn_client_add (svn_stringbuf_create (mine, subpool), 
+                               FALSE, NULL, NULL, subpool));
       break;
       
-    case svn_diff_action_delete:
-      /* svn_client_delete(mine) */
+    case svn_diff_action_delete: /*  */
+      SVN_ERR (svn_client_delete (NULL, 
+                                  svn_stringbuf_create (mine, subpool),
+                                  FALSE, /* don't force */
+                                  NULL, NULL, NULL, NULL, subpool));
       break;
     }
   
