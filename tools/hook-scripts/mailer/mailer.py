@@ -27,6 +27,7 @@ import svn.fs
 import svn.util
 import svn.delta
 import svn.repos
+import svn.core
 
 SEPARATOR = '=' * 78
 
@@ -36,7 +37,7 @@ def main(pool, config_fname, repos_dir, rev):
 
   cfg = Config(config_fname, repos)
 
-  editor = ChangeCollector(repos, rev-1)
+  editor = svn.repos.RevisionChangeCollector(repos.fs_ptr, rev)
 
   e_ptr, e_baton = svn.delta.make_editor(editor, pool)
   svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, pool)
@@ -79,7 +80,7 @@ class MailedOutput:
     # figure out the changed directories
     dirs = { }
     for path, change in changelist:
-      if change.item_type == ChangeCollector.DIR:
+      if change.item_kind == svn.core.svn_node_dir:
         dirs[path] = None
       else:
         idx = string.rfind(path, '/')
@@ -343,7 +344,7 @@ def generate_list(output, header, changelist, selection):
   if items:
     output.write('%s:\n' % header)
     for fname, change in items:
-      if change.item_type == ChangeCollector.DIR:
+      if change.item_kind == svn.core.svn_node_dir:
         is_dir = '/'
       else:
         is_dir = ''
@@ -368,7 +369,7 @@ def generate_list(output, header, changelist, selection):
 
 def generate_diff(output, cfg, repos, date, change, group, params, pool):
 
-  if change.item_type == ChangeCollector.DIR:
+  if change.item_kind == svn.core.svn_node_dir:
     # all changes were printed in the summary. nothing to do.
     return
 
@@ -483,156 +484,6 @@ class Repository:
       pass
     root = self.roots[rev] = svn.fs.revision_root(self.fs_ptr, rev, self.pool)
     return root
-
-
-class ChangeCollector(svn.delta.Editor):
-  DIR = 'DIR'
-  FILE = 'FILE'
-
-  # BATON FORMAT: [path, base_path, base_rev]
-  
-  def __init__(self, repos, rev_prev):
-    self.repos = repos
-    self.rev_prev = rev_prev
-
-    # path -> _change()
-    self.changes = { }
-
-  def open_root(self, base_revision, dir_pool):
-    return ('', '', self.rev_prev)  # dir_baton
-
-  def delete_entry(self, path, revision, parent_baton, pool):
-    base_path = _svn_join(parent_baton[1], _svn_basename(path))
-    if svn.fs.is_dir(self.repos.get_root(parent_baton[2]), base_path, pool):
-      item_type = ChangeCollector.DIR
-    else:
-      item_type = ChangeCollector.FILE
-    self.changes[path] = _change(item_type,
-                                 False,
-                                 False,
-                                 base_path,
-                                 parent_baton[2], # base_rev
-                                 None,            # (new) path
-                                 False,           # added
-                                 )
-
-  def add_directory(self, path, parent_baton,
-                    copyfrom_path, copyfrom_revision, dir_pool):
-    self.changes[path] = _change(ChangeCollector.DIR,
-                                 False,
-                                 False,
-                                 copyfrom_path,     # base_path
-                                 copyfrom_revision, # base_rev
-                                 path,              # path
-                                 True,              # added
-                                 )
-    if copyfrom_path and (copyfrom_revision != -1):
-      base_path = copyfrom_path
-    else:
-      base_path = path
-    base_rev = copyfrom_revision
-    return (path, base_path, base_rev)  # dir_baton
-
-  def open_directory(self, path, parent_baton, base_revision, dir_pool):
-    base_path = _svn_join(parent_baton[1], _svn_basename(path))
-    return (path, base_path, parent_baton[2])  # dir_baton
-
-  def change_dir_prop(self, dir_baton, name, value, pool):
-    dir_path = dir_baton[0]
-    if self.changes.has_key(dir_path):
-      self.changes[dir_path].prop_changes = True
-    else:
-      # can't be added or deleted, so this must be CHANGED
-      self.changes[dir_path] = _change(ChangeCollector.DIR,
-                                       True,
-                                       False,
-                                       dir_baton[1], # base_path
-                                       dir_baton[2], # base_rev
-                                       dir_path,     # path
-                                       False,        # added
-                                       )
-
-  def add_file(self, path, parent_baton,
-               copyfrom_path, copyfrom_revision, file_pool):
-    self.changes[path] = _change(ChangeCollector.FILE,
-                                 False,
-                                 False,
-                                 copyfrom_path,     # base_path
-                                 copyfrom_revision, # base_rev
-                                 path,              # path
-                                 True,              # added
-                                 )
-    if copyfrom_path and (copyfrom_revision != -1):
-      base_path = copyfrom_path
-    else:
-      base_path = path
-    base_rev = copyfrom_revision
-    return (path, base_path, base_rev)  # file_baton
-
-  def open_file(self, path, parent_baton, base_revision, file_pool):
-    base_path = _svn_join(parent_baton[1], _svn_basename(path))
-    return (path, base_path, parent_baton[2])  # file_baton
-
-  def apply_textdelta(self, file_baton, base_checksum):
-    file_path = file_baton[0]
-    if self.changes.has_key(file_path):
-      self.changes[file_path].text_changed = True
-    else:
-      # an add would have inserted a change record already, and it can't
-      # be a delete with a text delta, so this must be a normal change.
-      self.changes[file_path] = _change(ChangeCollector.FILE,
-                                        False,
-                                        True,
-                                        file_baton[1], # base_path
-                                        file_baton[2], # base_rev
-                                        file_path,     # path
-                                        False,         # added
-                                        )
-
-    # no handler
-    return None
-
-  def change_file_prop(self, file_baton, name, value, pool):
-    file_path = file_baton[0]
-    if self.changes.has_key(file_path):
-      self.changes[file_path].prop_changes = True
-    else:
-      # an add would have inserted a change record already, and it can't
-      # be a delete with a prop change, so this must be a normal change.
-      self.changes[file_path] = _change(ChangeCollector.FILE,
-                                        True,
-                                        False,
-                                        file_baton[1], # base_path
-                                        file_baton[2], # base_rev
-                                        file_path,     # path
-                                        False,         # added
-                                        )
-
-
-class _change:
-  __slots__ = [ 'item_type', 'prop_changes', 'text_changed',
-                'base_path', 'base_rev', 'path',
-                'added',
-                ]
-  def __init__(self,
-               item_type, prop_changes, text_changed, base_path, base_rev,
-               path, added):
-    self.item_type = item_type
-    self.prop_changes = prop_changes
-    self.text_changed = text_changed
-    self.base_path = base_path
-    self.base_rev = base_rev
-    self.path = path
-
-    ### it would be nice to avoid this flag. however, without it, it would
-    ### be quite difficult to distinguish between a change to the previous
-    ### revision (which has a base_path/base_rev) and a copy from some
-    ### other path/rev. a change in path is obviously add-with-history,
-    ### but the same path could be a change to the previous rev or a restore
-    ### of an older version. when it is "change to previous", I'm not sure
-    ### if the rev is always repos.rev - 1, or whether it represents the
-    ### created or time-of-checkout rev. so... we use a flag (for now)
-    self.added = added
 
 
 class Config:
@@ -758,22 +609,6 @@ class _sub_section:
 
 class MissingConfig(Exception):
   pass
-
-
-def _svn_basename(path):
-  "Compute the basename of an SVN path ('/' separators)."
-  idx = string.rfind(path, '/')
-  if idx == -1:
-    return path
-  return path[idx+1:]
-
-def _svn_join(base, relative):
-  "Join a relative path onto a base path using the SVN separator ('/')."
-  if relative[:1] == '/':
-    return relative
-  if base[-1:] == '/':
-    return base + relative
-  return base + '/' + relative
 
 
 # enable True/False in older vsns of Python
