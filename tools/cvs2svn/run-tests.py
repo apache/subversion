@@ -715,7 +715,7 @@ test_list = [ None,
               XFail(simple_tags),
               XFail(simple_branch_commits),
               XFail(mixed_commit),
-              XFail(split_branch),
+              split_branch,
              ]
 
 if __name__ == '__main__':

@@ -460,7 +460,20 @@ class RepositoryMirror:
     self.symroots_db_file = SYMBOLIC_NAME_ROOTS_DB
     self.symroots_db = anydbm.open(self.symroots_db_file, 'n')
 
-    # These keys could never be real directory entries.
+    # When copying a directory (say, to create part of a branch), we
+    # pass change_path() a list of expected entries, so it can remove
+    # any that are in the source but don't belong on the branch.
+    # However, because creating a given region of a branch can involve
+    # copying from several sources, we don't want later copy
+    # operations to delete entries that were legitimately created by
+    # earlier copy ops.  So after a copy, the directory records
+    # legitimate entries under this key, in a dictionary (the keys are
+    # entry names, the values can be ignored).
+    self.approved_entries = "/approved-entries"
+
+    # Set on a directory that's mutable in the revision currently
+    # being constructed.  (Yes, this is exactly analogous to
+    # the Subversion filesystem code's concept of mutability.)
     self.mutable_flag = "/mutable"
     # This could represent a new mutable directory or file.
     self.empty_mutable_thang = { self.mutable_flag : 1 }
@@ -657,10 +670,21 @@ class RepositoryMirror:
         actual_copy_rev = copyfrom_rev - 1
         new_val = self.probe_path(copyfrom_path, actual_copy_rev)
     if expected_entries:
+      approved_entries = new_val.get(self.approved_entries)
+      new_approved_entries = { }
+      if approved_entries == None:
+        approved_entries = { }
+      else:
+        approved_entries = marshal.loads(approved_entries)
       for ent in new_val.keys():
-        if (ent[0] != '/') and (not expected_entries.has_key(ent)):
+        if ((ent[0] != '/')
+            and not expected_entries.has_key(ent)
+            and not approved_entries.has_key(ent)):
           del new_val[ent]
           deletions.append(ent)
+        else:
+          new_approved_entries[ent] = 1
+      new_val[self.approved_entries] = marshal.dumps(new_approved_entries)
     parent[last_component] = leaf_key
     self.nodes_db[parent_key] = marshal.dumps(parent)
     self.symroots_db[path] = marshal.dumps((tags, branches))
