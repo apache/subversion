@@ -338,6 +338,25 @@ static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
   return FALSE;
 }
 
+/* This function handles any errors which occur in the child process
+ * created for a tunnel agent.  We write the error out as a command
+ * failure; the code in ra_svn_open() to read the server's greeting
+ * will see the error and return it to the caller. */
+static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
+                                       const char *desc)
+{
+  svn_ra_svn_conn_t *conn;
+  apr_file_t *in_file, *out_file;
+  svn_error_t *err;
+
+  apr_file_open_stdin(&in_file, pool);
+  apr_file_open_stdout(&out_file, pool);
+  conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
+  err = svn_error_create(status, NULL, desc);
+  svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
+  svn_error_clear(svn_ra_svn_flush(conn, pool));
+}
+
 static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 const svn_ra_callbacks_t *callbacks,
                                 void *callback_baton,
@@ -363,6 +382,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
       apr_procattr_create(&attr, pool);
       apr_procattr_io_set(attr, 1, 1, 0);
       apr_procattr_cmdtype_set(attr, APR_PROGRAM_PATH);
+      apr_procattr_child_errfn_set(attr, handle_child_process_error);
       proc = apr_palloc(pool, sizeof(*proc));
       apr_proc_create(proc, *args, args, NULL, attr, pool);
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
@@ -397,8 +417,8 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     }
 
   /* Read server's greeting. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nnll", &minver, &maxver,
-                                &mechlist, &caplist));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
+                                       &mechlist, &caplist));
   /* We only support protocol version 1. */
   if (minver > 1)
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,

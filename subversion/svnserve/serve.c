@@ -911,6 +911,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   /* Send greeting, saying we only support protocol version 1, the
    * anonymous authentication mechanism, and no extensions. */
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
+  SVN_ERR(svn_ra_svn_start_list(conn, pool));
   /* Our minimum and maximum supported protocol version is 1. */
   SVN_ERR(svn_ra_svn_write_number(conn, pool, 1));
   SVN_ERR(svn_ra_svn_write_number(conn, pool, 1));
@@ -924,6 +926,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   /* We have no special capabilities. */
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
 

@@ -56,13 +56,24 @@ alternatives; for example:
   example: ( first-kind rev:number )
          | second-kind
 
+The "command response" prototype is used in several contexts of this
+specification to indicate the success or failure of an operation.  It
+is defined as follows:
+
+  command-response: ( success params:list )
+                  | ( failure ( err:error ... ) )
+  error: ( apr-err:number message:string file:string line:number )
+
+The interpretation of parameters in a successful command response is
+context-dependent.
+
 Connection establishment and protocol setup
 -------------------------------------------
 
-By default, the client connects to the server on port XXX.
+By default, the client connects to the server on port 3690.
 
-Upon receiving a connection, the server sends a greeting, using an
-item matching the prototype:
+Upon receiving a connection, the server sends a greeting, using a
+command response whose parameters match the prototype:
 
   greeting: ( minver:number maxver:number
               ( mech:word ... ) ( cap:word ... ) )
@@ -129,15 +140,12 @@ client may now begin sending commands from the main command set.
 
 3. Commands
 
-Commands and command responses match the prototypes:
+Commands match the prototypes:
 
   command: ( command-name:word params:list )
-  command-response: ( success params:list )
-                  | ( failure ( err:error ... ) )
-  error: ( apr-err:number message:string file:string line:number )
 
-The interpretation of parameters in a command and its response depend
-on the command.
+The interpretation of command parameters is different from command to
+command.
 
 Initially, the client initiates commands from the main command set,
 and the server responds.  Some commands in the main command set can
