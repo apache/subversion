@@ -90,6 +90,9 @@ typedef enum svn_errno_t {
   /* A delta-pkg is missing ancestry. */
   SVN_ERR_XML_MISSING_ANCESTRY,
 
+  /* Not one of the valid kinds in svn_node_kind. */
+  SVN_ERR_UNKNOWN_NODE_KIND,
+
   /* Can't do this update or checkout, because something was in the way. */
   SVN_ERR_OBSTRUCTED_UPDATE,
 
