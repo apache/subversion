@@ -215,45 +215,77 @@ svn_xml_write_header (apr_file_t *file, apr_pool_t *pool)
 
 /*** Creating attribute hashes. ***/
 
-apr_hash_t *
-svn_xml_make_att_hash (const char **atts, apr_pool_t *pool)
+/* Combine an existing attribute list ATTS with a HASH that itself
+   represents an attribute list.  Iff PRESERVE is true, then no value
+   already in HASH will be changed, else values from ATTS will
+   override previous values in HASH. */
+static void
+amalgamate (const char **atts,
+            apr_hash_t *ht,
+            svn_boolean_t preserve,
+            apr_pool_t *pool)
 {
-  apr_hash_t *ht = apr_make_hash (pool);
   const char *key;
 
   if (atts)
     for (key = *atts; key; key = *(++atts))
       {
         const char *val = *(++atts);
+        size_t keylen;
         assert (key != NULL);
-        
         /* kff todo: should we also insist that val be non-null here? 
            Probably. */
 
-        apr_hash_set (ht, key, strlen (key),
-                      val ? svn_string_create (val, pool) : NULL);
+        keylen = strlen (key);
+        if (preserve && ((apr_hash_get (ht, key, keylen)) != NULL))
+          continue;
+        else
+          apr_hash_set (ht, key, keylen, 
+                        val ? svn_string_create (val, pool) : NULL);
       }
+}
+
+
+apr_hash_t *
+svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool)
+{
+  apr_hash_t *ht = apr_make_hash (pool);
+  const char *key;
+  
+  while ((key = va_arg (ap, char *)) != NULL)
+    {
+      svn_string_t *val = va_arg (ap, svn_string_t *);
+      apr_hash_set (ht, key, strlen (key), val);
+    }
 
   return ht;
 }
 
 
 apr_hash_t *
-svn_xml_make_att_hash_overlaying (const char **atts,
-                                  va_list ap,
-                                  apr_pool_t *pool)
+svn_xml_make_att_hash (const char **atts, apr_pool_t *pool)
 {
-  apr_hash_t *ht = svn_xml_make_att_hash (atts, pool);
-  const char *key;
-
-  if (ap)
-    while ((key = va_arg (ap, char *)) != NULL)
-      {
-        svn_string_t *val = va_arg (ap, svn_string_t *);
-        apr_hash_set (ht, key, strlen (key), val);
-      }
-  
+  apr_hash_t *ht = apr_make_hash (pool);
+  amalgamate (atts, ht, 0, pool);  /* third arg irrelevant in this case */
   return ht;
+}
+
+
+void
+svn_xml_hash_atts_overlaying (const char **atts,
+                              apr_hash_t *ht,
+                              apr_pool_t *pool)
+{
+  amalgamate (atts, ht, 0, pool);
+}
+
+
+void
+svn_xml_hash_atts_preserving (const char **atts,
+                              apr_hash_t *ht,
+                              apr_pool_t *pool)
+{
+  amalgamate (atts, ht, 1, pool);
 }
 
 
@@ -323,7 +355,7 @@ svn_xml_write_tag_v (apr_file_t *file,
                      const char *tagname,
                      va_list ap)
 {
-  apr_hash_t *ht = svn_xml_make_att_hash_overlaying (NULL, ap, pool);
+  apr_hash_t *ht = svn_xml_ap_to_hash (ap, pool);
   return svn_xml_write_tag_hash (file, pool, tagtype, tagname, ht);
 }
 
