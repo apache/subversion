@@ -33,7 +33,7 @@
 # stderr       Standardfehlerausgabe
 # stdio        Standardeingabe
 # stdout       Standardausgabe
-# stream			 Datenstrom
+# stream       Datenstrom
 # switch       umstellen
 # system       System, des Systems
 # tag          Tag, des Tags
@@ -49,9 +49,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-08-17 09:36+0200\n"
-"PO-Revision-Date: 2004-08-17 09:44+0100\n"
+"PO-Revision-Date: 2004-08-23 10:53+0100\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
-"Language-Team: Subversion <dev@subversion.tigris.org>\n"
+"Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -2275,19 +2275,19 @@ msgstr "Lesezugriff verweigert für Basis dieser Veränderung"
 
 #: include/svn_error_codes.h:675
 msgid "Svndiff data has invalid header"
-msgstr "Svndiff Datum enthält ungültigen Kopf"
+msgstr "Svndiff Daten enthalten ungültigen Kopf"
 
 #: include/svn_error_codes.h:679
 msgid "Svndiff data contains corrupt window"
-msgstr "Svndiff Datum enthält defektes Fenster"
+msgstr "Svndiff Daten enthalten defektes Fenster"
 
 #: include/svn_error_codes.h:683
 msgid "Svndiff data contains backward-sliding source view"
-msgstr "Svndiff Daten enthahlten rückwärts gleitenden Blick auf Quellen"
+msgstr "Svndiff Daten enthalten rückwärts gleitenden Blick auf Quellen"
 
 #: include/svn_error_codes.h:687
 msgid "Svndiff data contains invalid instruction"
-msgstr "Svndiff Datum enthält ungültige Anweisung"
+msgstr "Svndiff Daten enthalten ungültige Anweisung"
 
 #: include/svn_error_codes.h:691
 msgid "Svndiff data ends unexpectedly"
@@ -3049,7 +3049,7 @@ msgstr "Unkannter Dateisystemtyp '%s'"
 #: libsvn_fs/fs-loader.c:143
 #, c-format
 msgid "Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr "Versionen in FS-Modul '%s' stimmen nicht überein: gefunden %d.%d.%d%s, erwartet %d.%d.%d%s"
+msgstr "Versionen in DS-Modul '%s' stimmen nicht überein: gefunden %d.%d.%d%s, erwartet %d.%d.%d%s"
 
 #: libsvn_fs_base/err.c:69
 #: libsvn_fs_fs/err.c:71
@@ -3095,7 +3095,7 @@ msgstr ""
 #: libsvn_fs_base/fs.c:1269
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
-msgstr "Nicht unterstützte FS-Lader Version (%d) für bdb"
+msgstr "Nicht unterstützte DS-Lader Version (%d) für bdb"
 
 #: libsvn_fs_base/tree.c:381
 #: libsvn_fs_fs/tree.c:301
@@ -3181,7 +3181,7 @@ msgstr "'%s' ist kein Verzeichnis im Dateisystem '%s'"
 #: libsvn_fs_fs/fs.c:290
 #, c-format
 msgid "Unsupported FS loader version (%d) for fsfs"
-msgstr "Nicht unterstützte FS-Lader Version (%d) für fsfs"
+msgstr "Nicht unterstützte DS-Lader Version (%d) für fsfs"
 
 #: libsvn_fs_fs/fs_fs.c:364
 #: libsvn_fs_fs/fs_fs.c:378
@@ -3561,7 +3561,7 @@ msgstr "Die UUID Eigenschaft wurde weder auf der Ressource noch ihren Eltern gef
 
 #: libsvn_ra_dav/session.c:820
 msgid "Please upgrade the server to 0.19 or later"
-msgstr "Bitte aktualisieren Sie den Server auf Version 0.19 oder neuer."
+msgstr "Bitte aktualisieren Sie den Server auf Version 0.19 oder neuer"
 
 #: libsvn_ra_dav/session.c:836
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
@@ -3570,7 +3570,7 @@ msgstr "Modul zum Zugriff auf ein Projektarchiv über das WebDAV (DeltaV) Protok
 #: libsvn_ra_dav/session.c:874
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-msgstr "Nicht unterstützte ZM Plugin ABI Version (%d) für ra_dav."
+msgstr "Nicht unterstützte ZM Plugin ABI Version (%d) für ra_dav"
 
 #: libsvn_ra_dav/util.c:273
 msgid "authorization failed"
@@ -3622,12 +3622,12 @@ msgid ""
 "'%s'"
 msgstr ""
 "'%s'\n"
-"ist nicht das gleiche Projektarchiv wie\n"
+"ist nicht das selbe Projektarchiv wie\n"
 "'%s'"
 
 #: libsvn_ra_local/ra_plugin.c:226
 msgid "Unable to open an ra_local session to URL"
-msgstr "Kann ra_local Session nicht öffnen zur URL"
+msgstr "Kann keine ra_local Verbindung zu einer URL aufbauen"
 
 #: libsvn_ra_local/ra_plugin.c:927
 msgid "Module for accessing a repository on local disk."
@@ -3636,7 +3636,7 @@ msgstr "Modul zum Zugriff auf ein Projektarchiv auf der lokalen Festplatte"
 #: libsvn_ra_local/ra_plugin.c:972
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
-msgstr "Nicht unterstützte ZM Plugin ABI Version (%d) für ra_local."
+msgstr "Nicht unterstützte ZM Plugin ABI Version (%d) für ra_local"
 
 #: libsvn_ra_local/split_url.c:44
 #, c-format
@@ -3657,7 +3657,7 @@ msgstr "Lokale URL '%s' enthält nicht unterstützten Rechnernamen"
 #: libsvn_ra_local/split_url.c:115
 #, c-format
 msgid "Unable to open repository '%s'"
-msgstr "Kann Repository '%s' nicht öffnen"
+msgstr "Projektarchiv '%s' kann nicht geöffnet werden"
 
 #: libsvn_ra_svn/client.c:137
 #, c-format
@@ -4732,7 +4732,7 @@ msgstr "Verschieben fehlgeschlagen"
 #: libsvn_wc/update_editor.c:2735
 #, c-format
 msgid "'%s' has no ancestry information"
-msgstr "'%s' hat keine Informationen über seine Vorgänger."
+msgstr "'%s' hat keine Informationen über seine Vorgänger"
 
 #: libsvn_wc/util.c:84
 msgid "Unable to make any directories"
@@ -4779,11 +4779,11 @@ msgstr "keine Fortschrittsanzeige (nur Fehler) auf die Standardausgabe"
 
 #: svnadmin/main.c:223
 msgid "ignore any repos UUID found in the stream"
-msgstr "ignoriere jede Projektarchiv-UUID, die in dem Stream gefunden wird"
+msgstr "ignoriere jede Projektarchiv-UUID, die im Datenstrom gefunden wird"
 
 #: svnadmin/main.c:226
 msgid "set repos UUID to that found in stream, if any"
-msgstr "setze die UUID des Projektarchiv auf die im Stream gefundene, wenn überhaupt"
+msgstr "setze die UUID des Projektarchiv auf die im Datenstrom gefundene"
 
 #: svnadmin/main.c:229
 msgid "type of repository: 'bdb' or 'fsfs'"
@@ -4913,11 +4913,11 @@ msgid ""
 msgstr ""
 "Aufruf: svnadmin load ARCHIV_PFAD\n"
 "\n"
-"Lies einen Stream im 'Dump'-Format von der Standardeingabe in das\n"
+"Lies einen Datenstrom im 'Dump'-Format von der Standardeingabe in das\n"
 "Dateisystem des Projektarchivs ein. Falls das Projektarchiv vorher leer\n"
-"war, wird seine UUID standardmäßig in diejenige geändert, die im Stream\n"
-"spezifiziert ist. Eine Fortschrittsanzeige wird an die Standardausgabe\n"
-"gesendet.\n"
+"war, wird seine UUID standardmäßig in diejenige geändert, die im Daten-\n"
+"strom spezifiziert ist. Eine Fortschrittsanzeige wird an die Standard-\n"
+"ausgabe gesendet.\n"
 
 #: svnadmin/main.c:314
 msgid ""
