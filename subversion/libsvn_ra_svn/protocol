@@ -189,13 +189,14 @@ The main command set corresponds to the svn_ra interfaces.
     commit-info: ( new-rev:number date:string author:string )
 
   get-file
-    params:   ( path:string [ rev:number ] )
+    params:   ( path:string [ rev:number ] [ want-props ] [ want-contents ] )
     response: ( rev:number props:proplist )
-    After sending response, server sends file contents as a series of
-     strings, terminated by the empty string.
+    If want-contents is specified, then after sending response, server
+     sends file contents as a series of strings, terminated by the empty
+     string.
 
   get-dir
-    params:   ( path:string [ rev:number ] )
+    params:   ( path:string [ rev:number ] [ want-props ] [ want-contents ] )
     response: ( rev:number props:proplist ( entry:dirent ... ) )]
     dirent:   ( name:string kind:node-kind size:number [ has-props ]
                 created-rev:number [ created-date:string ]

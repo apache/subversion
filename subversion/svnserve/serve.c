@@ -160,6 +160,9 @@ static svn_error_t *handle_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- MAIN COMMAND SET --- */
 
+/* Write out a property list.  PROPS is allowed to be NULL, in which case
+ * an empty list will be written out; this happens if the client could
+ * have asked for props but didn't. */
 static svn_error_t *write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    apr_hash_t *props)
 {
@@ -170,12 +173,15 @@ static svn_error_t *write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_string_t *value;
 
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  if (props)
     {
-      apr_hash_this(hi, &namevar, NULL, &valuevar);
-      name = namevar;
-      value = valuevar;
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cs", name, value));
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, &namevar, NULL, &valuevar);
+          name = namevar;
+          value = valuevar;
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cs", name, value));
+        }
     }
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   return SVN_NO_ERROR;
@@ -338,27 +344,38 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *path, *full_path;
+  const char *path, *full_path, *wpword, *wcword;
   svn_revnum_t rev;
-  apr_array_header_t *opt;
+  apr_array_header_t *opt_rev, *opt_want_props, *opt_want_contents;
   svn_fs_root_t *root;
   svn_stream_t *contents;
-  apr_hash_t *props;
+  apr_hash_t *props = NULL;
   svn_string_t write_str;
   char buf[4096];
   apr_size_t len;
+  svn_boolean_t want_props, want_contents;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cl", &path, &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "r", &rev));
+  /* Parse arguments. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clll", &path, &opt_rev,
+                                 &opt_want_props, &opt_want_contents));
+  if (opt_rev->nelts > 0)
+    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
   else
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+  if (opt_want_props->nelts > 0)
+    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_props, pool, "w", &wpword));
+  want_props = (wpword && strcmp(wpword, "want-props") == 0);
+  if (opt_want_contents->nelts > 0)
+    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_contents, pool, "w", &wcword));
+  want_contents = (wcword && strcmp(wcword, "want-contents") == 0);
   full_path = svn_path_join(b->fs_path, path, pool);
-  CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
 
   /* Fetch the properties and a stream for the contents. */
-  CMD_ERR(get_props(&props, root, full_path, pool));
-  CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
+  CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  if (want_props)
+    CMD_ERR(get_props(&props, root, full_path, pool));
+  if (want_contents)
+    CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
 
   /* Send successful command response with revision and props. */
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
@@ -370,21 +387,24 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
 
   /* Now send the file's contents. */
-  while (1)
+  if (want_contents)
     {
-      len = sizeof(buf);
-      SVN_ERR(svn_stream_read(contents, buf, &len));
-      write_str.data = buf;
-      write_str.len = len;
-      if (len > 0)
-        SVN_ERR(svn_ra_svn_write_string(conn, pool, &write_str));
-      if (len < sizeof(buf))
+      while (1)
         {
-          SVN_ERR(svn_ra_svn_write_cstring(conn, pool, ""));
-          break;
+          len = sizeof(buf);
+          SVN_ERR(svn_stream_read(contents, buf, &len));
+          write_str.data = buf;
+          write_str.len = len;
+          if (len > 0)
+            SVN_ERR(svn_ra_svn_write_string(conn, pool, &write_str));
+          if (len < sizeof(buf))
+            {
+              SVN_ERR(svn_ra_svn_write_cstring(conn, pool, ""));
+              break;
+            }
         }
+      SVN_ERR(svn_stream_close(contents));
     }
-  SVN_ERR(svn_stream_close(contents));
 
   return SVN_NO_ERROR;
 }
@@ -394,9 +414,10 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   const char *path, *full_path, *file_path, *name, *cauthor, *cdate;
-  apr_array_header_t *opt;
+  const char *wpword, *wcword;
+  apr_array_header_t *opt_rev, *opt_want_props, *opt_want_contents;
   svn_revnum_t rev;
-  apr_hash_t *entries, *props, *file_props;
+  apr_hash_t *entries, *props = NULL, *file_props;
   apr_hash_index_t *hi;
   svn_fs_dirent_t *fsent;
   svn_dirent_t *entry;
@@ -405,62 +426,77 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t is_dir;
   svn_fs_root_t *root;
   apr_pool_t *subpool;
+  svn_boolean_t want_props, want_contents;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cl", &path, &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "r", &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clll", &path, &opt_rev,
+                                 &opt_want_props, &opt_want_contents));
+  if (opt_rev->nelts > 0)
+    SVN_ERR(svn_ra_svn_parse_tuple(opt_rev, pool, "r", &rev));
   else
     CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+  if (opt_want_props->nelts > 0)
+    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_props, pool, "w", &wpword));
+  want_props = (wpword && strcmp(wpword, "want-props") == 0);
+  if (opt_want_contents->nelts > 0)
+    SVN_ERR(svn_ra_svn_parse_tuple(opt_want_contents, pool, "w", &wcword));
+  want_contents = (wcword && strcmp(wcword, "want-contents") == 0);
   full_path = svn_path_join(b->fs_path, path, pool);
 
   /* Fetch the root of the appropriate revision. */
   CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
 
-  /* Fetch the directory entries and properties. */
-  CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
-  CMD_ERR(get_props(&props, root, full_path, pool));
+  /* Fetch the directory properties if requested. */
+  if (want_props)
+    CMD_ERR(get_props(&props, root, full_path, pool));
 
-  /* Transform the hash table's FS entries into dirents.  This probably
-   * belongs in libsvn_repos. */
-  subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  /* Fetch the directory entries if requested. */
+  if (want_contents)
     {
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      fsent = val;
+      CMD_ERR(svn_fs_dir_entries(&entries, root, full_path, pool));
 
-      file_path = svn_path_join(full_path, name, subpool);
-      entry = apr_pcalloc(pool, sizeof(*entry));
+      /* Transform the hash table's FS entries into dirents.  This probably
+       * belongs in libsvn_repos. */
+      subpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, &key, NULL, &val);
+          name = key;
+          fsent = val;
 
-      /* kind */
-      CMD_ERR(svn_fs_is_dir(&is_dir, root, file_path, subpool));
-      entry->kind = is_dir ? svn_node_dir : svn_node_file;
+          file_path = svn_path_join(full_path, name, subpool);
+          entry = apr_pcalloc(pool, sizeof(*entry));
 
-      /* size */
-      if (is_dir)
-        entry->size = 0;
-      else
-        CMD_ERR(svn_fs_file_length(&entry->size, root, file_path, subpool));
+          /* kind */
+          CMD_ERR(svn_fs_is_dir(&is_dir, root, file_path, subpool));
+          entry->kind = is_dir ? svn_node_dir : svn_node_file;
 
-      /* has_props */
-      CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path, subpool));
-      entry->has_props = (apr_hash_count(file_props) > 0) ? TRUE : FALSE;
+          /* size */
+          if (is_dir)
+            entry->size = 0;
+          else
+            CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
+                                       subpool));
 
-      /* created_rev, last_author, time */
-      CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
-                                           &cauthor, root, file_path,
-                                           subpool));
-      entry->last_author = apr_pstrdup (pool, cauthor);
-      if (cdate)
-        CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
-      else
-        entry->time = (time_t) -1;
+          /* has_props */
+          CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path, subpool));
+          entry->has_props = (apr_hash_count(file_props) > 0) ? TRUE : FALSE;
 
-      /* Store the entry. */
-      apr_hash_set(entries, name, APR_HASH_KEY_STRING, entry);
-      svn_pool_clear(subpool);
+          /* created_rev, last_author, time */
+          CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
+                                               &cauthor, root, file_path,
+                                               subpool));
+          entry->last_author = apr_pstrdup (pool, cauthor);
+          if (cdate)
+            CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
+          else
+            entry->time = (time_t) -1;
+
+          /* Store the entry. */
+          apr_hash_set(entries, name, APR_HASH_KEY_STRING, entry);
+          svn_pool_clear(subpool);
+        }
+      svn_pool_destroy(subpool);
     }
-  svn_pool_destroy(subpool);
 
   /* Write out response. */
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
@@ -469,19 +505,22 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
   SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next (hi))
+  if (want_contents)
     {
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      entry = val;
-      cdate = (entry->time == (time_t) -1) ? NULL
-        : svn_time_to_cstring(entry->time, pool);
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwn[w]r[c][c]", name,
-                                     kind_word(entry->kind),
-                                     (apr_uint64_t) entry->size,
-                                     entry->has_props ? "has-props" : NULL,
-                                     entry->created_rev, cdate,
-                                     entry->last_author));
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next (hi))
+        {
+          apr_hash_this(hi, &key, NULL, &val);
+          name = key;
+          entry = val;
+          cdate = (entry->time == (time_t) -1) ? NULL
+            : svn_time_to_cstring(entry->time, pool);
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cwn[w]r[c][c]", name,
+                                         kind_word(entry->kind),
+                                         (apr_uint64_t) entry->size,
+                                         entry->has_props ? "has-props" : NULL,
+                                         entry->created_rev, cdate,
+                                         entry->last_author));
+        }
     }
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
