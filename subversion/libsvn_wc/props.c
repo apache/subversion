@@ -1116,14 +1116,10 @@ svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
    
    Given a file at PATH, look up KEYWORD (or a mapping thereof) in its
    entry.  If the entry attribute is present, duplicate the attribute
-   value in one of *REVISION, *DATE, *AUTHOR, or *URL, allocated in
-   POOL.  If the attribute is not present, then don't touch any pointers.
-*/
+   value in the appropriate field in KEYWORDS, allocating the value in
+   POOL.  */
 static svn_error_t *
-expand_keyword (char **revision,
-                char **date,
-                char **author,
-                char **url,
+expand_keyword (svn_io_keywords_t *keywords,
                 const char *keyword,
                 const char *path,
                 apr_pool_t *pool)
@@ -1144,9 +1140,9 @@ expand_keyword (char **revision,
         /* We found a recognized keyword, so it needs to be expanded
            no matter what.  If the expansion value isn't available,
            we at least send back an empty string.  */
-        *revision = apr_pstrdup (pool, "");
+        keywords->revision = svn_string_create ("", pool);
       else
-        *revision = apr_pstrdup (pool, value->data);
+        keywords->revision = svn_string_create_from_buf (value, pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
            || (! strcmp (keyword, SVN_KEYWORD_DATE_SHORT)))
@@ -1157,9 +1153,9 @@ expand_keyword (char **revision,
                       strlen(SVN_ENTRY_ATTR_COMMITTED_DATE));
       
       if (! value)
-        *date = apr_pstrdup (pool, "");
+        keywords->date = svn_string_create ("", pool);
       else
-        *date = apr_pstrdup (pool, value->data);
+        keywords->date = svn_string_create_from_buf (value, pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
            || (! strcmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
@@ -1170,9 +1166,9 @@ expand_keyword (char **revision,
                       strlen(SVN_ENTRY_ATTR_LAST_AUTHOR));
       
       if (! value)
-        *author = apr_pstrdup (pool, "");
+        keywords->author = svn_string_create ("", pool);
       else
-        *author = apr_pstrdup (pool, value->data);
+        keywords->author = svn_string_create_from_buf (value, pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
            || (! strcmp (keyword, SVN_KEYWORD_URL_SHORT)))
@@ -1183,9 +1179,9 @@ expand_keyword (char **revision,
                       strlen(SVN_WC_ENTRY_ATTR_URL));
       
       if (! value)
-        *url = apr_pstrdup (pool, "");
+        keywords->url = svn_string_create ("", pool);
       else
-        *url = apr_pstrdup (pool, value->data);
+        keywords->url = svn_string_create_from_buf (value, pool);
     }
 
   /* else, do nothing.  it's an unrecognized keyword. */
@@ -1195,10 +1191,7 @@ expand_keyword (char **revision,
 
 
 svn_error_t *
-svn_wc__get_keywords (char **revision,
-                      char **date,
-                      char **author,
-                      char **url,
+svn_wc__get_keywords (svn_io_keywords_t **keywords,
                       char *path,
                       char *optional_value,
                       apr_pool_t *pool)
@@ -1206,7 +1199,7 @@ svn_wc__get_keywords (char **revision,
   svn_stringbuf_t *propval;
   const char *value;
   int offset = 0;
-  svn_stringbuf_t *discovered_word;
+  svn_stringbuf_t *found_word;
 
   /* Choose a property value to parse:  either the one that came into
      this function, or the one attached to PATH. */
@@ -1227,13 +1220,12 @@ svn_wc__get_keywords (char **revision,
      the value will contain keywords separated by whitespaces.  This
      can be made more complex later if somebody cares. */
 
-  /* Start off assuming that no keywords are present. */
-  *revision = *date = *author = *url = NULL;
-      
   /* The easy answer. */
   if (value == NULL)
     return SVN_NO_ERROR;
- 
+  else
+    *keywords = apr_pcalloc (pool, sizeof (**keywords));
+
   do {
     /* Find the start of a word by skipping past whitespace. */
     while ((value[offset] != '\0') && (apr_isspace (value[offset])))
@@ -1256,16 +1248,14 @@ svn_wc__get_keywords (char **revision,
         word_end = offset;
         
         /* Make a temporary copy of the word */
-        discovered_word = svn_stringbuf_ncreate (value + word_start,
-                                                 (word_end - word_start),
-                                                 pool);
+        found_word = svn_stringbuf_ncreate (value + word_start,
+                                            (word_end - word_start),
+                                            pool);
         
         /* If this word is an officially recognized keyword, then
            this routine will find its expansion (if available) and
            possibly fill in one of the char ** pointers.  */
-        SVN_ERR (expand_keyword (revision, date, author, url,
-                                 discovered_word->data,
-                                 path, pool));
+        SVN_ERR (expand_keyword (*keywords, found_word->data, path, pool));
       }
 
   } while (value[offset] != '\0');

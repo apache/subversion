@@ -123,8 +123,8 @@ svn_io_open_unique_file (apr_file_t **f,
 
   iterating_portion_idx = (*unique_name)->len + random_portion_width + 2;
   svn_stringbuf_appendcstr (*unique_name,
-                         apr_psprintf (pool, ".%s.00000%s",
-                                       random_portion, suffix));
+                            apr_psprintf (pool, ".%s.00000%s",
+                                          random_portion, suffix));
 
   for (i = 1; i <= 99999; i++)
     {
@@ -408,7 +408,7 @@ translate_keyword_subst (char *buf,
                          apr_size_t *len,
                          const char *keyword,
                          apr_size_t keyword_len,
-                         const char *value)
+                         svn_string_t *value)
 {
   char *buf_ptr;
 
@@ -433,19 +433,17 @@ translate_keyword_subst (char *buf,
       if (value)
         {
           /* ...so expand. */
-          apr_size_t value_len = strlen (value);
-
           buf_ptr[0] = ':';
           buf_ptr[1] = ' ';
-          if (value_len)
+          if (value->len)
             {
               /* "$keyword: value $" */
-              if (value_len > (SVN_KEYWORD_MAX_LEN - 5))
-                value_len = SVN_KEYWORD_MAX_LEN - 5;
-              strncpy (buf_ptr + 2, value, value_len);
-              buf_ptr[2 + value_len] = ' ';
-              buf_ptr[2 + value_len + 1] = '$';
-              *len = 5 + keyword_len + value_len;
+              if (value->len > (SVN_KEYWORD_MAX_LEN - 5))
+                value->len = SVN_KEYWORD_MAX_LEN - 5;
+              strncpy (buf_ptr + 2, value->data, value->len);
+              buf_ptr[2 + value->len] = ' ';
+              buf_ptr[2 + value->len + 1] = '$';
+              *len = 5 + keyword_len + value->len;
             }
           else
             {
@@ -477,19 +475,17 @@ translate_keyword_subst (char *buf,
       else
         {
           /* ...so re-expand. */
-          apr_size_t value_len = strlen (value);
-
           buf_ptr[0] = ':';
           buf_ptr[1] = ' ';
-          if (value_len)
+          if (value->len)
             {
               /* "$keyword: value $" */
-              if (value_len > (SVN_KEYWORD_MAX_LEN - 5))
-                value_len = SVN_KEYWORD_MAX_LEN - 5;
-              strncpy (buf_ptr + 2, value, value_len);
-              buf_ptr[2 + value_len] = ' ';
-              buf_ptr[2 + value_len + 1] = '$';
-              *len = 5 + keyword_len + value_len;
+              if (value->len > (SVN_KEYWORD_MAX_LEN - 5))
+                value->len = SVN_KEYWORD_MAX_LEN - 5;
+              strncpy (buf_ptr + 2, value->data, value->len);
+              buf_ptr[2 + value->len] = ' ';
+              buf_ptr[2 + value->len + 1] = '$';
+              *len = 5 + keyword_len + value->len;
             }
           else
             {
@@ -510,8 +506,8 @@ translate_keyword_subst (char *buf,
    string, and return TRUE.  If this buffer doesn't contain a known
    keyword pattern, leave BUF and *LEN untouched and return FALSE.
 
-   See the docstring for svn_io_copy_and_translate for how the EXPAND,
-   REVISION, DATE, AUTHOR, and URL parameters work.
+   See the docstring for svn_io_copy_and_translate for how the EXPAND
+   and KEYWORDS parameters work.
 
    NOTE: It is assumed that BUF has been allocated to be at least
    SVN_KEYWORD_MAX_LEN bytes longs, and that the data in BUF is less
@@ -524,21 +520,22 @@ static svn_boolean_t
 translate_keyword (char *buf,
                    apr_size_t *len,
                    svn_boolean_t expand,
-                   const char *revision,
-                   const char *date,
-                   const char *author,
-                   const char *url)
+                   svn_io_keywords_t *keywords)
 {
   const char *keyword;
-  const char *value;
+  svn_string_t *value;
   int keyword_len;
 
   /* Make sure we gotz good stuffs. */
   assert (*len <= SVN_KEYWORD_MAX_LEN);
   assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
 
+  /* Early return for ignored keywords */
+  if (! keywords)
+    return FALSE;
+
   /* Revision */
-  if ((value = revision))
+  if ((value = keywords->revision))
     {
       keyword = SVN_KEYWORD_REVISION_LONG;
       keyword_len = strlen (SVN_KEYWORD_REVISION_LONG);
@@ -554,7 +551,7 @@ translate_keyword (char *buf,
     }
 
   /* Date */
-  if ((value = date))
+  if ((value = keywords->date))
     {
       keyword = SVN_KEYWORD_DATE_LONG;
       keyword_len = strlen (SVN_KEYWORD_DATE_LONG);
@@ -570,7 +567,7 @@ translate_keyword (char *buf,
     }
 
   /* Author */
-  if ((value = author))
+  if ((value = keywords->author))
     {
       keyword = SVN_KEYWORD_AUTHOR_LONG;
       keyword_len = strlen (SVN_KEYWORD_AUTHOR_LONG);
@@ -586,7 +583,7 @@ translate_keyword (char *buf,
     }
 
   /* URL */
-  if ((value = url))
+  if ((value = keywords->url))
     {
       keyword = SVN_KEYWORD_URL_LONG;
       keyword_len = strlen (SVN_KEYWORD_URL_LONG);
@@ -662,10 +659,7 @@ svn_io_copy_and_translate (const char *src,
                            const char *dst,
                            const char *eol_str,
                            svn_boolean_t repair,
-                           const char *revision,
-                           const char *date,
-                           const char *author,
-                           const char *url,
+                           svn_io_keywords_t *keywords,
                            svn_boolean_t expand,
                            apr_pool_t *pool)
 {
@@ -689,12 +683,13 @@ svn_io_copy_and_translate (const char *src,
   apr_size_t src_format_len = 0;
 
 #if 0 /* ### todo:  here's a little shortcut */
-  if (! (eol_str || revision || date || author || url))
+  if (! (eol_str || keywords))
     return svn_io_copy_file (svn_stringbuf_create (src, pool),
                              svn_stringbuf_create (dst, pool),
                              pool);
 
 #endif /* 0 */
+
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -795,6 +790,15 @@ svn_io_copy_and_translate (const char *src,
               break;
             }
 
+          /* If we aren't paying attention to keywords, just skip the
+             rest of this stuff. */
+          if (! keywords)
+            {
+              if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
+                goto cleanup;
+              break;
+            }
+
           /* Put this character into the keyword buffer. */
           keyword_buf[keyword_off++] = c;
 
@@ -806,8 +810,7 @@ svn_io_copy_and_translate (const char *src,
           /* Else, it must be the end of one!  Attempt to translate
              the buffer. */
           len = keyword_off;
-          if (translate_keyword (keyword_buf, &len, expand,
-                                 revision, date, author, url))
+          if (translate_keyword (keyword_buf, &len, expand, keywords))
             {
               /* We successfully found and translated a keyword.  We
                  can write out this buffer now. */
