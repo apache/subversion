@@ -22,12 +22,19 @@ define([subversion_version],
        ifdef([__gnu__],
 	     [esyscmd(build/getversion.py subversion/include/svn_version.h)],
 	     [0.x]))
-AC_INIT(subversion, subversion_version, [http://subversion.tigris.org])
+AC_INIT(subversion, subversion_version, [http://subversion.tigris.org/])
 undefine([subversion_version])
 
 dnl AC_CONFIG_SRCDIR is *required*;  sanity-checks that our src dir exists.
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR(ac-helpers)
+
+dnl What version of Subversion are we configuring?
+# Note: this could be different from PACKAGE_VERSION. That symbol gets
+# defined at M4 evaluation time, but only for GNU M4. Other M4
+# implementations might end up with just "0.x"
+svn_version="`build/getversion.py subversion/include/svn_version.h`"
+echo "Configuring Subversion $svn_version"
 
 abs_srcdir="`cd $srcdir && pwd`"
 abs_builddir="`pwd`"
@@ -58,25 +65,6 @@ sinclude(build/ac-diff-test/gnu-diff.m4)
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
-
-
-dnl Create SVN_BINDIR for proper substitution
-if test "${bindir}" = '${exec_prefix}/bin'; then
-        if test "${exec_prefix}" = "NONE"; then
-                if test "${prefix}" = "NONE"; then
-                        SVN_BINDIR="${ac_default_prefix}/bin"
-                else
-                        SVN_BINDIR="${prefix}/bin"
-                fi
-        else
-                SVN_BINDIR="${exec_prefix}/bin"
-        fi
-else
-        SVN_BINDIR="${bindir}"
-fi
-
-eval  SVN_BINDIR=${SVN_BINDIR}
-AC_SUBST(SVN_BINDIR)
 
 
 dnl Generate config.nice early (before the args are munged)
@@ -135,22 +123,56 @@ if test -d $abs_srcdir/db ; then
     SVN_SUBDIRS="$SVN_SUBDIRS db/dist"
 fi
 
-dnl Set include dir and module library lists for Makefiles -----------------
+dnl What version of Expat are we using? -----------------
 
-dnl Expat
 APU_HAVE_OLD_EXPAT="`$apu_config --old-expat`"
 if test "$APU_HAVE_OLD_EXPAT" = "yes"; then
   AC_DEFINE(SVN_HAVE_OLD_EXPAT, 1, [Defined if Expat 1.0 or 1.1 was found])
 fi
 
-dnl Define the location of our templates ---------------------
 
-dnl ### I'm not sure of the best way for us to handle config of this value.
-dnl ### we probably want a version number in this path, too.
-dnl ### note that we use 'eval' to fully evaluate the value (prolly not good)
-template_dir="`eval echo ${datadir}/subversion/templates`"
-AC_DEFINE_UNQUOTED(SVN_TEMPLATE_ROOT_DIR, "$template_dir",
+dnl Set up a number of directories ---------------------
+
+dnl Create SVN_BINDIR for proper substitution
+if test "${bindir}" = '${exec_prefix}/bin'; then
+        if test "${exec_prefix}" = "NONE"; then
+                if test "${prefix}" = "NONE"; then
+                        SVN_BINDIR="${ac_default_prefix}/bin"
+                else
+                        SVN_BINDIR="${prefix}/bin"
+                fi
+        else
+                SVN_BINDIR="${exec_prefix}/bin"
+        fi
+else
+        SVN_BINDIR="${bindir}"
+fi
+
+dnl fully evaluate this value. when we substitute it into our tool scripts,
+dnl they will not have things such as ${bindir} available
+SVN_BINDIR="`eval echo ${SVN_BINDIR}`"
+AC_SUBST(SVN_BINDIR)
+
+
+dnl This directory is where we will store our data. We don't want to
+dnl evaluate it so that later changes in datadir will propagate properly
+svndatadir='${datadir}/subversion'
+
+
+dnl ### do we want this to be alterable via a cmdline switch?
+templatedir="${svndatadir}/${svn_version}/templates"
+AC_SUBST(templatedir)
+
+dnl We want to fully evaluate the template directory for the constant
+dnl that we compile into the code.
+def_template_dir="`eval echo ${templatedir}`"
+def_template_dir="`eval echo ${def_template_dir}`"
+AC_DEFINE_UNQUOTED(SVN_TEMPLATE_ROOT_DIR, "$def_template_dir",
                    [Location of the on-disk and in-repos templates.])
+
+docdir='${datadir}/doc'
+docdir="${docdir}/subversion-${svn_version}"
+AC_SUBST(docdir)
 
 dnl Check for programs ---------------------
 
