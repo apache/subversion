@@ -15,31 +15,26 @@ INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
 ## Libraries this binary depends upon:
 deltaparse_test_LDADD = ../libsvn_delta.la \
                         ../../libsvn_subr/libsvn_subr.la \
-                        ../../libsvn_string/libsvn_string.la \
                         ../../../apr/libapr.a \
                         ../../../expat-lite/libexpat.la
 
 vdelta_test_LDADD = ../libsvn_delta.la \
                     ../../libsvn_subr/libsvn_subr.la \
-                    ../../libsvn_string/libsvn_string.la \
                     ../../../apr/libapr.a \
                     ../../../expat-lite/libexpat.la
 
 random_test_LDADD = ../libsvn_delta.la \
                     ../../libsvn_subr/libsvn_subr.la \
-                    ../../libsvn_string/libsvn_string.la \
                     ../../../apr/libapr.a \
                     ../../../expat-lite/libexpat.la
 
 xml_output_test_LDADD = ../libsvn_delta.la \
                         ../../libsvn_subr/libsvn_subr.la \
-                        ../../libsvn_string/libsvn_string.la \
                         ../../../apr/libapr.a \
                         ../../../expat-lite/libexpat.la
 
 svndiff_test_LDADD = ../libsvn_delta.la \
                      ../../libsvn_subr/libsvn_subr.la \
-                     ../../libsvn_string/libsvn_string.la \
                      ../../../apr/libapr.a \
                      ../../../expat-lite/libexpat.la
 

@@ -12,7 +12,6 @@ svn_LDADD = ../libsvn_client/libsvn_client.la     \
             ../libsvn_wc/libsvn_wc.la             \
             ../libsvn_delta/libsvn_delta.la       \
 	    ../libsvn_subr/libsvn_subr.la         \
-            ../libsvn_string/libsvn_string.la     \
             ../../apr/libapr.a                    \
             ../../expat-lite/libexpat.la
 
