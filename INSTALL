@@ -1,6 +1,10 @@
-                       Subversion Installation
-                       =======================
 
+               ======================================
+                  INSTALLING AND USING SUBVERSION
+                      A Guide for Newcomers
+               ======================================
+
+               
    ********************************************************************
    ***                                                              ***
    ***  Note: this is PRE-ALPHA code.  Don't use it on real data,   ***
@@ -10,93 +14,298 @@
    ***                                                              ***
    ********************************************************************
 
-(Please read the HACKING file if you're installing from a working copy
-rather than an unpacked distribution.)
 
-(Also, if you are trying to set up a subversion server, also look at
-www/server_setup.html for instructions on compiling and installing 
-Apache 2.0 and mod_dav_svn).
+I.  INSTALLATION
 
-Subversion installs using the usual GNU procedure:
+  A.  BOOTSTRAPPING FROM TARBALL
 
-   $ ./configure --enable-maintainer-mode --disable-shared
-   $ make
-   $ make check
-   # make install
+      In order to get the latest Subversion source code, you need to
+      check it out of a Subversion repository, and thus need a working
+      Subversion client.
 
-The flags to `configure' are highly recommended for developers, as
-they build a statically-linked binary.  If you don't use those flags,
-then you must reverse the order of the "make check" and "make install"
-steps, because the shared libraries must be installed before "make
-check" will work.
+      Download the latest distribution tarball from:
 
-Additionally, with shared library builds, the destination library directory
-must be listed in either /etc/ld.so.conf or $LD_LIBRARY_PATH (for linux
-systems), so that subversion will be able to dynamically load repository
-access plugins.  If you try to do a checkout and see an error like:
+        http://subversion.tigris.org/servlets/ProjectDownloadList
 
-svn_error: #21068 : <Bad URL passed to RA layer>
-  Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
+      Unpack this tarball, and use the standard GNU procedure to compile:
 
-It probably means that the dynamic loader/linker can't find the subversion
-libraries.
+         $ ./configure --enable-maintainer-mode --disable-shared
+         $ make
 
-Note that if you commonly build with the -jN option to make, the make step
-above may fail, because we don't ensure that third party libraries in our
-source tree will finish building before subversion itself.  If you want
-to use -jN, use the following instead:
+      (The first switch to ./configure turns on debugging, and the
+      second switch builds a statically-linked client binary.)
 
-   $ ./configure --enable-maintainer-mode --disable-shared
-   $ make -jN external-all
-   $ make -jN local-all
-   $ make check
-   # make install
+      After compiling, you will have a large 'svn' binary sitting in
+      the tree.  Use it to check out a real Subversion working copy:
 
-(See www/server_setup.html for how to set up the Subversion server.)
+         $ subversion/clients/cmdline/svn checkout \
+              http://svn.collab.net/repos/svn/trunk -d svn
+
+         A  svn/dist.sh
+         A  svn/buildcheck.sh
+         A  svn/HACKING
+         ...
+
+   B.  BUILDING THE LATEST SOURCE
+
+      You can discard the directory created by the tarball; you're
+      about to build the latest, greatest Subversion client.
+
+      First off, if you have any Subversion libraries lying around
+      from previous 'make installs', clean them up first!
+
+         # rm -f /usr/local/lib/libsvn*
+         # rm -f /usr/local/lib/libapr*
+         # rm -f /usr/local/lib/libexpat*
+         # rm -f /usr/local/lib/libneon*
+
+      Start the process by running "autogen.sh":
+
+         $ chmod +x autogen.sh    # if not already executable
+         $ ./autogen.sh
+
+      This script will make sure you have all the necessary components
+      available to build Subversion.  If any are missing, you will be
+      told where to get them from.  (See the 'requirements' section
+      further down.)
+
+      After all components are in place, follow the usual procedure:
+
+         $ ./configure --enable-maintainer-mode --disable-shared
+         $ make
+         $ make check    (optional)           
+         # make install
+
+      The flags to `configure' are highly recommended for developers,
+      as they build a statically-linked binary.  If you don't use
+      those flags, then you must reverse the order of the "make check"
+      and "make install" steps, because the shared libraries must be
+      installed before "make check" will work.
+
+      Additionally, with shared library builds, the destination
+      library directory must be listed in either /etc/ld.so.conf or
+      $LD_LIBRARY_PATH (for linux systems), so that Subversion will be
+      able to dynamically load repository access plugins.  If you try
+      to do a checkout and see an error like:
+
+      svn_error: #21068 : <Bad URL passed to RA layer>
+         Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
+
+      It probably means that the dynamic loader/linker can't find all
+      of the libsvn_* libraries.
+
+      Note that if you commonly build with the -jN option to make, the
+      make step above may fail, because we don't ensure that third
+      party libraries in our source tree will finish building before
+      subversion itself.  If you want to use -jN, use the following
+      instead:
+
+         $ ./configure --enable-maintainer-mode --disable-shared
+         $ make -jN external-all
+         $ make -jN local-all
+         $ make check
+         # make install
 
 
-PREREQUISITES:
+   C. BUILD REQUIREMENTS
 
-1. Berkeley DB 3.3.11
+      1.  Berkeley DB
 
-   Berkely DB is needed to build a Subversion server.  If you are only 
-   interested in building a Subversion client, you don't need it.  If
-   you wish to build a server, read the rest of this section.
+      Berkeley DB is needed to build a Subversion server, or to access
+      a repository on local disk.  If you are only interested in
+      building a Subversion client that speaks to a remote (networked)
+      repository, you don't need it.  
 
-   You'll need Berkeley DB 3.3.11 or higher installed on your system.
-   You can get it from:
+      You'll need Berkeley DB 3.3.11 or higher installed on your
+      system.  You can get it from http://www.sleepycat.com/.
 
-      http://www.sleepycat.com
+      If you already have another version of Berkeley DB installed and
+      don't want to downgrade, you can unpack the Berkeley 3.3.11
+      distribution into a subdir named `db' in the top-level of the
+      Subversion source tree.  Then Subversion will ignore the system
+      DB and use the one it found in its own source tree.
+      Alternatively, you can add this flag
 
-   If you already have another version of Berkeley DB installed and
-   don't want to downgrade, you can unpack the Berkeley 3.3.11
-   distribution into a subdir named `db' in the top-level of the
-   Subversion source tree.  Then Subversion will ignore the system DB
-   and use the one it found in its own source tree.  Alternatively,
-   you can add this flag
+         --with-berkeley-db=/usr/local/BerkeleyDB.3.3
 
-      --with-berkeley-db=/usr/local/BerkeleyDB.3.3
+      to your `configure' switches, and the build process will use the
+      named Berkeley.  You may need to use a different path, of
+      course.
 
-   to your `configure' switches, and the build process will use the
-   named Berkeley.  You may need to use a different path, of course.
+      2. Python 2.0
 
-2. Python 2.1
+      If you want to run "make check", install Python 2.0 or higher on
+      your system, as the majority of the test suite is written in
+      Python.  Get it from http://www.python.org/.
 
-   If you want to run "make check", install Python 2.1 or higher on
-   your system, as the test suite is written in Python.  Get it from
-   http://www.python.org/.
 
-3. Clean up any previous Subversion installs first!
 
-   Your build may appear to succeed, but actually link incorrectly, if
-   there are old Subversion shared libraries on your system.  If
-   you've installed Subversion shared libraries in the past, you must
-   be sure to clean them out before building a newer version.  Usually
-   this does the trick:
 
-      # rm -f /usr/local/lib/libsvn*
-      # rm -f /usr/local/lib/libapr*
-      # rm -f /usr/local/lib/libexpat*
-      # rm -f /usr/local/lib/libneon*
+II.  QUICKSTART GUIDE
 
-Please mail dev@subversion.tigris.org if you have any problems.
+   A.  REPOSITORIES
+
+     1. REPOSITORY ACCESS
+
+      The Subversion client has an abstract interface for accessing a
+      repository.  Two "Repository Access" (RA) implementations
+      currently exist as libraries:
+
+        libsvn_ra_dav:   accesses a networked repository using WebDAV.
+        libsvn_ra_dav:   accesses a local repository using Berkeley DB.
+
+      You can see which methods are available to your 'svn' client
+      like so:
+
+        $ svn --version
+        Subversion Client, version 0.6.0
+          compiled Nov 27 2001, 21:15:44
+
+        Copyright (C) 2000-2001 CollabNet.
+        Subversion is open source software, see http://subversion.tigris.org/
+
+        The following repository access (RA) modules are available:
+
+         * ra_dav : Module for accessing a repository via WebDAV protocol.
+           - handles 'http' schema
+         * ra_local : Module for accessing a repository on local disk.
+           - handles 'file' schema
+           
+
+      If you don't see ra_local, it probably means that Berkeley DB
+      wasn't found when compiling your client binary.  If you don't
+      see ra_dav, then something is very wrong;  most likely your
+      dynamic loader/linker can't find libsvn_ra_dav.so (see section
+      I.B above.)
+
+
+      2. CREATING A REPOSITORY
+
+      A Subversion repository is an ordinary directory that mainly
+      contains Berkeley DB .db files.  You can only create a
+      repository if you have Berkeley DB available on your system and
+      it was found during the compile.  If this is true, you should
+      have a utility called 'svnadmin' installed.  'svnadmin' does
+      many things, but its most important feature is creating an empty
+      repository:
+
+          % svnadmin create /usr/local/svn/repos1
+
+      After the repository is created, you can initially import data
+      into it, using libsvn_ra_local (invoked by using a 'file' URL):
+
+          % svn import file///usr/local/svn/repos1 some/local/dir/
+
+      The above example imports the contents of some/local/dir/ right
+      into the root of the repository.  If you want to put these
+      contents into a newly-created repository subdirectory, use
+      *three* args to import.  (Try 'svn help import' for details).
+
+      Also, watch out for 'ownership' pitfalls.  Notice who has the
+      rights to modify the .db files in the repository.  Repository
+      commit access is ultimately determined by whomever has the
+      rights to modify the .db files.  
+
+      
+      3. CREATING A SUBVERSION SERVER
+
+      Subversion uses Apache 2.0 as its network server.  Apache's
+      mod_dav speaks to a special mod_dav_svn module, which uses
+      Berkeley DB to talk to a repository.
+
+      Apache's own authentication system allows remote users to access
+      the repository with Subversion clients.  However: make sure that
+      Apache has the right to edit the .db files itself, or you'll get
+      all sorts of Apache errors.  Often people create a special 'svn'
+      user who owns the repository, and folks put a line into
+      httpd.conf that tells Apache to run as that special user.
+      
+      Compiling Apache and mod_dav_svn is a separate project; please
+      read the document 'www/server_setup.html' for detailed
+      instructions.
+
+
+   B.  EXAMPLE WALKTHOUGH
+
+      Here are some simple examples of how one might use the svn
+      client.  In general, things are designed to be similar to CVS.
+      But many things are different.  *PLEASE* read the 'SVN for CVS
+      Users' document (in docs/, or on the website) to understand the
+      broader concepts of what's going on!
+
+         # Checkout a working copy.  This can either be a file: or
+         #  http: url, depending on which RA modules are available.
+
+         $ svn co file:///usr/local/svn/repos1 -d wc
+         A wc/foo
+         A wc/bar
+         A wc/baz
+         A wc/baz/gloo
+         A wc/baz/bloo
+
+         $ cp -R wc wc2                 # back up this working copy
+
+         $ cd wc
+         $ echo "new text" >> bar       # change bar's text
+         $ svn propset color green foo  # add a metadata property to foo
+         $ svn rm baz                   # schedule baz directory for deletion
+         $ touch newfile
+         $ svn add newfile              # schedule newfile for addition
+
+         $ svn status                   # See what's locally modified
+         M   ./bar
+         _M  ./foo
+         A   ./newfile
+         D   ./baz
+         D   ./baz/gloo
+         D   ./baz/bloo
+
+         $ svn commit -m "Made many changes"  # Commit the changes
+         Sending    bar
+         Sending    foo
+         Adding     newfile
+         Deleting   baz
+         Commit succeeded.
+
+         $ cd ../wc2                # change to the back-up working copy
+
+         $ svn update               # get changes from repository
+         U   ./bar
+         _U  ./foo
+         A   ./newfile
+         D   ./baz
+
+
+III.  THEORY AND DOCUMENTATION
+
+   A.  DESIGN
+
+      A design spec was written in June 2000, and is a bit out of
+      date.  But it still gives a good theoretical introduction to the
+      inner workings of the repository, and to Subversion's various
+      layers.  Look in doc/programmer/design/, or look at one of the
+      versions posted on the Subversion website.
+
+   B.  WEBDAV
+
+      Greg Stein has written an introduction Subversion's network
+      protocol, which is an extended dialect of HTTP.  The document is
+      'www/webdav-usage.html', and is also posted on the website.
+
+   C.  USER MANUAL
+
+      We've started documenting some of the behavior of the client;
+      it's only a small beginning, but it may help.  Look at
+      doc/user/manual/ for this project.
+
+
+IV.  PARTICPATING
+
+   Read the HACKING file!  It describes Subversion coding and log
+   message standards, as well as how to join discussion lists.
+
+   Talk on IRC with developers:  irc.openprojects.net, channel #svn.
+
+   Read the FAQ:  http://subversion.tigris.org/project_faq.html
+
+

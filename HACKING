@@ -574,26 +574,6 @@ These guidelines are paraphrased from Jim Blandy's excellent essay
 "Maintaining the ChangeLog".  It is in `doc/WritingChangeLogs.txt'.
 
 
-Generating ChangeLogs
-=====================
-
-Subversion does not keep ChangeLog files, because they're redundant
-with the CVS log entries.  But ChangeLog is an easier format to
-browse, so it's often handy to generate a ChangeLog from the cvs log
-data.  You can do so with the script `cvs2cl.pl', from:
-
-   http://www.red-bean.com/cvs2cl/
-
-If you've never used it before, try invoking it like this:
-
-   cd subversion/subversion
-   cvs2cl.pl --fsf -r
-
-That will produce a ChangeLog in the current directory (the "-r" flag
-says include revision numbers, and "--fsf" means do auto-wrapping in a
-way friendly to log entries written in GNU ChangeLog style).
-
-Run "cvs2cl.pl --help" for more information.
 
 
 
