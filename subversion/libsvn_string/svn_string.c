@@ -84,7 +84,7 @@ my__realloc (char *data, const size_t oldsize, const size_t request,
 
 
 
-/* Create a new bytestring by copying SIZE bytes from; requires a
+/* Create a new bytestring by copying SIZE bytes from BYTES; requires a
    memory POOL to allocate from. */
 svn_string_t *
 svn_string_ncreate (const char *bytes, const size_t size, 
