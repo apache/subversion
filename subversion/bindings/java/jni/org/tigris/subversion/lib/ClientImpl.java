@@ -18,7 +18,7 @@ package org.tigris.subversion.lib;
  */
 
 import org.tigris.subversion.SubversionException;
-import java.util.Hashtable;
+import java.util.Vector;
 import java.util.Date;
 
 public class ClientImpl implements org.tigris.subversion.lib.Client 
@@ -35,15 +35,18 @@ public class ClientImpl implements org.tigris.subversion.lib.Client
 
   public native void checkout(TreeDeltaEditor beforeEditor,
     TreeDeltaEditor afterEditor, String url, String path,
-    Revision revision, Date time, String xml_src) throws SubversionException;
+    Revision revision, Date time, String xml_src) 
+      throws SubversionException;
 
   public native void update(TreeDeltaEditor beforeEditor,
     TreeDeltaEditor afterEditor, String path, String xml_src,
     String revision, Date time) throws SubversionException;
 
-  public native void add(String path, boolean recursive) throws SubversionException;
+  public native void add(String path, boolean recursive) 
+      throws SubversionException;
 
-  public native void delete(String path, boolean force) throws SubversionException;
+  public native void delete(String path, boolean force) 
+      throws SubversionException;
 
   public native void performImport(TreeDeltaEditor beforeEditor,
       TreeDeltaEditor afterEditor, String path, String url,
@@ -51,14 +54,17 @@ public class ClientImpl implements org.tigris.subversion.lib.Client
       String Revision) throws SubversionException;
 
   public native void commit(TreeDeltaEditor beforeEditor,
-    TreeDeltaEditor afterEditor, String targets[], String log_msg,
-    String xml_dst, String revision) throws SubversionException;
+			    TreeDeltaEditor afterEditor, 
+			    String targets[], String log_msg,
+			    String xml_dst, String revision) 
+      throws SubversionException;
 
-  public native Hashtable status(String path, boolean descend, 
-    boolean get_all, boolean update)
-    throws SubversionException;
+  public native Vector status(String path, boolean descend, 
+			      boolean get_all, boolean update)
+      throws SubversionException;
 
-  public native String fileDiff(String path) throws SubversionException;
+  public native String fileDiff(String path) 
+      throws SubversionException;
 
   public native void cleanup(String dir) throws SubversionException;
 
