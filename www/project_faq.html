@@ -158,6 +158,9 @@ a <tt>file:</tt> URL?</a></li>
     with Apache on Win32 and I'm getting an error saying that the 
     module cannot be found, yet the mod_dav_svn.so file is right 
     there in <tt>\Apache\modules.</tt></a></li>
+<li><a href="#win32-hooks">Why aren't my repository hooks, like
+    <tt>pre-commit.bat</tt> and <tt>post-commit.bat</tt>, working
+    under Windows?</a></li>
 
 <h4>Developer questions:</h4>
 <li><a href="#ramdisk-tests">How do I run the regression tests in a
@@ -1989,6 +1992,17 @@ installation directory if they are not there.</p>
 like <a href="http://www.dependencywalker.com">Dependency Walker</a> 
 on <tt>mod_dav_svn.so</tt> to see if there are any other unresolved
 dependencies.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="win32-hooks">Why aren't my repository hooks, like
+    <tt>pre-commit.bat</tt> and <tt>post-commit.bat</tt>, working
+    under Windows?</a></h3>
+
+<p>When invoking other programs from repository hook scripts, try
+using absolute paths.  The environment Subversion passes to the hookss
+is minimal, so %PATH% may not have all the directories you expect.</p>
+
 
 <![CDATA[=========================================================]]>
 
