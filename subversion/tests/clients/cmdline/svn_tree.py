@@ -168,7 +168,7 @@ def create_from_path(path, contents=None, props={}):
 # a regexp machine for matching the name of the administrative dir.
 rm = re.compile("^SVN/|/SVN/|/SVN$|^/SVN/|^SVN$")
 
-# helper for visitfunc(), which is a helper for build_tree_from_wc()
+# helper for handle_dir(), which is a helper for build_tree_from_wc()
 def get_props(path):
   "Return a hash of props for PATH, using the svn client."
 
@@ -189,7 +189,7 @@ def get_props(path):
   return props
 
 
-# helper for visitfunc(), which helps build_tree_from_wc()
+# helper for handle_dir(), which helps build_tree_from_wc()
 def get_text(path):
   "Return a string with the textual contents of a file at PATH."
 
@@ -203,39 +203,43 @@ def get_text(path):
   return contents
 
 
-# helper for build_tree_from_wc()   -- callback for os.walk()
-def visitfunc(baton, dirpath, entrynames):
-  "Callback for os.walk().  Builds a tree of SVNTreeNodes."
+# main recursive helper for build_tree_from_wc()
+def handle_dir(path, current_parent, load_props, ignore_svn):
 
-  # if any element of DIRPATH is 'SVN', go home.
-  if rm.search(dirpath):
-    return
+  # get a list of all the files
+  all_files = os.listdir(path)
+  files = []
+  dirs = []
+  
+  # put dirs and files in their own lists, and remove SVN dirs
+  for f in all_files:
+    f = os.path.join(path, f)
+    if (os.path.isdir(f) and os.path.basename(f) != 'SVN'):
+      dirs.append(f)
+    elif os.path.isfile(f):
+      files.append(f)
+      
+  # add each file as a child of CURRENT_PARENT
+  for f in files:
+    fcontents = get_text(f)
+    if load_props:
+      fprops = get_props(f)
+    else:
+      fprops = {}
+    current_parent.add_child(SVNTreeNode(os.path.basename(f), None,
+                                         fcontents, fprops))
+    
+  # for each subdir, create a node, walk its tree, add it as a child
+  for d in dirs:
+    if load_props:
+      dprops = get_props(d)
+    else:
+      dprops = {}
+    new_dir_node = SVNTreeNode(os.path.basename(d), None, None, dprops)
+    handle_dir(d, new_dir_node, load_props, ignore_svn)
+    current_parent.add_child(new_dir_node)
 
-  # unpack the baton
-  root = baton[0]
-  load_props = baton[1]
 
-  # Create a linked list of nodes from DIRPATH, and deposit
-  # DIRPATH's properties in the tip.
-  if load_props:
-    dirpath_props = get_props(dirpath)
-  else:
-    dirpath_props = {}
-  new_branch = create_from_path(dirpath, None, dirpath_props)
-  root.add_child(new_branch)
-
-  # Repeat the process for each file entry.
-  for entry in entrynames:
-    entrypath = os.path.join(dirpath, entry)
-    if os.path.isfile(entrypath):
-      if load_props:
-        file_props = get_props(entrypath)
-      else:
-        file_props = {}
-      file_contents = get_text(entrypath)
-      new_branch = create_from_path(entrypath,
-                                    file_contents, file_props)
-      root.add_child(new_branch)
 
 
 ###########################################################################
@@ -339,7 +343,7 @@ def build_generic_tree(nodelist):
 
 def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
-
+  
   root = SVNTreeNode(root_node_name)
   rm = re.compile ('^(..)\s+(.+)')
   
@@ -383,7 +387,7 @@ def build_tree_from_status(lines):
   "Return a tree derived by parsing the output LINES from 'st'."
 
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^(..)\s+(\d+)\s+\(.+\)\s+(.+)')
+  rm = re.compile ('^(..)\s+(\d+)\s+\(\s+(\d+)\)\s+(.+)')
   
   for line in lines:
     match = rm.search(line)
@@ -405,20 +409,23 @@ def build_tree_from_status(lines):
 #   creates a drastic slowdown -- we spawn a new 'svn proplist'
 #   process for every file and dir in the working copy!
 
-def build_tree_from_wc(wc_path, load_props=0):
-  """Walk a subversion working copy starting at WC_PATH and return a
-  tree structure containing file contents.  If LOAD_PROPS is true,
-  then all file and dir properties will be read into the tree as well."""
 
-  root = SVNTreeNode(root_node_name)
+def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
+    """Takes WC_PATH as the path to a working copy.  Walks the tree below
+    that path, and creates the tree based on the actual found
+    files.  If IGNORE_SVN is true, then exclude SVN dirs from the tree.
+    If LOAD_PROPS is true, the props will be added to the tree."""
 
-  baton = (root, load_props)
-  os.path.walk(wc_path, visitfunc, baton)
+    root = SVNTreeNode(root_node_name, None)
 
-  return root
+    # if necessary, store the root dir's props in the root node.
+    if load_props:
+      root.props = get_props(wc_path)
+      
+    # Walk the tree recursively
+    handle_dir(os.path.normpath(wc_path), root, load_props, ignore_svn) 
 
-
-dump_tree(build_tree_from_wc('wc-t1'))
+    return root
 
 
 

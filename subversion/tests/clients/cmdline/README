@@ -113,14 +113,15 @@ The files in this directory, grouped by function:
                              call svn_test_main.client_test() on them.
  -----
 
- * svn_tree.py:           infrastructure for SVNTreeNode class,
-                          tree constructors, tree comparison routines.
+ * svn_tree.py:           infrastructure for SVNTreeNode class.
 
- * svn_output.py:         routines to parse subcommand output into
-                          specific kinds of trees.
+                          * tree constructors, tree comparison routines.
 
- * svn_wc.py:             routines to parse a working copy (and
-                          entries files) into specific kinds of trees.
+                          * routines to parse subcommand output into
+                            specific kinds of trees.
+
+                          * routines to parse a working copy and
+                            entries files into specific kinds of trees.
  -----
 
  * local_tests.py:        tests: client operations using ra_local.
