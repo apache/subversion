@@ -270,7 +270,7 @@ case "$svn_lib_berkeley_db" in
 
 
 the Subversion filesystem library, part of
-the server, requires Berkeley DB version 3.1.14 or newer, which you
+the server, requires Berkeley DB version 3.2.9 or newer, which you
 don't seem to have installed.  We have created makefiles which will
 build the Subversion client code only, and skip the server.
 You can find latest version of Berkeley DB at http://www.sleepycat.com.])
