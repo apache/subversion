@@ -903,8 +903,6 @@ populate_finfo (struct file_baton *fb,
                   const char *name,
                   apr_pool_t *pool)
 {
-  apr_finfo_t finfo;
-
   if (!fb->file_info)
     {
       fb->file_info=apr_palloc(pool, sizeof(*fb->file_info));
@@ -931,8 +929,6 @@ change_file_prop (void *file_baton,
    * date instead of the value */
   if (strcmp (name, SVN_PROP_TEXT_TIME) == 0)
     {
-      apr_time_t mtime;
-
       SVN_ERR (populate_finfo(b, name, pool));
       propchange->value=svn_string_create( 
                                           svn_time_to_cstring (b->file_info->mtime, b->pool),
