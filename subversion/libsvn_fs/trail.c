@@ -146,6 +146,8 @@ svn_fs__retry_txn (svn_fs_t *fs,
           return svn_err;
         }
 
+      svn_error_clear (svn_err);
+
       /* We deadlocked.  Abort the transaction, and try again.  */
       SVN_ERR (abort_trail (trail, fs));
     }
