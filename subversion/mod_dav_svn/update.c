@@ -63,6 +63,12 @@ typedef struct {
   svn_boolean_t added;
   apr_array_header_t *changed_props;
   apr_array_header_t *removed_props;
+
+  /* "entry props" */
+  const char *committed_rev;
+  const char *committed_date;
+  const char *last_author;
+
 } item_baton_t;
 
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
@@ -220,40 +226,27 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
      ### later on, compress via the 'scattered table' solution as
      discussed with gstein.  -bmcs */
   {
-    svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-    svn_string_t *committed_date = NULL;
-    svn_string_t *last_author = NULL;
-    
-    /* Get the CR and two derivative props. ### check for error returns. */
-    svn_fs_node_created_rev(&committed_rev,
-                            baton->uc->rev_root, baton->path2, baton->pool);
-    svn_fs_revision_prop(&committed_date,
-                         baton->uc->resource->info->repos->fs,
-                         committed_rev, SVN_PROP_REVISION_DATE, baton->pool);
-    svn_fs_revision_prop(&last_author,
-                         baton->uc->resource->info->repos->fs,
-                         committed_rev, SVN_PROP_REVISION_AUTHOR, baton->pool);
-    
     /* ### grrr, these DAV: property names are already #defined in
        ra_dav.h, and statically defined in liveprops.c.  And now
        they're hardcoded here.  Isn't there some header file that both
        sides of the network can share?? */
+    
     send_xml(baton->uc, "<S:prop>");
-    send_xml(baton->uc, "<D:version-name>%ld</D:version-name>",
-             committed_rev);
-
-    if (committed_date)
+    
+    /* ### special knowledge: svn_repos_dir_delta will never send
+     *removals* of the commit-info "entry props". */
+    if (baton->committed_rev)
+      send_xml(baton->uc, "<D:version-name>%ld</D:version-name>",
+               baton->committed_rev);
+      
+    if (baton->committed_date)
       send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
-               committed_date->data);
-    else
-      send_xml(baton->uc, "<S:remove-prop name=\"creationdate\"/>");
-
-    if (last_author)
+               baton->committed_date);
+    
+    if (baton->last_author)
       send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
-               last_author->data);
-    else
-      send_xml(baton->uc, "<S:remove-prop name=\"creator-displayname\"/>");
-
+               baton->last_author);
+    
     send_xml(baton->uc, "</S:prop>\n");
   }
 
@@ -347,12 +340,23 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
   item_baton_t *b = baton;
   svn_stringbuf_t *qname;
 
-  /* for now, ignore entry props that come through.  ### this should
-     go away and we should just tunnel those props on through for the
+  /* For now, specially handle entry props that come through (using
+     the ones we care about, discarding the rest).  ### this should go
+     away and we should just tunnel those props on through for the
      client to deal with. */
-  if (! strncmp (name->data, SVN_PROP_ENTRY_PREFIX, 
-                 strlen (SVN_PROP_ENTRY_PREFIX)))
-    return SVN_NO_ERROR;
+#define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
+  if (! strncmp(name->data, SVN_PROP_ENTRY_PREFIX, NSLEN))
+    {
+      if (! strcmp(name->data, SVN_PROP_ENTRY_COMMITTED_REV))
+        b->committed_rev = value ? apr_pstrdup(b->pool, value->data) : NULL;
+      else if (! strcmp(name->data, SVN_PROP_ENTRY_COMMITTED_DATE))
+        b->committed_date = value ? apr_pstrdup(b->pool, value->data) : NULL;
+      else if (! strcmp(name->data, SVN_PROP_ENTRY_LAST_AUTHOR))
+        b->last_author = value ? apr_pstrdup(b->pool, value->data) : NULL;
+      
+      return SVN_NO_ERROR;
+    }
+#undef NSLEN
                 
   qname = svn_stringbuf_create (apr_xml_quote_string (b->pool, name->data, 1),
                                 b->pool);
