@@ -125,6 +125,8 @@ SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   FS_RULES="fs-libs fs-programs"
+  AC_SUBST(SVN_DB_INCLUDES)
+  AC_SUBST(SVN_DB_LIBS)
 fi
 AC_SUBST(FS_RULES)
 
@@ -211,7 +213,7 @@ if test "$enable_shared" = "no"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
         [Defined if libsvn_client should link against libsvn_ra_local])
     SVN_RA_LIB_DEPS="$SVN_RA_LIB_DEPS subversion/libsvn_ra_local/libsvn_ra_local.la subversion/libsvn_repos/libsvn_repos.la subversion/libsvn_fs/libsvn_fs.la"
-    SVN_RA_LIB_LINK="$SVN_RA_LIB_LINK -L\$(abs_builddir)/subversion/libsvn_ra_local/.libs -lsvn_ra_local -L\$(abs_builddir)/subversion/libsvn_repos/.libs -lsvn_repos -L\$(abs_builddir)/subversion/libsvn_fs/.libs -lsvn_fs"
+    SVN_RA_LIB_LINK="$SVN_RA_LIB_LINK -L\$(abs_builddir)/subversion/libsvn_ra_local/.libs -lsvn_ra_local -L\$(abs_builddir)/subversion/libsvn_repos/.libs -lsvn_repos -L\$(abs_builddir)/subversion/libsvn_fs/.libs -lsvn_fs \$(SVN_DB_LIBS)"
   fi
 
 fi

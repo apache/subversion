@@ -159,18 +159,20 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	svn_lib_berkeley_db=no
       ;;
       "std" )
+        SVN_DB_INCLUDES=
+        SVN_DB_LIBS=-ldb
         svn_lib_berkeley_db=yes
       ;;
       *":"* )
 	header="`echo $found | sed -e 's/:.*$//'`"
 	lib="`echo $found | sed -e 's/^.*://'`"
-	CPPFLAGS="$CPPFLAGS -I$header"
-	LIBS="$LIBS -L$lib -ldb"
+        SVN_DB_INCLUDES="-I$header"
+        SVN_DB_LIBS="-L$lib -ldb"
         svn_lib_berkeley_db=yes
       ;;
       * )
-	CPPFLAGS="$CPPFLAGS -I$found/include"
-	LIBS="$LIBS -L$found/lib -ldb"
+        SVN_DB_INCLUDES="-I$found/include"
+        SVN_DB_LIBS="-L$found/lib -ldb"
 	svn_lib_berkeley_db=yes
       ;;
     esac
