@@ -114,7 +114,101 @@ svn_error_t *svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
                                        svn_fs_t *fs,
                                        svn_revnum_t rev,
                                        apr_pool_t *pool);
-  
+
+/* Create a new transaction in filesystem FS, based on revision REV,
+   and store it in *TXN_P.  Allocate all necessary variables from
+   POOL. */
+svn_error_t *svn_fs__fs_begin_txn  (svn_fs_txn_t **txn_p,
+                                    svn_fs_t *fs,
+                                    svn_revnum_t rev,
+                                    apr_pool_t *pool);
+
+/* Set the transaction property NAME to the value VALUE in transaction
+   TXN.  Perform temporary allocations from POOL. */
+svn_error_t *svn_fs__fs_change_txn_prop (svn_fs_txn_t *txn,
+                                         const char *name,
+                                         const svn_string_t *value,
+                                         apr_pool_t *pool);
+
+/* Store a transaction record in *TXN_P for the transaction identified
+   by TXN_ID in filesystem FS.  Allocate everything from POOL. */
+svn_error_t *svn_fs__fs_get_txn (svn_fs__transaction_t **txn_p,
+                                 svn_fs_t *fs,
+                                 const char *txn_id,
+                                 apr_pool_t *pool);
+
+/* Create an entirely new mutable node in the filesystem FS, whose
+   node-revision is NODEREV.  Set *ID_P to the new node revision's ID.
+   Use POOL for any temporary allocation.  COPY_ID is the copy_id to
+   use in the node revision ID.  TXN_ID is the Subversion transaction
+   under which this occurs. */
+svn_error_t *svn_fs__fs_create_node (const svn_fs_id_t **id_p,
+                                     svn_fs_t *fs,
+                                     svn_fs__node_revision_t *noderev,
+                                     const char *copy_id,
+                                     const char *txn_id,
+                                     apr_pool_t *pool);
+
+/* Remove all references to the transaction TXN_ID from filesystem FS.
+   Temporary allocations are from POOL. */
+svn_error_t *svn_fs__fs_purge_txn (svn_fs_t *fs,
+                                   const char *txn_id,
+                                   apr_pool_t *pool);
+
+/* Add or set in filesystem FS, transaction TXN_ID, in directory
+   PARENT_NODEREV a directory entry for NAME pointing to ID of type
+   KIND.  Allocations are done in POOL. */
+svn_error_t *svn_fs__fs_set_entry (svn_fs_t *fs,
+                                   const char *txn_id,
+                                   svn_fs__node_revision_t *parent_noderev,
+                                   const char *name,
+                                   const svn_fs_id_t *id,
+                                   svn_node_kind_t kind,
+                                   apr_pool_t *pool);
+
+/* Add a change to the changes record for filesystem FS in transaction
+   TXN_ID.  Mark path PATH, having node-id ID, as changed according to
+   the type in CHANGE_KIND.  If the text representation was changed
+   set TEXT_MOD to TRUE, and likewise for PROP_MOD.  Perform any
+   temporary allocations from POOL. */
+svn_error_t *svn_fs__fs_add_change (svn_fs_t *fs,
+                                    const char *txn_id,
+                                    const char *path,
+                                    const svn_fs_id_t *id,
+                                    svn_fs_path_change_kind_t change_kind,
+                                    svn_boolean_t text_mod,
+                                    svn_boolean_t prop_mod,
+                                    apr_pool_t *pool);
+
+/* Return a writable stream in *STREAM that allows storing the text
+   representation of node-revision NODEREV in filesystem FS.
+   Allocations are from POOL. */
+svn_error_t *svn_fs__fs_set_contents (svn_stream_t **stream,
+                                      svn_fs_t *fs,
+                                      svn_fs__node_revision_t *noderev,
+                                      apr_pool_t *pool);
+
+/* Create a node revision in FS which is an immediate successor of
+   OLD_ID, whose contents are NEW_NR.  Set *NEW_ID_P to the new node
+   revision's ID.  Use POOL for any temporary allocation.
+
+   COPY_ID, if non-NULL, is a key into the `copies' table, and
+   indicates that this new node is being created as the result of a
+   copy operation, and specifically which operation that was.
+
+   TXN_ID is the Subversion transaction under which this occurs.
+
+   After this call, the deltification code assumes that the new node's
+   contents will change frequently, and will avoid representing other
+   nodes as deltas against this node's contents.  */
+svn_error_t *svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
+                                          svn_fs_t *fs,
+                                          const svn_fs_id_t *old_idp,
+                                          svn_fs__node_revision_t *new_noderev,
+                                          const char *copy_id,
+                                          const char *txn_id,
+                                          apr_pool_t *pool);
+                                                   
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -125,6 +219,13 @@ svn_error_t *svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
 
 #define SVN_FS_FS__REVS_DIR          "revs"     /* Directory of revisions */
 #define SVN_FS_FS__REVPROPS_DIR      "revprops" /* Directory of revprops */
+#define SVN_FS_FS__TXNS_DIR          "transactions"
+#define SVN_FS_FS__CHANGES           "changes"
+#define SVN_FS_FS__TXNS_EXT          ".txn"
+#define SVN_FS_FS__TXNS_PROPS        "props"
+#define SVN_FS_FS__NEXT_IDS          "next-ids"
+#define SVN_FS_FS__CHILDREN_EXT      ".children"
+#define SVN_FS_FS__REV               "rev"
 
 /* Headers used to describe node-revision in the revision file. */
 #define SVN_FS_FS__NODE_ID           "id"       
@@ -151,7 +252,10 @@ svn_error_t *svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
 /* Kinds that a node-rev can be. */
 #define SVN_FS_FS__FILE              "file"   /* node-rev kind for file */
 #define SVN_FS_FS__DIR               "dir"    /* node-rev kind for directory */
+
 #define SVN_FS_FS__SOFT              "soft"
 #define SVN_FS_FS__HARD              "hard"
+
+#define SVN_FS_FS__THIS "this"
 
 #endif

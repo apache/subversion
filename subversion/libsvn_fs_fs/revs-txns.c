@@ -56,8 +56,15 @@ get_txn (svn_fs__transaction_t **txn_p,
          svn_boolean_t expect_dead,
          apr_pool_t *pool)
 {
-  abort ();
-  
+  svn_fs__transaction_t *txn;
+  SVN_ERR (svn_fs__fs_get_txn (&txn, fs, txn_id, pool));
+  if (expect_dead && (txn->kind != svn_fs__transaction_kind_dead))
+    return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
+                              "Transaction is not dead: '%s'", txn_id);
+  if ((! expect_dead) && (txn->kind == svn_fs__transaction_kind_dead))
+    return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
+                              "Transaction is dead: '%s'", txn_id);
+  *txn_p = txn;
   return SVN_NO_ERROR;
 }
 
@@ -437,71 +444,20 @@ svn_fs__set_txn_prop (svn_fs_t *fs,
   return put_txn (fs, txn, txn_name, pool);
 }
 
-
-static svn_error_t *
-txn_body_change_txn_prop (void *baton, apr_pool_t *pool)
-{
-  abort ();
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_fs_change_txn_prop (svn_fs_txn_t *txn,
                         const char *name,
                         const svn_string_t *value,
                         apr_pool_t *pool)
 {
-  struct change_txn_prop_args args;
   svn_fs_t *fs = txn->fs;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  SVN_ERR (svn_fs_txn_name (&args.id, txn, pool));
-  args.name = name;
-  args.value = value;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_txn_prop, &args, pool));
+  SVN_ERR (svn_fs__fs_change_txn_prop (txn, name, value, pool));
 
   return SVN_NO_ERROR;
 }
-
-
-/* Allocate and return a new transaction object in POOL for FS whose
-   transaction ID is ID.  ID is not copied.  */
-static svn_fs_txn_t *
-make_txn (svn_fs_t *fs,
-          const char *id,
-          svn_revnum_t base_rev,
-          apr_pool_t *pool)
-{
-  svn_fs_txn_t *txn = apr_pcalloc (pool, sizeof (*txn));
-
-  txn->fs = fs;
-  txn->id = id;
-  txn->base_rev = base_rev;
-
-  return txn;
-}
-          
-
-struct begin_txn_args
-{
-  svn_fs_txn_t **txn_p;
-  svn_revnum_t rev;
-};
-
-
-static svn_error_t *
-txn_body_begin_txn (void *baton,
-                    apr_pool_t *pool)
-{
-  abort ();
-  
-  return SVN_NO_ERROR;
-}
-
-
 
 
 /* Note:  it is acceptable for this function to call back into
@@ -512,17 +468,11 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
                   svn_revnum_t rev,
                   apr_pool_t *pool)
 {
-  svn_fs_txn_t *txn;
-  struct begin_txn_args args;
   svn_string_t date;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  args.txn_p = &txn;
-  args.rev   = rev;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_begin_txn, &args, pool));
-  
-  *txn_p = txn;
+  SVN_ERR (svn_fs__fs_begin_txn (txn_p, fs, rev, pool));
 
   /* Put a datestamp on the newly created txn, so we always know
      exactly how old it is.  (This will help sysadmins identify
@@ -531,7 +481,7 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
      automatically overwritten with a revision datestamp. */
   date.data = svn_time_to_cstring (apr_time_now(), pool);
   date.len = strlen (date.data);
-  SVN_ERR (svn_fs_change_txn_prop (txn, SVN_PROP_REVISION_DATE, 
+  SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_DATE, 
                                    &date, pool));
 
   return SVN_NO_ERROR;
@@ -597,30 +547,6 @@ struct cleanup_txn_args
   svn_fs__transaction_t **txn_p;
   const char *name;
 };
-
-
-static svn_error_t *
-txn_body_cleanup_txn (void *baton,
-                          apr_pool_t *pool)
-{
-  abort ();
-}
-
-
-static svn_error_t *
-txn_body_cleanup_txn_copy (void *baton, apr_pool_t *pool)
-{
-  abort ();
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-txn_body_cleanup_txn_changes (void *baton, apr_pool_t *pool)
-{
-  abort ();
-}
 
 
 struct get_dirents_args
@@ -712,56 +638,16 @@ delete_txn_tree (svn_fs_t *fs,
 }
 
 
-static svn_error_t *
-txn_body_delete_txn (void *baton, apr_pool_t *pool)
-{
-  abort ();
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_fs_purge_txn (svn_fs_t *fs,
                   const char *txn_id,
                   apr_pool_t *pool)
 {
-  struct cleanup_txn_args args;
-  svn_fs__transaction_t *txn;
-  int i;
-
   SVN_ERR (svn_fs__check_fs (fs));
 
-  /* Open the transaction, expecting it to be dead. */
-  args.txn_p = &txn;
-  args.name = txn_id;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_cleanup_txn, &args, pool));
+  SVN_ERR (svn_fs__fs_purge_txn (fs, txn_id, pool));
   
-  /* Delete the mutable portion of the tree hanging from the
-     transaction (which should gracefully recover if we've already
-     done this). */
-  SVN_ERR (delete_txn_tree (fs, txn->root_id, txn_id, pool));
-
-  /* Kill the transaction's changes (which should gracefully recover
-     if...). */
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_cleanup_txn_changes, 
-                              (void *)txn_id, pool));
-
-  /* Kill the transaction's copies (which should gracefully...). */
-  if (txn->copies)
-    {
-      for (i = 0; i < txn->copies->nelts; i++)
-        {
-          SVN_ERR (svn_fs__retry_txn 
-                   (fs, txn_body_cleanup_txn_copy,
-                    (void *)APR_ARRAY_IDX (txn->copies, i, const char *), 
-                    pool));
-        }
-    }
-      
-  /* Kill the transaction itself (which ... just kidding -- this has
-     no graceful failure mode). */
-  return svn_fs__retry_txn (fs, txn_body_delete_txn, (void *)txn_id, pool);
+  return SVN_NO_ERROR;
 }
 
 

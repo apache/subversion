@@ -347,7 +347,11 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
                  svn_fs_txn_t *txn,
                  apr_pool_t *pool)
 {
-  abort ();
+  svn_fs_root_t *root;
+
+  root = make_txn_root (txn->fs, txn->id, pool);
+
+  *root_p = root;
   
   return SVN_NO_ERROR;
 }
@@ -597,11 +601,72 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
                       const char *txn_id,
                       apr_pool_t *pool)
 {
-  abort ();
+  const svn_fs_id_t *child_id, *parent_id;
+  const char *child_copy_id, *parent_copy_id;
+  const char *id_path = NULL;
+  svn_fs__node_revision_t *noderev;
+
+  /* Make some assertions about the function input. */
+  assert (child && child->parent && txn_id);
+
+  /* Initialize some convenience variables. */
+  child_id = svn_fs__dag_get_id (child->node);
+  parent_id = svn_fs__dag_get_id (child->parent->node);
+  child_copy_id = svn_fs__id_copy_id (child_id);
+  parent_copy_id = svn_fs__id_copy_id (parent_id);
+
+  /* If this child is already mutable, we have nothing to do. */
+  if (svn_fs__id_txn_id (child_id))
+    {
+      *inherit_p = copy_id_inherit_self;
+      *copy_src_path = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* From this point on, we'll assume that the child will just take
+     its copy ID from its parent. */
+  *inherit_p = copy_id_inherit_parent;
+  *copy_src_path = NULL;
+
+  /* Special case: if the child's copy ID is '0', use the parent's
+     copy ID. */
+  if (strcmp (child_copy_id, "0") == 0)
+    return SVN_NO_ERROR;
   
+  /* Compare the copy IDs of the child and its parent.  If they are
+          the same, then the child is already on the same branch as the
+               parent, and should use the same mutability copy ID that the
+               parent will use. */
+  if (svn_fs__key_compare (child_copy_id, parent_copy_id) == 0)
+    return SVN_NO_ERROR;
+
+  /* If the child is on the same branch that the parent is on, the
+     child should just use the same copy ID that the parent would use.
+     Else, the child needs to generate a new copy ID to use should it
+     need to be made mutable.  We will claim that child is on the same
+     branch as its parent if the child itself is not a branch point,
+     or if it is a branch point that we are accessing via its original
+     copy destination path. */
+  SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, child_id, pool));
+  if (noderev->copyroot)
+    return SVN_NO_ERROR;
+
+  /* Determine if we are looking at the child via its original path or
+     as a subtree item of a copied tree. */
+  id_path = svn_fs__dag_get_created_path (child->node);
+  if (strcmp (id_path, parent_path_path (child, pool)) == 0)
+    {
+      *inherit_p = copy_id_inherit_self;
+      return SVN_NO_ERROR;
+    }
+
+  /* We are pretty sure that the child node is an unedited nested
+          branched node.  When it needs to be made mutable, it should claim
+          a new copy ID. */
+  *inherit_p = copy_id_inherit_new;
+  *copy_src_path = id_path;
   return SVN_NO_ERROR;
 }
-
 
 /* Allocate a new parent_path_t node from POOL, referring to NODE,
    ENTRY, PARENT, and COPY_ID.  */
@@ -888,13 +953,6 @@ make_path_mutable (svn_fs_root_t *root,
                                         parent_path->entry, 
                                         copy_id, txn_id, 
                                         pool));
-      
-      /* If we just created a brand new copy ID, we need to store a
-         `copies' table entry for it, as well as a notation in the
-         transaction that should this transaction be terminated, our
-         new copy needs to be removed. */
-
-      abort ();
     }
   else
     {
@@ -959,7 +1017,8 @@ add_change (svn_fs_t *fs,
             svn_boolean_t prop_mod,
             apr_pool_t *pool)
 {
-  abort ();
+  SVN_ERR (svn_fs__fs_add_change (fs, txn_id, path, noderev_id, change_kind,
+                                  text_mod, prop_mod, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1253,7 +1312,19 @@ update_ancestry (svn_fs_t *fs,
                  int source_pred_count,
                  apr_pool_t *pool)
 {
-  abort ();
+  svn_fs__node_revision_t *noderev;
+
+  if (svn_fs__id_txn_id (target_id) == NULL)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
+       "Unexpected immutable node at '%s'", target_path);
+
+  SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, target_id, pool));
+  noderev->predecessor_id = source_id;
+  noderev->predecessor_count = source_pred_count;
+  if (noderev->predecessor_count != -1)
+    noderev->predecessor_count++;
+  SVN_ERR (svn_fs__fs_put_node_revision (fs, target_id, noderev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2176,15 +2247,6 @@ struct rev_get_txn_id_args
   const char **txn_id;
   svn_revnum_t revision;
 };
-
-
-static svn_error_t *
-txn_body_rev_get_txn_id (void *baton, apr_pool_t *pool)
-{
-  abort ();
-
-  return SVN_NO_ERROR;
-}
 
 
 svn_error_t *
@@ -3127,18 +3189,6 @@ svn_fs_apply_text (svn_stream_t **contents_p,
 }
 
 /* --- End machinery for svn_fs_apply_text() ---  */
-
-
-/* Note: we're sharing the `things_changed_args' struct with
-   svn_fs_props_changed(). */
-
-static svn_error_t *
-txn_body_contents_changed (void *baton, apr_pool_t *pool)
-{
-  abort ();
-  
-  return SVN_NO_ERROR;
-}
 
 
 /* Note:  it is acceptable for this function to call back into
