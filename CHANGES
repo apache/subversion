@@ -1,10 +1,34 @@
-Version DEV
+Version 0.21.0 (released ???, revision ???)
 
  User-visible changes:
+ * SSL client and server certificate verification
+ * authentification info now stored in ~/.subversion/auth/
+ * svn diff on a copied file only shows local mods, not the whole file
+ * svn propget now takes a --strict option to control output
+ * svnadmin load now takes a --parent-dir option
+ * added the new 'svndumpfilter' program
+ * svnlook now has 'cat', 'propget', and 'proplist' commands to enable
+   viewing this information on transactions
+ * 'svn copy' from another repository now adds without history
+ * tag/branch conversion disabled in cvs2svn until it gets fixed
+ * the 'anonymous' user is no longer used; we simply avoid attaching an
+   author property when an author is not available
+ * improvements to ignored-file handling
  * Python ConfigParser-style variable expansion for config file (#1165)
 
  Developer-visible changes:
- * ...
+ * introduced the svn_filesize_t type (#639)
+ * realmstring added to the svn_auth framework
+ * the "result checksum" moved to the editor.close_file function
+ * more checksumming here and there
+ * initial work to enable binary properties via ra_dav
+ * initial, internal support for compressed streams
+ * test framework shifting to exception-based failure recording (#1193)
+ * improved options and handling in the C test framework
+ * java and python binding work
+ * libsvn_auth folded into libsvn_subr
+ * bug fixes: 'svnadmin load' parse bug; ra_svn crashes (#1160); 'svn
+   log' on a switched wc (#1108); 'svn ci -N' on named files (#1195)
 
 
 Version 0.20.1 (released 26 Mar 2003, revision 5467, branches/release-0.20.1)
