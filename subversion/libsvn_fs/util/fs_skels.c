@@ -525,7 +525,7 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
           chunk->size = atoi (apr_pstrmemdup (pool,
                                               diff_skel->next->data,
                                               diff_skel->next->len));
-          memcpy (&(chunk->checksum), checksum_skel->children->data, 
+          memcpy (&(chunk->checksum), checksum_skel->children->next->data, 
                   MD5_DIGESTSIZE);
           chunk->rep_key = apr_pstrmemdup (pool, 
                                            checksum_skel->next->data,
