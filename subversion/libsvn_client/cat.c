@@ -132,7 +132,5 @@ svn_client_cat (svn_stream_t* out,
       SVN_ERR (svn_stream_close (tmp_stream));
     }
 
-  SVN_ERR (ra_lib->close (session));
-
   return SVN_NO_ERROR;
 }

@@ -859,10 +859,6 @@ do_merge (const char *URL1,
   
   SVN_ERR (reporter->finish_report (report_baton));
   
-  SVN_ERR (ra_lib->close (session2));
-
-  SVN_ERR (ra_lib->close (session));
-
   return SVN_NO_ERROR;
 }
 
@@ -915,7 +911,6 @@ do_single_file_merge (const char *URL1,
   SVN_ERR (svn_client__get_revision_number
            (&rev1, ra_lib, session1, revision1, NULL, pool));
   SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, NULL, &props1));
-  SVN_ERR (ra_lib->close (session1));
 
   /* ### heh, funny.  we could be fetching two fulltexts from two
      *totally* different repositories here.  :-) */
@@ -927,7 +922,6 @@ do_single_file_merge (const char *URL1,
   SVN_ERR (svn_client__get_revision_number
            (&rev2, ra_lib, session2, merge_b->revision, NULL, pool));
   SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL, &props2));
-  SVN_ERR (ra_lib->close (session2));
 
   status = apr_file_close (fp1);
   if (status)
@@ -1249,9 +1243,6 @@ do_diff (const apr_array_header_t *options,
           target1 = NULL;
         }
 
-      SVN_ERR (ra_lib->close (session));
-      SVN_ERR (ra_lib->close (session2));
-      
       /* The main session is opened to the anchor of URL1. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor1,
                                             auth_dir,
@@ -1297,9 +1288,6 @@ do_diff (const apr_array_header_t *options,
 
       SVN_ERR (reporter->set_path (report_baton, "", start_revnum, pool));
       SVN_ERR (reporter->finish_report (report_baton));
-
-      SVN_ERR (ra_lib->close (session2));
-      SVN_ERR (ra_lib->close (session));      
     }
 
   else

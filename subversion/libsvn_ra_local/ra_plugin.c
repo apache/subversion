@@ -264,23 +264,6 @@ svn_ra_local__open (void **session_baton,
 
 
 static svn_error_t *
-svn_ra_local__close (void *session_baton)
-{
-  svn_ra_local__session_baton_t *baton = session_baton;
-
-  /* ### maybe arrange to have a pool which can be cleared... */
-
-  /* People shouldn't try and use these objects now. */
-  baton->repos = NULL;
-  baton->fs = NULL;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-static svn_error_t *
 svn_ra_local__get_latest_revnum (void *session_baton,
                                  svn_revnum_t *latest_revnum)
 {
@@ -947,7 +930,6 @@ static const svn_ra_plugin_t ra_local_plugin =
   "ra_local",
   "Module for accessing a repository on local disk.",
   svn_ra_local__open,
-  svn_ra_local__close,
   svn_ra_local__get_latest_revnum,
   svn_ra_local__get_dated_revision,
   svn_ra_local__change_rev_prop,

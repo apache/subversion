@@ -129,9 +129,6 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                    NULL,
                                    pool));
 
-  /* We're done with the RA session. */
-  SVN_ERR (ra_lib->close (session));
-
   return SVN_NO_ERROR;
 }
 

@@ -95,6 +95,12 @@ static int parse_url(const char *url, const char **user, unsigned short *port,
   return 0;
 }
 
+/* A pool cleanup handler to close a socket. */
+static apr_status_t cleanup_socket(void *arg)
+{
+  return apr_socket_close(arg);
+}
+
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
                                     apr_socket_t **sock, apr_pool_t *pool)
 {
@@ -115,6 +121,9 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_createf(status, NULL, "Can't connect to host '%s'",
                              hostname);
+
+  apr_pool_cleanup_register(pool, *sock, cleanup_socket,
+			    apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
@@ -282,6 +291,14 @@ static apr_status_t cleanup_file(void *arg)
   return apr_file_close(arg);
 }
 
+/* A pool cleanup handler to wait for a process. */
+static apr_status_t cleanup_process(void *arg)
+{
+  while (apr_proc_wait(arg, NULL, NULL, APR_WAIT) == APR_CHILD_NOTDONE)
+    ;
+  return APR_SUCCESS;
+}
+
 static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 const svn_ra_callbacks_t *callbacks,
                                 void *callback_baton,
@@ -325,10 +342,9 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
        * to avoid that); this means we have to be careful not to leave
        * stuff lying around in the write buffer between ra_lib
        * calls. */
-      apr_pool_cleanup_register(pool, proc->in, apr_pool_cleanup_null,
-                                cleanup_file);
-      apr_pool_cleanup_register(pool, proc->out, apr_pool_cleanup_null,
-                                cleanup_file);
+      apr_pool_cleanup_register(pool, proc->in, cleanup_file, cleanup_file);
+      apr_pool_cleanup_register(pool, proc->out, cleanup_file, cleanup_file);
+      apr_pool_cleanup_register(pool, proc, cleanup_process, apr_pool_cleanup_null);
     }
   else
     {
@@ -379,24 +395,6 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c", &conn->uuid));
 
   *sess = conn;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *ra_svn_close(void *sess)
-{
-  svn_ra_svn_conn_t *conn = sess;
-
-  if (conn->sock)
-    apr_socket_close(conn->sock);
-  else
-    {
-      apr_file_close(conn->in_file);
-      apr_file_close(conn->out_file);
-      /* ### Perhaps a cleanup handler should make sure this gets done? */
-      while (apr_proc_wait(conn->proc, NULL, NULL,
-                           APR_WAIT) == APR_CHILD_NOTDONE)
-        ;
-    }
   return SVN_NO_ERROR;
 }
 
@@ -854,7 +852,6 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   "ra_svn",
   "Module for accessing a repository using the svn network protocol.",
   ra_svn_open,
-  ra_svn_close,
   ra_svn_get_latest_rev,
   ra_svn_get_dated_rev,
   ra_svn_change_rev_prop,

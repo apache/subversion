@@ -274,14 +274,6 @@ typedef struct svn_ra_plugin_t
                         apr_hash_t *config,
                         apr_pool_t *pool);
 
-  /** Close a repository session. 
-   *
-   * Close a repository session.  This frees any memory used by the
-   * session baton.  (To free the session baton itself, simply free
-   * the pool it was created in.)
-   */
-  svn_error_t *(*close) (void *session_baton);
-
   /** Get the latest revision number from the repository.
    *
    * Get the latest revision number from the repository. This is

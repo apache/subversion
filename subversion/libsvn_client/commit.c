@@ -559,9 +559,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       return err;
     }
 
-  /* Close the session. */
-  SVN_ERR (ra_lib->close (session));
-
   /* Finally, fill in the commit_info structure. */
   *commit_info = svn_client__make_commit_info (committed_rev,
                                                committed_author,
@@ -912,10 +909,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       if (! bump_err)
         svn_pool_destroy (subpool);
     }
-
-  /* Close the RA session. */
-  if ((cleanup_err = ra_lib->close (session)))
-    goto cleanup;
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps ();

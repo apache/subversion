@@ -293,9 +293,6 @@ svn_client_switch (const char *path,
   if (err)
     return err;
 
-  /* Close the RA session. */
-  SVN_ERR (ra_lib->close (session));
-
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
