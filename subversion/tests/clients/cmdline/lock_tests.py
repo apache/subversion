@@ -39,7 +39,40 @@ Item = svntest.wc.StateItem
 # that user BAR cannot commit changes to the file nor its properties.
 def lock_file(sbox):
   "lock a file and verify that it's locked"
-  raise svntest.Failure
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  # lock a file as wc_author
+  file_path = os.path.join(sbox.wc_dir, 'binary_file')
+  file_path_b = os.path.join(sbox.wc_dir, 'binary_file')
+  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.run_svn(None, 'add', file_path)
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_path)
+
+  # --- Meanwhile, in our other working copy... ---
+
+  # change the locked file
+  svntest.main.file_append(file_path_b, "Covert tweak\n")
+
+  err_re = ".*User Sally does not own lock on path.*"
+  # attempt (and fail) to commit as user Sally
+  svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
+                                         None, None, None, None,
+                                         '--username', "Sally",
+                                         '--password', "bighair",
+                                         '-m', '', file_path_b)
 
 
 #----------------------------------------------------------------------
@@ -114,7 +147,7 @@ def enforce_lock(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(lock_file),
+              lock_file,
               XFail(unlock_file),
               XFail(break_lock),
               XFail(steal_lock),
