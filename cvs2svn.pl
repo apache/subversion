@@ -1285,8 +1285,19 @@ my $svnroot = $ARGV[0];
 &usage(1)
     unless $svnroot;
 
-die "$0: No CVSROOT specified.  Please use the `-d' option.\n"
-    unless $cvsroot;
+if(!$cvsroot) {
+    if( -r "CVS/Root" ) {
+        if(open(ROOT, "<CVS/Root")) {
+            $cvsroot=<ROOT>;
+            chomp $cvsroot;
+            close(ROOT);
+        }
+    }
+    if(!$cvsroot) {
+        die "No -d and no CVS directory found";
+    }
+}
+
 
 &SelfTest::run;
 
