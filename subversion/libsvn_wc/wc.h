@@ -65,9 +65,13 @@
 
 /*** Asking questions about a working copy. ***/
 
-/* Return an error unless PATH is a valid working copy.
-   kff todo: make it compare repository too. */
-svn_error_t *svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool);
+/* Set *IS_WC to true iff PATH is a valid working copy directory, else
+   set it to false.  PATH must exist, either as a file or directory,
+   else an error will be returned.
+   (kff todo: make this compare repository too?) */
+svn_error_t *svn_wc__check_wc (const svn_string_t *path,
+                               svn_boolean_t *is_wc,
+                               apr_pool_t *pool);
 
 
 /** File comparisons **/
@@ -230,11 +234,14 @@ svn_string_t *svn_wc__text_base_path (const svn_string_t *path,
                                       apr_pool_t *pool);
 
 
-/* Return a path to file FILEPATH's working properties file.
-   If TMP is set, return a path to the tmp working property file. */
-svn_string_t *svn_wc__file_prop_path (const svn_string_t *filepath,
-                                      svn_boolean_t tmp,
-                                      apr_pool_t *pool);
+/* Set *PROP_PATH to PATH's working properties file.
+   If TMP is set, return a path to the tmp working property file. 
+   PATH can be a directory or file, and even have changed w.r.t. the
+   working copy's adm knowledge. */
+svn_error_t *svn_wc__prop_path (svn_string_t **prop_path,
+                                const svn_string_t *path,
+                                svn_boolean_t tmp,
+                                apr_pool_t *pool);
 
 
 /* Ensure that PATH is a locked working copy directory.

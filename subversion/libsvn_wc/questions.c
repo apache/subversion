@@ -64,23 +64,43 @@
 
 
 svn_error_t *
-svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
+svn_wc__check_wc (const svn_string_t *path,
+                  svn_boolean_t *is_wc,
+                  apr_pool_t *pool)
 {
   /* Nothing fancy, just check for an administrative subdir and a
      `README' file. */ 
+
   apr_file_t *f = NULL;
   svn_error_t *err = NULL;
+  enum svn_node_kind kind;
 
-  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README,
-                               APR_READ, pool);
+  err = svn_io_check_path (path, &kind, pool);
+  if (err)
+    return err;
+  
+  if (kind != svn_node_dir)
+    *is_wc = FALSE;
+  else
+    {
+      err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README,
+                                   APR_READ, pool);
+      
+      /* It really doesn't matter what kind of error it is; if there
+         was an error at all, then for our purposes this is not a
+         working copy. */
+      if (err)
+        *is_wc = FALSE;
+      else
+        {
+          *is_wc = TRUE;
+          err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
+          if (err)
+            return err;
+        }
+    }
 
-  /* It really doesn't matter what kind of error it is; for our
-     purposes, this is not a working copy. */
-  return err;
-
-  /* Else. */
-  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
