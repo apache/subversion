@@ -721,6 +721,7 @@ svn_ra_dav__get_locations (void *session_baton,
                            apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
 
+/** @since New in 1.2. */
 svn_error_t *
 svn_ra_dav__get_log2 (void *session_baton,
                       const apr_array_header_t *paths,

@@ -608,6 +608,7 @@ svn_ra_local__do_diff (void *session_baton,
 }
 
 
+/** @since New in 1.2. */
 static svn_error_t *
 svn_ra_local__get_log2 (void *session_baton,
                         const apr_array_header_t *paths,

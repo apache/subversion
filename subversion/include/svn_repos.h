@@ -668,7 +668,10 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
 /* Retrieving log messages. */
 
 
-/** Invoke @a receiver with @a receiver_baton on each log message from 
+/**
+ * @since new in 1.2.
+ *
+ * Invoke @a receiver with @a receiver_baton on each log message from 
  * @a start to @a end in @a repos's filesystem.  @a start may be greater 
  * or less than @a end; this just controls whether the log messages are 
  * processed in descending or ascending revision number order.
@@ -691,7 +694,8 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  * "Single repository, multiple projects?" for more.  We may simple
  * need to offer a few different semantics for @a paths.
  *
- * If @a limit is non-zero then only return the first @a limit logs.
+ * If @a limit is non-zero then only invoke @a receiver on the first
+ * @a limit logs.
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths 
