@@ -146,7 +146,11 @@ switch -> cambiar
     traducir como relocalizar una vez haya suficiente material
     traducido y una lectura final sugiera una u otra traducción.
 
-API -> no se traduce
+API, GUI -> no se traduce
+    La primera vez que aparecen, poner nota del traductor indicando
+    qué significan las siglas y su traducción al castellano. De
+    hecho, verificar la aparición de las notas de traductor en el
+    sitio correcto debería ser una entrada del fichero TODO...
 
 plugins -> módulos
     El término fue extraído del glosario de ORCA.
