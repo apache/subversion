@@ -41,8 +41,9 @@ extern "C" {
 /* Misc. declarations */
 
 /**
- * Get libsvn_ra version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_ra version information.
  */
 const svn_version_t *svn_ra_version (void);
 
@@ -116,7 +117,9 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
        (void *session_baton,
         svn_revnum_t *latest_revnum);
 
-/** @since New in 1.1.
+/**
+ * @since New in 1.1.
+ *
  * A callback function type for use in @c get_file_revs.
  * @a baton is provided by the caller, @a path is the pathname of the file
  * in revision @a rev and @a rev_props are the revision properties.
@@ -716,7 +719,8 @@ typedef struct svn_ra_plugin_t
                                   const char **url,
                                   apr_pool_t *pool);
 
-  /** @since New in 1.1.
+  /**
+   * @since New in 1.1.
    *
    * Set @a *locations to the locations at the repository revisions
    * @a location_revisions of the file @a path present at the repository in
@@ -742,7 +746,9 @@ typedef struct svn_ra_plugin_t
                                  apr_array_header_t *location_revisions,
                                  apr_pool_t *pool);
 
-  /** @since New in 1.1.
+  /**
+   * @since New in 1.1.
+   *
    * Retrieve a subset of the interesting revisions of a file @a path
    * as seen in revision @a end.  Invoke @a handler with @a handler_baton
    * as its first argument for each such revision.  @a sesson_baton is
@@ -770,7 +776,9 @@ typedef struct svn_ra_plugin_t
                                  void *handler_baton,
                                  apr_pool_t *pool);
 
-  /** @since New in 1.1.
+  /**
+   * @since New in 1.1.
+   *
    * Return the plugin's version information.
    */
   /* FIXME: This is broken. The get_version function should be at the
@@ -855,7 +863,10 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
                                             apr_pool_t *pool,
                                             apr_hash_t *hash);
 
-/** The current ABI (Application Binary Interface) version for the
+/** 
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * The current ABI (Application Binary Interface) version for the
  * RA plugin model. This version number will change when the ABI
  * between the SVN core (e.g. libsvn_client) and the RA plugin changes.
  *
@@ -874,8 +885,6 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
  *   1  2001-02-17  Initial revision.
  *   2  2004-06-29  Preparing for svn 1.1, which adds new RA vtable funcs.
  * </pre>
- *
- * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 #define SVN_RA_ABI_VERSION      2
 

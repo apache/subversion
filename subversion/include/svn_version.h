@@ -59,9 +59,10 @@ extern "C" {
  */
 #define SVN_VER_MINOR      2
 
-/** Patch number.
- *
+/** 
  * @since New in 1.1.
+ *
+ * Patch number.
  *
  * Modify for every released patch.
  */
@@ -135,11 +136,11 @@ extern "C" {
 /* Version queries and compatibility checks */
 
 /**
+ * @since New in 1.1.
+ *
  * Version information. Each library contains a function called
  * svn_<i>libname</i>_version() that returns a pointer to a statically
  * allocated object of this type.
- *
- * @since New in 1.1.
  */
 typedef struct svn_version_t
 {
@@ -155,8 +156,9 @@ typedef struct svn_version_t
 } svn_version_t;
 
 /**
- * Define a static svn_version_t object.
  * @since New in 1.1.
+ *
+ * Define a static svn_version_t object.
  */
 #define SVN_VERSION_DEFINE(name) \
   static const svn_version_t name = \
@@ -168,14 +170,17 @@ typedef struct svn_version_t
     } \
 
 /**
- * Generate the implementation of a version query function.
  * @since New in 1.1.
+ *
+ * Generate the implementation of a version query function.
  */
 #define SVN_VERSION_BODY \
   SVN_VERSION_DEFINE (versioninfo); \
   return &versioninfo
 
 /**
+ * @since New in 1.1.
+ *
  * Check library version compatibility. Returns #TRUE if the clent's
  * version, given in @a my_version, is compatible with the library
  * version, provided in @a lib_version.
@@ -184,24 +189,24 @@ typedef struct svn_version_t
  * guarantees, but requires an exact match when linking to an
  * unreleased library. A development client is always compatible with
  * a previous released library.
- *
- * @since New in 1.1.
  */
 svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
                                   const svn_version_t *lib_version);
 
 /**
- * Check if @a my_version and @a lib_version encode the same version number.
  * @since New in 1.2.
+ *
+ * Check if @a my_version and @a lib_version encode the same version number.
  */
 svn_boolean_t svn_ver_equal (const svn_version_t *my_version,
                              const svn_version_t *lib_version);
 
 
 /**
+ * @since New in 1.1.
+ *
  * An entry in the compatibility checklist.
  * @see svn_ver_check_list()
- * @since New in 1.1.
  */
 typedef struct svn_version_checklist_t
 {
@@ -213,12 +218,13 @@ typedef struct svn_version_checklist_t
 
 
 /**
+ * @since New in 1.1.
+ *
  * Perform a series of version compatibility checks. Checks if @a
  * my_version is compatible with each entry in @a checklist. @a
  * checklist must end with an entry whose label is @c NULL.
  *
  * @see svn_ver_compatible()
- * @since New in 1.1.
  */
 svn_error_t *svn_ver_check_list (const svn_version_t *my_version,
                                  const svn_version_checklist_t *checklist);
@@ -226,8 +232,9 @@ svn_error_t *svn_ver_check_list (const svn_version_t *my_version,
 
 /* libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
 /**
- * Get libsvn_subr version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_subr version information.
  */
 const svn_version_t *svn_subr_version (void);
 
