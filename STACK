@@ -164,3 +164,279 @@ Filesystem:
   Once that's working, we can do the Big One: svn_fs_commit_txn(). :-)
 
   -Karl
+
+Changes to svn_delta_edit_fns_t:
+
+   These are the summary emails Ben sent to the dev list (lightly
+   edited), concerning changes proposed and accepted at the meetings
+   in Chicago on January 14-16.  A few of these are still being
+   discussed on the list; see the "STATUS" lines for more.
+
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #1:  New editor creation/finishing methods
+   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
+   The Way It Works Now:
+      When created, an {editor, edit_baton} are returned to the editor's
+      driver.  The first call is always replace_root(), and when
+      finished, the driver calls close_edit().
+   
+   Proposed Change:
+      When created, an editor and root_dir_baton are returned.  It is
+      already presumed that a change is going to be made below root_dir.
+      When the edit is finished, we call close_dir(root_dir_baton).  
+   
+      Thus replace_root() and close_edit() no longer exist in the editor
+      interface.
+   
+   Rationale:
+      This decision came out a heated debate about whether to allow
+      multiple calls to replace_root().  It was decided that this was a
+      bad idea;  it's possible that two different calls to replace_root()
+      might involve a file moving from one disjoint subtree to another
+      one;  thus the whole point of "not calculating the nearest parent
+      dir of all replace_root() calls" was lost.  Since we're going to
+      have to calculate this parent anyway, then, we may as well clarify
+      the interface.
+   
+      As the interface stands now, it's not particularly clear that
+      replace_root() is meant to be called only once.  Our proposed
+      change clears this up;  the directory you intend to replace is used
+      to *generate* the editor, which hands back a root_dir_baton instead
+      of an abstract "edit" baton.  Simliarly, when you're done, you just
+      close_dir() on this root_dir_baton.  We already have replace_dir()
+      and close_dir() -- why make special cases for the root directory?
+   
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #2:  Modify prototypes of replace_*() and add_*(
+   STATUS: Being discussed on list; don't make this change yet.
+   The Way It Works Now:
+      These editor functions now take arguments "ancestor_path" and
+      "ancestor_revision".
+   
+   Proposed Change:
+      Replace these two arguments with "base_revision" and
+      "target_revision" instead within replace_*(), and nothing but a
+      "target_revision" in add_*().
+   
+   Rationale:
+      We agreed in a previous discussion (on the dev list) that the
+      "ancestor_path" argument is meaningless in these routines;  this
+      path can be inferred via the sequence of parent dir_batons.
+   
+      This leaves only a single "revision" argument left.  The problem is
+      that the meaning of this argument is unclear.
+   
+      Why we need a "target" revision:
+          When updating the WC, the RA layer needs to specify the new
+          version of the object being created.  There's currently no way
+          to do this.  Both replace_*() and add_*() routines need this
+          ability. 
+   
+      Why we also need a "base" revision for replace_*():
+          When updating the WC, the RA layer needs to specify *which*
+          object it is trying to replace.  This is a problem also
+          discussed on the dev list;  it's possible that the revision of
+          a working copy object might change in the *middle* of a larger
+          update, creating the risk of the RA layer applying an incorrect
+          patch.  There are many ways to solve this via WC locking or
+          bookkeeping, but the simplest answer is to have the RA layer
+          declare what it's trying to replace and allow the update-editor
+          to bail if there's a descrepancy.
+   
+          In the commit use-case, the WC declares the "base" revision on
+          which it is sending local changes.
+
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #3:  New "WC" properties.
+   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
+   The Way It Works Now:
+      Properties attached to objects in the repository also appear in the
+      WC.  Similarly, properties added to WC objects get committed to the
+      repository. 
+   
+   Proposed Change:
+      Create a new class of properties that *only* exist in the WC.
+      These properties are stored for the benefit of RA layers.  We add
+      new editor functions:
+   
+            set_wc_dir_props (dir_baton, name, val)
+            set_wc_file_props (file_baton, name, val)
+   
+      If driving an editor:  if WC props exist for the object you're
+      describing, you *must* send them via these functions.
+   
+      If implementing an editor: if you receive WC props, you *must*
+      store them somewhere.
+   
+   Rationale:
+      The idea here is that RA layers often need to store and retrieve
+      RA-specific information in the working copy.  This is "out of band"
+      data" that is irrelevant to the repository.
+   
+      In the case of ra_dav, these properties are actually the versioned
+      resource URLs.  In the case of ra_local, we may store
+      authentication information this way (instead of using a .cvspass
+      file).  There may be other ra layers someday that need to store
+      private data in the same way, so we now have a general method for
+      doing so.
+   
+      Note:  this is the only editor change that *truly* has nothing to
+      do with "describing a tree change", which should make all of us
+      raise our collective eyebrows suspiciously.  However, I don't think
+      the "plug n' play" vision of editors is lost here, although we're
+      skirting the near the line.
+   
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #4:  Revise the commit cleanup process.  (in svn_ra.h)
+   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
+   The Way It Works Now:
+      The client calls get_commit_editor() in the RA layer, drives the
+      commit editor, and finishes the edit.  Assuming the commit is
+      successful, RA sets the new filesystem head revision in the
+      *new_revision argument.  At this point, the client bumps all WC
+      revisions to this new number.
+   
+   Proposed Change:
+      Remove the *new_revision argument; in the call to
+      get_commit_editor(), the client passes pointers to two new
+      functions and a baton:
+   
+            close_baton
+            close_commit_func (close_baton, relative_path, new_rev)
+            set_wc_prop_func (close_baton, relative_path, name, val)
+   
+      After finishing with RA's commit editor, RA does the "cleanup" by
+      calling the two functions above.  close_commit_func() bumps the
+      revision number of a path, and set_wc_prop_func() stores WC
+      properties on that path.
+   
+   Rationale:
+      Following on the heels of the previous issue, RA needs the ability
+      to store special "WC properties" after a commit.  In the case of
+      ra_dav, these are the magical "versioned resource URL" cookies.  In
+      the case of ra_local, perhaps someday these WC props will be
+      something else.
+   
+      As long as RA is doing this, it's simpler and more elegant to let
+      it bump revision numbers as well.  Right now the WC is storing a
+      list of all committed targets and doing the cleanup manually;  it's
+      far easier to let RA do the work.  In the end, WC won't have to do
+      anything but cleanup lockfiles.  Much simpler.
+   
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #5:  The "report" editor doesn't exist.
+   STATUS: Will be done by Ben, Mike, or self, unless someone volunteers.
+   The Way It Works Now:
+      To perform an update: 
+           - the client fetches a "report" editor from RA
+           - the client drives the report editor, describing the state
+             (revision numbers) of all objects in the working copy.
+           - RA then drives the "update" editor with custom changes.
+   
+   Proposed Change:
+      To perform an update:
+           - client describes working copy state using a new vtable with
+             just two simplified functions: replace_dir() and
+             replace_file() 
+           - RA then drives the "update" editor with custom changes.
+   
+   Rationale:
+       It occurred to us that it's inappropriate to use an editor to
+       report all the revision numbers in a working copy.  To do so would
+       completely distort the semantics of the editor: it has *nothing*
+       to do with describing a tree delta!
+    
+       One might argue that you *could* report working copy state as a
+       tree-delta.  In this scenario, you grab the revision of the WC's
+       root (say, version N), and then send a tree-delta that describes
+       how to change a tree at revision N into a multi-versioned tree
+       that looks like the working copy's hodgepodge of revisions.  Every
+       single object in the WC that isn't at N must be reported; pretty
+       inefficient.  Every call to replace_*() would have a base_revision
+       of N, and some different target revision.
+   
+       Needless to say, even in this scenario, no text-deltas are being
+       sent, and things are inefficient.  As Jimb says, "let's just write
+       an interface that really does what we want."  :)
+   
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #6:  Move textdeltas to the "other side" of the editor.
+   STATUS: Being discussed on list; holding off on making this change.
+   The Way It Works Now:
+      The driver of an editor takes a source and target stream, puts them
+      together via svn_txdelta() to produce a stream of "windows".  The
+      driver then pushes these windows at the editor's window-handler.
+   
+   Proposed Change:
+      Move this process to the other side of the interface, into the
+      editor implementation, giving the editor the power to deal with the
+      source and target streams directly.
+   
+      Specifically:
+                - remove the editor's apply_txdelta() routine
+                - create two new routines:
+                   apply_delta (filebaton, [src_stream], target_stream)
+                   set_file_contents (filebaton, [src_stream], delta,
+                                      enum delta_type)
+   
+                   apply_delta() sends svndiff deltas.
+                   set_file_contents() can send plain text or other
+                   types. 
+   
+                It becomes the obligation of the editor implementation to
+                implement at least one of these two routines;  if one
+                routine is NULL, the driver must use the other.
+   
+   Rationale:
+      It's too restrictive to force every editor implementation to accept
+      and deal with small svndiff windows.  For example: Greg Stein wants
+      to send plain text while debugging his commit-editor and network
+      layer.  It's best to allow the RA layer to make it's own choice
+      about how to break up the two streams most efficiently.
+   
+      The reason [src_stream] is optional is that it may be NULL;  this
+      presumably means that the editor already has access to the src
+      stream.
+   
+      (Greg and Jim, did I get this explanation totally wrong?  My notes
+      here aren't perfectly clear.  Please elaborate if you need to.)
+   
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #7:  New filesystem "copy" nodes (and renaming add_*() args)
+   STATUS: Will be done by JimB, Ben, Mike, or self, unless get volunteer.
+   The Way It Works Now:
+      When we copy (or move) a node in the filesystem, we're currently
+      losing information about where it came from.  Our "lazy cloning"
+      model goes a long way, but in the end we get just a bunch of
+      duplicated pointers to the same node revision numbers.
+   
+      E.g.: if a node A points to the same node revision that two others
+      (B and C) point to, there's no way to know whether A was copied
+      from B or C.
+   
+   Proposed Changes:
+      1.  In the filesystem model, create a 3rd node type called a "copy"
+          node.  (This is in addition to our "file" and "dir" nodes.)
+   
+          A copy node contains a pointer to a revision and a path.
+   
+          When we create node B as a "copy" of node A, we create a new
+          copy node.  This copy node allows us to discover the proper
+          node-revision, but it also tracks the history of the copy.
+   
+      2.  Remember that a copy command is really just an "add with
+          history", and a move command is really just a "delete, followed
+          by an add with history".  Thus it's the *add* command, which,
+          when given an ancestor path and revision, creates a copy node.
+          (If there's no history given, then the add command creates a
+          regular node.)
+   
+          For clarity sake, the history arguments to the editor's add()
+          function should reflect this copying.  Instead of
+          "ancestor_path" and "ancestor_revision", we'd like to call the
+          arguments "copyfrom_url" and "copyfrom_revision".
+      
+   Rationale:
+      I think it's all been explained above.  Other folks, feel free to
+      add to this explanation.
+
