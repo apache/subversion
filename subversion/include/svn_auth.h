@@ -149,31 +149,35 @@ typedef struct
 
 /** Specific types of credentials **/
 
-/** A simple username/password pair. */
+/** A simple username/password pair.  If @a may_save is TRUE, the
+ *  credentials are allowed to be saved to disk. */
 #define SVN_AUTH_CRED_SIMPLE "svn.simple"
 typedef struct
 {
   const char *username;
   const char *password;
-  
+  svn_boolean_t may_save;
 } svn_auth_cred_simple_t;
 
-/** Just a username. */
+/** Just a username. If @a may_save is TRUE, the credentials are
+ *  allowed to be saved on disk. */
 #define SVN_AUTH_CRED_USERNAME "svn.username"
 typedef struct
 {
   const char *username;
-
+  svn_boolean_t may_save;
 } svn_auth_cred_username_t;
 
 /** SSL client authentication - this provides @a cert_file and
-    optionally @a key_file (if the private key is separate) as the
-    full paths to the files, and sets @a cert_type for the type of
-    certificate file to load */
+ *  optionally @a key_file (if the private key is separate) as the
+ *  full paths to the files, and sets @a cert_type for the type of
+ *  certificate file to load. If @a may_save is TRUE, the credentials
+ *  are allowed to be saved to disk. */
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT "svn.ssl.client-cert"
 typedef struct
 {
   const char *cert_file;
+  svn_boolean_t may_save;
 } svn_auth_cred_ssl_client_cert_t;
 
 /** SSL client passphrase.
@@ -181,24 +185,26 @@ typedef struct
  * @a password gets set with the appropriate password for the
  * certificate.  The realmstring use with this credential type
  * must be a name that makes it possible for the user to identify
- * the certificate.
+ * the certificate. If @a may_save is TRUE, the credentials are
+ * allowed to be saved to disk.
  */
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
 typedef struct
 {
   const char *password;
+  svn_boolean_t may_save;
 } svn_auth_cred_ssl_client_cert_pw_t;
 
 /** SSL server verification.
  *
- *  If @a trust_permanently is set to true by the provider, the
- *  certificate will be trusted permanently. The member @a
- *  accepted_failures is only valid if @a trust_permanently is true.
+ *  @a accepted_failures is a bit mask of the accepted failures.  If
+ *  @a may_save is TRUE, the credentials are allowed to be saved to
+ *  disk.
  */
 #define SVN_AUTH_CRED_SSL_SERVER_TRUST "svn.ssl.server"
 typedef struct
 {
-  svn_boolean_t trust_permanently;
+  svn_boolean_t may_save;
   apr_uint32_t accepted_failures;
 } svn_auth_cred_ssl_server_trust_t;
 
@@ -248,6 +254,7 @@ typedef svn_error_t *
                                   void *baton,
                                   const char *realm,
                                   const char *username,
+                                  svn_boolean_t may_save,
                                   apr_pool_t *pool);
 
 
@@ -260,6 +267,7 @@ typedef svn_error_t *
 (*svn_auth_username_prompt_func_t) (svn_auth_cred_username_t **cred,
                                     void *baton,
                                     const char *realm,
+                                    svn_boolean_t may_save,
                                     apr_pool_t *pool);
 
 
@@ -288,6 +296,7 @@ typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
   const char *realm,
   apr_uint32_t failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
+  svn_boolean_t may_save,
   apr_pool_t *pool);
 
 
@@ -299,6 +308,7 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t) (
   svn_auth_cred_ssl_client_cert_t **cred,
   void *baton,
   const char *realm,
+  svn_boolean_t may_save,
   apr_pool_t *pool);
 
 
@@ -310,6 +320,7 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t) (
   svn_auth_cred_ssl_client_cert_pw_t **cred,
   void *baton,
   const char *realm,
+  svn_boolean_t may_save,
   apr_pool_t *pool);
 
 

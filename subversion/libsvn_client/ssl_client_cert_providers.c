@@ -63,6 +63,7 @@ ssl_client_cert_file_first_credentials (void **credentials_p,
         apr_palloc (pool, sizeof (*cred));
       
       cred->cert_file = cert_file;
+      cred->may_save = FALSE;
       *credentials_p = cred;
     }
   else
@@ -136,9 +137,13 @@ ssl_client_cert_prompt_first_cred (void **credentials_p,
   ssl_client_cert_prompt_provider_baton_t *pb = provider_baton;
   ssl_client_cert_prompt_iter_baton_t *ib =
     apr_pcalloc (pool, sizeof (*ib));
+  const char *no_auth_cache = apr_hash_get (parameters, 
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                            APR_HASH_KEY_STRING);
 
   SVN_ERR (pb->prompt_func ((svn_auth_cred_ssl_client_cert_t **) credentials_p,
-                            pb->prompt_baton, realmstring, pool));
+                            pb->prompt_baton, realmstring, ! no_auth_cache,
+                            pool));
 
   ib->pb = pb;
   ib->realmstring = apr_pstrdup (pool, realmstring);
@@ -156,6 +161,9 @@ ssl_client_cert_prompt_next_cred (void **credentials_p,
                                   apr_pool_t *pool)
 {
   ssl_client_cert_prompt_iter_baton_t *ib = iter_baton;
+  const char *no_auth_cache = apr_hash_get (parameters, 
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                            APR_HASH_KEY_STRING);
 
   if (ib->retries >= ib->pb->retry_limit)
     {
@@ -167,7 +175,7 @@ ssl_client_cert_prompt_next_cred (void **credentials_p,
 
   SVN_ERR (ib->pb->prompt_func ((svn_auth_cred_ssl_client_cert_t **)
                                 credentials_p, ib->pb->prompt_baton,
-                                ib->realmstring, pool));
+                                ib->realmstring, ! no_auth_cache, pool));
 
   return SVN_NO_ERROR;
 }

@@ -81,7 +81,7 @@ ssl_server_trust_file_first_credentials (void **credentials,
     svn_config_read_auth_data (&creds_hash, SVN_AUTH_CRED_SSL_SERVER_TRUST,
                                pb->realmstring, config_dir, pool);
   svn_error_clear (error);
-  if (!error && creds_hash)
+  if (! error && creds_hash)
     {
       svn_string_t *trusted_cert, *this_cert, *failstr;
       apr_uint32_t last_failures = 0;
@@ -114,11 +114,11 @@ ssl_server_trust_file_first_credentials (void **credentials,
     }
 
   /* If all failures are cleared now, we return the creds */
-  if (!*failures)
+  if (! *failures)
     {
       svn_auth_cred_ssl_server_trust_t *creds =
         apr_pcalloc (pool, sizeof(*creds));
-      creds->trust_permanently = FALSE; /* No need to save it again... */
+      creds->may_save = FALSE; /* No need to save it again... */
       *credentials = creds;
     }
 
@@ -138,6 +138,9 @@ ssl_server_trust_file_save_credentials (svn_boolean_t *saved,
   const svn_auth_ssl_server_cert_info_t *cert_info;
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
+
+  if (! creds->may_save)
+    return SVN_NO_ERROR;
 
   config_dir = apr_hash_get (parameters,
                              SVN_AUTH_PARAM_CONFIG_DIR,
@@ -216,6 +219,9 @@ ssl_server_trust_prompt_first_cred (void **credentials_p,
   apr_uint32_t *failures = apr_hash_get (parameters,
                                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                                          APR_HASH_KEY_STRING);
+  const char *no_auth_cache = apr_hash_get (parameters, 
+                                            SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                            APR_HASH_KEY_STRING);
   const svn_auth_ssl_server_cert_info_t *cert_info =
     apr_hash_get (parameters,
                   SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
@@ -223,7 +229,8 @@ ssl_server_trust_prompt_first_cred (void **credentials_p,
 
   SVN_ERR (pb->prompt_func ((svn_auth_cred_ssl_server_trust_t **)
                             credentials_p, pb->prompt_baton, realmstring,
-                            *failures, cert_info, pool));
+                            *failures, cert_info, ! no_auth_cache &&
+                            ! (*failures & SVN_AUTH_SSL_OTHER), pool));
 
   *iter_baton = NULL;
   return SVN_NO_ERROR;
