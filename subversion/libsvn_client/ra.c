@@ -150,19 +150,9 @@ push_wc_prop (void *baton,
     }
   else
     {
-      /* We could just set the property directly here; technically,
-         this function's interface allows us to.  But right now, there
-         should be no code paths that call this function without
-         commit_items.   If someday there were, they would need to be
-         carefully investigated for us to know they were safe.  See
-         http://subversion.tigris.org/issues/show_bug.cgi?id=806 for
-         details why.  In the meantime, return an error so anyone who
-         starts down that road will encounter this comment. */
-
-      return svn_error_createf
-        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-         "Attempt to set wc property '%s' on '%s' in a non-commit operation",
-         name, relpath);
+      return svn_wc_prop_set (name, value, 
+                              svn_path_join (cb->base_dir, relpath, pool), 
+                              cb->base_access, pool);
     }
 
   return SVN_NO_ERROR;
@@ -178,6 +168,7 @@ svn_client__open_ra_session (void **session_baton,
                              apr_array_header_t *commit_items,
                              svn_boolean_t do_store,
                              svn_boolean_t use_admin,
+                             svn_boolean_t read_only_wc,
                              svn_client_auth_baton_t *auth_baton,
                              apr_pool_t *pool)
 {
@@ -187,7 +178,7 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
-  cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
+  cbtable->push_wc_prop = read_only_wc ? NULL : push_wc_prop;
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;

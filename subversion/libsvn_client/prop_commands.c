@@ -143,7 +143,7 @@ svn_client_revprop_set (const char *propname,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        NULL, NULL, FALSE, FALSE,
+                                        NULL, NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -274,7 +274,7 @@ svn_client_revprop_get (const char *propname,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        NULL, NULL, FALSE, FALSE,
+                                        NULL, NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -418,7 +418,7 @@ svn_client_revprop_list (apr_hash_t **props,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        NULL, NULL, FALSE, FALSE,
+                                        NULL, NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
 
   /* Resolve the revision into something real, and return that to the
