@@ -1044,7 +1044,10 @@ do_item_commit (void **dir_baton,
                 (kind == svn_node_dir) ? *dir_baton : file_baton, 
                 &tempfile, pool));
       if (tempfile && tempfiles)
-        apr_hash_set (tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
+        {
+          tempfile = apr_pstrdup (apr_hash_pool_get (tempfiles), tempfile);
+          apr_hash_set (tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
+        }
     }
 
   /* Finally, handle text mods (in that we need to open a file if it
