@@ -361,7 +361,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  *
  * So instead of representing the tree delta explicitly, we define a
  * standard way for a consumer to process each piece of a tree delta
- * as soon as the producer creates it.  The `svn_delta_editor_t'
+ * as soon as the producer creates it.  The @c svn_delta_editor_t
  * structure is a set of callback functions to be defined by a delta
  * consumer, and invoked by a delta producer.  Each invocation of a
  * callback function describes a piece of the delta --- a file's
@@ -374,7 +374,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
 /** A structure full of callback functions the delta source will invoke
  * as it produces the delta.
  *
- * FUNCTION USAGE
+ * <h3>Function Usage</h3>
  *
  * Here's how to use these functions to express a tree delta.
  *
@@ -454,7 +454,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * pass a mix of valid and invalid copyfrom arguments.
  *
  *
- * FUNCTION CALL ORDERING
+ * <h3>Function Call Ordering</h3>
  *
  * There are six restrictions on the order in which the producer
  * may use the batons:
@@ -498,7 +498,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * make apply_textdelta calls at the end.
  *
  *
- * POOL USAGE
+ * <h3>Pool Usage</h3>
  *
  * Many editor functions are invoked multiple times, in a sequence
  * determined by the editor "driver". The driver is responsible for

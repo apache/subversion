@@ -1,5 +1,5 @@
-/*  svn_utf.h:  UTF-8 conversion routines
- *
+/**
+ * @copyright
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
@@ -13,6 +13,12 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_utf.h
+ * @brief UTF-8 conversion routines
+ *
+ * @{
  */
 
 
@@ -29,62 +35,78 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Set *DEST to a utf8-encoded stringbuf from native stringbuf SRC;
-   allocate *DEST in POOL. */
+/** Set @a *dest to a utf8-encoded stringbuf from native stringbuf @a src;
+ * allocate @a *dest in @a pool.
+ */
 svn_error_t *svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
                                         const svn_stringbuf_t *src,
                                         apr_pool_t *pool);
 
 
-/* Set *DEST to a utf8-encoded string from native string SRC; allocate
-   *DEST in POOL. */
+/** Set @a *dest to a utf8-encoded string from native string @a src; allocate
+ * @a *dest in @a pool.
+ */
 svn_error_t *svn_utf_string_to_utf8 (const svn_string_t **dest,
                                      const svn_string_t *src,
                                      apr_pool_t *pool);
 
 
-/* Set *DEST to a utf8-encoded stringbuf from native C string SRC;
-   allocate *DEST in POOL.   Use XLATOR to do the conversion;  if
-   NULL, then use the environment's default locale. */
+/** Set @a *dest to a utf8-encoded stringbuf from native C string @a src;
+ * allocate @a *dest in @a pool.
+ *
+ * Set @a *dest to a utf8-encoded stringbuf from native C string @a src;
+ * allocate @a *dest in @a pool.   Use @a xlator to do the conversion;  if
+ * @c NULL, then use the environment's default locale.
+ */
 svn_error_t *svn_utf_cstring_to_utf8_stringbuf (svn_stringbuf_t **dest,
                                                 const char *src,
                                                 apr_xlate_t *xlator,
                                                 apr_pool_t *pool);
 
 
-/* Set *DEST to a utf8-encoded C string from native C string SRC;
-   allocate *DEST in POOL.  Use XLATOR to do the conversion; if NULL,
-   then use the environment's default locale. */
+/** Set @a *dest to a utf8-encoded C string from native C string @a src;
+ * allocate @a *dest in @a pool.
+ *
+ * Set @a *dest to a utf8-encoded C string from native C string @a src;
+ * allocate @a *dest in @a pool.  Use @a xlator to do the conversion; if 
+ * @c NULL, then use the environment's default locale.
+ */
 svn_error_t *svn_utf_cstring_to_utf8 (const char **dest,
                                       const char *src,
                                       apr_xlate_t *xlator,
                                       apr_pool_t *pool);
 
 
-/* Set *DEST to a natively-encoded stringbuf from utf8 stringbuf SRC;
-   allocate *DEST in POOL. */
+/** Set @a *dest to a natively-encoded stringbuf from utf8 stringbuf @a src;
+ * allocate @a *dest in @a pool.
+ */
 svn_error_t *svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
 					  const svn_stringbuf_t *src,
 					  apr_pool_t *pool);
 
 
-/* Set *DEST to a natively-encoded string from utf8 string SRC;
-   allocate *DEST in POOL. */
+/** Set @a *dest to a natively-encoded string from utf8 string @a src;
+ * allocate @a *dest in @a pool.
+ */
 svn_error_t *svn_utf_string_from_utf8 (const svn_string_t **dest,
                                        const svn_string_t *src,
                                        apr_pool_t *pool);
 
 
-/* Set *DEST to a natively-encoded C string from utf8 C string SRC;
-   allocate *DEST in POOL. */
+/** Set @a *dest to a natively-encoded C string from utf8 C string @a src;
+ * allocate @a *dest in @a pool.
+ */
 svn_error_t *svn_utf_cstring_from_utf8 (const char **dest,
                                         const char *src,
                                         apr_pool_t *pool);
 
 
-/* Return a fuzzily native-encoded C string from utf8 C string SRC,
- * allocated in POOL.  A fuzzy recoding leaves all 7-bit ascii
- * characters the same, and substitutes "?\XXX" for others, where XXX
+/** Return a fuzzily native-encoded C string from utf8 C string @a src,
+ * allocated in @a pool.
+ *
+ * Return a fuzzily native-encoded C string from utf8 C string SRC,
+ * allocated in @a pool.  A fuzzy recoding leaves all 7-bit ascii
+ * characters the same, and substitutes "?\\XXX" for others, where XXX
  * is the unsigned decimal code for that character.
  *
  * This function cannot error; it is guaranteed to return something.
@@ -106,7 +128,7 @@ svn_error_t *svn_utf_cstring_from_utf8 (const char **dest,
  *
  * Now for both cases, the caller can at least fall back on this
  * function, which converts the message as best it can, substituting
- * ?\XXX escape codes for the non-ascii characters.
+ * ?\\XXX escape codes for the non-ascii characters.
  *
  * Ultimately, some callers may prefer the iconv "//TRANSLIT" option,
  * so when we can detect that at configure time, things will change.
@@ -119,23 +141,29 @@ const char *svn_utf_cstring_from_utf8_fuzzy (const char *src,
                                              apr_pool_t *pool);
 
 
-/* Set *DEST to a natively-encoded C string from utf8 stringbuf SRC;
-   allocate *DEST in POOL. */
+/** Set @a *dest to a natively-encoded C string from utf8 stringbuf @a src;
+ * allocate @a *dest in @a pool.
+ */
 svn_error_t *svn_utf_cstring_from_utf8_stringbuf (const char **dest,
                                                   const svn_stringbuf_t *src,
                                                   apr_pool_t *pool);
 
 
-/* Set *DEST to a natively-encoded C string from utf8 string SRC;
-   allocate *DEST in POOL. */
+/** Set @a *dest to a natively-encoded C string from utf8 string @a src;
+ * allocate @a *dest in @a pool.
+ */
 svn_error_t *svn_utf_cstring_from_utf8_string (const char **dest,
                                                const svn_string_t *src,
                                                apr_pool_t *pool);
 
 
-/* Convert UTF8_STRING to native encoding and store in BUF, storing
-   no more than BUFSIZE octets.  Note: this function is meant for
-   error message printing. */
+/** Convert @a utf8_string to native encoding and store in @a buf, storing
+ * no more than @a bufsize octets.
+ *
+ * Convert @a utf8_string to native encoding and store in @a buf, storing
+ * no more than @a bufsize octets.  Note: this function is meant for
+ * error message printing.
+ */
 const char *svn_utf_utf8_to_native (const char *utf8_string,
                                     char *buf,
                                     apr_size_t bufsize);
@@ -144,5 +172,6 @@ const char *svn_utf_utf8_to_native (const char *utf8_string,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+/** @} */
 
 #endif /* SVN_XML_H */
