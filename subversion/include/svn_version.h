@@ -83,7 +83,7 @@ extern "C" {
  *
  * When rolling a tarball, we automatically replace this text with " (r1234)"
  * (where 1234 is the last revision on the branch prior to the release) 
- * for final releases; in prereleases, it becomes " (Alpha)",
+ * for final releases; in prereleases, it becomes " (Alpha 1)",
  * " (Beta 1)", etc., as appropriate.
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
@@ -98,7 +98,7 @@ extern "C" {
  * contain any spaces. This value remains "-dev" in the repository.
  *
  * When rolling a tarball, we automatically replace this text with ""
- * for final releases; in prereleases, it becomes "-alpha", "-beta1",
+ * for final releases; in prereleases, it becomes "-alpha1, "-beta1",
  * etc., as appropriate.
  *
  * Always change this at the same time as SVN_VER_TAG.

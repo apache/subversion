@@ -3,7 +3,7 @@
 #
 # USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
 #                  [-apr PATH-TO-APR ] [-apu PATH-TO-APR-UTIL] 
-#                  [-neon PATH-TO-NEON ] [-alpha|-beta BETA_NUM|-rc RC_NUM]
+#                  [-neon PATH-TO-NEON ] [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The REVISION or REVISION-SVN will be used in the version string.
@@ -23,24 +23,20 @@
 #        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
 #        -apu ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
 #
-#   When building a beta tarball pass -beta NUM where num is the beta
-#   number.  For example:
+#   When building a alpha, beta or rc tarballs pass the apppropriate flag
+#   followeb by the number for that releasse.  For example you'd do
+#   the following for a Beta 1 release:
 #      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -beta 1
 # 
-#   Alpha versions can be specified with just -alpha but take no
-#   number parameter since they are not intended for public release.
-#   For example:
-#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -alpha
-#
-#   If neither an -beta or -rc option with a number or an -alpha option
-#   are specified, it will build a release tarball.
+#   If neither an -alpha, -beta or -rc option with a number is
+#   specified, it will build a release tarball.
 
 
 # A quick and dirty usage message
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
 [-rs REVISION-SVN ] [-pr REPOS-PATH] \
-[-alpha|-beta BETA_NUM|-rc RC_NUM] [-apr APR_PATH ] \
-[-apu APR_UTIL_PATH] [-neon NEON_PATH ]
+[-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
+[-apr APR_PATH ] [-apu APR_UTIL_PATH] [-neon NEON_PATH ]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
@@ -64,6 +60,7 @@ do
        -apu)  APU_PATH="$ARG" ;;
       -neon)  NEON_PATH="$ARG" ;;
       -beta)  BETA="$ARG" ;;
+     -alpha)  ALPHA="$ARG" ;;
           *)  ARG_PREV=$ARG ;;
     esac
 
@@ -72,12 +69,8 @@ do
   else
 
     case $ARG in
-      -v|-r|-rs|-pr|-beta|-rc|-apr|-apu|-neon)
+      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apu|-neon)
         ARG_PREV=$ARG
-        ;;
-      -alpha)
-        ALPHA="1"
-        ARG_PREV=""
         ;;
       *)
         echo " $USAGE"
@@ -97,8 +90,8 @@ if [ -n "$ALPHA" ] && [ -n "$BETA" ] ||
   echo " $USAGE"
   exit 1
 elif [ -n "$ALPHA" ] ; then
-  VER_TAG="Alpha"
-  VER_NUMTAG="-alpha" 
+  VER_TAG="Alpha $ALPHA"
+  VER_NUMTAG="-alpha$ALPHA" 
 elif [ -n "$BETA" ] ; then
   VER_TAG="Beta $BETA"
   VER_NUMTAG="-beta$BETA"
