@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="subversion_client" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="svnadmin" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=subversion_client - Win32 Debug
+CFG=svnadmin - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "subversion_client.mak".
+!MESSAGE NMAKE /f "svnadmin.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "subversion_client.mak" CFG="subversion_client - Win32 Debug"
+!MESSAGE NMAKE /f "svnadmin.mak" CFG="svnadmin - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "subversion_client - Win32 Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "subversion_client - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "svnadmin - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "svnadmin - Win32 Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=subversion_client - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "subversion_client - Win32 Release"
+!IF  "$(CFG)" == "svnadmin - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -51,9 +51,9 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 ..\libsvn_client\Release\libsvn_client.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_subr\Release\libsvn_subr.lib ..\libsvn_wc\Release\libsvn_wc.lib ..\..\apr\LibR\apr.lib ..\..\expat-lite\Release\libexpat.lib "$(SVN_DB3_WIN32)\lib\libdb32.lib" kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/svn.exe"
+# ADD LINK32 ..\libsvn_client\Release\libsvn_client.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_subr\Release\libsvn_subr.lib ..\libsvn_wc\Release\libsvn_wc.lib ..\..\apr\LibR\apr.lib ..\..\expat-lite\Release\libexpat.lib "$(SVN_DB3_WIN32)\lib\libdb32.lib" kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386
 
-!ELSEIF  "$(CFG)" == "subversion_client - Win32 Debug"
+!ELSEIF  "$(CFG)" == "svnadmin - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -76,102 +76,26 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ..\libsvn_client\Debug\libsvn_client.lib ..\libsvn_delta\Debug\libsvn_delta.lib ..\libsvn_subr\Debug\libsvn_subr.lib ..\libsvn_wc\Debug\libsvn_wc.lib ..\..\apr\LibD\apr.lib ..\..\expat-lite\Debug\libexpat.lib  "$(SVN_DB3_WIN32)\lib\libdb32.lib" kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/svn.exe" /pdbtype:sept
+# ADD LINK32 ..\libsvn_client\Debug\libsvn_client.lib ..\libsvn_delta\Debug\libsvn_delta.lib ..\libsvn_subr\Debug\libsvn_subr.lib ..\libsvn_wc\Debug\libsvn_wc.lib ..\..\apr\LibD\apr.lib ..\..\expat-lite\Debug\libexpat.lib "$(SVN_DB3_WIN32)\lib\libdb32.lib" kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no
 
 !ENDIF 
 
 # Begin Target
 
-# Name "subversion_client - Win32 Release"
-# Name "subversion_client - Win32 Debug"
+# Name "svnadmin - Win32 Release"
+# Name "svnadmin - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=".\add-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\checkout-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\commit-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\delete-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\diff-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\diff.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\help-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\import-cmd.c"
-# End Source File
-# Begin Source File
-
 SOURCE=.\main.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\propget-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\proplist-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\props.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\propset-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\status-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\status.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\trace-commit.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\trace-update.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\update-cmd.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\util.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=.\cl.h
-# End Source File
 # End Group
 # End Target
 # End Project

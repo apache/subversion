@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="libsvn_fs" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="libsvn_ra" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Static Library" 0x0104
 
-CFG=libsvn_fs - Win32 Debug
+CFG=libsvn_ra - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "libsvn_fs.mak".
+!MESSAGE NMAKE /f "libsvn_ra.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "libsvn_fs.mak" CFG="libsvn_fs - Win32 Debug"
+!MESSAGE NMAKE /f "libsvn_ra.mak" CFG="libsvn_ra - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "libsvn_fs - Win32 Release" (based on "Win32 (x86) Static Library")
-!MESSAGE "libsvn_fs - Win32 Debug" (based on "Win32 (x86) Static Library")
+!MESSAGE "libsvn_ra - Win32 Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "libsvn_ra - Win32 Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=libsvn_fs - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+!IF  "$(CFG)" == "libsvn_ra - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -52,7 +52,7 @@ LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
 
-!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+!ELSEIF  "$(CFG)" == "libsvn_ra - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -80,142 +80,14 @@ LIB32=link.exe -lib
 
 # Begin Target
 
-# Name "libsvn_fs - Win32 Release"
-# Name "libsvn_fs - Win32 Debug"
+# Name "libsvn_ra - Win32 Release"
+# Name "libsvn_ra - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=".\convert-size.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\dag.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\dbt.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\err.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\fs.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\id.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\node-rev.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\nodes-table.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\rev-table.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\skel.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\trail.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\tree.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\txn-table.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\txn.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\validate.c
-# End Source File
-# End Group
-# Begin Group "Header Files"
-
-# PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=".\convert-size.h"
-# End Source File
-# Begin Source File
-
-SOURCE=".\dag.h"
-# End Source File
-# Begin Source File
-
-SOURCE=.\dbt.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\err.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\file.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\fs.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\id.h
-# End Source File
-# Begin Source File
-
-SOURCE=".\node-rev.h"
-# End Source File
-# Begin Source File
-
-SOURCE=".\nodes-table.h"
-# End Source File
-# Begin Source File
-
-SOURCE=".\rev-table.h"
-# End Source File
-# Begin Source File
-
-SOURCE=.\revision.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\skel.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\trail.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\tree.h
-# End Source File
-# Begin Source File
-
-SOURCE=".\txn-table.h"
-# End Source File
-# Begin Source File
-
-SOURCE=.\txn.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\validate.h
+SOURCE=".\ra_loader.c"
 # End Source File
 # End Group
 # End Target
