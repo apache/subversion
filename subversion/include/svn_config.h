@@ -176,7 +176,7 @@ int svn_config_enumerate (svn_config_t *cfg, const char *section,
                           svn_config_enumerator_t callback, void *baton);
 
 
-/** Enumerate the group @a master_Section in @a cfg.  Each variable
+/** Enumerate the group @a master_section in @a cfg.  Each variable
  * value is interpreted as a list of glob patterns (separated by comma
  * and optional whitespace).  Return the name of the first variable
  * whose value matches @a key, or @c NULL if no variable matches.
