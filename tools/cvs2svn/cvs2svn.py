@@ -63,6 +63,16 @@ DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 SVN_REVISIONS_DB = 'cvs2svn-revisions.db'
 NODES_DB = 'cvs2svn-nodes.db'
 
+# os.popen() on Windows seems to require an access-mode string of 'rb'
+# in cases where the process will output binary information to stdout.
+# Without the 'b' we get IOErrors upon closing the pipe.  Unfortunately
+# 'rb' isn't accepted in the Linux version of os.popen().  As a purely
+# practical matter, we compensate by switching on os.name.
+if os.name == 'nt':
+  PIPE_READ_MODE = 'rb'
+else:
+  PIPE_READ_MODE = 'r'
+
 # Record the default RCS branches, if any, for CVS filepaths.
 #
 # The keys are CVS filepaths, relative to the top of the repository
@@ -1279,7 +1289,7 @@ class Dumper:
 
     basename = os.path.basename(rcs_file[:-2])
     pipe_cmd = 'co -q -p%s %s' % (cvs_rev, escape_shell_arg(rcs_file))
-    pipe = os.popen(pipe_cmd, 'r')
+    pipe = os.popen(pipe_cmd, PIPE_READ_MODE)
 
     # You might think we could just test
     #
