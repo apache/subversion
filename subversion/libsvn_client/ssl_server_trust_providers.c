@@ -220,8 +220,8 @@ ssl_server_trust_prompt_first_cred (void **credentials_p,
                   APR_HASH_KEY_STRING);
 
   SVN_ERR (pb->prompt_func ((svn_auth_cred_ssl_server_trust_t **)
-                            credentials_p,
-                            pb->prompt_baton, failures, cert_info, pool));
+                            credentials_p, pb->prompt_baton, realmstring,
+                            failures, cert_info, pool));
 
   /* Store the potentially updated failures mask in the hash */
   apr_hash_set (parameters,
