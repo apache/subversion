@@ -299,7 +299,23 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set property PROPNAME to PROPVAL on files or directories.\n"
     "usage: propset PROPNAME PROPVAL [TARGETS]\n\n"
-    "    Use -F (instead of PROPVAL) to get the value from a file.\n",
+    "    Use -F (instead of PROPVAL) to get the value from a file.\n"
+    "\n"
+    "    Note: svn recognizes the following special properties but will \n"
+    "    store any arbitrary properties set:\n"
+    "      svn:ingore     - A newline separated list of file patterns to ignore.\n"
+    "      svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
+    "        URL, HeadURL             - The URL for the head version of "
+    "the object.\n"
+    "        Author, LastChangedBy    - The last person to modify the file.\n"
+    "        Date, LastChangedDate    - The date/time the object was last "
+    "modified.\n"
+    "        Rev, LastChangedRevision - The last revision the object changed.\n"
+    "      svn:executable - If present, make the file executable. (Any\n"
+    "        attempt to set this property on a directory will be ignored.)\n"
+    "      svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'. \n"
+    "      svn:mimetype   - The mimetype of the file.  Used to determine\n"
+    "        whether to merge the file, and how to serve it from Apache.",
     {'F', 'q', svn_cl__targets_opt, svn_cl__recursive_opt} },
   
   { "revert", svn_cl__revert, {0},
