@@ -15,13 +15,13 @@
  * ====================================================================
  */
 
-#include "fs_skels.h"
+#include <string.h>
 #include "svn_error.h"
-#include "string.h"
 #include "svn_string.h"
+#include "fs_skels.h"
 #include "skel.h"
-#include "id.h"
-#include "validate.h"
+#include "../id.h"
+#include "../validate.h"
 
 
 static svn_error_t *

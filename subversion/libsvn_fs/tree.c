@@ -42,14 +42,14 @@
 #include "fs.h"
 #include "err.h"
 #include "trail.h"
-#include "txn-table.h"
-#include "rev-table.h"
-#include "nodes-table.h"
 #include "node-rev.h"
 #include "key-gen.h"
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
+#include "bdb/txn-table.h"
+#include "bdb/rev-table.h"
+#include "bdb/nodes-table.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.

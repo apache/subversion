@@ -17,19 +17,19 @@
 
 #include <string.h>
 #include <assert.h>
+#include <db.h>
 
 #include "svn_fs.h"
 
-#include "db.h"
-#include "fs.h"
-#include "err.h"
+#include "../fs.h"
+#include "../err.h"
 #include "dbt.h"
-#include "skel.h"
-#include "fs_skels.h"
-#include "trail.h"
+#include "../util/skel.h"
+#include "../util/fs_skels.h"
+#include "../trail.h"
+#include "../key-gen.h"
+#include "../id.h"
 #include "nodes-table.h"
-#include "key-gen.h"
-#include "id.h"
 
 
 

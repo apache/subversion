@@ -28,9 +28,10 @@
 
 #include "../libsvn_fs/fs.h"
 #include "../libsvn_fs/dag.h"
-#include "../libsvn_fs/rev-table.h"
-#include "../libsvn_fs/nodes-table.h"
 #include "../libsvn_fs/trail.h"
+
+#include "../libsvn_fs/bdb/rev-table.h"
+#include "../libsvn_fs/bdb/nodes-table.h"
 
 
 /*-------------------------------------------------------------------*/

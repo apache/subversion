@@ -24,11 +24,11 @@
 #include "svn_pools.h"
 #include "fs.h"
 #include "err.h"
-#include "dbt.h"
 #include "trail.h"
-#include "reps-table.h"
-#include "strings-table.h"
 #include "reps-strings.h"
+#include "bdb/dbt.h"
+#include "bdb/reps-table.h"
+#include "bdb/strings-table.h"
 
 
 

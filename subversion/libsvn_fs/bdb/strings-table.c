@@ -15,15 +15,15 @@
  * ====================================================================
  */
 
-#include "db.h"
+#include <db.h>
 #include "svn_fs.h"
-#include "fs.h"
-#include "err.h"
-#include "dbt.h"
-#include "trail.h"
-#include "strings-table.h"
-#include "key-gen.h"
 #include "svn_pools.h"
+#include "../fs.h"
+#include "../err.h"
+#include "dbt.h"
+#include "../trail.h"
+#include "../key-gen.h"
+#include "strings-table.h"
 
 
 /*** Creating and opening the strings table. ***/

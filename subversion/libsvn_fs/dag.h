@@ -20,7 +20,7 @@
 
 #include "svn_fs.h"
 #include "db.h"
-#include "skel.h"
+#include "util/skel.h"
 #include "trail.h"
 
 #ifdef __cplusplus

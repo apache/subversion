@@ -16,20 +16,20 @@
  */
 
 #include <string.h>
+#include <db.h>
+#include <assert.h>
 
 #include "svn_pools.h"
-#include "db.h"
-#include "fs.h"
-#include "err.h"
-#include "key-gen.h"
-#include "dbt.h"
-#include "skel.h"
-#include "fs_skels.h"
 #include "txn-table.h"
-#include "trail.h"
-#include "validate.h"
-#include "id.h"
-#include "assert.h"
+#include "../fs.h"
+#include "../err.h"
+#include "../key-gen.h"
+#include "dbt.h"
+#include "../util/skel.h"
+#include "../util/fs_skels.h"
+#include "../trail.h"
+#include "../validate.h"
+#include "../id.h"
 
 
 static int 

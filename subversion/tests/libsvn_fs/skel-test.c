@@ -23,7 +23,7 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "../../libsvn_fs/fs.h"
-#include "../../libsvn_fs/skel.h"
+#include "../../libsvn_fs/util/skel.h"
 
 
 /* Some utility functions.  */

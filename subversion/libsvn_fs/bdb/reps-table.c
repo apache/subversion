@@ -15,16 +15,16 @@
  * ====================================================================
  */
 
-#include "db.h"
+#include <db.h>
 #include "svn_fs.h"
-#include "fs.h"
-#include "fs_skels.h"
-#include "err.h"
+#include "../fs.h"
+#include "../util/fs_skels.h"
+#include "../err.h"
 #include "dbt.h"
-#include "trail.h"
+#include "../trail.h"
+#include "../key-gen.h"
 #include "reps-table.h"
 #include "strings-table.h"
-#include "key-gen.h"
 
 
 

@@ -19,24 +19,25 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>              /* for EINVAL */
+#include <db.h>
 
 #include "apr_general.h"
 #include "apr_pools.h"
 #include "apr_file_io.h"
 
 #include "svn_pools.h"
-#include "db.h"
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
-#include "nodes-table.h"
-#include "rev-table.h"
-#include "txn-table.h"
-#include "copies-table.h"
-#include "reps-table.h"
-#include "strings-table.h"
 #include "dag.h"
 #include "svn_private_config.h"
+
+#include "bdb/nodes-table.h"
+#include "bdb/rev-table.h"
+#include "bdb/txn-table.h"
+#include "bdb/copies-table.h"
+#include "bdb/reps-table.h"
+#include "bdb/strings-table.h"
 
 
 /* Checking for return values, and reporting errors.  */

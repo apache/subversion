@@ -22,10 +22,10 @@
 #include "svn_error.h"
 #include "apr.h"
 #include "../fs-helpers.h"
-#include "../../libsvn_fs/skel.h"
-#include "../../libsvn_fs/fs_skels.h"
-#include "../../libsvn_fs/strings-table.h"
-#include "../../libsvn_fs/reps-table.h"
+#include "../../libsvn_fs/util/skel.h"
+#include "../../libsvn_fs/util/fs_skels.h"
+#include "../../libsvn_fs/bdb/strings-table.h"
+#include "../../libsvn_fs/bdb/reps-table.h"
 
 
 

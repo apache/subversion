@@ -21,7 +21,7 @@
 #include "db.h"
 #include "svn_io.h"
 #include "svn_fs.h"
-#include "trail.h"
+#include "../trail.h"
 
 #ifdef __cplusplus
 extern "C" {
