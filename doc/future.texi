@@ -18,6 +18,13 @@ really want to achieve the goal of creating a compelling replacement for
 CVS.
 
 
+@menu
+* Annotation::                  
+* Repository Conversion::       
+* User Interface for Branches and Tags::  
+@end menu
+
+@node Annotation
 @subsection Annotation
 
 We need to provide annotation of individual files (i.e. who wrote which
@@ -30,12 +37,15 @@ The ``annotate'' method itself should be implemented as a server-side
 plug-in.  This makes the output much more hackable.
 
 
+@node Repository Conversion
 @subsection Repository Conversion
 
 We need to write a tool which will convert a CVS repository into an SVN
 repository, preserving all history.  This is absolutely critical in
 persuading people to switch to SVN.
 
+
+@node User Interface for Branches and Tags
 @subsection User Interface for Branches and Tags
 
 This is a tricky issue.
@@ -74,11 +84,27 @@ and tag commands.
 These are features we'd like to see in Subversion someday, but aren't
 critical for a 1.0 release.
 
+
+@menu
+* Server Grep::                 
+* Scripting Language::          
+* Smart conflict resolution::   
+* Mirroring Servers::           
+* Inter-Repository Communication::  
+* SQL Back-End::                
+* Digital Signatures::          
+* Import/Export format::        
+* SMTP access::                 
+@end menu
+
+@node Server Grep
 @subsection Server Grep
 
 Write a server-side plug-in which can quickly search a filesystem's text
 and properties.
 
+
+@node Scripting Language
 @subsection Scripting Language
 
 Write a server-side plug-in which provides glue between @emph{svn_main}
@@ -86,6 +112,8 @@ and libguile.so, libperl.so, or libpython.so.  The server becomes
 @b{very} extensible if it has an interpreted language built into it;
 it's also very nice for writing test suites!
 
+
+@node Smart conflict resolution
 @subsection Smart conflict resolution
 
 Certain kinds of conflicts can be resolved without human intervention.
@@ -105,7 +133,7 @@ Since all merging takes place on the client, these ``smart merges''
 should be implemented as a client-side plug-in.
 
 
-
+@node Mirroring Servers
 @subsection Mirroring Servers
 
 This is like the ClearCase multisite feature.  Essentially, it is a
@@ -125,6 +153,7 @@ server.  After the master accepts the change, the delta is automatically
 ``pushed'' out to the caching slave servers.
 
 
+@node Inter-Repository Communication
 @subsection Inter-Repository Communication
 
 This is one that people request a lot: the ability to commit changes
@@ -147,24 +176,30 @@ public repository.  He commits to his clone (which turns it into a
 branch), and when he's done, he performs a branch-merge back into the
 public repository.
 
+
+@node SQL Back-End
 @subsection SQL Back-End
 
 The Subversion filesystem will probably use Berkeley DB to store data on
 disk; however, a real SQL database provides much more reliable
 transactions.  Someone can rewrite the filesystem back-end to speak SQL.
 
+
+@node Digital Signatures
 @subsection Digital Signatures
 
 A few people have mentioned cryptographic signing of deltas.  It's a
 cool idea, and we should leave the door open for it.
 
 
+@node Import/Export format
 @subsection Import/Export format
 
 Suggested by Jason Robbins; he mentioned this as a nice thing to have
 someday.  It makes repositories easy to transport.
 
 
+@node SMTP access
 @subsection SMTP access
 
 Write a totally independent Network Layer which is an SMTP server on one
