@@ -6,6 +6,7 @@ INSTALL = install
 SHELL = /bin/sh
 
 BOOK_TOP = .
+BOOK_HTML_CHUNK_DIR = $(BOOK_DIR)/html-chunk
 BOOK_DIR = ${BOOK_TOP}/book
 BOOK_HTML_TARGET = $(BOOK_DIR)/book.html
 BOOK_PDF_TARGET = $(BOOK_DIR)/book.pdf
@@ -27,6 +28,7 @@ MDOCS_INSTALL_DIR = $(INSTALL_DIR)/misc-docs
 XSL_DIR = ${BOOK_TOP}/tools/xsl
 XSL_FO = ${BOOK_TOP}/tools/fo-stylesheet.xsl
 XSL_HTML = $(XSL_DIR)/html/docbook.xsl
+XSL_HTML_CHUNK = $(XSL_DIR)/html/chunk.xsl
 
 RUN_FOP = ${BOOK_TOP}/tools/bin/run-fop.sh
 
@@ -34,15 +36,15 @@ all: all-html all-pdf all-ps
 
 install: install-book install-misc-docs
 
-all-html: book-html misc-docs-html
+all-html: book-html book-html-chunk misc-docs-html
 
 all-pdf: book-pdf misc-docs-pdf
 
 all-ps: book-ps misc-docs-ps
 
-all-book: book-html book-pdf book-ps
+all-book: book-html book-html-chunk book-pdf book-ps
 
-install-book: install-book-html install-book-pdf install-book-ps
+install-book: install-book-html install-book-html-chunk install-book-pdf install-book-ps
 
 all-misc-docs: misc-docs-html misc-docs-pdf book-ps
 
@@ -57,6 +59,11 @@ book-html: $(BOOK_HTML_TARGET)
 $(BOOK_HTML_TARGET): $(BOOK_ALL_SOURCE)
 	$(XSLTPROC) --stringparam html.stylesheet "styles.css" \
            $(XSL_HTML) $(BOOK_XML_SOURCE) > $(BOOK_HTML_TARGET)
+
+## This trailing slash is essential that xsltproc will output pages to the dir
+book-html-chunk: $(BOOK_ALL_SOURCE)
+	mkdir -p $(BOOK_HTML_CHUNK_DIR)
+	$(XSLTPROC) -o $(BOOK_HTML_CHUNK_DIR)/ $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
 
 book-pdf: $(BOOK_PDF_TARGET)
 
@@ -78,6 +85,12 @@ install-book-html: $(BOOK_HTML_TARGET)
 	$(INSTALL) $(BOOK_HTML_TARGET) $(BOOK_INSTALL_DIR)
 	$(INSTALL) $(BOOK_DIR)/images/*.png $(BOOK_INSTALL_DIR)/images
 
+## index.html is created last
+install-book-html-chunk: $(BOOK_HTML_CHUNK_DIR)/index.html
+	$(INSTALL) -d $(BOOK_INSTALL_DIR)/images
+	$(INSTALL) $(BOOK_HTML_CHUNK_DIR)/*.html $(BOOK_INSTALL_DIR)
+	$(INSTALL) $(BOOK_DIR)/images/*.png $(BOOK_INSTALL_DIR)/images
+
 install-book-pdf: $(BOOK_PDF_TARGET) $(BOOK_INSTALL_DIR)
 	$(INSTALL) $(BOOK_PDF_TARGET) $(BOOK_INSTALL_DIR)
 
@@ -85,7 +98,7 @@ install-book-ps: $(BOOK_PS_TARGET) $(BOOK_INSTALL_DIR)
 	$(INSTALL) $(BOOK_PS_TARGET) $(BOOK_INSTALL_DIR)
 
 book-clean:
-	rm -f $(BOOK_HTML_TARGET) $(BOOK_FO_TARGET)
+	rm -f $(BOOK_HTML_TARGET) $(BOOK_FO_TARGET) $(BOOK_HTML_CHUNK_DIR)
 	rm -f $(BOOK_PDF_TARGET) $(BOOK_PS_TARGET) 
 
 misc-docs-html: $(MDOCS_HTML_TARGET)
