@@ -19,7 +19,6 @@
 
 /*** Includes ***/
 #include <jni.h>
-#include <apr_time.h>
 #include "j.h"
 #include "global.h"
 
@@ -29,20 +28,16 @@
 
 //DO YOU WANT TO DEBUG THIS CODE?
 //JUST UNCOMMENT THE FOLLOWING LINE
-//#define SVN_JNI_DATE__DEBUG
+#define SVN_JNI_DATE__DEBUG
 
-/* we can be lucky apr_time_t matches the constructor 
- * java.util.Date(long) so conversion is an easy job
- */
 jobject 
-date__apr_to_j(JNIEnv *env, jboolean *hasException,
-		       apr_time_t time)
+date__create(JNIEnv *env, jboolean *hasException, long time)
 {
   jobject result = NULL;
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI_DATE__DEBUG
-  fprintf(stderr, ">>>date__apr_to_j(...)\n");
+  fprintf(stderr, ">>>date__create(...)\n");
 #endif
 
   /*
@@ -70,10 +65,11 @@ date__apr_to_j(JNIEnv *env, jboolean *hasException,
       /* get method reference */
       if( !_hasException )
 	{
-	  constructor = j__get_method(env, &_hasException,
-                                     class,
-                                     "<init>",
-                                     SVN_JNI_DATE__SIG);
+	  constructor = 
+            j__get_method(env, &_hasException,
+                          class,
+                          "<init>",
+                          SVN_JNI_DATE__SIG);
 	}
 
       /* create new instance */
@@ -94,7 +90,7 @@ date__apr_to_j(JNIEnv *env, jboolean *hasException,
     }
 
 #ifdef SVN_JNI_DATE__DEBUG
-  fprintf(stderr, "<<<date_apr_to_j\n");
+  fprintf(stderr, "<<<date__create\n");
 #endif
 				    
   if( (hasException != NULL) && _hasException )

@@ -98,14 +98,14 @@ entry__create(JNIEnv *env, jboolean *hasException,
             
       if( !_hasException )
         {
-          jtexttime = date__apr_to_j(env, &_hasException, 
-                                     entry->text_time);
+          jtexttime = date__create(env, &_hasException, 
+                                   entry->text_time);
         }
       
       if( !_hasException )
         {
-          jproptime = date__apr_to_j(env, &_hasException,
-                                     entry->prop_time);
+          jproptime = date__create(env, &_hasException,
+                                   entry->prop_time);
         }
       
       if( !_hasException )

@@ -25,8 +25,7 @@
 
 /* functions */
 jobject 
-date__apr_to_j(JNIEnv *env, jboolean *hasException,
-			apr_time_t time);
+date__create(JNIEnv *env, jboolean *hasException, long time);
 
 #endif
 /* 
