@@ -88,7 +88,7 @@ section for approved changes.)
       Notes: looks like a big change, but it's mainly adding
              error-checking code to mod_dav_svn.
       Votes:
-       +1: cmpilato
+       +1: cmpilato, kfogel
 
     * r8139
       Fix authentication bugs. 
