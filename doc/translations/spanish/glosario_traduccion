@@ -138,3 +138,10 @@ click -> haga clic, pulse
     Traducción obtenida del glosario. Parece ser que click sólo se
     deja tal cual cuando se refiere a un sonido mecánico. Cuando
     se refiere a pulsar el botón del ratón se traduce como clic.
+
+switch -> cambiar
+    Únicamente cuando se habla del comando svn switch, no como la
+    palabra switch aislada, que significa parámetro o interruptor.
+    En el contexto de svn switch, traducirlo como cambiar. Quizás
+    traducir como relocalizar una vez haya suficiente material
+    traducido y una lectura final sugiera una u otra traducción.
