@@ -51,3 +51,5 @@ Greg:
    - libsvn_ra_dav:
       - update editor
       - commit editor
+
+   - APR: move apr_copy_file() from SVN
