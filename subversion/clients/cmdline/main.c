@@ -204,7 +204,13 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    begin copy there.  (-r is only needed if importing to --xml-file)\n",
     {'F', 'm', 'q', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r'} },
-  
+ 
+  { "info", svn_cl__info, {0},
+    "Display info about a resource.\n"
+    "usage: svn info TARGET1 [TARGET2...]\n\n"
+    "    Print information about TARGETs.\n",
+    {svn_cl__targets_opt} },
+ 
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: svn log [URL] [PATH1 [PATH2] ...] \n"

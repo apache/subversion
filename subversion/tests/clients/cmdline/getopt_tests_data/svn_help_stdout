@@ -16,6 +16,7 @@ Available subcommands:
    diff (di)
    help (?, h)
    import
+   info
    log
    merge
    mkdir
