@@ -278,16 +278,16 @@ main (int argc, char **argv)
   const svn_cl__cmd_desc_t *subcommand;
   apr_array_header_t *targets;  /* file/dir args from the command line */
 
-  apr_getopt_long_t long_opts[] =
+  apr_longopt_t options[] =
   {
-    {"xml-file",      1, svn_cl__xml_file_opt},
-    {"target-dir",    1, svn_cl__target_dir_opt}, /* README: --destination */
-    {"ancestor-path", 1, svn_cl__ancestor_path_opt}, /* !doc'ed in README */
-    {"revision",      1, 'r'},
-    {"valfile",       1, svn_cl__valfile_opt},       /* !doc'ed in README */
-    {"force",         0, svn_cl__force_opt},
-    {"help",          0, 'h'},
-    {0,            0, 0}
+    {"xml-file",      svn_cl__xml_file_opt, 1},
+    {"target-dir",    svn_cl__target_dir_opt, 1}, /* README: --destination */
+    {"ancestor-path", svn_cl__ancestor_path_opt, 1}, /* !doc'ed in README */
+    {"revision",      'r', 1},
+    {"valfile",       svn_cl__valfile_opt, 1},       /* !doc'ed in README */
+    {"force",         svn_cl__force_opt, 0},
+    {"help",          'h', 0},
+    {0,               0, 0}
   };
 
   apr_initialize ();
@@ -298,6 +298,7 @@ main (int argc, char **argv)
   targets = apr_make_array (pool, 0, sizeof (svn_string_t *));
 
   apr_initopt (&opt, pool, argc - 1, argv + 1);
+  opt->interleave = 1;
 
   /* Get the subcommand. */
   subcommand = get_command (opt);
@@ -311,86 +312,66 @@ main (int argc, char **argv)
   /* Parse options. */
   while (1)
     {
-      /* kff todo: add error checking, inline reading of valfiles. */
-
-      /* kff todo: apr_getopt_long() is about to change.  There may
-         also be some changes desirable here independent of
-         apr_getopt_long() changing. :-) */
-
-      apr_err = apr_getopt_long (opt, "r:h?", long_opts, &opt_id, &optarg);
-
-      if (APR_STATUS_IS_SUCCESS (apr_err))
-        {
-          switch (opt_id) {
-          case 'r':
-            opt_state.revision = (svn_revnum_t) atoi (optarg);
-            break;
-          case 'h':
-          case '?':
-            opt_state.help = TRUE;
-            break;
-          case svn_cl__xml_file_opt:
-            opt_state.xml_file = svn_string_create (optarg, pool);
-            break;
-          case svn_cl__target_dir_opt:
-            opt_state.target = svn_string_create (optarg, pool);
-            break;
-          case svn_cl__ancestor_path_opt:
-            opt_state.ancestor_path = svn_string_create (optarg, pool);
-            break;
-          case svn_cl__valfile_opt:
-            /* todo: just read in the value directly here? */
-            opt_state.valfile = svn_string_create (optarg, pool);
-            break;
-          case svn_cl__force_opt:
-            opt_state.force = TRUE;
-            break;
-          default:
-            break;  /* kff todo: ? */
-          }
-        }
-      else if (APR_STATUS_IS_EOF (apr_err))
-        {
-          /* Since arguments may be interleaved with options, we
-             handle arguments right here in the option parsing loop,
-             and manually bump opt->ind so apr_getopt_long() can
-             continue.  The arguments get put into an apr array, for
-             eventual hand-off to the subcommand, except for a few
-             subcommands which take non-standard arguments -- those
-             get handled specially. */
-
-          if (opt->ind < opt->argc)
-            {
-              char *this_arg = opt->argv[opt->ind];
-
-              if ((subcommand->cmd_code == svn_cl__propset_command)
-                  && (opt_state.name == NULL))
-                {
-                  opt_state.name = svn_string_create (this_arg, pool);
-                }
-              else if ((subcommand->cmd_code == svn_cl__propset_command)
-                       && (opt_state.value == NULL))
-                {
-                  opt_state.value = svn_string_create (this_arg, pool);
-                }
-              else if ((subcommand->cmd_code == svn_cl__propget_command)
-                       && (opt_state.name == NULL))
-                {
-                  opt_state.name = svn_string_create (this_arg, pool);
-                }
-              else  /* treat it as a regular file/dir arg */
-                {
-                  (*((svn_string_t **) apr_push_array (targets)))
-                    = svn_string_create (this_arg, pool);
-                }
-            }
-          else
-            break;
-
-          opt->ind++;
-        }
-      else
+      /* Parse the next option. */
+      apr_err = apr_getopt_long (opt, options,&opt_id, &optarg);
+      if (APR_STATUS_IS_EOF (apr_err))
         break;
+      else if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return EXIT_FAILURE;
+
+      switch (opt_id) {
+      case 'r':
+        opt_state.revision = (svn_revnum_t) atoi (optarg);
+        break;
+      case 'h':
+      case '?':
+        opt_state.help = TRUE;
+        break;
+      case svn_cl__xml_file_opt:
+        opt_state.xml_file = svn_string_create (optarg, pool);
+        break;
+      case svn_cl__target_dir_opt:
+        opt_state.target = svn_string_create (optarg, pool);
+        break;
+      case svn_cl__ancestor_path_opt:
+        opt_state.ancestor_path = svn_string_create (optarg, pool);
+        break;
+      case svn_cl__valfile_opt:
+        /* todo: just read in the value directly here? */
+        opt_state.valfile = svn_string_create (optarg, pool);
+        break;
+      case svn_cl__force_opt:
+        opt_state.force = TRUE;
+        break;
+      default:
+        break;  /* kff todo: ? */
+      }
+    }
+
+  for (; opt->ind < opt->argc; opt->ind++)
+    {
+      char *this_arg = opt->argv[opt->ind];
+
+      if ((subcommand->cmd_code == svn_cl__propset_command)
+          && (opt_state.name == NULL))
+        {
+          opt_state.name = svn_string_create (this_arg, pool);
+        }
+      else if ((subcommand->cmd_code == svn_cl__propset_command)
+               && (opt_state.value == NULL))
+        {
+          opt_state.value = svn_string_create (this_arg, pool);
+        }
+      else if ((subcommand->cmd_code == svn_cl__propget_command)
+               && (opt_state.name == NULL))
+        {
+          opt_state.name = svn_string_create (this_arg, pool);
+        }
+      else  /* treat it as a regular file/dir arg */
+        {
+          (*((svn_string_t **) apr_push_array (targets)))
+            = svn_string_create (this_arg, pool);
+        }
     }
 
   /* Certain commands have an implied `.' as argument, if nothing else
