@@ -86,3 +86,8 @@ Candidate changes:
     Notes:  a teeny-tiny fix.
     Votes:
       +1: cmpilato, sussman
+
+  * Issue #1733, attachment 305
+    Backport r8551 to 1.0.X to cause blame to bail on binary files.
+    Justification: Nicer behavior to the end user. 
+    Votes:
