@@ -113,6 +113,20 @@ static svn_error_t *fail(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return svn_ra_svn_flush(conn, pool);
 }
 
+/* If we can, make the nonce with random bytes.  If we can't... well,
+ * it just has to be different each time.  The current time isn't
+ * absolutely guaranteed to be different for each connection, but it
+ * should prevent replay attacks in practice. */
+static apr_status_t make_nonce(apr_uint64_t *nonce)
+{
+#if APR_HAS_RANDOM
+  return apr_generate_random_bytes((unsigned char *) nonce, sizeof(*nonce));
+#else
+  *nonce = apr_time_now();
+  return APR_SUCCESS;
+#endif
+}
+
 svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     svn_config_t *pwdb, const char **user,
                                     svn_boolean_t *success)
@@ -128,7 +142,7 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   *success = FALSE;
 
   /* Send a challenge. */
-  status = apr_generate_random_bytes((unsigned char *) &nonce, sizeof(nonce));
+  status = make_nonce(&nonce);
   if (APR_STATUS_IS_SUCCESS(status))
     status = apr_gethostname(hostbuf, sizeof(hostbuf), pool);
   if (!APR_STATUS_IS_SUCCESS(status))
