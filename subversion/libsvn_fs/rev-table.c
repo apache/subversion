@@ -171,6 +171,7 @@ struct youngest_rev_args {
   svn_fs_t *fs;
 };
 
+
 static svn_error_t *
 txn_body_youngest_rev (void *baton,
                        trail_t *trail)
@@ -180,16 +181,18 @@ txn_body_youngest_rev (void *baton,
   int db_err;
   DBC *cursor = 0;
   DBT key, value;
+  db_recno_t recno;
 
   svn_fs_t *fs = args->fs;
 
   /* Create a database cursor.  */
   SVN_ERR (DB_WRAP (fs, "getting youngest revision (creating cursor)",
-                    fs->revisions->cursor (fs->revisions, trail->db_txn, &cursor, 0)));
+                    fs->revisions->cursor (fs->revisions, trail->db_txn,
+                                           &cursor, 0)));
 
   /* Find the last entry in the `revisions' table.  */
   db_err = cursor->c_get (cursor,
-                          svn_fs__result_dbt (&key),
+                          svn_fs__recno_dbt (&key, &recno),
                           svn_fs__nodata_dbt (&value),
                           DB_LAST);
 
@@ -210,37 +213,29 @@ txn_body_youngest_rev (void *baton,
       SVN_ERR (DB_WRAP (fs, "getting youngest revision (finding last entry)",
                         db_err));
     }
-  svn_fs__track_dbt (&key, trail->pool);
 
   /* Turn the record number into a Subversion revision number.
      Revisions are numbered starting with zero; Berkeley DB record
      numbers begin with one.  */
-  {
-    db_recno_t recno;
-    recno = *(db_recno_t *) key.data;
-    *args->youngest_p = recno - 1;
-  }
+  *args->youngest_p = recno - 1;
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_fs_youngest_rev (svn_revnum_t *youngest_p,
-                     svn_fs_t *fs)
+                     svn_fs_t *fs,
+                     apr_pool_t *pool)
 {
-  svn_error_t *svn_err = 0;
-  apr_pool_t *pool = svn_pool_create (fs->pool);
-
   svn_revnum_t youngest;
   struct youngest_rev_args args;
   args.youngest_p = &youngest;
   args.fs = fs;
 
-  svn_err = svn_fs__retry_txn (fs, txn_body_youngest_rev, &args, pool);
-  /* Fall through.  We must destroy pool.  */
-  *youngest_p = youngest;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_youngest_rev, &args, pool));
 
-  apr_pool_destroy (pool);
-  return svn_err;
+  *youngest_p = youngest;
+  return SVN_NO_ERROR;
 }
 
 
