@@ -499,6 +499,10 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
                                   APR_HASH_KEY_STRING)))
         {
+          /* First, remove all node properties. */
+          if (found_node)
+            SVN_ERR (parse_fns->remove_node_props (node_baton));
+
           SVN_ERR (parse_property_block (stream,
                                          apr_atoui64 (valstr),
                                          parse_fns,
