@@ -29,7 +29,6 @@
 #include "err.h"
 #include "fs.h"
 #include "key-gen.h"
-#include "node-rev.h"
 #include "id.h"
 #include "revs-txns.h"
 #include "fs_fs.h"
@@ -933,28 +932,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
                             const char *txn_id, 
                             apr_pool_t *pool)
 {
-  svn_fs__node_revision_t *noderev;
-  
-  /* Make sure our node is a file. */
-  if (file->kind != svn_node_file)
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, NULL,
-       "Attempted to set textual contents of a *non*-file node");
-  
-  /* Make sure our node is mutable. */
-  if (! svn_fs__dag_check_mutable (file, txn_id))
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to set textual contents of an immutable node");
-
-  /* Get the node revision. */
-  SVN_ERR (get_node_revision (&noderev, file, pool));
-
-  /* If this node has no EDIT-DATA-KEY, this is a no-op. */
-  if (! noderev->edit_key)
-    return SVN_NO_ERROR;
-
-  abort ();
+  /* A big no-op for FSFS. */
   
   return SVN_NO_ERROR;
 }
