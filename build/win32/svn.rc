@@ -20,8 +20,8 @@
 #endif
 
 #include <winres.h>
-#include "../../../apr/include/apr_general.h"
-#include "../../include/svn_version.h"
+#include "../../apr/include/apr_general.h"
+#include "../../subversion/include/svn_version.h"
 
 #ifndef _DEBUG
 # ifdef SVN_VER_NAME
