@@ -71,9 +71,9 @@ for opt,arg in opts:
     all_tests = client_tests
     repo_loc = 'remote repository ' + arg + '.'
     base_url = arg
-    if arg[4:] == 'http':
+    if arg[:4] == 'http':
       log = 'dav-tests.log'
-    elif arg[3:] == 'svn':
+    elif arg[:3] == 'svn':
       log = 'svn-tests.log'
     else:
       # Don't know this schema, but who're we to judge whether it's
