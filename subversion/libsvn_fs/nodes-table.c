@@ -115,7 +115,7 @@ parse_node_revision_dbt (const DBT *d)
    to signal an error anyway, the need for pools isn't quite as urgent
    as in other code, but we still need to take care.  */
 static int
-compare_nodes_keys (const DBT *ak, const DBT *bk)
+compare_nodes_keys (DB *dummy, const DBT *ak, const DBT *bk)
 {
   svn_fs_id_t *a = parse_node_revision_dbt (ak);
   svn_fs_id_t *b = parse_node_revision_dbt (bk);
