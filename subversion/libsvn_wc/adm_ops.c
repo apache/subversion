@@ -54,15 +54,16 @@
 /*** Finishing updates and commits. ***/
 
 
-/* The main recursive body of svn_wc__do_update_cleanup. */
+/* The main body of svn_wc__do_update_cleanup. */
 static svn_error_t *
-recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
-                           const char *base_url,
-                           svn_revnum_t new_rev,
-                           svn_wc_notify_func_t notify_func,
-                           void *notify_baton,
-                           svn_boolean_t remove_missing_dirs,
-                           apr_pool_t *pool)
+tweak_entries (svn_wc_adm_access_t *dirpath,
+               const char *base_url,
+               svn_revnum_t new_rev,
+               svn_wc_notify_func_t notify_func,
+               void *notify_baton,
+               svn_boolean_t remove_missing_dirs,
+               svn_boolean_t recurse,
+               apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
@@ -70,7 +71,7 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
   svn_boolean_t write_required = FALSE;
   
   /* Read DIRPATH's entries. */
-  SVN_ERR (svn_wc_entries_read (&entries, dirpath, TRUE, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, TRUE, pool));
 
   /* Tweak "this_dir" */
   SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
@@ -78,13 +79,15 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
                                 svn_wc_adm_access_pool (dirpath)));
 
   /* Recursively loop over all children. */
-  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
       const char *name;
       svn_wc_entry_t *current_entry;
       const char *child_url = NULL;
+
+      svn_pool_clear (subpool);
 
       apr_hash_this (hi, &key, NULL, &val);
       name = key;
@@ -98,19 +101,18 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
       if (base_url)
         child_url = svn_path_url_add_component (base_url, name, subpool);
       
-      /* If a file, or deleted or absent dir, then tweak the entry but
-         don't recurse. */
+      /* If a file, or deleted or absent dir in recursive mode, then tweak the
+         entry but don't recurse. */
       if ((current_entry->kind == svn_node_file)
-          || current_entry->deleted
-          || current_entry->absent)
+          || (recurse && (current_entry->deleted || current_entry->absent)))
         {
           SVN_ERR (svn_wc__tweak_entry (entries, name,
                                         child_url, new_rev, &write_required,
                                         svn_wc_adm_access_pool (dirpath)));
         }
       
-      /* If a directory... */
-      else if (current_entry->kind == svn_node_dir)        
+      /* If a directory and recursiv... */
+      else if (recurse && (current_entry->kind == svn_node_dir))
         {
           const char *child_path
             = svn_path_join (svn_wc_adm_access_path (dirpath), name, subpool);
@@ -142,9 +144,9 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
               svn_wc_adm_access_t *child_access;
               SVN_ERR (svn_wc_adm_retrieve (&child_access, dirpath, child_path,
                                             subpool));
-              SVN_ERR (recursively_tweak_entries 
+              SVN_ERR (tweak_entries 
                        (child_access, child_url, new_rev, notify_func, 
-                        notify_baton, remove_missing_dirs, subpool));
+                        notify_baton, remove_missing_dirs, recurse, subpool));
             }
         }
     }
@@ -199,21 +201,9 @@ svn_wc__do_update_cleanup (const char *path,
       svn_wc_adm_access_t *dir_access;
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path, pool));
 
-      if (! recursive) 
-        {
-          svn_boolean_t write_required = FALSE;
-          SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
-          SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
-                                        base_url, new_revision, &write_required,
-                                        svn_wc_adm_access_pool (dir_access)));
-          if (write_required)
-            SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
-        }
-      else
-        SVN_ERR (recursively_tweak_entries (dir_access, base_url,
-                                            new_revision, notify_func, 
-                                            notify_baton, remove_missing_dirs,
-                                            pool));
+      SVN_ERR (tweak_entries (dir_access, base_url, new_revision,
+                              notify_func, notify_baton, remove_missing_dirs,
+                              recursive, pool));
     }
 
   else
