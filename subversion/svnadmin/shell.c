@@ -239,8 +239,9 @@ print_dirent (svn_stringbuf_t *abs_path,
   else
     SVN_ERR (svn_fs_file_length (&size, shcxt->root, abs_path->data, pool));
   
-  /* ### temporary */
-  created_rev = 0;
+  /* revision in which this file was created. */
+  SVN_ERR (svn_fs_node_created_rev (&created_rev,
+                                    shcxt->root, abs_path->data, pool));
 
   /* convert id to a stringbuf */
   id_str = svn_fs_unparse_id (entry->id, pool);
