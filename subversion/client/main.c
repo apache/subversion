@@ -51,74 +51,74 @@
  */
 const svn_cl__cmd_desc_t svn_cl__cmd_table[] = 
 {
-  { "add",        FALSE,  svn_cl__add_command,      svn_cl__add, 0,
+  { "add",        FALSE, svn_cl__add, 0,
     "Add new files and directories to version control.\n"
     "usage: add [TARGETS]\n" },
-  { "ad",         TRUE, 0, NULL, 0, NULL },
-  { "new",        TRUE, 0, NULL, 0, NULL },
+  { "ad",         TRUE, NULL, 0, NULL },
+  { "new",        TRUE, NULL, 0, NULL },
 
-  { "checkout",   FALSE,  svn_cl__checkout_command, svn_cl__checkout, 0,
+  { "checkout",   FALSE, svn_cl__checkout, 0,
     "Check out a working directory from a repository.\n"
     "usage: checkout REPOSPATH\n" },
-  { "co",         TRUE, 0, NULL, 0, NULL },
+  { "co",         TRUE, NULL, 0, NULL },
 
-  { "commit",     FALSE,  svn_cl__commit_command,   svn_cl__commit, 0,
+  { "commit",     FALSE, svn_cl__commit, 0,
     "Commit changes from your working copy to the repository.\n"
     "usage: commit [TARGETS]\n" },
-  { "ci",         TRUE, 0, NULL, 0, NULL },
+  { "ci",         TRUE, NULL, 0, NULL },
 
-  { "delete",     FALSE,  svn_cl__delete_command,   svn_cl__delete, 0,
+  { "delete",     FALSE, svn_cl__delete, 0,
     "Remove files and directories from version control.\n"
     "usage: delete [TARGETS]\n" },
-  { "del",        TRUE, 0, NULL, 0, NULL },
-  { "remove",     TRUE, 0, NULL, 0, NULL },
-  { "rm",         TRUE, 0, NULL, 0, NULL },
+  { "del",        TRUE, NULL, 0, NULL },
+  { "remove",     TRUE, NULL, 0, NULL },
+  { "rm",         TRUE, NULL, 0, NULL },
 
-  { "help",       FALSE,  svn_cl__help_command,   svn_cl__help, 0,
+  { "help",       FALSE, svn_cl__help, 0,
     "Display this usage message.\n"
     "usage: help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n" },
-  { "?",          TRUE, 0, NULL, 0, NULL },
-  { "h",          TRUE, 0, NULL, 0, NULL },
+  { "?",          TRUE, NULL, 0, NULL },
+  { "h",          TRUE, NULL, 0, NULL },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
      support them explicitly. */
 
-  { "proplist",   FALSE,  svn_cl__proplist_command, svn_cl__proplist, 0,
+  { "proplist",   FALSE, svn_cl__proplist, 0,
     "List all properties for given files and directories.\n"
     "usage: proplist [TARGETS]\n" },
-  { "plist",      TRUE, 0, NULL, 0, NULL },
-  { "pl",         TRUE, 0, NULL, 0, NULL },
+  { "plist",      TRUE, NULL, 0, NULL },
+  { "pl",         TRUE, NULL, 0, NULL },
 
-  { "propget",    FALSE,  svn_cl__propget_command,  svn_cl__propget, 1,
+  { "propget",    FALSE, svn_cl__propget, 1,
     "Get the value of property PROPNAME on files and directories.\n"
     "usage: propget PROPNAME [TARGETS]\n" },
-  { "pget",       TRUE,   0,  NULL, 1, NULL },
-  { "pg",         TRUE,   0,  NULL, 1, NULL },
+  { "pget",       TRUE, NULL, 1, NULL },
+  { "pg",         TRUE, NULL, 1, NULL },
 
-  { "propset",    FALSE,  svn_cl__propset_command,  svn_cl__propset, 2, 
+  { "propset",    FALSE, svn_cl__propset, 2, 
     "Set property PROPNAME to PROPVAL on the named files and directories.\n"
     "usage: propset PROPNAME [PROPVAL | --valfile VALFILE] "
     "[TARGET1 [TARGET2] ...]\n"},
-  { "pset",       TRUE, 0, NULL, 2, NULL },
-  { "ps",         TRUE, 0, NULL, 2, NULL },
+  { "pset",       TRUE, NULL, 2, NULL },
+  { "ps",         TRUE, NULL, 2, NULL },
 
-  { "status",     FALSE,  svn_cl__status_command,   svn_cl__status, 0,
+  { "status",     FALSE, svn_cl__status, 0,
     "Print the status of working copy files and directories.\n"
     "usage: status [TARGETS]\n" },
-  { "stat",       TRUE, 0, NULL, 0, NULL },
-  { "st",         TRUE, 0, NULL, 0, NULL },
+  { "stat",       TRUE, NULL, 0, NULL },
+  { "st",         TRUE, NULL, 0, NULL },
 
-  { "diff",     FALSE,  svn_cl__diff_command,   svn_cl__diff, 0,
+  { "diff",     FALSE, svn_cl__diff, 0,
     "Display local file changes as contextual diffs.\n"
     "usage: diff [TARGETS]\n" },
-  { "df",         TRUE, 0, NULL, 0, NULL },
+  { "df",         TRUE, NULL, 0, NULL },
 
-  { "update",     FALSE,  svn_cl__update_command,   svn_cl__update, 0,
+  { "update",     FALSE, svn_cl__update, 0,
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n" },
-  { "up",         TRUE, 0, NULL, 0, NULL },
-  { NULL,         FALSE,  0, NULL, 0, NULL }
+  { "up",         TRUE, NULL, 0, NULL },
+  { NULL,         FALSE, NULL, 0, NULL }
 };
 
 
