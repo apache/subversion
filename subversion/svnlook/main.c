@@ -690,36 +690,55 @@ print_diff_tree (svn_fs_root_t *root,
       if ((! no_diff_deleted) || (node->action != 'D'))
         {
           svn_diff_t *diff;
+          svn_string_t *mimetype;
+          svn_boolean_t binary = FALSE;
 
           printf ("===========================================================\
 ===================\n");
           fflush (stdout);
 
-          /* ### TODO: Read the mime-type property of our two diffy
-             items, and if either indicates binariness, don't do the
-             diff. */
-          
-          SVN_ERR (svn_diff_file_diff (&diff, orig_path, new_path, pool));
-          if (svn_diff_contains_diffs (diff))
+          /* Read the mime-type property of our two diffy items, and
+             if either indicates binariness, don't do the diff. */
+          SVN_ERR (svn_fs_node_prop (&mimetype, root, path,
+                                     SVN_PROP_MIME_TYPE, pool));
+          if (mimetype && svn_mime_type_is_binary (mimetype->data))
+            binary = TRUE;
+          if (! binary)
             {
-              apr_file_t *outhandle;
-              apr_status_t apr_err;
-              const char *orig_label, *new_label;
+              SVN_ERR (svn_fs_node_prop (&mimetype, base_root, base_path,
+                                         SVN_PROP_MIME_TYPE, pool));
+              if (mimetype && svn_mime_type_is_binary (mimetype->data))
+                binary = TRUE;
+            }
 
-              /* Get an apr_file_t representing stdout, which is where
-                 we'll have the diff program print to. */
-              apr_err = apr_file_open_stdout (&outhandle, pool);
-              if (apr_err)
-                return svn_error_create 
-                  (apr_err, NULL,
-                   "print_diff_tree: can't open handle to stdout");
+          if (binary)
+            {
+              printf ("(Binary files differ)\n");
+            }
+          else
+            {
+              SVN_ERR (svn_diff_file_diff (&diff, orig_path, new_path, pool));
+              if (svn_diff_contains_diffs (diff))
+                {
+                  apr_file_t *outhandle;
+                  apr_status_t apr_err;
+                  const char *orig_label, *new_label;
 
-              orig_label = generate_label (base_root, base_path, pool);
-              new_label = generate_label (root, path, pool);
-              SVN_ERR (svn_diff_file_output_unified (outhandle, diff, 
-                                                     orig_path, new_path,
-                                                     orig_label, new_label,
-                                                     pool));
+                  /* Get an apr_file_t representing stdout, which is where
+                     we'll have the diff program print to. */
+                  apr_err = apr_file_open_stdout (&outhandle, pool);
+                  if (apr_err)
+                    return svn_error_create 
+                      (apr_err, NULL,
+                       "print_diff_tree: can't open handle to stdout");
+                  
+                  orig_label = generate_label (base_root, base_path, pool);
+                  new_label = generate_label (root, path, pool);
+                  SVN_ERR (svn_diff_file_output_unified (outhandle, diff, 
+                                                         orig_path, new_path,
+                                                         orig_label, new_label,
+                                                         pool));
+                }
             }
         }
 
