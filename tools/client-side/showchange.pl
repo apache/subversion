@@ -16,5 +16,5 @@ my $svn = "svn";
 
 my $prev_revision = $revision - 1;
 
-system ("${svn} log --incremental -r${revision} $url");
+system ("${svn} log -v --incremental -r${revision} $url");
 system ("${svn} diff -r${prev_revision}:${revision} $url");
