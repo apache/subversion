@@ -106,7 +106,10 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 
 /* Set *PATH_P to the path to config file FNAME in the user's personal
    configuration area; if FNAME is NULL, set *PATH_P to the directory
-   name of the user's config area.  Allocate *PATH_P in POOL.  */
+   name of the user's config area.  Allocate *PATH_P in POOL.
+
+   If the user's personal configuration area cannot be located (most
+   likely under Win32), set *PATH_P to NULL regardless of FNAME.  */
 svn_error_t *
 svn_config__user_config_path (const char **path_p,
                               const char *fname,
