@@ -124,6 +124,13 @@ copy_versioned_files (const char *from,
       return SVN_NO_ERROR;
     }
 
+  /* Only export directories with the 'added' status if revision
+     is WORKING.  Otherwise, skip it, as it doesn't exist in any
+     revision other than WORKING. */
+  if (revision->kind != svn_opt_revision_working &&
+      entry->schedule == svn_wc_schedule_add)
+    return SVN_NO_ERROR;
+
   /* Try to make the new directory.  If this fails because the
      directory already exists, check our FORCE flag to see if we
      care. */
@@ -200,8 +207,11 @@ copy_versioned_files (const char *from,
               svn_error_clear (err);
             }
           
-          /* don't copy it if it isn't versioned. */
-          if (! entry)
+          /* Only export 'added' files when the revision is WORKING.
+             Otherwise, skip the 'added' files, since they didn't exist
+             in the BASE revision and don't have an associated text-base. */
+          if (! entry || (revision->kind != svn_opt_revision_working &&
+                          entry->schedule == svn_wc_schedule_add))
             continue;
     
           if (revision->kind != svn_opt_revision_working)

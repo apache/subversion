@@ -37,14 +37,6 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r11296, r11415
-    Fix 'svn export -rBASE' when the working copy has added files or
-    directories that have been committed yet.
-    Justification:
-      It's an irritating bug with a simple fix.
-    Votes:
-      +1: jszakmeister, kfogel, lundblad
-
   * r11364, r11410 (Issue 2076)
     fsfs does not check if the revision is valid for proplist/propedit/etc
     Justification:
