@@ -221,7 +221,6 @@ svn_fs__string_size (apr_size_t *size,
   int db_err;
   DBT query, result;
 
-  /* kff todo: is svn_fs__nodata_dbt() the right thing to use here? */
   svn_fs__clear_dbt (&result);
   result.ulen = 0;
   result.flags |= DB_DBT_USERMEM;
