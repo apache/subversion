@@ -98,7 +98,7 @@ void svn_test_add_dir_cleanup (const char *path);
  *
  * @a editor_name is a name for the editor, a string that will be
  * prepended to the editor output as shown below.  @a editor_name may
- * be the empty string, but it may not be null.
+ * be the empty string (but it may not be null).
  *
  * @a verbose is a flag for specifying whether or not your want all the
  * nitty gritty details displayed.  When @a verbose is @c FALSE, each 

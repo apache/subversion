@@ -2393,7 +2393,7 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
  * @a validator_baton), will be called for each newly generated URL.
  *
  * @a adm_access is an access baton for the directory containing
- * @a path, and must not be NULL.  
+ * @a path.
  */
 svn_error_t *
 svn_wc_relocate (const char *path,
