@@ -969,6 +969,53 @@ svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
 
 
 
+
+
+/* A callback vtable invoked by our diff-editors, as they receive
+   diffs from the server.  'svn diff' and 'svn merge' both implement
+   their own versions of this table. */
+typedef struct svn_diff_callbacks_t
+{
+  /* A file PATH has changed.  The changes can be seen by comparing
+     TMPFILE1 and TMPFILE2, which represent REV1 and REV2 of the file,
+     respectively. */
+  svn_error_t *(*file_changed) (const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                svn_revnum_t rev1,
+                                svn_revnum_t rev2,
+                                void *diff_baton);
+
+  /* A file PATH was added.  The contents can be seen by comparing
+     TMPFILE1 and TMPFILE2. */
+  svn_error_t *(*file_added) (const char *path,
+                              const char *tmpfile1,
+                              const char *tmpfile2,
+                              void *diff_baton);
+  
+  /* A file PATH was deleted.  The [loss of] contents can be seen by
+     comparing TMPFILE1 and TMPFILE2. */
+  svn_error_t *(*file_deleted) (const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                void *diff_baton);
+  
+  /* A directory PATH was added. */
+  svn_error_t *(*dir_added) (const char *path,
+                             void *diff_baton);
+  
+  /* A directory PATH was deleted. */
+  svn_error_t *(*dir_deleted) (const char *path,
+                               void *diff_baton);
+  
+  /* A property NAME attached to PATH changed value to VALUE. */
+  svn_error_t *(*prop_changed) (const char *path,
+                                const char *name,
+                                const svn_string_t *value,
+                                void *diff_baton);
+
+} svn_diff_callbacks_t;
+
 
 
 #ifdef __cplusplus

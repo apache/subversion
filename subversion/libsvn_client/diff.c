@@ -37,6 +37,12 @@
 #include "client.h"
 #include <assert.h>
 
+
+/*-----------------------------------------------------------------*/
+
+/*** Callbacks for 'svn diff', invoked by the repos-diff editor. ***/
+
+
 struct diff_cmd_baton {
   const apr_array_header_t *options;
   apr_pool_t *pool;
@@ -44,29 +50,25 @@ struct diff_cmd_baton {
   apr_file_t *errfile;
 };
 
-/* This is an svn_diff_cmd_t callback, used by 'svn diff' */
+
+/* The main workhorse, which invokes an external 'diff' program on the
+   two temporary files.   The path is the "true" label to use in the
+   diff output, and the revnums are ignored. */
 static svn_error_t *
-diff_cmd (const char *path1,
-          const char *path2,
-          const char *path3,
-          const char *label,
-          enum svn_diff_action_t action,
-          svn_revnum_t path1_rev,
-          svn_revnum_t path2_rev,
-          void *baton)
+diff_file_changed (const char *path,
+                   const char *tmpfile1,
+                   const char *tmpfile2,
+                   svn_revnum_t rev1,
+                   svn_revnum_t rev2,
+                   void *diff_baton)
 {
-  struct diff_cmd_baton *diff_cmd_baton = baton;
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   const char **args = NULL;
   int nargs, exitcode;
   apr_file_t *outfile = diff_cmd_baton->outfile;
   apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
-
-  /* ### In the case of adds or deletes, the diff editor is already
-     guaranteeing that either PATH1 or PATH2 is an empty file.
-     However, perhaps someday this callback might want to look at
-     ACTION and print something more informative:  "file was deleted"
-     or somesuch, instead of printing all '-' or '+' signs.  Dunno.  */
+  const char *label = path;
 
   /* Execute local diff command on these two paths, print to stdout. */
   nargs = diff_cmd_baton->options->nelts;
@@ -83,12 +85,12 @@ diff_cmd (const char *path1,
     }
 
   /* Print out the diff header. */
-  apr_file_printf (outfile, "Index: %s\n", label ? label : path1);
+  apr_file_printf (outfile, "Index: %s\n", label ? label : tmpfile1);
   apr_file_printf (outfile, 
      "===================================================================\n");
 
-  SVN_ERR (svn_io_run_diff (".", args, nargs, label, 
-                            path1, path2, 
+  SVN_ERR (svn_io_run_diff (".", args, nargs, path, 
+                            tmpfile1, tmpfile2, 
                             &exitcode, outfile, errfile, subpool));
 
   /* ### todo: Handle exit code == 2 (i.e. errors with diff) here */
@@ -103,6 +105,76 @@ diff_cmd (const char *path1,
   return SVN_NO_ERROR;
 }
 
+/* The because the repos-diff editor passes at least one empty file to
+   each of these next two functions, they can be dumb wrappers around
+   the main workhorse routine. */
+static svn_error_t *
+diff_file_added (const char *path,
+                 const char *tmpfile1,
+                 const char *tmpfile2,
+                 void *diff_baton)
+{
+  return diff_file_changed (path, tmpfile1, tmpfile2, 
+                            SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                            diff_baton);
+}
+
+static svn_error_t *
+diff_file_deleted (const char *path,
+                   const char *tmpfile1,
+                   const char *tmpfile2,
+                   void *diff_baton)
+{
+  return diff_file_changed (path, tmpfile1, tmpfile2, 
+                            SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                            diff_baton);
+}
+
+/* For now, let's have 'svn diff' send feedback to the top-level
+   application, so that something reasonable about directories and
+   propsets gets printed to stdout. */
+static svn_error_t *
+diff_dir_added (const char *path,
+                void *diff_baton)
+{
+  /* ### todo:  send feedback to app */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+diff_dir_deleted (const char *path,
+                  void *diff_baton)
+{
+  /* ### todo:  send feedback to app */
+  return SVN_NO_ERROR;
+}
+  
+static svn_error_t *
+diff_prop_changed (const char *path,
+                   const char *name,
+                   const svn_string_t *value,
+                   void *diff_baton)
+{
+  /* ### todo:  send feedback to app */
+  return SVN_NO_ERROR;
+}
+
+/* The main callback table for 'svn diff'.  */
+static svn_diff_callbacks_t 
+diff_callbacks =
+  {
+    diff_file_changed,
+    diff_file_added,
+    diff_file_deleted,
+    diff_dir_added,
+    diff_dir_deleted,
+    diff_prop_changed
+  };
+
+
+/*-----------------------------------------------------------------*/
+
+/*** Callbacks for 'svn merge', invoked by the repos-diff editor. ***/
 
 
 struct merge_cmd_baton {
@@ -110,16 +182,13 @@ struct merge_cmd_baton {
 };
 
 
-/* This is an svn_diff_cmd_t callback, used by 'svn merge' */
 static svn_error_t *
-merge_cmd (const char *older,
-           const char *yours,
-           const char *mine,
-           const char *label,
-           enum svn_diff_action_t action,
-           svn_revnum_t older_rev,
-           svn_revnum_t yours_rev,
-           void *baton)
+merge_file_changed (const char *mine,
+                    const char *older,
+                    const char *yours,
+                    svn_revnum_t older_rev,
+                    svn_revnum_t yours_rev,
+                    void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
@@ -133,64 +202,122 @@ merge_cmd (const char *older,
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
-  /* ### Remove the printf stuff below once we have the update
-     trace-editor composed with the diff editor.  But we need to
-     convert the diff editor to the "new" interface first, before we
-     can do the composition.  */
+  err = svn_wc_merge (older, yours, mine,
+                      left_label, right_label, target_label,
+                      subpool);
+  if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
+    return err;  
 
-  /* ### <REMOVE ME> 
-  const char *act = "NONE";
-  switch (action)
-    {
-    case svn_diff_action_delete:
-      act = "delete";
-      break;
-    case svn_diff_action_add:
-      act = "add";
-      break;
-    case svn_diff_action_modify:
-      act = "modify";
-      break;
-    }
-  printf ("------------------------\n");
-  printf ("Hello, world!\n");
-  printf ("Action is: %s\n", act);
-  printf ("Older = %s, revision %d\n", older, (int) older_rev);
-  printf ("Yours = %s, revision %d\n", yours, (int) yours_rev);
-  printf ("Mine  = %s\n", mine);
-  ### </REMOVE ME> */
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
 
-  switch (action)
-    {
-      /* ### should all this stuff be done -loggily- like the
-         update-editor does things??  */
+static svn_error_t *
+merge_file_added (const char *mine,
+                  const char *older,
+                  const char *yours,
+                  void *baton)
+{
+  struct merge_cmd_baton *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
 
-    case svn_diff_action_modify: /* patch the file */
-      err = svn_wc_merge (older, yours, mine,
-                         left_label, right_label, target_label,
-                         subpool);
-      if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-        return err;  
-      break;
-      
-    case svn_diff_action_add:
-      SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
-      SVN_ERR (svn_client_add (svn_stringbuf_create (mine, subpool), 
-                               FALSE, NULL, NULL, subpool));
-      break;
-      
-    case svn_diff_action_delete: /*  */
-      SVN_ERR (svn_client_delete (NULL, 
-                                  svn_stringbuf_create (mine, subpool),
-                                  FALSE, /* don't force */
-                                  NULL, NULL, NULL, NULL, subpool));
-      break;
-    }
+  /* ### if file already exists, this should call svn_wc_merge. */
+  
+  SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
+  SVN_ERR (svn_client_add (svn_stringbuf_create (mine, subpool), 
+                           FALSE, NULL, NULL, subpool));
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+merge_file_deleted (const char *mine,
+                    const char *older,
+                    const char *yours,
+                    void *baton)
+{
+  struct merge_cmd_baton *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+
+  /* ### if file is already non-existent, this should be a no-op. */
+
+  SVN_ERR (svn_client_delete (NULL, 
+                              svn_stringbuf_create (mine, subpool),
+                              FALSE, /* don't force */
+                              NULL, NULL, NULL, NULL, subpool));
   
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+merge_dir_added (const char *path,
+                 void *baton)
+{
+  struct merge_cmd_baton *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+  svn_stringbuf_t *path_s = svn_stringbuf_create (path, subpool);
+
+  /* ### if directory already exists, this should be a no-op */
+
+  SVN_ERR (svn_client_mkdir (NULL, path_s, NULL, NULL, NULL, NULL, subpool));
+  SVN_ERR (svn_client_add (path_s, FALSE, NULL, NULL, subpool));
+  
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+merge_dir_deleted (const char *path,
+                   void *baton)
+{
+  struct merge_cmd_baton *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+
+  /* ### if directory is already non-existent, this should be a no-op */
+
+  SVN_ERR (svn_client_delete (NULL, 
+                              svn_stringbuf_create (path, subpool),
+                              FALSE, /* don't force */
+                              NULL, NULL, NULL, NULL, subpool));
+  
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+  
+static svn_error_t *
+merge_prop_changed (const char *path,
+                    const char *name,
+                    const svn_string_t *value,
+                    void *baton)
+{
+  struct merge_cmd_baton *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+
+  SVN_ERR (svn_client_propset (name, value, path, FALSE, subpool));
+  
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
+}
+
+/* The main callback table for 'svn merge'.  */
+static svn_diff_callbacks_t 
+merge_callbacks =
+  {
+    merge_file_changed,
+    merge_file_added,
+    merge_file_deleted,
+    merge_dir_added,
+    merge_dir_deleted,
+    merge_prop_changed
+  };
+
+
+/*-----------------------------------------------------------------------*/
+
+/** The shared logic behind 'svn diff' and 'svn merge'.  */
 
 
 /* Hi!  I'm a soon-to-be-out-of-date comment regarding a
@@ -224,8 +351,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
                svn_stringbuf_t *path2,
                const svn_client_revision_t *revision2,
                svn_boolean_t recurse,
-               svn_diff_cmd_t cmd,
-               void *cmd_baton,
+               svn_diff_callbacks_t *callbacks,
+               void *callback_baton,
                apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
@@ -275,7 +402,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
           || (revision1->kind == svn_client_revision_base))
       && (revision2->kind == svn_client_revision_working))
     {
-      return svn_wc_diff (anchor, target, cmd, cmd_baton, recurse, pool);
+      return svn_wc_diff (anchor, target, callbacks, callback_baton,
+                          recurse, pool);
     }
 
   /* Else we must contact the repository. */
@@ -309,7 +437,7 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
     {
       /* The working copy is involved in this case. */
       SVN_ERR (svn_wc_get_diff_editor (anchor, target,
-                                       cmd, cmd_baton,
+                                       callbacks, callback_baton,
                                        recurse,
                                        &diff_editor, &diff_edit_baton,
                                        pool));
@@ -354,8 +482,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
 
       /* Get the true diff editor. */
       SVN_ERR (svn_client__get_diff_editor (target,
-                                            cmd,
-                                            cmd_baton,
+                                            callbacks,
+                                            callback_baton,
                                             recurse,
                                             ra_lib, session2,
                                             start_revnum,
@@ -399,9 +527,9 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
   return SVN_NO_ERROR;
 }
 
-
+/*----------------------------------------------------------------------- */
 
-/*** Public Interface. ***/
+/*** Public Interfaces. ***/
 
 /* Display context diffs between two PATH/REVISION pairs.  Each of
    these input will be one of the following:
@@ -471,7 +599,7 @@ svn_client_diff (const apr_array_header_t *options,
                         path2,
                         revision2,
                         recurse,
-                        diff_cmd,
+                        &diff_callbacks,
                         &diff_cmd_baton,
                         pool);
 }
@@ -501,7 +629,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                         path2,
                         revision2,
                         recurse,
-                        merge_cmd,
+                        &merge_callbacks,
                         &merge_cmd_baton,
                         pool);
 }
