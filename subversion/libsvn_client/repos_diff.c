@@ -43,7 +43,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  svn_diff_cmd_t diff_cmd;
+  svn_diff_callbacks_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
@@ -300,28 +300,6 @@ get_empty_file (struct edit_baton *b,
   return SVN_NO_ERROR;
 }
 
-/* Runs the diff callback to display the difference for a single file. At
- * this stage both versions of the file exist as temporary files.
- * ACTION describes the action to be passed to the diff-callback.
- */
-static svn_error_t *
-run_diff_cmd (struct file_baton *b,
-              enum svn_diff_action_t action)
-{
-  svn_diff_cmd_t diff_cmd = b->edit_baton->diff_cmd;
-
-  SVN_ERR (diff_cmd (b->path_start_revision->data, /* rev1 ("older") */
-                     b->path_end_revision->data,   /* rev2 ("yours") */
-                     b->path,                     /* possible "mine" */
-                     b->path,      /* correct label to show in diffs */
-                     action,
-                     b->edit_baton->revision,                /* rev1 */
-                     b->edit_baton->target_revision,         /* rev2 */
-                     b->edit_baton->diff_cmd_baton));
-
-  return SVN_NO_ERROR;
-}
-
 /* An svn_delta_edit_fns_t editor function. The root of the comparison
  * hierarchy
  */
@@ -369,6 +347,9 @@ delete_entry (const char *path,
   svn_node_kind_t kind;
 
   /* We need to know if this is a directory or a file */
+  /* ### over ra_dav, this breaks if PATH doesn't exist in HEAD; see
+       issue #581.  Obviously, this kind of misses the point of
+       passing in a revision.  :-)  */
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
                                                pb->edit_baton->ra_session,
                                                path,
@@ -385,13 +366,21 @@ delete_entry (const char *path,
                                                 pool);
         SVN_ERR (get_file_from_ra (b));
         SVN_ERR (get_empty_file(b->edit_baton, &b->path_end_revision));
-        SVN_ERR (run_diff_cmd (b, svn_diff_action_delete));
+        
+        SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
+                 (b->path,
+                  b->path_start_revision->data,
+                  b->path_end_revision->data,
+                  b->edit_baton->diff_cmd_baton));
+        break;
       }
-      break;
     case svn_node_dir:
-      /* ### TODO: need to get the directory entries to show
-         deleted files */
-      break;
+      {
+        SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
+                 (pb->path,
+                  pb->edit_baton->diff_cmd_baton));
+        break;
+      }
     default:
       break;
     }
@@ -416,6 +405,10 @@ add_directory (const char *path,
 
   b = make_dir_baton (path, pb, TRUE, pool);
   *child_baton = b;
+
+  SVN_ERR (pb->edit_baton->diff_callbacks->dir_added 
+           (path,
+            pb->edit_baton->diff_cmd_baton));
 
   return SVN_NO_ERROR;
 }
@@ -561,6 +554,7 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
+  struct edit_baton *eb = b->edit_baton;
 
   /* Maybe only the properties changed, not the text content.  In that
      case, no difference is reported, and no need to run diff.
@@ -570,13 +564,60 @@ close_file (void *file_baton)
   if (b->path_end_revision)
     {
       if (b->added)
-        SVN_ERR (run_diff_cmd (b, svn_diff_action_add));
+        SVN_ERR (eb->diff_callbacks->file_added
+                 (b->path,
+                  b->path_start_revision->data,
+                  b->path_end_revision->data,
+                  b->edit_baton->diff_cmd_baton));
       else
-        SVN_ERR (run_diff_cmd (b, svn_diff_action_modify));
+        SVN_ERR (eb->diff_callbacks->file_changed
+                 (b->path,
+                  b->path_start_revision->data,
+                  b->path_end_revision->data,
+                  b->edit_baton->revision,
+                  b->edit_baton->target_revision,
+                  b->edit_baton->diff_cmd_baton));
     }
 
   return SVN_NO_ERROR;
 }
+
+/* An svn_delta_edit_fns_t editor function.
+ */
+static svn_error_t *
+change_file_prop (void *file_baton,
+                  const char *name,
+                  const svn_string_t *value,
+                  apr_pool_t *pool)
+{
+  struct file_baton *b = file_baton;
+  struct edit_baton *eb = b->edit_baton;
+
+  SVN_ERR (eb->diff_callbacks->prop_changed
+           (b->path, name, value,
+            eb->diff_cmd_baton));
+  
+  return SVN_NO_ERROR;
+}
+
+/* An svn_delta_edit_fns_t editor function.
+ */
+static svn_error_t *
+change_dir_prop (void *dir_baton,
+                 const char *name,
+                 const svn_string_t *value,
+                 apr_pool_t *pool)
+{
+  struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;
+
+  SVN_ERR (eb->diff_callbacks->prop_changed
+           (db->path, name, value,
+            eb->diff_cmd_baton));
+  
+  return SVN_NO_ERROR;
+}
+
 
 /* An svn_delta_edit_fns_t editor function.
  */
@@ -594,7 +635,7 @@ close_edit (void *edit_baton)
  */
 svn_error_t *
 svn_client__get_diff_editor (svn_stringbuf_t *target,
-                             svn_diff_cmd_t diff_cmd,
+                             svn_diff_callbacks_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_ra_plugin_t *ra_lib,
@@ -609,7 +650,7 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
   struct edit_baton *eb = apr_palloc (subpool, sizeof (*eb));
 
   eb->target = target;
-  eb->diff_cmd = diff_cmd;
+  eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->recurse = recurse;
   eb->ra_lib = ra_lib;
@@ -627,6 +668,8 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
   tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->close_file = close_file;
+  tree_editor->change_file_prop = change_file_prop;
+  tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_edit = close_edit;
 
   *edit_baton = eb;

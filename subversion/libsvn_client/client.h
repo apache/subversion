@@ -199,7 +199,7 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
  */
 svn_error_t *
 svn_client__get_diff_editor (svn_stringbuf_t *target,
-                             svn_diff_cmd_t diff_cmd,
+                             svn_diff_callbacks_t *diff_cmd,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_ra_plugin_t *ra_lib,
