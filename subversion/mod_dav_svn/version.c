@@ -386,10 +386,10 @@ static int dav_svn_report_label_header_allowed(const ap_xml_doc *doc)
   return 0;
 }
 
-static dav_error *dav_svn_get_report(request_rec *r,
-                                     const dav_resource *resource,
-                                     const ap_xml_doc *doc,
-                                     ap_text_header *report)
+static dav_error *dav_svn_deliver_report(request_rec *r,
+                                         const dav_resource *resource,
+                                         const ap_xml_doc *doc,
+                                         ap_filter_t *output)
 {
   int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
 
@@ -399,11 +399,11 @@ static dav_error *dav_svn_get_report(request_rec *r,
 
       if (strcmp(doc->root->name, "update-report") == 0)
         {
-          return dav_svn__update_report(resource, doc, report);
+          return dav_svn__update_report(resource, doc, output);
         }
       if (strcmp(doc->root->name, "log-report") == 0)
         {
-          return dav_svn__log_report(resource, doc, report);
+          return dav_svn__log_report(resource, doc, output);
         }
     }
 
@@ -522,7 +522,7 @@ const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_checkin,
   dav_svn_avail_reports,
   dav_svn_report_label_header_allowed,
-  dav_svn_get_report,
+  dav_svn_deliver_report,
   NULL,                 /* update */
   NULL,                 /* add_label */
   NULL,                 /* remove_label */
