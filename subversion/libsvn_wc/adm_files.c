@@ -391,7 +391,9 @@ prop_path_internal (svn_string_t **prop_path,
     {
       svn_path_split (path, prop_path, &entry_name,
                       svn_path_local_style, pool);
- 
+      if (svn_path_is_empty (*prop_path, svn_path_local_style))
+        svn_string_set (*prop_path, ".");
+
       err = svn_wc_check_wc (*prop_path, &is_wc, pool);
       if (err)
         return err;
