@@ -91,7 +91,7 @@ section for approved changes.)
       Change 'expl' to 'expt' to avoid conflict with C99 builtins.
       Justification: avoids compile warnings, trivial & low risk
       Votes:
-        +1: kfogel
+        +1: kfogel, ghudson
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
