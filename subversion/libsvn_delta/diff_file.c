@@ -98,29 +98,38 @@ svn_diff__file_datasource_open(void *baton,
                                file_baton->path[idx]);
     }
 
+  if (finfo.size == 0)
+    {
+      file_baton->buffer[idx] = NULL;
+    }
+
 #if APR_HAS_MMAP
-  {
-    apr_mmap_t *mm;
+  else
+    {
+      apr_mmap_t *mm;
 
-    rv = apr_mmap_create(&mm, file,
-                         0, finfo.size, APR_MMAP_READ,
-                         file_baton->pool);
-    if (rv != APR_SUCCESS)
-      {
-        return svn_error_createf(rv, NULL, "Failed to mmap file '%s'.",
-                                 file_baton->path[idx]);
-      }
+      rv = apr_mmap_create(&mm, file,
+                           0, finfo.size, APR_MMAP_READ,
+                           file_baton->pool);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL, "Failed to mmap file '%s'.",
+                                   file_baton->path[idx]);
+        }
 
-    file_baton->buffer[idx] = mm->mm;
-  }
+      file_baton->buffer[idx] = mm->mm;
+    }
 
 #else /* APR_HAS_MMAP */
-  file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size);
-  rv = apr_file_read_full(file, file_baton->buffer[idx], finfo.size, NULL);
-  if (rv != APR_SUCCESS)
+  else
     {
-      return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
-                               file_baton->path[idx]);
+      file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size);
+      rv = apr_file_read_full(file, file_baton->buffer[idx], finfo.size, NULL);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
+                                   file_baton->path[idx]);
+        }
     }
 
   rv = apr_file_close(file);
