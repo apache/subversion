@@ -834,12 +834,17 @@ def nonascii_filenames():
   # a UTF-8 locale (which does not exhibit this problem)
   current_locale = locale.getlocale()
   new_locale = 'en_US.ISO8859-1'
+  locale_changed = None
 
   try:
     # change locale to non-UTF-8 locale to generate latin1 names
     locale.setlocale(locale.LC_ALL, # this might be too broad?
                      new_locale)
+    locale_changed = 1
+  except locale.Error:
+    raise svntest.Skip
 
+  try:
     testdata_path = os.path.abspath('test-data')
     srcrepos_path = os.path.join(testdata_path,'main-cvsrepos')
     dstrepos_path = os.path.join(testdata_path,'non-ascii-cvsrepos')
@@ -854,11 +859,10 @@ def nonascii_filenames():
 
     # if ensure_conversion can generate a 
     repos, wc, logs = ensure_conversion('non-ascii', encoding='latin1')
-
   finally:
+    if locale_changed:
+      locale.setlocale(locale.LC_ALL, current_locale)
     shutil.rmtree(dstrepos_path)
-    locale.setlocale(locale.LC_ALL,
-                     current_locale)
     
 
 def vendor_branch_sameness():
