@@ -19,20 +19,6 @@ To be fixed by someone:
 
 --------------------------------------------------------------
 
-To be fixed by fitz:
-  
-ch09:
-
-  - svnserve isn't mentioned at *all*.  this is really inconsistent;
-    it's used at least as much as 'svnlook' or other binaries we
-    ship.  it's not a 2nd-class citizen;  it needs to be documented in
-    the reference chapter like everything else.  (run 'man svnserve'
-    and/or read chapter 6 to understand how it works)
-
-
-
---------------------------------------------------------------
-
 To be fixed by sussman:
 
 ch01:
