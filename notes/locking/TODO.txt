@@ -11,7 +11,7 @@ MUST HAVE
        --> depends on patch-in-progress:
            rev svn_wc_notify_func_t (on trunk) (lundblad/sussman)
 
-* fix svn_fs_access_t handling in svnserve (sussman)
+* fix svn_fs_access_t handling in svnserve (lundblad)
 
 * possibly teach mailer.py to send lock/unlock mails (fitz)
 
