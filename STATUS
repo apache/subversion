@@ -15,8 +15,6 @@ Candidate changes:
       Simple fix for a nasty problem that has bitten at least one user.
     Votes:
        +1: bliss, maxb, breser, ghudson
-       -1: brane [until someone explains to me why this should be a
-                  Unix-only change]
 
 Status of 1.1.1:
 ================
