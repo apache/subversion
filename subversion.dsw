@@ -27,7 +27,7 @@ Package=<4>
     Project_Dep_Name libsvn_tests_main
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name subversion_client
+    Project_Dep_Name svn
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name svnadmin
@@ -84,7 +84,7 @@ Package=<4>
     Project_Dep_Name tests_libsvn_subr_string
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name tests_libsvn_subr_target_test
+    Project_Dep_Name tests_libsvn_subr_target
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_wc_checkout
@@ -282,7 +282,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "subversion_client"=.\subversion\clients\cmdline\subversion_client.dsp - Package Owner=<4>
+Project: "svn"=.\subversion\clients\cmdline\subversion_client.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -585,7 +585,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_subr_target_test"=.\SUBVERSION\TESTS\LIBSVN_SUBR\tests_libsvn_subr_target_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_subr_target"=.\SUBVERSION\TESTS\LIBSVN_SUBR\tests_libsvn_subr_target_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
