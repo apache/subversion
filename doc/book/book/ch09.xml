@@ -510,6 +510,11 @@ $ svn log -r 1729:{2002-02-17}
           <title>Changes</title>
           <para>Working Copy</para>
         </refsect1>
+
+        <refsect1>
+          <title>Accesses Repository</title>
+          <para>No</para>
+        </refsect1>
         
         <refsect1>
           <title>Switches</title>
