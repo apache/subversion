@@ -27,6 +27,7 @@
 #include <apr_hash.h>
 #include "svn_wc.h"
 #include "svn_delta.h"
+#include "svn_diff.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -35,6 +36,7 @@
 #include "svn_io.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
+#include "svn_config.h"
 #include "client.h"
 #include <assert.h>
 
@@ -126,6 +128,10 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 
 
 struct diff_cmd_baton {
+  /* Full path of external command to run to perform the 'diff',
+     NULL for the internal library.
+   */
+  const char *cmd;
   const apr_array_header_t *options;
   apr_pool_t *pool;
   apr_file_t *outfile;
@@ -183,6 +189,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
                    void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  const char *diff_cmd = diff_cmd_baton->cmd;
   const char **args = NULL;
   int nargs, exitcode;
   apr_file_t *outfile = diff_cmd_baton->outfile;
@@ -203,11 +210,6 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
         }
       assert (i == nargs);
     }
-
-  /* Print out the diff header. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
-  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
-                               path_native, equal_string));
 
   if (rev1 == rev2)
     {
@@ -255,13 +257,43 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       label1 = diff_label (path, rev1, subpool);
       label2 = diff_label (path, rev2, subpool);
     }
+    
+  if (diff_cmd)
+    {
+      const char *diff_utf8;
+ 
+      SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, subpool));
+ 
+      /* Print out the diff header. */
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
+      SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+                                   path_native, equal_string));
 
-  SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
-                            tmpfile1, tmpfile2, 
-                            &exitcode, outfile, errfile, subpool));
+      /* XXX: Find a way to pass diff_cmd to svn_io_run_diff */
+      SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
+                                tmpfile1, tmpfile2, 
+                                &exitcode, outfile, errfile, subpool));
+    }
+  else
+    {
+      svn_diff_t *diff;
 
-  /* ### todo: Handle exit code == 2 (i.e. errors with diff) here */
-  
+      SVN_ERR (svn_diff_file (&diff, tmpfile1, tmpfile2, subpool));
+      if (svn_diff_contains_diffs (diff))
+        {
+          /* Print out the diff header. */
+          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
+          SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+                                       path_native, equal_string));
+
+          /* Output the actual diff */
+          SVN_ERR(svn_diff_file_output_unified(outfile, diff,
+                                               tmpfile1, tmpfile2,
+                                               label1, label2,
+                                               subpool));
+        }
+    }
+
   /* ### todo: someday we'll need to worry about whether we're going
      to need to write a diff plug-in mechanism that makes use of the
      two paths, instead of just blindly running SVN_CLIENT_DIFF.  */
@@ -1331,7 +1363,8 @@ svn_client_diff (const apr_array_header_t *options,
 {
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks_t diff_callbacks;
-
+  svn_config_t *cfg;
+ 
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
   diff_callbacks.file_deleted = no_diff_deleted ? diff_file_deleted_no_diff :
@@ -1340,6 +1373,10 @@ svn_client_diff (const apr_array_header_t *options,
   diff_callbacks.dir_deleted = diff_dir_deleted;
   diff_callbacks.props_changed = diff_props_changed;
     
+  cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                      APR_HASH_KEY_STRING);
+  svn_config_get (cfg, &diff_cmd_baton.cmd, "helpers", "diff-cmd", NULL);
+
   diff_cmd_baton.orig_path_1 = path1;
   diff_cmd_baton.orig_path_2 = path2;
 

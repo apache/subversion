@@ -98,6 +98,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "try operation but make no changes"},
     {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
                        "do not print differences for deleted files"},
+    {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
+                      "Use \"ARG\" as diff command"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -209,6 +211,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', 'x', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__diff_cmd_opt,
      svn_cl__no_diff_deleted} },
 
   { "export", svn_cl__export, {0},
@@ -740,6 +743,9 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
         break;
+      case svn_cl__diff_cmd_opt:
+        opt_state.diff_cmd = apr_pstrdup (pool, opt_arg);
+	break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -915,6 +921,20 @@ main (int argc, const char * const *argv)
       return EXIT_FAILURE;
     }
 
+    /* Update the options in the config */
+    /* XXX: Only diff_cmd for now, overlay rest later and stop passing
+       opt_state altogether? */
+    if (opt_state.diff_cmd)
+      svn_config_set (cfg, "helpers", "diff-cmd", opt_state.diff_cmd);
+
+    err = svn_config_read_servers (&cfg, pool);
+    if (err)
+      svn_handle_error (err, stderr, 0);
+    else
+      apr_hash_set (ctx.config, SVN_CONFIG_CATEGORY_SERVERS,
+                    APR_HASH_KEY_STRING, cfg);
+  }
+  
   ctx.log_msg_func = svn_cl__get_log_message;
   ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
                                                   ctx.config, pool);

@@ -59,7 +59,8 @@ typedef enum {
   svn_cl__non_interactive_opt,
   svn_cl__no_diff_deleted,
   svn_cl__dry_run_opt,
-  svn_cl__revprop_opt
+  svn_cl__revprop_opt,
+  svn_cl__diff_cmd_opt
 } svn_cl__longopt_t;
 
 
@@ -103,6 +104,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
+  const char *diff_cmd;          /* the external diff command to use */
 } svn_cl__opt_state_t;
 
 
