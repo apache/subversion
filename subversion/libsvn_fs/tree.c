@@ -1241,10 +1241,16 @@ merge (const char **conflict_p,
                       else  /* otherwise, they're not all dirs, so... */
                         {
                           /*... flag a conflict. */
-                          *conflict_p = target_path;
+                          
+                          /* ### kff todo: abstract path creation func
+                             here? */
+                          *conflict_p = apr_psprintf (trail->pool,
+                                                      "%s/%s",
+                                                      target_path,
+                                                      a_entry->name);
                           return svn_error_createf
                             (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                             "conflict at \"%s\"", target_path);
+                             "conflict at \"%s\"", *conflict_p);
                         }
                     }
                   /* Else target entry has changed since ancestor
@@ -1262,14 +1268,12 @@ merge (const char **conflict_p,
               if (! svn_fs_id_eq (a_entry->id, s_entry->id))
                 {
                   /* ### kff todo: abstract path creation func here? */
-                  const char *new_tpath
-                    = apr_psprintf (trail->pool, "%s/%s",
-                                    target_path, a_entry->name);
+                  *conflict_p = apr_psprintf (trail->pool, "%s/%s",
+                                              target_path, a_entry->name);
                   
-                  *conflict_p = new_tpath;
                   return svn_error_createf
                     (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                     "conflict at \"%s\"", new_tpath);
+                     "conflict at \"%s\"", *conflict_p);
                 }
 
               /* Else if E did not change between ancestor and source,
@@ -1303,14 +1307,12 @@ merge (const char **conflict_p,
                      E in source. */
 
                   /* ### kff todo: abstract path creation func here? */
-                  const char *new_tpath
-                    = apr_psprintf (trail->pool, "%s/%s",
-                                    target_path, t_entry->name);
+                  *conflict_p = apr_psprintf (trail->pool, "%s/%s",
+                                              target_path, t_entry->name);
 
-                  *conflict_p = new_tpath;
                   return svn_error_createf
                     (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                     "conflict at \"%s\"", new_tpath);
+                     "conflict at \"%s\"", *conflict_p);
                 }
             }
           /* E exists in neither target nor source */
@@ -1352,10 +1354,13 @@ merge (const char **conflict_p,
           /* E exists in target but is different from E in source */
           else if (! svn_fs_id_eq (s_entry->id, t_entry->id))
             {
-              *conflict_p = target_path;
+              /* ### kff todo: abstract path creation func here? */
+              *conflict_p = apr_psprintf (trail->pool, "%s/%s",
+                                          target_path, t_entry->name);
+              
               return svn_error_createf
                 (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                 "conflict at \"%s\"", target_path);
+                 "conflict at \"%s\"", *conflict_p);
 
               /* The remaining case would be: E exists in target and
                * is same as in source.  This implies a twin add, so
