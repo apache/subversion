@@ -45,6 +45,7 @@
 #include "dag.h"
 #include "tree.h"
 #include "proplist.h"
+#include "hooks.h"
 
 
 
@@ -1690,8 +1691,19 @@ svn_fs_commit_txn (const char **conflict_p,
    */
 
   svn_error_t *err;
+  svn_fs_t *fs = svn_fs__txn_fs (txn);
+  apr_pool_t *pool = svn_fs__txn_pool (txn);
 
-  /* ### todo: run pre-commit hooks. */
+  /* Run pre-commit hooks. */
+  {
+    const char *txn_name;
+
+    SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
+    SVN_ERR (svn_fs__run_pre_commit_hooks (fs, txn_name, pool));
+
+    /* ### todo: actually, if error want to abort the txn before
+       returning.  If it's a hook failure error, that is. */
+  }
 
   while (1729)
     {
@@ -1701,8 +1713,6 @@ svn_fs_commit_txn (const char **conflict_p,
       svn_revnum_t youngish_rev;
       svn_fs_root_t *youngish_root;
       dag_node_t *youngish_root_node;
-      svn_fs_t *fs = svn_fs__txn_fs (txn);
-      apr_pool_t *pool = svn_fs__txn_pool (txn);
 
       /* Get the *current* youngest revision, in one short-lived
          Berkeley transaction.  (We don't want the revisions table
@@ -1765,7 +1775,8 @@ svn_fs_commit_txn (const char **conflict_p,
         }
     }
 
-  /* ### todo: run post-commit hooks. */
+  /* Run post-commit hooks. */
+  SVN_ERR (svn_fs__run_post_commit_hooks (fs, *new_rev, pool));
 
   return SVN_NO_ERROR;
 }
