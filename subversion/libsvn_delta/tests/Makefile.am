@@ -32,8 +32,25 @@ random_test_LDADD = ../libsvn_delta.la \
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
-## Automatic test scripts to run for `make check`
+## Automatic tests run by `make check` -----------------------------
 
-## TESTS = 
+## A list of test-programs to run.  (Each program contains sub-tests.)
+SVN_TESTS = random-test
 
-
+## We're overriding automake's own `check' rule, because it's extremely
+## inflexible;  we want better control over automated-test output. 
+check:
+	@echo > tests.log
+	@for prog in $(SVN_TESTS); do \
+	  echo; \
+	  echo -n "Running all sub-tests in $$prog..."; \
+	  ./$$prog >> tests.log; \
+	  if [ $$? -eq 0 ]; \
+	  then \
+	     echo "SUCCESS"; \
+	  else \
+	     echo; \
+	     echo "at least one sub-test FAILED, check tests.log:"; echo; \
+	     cat tests.log | grep FAIL; \
+	  fi; \
+	done
