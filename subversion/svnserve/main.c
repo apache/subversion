@@ -88,7 +88,7 @@ static const apr_getopt_option_t svnserve__options[] =
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
      "listen port (for daemon mode)"},
     {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
-     "listen host (for daemon mode)"},
+     "listen hostname or IP address (for daemon mode)"},
     {"help",             'h', 0, "display this help"},
     {"root",             'r', 1, "root of directory to serve"},
     {"read-only",        'R', 0, "deprecated; use repository config file"},
