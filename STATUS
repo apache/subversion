@@ -70,6 +70,12 @@ Candidate changes:
     Votes:
       +1: breser
 
+  * r8718
+    Remove shell calls in perl bindings tests.
+    Justification: Will fail if svn isn't already installed.
+    Votes:
+      +1: breser
+
 Status of 1.0.1:
 ================
 
