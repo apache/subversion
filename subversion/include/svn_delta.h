@@ -91,6 +91,16 @@ typedef struct svn_delta_digger_t
   
   svn_delta_t *delta;
 
+  /* TODO: might want to declare a 
+   * 
+   *    svn_edit_content_t *context;
+   *
+   * or something for the data handler to use as instantly available
+   * context; otherwise it's cdr'ing down the delta each time.  Not
+   * horrible, since depth is never very great, but not the most
+   * efficient thing either. 
+   */
+
   /* Caller uses delta context to determine if prop data or text data. */
   svn_error_t (*data_handler) (svn_delta_digger_t *digger,
                                const char *data,
