@@ -306,6 +306,19 @@ svn_error_t *svn_wc_add_directory (svn_string_t *dir,
 svn_error_t *svn_wc_add_file (svn_string_t *file,
                               apr_pool_t *pool);
 
+/* Recursively un-mark a tree (beginning at a directory or a file
+   PATH) for addition.  */
+svn_error_t *svn_wc_unadd (svn_string_t *path,
+                           apr_pool_t *pool);
+
+/* Un-mark a PATH for deletion.  If RECURSE is TRUE and PATH
+   represents a directory, un-mark the entire tree under PATH for
+   deletion.  */
+svn_error_t *svn_wc_undelete (svn_string_t *path,
+                              svn_boolean_t recurse,
+                              apr_pool_t *pool);
+
+
 
 /*** Commits. ***/
 
