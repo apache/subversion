@@ -132,6 +132,9 @@ svn_fs__string_append (svn_fs_t *fs,
       char next_key[200];
       apr_size_t key_len;
 
+      /* ### todo: see issue #409 for why bumping the key as part of this
+         trail is problematic. */
+
       /* Get the current value associated with `next-key'.  */
       svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
       SVN_ERR (DB_WRAP (fs, "allocating new string (getting next-key)",
