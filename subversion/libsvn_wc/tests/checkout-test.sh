@@ -10,4 +10,4 @@ fi
 # First get rid of any remnant of the last run.
 rm -rf A
 
-./checkout-test checkout-1.delta
+./checkout-test checkout-1.delta this/is/a/test/dir

@@ -90,4 +90,10 @@ void svn_path_remove_component (svn_string_t *path, int style);
 /* Duplicate and return PATH's last component, w/o separator. */
 svn_string_t *svn_path_last_component (svn_string_t *path, apr_pool_t *pool);
 
+/* Return non-zero iff PATH is empty or represents the current
+   directory -- that is, if it is NULL or if prepending it as a
+   component to an existing path would result in no meaningful
+   change. */
+int svn_path_isempty (svn_string_t *path);
+
 #endif /* SVN_PATHS_H */
