@@ -215,7 +215,7 @@ decode_group (const unsigned char *in, char *out)
 
 /* Decode a byte string which may or may not be the total amount of
    data being decoded.  INBUF and *INBUFLEN carry the leftover bytes
-   fro call to call, and *DONE keeps track of whether we've seen an
+   from call to call, and *DONE keeps track of whether we've seen an
    '=' which terminates the encoded data.  Have room for four bytes in
    INBUF and initialize *INBUFLEN to 0 and *DONE to FALSE.  Output
    will be appended to STR.  */
