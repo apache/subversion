@@ -1,0 +1,148 @@
+<html>
+<body bgcolor="#F0F0F0" text="#000033">
+<center>
+<img src="subversion.jpg">
+<h2>Weekly Status</h2>
+Last updated:  27 February 2001
+</center>
+
+<h3>The Big Picture</h3>
+
+(taken from our <a href="project_docs.html">design document</a>)
+
+
+<pre>
+                    +--------------------+
+                    | commandline or GUI |
+                    |    client app      |
+         +----------+--------------------+----------+ <=== Client interface
+         |              Client Library              |
+         |                                          |
+         |        +----+                            |
+         |        |    |                            |
+ +-------+--------+    +--------------+--+----------+ <=== Network interface
+ | Working Copy   |    |    Remote    |  | Local    |
+ | Management lib |    | Repos Access |  | Repos    |
+ +----------------+    +--------------+  | Access   |
+                       |     neon     |  |          |
+                       +--------------+  |          |
+                          ^              |          |
+                         /               |          |
+                   DAV  /                |          |
+                       /                 |          |
+                      v                  |          |
+              +---------+                |          |
+              |         |                |          |
+              | Apache  |                |          |
+              |         |                |          |
+              +---------+                |          |
+              | mod_DAV |                |          |
+            +-------------+              |          |
+            | mod_DAV_SVN |              |          |
+ +----------+-------------+--------------+----------+ <=== Filesystem interface
+ |                                                  |
+ |               Subversion Filesystem              |
+ |                                                  |
+ +--------------------------------------------------+
+</pre>
+
+<br><br>
+
+<!----------------------------------------------------------------->
+
+
+<h3>Progress</h3>
+
+(note: these meters measure nothing but fuzzy gut feelings. :-) )
+
+<p>
+
+<table  cellspacing="0" cellpadding="2">
+
+<tr valign="top">
+<td align="left">Versioned Filesystem</td>
+<td align="left">
+<img src="blupixel.gif" border="0" width="200" height="15" 
+alt="200 units"><img src="redpixel.gif" border="0" width="200"
+height="15" alt="200 units">
+</td></tr>
+
+<tr valign="top">
+<td align="left">Networking Layer</td>
+<td align="left">
+<img src="blupixel.gif" border="0" width="300" height="15" 
+alt="200 units"><img src="redpixel.gif" border="0" width="100"
+height="15" alt="200 units">
+</td></tr>
+
+<tr valign="top">
+<td align="left">Client Libraries</td>
+<td align="left">
+<img src="blupixel.gif" border="0" width="200" height="15" 
+alt="200 units"><img src="redpixel.gif" border="0" width="200"
+height="15" alt="200 units">
+</td></tr>
+
+<tr valign="top">
+<td align="left">CVS Migration Tools</td>
+<td align="left">
+<img src="blupixel.gif" border="0" width="100" height="15" 
+alt="200 units"><img src="redpixel.gif" border="0" width="300"
+height="15" alt="200 units">
+</td></tr>
+
+<tr valign="top">
+<td align="left">Documentation</td>
+<td align="left">
+<img src="blupixel.gif" border="0" width="50" height="15" 
+alt="200 units"><img src="redpixel.gif" border="0" width="350"
+height="15" alt="200 units">
+</td></tr>
+
+</table>
+
+
+<!----------------------------------------------------------------->
+
+<h3><i>Tentative</i> Roadmap</h3>
+
+<ul>
+
+<li> <b>Milestone 1</b> (20 Oct 2000):  basic working copy manipulation;
+      client can checkout/update/commit using XML files.
+</li>
+
+<li> <b>Milestone 2</b> (1 Apr 2001):  rudimentary working filesystem;
+      client can checkout/update/commit using WebDAV layer.
+</li>
+
+<li> <b>Alpha Release</b> (15 May 2001):  feature complete.
+</li>
+
+<li> <b>Beta Release</b> (15 June 2001):  release candidate, heavy testing.
+</li>
+
+<li> <b>1.0 Release</b> (30 June 2001):  we hope.  :-)
+</li>
+
+</ul>
+
+
+<!----------------------------------------------------------------->
+
+<h3>What People Are Currently Working On</h3>
+
+<ul>
+<li><b>Filesystem</b>:  kfogel, cmpilato, sussman, jimb </li>
+<li><b>DAV layer</b>:  gstein </li>
+<li><b>Client libs</b>:  -- </li>
+<li><b>Migration tools</b>:  -- </li>
+<li><b>Docs</b>: -- </li>
+</ul>
+
+
+<h3>Last Week's Activities</h3>
+
+Insert two-paragraph summary here.  (Perhaps written by a volunteer?)
+
+</html>
