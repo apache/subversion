@@ -238,6 +238,8 @@ typedef struct svn_wc__entry_baton_t
 
   svn_boolean_t found_it;  /* Gets set to true iff we see a matching entry. */
 
+  svn_boolean_t removing;  /* Set iff the task is to remove an entry. */
+
   apr_file_t *infile;      /* The entries file we're reading from. */
   apr_file_t *outfile;     /* If this is NULL, then we're GETTING
                               attributes; if this is non-NULL, then
@@ -381,18 +383,22 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
         {
           baton->found_it = 1;
 
-          if (baton->outfile) /* we're writing out a changed tag */
+          if (baton->outfile) /* we're writing out a change */
             {
-              err = write_entry (baton->outfile,
-                                 baton->entryname,
-                                 baton->version,
-                                 baton->kind,
-                                 baton->attributes,
-                                 baton->pool);
-              if (err)
+              /* Rewrite the tag only if we're not removing it. */
+              if (! baton->removing)
                 {
-                  svn_xml_signal_bailout (err, baton->parser);
-                  return;
+                  err = write_entry (baton->outfile,
+                                     baton->entryname,
+                                     baton->version,
+                                     baton->kind,
+                                     baton->attributes,
+                                     baton->pool);
+                  if (err)
+                    {
+                      svn_xml_signal_bailout (err, baton->parser);
+                      return;
+                    }
                 }
             }
           else  /* just reading attribute values, not writing a new tag */
@@ -543,6 +549,7 @@ do_entry (svn_string_t *path,
           svn_vernum_t *version_receiver,
           enum svn_node_kind kind,
           enum svn_node_kind *kind_receiver,
+          svn_boolean_t removing,
           svn_boolean_t setting,
           apr_hash_t *attributes)
 {
@@ -553,6 +560,9 @@ do_entry (svn_string_t *path,
   svn_wc__entry_baton_t *baton 
     = apr_pcalloc (pool, sizeof (svn_wc__entry_baton_t));
 
+  assert (! (setting && removing));
+  assert (! ((entryname == NULL) && removing));
+
   /* Open current entries file for reading */
   err = svn_wc__open_adm_file (&infile, path,
                                SVN_WC__ADM_ENTRIES,
@@ -560,7 +570,7 @@ do_entry (svn_string_t *path,
   if (err)
     return err;
 
-  if (setting)
+  if (setting || removing)
     {
       /* Open a new `tmp/entries' file for writing */
       err = svn_wc__open_adm_file (&outfile, path,
@@ -574,6 +584,7 @@ do_entry (svn_string_t *path,
   baton->pool       = pool;
   baton->infile     = infile;
   baton->outfile    = outfile;
+  baton->removing   = removing;
   baton->entryname  = entryname;
   baton->version    = version;
   baton->kind       = kind;
@@ -629,6 +640,7 @@ svn_wc__entry_set (svn_string_t *path,
   err = do_entry (path, pool, entryname,
                   version, NULL,
                   kind, NULL,
+                  0, /* not removing */
                   1, /* setting */
                   att_hash);
 
@@ -651,6 +663,7 @@ svn_wc__entry_get (svn_string_t *path,
   err = do_entry (path, pool, entryname,
                   SVN_INVALID_VERNUM, version,
                   0, kind,
+                  0, /* not removing */
                   0, /* not setting */
                   ht);
   if (err)
@@ -667,7 +680,21 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
                                    svn_string_t *entryname,
                                    apr_pool_t *pool)
 {
-  /* kff todo: finish this. */
+  svn_error_t *err;
+
+  err = do_entry (path,
+                  pool,
+                  entryname,
+                  SVN_INVALID_VERNUM,  /* irrelevant */
+                  NULL,                /* irrelevant */
+                  0,                   /* irrelevant */
+                  NULL,                /* irrelevant */
+                  1,                   /* removing */
+                  0,                   /* not setting */
+                  NULL);               /* irrelevant */
+  if (err)
+    return err;
+
   return SVN_NO_ERROR;
 }
 
