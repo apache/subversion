@@ -648,7 +648,7 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_session_t *ras)
 
 
 svn_error_t *
-svn_ra_dav__request_dispatch(int *code,
+svn_ra_dav__request_dispatch(int *code_p,
                              ne_request *request,
                              ne_session *session,
                              const char *method,
@@ -676,15 +676,17 @@ svn_ra_dav__request_dispatch(int *code,
   rv = ne_request_dispatch(request);
 
   statstruct = ne_get_status(request);
-  *code = statstruct->code;
   code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
+  if (code_p)
+     *code_p = statstruct->code;
 
   ne_request_destroy(request);
   ne_xml_destroy(error_parser);
 
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
-  if (rv == NE_OK && (*code == okay_1 || *code == okay_2))
+  if (rv == NE_OK
+      && (statstruct->code == okay_1 || statstruct->code == okay_2))
     return SVN_NO_ERROR;
 
   /* next, check to see if a <D:error> was discovered */

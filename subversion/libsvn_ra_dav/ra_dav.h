@@ -646,11 +646,11 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        int retcode);
 
 
-/* Given a neon REQUEST and SESSION, run the request and return the
-   http status code in *CODE.  Return any resulting error (from neon,
-   a <D:error> body response, or any non-2XX status code) as an
-   svn_error_t, otherwise return NULL.  The request will be freed
-   either way.
+/* Given a neon REQUEST and SESSION, run the request; if CODE_P is
+   non-null, return the http status code in *CODE_P.  Return any
+   resulting error (from neon, a <D:error> body response, or any
+   non-2XX status code) as an svn_error_t, otherwise return NULL.  
+   The request will be freed either way.
 
    SESSION, METHOD, and URL are required as well, as they are used to
    describe the possible error.  The error will be allocated in POOL.
@@ -667,7 +667,7 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
    ### different...
  */
 svn_error_t *
-svn_ra_dav__request_dispatch(int *code,
+svn_ra_dav__request_dispatch(int *code_p,
                              ne_request *request,
                              ne_session *session,
                              const char *method,

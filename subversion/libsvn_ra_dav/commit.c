@@ -176,18 +176,8 @@ static svn_error_t * delete_activity(void *edit_baton,
                                      apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
-  int code;
-  svn_error_t *err;
-
-  err = simple_request(cc->ras, "DELETE", cc->activity_url, &code,
-                       NULL, 204 /* No Content */, 404 /* Not Found */, pool);
-  /* ### toss this special test at some point before 1.0 */
-  if (err && code == 500)
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-  return err;
+  return simple_request(cc->ras, "DELETE", cc->activity_url, NULL,
+                        NULL, 204 /* No Content */, 404 /* Not Found */, pool);
 }
 
 
