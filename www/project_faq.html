@@ -1459,13 +1459,14 @@ href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4">
 auto-props</a> feature in the book.  You need to make sure all your
 users configure their clients' auto-props settings appropriately.</p>
 
-<p>If you're particularly paranoid, you can also write a pre-commit
-hook script that rejects any commit which forgets to add properties to
-new files.  However, this approach is usually overkill.  If somebody
-occasionally forgets to set <tt>svn:eol-style</tt>, for example, it's
-easily noticable.  (The minute somebody opens the file on a different
-OS, it will be noticed!)  And the problem is easily fixable (just set
-the property and commit).  It's not something to lose sleep over.</p>
+<p>You could write a pre-commit hook script to reject any commit which
+forgets to add properties to new files (see <a
+href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-mime-type.pl"
+>http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-mime-type.pl</a>
+for example).  However, this approach may be overkill.  If somebody
+forgets to set <tt>svn:eol-style</tt>, for example, it will be noticed
+the minute somebody else opens the file on a different OS.  Once
+noticed, it's easy to fix: just set the property and commit.</p>
 
 <p>Note: many users have asked for a feature whereby the server
 automatically "broadcasts" run-time settings to clients, such as
