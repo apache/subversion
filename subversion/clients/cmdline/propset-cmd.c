@@ -73,9 +73,9 @@ svn_cl__propset (apr_getopt_t *os,
                                   opt_state->recursive, pool));
 
       if (! opt_state->quiet)
-        printf ("property `%s' set %s on '%s'\n",
+        printf ("property `%s' set%s on '%s'\n",
                 propname->data,
-                opt_state->recursive ? "(recursively)" : "",
+                opt_state->recursive ? " (recursively)" : "",
                 target->data);
     }
 
