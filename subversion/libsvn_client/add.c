@@ -30,7 +30,9 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_add (svn_string_t *path, apr_pool_t *pool)
+svn_client_add (svn_string_t *path, 
+                svn_boolean_t recursive,
+                apr_pool_t *pool)
 {
   enum svn_node_kind kind;
   svn_error_t * err;
@@ -38,9 +40,24 @@ svn_client_add (svn_string_t *path, apr_pool_t *pool)
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   
   if (kind == svn_node_file)
-    err = svn_wc_add_file (path, pool);
+    {
+      if (recursive)
+        {
+          /* todo: a gentle warning about trying to recurse on a file
+             might be in order here. */
+        }
+      else
+        err = svn_wc_add_file (path, pool);
+    }
   else if (kind == svn_node_dir)
-    err = svn_wc_add_directory (path, pool);
+    {
+      if (recursive)
+        {
+          /* todo: um...recursively mark a tree for addition. */
+        }
+      else
+        err = svn_wc_add_directory (path, pool);
+    }
   else
     return
       svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
@@ -55,6 +72,20 @@ svn_client_add (svn_string_t *path, apr_pool_t *pool)
       else
           return err;
     }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_unadd (svn_string_t *path, 
+                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = svn_wc_unadd (path, pool);
+  if (err)
+    return err;
+
   return SVN_NO_ERROR;
 }
 

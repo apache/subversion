@@ -299,9 +299,16 @@ svn_wc_copy (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 }
 
 
-/* Recursively mark a tree DIR for deletion. */
+enum mark_tree_state {
+  mark_tree_state_delete = 1,
+  mark_tree_state_unadd,
+  mark_tree_state_undelete
+};
+
+
+/* Recursively mark a tree DIR for some STATE. */
 static svn_error_t *
-delete_tree (svn_string_t *dir, apr_pool_t *pool)
+mark_tree (svn_string_t *dir, enum mark_tree_state state, apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
@@ -311,7 +318,7 @@ delete_tree (svn_string_t *dir, apr_pool_t *pool)
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
 
-  /* Delete each entry in the entries file. */
+  /* Mark each entry in the entries file. */
   for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -331,14 +338,29 @@ delete_tree (svn_string_t *dir, apr_pool_t *pool)
             {
               svn_path_add_component (fullpath, basename, 
                                       svn_path_local_style);
-              SVN_ERR (delete_tree (fullpath, subpool));
+              SVN_ERR (mark_tree (fullpath, state, subpool));
             }
         }
 
-      /* Mark this entry for deletion. */
-      SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-               (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-                SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
+      /* Mark this entry. */
+      switch (state)
+        {
+        case mark_tree_state_delete:
+          SVN_ERR (svn_wc__entry_fold_sync_intelligently 
+                   (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
+                    SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
+          break;
+
+        case mark_tree_state_unadd:
+          SVN_ERR (svn_wc__entry_fold_sync
+                   (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
+                    SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADDED,
+                    0, 0, pool, NULL, NULL));
+          break;
+
+        case mark_tree_state_undelete:
+          break;
+        }
 
       /* Reset FULLPATH to just hold this dir's name. */
       svn_string_set (fullpath, dir->data);
@@ -364,7 +386,7 @@ svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
   if (entry->kind == svn_node_dir)
     {
       /* Recursively mark a whole tree for deletion. */
-      SVN_ERR (delete_tree (path, pool));
+      SVN_ERR (mark_tree (path, mark_tree_state_delete, pool));
     }
 
   /* We need to mark this entry for deletion in its parent's entries
@@ -435,6 +457,50 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc_unadd (svn_string_t *path, 
+              apr_pool_t *pool)
+{
+  svn_wc_entry_t *entry;
+  svn_string_t *dir, *basename;
+
+  /* Get the entry for PATH */
+  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (entry->kind == svn_node_dir)
+    {
+      /* Recursively un-mark a whole tree for addition. */
+      SVN_ERR (mark_tree (path, mark_tree_state_unadd, pool));
+    }
+
+  /* We need to mark this entry for deletion in its parent's entries
+     file, so we split off basename from the parent path, then fold in
+     the addition of a delete flag. */
+  svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
+  if (svn_path_is_empty (dir, svn_path_local_style))
+    svn_string_set (dir, ".");
+  
+  SVN_ERR (svn_wc__entry_fold_sync
+           (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
+            SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADDED,
+            0, 0, pool, NULL, NULL));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Un-mark a PATH for deletion.  If RECURSE is TRUE and PATH
+   represents a directory, un-mark the entire tree under PATH for
+   deletion.  */
+svn_error_t *
+svn_wc_undelete (svn_string_t *path, 
+                 svn_boolean_t recursive,
+                 apr_pool_t *pool)
+{
+  /* todo: make this not suck */
+  abort ();
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *

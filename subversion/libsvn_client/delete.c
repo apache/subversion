@@ -32,12 +32,12 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_delete (svn_string_t *path, svn_boolean_t force, apr_pool_t *pool)
+svn_client_delete (svn_string_t *path,
+                   svn_boolean_t force, 
+                   apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-
-  /* kff todo: hmm, this seems to be file-specific, which is probably bad. */
 
   /* Mark the entry for deletion. */
   err = svn_wc_delete (path, pool);
@@ -57,6 +57,21 @@ svn_client_delete (svn_string_t *path, svn_boolean_t force, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_client_undelete (svn_string_t *path,
+                     svn_boolean_t recursive,
+                     apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  /* Mark the entry for deletion. */
+  err = svn_wc_undelete (path, recursive, pool);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
 
 
 /* 

@@ -96,9 +96,11 @@ typedef struct svn_cl__cmd_desc_t
 /* Declare all the command procedures */
 svn_cl__cmd_proc_t
   svn_cl__add,
+  svn_cl__unadd,
   svn_cl__commit,
   svn_cl__checkout,
   svn_cl__delete,
+  svn_cl__undelete,
   svn_cl__help,
   svn_cl__import,
   svn_cl__proplist,
@@ -107,6 +109,7 @@ svn_cl__cmd_proc_t
   svn_cl__status,
   svn_cl__diff,
   svn_cl__update;
+
 
 /* make the command table information available to all commands */ 
 extern const svn_cl__cmd_desc_t svn_cl__cmd_table[];
