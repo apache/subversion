@@ -22,6 +22,9 @@
 
 /*** Includes. ***/
 
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
+
 #include "svn_client.h"
 #include "client.h"
 #include "svn_path.h"
