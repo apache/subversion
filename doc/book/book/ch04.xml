@@ -816,7 +816,7 @@ $ svn status
           very likely hear reference to the term
           <firstterm>ancestry</firstterm>.  This word is used to
           describe the relationship between two objects in a
-          repository: if they're related to each other, than one
+          repository: if they're related to each other, then one
           object is said to be an ancestor of the other.</para>
 
         <para>For example, suppose you commit revision 100, which
