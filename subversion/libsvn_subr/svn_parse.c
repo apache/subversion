@@ -185,7 +185,9 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
   ap_status_t result;     
   ap_file_t *FILE = NULL;
 
-  
+  svn_error_t *warning = NULL;
+  svn_error_t *latest_warning = NULL;
+
   /* Create our uberhash */
   *uberhash = ap_make_hash (pool);
 
@@ -263,17 +265,17 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
            
             if (new_section == NULL)  /* couldn't find a ']' ! */
               {
-                char *finalmsg;
-                svn_string_t *msg = 
-                  svn_string_create 
-                  ("svn_parse(): warning: skipping malformed line: ", pool);
-                svn_string_appendstr (msg, currentline, pool);
+                char *finalmsg = 
+                  ap_psprintf 
+                  (pool, 
+                   "svn_parse(): warning: skipping malformed line: %s",
+                   svn_string_2cstring (currentline, pool));
 
-                /* Instead of returning an error, just print warning */
-                finalmsg = svn_string_2cstring (msg, pool);
-                svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, NULL, finalmsg, 
-                                   NULL, pool), stderr);
+                /* Batch up a new warning */
+                warning = 
+                  svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
+                warning->child = latest_warning; /* wrap the batch */
+                latest_warning = warning;  /* new top of batch */
                 break;
               }
                                         
@@ -302,25 +304,25 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
             svn_string_t *new_key, *new_val;
             size_t local_offset;
 
-            local_offset = svn__slurp_to (currentline, /* search current line */
-                                      &new_key,     /* put substring here */
-                                      offset,      /* start at this offset */
-                                      ':',         /* look for a colon */
-                                      pool);       /* build substr here */
-
+            local_offset = svn__slurp_to (currentline, /* search  line */
+                                          &new_key, /* put substring here */
+                                          offset,   /* start at this offset */
+                                          ':',      /* look for a colon */
+                                          pool);    /* build substr here */
+            
             if (new_key == NULL)  /* didn't find a colon! */
               {
-                char *finalmsg;
-                svn_string_t *msg = 
-                  svn_string_create 
-                  ("svn_parse(): warning: skipping malformed line: ", pool);
-                svn_string_appendstr (msg, currentline, pool);
-               
-                /* Instead of returning an error, just print warning */
-                finalmsg = svn_string_2cstring (msg, pool);                
-                svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, NULL, finalmsg,
-                                   NULL, pool), stderr);
+                char *finalmsg = 
+                  ap_psprintf 
+                  (pool, 
+                   "svn_parse(): warning: skipping malformed line: %s",
+                   svn_string_2cstring (currentline, pool));
+
+                /* Batch up a new warning */
+                warning = 
+                  svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
+                warning->child = latest_warning; /* wrap the batch */
+                latest_warning = warning;  /* new top of batch */
                 break;
               }
 
@@ -359,23 +361,28 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
   result = ap_close (FILE);
   if (result != APR_SUCCESS)
     {
-      char *finalmsg;
-      svn_string_t *msg = svn_string_create 
-        ("svn_parse(): warning: can't close file ", pool);
-      svn_string_appendstr (msg, filename, pool);
+      char *finalmsg = 
+        ap_psprintf 
+        (pool, 
+         "svn_parse(): warning: can't close file: %s",
+         svn_string_2cstring (filename, pool));
       
-      /* Not fatal, just annoying.  Send a warning instead returning error. */
-      finalmsg = svn_string_2cstring (msg, pool);
-      svn_handle_error (svn_create_error (result, NULL, finalmsg, NULL, pool),
-                        stderr);
+      /* Batch up a new warning */
+      warning = 
+        svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
+      warning->child = latest_warning; /* wrap the batch */
+      latest_warning = warning;  /* new top of batch */
     }
   
   ap_destroy_pool (scratchpool);
 
 
-  /* Return success */
+  /* Are there any batched warnings? */
 
-  return 0;
+  if (latest_warning)
+    return latest_warning;
+  else
+    return SVN_SUCCESS;
 }
 
 
