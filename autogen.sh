@@ -73,7 +73,7 @@ autoheader
 
 # Produce all the `Makefile.in's, verbosely, and create neat missing things
 # like `libtool', `install-sh', etc.
-automake --add-missing --verbose
+automake --add-missing --verbose --foreign
 
 # If there's a config.cache file, we may need to delete it.  
 # If we have an existing configure script, save a copy for comparison.

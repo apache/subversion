@@ -17,7 +17,7 @@ SVN_CONFIG_NICE(config.nice)
 dnl Required to init all of the `automake' macros, and to run typical macros
 AM_INIT_AUTOMAKE(subversion, 0.1, no-define)
 
-dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_config.h.in for us.
+dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_private_config.h.in for us.
 dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
 dnl Because we're using automake, we must use AM_ instead of AC_.  AM_ creates
 dnl    rules to regenerate the header file whenever config files change.
@@ -253,7 +253,7 @@ AC_OUTPUT([Makefile                                           \
 
 dnl  Print warning messages about what we did and didn't configure at the 
 dnl  end, where people will actually see them.
-case "$svn_cv_lib_berkeley_db" in
+case "$svn_lib_berkeley_db" in
   "no" )
     echo 1>&2
     AC_MSG_WARN([we have configured for a client-only build
