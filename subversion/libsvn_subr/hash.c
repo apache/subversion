@@ -1,5 +1,5 @@
 /*
- * hashdump.c :  dumping and reading hash tables to/from files.
+ * hash.c :  dumping and reading hash tables to/from files.
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -73,13 +73,12 @@
 
 /*** Code. ***/
 
-apr_status_t
+svn_error_t *
 svn_hash_write (apr_hash_t *hash, 
                 apr_file_t *destfile,
                 apr_pool_t *pool)
 {
   apr_hash_index_t *this;      /* current hash entry */
-  apr_status_t err;
   char buf[SVN_KEYLINE_MAXLEN];
 
   for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
@@ -95,94 +94,43 @@ svn_hash_write (apr_hash_t *hash,
 
       /* Output name length, then name. */
 
-      err = apr_file_write_full (destfile, "K ", 2, NULL);
-      if (err) return err;
+      SVN_ERR (svn_io_file_write_full (destfile, "K ", 2, NULL, pool));
 
       sprintf (buf, "%" APR_SSIZE_T_FMT "%n", keylen, &bytes_used);
-      err = apr_file_write_full (destfile, buf, bytes_used, NULL);
-      if (err) return err;
+      SVN_ERR (svn_io_file_write_full (destfile, buf, bytes_used, NULL, pool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
 
-      err = apr_file_write_full (destfile, "\n", 1, NULL);
-      if (err) return err;
-
-      err = apr_file_write_full (destfile, (const char *) key, keylen, NULL);
-      if (err) return err;
-
-      err = apr_file_write_full (destfile, "\n", 1, NULL);
-      if (err) return err;
+      SVN_ERR (svn_io_file_write_full (destfile, 
+                                       (const char *) key, keylen, 
+                                       NULL, pool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
 
       /* Output value length, then value. */
       value = val;
 
-      err = apr_file_write_full (destfile, "V ", 2, NULL);
-      if (err) return err;
+      SVN_ERR (svn_io_file_write_full (destfile, "V ", 2, NULL, pool));
 
       sprintf (buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
-      err = apr_file_write_full (destfile, buf, bytes_used, NULL);
-      if (err) return err;
+      SVN_ERR (svn_io_file_write_full (destfile, buf, bytes_used, NULL, pool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
 
-      err = apr_file_write_full (destfile, "\n", 1, NULL);
-      if (err) return err;
-
-      err = apr_file_write_full (destfile, value->data, value->len, NULL);
-      if (err) return err;
-
-      err = apr_file_write_full (destfile, "\n", 1, NULL);
-      if (err) return err;
+      SVN_ERR (svn_io_file_write_full (destfile, value->data, value->len, 
+                                       NULL, pool));
+      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, pool));
     }
 
-  err = apr_file_write_full (destfile, "END\n", 4, NULL);
-  if (err) return err;
+  SVN_ERR (svn_io_file_write_full (destfile, "END\n", 4, NULL, pool));
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 
-/* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
- * Does not include newline, instead '\0' is put there.
- * Length (as in strlen) is returned in *LIMIT.
- * BUF should be pre-allocated.
- * FILE should be already opened. 
- *
- * (This is meant for reading length lines from hashdump files.) 
- */
-apr_status_t
-svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit)
-{
-  apr_size_t i;
-  apr_status_t err;
-  char c;
-
-  for (i = 0; i < *limit; i++)
-  {
-    err = apr_file_getc (&c, file); 
-    if (err)
-      return err;   /* Note: this status code could be APR_EOF, which
-                       is totally fine.  The caller should be aware of
-                       this. */
-    if (c == '\n')
-      {
-        buf[i] = '\0';
-        *limit = i;
-        return APR_SUCCESS;
-      }
-    else
-      {
-        buf[i] = c;
-      }
-  }
-
-  /* todo: make a custom error "SVN_LENGTH_TOO_LONG" or something? */
-  return SVN_WARNING;
-}
-
-
-apr_status_t
+svn_error_t *
 svn_hash_read (apr_hash_t *hash, 
                apr_file_t *srcfile,
                apr_pool_t *pool)
 {
-  apr_status_t err;
+  svn_error_t *err;
   char buf[SVN_KEYLINE_MAXLEN];
   apr_size_t num_read;
   char c;
@@ -194,11 +142,14 @@ svn_hash_read (apr_hash_t *hash,
       /* Read a key length line.  Might be END, though. */
       apr_size_t len = sizeof(buf);
 
-      err = svn_io_read_length_line (srcfile, buf, &len);
-      if (APR_STATUS_IS_EOF(err) && first_time)
-        /* We got an EOF on our very first attempt to read, which
-           means it's a zero-byte file.  No problem, just go home. */        
-        return APR_SUCCESS;
+      err = svn_io_read_length_line (srcfile, buf, &len, pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err) && first_time)
+        {
+          /* We got an EOF on our very first attempt to read, which
+             means it's a zero-byte file.  No problem, just go home. */        
+          svn_error_clear (err);
+          return SVN_NO_ERROR;
+        }
       else if (err)
         /* Any other circumstance is a genuine error. */
         return err;
@@ -218,7 +169,7 @@ svn_hash_read (apr_hash_t *hash,
               && (buf[8] == 'D')))
         {
           /* We've reached the end of the dumped hash table, so leave. */
-          return APR_SUCCESS;
+          return SVN_NO_ERROR;
         }
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
@@ -227,19 +178,18 @@ svn_hash_read (apr_hash_t *hash,
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           void *keybuf = apr_palloc (pool, keylen + 1);
-          err = apr_file_read_full (srcfile, keybuf, keylen, &num_read);
-          if (err) return err;
+          SVN_ERR (svn_io_file_read_full (srcfile, 
+                                          keybuf, keylen, &num_read, pool));
           ((char *) keybuf)[keylen] = '\0';
 
           /* Suck up extra newline after key data */
-          err = apr_file_getc (&c, srcfile);
-          if (err) return err;
-          if (c != '\n') return SVN_ERR_MALFORMED_FILE;
+          SVN_ERR (svn_io_file_getc (&c, srcfile, pool));
+          if (c != '\n') 
+            return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
 
           /* Read a val length line */
           len = sizeof(buf);
-          err = svn_io_read_length_line (srcfile, buf, &len);
-          if (err) return err;
+          SVN_ERR (svn_io_read_length_line (srcfile, buf, &len, pool));
 
           if ((buf[0] == 'V') && (buf[1] == ' '))
             {
@@ -250,14 +200,15 @@ svn_hash_read (apr_hash_t *hash,
 
               /* Again, 1 extra byte for the null termination. */
               void *valbuf = apr_palloc (pool, vallen + 1);
-              err = apr_file_read_full (srcfile, valbuf, vallen, &num_read);
-              if (err) return err;
+              SVN_ERR (svn_io_file_read_full (srcfile, 
+                                              valbuf, vallen, 
+                                              &num_read, pool));
               ((char *) valbuf)[vallen] = '\0';
 
               /* Suck up extra newline after val data */
-              err = apr_file_getc (&c, srcfile);
-              if (err) return err;
-              if (c != '\n') return SVN_ERR_MALFORMED_FILE;
+              SVN_ERR (svn_io_file_getc (&c, srcfile, pool));
+              if (c != '\n')
+                return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
 
               value->data = valbuf;
               value->len = vallen;
@@ -267,15 +218,14 @@ svn_hash_read (apr_hash_t *hash,
             }
           else
             {
-              return SVN_ERR_MALFORMED_FILE;
+              return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
             }
         }
       else
         {
-          return SVN_ERR_MALFORMED_FILE;
+          return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL, NULL);
         }
     } /* while (1) */
-
 }
 
 

@@ -85,7 +85,6 @@ svn_config_read_auth_data (apr_hash_t **hash,
   SVN_ERR (svn_io_check_path (auth_path, &kind, pool));
   if (kind == svn_node_file)
     {
-      apr_status_t status;
       apr_file_t *authfile = NULL;
 
       SVN_ERR_W (svn_io_file_open (&authfile, auth_path,
@@ -95,10 +94,8 @@ svn_config_read_auth_data (apr_hash_t **hash,
       
       *hash = apr_hash_make (pool);
 
-      status = svn_hash_read (*hash, authfile, pool);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "error parsing '%s'", auth_path);
+      SVN_ERR_W (svn_hash_read (*hash, authfile, pool),
+                 apr_psprintf (pool, "error parsing '%s'", auth_path));
       
       SVN_ERR (svn_io_file_close (authfile, pool));
     }
@@ -114,7 +111,6 @@ svn_config_write_auth_data (apr_hash_t *hash,
                             const char *config_dir,
                             apr_pool_t *pool)
 {
-  apr_status_t status;
   apr_file_t *authfile = NULL;
   const char *auth_path;
 
@@ -135,10 +131,8 @@ svn_config_write_auth_data (apr_hash_t *hash,
                                APR_OS_DEFAULT, pool),
              "unable to open auth file for writing");
   
-  status = svn_hash_write (hash, authfile, pool);
-  if (status)
-    return svn_error_createf (status, NULL,
-                              "error writing hash to '%s'", auth_path);
+  SVN_ERR_W (svn_hash_write (hash, authfile, pool),
+             apr_psprintf (pool, "error writing hash to '%s'", auth_path));
 
   SVN_ERR (svn_io_file_close (authfile, pool));
 

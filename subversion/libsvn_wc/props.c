@@ -158,18 +158,14 @@ svn_wc__load_prop_file (const char *propfile_path,
   if (kind == svn_node_file)
     {
       /* Ah, this file already has on-disk properties.  Load 'em. */
-      apr_status_t status;
       apr_file_t *propfile = NULL;
 
       SVN_ERR (svn_io_file_open (&propfile, propfile_path,
                                  APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                                  pool));
 
-      status = svn_hash_read (hash, propfile, pool);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "Can't parse '%s'",
-                                  propfile_path);
+      SVN_ERR_W (svn_hash_read (hash, propfile, pool),
+                 apr_psprintf (pool, "Can't parse '%s'", propfile_path));
 
       SVN_ERR (svn_io_file_close (propfile, pool));
     }
@@ -186,7 +182,6 @@ svn_wc__save_prop_file (const char *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   apr_file_t *prop_tmp;
 
   SVN_ERR (svn_io_file_open (&prop_tmp, propfile_path,
@@ -194,11 +189,10 @@ svn_wc__save_prop_file (const char *propfile_path,
                               | APR_BUFFERED), 
                              APR_OS_DEFAULT, pool));
 
-  apr_err = svn_hash_write (hash, prop_tmp, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "Can't write property hash to '%s'",
-                              propfile_path);
+  SVN_ERR_W (svn_hash_write (hash, prop_tmp, pool),
+             apr_psprintf (pool, 
+                           "Can't write property hash to '%s'", 
+                           propfile_path));
 
   SVN_ERR (svn_io_file_close (prop_tmp, pool));
 
@@ -794,7 +788,6 @@ svn_wc__wcprop_set (const char *name,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_status_t apr_err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
 
@@ -816,10 +809,9 @@ svn_wc__wcprop_set (const char *name,
                                1, /* we DO want wcprops */
                                pool));
   /* Write. */
-  apr_err = svn_hash_write (prophash, fp, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "Cannot write property hash for '%s'", path);
+  SVN_ERR_W (svn_hash_write (prophash, fp, pool),
+             apr_psprintf (pool,
+                           "Cannot write property hash for '%s'", path));
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 1,
@@ -1001,7 +993,6 @@ svn_wc_prop_set (const char *name,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_status_t apr_err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
   svn_subst_keywords_t *old_keywords;
@@ -1123,10 +1114,9 @@ svn_wc_prop_set (const char *name,
                                0, /* not wcprops */
                                pool));
   /* Write. */
-  apr_err = svn_hash_write (prophash, fp, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "Cannot write property hash for '%s'", path);
+  SVN_ERR_W (svn_hash_write (prophash, fp, pool),
+             apr_psprintf (pool, 
+                           "Cannot write property hash for '%s'", path));
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 0,
