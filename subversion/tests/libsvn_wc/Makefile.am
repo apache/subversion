@@ -20,8 +20,9 @@ commit_test_LDADD = @SVN_TESTS_EDITOR_LIBS@ @SVN_LIBSVN_WC_LIBS@ \
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
-## Automatic test scripts to run for `make check`
-TESTS = checkout-test.sh
+check:
+	srcdir=$(srcdir); export srcdir; \
+	sh @srcdir@/checkout-test.sh
 
 ## For some reason, we need to include this in the distribution
 EXTRA_DIST = checkout-test.sh

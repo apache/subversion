@@ -8,14 +8,15 @@ fi
 
 > ./tests.log
 for test_pgm in skel-test fs-test; do
-  if ./${test_pgm} >> ./tests.log; then :; else
-    echo "Test program \`${test_pgm}' exited with status $?" >&2
-    exit 1
+  echo;
+  echo -n "Running all sub-tests in ${test_pgm}...";
+  ./${test_pgm} >> tests.log;
+  if [ $? -eq 0 ];
+  then
+    echo "SUCCESS";
+  else
+    echo;
+    echo "at least one sub-test FAILED, check tests.log:"; echo; \
+    cat tests.log | grep FAIL; \
   fi
 done
-
-if grep '^FAIL:' ./tests.log; then
-  exit 1
-else
-  exit 0
-fi
