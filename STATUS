@@ -87,13 +87,6 @@ section for approved changes.)
        +1: cmpilato, kfogel
 
 
-    * Issue #1647
-      Unnecessary NULL guarantees in some string/uri APIs.
-      Justification: Tiny change, avoid unnecessary interface guarantees.
-      Votes:
-       +1: kfogel, ghudson, epg
-      
-
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
@@ -106,6 +99,13 @@ the section for unapproved changes.)
       +1: ghudson, epg, mbk, brane
       -0: gstein
 
+
+    * Issue #1647
+      Unnecessary NULL guarantees in some string/uri APIs.
+      Justification: Tiny change, avoid unnecessary interface guarantees.
+      Votes:
+       +1: kfogel, ghudson, epg
+      
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
