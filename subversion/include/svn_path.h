@@ -145,7 +145,7 @@ void svn_path_remove_component (svn_stringbuf_t *path);
  *   examples:
  *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
  *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
- *             - <pre>"/"             ==>  "/"  and ""</pre>
+ *             - <pre>"/"             ==>  "/"  and "/"</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
  */
