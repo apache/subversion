@@ -82,7 +82,7 @@ struct svn_fs_t
 typedef struct
 {
   /* id of the root node. */
-  svn_fs_id_t *id;
+  const svn_fs_id_t *id;
 
   /* property list (const char * name, svn_string_t * value) 
      may be NULL if there are no properies.  */
@@ -95,10 +95,10 @@ typedef struct
 typedef struct
 {
   /* id of the root node */
-  svn_fs_id_t *root_id;
+  const svn_fs_id_t *root_id;
 
   /* id of the revision root node upon which this txn is base */
-  svn_fs_id_t *base_root_id;
+  const svn_fs_id_t *base_root_id;
 
   /* property list (const char * name, svn_string_t * value).
      may be NULL if there are no properties.  */

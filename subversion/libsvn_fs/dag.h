@@ -72,7 +72,7 @@ typedef struct dag_node_t dag_node_t;
 svn_error_t *
 svn_fs__dag_get_node (dag_node_t **node,
                       svn_fs_t *fs,
-                      svn_fs_id_t *id,
+                      const svn_fs_id_t *id,
                       trail_t *trail);
 
 
@@ -289,7 +289,7 @@ svn_error_t *svn_fs__dag_delete_tree (dag_node_t *parent,
    ID itself, from FS's `nodes' table, as part of TRAIL.  ID may refer
    to a file or directory, which may be mutable or immutable.  */
 svn_error_t *svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
-                                            svn_fs_id_t *id,
+                                            const svn_fs_id_t *id,
                                             trail_t *trail);
 
 

@@ -99,7 +99,7 @@ txn_body_begin_txn (void *baton,
                     trail_t *trail)
 {
   struct begin_txn_args *args = baton;
-  svn_fs_id_t *root_id;
+  const svn_fs_id_t *root_id;
   char *svn_txn_id;
 
   SVN_ERR (svn_fs__rev_get_root (&root_id, args->fs, args->rev, trail));
@@ -215,7 +215,7 @@ txn_body_abort_txn (void *baton, trail_t *trail)
   struct abort_txn_args *args = baton;
   svn_fs_txn_t *txn = args->txn;
   const char *txn_name;
-  svn_fs_id_t *root_id, *ignored_id;
+  const svn_fs_id_t *root_id, *ignored_id;
 
   SVN_ERR (svn_fs_txn_name (&txn_name, txn, txn->pool));
   SVN_ERR (svn_fs__get_txn_ids (&root_id, &ignored_id, txn->fs, 
@@ -253,8 +253,8 @@ txn_body_open_txn (void *baton,
                    trail_t *trail)
 {
   struct open_txn_args *args = baton;
-  svn_fs_id_t *root_id;
-  svn_fs_id_t *base_root_id;
+  const svn_fs_id_t *root_id;
+  const svn_fs_id_t *base_root_id;
   dag_node_t *base_root_node;
   svn_revnum_t base_rev;
 

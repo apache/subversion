@@ -148,8 +148,8 @@ svn_fs__create_txn (char **txn_name_p,
   svn_fs__transaction_t txn;
 
   SVN_ERR (allocate_txn_id (&txn_name, fs, trail));
-  txn.root_id = (svn_fs_id_t *) root_id;
-  txn.base_root_id = (svn_fs_id_t *) root_id;
+  txn.root_id = root_id;
+  txn.base_root_id = root_id;
   txn.proplist = NULL;
   SVN_ERR (put_txn (fs, &txn, txn_name, trail));
 
@@ -210,8 +210,8 @@ svn_fs__get_txn (svn_fs__transaction_t **txn_p,
 
 
 svn_error_t *
-svn_fs__get_txn_ids (svn_fs_id_t **root_id_p,
-                     svn_fs_id_t **base_root_id_p,
+svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
+                     const svn_fs_id_t **base_root_id_p,
                      svn_fs_t *fs,
                      const char *txn_name,
                      trail_t *trail)
@@ -236,7 +236,7 @@ svn_fs__set_txn_root (svn_fs_t *fs,
   SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
   if (! svn_fs__id_eq (txn->root_id, new_id))
     {
-      txn->root_id = (svn_fs_id_t *) new_id;
+      txn->root_id = new_id;
       SVN_ERR (put_txn (fs, txn, txn_name, trail));
     }
   return SVN_NO_ERROR;
@@ -254,7 +254,7 @@ svn_fs__set_txn_base (svn_fs_t *fs,
   SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
   if (! svn_fs__id_eq (txn->base_root_id, new_id))
     {
-      txn->base_root_id = (svn_fs_id_t *) new_id;
+      txn->base_root_id = new_id;
       SVN_ERR (put_txn (fs, txn, txn_name, trail));
     }
   return SVN_NO_ERROR;

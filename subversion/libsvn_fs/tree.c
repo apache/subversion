@@ -1733,7 +1733,7 @@ txn_body_commit (void *baton, trail_t *trail)
   const char *txn_name = svn_fs__txn_id (txn);
 
   svn_revnum_t youngest_rev;
-  svn_fs_id_t *y_rev_root_id;
+  const svn_fs_id_t *y_rev_root_id;
   dag_node_t *txn_base_root_node;
 
   /* Getting the youngest revision locks the revisions table until
@@ -3012,7 +3012,7 @@ txn_body_txn_root (void *baton,
   svn_fs_txn_t *txn = args->txn;
   svn_fs_t *fs = svn_fs_txn_fs (txn);
   const char *svn_txn_id = svn_fs__txn_id (txn);
-  svn_fs_id_t *root_id, *base_root_id;
+  const svn_fs_id_t *root_id, *base_root_id;
   svn_fs_root_t *root;
 
   /* Verify that the transaction actually exists.  */
