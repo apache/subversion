@@ -795,10 +795,53 @@ svn_io_set_file_executable (const char *path,
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
   if (executable)
-    status = apr_file_attrs_set (path_apr,
-                                 APR_FILE_ATTR_EXECUTABLE,
-                                 APR_FILE_ATTR_EXECUTABLE,
-                                 pool);
+    {
+      apr_finfo_t finfo;
+      apr_fileperms_t perms_to_set;
+
+      /* Try to change only a minimal amount of the perms first 
+         by getting the current perms and adding execute bits
+         only on where read perms are granted.  If this fails
+         fall through to the apr_file_perms_set() call. */
+      status = apr_stat (&finfo, path_apr, APR_FINFO_PROT, pool);
+      if (status)
+        {
+          if (ignore_enoent && APR_STATUS_IS_ENOENT (status))
+            return SVN_NO_ERROR;
+          else if (status != APR_ENOTIMPL)
+            return svn_error_wrap_apr (status,
+                                       "Can't change executability of "
+                                       "file '%s'", path);
+        } 
+      else
+        {
+          perms_to_set = finfo.protection;
+          if (finfo.protection & APR_UREAD)
+            perms_to_set |= APR_UEXECUTE;
+          if (finfo.protection & APR_GREAD)
+            perms_to_set |= APR_GEXECUTE;
+          if (finfo.protection & APR_WREAD)
+            perms_to_set |= APR_WEXECUTE;
+
+          status = apr_file_perms_set (path_apr, perms_to_set);
+          if (status)
+            {
+              if (ignore_enoent && APR_STATUS_IS_ENOENT (status))
+                return SVN_NO_ERROR;
+              else if (status != APR_ENOTIMPL)
+                return svn_error_wrap_apr (status,
+                                           "Can't change executability of "
+                                           "file '%s'", path);
+            }
+          else
+            return SVN_NO_ERROR;
+        } 
+ 
+      status = apr_file_attrs_set (path_apr,
+                                   APR_FILE_ATTR_EXECUTABLE,
+                                   APR_FILE_ATTR_EXECUTABLE,
+                                   pool);
+    }
   else
     status = apr_file_attrs_set (path_apr,
                                  0,

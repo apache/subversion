@@ -205,8 +205,19 @@ svn_error_t *svn_io_set_file_read_write (const char *path,
                                          svn_boolean_t ignore_enoent,
                                          apr_pool_t *pool);
 
-/** Toggle a file's "executability", as much as the operating system
- * allows.  @a path is the utf8-encoded path to the file.  If @a executable
+/** Toggle a file's "executability".
+ *
+ * When making the file executable on operating systems with unix style
+ * permissions only make the file executable for the user, group or world
+ * if the user, group or world already have permission to read the file.
+ *
+ * When making the file non-executable on operating systems with unix style
+ * permissions, remove all execute permissions.
+ *
+ * On other operating systems, toggle the file's "executability" as much as
+ * the operating system allows.
+ *
+ * @a path is the utf8-encoded path to the file.  If @a executable
  * is @c TRUE, then make the file executable.  If @c FALSE, make in
  * non-executable.  If @a ignore_enoent is @c TRUE, don't fail if the target
  * file doesn't exist.
