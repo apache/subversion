@@ -65,13 +65,6 @@ svn_repos_svnserve_conf (svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
-svn_repos_passwd (svn_repos_t *repos, apr_pool_t *pool)
-{
-  return svn_path_join (repos->conf_path, SVN_REPOS__CONF_PASSWD, pool);
-}
-
-
-const char *
 svn_repos_lock_dir (svn_repos_t *repos, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, repos->lock_path);
@@ -858,7 +851,9 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       "# sally = sallyssecret"
       APR_EOL_STR;
 
-    SVN_ERR_W (svn_io_file_create (svn_repos_passwd (repos, pool),
+    SVN_ERR_W (svn_io_file_create (svn_path_join (repos->conf_path,
+                                                  SVN_REPOS__CONF_PASSWD,
+                                                  pool),
                                    passwd_contents, pool),
                "Creating passwd file");
   }
