@@ -94,8 +94,8 @@
 
 
 
-#include <apr_hash.h>
 #include <apr_pools.h>
+#include <apr_hash.h>
 #include <apr_file_io.h>
 #include "svn_types.h"
 #include "svn_string.h"
@@ -255,7 +255,10 @@ svn_wc_proplist_write (ap_hash_t *proplist,
       svn_string_appendstr (msg, destfile_name, pool);
 
       /* Declare this a fatal error! */
-      svn_handle_error (svn_create_error (res, SVN_FATAL, msg, pool));
+      svn_handle_error (svn_create_error (res, SVN_FATAL,
+                                          svn_string_2cstring (msg, pool),
+                                          NULL, pool),
+                        stderr);
     }
 
   /* Else file successfully opened.  Continue. */
@@ -297,7 +300,10 @@ svn_wc_proplist_write (ap_hash_t *proplist,
       svn_string_appendstr (msg, destfile_name, pool);
       
       /* Not fatal, just annoying */
-      svn_handle_error (svn_create_error (res, SVN_NON_FATAL, msg, pool));
+      svn_handle_error (svn_create_error (res, SVN_NON_FATAL,
+                                          svn_string_2cstring (msg, pool),
+                                          NULL, pool),
+                        stderr);
     }
   
   ap_destroy_pool (pool);
@@ -316,8 +322,8 @@ svn_wc_proplist_read (svn_string_t *propfile, apr_pool_t *pool)
 
 #ifdef SVN_TEST
 
-void
-main ()
+int
+main (void)
 {
   ap_pool_t *pool = NULL;
   ap_hash_t *proplist;
@@ -363,6 +369,8 @@ main ()
     (proplist, svn_string_create ("propdump.out", pool));
 
   ap_destroy_pool (pool);
+
+  return 0;
 }
 
 #endif /* SVN_TEST */
