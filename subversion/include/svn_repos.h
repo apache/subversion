@@ -906,6 +906,10 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  * If the dumpstream contains no UUID, then @a uuid_action is
  * ignored and the repository UUID is not touched.
  *
+ * If @a parent_dir is not null, then the parser will reparent all the
+ * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
+ * must be an existing directory in the repository.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
