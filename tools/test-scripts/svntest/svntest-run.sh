@@ -3,13 +3,14 @@
 EXEC_PATH="`dirname $0`"
 BUILD_TYPE="$1"
 RA_TYPE="$2"
+FS_TYPE="$3"
 
 # Source the configuration file.
 . "$EXEC_PATH/svntest-config.sh"
 
 # Compute local vars
-LOG_FILE="$LOG_FILE_PREFIX.$BUILD_TYPE.$RA_TYPE"
-TEST="`$GUESS` $BUILD_TYPE $RA_TYPE"
+LOG_FILE="$LOG_FILE_PREFIX.$BUILD_TYPE.$RA_TYPE.$FS_TYPE"
+TEST="`$GUESS` $BUILD_TYPE $RA_TYPE $FS_TYPE"
 REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 
 # Prime and initialize the log file
@@ -41,6 +42,17 @@ case $RA_TYPE in
 esac
 PASS
 
+# Check the FS type
+START "check FS type" "Checking FS type..."
+case $FS_TYPE in
+    bdb)  CHECK_ARGS="FS_TYPE=bdb" ;;
+    fsfs) CHECK_ARGS="FS_TYPE=fsfs" ;;
+    *)  echo "$FS_TYPE: unknown FS type"
+        echo "$FS_TYPE: unknown FS type" >> $LOG_FILE
+        FAIL ;;
+esac
+PASS
+
 # Check that the object directory exists, and that it contains the
 # necessary executable files
 START "check object directory" "Checking object directory..."
@@ -63,7 +75,8 @@ if test "xyes" == "x$RAMDISK";
 then
     test -x $TEST_ROOT/$OBJ/subversion/tests/clients || {
         START "re-initializing ramdisk" "Re-initializing ramdisk"
-        mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" >> "$LOG_FILE" 2>&1 || FAIL
+        mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" \
+            >> "$LOG_FILE" 2>&1 || FAIL
         cd "$TEST_ROOT/$OBJ"
         $MAKE  mkdir-init > "$LOG_FILE.ramdisk" 2>&1
         test $? = 0 || {
@@ -78,7 +91,7 @@ then
         PASS
     }
 fi
-        
+
 # Prepare the server
 case $CHECK_TARGET in
     check)
@@ -111,7 +124,7 @@ case $CHECK_TARGET in
             >> $LOG_FILE 2>&1
         test $? = 0 || FAIL
         PASS
-        CHECK_ARGS="$RA_DAV_CHECK_ARGS"
+        CHECK_ARGS="$CHECK_ARGS '$RA_DAV_CHECK_ARGS'"
         ;;
 esac
 
@@ -133,31 +146,33 @@ kill_svnserve() {
             PASS
             ;;
     esac
-    
+
     umount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests"
 }
 
 # Test
 ts_start=`$DATE +"%s"`
 
-START "make $CHECK_TARGET" "Testing $RA_TYPE..."
-CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}"
+START "make $CHECK_TARGET" "Testing $RA_TYPE on $FS_TYPE..."
+CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}_${FS_TYPE}"
 cd $TEST_ROOT/$OBJ
 if test $CHECK_TARGET == davcheck ;
 then
     # At the moment we can't give repository url with
     # make davcheck, so use check & BASE_URL here for the present
-    $MAKE check "$CHECK_ARGS" > $CHECK_LOG_FILE 2>&1    
+    $MAKE check $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
 else
-    $MAKE $CHECK_TARGET > $CHECK_LOG_FILE 2>&1
+    $MAKE $CHECK_TARGET $CHECK_ARGS > $CHECK_LOG_FILE 2>&1
 fi
 test $? = 0 || {
     FAIL_LOG $CHECK_LOG_FILE
-    $CP "tests.log" "$LOG_FILE_PREFIX.log.$BUILD_TYPE.$RA_TYPE.$REV.failed" \
+    $CP "tests.log" \
+        "$LOG_FILE_PREFIX.log.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.$REV.failed" \
         >> $LOG_FILE 2>&1
 
     # Prepare the log file for the mailer
-    $GZIP_C < "tests.log" > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.log.gz"
+    $GZIP_C < "tests.log" \
+            > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
     FAIL kill_svnserve
 }
 PASS
