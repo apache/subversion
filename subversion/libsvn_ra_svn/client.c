@@ -406,9 +406,9 @@ static void ra_svn_get_reporter(ra_svn_session_baton_t *sess, apr_pool_t *pool,
 
 /* --- RA LAYER IMPLEMENTATION --- */
 
-static svn_error_t *find_tunnel_agent(const char *tunnel, const char *hostname,
-                                      const char ***argv, apr_hash_t *config,
-                                      apr_pool_t *pool)
+static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
+                                      const char *host, const char ***argv,
+                                      apr_hash_t *config, apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *val, *var, *cmd;
@@ -462,7 +462,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *hostname,
     ;
   *argv = apr_palloc(pool, (n + 4) * sizeof(char *));
   memcpy(*argv, cmd_argv, n * sizeof(char *));
-  (*argv)[n++] = hostname;
+  (*argv)[n++] = (user) ? apr_psprintf(pool, "%s@%s", user, host) : host;
   (*argv)[n++] = "svnserve";
   (*argv)[n++] = "-t";
   (*argv)[n] = NULL;
@@ -555,7 +555,7 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
 
   if (tunnel)
     {
-      SVN_ERR(find_tunnel_agent(tunnel, hostname, &args, config, pool));
+      SVN_ERR(find_tunnel_agent(tunnel, user, hostname, &args, config, pool));
       SVN_ERR(make_tunnel(args, &conn, pool));
     }
   else
