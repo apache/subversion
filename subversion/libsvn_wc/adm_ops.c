@@ -826,6 +826,8 @@ svn_wc_add (const char *path,
             svn_wc_adm_access_t *parent_access,
             const char *copyfrom_url,
             svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
             svn_wc_notify_func_t notify_func,
             void *notify_baton,
             apr_pool_t *pool)
@@ -1044,8 +1046,8 @@ svn_wc_add (const char *path,
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (adm_access, SVN_WC__ENTRY_MODIFY_COPIED,
                               svn_wc_schedule_normal, TRUE,
-                              NULL,  /* ### cancel_func */
-                              NULL,  /* ### cancel_baton */
+                              cancel_func,
+                              cancel_baton,
                               NULL, NULL, /* N/A cuz we aren't deleting */
                               pool));
 

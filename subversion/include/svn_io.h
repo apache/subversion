@@ -150,11 +150,17 @@ svn_error_t *svn_io_copy_file (const char *src,
  * return error.  @a copy_perms will be passed through to @c svn_io_copy_file 
  * when any files are copied.  @a src, @a dst_parent, and @a dst_basename are 
  * all utf8-encoded.
+ *
+ * If @a cancel_func is non-null, invoke it with @a cancel_baton at
+ * various points during the operation.  If it returns any error
+ * (typically SVN_ERR_CANCELLED), return that error immediately.
  */ 
 svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                           const char *dst_parent,
                                           const char *dst_basename,
                                           svn_boolean_t copy_perms,
+                                          svn_cancel_func_t cancel_func,
+                                          void *cancel_baton,
                                           apr_pool_t *pool);
 
 

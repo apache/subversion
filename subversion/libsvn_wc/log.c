@@ -1366,6 +1366,8 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_cleanup (const char *path,
                 svn_wc_adm_access_t *optional_adm_access,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *pool)
 {
   apr_hash_t *entries = NULL;
@@ -1376,6 +1378,10 @@ svn_wc_cleanup (const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t cleanup;
   int wc_format_version;
+
+  /* Check cancellation; note that this catches recursive calls too. */
+  if (cancel_func)
+    SVN_ERR (cancel_func (cancel_baton));
 
   SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
 
@@ -1408,7 +1414,8 @@ svn_wc_cleanup (const char *path,
           const char *subdir = svn_path_join (path, key, pool);
           SVN_ERR (svn_io_check_path (subdir, &kind, pool));
           if (kind == svn_node_dir)
-            SVN_ERR (svn_wc_cleanup (subdir, adm_access, pool));
+            SVN_ERR (svn_wc_cleanup (subdir, adm_access,
+                                     cancel_func, cancel_baton, pool));
         }
     }
 
