@@ -171,9 +171,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     {
         synchronized(clazz)
         {
-            return worker.logMessages(path, revisionStart, revisionEnd, true);
+            return worker.logMessages(path, revisionStart, revisionEnd, true, false);
         }
     }
+
     /**
      * Retrieve the log messages for an item
      * @param path          path or url to get the log message for.
@@ -189,7 +190,29 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             return worker.logMessages(path, revisionStart, revisionEnd,
-                    stopOnCopy);
+                    stopOnCopy, false);
+        }
+    }
+
+    /**
+     * Retrieve the log messages for an item
+     * @param path          path or url to get the log message for.
+     * @param revisionStart first revision to show
+     * @param revisionEnd   last revision to show
+     * @param stopOnCopy    do not continue on copy operations
+     * @param discoverPath  returns the paths of the changed items in the
+     *                      returned objects
+     * @return array of LogMessages
+     */
+    public LogMessage[] logMessages(String path, Revision revisionStart,
+                                    Revision revisionEnd, boolean stopOnCopy,
+                                    boolean discoverPath)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.logMessages(path, revisionStart, revisionEnd,
+                    stopOnCopy, discoverPath);
         }
     }
     /**

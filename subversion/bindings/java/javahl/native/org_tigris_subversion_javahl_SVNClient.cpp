@@ -249,13 +249,11 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_setPrompt
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    logMessages
- * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;
- *             Lorg/tigris/subversion/javahl/Revision;Z)
- *            [Lorg/tigris/subversion/javahl/LogMessage;
+ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Lorg/tigris/subversion/javahl/Revision;ZZ)[Lorg/tigris/subversion/javahl/LogMessage;
  */
 JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMessages
   (JNIEnv* env, jobject jthis, jstring jpath, jobject jrevisionStart,
-   jobject jrevisionEnd, jboolean jstopOnCopy)
+   jobject jrevisionEnd, jboolean jstopOnCopy, jboolean jdisoverPaths)
 {
     JNIEntry(SVNClient, logMessages);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -264,12 +262,12 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMe
         JNIUtil::throwError(_("bad c++ this"));
         return NULL;
     }
-    Revision revisionStart(jrevisionStart);
+    Revision revisionStart(jrevisionStart, false, true);
     if(JNIUtil::isExceptionThrown())
     {
         return NULL;
     }
-    Revision revisionEnd(jrevisionEnd);
+    Revision revisionEnd(jrevisionEnd, true);
     if(JNIUtil::isExceptionThrown())
     {
         return NULL;
@@ -280,7 +278,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMe
         return NULL;
     }
     return cl->logMessages(path, revisionStart, revisionEnd,
-                           jstopOnCopy ? true: false);
+        jstopOnCopy ? true: false, jdisoverPaths ? true : false);
 }
 
 /*
