@@ -74,6 +74,12 @@ extern struct svn_test_descriptor_t test_funcs[];
  */
 apr_uint32_t svn_test_rand (apr_uint32_t *seed);
 
+
+/** Add @a path to the test cleanup list.
+ */
+void svn_test_add_dir_cleanup (const char *path);
+
+
 
 /** Set @a *editor and @a *edit_baton to an editor that prints its arguments 
  * to @a out_stream.

@@ -378,14 +378,28 @@ class Sandbox:
     self.name = '%s-%d' % (module, idx)
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
+    self.repo_url = test_area_url + '/' + self.repo_dir
     self.test_paths = [self.wc_dir, self.repo_dir]
 
   def build(self):
     if actions.make_repo_and_wc(self):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
-  def add_test_path(self, path):
+  def add_test_path(self, path, remove=1):
     self.test_paths.append(path)
+    if remove:
+      safe_rmtree(path)
+
+  def add_repo_path(self, suffix, remove=1):
+    path = self.repo_dir + '.' + suffix
+    url  = self.repo_url + '.' + suffix
+    self.add_test_path(path, remove)
+    return path, url
+
+  def add_wc_path(self, suffix, remove=1):
+    path = self.wc_dir + '.' + suffix
+    self.add_test_path(path, remove)
+    return path
 
   def cleanup_test_paths(self):
     global verbose_mode

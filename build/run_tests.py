@@ -10,7 +10,7 @@ class TestHarness:
   '''
 
   def __init__(self, abs_srcdir, abs_builddir, python, shell, logfile,
-               base_url = None, verbose=None, cleanup=None):
+               base_url=None, verbose=None, cleanup=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -94,6 +94,8 @@ class TestHarness:
       progname = './' + progbase
       cmdline = [quote(progname),
                  quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
+      if self.verbose is not None:
+        cmdline.append('--verbose')
       if self.cleanup is not None:
         cmdline.append('--cleanup')
     else:

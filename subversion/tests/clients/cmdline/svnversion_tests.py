@@ -34,7 +34,7 @@ def svnversion_test(sbox):
   "test 'svnversion' on a working copy and other directories"
   sbox.build()
   wc_dir = sbox.wc_dir
-  repo_url = svntest.main.current_repo_url
+  repo_url = sbox.repo_url
 
   # Unmodified
   output, errput = svntest.main.run_svnversion(wc_dir, repo_url)

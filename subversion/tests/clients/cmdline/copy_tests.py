@@ -299,7 +299,7 @@ def receive_copy_in_update(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy.
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Define a zillion paths in both working copies.

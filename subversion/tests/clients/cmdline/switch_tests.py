@@ -274,7 +274,7 @@ def full_update(sbox):
     return 1
 
   # Copy wc_dir to a backup location
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
   
   # Commit some stuff (don't bother verifying)
@@ -402,7 +402,7 @@ def update_switched_things(sbox):
     return 1
 
   # Copy wc_dir to a backup location
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
   
   # Commit some stuff (don't bother verifying)

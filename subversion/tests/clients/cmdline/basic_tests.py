@@ -175,7 +175,7 @@ def basic_update(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
@@ -251,7 +251,7 @@ def basic_corruption(sbox):
   wc_dir = sbox.wc_dir
 
   # Make the "other" working copy
-  other_wc = wc_dir + '-other'
+  other_wc = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir (wc_dir, other_wc)
 
   # Make a local mod to mu
@@ -397,7 +397,7 @@ def basic_merging_update(sbox):
     return 1
   
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
@@ -480,7 +480,7 @@ def basic_conflict(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files which will be committed
@@ -1475,7 +1475,7 @@ def basic_auth_cache(sbox):
 
   wc_dir         = sbox.wc_dir
   repo_dir       = sbox.repo_dir
-  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  repo_url       = sbox.repo_url
 
   # Create a working copy without auth tokens
   svntest.main.safe_rmtree(wc_dir)
