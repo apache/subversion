@@ -645,6 +645,32 @@ svn_config_set_bool (svn_config_t *cfg,
 }
 
 
+
+int
+svn_config_enumerate_sections (svn_config_t *cfg,
+                               svn_config_section_enumerator_t callback,
+                               void *baton)
+{
+  apr_hash_index_t *sec_ndx;
+  int count = 0;
+
+  for (sec_ndx = apr_hash_first (cfg->x_pool, cfg->sections);
+       sec_ndx != NULL;
+       sec_ndx = apr_hash_next (sec_ndx))
+    {
+      void *sec_ptr;
+      cfg_section_t *sec;
+
+      apr_hash_this (sec_ndx, NULL, NULL, &sec_ptr);
+      sec = sec_ptr;
+      ++count;
+      if (!callback (sec->name, baton))
+        break;
+    }
+
+  return count;
+}
+
 
 
 int
