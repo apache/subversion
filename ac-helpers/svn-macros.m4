@@ -69,3 +69,11 @@ AC_DEFUN(SVN_SUBDIR_CONFIG, [
     AC_MSG_WARN(not running configure in $1)
   fi
 ])dnl
+
+dnl
+dnl SVN_CONFIG_SCRIPT(path)
+dnl
+dnl Make AC_OUTPUT create an executable file.
+dnl
+AC_DEFUN(SVN_CONFIG_SCRIPT, [
+  AC_CONFIG_FILES([$1], [chmod +x $1])])
