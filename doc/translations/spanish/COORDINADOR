@@ -1,0 +1,210 @@
+ 1     Respecto a la comunidad de traductores
+ 1.1    Definición de la comunidad
+ 1.2    Descripción del puesto de coordinador
+ 1.3.1   Papel de traductor
+ 1.3.2   Papel de coordinador
+ 1.4    Tiempos de reacción
+ 1.5    Manutención básica del proyecto
+ 1.6    Elección/cambio de coordinador
+ 1.7    Situaciones excepcionales y delegación de responsabilidades
+
+
+
+1 Respecto a la comunidad de traductores
+****************************************
+
+1.1 Definición de la comunidad
+==============================
+
+Se entiende por comunidad de traductores aquellas personas que se
+comunican o leen la lista de correo l10n-es alojada en el servidor
+subversion.org. Por traductor, aunque de forma más genérica se
+debería decir colaborador, se entiende cualquier persona que desee
+traducir textos del inglés al español, realice comentarios sobre
+el proyecto en sí, o proporcione revisiones de las traducciones
+realizadas.  Cualquier persona que interactúe de esta forma y
+proporcione alguna mejora "material" al proyecto deberá ser añadida
+al fichero de colaboradores.
+
+
+1.2 Descripción del puesto de coordinador
+=========================================
+
+El coordinador del proyecto de traducción puede tomar dos papeles
+(normalmente ambos): traductor y coordinador. En ambos casos debe
+ceñirse a unas reglas que definen su responsabilidad, dado que se
+trata de una posición pública dentro de una comunidad, y por lo
+tanto está sujeta a la opinión global de ésta.
+
+
+1.3.1 Papel de traductor
+------------------------
+
+El papel de traductor no es obligatorio, un coordinador puede
+dedicarse únicamente a coordinar el proyecto sin colaborar una
+sola línea de texto a la traducción final. No obstante, en caso de
+colaborar como traductor, aparte de seguir las mismas reglas que
+usan el resto de los traductores, debe ser un modelo de dedicación.
+Por esto se entiende que realizará trabajo de traducción de forma
+periódica y constante, de forma que anime a otros a colaborar.
+Este trabajo continuo e ininterrumpido tiene como objetivo principal
+mostrar de cara al público que el proyecto no está "muerto"
+y progresa, a la velocidad que sea.
+
+En caso de faltar a las restricciones temporales aplicadas a otros
+traductores, pierde el papel de coordinador y queda como coordinador
+en funciones hasta que se realice un cambio de coordinador. La
+ausencia de trabajo se puede aceptar si el coordinador notifica
+con antelación de una situación excepcional indicada más abajo.
+
+Como traductor se espera que conozca el lenguaje español a fondo para
+ser capaz de decidir si la traducción debe seguir un estilo u otro.
+Al fin y al cabo una traducción no puede ser literal, y se acaban
+"reescribiendo" los conceptos con otras palabras. Como tal, puede
+y debe influir en las traducciones de los demás para que el estilo
+final de todas las colaboraciones encaje y se lea como único por
+cualquier lector.
+
+
+1.3.2 Papel de coordinador
+--------------------------
+
+La función de coordinar es obligatoria para el puesto. Dentro de esta
+función se distingue la comunicación y la acción de forma separada.
+La comunicación es la tarea de contestar vía email a cualquier
+petición, incidente, pregunta, etc, sea realizada de forma personal
+o vía lista de correo. Por acción se considera hacer efectivas las
+decisiones que sean consideradas necesarias para llevar a buen
+puerto el proyecto. Para diferenciar comunicación de acción se
+muestran dos ejemplos:
+
+Dos traductores desean traducir un fichero determinado. Mediante
+comunicación el coordinador sugiere que uno de los dos sea el
+responsable. Los traductores, ya sea por el coordinador u otros
+argumentos aclaran el conflicto y deciden que uno de los dos será
+el responsable.
+
+La acción llegaría en caso de que el conflicto aparentemente no
+se pueda solucionar.  En este caso el coordinador toma la decisión
+de que uno de los dos sea el responsable.  Esto es una acción que
+deberá ser respetada por los traductores.
+
+Tal y como se puede inferir de este ejemplo, el coordinador goza
+de poder absoluto para resolver cualquier conflicto. Si bien por
+medio de la comunicación, no debería ser necesario llegar a tomar
+alguna acción de tal calibre.
+
+Por otro lado hay otras acciones que no afectan a traductores
+que sólo son responsabilidad del coordinador, como mantener los
+meta ficheros del proyecto, actualizar la página web del libro,
+enviar informes semanales de actividad a la lista de correo,
+etc. Estas otras acciones son más "aburridas", y definitivamente
+menos peligrosas para la salud, pero hay que hacerlas.
+
+
+1.4 Tiempos de reacción
+=======================
+
+Tanto para la comunicación como la acción, se deben mantener unos
+límites de tiempo, fuera de los cuales el coordinador no cumple con
+su función y por tanto debe ser cambiado. Dado que hablamos de una
+comunidad basada en la comunicación por email, estos tiempos son
+algo más elásticos que en trabajos donde los colaboradores se ven
+cara a cara.
+
+Tomando como referencia un mensaje en la lista de correo, se
+considera como respuesta rápida si el coordinador responde en
+menos de dos días. Si responde entre 2 y 5 días, la respuesta es
+buena. Si responde entre 5 y 10 días, la respuesta es aceptable. Si
+responde entre 10 y 20 días, la respuesta es mediocre. Más de 20 días
+significa que el coordinador no está leyendo su correo electrónico
+y por lo tanto no realiza su papel de coordinador.
+
+No obstante, dada la volatilidad del email y la cantidad de SPAM
+con la que cualquier usuario de Internet debe enfrentarse, se exige
+que el mensaje de la lista de correo sea reenviado cada 5 días,
+para asegurarse de que es visto. Estos reenvíos, no obstante, no
+extienden el periodo de 20 días especificado por el primer mensaje,
+el cual el coordinador debe cumplir.
+
+
+1.5 Manutención básica del proyecto
+===================================
+
+El coordinador debe mantener actualizados los ficheros relacionados
+con el proyecto, es decir, todos aquellos pertenecientes
+al directorio raíz, como por ejemplo LEAME, TRABAJO, TODO,
+etc. Especialmente importante es llevar correctamente el fichero que
+relaciona trabajo con autor, para que se sepa quién ha colaborado
+de qué manera.
+
+En el directorio raíz también hay algunos scripts en Python, que
+se pueden ejecutar en una máquina Unix o similar (posiblemente
+no funcionen en plataformas Windows). Uno de ellos genera unas
+estadísticas básicas de actividad que deben ser enviadas una vez
+por semana a la lista de correo de la comunidad de traductores.
+
+
+1.6 Elección/cambio de coordinador
+==================================
+
+En el caso de que haya que hacer un cambio de coordinador, se
+contempla la posibilidad de que el coordinador haya desaparecido
+completamente del proyecto, o que siga pudiendo colaborar, obviamente
+por debajo de los requisitos mínimos planteados por este documento
+(ya que de lo contrario no se entendería la necesidad del cambio).
+
+En el primer caso es urgente que los traductores en activo, mediante
+la lista de correo, elijan a otra persona para que realice las
+tareas de coordinador. Esta elección debe realizarse en un periodo
+no superior a los dos meses desde el último mensaje público del
+coordinador. Si bien una traducción es un trabajo que no requiere
+realmente de mucha coordinación, es necesario que alguien adquiera
+la responsabilidad del proyecto para poder hacer efectivos los
+requisitos de comunicación y acción, vitales para que el proyecto
+no se quede estancado.
+
+Dicho de otro modo: la decisión en caso extremo puede bien ser
+aparcar el proyecto, pero es decisión que debe ser tomada por
+alguien, no dejada al azar. Es una lástima que por falta de voluntad
+un proyecto de traducción deba ser detenido, pero es peor aun que
+a falta de establecer este hecho claramente dentro de la comunidad
+de Subversion y la página web del proyecto, otros potenciales
+voluntarios no se decidan a retomar el proyecto.
+
+En el segundo caso, igualmente hay que nombrar a otro coordinador
+en un periodo de dos meses. Pero como el coordinador sigue por ahí,
+pues digamos que puede seguir realizando esa función hasta que se
+encuentre un reemplazo. En este periodo, cualquier traductor
+adquiere temporalmente el poder de coordinador: al haber un vacío
+"formal" de poder, cualquiera es válido para tomar alguna decisión
+normalmente tomada por el coordinador. En el peor de los casos el
+futuro coordinador puede deshacer el cambio, si alguna decisión
+temporal fue errónea.
+
+En ambos casos, el cambio de coordinador debe ser comunicado a la
+comunidad de desarrolladores de Subversion.
+
+
+1.7 Situaciones excepcionales y delegación de responsabilidades
+===============================================================
+
+Como situación excepcional se entiende cualquier razón por la
+cual el coordinador no pueda cumplir su papel por un determinado
+tiempo. Por ejemplo, vacaciones, hospitalización, carga excesiva
+de trabajo en la vida real, etc.  El coordinador puede notificar
+de estas situaciones a la lista de correo, indicando el tiempo
+por el cual no podrá cumplir sus funciones. Al mismo tiempo debe
+elegir a un traductor para que sea el coordinador en funciones,
+si bien sólo en el papel de coordinador, no en el de traductor ideal.
+
+Igualmente si estas situaciones no pueden ser anticipadas pero se
+explican posteriormente, pueden servir como eximente para evitar la
+destitución del coordinador, siempre y cuando los demás traductores
+acepten esta "excusa".
+
+Una situación excepcional que requiera delegación de
+responsabilidades en otra persona incluye no sólo las labores de
+coordinador respecto a los traductores del proyecto, sino también
+las labores respecto a la comunidad Subversion (más en el siguiente
+capítulo).
