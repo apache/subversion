@@ -484,7 +484,7 @@ def diff_non_recursive(sbox):
     return 1
 
   # non-recursive has one change
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1', '-n',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1', '-N',
                                                  os.path.join(wc_dir, 'A', 'D'))
   if count_diff_output(diff_output) != 1:
     return 1
