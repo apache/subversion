@@ -1229,7 +1229,7 @@ get_combined_window (svn_txdelta_window_t **result,
             return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                      _("Reading one svndiff window read "
                                        "beyond the end of the "
-                                       "representation."));
+                                       "representation"));
         }
 
       /* Read the next window. */
@@ -1241,7 +1241,7 @@ get_combined_window (svn_txdelta_window_t **result,
       if (rs->off > rs->end)
         return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                  _("Reading one svndiff window read beyond "
-                                   "the end of the representation."));
+                                   "the end of the representation"));
 
       /* Combine this window with the current one.  Cycles pools so that we
          only need to hold three windows at a time. */
@@ -2976,14 +2976,14 @@ get_next_revision_ids (const char **node_id,
   str = apr_strtok (NULL, " ", &last_str);
   if (! str)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Corrupt current file."));
+                             _("Corrupt current file"));
 
   *node_id = apr_pstrdup (pool, str);
 
   str = apr_strtok (NULL, " ", &last_str);
   if (! str)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Corrupt current file."));
+                             _("Corrupt current file"));
 
   *copy_id = apr_pstrdup (pool, str);
 
