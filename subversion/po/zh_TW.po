@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-12 23:34+0800\n"
+"POT-Creation-Date: 2004-09-24 23:56+0800\n"
 "PO-Revision-Date: 2004-09-08 21:44+0200\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
@@ -2189,214 +2189,222 @@ msgstr "所有的認證供給者已耗盡"
 msgid "Read access denied for root of edit"
 msgstr "編輯的根目錄讀取拒絕"
 
-#: include/svn_error_codes.h:675
+#: include/svn_error_codes.h:674
+msgid "Item is not readable."
+msgstr "項目無法讀取"
+
+#: include/svn_error_codes.h:679
+msgid "Item is partially readable."
+msgstr "項目只有部份可讀取"
+
+#: include/svn_error_codes.h:686
 msgid "Svndiff data has invalid header"
 msgstr "svndiff 資料包含了無效的檔頭"
 
 # as-is
-#: include/svn_error_codes.h:679
+#: include/svn_error_codes.h:690
 msgid "Svndiff data contains corrupt window"
 msgstr "Svndiff data contains corrupt window"
 
 # as-is
-#: include/svn_error_codes.h:683
+#: include/svn_error_codes.h:694
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "Svndiff data contains backward-sliding source view"
 
-#: include/svn_error_codes.h:687
+#: include/svn_error_codes.h:698
 msgid "Svndiff data contains invalid instruction"
 msgstr "svndiff 資料包含了無效的指令"
 
-#: include/svn_error_codes.h:691
+#: include/svn_error_codes.h:702
 msgid "Svndiff data ends unexpectedly"
 msgstr "svndiff 資料無預期地結束"
 
-#: include/svn_error_codes.h:697
+#: include/svn_error_codes.h:708
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache 沒有指向 SVN 檔案系統的路徑"
 
-#: include/svn_error_codes.h:701
+#: include/svn_error_codes.h:712
 msgid "Apache got a malformed URI"
 msgstr "Apache 得到一個有缺陷的 URI"
 
 # as-is
-#: include/svn_error_codes.h:705
+#: include/svn_error_codes.h:716
 msgid "Activity not found"
 msgstr "Activity not found"
 
-#: include/svn_error_codes.h:709
+#: include/svn_error_codes.h:720
 msgid "Baseline incorrect"
 msgstr "基線不正確"
 
-#: include/svn_error_codes.h:713
+#: include/svn_error_codes.h:724
 msgid "Input/output error"
 msgstr "輸出入錯誤"
 
-#: include/svn_error_codes.h:719
+#: include/svn_error_codes.h:730
 msgid "A path under version control is needed for this operation"
 msgstr "本動作僅能作用於納入版本控制的路徑"
 
-#: include/svn_error_codes.h:723
+#: include/svn_error_codes.h:734
 msgid "Repository access is needed for this operation"
 msgstr "本動作需要對檔案庫進行存取"
 
-#: include/svn_error_codes.h:727
+#: include/svn_error_codes.h:738
 msgid "Bogus revision information given"
 msgstr "使用了有問題的修訂版資訊"
 
-#: include/svn_error_codes.h:731
+#: include/svn_error_codes.h:742
 msgid "Attempting to commit to a URL more than once"
 msgstr "嘗試對 URL 進行一次以上的送交"
 
-#: include/svn_error_codes.h:735
+#: include/svn_error_codes.h:746
 msgid "Operation does not apply to binary file"
 msgstr "本動作不適用於二進制檔案"
 
-#: include/svn_error_codes.h:741
+#: include/svn_error_codes.h:752
 msgid "Format of an svn:externals property was invalid"
 msgstr "svn:externals 性質的格式是無效的"
 
-#: include/svn_error_codes.h:745
+#: include/svn_error_codes.h:756
 msgid "Attempting restricted operation for modified resource"
 msgstr "嘗試對已修改的資源進行受限的作業"
 
-#: include/svn_error_codes.h:749
+#: include/svn_error_codes.h:760
 msgid "Operation does not apply to directory"
 msgstr "本動作不適用於目錄"
 
-#: include/svn_error_codes.h:753
+#: include/svn_error_codes.h:764
 msgid "Revision range is not allowed"
 msgstr "不允許的修訂版範圍"
 
-#: include/svn_error_codes.h:757
+#: include/svn_error_codes.h:768
 msgid "Inter-repository relocation not allowed"
 msgstr "不支援不同檔案庫之間的重新安置 (relocation)"
 
-#: include/svn_error_codes.h:761
+#: include/svn_error_codes.h:772
 msgid "Author name cannot contain a newline"
 msgstr "作者名稱不可包含換列字元"
 
-#: include/svn_error_codes.h:765
+#: include/svn_error_codes.h:776
 msgid "Bad property name"
 msgstr "有問題的性質名稱"
 
-#: include/svn_error_codes.h:770
+#: include/svn_error_codes.h:781
 msgid "Two versioned resources are unrelated"
 msgstr "兩個納入版本控制的資源沒有相關性"
 
-#: include/svn_error_codes.h:777
+#: include/svn_error_codes.h:788
 msgid "A problem occurred; see later errors for details"
 msgstr "有問題發生; 請參閱隨附的細節"
 
-#: include/svn_error_codes.h:781
+#: include/svn_error_codes.h:792
 msgid "Failure loading plugin"
 msgstr "載入外掛失敗"
 
-#: include/svn_error_codes.h:785
+#: include/svn_error_codes.h:796
 msgid "Malformed file"
 msgstr "有缺陷的檔案"
 
-#: include/svn_error_codes.h:789
+#: include/svn_error_codes.h:800
 msgid "Incomplete data"
 msgstr "不完全的資料"
 
-#: include/svn_error_codes.h:793
+#: include/svn_error_codes.h:804
 msgid "Incorrect parameters given"
 msgstr "使用不正確的參數"
 
-#: include/svn_error_codes.h:797
+#: include/svn_error_codes.h:808
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr "試著對未納入版本控制的資源進行版本控制動作"
 
-#: include/svn_error_codes.h:801
+#: include/svn_error_codes.h:812
 msgid "Test failed"
 msgstr "測試失敗"
 
-#: include/svn_error_codes.h:805
+#: include/svn_error_codes.h:816
 msgid "Trying to use an unsupported feature"
 msgstr "試著要使用不支援的功能"
 
-#: include/svn_error_codes.h:809
+#: include/svn_error_codes.h:820
 msgid "Unexpected or unknown property kind"
 msgstr "不預期或未知的性質種類"
 
-#: include/svn_error_codes.h:813
+#: include/svn_error_codes.h:824
 msgid "Illegal target for the requested operation"
 msgstr "對要求的動作來說是不合法的目標"
 
-#: include/svn_error_codes.h:817
+#: include/svn_error_codes.h:828
 msgid "MD5 checksum is missing"
 msgstr "沒有 MD5 檢查值"
 
-#: include/svn_error_codes.h:821
+#: include/svn_error_codes.h:832
 msgid "Directory needs to be empty but is not"
 msgstr "目錄必須為空的, 但是結果並非如此"
 
-#: include/svn_error_codes.h:825
+#: include/svn_error_codes.h:836
 msgid "Error calling external program"
 msgstr "呼叫外部程式時發生錯誤"
 
-#: include/svn_error_codes.h:829
+#: include/svn_error_codes.h:840
 msgid "Python exception has been set with the error"
 msgstr "Python 例外已被設定為錯誤"
 
-#: include/svn_error_codes.h:833
+#: include/svn_error_codes.h:844
 msgid "A checksum mismatch occurred"
 msgstr "總和檢查值不符"
 
-#: include/svn_error_codes.h:837
+#: include/svn_error_codes.h:848
 msgid "The operation was interrupted"
 msgstr "動作被中斷"
 
-#: include/svn_error_codes.h:841
+#: include/svn_error_codes.h:852
 msgid "The specified diff option is not supported"
 msgstr "指定的 diff 選項不支援"
 
-#: include/svn_error_codes.h:845
+#: include/svn_error_codes.h:856
 msgid "Property not found"
 msgstr "找不到性質"
 
-#: include/svn_error_codes.h:849
+#: include/svn_error_codes.h:860
 msgid "No auth file path available"
 msgstr "未提供 auth 檔案路徑"
 
-#: include/svn_error_codes.h:854
+#: include/svn_error_codes.h:865
 msgid "Incompatible library version"
 msgstr "不相容的程式庫版本"
 
-#: include/svn_error_codes.h:860
+#: include/svn_error_codes.h:871
 msgid "Client error in parsing arguments"
 msgstr "用戶端於剖析引數時發生錯誤"
 
-#: include/svn_error_codes.h:864
+#: include/svn_error_codes.h:875
 msgid "Not enough args provided"
 msgstr "未提供足夠的引數"
 
-#: include/svn_error_codes.h:868
+#: include/svn_error_codes.h:879
 msgid "Mutually exclusive arguments specified"
 msgstr "指定了互斥的引數"
 
-#: include/svn_error_codes.h:872
+#: include/svn_error_codes.h:883
 msgid "Attempted command in administrative dir"
 msgstr "嘗試於管理目錄中執行命令"
 
-#: include/svn_error_codes.h:876
+#: include/svn_error_codes.h:887
 msgid "The log message file is under version control"
 msgstr "紀錄訊息檔於版本控制之下"
 
-#: include/svn_error_codes.h:880
+#: include/svn_error_codes.h:891
 msgid "The log message is a pathname"
 msgstr "紀錄訊息是路徑名"
 
-#: include/svn_error_codes.h:884
+#: include/svn_error_codes.h:895
 msgid "Committing in directory scheduled for addition"
 msgstr "於預計新增的目錄中進行送交"
 
-#: include/svn_error_codes.h:888
+#: include/svn_error_codes.h:899
 msgid "No external editor available"
 msgstr "無法使用外部編輯器"
 
-#: include/svn_error_codes.h:892
+#: include/svn_error_codes.h:903
 msgid "Something is wrong with the log message's contents"
 msgstr "紀錄訊息的內容有不妥的地方"
 
@@ -2843,11 +2851,11 @@ msgstr "項目 '%s' 沒有 URL"
 msgid "No commits in repository."
 msgstr "檔案庫中沒有任何送交"
 
-#: libsvn_client/ls.c:48 libsvn_client/ls.c:122
+#: libsvn_client/ls.c:49 libsvn_client/ls.c:126
 msgid "No get_dir() available for URL schema"
 msgstr "該 URL 綱要中並不支援 get_dir()"
 
-#: libsvn_client/ls.c:129 libsvn_client/ls.c:136
+#: libsvn_client/ls.c:133 libsvn_client/ls.c:140
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL '%s' 並不存在於該修訂版中"
@@ -3119,7 +3127,7 @@ msgstr "修訂版檔案的最後一列大於 64 個字元長"
 msgid "Final line in revision file missing space"
 msgstr "修訂版檔案的最後一列少掉空白字元"
 
-#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:163 libsvn_repos/log.c:167
+#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:231 libsvn_repos/log.c:235
 #, c-format
 msgid "No such revision %ld"
 msgstr "沒有這個修訂版 %ld"
@@ -3507,7 +3515,7 @@ msgstr "%s 要求的回應傳回無效的 XML: %s (%s)"
 msgid "%s request failed on '%s'"
 msgstr "%s 要求於 '%s' 的失敗"
 
-#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:465
+#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:467
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3524,12 +3532,12 @@ msgid "Unable to open an ra_local session to URL"
 msgstr "無法開啟 URL 的 ra_local session"
 
 # as-is
-#: libsvn_ra_local/ra_plugin.c:927
+#: libsvn_ra_local/ra_plugin.c:930
 msgid "Module for accessing a repository on local disk."
 msgstr "Module for accessing a repository on local disk."
 
 # as-is
-#: libsvn_ra_local/ra_plugin.c:972
+#: libsvn_ra_local/ra_plugin.c:975
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
 msgstr "Unsupported RA plugin ABI version (%d) for ra_local"
@@ -3650,15 +3658,19 @@ msgstr ""
 msgid "Failed to find time on revision %ld"
 msgstr "無法找到修訂版 %ld 的時間"
 
-#: libsvn_repos/rev_hunt.c:199
+#: libsvn_repos/rev_hunt.c:219
 #, c-format
 msgid "Invalid start revision %ld"
 msgstr "無效的起始修訂版 %ld"
 
-#: libsvn_repos/rev_hunt.c:203
+#: libsvn_repos/rev_hunt.c:223
 #, c-format
 msgid "Invalid end revision %ld"
 msgstr "無效的結束修訂版 %ld"
+
+#: libsvn_repos/rev_hunt.c:315
+msgid "Unreadable path encountered; access denied."
+msgstr "遇到無法讀取的路徑; 拒絕存取."
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
@@ -4495,8 +4507,7 @@ msgstr "自來源檔案庫移除多餘的紀錄檔"
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
-msgstr ""
-"如果檔案庫被其它行程所用, 等待而不逕自結束"
+msgstr "如果檔案庫被其它行程所用, 等待而不逕自結束"
 
 #: svnadmin/main.c:282
 msgid ""
