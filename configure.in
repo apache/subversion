@@ -62,7 +62,7 @@ dnl Check for libraries --------------------
 
 dnl AC_CHECK_LIB() calls go here, if we ever need any
 
-
+SVN_CHECK_BERKELEY_DB(3, 1, 14)
 
 dnl Check for header files ----------------
 
