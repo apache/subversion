@@ -57,3 +57,10 @@ Candidate changes:
     Justification: This fixes the RPM build to work without patching.
     Votes:
       +1: david
+
+  * r9589
+    Fix nasty pool usage problems in 'svnlook diff/changed/dirs-changed'.
+    Justification: commit-email.pl uses 'svnlook diff', and 'svnlook
+    diff' on, say, and large import, can get *really* nasty memory-wise.
+    Votes:
+      +1: cmpilato
