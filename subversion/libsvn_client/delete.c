@@ -208,6 +208,8 @@ svn_client__wc_delete (const char *path,
                        svn_wc_adm_access_t *adm_access,
                        svn_boolean_t force, 
                        svn_boolean_t dry_run, 
+                       svn_wc_notify_func_t notify_func,
+                       void *notify_baton,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {
@@ -220,7 +222,7 @@ svn_client__wc_delete (const char *path,
     /* Mark the entry for commit deletion and perform wc deletion */
     SVN_ERR (svn_wc_delete (path, adm_access,
                             ctx->cancel_func, ctx->cancel_baton,
-                            ctx->notify_func, ctx->notify_baton, pool));
+                            notify_func, notify_baton, pool));
   return SVN_NO_ERROR;
 }
 
@@ -261,7 +263,9 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
           SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path, 
                                      TRUE, 0, subpool));
           SVN_ERR (svn_client__wc_delete (path, adm_access, force, 
-                                          FALSE, ctx, subpool));
+                                          FALSE,
+                                          ctx->notify_func, ctx->notify_baton,
+                                          ctx, subpool));
           SVN_ERR (svn_wc_adm_close (adm_access));
         }
       svn_pool_destroy (subpool);
