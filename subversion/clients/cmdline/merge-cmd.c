@@ -66,12 +66,8 @@ svn_cl__merge (apr_getopt_t *os,
       using_alternate_syntax = TRUE;
     }
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         ! using_alternate_syntax,
-                                         pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* If there are no targets at all, then let's just give the user a
      friendly help message, rather than spewing an error.  */
@@ -103,7 +99,7 @@ svn_cl__merge (apr_getopt_t *os,
       else
         targetpath = "";
     }
-  else /* using @rev syntax, revs already extracted. */
+  else /* using @rev syntax */
     {
       if ((targets->nelts < 2) || (targets->nelts > 3))
         {
@@ -114,8 +110,12 @@ svn_cl__merge (apr_getopt_t *os,
         }
 
       /* the first two paths become the 'sources' */
-      sourcepath1 = ((const char **) (targets->elts))[0];
-      sourcepath2 = ((const char **) (targets->elts))[1];
+      SVN_ERR (svn_opt_parse_path (&opt_state->start_revision, &sourcepath1,
+                                   ((const char **) (targets->elts))[0],
+                                   pool));
+      SVN_ERR (svn_opt_parse_path (&opt_state->end_revision, &sourcepath2,
+                                   ((const char **) (targets->elts))[1],
+                                   pool));
       
       /* Catch 'svn merge wc_path1 wc_path2 [target]' without explicit
          revisions--since it ignores local modifications it may not do what

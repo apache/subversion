@@ -68,22 +68,24 @@ svn_cl__diff (apr_getopt_t *os,
   if ((status = apr_file_open_stderr (&errfile, pool)))
     return svn_error_wrap_apr (status, _("Can't open stderr"));
 
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
+                                          opt_state->targets, pool));
+
   if (! opt_state->old_target && ! opt_state->new_target
-      && (os->argc - os->ind == 2)
-      && svn_path_is_url (os->argv[os->ind])
-      && svn_path_is_url (os->argv[os->ind + 1])
+      && (targets->nelts == 2)
+      && svn_path_is_url (APR_ARRAY_IDX (targets, 0, const char *))
+      && svn_path_is_url (APR_ARRAY_IDX (targets, 1, const char *))
       && opt_state->start_revision.kind == svn_opt_revision_unspecified
       && opt_state->end_revision.kind == svn_opt_revision_unspecified)
     {
       /* The 'svn diff OLD_URL[@OLDREV] NEW_URL[@NEWREV]' case matches. */
-      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                             opt_state->targets,
-                                             &(opt_state->start_revision),
-                                             &(opt_state->end_revision),
-                                             TRUE, /* extract @revs */ pool));
 
-      old_target = APR_ARRAY_IDX (targets, 0, const char *);
-      new_target = APR_ARRAY_IDX (targets, 1, const char *);
+      SVN_ERR (svn_opt_parse_path (&opt_state->start_revision, &old_target,
+                                   APR_ARRAY_IDX (targets, 0, const char *),
+                                   pool));
+      SVN_ERR (svn_opt_parse_path (&opt_state->end_revision, &new_target,
+                                   APR_ARRAY_IDX (targets, 1, const char *),
+                                   pool));
       targets->nelts = 0;
       
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
@@ -94,12 +96,10 @@ svn_cl__diff (apr_getopt_t *os,
   else if (opt_state->old_target)
     {
       apr_array_header_t *tmp, *tmp2;
+      svn_opt_revision_t old_rev, new_rev;
       
       /* The 'svn diff --old=OLD[@OLDREV] [--new=NEW[@NEWREV]]
          [PATH...]' case matches. */
-
-      SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
-                                              opt_state->targets, pool));
 
       tmp = apr_array_make (pool, 2, sizeof (const char *));
       APR_ARRAY_PUSH (tmp, const char *) = (opt_state->old_target);
@@ -108,13 +108,17 @@ svn_cl__diff (apr_getopt_t *os,
                                             : APR_ARRAY_IDX (tmp, 0,
                                                              const char *));
 
-      SVN_ERR (svn_opt_args_to_target_array (&tmp2, os, tmp,
-                                             &(opt_state->start_revision),
-                                             &(opt_state->end_revision),
-                                             TRUE, /* extract @revs */ pool));
-
-      old_target = APR_ARRAY_IDX (tmp2, 0, const char *);
-      new_target = APR_ARRAY_IDX (tmp2, 1, const char *);
+      SVN_ERR (svn_opt_args_to_target_array2 (&tmp2, os, tmp, pool));
+      SVN_ERR (svn_opt_parse_path (&old_rev, &old_target,
+                                   APR_ARRAY_IDX (tmp2, 0, const char *),
+                                   pool));
+      if (old_rev.kind != svn_opt_revision_unspecified)
+        opt_state->start_revision = old_rev;
+      SVN_ERR (svn_opt_parse_path (&new_rev, &new_target,
+                                   APR_ARRAY_IDX (tmp2, 1, const char *),
+                                   pool));
+      if (new_rev.kind != svn_opt_revision_unspecified)
+        opt_state->end_revision = new_rev;
 
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_path_is_url (old_target)
@@ -126,29 +130,17 @@ svn_cl__diff (apr_getopt_t *os,
     }
   else
     {
-      apr_array_header_t *tmp, *tmp2;
       svn_boolean_t working_copy_present = FALSE, url_present = FALSE;
       
       /* The 'svn diff [-r M[:N]] [TARGET[@REV]...]' case matches. */
 
       /* Here each target is a pegged object. Find out the starting
          and ending paths for each target. */
-      SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
-                                              opt_state->targets, pool));
 
       svn_opt_push_implicit_dot_target (targets, pool);
 
-      tmp = apr_array_make (pool, 2, sizeof (const char *));
-      APR_ARRAY_PUSH (tmp, const char *) = ".";
-      APR_ARRAY_PUSH (tmp, const char *) = ".";
-      
-      SVN_ERR (svn_opt_args_to_target_array (&tmp2, os, tmp,
-                                             &(opt_state->start_revision),
-                                             &(opt_state->end_revision),
-                                             TRUE, /* extract @revs */ pool));
-
-      old_target = APR_ARRAY_IDX (tmp2, 0, const char *);
-      new_target = APR_ARRAY_IDX (tmp2, 1, const char *);
+      old_target = "";
+      new_target = "";
 
       /* Check to see if at least one of our paths is a working copy
          path. */
