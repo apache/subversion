@@ -45,6 +45,7 @@
    thunk ra_callback
 */
 %apply const char **OUTPUT {
+    const char **url,
     const char **uuid
 };
 
