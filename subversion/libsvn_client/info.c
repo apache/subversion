@@ -364,7 +364,7 @@ svn_client_info (const char *path_or_url,
       /* An old mod_dav_svn will always work; there's nothing wrong with
          doing a PROPFIND for a property named "DAV:supportedlock".  But
          an old svnserve will error. */
-      if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+      if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
         {
           svn_error_clear(err);
           lock = NULL;
@@ -389,11 +389,9 @@ svn_client_info (const char *path_or_url,
         {
           err = svn_ra_get_locks (ra_session, &locks, "", pool);
           
-          /* An old svnserve will throw an UNKNOWN_CMD error.
-             An old mod_dav_svn will throw NOT_IMPLEMENTED or UNSUPPORTED. */
+          /* Catch specific errors thrown by old mod_dav_svn or svnserve. */
           if (err && 
-              (err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD
-               || err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED
+              (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED
                || err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
             {
               svn_error_clear(err);
