@@ -162,11 +162,11 @@ Bindings changes that don't affect the build system:
    * r8233
      Catch up r8213 authz_func renaming for SWIG / Perl bindings.
      Votes:
-      +1: clkao
+      +1: clkao, rooneg
 
 
    * r8238
      Update Perl bindings test suite for API change introduced in r8216
      disallowing NULL in dir_delta target.
      Votes:
-      +1: clkao
+      +1: clkao, rooneg
