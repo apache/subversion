@@ -289,16 +289,18 @@ import_dir (const svn_delta_editor_t *editor,
 /* Recursively import PATH to a repository using EDITOR and
  * EDIT_BATON.  PATH can be a file or directory.
  * 
- * NEW_ENTRY is the name to use in the repository.  If PATH is a
- * directory, NEW_ENTRY may be null, which creates as many new entries
- * in the top repository target directory as there are entries in the
- * top of PATH; but if NEW_ENTRY is non-null, it is the name of a new
- * subdirectory in the repository to hold the import.  If PATH is a
- * file, NEW_ENTRY may not be null.  NEW_ENTRY can have multiple
- * components in which case parent directories are created as
- * needed. 
- * 
- * NEW_ENTRY can never be the empty string.
+ * NEW_ENTRIES is an ordered array of path components that must be
+ * created in the repository (where the ordering direction is
+ * parent-to-child).  If PATH is a directory, NEW_ENTRIES may be empty
+ * -- the result is an import which creates as many new entries in the
+ * top repository target directory as there are importable entries in
+ * the top of PATH; but if NEW_ENTRIES is not empty, its last item is
+ * the name of a new subdirectory in the repository to hold the
+ * import.  If PATH is a file, NEW_ENTRIES may not be empty, and its
+ * last item is the name used for the file in the repository.  If
+ * NEW_ENTRIES contains more than one item, all but the last item are
+ * the names of intermediate directories that are created before the
+ * real import begins.  NEW_ENTRIES may NOT be NULL.
  * 
  * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for 
  * each imported path, passing actions svn_wc_notify_commit_added.
@@ -315,7 +317,7 @@ import_dir (const svn_delta_editor_t *editor,
  */
 static svn_error_t *
 import (const char *path,
-        const char *new_entry,
+        apr_array_header_t *new_entries,
         const svn_delta_editor_t *editor,
         void *edit_baton,
         svn_boolean_t nonrecursive,
@@ -327,6 +329,7 @@ import (const char *path,
   svn_node_kind_t kind;
   apr_array_header_t *ignores;
   apr_array_header_t *batons = NULL;
+  const char *edit_path = "";
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
@@ -337,95 +340,56 @@ import (const char *path,
   /* Import a file or a directory tree. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
 
-  if (new_entry)
+  /* Make the intermediate directory components necessary for properly
+     rooting our import source tree.  */
+  if (new_entries->nelts)
     {
-      apr_array_header_t *dirs;
-      const char *new_path = "";
       int i;
 
-      dirs = svn_path_decompose (new_entry, pool);
-
-      /* If we are importing a file then NEW_ENTRY's basename is
-       * the desired filename in the repository.  We don't create
-       * a directory with that name. */
-      if (kind == svn_node_file)
-        apr_array_pop (dirs);
-
-      for (i = 0; i < dirs->nelts; i++)
+      batons = apr_array_make (pool, new_entries->nelts, sizeof (void *));
+      for (i = 0; i < new_entries->nelts; i++)
         {
-          void *temp;
+          const char *component = APR_ARRAY_IDX (new_entries, i, const char *);
+          edit_path = svn_path_join (edit_path, component, pool);
 
-          if (! batons)
-            batons = apr_array_make (pool, 1, sizeof (void *));
+          /* If this is the last path component, and we're importing a
+             file, then this component is the name of the file, not an
+             intermediate directory. */
+          if ((i == new_entries->nelts - 1) && (kind == svn_node_file))
+            break;
 
           *((void **) apr_array_push (batons)) = root_baton;
-          new_path = svn_path_join (new_path, ((char **)dirs->elts)[i], pool);
-          SVN_ERR (editor->add_directory (new_path,
+          SVN_ERR (editor->add_directory (edit_path,
                                           root_baton,
                                           NULL, SVN_INVALID_REVNUM,
-                                          pool, &temp));
-          root_baton = temp;
+                                          pool, &root_baton));
         }
+    }
+  else if (kind == svn_node_file)
+    {
+      return svn_error_create
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+         "New entry name required when importing a file");
     }
 
   /* Note that there is no need to check whether PATH's basename is
-     the same name that we reserve for our admistritave
-     subdirectories.  It would be strange, but not illegal to import
-     the contents of a directory of that name, because the directory's
-     own name is not part of those contents.  Of course, if something
-     underneath it also has our reserved name, then we'll error. */
+     the same name that we reserve for our administrative
+     subdirectories.  It would be strange -- though not illegal -- to
+     import the contents of a directory of that name, because the
+     directory's own name is not part of those contents.  Of course,
+     if something underneath it also has our reserved name, then we'll
+     error. */
 
   if (kind == svn_node_file)
     {
       SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
       if (! svn_cstring_match_glob_list (path, ignores))
-        {
-          if (! new_entry)
-            return svn_error_create
-                (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                 "New entry name required when importing a file");
-
-          SVN_ERR (import_file (editor, root_baton,
-                                path, new_entry, ctx, pool));
-        }
+        SVN_ERR (import_file (editor, root_baton, path, edit_path,
+                              ctx, pool));
     }
   else if (kind == svn_node_dir)
     {
-#if 0 /* Temporarily blocked out for consideration, see below. */
-      /* If we activate this notification, then
-       *
-       *   $ svn import url://blah/blah [PATH_TO_IMPORT] [NEW_ENTRY_IN_REPOS]
-       *
-       * will lead off with a notification for PATH_TO_IMPORT
-       * ("." by default).  This is technically accurate -- after all,
-       * that dir is being imported -- but it's also kind of
-       * redundant.  I'm not sure it really helps users to see it.  In
-       * any case, the current test suite does not expect it.  And see
-       *
-       *   http://subversion.tigris.org/issues/show_bug.cgi?id=735
-       *   http://subversion.tigris.org/issues/show_bug.cgi?id=736
-       *
-       * which are also about import notification paths.
-       *
-       * If we _are_ going to do this, perhaps the better way would be
-       * to have import_dir(foo) notify for foo, instead of only
-       * handling things underneath foo and requiring its caller
-       * (i.e., this code right here) to notify for foo itself.
-       */
-      if (ctx->notify_func)
-        (*ctx->notify_func) (ctx->notify_baton,
-                             path,
-                             svn_wc_notify_commit_added,
-                             svn_node_dir,
-                             NULL,
-                             svn_wc_notify_state_inapplicable,
-                             svn_wc_notify_state_inapplicable,
-                             SVN_INVALID_REVNUM);
-#endif /* 0 */
-
-      SVN_ERR (import_dir (editor, 
-                           root_baton,
-                           path, new_entry ? new_entry : "",
+      SVN_ERR (import_dir (editor, root_baton, path, edit_path,
                            nonrecursive, excludes, ctx, pool));
 
     }
@@ -435,9 +399,9 @@ import (const char *path,
                                 "'%s' does not exist.", path);  
     }
 
-  /* Close up the show; it's time to go home. */
+  /* Close up shop; it's time to go home. */
   SVN_ERR (editor->close_directory (root_baton, pool));
-  if (batons)
+  if (batons && batons->nelts)
     {
       void **baton;
       while ((baton = (void **) apr_array_pop (batons)))
@@ -526,10 +490,10 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   apr_hash_t *excludes = apr_hash_make (pool);
-  const char *new_entry = NULL;
   svn_node_kind_t kind;
   const char *base_dir = path;
-  apr_array_header_t *dirs = NULL;
+  apr_array_header_t *new_entries = apr_array_make (pool, 4, 
+                                                    sizeof (const char *));
   const char *temp;
   const char *dir;
   apr_pool_t *subpool;
@@ -549,8 +513,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       item = apr_pcalloc (pool, sizeof (*item));
       item->path = apr_pstrdup (pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
-        = item;
+      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
       
       SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
                                      ctx->log_msg_baton, pool));
@@ -568,6 +531,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   if (kind == svn_node_file)
     svn_path_split (path, &base_dir, NULL, pool);
 
+  /* Figure out all the path components we need to create just to have
+     a place to stick our imported tree. */
   subpool = svn_pool_create (pool);
   do
     {
@@ -588,11 +553,9 @@ svn_client_import (svn_client_commit_info_t **commit_info,
           else
             svn_error_clear (err);
           
-          if (! dirs)
-            dirs = apr_array_make (pool, 1, sizeof (const char *));
-          
           svn_path_split (url, &temp, &dir, pool);
-          *((const char **)apr_array_push (dirs)) = dir;
+          *((const char **) apr_array_push (new_entries)) = 
+            svn_path_uri_decode (dir, pool);
           url = temp;
         }
     }
@@ -601,28 +564,37 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                                NULL, log_msg, NULL, commit_info,
                                FALSE, subpool)));
 
-  /* If there were some intermediate directories that needed to be
-     created, we'll tack those */
-  if (dirs && dirs->nelts)
+  /* Reverse the order of the components we added to our NEW_ENTRIES array. */
+  if (new_entries->nelts)
     {
-      const char **child;
-      new_entry = *((const char **)apr_array_pop (dirs));
-      while ((child = (const char **)apr_array_pop (dirs)))
+      int i, j;
+      const char *component;
+      for (i = 0; i < (new_entries->nelts / 2); i++)
         {
-          new_entry = svn_path_join (new_entry, *child, pool);
+          j = new_entries->nelts - i - 1;
+          component = 
+            APR_ARRAY_IDX (new_entries, i, const char *);
+          APR_ARRAY_IDX (new_entries, i, const char *) =
+            APR_ARRAY_IDX (new_entries, j, const char *);
+          APR_ARRAY_IDX (new_entries, j, const char *) = 
+            component;
         }
     }
   
-  /* NEW_ENTRY == NULL means the first call to get_ra_editor()
-     above succeeded.  That means that URL corresponds to an
-     already existing filesystem entity. */
-  if (kind == svn_node_file && (! new_entry))
+  /* An empty NEW_ENTRIES list the first call to get_ra_editor() above
+     succeeded.  That means that URL corresponds to an already
+     existing filesystem entity. */
+  if (kind == svn_node_file && (! new_entries->nelts))
     return svn_error_createf
       (SVN_ERR_ENTRY_EXISTS, NULL,
        "Path '%s' already exists", url);
 
-  /* The repository doesn't know about the reserved. */
-  if (new_entry && (strcmp (new_entry, SVN_WC_ADM_DIR_NAME) == 0))
+  /* The repository doesn't know about the reserved administrative
+     directory. */
+  if (new_entries->nelts && 
+      (strcmp (APR_ARRAY_IDX (new_entries, 
+                              new_entries->nelts - 1, 
+                              const char *), SVN_WC_ADM_DIR_NAME) == 0))
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
        "'%s' is a reserved name and cannot be imported",
@@ -631,8 +603,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
 
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import (path, new_entry,
-                     editor, edit_baton, nonrecursive, excludes, ctx, pool)))
+  if ((err = import (path, new_entries, editor, edit_baton, 
+                     nonrecursive, excludes, ctx, pool)))
     {
       svn_error_clear (editor->abort_edit (edit_baton, pool));
       return err;
