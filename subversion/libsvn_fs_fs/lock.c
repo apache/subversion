@@ -355,9 +355,8 @@ make_dir (const char *path,
   if (err && !APR_STATUS_IS_EEXIST (err->apr_err))
     return err;
 
-  /* If EEXIST, then clear the error */
-  if (err && APR_STATUS_IS_EEXIST (err->apr_err))
-    svn_error_clear (err);
+  /* Unconditionally clear the error otherwise. */
+  svn_error_clear (err);
 
   return SVN_NO_ERROR;
 }
