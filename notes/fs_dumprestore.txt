@@ -78,8 +78,8 @@ revision.  Fields in [braces] are optional, and unknown headers are
 always ignored, for backwards compatibility.
 
 Revision-number: N
-[Revision-content-checksum: blob]
-Revision-content-length: L
+[Revision-content-md5: blob]
+Content-length: L
 
    ...N bytes of property data.  Properties are stored in the same
    human-readable hashdump format used by working copy property files,
@@ -90,8 +90,8 @@ Node-kind: file | dir  (1)
 Node-action: change | add | delete | replace
 [Node-copied-from: X, path ]
 [Node-copy-source-checksum: blob] (2)
-[Node-content-checksum: blob]
-Node-content-length: Y
+[Node-content-md5: blob]
+Content-length: Y
 
    ... Y bytes of content data, divided into 'props' and 'text'
    sections.  The properties come first; their total length (including

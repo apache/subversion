@@ -26,19 +26,20 @@
 
 
 /* RFC822-style headers that exist in the dumpfile. */
-#define SVN_REPOS_DUMPFILE_MAGIC_HEADER          "SVN-fs-dump-format-version"
-#define SVN_REPOS_DUMPFILE_FORMAT_VERSION         1
+#define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
+#define SVN_REPOS_DUMPFILE_FORMAT_VERSION           1
 
-#define SVN_REPOS_DUMPFILE_REVISION_NUMBER       "Revision-number"
-#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_LENGTH "Revision-content-length"
-#define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM "Node-content-checksum"
-#define SVN_REPOS_DUMPFILE_NODE_CONTENT_LENGTH   "Node-content-length"
-#define SVN_REPOS_DUMPFILE_NODE_PATH             "Node-path"
-#define SVN_REPOS_DUMPFILE_NODE_KIND             "Node-kind"
-#define SVN_REPOS_DUMPFILE_NODE_ACTION           "Node-action"
-#define SVN_REPOS_DUMPFILE_NODE_COPIED_FROM      "Node-copied-from"
-#define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM  "Node-copy-source-checksum"
+#define SVN_REPOS_DUMPFILE_REVISION_NUMBER           "Revision-number"
+#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_CHECKSUM "Revision-content-md5"
+#define SVN_REPOS_DUMPFILE_REVISION_CONTENT_LENGTH   "Content-length"
 
+#define SVN_REPOS_DUMPFILE_NODE_PATH                 "Node-path"
+#define SVN_REPOS_DUMPFILE_NODE_KIND                 "Node-kind"
+#define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
+#define SVN_REPOS_DUMPFILE_NODE_COPIED_FROM          "Node-copied-from"
+#define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM "Node-copy-source-checksum"
+#define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM     "Node-content-md5"
+#define SVN_REPOS_DUMPFILE_NODE_CONTENT_LENGTH       "Content-length"
 
 
 /*----------------------------------------------------------------------*/
@@ -112,8 +113,11 @@ struct edit_baton
   apr_file_t *file;
   svn_revnum_t rev;
   svn_fs_t *fs;              
-  apr_pool_t *pool;
   svn_fs_root_t *fs_root;
+
+  /* reusable buffer for writing file contents */
+  char buffer[SVN_STREAM_CHUNK_SIZE];
+  apr_size_t bufsize;
 };
 
 struct dir_baton
@@ -164,13 +168,20 @@ enum node_action
 };
 
 /* The helper function called by add_* and open_* -- does all the work
-   of writing a node record.  */
+   of writing a node record.
+   
+   Write out a node record for PATH of type KIND under FS_ROOT.
+   ACTION describes what is happening to the node (see enum node_action).
+   Write record to already-open FILE, using BUFFER to write in chunks.
+  */
 static svn_error_t *
 dump_node (svn_fs_root_t *fs_root,
            const char *path,    /* an absolute path. */
            enum svn_node_kind kind,
            enum node_action action,
            apr_file_t *file,
+           void *buffer,
+           apr_size_t bufsize,
            apr_pool_t *pool)
 {
   svn_stringbuf_t *propstring;
@@ -192,12 +203,12 @@ dump_node (svn_fs_root_t *fs_root,
   if (action == node_action_change)
     {
       apr_file_printf (file, 
-                       SVN_REPOS_DUMPFILE_NODE_ACTION ": replace\n");  
+                       SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n");  
     }
   else if (action == node_action_replace)
     {
       apr_file_printf (file, 
-                       SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n");  
+                       SVN_REPOS_DUMPFILE_NODE_ACTION ": replace\n");  
     }
   else if (action == node_action_delete)
     {
@@ -263,31 +274,30 @@ dump_node (svn_fs_root_t *fs_root,
   
   /* Dump text content. */
   if (kind == svn_node_file)
-  {  
-    apr_status_t apr_err;
-    apr_size_t len, len2;
-    svn_stream_t *stream;
-    unsigned char buffer[1024];
-
-    SVN_ERR (svn_fs_file_contents (&stream, fs_root, path, pool));
+    {  
+      apr_status_t apr_err;
+      apr_size_t len, len2;
+      svn_stream_t *stream;
+      
+      SVN_ERR (svn_fs_file_contents (&stream, fs_root, path, pool));
+      
+      while (1)
+        {
+          len = bufsize;
+          SVN_ERR (svn_stream_read (stream, buffer, &len));
+          len2 = len;
+          apr_err = apr_file_write (file, buffer, &len2);
+          if ((apr_err) || (len2 != len))
+            return svn_error_createf 
+              (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
+               "Error writing contents of %s", path);
+          if (len != bufsize)
+            break;
+        }
+    }
   
-    while (1)
-      {
-        len = sizeof (buffer);
-        SVN_ERR (svn_stream_read (stream, buffer, &len));
-        len2 = len;
-        apr_err = apr_file_write (file, buffer, &len2);
-        if ((apr_err) || (len2 != len))
-          return svn_error_createf 
-            (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
-             "Error writing contents of %s", path);
-        if (len != sizeof (buffer))
-          break;
-      }
-  }
-
   apr_file_printf (file, "\n\n"); /* ### needed? */
-
+  
   return SVN_NO_ERROR;
 }
 
@@ -317,7 +327,7 @@ delete_entry (const char *path,
      shouldn't care.  */
   SVN_ERR (dump_node (eb->fs_root, path,
                       svn_node_unknown, node_action_delete,
-                      eb->file, pool));
+                      eb->file, eb->buffer, eb->bufsize, pool));
 
   return SVN_NO_ERROR;
 }
@@ -337,7 +347,7 @@ add_directory (const char *path,
 
   SVN_ERR (dump_node (eb->fs_root, path, 
                       svn_node_dir, node_action_add, 
-                      eb->file, pool));
+                      eb->file, eb->buffer, eb->bufsize, pool));
   new_db->written_out = TRUE;
 
   *child_baton = new_db;
@@ -375,7 +385,7 @@ add_file (const char *path,
 
   SVN_ERR (dump_node (eb->fs_root, path, 
                       svn_node_file, node_action_add,
-                      eb->file, pool));
+                      eb->file, eb->buffer, eb->bufsize, pool));
 
   *file_baton = NULL;  /* muhahahaha */
   return SVN_NO_ERROR;
@@ -394,7 +404,7 @@ open_file (const char *path,
 
   SVN_ERR (dump_node (eb->fs_root, path, 
                       svn_node_file, node_action_change, 
-                      eb->file, pool));
+                      eb->file, eb->buffer, eb->bufsize, pool));
 
   *file_baton = NULL;  /* muhahahaha again */
   return SVN_NO_ERROR;
@@ -417,21 +427,12 @@ change_dir_prop (void *parent_baton,
     {
       SVN_ERR (dump_node (eb->fs_root, db->path->data, 
                           svn_node_dir, node_action_change, 
-                          eb->file, pool));
+                          eb->file, eb->buffer, eb->bufsize, pool));
       db->written_out = TRUE;
     }
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-close_edit (void *edit_baton)
-{
-
-  /* ### delete me? */
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -446,14 +447,13 @@ get_dump_editor (const svn_delta_editor_t **editor,
   /* Allocate an edit baton to be stored in every directory baton.
      Set it up for the directory baton we create here, which is the
      root baton. */
-  apr_pool_t *subpool = svn_pool_create (pool);
-  struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
+  struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
   svn_delta_editor_t *dump_editor = svn_delta_default_editor (pool);
 
   /* Set up the edit baton. */
-  eb->pool = subpool;
   eb->file = file;
   eb->fs = fs;
+  eb->bufsize = sizeof(eb->buffer);
   eb->path = svn_stringbuf_create (root_path, pool);
   SVN_ERR (svn_fs_revision_root (&(eb->fs_root), eb->fs, to_rev, pool));
 
@@ -465,7 +465,6 @@ get_dump_editor (const svn_delta_editor_t **editor,
   dump_editor->change_dir_prop = change_dir_prop;
   dump_editor->add_file = add_file;
   dump_editor->open_file = open_file;
-  dump_editor->close_edit = close_edit;
 
   *edit_baton = eb;
   *editor = dump_editor;
@@ -562,10 +561,18 @@ svn_repos_dump_fs (svn_repos_t *repos,
           /* Special-special-case a dump of revision 0. */
           if (i == 0)
             {
-              /* Just write out the one revision record and the
-                 one root-node record, and continue looping. */
+              svn_fs_root_t *root_0;
+              char buffer[1024];
+
+              /* Just write out the one revision record and the one
+                 root-node record (for formality), and continue
+                 looping. */
               SVN_ERR (write_revision_record (file, fs, 0, subpool));
-              /* ### must we write the root-dir node?? */
+
+              SVN_ERR (svn_fs_revision_root (&root_0, fs, 0, subpool));
+              SVN_ERR (dump_node (root_0, "/",
+                                  svn_node_dir, node_action_add,
+                                  file, buffer, 1024, subpool));
 
               goto loop_end;
             }
@@ -614,7 +621,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
       svn_pool_clear (subpool);
     }
 
-  /* ### anything else to do? */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
