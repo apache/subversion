@@ -355,6 +355,19 @@ svn_client_status (apr_hash_t **statushash,
                    svn_boolean_t update,
                    apr_pool_t *pool);
 
+
+/* ### todo document this */
+svn_error_t *
+svn_client_log (svn_client_auth_baton_t *auth_baton,
+                apr_hash_t *paths,
+                svn_revnum_t start,
+                svn_revnum_t end,
+                svn_boolean_t discover_changed_paths,
+                svn_ra_log_message_receiver_t receiver,
+                void *receiver_baton,
+                apr_pool_t *pool);
+
+
 /* Given a PATH to a working copy file, return a path to a temporary
    copy of the PRISTINE version of the file.  The client can then
    compare this to the working copy of the file and execute any kind
