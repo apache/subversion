@@ -1045,11 +1045,11 @@ close_file (void *file_baton)
   svn_error_t *err;
   apr_status_t apr_err;
   char *revision_str = NULL;
-  svn_stringbuf_t *entry_accum;
+  svn_stringbuf_t *entry_accum, *txtb, *tmp_txtb;
+  svn_boolean_t has_binary_prop, is_locally_modified;
 
-  err = svn_wc__lock (fb->dir_baton->path, 0, fb->pool);
-  if (err)
-    return err;
+  /* Lock the working directory while we change things. */
+  SVN_ERR (svn_wc__lock (fb->dir_baton->path, 0, fb->pool));
 
   /*
      When we reach close_file() for file `F', the following are
@@ -1090,252 +1090,326 @@ close_file (void *file_baton)
 
   */
 
-  /** Write out the appropriate log entries. 
-      This is safe because the adm area is locked right now. **/ 
-      
-  err = svn_wc__open_adm_file (&log_fp,
-                               fb->dir_baton->path,
-                               SVN_WC__ADM_LOG,
-                               (APR_WRITE | APR_CREATE), /* not excl */
-                               fb->pool);
-  if (err)
-    return err;
+  /* Open a log file.  This is safe because the adm area is locked
+     right now. */
+  SVN_ERR (svn_wc__open_adm_file (&log_fp,
+                                  fb->dir_baton->path,
+                                  SVN_WC__ADM_LOG,
+                                  (APR_WRITE | APR_CREATE), /* not excl */
+                                  fb->pool));
 
+  /* Accumulate log commands in this buffer until we're ready to close
+     and run the log.  */
   entry_accum = svn_stringbuf_create ("", fb->pool);
 
-  if (fb->text_changed)
-    {
-      enum svn_node_kind wfile_kind = svn_node_unknown;
-      svn_stringbuf_t *tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
-      svn_stringbuf_t *txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
-      svn_stringbuf_t *received_diff_filename;
-      
-      err = svn_io_check_path (fb->path, &wfile_kind, fb->pool);
-      if (err)
-        return err;
-      
-      if (wfile_kind == svn_node_file)
-        {
-          /* To preserve local changes dominantly over received
-             changes, we record the received changes as a diff, to be
-             applied over the working file.  Rejected hunks will be from
-             the received changes, not the user's changes. */
-          
-          /* diff -c SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.diff
-           */
-          
-          /* kff todo: need to handle non-text formats here, and support
-             other merge programs.  And quote the arguments like civilized
-             programmers. */
-          
-          apr_proc_t diff_proc;
-          apr_procattr_t *diffproc_attr;
-          const char *diff_args[6];
 
-          apr_file_t *received_diff_file;
-          svn_stringbuf_t *tmp_txtb_full_path
-            = svn_wc__text_base_path (fb->path, 1, fb->pool);
-          svn_stringbuf_t *txtb_full_path
-            = svn_wc__text_base_path (fb->path, 0, fb->pool);
-          svn_stringbuf_t *tmp_loc
-            = svn_wc__adm_path (fb->dir_baton->path, 1, fb->pool, 
-                                fb->name->data, NULL);
-          
-          err = svn_io_open_unique_file (&received_diff_file,
-                                         &received_diff_filename,
-                                         tmp_loc,
-                                         SVN_WC__DIFF_EXT,
-                                         fb->pool);
-          if (err)
-            return err;
-          
-          /* Create the process attributes. */
-          apr_err = apr_procattr_create (&diffproc_attr, fb->pool); 
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
-            return svn_error_create 
-              (apr_err, 0, NULL, fb->pool,
-               "close_file: error creating diff process attributes");
-          
-          /* Make sure we invoke diff directly, not through a shell. */
-          apr_err = apr_procattr_cmdtype_set (diffproc_attr, APR_PROGRAM);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
-            return svn_error_create 
-              (apr_err, 0, NULL, fb->pool,
-               "close_file: error setting diff process cmdtype");
-          
-          /* Set io style. */
-          apr_err = apr_procattr_io_set (diffproc_attr, 0, 
-                                        APR_CHILD_BLOCK, APR_CHILD_BLOCK);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
-            return svn_error_create
-              (apr_err, 0, NULL, fb->pool,
-               "close_file: error setting diff process io attributes");
-          
-          /* Tell it to send output to the diff file. */
-          apr_err = apr_procattr_child_out_set (diffproc_attr,
-                                              received_diff_file,
-                                              NULL);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
-            return svn_error_create 
-              (apr_err, 0, NULL, fb->pool,
-               "close_file: error setting diff process child output");
-          
-          /* Build the diff command. */
-          diff_args[0] = "diff";
-          diff_args[1] = "-c";
-          diff_args[2] = "--";
-          diff_args[3] = txtb_full_path->data;
-          diff_args[4] = tmp_txtb_full_path->data;
-          diff_args[5] = NULL;
-          
-          /* Start the diff command.  kff todo: path to diff program
-             should be determined through various levels of fallback,
-             of course, not hardcoded. */ 
-          apr_err = apr_proc_create (&diff_proc,
-                                        SVN_CLIENT_DIFF,
-                                        diff_args,
-                                        NULL,
-                                        diffproc_attr,
-                                        fb->pool);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
-            return svn_error_createf 
-              (apr_err, 0, NULL, fb->pool,
-               "close_file: error starting diff process");
-          
-          /* Wait for the diff command to finish. */
-          apr_err = apr_proc_wait (&diff_proc, APR_WAIT);
-          if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
-            return svn_error_createf
-              (apr_err, 0, NULL, fb->pool,
-               "close_file: error waiting for diff process");
-        }
-      
-      /* Move new text base over old text base. */
+  /* We implement this matrix:
+
+                  Text file                Binary File
+               --------------------------------------------
+    Local Mods |  run diff/patch   |  rename working file; | 
+               |                   |  copy new file out.   |
+               --------------------------------------------
+    No Mods    |        Just overwrite working file.       |
+               |                                           |
+               ---------------------------------------------
+
+   So the first thing we do is figure out where we are in the
+   matrix. */
+
+
+  /* Text or Binary File?  Note that this is not a definitive test of
+     whether the file is actually text or binary, just whether it has
+     a mime-type that "marks" the file as binary. */
+  SVN_ERR (svn_wc_has_binary_prop (&has_binary_prop, fb->path, fb->pool));
+
+  /* Local textual mods?  (We can ignore local prop-mods;  those will
+     be automagically merged later on in this routine.) */
+  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified, fb->path, fb->pool));
+
+  /* Before doing any logic, we *know* that the first thing the
+     logfile should do is overwrite the old text-base file with the
+     newly received one in tmp/.  */
+  tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
+  txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
+  svn_xml_make_open_tag (&entry_accum,
+                         fb->pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MV,
+                         SVN_WC__LOG_ATTR_NAME,
+                         tmp_txtb,
+                         SVN_WC__LOG_ATTR_DEST,
+                         txtb,
+                         NULL);
+
+  if ( (! is_locally_modified) || (fb->dir_baton->edit_baton->is_checkout) )
+    {
+      /* If there are no local mods (or we're doing an initial
+         checkout), who cares whether it's a text or binary file!
+         Just overwrite any working file with the new one. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
                              svn_xml_self_closing,
-                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_CP,
                              SVN_WC__LOG_ATTR_NAME,
-                             tmp_txtb,
-                             SVN_WC__LOG_ATTR_DEST,
                              txtb,
+                             SVN_WC__LOG_ATTR_DEST,
+                             fb->name,
                              NULL);
-      
-      if (wfile_kind == svn_node_none)
+    }
+  
+  else   /* file is locally modified, and this is an update. */
+    {
+      if (fb->text_changed)
         {
-          /* Copy the new base text to the working file. */
-          svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_CP,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 txtb,
-                                 SVN_WC__LOG_ATTR_DEST,
-                                 fb->name,
-                                 NULL);
-        }
-      else if (wfile_kind == svn_node_file)
-        {
-          /* Patch repos changes into an existing local file. */
-          svn_stringbuf_t *patch_cmd = svn_stringbuf_create (SVN_CLIENT_PATCH,
-                                                       fb->pool);
-          apr_file_t *reject_file = NULL;
-          svn_stringbuf_t *reject_filename = NULL;
-          
-          /* Get the reject file ready. */
-          /* kff todo: code dup with above, abstract it? */
-          err = svn_io_open_unique_file (&reject_file,
-                                         &reject_filename,
-                                         fb->path,
-                                         SVN_WC__TEXT_REJ_EXT,
-                                         fb->pool);
-          if (err)
-            return err;
-          else
+          if (! has_binary_prop)
             {
-              apr_err = apr_file_close (reject_file);
+              enum svn_node_kind wfile_kind = svn_node_unknown;
+              svn_stringbuf_t *received_diff_filename;
+              svn_stringbuf_t *patch_cmd
+                = svn_stringbuf_create (SVN_CLIENT_PATCH, fb->pool);
+              apr_file_t *reject_file = NULL;
+              svn_stringbuf_t *reject_filename = NULL;
+              
+              SVN_ERR (svn_io_check_path (fb->path, &wfile_kind, fb->pool));
+              if (wfile_kind == svn_node_none)
+                {
+                  /* If the working file is missing, then just copy
+                     the new base text to the working file. */
+                  svn_xml_make_open_tag (&entry_accum,
+                                         fb->pool,
+                                         svn_xml_self_closing,
+                                         SVN_WC__LOG_CP,
+                                         SVN_WC__LOG_ATTR_NAME,
+                                         txtb,
+                                         SVN_WC__LOG_ATTR_DEST,
+                                         fb->name,
+                                         NULL);
+                }
+              else  /* working file exists */
+                {                  
+                  /* Run the external `diff' command immediately and
+                     create a temporary .diff file. */
+                  apr_proc_t diff_proc;
+                  apr_procattr_t *diffproc_attr;
+                  const char *diff_args[6];
+                  
+                  apr_file_t *received_diff_file;
+                  svn_stringbuf_t *tmp_txtb_full_path
+                    = svn_wc__text_base_path (fb->path, 1, fb->pool);
+                  svn_stringbuf_t *txtb_full_path
+                    = svn_wc__text_base_path (fb->path, 0, fb->pool);
+                  svn_stringbuf_t *tmp_loc
+                    = svn_wc__adm_path (fb->dir_baton->path, 1, fb->pool, 
+                                        fb->name->data, NULL);
+                  
+                  SVN_ERR (svn_io_open_unique_file (&received_diff_file,
+                                                    &received_diff_filename,
+                                                    tmp_loc,
+                                                    SVN_WC__DIFF_EXT,
+                                                    fb->pool));
+                  
+                  /* Create the process attributes. */
+                  apr_err = apr_procattr_create (&diffproc_attr, fb->pool); 
+                  if (! APR_STATUS_IS_SUCCESS (apr_err))
+                    return svn_error_create 
+                      (apr_err, 0, NULL, fb->pool,
+                       "close_file: error creating diff process attributes");
+                  
+                  /* Make sure we invoke diff directly, not thru a shell. */
+                  apr_err = 
+                    apr_procattr_cmdtype_set (diffproc_attr, APR_PROGRAM);
+                  if (! APR_STATUS_IS_SUCCESS (apr_err))
+                    return svn_error_create 
+                      (apr_err, 0, NULL, fb->pool,
+                       "close_file: error setting diff process cmdtype");
+                  
+                  /* Set io style. */
+                  apr_err = 
+                    apr_procattr_io_set (diffproc_attr, 0, 
+                                         APR_CHILD_BLOCK, APR_CHILD_BLOCK);
+                  if (! APR_STATUS_IS_SUCCESS (apr_err))
+                    return svn_error_create
+                      (apr_err, 0, NULL, fb->pool,
+                       "close_file: error setting diff process io attributes");
+                  
+                  /* Tell it to send output to the diff file. */
+                  apr_err = apr_procattr_child_out_set (diffproc_attr,
+                                                        received_diff_file,
+                                                        NULL);
+                  if (! APR_STATUS_IS_SUCCESS (apr_err))
+                    return svn_error_create 
+                      (apr_err, 0, NULL, fb->pool,
+                       "close_file: error setting diff process child output");
+                  
+                  /* Build the diff command. */
+                  diff_args[0] = "diff";
+                  diff_args[1] = "-c";
+                  diff_args[2] = "--";
+                  diff_args[3] = txtb_full_path->data;
+                  diff_args[4] = tmp_txtb_full_path->data;
+                  diff_args[5] = NULL;
+                  
+                  /* Start the diff command.  kff todo: path to diff program
+                     should be determined through various levels of fallback,
+                     of course, not hardcoded. */ 
+                  apr_err = apr_proc_create (&diff_proc,
+                                             SVN_CLIENT_DIFF,
+                                             diff_args,
+                                             NULL,
+                                             diffproc_attr,
+                                             fb->pool);
+                  if (! APR_STATUS_IS_SUCCESS (apr_err))
+                    return svn_error_createf 
+                      (apr_err, 0, NULL, fb->pool,
+                       "close_file: error starting diff process");
+                  
+                  /* Wait for the diff command to finish. */
+                  apr_err = apr_proc_wait (&diff_proc, APR_WAIT);
+                  if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
+                    return svn_error_createf
+                      (apr_err, 0, NULL, fb->pool,
+                       "close_file: error waiting for diff process");
+                  
+                  
+                  /* Write a log message to `patch' the working file and
+                     cleanup... */
+
+                  /* Get the reject file ready. */
+                  /* kff todo: code dup with above, abstract it? */
+                  SVN_ERR (svn_io_open_unique_file (&reject_file,
+                                                    &reject_filename,
+                                                    fb->path,
+                                                    SVN_WC__TEXT_REJ_EXT,
+                                                    fb->pool));
+                  apr_err = apr_file_close (reject_file);
+                  if (apr_err)
+                    return svn_error_createf (apr_err, 0, NULL, fb->pool,
+                                              "close_file: error closing %s",
+                                              reject_filename->data);
+
+                  /* Paths need to be relative to the working dir that uses
+                     this log file, so we chop the prefix.
+                     
+                     kff todo: maybe this should be abstracted into
+                     svn_path_whatever, but it's so simple I'm inclined not
+                     to.  On the other hand, the +1/-1's are for slashes, and
+                     technically only svn_path should know such dirty details.
+                     On the third hand, whatever the separator char is, it's
+                     still likely to be one char, so the code would work even
+                     if it weren't slash.
+                     
+                     Sometimes I think I think too much.  I think. */ 
+                  reject_filename = svn_stringbuf_ncreate
+                    (reject_filename->data + fb->dir_baton->path->len + 1,
+                     reject_filename->len - fb->dir_baton->path->len - 1,
+                     fb->pool);
+                  
+                  received_diff_filename = svn_stringbuf_ncreate
+                    (received_diff_filename->data 
+                     + fb->dir_baton->path->len + 1,
+                     received_diff_filename->len
+                     - fb->dir_baton->path->len - 1,
+                     fb->pool);
+                  
+                  /* Log the patch command. */
+                  /* kff todo: these options will have to be
+                     portablized too.  Even if we know we're doing a
+                     plaintext patch, not all patch programs support
+                     these args. */
+                  svn_xml_make_open_tag (&entry_accum,
+                                         fb->pool,
+                                         svn_xml_self_closing,
+                                         SVN_WC__LOG_RUN_CMD,
+                                         SVN_WC__LOG_ATTR_NAME,
+                                         patch_cmd,
+                                         SVN_WC__LOG_ATTR_ARG_1,
+                                         svn_stringbuf_create ("-r", fb->pool),
+                                         SVN_WC__LOG_ATTR_ARG_2,
+                                         reject_filename,
+                                         SVN_WC__LOG_ATTR_ARG_3,
+                                         svn_stringbuf_create ("-B.#", fb->pool),
+                                         SVN_WC__LOG_ATTR_ARG_4,
+                                         svn_stringbuf_create ("--", fb->pool),
+                                         SVN_WC__LOG_ATTR_ARG_5,
+                                         fb->name,
+                                         SVN_WC__LOG_ATTR_INFILE,
+                                         received_diff_filename,
+                                         NULL);
+
+                  /* Remove the diff file that patch will have used. */
+                  svn_xml_make_open_tag (&entry_accum,
+                                         fb->pool,
+                                         svn_xml_self_closing,
+                                         SVN_WC__LOG_RM,
+                                         SVN_WC__LOG_ATTR_NAME,
+                                         received_diff_filename,
+                                         NULL);
+
+                  /* Remove the reject file that patch will have used,
+                     IFF the reject file is empty (zero bytes) --
+                     implying that there was no conflict.  If the
+                     reject file is nonzero, then mark the entry as
+                     conflicted!  */
+                  svn_xml_make_open_tag (&entry_accum,
+                                         fb->pool,
+                                         svn_xml_self_closing,
+                                         SVN_WC__LOG_DETECT_CONFLICT,
+                                         SVN_WC__LOG_ATTR_NAME,
+                                         fb->name,
+                                         SVN_WC_ENTRY_ATTR_REJFILE,
+                                         reject_filename,
+                                         NULL);
+                  
+                }
+            }
+
+          else  /* file is marked as binary */
+            {
+              apr_file_t *renamed_fp;
+              svn_stringbuf_t *renamed_path, *renamed_basename;
+
+              /* Rename the working file. */
+              SVN_ERR (svn_io_open_unique_file (&renamed_fp,
+                                                &renamed_path,
+                                                fb->path,
+                                                ".orig",
+                                                fb->pool));
+              apr_err = apr_file_close (renamed_fp);
               if (apr_err)
                 return svn_error_createf (apr_err, 0, NULL, fb->pool,
                                           "close_file: error closing %s",
-                                          reject_filename->data);
+                                          renamed_path->data);
+              
+              renamed_basename
+                = svn_path_last_component (renamed_path,
+                                           svn_path_local_style, fb->pool);
+
+              svn_xml_make_open_tag (&entry_accum,
+                                     fb->pool,
+                                     svn_xml_self_closing,
+                                     SVN_WC__LOG_CP,
+                                     SVN_WC__LOG_ATTR_NAME,
+                                     fb->name,
+                                     SVN_WC__LOG_ATTR_DEST,
+                                     renamed_basename,
+                                     NULL);
+              
+              /* Copy the new file out into working area. */
+              svn_xml_make_open_tag (&entry_accum,
+                                     fb->pool,
+                                     svn_xml_self_closing,
+                                     SVN_WC__LOG_CP,
+                                     SVN_WC__LOG_ATTR_NAME,
+                                     txtb,
+                                     SVN_WC__LOG_ATTR_DEST,
+                                     fb->name,
+                                     NULL);
             }
-
-          /* Paths need to be relative to the working dir that uses
-             this log file, so we chop the prefix.
-
-             kff todo: maybe this should be abstracted into
-             svn_path_whatever, but it's so simple I'm inclined not
-             to.  On the other hand, the +1/-1's are for slashes, and
-             technically only svn_path should know such dirty details.
-             On the third hand, whatever the separator char is, it's
-             still likely to be one char, so the code would work even
-             if it weren't slash.
-
-             Sometimes I think I think too much.  I think.
-          */ 
-          reject_filename = svn_stringbuf_ncreate
-            (reject_filename->data + fb->dir_baton->path->len + 1,
-             reject_filename->len - fb->dir_baton->path->len - 1,
-             fb->pool);
-
-          received_diff_filename = svn_stringbuf_ncreate
-            (received_diff_filename->data + fb->dir_baton->path->len + 1,
-             received_diff_filename->len - fb->dir_baton->path->len - 1,
-             fb->pool);
-
-          /* Log the patch command. */
-          /* kff todo: these options will have to be portablized too.
-             Even if we know we're doing a plaintext patch, not all
-             patch programs support these args. */
-          svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_RUN_CMD,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 patch_cmd,
-                                 SVN_WC__LOG_ATTR_ARG_1,
-                                 svn_stringbuf_create ("-r", fb->pool),
-                                 SVN_WC__LOG_ATTR_ARG_2,
-                                 reject_filename,
-                                 SVN_WC__LOG_ATTR_ARG_3,
-                                 svn_stringbuf_create ("-B.#", fb->pool),
-                                 SVN_WC__LOG_ATTR_ARG_4,
-                                 svn_stringbuf_create ("--", fb->pool),
-                                 SVN_WC__LOG_ATTR_ARG_5,
-                                 fb->name,
-                                 SVN_WC__LOG_ATTR_INFILE,
-                                 received_diff_filename,
-                                 NULL);
-
-          /* Remove the diff file that patch will have used. */
-          svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_RM,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 received_diff_filename,
-                                 NULL);
-
-          /* Remove the reject file that patch will have used, IFF the
-           reject file is empty (zero bytes) -- implying that there
-           was no conflict.  If the reject file is nonzero, then mark
-           the entry as conflicted!  */
-          svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_DETECT_CONFLICT,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 fb->name,
-                                 SVN_WC_ENTRY_ATTR_REJFILE,
-                                 reject_filename,
-                                 NULL);
-
         }
-      else
-        {
-          /* kff todo: handle edge cases */
-        }
-    }
+
+    }  /* End  of textual merging process! */
+  
 
   /* MERGE ANY PROPERTY CHANGES, if they exist... */
   if (fb->prop_changed)

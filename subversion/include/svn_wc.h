@@ -56,6 +56,12 @@ svn_error_t *svn_wc_check_wc (const svn_stringbuf_t *path,
                               apr_pool_t *pool);
 
 
+/* Set *HAS_BINARY_PROP to TRUE iff PATH has been marked with a
+   property indicating that it is non-text (i.e. binary.) */
+svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
+                                     const svn_stringbuf_t *path,
+                                     apr_pool_t *pool);
+
 
 /*** Detecting modification. ***/
 
@@ -626,6 +632,8 @@ svn_error_t *
 svn_wc_revert (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
+
+/*** Authentication files ***/
 
 /* Get the *CONTENTS of FILENAME in the authentcation area of PATH's
    administrative directory, allocated in POOL.  PATH must be a

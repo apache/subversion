@@ -291,12 +291,16 @@ def run_tests(test_list):
       if (len(sys.argv) > 2) and (sys.argv[2] == 'dav'):
         DAV_mode = 1
       try:
-        testnum = int(sys.argv[1])        
-        return run_one_test(testnum, test_list)
+        testnum = int(sys.argv[1])
       except ValueError:
-        print "warning: ignoring bogus argument"
-        
-  # run all the tests.
+        print "error: bogus argument given."        
+        print "Usage:  ./test-script.py"
+        print "        ./test-script.py list"
+        print "        ./test-script.py [test-number]"
+        sys.exit(1)
+      return run_one_test(testnum, test_list)
+      
+  # otherwise if no args given, run all the tests.
   got_error = 0
   for n in range(len(test_list)):
     if n:
