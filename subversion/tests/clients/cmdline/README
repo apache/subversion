@@ -36,6 +36,10 @@ that script:
 
    $ ./basic_tests.py list
 
+
+Running over ra_dav
+-------------------
+
 Running a script over ra_dav is basically the same, but you have to
 set up httpd 2.0 first (on the same machine, since the tests create
 repositories on the fly), and pass a URL argument to the test scripts.
@@ -101,6 +105,21 @@ Next create the auth file using the command
 
 and enter the password "rayjandom" when prompted.  Now, (re)start Apache
 and run the tests over ra_dav.
+
+
+Running over ra_svn
+-------------------
+
+It's also easy to run the tests against a local svnserve:
+
+$ subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
+$ make check BASE_URL=svn://localhost
+
+or, to run individual tests,
+
+$ ./basic_tests.py 3 --url=svn://localhost
+
+
 
 
 Directory Contents
