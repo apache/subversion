@@ -809,23 +809,6 @@ do_entry_deletion (struct edit_baton *eb,
   logfile_path = svn_wc__adm_path (parent_path, FALSE, pool,
                                    SVN_WC__ADM_LOG, NULL);
 
-  /* If trying to delete a locally-modified file, throw an 'obstructed
-     update' error. */
-  if (kind == svn_node_file)
-    {
-      svn_boolean_t tmodified_p, pmodified_p;
-      SVN_ERR (svn_wc_text_modified_p (&tmodified_p, full_path, FALSE,
-                                       adm_access, pool));
-      SVN_ERR (svn_wc_props_modified_p (&pmodified_p, full_path,
-                                        adm_access, pool));
-
-      if (tmodified_p || pmodified_p)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "Won't delete locally modified file '%s'",
-           path);
-    }
-
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   parent_path,
                                   SVN_WC__ADM_LOG,

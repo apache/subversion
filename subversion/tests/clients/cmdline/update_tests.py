@@ -680,17 +680,32 @@ def update_delete_modified_files(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Update that 'deletes' modified files.  We should get an
-  # 'obstructed update' error (see issue #1196).
-  output, errput = svntest.actions.run_and_verify_svn(
-    "Updating failed", None, SVNAnyOutput, 'up', wc_dir)
+  # Now update to 'delete' modified files -- that is, remove them from
+  # version control, but leave them on disk.  It used to be we would
+  # expect an 'obstructed update' error (see issue #1196), but
+  # nowadays we expect success (see issue #1806).
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(status='D '),
+    'A/D/G'       : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha',
+                      contents="This is the file 'alpha'.appended alpha text")
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.appended pi text")
+  expected_disk.remove('A/D/G/rho')
+  expected_disk.remove('A/D/G/tau')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.remove('A/D/G')
+  expected_status.remove('A/D/G/pi')
+  expected_status.remove('A/D/G/rho')
+  expected_status.remove('A/D/G/tau')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
-  for line in errput:
-    if re.match(".*Won't delete locally modified file.*", line):
-      return
-
-  # Else never matched the expected error output, so the test failed.
-  raise svntest.main.SVNUnmatchedError
 
 #----------------------------------------------------------------------
 

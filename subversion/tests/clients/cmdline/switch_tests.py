@@ -748,7 +748,8 @@ def failed_anchor_is_target(sbox):
   psi_path = os.path.join(H_path, 'psi')
   svntest.main.file_append(psi_path, "more text")
 
-  # This switch will fail as it will not delete psi with local mods
+  # This switch leaves psi unversioned, because of the local mods,
+  # then fails because it tries to add a directory of the same name.
   out, err = svntest.main.run_svn(1, 'switch',
                                   '--username', svntest.main.wc_author,
                                   '--password', svntest.main.wc_passwd,
@@ -758,11 +759,16 @@ def failed_anchor_is_target(sbox):
 
   # Some items under H show up as switched because, while H itself was
   # switched, the switch command failed before it reached all items
+  #
+  # NOTE: I suspect this whole test is dependent on the order in
+  # which changes are received, but since the new psi is a dir, it
+  # appears we can count on it being received last.  But if this test
+  # ever starts failing, you read it here first :-).
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
   expected_status.tweak('A/D/H/chi', 'A/D/H/omega', switched='S')
-  expected_status.tweak('A/D/H/psi', status='M ', switched='S')
+  expected_status.remove('A/D/H/psi')
   expected_status.add({
     'A/D/H/pi'      : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/D/H/tau'     : Item(status='  ', wc_rev=2, repos_rev=2),
@@ -770,8 +776,8 @@ def failed_anchor_is_target(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # At one stage the failed switch left the wrong URL in the target
-  # directory H.
+  # There was a bug whereby the failed switch left the wrong URL in
+  # the target directory H.  Check for that.
   out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', H_path)
   for line in out:
     if line.find('URL: ' + G_url) != -1:
@@ -779,8 +785,9 @@ def failed_anchor_is_target(sbox):
   else:
     raise svntest.Failure
 
-  # Revert local mod and repeat the switch
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', psi_path)
+  # Remove the now-unversioned psi, and repeat the switch.  This
+  # should complete the switch.
+  os.remove(psi_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -788,8 +795,12 @@ def failed_anchor_is_target(sbox):
 
   expected_status.remove('A/D/H/chi', 'A/D/H/omega')
   expected_status.tweak('A/D/H', status='  ') # remains switched
-  expected_status.tweak('A/D/H/psi', status='  ', switched=None, wc_rev=2)
+  expected_status.add({ 'A/D/H/psi' : Item(status='  ',
+                                           switched=None,
+                                           repos_rev=2,
+                                           wc_rev=2) })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
