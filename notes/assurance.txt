@@ -22,7 +22,7 @@ your repository. Now you discover that an attacker can execute arbitary
 code as the userid your service is running as. This is not ideal. 
 
 Hence, we distinquish between "security features" and assurance. Brian
-Snow, a technical directory at the NSA, defines assurance as follows:
+Snow, a technical director at the NSA, defines assurance as follows:
 
         "Confidence-building activities that demonstrate that a system
         possesses the desired properties and only these properties and

@@ -1,0 +1,94 @@
+
+A proposal for an svn filesystem dump/restore format.
+
+Two problems we want to solve
+=============================
+
+ 1.  When we change our node-id schema, we need to migrate all of our
+     data (by dumping and restoring).
+
+ 2.  Serves as a backup format.  Could be read by other software tools
+     someday.
+
+
+Design Goals
+============
+
+ A.  Written as two new public functions in svn_fs.h.  To be invoked
+     by new 'svnadmin' subcommands.
+
+ B.  Format uses only timeless fs concepts.
+
+     The dump format needs to reference concepts that we *know* are
+     general enough to never change.  These concepts must exist
+     independently of any internal node-id schema, or any DB storage
+     backend.  In other words, we're talking about the basic ideas in
+     our original "design spec" from May 2000.
+
+
+Format Semantics
+================
+
+Here are the timeless semantics of our fs design -- the things that
+would be stored in our dump format.
+
+  - A filesystem is an array of trees.
+    Each tree is called a "revision" and has unversioned properties attached.
+
+  - A revision has a tree of "nodes" hanging off of it.
+ 
+  - The majority of a tree's nodes are hard-links (references) to
+    nodes that were created in earlier trees.
+
+  - A node contains 
+
+        - versioned text
+        - versioned properties
+        - predecessor history:  "which node am I a variant of?"
+        - copy history:  "which node am I a copy of?"
+
+    The history values can be non-existent (meaning the node is
+    completely new), or can have a value of {revision, path}.
+
+
+Implementation (Questions)
+==============
+
+  * file format
+   
+    Although it's tempting to use XML (easy to output, easy to write a
+    parser), gstein pointed out that it may create more problems in
+    the long run.  Storing binary data (and escaping) in XML can be
+    painful; scanning for the escape characters can really slow down
+    an import; just imagine trying to store an XML file!  Even though
+    XML may be more convenient at the outset, we'll probably end up
+    burning lots of time trying to work around these other issues
+    later on.
+
+    For this reason, we're thinking some kind of simple binary format.
+
+  * should we bother to implement 'diffy' storage of texts in our
+    format?  My instinct is "no".  Dumping and restoring a filesystem
+    is a rare operation, so we don't need to be so paranoid about disk
+    space usage.  It would be extra work to implement diffy-storage,
+    and imports would probably be safer (and faster) if we had nothing
+    but fulltexts in our dump.
+
+  * Reading through our 'libsvn_fs/structure' document, it seems that
+    the only data we're not saving in the dump is a node's "Created
+    Revision" (CR).  It's not clear to me that this is a timeless
+    concept.  It certainly has no relevance in the new, impending fs
+    schema.  It seems more like an optimization for our current
+    node-id schema.  Do others agree?
+
+    Let me be clear here: the CR is still a useful concept.  For
+    example, I like very much that this value is cached in my working
+    copy and shows up in 'svn status -v'.  I will always want to know
+    "in what revision did foo.c last change?"  When we switch to the
+    new schema, we'll still want to keep this concept around -- it
+    will simply have a different implementation under the hood.
+
+    But still, I don't think it needs to be saved in a dump format.
+    When we re-import a filesystem, the information can be *derived*
+    by whatever schema exists under the hood -- possibly on-the-fly,
+    as we're importing.  Am I making sense?
