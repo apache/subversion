@@ -218,7 +218,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   details.  Return 0 if successful."""
 
   # Commit.
-  output, errput = main.run_svn (error_re_string, 'ci', *args)
+  output, errput = main.run_svn(error_re_string, 'ci', '-m', '"log msg"',*args)
 
   if (error_re_string):
     rm = re.compile (error_re_string)

@@ -122,7 +122,7 @@ check_status 11
 ### Try to commit;  the conflict should abort due to conflicts.
 echo "Attempting to commit while conflicts are present:"
 ${SVN_PROG} commit  --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 22 ${TEST_DIR_1}                 \
+                   --revision 22 ${TEST_DIR_1} -m "log msg"    \
 2>&1
 # (no check_status here, because we *expect* the commit to fail!)
 
@@ -137,7 +137,7 @@ check_status 12
 ### Try to commit again;  the conflict should abort due to text conflict.
 echo "Attempting to commit while conflicts are present:"
 ${SVN_PROG} commit --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 23 ${TEST_DIR_1}                \
+                   --revision 23 ${TEST_DIR_1} -m "log msg"   \
 2>&1
 # (no check_status here, because we *expect* the commit to fail!)
 
