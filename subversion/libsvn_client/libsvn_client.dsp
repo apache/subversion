@@ -123,6 +123,14 @@ SOURCE=.\diff.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\log.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\prop_commands.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\revert.c
 # End Source File
 # Begin Source File
