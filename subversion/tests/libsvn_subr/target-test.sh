@@ -2,6 +2,8 @@
 
 FAILED="no"
 
+PWD=`pwd`
+
 if test -d "z"; then
     :
 else
