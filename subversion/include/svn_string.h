@@ -79,6 +79,7 @@ svn_string_t * svn_string_ncreate (const char *bytes, const size_t size,
 
 void svn_string_setempty (svn_string_t *str);
 svn_boolean_t svn_string_isempty (const svn_string_t *str);
+void svn_string_chop (svn_string_t *str, size_t bytes);
 
 /* Fill bytestring with a character */
 

@@ -146,9 +146,25 @@ svn_string_fillchar (svn_string_t *str, const unsigned char c)
 void
 svn_string_setempty (svn_string_t *str)
 {
-  str->data = NULL;
+  if (str->len > 0)
+    str->data[0] = '\0';
+
   str->len = 0;
-  str->blocksize = 0;
+}
+
+
+/* Chop NBYTES bytes off end of STR, but not more than STR->len. */
+
+void
+svn_string_chop (svn_string_t *str, size_t nbytes)
+{
+  if (nbytes > str->len)
+    str->len = 0;
+  else
+    str->len -= nbytes;
+
+  if (str->len > 0)
+    str->data[0] = '\0';
 }
 
 
@@ -157,10 +173,7 @@ svn_string_setempty (svn_string_t *str)
 svn_boolean_t
 svn_string_isempty (const svn_string_t *str)
 {
-  if (str->len == 0)
-    return TRUE;
-  else
-    return FALSE;
+  return (str->len == 0);
 }
 
 
