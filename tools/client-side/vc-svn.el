@@ -411,21 +411,4 @@ This function returns a status of either 0 (no differences found), or
   (vc-do-command buffer 0 vc-svn-program-name file 
          "cat" "-r" rev))
 
-(defun vc-svn-mode-line-string (file)
-  "Returns a string for placement in the modeline for FILE.
-Compared to the default implementation, this does two things:
-Handle the case of a file which has been added, but not committed, 
-and show the user when their local copy has been modified."
-  (let* ((state   (vc-state file))
-         (rev     (vc-workfile-version file)))
-    (cond ((string= rev "0")
-           ;; A file that is added but not yet committed.
-           "SVN:A")
-          ((eq state 'edited)
-           ;; A file we've edited locally
-           (concat "SVN:" rev "M"))
-          (t
-           ;; A fallback for all other states.
-           (concat "SVN:" rev)))))
-
 (provide 'vc-svn)
