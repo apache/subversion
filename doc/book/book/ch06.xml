@@ -461,10 +461,14 @@ collabnet = svn.collab.net
                 files and directories that Subversion should not
                 display unless they are versioned.  The default value
                 is <literal>*.o *.lo *.la #*# .*.rej *.rej .*~ *~
-                .#*</literal>.  You can override this option for a
-                single instance of the <command>svn status</command>
-                command by using the <option>--no-ignores</option>
-                command-line flag.</para>
+                .#*</literal>.</para>
+
+              <para>You can override this option for a single instance
+                of the <command>svn status</command> command by using
+                the <option>--no-ignores</option> command-line flag.
+                For information on more fine-grained control of
+                ignored items, see <xref linkend="svn-ch-6-sect-2.3.3"
+                />.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -1181,11 +1185,11 @@ $ svn status
             <listitem>
               <para>This keyword is compressed combination of the
                 other keywords.  Its substitution looks something like
-                <literal>$Id: bar 148 2002-07-28 21:30:43 epg
+                <literal>$Id: calc.c 148 2002-07-28 21:30:43 sally
                 $</literal>, and is interpreted to mean that the file
-                <filename>bar</filename> was last changed in revision
+                <filename>calc.c</filename> was last changed in revision
                 148 on the evening of July 28, 2002 by the user
-                <literal>epg</literal>.</para>
+                <literal>sally</literal>.</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -1418,10 +1422,11 @@ Cumulus clouds are appearing more frequently as summer approaches.
       <sect3 id="svn-ch-6-sect-2.3.6">
         <title><literal>svn:externals</literal></title>
 
-        <para>The <literal>svn:externals</literal> property is used to
-          instruct Subversion to populate a versioned directory with
-          one or more other checked-out Subversion working copies.
-          For more information on this keyword and its use, see <xref
+        <para>The <literal>svn:externals</literal> property contains
+          module definitions which instruct Subversion to populate a
+          versioned directory with one or more other checked-out
+          Subversion working copies.  For more information on this
+          keyword and its use, see <xref
           linkend="svn-ch-6-sect-3"/>.</para>
 
       </sect3>
@@ -1434,61 +1439,81 @@ Cumulus clouds are appearing more frequently as summer approaches.
   <sect1 id="svn-ch-6-sect-3">
     <title>Modules</title>
     
-    <para>Sometimes it's useful to construct a working copy that is
+    <para>Sometimes it is useful to construct a working copy that is
       made out of a number of different checkouts.  For example, you
-      may want different sub-directories to come from different
-      locations in a repository.</para>
+      may want different subdirectories to come from different
+      locations in a repository, or perhaps from different
+      repositories altogether.  You could certainly setup such a
+      scenario by hand&mdash;using <command>svn checkout</command> to
+      create the sort of nested working copy structure you are trying
+      to achieve.  But if this layout is important for everyone who
+      uses your repository, every other user will need to perform the
+      same checkout operations that you did.</para>
 
-    <para>On the one hand, you could begin by checking out a working
-      copy, and then run <command>svn switch</command> on various
-      subdirectories.  But this is a bit of work.  Wouldn't it be nice
-      to define&mdash;in a single place&mdash;exactly how you want the
-      final working copy to be?</para>
-
-    <para>This is known as a <firstterm>module</firstterm>.  You can
-      define a module by attaching another special
-      <quote>magic</quote> <literal>svn:</literal> property to a
-      directory: the <literal>svn:externals</literal> property.</para>
-
-    <para>The value of this property is a list of subdirectories and
-      their corresponding URLs:</para>
-
-    <screen>
-$ svn propget svn:externals projectdir
-subdir1/foo       http://url.for.external.source/foo
-subdir1/bar       http://blah.blah.blah/repositories/theirproj
-subdir1/bar/baz   http://blorg.blorg.blorg/basement/code
-    </screen>
-
-    <para>Assuming that this property is attached to the directory
-      <filename>projectdir</filename>, then when we check it out,
-      we'll get everything else defined by the property.</para>
+    <para>Fortunately, Subversion provides support for
+      <firstterm>module</firstterm> definitions.  A module is a
+      mapping of a local directory to the URL of a versioned resource.
+      In Subversion, you declare module definitions in groups using
+      the <literal>svn:externals</literal> property.  This property is
+      set on a versioned directory, and its value is a multi-line
+      table of subdirectories (relative to the versioned directory on
+      which the property is set) and Subversion repository URLs.</para>
 
     <screen>
-$ svn checkout http://foo.com/repos/projectdir
-A  projectdir/blah.c
-A  projectdir/gloo.c
-A  projectdir/trout.h
-Checked out revision 128.
+$ svn propget svn:externals calc
+third-party/sounds          http://sounds.red-bean.com/repos
+third-party/skins           http://skins.red-bean.com/repositories/skinproj
+third-party/skins/toolkit   http://svn.red-bean.com/repos/skin-maker
+</screen>
 
-Fetching external item into projectdir/subdir1/foo
-A  projectdir/subdir1/foo/rho.txt
-A  projectdir/subdir1/foo/pi.txt
-A  projectdir/subdir1/foo/tau.doc
-Checked out revision 128.
+    <para>The convenience of the <literal>svn:externals</literal>
+      property is that once it is set on a versioned directory,
+      everyone who checks out a working copy with that directory also
+      gets the benefit of the module definition.  In other words, once
+      one person has made the effort to define those nested working
+      copy checkouts, no one else has to bother&mdash;Subversion will,
+      upon checkout of the original working copy, also checkout the
+      module working copies.</para>
+
+    <para>Note the previous module definition example.  When someone
+      checks out a working copy of the <filename>calc</filename>
+      directory, Subversion also continues to checkout the items found
+      in its module definition.</para>
+
+    <screen>
+$ svn checkout http://svn.example.com/repos/calc
+A  calc
+A  calc/Makefile
+A  calc/integer.c
+A  calc/button.c
+Checked out revision 148.
+
+Fetching external item into calc/third-party/sounds
+A  calc/third-party/sounds/ding.ogg
+A  calc/third-party/sounds/dong.ogg
+A  calc/third-party/sounds/clang.ogg
 &hellip;
-    </screen>
+A  calc/third-party/sounds/bang.ogg
+A  calc/third-party/sounds/twang.ogg
+Checked out revision 14.
 
-    <para>By tweaking the value of the
-      <literal>svn:externals</literal> property, the definition of the
-      module can change over time, and subsequent calls to
-      <command>svn update</command> will update working copies
-      appropriately.</para>
+Fetching external item into calc/third-party/skins
+&hellip;
+</screen>
 
-    <!-- ###TODO Anything else to add here?  I'm suspicious that this
-    feature doesn't work as I expect just yet; when I run 'svn up' at the
-    top of the wc, nothing happens in the external directory at all,
-    because (I guess) it's not linked to the parent. -Ben -->
+    <para>If you need to change the module definition, you can do so
+      using the regular property modification subcommands.  When you
+      commit a change to the <literal>svn:externals</literal>
+      property, Subversion will syncronize the checked-out items
+      against the changed module definition when you next run
+      <command>svn update</command>.  The same thing will happen when
+      others update their working copies and receive your changes to
+      the module definition.</para>
+
+    <!-- ### TECH-CHECK: Does this stuff really work?  Ben had a
+         comment here that was more than a little doubtful.  We *do*
+         have module tests in place.  Perhaps Ben's update did nothing
+         because his directory was already up-to-date?  -->
     
   </sect1>
 
