@@ -700,7 +700,7 @@ remove_tmpfiles (apr_hash_t *tempfiles,
 
       if (err)
         {
-          if (err->apr_err != APR_ENOENT)
+          if (! APR_STATUS_IS_ENOENT (err->apr_err))
             return err;
           else
             svn_error_clear (err);
