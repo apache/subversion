@@ -39,11 +39,11 @@ status__set_entry(JNIEnv *env, jboolean *hasException,
 
 void
 status__set_text_status(JNIEnv *env, jboolean *hasException,
-                        jobject jstatus, jint jtext_status);
+                        jobject jstatus, jobject jtext_status);
 
 void 
 status__set_prop_status(JNIEnv *env, jboolean *hasException,
-                        jobject jstatus, jint jprop_status);
+                        jobject jstatus, jobject jprop_status);
 
 void
 status__set_copied(JNIEnv *env, jboolean *hasException,
@@ -56,12 +56,12 @@ status__set_locked(JNIEnv *env, jboolean *hasException,
 void 
 status__set_repos_text_status(JNIEnv *env, jboolean *hasException,
                               jobject jstatus, 
-                              jint jrepos_text_status);
+                              jobject jrepos_text_status);
 
 void
 status__set_repos_prop_status(JNIEnv *env, jboolean *hasException,
                               jobject jstatus,
-                              jint jrepos_prop_status);
+                              jobject jrepos_prop_status);
 
 #endif
 
