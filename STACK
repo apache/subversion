@@ -38,7 +38,7 @@ Ben todo:
    - finish svn_fs_is_different, make status command use it.
 
 
-Karl post-M3:
+Karl:
 
    - Propagate changes down into libsvn_client.  Currently, the client
      usually takes a `targets' list and iterates over it, invoking
