@@ -309,6 +309,7 @@ sub CntHhpHead
     $CntHead="$CntHead\nDefault Window=Main";
     $CntHead="$CntHead\nDefault topic=book/index.html";
     $CntHead="$CntHead\nDisplay compile progress=No";
+    $CntHead="$CntHead\nFull-text search=Yes";
     $CntHead="$CntHead\nLanguage=0x409 Engelska (USA)";
     $CntHead="$CntHead\nTitle=Subversion Documentation";
 
