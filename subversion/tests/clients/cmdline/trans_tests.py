@@ -66,23 +66,6 @@ Item = svntest.wc.StateItem
 #
 ####
 
-########### THINGS THAT HAVE FAILED DURING HAND-TESTING ##############
-#
-# These have all been fixed, but we want regression tests for them.
-#
-#   1. Ben encountered this:
-#      Create a greek tree, commit a keyword into one file,
-#      then commit a keyword property (i.e., turn on keywords), then
-#      try to check out head somewhere else.  See seg fault.
-#    
-#   2. Mike encountered this:
-#      Add the keyword property to a file, svn revert the file, see
-#      error.
-#
-#   3. Another one from Ben:
-#      Keywords not expanded on checkout.
-#
-######################################################################
 
 
 # Paths that the tests test.
@@ -652,6 +635,79 @@ def copy_propset_commit(sbox):
                                          None, None, None, None, None,
                                          wc_dir)
 
+#----------------------------------------------------------------------
+#      Create a greek tree, commit a keyword into one file,
+#      then commit a keyword property (i.e., turn on keywords), then
+#      try to check out head somewhere else.
+#      This should not cause seg fault
+def propset_commit_checkout_nocrash(sbox):
+  "propset, commit, check out into another wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Put a keyword in A/mu, commit
+  svntest.main.file_append (mu_path, "\n$Rev$")
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Set property to do keyword expansion on A/mu, commit.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords', 'Rev', mu_path)
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Check out into another wc dir
+  other_wc_dir = sbox.add_wc_path('other')
+  mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
+  
+  svntest.actions.run_and_verify_svn (None, None, None, 'checkout',
+                                      '--username', svntest.main.wc_author,
+                                      '--password', svntest.main.wc_passwd,
+                                      svntest.main.current_repo_url,
+                                      other_wc_dir)
+
+  mu_other_contents = open(mu_other_path).read()
+  if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
+    print "'%s' does not have the expected contents" % mu_other_path
+    raise svntest.Failure
+
+  
+#----------------------------------------------------------------------
+#      Add the keyword property to a file, svn revert the file
+#      This should not display any error message
+def propset_revert_noerror(sbox):
+  "propset, revert"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Set the Rev keyword for the mu file
+  # could use the keywords_on()/keywords_off() functions to
+  # set/del all svn:keywords
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords', 'Rev', mu_path)
+
+  # Revert the propset
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', mu_path)
   
 ########################################################################
 # Run the tests
@@ -668,6 +724,8 @@ test_list = [ None,
               keyword_expanded_on_checkout,
               cat_keyword_expansion,
               copy_propset_commit,
+              propset_commit_checkout_nocrash,
+              propset_revert_noerror, 
              ]
 
 if __name__ == '__main__':
