@@ -65,16 +65,16 @@ MDK_RELEASE := 1
 
 # swig rpm name - change this to suit your needs
 # Mandrake calls this swig, tigris calls this swig-runtime
-# SWIG_RPM := swig-runtime
+# SWIG := swig-runtime
 
 # swig-devel rpm name - change this to suit your needs
 # Mandrake calls this swig, tigris calls this swig
-# SWIG_BUILD_RPM := swig
+# SWIG_BUILD := swig
 
 # libneon0 rpm name - change this to suit your needs
 # Currently libneon's rpms seem to be called neon on tigris
 # but are called libneon0 on Mandrake
-# NEON_RPM := neon
+# NEON := neon
 
 # Default editor
 # Change this to something else if you like
@@ -156,8 +156,8 @@ NO_ACTIVATION   := $(if $(NO_ACTIVATION),$(NO_ACTIVATION),1)
 NO_APACHE2      := $(if $(NO_APACHE2),$(NO_APACHE2),0)
 REQUIRE_APACHE2 := $(if $(REQUIRE_APACHE2),$(REQUIRE_APACHE2),1)
 NEON_RPM        := $(if $(NEON),$(NEON),libneon0)
-SWIG_RPM        := $(if $(SWIG_RPM),$(SWIG_RPM),swig)
-SWIG_BUILD_RPM  := $(if $(SWIG_BUILD_RPM),$(SWIG_BUILD_RPM),swig)
+SWIG_RPM        := $(if $(SWIG),$(SWIG),swig)
+SWIG_BUILD_RPM  := $(if $(SWIG_BUILD),$(SWIG_BUILD),swig)
 SWIG_MIN        := $(if $(SWIG_MIN),$(SWIG_MIN),$(if $(GE_30),1.3.16,1.3.16))
 NEON_MIN        := $(if $(NEON_MIN),$(NEON_MIN),$(if $(GE_30),0.24.0,0.23.0))
 APACHE_MIN      := $(if $(APACHE_MIN),$(APACHE_MIN),$(if $(GE_30),2.0.47,2.0.43))
