@@ -11,8 +11,3 @@ RedHat 7.x, RedHat 8.x, RedHat 9.x :
 
 2. Run cvs2svn tests during RPM generation.
 
-3. Update RPMs to be similar to RedHat 9.X packages
-   (separate apr, apr-utils packages)
-
-4. Fix Apache (httpd) RPMs to use new pkg-config so it will compile correctly
-   on RedHat 9.X so we can compile Subversion on RedHat 9.X.
