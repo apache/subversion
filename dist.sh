@@ -128,11 +128,11 @@ echo "Downloading book into sandbox..."
 
 wget http://svnbook.red-bean.com/book.pdf \
   -O "$DISTPATH/doc/book/book/book.pdf" ||
-  echo "ERROR: Problem getting the book.pdf file." && exit 1
+  ( echo "ERROR: Problem getting the book.pdf file." && exit 1 )
 
 wget http://svnbook.red-bean.com/book.html \
   -O "$DISTPATH/doc/book/book/book.html" ||
-  echo "ERROR: Problem getting the book.html file." && exit 1
+  ( echo "ERROR: Problem getting the book.html file." && exit 1 )
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 
