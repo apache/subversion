@@ -295,7 +295,6 @@ typedef struct svn_edit_t
   } kind;
   svn_string_t *name;             /* name to add/del/replace */
   svn_edit_content_t *content;    /* the object we're adding/replacing */
-  struct svn_edit_t *next;        /* Next one in the list, or NULL. */
 } svn_edit_t;
 
 
@@ -304,7 +303,7 @@ typedef struct svn_delta_t
 {
   svn_string_t *source_root;   /* Directory to which this delta applies */
   svn_version_t base_version;  /* Base version of this directory */
-  svn_edit_t *edits;           /* list of changes to make */
+  svn_edit_t *edit;            /* latest edit we're holding */
 } svn_delta_t;
 
 
