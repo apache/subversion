@@ -9,17 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10389, r10398:
-    Don't always patch the apr-util files for BDB when generating
-    Windows build scripts (introduced in r10206).
-    Justification:
-      trivial fix, avoids breaking the apr-util build by mistake,
-      will make my life easier as long as the 1.1.x branch is live.
-      r10389 is a doc and utility fix for r10206.
-    Votes:
-      +3: brane. That should be enough :-)
-      +0: breser. Don't know enough about the Windows build to be +1
-
   * r10379,r10380,r10384,r10469,r10470,r10487
     Support creation of zip archives for Windows.
     Justification:

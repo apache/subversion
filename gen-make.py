@@ -65,13 +65,13 @@ def _usage_exit():
   print "  Windows-specific options:"
   print
   print "  --with-apr=DIR"
-  print "           The APR sources are in DIR"
+  print "           the APR sources are in DIR"
   print
   print "  --with-apr-util=DIR"
-  print "           The APR-Util sources are in DIR"
+  print "           the APR-Util sources are in DIR"
   print
   print "  --with-apr-iconv=DIR"
-  print "           The APR-Iconv sources are in DIR"
+  print "           the APR-Iconv sources are in DIR"
   print
   print "  --with-berkeley-db=DIR"
   print "           look for Berkley DB headers and libs in"
@@ -107,6 +107,9 @@ def _usage_exit():
   print
   print "  --enable-nls"
   print "           add support for gettext localization"
+  print
+  print "  --enable-bdb-in-apr-util"
+  print "           configure APR-Util to use Berkeley DB"
   sys.exit(0)
 
 
@@ -137,6 +140,7 @@ if __name__ == '__main__':
                                 'enable-purify',
                                 'enable-quantify',
                                 'enable-nls',
+                                'enable-bdb-in-apr-util'
                                 ])
     if len(args) > 1:
       _usage_exit()
