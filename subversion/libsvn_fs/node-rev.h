@@ -58,6 +58,10 @@ svn_error_t *svn_fs__create_node (svn_fs_id_t **id_p,
    *NEW_ID_P to the new node revision's ID.  Use TRAIL->pool for any
    temporary allocation.
 
+   kff todo: I think the mutability part might be a lie.
+   put_representation_skel() doesn't seem to do anything with
+   mutability yet... Must check into this.
+
    After this call, the deltification code assumes that the new node's
    contents will change frequently.  */
 svn_error_t *svn_fs__create_successor (svn_fs_id_t **new_id_p,
