@@ -913,7 +913,7 @@ def merge_one_file(sbox):
   expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak(rho_rel_path, wc_rev=2)
+  expected_status.tweak('A/D/G/rho', wc_rev=2)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
                                          expected_status,

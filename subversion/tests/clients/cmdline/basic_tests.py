@@ -1079,8 +1079,7 @@ def basic_checkout_deleted(sbox):
                                         wc_dir)
 
   # Now try to checkout revision 1 of A/D.
-  url = svntest.main.test_area_url + '/' + svntest.main.current_repo_dir + \
-        '/A/D'
+  url = svntest.main.current_repo_url + '/A/D'
   wc2 = os.path.join (sbox.wc_dir, 'new_D')
   svntest.actions.run_and_verify_svn("error checking out r1 of A/D",
                                      None, [], 'co', '-r', '1',
@@ -1164,7 +1163,7 @@ def basic_import(sbox):
   svntest.main.file_append(new_path, "some text")
 
   # import new files into repository
-  url = os.path.join(svntest.main.current_repo_url, "dirA/dirB/new_file")
+  url = svntest.main.current_repo_url + "/dirA/dirB/new_file"
   output, errput =   svntest.actions.run_and_verify_svn(
     'Cannot change node kind', None, [], 'import',
     '--username', svntest.main.wc_author,
@@ -1503,7 +1502,7 @@ def basic_import_ignores(sbox):
   open(foo_o_path, 'w')
 
   # import new dir into repository
-  url = os.path.join(svntest.main.current_repo_url, 'dir')
+  url = svntest.main.current_repo_url + '/dir'
 
   output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',

@@ -76,6 +76,8 @@ def guarantee_greek_repository(path):
 
     # build a URL for doing an import.
     url = main.test_area_url + '/' + main.pristine_dir
+    if main.windows == 1:
+      url = string.replace(url, '\\', '/')
 
     # import the greek tree, using l:foo/p:bar
     ### todo: svn should not be prompting for auth info when using

@@ -164,6 +164,9 @@ def test_print_property_diffs(sbox):
   if len(output) != len(expected_output):
     raise svntest.Failure
 
+  # On Windows, diff's still output / rather than \ in paths
+  if svntest.main.windows == 1:
+    iota_path = string.replace(iota_path, '\\', '/')
   # Replace all occurences of wc_dir/iota with iota in svn diff output
   reiota = re.compile(iota_path)
 

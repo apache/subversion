@@ -259,7 +259,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
   # get a list of all the names in the path
   # each of these will be a child of the former
   if os.sep != "/":
-    path = path.replace(os.sep, "/")
+    path = string.replace(path, os.sep, "/")
   elements = path.split("/")
   if len(elements) == 0:
     ### we should raise a less generic error here. which?
@@ -497,8 +497,8 @@ def dump_tree(n,indent=""):
   else:
     print "%s%s" % (indent, n.name)
 
-  indent = indent.replace("-"," ")
-  indent = indent.replace("+"," ")
+  indent = string.replace(indent, "-", " ")
+  indent = string.replace(indent, "+", " ")
   for i in range(len(tmp_children)):
     c = tmp_children[i]
     if i == len(tmp_children

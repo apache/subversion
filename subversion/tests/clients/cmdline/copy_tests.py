@@ -400,8 +400,7 @@ def resurrect_deleted_dir(sbox):
 
   # Use 'svn cp -r 1 URL URL' to resurrect the deleted directory, where
   # the two URLs are identical.  This used to trigger a failure.  
-  url = svntest.main.test_area_url + '/' \
-        + svntest.main.current_repo_dir + '/A/D/G'
+  url = svntest.main.current_repo_url + '/A/D/G'
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -604,8 +603,7 @@ def copy_files_with_properties(sbox):
 
   # REPOS to WC copy of file with properties
   rho_url_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho_url')
-  rho_url = svntest.main.test_area_url + '/' \
-            + svntest.main.current_repo_dir + '/A/D/G/rho'
+  rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', rho_url, rho_url_path)
 
@@ -930,7 +928,7 @@ def copy_to_root(sbox):
 
   sbox.build()
 
-  root = svntest.main.test_area_url + '/' + svntest.main.current_repo_dir
+  root = svntest.main.current_repo_url
   mu = root + '/A/mu'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
