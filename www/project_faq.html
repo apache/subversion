@@ -122,6 +122,8 @@ I avoid having to type it so often?</a></li>
 a <tt>file:</tt> URL?</a></li>
 <li><a href="#write-over-dav">I'm having trouble doing write
     operations to a Subversion repository over a network.</a></li>
+<li><a href="#vs-asp-net">VS.NET/ASP.NET seems to have a problem with
+    the ".svn" directory name.  What should I do?</a></li>
 <li><a href="#windows-xp-server">Under Windows XP, the Subversion
     server sometimes seems to send out corrupted data.  Can this really be
     happening?</a></li>  
@@ -1649,6 +1651,53 @@ svn import file:///d:/some/path/to/repos/on/d/drive
 <p>See <a
 href="http://svnbook.red-bean.com/html-chunk/ch02s03.html#svn-ch-2-sidebar-1">
 Repository URLs</a> in the Subversion Book for more details.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+  
+<h3><a name="vs-asp-net">VS.NET/ASP.NET seems to have a problem with
+    the ".svn" directory name.  What should I do?</a></h3>
+
+<p>VS.Net has a subsystem called ASP.Net, which uses WebDAV to do
+remote publishing through IIS.  This subsystem rejects any pathname
+that starts with ".".  This causes a problem when you try to remotely
+publish a Subversion working copy, because of the ".svn"
+subdirectories.  The error message says something like "unable to
+read project information".</p>
+
+<p>There are a few solutions:</p>
+
+<ul>
+<li><p>Recompile your client to use a different working copy name, as
+    described <a href="#adm-dir">here</a>.  Or,</p>
+</li>
+<li><p>If you use TortoiseSVN, you can download a client that is
+    already modified to work around the problem, see
+    <a href="http://tortoisesvn.tigris.org/download.html"
+            >http://tortoisesvn.tigris.org/download.html</a>.  Or,</p>
+</li>
+<li><p>Take Jim Bolla's advice from
+    <a href="http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx"
+            >http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx</a>:
+    <i>"If you're working on web projects locally or across a file
+    share, you can get around this by converting it to a regular class
+    library project.  I have some docementation on how to do this that
+    i've compiled from various sources on the internet about how to do
+    this."</i> (We've contacted Jim Bolla about getting that
+    documentation, and will include it here if we can.).  Or, </p>
+</li>
+<li><p>Steele Price, also on
+    <a href="http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx"
+            >http://weblogs.asp.net/fbouma/archive/2004/02/28/81479.aspx</a>,
+    says:
+    <i>"You can get around the .SVN directory pretty easily by
+    following instructions here: <a
+    href="http://staff.develop.com/onion/Samples/aspdotnet_without_web_projects.htm">http://staff.develop.com/onion/Samples/aspdotnet_without_web_projects.htm</a>
+    further instruction for making new projects is here:
+    <a href="http://blog.steeleprice.net/archive/2003/11/09/134.aspx"
+            >http://blog.steeleprice.net/archive/2003/11/09/134.aspx</a>"
+    </i></p>
+</li>
+</ul>
 
 <![CDATA[-----------------------------------------------------------]]>
 
