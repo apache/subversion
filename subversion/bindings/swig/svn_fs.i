@@ -103,7 +103,7 @@ apr_array_header_t **revs {
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
 */
 
-%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(python,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
@@ -115,7 +115,7 @@ apr_array_header_t **revs {
    structures
 */
 
-%typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(python, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
     $result = t_output_helper(
         $result,

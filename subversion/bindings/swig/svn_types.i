@@ -45,6 +45,15 @@
 */
 %typemap(python, in, parse="z") const char *MAY_BE_NULL "";
 
+%typemap(java, in) const char *MAY_BE_NULL { 
+  /* ### WHEN IS THIS USED? */
+  $1 = 0;
+  if ($input) {
+    $1 = ($1_ltype)JCALL2(GetStringUTFChars, jenv, $input, 0);
+    if (!$1) return $null;
+  }
+}
+
 /* -----------------------------------------------------------------------
    Define a more refined 'varin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
@@ -88,6 +97,9 @@
 	return $jnicall;
 }
 
+/* Make the proxy classes much more usable */
+%typemap(javaptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [] "public"
+
 /* -----------------------------------------------------------------------
    'svn_renum_t *' will always be an OUTPUT parameter
 */
@@ -105,6 +117,35 @@
     $1 = PyString_AS_STRING($input);
     $2 = PyString_GET_SIZE($input);
 }
+
+%typemap(java, arginit) (const char *PTR, apr_size_t LEN) "char c;"
+
+%typemap(java, in) (const char *PTR, apr_size_t LEN) {
+    if ($input != NULL) {
+	    /* Do not use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical
+		* since the Subversion client might block the thread */
+
+       $1 = JCALL2(GetByteArrayElements, jenv, $input, NULL);
+	   $2 = JCALL1(GetArrayLength, jenv, $input);
+	}
+	else {
+       $1 = &c;
+	   $2 = 0;
+	}
+}
+
+%typemap(java, argfree) (const char *PTR, apr_size_t LEN) {
+	if ($input != NULL)	JCALL3(jenv, ReleaseByteArrayElements, @input, $1, JNI_ABORT); 	
+	/* Since this buffer is used as input JNI_ABORT is safe as "mode" above*/
+}
+
+%typemap(jni) (const char *PTR, apr_size_t LEN) "jbyteArray"
+%typemap(jtype) (const char *PTR, apr_size_t LEN) "byte[]"
+%typemap(jstype) (const char *PTR, apr_size_t LEN) "byte[]"
+%typemap(javain) (const char *PTR, apr_size_t LEN) "$javainput"
+%typemap(javaout) (const char *PTR, apr_size_t LEN) {
+    return $jnicall;
+  }
 
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
