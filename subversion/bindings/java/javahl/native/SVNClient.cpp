@@ -996,6 +996,9 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path, const char *name
     svn_string_t *propval;
     apr_hash_this (hi, (const void **)&filename, NULL, (void**)&propval);
 
+    if(propval == NULL)
+        return NULL;
+
     return createJavaProperty(jthis, path, name, propval);
 }
 
@@ -2104,6 +2107,8 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
         JNIUtil::handleSVNError(error);
         return NULL;
     }
+    if(propval == NULL)
+        return NULL;
 
     return createJavaProperty(jthis, path, name, propval);
 }
