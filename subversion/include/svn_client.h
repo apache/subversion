@@ -428,6 +428,21 @@ svn_client_copy (svn_stringbuf_t *src_path,
                  svn_stringbuf_t *dst_path,
                  apr_pool_t *pool);
 
+
+/* Move/rename SRC_PATH to DST_PATH.  In Subversion, this operation is
+   (literally!) equivalent to
+
+        svn_client_copy (src_path, dst_path, pool);
+        svn_client_delete (src_path, TRUE, pool):
+
+   Therefore, please read the docstrings for those two functions. */
+svn_error_t *
+svn_client_move (svn_stringbuf_t *src_path,
+                 svn_stringbuf_t *dst_path,
+                 apr_pool_t *pool);
+
+
+
 /* Set PROPNAME to PROPVAL on TARGET.  If RECURSE is true, then PROPNAME
    will be set on recursively on TARGET and all children.  If RECURSE is false,
    and TARGET is a directory, PROPNAME will be set on _only_ TARGET.

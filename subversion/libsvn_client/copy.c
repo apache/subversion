@@ -1,5 +1,5 @@
 /*
- * copy.c:  wrappers around wc 'copy' functionality.
+ * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -37,7 +37,7 @@
 
 
 
-/* Public Interface */
+/* Public Interfaces */
 
 /* The main work of this function is to figure out exactly which
    arguments need to be passed to svn_wc_copy(). */
@@ -97,6 +97,32 @@ svn_client_copy (svn_stringbuf_t *src_path,
 
   return SVN_NO_ERROR;
 }
+
+
+
+
+
+svn_error_t *
+svn_client_move (svn_stringbuf_t *src_path,
+                 svn_stringbuf_t *dst_path,
+                 apr_pool_t *pool)
+{
+  /* A move is just a copy (add with history).... */
+  SVN_ERR (svn_client_copy (src_path, dst_path, pool));
+  
+  /* ... and a delete. */
+  SVN_ERR (svn_client_delete (src_path, 
+                              TRUE, /* force flag */
+                              pool));
+
+  /* Wasn't that easy? */
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 
 
