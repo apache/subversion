@@ -1524,7 +1524,7 @@ svn_wc_install_file (const char *file_path,
       {
         /* Did we get a new keywords value passed into this routine? */
         int i;
-        svn_stringbuf_t *fresh_keywords_value;
+        svn_stringbuf_t *fresh_keywords_value = NULL;
 
         /* Rats, here's one case where it would be *nice* to have a
            hash instead of an array.  */
