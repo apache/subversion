@@ -193,9 +193,11 @@ int svn_path_compare_paths (const char *path1, const char *path2);
  * Return the longest common path shared by both @a path1 and @a path2.  If
  * there's no common ancestor, return @c NULL.
  *
- * @a path1 and @a path2 may be URLs.  It is not enough for two URLs to 
- * share the prefix 'protocol://'; they must actually share some of the 
- * subsequent path in order to be deemed to have a common ancestor.
+ * @a path1 and @a path2 may be URLs.  In order for two URLs to have 
+ * a common ancestor, they must (a) have the same protocol (since two URLs 
+ * with the same path but different protocols may point at completely 
+ * different resources), and (b) share a common ancestor in their path 
+ * component, i.e. 'protocol://' is not a sufficient ancestor.
  */
 char *svn_path_get_longest_ancestor (const char *path1,
                                      const char *path2,
@@ -239,13 +241,16 @@ svn_path_split_if_file(const char *path,
  *   - Set @a *pbasename to the absolute path of the common parent
  *     directory of all of the targets (if the targets are
  *     files/directories), or the common URL prefix of the targets (if
- *     they are URLs)
+ *     they are URLs).  If the targets have no common prefix, or are a 
+ *     mix of URLs and local paths, set @a *pbasename to the empty string.
  *
  *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
  *     to an array of targets relative to @a *pbasename, and if 
- *     @a remove_redundancies is true, omit any paths that are
- *     descendants of another path in @a targets.  Else if @a
- *     pcondensed_targets is null, leave it alone.
+ *     @a remove_redundancies is true, omit any paths/URLs that are
+ *     descendants of another path/URL in @a targets.  If *pbasename
+ *     is empty, @a *pcondensed_targets will contain full URLs and/or
+ *     absolute paths; redundancies can still be removed (from both URLs 
+ *     and paths).  If @a pcondensed_targets is null, leave it alone.  
  *
  * Else if there is exactly one directory target, then
  *
