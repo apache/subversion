@@ -92,12 +92,14 @@ merge_text (svn_string_t *path,
     return err;
 
   /* Merge local edits into the updated version. */
-  return svn_wc__merge_local_changes (svn_wc__gnudiff_patcher,
-                                      diff,
-                                      filepath,
-                                      pool);
+  err = svn_wc__merge_local_changes (svn_wc__gnudiff_patcher,
+                                     diff,
+                                     filepath,
+                                     pool);
   if (err)
     return err;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -107,25 +109,22 @@ replace_text_base (svn_string_t *path,
                    apr_pool_t *pool)
 {
   svn_string_t *filepath;
+  svn_string_t *tmp_text_base;
   svn_error_t *err;
+  svn_boolean_t exists;
 
   filepath = svn_string_dup (path, pool);
   svn_path_add_component_nts (filepath, name, SVN_PATH_LOCAL_STYLE, pool);
 
-  err = svn_wc__sync_text_base (filepath, pool);
+  tmp_text_base = svn_wc__text_base_path (path, 1, pool);
+  err = svn_wc__file_exists_p (&exists, tmp_text_base, pool);
+  if (err)
+    return err;
 
-  printf ("*** kff first: %p ***\n", err);
-  if (err && (err->apr_err == APR_EEXIST))
-    {
-      /* If this operation appears to have been done already, that's
-         not an error, it just means we're mopping up after some
-         unexpected interrupt. */
-      printf ("*** kff here ***\n");
-      svn_error_free (err);
-      return SVN_NO_ERROR;
-    }
-  
-  return err;
+  if (! exists)
+    return SVN_NO_ERROR;  /* tolerate mop-up calls gracefully */
+  else
+    return svn_wc__sync_text_base (filepath, pool);
 }
 
 
@@ -135,8 +134,12 @@ set_version (svn_string_t *path,
              svn_vernum_t version,
              apr_pool_t *pool)
 {
-  printf ("   LOG SET_VERSION: %s/%s, %d\n", path->data, name, (int) version);
-  return SVN_NO_ERROR;
+  /* This operation is idempotent, so just do it and don't worry. */
+  return svn_wc__set_versions_entry (path,
+                                     pool,
+                                     name,
+                                     version,
+                                     NULL);
 }
 
 
