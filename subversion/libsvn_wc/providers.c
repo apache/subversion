@@ -122,12 +122,10 @@ get_creds (const char **username,
     *password
       = def_password ? def_password : spassword ? spassword->data : NULL;
 
-  /* Note the funny conditional.  It's possible that in some weird
-     circumstance we might fetch just a password; in that case, we
-     set *got_creds according to whether we were able to return that
-     password to the caller.  After all, if we couldn't return it,
-     then we effectively didn't get it, as it's useless. */
-  if (*username || (password && *password))
+  /* If we were asked for a password but didn't get one, then we
+     didn't get creds; but if we weren't asked for a password, then a
+     username is enough to say we got creds. */
+  if (*username && ((! password) || (password && *password)))
     *got_creds = TRUE;
 
   return SVN_NO_ERROR;
