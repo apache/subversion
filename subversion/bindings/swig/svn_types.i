@@ -275,7 +275,7 @@
 
 %typemap(python, in) (svn_log_message_receiver_t receiver, 
                       void *receiver_baton) {
-    $1 = svn_swig_py_thunk_log_receiver;
+    $1 = svn_swig_py_log_receiver;
     $2 = (void *)$input;
 }
 %typemap(perl5, in) (svn_log_message_receiver_t receiver, 

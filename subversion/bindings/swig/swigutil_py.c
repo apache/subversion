@@ -433,7 +433,7 @@ commit_item_array_to_list(const apr_array_header_t *array)
 }
 
 
-static svn_error_t * convert_python_error(void)
+static svn_error_t *convert_python_error(void)
 {
   return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
                           "The Python callback raised an exception");
@@ -448,8 +448,9 @@ typedef struct {
   PyObject *baton;      /* the dir/file baton (or NULL for edit baton) */
 } item_baton;
 
-static item_baton * make_baton(apr_pool_t *pool,
-                               PyObject *editor, PyObject *baton)
+static item_baton *make_baton(apr_pool_t *pool, 
+                              PyObject *editor, 
+                              PyObject *baton)
 {
   item_baton *newb = apr_palloc(pool, sizeof(*newb));
 
@@ -464,7 +465,8 @@ static item_baton * make_baton(apr_pool_t *pool,
   return newb;
 }
 
-static svn_error_t * close_baton(void *baton, const char *method)
+static svn_error_t *close_baton(void *baton, 
+                                const char *method)
 {
   item_baton *ib = baton;
   PyObject *result;
@@ -504,9 +506,9 @@ static svn_error_t * close_baton(void *baton, const char *method)
   return err;
 }
 
-static svn_error_t * thunk_set_target_revision(void *edit_baton,
-                                               svn_revnum_t target_revision,
-                                               apr_pool_t *pool)
+static svn_error_t *set_target_revision(void *edit_baton,
+                                        svn_revnum_t target_revision,
+                                        apr_pool_t *pool)
 {
   item_baton *ib = edit_baton;
   PyObject *result;
@@ -531,10 +533,10 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
   return err;
 }
 
-static svn_error_t * thunk_open_root(void *edit_baton,
-                                     svn_revnum_t base_revision,
-                                     apr_pool_t *dir_pool,
-                                     void **root_baton)
+static svn_error_t *open_root(void *edit_baton,
+                              svn_revnum_t base_revision,
+                              apr_pool_t *dir_pool,
+                              void **root_baton)
 {
   item_baton *ib = edit_baton;
   PyObject *result;
@@ -560,10 +562,10 @@ static svn_error_t * thunk_open_root(void *edit_baton,
   return err;
 }
 
-static svn_error_t * thunk_delete_entry(const char *path,
-                                        svn_revnum_t revision,
-                                        void *parent_baton,
-                                        apr_pool_t *pool)
+static svn_error_t *delete_entry(const char *path,
+                                 svn_revnum_t revision,
+                                 void *parent_baton,
+                                 apr_pool_t *pool)
 {
   item_baton *ib = parent_baton;
   PyObject *result;
@@ -589,12 +591,12 @@ static svn_error_t * thunk_delete_entry(const char *path,
   return err;
 }
 
-static svn_error_t * thunk_add_directory(const char *path,
-                                         void *parent_baton,
-                                         const char *copyfrom_path,
-                                         svn_revnum_t copyfrom_revision,
-                                         apr_pool_t *dir_pool,
-                                         void **child_baton)
+static svn_error_t *add_directory(const char *path,
+                                  void *parent_baton,
+                                  const char *copyfrom_path,
+                                  svn_revnum_t copyfrom_revision,
+                                  apr_pool_t *dir_pool,
+                                  void **child_baton)
 {
   item_baton *ib = parent_baton;
   PyObject *result;
@@ -621,11 +623,11 @@ static svn_error_t * thunk_add_directory(const char *path,
   return err;
 }
 
-static svn_error_t * thunk_open_directory(const char *path,
-                                          void *parent_baton,
-                                          svn_revnum_t base_revision,
-                                          apr_pool_t *dir_pool,
-                                          void **child_baton)
+static svn_error_t *open_directory(const char *path,
+                                   void *parent_baton,
+                                   svn_revnum_t base_revision,
+                                   apr_pool_t *dir_pool,
+                                   void **child_baton)
 {
   item_baton *ib = parent_baton;
   PyObject *result;
@@ -652,10 +654,10 @@ static svn_error_t * thunk_open_directory(const char *path,
   return err;
 }
 
-static svn_error_t * thunk_change_dir_prop(void *dir_baton,
-                                           const char *name,
-                                           const svn_string_t *value,
-                                           apr_pool_t *pool)
+static svn_error_t *change_dir_prop(void *dir_baton,
+                                    const char *name,
+                                    const svn_string_t *value,
+                                    apr_pool_t *pool)
 {
   item_baton *ib = dir_baton;
   PyObject *result;
@@ -683,18 +685,18 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
   return err;
 }
 
-static svn_error_t * thunk_close_directory(void *dir_baton,
-                                           apr_pool_t *pool)
+static svn_error_t *close_directory(void *dir_baton,
+                                    apr_pool_t *pool)
 {
   return close_baton(dir_baton, "close_directory");
 }
 
-static svn_error_t * thunk_add_file(const char *path,
-                                    void *parent_baton,
-                                    const char *copyfrom_path,
-                                    svn_revnum_t copyfrom_revision,
-                                    apr_pool_t *file_pool,
-                                    void **file_baton)
+static svn_error_t *add_file(const char *path,
+                             void *parent_baton,
+                             const char *copyfrom_path,
+                             svn_revnum_t copyfrom_revision,
+                             apr_pool_t *file_pool,
+                             void **file_baton)
 {
   item_baton *ib = parent_baton;
   PyObject *result;
@@ -722,11 +724,11 @@ static svn_error_t * thunk_add_file(const char *path,
   return err;
 }
 
-static svn_error_t * thunk_open_file(const char *path,
-                                     void *parent_baton,
-                                     svn_revnum_t base_revision,
-                                     apr_pool_t *file_pool,
-                                     void **file_baton)
+static svn_error_t *open_file(const char *path,
+                              void *parent_baton,
+                              svn_revnum_t base_revision,
+                              apr_pool_t *file_pool,
+                              void **file_baton)
 {
   item_baton *ib = parent_baton;
   PyObject *result;
@@ -753,8 +755,8 @@ static svn_error_t * thunk_open_file(const char *path,
   return err;
 }
 
-static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
-                                          void *baton)
+static svn_error_t *window_handler(svn_txdelta_window_t *window,
+                                   void *baton)
 {
   PyObject *handler = baton;
   PyObject *result;
@@ -796,12 +798,11 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
   return err;
 }
 
-static svn_error_t *
-thunk_apply_textdelta(void *file_baton, 
-                      const char *base_checksum,
-                      apr_pool_t *pool,
-                      svn_txdelta_window_handler_t *handler,
-                      void **h_baton)
+static svn_error_t *apply_textdelta(void *file_baton, 
+                                    const char *base_checksum,
+                                    apr_pool_t *pool,
+                                    svn_txdelta_window_handler_t *handler,
+                                    void **h_baton)
 {
   item_baton *ib = file_baton;
   PyObject *result;
@@ -832,7 +833,7 @@ thunk_apply_textdelta(void *file_baton,
     {
       /* return the thunk for invoking the handler. the baton takes our
          'result' reference, which is the handler. */
-      *handler = thunk_window_handler;
+      *handler = window_handler;
       *h_baton = result;
     }
 
@@ -843,10 +844,10 @@ thunk_apply_textdelta(void *file_baton,
   return err;
 }
 
-static svn_error_t * thunk_change_file_prop(void *file_baton,
-                                            const char *name,
-                                            const svn_string_t *value,
-                                            apr_pool_t *pool)
+static svn_error_t *change_file_prop(void *file_baton,
+                                     const char *name,
+                                     const svn_string_t *value,
+                                     apr_pool_t *pool)
 {
   item_baton *ib = file_baton;
   PyObject *result;
@@ -874,9 +875,9 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
   return err;
 }
 
-static svn_error_t * thunk_close_file(void *file_baton,
-                                      const char *text_checksum,
-                                      apr_pool_t *pool)
+static svn_error_t *close_file(void *file_baton,
+                               const char *text_checksum,
+                               apr_pool_t *pool)
 {
   item_baton *ib = file_baton;
   PyObject *result;
@@ -913,14 +914,14 @@ static svn_error_t * thunk_close_file(void *file_baton,
   return err;
 }
 
-static svn_error_t * thunk_close_edit(void *edit_baton,
-                                      apr_pool_t *pool)
+static svn_error_t *close_edit(void *edit_baton,
+                               apr_pool_t *pool)
 {
   return close_baton(edit_baton, "close_edit");
 }
 
-static svn_error_t * thunk_abort_edit(void *edit_baton,
-                                      apr_pool_t *pool)
+static svn_error_t *abort_edit(void *edit_baton,
+                               apr_pool_t *pool)
 {
   return close_baton(edit_baton, "abort_edit");
 }
@@ -932,20 +933,20 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 {
   svn_delta_editor_t *thunk_editor = svn_delta_default_editor (pool);
   
-  thunk_editor->set_target_revision = thunk_set_target_revision;
-  thunk_editor->open_root = thunk_open_root;
-  thunk_editor->delete_entry = thunk_delete_entry;
-  thunk_editor->add_directory = thunk_add_directory;
-  thunk_editor->open_directory = thunk_open_directory;
-  thunk_editor->change_dir_prop = thunk_change_dir_prop;
-  thunk_editor->close_directory = thunk_close_directory;
-  thunk_editor->add_file = thunk_add_file;
-  thunk_editor->open_file = thunk_open_file;
-  thunk_editor->apply_textdelta = thunk_apply_textdelta;
-  thunk_editor->change_file_prop = thunk_change_file_prop;
-  thunk_editor->close_file = thunk_close_file;
-  thunk_editor->close_edit = thunk_close_edit;
-  thunk_editor->abort_edit = thunk_abort_edit;
+  thunk_editor->set_target_revision = set_target_revision;
+  thunk_editor->open_root = open_root;
+  thunk_editor->delete_entry = delete_entry;
+  thunk_editor->add_directory = add_directory;
+  thunk_editor->open_directory = open_directory;
+  thunk_editor->change_dir_prop = change_dir_prop;
+  thunk_editor->close_directory = close_directory;
+  thunk_editor->add_file = add_file;
+  thunk_editor->open_file = open_file;
+  thunk_editor->apply_textdelta = apply_textdelta;
+  thunk_editor->change_file_prop = change_file_prop;
+  thunk_editor->close_file = close_file;
+  thunk_editor->close_edit = close_edit;
+  thunk_editor->abort_edit = abort_edit;
 
   *editor = thunk_editor;
   *edit_baton = make_baton(pool, py_editor, NULL);
@@ -1142,11 +1143,11 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
 
 
 /* Thunked version of svn_repos_authz_func_t callback type. */
-svn_error_t *svn_swig_py_thunk_repos_authz_func(svn_boolean_t *allowed,
-                                                svn_fs_root_t *root,
-                                                const char *path,
-                                                void *baton,
-                                                apr_pool_t *pool)
+svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
+                                          svn_fs_root_t *root,
+                                          const char *path,
+                                          void *baton,
+                                          apr_pool_t *pool)
 {
   PyObject *function = baton;
   PyObject *result;
@@ -1214,13 +1215,13 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
 
 
 /* Thunked version of svn_log_message_receiver_t callback type. */
-svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
-                                             apr_hash_t *changed_paths,
-                                             svn_revnum_t rev,
-                                             const char *author,
-                                             const char *date,
-                                             const char *msg,
-                                             apr_pool_t *pool)
+svn_error_t *svn_swig_py_log_receiver(void *baton,
+                                      apr_hash_t *changed_paths,
+                                      svn_revnum_t rev,
+                                      const char *author,
+                                      const char *date,
+                                      const char *msg,
+                                      apr_pool_t *pool)
 {
   PyObject *receiver = baton;
   PyObject *result;
