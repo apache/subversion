@@ -146,9 +146,13 @@ svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 svn_error_t *
 svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
+  svn_string_t *id_str = svn_fs_unparse_id (id, fs->pool);
+
   return
-    corrupt_id ("reference to non-existent node `%s' in filesystem `%s'",
-                id, fs);
+    svn_error_createf
+    (SVN_ERR_FS_ID_NOT_FOUND, 0, 0, fs->pool,
+     "reference to non-existent node `%s' in filesystem `%s'",
+     id_str->data, fs->env_path);
 }
 
 

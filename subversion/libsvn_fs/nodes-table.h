@@ -35,7 +35,10 @@ int svn_fs__open_nodes_table (DB **nodes_p,
    FS, as part of TRAIL.  Allocate the skel and the data it points
    into in TRAIL->pool.
 
-   This verifies that *SKEL_P is a well-formed REPRESENTATION skel.  */
+   This verifies that *SKEL_P is a well-formed REPRESENTATION skel.  
+
+   If ID does not exist in FS, the error SVN_ERR_FS_ID_NOT_FOUND is
+   returned.  */
 svn_error_t *svn_fs__get_rep (skel_t **skel_p,
                               svn_fs_t *fs,
                               const svn_fs_id_t *id,
