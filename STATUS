@@ -144,3 +144,7 @@ Binding candidate changes:
     Votes:
       +1: breser
 
+  * r8805, r8806
+    Fix perl bindings build on OS X.
+    Votes:
+      +1: breser
