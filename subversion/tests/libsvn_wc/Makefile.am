@@ -1,6 +1,6 @@
 ## Makefile.in is generated from this by automake.
 
-bin_PROGRAMS = checkout-test
+noinst_PROGRAMS = checkout-test
 checkout_test_SOURCES = checkout-test.c
 
 ## Flags needed when compiling:
