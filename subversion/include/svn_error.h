@@ -296,9 +296,9 @@ typedef struct svn_error
 
 /* Clear the passed in pool.
  *
- * The reason we need this wrapper to apr_clear_pool, is because
- * apr_clear_pool removes the association with the appropriate error
- * pool. This wrapper calls apr_clear_pool, and then reattaches the
+ * The reason we need this wrapper to apr_pool_clear, is because
+ * apr_pool_clear removes the association with the appropriate error
+ * pool. This wrapper calls apr_pool_clear, and then reattaches the
  * error pool.
  *
  * If anything goes wrong, an abort function will be called.
