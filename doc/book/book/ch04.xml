@@ -740,6 +740,40 @@ $ svn status
 
       </sect3>
 
+      <sidebar>
+        <title>Subversion and Changesets</title>
+
+        <para>Everyone seems to have a slightly different definition
+          of "changeset", or a least a different expectation of what
+          it means for a version control system to have "changeset
+          features".  For our purpose, let's say that a changeset is
+          just a collection of changes with a unique name.  The
+          changes might include textual edits to file contents,
+          modifications to tree structure, or tweaks to metadata.  In
+          more common speak, a changeset is just a patch with a name
+          you can refer to.</para>
+
+        <para>In Subversion, a global revision number 'N' names a tree
+          in the repository: it's the way the repository looked after
+          the Nth commit.  It's also the name of an implicit
+          changeset: if you compare tree N with tree N-1, you can
+          derive the exact patch that was committed.  For this reason,
+          it's easy to think of "revision N" as not just a tree, but a
+          changeset as well.  If you use an issue tracker to manage
+          bugs, you can use the revision numbers to refer to
+          particular patches that fix bugs&mdash;for example, "this
+          issue was fixed by revision 9238."  Somebody can then run
+          <command>svn log -r9238</command> to read about the exact
+          changeset which fixed the bug, and run <command>svn diff
+          -r9237:9238</command> to see the patch itself.  And
+          Subversion's merge command also uses revision numbers.  You
+          can merge specific changesets from one branch to another by
+          naming them in the merge arguments: <command>svn merge
+          -r9237:9238</command> would merge changeset #9238 into your
+          working copy.</para>
+      </sidebar>
+
+
     </sect2>
 
 
