@@ -210,10 +210,10 @@ INSTALL_JAVAHL_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
 INSTALL_EXTRA_SWIG_PY=\
-   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
-   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir_extra)"; \
+   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python" "$(swig_pydir)" "$(DESTDIR)"; \
+   $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(swig_pydir_extra)" "$(DESTDIR)"; \
    if test $(abs_srcdir) != $(abs_builddir); then \
-       $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
+       $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(swig_pydir)" "$(DESTDIR)"; \
    fi
 
 # The path to generated and complementary source files for the SWIG
