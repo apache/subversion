@@ -49,8 +49,8 @@ import copy    # for deepcopy()
 
 # The locations of the svn and svnadmin binaries, relative to the only
 # scripts that import this file right now (they live in ../ ).
-svn_binary = '../../../clients/cmdline/svn'
-svnadmin_binary = '../../../svnadmin/svnadmin'
+svn_binary = os.path.abspath('../../../clients/cmdline/svn')
+svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin')
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
