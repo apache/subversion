@@ -161,6 +161,27 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 
 
 
+svn_error_t *
+svn_wc_get_pristine_copy_path (svn_string_t *path,
+                               svn_string_t **pristine_copy_path,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_string_t *text_base_path, *text_base_tmp_path;
+
+  /* Copy the text-base version of PATH to the temporary area */
+  text_base_path = svn_wc__text_base_path (path, FALSE, pool);
+  text_base_tmp_path = svn_wc__text_base_path (path, TRUE, pool);
+  err = svn_io_copy_file (text_base_path, text_base_tmp_path, pool);
+  if (err) return err;
+
+  /* Return a path to this temporary text-base copy so that clients
+     can examine it when doing diffs.  */
+  *pristine_copy_path = text_base_tmp_path;
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* 

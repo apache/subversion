@@ -108,6 +108,11 @@ static const svn_cl__cmd_desc_t cmd_table[] =
   { "stat",       TRUE, 0, NULL, NULL },
   { "st",         TRUE, 0, NULL, NULL },
 
+  { "diff",     FALSE,  svn_cl__diff_command,   svn_cl__diff,
+    "Display local file changes as contextual diffs.\n"
+    "usage: diff [TARGETS]\n" },
+  { "df",         TRUE, 0, NULL, NULL },
+
   { "update",     FALSE,  svn_cl__update_command,   svn_cl__update,
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n" },

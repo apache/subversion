@@ -443,6 +443,35 @@ svn_error_t *svn_wc_prop_set (svn_string_t *name,
                               apr_pool_t *pool);
 
 
+
+/*** Diffs ***/
+
+/* Given a PATH to a wc file, return a PRISTINE_COPY_PATH which points
+   to a -copy- of the pristine version of the file.  This is needed so
+   clients can do diffs.  If the WC has no text-base, return a NULL
+   instead of a path. */
+svn_error_t *svn_wc_get_pristine_copy_path (svn_string_t *path,
+                                            svn_string_t **pristine_copy_path,
+                                            apr_pool_t *pool);
+
+
+/* Invoke PROGRAM with ARGS, using PATH as working directory.
+ * Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
+ * ERRFILE, except where they are null.
+ *
+ * ARGS is a list of (const char *)'s, terminated by NULL.
+ * ARGS[0] is the name of the program, though it need not be the same
+ * as CMD.
+ */
+svn_error_t *
+svn_wc_run_cmd_in_directory (svn_string_t *path,
+                             const char *cmd,
+                             const char *const *args,
+                             apr_file_t *infile,
+                             apr_file_t *outfile,
+                             apr_file_t *errfile,
+                             apr_pool_t *pool);
+
 #endif  /* SVN_WC_H */
 
 #ifdef __cplusplus

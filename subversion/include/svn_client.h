@@ -96,6 +96,14 @@ svn_client_status (apr_hash_t **statushash,
                    apr_pool_t *pool);
 
 
+/* Given a PATH to a working copy file, return a path to a temporary
+   copy of the PRISTINE version of the file.  The client can then
+   compare this to the working copy of the file and execute any kind
+   of diff it wishes. */
+svn_error_t *
+svn_client_file_diff (svn_string_t *path,
+                      svn_string_t **pristine_copy_path,
+                      apr_pool_t *pool);
 
 
 #endif  /* SVN_CLIENT_H */

@@ -51,6 +51,7 @@ enum svn_cl__command_id {
   svn_cl__propget_command,
   svn_cl__propset_command,
   svn_cl__status_command,
+  svn_cl__diff_command,
   svn_cl__update_command
 };
 
@@ -116,6 +117,7 @@ svn_cl__cmd_proc_t
   svn_cl__propget,
   svn_cl__propset,
   svn_cl__status,
+  svn_cl__diff,
   svn_cl__update;
 
 
@@ -133,6 +135,8 @@ void svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool);
    (svn_string_t *). */
 void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 
+/* Print a context diff showing local changes made to PATH */
+svn_error_t *svn_cl__print_file_diff (svn_string_t *path, apr_pool_t *pool);
 
 /* Returns an editor that prints out events in an update or checkout. */
 svn_error_t *
