@@ -98,16 +98,21 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   void *commit_edit_baton, *track_edit_baton;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  apr_hash_t *targets = NULL;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
+  svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb = {path, pool};
   apr_array_header_t *tgt_array = apr_array_make (pool, 1,
                                                   sizeof(svn_string_t *));
   
+  if (url) 
+    is_import = TRUE;
+  else
+    is_import = FALSE;
+
   /* Sanity check: if this is an import, then NEW_ENTRY can be null or
-     non-empty, but it can't be empty. */
-  if (url && (new_entry && strcmp (new_entry->data, "")))
+     non-empty, but it can't be empty. */ 
+  if (is_import && (new_entry && (strcmp (new_entry->data, "") == 0)))
     {
       return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, NULL, pool,
                                "empty string is an invalid entry name");
@@ -116,6 +121,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   /* If we're committing to XML... */
   if (xml_dst && xml_dst->data)
     {
+      /* ### kff todo: imports are not known to work with xml yet.
+         They should someday. */
+
       /* Open the xml file for writing. */
       apr_err = apr_file_open (&dst, xml_dst->data,
                                (APR_WRITE | APR_CREATE),
@@ -154,7 +162,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
     {
       svn_wc_entry_t *entry;
 
-      if (! url)  /* not importing */
+      if (! is_import)
         {
           /* Construct full URL from PATH. */
           SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -172,8 +180,15 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       /* Open an RA session to URL */
       SVN_ERR (ra_lib->open (&session, url, pool));
       
+      /*
+       * ### kff todo fooo working here.
+       *
+       * Pass a no-op revision bumping routine to get_commit_editor
+       * below, in the import case.
+       */
+
       /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
-      SVN_ERR (ra_lib->get_commit_editor 
+      SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
                 log_msg,
@@ -189,12 +204,22 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                          editor, edit_baton, 
                          after_editor, after_edit_baton, pool);
   
-  /* Crawl local mods and report changes to EDITOR.  When close_edit()
-     is called, revisions will be bumped. */
-  SVN_ERR (svn_wc_crawl_local_mods (&targets,
-                                    path,
-                                    editor, edit_baton,
-                                    pool));
+  /* Do the commit. */
+  if (is_import)
+    {
+      /* Crawl a directory tree, importing. 
+       * ### kff todo fooo working here.
+       */
+      /*
+        SVN_ERR (svn_wc_import_tree (path, editor, edit_baton, pool));
+      */
+    }
+  else
+    {
+      /* Crawl local mods and report changes to EDITOR.  When
+         close_edit() is called, revisions will be bumped. */
+      SVN_ERR (svn_wc_crawl_local_mods (path, editor, edit_baton, pool));
+    }
 
 
   if (xml_dst && xml_dst->data)

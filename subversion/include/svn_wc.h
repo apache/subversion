@@ -328,13 +328,9 @@ svn_wc_close_commit (svn_string_t *path,
 /* Crawl a tree depth-first, to import new data or commit changes.
 
    Start the crawl at ROOT_DIRECTORY, communicate all local changes (both
-   textual and tree) to EDIT_FNS and EDIT_BATON.
-
-   Any items (files or dirs) that were found to be modified, and were
-   therefore committed, are stored in TARGETS as full paths. */
+   textual and tree) to EDIT_FNS and EDIT_BATON.  */
 svn_error_t *
-svn_wc_crawl_local_mods (apr_hash_t **targets,
-                         svn_string_t *root_directory,
+svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
                          apr_pool_t *pool);
