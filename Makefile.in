@@ -40,7 +40,8 @@ SWIG_DIRS = subversion/bindings/swig/python     \
             subversion/bindings/swig/java/org   \
             subversion/bindings/swig/java/org/tigris \
             subversion/bindings/swig/java/org/tigris/subversion \
-            subversion/bindings/swig/java/org/tigris/subversion/swig
+            subversion/bindings/swig/java/org/tigris/subversion/swig \
+            subversion/bindings/swig/perl
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
@@ -70,11 +71,13 @@ docdir = @docdir@
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
 swig_java_libdir = @libdir@
+swig_pl_libdir = @libdir@
 
 ### these possibly need further discussion
 swig_pydir = @libdir@/svn-python/libsvn
 swig_pydir_extra = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
+swig_pldir = @libdir@/svn-perl
 
 ### should search for these...
 MAKEINFO = @MAKEINFO@
@@ -109,6 +112,9 @@ SWIG_PY_LINK = @SWIG_PY_LINK@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
 SWIG_JAVA_COMPILE = $(CC) -DNDEBUG -g -O3 -Wall -Wstrict-prototypes -fPIC
 SWIG_JAVA_LINK = $(CC) -shared
+SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
+SWIG_PL_COMPILE = @SWIG_PL_COMPILE@
+SWIG_PL_LINK = @SWIG_PL_LINK@
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
@@ -138,15 +144,18 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
 RUN_SWIG_PY = $(SWIG) -c -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_PL = $(SWIG) -c -perl $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -o $@
 RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
 COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PL_COMPILE) $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
+LINK_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PL_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pldir) -avoid-version -module
 
 
 INSTALL = @INSTALL@
