@@ -46,8 +46,9 @@ int svn_fs__open_strings_table (DB **strings_p,
 /* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part
  * of TRAIL.
  * 
- * On return, *LEN is set to the number of bytes read. This value may
- * be less than the number requested.
+ * On return, *LEN is set to the number of bytes read.  If this value
+ * is less than the number requested, the end of the string has been
+ * reached (no error is returned on end-of-string).
  *
  * If OFFSET is past the end of the string, then *LEN will be set to
  * zero. Callers which are advancing OFFSET as they read portions of
