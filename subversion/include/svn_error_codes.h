@@ -842,6 +842,10 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 18,
               "No auth file path available")
 
+  SVN_ERRDEF (SVN_ERR_VERSION_MISMATCH,
+              SVN_ERR_MISC_CATEGORY_START + 19,
+              "Incompatible library version")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
