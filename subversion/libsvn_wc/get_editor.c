@@ -651,7 +651,12 @@ apply_textdelta (void *file_baton,
     {
       err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
       if (err)
-        goto error;
+        {
+          if (hb->source)
+            svn_wc__close_text_base (hb->source, fb->path, 0, subpool);
+          apr_destroy_pool (subpool);
+          return err;
+        }
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
@@ -659,28 +664,26 @@ apply_textdelta (void *file_baton,
   err = svn_wc__open_text_base (&hb->dest, fb->path,
                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                 subpool);
-  if (err != SVN_NO_ERROR)
-    goto error;
-
+  if (err)
+    {
+      if (hb->dest)
+        svn_wc__close_text_base (hb->dest, fb->path, 0, subpool);
+      apr_destroy_pool (subpool);
+      return err;
+    }
+  
   /* Prepare to apply the delta.  */
   svn_txdelta_apply (read_from_file, hb->source, write_to_file, hb->dest,
                      subpool, &hb->apply_handler, &hb->apply_baton);
-
+  
   hb->pool = subpool;
   hb->fb = fb;
-
+  
   /* We're all set.  */
   *handler_baton = hb;
   *handler = window_handler;
-  return SVN_NO_ERROR;
 
- error:
-  if (hb->source)
-    svn_wc__close_text_base (hb->source, fb->path, 0, subpool);
-  if (hb->dest)
-    svn_wc__close_text_base (hb->dest, fb->path, 0, subpool);
-  apr_destroy_pool (subpool);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
