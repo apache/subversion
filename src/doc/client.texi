@@ -17,83 +17,36 @@ This chapter describes the libraries, and the physical layout of working
 copies.
 
 @menu
+* Terminology
 * The working copy management library
 * The repository access library
 * The high-level client operation library
 * The layout of working copies
 @end menu
 
-fooo
----------------------------------------------------------------------------
+@c todo: make sure skelta gets define somewhere
 
-wc:
+@c -----------------------------------------------------------------------
+@node Terminology
+@subsection Terminology
 
-   skelta make_skelta (path1, ...)
-   delta fill_skelta (skelta)
-   delta make_delta (path1, ...)    /* just wrapper around above two? */
-   bool apply_delta (delta)
-   bool add (path)
-   bool delete (path)
-   bool rename (old_path, new_path)
-   
-   [ all the prop calls, sans version ones ]
+TODO: this should go somewhere else in the document
 
+@example
+   "diff"              ===> a textual diff, like the output of GNU diff
 
-repos:
+   "vdelta", "vdiff"   ===> you know what this is
 
-   ver latest (repos)
-   token submit_delta (repos, delta)    /* can take a skelta or a delta */
-   version write_delta (repos, delta, token)
-   skelta get_status (repos, skelta)
-   delta get_update (repos, skelta)   /* or implement this in a `read'y way? */
-   bool abandon (repos, token)
+   "pdelta", "pdiff"   ===> deltas for property lists.  
+                            May include vdeltas. 
 
-   get_delta (repos, ver1, path1, ver2, path2)    /* ??? necessary ??? */
-   get_diff (repos, ver1, path1, [ver2, path2, ...])
-   node read (repos, ver, path)
-   
-   get_node_prop(ver, path, propname)
-    return the value of @emph{propname} for a file or directory
-   get_dirent_prop(ver, path, propname)
-    return the value of @emph{propname} for a directory entry
-   get_ver_prop(ver, propname)
-    return the value of @emph{propname} for a version (e.g., log message)
-   get_node_proplist(ver, path)
-    return all properties (keys and values) of a file or directory
-   get_dirent_proplist(ver, path)
-    return all properties (keys and values) of a directory entry
-   get_ver_proplist(ver)
-    return all properties (keys and values) of a version
-   get_node_propnames(ver, path)
-    return all property keys for a file or directory
-   get_node_propnames(ver, path)
-    return all property keys for a file or directory
-   get_dirent_propnames(ver, path)
-    return all property keys for a directory entry
-   get_ver_propnames(ver)
-    return all property keys for a version
+   "delta"             ===> the lispy encapsulating data structure.
+                            May include vdeltas and pdeltas.
 
-client:
+   "skelta"            ===> a skeleton delta, holds everything but the
+                            actual vdeltas and pdeltas.
 
-   add
-   annotate
-   checkout
-   commit
-   diff
-   import
-   log
-   rename
-   remove
-   branch
-   tag
-   status
-   update
-
----------------------------------------------------------------------------
-fooo
-
-
-
+@end example
 
 @c -----------------------------------------------------------------------
 @node The working copy management library
@@ -103,23 +56,17 @@ This library performs "offline" operations on the working copy.
 
 @table @code
 
-@item empty_delta (path1, ...)
+@item skelta make_skelta (path1, ...)
 
-Returns a delta object describing the changes to PATHs, but without
-including the actual content of file changes.  In other words, this is
-how you get a list of all local modifications..
+Returns a skelta -- a delta object describing the changes to PATHs, but
+not including the actual content of the changes (i.e., the vdeltas).  In
+other words, this is how you get a list of all local modifications.
 
 A PATH can be a directory or a file; if directory, then it's a root from
 which to start looking for modifications.  
 
-Why does it take a variable number arguments?  For the same reason the
-@code{delta()} function below does, read on...
-
-@item delta (path1, ...)
-
-Like @code{empty_delta()}, but includes the content of file changes.
-
-Takes multiple paths because you might want to do something like this:
+Takes multiple @code{path} arguments because you might want to do
+something like this:
 
 @example
    $ svn commit foo/ bar/ baz/qux.c
@@ -127,9 +74,26 @@ Takes multiple paths because you might want to do something like this:
 
 The commit is atomic, and covers some but not necessarily all of the
 subdirectories available here.  Therefore, it must be possible to
-request a delta for any subset of the working tree.  Files and
-directories not in that subset might also have been modified, but the
+request a delta for any subset of the working tree.  Although some files
+and directories outside that subset might also have been modified, the
 delta will not include those changes.
+
+@item delta fill_skelta (skelta)
+
+Turns a skelta into a delta by generating the vdiffs and placing them
+into the skelta.
+
+(Note to self: probably okay for this to modify its argument.)
+
+@item make_delta (path1, ...)
+
+Equivalent to 
+
+@example
+@code
+   fill_skelta (make_skelta (path1, ...))
+@end code
+@end example
 
 @item apply_delta (delta)
 
