@@ -1614,23 +1614,33 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                                   locked_dirs,
                                   pool);
 
-  /* Catch -any- error that happened during a commit-crawl.
-     Be sure to unlock any working-copy directories that may have
-     become locked during the crawl. */
-  if (err)
+  /* Make sure that we always remove the locks that we installed. */
+  err2 = remove_all_locks (locked_dirs, pool);
+
+  /* Now deal with the two errors that may have occurred. */
+  if (err && err2)
     {
-      err2 = remove_all_locks (locked_dirs, pool);
-      if (err2)
-        return svn_error_quick_wrap 
-          (err, "commit failed:  uhoh, unable to remove all wc locks.");
-      else
-        return svn_error_quick_wrap 
-          (err, "commit failed: wc locks have been removed.");
+      svn_error_t *scan;
+
+      /* This is tricky... wrap the two errors and concatenate them. */
+      err = svn_error_quick_wrap (err, "---- commit error follows:");
+      err2 = svn_error_quick_wrap
+        (err2, "commit failed (see below); unable to remove all wc locks:");
+
+      /* Hook the commit error to the end of the unlock error. */
+      for (scan = err2; scan->child != NULL; scan = scan->child)
+        continue;
+      scan->child = err;
+
+      /* Return the unlock error; the commit error is at the end. */
+      return err2;
     }
 
-  /* Successful crawl:  remove all the lockfiles in this case too. */
-  err = remove_all_locks (locked_dirs, pool);
   if (err)
+    return svn_error_quick_wrap 
+      (err, "commit failed: wc locks have been removed.");
+
+  if (err2)
     return svn_error_quick_wrap
       (err, "commit succeeded, but unable to remove all wc locks!");
 
