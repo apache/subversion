@@ -58,6 +58,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
   svn_client_auth_baton_t *auth_baton = NULL;
   svn_error_t *error = NULL;
   apr_pool_t *pool = NULL;
+  svn_revnum_t youngest;
 
 #ifdef SVN_JNI__VERBOSE
   fprintf(stderr, ">>>" SVN_JNI__CLIENTIMPL_STATUS "\n");
@@ -150,10 +151,14 @@ Java_org_tigris_subversion_lib_ClientImpl_status
       fprintf(stderr, ")\n");
 #endif
       
-      error = svn_client_status(&statushash, fooo youngest, target_stringbuf, 
+      error = svn_client_status(&statushash, &youngest, target_stringbuf, 
                                 auth_baton,descend, 
                                 get_all, update, 
                                 pool);
+
+      /* ### todo: `youngest' is tossed right now, need to propagate
+         the change to the Java interface. */
+
       if( error != NULL )
 	{
 #ifdef SVN_JNI__VERBOSE

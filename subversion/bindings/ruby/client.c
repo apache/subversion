@@ -488,6 +488,7 @@ cl_status (VALUE self, VALUE aPath,
 {
   apr_hash_t *statushash;
   svn_stringbuf_t *path;
+  svn_revnum_t youngest;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
   svn_error_t *err;
@@ -498,7 +499,8 @@ cl_status (VALUE self, VALUE aPath,
   pool = svn_pool_create (NULL);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
 
-  err = svn_client_status (&statushash, fooo youngest, path, auth_baton,
+  /* ### todo: `youngest' is tossed right now. */
+  err = svn_client_status (&statushash, &youngest, path, auth_baton,
                            RTEST (descend), RTEST (get_all),
                            RTEST (update), pool);
 
