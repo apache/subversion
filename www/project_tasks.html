@@ -1,0 +1,162 @@
+<html>
+<body bgcolor="#F0F0F0" text="#000033">
+
+<p>
+
+<center>
+<img src="/subversion.jpg">
+<h2>Bite-Sized Tasks</h2>
+$Date: 2001-07-04 19:13:03 $
+</center>
+
+<!-- ------------------------------------------------------------- -->
+
+<p>
+
+Looking for a chance to help out with Subversion?  Then you've come to
+the right place...
+
+<p>
+
+This page lists tasks that are well-defined and self-contained.  You
+<i>don't</i> need broad or very detailed knowledge of Subversion's
+design to take on one of these tasks, you just need a pretty good idea
+of how things generally work, and to have read the coding guidelines
+in the HACKING file.  The idea is that each task is something that a
+volunteer could pick off in a spare evening or two.
+
+<p>
+
+If you'd like to take on one of these tasks, notify the other
+developers by mailing dev@subversion.tigris.org (of course, you should
+be <a
+href="http://subversion.tigris.org/servlets/ProjectMailingListList"
+>subscribed</a> to that list) and start coding -- we'll put your name
+next to the task here so people can see who's working on what.  If you
+have questions as you go, ask the dev list, and send the patch there
+when ready.
+
+<p>
+
+Here are the tasks:
+
+<p>
+
+<ul>
+
+   <li> <b>Convert to more appropriate string types throughout code</b> <p>
+   This is 
+   <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=406">issue
+   #406</a>.  It involves tweaks across quite a bit of code, but
+   they're fairly minor tweaks.  Also, it can be done incrementally,
+   there's no particular reason why the whole change needs to happen
+   at once.  Estimate: one solid evening, or two at the most.  Here's
+   the description:
+   <p>
+   <pre>
+   There are many places where, for historical reasons, we are using
+   svn_stringbuf_t to pass or return constant char * data.  We could
+   just use svn_string_t, or in some instances even go straight to
+   const char *. I will put "### todo" notes, referencing this issue,
+   in the code at some of these places. See in particular the
+   declarations of
+   
+      svn_fs_revision_prop()
+      svn_fs_revision_proplist()
+      svn_fs__get_prop()
+      svn_fs__make_prop_hash()
+   
+   Really, it is questionable that we even need to use svn_string_t
+   for property names.  I believe everyone agreed informally that
+   const char * would be fine, and usually more convenient for
+   callers.  If so, the fix for this issue is something like:
+   
+      1. Change all property getting functions to take a const char
+         *name, and return by reference svn_string_t *value.
+   
+      2. Change all property setting functions to take const char
+         *name and svn_string_t *value.
+   
+   Comments?  This affects not just svn_fs.h property interfaces, but
+   svn_delta_edit_fns_t in svn_delta.h as well, and probably some
+   stuff in svn_wc.h.
+   
+   -Karl
+   
+   ------- Additional Comments From Karl Fogel 2001-07-02 09:37 -------
+   
+   Note that making this change probably implies writing
+   svn_string_ncreate() and all that good stuff, or else doing it
+   inline.  All our old svn_string_* functions became svn_stringbuf_t
+   functions when we split the data type, and now there is a paucity
+   of svn_string_t functions.
+   </pre>
+   </li>
+   <p>
+
+   <!-- ---------------------------------------------------------- -->
+
+   <li> <b>Add better usage descriptions to subcommand help.</b><p>
+   This is
+   <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=407">issue
+   #407</a>, filed by Ben, the description is:
+   <p>
+   <pre>
+   $ svn help co
+   checkout (co): Check out a working directory from a repository.
+   usage: checkout REPOSPATH1 [REPOSPATH2 REPOSPATH3...]
+   
+   Notice that there's no mention of the fact that it accepts
+   the {-r, -d, -D} flags.  We can either just throw that information
+   into the usage command, or perhaps somebody can add an organized
+   system for specifying exactly which args a subcommand can accept.
+   This system would also be able to *report* which args a subcommand
+   can accept -- and thus be used in the usage messages.
+   
+   This is a "bite sized task" for a volunteer.
+   </pre>
+   </li>
+   <p>
+
+   <!-- ---------------------------------------------------------- -->
+
+   <li> <b>Fix up date parsing library issues</b> <p>
+   </li>
+   This task is probably small, but will require some investigation
+   and list discussion first probably.  The basic issue is this: Ben
+   took the getdate.y date grammar file from CVS (that file has always
+   been in the public domain) and imported it into Subversion.  So now
+   Subversion has CVS's date parsing capabilities, which are good, but
+   not perfect.  Aside from the functionality issues, there's also the
+   problem that getdate.c needs to be automatically generated from
+   getdate.y, and it would be better to have a .c file that we edit
+   directly, than a .y file which causes Subversion developers to be
+   dependent on having the correct version of Yacc/Bison/Whatever
+   installed.
+   <p>
+   This message from Branko summarizes the issues pretty well; read
+   it, then move back and forth in the thread to get some context and
+   a sense of what people see as the solution domain right now:
+   <p>
+   <a
+  href="http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&listName=dev"
+   >http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&listName=dev</a>
+   <p>
+
+   <!-- ---------------------------------------------------------- -->
+
+<!-- template for further items: -->
+<!--
+
+   <li> <b></b> <p>
+   </li>
+   <p>
+
+-->
+
+</ul>
+
+
+</html>
