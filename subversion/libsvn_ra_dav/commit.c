@@ -1162,7 +1162,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
      which will keep track of which targets should get their revisions
      and wcprops set after the commit.  Thus we avoid overzealously
      bumping directories on commit. */
-  svn_delta_edit_fns_t *tracking_editor;
+  const svn_delta_edit_fns_t *tracking_editor;
   void *tracking_baton;
 
   /* ### temporary, until we can use the new-style editor directly */

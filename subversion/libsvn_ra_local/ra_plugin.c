@@ -287,9 +287,11 @@ get_commit_editor (void *session_baton,
                    svn_ra_close_commit_func_t close_func,
                    void *close_baton)
 {
-  svn_delta_edit_fns_t *commit_editor, *tracking_editor;
+  svn_delta_editor_t *commit_editor;
+  const svn_delta_edit_fns_t *tracking_editor, *wrap_editor;
   const svn_delta_edit_fns_t *composed_editor;
-  void *commit_editor_baton, *tracking_editor_baton, *composed_editor_baton;
+  void *commit_edit_baton, *composed_edit_baton;
+  void *tracking_edit_baton, *wrap_edit_baton;
 
   svn_ra_local__session_baton_t *sess_baton = 
     (svn_ra_local__session_baton_t *) session_baton;
@@ -308,31 +310,36 @@ get_commit_editor (void *session_baton,
   cb->committed_author = committed_author;
                                          
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_ra_local__get_editor (&commit_editor, &commit_editor_baton,
+  SVN_ERR (svn_ra_local__get_editor (&commit_editor, &commit_edit_baton,
                                      sess_baton,
                                      log_msg,
                                      cleanup_commit, cb,
                                      sess_baton->pool));
 
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         commit_editor, commit_edit_baton, sess_baton->pool);
+
   /* Get the commit tracking editor, telling it to store committed
      targets, and NOT to bump revisions.  (The FS editor will do this
      for us.)  */
   SVN_ERR (svn_delta_get_commit_track_editor (&tracking_editor,
-                                              &tracking_editor_baton,
+                                              &tracking_edit_baton,
                                               sess_baton->pool,
                                               cb->committed_targets,
                                               SVN_INVALID_REVNUM,
                                               NULL, NULL));
 
   /* Set up a pipeline between the editors, creating a composed editor. */
-  svn_delta_compose_editors (&composed_editor, &composed_editor_baton,
-                             commit_editor, commit_editor_baton,
-                             tracking_editor, tracking_editor_baton,
+  svn_delta_compose_editors (&composed_editor, &composed_edit_baton,
+                             wrap_editor, wrap_edit_baton,
+                             tracking_editor, tracking_edit_baton,
                              sess_baton->pool);
 
   /* Give the magic composed-editor back to the client */
   *editor = composed_editor;
-  *edit_baton = composed_editor_baton;
+  *edit_baton = composed_edit_baton;
   return SVN_NO_ERROR;
 }
 
