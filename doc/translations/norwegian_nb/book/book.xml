@@ -140,21 +140,17 @@
   &ch02;
   &ch03;
   &ch04;
-  <!-- CO {{{
   &ch05;
   &ch06;
   &ch07;
   &ch08;
   &ch09;
-  }}} -->
   &appa;
-  <!-- CO {{{
   &appb;
   &appc;
   &appd;
   &license;
   &colo;
-  }}} -->
 
   </book>
   <!-- vim: set ft=svnbook : -->
