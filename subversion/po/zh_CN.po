@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion        1.1.1\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-12-17 15:53+0800\n"
+"POT-Creation-Date: 2004-12-20 22:42+0800\n"
 "PO-Revision-Date: 2004-10-14 08:51+0800\n"
 "Last-Translator:  Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -65,6 +65,7 @@ msgstr ""
 "如无指定参数给命令，默认将会自当前的目录 (包含) 进\n"
 "行递归存取\n"
 "\n"
+"可用的子命令：\n"
 
 #: clients/cmdline/help-cmd.c:46
 msgid ""
@@ -230,7 +231,7 @@ msgstr ""
 "\n"
 
 #: clients/cmdline/log-cmd.c:95 include/svn_error_codes.h:220
-#: libsvn_subr/cmdline.c:316 libsvn_subr/cmdline.c:333
+#: libsvn_subr/cmdline.c:333 libsvn_subr/cmdline.c:350
 msgid "Write error"
 msgstr "写入错误"
 
@@ -2546,15 +2547,15 @@ msgstr "提交项目“%s”有复制标志，但是没有复制的地址(copyfr
 
 #: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
-#: libsvn_client/diff.c:1207 libsvn_client/diff.c:1849
-#: libsvn_client/diff.c:2284 libsvn_client/diff.c:2389
+#: libsvn_client/diff.c:1255 libsvn_client/diff.c:1897
+#: libsvn_client/diff.c:2332 libsvn_client/diff.c:2437
 #: libsvn_client/prop_commands.c:171 libsvn_client/prop_commands.c:387
 #: libsvn_client/prop_commands.c:538 libsvn_client/prop_commands.c:881
-#: libsvn_client/revisions.c:92 libsvn_client/status.c:125
-#: libsvn_client/status.c:178 libsvn_client/switch.c:114
-#: libsvn_client/update.c:85 libsvn_wc/adm_ops.c:2095 libsvn_wc/copy.c:304
-#: libsvn_wc/entries.c:1374 libsvn_wc/entries.c:1793 libsvn_wc/props.c:282
-#: libsvn_wc/questions.c:171
+#: libsvn_client/ra.c:179 libsvn_client/revisions.c:92
+#: libsvn_client/status.c:125 libsvn_client/status.c:178
+#: libsvn_client/switch.c:114 libsvn_client/update.c:85
+#: libsvn_wc/adm_ops.c:2095 libsvn_wc/copy.c:304 libsvn_wc/entries.c:1374
+#: libsvn_wc/entries.c:1793 libsvn_wc/props.c:282 libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "“%s”尚未纳入版本控制"
@@ -2724,12 +2725,12 @@ msgstr "尚不支持混合的存取规则 (“%s”与“%s”)"
 #: libsvn_client/diff.c:267
 #, c-format
 msgid "%s\t(revision %ld)"
-msgstr "%s\t(修订版 %ld)"
+msgstr "%s\t（修订版 %ld）"
 
 #: libsvn_client/diff.c:270
 #, c-format
 msgid "%s\t(working copy)"
-msgstr "%s\t(工作拷贝)"
+msgstr "%s\t（工作拷贝）"
 
 #: libsvn_client/diff.c:382
 #, c-format
@@ -2757,38 +2758,38 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1263 libsvn_client/diff.c:1956
-#: libsvn_client/diff.c:2036
+#: libsvn_client/diff.c:1311 libsvn_client/diff.c:2004
+#: libsvn_client/diff.c:2084
 msgid "Not all required revisions are specified"
 msgstr "并未提供全部所需的修订版"
 
-#: libsvn_client/diff.c:1544
+#: libsvn_client/diff.c:1592
 msgid "Sorry, svn_client_diff was called in a way that is not yet supported"
 msgstr "抱歉，svn_client_diff 以不支持的方式被调用"
 
-#: libsvn_client/diff.c:1584
+#: libsvn_client/diff.c:1632
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
 msgstr "目前只支持路径的文件参考基础与其工作文件之间的文件差异"
 
-#: libsvn_client/diff.c:1716 libsvn_client/diff.c:1721
+#: libsvn_client/diff.c:1764 libsvn_client/diff.c:1769
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "在档案库的修订版 %2$ld 中找不到“%1$s”"
 
-#: libsvn_client/diff.c:1852 libsvn_client/switch.c:117
+#: libsvn_client/diff.c:1900 libsvn_client/switch.c:117
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "目录“%s”没有地址(URL)"
 
-#: libsvn_client/diff.c:2047
+#: libsvn_client/diff.c:2095
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "对于 peg 差异，必须至少有一个非本地端的修订版"
 
-#: libsvn_client/diff.c:2261 libsvn_client/diff.c:2266
-#: libsvn_client/diff.c:2377 libsvn_client/export.c:739 libsvn_client/ra.c:694
-#: libsvn_client/ra.c:814
+#: libsvn_client/diff.c:2309 libsvn_client/diff.c:2314
+#: libsvn_client/diff.c:2425 libsvn_client/export.c:739 libsvn_client/ra.c:705
+#: libsvn_client/ra.c:825
 #, c-format
 msgid "'%s' has no URL"
 msgstr "“%s”没有地址(URL)"
@@ -2836,11 +2837,11 @@ msgstr "项目“%s”没有地址(URL)"
 msgid "No commits in repository."
 msgstr "档案库中没有任何提交"
 
-#: libsvn_client/ls.c:49 libsvn_client/ls.c:126
+#: libsvn_client/ls.c:49 libsvn_client/ls.c:130
 msgid "No get_dir() available for URL schema"
 msgstr "该地址(URL)规则中并不支持 get_dir()"
 
-#: libsvn_client/ls.c:133 libsvn_client/ls.c:140
+#: libsvn_client/ls.c:137 libsvn_client/ls.c:144
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "地址(URL)“%s”并不存在于该修订版中"
@@ -2874,32 +2875,32 @@ msgstr "“%s”为未知的节点类型"
 msgid "Attempt to set wc property '%s' on '%s' in a non-commit operation"
 msgstr "试图在非提交操作中，设定工作拷贝属性“%s”于“%s”"
 
-#: libsvn_client/ra.c:317
+#: libsvn_client/ra.c:328
 #, c-format
 msgid "Can't find entry for '%s'"
 msgstr "无法找到“%s”的项目"
 
-#: libsvn_client/ra.c:443
+#: libsvn_client/ra.c:454
 #, c-format
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "未提供“%s”于修订版 %ld 的 changed-path 信息"
 
-#: libsvn_client/ra.c:560
+#: libsvn_client/ra.c:571
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "路径“%s”不存在于修订版 %ld 中"
 
-#: libsvn_client/ra.c:621 libsvn_client/ra.c:756
+#: libsvn_client/ra.c:632 libsvn_client/ra.c:767
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "无法找到“%s”的档案库位置于修订版 %ld"
 
-#: libsvn_client/ra.c:632
+#: libsvn_client/ra.c:643
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "“%s”于修订版 %ld 是一个无关的物件"
 
-#: libsvn_client/ra.c:761
+#: libsvn_client/ra.c:772
 #, c-format
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
@@ -2948,7 +2949,7 @@ msgstr "引用至不存在的修订版 %ld 于文件系统“%s”中"
 msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
 msgstr "文件无法变更：文件系统“%s”，修订版 %ld，路径“%s”"
 
-#: libsvn_fs_base/fs.c:1113
+#: libsvn_fs_base/fs.c:1122
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -2959,7 +2960,7 @@ msgstr ""
 "即时拷贝的演算法有所影响。如果问题依旧存在，请尝试\n"
 "在 DB_CONFIG 中取消这个功能。"
 
-#: libsvn_fs_base/fs.c:1132
+#: libsvn_fs_base/fs.c:1141
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -2970,7 +2971,7 @@ msgstr ""
 "可能对制作即时拷贝的演算法有所影响。如果问题依旧存在，请\n"
 "尝试在 DB_CONFIG 中取消这个功能。"
 
-#: libsvn_fs_base/fs.c:1269
+#: libsvn_fs_base/fs.c:1278
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "不支持的 bdb 的 FS 载入器版本 (%d)"
@@ -3546,23 +3547,27 @@ msgstr "无法打开档案库“%s”"
 msgid "Prop diffs element not a list"
 msgstr "Prop diffs 元素不是一个列表"
 
-#: libsvn_ra_svn/client.c:1120
+#: libsvn_ra_svn/client.c:639
+msgid "Impossibly long repository root from server"
+msgstr "服务器上的档案库超长"
+
+#: libsvn_ra_svn/client.c:1135
 msgid "get-locations not implemented"
 msgstr "get-locations 未实现"
 
-#: libsvn_ra_svn/client.c:1185
+#: libsvn_ra_svn/client.c:1201
 msgid "get-file-revs not implemented"
 msgstr "get-file-revs 未实现"
 
-#: libsvn_ra_svn/client.c:1199
+#: libsvn_ra_svn/client.c:1215
 msgid "Revision entry not a list"
 msgstr "修订版条目不是一个列表"
 
-#: libsvn_ra_svn/client.c:1211 libsvn_ra_svn/client.c:1236
+#: libsvn_ra_svn/client.c:1228 libsvn_ra_svn/client.c:1253
 msgid "Text delta chunk not a string"
 msgstr "文字差异区段并非字串"
 
-#: libsvn_ra_svn/client.c:1248
+#: libsvn_ra_svn/client.c:1265
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs 命令没有返回任何修订版"
 
@@ -3592,17 +3597,17 @@ msgstr "结束修订版 %ld 无效 (最新的修订版为 %ld)"
 msgid "* %s revision %ld.\n"
 msgstr "* %s 修订版 %ld。\n"
 
-#: libsvn_repos/load.c:801
+#: libsvn_repos/load.c:795
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< 开始新的事务，基于最初的修订版 %ld\n"
 
-#: libsvn_repos/load.c:845
+#: libsvn_repos/load.c:839
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "相对来源修订版 %ld 不存在于目前档案库之中"
 
-#: libsvn_repos/load.c:1129
+#: libsvn_repos/load.c:1133
 #, c-format
 msgid ""
 "\n"
@@ -3613,7 +3618,7 @@ msgstr ""
 "------- 提交后的修订版 %ld >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1135
+#: libsvn_repos/load.c:1139
 #, c-format
 msgid ""
 "\n"
@@ -3798,12 +3803,12 @@ msgstr "“%s”不是目录"
 msgid "No entry for '%s'"
 msgstr "没有“%s”的项目"
 
-#: libsvn_wc/adm_files.c:904
+#: libsvn_wc/adm_files.c:905
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr "修订版 %ld 不符合现有的修订版 %ld 于“%s”中"
 
-#: libsvn_wc/adm_files.c:912
+#: libsvn_wc/adm_files.c:913
 #, c-format
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
 msgstr "地址(URL)“%s”不符合现有的地址(URL)“%s”于“%s”中"
