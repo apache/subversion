@@ -387,6 +387,16 @@ txn_body_string_append_fail (void *baton, trail_t *trail)
                            "la dee dah, la dee day...");
 }
 
+
+static svn_error_t *
+txn_body_string_copy (void *baton, trail_t *trail)
+{
+  struct string_args *b = (struct string_args *) baton;
+  return svn_fs__string_copy (b->fs, &(b->key), b->key, trail);
+}
+
+
+
 static const char *bigstring1 = "\
     Alice opened the door and found that it led into a small
 passage, not much larger than a rat-hole:  she knelt down and
@@ -590,6 +600,53 @@ abort_string (const char **msg, apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+copy_string (const char **msg, apr_pool_t *pool)
+{
+  struct string_args args;
+  svn_fs_t *fs;
+  const char *old_key;
+
+  *msg = "Create and copy a string";
+
+  /* Create a new fs and repos */
+  SVN_ERR (svn_test__create_fs_and_repos
+           (&fs, "test-repo-copy-string", pool));
+
+  /*  Write a new string (string1). */
+  args.fs = fs;
+  args.key = NULL;
+  args.text = bigstring1;
+  args.len = strlen (bigstring1);
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_append, &args, pool));
+
+  /* Make sure a key was returned. */
+  if (! (old_key = args.key))
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "write of new string failed to return new key");
+
+  /* Now copy that string into a new location. */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_copy, &args, pool));
+
+  /* Make sure a different key was returned. */
+  if ((! args.key) || (! strcmp (old_key, args.key)))
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "copy of string failed to return new key");
+
+  /* Verify record's size and contents. */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_verify_string, &args, pool));
+
+  /* Close the filesystem. */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 
@@ -604,6 +661,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   delete_rep,
   test_strings,
   abort_string,
+  copy_string,
   0
 };
 
