@@ -50,6 +50,7 @@
 
 
 #include <apr_strings.h>
+#include <assert.h>
 #include "wc.h"
 #include "svn_xml.h"
 #include "svn_error.h"
@@ -173,25 +174,109 @@ typedef struct svn_wc__version_baton_t
 
   va_list valist;          /* The attribute list we want to set or get */
 
-  
-
-
 } svn_wc__version_baton_t;
 
 
 
-/* Write out a new <entry ...> tag whose attributes are the _union_ of
-   those in ATTS and those specified in BATON->valist */
+/* Write out a new <entry ...> tag in BATON->outfile, an entry whose
+   attributes are the _union_ of those in ATTS and those specified in
+   BATON->valist */
 static svn_error_t *
 set_entry_attributes (svn_wc__version_baton_t *baton,
                       const char **atts)
 {
-  /* TODO:  Karl, please write. ;-) */
+  svn_error_t *err;
+  const char **newatts;    /* What will become our final union of attributes */
+  const char **tempatts;   /* Temp variable for looping over att lists */
+  char *attribute;
+  svn_string_t *orig_value;
+  svn_string_t *dup_value;
+  int len = 0;             /* The length of newatts */
+  int count = 0;
+  apr_pool_t *subpool = svn_pool_create (baton->pool, NULL);
 
-  /* After constructing a **newatts list which is the union of the two
-     lists, pass it off to svn_xml_write_tag_list(), which,
-     incidentally, Karl, you also need to write.  :-) */
+  /* Figure out the length of atts */
+  tempatts = atts;
+  while (tempatts)
+    {
+      len++;
+      tempatts++;
+    }
+  assert (len % 2 == 0);  /* The length of atts should be even! */
   
+  /* Allocate newatts with the same length */
+  newatts = apr_pcalloc (subpool, (sizeof(char *) * len));
+  
+  /* Now copy atts into newatts */
+  tempatts = atts;
+  while (tempatts && (*tempatts))
+    {
+      newatts[count] = apr_psprintf (subpool, "%s", tempatts[0]);
+      newatts[(count + 1)] = apr_psprintf (subpool, "%s", tempatts[1]);
+      atts += 2;
+      count += 2;
+    }
+
+  /* Loop through our va_list, modifiying newatts appropriately.  */
+  while ((attribute = va_arg (baton->valist, char *)))
+    {
+      int found_match = 0;
+
+      /* Get the value of our current vararg and duplicate it */
+      orig_value = va_arg (baton->valist, svn_string_t *);
+      dup_value = svn_string_dup (orig_value, subpool);
+
+      /* Does this attribute already exist in newatts? */
+      tempatts = newatts;
+      while (tempatts && (*tempatts))
+        {
+          if (! strcmp (tempatts[0], attribute)) 
+            {
+              /* Found a match... let's overwrite the value. */
+              tempatts[1] = dup_value->data;
+              
+              /* Don't forget, we also need to set the version number
+                 specified in our baton!  */
+              if (! strcmp (attribute, "version"))
+                tempatts[1] = apr_psprintf (subpool, "%ld",
+                                            (* (baton->version)) );
+
+              found_match = 1;
+              break;
+            }
+          tempatts += 2;
+        }
+
+      if (! found_match)
+        {
+          /* If no match, then we need to manually add attribute/value
+             pair to newatts, by re-allocing newatts. */
+          tempatts = newatts;
+          len += 2;
+          newatts = apr_pcalloc (subpool, (sizeof(char *) * len));
+          memcpy (newatts, tempatts, (sizeof(char *) * (len - 2)));
+
+          newatts[(len - 2)] = apr_psprintf (subpool, "%s", attribute);
+          newatts[(len - 1)] = dup_value->data;
+        }
+
+    } /* while (attribute = va_arg) */
+
+
+  /* Presumably, by this point, newatts is now a union of atts and the
+     valist, containing no redundancies.  Print it out! */
+  err = svn_xml_write_tag_list (baton->outfile, baton->pool,
+                                svn_xml__self_close_tag,
+                                SVN_WC__VERSIONS_ENTRY,
+                                newatts);
+  
+  if (err)
+    return err;
+  
+  /* Clean up all the memory we used for copying/constructing
+     attribute lists.  */
+  apr_destroy_pool (subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -214,11 +299,11 @@ get_entry_attributes (svn_wc__version_baton_t *baton,
                       const char **atts)
 {
   const char *val;
-
   char *variable_attribute_name;
   svn_string_t **variable_attribute_value;
 
-  /* Before we do anything, let's set baton->version */
+  /* Before we do anything, return the `version' attribute by setting
+     baton->version correctly. */
   val = svn_xml_get_attr_value ("version", atts);
   (* (baton->version)) = (svn_vernum_t) atoi (val);
 
@@ -242,36 +327,18 @@ get_entry_attributes (svn_wc__version_baton_t *baton,
 
 /* Called whenever we find an <open> tag of some kind. */
 static void
-xml_handle_start (void *userData, const char *name, const char **atts)
+xml_handle_start (void *userData, const char *tagname, const char **atts)
 {
   svn_error_t *err;
 
   /* Salvage our baton */
   svn_wc__version_baton_t *baton = (svn_wc__version_baton_t *) userData;
 
-  /* There are only two kinds of tags to examine... */
+  /* We only care about the `entry' tag; all other tags such as `xml'
+     and `wc-versions' will simply be written write back out,
+     verbatim.  */
 
-  if (! strcmp (name, SVN_WC__VERSIONS_START))
-    {
-      /* We only care about this tag if we're writing to an outfile. */
-      if (baton->outfile)
-        {
-          /* Write it back out again. */
-          err = svn_xml_write_tag (baton->outfile,
-                                   baton->pool,
-                                   svn_xml__open_tag,
-                                   SVN_WC__VERSIONS_START,
-                                   "xmlns", SVN_XML_NAMESPACE,
-                                   NULL);
-          if (err)
-            {
-              svn_xml_signal_bailout (err, baton->parser);
-              return;
-            }
-        }
-    }
-
-  else if (! strcmp (name, SVN_WC__VERSIONS_ENTRY))
+  if (! strcmp (tagname, SVN_WC__VERSIONS_ENTRY))
     {
       /* Get the `name' attribute */
       const char *nameval = svn_xml_get_attr_value ("name", atts);
@@ -316,13 +383,25 @@ xml_handle_start (void *userData, const char *name, const char **atts)
                   return;
                 }
             }
-        }
- 
-    }
+        } 
+    } 
 
-  else
+  else  /* This is some other non-`entry' tag.  Preserve it.  */
     {
-      /* just ignore unrecognized xml tags */
+      /* We only care about this tag if we're writing to an outfile. */
+      if (baton->outfile)
+        {
+          /* Write it back out again. */
+          err = svn_xml_write_tag_list (baton->outfile, baton->pool,
+                                        svn_xml__self_close_tag,
+                                        tagname,
+                                        atts);
+          if (err)
+            {
+              svn_xml_signal_bailout (err, baton->parser);
+              return;
+            }
+        }
     }
 
   /* This is an expat callback;  return nothing. */
@@ -333,7 +412,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
 /* Called whenever we find an </close> tag of some kind. */
 static void
-xml_handle_end (void *userData, const char *name)
+xml_handle_end (void *userData, const char *tagname)
 {
   svn_error_t *err;
 
@@ -343,9 +422,10 @@ xml_handle_end (void *userData, const char *name)
   /* We don't care about closures of SVN_WC__VERSIONS_ENTRY, because
      they're all self-closing anyway, and well, xml_handle_start is
      writing them back out to disk already.  We only care about
-     </wc-versions> here. */
+     </wc-versions> here, because it's the *only* non-self-closing tag
+     we're gonig to run across in the versions file.  */
 
-  if (! strcmp (name, SVN_WC__VERSIONS_END))
+  if (! strcmp (tagname, SVN_WC__VERSIONS_END))
     {
       /* Copy this tag back out to the outfile, if we have one. */
       if (baton->outfile)

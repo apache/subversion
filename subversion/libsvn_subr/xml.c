@@ -271,6 +271,66 @@ svn_xml_write_tag_v (apr_file_t *file,
 }
 
 
+
+/* Like svn_xml_write_tag, but takes a list of char* pairs */
+svn_error_t *
+svn_xml_write_tag_list (apr_file_t *file,
+                        apr_pool_t *pool,
+                        const int tagtype,
+                        const char *tagname,
+                        const char **atts)
+{
+  apr_status_t status;
+  apr_size_t bytes_written;
+  const char *attribute, *value;
+  svn_string_t *xmlstring;
+
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+
+  xmlstring = svn_string_create ("<", subpool);
+
+  if (tagtype == svn_xml__close_tag)
+    svn_string_appendcstr (xmlstring, "/", subpool);
+
+  svn_string_appendcstr (xmlstring, tagname, subpool);
+
+  while (atts && (*atts))
+    {
+      attribute = atts[0];
+      value = atts[1];
+      assert (value != NULL);
+      
+      /* kff todo: once values are svn_string_t's, implement the xml
+         quoting. */
+
+      svn_string_appendcstr (xmlstring, "\n   ", subpool);
+      svn_string_appendcstr (xmlstring, attribute, subpool);
+      svn_string_appendcstr (xmlstring, "=\"", subpool);
+      svn_string_appendcstr (xmlstring, value, subpool);
+      svn_string_appendcstr (xmlstring, "\"", subpool);
+
+      atts += 2;
+    }
+
+  if (tagtype == svn_xml__self_close_tag)
+    svn_string_appendcstr (xmlstring, "/", subpool);
+
+  svn_string_appendcstr (xmlstring, ">\n", subpool);
+
+  /* Do the write */
+  status = apr_full_write (file, xmlstring->data, xmlstring->len,
+                           &bytes_written);
+  if (status)
+    return svn_error_create (status, 0, NULL, subpool,
+                             "svn_xml_write_tag:  file write error.");
+
+  apr_destroy_pool (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* 
  * local variables:
