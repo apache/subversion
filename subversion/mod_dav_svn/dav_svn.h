@@ -59,9 +59,6 @@
 #include <apr_tables.h>
 #include <mod_dav.h>
 
-void dav_svn_register_repos(apr_pool_t *p);
-
-const dav_hooks_propdb *dav_svn_get_propdb_hooks(request_rec *r);
 
 void dav_svn_gather_propsets(apr_array_header_t *uris);
 int dav_svn_find_liveprop(request_rec *r, const char *ns_uri, const char *name,
@@ -70,7 +67,11 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
                                   int insvalue, ap_text_header *phdr);
 void dav_svn_register_uris(apr_pool_t *p);
 
-const dav_hooks_vsn *dav_svn_get_vsn_hooks(request_rec *r);
+/* our hooks structures; these are gathered into a dav_provider */
+extern const dav_hooks_repository dav_svn_hooks_repos;
+extern const dav_hooks_propdb dav_svn_hooks_propdb;
+extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
+extern const dav_hooks_vsn dav_svn_hooks_vsn;
 
 
 #endif /* DAV_SVN_H */

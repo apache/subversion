@@ -58,11 +58,7 @@
 #include "dav_svn.h"
 
 
-const dav_hooks_vsn *dav_svn_get_vsn_hooks(request_rec *r)
-{
-    /* ### */
-    return NULL;
-}
+const dav_hooks_vsn dav_svn_hooks_vsn = { 0 };
 
 
 /* 

@@ -58,14 +58,7 @@
 #include "dav_svn.h"
 
 
-void dav_svn_register_repos(apr_pool_t *p)
-{
-    /* register the repository provider */
-#if 0
-    dav_register_repository(p, "svn", &dav_hooks_repository_svn);
-#endif
-}
-
+const dav_hooks_repository dav_svn_hooks_repos = { 0 };
 
 
 /* 
