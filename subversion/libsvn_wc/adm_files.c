@@ -1113,10 +1113,10 @@ init_adm (const char *path,
 
 
 svn_error_t *
-svn_wc__ensure_adm (const char *path,
-                    const char *url,
-                    svn_revnum_t revision,
-                    apr_pool_t *pool)
+svn_wc_ensure_adm (const char *path,
+                   const char *url,
+                   svn_revnum_t revision,
+                   apr_pool_t *pool)
 {
   svn_boolean_t exists_already;
 
