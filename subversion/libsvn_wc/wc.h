@@ -370,50 +370,6 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 
 #define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
 #define SVN_WC__ENTRIES_ENTRY          "entry"
-#define SVN_WC__ENTRIES_ATTR_NAME      "name"
-#define SVN_WC__ENTRIES_ATTR_REVISION  "revision"
-#define SVN_WC__ENTRIES_ATTR_KIND      "kind"
-#define SVN_WC__ENTRIES_ATTR_TIMESTAMP "timestamp"
-#define SVN_WC__ENTRIES_ATTR_CHECKSUM  "checksum"
-#define SVN_WC__ENTRIES_ATTR_ADD       "add"
-#define SVN_WC__ENTRIES_ATTR_DELETE    "delete"
-#define SVN_WC__ENTRIES_ATTR_MERGED    "merged"
-#define SVN_WC__ENTRIES_ATTR_CONFLICT  "conflict"
-#define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
-#define SVN_WC__ENTRIES_ATTR_REJFILE   "reject-file"
-
-
-/* A data structure representing an entry from the `entries' file. */
-typedef struct svn_wc__entry_t
-{
-  /* Note that the entry's name is not stored here, because it is the
-     hash key for which this is the value. */
-
-  svn_revnum_t revision;       /* Base revision.  (Required) */
-  svn_string_t *ancestor;      /* Base path.  (Required) */
-  enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
-
-  int flags;                   /* Marks an entry with A, D, C, etc. */
-
-  apr_time_t timestamp;        /* When the entries file thinks the
-                                  local working file last changed.
-                                  (NULL means not available) */ 
-
-  apr_hash_t *attributes;      /* All XML attributes, both those
-                                  duplicated above and any others.
-                                  (Required) */
-} svn_wc__entry_t;
-
-/* Bitmasks stored in the `flags' field above.  */
-#define SVN_WC__ENTRY_CLEAR     1     /* special flag, means clear flags */
-#define SVN_WC__ENTRY_ADD       2     /* entry marked for addition */
-#define SVN_WC__ENTRY_DELETE    4     /* entry marked for deletion */
-#define SVN_WC__ENTRY_MERGED    8     /* wfile merged as of timestamp */
-#define SVN_WC__ENTRY_CONFLICT  16    /* wfile conflicted as of timestamp */
-
-/* How an entries file's owner dir is named in the entries file. */
-#define SVN_WC__ENTRIES_THIS_DIR       ""
-
 
 /* Initialize contents of `entries' for a new adm area. */
 svn_error_t *svn_wc__entries_init (svn_string_t *path,
@@ -422,7 +378,7 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path,
 
 
 /* Parse the `entries' file for PATH and return a hash ENTRIES, whose
-   keys are entry names and values are (svn_wc__entry_t *). */
+   keys are entry names and values are (svn_wc_entry_t *). */
 svn_error_t *svn_wc__entries_read (apr_hash_t **entries,
                                    svn_string_t *path,
                                    apr_pool_t *pool);
@@ -462,7 +418,7 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
  * If KIND is svn_node_none, then the entry's kind will not be
  * changed, else it will be set to KIND.
  * 
- * If flags has the SVN_WC__ENTRY_CLEAR bit set, then the entry's
+ * If flags has the SVN_WC_ENTRY_CLEAR bit set, then the entry's
  * flags will be cleared.  If it has any other bits set, those bits
  * will be OR'd onto the entry's flags.
  * 
@@ -493,7 +449,7 @@ void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
 
 /* Return a duplicate of ENTRY, allocated in POOL.  No part of the new
    entry will be shared with ENTRY. */
-svn_wc__entry_t *svn_wc__entry_dup (svn_wc__entry_t *entry, apr_pool_t *pool);
+svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 
 
 
@@ -612,7 +568,7 @@ svn_wc__conflicting_propchanges_p (svn_string_t **description,
 svn_error_t *
 svn_wc__get_existing_reject_file (svn_string_t **reject_file,
                                   svn_string_t *path,
-                                  svn_string_t *name,
+                                  const svn_string_t *name,
                                   apr_pool_t *pool);
 
 /* If PROPFILE_PATH exists (and is a file), assume it's full of

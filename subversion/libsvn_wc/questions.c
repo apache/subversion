@@ -122,7 +122,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   apr_time_t wfile_time;
   svn_string_t *dirpath, *entryname;
   apr_hash_t *entries = NULL;
-  struct svn_wc__entry_t *entry;
+  struct svn_wc_entry_t *entry;
 
   svn_path_split (filename, &dirpath, &entryname, svn_path_local_style, pool);
 

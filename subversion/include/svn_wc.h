@@ -73,35 +73,73 @@
 #include "svn_error.h"
 
 
-/* Structure containing the "status" of a working copy dirent.  
+
+/*** Entries. ***/
 
-   Note that this overlaps somewhat with the private declaration of an
-   "entry" in wc.h; so there's a bit of redundancy going on.  But so
-   far, it hasn't made sense to completely contain one structure in
-   another.  I mean, entry structs don't want "modified_p" or
-   "repos_ver" fields, and status structs don't want full xml
-   attribute hashes.  :) 
-*/
-typedef struct svn_wc_status_t 
+/* A data structure representing an entry from the `entries' file. */
+typedef struct svn_wc_entry_t
 {
-  svn_revnum_t local_ver;        /* working copy revision number */
-  svn_revnum_t repos_ver;        /* repository revision number */
+  /* Note that the entry's name is not stored here, because it is the
+     hash key for which this is the value. */
+
+  svn_revnum_t revision;       /* Base revision.  (Required) */
+  svn_string_t *ancestor;      /* Base path.  (Required) */
+  enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
+
+  int flags;                   /* Marks an entry with A, D, C, etc. */
+
+  apr_time_t timestamp;        /* When the entries file thinks the
+                                  local working file last changed.
+                                  (NULL means not available) */ 
+
+  apr_hash_t *attributes;      /* All XML attributes, both those
+                                  duplicated above and any others.
+                                  (Required) */
+} svn_wc_entry_t;
+
+
+#define SVN_WC_ENTRY_ATTR_NAME      "name"
+#define SVN_WC_ENTRY_ATTR_REVISION  "revision"
+#define SVN_WC_ENTRY_ATTR_KIND      "kind"
+#define SVN_WC_ENTRY_ATTR_TIMESTAMP "timestamp"
+#define SVN_WC_ENTRY_ATTR_CHECKSUM  "checksum"
+#define SVN_WC_ENTRY_ATTR_ADD       "add"
+#define SVN_WC_ENTRY_ATTR_DELETE    "delete"
+#define SVN_WC_ENTRY_ATTR_MERGED    "merged"
+#define SVN_WC_ENTRY_ATTR_CONFLICT  "conflict"
+#define SVN_WC_ENTRY_ATTR_ANCESTOR  "ancestor"
+#define SVN_WC_ENTRY_ATTR_REJFILE   "reject-file"
+
+
+/* Bitmasks stored in the `flags' field above.  */
+#define SVN_WC_ENTRY_CLEAR     1     /* special flag, means clear flags */
+#define SVN_WC_ENTRY_ADD       2     /* entry marked for addition */
+#define SVN_WC_ENTRY_DELETE    4     /* entry marked for deletion */
+#define SVN_WC_ENTRY_MERGED    8     /* wfile merged as of timestamp */
+#define SVN_WC_ENTRY_CONFLICT  16    /* wfile conflicted as of timestamp */
+
+/* How an entries file's owner dir is named in the entries file. */
+#define SVN_WC_ENTRY_THIS_DIR  ""
+
+
+
+/* Structure for holding the "status" of a working copy item. 
+   The item's entry data is in ENTRY, augmented and possibly shadowed
+   by the other fields. */
+typedef struct svn_wc_status_t
+{
+  svn_wc_entry_t *entry;
+  svn_revnum_t repos_rev;
   
-  /* MUTUALLY EXCLUSIVE states. One of
-     these will always be set. */
-  enum                           
-  {
+  /* Mutually exclusive states. One of these will always be set. */
+  enum {
     svn_wc_status_none = 1,
     svn_wc_status_added,
     svn_wc_status_deleted,
     svn_wc_status_modified,
     svn_wc_status_merged,
     svn_wc_status_conflicted
-    
-  }  flag;
-
-  /* For the future: we can place information in here about ancestry
-     "sets". */
+  } flag;
 
 } svn_wc_status_t;
 

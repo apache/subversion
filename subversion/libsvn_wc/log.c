@@ -70,14 +70,21 @@ struct log_runner
 
 /*** The XML handlers. ***/
 
+/* Used by file_xfer_under_path(). */
+enum svn_wc__xfer_action {
+  svn_wc__xfer_append,
+  svn_wc__xfer_cp,
+  svn_wc__xfer_mv,
+};
+
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
    PATH is the common parent of both locations. */
 static svn_error_t *
-cp_or_mv_under_directory (svn_string_t *path,
-                          const char *name,
-                          const char *dest,
-                          svn_boolean_t rename,
-                          apr_pool_t *pool)
+file_xfer_under_path (svn_string_t *path,
+                      const char *name,
+                      const char *dest,
+                      enum svn_wc__xfer_action action,
+                      apr_pool_t *pool)
 {
   apr_status_t status;
   svn_string_t *full_from_path, *full_dest_path;
@@ -88,18 +95,21 @@ cp_or_mv_under_directory (svn_string_t *path,
   svn_path_add_component_nts (full_from_path, name, svn_path_local_style);
   svn_path_add_component_nts (full_dest_path, dest, svn_path_local_style);
 
-  if (rename)
-    {
-      status = apr_rename_file (full_from_path->data,
-                                full_dest_path->data, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "cp_or_mv_under_directory: "
-                                  "can't move %s to %s",
-                                  name, dest);
-    }
-  else
+  switch (action)
+  {
+  case svn_wc__xfer_append:
+    return svn_io_append_file (full_from_path, full_dest_path, pool);
+  case svn_wc__xfer_cp:
     return svn_io_copy_file (full_from_path, full_dest_path, pool);
+  case svn_wc__xfer_mv:
+    status = apr_rename_file (full_from_path->data,
+                              full_dest_path->data, pool);
+    if (status)
+      return svn_error_createf (status, 0, NULL, pool,
+                                "file_xfer_under_path: "
+                                "can't move %s to %s",
+                                name, dest);
+  }
 
   return SVN_NO_ERROR;
 }
@@ -249,11 +259,19 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         }
     }
   else if ((strcmp (eltname, SVN_WC__LOG_MV) == 0)
-           || (strcmp (eltname, SVN_WC__LOG_CP) == 0))
+           || (strcmp (eltname, SVN_WC__LOG_CP) == 0)
+           || (strcmp (eltname, SVN_WC__LOG_APPEND) == 0))
     {
       /* Grab a "dest" attribute as well. */
       const char *dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
-      svn_boolean_t rename = (strcmp (eltname, SVN_WC__LOG_MV)) ? 0 : 1;
+      enum svn_wc__xfer_action action;
+
+      if (strcmp (eltname, SVN_WC__LOG_MV) == 0)
+        action = svn_wc__xfer_mv;
+      else if (strcmp (eltname, SVN_WC__LOG_CP) == 0)
+        action = svn_wc__xfer_cp;
+      else if (strcmp (eltname, SVN_WC__LOG_APPEND) == 0)
+        action = svn_wc__xfer_append;
 
       if (! name)
         {
@@ -278,8 +296,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           return;
         }
       else
-        err = cp_or_mv_under_directory (loggy->path, name, dest,
-                                        rename, loggy->pool);
+        err = file_xfer_under_path (loggy->path, name, dest,
+                                    action, loggy->pool);
     }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0)
     {
@@ -325,7 +343,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         {
           svn_string_t *sname = svn_string_create (name, loggy->pool);
           svn_string_t *revstr = apr_hash_get (ah,
-                                               SVN_WC__ENTRIES_ATTR_REVISION,
+                                               SVN_WC_ENTRY_ATTR_REVISION,
                                                APR_HASH_KEY_STRING);
           svn_revnum_t new_revision = (revstr ? atoi (revstr->data)
                                       : SVN_INVALID_REVNUM);
@@ -334,7 +352,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           
           enum svn_node_kind kind = svn_node_unknown;
           svn_string_t *kindstr = apr_hash_get (ah,
-                                                SVN_WC__ENTRIES_ATTR_KIND,
+                                                SVN_WC_ENTRY_ATTR_KIND,
                                                 APR_HASH_KEY_STRING);
           
           svn_string_t *wfile = svn_string_dup (loggy->path, loggy->pool);
@@ -355,18 +373,18 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
             kind = svn_node_none;
           
           /* Stuff state into flags. */
-          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_ADD,
+          if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_ADD,
                             APR_HASH_KEY_STRING))
-            flags |= SVN_WC__ENTRY_ADD;
-          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_DELETE,
+            flags |= SVN_WC_ENTRY_ADD;
+          if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_DELETE,
                             APR_HASH_KEY_STRING))
-            flags |= SVN_WC__ENTRY_DELETE;
-          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_MERGED,
+            flags |= SVN_WC_ENTRY_DELETE;
+          if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_MERGED,
                             APR_HASH_KEY_STRING))
-            flags |= SVN_WC__ENTRY_MERGED;
-          if (apr_hash_get (ah, SVN_WC__ENTRIES_ATTR_CONFLICT,
+            flags |= SVN_WC_ENTRY_MERGED;
+          if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_CONFLICT,
                             APR_HASH_KEY_STRING))
-            flags |= SVN_WC__ENTRY_CONFLICT;
+            flags |= SVN_WC_ENTRY_CONFLICT;
           
           /* Get the timestamp only if the working file exists. */
           {
@@ -459,7 +477,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           enum svn_node_kind kind;
           svn_string_t *sname = svn_string_create (name, loggy->pool);
           apr_hash_t *entries = NULL;
-          svn_wc__entry_t *entry;
+          svn_wc_entry_t *entry;
 
           err = svn_wc__entries_read (&entries, loggy->path, loggy->pool);
           if (err)
@@ -469,7 +487,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
             }
           
           entry = apr_hash_get (entries, sname->data, sname->len);
-          if (entry && (entry->flags & SVN_WC__ENTRY_DELETE))
+          if (entry && (entry->flags & SVN_WC_ENTRY_DELETE))
             {
               err = remove_from_revision_control (loggy, sname);
               if (err)
@@ -554,7 +572,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                               sname,
                                               atoi (revstr),
                                               svn_node_file,
-                                              SVN_WC__ENTRY_CLEAR,
+                                              SVN_WC_ENTRY_CLEAR,
                                               timestamp,
                                               loggy->pool,
                                               NULL);
@@ -692,13 +710,13 @@ svn_wc__cleanup (svn_string_t *path,
       const void *key;
       apr_size_t keylen;
       void *val;
-      svn_wc__entry_t *entry;
+      svn_wc_entry_t *entry;
 
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
 
-      if ((keylen == strlen (SVN_WC__ENTRIES_THIS_DIR))
-          && (strcmp ((char *) key, SVN_WC__ENTRIES_THIS_DIR) == 0))
+      if ((keylen == strlen (SVN_WC_ENTRY_THIS_DIR))
+          && (strcmp ((char *) key, SVN_WC_ENTRY_THIS_DIR) == 0))
         continue;
 
       /* If TARGETS tells us to care about this dir, we may need to
@@ -792,13 +810,13 @@ svn_wc__log_commit (svn_string_t *path,
       const void *key;
       apr_size_t keylen;
       void *val;
-      svn_wc__entry_t *entry;
+      svn_wc_entry_t *entry;
 
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
 
-      if ((keylen == strlen (SVN_WC__ENTRIES_THIS_DIR))
-          && (strcmp ((char *) key, SVN_WC__ENTRIES_THIS_DIR) == 0))
+      if ((keylen == strlen (SVN_WC_ENTRY_THIS_DIR))
+          && (strcmp ((char *) key, SVN_WC_ENTRY_THIS_DIR) == 0))
         continue;
 
       if (entry->kind == svn_node_dir)

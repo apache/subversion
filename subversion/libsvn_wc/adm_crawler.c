@@ -79,7 +79,7 @@
  */
 struct target_baton
 {
-  svn_wc__entry_t *entry;
+  svn_wc_entry_t *entry;
   void *editor_baton;
 };
 
@@ -90,7 +90,7 @@ struct stack_object
 {
   svn_string_t *path;         /* A working copy directory */
   void *baton;                /* An associated dir baton, if any exists yet. */
-  svn_wc__entry_t *this_dir;  /* All entry info about this directory */
+  svn_wc_entry_t *this_dir;  /* All entry info about this directory */
 
   struct stack_object *next;
   struct stack_object *previous;
@@ -105,7 +105,7 @@ static void
 push_stack (struct stack_object **stack,
             svn_string_t *path,
             void *baton,
-            svn_wc__entry_t *entry,
+            svn_wc_entry_t *entry,
             apr_pool_t *pool)
 {
   struct stack_object *new_top = apr_pcalloc (pool, sizeof (*new_top));
@@ -361,7 +361,7 @@ do_apply_textdelta (svn_string_t *filename,
                          local_tmp_path->data);
 
   textbasefile = NULL; /* paranoia! */
-  if (! (tb->entry->flags & SVN_WC__ENTRY_ADD))
+  if (! (tb->entry->flags & SVN_WC_ENTRY_ADD))
     {
       err = svn_wc__open_text_base (&textbasefile, filename, APR_READ, pool);
       if (err)
@@ -441,8 +441,8 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
       /* If this file is not simply being deleted, i.e., if it does
          not have both a delete flag set and no add flag, then we want
          to send the txdelta. */
-      if (! ((tb->entry->flags & SVN_WC__ENTRY_DELETE)
-             && (! (tb->entry->flags & SVN_WC__ENTRY_ADD))))
+      if (! ((tb->entry->flags & SVN_WC_ENTRY_DELETE)
+             && (! (tb->entry->flags & SVN_WC_ENTRY_ADD))))
         {
           err = do_apply_textdelta (filepath, editor, tb, pool);
           if (err)
@@ -466,7 +466,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
    the `conflicted' flag bit set.  */
 static svn_error_t *
 check_for_unresolved_file_conflict (svn_string_t *full_path_to_file,
-                                    svn_wc__entry_t *entry,
+                                    svn_wc_entry_t *entry,
                                     apr_hash_t *locks,
                                     apr_pool_t *pool)
 {
@@ -531,7 +531,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
   apr_hash_t *entries;            /* _all_ of the entries in in
                                      current directory */
   apr_hash_index_t *entry_index;  /* holds loop-state */
-  svn_wc__entry_t *this_dir;      /* represents current working dir */
+  svn_wc_entry_t *this_dir;      /* represents current working dir */
 
   /**                                                   **/
   /** Setup -- arrival in a new subdir of working copy. **/
@@ -547,8 +547,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
     return err;
 
   /* Grab the entry representing "." */
-  this_dir = (svn_wc__entry_t *) 
-    apr_hash_get (entries, SVN_WC__ENTRIES_THIS_DIR, APR_HASH_KEY_STRING);
+  this_dir = (svn_wc_entry_t *) 
+    apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
   if (! this_dir)
     return
       svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, subpool,
@@ -571,18 +571,18 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       apr_size_t klen;
       void *val;
       svn_string_t *current_entry_name;
-      svn_wc__entry_t *current_entry; 
+      svn_wc_entry_t *current_entry; 
       svn_string_t *full_path_to_entry;
 
       /* Get the next entry name (and structure) from the hash */
       apr_hash_this (entry_index, &key, &klen, &val);
       keystring = (const char *) key;
 
-      if (! strcmp (keystring, SVN_WC__ENTRIES_THIS_DIR))
+      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
         current_entry_name = NULL;
       else
         current_entry_name = svn_string_create (keystring, subpool);
-      current_entry = (svn_wc__entry_t *) val;
+      current_entry = (svn_wc_entry_t *) val;
 
       /* Construct a full path to the current entry */
       full_path_to_entry = svn_string_dup (path, subpool);
@@ -597,7 +597,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
          of conflict that has NOT yet been resolved, we abort the
          entire commit.  */
       if ((current_entry->kind == svn_node_file)
-          && (current_entry->flags & SVN_WC__ENTRY_CONFLICT))
+          && (current_entry->flags & SVN_WC_ENTRY_CONFLICT))
         {
           err = check_for_unresolved_file_conflict (full_path_to_entry,
                                                     current_entry,
@@ -606,8 +606,8 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
         }
 
       /* Is the entry marked for both deletion AND addition? */
-      if ((current_entry->flags & SVN_WC__ENTRY_DELETE)
-          && (current_entry->flags & SVN_WC__ENTRY_ADD))
+      if ((current_entry->flags & SVN_WC_ENTRY_DELETE)
+          && (current_entry->flags & SVN_WC_ENTRY_ADD))
         {
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
@@ -677,7 +677,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
         }
 
       /* Is the entry marked for deletion only? */
-      else if ((current_entry->flags) & SVN_WC__ENTRY_DELETE)
+      else if ((current_entry->flags) & SVN_WC_ENTRY_DELETE)
         {
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
@@ -708,7 +708,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
         }
 
       /* Is this entry marked for addition only? */
-      else if ((current_entry->flags) & SVN_WC__ENTRY_ADD)
+      else if ((current_entry->flags) & SVN_WC_ENTRY_ADD)
         {
           /* Adding a new directory: */
           if (current_entry->kind == svn_node_dir)

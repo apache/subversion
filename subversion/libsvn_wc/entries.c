@@ -108,9 +108,9 @@ svn_wc__entries_init (svn_string_t *path,
                          pool,
                          svn_xml_self_closing,
                          SVN_WC__ENTRIES_ENTRY,
-                         SVN_WC__ENTRIES_ATTR_REVISION,
+                         SVN_WC_ENTRY_ATTR_REVISION,
                          svn_string_create (initial_revstr, pool),
-                         SVN_WC__ENTRIES_ATTR_ANCESTOR,
+                         SVN_WC_ENTRY_ATTR_ANCESTOR,
                          ancestor_path,
                          NULL);
 
@@ -145,7 +145,7 @@ svn_wc__entries_init (svn_string_t *path,
 
 struct entries_accumulator
 {
-  /* Keys are entry names, vals are (struct svn_wc__entry_t *)'s. */
+  /* Keys are entry names, vals are (struct svn_wc_entry_t *)'s. */
   apr_hash_t *entries; 
 
   /* The dir whose entries file this is. */
@@ -159,10 +159,10 @@ struct entries_accumulator
 };
 
 
-static svn_wc__entry_t *
+static svn_wc_entry_t *
 alloc_entry (apr_pool_t *pool)
 {
-  svn_wc__entry_t *entry = apr_pcalloc (pool, sizeof (*entry));
+  svn_wc_entry_t *entry = apr_pcalloc (pool, sizeof (*entry));
   entry->revision   = SVN_INVALID_REVNUM;
   entry->kind       = svn_node_none;
   entry->attributes = apr_make_hash (pool);
@@ -180,16 +180,16 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
      and `wc-entries', are ignored. */
   if ((strcmp (tagname, SVN_WC__ENTRIES_ENTRY)) == 0)
     {
-      svn_wc__entry_t *entry = alloc_entry (accum->pool);
+      svn_wc_entry_t *entry = alloc_entry (accum->pool);
       entry->attributes = svn_xml_make_att_hash (atts, accum->pool);
 
       /* Find the name and set up the entry under that name. */
       {
         svn_string_t *name
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_NAME, APR_HASH_KEY_STRING);
-        char *nstr = name ? name->data : SVN_WC__ENTRIES_THIS_DIR;
-        apr_size_t len = name ? name->len : strlen (SVN_WC__ENTRIES_THIS_DIR);
+                          SVN_WC_ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
+        char *nstr = name ? name->data : SVN_WC_ENTRY_THIS_DIR;
+        apr_size_t len = name ? name->len : strlen (SVN_WC_ENTRY_THIS_DIR);
 
         apr_hash_set (accum->entries, nstr, len, entry);
       }
@@ -198,7 +198,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       {
         svn_string_t *revision_str
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_REVISION, APR_HASH_KEY_STRING);
+                          SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING);
 
         if (revision_str)
           entry->revision = (svn_revnum_t) atoi (revision_str->data);
@@ -210,14 +210,14 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       {
         entry->ancestor
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_ANCESTOR, APR_HASH_KEY_STRING);
+                          SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING);
       }
 
       /* Set up kind. */
       {
         svn_string_t *kindstr
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_KIND, APR_HASH_KEY_STRING);
+                          SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
 
         if ((! kindstr) || (strcmp (kindstr->data, "file") == 0))
           entry->kind = svn_node_file;
@@ -227,7 +227,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           {
             svn_string_t *name
               = apr_hash_get (entry->attributes,
-                              SVN_WC__ENTRIES_ATTR_NAME, APR_HASH_KEY_STRING);
+                              SVN_WC_ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
 
             svn_xml_signal_bailout 
               (svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND,
@@ -237,7 +237,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
                                   "entries.c:handle_start_tag(): "
                                   "entry %s in dir %s",
                                   (name ?
-                                   name->data : SVN_WC__ENTRIES_THIS_DIR),
+                                   name->data : SVN_WC_ENTRY_THIS_DIR),
                                   accum->path->data),
                accum->parser);
           }
@@ -247,7 +247,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       {
         svn_string_t *timestr
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_TIMESTAMP, APR_HASH_KEY_STRING);
+                          SVN_WC_ENTRY_ATTR_TIMESTAMP, APR_HASH_KEY_STRING);
 
         if (timestr)
           entry->timestamp = svn_wc__string_to_time (timestr);
@@ -257,18 +257,18 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       {
         svn_string_t *addstr
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_ADD, APR_HASH_KEY_STRING);
+                          SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING);
         svn_string_t *delstr
           = apr_hash_get (entry->attributes,
-                          SVN_WC__ENTRIES_ATTR_DELETE, APR_HASH_KEY_STRING);
+                          SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING);
 
         /* Technically, the value has to be "true".  But we only have
            these attributes at all when they have values of "true", so
            let's not go overboard on the paranoia here. */
         if (addstr)
-          entry->flags |= SVN_WC__ENTRY_ADD;
+          entry->flags |= SVN_WC_ENTRY_ADD;
         if (delstr)
-          entry->flags |= SVN_WC__ENTRY_DELETE;
+          entry->flags |= SVN_WC_ENTRY_DELETE;
       }
     }
 }
@@ -280,7 +280,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
    Typically, SRC is a parent directory's own entry, and DST is some
    child in that directory. */
 static void
-take_from_entry (svn_wc__entry_t *src, svn_wc__entry_t *dst, apr_pool_t *pool)
+take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 {
   /* Inherits parent's revision if don't have a revision of one's own,
      unless this is a subdirectory. */
@@ -290,7 +290,7 @@ take_from_entry (svn_wc__entry_t *src, svn_wc__entry_t *dst, apr_pool_t *pool)
   if (! dst->ancestor)
     {
       svn_string_t *name = apr_hash_get (dst->attributes,
-                                         SVN_WC__ENTRIES_ATTR_NAME,
+                                         SVN_WC_ENTRY_ATTR_NAME,
                                          APR_HASH_KEY_STRING);
       dst->ancestor = svn_string_dup (src->ancestor, pool);
       svn_path_add_component (dst->ancestor, name,
@@ -305,8 +305,8 @@ static svn_error_t *
 resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  svn_wc__entry_t *default_entry
-    = apr_hash_get (entries, SVN_WC__ENTRIES_THIS_DIR, APR_HASH_KEY_STRING);
+  svn_wc_entry_t *default_entry
+    = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
 
   /* First check the dir's own entry for consistency. */
   if (! default_entry)
@@ -337,12 +337,12 @@ resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
       const void *key;
       apr_size_t keylen;
       void *val;
-      svn_wc__entry_t *this_entry;
+      svn_wc_entry_t *this_entry;
 
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
 
-      if (strcmp (SVN_WC__ENTRIES_THIS_DIR, (char *) key) == 0)
+      if (strcmp (SVN_WC_ENTRY_THIS_DIR, (char *) key) == 0)
         continue;
 
       take_from_entry (default_entry, this_entry, pool);
@@ -355,46 +355,46 @@ resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
 /* Update an entry's attribute hash according to its structure fields,
    which should always dominate the hash when the two differ. */
 static void
-sync_entry (svn_wc__entry_t *entry, apr_pool_t *pool)
+sync_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 {
   /* Revision. */
   if (entry->revision != SVN_INVALID_REVNUM)
     apr_hash_set (entry->attributes,
-                  SVN_WC__ENTRIES_ATTR_REVISION, APR_HASH_KEY_STRING,
+                  SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
                   svn_string_createf (pool, "%ld", entry->revision));
   
   /* Ancestor. */
   apr_hash_set (entry->attributes,
-                SVN_WC__ENTRIES_ATTR_ANCESTOR, APR_HASH_KEY_STRING,
+                SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING,
                 entry->ancestor);
   
   /* Kind. */
   if (entry->kind == svn_node_dir)
     apr_hash_set (entry->attributes,
-                  SVN_WC__ENTRIES_ATTR_KIND, APR_HASH_KEY_STRING,
+                  SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
                   svn_string_create ("dir", pool));
   else if (entry->kind != svn_node_none)  /* default to file kind */
     apr_hash_set (entry->attributes,
-                  SVN_WC__ENTRIES_ATTR_KIND, APR_HASH_KEY_STRING,
+                  SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
                   NULL);
   
   /* Flags. */
-  if (entry->flags & SVN_WC__ENTRY_CLEAR)
+  if (entry->flags & SVN_WC_ENTRY_CLEAR)
     {
-      apr_hash_set (entry->attributes, SVN_WC__ENTRIES_ATTR_ADD,
+      apr_hash_set (entry->attributes, SVN_WC_ENTRY_ATTR_ADD,
                     APR_HASH_KEY_STRING, NULL);
-      apr_hash_set (entry->attributes, SVN_WC__ENTRIES_ATTR_DELETE,
+      apr_hash_set (entry->attributes, SVN_WC_ENTRY_ATTR_DELETE,
                     APR_HASH_KEY_STRING, NULL);
     }
   else  /* don't lose any existing flags, but maybe set some new ones */
     {
-      if (entry->flags & SVN_WC__ENTRY_ADD)
+      if (entry->flags & SVN_WC_ENTRY_ADD)
         apr_hash_set (entry->attributes,
-                      SVN_WC__ENTRIES_ATTR_ADD, APR_HASH_KEY_STRING,
+                      SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING,
                       svn_string_create ("true", pool));
-      if (entry->flags & SVN_WC__ENTRY_DELETE)
+      if (entry->flags & SVN_WC_ENTRY_DELETE)
         apr_hash_set (entry->attributes,
-                      SVN_WC__ENTRIES_ATTR_DELETE, APR_HASH_KEY_STRING,
+                      SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING,
                       svn_string_create ("true", pool));
     }
   
@@ -402,7 +402,7 @@ sync_entry (svn_wc__entry_t *entry, apr_pool_t *pool)
   if (entry->timestamp)
     {
       apr_hash_set (entry->attributes,
-                    SVN_WC__ENTRIES_ATTR_TIMESTAMP, APR_HASH_KEY_STRING,
+                    SVN_WC_ENTRY_ATTR_TIMESTAMP, APR_HASH_KEY_STRING,
                     svn_wc__time_to_string (entry->timestamp, pool));
     }
 }
@@ -524,7 +524,7 @@ svn_wc__entries_write (apr_hash_t *entries,
       const void *key;
       apr_size_t keylen;
       void *val;
-      svn_wc__entry_t *this_entry;
+      svn_wc_entry_t *this_entry;
 
       /* Get the entry and make sure its attributes are up-to-date. */
       apr_hash_this (hi, &key, &keylen, &val);
@@ -570,7 +570,7 @@ stuff_entry_v (apr_hash_t *entries,
                va_list ap)
 {
   char *key;
-  struct svn_wc__entry_t *entry
+  struct svn_wc_entry_t *entry
     = apr_hash_get (entries, name->data, name->len);
 
   assert (name != NULL);
@@ -597,14 +597,14 @@ stuff_entry_v (apr_hash_t *entries,
 
   /* The entry's name is an attribute, too. */
   apr_hash_set (entry->attributes,
-                SVN_WC__ENTRIES_ATTR_NAME,
+                SVN_WC_ENTRY_ATTR_NAME,
                 APR_HASH_KEY_STRING,
                 name);
 
   /* Absorb defaults from the parent dir, if any. */
   {
-    svn_wc__entry_t *default_entry
-      = apr_hash_get (entries, SVN_WC__ENTRIES_THIS_DIR, APR_HASH_KEY_STRING);
+    svn_wc_entry_t *default_entry
+      = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
     if (default_entry)
       take_from_entry (default_entry, entry, pool);
   }
@@ -629,7 +629,7 @@ svn_wc__entry_add (apr_hash_t *entries,
                    apr_pool_t *pool,
                    ...)
 {
-  struct svn_wc__entry_t *entry
+  struct svn_wc_entry_t *entry
     = apr_hash_get (entries, name->data, name->len);
 
   if (entry)
@@ -681,7 +681,7 @@ svn_wc__entry_merge_sync (svn_string_t *path,
     return err;
   
   if (name == NULL)
-    name = svn_string_create (SVN_WC__ENTRIES_THIS_DIR, pool);
+    name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
   va_start (ap, pool);
   stuff_entry_v (entries, name, revision, kind, flags, timestamp, pool, ap);
@@ -697,11 +697,11 @@ svn_wc__entry_merge_sync (svn_string_t *path,
 
 
 /* Utility: return a duplicate of ENTRY object allocated in POOL. */
-svn_wc__entry_t *
-svn_wc__entry_dup (svn_wc__entry_t *entry, apr_pool_t *pool)
+svn_wc_entry_t *
+svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  svn_wc__entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
+  svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
 
   dupentry->revision   = entry->revision;
   dupentry->ancestor   = svn_string_dup (entry->ancestor, pool);
