@@ -65,17 +65,17 @@ then
 else
     $CAT <<EOF >> "$MAILFILE"
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="$NEXT_PART"
+Content-Type: multipart/mixed; boundary="----------=_$NEXT_PART"
 
 This is a multi-part message in MIME format.
-------------$NEXT_PART
+------------=_$NEXT_PART
 Content-Type: text/plain; charset=us-ascii
 Content-Transfer-Encoding: 8bit
 
 EOF
     $CAT "$LOG_FILE" >> "$MAILFILE"
     $CAT <<EOF >> "$MAILFILE"
-------------$NEXT_PART
+------------=_$NEXT_PART
 Content-Type: application/x-gzip; name="tests.log.gz"
 Content-Transfer-Encoding: base64
 Content-Disposition: inline; filename="tests.log.gz"
@@ -84,7 +84,7 @@ EOF
     $BASE64_E < "$TESTS_LOG_FILE" >> "$MAILFILE"
     $RM_F "$TESTS_LOG_FILE"
     $CAT <<EOF >> "$MAILFILE"
-------------$NEXT_PART--
+------------=_$NEXT_PART--
 EOF
 fi
 $SENDMAIL -t < "$MAILFILE"
