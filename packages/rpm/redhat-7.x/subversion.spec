@@ -4,6 +4,9 @@
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_check to 0.
 %define make_check 1
+%define make_ra_local_check 1
+%define make_ra_svn_check 1
+%define make_ra_dav_check 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -253,7 +256,26 @@ make
 make swig-py-ext
 
 %if %{make_check}
+%if %{make_ra_local_check}
+echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 make check
+echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+%endif
+
+%if %{make_ra_svn_check}
+echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
+killall lt-svnserve || true
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+make svncheck
+killall lt-svnserve
+echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
+%endif
+
+%if %{make_ra_dav_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
+make davcheck
+echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
+%endif
 %endif
 
 # Build cvs2svn python bindings
