@@ -15,6 +15,9 @@
 ;; Later on, there will be auto-detection of svn files, modeline
 ;; status, and a whole library of routines to interface with the
 ;; command-line client.  For now, there's this, at Ben's request.
+;;
+;; All this stuff should get folded into Emacs VC mode, really.
+
 (defun svn-revert ()
   "Revert the current buffer and its file to its svn base revision."
   (interactive)
@@ -36,6 +39,55 @@
       (revert-buffer nil t)
       (save-buffer))
     (message "Reverted \"%s\"." fname)))
+
+(defconst svn-adm-area ".svn"
+  "The name of the Subversion administrative subdirectory.")
+
+(defconst svn-adm-entries ".svn/entries"
+  "The path from cwd to the Subversion entries file.")
+
+(defun svn-controlled-path-p (path)
+  "Return non-nil if PATH is under Subversion revision control, else
+return nil.  If PATH does not exist, return nil.
+
+In the future, this will return an Emacs Lisp reflection of PATH's
+entry, either an explicit svn-entry-struct, or a list of the form
+\(LAST-COMMIT-REV CURRENT-REV LAST-COMMITTER ...\), so we can display
+svn information in the mode line.  But that requires truly parsing the
+entries file, instead of just detecting PATH among the entries."
+  (interactive "f")  ; any use for interactive, other than testing?
+  (cond
+   ((not (file-exists-p path))
+    nil)
+   ((file-directory-p path)
+    (let ((adm-area (concat path "/" svn-adm-area)))
+      (if (file-directory-p adm-area)
+          t
+        nil)))
+   (t
+    (let ((entries  (concat (file-name-directory path) svn-adm-entries))
+          (basename (file-name-nondirectory path))
+          (found    nil))
+      (save-excursion
+        (let ((find-file-hooks nil))
+          (set-buffer (find-file-noselect entries t)))
+        (goto-char (point-min))
+        (if (search-forward (format "name=\"%s\"" basename) nil t)
+            (setq found t)
+          (setq found nil))
+        (kill-buffer nil))
+      found))))
+
+(defun svn-find-file-hook ()
+  "Function for find-file-hooks.
+Inhibit backup files unless `vc-make-backup-files' is non-nil."
+  (if (svn-controlled-path-p (buffer-file-name))
+      (progn
+        (unless vc-make-backup-files
+          (make-local-variable 'backup-inhibited)
+          (setq backup-inhibited t)))))
+
+(add-hook 'find-file-hooks 'svn-find-file-hook)
 
 
 
