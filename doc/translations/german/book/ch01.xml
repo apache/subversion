@@ -51,8 +51,8 @@
       machine</quote>.</para>
     
     <para>Subversions erlaubt den Zugriff auf sein Repository durch
-      ein Netzwerk, womit der Zugriff von Leuten auf unterschiedlichen
-      Rechnern ermöglicht wird.
+      ein Netzwerk, womit der Zugriff durch Leute von unterschiedlichen
+      Rechnern aus ermöglicht wird.
       ...At some Level die Möglichkeit verschiedener Leute Datensätze
       an unterschiedlichen Orten zu Verwalten und zu modifizieren
       fördert die Zusammenarbeit. Fortschritt kann früher eintreten
@@ -75,16 +75,16 @@
       trade-off for losing that conduit&mdash;if some incorrect change
       is made to the data, just undo that change.</para>
 
-    <para>Einige Versionskontrollesystem sind auch Software Konfigurations
+    <para>Einige Versionskontrollsysteme sind auch Software Konfigurations
       Management Systeme (SKM). Diese Systeme sind speziell darauf
       zugeschnitten, Quellcodebäume zu verwalten. Sie haben sehr
       viele Funktionalitäten, die auf die Software Entwicklung 
       ausgerichtet sind. z.B. die Angebore Fähigkeit Programmiersprachen
       zu verstehen oder liefern Spezielle Werkzeuge zum Erzeugen
-      (build) von Software. Subververion, aber ist keines von diesen Systemen.
+      (build) von Software. Subversion, aber ist keines von diesen Systemen.
       Es ist ein allgemeines System welches zur Verwaltung 
       <emphasis>jeder</emphasis> Art von Dateien verwendet werden kann.
-      Für Sie diese Dateien können Quellcode sein, während es für andere
+      Für Sie können die Dateien Quellcode sein, während es für andere
       eine Einkaufsliste im Supermarkt ist bis zur Video Liste und
       darüber hinaus.
 	  
@@ -447,10 +447,10 @@
       <varlistentry>
           <term>Attakierbarkeit ??     Hackability</term>
         <listitem>
-            <para>Subversion hat keinerlei Altlasten aus der Historie.
+            <para>Subversion schleppt keine Altlasten aus der Vergangenheit mit.
                 Es ist als eine Sammlung von Shared C Bibliotheken
                 impementiert und mit einer wohldefinierten 
-                API versehen. Das macht Subversion extrem 
+                Schnittstelle (API) versehen. Das macht Subversion extrem 
                 wartbar und Einsetzbar in anderen Applikationen
                 und Sprachen.
                 
@@ -474,7 +474,7 @@
     <title>Die Subversion Architektur   Subversion's Architecture</title>
 
     <para>Abbildung 1.1 illustriert was man als einen Blick
-        aus großer Höhe auf das Subversion Design.
+        aus großer Höhe auf das Subversion Design bezeichnen würde.
         
         Figure 1.1 illustrates what one might call a
       <quote>mile-high</quote> view of Subversion's design.</para>
@@ -548,9 +548,9 @@
       distribution system (RPMs, DEBs, the ports tree, etc.) to get
       Subversion.</para>
 
-  <para>Alternativ kann man Subversion auch direkt auf dem Source Code
-      übersetzen. Nach dem runterladen der aktuellesten Release 
-      von der Subversion Web Seite und entpacken, foglen Sie bitten
+  <para>Alternativ kann man Subversion auch direkt aus dem Source Code
+      übersetzen. Nach dem herunterladen der aktuellesten Release 
+      von der Subversion Web Seite und nachfolgendem entpacken folgen Sie bitte
       den Anweisungen in der Datei <filename>INSTALL</filename>, um
       Subversion zu compileren. Beachten Sie bitte, dass ein veröffentliches
       Souce Code Pakete alles beinhaltet, um eine Kommandozeilen Client,
@@ -678,7 +678,7 @@
             <para>Ein maßgeschneidertes Programm als Standalone Server Programm,
                 welcher als Deamon Prozeß Verwendung findet, der auch
                 über SSH aufgerufen werden kann. Das ist ein anderer Weg,
-                um ein Repository für andere zugreifbar zu machen.
+                um ein Repository per Netzwerk verfügbar zu machen.
                 
                 A custom standalone server program, runnable as a
             daemon process or invokable by SSH; another way to make
