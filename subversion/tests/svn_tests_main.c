@@ -174,7 +174,7 @@ main (int argc, char *argv[])
   int got_error = 0;
   apr_pool_t *pool, *test_pool;
   int ran_a_test = 0;
-  const char **arg;
+  char **arg;
 
   /* How many tests are there? */
   int array_size = get_array_size();
