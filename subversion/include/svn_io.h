@@ -317,9 +317,7 @@ void svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn);
 void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 
 
-/* Convenience function to create a readable generic stream which is
-   empty.  */
-
+/* Convenience function to create a generic stream which is empty.  */
 svn_stream_t *svn_stream_empty (apr_pool_t *pool);
 
 
