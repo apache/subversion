@@ -331,7 +331,7 @@ fetch_tokens (svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
       apr_hash_this (hi, &key, NULL, NULL);
       path = key;
 
-      svn_ra_get_lock (ra_session, &lock, path, iterpool);
+      SVN_ERR (svn_ra_get_lock (ra_session, &lock, path, iterpool));
 
       if (! lock)
         return svn_error_createf 
