@@ -19,6 +19,7 @@
 
 #include <apr_file_io.h>
 
+#include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_error.h"
 #include "svn_opt.h"
@@ -26,8 +27,9 @@
 #include "svn_subst.h"
 #include "svn_path.h"
 #include "svn_config.h"
+#include "svn_repos.h"
+#include "svn_fs.h"
 
-#include "svnadmin.h"
 
 
 /*** Code. ***/
@@ -41,11 +43,10 @@ create_stdio_stream (svn_stream_t **stream,
                      apr_pool_t *pool)
 {
   apr_file_t *stdio_file;
-
   apr_status_t apr_err = open_fn (&stdio_file, pool);  
+
   if (apr_err)
-    return svn_error_create (apr_err, NULL,
-                             "error opening stdio file");
+    return svn_error_create (apr_err, NULL, "error opening stdio file");
   
   *stream = svn_stream_from_aprfile (stdio_file, pool);
   return SVN_NO_ERROR;   
@@ -119,7 +120,7 @@ static const apr_getopt_option_t options_table[] =
     {"parent-dir", svnadmin__parent_dir, 1,
      "load at specified directory in repository"},
 
-    {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
+    {"bdb-txn-nosync", svnadmin__bdb_txn_nosync, 0,
      "disable fsync at transaction commit [Berkeley DB]"},
 
     {"config-dir", svnadmin__config_dir, 1,
