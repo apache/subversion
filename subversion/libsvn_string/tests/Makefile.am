@@ -4,7 +4,7 @@ noinst_PROGRAMS = stringtest
 stringtest_SOURCES = stringtest.c
 
 ## Flags needed when compiling:
-CFLAGS = -pthread
+CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:
