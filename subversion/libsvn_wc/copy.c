@@ -454,6 +454,15 @@ svn_wc_copy (const char *src_path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR (svn_wc_entry (&entry, svn_wc_adm_access_path (dst_parent),
+                         dst_parent, FALSE, pool));
+  if (entry->schedule == svn_wc_schedule_delete)
+    return svn_error_createf
+      (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+       _("Cannot copy to '%s' as it is scheduled for deletion"),
+       svn_wc_adm_access_path (dst_parent));
 
   SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, src_path, FALSE, -1,
                                    pool));

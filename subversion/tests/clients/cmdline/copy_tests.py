@@ -1349,7 +1349,7 @@ def double_uri_escaping_1814(sbox):
 
 
 #----------------------------------------------------------------------
-#  Regression test for issue 2101
+#  Regression test for issues 2101 and 2020
 
 def wc_to_wc_copy_deleted(sbox):
   "wc to wc copy with deleted=true items"
@@ -1360,14 +1360,30 @@ def wc_to_wc_copy_deleted(sbox):
   B_path = os.path.join(wc_dir, 'A', 'B')
   B2_path = os.path.join(wc_dir, 'A', 'B2')
 
-  # Get some stuff in state deleted
+  # Schedule for delete
   svntest.actions.run_and_verify_svn(None, None, [], 'rm',
                                      os.path.join(B_path, 'E', 'alpha'),
                                      os.path.join(B_path, 'lambda'),
                                      os.path.join(B_path, 'F'))
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', 'A/B/lambda', 'A/B/F', status='D ')
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+
+  # Copy to schedule=delete fails
+  out, err = svntest.main.run_svn(1, 'cp',
+                                  os.path.join(B_path, 'E'),
+                                  os.path.join(B_path, 'F'))
+  for line in err:
+    if line.find("is scheduled for deletion") != -1:
+      break
+  else:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+
+
+  # Commit to get state deleted
   expected_status.remove('A/B/E/alpha', 'A/B/lambda', 'A/B/F')
+  expected_status.tweak(repos_rev=2)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
     'A/B/lambda'  : Item(verb='Deleting'),

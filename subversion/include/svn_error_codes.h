@@ -361,6 +361,11 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 22,
               "Path syntax not supported in this context")  
 
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_WC_INVALID_SCHEDULE,
+              SVN_ERR_WC_CATEGORY_START + 23,
+              "Invalid schedule")  
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
