@@ -965,30 +965,27 @@ understood it <em>before</em> actually hacking the code, right? :)
 <![CDATA[=========================================================]]>
 
 <h3><a name="in-place-import">How can I do an in-place 'import'
-    (i.e. add a tree to subversion without moving or deleting the
-    original working copy)?</a></h3> 
+    (i.e. add a tree of unversioned files to subversion, and convert the
+    original tree into a working copy)?</a></h3> 
 
 <p>Suppose, for example, that you wanted to put some of /etc under
-version control inside a brand-new repository you created using:
-</p>
+version control inside your repository:</p>
 
 <pre>
-     # svnadmin create /root/svn
-</pre>
-
-<p>To do this you would:
-</p>
-
-<pre>
-     # cd /
-     # svn co file:///root/svn etc
-     # cd etc
+     # svn mkdir file:///root/svn-repository/etc \
+         -m "Make a directory in the repository to correspond to /etc"
+     # cd /etc
+     # svn checkout file:///root/svn-repository/etc .
      # svn add apache samba alsa X11 
-     # svn commit -m "configury"
+     # svn commit -m "Initial version of my config files"
 </pre>
 
-<p>This takes advantage of the a hidden feature of add which allows it
-to create working copies for directories which do not yet exist in the
+<p>This takes advantage of a not-immediately-obvious feature of
+<tt>svn&nbsp;checkout</tt>: you can check out a directory from the repository
+directly into an existing directory.  Here, we first make a new empty directory
+in the repository, and then check it out into <tt>/etc</tt>, transforming
+<tt>/etc</tt> into a working copy.  Once that is done, you can use normal
+<tt>svn&nbsp;add</tt> commands to select files and subtrees to add to the
 repository.</p>
 
 <p>There is an issue filed for enhancing <tt>svn&nbsp;import</tt> to
