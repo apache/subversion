@@ -11,6 +11,8 @@ import sys
 import getopt
 
 
+sys.path.insert(0, os.path.join('build', 'generator'))
+### this will disappear soon
 sys.path.insert(0, 'build')
 
 gen_modules = {

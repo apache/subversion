@@ -66,6 +66,15 @@ class GeneratorBase:
                                self.cfg,
                                self._extension_map)
 
+      if parser.get(target, 'cmd'):
+        target_ob.cmd = parser.get(target, 'cmd')
+
+      if parser.get(target, 'release'):
+        target_ob.release = parser.get(target, 'release')
+
+      if parser.get(target, 'debug'):
+        target_ob.debug = parser.get(target, 'debug')
+
       self.targets[target] = target_ob
 
       ### I don't feel like passing these to the constructor right now,
@@ -89,7 +98,7 @@ class GeneratorBase:
       self.manpages.extend(string.split(parser.get(target, 'manpages')))
       self.infopages.extend(string.split(parser.get(target, 'infopages')))
 
-      if type != 'script':
+      if type not in ('script', 'project', 'external', 'utility'):
         # collect test programs
         if type == 'exe':
           if install == 'test':
@@ -367,6 +376,9 @@ class Target:
       return cmp(self.name, ob.name)
     return cmp(self.name, ob)
 
+  def __hash__(self):
+    return hash(self.name)
+
 class TargetLinked(Target):
   "The target is linked (by libtool) against other libraries."
 
@@ -487,12 +499,42 @@ class TargetSWIG(Target):
       # the specified install area depends upon the library
       graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
 
+class TargetProject(TargetLinked):
+  default_install = 'project'
+  def find_sources(self, patterns):
+    # We don't use sources
+    pass
+  def add_dependencies(self, graph):
+    # We don't use dependencies
+    pass
+
+class TargetExternal(TargetLinked):
+  default_install = 'external'
+  def find_sources(self, patterns):
+    # We don't use sources
+    pass
+  def add_dependencies(self, graph):
+    # We don't use dependencies
+    pass
+
+class TargetUtility(TargetLinked):
+  default_install = 'utility'
+  def find_sources(self, patterns):
+    # We don't use sources
+    pass
+  def add_dependencies(self, graph):
+    # We don't use dependencies
+    pass
+
 _build_types = {
   'exe' : TargetExe,
   'script' : TargetScript,
   'lib' : TargetLib,
   'doc' : TargetDoc,
   'swig' : TargetSWIG,
+  'project' : TargetProject,
+  'external' : TargetExternal,
+  'utility' : TargetUtility,
   }
 
 
@@ -512,6 +554,9 @@ _cfg_defaults = {
   'install' : '',
   'testing' : '',
   'add-deps' : '',
+  'cmd' : '',
+  'release' : '',
+  'debug' : '',
   }
 
 _predef_sections = [
