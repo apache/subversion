@@ -1,34 +1,3 @@
-> From: Julian Foad <julianfoad@btopenworld.com>
-> Subject: Review of APIs new in 1.2
-> To: dev@subversion.tigris.org
-> Date: Thu, 24 Mar 2005 01:21:47 +0000
-> Reply-To: dev@subversion.tigris.org
-> 
-> Here is a quick review of the public APIs marked "@since New in 1.2"
-> in r13616, and of the doc strings of the APIs deprecated by them.
-> 
-> 
-> svn_client_checkout2
-> svn_client_update2
-> svn_client_diff2
-> svn_client_diff_peg2
-> svn_client_propset2
-> svn_client_propget2
-> svn_client_proplist2
-> svn_client_export3
-> svn_client_ls2
-> svn_client_info
-> svn_ra_do_update
-> svn_ra_do_switch
-> svn_ra_do_status
-> svn_ra_do_diff
-> svn_wc_process_committed2
-> svn_wc_crawl_revisions2
-> svn_wc_get_update_editor2
-> svn_wc_get_diff_editor3
-> svn_wc_diff3
->    Enhancement: Ought to use "depth" instead of "recurse".
->
 > svn_client_status2
 > svn_wc_get_status_editor2
 > svn_wc_resolved_conflict2
