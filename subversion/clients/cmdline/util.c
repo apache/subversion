@@ -31,6 +31,7 @@
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
+#include <apr_lib.h>
 
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -125,14 +126,17 @@ svn_cl__parse_all_args (apr_getopt_t *os,
 }
 
 /* Create a targets array and add all the remaining arguments
- * to it. */
+ * to it. We also process arguments passed in the --target file, if
+ * specified, just as if they were passed on the command line.  */
 apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
+			      svn_cl__opt_state_t *opt_state,
                               apr_pool_t *pool)
 {
   apr_array_header_t *targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_stringbuf_t *));
-  
+ 
+  /* Command line args take precendence.  */
   for (; os->ind < os->argc; os->ind++)
     {
       svn_stringbuf_t *target = svn_stringbuf_create (os->argv[os->ind], pool);
@@ -161,6 +165,10 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
       (*((svn_stringbuf_t **) apr_array_push (targets))) = target;
     }
 
+  /* Now args from --targets, if any */
+  if (NULL != opt_state->targets)
+    apr_array_cat(targets, opt_state->targets);
+
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
      
@@ -179,13 +187,13 @@ svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
       svn_stringbuf_t *item;
       while (end < buffer->len)
         {
-          while (isspace(buffer->data[start]))
-                start++; 
+          while (apr_isspace(buffer->data[start]))
+            start++; 
 
           end = start;
 
-          while (end < buffer->len && !isspace(buffer->data[end]))
-              end++;
+          while (end < buffer->len && !apr_isspace(buffer->data[end]))
+            end++;
 
           item  = svn_stringbuf_ncreate(&buffer->data[start],
                                           end - start, pool);
@@ -195,9 +203,48 @@ svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
         }
     }
   return array;
-} 
+}
 
+/* Convert a newline seperated list of items into an apr_array_header_t */
+#define IS_NEWLINE(c) (c == '\n' || c == '\r')
+apr_array_header_t*
+svn_cl__newlinelist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
+{
+  apr_array_header_t *array = apr_array_make(pool, DEFAULT_ARRAY_SIZE,
+					     sizeof(svn_stringbuf_t *));
 
+  if (buffer != NULL)
+    {
+      apr_size_t start = 0, end = 0;
+      svn_stringbuf_t *item;
+      while (end < buffer->len)
+        {
+          /* Skip blank lines, lines with nothing but spaces, and spaces at
+           * the start of a line.  */
+	  while (IS_NEWLINE(buffer->data[start]) ||
+                 apr_isspace(buffer->data[start]))
+	    start++;
+
+	  end = start;
+
+          /* If end of the string, we're done */
+	  if (start >= buffer->len)
+	    break;
+
+          /* Find The end of this line.  */
+	  while (end < buffer->len && !IS_NEWLINE(buffer->data[end]))
+	    end++;
+
+	  item = svn_stringbuf_ncreate(&buffer->data[start],
+				       end - start, pool);
+	  *((svn_stringbuf_t**)apr_array_push(array)) = item;
+
+	  start = end;
+	}
+    }
+  return array;
+}
+#undef IS_NEWLINE
 
 void
 svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)

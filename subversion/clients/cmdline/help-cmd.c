@@ -76,7 +76,7 @@ svn_cl__help (apr_getopt_t *os,
   int i;
 
   if (os)
-    targets = svn_cl__args_to_target_array (os, pool);
+    targets = svn_cl__args_to_target_array (os, opt_state, pool);
 
   if (targets && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)

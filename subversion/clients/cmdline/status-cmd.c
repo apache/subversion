@@ -44,7 +44,7 @@ svn_cl__status (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
 
-  targets = svn_cl__args_to_target_array (os, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, pool);
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

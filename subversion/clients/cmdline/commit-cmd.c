@@ -346,7 +346,7 @@ message_from_editor (apr_pool_t *pool,
       error = svn_error_create
         (SVN_ERR_CMDLINE__TMPFILE_WRITE, 0, NULL, 
          pool,
-         "Failed to write stauts information to temporary file.");
+         "Failed to write status information to temporary file.");
     }
   else if (include_status_output)
     {
@@ -558,7 +558,7 @@ svn_cl__commit (apr_getopt_t *os,
   else
     message = opt_state->message;
 
-  targets = svn_cl__args_to_target_array (os, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, pool);
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

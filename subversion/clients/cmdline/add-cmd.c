@@ -45,7 +45,7 @@ svn_cl__add (apr_getopt_t *os,
   int i;
   svn_boolean_t recursive = opt_state->recursive;
 
-  targets = svn_cl__args_to_target_array (os, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, pool);
 
   if (targets->nelts)
     {

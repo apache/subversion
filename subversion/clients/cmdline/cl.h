@@ -47,6 +47,7 @@ typedef enum {
   /* Here are authentication args: */
   svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
+  svn_cl__targets_opt,
 } svn_cl__longopt_t;
 
 
@@ -93,6 +94,8 @@ typedef struct svn_cl__opt_state_t
   svn_stringbuf_t *auth_password;
   /* Extension arguments (eg arguments to be passed into GNU diff) */
   svn_stringbuf_t *extensions;
+  /* Targets supplied from a file with --targets */
+  apr_array_header_t *targets;
 } svn_cl__opt_state_t;
 
 
@@ -163,14 +166,21 @@ void svn_cl__push_svn_string (apr_array_header_t *array,
                               const char *str,
                               apr_pool_t *pool);
 
-/* subcommands call this to pull any args left into the array of targets. */
+/* Subcommands call this to pull any args left into the array of targets.
+   This includes any extra args passed in the file specified by
+   --targets.  */
 apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
+			      svn_cl__opt_state_t *opt_state,
                               apr_pool_t *pool);
 
 /* Splits a list of whitespace-separated values into an apr_array_header_t */
 apr_array_header_t*
 svn_cl__stringlist_to_array (svn_stringbuf_t *buffer, apr_pool_t *pool);
+
+/* Splits a list of newline seperated values into an apr_array_header_t */
+apr_array_header_t*
+svn_cl__newlinelist_to_array (svn_stringbuf_t *buffer, apr_pool_t *pool);
 
 void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                        apr_pool_t *pool);
