@@ -71,3 +71,11 @@ Candidate changes:
       been a secondary goal of FSFS from the beginning.
     Votes:
       +1: ghudson
+
+  * Issue #2111
+    Fix RPM build breakage.
+    Justification:
+      RPM build breakage = bad.
+    Votes:
+      +1: david
+
