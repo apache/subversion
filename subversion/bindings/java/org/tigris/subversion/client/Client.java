@@ -28,11 +28,21 @@ import org.tigris.subversion.wc.Notifier;
  */
 public interface Client
 {
+    /** Fetch an authentication provider which prompts the user for name
+     * and password.
+     * @param prompt A delegate for prompting
+     * @param retryLimit How often to re-prompt
+     * @return A <code>AuthProvider</code> 
+     */
     AuthProvider getSimplePromptProvider(ClientPrompt prompt, int retryLimit);
 
-    AuthProvider getAuthProvider();
-
-    ClientPrompt getPrompt();
+    /** Fetch an authentication provider which prompts the user for a
+     * username.
+     * @param prompt A delegate for prompting
+     * @param retryLimit How often to re-prompt
+     * @return A <code>AuthProvider</code> 
+     */
+    AuthProvider getUsernamePromptProvider(ClientPrompt prompt, int retryLimit);
 
     Notifier getNotifier();
 
