@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-05-24 16:15:57 $
+              Last updated:  $Date: 2001-07-13 15:35:28 $
 
 
 TABLE OF CONTENTS
@@ -42,11 +42,35 @@ repository:
 
  * Go to http://subversion.tigris.org and
 
-    * join the "dev", "cvs", and "announce" mailing lists.
+    * Join the "dev", "cvs", and "announce" mailing lists.
+      The dev list, dev@subversion.tigris.org, is where almost all
+      discussion takes place.  All questions should go there, though
+      you might want to check the list archives first.
 
-    * print out and digest the Spec.  (The postscript might look
+    * Print out and digest the Spec.  (The postscript might look
       better than the PDF.)  The Spec will give you a theoretical
       overview of Subversion's design.
+
+If you'd like to contribute code, then look at:
+
+    * The bugs/issues database
+      http://subversion.tigris.org/servlets/ProjectIssues
+
+    * The bite-sized tasks page
+      http://subversion.tigris.org/project_tasks.html
+
+To submit code, simply send your patches to dev@subversion.tigris.org.
+No, wait, first read the rest of this file, _then_ start sending
+patches to dev@subversion.tigris.org. :-)
+
+After someone has contributed a few non-trivial patches, some current
+committer (usually the one who has reviewed and applied the patches)
+proposes that person for commit access.  This proposal is sent only to
+the other committers -- the ensuing discussion is private, so that
+everyone can feel comfortable speaking their minds.  Assuming there
+are no objections, the contributor is granted commit access.  The
+decision is made by consensus among all committers; there are no
+formal rules governing the procedure.
 
 
 
