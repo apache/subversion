@@ -931,31 +931,34 @@ close_file (void *file_baton,
     }
   else
     {
-      /* Be careful with errors to ensure that the temporary translated
-         file is deleted. */
-      svn_error_t *err1, *err2 = SVN_NO_ERROR;
-      const char *translated;
-      
-      SVN_ERR (svn_wc_translated_file (&translated, b->path, adm_access,
-                                       TRUE, b->pool));
-
-      err1 = b->edit_baton->callbacks->file_changed
-        (NULL, NULL,
-         b->path,
-         temp_file_path,
-         translated,
-         b->edit_baton->revnum,
-         SVN_INVALID_REVNUM,
-         b->edit_baton->callback_baton);
-      
-      if (translated != b->path)
-        err2 = svn_io_remove_file (translated, b->pool);
-
-      if (err1 || err2)
+      if (b->temp_file) /* A property-only change will not have opened a file */
         {
-          if (err1 && err2)
-            svn_error_clear (err2);
-          return err1 ? err1 : err2;
+          /* Be careful with errors to ensure that the temporary translated
+             file is deleted. */
+          svn_error_t *err1, *err2 = SVN_NO_ERROR;
+          const char *translated;
+      
+          SVN_ERR (svn_wc_translated_file (&translated, b->path, adm_access,
+                                           TRUE, b->pool));
+
+          err1 = b->edit_baton->callbacks->file_changed
+            (NULL, NULL,
+             b->path,
+             temp_file_path,
+             translated,
+             b->edit_baton->revnum,
+             SVN_INVALID_REVNUM,
+             b->edit_baton->callback_baton);
+      
+          if (translated != b->path)
+            err2 = svn_io_remove_file (translated, b->pool);
+
+          if (err1 || err2)
+            {
+              if (err1 && err2)
+                svn_error_clear (err2);
+              return err1 ? err1 : err2;
+            }
         }
       
       if (b->propchanges->nelts > 0)
