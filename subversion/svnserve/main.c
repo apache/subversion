@@ -78,7 +78,7 @@ enum connection_handling_mode {
  */
 static const apr_getopt_option_t svnserve__options[] =
   {
-    {"help",             'h', 0, "show help on a subcommand"},
+    {"help",             'h', 0, "display this help"},
     {"daemon",           'd', 0, "daemon mode"},
     {"tunnel",           't', 0, "tunnel mode"},
     {"listen-once",      'X', 0, "listen once (useful for debugging)"},
