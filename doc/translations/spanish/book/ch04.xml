@@ -1402,24 +1402,25 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
         </listitem>
       </orderedlist>
     
-    <para>In other words, if a user knows that the branch-work only
-      needs to happen on a specific subdirectory, they use
-      <command>svn switch</command> to move only that subdirectory to
-      the branch.  (Or sometimes users will switch just a single
-      working file to the branch!)  That way, they can continue to
-      receive normal 'trunk' updates to most of their working copy,
-      but the switched portions will remain immune (unless someone
-      commits a change to their branch).  This feature adds a whole
-      new dimension to the concept of a <quote>mixed working
-      copy</quote>&mdash;not only can working copies contain a mixture
-      of working revisions, but a mixture of repository locations as
-      well.</para>
+    <para>En otras palabras, si un usuario sabe que el trabajo
+      que quiere realizar sólo ocurrirá en un subdirectorio
+      específico, usará <command>svn switch</command> para mover sólo
+      ese subdirectorio a la rama. (¡A veces los usuarios cambian
+      un único fichero de su copia local a la rama!) De ese modo,
+      sigue pudiendo recibir modificaciones normales del 'tronco'
+      en su copia local, pero las porciones que cambió a otra rama
+      quedarán inmunes (a no ser que alguien envie un cambio a
+      esa rama).  Esta característica añade una nueva dimensión al
+      concepto de <quote>copia local mezclada</quote>&mdash;no sólo
+      pueden tener las copias locales una mezcla de revisiones,
+      sino también una mezcla de rutas de repositorio.</para>
     
-    <para>If your working copy contains a number of switched subtrees
-      from different repository locations, it continues to function as
-      normal.  When you update, you'll receive patches to each subtree
-      as appropriate.  When you commit, your local changes will still
-      be applied as a single, atomic change to the repository.</para>
+    <para>Si su copia local contiene un número de sub árboles
+      cambiados a otras localizaciones del repositorio, sigue
+      funcionando de forma normal. Cuando la actualice, recibirá
+      los parches propios de cada sub árbol.  Cuando envíe cambios,
+      sus cambios locales seguirán siendo aplicados como un cambio
+      atómico único al repositorio.</para>
 
     <para>Note that while it's okay for your working copy to reflect a
       mixture of repository locations, these locations must all be
