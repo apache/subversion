@@ -39,9 +39,10 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
 {
   char * buffer;
   int apr_err = apr_filepath_merge(&buffer, NULL, relative->data,
-                                   APR_FILEPATH_NOTRELATIVE &
-                                   APR_FILEPATH_NATIVE & 
-                                   APR_FILEPATH_TRUENAME, pool);
+                                   APR_FILEPATH_NOTRELATIVE
+                                   | APR_FILEPATH_NATIVE
+                                   | APR_FILEPATH_TRUENAME,
+                                   pool);
   if (apr_err == APR_SUCCESS)
     {
       *pabsolute = svn_stringbuf_create(buffer, pool);
