@@ -701,10 +701,9 @@ static svn_error_t * commit_open_root(void *edit_baton,
    CHILD_TOKENS.   No keys or values are reallocated or dup'd.  If no
    keys are children, then return an empty hash.  Use POOL to allocate
    new hash. */
-static svn_error_t *get_child_tokens(apr_hash_t **child_tokens,
-                                     apr_hash_t *lock_tokens,
-                                     const char *dir,
-                                     apr_pool_t *pool)
+static apr_hash_t *get_child_tokens(apr_hash_t *lock_tokens,
+                                    const char *dir,
+                                    apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *tokens = apr_hash_make(pool);
@@ -724,9 +723,7 @@ static svn_error_t *get_child_tokens(apr_hash_t **child_tokens,
     }
 
   svn_pool_destroy(subpool);
-
-  *child_tokens = tokens;
-  return SVN_NO_ERROR;
+  return tokens;
 }
 
 
@@ -765,7 +762,8 @@ static svn_error_t * commit_delete_entry(const char *path,
   if (parent->cc->tokens)
     {
       const char *token = 
-           apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
+        apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
+
       if (token)
         {
           const char *token_header_val;
@@ -811,19 +809,34 @@ static svn_error_t * commit_delete_entry(const char *path,
   {
     /* Re-attempt the DELETE request as if the path were a directory.
        Discover all lock-tokens within the directory, and send them in
-       the body of the request (which is normally empty).  
+       the body of the request (which is normally empty).  Of course,
+       if we don't *find* any additional lock-tokens, don't bother to
+       retry (it ain't gonna do any good).
 
        Note that we're not sending the locks in the If: header, for
-       the same reasn we're not sending in MERGE's headers: httpd has
+       the same reason we're not sending in MERGE's headers: httpd has
        limits on the amount of data it's willing to receive in headers. */
 
     apr_hash_t *child_tokens;
     ne_request *req;
     const char *body;
+    const char *token;
     svn_stringbuf_t *locks_list;
 
-    SVN_ERR (get_child_tokens(&child_tokens, parent->cc->tokens,
-                              path, pool));
+    child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
+
+    /* No kiddos?  Return the original error.  Else, clear it so it
+       doesn't get leaked.  */
+    if (! apr_hash_count(child_tokens))
+      return serr;
+    else
+      svn_error_clear(serr);
+
+    /* In preparation of directory locks, go ahead and add the actual
+       target's lock token to those of its children. */
+    if ((token = apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING)))
+      apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
+
     SVN_ERR (svn_ra_dav__assemble_locktoken_body(&locks_list,
                                                  child_tokens, pool));
 
