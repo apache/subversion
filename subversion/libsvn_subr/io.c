@@ -508,13 +508,6 @@ svn_io_set_file_affected_time (apr_time_t apr_time,
                                const char *path,
                                apr_pool_t *pool)
 {
-  /* Subversion compiles against the latest released httpd as its
-     baseline, and this new APR function didn't make it into
-     httpd-2.0.47.  If you are using APR HEAD, then feel free to
-     uncomment the call below for experimentation.  Otherwise, leave
-     it commented until httpd-2.0.48 is out.  */
-
-  /*
   apr_status_t status;
   const char *native_path;
 
@@ -525,7 +518,6 @@ svn_io_set_file_affected_time (apr_time_t apr_time,
     return svn_error_createf
       (status, NULL,
        "svn_io_set_file_affected_time: can't set access time of '%s'", path);
-  */  
 
   return SVN_NO_ERROR;
 }
