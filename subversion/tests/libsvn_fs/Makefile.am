@@ -13,7 +13,7 @@ skel_test_SOURCES = skel-test.c
 skel_test_LDADD = ${COMMON_LIBS}
 
 # Tests for the filesystem.
-fs_test_SOURCES = fs-test.c
+fs_test_SOURCES = fs-test.c dir-delta-editor.c
 fs_test_LDADD = ${COMMON_LIBS}
 
 INCLUDES = -I$(srcdir)/.. @SVN_INCLUDES@ @SVN_APR_INCLUDES@
@@ -26,3 +26,4 @@ check:
 
 ## Need to include the test script in the distribution
 EXTRA_DIST = run-fs-tests.sh
+

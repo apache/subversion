@@ -114,21 +114,23 @@ static svn_error_t *delete (struct context *c,
 
 static svn_error_t *add_file_or_dir (struct context *c, 
                                      void *dir_baton, 
-                                     svn_string_t *target_path,
+                                     svn_string_t *target_path, 
                                      svn_string_t *target_name);
 
 static svn_error_t *replace_file_or_dir (struct context *c, 
                                          void *dir_baton,
-                                         svn_string_t *target_path, 
+                                         svn_string_t *target_path,
                                          svn_string_t *target_name,
                                          svn_string_t *source_path, 
                                          svn_string_t *source_name);
 
+#if 0
 static svn_error_t *replace_with_nearest (struct context *c, 
                                           void *dir_baton,
                                           svn_string_t *source_path, 
                                           svn_string_t *target_path,
                                           svn_fs_dirent_t *t_entry);
+#endif /* 0 */
 
 static svn_error_t *delta_dirs (struct context *c, 
                                 void *dir_baton,
@@ -563,7 +565,7 @@ delete (struct context *c, void *dir_baton, svn_string_t *target_name)
 
 /* Emit a delta to create the entry named NAME in DIR_BATON.  */
 static svn_error_t *
-add_file_or_dir (struct context *c, void *dir_baton, 
+add_file_or_dir (struct context *c, void *dir_baton,
                  svn_string_t *target_path,
                  svn_string_t *target_name)
 {
@@ -576,11 +578,11 @@ add_file_or_dir (struct context *c, void *dir_baton,
       target_full_path = svn_string_dup (target_path, c->pool);
       svn_path_add_component 
         (target_full_path, target_name, svn_path_repos_style);
-    }
 
-  /* Is the target a file or a directory?  */
-  SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
-                          target_full_path->data, c->pool));
+      /* Is the target a file or a directory?  */
+      SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
+                              target_full_path->data, c->pool));    
+    }
 
   if (is_dir)
     {
@@ -647,6 +649,12 @@ replace_file_or_dir (struct context *c, void *dir_baton,
       base_revision = get_revision_from_hash (c->source_rev_diffs,
                                               source_full_path,
                                               c->pool);
+
+      if (! SVN_IS_VALID_REVNUM(base_revision))
+        return
+          svn_error_create
+          (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, c->pool,
+           "unable to ascertain base revision for source path");
     }
 
   if (is_dir)
@@ -674,6 +682,7 @@ replace_file_or_dir (struct context *c, void *dir_baton,
 }
 
 
+#if 0
 /* Do a `replace' edit in DIR_BATON turning the entry named
    T_ENTRY->name in SOURCE_PATH into the corresponding entry in
    TARGET_PATH.  Emit a replace_dir or replace_file as needed.  Choose
@@ -687,6 +696,7 @@ replace_with_nearest (struct context *c, void *dir_baton,
   apr_hash_index_t *hi;
   int best_distance = -1;
   svn_fs_dirent_t *best_entry = NULL;
+  svn_fs_dirent_t *s_entry = NULL;
 
   /* Get the list of entries in source.  */
   SVN_ERR (svn_fs_dir_entries (&s_entries, c->source_root,
@@ -735,21 +745,23 @@ replace_with_nearest (struct context *c, void *dir_baton,
      this from scratch.  Else, replace it relative to the ancestor we
      found. */
   if (best_distance == -1)
-    SVN_ERR (replace_file_or_dir (c, dir_baton,
-                                  target_path, 
-                                  svn_string_create (t_entry->name, c->pool), 
-                                  0, 
-                                  0));
+      SVN_ERR (replace_file_or_dir 
+               (c, dir_baton,
+                target_path, 
+                svn_string_create (t_entry->name, c->pool), 
+                0, 
+                0));
   else
-    SVN_ERR (replace_file_or_dir (c, dir_baton,
-                                  target_path, 
-                                  svn_string_create (t_entry->name, c->pool),
-                                  source_path, 
-                                  svn_string_create 
-                                      (best_entry->name, c->pool)));
+    SVN_ERR (replace_file_or_dir 
+             (c, dir_baton,
+              target_path, 
+              svn_string_create (t_entry->name, c->pool),
+              source_path, 
+              svn_string_create (best_entry->name, c->pool)));
 
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 /* Emit deltas to turn SOURCE_PATH into TARGET_PATH.  Assume that
@@ -822,17 +834,31 @@ delta_dirs (struct context *c, void *dir_baton,
             }
           else if (distance == -1)
             {
-              SVN_ERR (replace_with_nearest (c, dir_baton, source_path, 
-                                             target_path, t_entry));
+              /*
+                This was:
+
+                SVN_ERR (replace_with_nearest (c, dir_baton, source_path, 
+                target_path, t_entry));
+
+                cmpilato todo: At some point, we will probably revisit
+                the replace_from_nearest notion.  Right now, I just
+                want stuff to work!
+              */
+              SVN_ERR (delete 
+                       (c, dir_baton, 
+                        svn_string_create (t_entry->name, c->pool)));
+              SVN_ERR (add_file_or_dir
+                       (c, dir_baton, target_path,
+                        svn_string_create (t_entry->name, c->pool)));
             }
           else
             {
               SVN_ERR (replace_file_or_dir
                        (c, dir_baton, 
-                        source_path, 
-                        svn_string_create (s_entry->name, c->pool),
                         target_path,
-                        svn_string_create (t_entry->name, c->pool)));
+                        svn_string_create (t_entry->name, c->pool),
+                        source_path,
+                        svn_string_create (s_entry->name, c->pool)));
             }
 
           /*  Remove the entry from the source_hash. */
