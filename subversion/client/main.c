@@ -76,9 +76,9 @@ static svn_cl__t_cmd_desc cmd_table[] = {
   { "delete",        6, TRUE,  svn_cl__delete      },
   { "help",          4, FALSE, svn_cl__help        },
   { "new",           3, TRUE,  svn_cl__add         },
-  { "pf",            2, TRUE,  svn_cl__prop_find   },
-  { "pfind",         5, TRUE,  svn_cl__prop_find   },
-  { "prop-find",     9, TRUE,  svn_cl__prop_find   },
+  { "pf",            2, TRUE,  svn_cl__propfind    },
+  { "pfind",         5, TRUE,  svn_cl__propfind    },
+  { "propfind",      9, TRUE,  svn_cl__propfind    },
   { "rm",            2, TRUE,  svn_cl__delete      },
   { "st",            2, TRUE,  svn_cl__status      },
   { "stat",          4, TRUE,  svn_cl__status      },
@@ -211,7 +211,7 @@ svn_cl__parse_options (int argc,
           || (command == UPDATE_COMMAND)
           || (command == COMMIT_COMMAND)
           || (command == STATUS_COMMAND)
-          || (command == PROP_FIND_COMMAND)))
+          || (command == PROPFIND_COMMAND)))
     *target = svn_string_create (".", pool);
 }
 
