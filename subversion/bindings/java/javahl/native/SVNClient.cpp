@@ -1514,6 +1514,29 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision)
 		read_stream = svn_stream_from_aprfile(file, pool.pool());
 		size = finfo.size;
 	}	
+	else if(revision.revision()->kind == svn_opt_revision_working) 
+	// we want the working copy. Going back to the server returns base instead (not good)
+	{
+
+		const char *ori_path = svn_path_internal_style(path, pool.pool());
+		apr_file_t *file = NULL;
+		apr_finfo_t finfo;
+		apr_status_t apr_err = apr_stat(&finfo, ori_path,
+                                   APR_FINFO_MIN, pool.pool());
+		if(apr_err)
+		{
+			JNIUtil::handleAPRError(apr_err, "open file");
+			return NULL;
+		}
+		apr_err = apr_file_open(&file, ori_path, APR_READ, 0, pool.pool());
+		if(apr_err)
+		{
+			JNIUtil::handleAPRError(apr_err, "open file");
+			return NULL;
+		}
+		read_stream = svn_stream_from_aprfile(file, pool.pool());
+		size = finfo.size;
+	}	
 	else 
 	{
 		svn_client_ctx_t * ctx = getContext(NULL);
