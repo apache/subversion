@@ -115,14 +115,17 @@ personas. Para evitar duplicar esfuerzos a cada persona se le
 asignaría un capítulo. Si hay más personas que capítulos, varias
 traducirán el mismo, requiriendo la comunicación de ambas partes
 para no pisarse trabajo. El listado de quién hace qué cosa se lleva
-en el fichero TRABAJO.
+en el fichero TRABAJO. Aquellos que quieran traducir un fichero
+sin acceso de escritura al repositorio, deben indicar en la lista
+de correo de forma explícita qué fichero están traduciendo. De lo
+contrario este fichero podría ser asignado por error a otra persona.
 
 Cuando un traductor comienza con un capítulo, se entiende que el
 trabajo puede llevar bastante tiempo hasta ser completado. Pero
 si un traductor no "genera" ningún cambio en la traducción en
 14 días, el trozo que se le había asignado quedará libre para
-otros traductores. Se pretende evitar así el estancamiento de la
-traducción. Por esta razón se recomienda la traducción de una
+otros traductores. Se pretende evitar así el estancamiento de
+la traducción. Por esta razón se recomienda la traducción de una
 sección <para></para> por día, para evitar saturarse. Mejor cambios
 pequeños frecuentes que ningún cambio.
 
