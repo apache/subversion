@@ -152,12 +152,26 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
   comb->res.working = TRUE;
   comb->res.versioned = TRUE;
 
-  if ((slash = ap_strchr_c(path, '/')) == NULL || slash == path)
+  slash = ap_strchr_c(path, '/');
+
+  /* This sucker starts with a slash.  That's bogus. */
+  if (slash == path)
     return TRUE;
 
-  comb->priv.root.activity_id = apr_pstrndup(comb->res.pool, path,
-                                             slash - path);
-  comb->priv.repos_path = slash;
+  if (slash == NULL)
+    {
+      /* There's no slash character in our path.  Assume it's just an
+         ACTIVITY_ID pointing to the root path.  That should be cool.
+         We'll just drop through to the normal case handling below. */
+      comb->priv.root.activity_id = apr_pstrdup(comb->res.pool, path);
+      comb->priv.repos_path = "/";
+    }
+  else
+    {
+      comb->priv.root.activity_id = apr_pstrndup(comb->res.pool, path,
+                                                 slash - path);
+      comb->priv.repos_path = slash;
+    }
 
   return FALSE;
 }
