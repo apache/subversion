@@ -81,7 +81,7 @@ int svn_sort_compare_revisions (const void *a, const void *b);
 /** Sort @a ht according to its keys, return an @c apr_array_header_t
  * containing @c svn_item_t structures holding those keys and values
  * (i.e. for each @c svn_item_t @a item in the returned array, @a item->key
- * and is the @a item->size are the hash key, and @a item->data points to
+ * and @a item->size are the hash key, and @a item->data points to
  * the hash value).
  *
  * Storage is shared with the original hash, not copied.
