@@ -79,13 +79,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r12983, r12986
-    Treat a sharing violation as cause for retrying file ops on Windows.
-    Justification:
-      Better chance of client survival in the toxic environment of Win32.
-    Votes:
-      +1: brane, cmpilato, maxb
-
   * r13111
     Fix improper UTF-8 conversion for wc-to-wc directory moves/copies.
     Justification:

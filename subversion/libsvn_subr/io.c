@@ -75,22 +75,24 @@
 #ifdef WIN32
 #define WIN32_RETRY_LOOP(err, expr)                                        \
   do                                                                       \
-  {                                                                        \
-    int retries = 0;                                                       \
-    int sleep_count = 1000;                                                \
-                                                                           \
-    for ( retries = 0;                                                     \
-          APR_TO_OS_ERROR (err) == ERROR_ACCESS_DENIED && retries < 100;   \
-          ++retries )                                                      \
     {                                                                      \
-      apr_sleep (sleep_count);                                             \
-      if (sleep_count < 128000)                                            \
-        sleep_count *= 2;                                                  \
-      err = expr;                                                          \
+      apr_status_t os_err = APR_TO_OS_ERROR (err);                         \
+      int sleep_count = 1000;                                              \
+      int retries;                                                         \
+      for (retries = 0;                                                    \
+           retries < 100 && (os_err == ERROR_ACCESS_DENIED                 \
+                             || os_err == ERROR_SHARING_VIOLATION);        \
+           ++retries, os_err = APR_TO_OS_ERROR (err))                      \
+        {                                                                  \
+          apr_sleep (sleep_count);                                         \
+          if (sleep_count < 128000)                                        \
+            sleep_count *= 2;                                              \
+          (err) = (expr);                                                  \
+        }                                                                  \
     }                                                                      \
-  } while (0)
+  while (0)
 #else
-#define WIN32_RETRY_LOOP(err, expr) do {} while(0)
+#define WIN32_RETRY_LOOP(err, expr) ((void)0)
 #endif
 
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();
