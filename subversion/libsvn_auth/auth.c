@@ -139,8 +139,6 @@ svn_auth_register_provider (svn_auth_baton_t *auth_baton,
   *(provider_t **)apr_array_push (table->providers) = provider;
   
   /* ### hmmm, we never used the passed in pool.  maybe we don't need it? */
-
-  return SVN_NO_ERROR;
 }
 
 
