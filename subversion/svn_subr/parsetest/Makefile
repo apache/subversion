@@ -1,9 +1,12 @@
 
-# Quick Hack Makefile for string library tests (assumes GCC)
+# Quick Hack Makefile
 
 SVN_INCLUDE = ../../include
+SVN_STRING_LIB = ../../libsvn_string
+
 APR_INCLUDE = ../../../apr/include
 APR_LIB = ../../../apr
+
 
 all: parsetest
 
@@ -21,5 +24,6 @@ svn_parse.o: ../svn_parse.c ../svn_parse.h
 parsetest: parsetest.c svn_error.o svn_parse.o
 	cc -o parsetest parsetest.c svn_error.o svn_parse.o \
                                     -g -Wall -pthread \
-                                    -I$(SVN_INCLUDE) -I$(APR_INCLUDE) \
-                                    -L$(APR_LIB)
+                                    -I$(SVN_INCLUDE) -I$(APR_INCLUDE) -I.. \
+                                    -L$(APR_LIB) -L$(SVN_STRING_LIB) \
+                                    -lsvn_string -lapr
