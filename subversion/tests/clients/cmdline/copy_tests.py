@@ -1170,7 +1170,7 @@ test_list = [ None,
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
               resurrect_deleted_file,
-              XFail(diff_repos_to_wc_copy),
+              diff_repos_to_wc_copy,
              ]
 
 if __name__ == '__main__':

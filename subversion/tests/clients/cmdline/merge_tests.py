@@ -1303,7 +1303,7 @@ test_list = [ None,
               merge_with_prev,
               merge_binary_file,
               merge_one_file,
-              XFail(merge_in_new_file_and_diff),
+              merge_in_new_file_and_diff,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

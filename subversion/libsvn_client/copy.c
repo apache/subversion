@@ -672,6 +672,28 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   return reconcile_errors (cmt_err, unlock_err, cleanup_err, pool);
 }
 
+typedef struct 
+{
+  svn_ra_plugin_t *ra_lib;
+  void *sess;
+  svn_revnum_t src_revnum;
+  svn_revnum_t *fetched_rev;
+  apr_pool_t *pool;
+} add_repos_file_baton_t;
+
+static svn_error_t * 
+add_repos_file_helper (svn_stream_t *fstream,
+                       apr_hash_t **props,
+                       void *helper_baton)
+{
+  add_repos_file_baton_t *baton = helper_baton;
+  
+  SVN_ERR (baton->ra_lib->get_file (baton->sess, "", baton->src_revnum,
+                                    fstream, baton->fetched_rev,
+                                    props, baton->pool));
+
+  return SVN_NO_ERROR;
+}
 
 /*
    ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
@@ -691,8 +713,6 @@ repos_to_wc_copy (const char *src_url,
   svn_node_kind_t src_kind, dst_kind;
   svn_revnum_t src_revnum;
   svn_wc_adm_access_t *adm_access;
-  apr_hash_t *props = NULL;
-  apr_hash_index_t *hi;
   const char *src_uuid = NULL, *dst_uuid = NULL;
   svn_boolean_t same_repositories;
   const char *auth_dir;
@@ -853,33 +873,19 @@ repos_to_wc_copy (const char *src_url,
 
   else if (src_kind == svn_node_file)
     {
-      apr_status_t status;
-      svn_stream_t *fstream;
-      apr_file_t *fp;
-      svn_revnum_t fetched_rev = 0;
-      
-      /* Open DST_PATH for writing. */
-      SVN_ERR_W (svn_io_file_open (&fp, dst_path,
-                                   (APR_CREATE | APR_WRITE),
-                                   APR_OS_DEFAULT, pool),
-                 "failed to open file for writing.");
+      svn_revnum_t fetched_rev;
+      add_repos_file_baton_t add_repos_file_baton;
+      add_repos_file_baton.ra_lib = ra_lib;
+      add_repos_file_baton.sess = sess;
+      add_repos_file_baton.src_revnum = src_revnum;
+      add_repos_file_baton.fetched_rev = &fetched_rev;
+      add_repos_file_baton.pool = pool;
+        
+      SVN_ERR (svn_wc_add_repos_file (dst_path, adm_access,
+                                      add_repos_file_helper,
+                                      &add_repos_file_baton,
+                                      pool));
 
-      /* Create a generic stream that operates on this file.  */
-      fstream = svn_stream_from_aprfile (fp, pool);
-      
-      /* Have the RA layer 'push' data at this stream.  We pass a
-         relative path of "", because we opened SRC_URL, which is
-         already the full URL to the file. */         
-      SVN_ERR (ra_lib->get_file (sess, "", src_revnum, fstream, 
-                                 &fetched_rev, &props, pool));
-
-      /* Close the file. */
-      status = apr_file_close (fp);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "failed to close file '%s'.",
-                                  dst_path);   
-     
       /* Also, if SRC_REVNUM is invalid ('head'), then FETCHED_REV is now
          equal to the revision that was actually retrieved.  This is
          the value we want to use as 'copyfrom_rev' in the call to
@@ -923,29 +929,6 @@ repos_to_wc_copy (const char *src_url,
       /* Recursively schedule unversioned tree for addition, sans history. */
       SVN_ERR (svn_client__add (dst_path, TRUE /* recursive */,
                                 adm_access, ctx, pool));
-    }
-
-  /* If any properties were fetched (in the file case), apply those
-     changes now. */
-  if (props)
-    {
-      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi)) 
-        {
-          const void *key;
-          void *val;
-          enum svn_prop_kind kind;
-          
-          apr_hash_this (hi, &key, NULL, &val);
-          
-          /* We only want to set 'normal' props.  For now, we're
-             ignoring any wc props (they're not needed when we commit
-             an addition), and we're ignoring entry props (they're
-             written to the entries file as part of the post-commit
-             processing).  */
-          kind = svn_property_kind (NULL, key);
-          if (kind == svn_prop_regular_kind)
-            SVN_ERR (svn_wc_prop_set (key, val, dst_path, adm_access, pool));
-        }
     }
 
   if (! optional_adm_access)

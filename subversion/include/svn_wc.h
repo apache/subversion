@@ -1528,6 +1528,24 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                   const char *diff3_cmd,
                                   apr_pool_t *pool);
 
+typedef svn_error_t * (*svn_wc_add_repos_file_helper_t)
+  (svn_stream_t *fstream, apr_hash_t **props, void *baton);
+
+/*
+ * Copies a single file from the repository in the working copy.
+ * @a dst_path is the destination path.
+ * @a adm_access is the adm_access.
+ * @a helper is a callback that accepts a file stream, a pointer to 
+ * a property hash, and @a helper_baton, and actually retrieves the
+ * file from the back end.
+ * @a pool is the memory pool associated with the calling context.
+ * */
+svn_error_t *
+svn_wc_add_repos_file (const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_wc_add_repos_file_helper_t helper,
+                       void *helper_baton,
+                       apr_pool_t *pool);
 
 
 /* A word about the implementation of working copy property storage:
