@@ -608,6 +608,8 @@ typedef struct svn_ra_plugin_t
    * The working copy will be diffed against @a versus_url as it exists
    * in revision @a revision, or as it is in head if @a revision is
    * @c SVN_INVALID_REVNUM.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*do_diff) (void *session_baton,
                            const svn_ra_reporter_t **reporter,
@@ -617,7 +619,8 @@ typedef struct svn_ra_plugin_t
                            svn_boolean_t recurse,
                            const char *versus_url,
                            const svn_delta_editor_t *diff_editor,
-                           void *diff_baton);
+                           void *diff_baton,
+                           apr_pool_t *pool);
 
   /** Invoke @a receiver with @a receiver_baton on each log message from
    * @a start to @a end.
