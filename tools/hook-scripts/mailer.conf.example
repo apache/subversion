@@ -4,9 +4,6 @@
 
 [general]
 
-# If you would like a prefix on the subject line, place it here
-subject_prefix =
-
 # This is not passed to the shell, so do not use shell metacharacters.
 # The command is split around whitespace, so if you want to include
 # whitespace in the command, then ### something ###
@@ -29,6 +26,11 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 #smtp_hostname = localhost
 
 # --------------
+
+[defaults]
+
+# If you would like a prefix on the subject line, place it here
+subject_prefix =
 
 ### temporary addresses for when we send mail
 from_addr = invalid@example.com

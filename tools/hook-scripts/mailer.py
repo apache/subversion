@@ -14,6 +14,9 @@ import string
 import ConfigParser
 import time
 import popen2
+import cStringIO
+import smtplib
+import re
 
 import svn.fs
 import svn.util
@@ -25,6 +28,7 @@ SEPARATOR = '=' * 78
 
 def main(pool, config_fname, repos_dir, rev):
   cfg = Config(config_fname)
+  cfg.prep_groups(repos_dir)
 
   repos = Repository(repos_dir, rev, pool)
 
@@ -39,57 +43,78 @@ def main(pool, config_fname, repos_dir, rev):
                                 1,  # use_copy_history
                                 pool)
 
-  output = determine_output(cfg, repos, editor.changes)
-  generate_content(output, cfg, repos, editor.changes, pool)
-  output.finish()
+  # get all the changes and sort by path
+  changelist = editor.changes.items()
+  changelist.sort()
+
+  # collect the set of groups and the unique sets of params for the options
+  groups = { }
+  for path, change in changelist:
+    group, params = cfg.which_group(path)
+
+    # turn the params into a hashable object and stash it away
+    params = params.items()
+    params.sort()
+    groups[group, tuple(params)] = None
+
+  output = determine_output(cfg, repos, changelist)
+
+  for group, params in groups:
+    output.start(group, params)
+    generate_content(output, cfg, repos, changelist, pool)
+    output.finish()
 
 
-def determine_output(cfg, repos, changes):
-  ### process changes to determine the applicable groups
-
+def determine_output(cfg, repos, changelist):
   if cfg.is_set('general.mail_command'):
-    subject = mail_subject(cfg, repos, changes)
-    return PipeOutput(cfg, subject)
+    cls = PipeOutput
+  elif cfg.is_set('general.smtp_hostname'):
+    cls = SMTPOutput
+  else:
+    cls = StandardOutput
 
-  if cfg.is_set('general.smtp_hostname'):
-    subject = mail_subject(cfg, repos, changes)
-    return SMTPOutput(cfg, subject)
-
-  return StandardOutput()
+  return cls(cfg, repos, changelist)
 
 
-def mail_subject(cfg, repos, changes):
+def mail_subject(cfg, repos, changelist):
+  ### process the changelist to get the set of changed dirs
   subject = 'rev %d - DIRS-GO-HERE' % repos.rev
-  if cfg.general.subject_prefix:
-    return cfg.general.subject_prefix + ' ' + subject
+
+  ### we need the group and params here
+  prefix = cfg.get('subject_prefix', None, { })
+  if prefix:
+    return prefix + ' ' + subject
   return subject
 
 
 class MailedOutput:
-  def __init__(self, cfg, subject):
+  def __init__(self, cfg, repos, changelist):
     self.cfg = cfg
-    self.subject = subject
+    self.subject = mail_subject(cfg, repos, changelist)
 
-  def mail_headers(self):
+  def mail_headers(self, group, params):
     return 'From: %s\n' \
            'To: %s\n' \
            'Subject: %s\n' \
-           % (self.cfg.general.from_addr,
-              self.cfg.general.to_addr,
+           % (self.cfg.get('from_addr', group, params),
+              self.cfg.get('to_addr', group, params),
               self.subject)
 
 
 class SMTPOutput(MailedOutput):
-  "Deliver a mail message to an MDA using SMTP."
+  "Deliver a mail message to an MTA using SMTP."
 
-  def __init__(self, cfg, subject):
-    MailedOutput.__init__(self, cfg, subject)
+  def __init__(self, cfg, repos, changelist):
+    MailedOutput.__init__(self, cfg, repos, changelist)
 
-    import cStringIO
+  def start(self, group, params):
+    self.to_addr = self.cfg.get('from_addr', group, params)
+    self.from_addr = self.cfg.get('to_addr', group, params)
+
     self.buffer = cStringIO.StringIO()
     self.write = self.buffer.write
 
-    self.write(self.mail_headers())
+    self.write(self.mail_headers(group, params))
     self.write('\n')
 
   def run_diff(self, cmd):
@@ -102,21 +127,19 @@ class SMTPOutput(MailedOutput):
     pipe_ob.wait()
 
   def finish(self):
-    import smtplib
     server = smtplib.SMTP(self.cfg.general.smtp_hostname)
-
-    ### we need to set some headers before dumping in the content
-    server.sendmail(self.cfg.general.from_addr,
-                    [ self.cfg.general.to_addr ],
-                    self.buffer.getvalue())
+    server.sendmail(self.to_addr, [ self.from_addr ], self.buffer.getvalue())
     server.quit()
 
 
 class StandardOutput:
   "Print the commit message to stdout."
 
-  def __init__(self):
+  def __init__(self, cfg, repos, changelist):
     self.write = sys.stdout.write
+
+  def start(self, group, params):
+    pass
 
   def run_diff(self, cmd):
     # flush our output to keep the parent/child output in sync
@@ -144,12 +167,17 @@ class StandardOutput:
 class PipeOutput(MailedOutput):
   "Deliver a mail message to an MDA via a pipe."
 
-  def __init__(self, cfg, subject):
-    MailedOutput.__init__(self, cfg, subject)
+  def __init__(self, cfg, repos, changelist):
+    MailedOutput.__init__(self, cfg, repos, changelist)
 
     # figure out the command for delivery
-    cmd = string.split(cfg.general.mail_command)
-    cmd.append(cfg.general.to_addr)
+    self.cmd = string.split(cfg.general.mail_command)
+
+    # we want a handle to /dev/null for hooking up to the diffs' stdin
+    self.null = os.open('/dev/null', os.O_RDONLY)
+
+  def start(self, group, params):
+    cmd = self.cmd + [ self.cfg.get('to_addr', group, params) ]
 
     # construct the pipe for talking to the mailer
     self.pipe = popen2.Popen3(cmd)
@@ -158,11 +186,8 @@ class PipeOutput(MailedOutput):
     # we don't need the read-from-mailer descriptor, so close it
     self.pipe.fromchild.close()
 
-    # we want a handle to /dev/null for hooking up to the diffs' stdin
-    self.null = os.open('/dev/null', os.O_RDONLY)
-
     # start writing out the mail message
-    self.write(self.mail_headers())
+    self.write(self.mail_headers(group, params))
     self.write('\n')
 
   def run_diff(self, cmd):
@@ -206,7 +231,7 @@ class PipeOutput(MailedOutput):
     self.pipe.wait()
 
 
-def generate_content(output, cfg, repos, changes, pool):
+def generate_content(output, cfg, repos, changelist, pool):
 
   svndate = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
   ### pick a different date format?
@@ -216,10 +241,6 @@ def generate_content(output, cfg, repos, changes, pool):
                % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR),
                   date,
                   repos.rev))
-
-  # get all the changes and sort by path
-  changelist = changes.items()
-  changelist.sort()
 
   # print summary sections
   generate_list(output, 'Added', changelist, _select_adds)
@@ -520,14 +541,26 @@ class _change:
 
 
 class Config:
+
+  # The predefined configuration sections. These are omitted from the
+  # set of groups.
+  _predefined = ('general', 'defaults')
+
   def __init__(self, fname):
     cp = ConfigParser.ConfigParser()
     cp.read(fname)
 
+    # record the (non-default) groups that we find
+    self._groups = [ ]
+
     for section in cp.sections():
       if not hasattr(self, section):
-        setattr(self, section, _sub_section())
-      section_ob = getattr(self, section)
+        section_ob = _sub_section()
+        setattr(self, section, section_ob)
+        if section not in self._predefined:
+          self._groups.append((section, section_ob))
+      else:
+        section_ob = getattr(self, section)
       for option in cp.options(section):
         # get the raw value -- we use the same format for *our* interpolation
         value = cp.get(section, option, raw=1)
@@ -554,6 +587,57 @@ class Config:
         return None
       ob = getattr(ob, part)
     return ob
+
+  def get(self, option, group, params):
+    if group:
+      sub = getattr(self, group)
+      if hasattr(sub, option):
+        return getattr(sub, option) % params
+    return getattr(self.defaults, option, '') % params
+
+  def prep_groups(self, repos_dir):
+    self._group_re = [ ]
+
+    repos_dir = os.path.abspath(repos_dir)
+
+    # compute the default repository-based parameters
+    default_params = { }
+    try:
+      match = re.match(self.defaults.for_repos, repos_dir)
+      if match:
+        default_params = match.groupdict()
+    except AttributeError:
+      # there is no self.defaults.for_repos
+      pass
+
+    # select the groups that apply to this repository
+    for group, sub in self._groups:
+      params = default_params
+      if hasattr(sub, 'for_repos'):
+        match = re.match(sub.for_repos, repos_dir)
+        if not match:
+          continue
+        params = match.groupdict()
+      self._group_re.append((group, re.compile(sub.for_paths), params))
+
+    # after all the groups are done, add in the default group
+    try:
+      self._group_re.append((None,
+                             re.compile(self.defaults.for_paths),
+                             default_params))
+    except AttributeError:
+      # there is no self.defaults.for_paths
+      pass
+
+  def which_group(self, path):
+    "Return the path's associated group."
+    for group, pattern, repos_params in self._group_re:
+      match = pattern.match(path)
+      if match:
+        params = repos_params.copy()
+        params.update(match.groupdict())
+        return group, params
+    return None, { }
 
 
 class _sub_section:
@@ -633,4 +717,5 @@ if __name__ == '__main__':
 #     o flag to disable generation of add/delete diffs
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
+#   - extra config living in repos
 #
