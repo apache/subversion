@@ -2,7 +2,10 @@
 
 FAILED="no"
 
-PWD=`pwd`
+# PWD is a read only variable in some /bin/sh's, so we would get an error here, 
+# fortunately, those /bin/sh's also allow you to just read $PWD to get the 
+# current working directory, so we can safely ignore the problem and continue.
+PWD=`pwd` 2>/dev/null
 
 if test -d "z"; then
     :
