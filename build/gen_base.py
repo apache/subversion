@@ -39,7 +39,6 @@ class GeneratorBase:
 
     self.targets = { }
     self.includes = [ ]
-    self.install = { }                       # install area name -> targets
     self.test_progs = [ ]
     self.test_deps = [ ]
     self.fs_test_progs = [ ]
@@ -48,6 +47,7 @@ class GeneratorBase:
     self.target_dirs = { }
     self.manpages = [ ]
     self.infopages = [ ]
+    self.graph = DependencyGraph()
 
     # PASS 1: collect the targets and some basic info
     self.target_names = _filter_targets(self.parser.sections())
@@ -72,11 +72,8 @@ class GeneratorBase:
 
       self.targets[target] = target_ob
 
-      itype = target_ob.install
-      if self.install.has_key(itype):
-        self.install[itype].append(target_ob)
-      else:
-        self.install[itype] = [ target_ob ]
+      # the specified install area depends upon this target
+      self.graph.add(DT_INSTALL, target_ob.install, target_ob)
 
       # find all the sources involved in building this target
       target_ob.find_sources(self.parser.get(target, 'sources'))
@@ -113,7 +110,7 @@ class GeneratorBase:
 
     # collect the outputs for each install type
     self.inst_outputs = { }
-    for itype, i_targets in self.install.items():
+    for itype, i_targets in self.graph.get_deps(DT_INSTALL):
       self.inst_outputs[itype] = outputs = [ ]
       for t in i_targets:
         outputs.append(t.output)
@@ -135,6 +132,52 @@ class MsvcProjectGenerator(GeneratorBase):
 
   def write(self):
     raise NotImplementedError
+
+
+class DependencyGraph:
+  """Record dependencies between build items.
+
+  See the DT_* values for the different dependency types. For each type,
+  the target and source objects recorded will be different. They could
+  be file names, _Target objects, install types, etc.
+  """
+
+  def __init__(self):
+    self.deps = { }     # type -> { target -> [ source ... ] }
+    for dt in dep_types:
+      self.deps[dt] = { }
+
+  def add(self, type, target, source):
+    if self.deps[type].has_key(target):
+      self.deps[type][target].append(source)
+    else:
+      self.deps[type][target] = [ source ]
+
+  def get(self, type, target):
+    return self.deps[type].get(target, [ ])
+
+  def get_targets(self, type):
+    targets = self.deps[type].keys()
+    targets.sort()  # ensures consistency between runs
+    return targets
+
+  def get_deps(self, type):
+    deps = self.deps[type].items()
+    deps.sort()  # ensures consistency between runs
+    return deps
+
+# dependency types
+dep_types = [
+  'DT_INSTALL',
+  'DT_OBJECT',
+  'DT_SWIG_C',
+  'DT_LIBRARY',
+  ]
+
+# create some variables for these
+for _dt in dep_types:
+  # e.g. DT_INSTALL = 'DT_INSTALL'
+  globals()[_dt] = _dt
 
 
 class _Target:
