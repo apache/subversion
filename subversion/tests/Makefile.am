@@ -8,10 +8,10 @@ libsvn_test_editor_la_SOURCES = svn_test_editor.c
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
 
 ## Need to include these for performing tests.
-EXTRA_DIST = xml/README xml/co1-inline.xml xml/co1-postfix.xml xml/co1.txt \
-            xml/pipatch.xml xml/up-props.xml xml/up1a-inline.xml \
-            xml/up1a-postfix.xml xml/up1b-inline.xml xml/up1b-postfix.xml \
-            xml/up2.xml xml/up3.xml xml/up5.xml
+EXTRA_DIST = greek-tree.txt xml/README xml/co1-inline.xml xml/co1-postfix.xml \
+             xml/pipatch.xml xml/up-props.xml xml/up1a-inline.xml \
+             xml/up1a-postfix.xml xml/up1b-inline.xml xml/up1b-postfix.xml \
+             xml/up2.xml xml/up3.xml xml/up5.xml
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
