@@ -178,11 +178,11 @@ does not allow this.
     * key to the new revision number.  Or maybe there's a better way?
     */
 
-    /* Oh, wait, I know.  We'll store REV in HEADER, as in
+    /* Oh, wait, I know.  Yes, we'll store REV in HEADER, as in
      * 
      *   (KIND REV FLAG ...)
      * 
-     * While a transaction is being created, new nodes have an
+     * and while a transaction is being created, new nodes have an
      * empty-string atom for REV.  When the transaction is ready to be
      * committed, we get a lock on the new revision number.  Once we
      * have it, our goal is to take as little time as possible to
