@@ -78,6 +78,12 @@ extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
 svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
 
 
+/* Return a property delta parser. */
+svn_pdelta_chunk_parser_t *
+svn_make_pdelta_chunk_parser (svn_prop_change_chunk_handler_t *handler, 
+                              void *handler_baton,
+                              apr_pool_t *pool);
+
 /* These are the in-memory tree-delta stackframes; they are used to
  * keep track of a delta's state while the XML stream is being parsed.
  * 

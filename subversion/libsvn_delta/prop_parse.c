@@ -82,6 +82,7 @@ svn_make_pdelta_chunk_parser (svn_prop_change_chunk_handler_t *handler,
                               apr_pool_t *pool)
 {
   /* TODO : copy code from vcdiff_parse.c */
+  return 0;
 }
 
 

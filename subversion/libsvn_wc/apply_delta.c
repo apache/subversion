@@ -51,6 +51,7 @@
 
 #include <stdio.h>       /* for sprintf() */
 #include <stdlib.h>
+#include <string.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
@@ -118,6 +119,8 @@ struct w_baton
   svn_string_t *top_dir;
   int top_dir_done_p;
 
+  svn_string_t *path_already;
+
 };
 
 
@@ -135,26 +138,21 @@ delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 
 
 static svn_error_t *
-entry_pdelta (svn_string_t *name,
-              void *walk_baton, void *parent_baton,
-              svn_pdelta_t *entry_pdelta)
-{
-  return 0;
-}
-
-
-static svn_error_t *
 add_directory (svn_string_t *name,
                void *walk_baton, void *parent_baton,
                svn_string_t *base_path,
                svn_vernum_t base_version,
-               svn_pdelta_t *pdelta,
                void **child_baton)
 {
   /* todo: we're not yet special-casing top_dir.  When we do, it'll be
      like "cvs checkout -d foo bar", which produces a tree whose top
      dir is named foo, but everything underneath is within the
-     project's namespace and appears as in the project. */
+     project's namespace and appears as in the project.  This is
+     doubly important for Subversion because the root node in a
+     repository has no name, so if no subdir of the repository is
+     specified in the checkout, the client must make up a local name
+     for the root (i.e., the -d option should probably be mandatory if
+     no other name was given). */
 
   /* fooo */
   return 0;
@@ -166,7 +164,6 @@ replace_directory (svn_string_t *name,
                    void *walk_baton, void *parent_baton,
                    svn_string_t *base_path,
                    svn_vernum_t base_version,
-                   svn_pdelta_t *pdelta,
                    void **child_baton)
 {
   return 0;
@@ -220,17 +217,23 @@ window_handler (svn_delta_window_t *window, void *baton)
 
 
 static svn_error_t *
+begin_textdelta (void *walk_baton, void *parent_baton,
+                 svn_text_delta_window_handler_t **handler,
+                 void **handler_baton)
+{
+  *handler = window_handler;
+  return 0;
+}
+
+
+static svn_error_t *
 add_file (svn_string_t *name,
           void *walk_baton, void *parent_baton,
           svn_string_t *base_path,
-          svn_vernum_t base_version,
-          svn_pdelta_t *pdelta,
-          svn_text_delta_window_handler_t **handler,
-          void **handler_baton)
+          svn_vernum_t base_version)
 {
   printf ("file \"%s\" (%s, %ld)\n",
           name->data, base_path->data, base_version);
-  *handler = window_handler;
   return 0;
 }
 
@@ -239,14 +242,10 @@ static svn_error_t *
 replace_file (svn_string_t *name,
               void *walk_baton, void *parent_baton,
               svn_string_t *base_path,
-              svn_vernum_t base_version,
-              svn_pdelta_t *pdelta,
-              svn_text_delta_window_handler_t **handler,
-              void **handler_baton)
+              svn_vernum_t base_version)
 {
   printf ("file \"%s\" (%s, %ld)\n",
           name->data, base_path->data, base_version);
-  *handler = window_handler;
   return 0;
 }
 
@@ -292,19 +291,19 @@ svn_wc_apply_delta (void *delta_src,
   /* Else nothing in the way, so continue. */
 
   /* Set up the walker callbacks... */
+  memset (&walker, 0, sizeof (walker));
   walker.delete            = delete;
-  walker.entry_pdelta      = entry_pdelta;  /* kff todo */
   walker.add_directory     = add_directory;
   walker.replace_directory = replace_directory;
   walker.finish_directory  = finish_directory;
   walker.finish_file       = finish_file;
   walker.add_file          = add_file;
   walker.replace_file      = replace_file;
+  walker.begin_textdelta   = begin_textdelta;
 
   /* Set up the batons... */
   memset (&w_baton, 0, sizeof (w_baton));
   memset (&p_baton, 0, sizeof (p_baton));
-
   w_baton.top_dir = target;   /* Remember, target might be null. */
 
   /* ... and walk! */
