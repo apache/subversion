@@ -18,8 +18,10 @@ A rough guide to the source tree:
       User and Developer documentation.
    www/
       Subversion web pages (live content at http://subversion.tigris.org/).
+   apr/
+      The Apache Portable Runtime library (vendor branched from Apache).
    subversion/  
-      Source code to subversion itself (as opposed to external libraries)
+      Source code to subversion itself (as opposed to external libraries).
    subversion/include/
       Public header files for users of subversion libraries.
    subversion/libsvn_fs/
