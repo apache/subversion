@@ -41,6 +41,9 @@ svnadmin = "/usr/local/bin/svnadmin"
 # Path to db_archive program
 db_archive = "/usr/local/BerkeleyDB.4.0/bin/db_archive"
 
+# Number of backups to keep around
+num_backups = 64
+
 ######################################################################
 
 print "Beginning hot backup of '"+ repo_dir + "'."
@@ -125,3 +128,11 @@ print "Done."
 os.unlink(lockpath)
 print "Lock removed.  Cleanup complete."
 
+# Step 7:  finally, remove the repository back that's NUM_BACKUPS older
+# than the one we just created.
+
+kill_rev = int(youngest) - num_backups
+old_backup_subdir = os.path.join(backup_dir, "repo-bkp-" + `kill_rev`)
+if os.path.exists(old_backup_subdir):
+  print "Removing old backup: " + old_backup_subdir
+  shutil.rmtree(old_backup_subdir)
