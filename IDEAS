@@ -409,3 +409,32 @@ Question; Would it be better to pull the code out of the CVS sources,
 or write it to the CVSclient spec?
 
   Brane Cibej <brane@xbc.nu>
+
+* Random access to delta-encoded files
+
+Several features collude to produce a challenge:
+- HTTP provides the ability to fetch substrings of files.
+- Subversion provides a uniform interface for reading both old and new
+  versions of nodes.
+- Subversion wants to use deltas to store multiple versions of a file
+  in a compact way.
+
+So, suppose an HTTP request comes in for bytes 1,000,000,000 through
+1,000,004,000 of a two-gigabyte file, which happens to be stored in
+the repository as the result of applying ten deltas to another
+two-gigabyte file which is stored in fulltext.  It would be nice if it
+were possible to extract the requested bytes without reconstructing
+the full text of the file.
+
+In other words, we'd like random access to the result of applying a
+text delta to some source string.
+
+I was thinking of extending the svndelta format with a hierarchical
+index, a B+tree of delta windows: after every tenth window, store a
+little table of pointers to the windows.  After every tenth little
+table, store a little table of pointers to little tables of pointers
+to windows.  After every tenth... you see what I mean.  Then you can
+start at the end of the file and find any window in logarithmic time.
+That procedure always emits balanced trees.  Use 100 instead of ten,
+and your tree has 1/100th the number of nodes as your file has
+windows, and is very shallow.
