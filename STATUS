@@ -21,6 +21,7 @@ Candidate changes:
     Justification:
       Removes *4* redundant functions, but adds a new API.
     Votes:
+      -0: ghudson (what's the point of putting code cleanups into 1.1?)
       +1: cmpilato
 
   * r10645
@@ -77,7 +78,7 @@ Candidate changes:
       
   * r10722
     Display the targets printed for propedit in local style.
-    Justificatoin:
+    Justification:
       Very tiny error in the output of the propedit command.
     Votes:
       +1: breser, lundblad
@@ -89,6 +90,15 @@ Candidate changes:
       API contract violation.
     Votes:
       +1: breser
+      -1: ghudson
+          (http://www.contactor.se/~dast/svn/archive-2004-08/0754.shtml)
+
+  * r10760
+    Make "svn info" check for and refuse URL targets.
+    Justification:
+      Avoids assertion failure (the same one avoided by r10731).
+    Votes:
+      +1: ghudson
 
   * r10467, r10734, rXXXXX
     Detect and report lock-contention at recovery time.
@@ -100,13 +110,15 @@ Candidate changes:
       are approved, then a new trunk revision, marked rXXXXX above, should
       also be applied to reflect that the changes were actually included
       in 1.1.0.
+    Note: See discussion in
+     http://www.contactor.se/~dast/svn/archive-2004-08/0804.shtml
     Votes:
       +1: mbk
 
   * r10752
     Remove packages/rpm/mandrake-*.
     Justification:
-      Foolish to include something that has been maintainerless since before 1.0.0 in
-      1.1.x.
+      Foolish to include something that has been maintainerless since
+      before 1.0.0 in 1.1.x.
     Votes:
       +1: maxb
