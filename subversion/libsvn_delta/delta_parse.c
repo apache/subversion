@@ -246,6 +246,13 @@ do_stack_append (svn_delta_digger_t *digger,
                && (youngest_frame->tag != svn_XML_file))
         return XML_validation_error (pool, tagname, FALSE);
 
+      /* ancestry information can only appear as <file> or <dir> attrs */
+      else if (((new_frame->ancestor_path) 
+                || (new_frame->ancestor_version >= 0))
+               && (new_frame->tag != svn_XML_file)
+               && (new_frame->tag != svn_XML_dir))
+        return XML_validation_error (pool, tagname, FALSE);
+
 
       /* The XML is valid.  Do the append.  */
       youngest_frame->next = new_frame;
@@ -253,6 +260,25 @@ do_stack_append (svn_delta_digger_t *digger,
     }
   
   new_frame->previous = youngest_frame;
+
+  /* Inherit ancestry information.  It may get overridden later, but
+   * if it's not, then defaulting to the previous frame's information
+   * is correct.  Note that all frames get this, whether of type
+   * file|dir or not.  Once validation is done, it's okay for us to
+   * just set ancestry information in every frame, even those whose
+   * XML attributes couldn't ever have held ancestory information. 
+   * 
+   * Of course, we only set it in new_frame if it's not already
+   * explicitly set by attributes.
+   */
+  if (new_frame->previous)
+    {
+      if (! new_frame->ancestor_path)
+        new_frame->ancestor_path = new_frame->previous->ancestor_path;
+
+      if (new_frame->ancestor_version < 0)
+        new_frame->ancestor_version = new_frame->previous->ancestor_version;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -377,8 +403,6 @@ do_directory_callback (svn_delta_digger_t *digger,
      wonder if it's such a good idea to use svn_string_t in situations
      where (char *) is so much more natural, though... */
   const char *ancestor, *ver;
-  svn_string_t *ancestor_path = NULL;
-  svn_version_t ancestor_version = 0;
   svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
@@ -400,26 +424,29 @@ do_directory_callback (svn_delta_digger_t *digger,
      attributes of the current <dir> tag. */
   ancestor = get_attribute_value (atts, "ancestor");
   if (ancestor)
-    ancestor_path = svn_string_create (ancestor, digger->pool);
+    youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
   ver = get_attribute_value (atts, "ver");
   if (ver)
-    ancestor_version = atoi (ver);
+    youngest_frame->ancestor_version = atoi (ver);
 
   /* Call our walker's callback. */
   if (replace_p)
-    err = (* (digger->walker->replace_directory)) (dir_name,
-                                                   digger->walk_baton,
-                                                   youngest_frame->baton,
-                                                   ancestor_path,
-                                                   ancestor_version,
-                                                   &child_baton);
+    err = (* (digger->walker->replace_directory)) 
+      (dir_name,
+       digger->walk_baton,
+       youngest_frame->baton,
+       youngest_frame->ancestor_path,
+       youngest_frame->ancestor_version,
+       &child_baton);
   else
-    err = (* (digger->walker->add_directory)) (dir_name,
-                                               digger->walk_baton,
-                                               youngest_frame->baton,
-                                               ancestor_path,
-                                               ancestor_version,
-                                               &child_baton);
+    err = (* (digger->walker->add_directory)) 
+      (dir_name,
+       digger->walk_baton,
+       youngest_frame->baton,
+       youngest_frame->ancestor_path,
+       youngest_frame->ancestor_version,
+       &child_baton);
+
   if (err) 
     return err;
 
@@ -525,8 +552,6 @@ do_file_callback (svn_delta_digger_t *digger,
 {
   svn_error_t *err;
   const char *ancestor, *ver;
-  svn_string_t *ancestor_path = NULL;
-  svn_version_t ancestor_version = 0;
   svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
@@ -548,25 +573,27 @@ do_file_callback (svn_delta_digger_t *digger,
      attributes of the current <dir> tag. */
   ancestor = get_attribute_value (atts, "ancestor");
   if (ancestor)
-    ancestor_path = svn_string_create (ancestor, digger->pool);
+    youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
   ver = get_attribute_value (atts, "ver");
   if (ver)
-    ancestor_version = atoi (ver);
+    youngest_frame->ancestor_version = atoi (ver);
 
   /* Call our walker's callback, and get back a window handler & baton. */
   if (replace_p)
-    err = (* (digger->walker->replace_file)) (dir_name,
-                                              digger->walk_baton,
-                                              youngest_frame->baton,
-                                              ancestor_path,
-                                              ancestor_version);
+    err = (* (digger->walker->replace_file)) 
+      (dir_name,
+       digger->walk_baton,
+       youngest_frame->baton,
+       youngest_frame->ancestor_path,
+       youngest_frame->ancestor_version);
   else
-    err = (* (digger->walker->add_file)) (dir_name,
-                                          digger->walk_baton,
-                                          youngest_frame->baton,
-                                          ancestor_path,
-                                          ancestor_version);
-
+    err = (* (digger->walker->add_file)) 
+      (dir_name,
+       digger->walk_baton,
+       youngest_frame->baton,
+       youngest_frame->ancestor_path,
+       youngest_frame->ancestor_version);
+  
   if (err)
     return err;
   
@@ -843,6 +870,9 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   svn_delta_stackframe_t *new_frame
     = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
+  /* Initialize the ancestor version to a recognizably invalid value. */
+  new_frame->ancestor_version = -1;
+
   /* Set the tag field */
   err = set_tag_type (new_frame, name, my_digger);
   if (err)
@@ -856,6 +886,16 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   value = get_attribute_value (atts, "name");
   if (value)
     new_frame->name = svn_string_create (value, my_digger->pool);
+  
+  /* Set ancestor path in frame, if there's any such attribute in ATTS */
+  value = get_attribute_value (atts, "ancestor");
+  if (value)
+    new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
+  
+  /* Set ancestor version in frame, if there's any such attribute in ATTS */
+  value = get_attribute_value (atts, "ver");
+  if (value)
+    new_frame->ancestor_version = atoi (value);
   
   /*  Append new frame to stack, validating in the process. 
       If successful, new frame will automatically inherit parent's baton. */
