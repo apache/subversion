@@ -19,41 +19,58 @@
 # Usage:
 #
 #    Just call svn_entry.get_entries(path), where PATH is exact path
-#    to an 'entries' file.  You'll get back a list of svn_entry
-#    objects, each of which contains two fields:
+#    to an 'entries' file.  You'll get back a hash of svn_entry
+#    objects keyed by name.
 #
-#        * name  (string)
-#        * atts  (dictionary)
-#
-#    You can then look up values in the dictionary.  If a key isn't
-#    present, then no such attribute exists for the entry.  The only
-#    "derived" attributes are 'revision' and 'ancestor', which are filled
-#    in from the parent entry.
-
+#    Each object contains a hash 'atts' that you can examine: name,
+#    kind, revision, ancestor.  Other optional keys *might* be
+#    present, such as prop-time, text-time, add, delete, conflict.
 
 import xml.parsers.expat  # you may need to install this package
 
 class svn_entry:
   "An object that represents an entry from an 'entries' file."
 
-  def __init__(self, name):   # constructor
-    self.name = name
-    self.atts = {}
+  def __init__(self, attributes):   # constructor
+    self.atts = attributes
+
+  def prettyprint(self):
+    print " Entryname:", self.atts['name']
+    print "      Kind:", self.atts['kind']
+    print "  Revision:", self.atts['revision']
+    print "  Ancestor:", self.atts['ancestor']
+    print "  all atts:", self.atts
+    print
 
 class svn_entryparser:
   "A class to parse an 'entries' file."
 
   def __init__(self):   # constructor
-    self.entry_list = []
+    self.entry_dict = {}
     self.parser = xml.parsers.expat.ParserCreate()
     self.parser.StartElementHandler = self.handle_start_tag
 
   def handle_start_tag(self, name, attrs):
     "Expat callback that receives a new open-tag."
+
     if attrs.has_key('name'):
-      entry = svn_entry(attrs['name']) # create new entry object
-      entry.atts = attrs       # todo:  make revision/ancestry inherit.
-      self.entry_list.append(entry)
+      entry = svn_entry(attrs) # create new entry object
+      
+      # Derive missing values
+      if not entry.atts.has_key('kind'):
+        entry.atts['kind'] = 'file' # default kind if none mentioned
+      if not entry.atts.has_key('revision'):
+        if self.entry_dict.has_key(""):
+          parent = self.entry_dict[""]
+          entry.atts['revision'] = parent.atts['revision']
+      if not entry.atts.has_key('ancestor'):
+        if self.entry_dict.has_key(""):
+          parent = self.entry_dict[""]
+          entry.atts['ancestor'] = parent.atts['ancestor'] + '/' \
+                                   + entry.atts['name']
+                  
+      self.entry_dict[attrs['name']] = entry  # store the new entry
+
 
 # The main exported routine
 def get_entries(path):
@@ -63,4 +80,4 @@ def get_entries(path):
   fp = open(path, 'r')
   entryparser.parser.ParseFile(fp)
   fp.close()
-  return entryparser.entry_list
+  return entryparser.entry_dict
