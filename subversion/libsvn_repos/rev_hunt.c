@@ -65,12 +65,13 @@ svn_repos_dated_revision (svn_revnum_t *revision,
                           apr_time_t time,
                           apr_pool_t *pool)
 {
-  svn_revnum_t rev_mid, rev_top, rev_bot;
+  svn_revnum_t rev_mid, rev_top, rev_bot, rev_latest;
   apr_time_t this_time;
 
   /* Initialize top and bottom values of binary search. */
+  SVN_ERR (svn_fs_youngest_rev (&rev_latest, fs, pool));
   rev_bot = 0;
-  SVN_ERR (svn_fs_youngest_rev (&rev_top, fs, pool));
+  rev_top = rev_latest;
 
   while (rev_bot <= rev_top)
     {
@@ -80,6 +81,12 @@ svn_repos_dated_revision (svn_revnum_t *revision,
       if (this_time > time) /* we've overshot */
         {
           apr_time_t previous_time;
+
+          if ((rev_mid - 1) < 0)
+            {
+              *revision = 0;
+              break;
+            }
 
           /* see if time falls between rev_mid and rev_mid-1: */
           SVN_ERR (get_time (&previous_time, fs, rev_mid - 1, pool));
@@ -95,6 +102,12 @@ svn_repos_dated_revision (svn_revnum_t *revision,
       else if (this_time < time) /* we've undershot */
         {
           apr_time_t next_time;
+
+          if ((rev_mid + 1) > rev_latest)
+            {
+              *revision = rev_latest;
+              break;
+            }
           
           /* see if time falls between rev_mid and rev_mid+1: */
           SVN_ERR (get_time (&next_time, fs, rev_mid + 1, pool));

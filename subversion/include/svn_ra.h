@@ -119,10 +119,14 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*close) (void *session_baton);
 
   /* Get the latest revision number from the repository. This is
-     usefule for the `svn status' command.  :) */
+     useful for the `svn status' command.  :) */
   svn_error_t *(*get_latest_revnum) (void *session_baton,
                                      svn_revnum_t *latest_revnum);
 
+  /* Get the latest revision number at time TIME. */
+  svn_error_t *(*get_dated_revision) (void *session_baton,
+                                      svn_revnum_t *revision,
+                                      apr_time_t tm);
 
   /* Begin a commit against `rev:path' using LOG_MSG.  `rev' is the
      argument that will be passed to replace_root(), and `path' is

@@ -71,6 +71,7 @@ svn_cl__update (apr_getopt_t *os,
                                   target,
                                   opt_state->xml_file,
                                   opt_state->revision,
+                                  opt_state->date,
                                   pool));
     }
 

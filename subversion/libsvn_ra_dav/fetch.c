@@ -701,6 +701,25 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
   return NULL;
 }
 
+
+/* ### DUMMY FUNC.   To be marshalled over network like previous
+   routine. */
+
+svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
+                                             svn_revnum_t *revision,
+                                             apr_time_t time)
+{
+  *revision = 0;
+
+  /* On the other side of the network, mod_dav_svn can simply call
+     svn_repos_dated_revision().  */
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* -------------------------------------------------------------------------
 **
 ** UPDATE HANDLING

@@ -228,11 +228,11 @@ svn_repos_update (svn_fs_root_t *target_root,
 /*** Finding particular revisions. */
 
 /* Set *REVISION to the revision number in FS that was youngest at
-   time TIME. */
+   time TM. */
 svn_error_t *
 svn_repos_dated_revision (svn_revnum_t *revision,
                           svn_fs_t *fs,
-                          apr_time_t time,
+                          apr_time_t tm,
                           apr_pool_t *pool);
                           
 

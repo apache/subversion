@@ -48,7 +48,8 @@
    If XML_SRC is NULL, then the checkout will come from the repository
    and subdir specified by URL.  An invalid REVISION will cause the
    "latest" tree to be fetched, while a valid REVISION will fetch a
-   specific tree.
+   specific tree.  Alternatively, a time TM can be used to implicitly
+   select a revision.  TM cannot be used at the same time as REVISION.
 
    If XML_SRC is non-NULL, it is an xml file to check out from; in
    this case, the working copy will record the URL as artificial
@@ -67,6 +68,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
                      svn_revnum_t revision,
+                     apr_time_t tm,
                      svn_stringbuf_t *xml_src,
                      apr_pool_t *pool)
 {
@@ -106,10 +108,21 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
       /* Open an RA session to URL */
       SVN_ERR (ra_lib->open (&session, URL, pool));
       
+      /* Decide which revision to get: */
+
+      /* If both REVISION and TM are specified, this is an error.
+         They mostly likely contradict one another. */
+      if ((revision != SVN_INVALID_REVNUM) && tm)
+        return
+          svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
+                           "Cannot specify _both_ revision and time.");
+
+      /* If only TM is given, convert the time into a revision number. */
+      else if (tm)
+        SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
+
       /* Tell RA to do a checkout of REVISION; if we pass an invalid
          revnum, that means RA will fetch the latest revision.  */
-
-      /* ben sez:  todo:  update RA interface here to take REVISION. */
       SVN_ERR (ra_lib->do_checkout (session,
                                     revision,
                                     checkout_editor,
