@@ -25,7 +25,7 @@
 #include "../libsvn_fs/fs_loader.h"
 
 
-struct get_uuid_args 
+struct get_uuid_args
 {
   int idx;
   const char **uuid;
@@ -36,7 +36,7 @@ static svn_error_t *
 txn_body_get_uuid (void *baton, trail_t *trail)
 {
   struct get_uuid_args *args = baton;
-  return svn_fs__bdb_get_uuid (trail->fs, args->idx, args->uuid, trail);
+  return svn_fs_bdb__get_uuid (trail->fs, args->idx, args->uuid, trail);
 }
 
 
@@ -47,7 +47,7 @@ svn_fs_base__get_uuid (svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_base__check_fs (fs));
 
   /* Check for a cached UUID first.  Failing that, we hit the
      database. */
@@ -60,7 +60,7 @@ svn_fs_base__get_uuid (svn_fs_t *fs,
       struct get_uuid_args args;
       args.idx = 1;
       args.uuid = uuid;
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_uuid, &args, pool));
+      SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_uuid, &args, pool));
 
       /* Toss what we find into the cache. */
       if (*uuid)
@@ -71,7 +71,7 @@ svn_fs_base__get_uuid (svn_fs_t *fs,
 }
 
 
-struct set_uuid_args 
+struct set_uuid_args
 {
   int idx;
   const char *uuid;
@@ -82,7 +82,7 @@ static svn_error_t *
 txn_body_set_uuid (void *baton, trail_t *trail)
 {
   struct set_uuid_args *args = baton;
-  return svn_fs__bdb_set_uuid (trail->fs, args->idx, args->uuid, trail);
+  return svn_fs_bdb__set_uuid (trail->fs, args->idx, args->uuid, trail);
 }
 
 
@@ -94,11 +94,11 @@ svn_fs_base__set_uuid (svn_fs_t *fs,
   struct set_uuid_args args;
   base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_base__check_fs (fs));
 
   args.idx = 1;
   args.uuid = uuid;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_set_uuid, &args, pool));
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_set_uuid, &args, pool));
 
   /* Toss our value into the cache. */
   if (uuid)

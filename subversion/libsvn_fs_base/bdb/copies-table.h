@@ -30,14 +30,14 @@ extern "C" {
 /* Open a `copies' table in ENV.  If CREATE is non-zero, create
    one if it doesn't exist.  Set *COPIES_P to the new table.
    Return a Berkeley DB error code.  */
-int svn_fs__bdb_open_copies_table (DB **copies_p,
+int svn_fs_bdb__open_copies_table (DB **copies_p,
                                    DB_ENV *env,
                                    svn_boolean_t create);
 
 /* Reserve a slot in the `copies' table in FS for a new copy operation
    as part of TRAIL.  Return the slot's id in *COPY_ID_P, allocated in
    TRAIL->pool.  */
-svn_error_t *svn_fs__bdb_reserve_copy_id (const char **copy_id_p,
+svn_error_t *svn_fs_bdb__reserve_copy_id (const char **copy_id_p,
                                           svn_fs_t *fs,
                                           trail_t *trail);
 
@@ -48,20 +48,21 @@ svn_error_t *svn_fs__bdb_reserve_copy_id (const char **copy_id_p,
 
    SRC_PATH is expected to be a canonicalized filesystem path (see
    svn_fs__canonicalize_abspath).
-   
-   COPY_ID should generally come from a call to svn_fs__reserve_copy_id().  */
-svn_error_t *svn_fs__bdb_create_copy (svn_fs_t *fs,
+
+   COPY_ID should generally come from a call to
+   svn_fs_base__reserve_copy_id().  */
+svn_error_t *svn_fs_bdb__create_copy (svn_fs_t *fs,
                                       const char *copy_id,
                                       const char *src_path,
                                       const char *src_txn_id,
                                       const svn_fs_id_t *dst_noderev_id,
-                                      svn_fs__copy_kind_t kind,
+                                      copy_kind_t kind,
                                       trail_t *trail);
 
 /* Remove the copy whose name is COPY_ID from the `copies' table of
    FS, as part of TRAIL.  If there is no such copy,
    SVN_ERR_FS_NO_SUCH_COPY is the error returned.  */
-svn_error_t *svn_fs__bdb_delete_copy (svn_fs_t *fs,
+svn_error_t *svn_fs_bdb__delete_copy (svn_fs_t *fs,
                                       const char *copy_id,
                                       trail_t *trail);
 
@@ -69,7 +70,7 @@ svn_error_t *svn_fs__bdb_delete_copy (svn_fs_t *fs,
    FS, as part of TRAIL.  Perform all allocations in TRAIL->pool.  If
    there is no such copy, SVN_ERR_FS_NO_SUCH_COPY is the error
    returned.  */
-svn_error_t *svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
+svn_error_t *svn_fs_bdb__get_copy (copy_t **copy_p,
                                    svn_fs_t *fs,
                                    const char *copy_id,
                                    trail_t *trail);

@@ -40,17 +40,17 @@ extern "C" {
 
 
 /* Open a `strings' table in ENV.  If CREATE is non-zero, create
- * one if it doesn't exist.  Set *STRINGS_P to the new table.  
+ * one if it doesn't exist.  Set *STRINGS_P to the new table.
  * Return a Berkeley DB error code.
  */
-int svn_fs__bdb_open_strings_table (DB **strings_p,
+int svn_fs_bdb__open_strings_table (DB **strings_p,
                                     DB_ENV *env,
                                     svn_boolean_t create);
 
 
 /* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part
  * of TRAIL.
- * 
+ *
  * On return, *LEN is set to the number of bytes read.  If this value
  * is less than the number requested, the end of the string has been
  * reached (no error is returned on end-of-string).
@@ -59,11 +59,11 @@ int svn_fs__bdb_open_strings_table (DB **strings_p,
  * zero. Callers which are advancing OFFSET as they read portions of
  * the string can terminate their loop when *LEN is returned as zero
  * (which will occur when OFFSET == length(the string)).
- * 
+ *
  * If string KEY does not exist, the error SVN_ERR_FS_NO_SUCH_STRING
  * is returned.
  */
-svn_error_t *svn_fs__bdb_string_read (svn_fs_t *fs,
+svn_error_t *svn_fs_bdb__string_read (svn_fs_t *fs,
                                       const char *key,
                                       char *buf,
                                       svn_filesize_t offset,
@@ -76,7 +76,7 @@ svn_error_t *svn_fs__bdb_string_read (svn_fs_t *fs,
  *
  * If string KEY does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
  */
-svn_error_t *svn_fs__bdb_string_size (svn_filesize_t *size,
+svn_error_t *svn_fs_bdb__string_size (svn_filesize_t *size,
                                       svn_fs_t *fs,
                                       const char *key,
                                       trail_t *trail);
@@ -92,8 +92,8 @@ svn_error_t *svn_fs__bdb_string_size (svn_filesize_t *size,
  * SVN_ERR_FS_NO_SUCH_STRING.
  *
  * Note: to overwrite the old contents of a string, call
- * svn_fs__bdb_string_clear() and then svn_fs__bdb_string_append().  */
-svn_error_t *svn_fs__bdb_string_append (svn_fs_t *fs,
+ * svn_fs_bdb__string_clear() and then svn_fs_bdb__string_append().  */
+svn_error_t *svn_fs_bdb__string_append (svn_fs_t *fs,
                                         const char **key,
                                         apr_size_t len,
                                         const char *buf,
@@ -103,7 +103,7 @@ svn_error_t *svn_fs__bdb_string_append (svn_fs_t *fs,
 /* Make string KEY in FS zero length, as part of TRAIL.
  * If the string does not exist, return SVN_ERR_FS_NO_SUCH_STRING.
  */
-svn_error_t *svn_fs__bdb_string_clear (svn_fs_t *fs,
+svn_error_t *svn_fs_bdb__string_clear (svn_fs_t *fs,
                                        const char *key,
                                        trail_t *trail);
 
@@ -114,8 +114,8 @@ svn_error_t *svn_fs__bdb_string_clear (svn_fs_t *fs,
  *
  * WARNING: Deleting a string renders unusable any representations
  * that refer to it.  Be careful.
- */ 
-svn_error_t *svn_fs__bdb_string_delete (svn_fs_t *fs,
+ */
+svn_error_t *svn_fs_bdb__string_delete (svn_fs_t *fs,
                                         const char *key,
                                         trail_t *trail);
 
@@ -123,7 +123,7 @@ svn_error_t *svn_fs__bdb_string_delete (svn_fs_t *fs,
 /* Copy the contents of the string referred to by KEY in FS into a new
  * record, returning the new record's key in *NEW_KEY.  All
  * allocations (including *NEW_KEY) occur in TRAIL->pool.  */
-svn_error_t *svn_fs__bdb_string_copy (svn_fs_t *fs,
+svn_error_t *svn_fs_bdb__string_copy (svn_fs_t *fs,
                                       const char **new_key,
                                       const char *key,
                                       trail_t *trail);
