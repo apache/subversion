@@ -118,20 +118,17 @@ fill_attributes (apr_pool_t *pool,
 
 
 
-/* Heh, by creating our "stackframe" structure, this routine has been
-   reduced to a trivial nothingness, like a lisp routine or something.
-   :) */
 
-/* Return the last frame of a delta stack. */
+/* Return the newest frame of an XML stack. (The "top" of the stack.) */
 static svn_delta_stackframe_t *
-find_delta_bottom (svn_delta_stackframe_t *frame)
+find_stack_newest (svn_delta_stackframe_t *frame)
 {
   if (frame)
     {
       if (frame->next == NULL)
         return frame;
       else
-        return find_delta_bottom (frame->next);
+        return find_stack_newest (frame->next);
     }
   else
     return NULL;
@@ -190,13 +187,10 @@ twiddle_edit_content_flags (svn_delta_digger_t *digger,
 
 
 
-/* The way to officially bail out of expat.
-
-   Store ERROR in DIGGER and set all expat callbacks to NULL.
-
-   (To understand why this works, see svn_delta_parse())
- */
-
+/* The way to officially bail out of expat. 
+   
+   Store ERROR in DIGGER and set all expat callbacks to NULL. (To
+   understand why this works, see svn_delta_parse(). ) */
 static void
 signal_expat_bailout (svn_error_t *error, svn_delta_digger_t *digger)
 {
@@ -212,9 +206,8 @@ signal_expat_bailout (svn_error_t *error, svn_delta_digger_t *digger)
 
 
 
-/* If we get malformed XML, create an informative error message. */
-   (Set DESTROY_P to indicate an unexpected </close> tag) */
-
+/* If we get malformed XML, create an informative error message.
+   (Set DESTROY_P to indicate an unexpected closure tag) */
 static svn_error_t *
 XML_type_error (apr_pool_t *pool, const char *name, svn_boolean_t destroy_p)
 {
@@ -231,97 +224,127 @@ XML_type_error (apr_pool_t *pool, const char *name, svn_boolean_t destroy_p)
 
 
 
-/* 
-   telescope_delta_stack() : either append or un-pend a frame to the
-                             end of a delta, validating XML first.
 
-   Append NEW_FRAME to the end of stack within DIGGER.  (NEW_FRAME
-   will inherit its parent's baton.)
 
-   To remove bottommost frame from stack, set DESTROY-P (in which case
-   the NEW_FRAME argument is ignored.)
-
-   TAGNAME is used to validate the current XML tag. If a validation
-   error is found, return it. */
-
+/* Decide if it's valid XML to append NEW_FRAME to DIGGER's stack.  If
+   so, append the frame.  If not, return a validity error. (TAGNAME is
+   used for error message.) */
 static svn_error_t *
-telescope_delta_stack (svn_delta_digger_t *digger,
-                       const svn_boolean_t destroy_p,
-                       svn_delta_stackframe_t *new_frame,
-                       const char *tagname)
+do_stack_append (svn_delta_digger_t *digger, 
+                 svn_delta_stackframe_t *new_frame,
+                 static char *tagname)
 {
-  /* Get a grip on the bottom frame of the stack */
+  apr_pool_t *pool = digger->pool;
 
-  svn_delta_stackframe_t *bot_frame
-    = find_delta_bottom (digger->stack);
+  /* Get a grip on the youngest frame of the stack */
+  svn_delta_stackframe_t *youngest_frame = find_stack_newest (digger->stack);
 
-  if (destroy_p)  /* unpend procedure... */
+  if (youngest_frame == NULL)
     {
-      /* Type-check: make sure the kind of object we're removing (due
-         to an XML closure tag) actually agrees with the type of frame
-         at the bottom of the stack! */
-
-      if ((strcmp (tagname, "tree-delta") == 0)
-          && (bot_frame->kind != svn_XML_tree))
-        return XML_type_error (digger->pool, tagname, TRUE);
-
-      else if (((strcmp (tagname, "new") == 0) 
-                || (strcmp (tagname, "replace") == 0)
-                || (strcmp (tagname, "delete") == 0))
-               && (bot_frame->kind != svn_XML_edit))
-        return XML_type_error (digger->pool, tagname, TRUE);
-
-      else if (((strcmp (tagname, "file") == 0) 
-                || (strcmp (tagname, "dir") == 0))
-               && (bot_frame->kind != svn_XML_content))
-        return XML_type_error (digger->pool, tagname, TRUE);
-
-
-      /* We're using pools, so just "lose" the pointer to the
-         bottommost frame. */
-      if (bot_frame->previous)
-        bot_frame->previous->next = NULL;
-      else
-        digger->stack = NULL;
-
+      /* The stack is empty, this is our first frame append. */
+      digger->stack = new_frame;
       return SVN_NO_ERROR;
     }
+  
+  /* Validity check: make sure that our XML open tag logically follows
+     the previous open tag. */
 
-  else /* append procedure... */
+  if ((new_frame->tag == svn_XML_treedelta)
+      && (youngest_frame->tag != svn_XML_dir))
+    return XML_type_error (pool, tagname, FALSE);
+
+  else if ( ((new_frame->tag == svn_XML_new)
+             || (new_frame->tag == svn_XML_replace)
+             || (new_frame->tag == svn_XML_delete))
+            && (youngest_frame->tag != svn_XML_treedelta) )
+        return XML_type_error (pool, tagname, FALSE);
+  
+  else if ((new_frame->tag == svn_XML_file)
+           || (new_frame->tag == svn_XML_dir))
     {
-      /* Type-check: make sure the kind of object we're adding (due to
-         an XML open tag) logically follows the type of frame at the
-         bottom of the stack! */
-
-      if ((strcmp (tagname, "tree-delta") == 0)
-          && (bot_frame->kind != svn_XML_content))
+      if ((youngest_frame->tag != svn_XML_new)
+          && (youngest_frame->tag != svn_XML_replace)
+          && (youngest_frame->tag != svn_XML_delete))
         return XML_type_error (digger->pool, tagname, FALSE);
-
-      else if (((strcmp (tagname, "new") == 0) 
-                || (strcmp (tagname, "replace") == 0)
-                || (strcmp (tagname, "delete") == 0))
-               && (bot_frame->kind != svn_XML_tree))
-        return XML_type_error (digger->pool, tagname, FALSE);
-
-      else if (((strcmp (tagname, "file") == 0) 
-                || (strcmp (tagname, "dir") == 0))
-               && (bot_frame->kind != svn_XML_edit))
-        return XML_type_error (digger->pool, tagname, FALSE);
-
-
-      /* Append doublely-linked list item */
-      if (bot_frame) {
-        bot_frame->next = new_frame;
-        new_frame->previous = bot_frame;
-        /* Child inherits parent's baton by default */
-        new_frame->baton = bot_frame->baton;
-      }
-      else
-        digger->stack = new_frame;
-
-      return SVN_NO_ERROR;
     }
+
+  /* Append doubley-linked list item */
+  
+  youngest_frame->next = new_frame;
+  new_frame->previous = youngest_frame;
+
+  /* Child inherits parent's baton by default */
+  new_frame->baton = youngest_frame->baton;
+
+  return SVN_NO_ERROR;
 }
+
+
+
+
+/* Decide if an xml closure TAGNAME is valid, by examining the
+   youngest frame in DIGGER's stack.  If so, remove YOUNGEST_FRAME
+   from the stack.  If not, return a validity error. */
+static svn_error_t *
+do_stack_remove (svn_delta_digger_t *digger, char *tagname)
+{
+  apr_pool_t *pool = digger->pool;
+
+  /* Get a grip on the youngest frame of the stack */
+  svn_delta_stackframe_t *youngest_frame = find_stack_newest (digger->stack);
+
+  if (youngest_frame == NULL)
+    return XML_type_error (pool, tagname, TRUE);
+
+  /* Validity check: Make sure the kind of object we're removing (due
+     to an XML TAGNAME closure) actually agrees with the type of frame
+     at the bottom of the stack! */
+  
+  if ((strcmp (tagname, "tree-delta") == 0)
+      && (youngest_frame->tag != svn_XML_treedelta))
+    return XML_type_error (pool, tagname, TRUE);
+
+  else if ((strcmp (tagname, "new") == 0)
+           && (youngest_frame->tag != svn_XML_new))
+    return XML_type_error (pool, tagname, TRUE);
+
+  else if ((strcmp (tagname, "delete") == 0)
+           && (youngest_frame->tag != svn_XML_del))
+    return XML_type_error (pool, tagname, TRUE);
+
+  else if ((strcmp (tagname, "replace") == 0)
+           && (youngest_frame->tag != svn_XML_replace))
+    return XML_type_error (pool, tagname, TRUE);
+
+  else if ((strcmp (tagname, "file") == 0)
+           && (youngest_frame->tag != svn_XML_file))
+    return XML_type_error (pool, tagname, TRUE);
+
+  else if ((strcmp (tagname, "dir") == 0)
+           && (youngest_frame->tag != svn_XML_dir))
+    return XML_type_error (pool, tagname, TRUE);
+
+  else if ((strcmp (tagname, "textdelta") == 0)
+           && (youngest_frame->tag != svn_XML_textdelta))
+    return XML_type_error (pool, tagname, TRUE);
+
+  else if ((strcmp (tagname, "propdelta") == 0)
+           && (youngest_frame->tag != svn_XML_propdelta))
+    return XML_type_error (pool, tagname, TRUE);
+
+
+  /* Passed validity check, do the actual removal */
+
+  /* Lose the pointer to the youngest frame. */
+  if (youngest_frame->previous)
+    youngest_frame->previous->next = NULL;
+
+  else  /* we must be removing the only frame in the stack */
+    digger->stack = NULL;
+      
+  return SVN_NO_ERROR;
+}
+
 
 
 
