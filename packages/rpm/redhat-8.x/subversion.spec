@@ -23,7 +23,7 @@ Requires: httpd-apr >= %{apache_version}
 Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
-Requires: python >= 2.2.1
+Requires: python >= 2
 #Requires: /sbin/install-info
 Obsoletes: subversion-cvs2svn
 BuildPreReq: httpd >= %{apache_version}
@@ -81,7 +81,7 @@ the Apache directories and configuration.
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
 Requires: swig-runtime >= 1.3.16
-Requires: python >= 2.2.1
+Requires: python >= 2
 Obsoletes: subversion-cvs2svn
 %description python
 Provides Python (SWIG) support for Subversion.
