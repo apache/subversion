@@ -1315,6 +1315,21 @@ undelete_change (svn_fs_t *fs,
 }
                        
 
+/* Set the contents of CONFLICT_PATH to PATH, and return an
+   SVN_ERR_FS_CONFLICT error that indicates that there was a conflict
+   at PATH.  Perform all allocations in POOL (except the allocation of
+   CONFLICT_PATH, which should be handled outside this function).  */
+static svn_error_t *
+conflict_err (svn_stringbuf_t *conflict_path,
+              const char *path,
+              apr_pool_t *pool)
+{
+  svn_stringbuf_set (conflict_path, path);
+  return svn_error_createf (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
+                            "conflict at \"%s\"", path);
+}
+
+
 /* Merge changes between ANCESTOR and SOURCE into TARGET, as part of
  * TRAIL.  ANCESTOR and TARGET must be distinct node revisions.
  * TARGET_PATH should correspond to TARGET's full path in its
@@ -1498,9 +1513,7 @@ merge (svn_stringbuf_t *conflict_p,
       || (! svn_fs__dag_is_directory (target))
       || (! svn_fs__dag_is_directory (ancestor)))
     {
-      svn_stringbuf_set (conflict_p, target_path);
-      return svn_error_createf (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                                "conflict at \"%s\"", target_path);
+      return conflict_err (conflict_p, target_path, trail->pool);
     }
 
       
@@ -1524,9 +1537,7 @@ merge (svn_stringbuf_t *conflict_p,
        atoms are `equal' is enough. */
     if (! svn_fs__same_keys (tgt_nr->prop_key, anc_nr->prop_key))
       {
-        svn_stringbuf_set (conflict_p, target_path);
-        return svn_error_createf (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                                  "conflict at \"%s\"", target_path);
+        return conflict_err (conflict_p, target_path, trail->pool);
       }
   }
 
@@ -1664,13 +1675,11 @@ merge (svn_stringbuf_t *conflict_p,
                       || (! svn_fs__dag_is_directory (a_ent_node)))
                     {
                       /* Not all of these entries is a directory. Conflict. */
-                      svn_stringbuf_set (conflict_p, 
-                                         svn_path_join (target_path,
-                                                        a_entry->name,
-                                                        trail->pool));
-                      return svn_error_createf
-                        (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                         "conflict at \"%s\"", conflict_p->data);
+                      return conflict_err (conflict_p,
+                                           svn_path_join (target_path,
+                                                          a_entry->name,
+                                                          trail->pool),
+                                           trail->pool);
                     }
 
                   /* ... just recurse. */
@@ -1701,12 +1710,11 @@ merge (svn_stringbuf_t *conflict_p,
              conflicts with E's having been removed from target. */
           if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
-              svn_stringbuf_set (conflict_p, svn_path_join (target_path,
-                                                            a_entry->name,
-                                                            trail->pool));
-              return svn_error_createf
-                (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                 "conflict at \"%s\"", conflict_p->data);
+              return conflict_err (conflict_p,
+                                   svn_path_join (target_path,
+                                                  a_entry->name,
+                                                  trail->pool),
+                                   trail->pool);
             }
 
           /* Else if E did not change between ancestor and source,
@@ -1748,12 +1756,11 @@ merge (svn_stringbuf_t *conflict_p,
                  the ancestor that we conflict here.
 
                  ### TODO: see issue #418 about this inelegance. */
-              svn_stringbuf_set (conflict_p, svn_path_join (target_path,
-                                                            t_entry->name,
-                                                            trail->pool));
-              return svn_error_createf
-                (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                 "conflict at \"%s\"", conflict_p->data);
+              return conflict_err (conflict_p,
+                                   svn_path_join (target_path,
+                                                  t_entry->name,
+                                                  trail->pool),
+                                   trail->pool);
             }
           else
             {
@@ -1774,7 +1781,7 @@ merge (svn_stringbuf_t *conflict_p,
              deletion of E so that this transaction isn't given credit
              for that change. */
           SVN_ERR (undelete_change (fs, svn_path_join (target_path, 
-                                                       t_entry->name, 
+                                                       a_entry->name, 
                                                        trail->pool),
                                     txn_id, trail));
 
@@ -1830,12 +1837,11 @@ merge (svn_stringbuf_t *conflict_p,
       /* E exists in target but is different from E in source */
       else if (! s_ancestorof_t)
         {
-          svn_stringbuf_set (conflict_p, svn_path_join (target_path,
-                                                        t_entry->name,
-                                                        trail->pool));
-          return svn_error_createf
-            (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-             "conflict at \"%s\"", conflict_p->data);
+          return conflict_err (conflict_p,
+                               svn_path_join (target_path,
+                                              t_entry->name,
+                                              trail->pool),
+                               trail->pool);
 
           /* The remaining case would be: E exists in target and is
            * same as in source.  This implies a twin add, so target
@@ -1922,7 +1928,7 @@ txn_body_merge (void *baton, trail_t *trail)
     }
   else
     {
-      SVN_ERR (merge (args->conflict, "", txn_root_node,
+      SVN_ERR (merge (args->conflict, "/", txn_root_node,
                       source_node, ancestor_node, txn_id, trail));
 
       /* After the merge, txn's new "ancestor" is now really the node
@@ -1931,7 +1937,7 @@ txn_body_merge (void *baton, trail_t *trail)
          forget the merging work that's already been done. */
       SVN_ERR (update_ancestry (fs, source_id, 
                                 svn_fs__dag_get_id (txn_root_node),
-                                txn_id, "", trail));
+                                txn_id, "/", trail));
       SVN_ERR (svn_fs__set_txn_base (fs, txn_id, source_id, trail));
     }
   
