@@ -30,6 +30,7 @@
 #include "svn_wc.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
+#include "svn_subst.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_pools.h"
@@ -45,6 +46,7 @@
 
 /* Apply PATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
+   PROPERTIES is the set of node properties set on this file.
 
    Fill DIGEST with the md5 checksum of the sent file; DIGEST must be
    at least APR_MD5_DIGESTSIZE bytes long. */
@@ -52,30 +54,85 @@ static svn_error_t *
 send_file_contents (const char *path,
                     void *file_baton,
                     const svn_delta_editor_t *editor,
+                    apr_hash_t *properties,
                     unsigned char *digest,
                     apr_pool_t *pool)
 {
+  const char *tmpfile_path = NULL;
   svn_stream_t *contents;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
   apr_file_t *f = NULL;
+  const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
 
-  /* Get an apr file for PATH. */
-  SVN_ERR (svn_io_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool));
-  
-  /* Get a readable stream of the file's contents. */
-  contents = svn_stream_from_aprfile (f, pool);
+  /* If there are properties, look for EOL-style and keywords ones. */
+  if (properties)
+    {
+      eol_style_val = apr_hash_get (properties, SVN_PROP_EOL_STYLE,
+                                    sizeof (SVN_PROP_EOL_STYLE) - 1);
+      keywords_val = apr_hash_get (properties, SVN_PROP_KEYWORDS,
+                                   sizeof (SVN_PROP_KEYWORDS) - 1);
+    }
 
   /* Get an editor func that wants to consume the delta stream. */
   SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool,
                                     &handler, &handler_baton));
 
+  /* If we have EOL styles or keywords to de-translate, do it.  Any
+     EOL style gets translated to "\n", the repository-normal format.
+     Keywords get unexpanded.  */
+  if (eol_style_val || keywords_val)
+    {
+      svn_subst_keywords_t keywords = {0};
+      const char *temp_dir;
+      svn_stream_t *tmp_stream;
+      apr_file_t *tmp_f;
+
+      /* Get a readable stream of the file's contents. */
+      SVN_ERR (svn_io_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool));
+      contents = svn_stream_from_aprfile (f, pool);
+
+      if (keywords_val)
+        SVN_ERR (svn_subst_build_keywords (&keywords, keywords_val->data, 
+                                           "-1", "", 0, "", pool));
+
+      /* Now create a new tempfile, and open a stream to it. */
+      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
+      SVN_ERR (svn_io_open_unique_file 
+               (&tmp_f, &tmpfile_path,
+                svn_path_join (temp_dir, "svn-import", pool),
+                ".tmp", FALSE, pool));
+      tmp_stream = svn_stream_from_aprfile (tmp_f, pool);
+
+      /* Copy the original file to the temporary one, de-translating
+         along the way. */
+      SVN_ERR (svn_subst_translate_stream (contents, tmp_stream, 
+                                           eol_style_val ? "\n" : NULL,
+                                           eol_style_val ? TRUE : FALSE,
+                                           keywords_val ? &keywords : NULL,
+                                           FALSE));
+
+      /* Close our original and temporary files. */
+      SVN_ERR (svn_io_file_close (f, pool));
+      SVN_ERR (svn_io_file_close (tmp_f, pool));
+    }
+
+  /* Open our contents file, either the original path or the temporary
+     copy we might have made above. */
+  SVN_ERR (svn_io_file_open (&f, tmpfile_path ? tmpfile_path : path, 
+                             APR_READ, APR_OS_DEFAULT, pool));
+  contents = svn_stream_from_aprfile (f, pool);
+
   /* Send the file's contents to the delta-window handler. */
   SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton,
                                     digest, pool));
 
-  /* Close the file. */
+  /* Close our contents file. */
   SVN_ERR (svn_io_file_close (f, pool));
+
+  /* If we used a tempfile, we need to close and remove it, too. */
+  if (tmpfile_path)
+    SVN_ERR (svn_io_remove_file (tmpfile_path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -118,15 +175,11 @@ import_file (const svn_delta_editor_t *editor,
     {
       for (hi = apr_hash_first (pool, properties); hi; hi = apr_hash_next (hi))
         {
-          const void *propname;
-          void *propvalue;
-          svn_string_t propvaluestr;
+          const void *pname;
+          void *pval;
 
-          apr_hash_this (hi, &propname, NULL, &propvalue);
-          propvaluestr.data = propvalue;
-          propvaluestr.len = strlen (propvaluestr.data);
-          SVN_ERR (editor->change_file_prop (file_baton, propname,
-                                             &propvaluestr, pool));
+          apr_hash_this (hi, &pname, NULL, &pval);
+          SVN_ERR (editor->change_file_prop (file_baton, pname, pval, pool));
         }
     }
 
@@ -141,7 +194,8 @@ import_file (const svn_delta_editor_t *editor,
                          SVN_INVALID_REVNUM);
 
   /* Now, transmit the file contents. */
-  SVN_ERR (send_file_contents (path, file_baton, editor, digest, pool));
+  SVN_ERR (send_file_contents (path, file_baton, editor, 
+                               properties, digest, pool));
 
   /* Finally, close the file. */
   text_checksum = svn_md5_digest_to_cstring (digest, pool);

@@ -121,7 +121,12 @@ auto_props_enumerator (const char *name,
       len = strlen (property);
       if (len > 0)
         {
-          apr_hash_set (autoprops->properties, property, len, this_value);
+          svn_string_t *propval = apr_pcalloc (autoprops->pool,
+                                               sizeof (*propval));
+          propval->data = this_value;
+          propval->len = strlen (this_value);
+
+          apr_hash_set (autoprops->properties, property, len, propval);
           if (strcmp (property, SVN_PROP_MIME_TYPE) == 0)
             autoprops->mimetype = this_value;
           else if (strcmp (property, SVN_PROP_EXECUTABLE) == 0)
@@ -151,35 +156,37 @@ svn_client__get_auto_props (apr_hash_t **properties,
   autoprops.have_executable = FALSE;
   *properties = autoprops.properties;
   cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                        APR_HASH_KEY_STRING);
+                      APR_HASH_KEY_STRING);
 
   /* check that auto props is enabled */
   SVN_ERR (svn_config_get_bool (cfg, &use_autoprops,
                                 SVN_CONFIG_SECTION_MISCELLANY,
                                 SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, FALSE));
+
+  /* search for auto props */
   if (use_autoprops)
-  {
-    /* search for auto props */
     svn_config_enumerate (cfg, SVN_CONFIG_SECTION_AUTO_PROPS,
                           auto_props_enumerator, &autoprops);
-  }
+
   /* if mimetype has not been set check the file */
-  if (!autoprops.mimetype)
+  if (! autoprops.mimetype)
     {
       SVN_ERR (svn_io_detect_mimetype (&autoprops.mimetype, path, pool));
       if (autoprops.mimetype)
         apr_hash_set (autoprops.properties, SVN_PROP_MIME_TYPE,
-                      strlen (SVN_PROP_MIME_TYPE), autoprops.mimetype );
+                      strlen (SVN_PROP_MIME_TYPE), 
+                      svn_string_create (autoprops.mimetype, pool));
     }
 
   /* if executable has not been set check the file */
-  if (!autoprops.have_executable)
+  if (! autoprops.have_executable)
     {
       svn_boolean_t executable = FALSE;
       SVN_ERR (svn_io_is_file_executable (&executable, path, pool));
       if (executable)
         apr_hash_set (autoprops.properties, SVN_PROP_EXECUTABLE,
-                      strlen (SVN_PROP_EXECUTABLE), "" );
+                      strlen (SVN_PROP_EXECUTABLE), 
+                      svn_string_create ("", pool));
     }
 
   *mimetype = autoprops.mimetype;
@@ -209,15 +216,11 @@ add_file (const char *path,
       for (hi = apr_hash_first (pool, properties);
            hi != NULL; hi = apr_hash_next (hi))
         {
-          const void *propname;
-          void *propvalue;
-          svn_string_t propvaluestr;
+          const void *pname;
+          void *pval;
 
-          apr_hash_this (hi, &propname, NULL, &propvalue);
-          propvaluestr.data = propvalue;
-          propvaluestr.len = strlen (propvaluestr.data);
-          SVN_ERR (svn_wc_prop_set (propname, &propvaluestr, path,
-                                    adm_access, pool));
+          apr_hash_this (hi, &pname, NULL, &pval);
+          SVN_ERR (svn_wc_prop_set (pname, pval, path, adm_access, pool));
         }
     }
   /* Report the addition to the caller. */
