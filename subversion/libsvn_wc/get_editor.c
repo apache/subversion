@@ -1118,51 +1118,53 @@ close_file (void *file_baton)
    matrix. */
 
 
-  /* Text or Binary File?  Note that this is not a definitive test of
-     whether the file is actually text or binary, just whether it has
-     a mime-type that "marks" the file as binary. */
-  SVN_ERR (svn_wc_has_binary_prop (&has_binary_prop, fb->path, fb->pool));
-
-  /* Local textual mods?  (We can ignore local prop-mods;  those will
-     be automagically merged later on in this routine.) */
-  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified, fb->path, fb->pool));
-
-  /* Before doing any logic, we *know* that the first thing the
-     logfile should do is overwrite the old text-base file with the
-     newly received one in tmp/.  */
-  tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
-  txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
-  svn_xml_make_open_tag (&entry_accum,
-                         fb->pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_txtb,
-                         SVN_WC__LOG_ATTR_DEST,
-                         txtb,
-                         NULL);
-
-  if ( (! is_locally_modified) || (fb->dir_baton->edit_baton->is_checkout) )
+  if (fb->text_changed)
     {
-      /* If there are no local mods (or we're doing an initial
-         checkout), who cares whether it's a text or binary file!
-         Just overwrite any working file with the new one. */
+      /* Text or Binary File?  Note that this is not a definitive test of
+         whether the file is actually text or binary, just whether it has
+         a mime-type that "marks" the file as binary. */
+      SVN_ERR (svn_wc_has_binary_prop (&has_binary_prop, fb->path, fb->pool));
+      
+      /* Local textual mods?  (We can ignore local prop-mods;  those will
+         be automagically merged later on in this routine.) */
+      SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
+                                       fb->path, fb->pool));
+      
+      /* Before doing any logic, we *know* that the first thing the
+         logfile should do is overwrite the old text-base file with the
+         newly received one in tmp/.  */
+      tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
+      txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
                              svn_xml_self_closing,
-                             SVN_WC__LOG_CP,
+                             SVN_WC__LOG_MV,
                              SVN_WC__LOG_ATTR_NAME,
-                             txtb,
+                             tmp_txtb,
                              SVN_WC__LOG_ATTR_DEST,
-                             fb->name,
+                             txtb,
                              NULL);
-    }
-  
-  else   /* file is locally modified, and this is an update. */
-    {
-      if (fb->text_changed)
+
+      if ( (! is_locally_modified)
+           || (fb->dir_baton->edit_baton->is_checkout) )
         {
-          if (! has_binary_prop)
+          /* If there are no local mods (or we're doing an initial
+             checkout), who cares whether it's a text or binary file!
+             Just overwrite any working file with the new one. */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_CP,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 txtb,
+                                 SVN_WC__LOG_ATTR_DEST,
+                                 fb->name,
+                                 NULL);
+        }
+  
+      else   /* file is locally modified, and this is an update. */
+        {
+          if (! has_binary_prop)  /* type text */
             {
               enum svn_node_kind wfile_kind = svn_node_unknown;
               svn_stringbuf_t *received_diff_filename;
@@ -1363,12 +1365,12 @@ close_file (void *file_baton)
                   
                 }
             }
-
+          
           else  /* file is marked as binary */
             {
               apr_file_t *renamed_fp;
               svn_stringbuf_t *renamed_path, *renamed_basename;
-
+              
               /* Rename the working file. */
               SVN_ERR (svn_io_open_unique_file (&renamed_fp,
                                                 &renamed_path,
@@ -1407,10 +1409,10 @@ close_file (void *file_baton)
                                      NULL);
             }
         }
-
+      
     }  /* End  of textual merging process! */
   
-
+  
   /* MERGE ANY PROPERTY CHANGES, if they exist... */
   if (fb->prop_changed)
     {
