@@ -1,4 +1,4 @@
-Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision >3021)
+Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision >3030)
 
  User-visible changes:
  * fs schema change, see issue #842. **NOTE: repos dump/load cycle required!**
