@@ -39,6 +39,9 @@ struct edit_baton
 
   /* Supplied when the editor is created: */
 
+  /* The active RA session */
+  svn_ra_local__session_baton_t *session;
+
   /* The user doing the commit.  Presumably, some higher layer has
      already authenticated this user. */
   const char *user;
@@ -226,18 +229,34 @@ add_directory (svn_stringbuf_t *name,
 
   if (copyfrom_path)
     {
-      /* If the driver supplied ancestry args, the filesystem can make a
-         "cheap copy" under the hood... how convenient! */
+      svn_stringbuf_t *repos_path; 
+      svn_stringbuf_t *fs_path;
       svn_fs_root_t *copyfrom_root;
+
+      /* This add has history.  Let's split the copyfrom_url. */
+      SVN_ERR (svn_ra_local__split_URL (&repos_path, &fs_path,
+                                        copyfrom_path, new_dirb->subpool));
+
+      /* For now, require that the url come from the same repository
+         that this commit is operating on. */
+      if (! svn_stringbuf_compare (eb->session->repos_path, repos_path))
+            return 
+              svn_error_createf 
+              (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
+               "fs editor: add_file`%s': copyfrom_url is from different repo",
+               name->data);
+      
+      /* Now use the "fs_path" as an absolute path within the
+         repository to make the copy from. */      
 
       SVN_ERR (svn_fs_revision_root (&copyfrom_root, eb->fs,
                                      copyfrom_revision, new_dirb->subpool));
 
-      SVN_ERR (svn_fs_copy (copyfrom_root, copyfrom_path->data,
+      SVN_ERR (svn_fs_copy (copyfrom_root, fs_path->data,
                             eb->txn_root, new_dirb->path->data,
                             new_dirb->subpool));
 
-      /* And don't forget to fill out the the dir baton */
+      /* And don't forget to fill out the the dir baton! */
       new_dirb->base_rev = copyfrom_revision;
     }
   else
@@ -381,21 +400,36 @@ add_file (svn_stringbuf_t *name,
   pb->ref_count++;
 
   if (copy_path)
-    {
-      /* If the driver supplied ancestry args, the filesystem can make a
-         "cheap copy" under the hood... how convenient! */
+    {      
+      svn_stringbuf_t *repos_path; 
+      svn_stringbuf_t *fs_path;
       svn_fs_root_t *copy_root;
 
+      /* This add has history.  Let's split the copyfrom_url. */
+      SVN_ERR (svn_ra_local__split_URL (&repos_path, &fs_path,
+                                        copy_path, new_fb->subpool));
+
+      /* For now, require that the url come from the same repository
+         that this commit is operating on. */
+      if (! svn_stringbuf_compare (eb->session->repos_path, repos_path))
+            return 
+              svn_error_createf 
+              (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
+               "fs editor: add_file`%s': copyfrom_url is from different repo",
+               name->data);
+      
+      /* Now use the "fs_path" as an absolute path within the
+         repository to make the copy from. */      
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
                                      copy_revision, new_fb->subpool));
 
-      SVN_ERR (svn_fs_copy (copy_root, copy_path->data,
+      SVN_ERR (svn_fs_copy (copy_root, fs_path->data,
                             eb->txn_root, new_fb->path->data,
                             new_fb->subpool));
     }
   else
     {
-      /* No ancestry given, just make a new file. */      
+      /* No ancestry given, just make a new, empty file. */      
       SVN_ERR (svn_fs_make_file (eb->txn_root, new_fb->path->data,
                                  new_fb->subpool));
     }
@@ -546,6 +580,7 @@ abort_edit (void *edit_baton)
 svn_error_t *
 svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
                           void **edit_baton,
+                          svn_ra_local__session_baton_t *session,
                           svn_fs_t *fs,
                           svn_stringbuf_t *base_path,
                           const char *user,
@@ -581,6 +616,7 @@ svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
   eb->hook = hook;
   eb->hook_baton = hook_baton;
   eb->base_path = svn_stringbuf_dup (base_path, subpool);
+  eb->session = session;
   eb->fs = fs;
   eb->txn = NULL;
 

@@ -158,6 +158,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
  */
 svn_error_t *svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
+                                       svn_ra_local__session_baton_t *session,
                                        svn_fs_t *fs,
                                        svn_stringbuf_t *base_path,
                                        const char *user,

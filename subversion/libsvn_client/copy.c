@@ -89,10 +89,6 @@ svn_client_copy (svn_stringbuf_t *src_path,
       final_basename = src_basename;
     }
 
-  /* ### Extremely temporary, duh.  :-)  */
-  printf ("I will now create '%s' within directory '%s'\n",
-          final_basename->data, final_parent->data);
-
 
   /* Part II:  Have the working copy library do the real work. */
 
