@@ -86,6 +86,9 @@ struct file_baton
 static svn_error_t *
 decrement_dir_ref_count (struct dir_baton *db)
 {
+  if (db == NULL)
+    return SVN_NO_ERROR;
+
   db->ref_count--;
 
   /* Check to see if *any* child batons still depend on this
