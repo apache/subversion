@@ -666,7 +666,7 @@ svn_client__repos_locations (const char **start_url,
       if (strcmp (url, svn_path_join (repos_url, lrb.peg_path, pool)) != 0)
         return svn_error_createf
           (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-           _("'%s' in revision %ld is an unrelated object."),
+           _("'%s' in revision %ld is an unrelated object"),
            path, youngest);
     }
 

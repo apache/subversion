@@ -139,11 +139,11 @@ const apr_getopt_option_t svn_cl__options[] =
     {"no-auto-props", svn_cl__no_autoprops_opt, 0,
                       N_("disable automatic properties")},
     {"native-eol",    svn_cl__native_eol_opt, 1,
-                      N_("Use a different EOL marker than the standard\n"
+                      N_("use a different EOL marker than the standard\n"
                       "                             system marker for files "
                       "with a native svn:eol-style\n"
                       "                             property.  ARG may be one "
-                      "of 'LF', 'CR', 'CRLF'\n")},
+                      "of 'LF', 'CR', 'CRLF'")},
     {0,               0, 0, 0}
   };
 
@@ -251,7 +251,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  1. Display the changes made to TARGETs as they are seen in REV "
        "between\n"
-       "     two revisions.  TARGETs may working copy paths or URLs.\n"
+       "     two revisions.  TARGETs may be working copy paths or URLs.\n"
        "\n"
        "     N defaults to BASE if any TARGET is a working copy path, otherwise "
        "it\n"
