@@ -179,3 +179,10 @@ changes.
       Justification: Improve display, ease of use, low risk.
       Votes:
        +1: blair
+
+    * r8366
+      In svn_add_diffs.pl, change regex to match new r\d+ revision
+      format from 'svn log'.
+      Justification: Broken without fix, one line change.
+      Votes:
+       +1: blair
