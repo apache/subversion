@@ -17,9 +17,6 @@ import math
 import md5
 import shutil
 
-from svn import fs, util, delta, repos
-
-
 trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
 branch_tag = re.compile('^[0-9.]+\\.0\\.[0-9]+$')
 vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
@@ -210,19 +207,6 @@ def relative_name(cvsroot, fname):
       return fname[l+1:]
     return fname[l:]
   return l
-
-def make_path(fs, root, repos_path, f_pool):
-  ### hmm. need to clarify OS path separators vs FS path separators
-  dirname = os.path.dirname(repos_path)
-  if dirname != '/':
-    # get the components of the path (skipping the leading '/')
-    parts = string.split(dirname[1:], os.sep)
-    for i in range(1, len(parts) + 1):
-      # reassemble the pieces, adding a leading slash
-      parent_dir = '/' + string.join(parts[:i], '/')
-      if fs.check_path(root, parent_dir, f_pool) == util.svn_node_none:
-        print '    making dir:', parent_dir
-        fs.make_dir(root, parent_dir, f_pool)
 
 def visit_file(arg, dirname, files):
   cd, p, stats = arg
@@ -475,27 +459,16 @@ class Dump:
     # This record is done.
     self.dumpfile.write('\n')
 
-    # Some old code, left around for reference (I don't think we need
-    # to worry about this particular problem anymore, since dumpfiles
-    # do not depend on deltas, but want to poke around a little more
-    # to make sure I understand what this was for):
-    # 
-    #    # Get the current file contents from the repo, or, if we have
-    #    # multiple CVS revisions to the same file being done in this
-    #    # single commit, then get the contents of the previous
-    #    # revision from co, or else the delta won't be correct because
-    #    # the contents in the repo won't have changed yet.
-    #    if svn_path == lastcommit[0]:
-    #      infile2 = os.popen("co -q -p%s \'%s\'"
-    #                         % (lastcommit[1], rcs_file), "r", 102400)
-    #      stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
-    #    else:
-    #      stream1 = fs.file_contents(root, svn_path, f_pool)
-
   def close(self):
     self.dumpfile.close()
     ### os.removedirs() didn't work.  (What is it for, anyway?)
     shutil.rmtree(self.tmpdir)
+
+
+def format_date(date):
+  """Return an svn-compatible date string for DATE (seconds since epoch)."""
+  ### A Subversion date looks like "2002-09-29T14:44:59.000000Z"
+  return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime(date))
 
 
 class Commit:
@@ -530,7 +503,7 @@ class Commit:
       self.deletes.append((file, rev, branch_name, tags, branches))
     self.files[file] = 1
 
-  def get_metadata(self, pool):
+  def get_metadata(self):
     # by definition, the author and log message must be the same for all
     # items that went into this commit. therefore, just grab any item from
     # our record of changes/deletes.
@@ -545,12 +518,11 @@ class Commit:
     rip.parse_cvs_file(file)
     author = rip.authors[rev]
     log = rip.logs[rev]
-
-    # format the date properly
-    a_t = util.apr_time_ansi_put(self.t_max)[1]
-    date = util.svn_time_to_cstring(a_t, pool)
+    # and we already have the date, so just format it
+    date = format_date(self.t_max)
 
     return author, log, date
+
 
   def commit(self, dump, ctx):
     # commit this transaction
@@ -571,19 +543,7 @@ class Commit:
       print '    (skipped; dry run enabled)'
       return
 
-    # create a pool for the entire commit
-    c_pool = util.svn_pool_create(ctx.pool)
-
-    # rev = fs.youngest_rev(t_fs, c_pool)
-    # txn = fs.begin_txn(t_fs, rev, c_pool)
-    # root = fs.txn_root(txn, c_pool)
-
-    lastcommit = (None, None)
-
     do_copies = [ ]
-
-    # create a pool for each file; it will be cleared on each iteration
-    f_pool = util.svn_pool_create(c_pool)
 
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
       # compute a repository path, dropping the ,v from the file name
@@ -593,7 +553,7 @@ class Commit:
       print '    changing %s : %s' % (cvs_rev, svn_path)
 
       # get the metadata for this commit
-      author, log, date = self.get_metadata(c_pool)
+      author, log, date = self.get_metadata()
       props = { 'svn:author' : unicode(author, ctx.encoding).encode('utf8'),
                 'svn:log' : unicode(log, ctx.encoding).encode('utf8'),
                 'svn:date' : date }
@@ -604,6 +564,8 @@ class Commit:
       previous_rev = dump.end_revision()
       print '    new revision:', previous_rev
 
+# ### This stuff left in temporarily, as a reference:
+#
 #      make_path(fs, root, svn_path, f_pool)
 #
 #      if fs.check_path(root, svn_path, f_pool) == util.svn_node_none:
@@ -725,9 +687,6 @@ class Commit:
 #      # FIXME: we don't set a date here
 #      # gstein sez: tags don't have dates, so no biggy. commits to
 #      #             branches have dates, tho.
-#    
-    # done with the commit and file pools
-    util.svn_pool_destroy(c_pool)
 
 
 def read_resync(fname):
@@ -946,10 +905,8 @@ _passes = [
 class _ctx:
   pass
 
-def convert(pool, ctx, start_pass=1):
+def convert(ctx, start_pass=1):
   "Convert a CVS repository to an SVN repository."
-
-  ctx.pool = pool
 
   times = [ None ] * len(_passes)
   for i in range(start_pass - 1, len(_passes)):
@@ -1036,7 +993,7 @@ def main():
     elif opt == '--encoding':
       ctx.encoding = value
 
-  util.run_app(convert, ctx, start_pass=start_pass)
+  convert(ctx, start_pass=start_pass)
 
 if __name__ == '__main__':
   main()
