@@ -296,7 +296,7 @@ svn_utf_cstring_to_utf8 (const char **dest,
 #ifdef SVN_UTF8
 
   svn_stringbuf_t *destbuf;
-  SVN_ERR (svn_utf_cstring_to_utf8_stringbuf (src, &destbuf, xlator, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8_stringbuf (&destbuf, src, xlator, pool));
   *dest = destbuf->data;
   return SVN_NO_ERROR;
 
@@ -395,7 +395,7 @@ svn_utf_cstring_from_utf8_stringbuf (const char **dest,
 #ifdef SVN_UTF8
 
   svn_stringbuf_t *destbuf;
-  SVN_ERR (svn_utf_stringbuf_from_utf8 (src, &destbuf, pool));
+  SVN_ERR (svn_utf_stringbuf_from_utf8 (&destbuf, src, pool));
   *dest = destbuf->data;
   return SVN_NO_ERROR;
 
