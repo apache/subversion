@@ -151,15 +151,15 @@
       su copia local&mdash;especialmente si ejecuta <command>svn
       update</command> semanas tras el aislamiento.</para>
 
-    <para>The better solution is to create your own branch, or line of
-      development, in the repository.  This allows you to save your
-      half-broken work frequently without interfering with others, yet
-      you can still selectively share information with your
-      collaborators.  You'll see exactly how this works later
-      on.</para>
+    <para>La mejor solución es crear su propia rama, o línea de
+      desarrollo, en el repositorio. Esto le permite guardar su
+      trabajo a medio hacer con frecuencia sin interferir con otros,
+      permitiendo a su vez compartir de forma selectiva información
+      con sus colaboradores. Más adelante verá exáctamente como
+      funciona esto.</para>
 
   <sect2 id="svn-ch-4-sect-2.1">
-    <title>Creating a Branch</title> 
+    <title>Creando una rama</title>
       
       <para>Creating a branch is very simple&mdash;you make a copy of
         the project in the repository using the <command>svn
