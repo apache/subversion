@@ -769,7 +769,7 @@ $
           </footnote></para>
 
         <screen>
-$ svn pset svn:log '* button.c: Fix a compiler warning.' -r11 --revprop
+$ svn propset svn:log '* button.c: Fix a compiler warning.' -r11 --revprop
 property `status' set on repository revision '11'
 $
 </screen>
@@ -827,7 +827,7 @@ $
           state.</para>
  
         <screen>
-% svn up calc
+% svn update calc
 M  calc/Makefile.in
  C calc/button.c
 Updated to revision 143.
@@ -845,7 +845,7 @@ $
           commit your local modifications will fail.</para>
 
         <screen>
-$ svn st calc
+$ svn status calc
  C     calc/button.c
 ?      calc/button.c.prej
 $ cat calc/button.c.prej 
@@ -1061,7 +1061,7 @@ $
             <command>svn propset</command> command:</para>
        
           <screen>
-$ svn pset svn:ignore -F .cvsignore .
+$ svn propset svn:ignore -F .cvsignore .
 property `svn:ignore' set on '.'
 $
 </screen>        

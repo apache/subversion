@@ -1071,7 +1071,7 @@ Committed revision 376.
         of the software that won't change much:</para>
 
 <screen>
-$ svn cp http://svn.example.com/repos/trunk/calc \
+$ svn copy http://svn.example.com/repos/trunk/calc \
          http://svn.example.com/branches/calc/stable-1.0
          -m "Creating stable branch of calc project."
 

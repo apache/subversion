@@ -2041,7 +2041,7 @@ Committed revision 26.
             <para>Move a file in your working copy:</para>
 
             <screen>
-$ svn mv foo.c bar.c
+$ svn move foo.c bar.c
 A         bar.c
 D         foo.c
             </screen>
@@ -2050,7 +2050,7 @@ D         foo.c
               so it requires a commit message): </para>
 
             <screen>
-$ svn mv -m "Move a file" http://svn.red-bean.com/repos/foo.c http://svn.red-bean.com/repos/bar.c
+$ svn move -m "Move a file" http://svn.red-bean.com/repos/foo.c http://svn.red-bean.com/repos/bar.c
 
 Committed revision 27.
             </screen>
@@ -2129,7 +2129,7 @@ property `svn:mime-type' set on 'foo.jpg'
               executable permission set:</para>
 
             <screen>
-$ svn ps svn:executable ON somescript
+$ svn propset svn:executable ON somescript
 property `svn:executable' set on 'somescript'
             </screen>
 
@@ -2608,7 +2608,7 @@ $ svn status
               copy will sprout three new files:</para>
 
             <screen>
-$ svn up
+$ svn update
 C  foo.c
 Updated to revision 31.
 $ ls
@@ -3130,7 +3130,7 @@ Updated to revision 31.
               your last update:</para>
 
             <screen>
-$ svn up
+$ svn update
 A  newdir/toggle.c
 A  newdir/disclose.c
 A  newdir/launch.c
@@ -3144,7 +3144,7 @@ Updated to revision 32.
               linkend="svn-ap-a"/>):</para>
 
             <screen>
-svn up -r30
+svn update -r30
 A  newdir/README
 D  newdir/toggle.c
 D  newdir/disclose.c
