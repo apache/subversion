@@ -117,10 +117,12 @@ sub check_out
 # Print status and update. The update is to do any required merges.
 sub status_update
   {
-    my ( $wc_dir, $wait_for_key ) = @_;
+    my ( $wc_dir, $wait_for_key, $disable_status ) = @_;
     my $svn_cmd = "svn st -u $wc_dir";
-    print "Status:\n";
-    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    if ( not $disable_status ) {
+      print "Status:\n";
+      system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    }
     print "Press return to update/commit\n" if $wait_for_key;
     read STDIN, $wait_for_key, 1 if $wait_for_key;
     print "Updating:\n";
@@ -133,8 +135,8 @@ sub status_update
 # conflict.
 sub status_update_commit
   {
-    my ( $wc_dir, $wait_for_key ) = @_;
-    status_update $wc_dir, $wait_for_key;
+    my ( $wc_dir, $wait_for_key, $disable_status ) = @_;
+    status_update $wc_dir, $wait_for_key, $disable_status;
     print "Committing:\n";
     # Use current time as log message
     my $now_time = localtime;
@@ -266,6 +268,7 @@ usage: stress.pl [-c] [-i num] [-n num] [-s secs] [-x num] [-D num] [-F num]
                  [-N num] [-P num] [-R path] [-S path] [-U url] [-W]
 where
   -c cause repository creation
+  -d don't make the status calls
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
   -n the number of sets of changes to commit
   -p add svn:eol-style and svn:keywords properties to the files
@@ -291,13 +294,14 @@ where
     $cmd_opts{'U'} = "none";       # URL
     $cmd_opts{'W'} = 0;            # create with --bdb-txn-nosync
     $cmd_opts{'c'} = 0;            # create repository
+    $cmd_opts{'d'} = 0;            # disable status
     $cmd_opts{'i'} = 0;            # ID
     $cmd_opts{'n'} = 200;          # sets of changes
     $cmd_opts{'p'} = 0;            # add file properties
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'ci:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'cdi:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
 
     # default ID if not set
     $cmd_opts{'i'} = 1 - $cmd_opts{'c'} if not $cmd_opts{'i'};
@@ -343,7 +347,7 @@ if ( $cmd_opts{'c'} )
     system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
     populate( "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'},
               $cmd_opts{'P'}, $cmd_opts{'p'} );
-    status_update_commit $wc_dir, 0 and die "populate checkin failed\n";
+    status_update_commit $wc_dir, 0, 1 and die "populate checkin failed\n";
   }
 
 my @wc_files = GetListOfFiles $wc_dir;
@@ -368,9 +372,10 @@ for $mod_number ( 1..$cmd_opts{'n'} )
 
     if ( $cmd_opts{'x'} > 0 ) {
       # Loop committing until successful or the stop file is created
-      1 while not -e $stop_file and status_update_commit $wc_dir, $wait_for_key;
+      1 while not -e $stop_file
+        and status_update_commit $wc_dir, $wait_for_key, $cmd_opts{'d'};
     } else {
-      status_update $wc_dir, $wait_for_key;
+      status_update $wc_dir, $wait_for_key, $cmd_opts{'d'};
     }
 
     # Break out of loop, or sleep, if required
