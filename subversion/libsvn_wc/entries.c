@@ -352,7 +352,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           if (entry)
             baton->entryname = svn_string_create (entry, baton->pool);
           else
-            baton->entryname = svn_string_create (".", baton->pool);
+            baton->entryname = NULL;
 
           /* Fill in all the other fields in the entrybaton */
           get_entry_attributes (atts,
@@ -528,13 +528,13 @@ do_parse (svn_wc__entry_baton_t *baton)
     if (apr_err && (apr_err != APR_EOF))
       return svn_error_create 
         (apr_err, 0, NULL, baton->pool,
-         "svn_wc__entry_set: apr_full_read choked");
+         "do_parse: apr_full_read choked");
     
     err = svn_xml_parse (svn_parser, buf, bytes_read, (apr_err == APR_EOF));
     if (err)
       return svn_error_quick_wrap 
         (err,
-         "svn_wc__entry_set:  xml parser failed.");
+         "do_parse:  xml parser failed.");
   } while (apr_err != APR_EOF);
 
 

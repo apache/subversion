@@ -151,6 +151,9 @@ test_replace_root (void *edit_baton,
   d->edit_baton = eb;
   *root_baton = d;
 
+  printf ("REPLACE_ROOT:  name '%s'\n", eb->root_path->data);
+
+
   return SVN_NO_ERROR;
 }
 
@@ -250,6 +253,14 @@ test_close_file (void *file_baton)
     printf ("CLOSE_FILE:  no name!!\n");
 
   return SVN_NO_ERROR;    
+}
+
+static svn_error_t *
+test_close_edit (void *edit_baton)
+{
+  printf ("EDIT COMPLETE.\n");
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -423,7 +434,7 @@ main (int argc, char *argv[])
   my_editor.change_file_prop   = test_change_file_prop;
   my_editor.change_dir_prop    = test_change_dir_prop;
 
-  my_editor.close_edit         = NULL;
+  my_editor.close_edit         = test_close_edit;
 
 
   /* Set up the edit baton. */
