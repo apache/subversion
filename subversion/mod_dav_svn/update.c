@@ -631,9 +631,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
 
   uc.resource = resource;
-  uc.output = output;
+  uc.output = output;  
   uc.anchor = resource->info->repos_path;
-  uc.dst_path = dst_path ? dst_path : uc.anchor;
+  if (dst_path) /* we're doing a 'switch' */
+    {      
+      if (target) /* if the src is split into anchor/target, so must
+                     the telescoping dst_path be. */
+        uc.dst_path = svn_path_remove_component_nts(dst_path, resource->pool);
+      else
+        uc.dst_path = dst_path;
+    }
+  else  /* we're doing an update, so src and dst are the same. */
+    uc.dst_path = uc.anchor;
 
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   uc.pathmap = NULL;
@@ -755,34 +764,44 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      the response to the client. */
   serr = svn_repos_finish_report(rbaton);
 
+  /* The potential "resource walk" part of the update-report. */
   if (dst_path)  /* this was a 'switch' operation */
     {
-      /* send a second embedded <S:resource-walk> tree that contains
-         the new vsn-rsc-urls for the switched dir.  this walk
-         contains essentially nothing but <add> tags. */
-      svn_fs_root_t *zero_root;
-      svn_fs_revision_root(&zero_root, repos->fs, 0, resource->pool);
+      /* Sanity check: if we switched a file, we can't do a resource
+         walk.  dir_delta would choke if we pass a filepath as the
+         'target'.  Also, there's no need to do the walk, since the
+         new vsn-rsc-url was already in the earlier part of the report. */
+      svn_node_kind_t dst_kind = svn_fs_check_path(uc.rev_root, dst_path,
+                                                   resource->pool);
+      if (dst_kind == svn_node_dir)
+        {
+          /* send a second embedded <S:resource-walk> tree that contains
+             the new vsn-rsc-urls for the switched dir.  this walk
+             contains essentially nothing but <add> tags. */
+          svn_fs_root_t *zero_root;
+          svn_fs_revision_root(&zero_root, repos->fs, 0, resource->pool);
 
-      send_xml(&uc, "<S:resource-walk>" DEBUG_CR);
+          send_xml(&uc, "<S:resource-walk>" DEBUG_CR);
 
-      uc.resource_walk = TRUE;
+          uc.resource_walk = TRUE;
 
-      /* Compare subtree DST_PATH within a pristine revision to
-         revision 0.  This should result in nothing but 'add' calls
-         to the editor. */
-      serr = svn_repos_dir_delta(/* source is revision 0: */
-                                 zero_root, "", NULL,
-                                 /* target is 'switch' location: */
-                                 uc.rev_root, dst_path,
-                                 /* re-use the editor */
-                                 editor, &uc,
-                                 FALSE, /* no text deltas */
-                                 recurse,
-                                 TRUE, /* send entryprops */
-                                 FALSE, /* no copy history */
-                                 resource->pool);
+          /* Compare subtree DST_PATH within a pristine revision to
+             revision 0.  This should result in nothing but 'add' calls
+             to the editor. */
+          serr = svn_repos_dir_delta(/* source is revision 0: */
+                                     zero_root, "", NULL,
+                                     /* target is 'switch' location: */
+                                     uc.rev_root, dst_path,
+                                     /* re-use the editor */
+                                     editor, &uc,
+                                     FALSE, /* no text deltas */
+                                     recurse,
+                                     TRUE, /* send entryprops */
+                                     FALSE, /* no copy history */
+                                     resource->pool);
 
-      send_xml(&uc, "</S:resource-walk>" DEBUG_CR);
+          send_xml(&uc, "</S:resource-walk>" DEBUG_CR);
+        }
     }
 
   /* Now close the report body completely. */
