@@ -3851,7 +3851,7 @@ Updated to revision 30.
           <term><option>--parent-dir
           <replaceable>DIR</replaceable></option></term>
           <listitem>
-            <para>When loading a dumpfile, root paths at
+            <para>When loading a dump file, root paths at
               <replaceable>DIR</replaceable> instead of
               <filename>/</filename>.</para>
           </listitem>

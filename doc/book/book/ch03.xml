@@ -274,7 +274,7 @@ $ svn log --revision {2002-11-20}:4040
 </screen>
 
       <para>Users should be aware of a subtlety that can become quite
-        a stumblingblock when dealing with dates in Subversion.  Since
+        a stumbling-block when dealing with dates in Subversion.  Since
         the timestamp of a revision is stored as a property of the
         revision&mdash;an unversioned, modifiable
         property&mdash;revision timestamps can be changed to represent
@@ -1129,7 +1129,7 @@ Index: stuff/things/bloo.h
 $ svn diff &gt; patchfile
 </screen>
 
-        <para>You could, for example, email the patchfile to another
+        <para>You could, for example, email the patch file to another
           developer for review or testing prior to commit.</para>
 
       </sect3>

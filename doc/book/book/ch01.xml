@@ -377,8 +377,8 @@
       <varlistentry>
         <term>svndumpfilter</term>
         <listitem>
-          <para>A program for filtering Subversion repository dumpfile
-            format streams.</para>
+          <para>A program for filtering Subversion repository dump
+            streams.</para>
         </listitem>
       </varlistentry>
 
