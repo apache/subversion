@@ -54,6 +54,7 @@ Commit access for specific areas:
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
+           kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
 
   Packages:
 
@@ -113,7 +114,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (doc: it)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-versioning)
       markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
         pburba   Paul Burba <PaulB@softlanding.com>          (ebcdic)
-           kou   Kouhei Sutou <kou@cozmixng.org>             (ruby)
 
   Subprojects that are complete or abandoned:
 
