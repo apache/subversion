@@ -155,7 +155,8 @@ main (int argc, char **argv)
   svn_txdelta_stream_t *stream;
   svn_txdelta_window_t *window;
   svn_txdelta_window_handler_t *handler;
-  void *handler_baton;
+  svn_write_fn_t *write_fn;
+  void *handler_baton, *write_baton;
   svn_error_t *err;
 
   progname = strrchr (argv[0], '/');
@@ -206,16 +207,32 @@ main (int argc, char **argv)
       rewind (source);
       target_regen = tmpfile ();
 
-      /* Create and apply a delta between the source and target.  */
+      /* Set up a four-stage pipeline: create a delta, convert it to
+         svndiff format, parse it back into delta format, and apply it
+         to a copy of the source file to see if we get the same target
+         back.  */
       pool = svn_pool_create (NULL, NULL);
-      err = svn_txdelta (&stream,
-                         read_from_file, source,
-                         read_from_file, target,
-                         pool);
+
+      /* Make stage 4: apply the text delta.  */
+      err = svn_txdelta_apply (read_from_file, source_copy,
+                               write_to_file, target_regen, pool,
+                               &handler, &handler_baton);
+
+      /* Make stage 3: reparse the text delta.  */
       if (err == SVN_NO_ERROR)
-        err = svn_txdelta_apply (read_from_file, source_copy,
-                                 write_to_file, target_regen, pool,
-                                 &handler, &handler_baton);
+        err = svn_txdelta_parse_svndiff (handler, handler_baton, pool,
+                                         &write_fn, &write_baton);
+
+      /* Make stage 2: encode the text delta in svndiff format.  */
+      if (err == SVN_NO_ERROR)
+        err = svn_txdelta_to_svndiff (write_fn, write_baton, pool, &handler,
+                                      &handler_baton);
+
+      /* Make stage 1: create the text delta.  */
+      if (err == SVN_NO_ERROR)
+        err = svn_txdelta (&stream, read_from_file, source, read_from_file,
+                           target, pool);
+
       while (err == SVN_NO_ERROR)
         {
           err = svn_txdelta_next_window (&window, stream);
