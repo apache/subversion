@@ -1363,7 +1363,7 @@ merge (const char **conflict_p,
                        (tnode, s_entry->name, s_entry->id, trail));
             }
           /* E exists in target but is different from E in source */
-          else if (! svn_fs_id_eq (s_entry->id, t_entry->id))
+          else if (! svn_fs_id_is_ancestor (s_entry->id, t_entry->id))
             {
               /* ### kff todo: abstract path creation func here? */
               *conflict_p = apr_psprintf (trail->pool, "%s/%s",
