@@ -265,7 +265,7 @@ else
 fi
 if test "$PYTHON" != "none"; then
   echo "checking for Python 2.0 or newer"
-  ${PYTHON} ${abs_srcdir}/pycheck.py
+  ${PYTHON} ${abs_srcdir}/build/pycheck.py
 fi
 
 dnl try to find "swig" to build the SWIG bindings
