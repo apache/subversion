@@ -115,7 +115,7 @@ SVN_ERROR_START
               "Unrecognized binary data encoding; can't decode")
 
   SVN_ERRDEF (SVN_ERR_WC_OBSTRUCTED_UPDATE,
-              "Obstructed update; unversioned item in the way")
+              "Obstructed update")
 
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_MISMATCH,
               "Mismatch popping the WC unwind stack")
