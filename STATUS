@@ -39,3 +39,10 @@ Candidate changes:
       Shallow silly bug.
     Votes:
       +1: bliss, kfogel
+
+  * r11172
+    Fix encoding bug in svnlook log and author.
+    Justification:
+      Regression and annoying for people using non-ASCII chars in log messages.
+    Votes:
+      +1: lundblad
