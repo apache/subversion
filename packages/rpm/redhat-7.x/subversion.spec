@@ -23,6 +23,7 @@ Requires: apache-libapr >= %{apache_version}
 Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
+Requires: python2
 #Requires: /sbin/install-info
 Obsoletes: subversion-cvs2svn
 BuildPreReq: apache >= %{apache_version}
@@ -83,6 +84,7 @@ the Apache directories and configuration.
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
 Requires: swig-runtime >= 1.3.16
+Requires: python2
 Obsoletes: subversion-cvs2svn
 %description python
 Provides Pythong (SWIG) support for Subversion.
@@ -94,6 +96,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Thu May 15 2003 David Summers <david@summersoft.fay.ar.us> 0.22.2-5943
+- The subversion package now requires python 2 because cvs2svn has been
+  unswigified and just depends on python 2.
+- The new subversion-python package requires python 2.
+
 * Sat May 10 2003 David Summers <david@summersoft.fay.ar.us> 0.22.1-5879
 - svn-config has been taken back out of the distribution.
 - cvs2svn no longer requires SWIG, so rename the subversion-cvs2svn package to
