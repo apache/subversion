@@ -756,6 +756,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   svn_lock_t *new_lock;
   svn_fs_root_t *root;
   svn_revnum_t youngest;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   SVN_ERR (svn_fs_fs__check_fs (fs));
 
@@ -795,6 +796,8 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                                   path);
     }
 
+  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+
   /* Is the path already locked?   
 
      Note that this next function call will automatically ignore any
@@ -825,6 +828,9 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                               comment, timeout, pool));
   SVN_ERR (write_lock_to_file (fs, new_lock, pool));
   *lock_p = new_lock;
+
+  /* Destroy our subpool and release the lock. */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -897,9 +903,13 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
         }
       else
         {
+          apr_pool_t *subpool = svn_pool_create (pool);
           /* Force was passed, so lock is being stolen. Destroy the
              existing lock. */
+          SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
           SVN_ERR (delete_lock (fs, existing_lock, pool));
+          /* Destroy our subpool and release the lock. */
+          svn_pool_destroy (subpool);
         }          
     }
 
@@ -938,6 +948,7 @@ svn_fs_fs__unlock (svn_fs_t *fs,
                    svn_boolean_t force,
                    apr_pool_t *pool)
 {
+  apr_pool_t *subpool = svn_pool_create (pool);
   svn_lock_t *existing_lock;
 
   /* Sanity check:  we don't want to lookup a NULL path. */
@@ -964,8 +975,12 @@ svn_fs_fs__unlock (svn_fs_t *fs,
                                                fs->access_ctx->username,
                                                existing_lock->owner);
   
+  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
   /* Remove lock and lock token files. */
   SVN_ERR (delete_lock (fs, existing_lock, pool));
+
+  /* Destroy our subpool and release the lock. */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
