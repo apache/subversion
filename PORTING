@@ -18,7 +18,10 @@
 #       frobnicator to see if I can't get the filesystem to
 #       build. -J. Random
 ####
-# 
+#
+# To find out your canonical host triplet, run ac-helpers/config.guess
+# after autogen.sh.
+#
 # Please keep the list in alphabetical order
 #
 
@@ -85,8 +88,8 @@ rs6000-ibm-aix4.3.2.0:
 
 sparc-sun-solaris2.6:
      Client:     Build OK, Check OK.
-     Filesystem: ?
-     Last Check: 17 Jan 2001
+     Filesystem: Build OK, Check OK.
+     Last Check: 9 May 2001
      Porter:     Branko Cibej <brane@xbc.nu>
 
      Notes:
