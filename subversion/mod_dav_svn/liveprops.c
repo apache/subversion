@@ -288,7 +288,19 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         if ((serr != NULL) || (pval == NULL))
           value = "text/plain"; /* assume default */        
         else
-          value = pval->data;
+          {
+            serr = svn_validate_mime_type (pval->data, p);
+            if (serr)
+              {
+                /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
+                   there's no point even checking.  No matter what the
+                   error is, we can't claim to have a mime type for
+                   this resource. */
+                  return DAV_PROP_INSERT_NOTDEF;
+              }
+            else
+              value = pval->data;
+          }
 
         break;
       }

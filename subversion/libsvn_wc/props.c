@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_error.h"
+#include "svn_props.h"
 #include "svn_io.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -1036,12 +1037,12 @@ svn_wc_prop_set (const char *name,
   /* ### argh */
   svn_stringbuf_t *valuebuf;
 
-  if (! strcmp (name, SVN_PROP_EXECUTABLE))
+  if (strcmp (name, SVN_PROP_EXECUTABLE) == 0)
     {
       enum svn_node_kind kind;
       SVN_ERR (svn_io_check_path (path, &kind, pool));
 
-      if (kind == svn_node_dir && value != NULL)
+      if ((kind == svn_node_dir) && (value != NULL))
         /* Setting the executable bit doesn't make sense for dirs. (And
            don't try and tell me Unix does it...) */
         return svn_error_create (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool,
@@ -1056,6 +1057,10 @@ svn_wc_prop_set (const char *name,
           else
             SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
         }
+    }
+  else if ((strcmp (name, SVN_PROP_MIME_TYPE) == 0) && value)
+    {
+      SVN_ERR (svn_validate_mime_type (value->data, pool));
     }
 
   err = svn_wc_prop_list (&prophash, path, pool);
