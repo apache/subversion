@@ -269,19 +269,18 @@ svn_cmdline_fputs (const char *string, FILE* stream, apr_pool_t *pool)
     }
 
   /* On POSIX systems, errno will be set on an error in fputs, but this might
-     not be the case on other platforms.  We reset the OS error and only
+     not be the case on other platforms.  We reset errno and only
      use it if it was set by the below fputs call.  Else, we just return
      a generic error. */
-  apr_set_os_error (APR_SUCCESS);
+  errno = 0;
 
   if (fputs (out, stream) == EOF)
     {
-      apr_status_t status = apr_get_os_error ();
-      if (APR_STATUS_IS_SUCCESS (status))
+      if (errno)
+        return svn_error_wrap_apr (errno, _("Write error"));
+      else
         return svn_error_create
           (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
-      else
-        return svn_error_wrap_apr (status, _("Write error"));
     }
 
   return SVN_NO_ERROR;
@@ -290,10 +289,15 @@ svn_cmdline_fputs (const char *string, FILE* stream, apr_pool_t *pool)
 svn_error_t *
 svn_cmdline_fflush (FILE *stream)
 {
+  /* See comment in svn_cmdline_fputs about use of errno and stdio. */
+  errno = 0;
   if (fflush (stream) == EOF)
-    /* ### Use same error handling as in svn_cmdline_fputs when we know it is
-       portable. */
-    return svn_error_create (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+    {
+      if (errno)
+        return svn_error_wrap_apr (errno, _("Write error"));
+      else
+        return svn_error_create (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+    }
 
   return SVN_NO_ERROR;
 }
