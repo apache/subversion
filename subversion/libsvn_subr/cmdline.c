@@ -286,3 +286,14 @@ svn_cmdline_fputs (const char *string, FILE* stream, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cmdline_fflush (FILE *stream)
+{
+  if (fflush (stream) == EOF)
+    /* ### Use same error handling as in svn_cmdline_fputs when we know it is
+       portable. */
+    return svn_error_create (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+
+  return SVN_NO_ERROR;
+}
