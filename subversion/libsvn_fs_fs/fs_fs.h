@@ -308,6 +308,4 @@ svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs);
 #define SVN_FS_FS__SOFT              "soft"
 #define SVN_FS_FS__HARD              "hard"
 
-#define SVN_FS_FS__THIS "this"
-
 #endif
