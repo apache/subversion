@@ -122,14 +122,20 @@ create_hash_table (apr_size_t num_slots, apr_pool_t *pool)
 
 
 /* Convert a key to a pointer to the key's hash bucket.
-   We use a 2-universal multiplicative hash function. */
+   We use a 2-universal multiplicative hash function. If you're
+   windering about the selected multiplier, take a look at the
+   comments in apr/tables/apr_hash.c:find_entry for a discussion
+   on fast string hashes; it's very illuminating.
+
+   [ We use 127 instead of 33 here because I happen to like
+     interesting prime numbers, so there. --xbc ] */
 static APR_INLINE apr_uint32_t
 get_bucket (const hash_table_t *table, const char *key)
 {
   int i;
   apr_uint32_t hash = 0;
   for (i = 0; i < VD_KEY_SIZE; ++i)
-    hash = hash * 97 + *key++ + 41;
+    hash = hash * 127 + *key++;
   return hash % table->num_buckets;
 }
 
