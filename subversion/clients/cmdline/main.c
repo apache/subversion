@@ -61,7 +61,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"force",         svn_cl__force_opt, 0, "force operation to run"},
     {"help",          'h', 0, "show help on a subcommand"},
     {NULL,            '?', 0, "show help on a subcommand"},
-    {"message",       'm', 1, "specify commit message \"ARG\""},
+    {"message",       'm', 1, "specify commit message ARG"},
     {"quiet",         'q', 0, "print as little as possible"},
     {"recursive",     'R', 0, "descend recursively"},
     {"non-recursive", 'N', 0, "operate on single directory only"},
@@ -84,9 +84,9 @@ const apr_getopt_option_t svn_cl__options[] =
     {"show-updates",  'u', 0, "display update information"},
     {"username",      svn_cl__auth_username_opt, 1, "specify a username ARG"},
     {"password",      svn_cl__auth_password_opt, 1, "specify a password ARG"},
-    {"extensions",    'x', 1, "pass \"ARG\" as bundled options to GNU diff"},
+    {"extensions",    'x', 1, "pass ARG as bundled options to GNU diff"},
     {"targets",       svn_cl__targets_opt, 1,
-                      "pass contents of file \"ARG\" as additional args"},
+                      "pass contents of file ARG as additional args"},
     {"xml",           svn_cl__xml_opt, 0, "output in xml"},
     {"strict",        svn_cl__strict_opt, 0, "use strict semantics"},
     {"no-ignore",     svn_cl__no_ignore_opt, 0,
@@ -100,9 +100,9 @@ const apr_getopt_option_t svn_cl__options[] =
     {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
                        "do not print differences for deleted files"},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
-                      "Use \"ARG\" as diff command"},
+                      "Use ARG as diff command"},
     {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
-                      "Use \"ARG\" as merge command"},
+                      "Use ARG as merge command"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -129,6 +129,10 @@ const apr_getopt_option_t svn_cl__options[] =
  * either a path or an url can be used.  Hmm, should this be part of the
  * help text?
  */
+#define SVN_CL__AUTH_OPTIONS svn_cl__auth_username_opt, \
+                             svn_cl__auth_password_opt, \
+                             svn_cl__no_auth_cache_opt, \
+                             svn_cl__non_interactive_opt
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
   { "add", svn_cl__add, {0},
@@ -140,7 +144,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"
     "usage: cat TARGET [TARGET [TARGET ... ]]\n",
-    {'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'r', SVN_CL__AUTH_OPTIONS} },
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
@@ -149,9 +153,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  the destination. If multiple URLs are given each will be checked\n"
     "  out into a sub-directory of PATH, with the name of the sub-directory\n"
     "  being the basename of the URL.\n",
-    {'r', 'q', 'N',
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt } },
+    {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS} },
 
   { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"
@@ -164,9 +166,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: commit [PATH [PATH ... ]]\n\n"
     "  Be sure to use one of -m or -F to send a log message.\n",
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
-     svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
-     svn_cl__encoding_opt} },
+     svn_cl__force_opt, SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
@@ -176,10 +176,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> URL:  immediately commit a copy of WC to URL\n"
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
-    {'m', 'F', 'r', 'q',
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
-     svn_cl__encoding_opt} },
+    {'m', 'F', 'r', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
@@ -193,9 +190,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If run on an URL, the item is deleted from the repository via an\n"
     "  immediate commit.\n",
     {svn_cl__force_opt, 'm', 'F', 'q', svn_cl__targets_opt,
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__encoding_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
@@ -211,11 +206,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  2. If the alternate syntax is used, the server compares URL1 and URL2\n"
     "     at revisions N and M respectively.  If either N or M are ommitted,\n"
     "     a value of HEAD is assumed.\n",
-    {'r', 'x', 'N',
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__diff_cmd_opt,
-     svn_cl__no_diff_deleted} },
+    {'r', 'x', 'N', svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
+    SVN_CL__AUTH_OPTIONS} },
 
   { "export", svn_cl__export, {0},
     "export stuff.\n"
@@ -228,8 +220,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  2. Exports a clean directory tree from the working copy specified by\n"
     "     PATH1 into PATH2.  all local changes will be preserved, but files\n"
     "     not under revision control will not be copied.\n",
-    {'r', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
+    {'r', 'q', SVN_CL__AUTH_OPTIONS} },
 
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
@@ -247,9 +238,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If no third arg, copy top-level contents of PATH into URL\n"
     "  directly.  Otherwise, create NEW_ENTRY underneath URL and\n"
     "  begin copy there.\n",
-    {'m', 'F', 'q', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__encoding_opt} },
+    {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
@@ -261,9 +250,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "List directory entries of a URL.\n"
     "usage: list URL [URL ... ]\n\n"
     "  If URL is a file, just file entry will be displayed.\n",
-    {'r', 'v', 'R', svn_cl__auth_username_opt, 
-     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__non_interactive_opt} },
+    {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS} },
   
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -283,10 +270,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    svn log foo.c\n"
     "    svn log http://www.example.com/repo/project/foo.c\n"
     "    svn log http://www.example.com/repo/project foo.c bar.c\n",
-    {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
-     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__non_interactive_opt, svn_cl__strict_opt,
-     svn_cl__incremental_opt, svn_cl__xml_opt} },
+    {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__strict_opt,
+     svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS} },
 
   { "merge", svn_cl__merge, {0},
     "apply the differences between two URLs to a working copy path.\n"
@@ -301,9 +286,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  PATH is the working copy path that will receive the changes.\n"
     "  If omitted, a default value of '.' is assumed.\n\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__merge_cmd_opt } },
+     svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -313,9 +296,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  for addition in the working copy.  If TARGET is an URL the directory\n"
     "  is created in the repository via an immediate commit.  In both cases\n"
     "  all the intermediate directories must already exist.\n",
-    {'m', 'F', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__encoding_opt} },
+    {'m', 'F', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
@@ -324,9 +305,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  SRC and DST can both be working copy (WC) paths or URLs:\n"
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
-    {'m', 'F', 'r', 'q', svn_cl__auth_username_opt,
-     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt, 
-     svn_cl__non_interactive_opt, svn_cl__force_opt,
+    {'m', 'F', 'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
@@ -335,8 +314,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propdel PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Removes versioned props in working copy.\n"
     "  2. Removes unversioned remote prop on repos revision.\n\n",
-    {'q', 'R', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__revprop_opt} },
+    {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
@@ -344,8 +322,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propedit PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Edits versioned props in working copy.\n"
     "  2. Edits unversioned remote prop on repos revision.\n\n",
-    {'r', svn_cl__revprop_opt, svn_cl__encoding_opt,
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
@@ -353,8 +330,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propget PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Prints versioned prop in working copy.\n"
     "  2. Prints unversioned remote prop on repos revision.\n\n",
-    {'R', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__revprop_opt} },
+    {'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties on files, dirs, or revisions.\n"
@@ -362,8 +338,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. proplist --revprop -r REV [URL]\n\n"
     "  1. Lists versioned props in working copy.\n"
     "  2. Lists unversioned remote props on repos revision.\n\n",
-    {'v', 'R', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__revprop_opt} },
+    {'v', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
@@ -399,8 +374,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "        foo             http://example.com/repos/zig\n"
     "        foo/bar -r 1234 http://example.com/repos/zag\n",
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__encoding_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
@@ -475,18 +449,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    A  +         965       687        joe   wc/qax.c\n"
     "                 965       687        joe   wc/zig.c\n"
     "    Head revision:   981\n",
-    { 'u', 'v', 'N', 'q',
-      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-      svn_cl__no_ignore_opt } },
+    { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS} },
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
     "usage: switch URL [PATH]\n\n"
     "  Note:  this is the way to move a working copy to a new branch.\n",
-    { 'r', 'N', 'q', svn_cl__auth_username_opt,
-      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-      svn_cl__non_interactive_opt, svn_cl__merge_cmd_opt } },
+    { 'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -505,9 +474,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "\n"
     "  A character in the first column signifies an update to the actual file,\n"
     "  while updates to the file's props are shown in the second column.\n",
-    {'r', 'N', 'q', svn_cl__auth_username_opt,
-     svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__non_interactive_opt, svn_cl__merge_cmd_opt } },
+    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };

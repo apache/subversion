@@ -39,7 +39,8 @@ _svn()
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--username|--password|--targets|\
-	           |-x|--extensions|-m|--message|-F|--file|--message-encoding"
+	           |-x|--extensions|-m|--message|-F|--file|--encoding|
+	           |--diff-cmd|--diff3-cmd"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -61,10 +62,10 @@ _svn()
 		cmdOpts="$qOpts"
 		;;
 	add)
-		cmdOpts="--targets -R --recursive $qOpts"
+		cmdOpts="--targets -$nOpts $qOpts"
 		;;
 	cat)
-		cmdOpts="$rOpts --username --password"
+		cmdOpts="$rOpts $pOpts"
 		;;
 	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts"
@@ -81,8 +82,8 @@ _svn()
 		cmdOpts="--force $mOpts $qOpts --targets $pOpts"
 		;;
 	diff|di)
-		cmdOpts="$rOpts -x --extensions --no-diff-deleted $nOpts \
-                         $pOpts"
+		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
+		         $nOpts $pOpts"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts"
@@ -98,10 +99,11 @@ _svn()
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --strict \
-		        --incremental --xml"
+		         --incremental --xml"
 		;;
 	merge)
-		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run $pOpts"
+		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
+		         $pOpts"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts $pOpts"
@@ -110,20 +112,20 @@ _svn()
 		cmdOpts="$mOpts $rOpts $qOpts $pOpts --force"
 		;;
 	propdel|pdel)
-		cmdOpts="$qOpts -R --recursive $rOpts --revprop"
+		cmdOpts="$qOpts -R --recursive $rOpts --revprop $pOpts"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="$rOpts --revprop --encoding"
+		cmdOpts="$rOpts --revprop --encoding $pOpts"
 		;;
 	propget|pget|pg)
-		cmdOpts="-R --recursive $rOpts --revprop"
+		cmdOpts="-R --recursive $rOpts --revprop $pOpts"
 		;;
 	proplist|plist|pl)
-		cmdOpts="-v --verbose -R --recursive $rOpts --revprop"
+		cmdOpts="-v --verbose -R --recursive $rOpts --revprop $pOpts"
 		;;
 	propset|pset|ps)
 		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop \
-                         --encoding"
+		         --encoding $pOpts"
 		;;
 	revert)
 		cmdOpts="--targets -R --recursive $qOpts"
@@ -133,7 +135,7 @@ _svn()
 		;;
 	status|stat|st)
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
-                         --no-ignore"
+		         --no-ignore"
 		;;
 	switch|sw)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts"
