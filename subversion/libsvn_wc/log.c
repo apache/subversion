@@ -1291,6 +1291,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_cleanup (const char *path,
                 svn_wc_adm_access_t *optional_adm_access,
+                const char *diff3_cmd,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool)
@@ -1339,7 +1340,7 @@ svn_wc_cleanup (const char *path,
           const char *subdir = svn_path_join (path, key, pool);
           SVN_ERR (svn_io_check_path (subdir, &kind, pool));
           if (kind == svn_node_dir)
-            SVN_ERR (svn_wc_cleanup (subdir, adm_access,
+            SVN_ERR (svn_wc_cleanup (subdir, adm_access, diff3_cmd,
                                      cancel_func, cancel_baton, pool));
         }
     }
@@ -1354,7 +1355,7 @@ svn_wc_cleanup (const char *path,
       /* Is there a log?  If so, run it. */
       SVN_ERR (svn_io_check_path (log_path, &kind, pool));
       if (kind == svn_node_file)
-        SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
+        SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
     }
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not

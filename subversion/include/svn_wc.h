@@ -1858,7 +1858,9 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
 
 /** Recurse from @a path, cleaning up unfinished log business.  Perform
  * necessary allocations in @a pool.  Any working copy locks under @a path 
- * will be taken over and then cleared by this function.
+ * will be taken over and then cleared by this function.  If @a diff3_cmd
+ * is non-null, then use it as the diff3 command for any merging; otherwise,
+ * use the built-in merge code.
  *
  * WARNING: there is no mechanism that will protect locks that are still 
  * being used.
@@ -1870,6 +1872,7 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
 svn_error_t *
 svn_wc_cleanup (const char *path,
                 svn_wc_adm_access_t *optional_adm_access,
+                const char *diff3_cmd,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool);

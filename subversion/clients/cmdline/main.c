@@ -167,7 +167,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Recursively clean up the working copy, removing locks, resuming\n"
     "unfinished operations, etc.\n"
     "usage: cleanup [PATH...]\n",
-    {0} },
+    {svn_cl__merge_cmd_opt} },
   
   { "commit", svn_cl__commit, {"ci"},
     "Send changes from your working copy to the repository.\n"
