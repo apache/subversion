@@ -200,13 +200,6 @@ Approved changes (further review is welcome, but not required):
       +1: josander
       +0: maxb
 
-  * r11438
-    Fix a bug that caused 'svnversion --version .' to crash.
-    Justification:
-      Segfaults bad!
-    Votes:
-      +1: maxb, epg, rooneg
-
   * r11862, r11921, r12061 (part of issue #1997)
     Fix encoding bug in svnserve -h.
     Justification:
