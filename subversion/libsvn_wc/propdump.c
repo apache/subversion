@@ -309,7 +309,7 @@ svn_wc_proplist_write (svn_proplist_t *proplist,
 svn_proplist_t *
 svn_wc_proplist_read (svn_string_t *propfile, apr_pool_t *pool)
 {
-  /* kff todo: fooo in progress
+  /* kff todo: fooo in progress */
 }
 #endif /* 0 */
 
