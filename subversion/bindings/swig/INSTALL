@@ -74,14 +74,16 @@ Step 3:  Install Specific Language Bindings
        see http://subversion.tigris.org/issues/show_bug.cgi?id=1125
        for some imminent improvements to the install process.
 
+*  Perl
+
+   ???
+
 *  Java
 
    The Java bindings are still under development, and have not yet
    reached a functional state.  You can attempt to build them by
    running 'make swig-java' from the top level of the Subversion
    source tree.
-
-*  Perl?
 
 
 BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
@@ -137,12 +139,12 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
                Also for Java, path to JNI Windows headers,
                (for example, C:\Program Files\j2sdk1.4.2\include\win32)
 
-   4.  If you haven't already built subversion, you should do so now.
+   4.  If you haven't already built Subversion, you should do so now.
        Instructions are in the main INSTALL file. At the very least,
        you need to run gen-make.py to generate Visual Studio project
        files.
 
-   5.  Build the bindings. Open the subversion workspace in Visual C++
+   5.  Build the bindings. Open the Subversion workspace in Visual C++
        (subversion_msvc.dsw or subversion_vcnet.sln) and build one or more
        of the following projects:
 
@@ -152,16 +154,16 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
 
    6. Install the bindings. The procedure varies depending on the language.
 
-      For python, create two folders:
+      For Python, create two folders:
 
-          <PYTHON_DIR>\Lib\site-packages\svn
-          <PYTHON_DIR>\Lib\site-packages\libsvn
+          <PYTHON>\Lib\site-packages\svn
+          <PYTHON>\Lib\site-packages\libsvn
 
       Copy subversion\bindings\swig\python\svn\*.py into the svn folder.
       Copy subversion\bindings\swig\python\*.py and
       Release\subversion\bindings\swig\python\*.dll into the libsvn folder.
 
-      Optionally, you can run the following commands to compile the python
+      Optionally, you can run the following commands to compile the Python
       sources into bytecode:
 
           python <PYTHON>\lib\compileall.py <PYTHON>\Lib\site-packages\svn
@@ -170,8 +172,8 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
       This can make the modules load faster for users without write access
       to the site-packages directory.
 
-      For perl, ???
-      For java, ???
+      For Perl, ???
+      For Java, ???
 
 
 TESTING AND USING SWIG BINDINGS
@@ -179,12 +181,12 @@ TESTING AND USING SWIG BINDINGS
 *  Python
 
    1.  Verify that an 'svn' package has been installed correctly.  You can
-       do this by running python via 'python -c "from svn import client"'.
+       do this by running Python via 'python -c "from svn import client"'.
 
    2.  Try some demo programs.  From the top of your svn working copy,
        cd tools/examples/ and try running 'svnlook.py'.
 
-   3.  Start writing your own scripts. Use the subversion API is definitions
+   3.  Start writing your own scripts. Use the Subversion API definitions
        and descriptions in:
 
            subversion/include/svn_client.h
@@ -194,5 +196,5 @@ TESTING AND USING SWIG BINDINGS
            subversion/include/svn_repos.h
            subversion/include/svn_wc.h
 
-*  Java
 *  Perl
+*  Java
