@@ -16,11 +16,11 @@ _svn()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='add checkout co cleanup commit ci copy cp delete del remove \
-	      rm diff di import h help log merge mkdir move mv rename ren \
-	      propdel pdel propedit pedit pe propget pget pg proplist     \
-	      plist pl propset pset ps revert resolve status stat st      \
-	      switch sw update up --version'
+	cmds='add checkout co cleanup commit ci copy cp delete del remove   \
+	      rm diff di import info h help log merge mkdir move mv rename  \
+	      ren propdel pdel propedit pedit pe propget pget pg proplist   \
+	      plist pl propset pset ps revert resolve status stat st switch \
+	      sw update up --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -40,7 +40,8 @@ _svn()
 
 	# options that require a parameter
 	optsParam="-r|--revision|-D|--date|--username|--password|--targets|\
-	           |-d|--destination|-x|--extensions|-m|--message|-F|--file"
+	           |-d|--destination|-x|--extensions|-m|--message|-F|--file|\
+		   info"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
