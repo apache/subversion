@@ -115,13 +115,13 @@ Candidate changes:
     Votes:
       +1: clkao
 
-  * r10782
+  * r10782, r10824
     Fix FSFS changed-path handling
     Justification:
       Bug can cause FSFS to fail to report some changed-paths, leading to
       data loss because those paths aren't included in a dump.
     Votes:
-      +1: ghudson
+      +1: ghudson, bliss
 
   * r10800 (Issue #2031)
     Add -lstdc++ to javahl binding DSO at link-time.
