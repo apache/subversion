@@ -180,6 +180,36 @@ def status_missing_file(sbox):
   return 0
 
 
+def status_type_change(sbox):
+  "status with versioned items whose working type has changed"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+
+  os.rename('iota', 'was_iota')
+  os.rename('A', 'was_A')
+  svntest.main.file_append('A', "This file was directory A")
+  os.mkdir('iota')
+
+  # ### todo: passing expected err output here, just so we don't get
+  # ### stderr printed when we run the test.  But when the bug is
+  # ### fixed, we should pass None as the first arg to run_svn, and
+  # ### check that stat_output has the appropriate `~' lines.
+  stat_output, err_output = svntest.main.run_svn \
+                            ('Unexpected node kind found', 'status')
+  if err_output:
+    return 1
+
+  os.chdir(was_cwd)
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -190,6 +220,7 @@ test_list = [ None,
               status_update_with_nested_adds,
               status_shows_all_in_current_dir,
               (status_missing_file, svntest.main.XFAIL),
+              (status_type_change, svntest.main.XFAIL),
              ]
 
 if __name__ == '__main__':
