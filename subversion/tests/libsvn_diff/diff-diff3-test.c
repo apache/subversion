@@ -1342,7 +1342,7 @@ random_trivial_merge (const char **msg,
 }
 
 
-/* The "original" file has has a number of distinct lines.  We generate two
+/* The "original" file has a number of distinct lines.  We generate two
    random modifications by selecting two subsets of the original lines and
    for each selected line either adding an additional line, replacing the
    line, or deleting the line.  The two subsets are chosen so that each

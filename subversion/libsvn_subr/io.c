@@ -166,7 +166,7 @@ svn_io_open_unique_file (apr_file_t **f,
          conditional, but it's not worth the clarity loss.)
 
          If the first attempt fails, the first number will be "2".
-         This is good, since "1" would misleadingly imply that that
+         This is good, since "1" would misleadingly imply that
          the second attempt was actually the first... and if someone's
          got conflicts on their conflicts, we probably don't want to
          add to their confusion :-). */

@@ -397,7 +397,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   reset_log_item (&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
-     it as the main argument to the the REPORT request; it might cause
+     it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */

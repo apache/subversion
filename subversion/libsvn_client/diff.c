@@ -1958,7 +1958,7 @@ svn_client_merge (const char *source1,
   const char *URL1, *URL2;
   const char *path1;
 
-  /* if source1 or source2 are paths, we need to get the the underlying url
+  /* if source1 or source2 are paths, we need to get the underlying url
    * from the wc and save the initial path we were passed so we can use it as 
    * a path parameter (either in the baton or not).  otherwise, the path 
    * will just be NULL, which means we won't be able to figure out some kind 
