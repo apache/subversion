@@ -102,6 +102,17 @@ typedef struct {
   /* the open repository */
   svn_fs_t *fs;
 
+  /* NOTE: root_rev and root_dir may be 0/NULL if we don't open the root
+     of the repository (e.g. we're dealing with activity resources) */
+  /* ### these fields may make better sense elsewhere; a repository may
+     ### need two roots open for some operations(?) */
+
+  /* what revision did we open for the root? */
+  svn_revnum_t root_rev;
+
+  /* the root of the revision tree */
+  svn_fs_dir_t *root_dir;
+  
 } dav_svn_repos;
 
 /* internal structure to hold information about this resource */
@@ -120,7 +131,10 @@ struct dav_resource_private {
   svn_string_t *path;
 
   /* resource-type-specific data */
-  const char *object_name;
+  const char *object_name;      /* ### not really defined right now */
+
+  /* for REGULAR resources: an open node for the revision */
+  svn_fs_node_t *node;
 
   dav_svn_repos *repos;
 };
@@ -150,7 +164,7 @@ static int dav_svn_setup_activity(dav_resource_combined *comb,
 }
 
 static int dav_svn_setup_version(dav_resource_combined *comb,
-                                  const char *path)
+                                 const char *path)
 {
   comb->res.type = DAV_RESOURCE_TYPE_VERSION;
 
@@ -216,6 +230,7 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 
   if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
     {
+      /* ### return an error rather than log it? */
       ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
                     SVN_ERR_APMOD_MISSING_PATH_TO_FS, r,
                     "The server is misconfigured: an SVNPath directive is "
@@ -286,6 +301,8 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   err = svn_fs_open_berkeley(repos->fs, fs_path);
   if (err != NULL)
     {
+      /* ### do something with err */
+      /* ### return an error rather than log it? */
       ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, err->apr_err, r,
                     "Could not open the SVN filesystem at %s", fs_path);
       return NULL;
@@ -346,12 +363,57 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
     }
   else
     {
-      /* ### open the FS */
+      /* ### no way to ask for "head" */
+      /* ### note that we won't *always* go for the head... if this resource
+         ### corresponds to a Version Resource, then we have a specific
+         ### version to ask for.
+      */
+      repos->root_rev = 1;
 
-      /* ### look up the resource in the SVN repository */
+      /* get the root of the tree */
+      err = svn_fs_open_root(&repos->root_dir, repos->fs, repos->root_rev);
+      if (err != NULL)
+        {
+          /* ### do something with err */
+          /* ### return an error rather than log it? */
+          ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, err->apr_err, r,
+                        "Could not open the root of the repository");
+          return NULL;
+        }
+
+      /* open the node itself */
+      /* ### what happens if we want to modify this node?
+         ### well, you can't change a REGULAR resource, so this is probably
+         ### going to be fine. a WORKING resource will have more work
+      */
+      if (strcmp(relative, "/") == 0)
+        {
+          comb->priv.node = svn_fs_dir_to_node(repos->root_dir);
+          comb->res.collection = 1;
+        }
+      else
+        {
+          svn_string_t relpath = *comb->priv.path;
+
+          /* open the requested resource. note that we skip the leading "/" */
+          ++relpath.data;
+          --relpath.len;
+          err = svn_fs_open_node(&comb->priv.node, repos->root_dir, &relpath,
+                                 r->pool);
+          if (err != NULL)
+            {
+              /* ### do something with err */
+              /* ### return an error rather than log it? */
+              ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
+                            err->apr_err, r,
+                            "Could not open the resource '%s'", relative);
+              return NULL;
+            }
+
+          comb->res.collection = svn_fs_node_is_dir(comb->priv.node);
+        }
+
       comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
-
-      /* ### set comb->res.collection */
     }
 
 #ifdef SVN_DEBUG
@@ -366,6 +428,8 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   comb->res.exists = TRUE;
 
   /* everything in this URL namespace is versioned */
+  /* ### is it? why are activities, version, and working resources marked
+     ### as "versioned"? */
   comb->res.versioned = TRUE;
 
   return &comb->res;
@@ -374,6 +438,7 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   /* A malformed URI error occurs when a URI indicates the "special" area,
      yet it has an improper construction. Generally, this is because some
      doofus typed it in manually or has a buggy client. */
+  /* ### return an error rather than log it? */
   ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
                 SVN_ERR_APMOD_MALFORMED_URI, r,
                 "The URI indicated a resource within Subversion's special "
@@ -400,18 +465,52 @@ static dav_resource * dav_svn_get_parent_resource(const dav_resource *resource)
   return NULL;
 }
 
+/* does RES2 live in the same repository as RES1? */
+static int is_our_resource(const dav_resource *res1,
+                           const dav_resource *res2)
+{
+  if (res1->hooks != res2->hooks
+      || strcmp(res1->info->repos->fs_path, res2->info->repos->fs_path) != 0)
+    {
+      /* a different provider, or a different FS repository */
+      return 0;
+    }
+
+  /* coalesce the repository */
+  if (res1->info->repos != res2->info->repos)
+    {
+        /* ### crap. what to do with this... */
+        (void) svn_fs_close_fs(res2->info->repos->fs);
+        res2->info->repos = res1->info->repos;
+    }
+
+  return 1;
+}
+
 static int dav_svn_is_same_resource(const dav_resource *res1,
                                     const dav_resource *res2)
 {
+  if (!is_our_resource(res1, res2))
+    return 0;
+
   return svn_string_compare(res1->info->path, res2->info->path);
 }
 
 static int dav_svn_is_parent_resource(const dav_resource *res1,
                                       const dav_resource *res2)
 {
-  /* ### fill this in */
-  /* ### note: only needed by COPY/MOVE */
-  return 1;
+  apr_size_t len1 = strlen(res1->info->path->data);
+  apr_size_t len2;
+
+  if (!is_our_resource(res1, res2))
+    return 0;
+
+  /* res2 is one of our resources, we can use its ->info ptr */
+  len2 = strlen(res2->info->path->data);
+
+  return (len2 > len1
+          && memcmp(res1->info->path->data, res2->info->path->data, len1) == 0
+          && res2->info->path->data[len1] == '/');
 }
 
 static dav_error * dav_svn_open_stream(const dav_resource *resource,
@@ -419,42 +518,9 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                        dav_stream **stream)
 {
   dav_resource_private *info = resource->info;
+#if 0
   svn_error_t *err;
-  svn_revnum_t v;
-  svn_fs_dir_t *fsdir;
-  svn_fs_node_t *node;
-  svn_string_t relpath;
-
-  /* ### no way to ask for "head" */
-  /* ### note that we won't *always* go for the head... if this resource
-     ### corresponds to a Version Resource, then we have a specific version
-     ### to ask for. [and it should be in info->whatever]
-  */
-  v = 1;
-
-  /* get the root of the tree */
-  err = svn_fs_open_root(&fsdir, info->repos->fs, v);
-  if (err != NULL)
-    {
-      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not open the root of the repository");
-    }
-
-  /* assert: we are not opening a dir, thus we are not opening "/" */
-
-  /* open the requested resource. note that we skip the leading "/" */
-  relpath = *info->path;
-  ++relpath.data;
-  --relpath.len;
-  err = svn_fs_open_node(&node, fsdir, &relpath, info->pool);
-  if (err != NULL)
-    {
-      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not open the resource");
-    }
-
-  /* done with the root dir */
-  svn_fs_close_dir(fsdir);
+#endif
 
   /* start building the stream structure */
   *stream = apr_pcalloc(info->pool, sizeof(**stream));
@@ -462,7 +528,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
 #if 0
   /* get an FS file object for the resource [from the node] */
-  (*stream)->file = svn_fs_node_to_file(node);
+  (*stream)->file = svn_fs_node_to_file(info->node);
   /* assert: file != NULL   (we shouldn't be here if node is a DIR) */
 
   /* ### assuming mode == read for now */
@@ -522,15 +588,31 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
 
 static const char * dav_svn_getetag(const dav_resource *resource)
 {
-  /* ### fix this */
-  return "svn-etag";
+  const svn_fs_id_t id[] = { 1, 1, -1 }; /* ### temp, until we can fetch */
+  svn_string_t *idstr;
+
+  if (!resource->exists)
+    return "";
+
+  /* ### what kind of etag to return for collections, activities, etc? */
+
+  /* ### fetch the id from the node */
+
+  idstr = svn_fs_unparse_id(id, resource->info->pool);
+  return apr_psprintf(resource->info->pool, "\"%s\"", idstr);
 }
 
 static dav_error * dav_svn_set_headers(request_rec *r,
                                        const dav_resource *resource)
 {
+#if 0
+  apr_off_t length;
+#endif
+
   if (!resource->exists)
     return NULL;
+
+  /* ### what to do for collections, activities, etc */
 
   /* make sure the proper mtime is in the request record */
 #if 0
@@ -543,14 +625,21 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 #endif
 
   /* generate our etag and place it into the output */
-  apr_table_set(r->headers_out, "ETag", dav_svn_getetag(resource));
+  apr_table_setn(r->headers_out, "ETag", dav_svn_getetag(resource));
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
 
   /* set up the Content-Length header */
 #if 0
-  ap_set_content_length(r, resource->info->finfo.size);
+  /* ### need to get FILE */
+  err = svn_fs_file_length(&length, file);
+  if (err != NULL)
+    {
+      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not fetch the resource length");
+    }
+  ap_set_content_length(r, length);
 #endif
 
   /* ### how to set the content type? */
