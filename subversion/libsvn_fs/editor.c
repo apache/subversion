@@ -98,7 +98,7 @@ clone_root (void *dir_baton, trail_t *trail)
 /*** Editor functions. ***/
 
 static svn_error_t *
-begin_edit (void *edit_baton, void **root_baton)
+replace_root (void *edit_baton, void **root_baton)
 {
   /* kff todo: figure out breaking into subpools soon */
   struct edit_baton *eb = edit_baton;
@@ -318,7 +318,7 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
 
   /* Set up the editor. */
-  e->begin_edit        = begin_edit;
+  e->replace_root      = replace_root;
   e->delete_entry      = delete_entry;
   e->add_directory     = add_directory;
   e->replace_directory = replace_directory;

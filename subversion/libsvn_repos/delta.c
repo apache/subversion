@@ -96,7 +96,7 @@ svn_fs_dir_delta (svn_fs_dir_t *source,
 
   source_path.len = 0;
 
-  svn_err = editor->begin_edit (edit_baton, &root_baton);
+  svn_err = editor->replace_root (edit_baton, &root_baton);
   if (svn_err) goto error;
 
   c.editor = editor;

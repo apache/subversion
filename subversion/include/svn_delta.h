@@ -285,8 +285,8 @@ typedef struct svn_delta_edit_fns_t
      baton global to the entire delta edit.  In the case of
      `svn_xml_parse', this would be the EDIT_BATON argument; other
      producers will work differently.  The producer should pass this
-     value as the EDIT_BATON argument to the `begin_edit' function,
-     to get a baton representing root of the tree being edited.  
+     value as the EDIT_BATON argument to the `replace_root' function,
+     to get a baton representing root of the tree being edited.
 
      Most of the callbacks work in the obvious way:
 
@@ -302,12 +302,12 @@ typedef struct svn_delta_edit_fns_t
 
      Since every call requires a parent directory baton, including
      add_directory and replace_directory, where do we ever get our
-     initial directory baton, to get things started?  The `begin_edit'
-     function returns a baton for the top directory of the change.  In
-     general, the producer needs to invoke the editor's `begin_edit'
-     function before it can get anything done.
+     initial directory baton, to get things started?  The
+     `replace_root' function returns a baton for the top directory of
+     the change.  In general, the producer needs to invoke the
+     editor's `replace_root' function before it can get anything done.
 
-     While `begin_edit' provides a directory baton for the root of
+     While `replace_root' provides a directory baton for the root of
      the tree being changed, the `add_directory' and
      `replace_directory' callbacks provide batons for other
      directories.  Like the callbacks above, they take a PARENT_BATON
@@ -319,7 +319,7 @@ typedef struct svn_delta_edit_fns_t
      So, if we already have subdirectories named `foo' and `foo/bar',
      then the producer can create a new file named `foo/bar/baz.c' by
      calling:
-        begin_edit () --- yielding a baton ROOT for the top directory
+        replace_root () --- yielding a baton ROOT for the top directory
         replace_directory (ROOT, "foo") --- yielding a baton F for `foo'
         replace_directory (F, "bar") --- yielding a baton B for `foo/bar'
         add_file (B, "baz.c")
