@@ -56,6 +56,10 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 /* XXX FIXME: These should be protected by a thread mutex.
    svn_error__locate and make_error_internal should cooperate
    in locking and unlocking it. */
+/* There's no need for global data here.  Just pass __FILE__ and
+   __LINE__ to the true names of svn_error_create() and friends.  To
+   avoid having two variants each of three functions, always record
+   file and line information; there's no reason not to. --ghudson */
 
 #ifdef SVN_DEBUG
 /* XXX TODO: Define mutex here #if APR_HAS_THREADS */
