@@ -43,7 +43,7 @@ generate_status_codes (char *str_status,
   switch (text_status)
     {
     case svn_wc_status_none:
-      text_statuschar = '?';
+      text_statuschar = ' ';
       break;
     case svn_wc_status_normal:
       text_statuschar = '_';
@@ -69,6 +69,7 @@ generate_status_codes (char *str_status,
     case svn_wc_status_conflicted:
       text_statuschar = 'C';
       break;
+    case svn_wc_status_unversioned:
     default:
       text_statuschar = '?';
       break;
@@ -103,6 +104,7 @@ generate_status_codes (char *str_status,
     case svn_wc_status_conflicted:
       prop_statuschar = 'C';
       break;
+    case svn_wc_status_unversioned:
     default:
       prop_statuschar = '?';
       break;
@@ -127,18 +129,11 @@ print_short_format (const char *path,
     return;
 
   /* Create local-mod status code block. */
-  if (! status->entry)
-    generate_status_codes (str_status,
-                           svn_wc_status_none,
-                           svn_wc_status_none,
-                           FALSE, 
-                           FALSE);
-  else
-    generate_status_codes (str_status,
-                           status->text_status,
-                           status->prop_status,
-                           status->locked,
-                           status->copied);
+  generate_status_codes (str_status,
+                         status->text_status,
+                         status->prop_status,
+                         status->locked,
+                         status->copied);
 
   printf ("%s   %s\n", str_status, path);
 }
@@ -158,18 +153,11 @@ print_long_format (const char *path,
     return;
 
   /* Create local-mod status code block. */
-  if (! status->entry)
-    generate_status_codes (str_status,
-                           svn_wc_status_none,
-                           svn_wc_status_none,
-                           FALSE, 
-                           FALSE);
-  else
-    generate_status_codes (str_status,
-                           status->text_status,
-                           status->prop_status,
-                           status->locked,
-                           status->copied);
+  generate_status_codes (str_status,
+                         status->text_status,
+                         status->prop_status,
+                         status->locked,
+                         status->copied);
 
   /* Get local revision number */
   if (status->entry)

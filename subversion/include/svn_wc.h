@@ -246,7 +246,8 @@ enum svn_wc_status_kind
     svn_wc_status_replaced,   /* foo.c was deleted and then re-added */
     svn_wc_status_modified,   /* foo.c's text or props have been modified */
     svn_wc_status_merged,     /* local mods received repos mods */
-    svn_wc_status_conflicted  /* local mods received conflicting repos mods */
+    svn_wc_status_conflicted, /* local mods received conflicting repos mods */
+    svn_wc_status_unversioned /* foo.c is not a versioned thing in this wc */
 };
 
 /* Structure for holding the "status" of a working copy item. 
@@ -281,9 +282,29 @@ typedef struct svn_wc_status_t
 
 
 /* Fill *STATUS for PATH, allocating in POOL, with the exception of
-   the repos_rev field, which is normally filled in by the caller. */
-svn_error_t *svn_wc_status (svn_wc_status_t **status,
-                            svn_stringbuf_t *path,
+   the repos_rev field, which is normally filled in by the caller. 
+
+   Here are some things to note about the returned structure.  A quick
+   examination of the STATUS->text_status after a successful return of
+   this function can reveal the following things:
+
+      svn_wc_status_none : PATH is not versioned, and is either not
+                           present on disk, or is ignored by the
+                           svn:ignore property setting for PATH's
+                           parent directory.
+
+      svn_wc_status_absent : PATH is versioned, but is missing from
+                             the working copy.
+
+      svn_wc_status_unversioned : PATH is not versioned, but is
+                                  present on disk and not being
+                                  ignored (see above).  
+
+   The other available results for the text_status field more
+   straightforward in their meanings.  See the comments on the
+   svn_wc_status_kind structure above for some hints.  */
+svn_error_t *svn_wc_status (svn_wc_status_t **status, 
+                            svn_stringbuf_t *path, 
                             apr_pool_t *pool);
 
 
@@ -307,8 +328,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  *
  * If DESCEND is non-zero, statushash will contain statuses for PATH
  * and everything below it, including subdirectories.  In other
- * words, a full recursion.
- */
+ * words, a full recursion.  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_stringbuf_t *path,
                               svn_boolean_t descend,
