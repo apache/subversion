@@ -126,6 +126,7 @@ svn_cl__lock (apr_getopt_t *os,
       if ((err = svn_cl__check_cancel (ctx->cancel_baton)))
         goto leave_msg;
 
+      /* ### TODO: Print warning on error and continue. */
       if ((err = svn_client_lock (&lock, target, comment, opt_state->force,
                                   ctx, subpool)))
         goto leave_msg;

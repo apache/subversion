@@ -177,6 +177,7 @@ svn_client_unlock (const char *path, svn_boolean_t force,
       if (lock)
         lock_token = lock->token;
       else
+        /* ### TODO: Return error. */
         lock_token = NULL;
     }
 

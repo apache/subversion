@@ -58,6 +58,7 @@ svn_cl__unlock (apr_getopt_t *os,
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
+      /* ### TODO: Print warning on error and continue. */
       SVN_ERR (svn_client_unlock (path, opt_state->force, ctx, subpool));
       SVN_ERR (svn_cmdline_printf (subpool, _("Unlocked '%s'.\n"), path));
     }
