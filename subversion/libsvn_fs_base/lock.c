@@ -21,9 +21,10 @@
 #include "svn_fs.h"
 
 #include "lock.h"
+#include "err.h"
+#include "bdb/locks-table.h"
+#include "bdb/lock-tokens-table.h"
 #include "../libsvn_fs/fs-loader.h"
-
-
 
 svn_error_t *
 svn_fs_base__lock (const char **token,
@@ -52,17 +53,21 @@ svn_fs_base__unlock (svn_fs_t *fs,
 
 struct lock_token_get_args
 {
-  const char **lock_token_p;
+  svn_lock_t **lock_p;
   const char *path;
 };
 
 
 static svn_error_t *
-txn_body_get_lock_token_from_path (void *baton, trail_t *trail)
+txn_body_get_lock_from_path (void *baton, trail_t *trail)
 {
+  const char *lock_token;
   struct lock_token_get_args *args = baton;
-  return svn_fs_bdb__lock_get (args->lock_token_p, trail->fs,
-                               args->path, trail);
+  
+  SVN_ERR (svn_fs_bdb__lock_token_get (&lock_token, trail->fs,
+                                       args->path, trail));
+  return svn_fs_bdb__lock_get (args->lock_p, trail->fs,
+                               lock_token, trail);
 }
 
 
@@ -73,20 +78,13 @@ svn_fs_base__get_lock_from_path (svn_lock_t **lock,
                                  apr_pool_t *pool)
 {
   struct lock_token_get_args args;
-  svn_error_t *err;
-  const char *token;
-  base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
-  /* First convert the path into a token. */
   args.path = path;
-  args.lock_token_p = &token;  
-  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_lock_token_from_path,
+  args.lock_p = lock;  
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_lock_from_path,
                                    &args, pool));
-  
-  /* Then convert the token into an svn_lock_t */
-  SVN_ERR (svn_fs_base__get_lock_from_token (lock, fs, token, pool));
   
   return SVN_NO_ERROR;
 }
@@ -114,9 +112,8 @@ svn_fs_base__get_lock_from_token (svn_lock_t **lock,
                                   const char *token,
                                   apr_pool_t *pool)
 {
-  struct lock_get args;
+  struct lock_get_args args;
   svn_error_t *err;
-  base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
@@ -126,14 +123,33 @@ svn_fs_base__get_lock_from_token (svn_lock_t **lock,
                                 &args, pool);
 
   if (err && err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
-    *lock = NULL;
-  else if (err)
-    return err;
-  
-  return SVN_NO_ERROR;
+    {
+      *lock = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return err;
 }
 
 
+struct locks_get_args
+{
+  apr_hash_t **locks_p;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_get_locks (void *baton, trail_t *trail)
+{
+  struct locks_get_args *args = baton;
+  SVN_ERR (svn_fs_bdb__lock_tokens_get (args->locks_p, trail->fs,
+                                        args->path, trail));
+
+  /* strikerXXX: TODO, resolve tokens to svn_lock_t */
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_base__get_locks (apr_hash_t **locks,
@@ -141,7 +157,11 @@ svn_fs_base__get_locks (apr_hash_t **locks,
                         const char *path,
                         apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
-}
+  struct locks_get_args args;
 
+  SVN_ERR (svn_fs_base__check_fs (fs));
+  
+  args.locks_p = locks;
+  args.path = path;
+  return svn_fs_base__retry_txn (fs, txn_body_get_locks, &args, pool);
+}
