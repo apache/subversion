@@ -435,7 +435,7 @@ svn_ra_dav__open (void **session_baton,
 
   /* Sanity check the URI */
   if (ne_uri_parse(repos_URL, &uri) 
-      || uri.host == NULL || uri.path == NULL)
+      || uri.host == NULL || uri.path == NULL || uri.scheme == NULL)
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
