@@ -652,7 +652,7 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb(?r)", 
-                                 &rev, &target, &recurse));
+                                 &target, &recurse, &rev));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
