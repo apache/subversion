@@ -560,6 +560,47 @@ def basic_conflict():
 
   return 0
 
+#----------------------------------------------------------------------
+
+def basic_cleanup():
+  "basic cleanup command"
+
+  sbox = sandbox(basic_cleanup)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Lock some directories.
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  svntest.actions.lock_admin_dir(B_path)
+  svntest.actions.lock_admin_dir(G_path)
+  svntest.actions.lock_admin_dir(C_path)
+  
+  # Verify locked status.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    if (item[0] == B_path) or (item[0] == G_path) or (item[0] == C_path):
+      item[3]['locked'] = 'L'
+
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    return 1
+  
+  # Run cleanup (### todo: cleanup doesn't currently print anything)
+  stdout_lines, stderr_lines = svntest.main.run_svn('cleanup', wc_dir)
+  if len (stderr_lines) > 0:
+    print "Cleanup command printed to stderr."
+    return 1
+  
+  # Verify unlocked status.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_status (wc_dir, expected_output_tree)
+  
 
 ########################################################################
 # Run the tests
@@ -575,7 +616,8 @@ test_list = [ None,
               commit_multiple_targets_2,
               basic_update,
               basic_merge,
-              basic_conflict
+              basic_conflict,
+              basic_cleanup
              ]
 
 if __name__ == '__main__':

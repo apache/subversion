@@ -48,6 +48,7 @@ assemble_status (svn_wc_status_t *status,
   status->repos_rev = SVN_INVALID_REVNUM;  /* caller fills in */
   status->text_status = svn_wc_status_none;       /* default to no status. */
   status->prop_status = svn_wc_status_none;       /* default to no status. */
+  status->locked = FALSE;
 
   if (status->entry)
     {
@@ -154,6 +155,10 @@ assemble_status (svn_wc_status_t *status,
           if (prop_conflict_p)
             status->prop_status = svn_wc_status_conflicted;
         }
+
+      /* Check for locked directories. */
+      if (entry->kind == svn_node_dir)
+        SVN_ERR (svn_wc__locked (&(status->locked), path, pool));
 
     }
 

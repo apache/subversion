@@ -313,9 +313,18 @@ def duplicate_dir(wc_name, wc_copy_name):
 # A generic starting state for the output of 'svn status'.
 # Returns a list of the form:
 #
-#   [ ['repo', None, {}, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
-#     ['repo/A', None, {}, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
-#     ['repo/A/mu', None, {}, {'status':'_ ', 'wc_rev':'1', 'repos_rev':'1'}],
+#   [ ['wc_dir', None, {}, {'status':'_ ',
+#                           'locked':' ',
+#                           'wc_rev':'1',
+#                           'repos_rev':'1'}],
+#     ['wc_dir/A', None, {}, {'status':'_ ',
+#                             'locked':' ',
+#                             'wc_rev':'1',
+#                             'repos_rev':'1'}],
+#     ['wc_dir/A/mu', None, {}, {'status':'_ ',
+#                                'locked':' ',
+#                                'wc_rev':'1',
+#                                'repos_rev':'1'}],
 #     ... ]
 #
 def get_virginal_status_list(wc_dir, rev):
@@ -330,12 +339,14 @@ def get_virginal_status_list(wc_dir, rev):
 
   output_list = [[wc_dir, None, {},
                   {'status' : '_ ',
+                   'locked' : ' ',
                    'wc_rev' : rev,
                    'repos_rev' : rev}]]
   path_list = [x[0] for x in main.greek_tree]
   for path in path_list:
     item = [os.path.join(wc_dir, path), None, {},
             {'status' : '_ ',
+             'locked' : ' ',
              'wc_rev' : rev,
              'repos_rev' : rev}]
     output_list.append(item)
@@ -352,6 +363,12 @@ def path_index(list, path):
       return list.index(item)
   return None
 
+# Cheap administrative directory locking
+def lock_admin_dir(wc_dir):
+  "Lock a SVN administrative directory"
+
+  path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
+  main.file_append(path, "stop looking!")
 
 
 ### End of file.

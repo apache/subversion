@@ -102,6 +102,14 @@ greek_tree = ( ('iota', "This is the file 'iota'.", {}, {}),
 ######################################################################
 # Utilities shared by the tests
 
+def get_admin_name():
+  "Return name of SVN administrative subdirectory."
+
+  # todo: One day this sucker will try to intelligently discern what
+  # the admin dir is.  For now, 'SVN' will suffice.
+  return 'SVN'
+
+
 # For running subversion and returning the output
 def run_svn(*varargs):
   "Run svn with VARARGS; return stdout, stderr as lists of lines."
