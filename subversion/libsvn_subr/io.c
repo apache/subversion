@@ -185,8 +185,8 @@ svn_io_copy_file (const char *src,
                   apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  /* FIXME: apr_file_copy with perms may fail on Win32. We need a platform
-     - specific implementation to get the permissions right. */
+  /* ### FIXME: apr_file_copy with perms may fail on Win32.  We need a
+     platform-specific implementation to get the permissions right. */
 #ifndef SVN_WIN32
   apr_int32_t options = copy_perms ? APR_FILE_SOURCE_PERMS : APR_OS_DEFAULT;
 #else
