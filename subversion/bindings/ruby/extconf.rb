@@ -23,6 +23,7 @@ $objs = [
   'txdelta.o',
   'types.o',
   'util.o',
+  'wc.o',
 ]
 
 $CFLAGS << ' -I. '
