@@ -113,7 +113,7 @@ if (defined $ENV{REMOTE_USER})
     ($username) = $ENV{REMOTE_USER} =~ m/(\w+)/;
     unless (defined $username and length $username)
       {
-	my_die "$0: REMOTE_USER set to `$ENV{REMOTE_USER}' but no valid ",
+        my_die "$0: REMOTE_USER set to `$ENV{REMOTE_USER}' but no valid ",
                "string extracted from it.\n";
       }
   }
@@ -130,13 +130,13 @@ if ($opt_verbose)
 # Load the source directory into Subversion.
 print "Now syncing Subversion repository with source directory.\n\n";
 my_system($svn_load_dirs,
-	  @opt_verbose,
-	  '-no_user_input',
-	  '-svn_username', $username,
-	  '-p', '/opt/i386-linux/installed/svn_load_dirs_property_table.cfg',
-	  $repos_base_uri,
-	  '.',
-	  $source_dirname) == 0
+          @opt_verbose,
+          '-no_user_input',
+          '-svn_username', $username,
+          '-p', '/opt/i386-linux/installed/svn_load_dirs_property_table.cfg',
+          $repos_base_uri,
+          '.',
+          $source_dirname) == 0
   or my_die "$0: system failed.  Quitting.\n";
 
 print "\nNow syncing target directory with Subversion repository.\n\n";
@@ -245,13 +245,13 @@ sub my_system
 
       my $message     = "$0: system(@_) exited with status $exit_value";
       if ($signal_num)
-	{
-	  $message     .= " caught signal $signal_num";
-	}
+        {
+          $message     .= " caught signal $signal_num";
+        }
       if ($dumped_core)
-	{
-	  $message     .= " and dumped core";
-	}
+        {
+          $message     .= " and dumped core";
+        }
       print "$message\n";
     }
 
