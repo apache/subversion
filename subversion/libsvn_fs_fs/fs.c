@@ -31,6 +31,7 @@
 #include "fs.h"
 #include "err.h"
 #include "dag.h"
+#include "fs_fs.h"
 #include "svn_private_config.h"
 
 
@@ -118,7 +119,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 svn_error_t *
 svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 {
-  abort ();
+  SVN_ERR (svn_fs__fs_open (fs, path, fs->pool));
 
   return SVN_NO_ERROR;
 }
