@@ -1623,7 +1623,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       base = SVN_STR_TO_REV(att);
       if (rb->dirs->nelts == 0)
         {
-          pathbuf = svn_stringbuf_create(".", rb->ras->pool);
+          pathbuf = svn_stringbuf_create("", rb->ras->pool);
           CHKERR( (*rb->editor->open_root)(rb->edit_baton, base,
                                          &new_dir_baton) );
         }

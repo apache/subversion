@@ -132,8 +132,6 @@ svn_client_add (const char *path,
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
   const char *parent_path = svn_path_remove_component_nts (path, pool);
-  if (svn_path_is_empty_nts (parent_path))
-    parent_path = ".";
 
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE, pool));
 

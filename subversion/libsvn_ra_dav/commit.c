@@ -343,7 +343,7 @@ static svn_error_t * get_activity_collection(
 
       /* get the URL where we should create activities */
       SVN_ERR( (*cc->get_func)(cc->cb_baton,
-                               ".",
+                               "",
                                SVN_RA_DAV__LP_ACTIVITY_COLL,
                                activity_coll,
                                cc->ras->pool) );
@@ -367,7 +367,7 @@ static svn_error_t * get_activity_collection(
     {
       /* save the (new) activity collection URL into the directory */
       SVN_ERR( (*cc->set_func)(cc->cb_baton,
-                               ".",
+                               "",
                                SVN_RA_DAV__LP_ACTIVITY_COLL,
                                *activity_coll,
                                cc->ras->pool) );

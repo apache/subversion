@@ -59,7 +59,7 @@ svn_cl__switch (apr_getopt_t *os,
   if (targets->nelts == 1)
     {
       switch_url = ((const char **) (targets->elts))[0];
-      target = ".";
+      target = "";
     }
   else
     {

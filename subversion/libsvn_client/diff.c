@@ -432,8 +432,6 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
     {
     case svn_node_file:
       svn_path_split_nts (mine, &parent_path, NULL, merge_b->pool);
-      if (svn_path_is_empty_nts (parent_path))
-        parent_path = ".";
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, mine, parent_access, merge_b->force,
@@ -522,8 +520,6 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
     {
     case svn_node_dir:
       svn_path_split_nts (path, &parent_path, NULL, merge_b->pool);
-      if (svn_path_is_empty_nts (parent_path))
-        parent_path = ".";
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, path, parent_access, merge_b->force,
@@ -824,8 +820,6 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
                               tmpfile2);   
   
   parent_path = svn_path_remove_component_nts (target_wcpath, pool);
-  if (svn_path_is_empty_nts (parent_path))
-    parent_path = ".";
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE, pool));
 
   /* Perform a 3-way merge between the temporary fulltexts and the

@@ -54,7 +54,7 @@ open_tmp_file (apr_file_t **fp,
     truepath = apr_pstrdup (cb->pool, cb->base_dir);
   else
     /* ### TODO: need better tempfile support */
-    truepath = ".";
+    truepath = "";
 
   /* Tack on a made-up filename. */
   truepath = svn_path_join (truepath, "tempfile", cb->pool);

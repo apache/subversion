@@ -22,6 +22,9 @@
 #include <apr_general.h>
 #include "svn_test.h"
 
+/* Using a symbol, because I tried experimenting with different
+   representations */
+#define SVN_EMPTY_PATH ""
 
 static svn_error_t *
 test_path_is_child (const char **msg,
@@ -37,7 +40,7 @@ test_path_is_child (const char **msg,
     "/foo/bar/baz",
     "/flu/blar/blaz",
     "/foo/bar/baz/bing/boom",
-    ".",
+    SVN_EMPTY_PATH,
     "foo",
     ".foo"
     };
@@ -90,13 +93,21 @@ test_path_split (const char **msg,
   int i;
 
   static const char * const paths[][3] = { 
-    { "/foo/bar",        "/foo",     "bar" },
-    { "/foo/bar/",       "/foo",     "bar" },
-    { "/foo/bar/ ",      "/foo/bar", " " },
-    { "/foo",            "/",         "foo" },
-    { "foo",             "",         "foo" },
-    { "",                "",         "" },
-    { "/flu\\b/\\blarg", "/flu\\b",  "\\blarg" },
+    { "/foo/bar",        "/foo",          "bar" },
+    { "/foo/bar/ ",      "/foo/bar",      " " },
+    { "/foo",            "/",             "foo" },
+    { "foo",             SVN_EMPTY_PATH,  "foo" },
+    { "./foo",           SVN_EMPTY_PATH,  "foo" },
+    { "././.bar",        SVN_EMPTY_PATH,  ".bar" },
+    { "/././.bar",       "/",             ".bar" },
+    { "foo///bar",       "foo",           "bar" },
+    { "/foo///bar",      "/foo",          "bar" },
+    { "foo//.//bar",     "foo",           "bar" },
+    { "foo./.bar",       "foo.",          ".bar" },
+    { "foo././.bar",     "foo.",          ".bar" },
+    { "../foo",          "..",            "foo" },
+    { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
+    { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
   };
   
   *msg = "test svn_path_split";
@@ -104,10 +115,11 @@ test_path_split (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < sizeof (paths) / sizeof (paths[0]); i++)
     {
       svn_stringbuf_t *path = svn_stringbuf_create (paths[i][0], pool);
       svn_stringbuf_t *dir, *base_name;
+      const char *dir_nts, *base_name_nts;
 
       svn_path_split (path, &dir, &base_name, pool);
 
@@ -124,6 +136,22 @@ test_path_split (const char **msg,
             (SVN_ERR_TEST_FAILED, 0, NULL, pool,
              "svn_path_split (%s) returned basename '%s' instead of '%s'",
              path->data, base_name->data, paths[i][2]);
+        }
+
+      svn_path_split_nts (paths[i][0], &dir_nts, &base_name_nts, pool);
+      if (strcmp (dir_nts, paths[i][1]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "svn_path_split_nts (%s) returned dirname '%s' instead of '%s'",
+             path->data, dir_nts, paths[i][1]);
+        }
+      if (strcmp (base_name_nts, paths[i][2]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "svn_path_split_nts (%s) returned basename '%s' instead of '%s'",
+             path->data, base_name_nts, paths[i][2]);
         }
     }
   return SVN_NO_ERROR;
@@ -246,18 +274,12 @@ test_join (const char **msg,
     { "/abc", "/def", "/def" },
     { "/abc", "/d", "/d" },
     { "/abc", "/", "/" },
-    { "/abc/", "def", "/abc/def" },
-    { "/abc/", "/def", "/def" },
-    { "", "def", "def" },
-    { "abc", "", "abc" },
-    { "", "/def", "/def" },
-    { "/", "", "/" },
-    { "", "/", "/" },
-    { ".", "abc", "abc" },
-    { "abc", ".", "abc" },
-    { ".", ".", "." },
-    { "", ".", "." },
-    { ".", "", "." }
+    { SVN_EMPTY_PATH, "/", "/" },
+    { "/", SVN_EMPTY_PATH, "/" },
+    { SVN_EMPTY_PATH, "abc", "abc" },
+    { "abc", SVN_EMPTY_PATH, "abc" },
+    { SVN_EMPTY_PATH, "/abc", "/abc" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
   };
 
   *msg = "test svn_path_join(_many)";
@@ -295,42 +317,36 @@ test_join (const char **msg,
   else
 
   TEST_MANY((pool, "abc", NULL), "abc");
-  TEST_MANY((pool, "abc/", NULL), "abc");
   TEST_MANY((pool, "/abc", NULL), "/abc");
-  TEST_MANY((pool, "/abc/", NULL), "/abc");
   TEST_MANY((pool, "/", NULL), "/");
 
   TEST_MANY((pool, "abc", "def", "ghi", NULL), "abc/def/ghi");
   TEST_MANY((pool, "abc", "/def", "ghi", NULL), "/def/ghi");
   TEST_MANY((pool, "/abc", "def", "ghi", NULL), "/abc/def/ghi");
   TEST_MANY((pool, "abc", "def", "/ghi", NULL), "/ghi");
-  TEST_MANY((pool, "abc", "def/", "ghi", NULL), "abc/def/ghi");
-  TEST_MANY((pool, "abc/", "def", "ghi", NULL), "abc/def/ghi");
-  TEST_MANY((pool, "abc", "def", "ghi/", NULL), "abc/def/ghi");
+  TEST_MANY((pool, "/", "def", "/ghi", NULL), "/ghi");
+  TEST_MANY((pool, "/", "/def", "/ghi", NULL), "/ghi");
 
-  TEST_MANY((pool, "", "def", "ghi", NULL), "def/ghi");
-  TEST_MANY((pool, "abc", "", "ghi", NULL), "abc/ghi");
-  TEST_MANY((pool, "abc", "def", "", NULL), "abc/def");
-  TEST_MANY((pool, "", "def", "", NULL), "def");
-  TEST_MANY((pool, "", "", "ghi", NULL), "ghi");
-  TEST_MANY((pool, "abc", "", "", NULL), "abc");
-  TEST_MANY((pool, "", "def", "", NULL), "def");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "def", "ghi", NULL), "def/ghi");
+  TEST_MANY((pool, "abc", SVN_EMPTY_PATH, "ghi", NULL), "abc/ghi");
+  TEST_MANY((pool, "abc", "def", SVN_EMPTY_PATH, NULL), "abc/def");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "def", SVN_EMPTY_PATH, NULL), "def");
+  TEST_MANY((pool, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "ghi", NULL), "ghi");
+  TEST_MANY((pool, "abc", SVN_EMPTY_PATH, SVN_EMPTY_PATH, NULL), "abc");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "def", "/ghi", NULL), "/ghi");
+  TEST_MANY((pool, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "/ghi", NULL), "/ghi");
 
   TEST_MANY((pool, "/", "def", "ghi", NULL), "/def/ghi");
   TEST_MANY((pool, "abc", "/", "ghi", NULL), "/ghi");
   TEST_MANY((pool, "abc", "def", "/", NULL), "/");
   TEST_MANY((pool, "/", "/", "ghi", NULL), "/ghi");
   TEST_MANY((pool, "/", "/", "/", NULL), "/");
-  TEST_MANY((pool, ".", "abc", "def", NULL), "abc/def");
-  TEST_MANY((pool, ".", ".", "abc", NULL), "abc");
-  TEST_MANY((pool, ".", "abc", ".", NULL), "abc");
-  TEST_MANY((pool, "abc", ".", ".", NULL), "abc");
-  TEST_MANY((pool, ".", ".", ".", NULL), ".");
-  TEST_MANY((pool, ".", "", "", NULL), ".");
-  TEST_MANY((pool, "", ".", "", NULL), ".");
-  TEST_MANY((pool, "", "", ".", NULL), ".");
-  TEST_MANY((pool, ".", "", ".", NULL), ".");
-  TEST_MANY((pool, ".", "", "abc", NULL), "abc");
+  TEST_MANY((pool, "/", SVN_EMPTY_PATH, "ghi", NULL), "/ghi");
+  TEST_MANY((pool, "/", "def", SVN_EMPTY_PATH, NULL), "/def");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "/", "ghi", NULL), "/ghi");
+  TEST_MANY((pool, "/", SVN_EMPTY_PATH, SVN_EMPTY_PATH, NULL), "/");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "/", SVN_EMPTY_PATH, NULL), "/");
+  TEST_MANY((pool, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "/", NULL), "/");
 
   /* ### probably need quite a few more tests... */
 
@@ -349,27 +365,17 @@ test_basename (const char **msg,
   static const char * const paths[][2] = {
     { "abc", "abc" },
     { "/abc", "abc" },
-    { "/abc/", "abc" },
-    { "/abc//", "abc" },
     { "//abc", "abc" },
-    { "//abc/", "abc" },
-    { "//abc//", "abc" },
     { "/x/abc", "abc" },
-    { "/x/abc/", "abc" },
     { "/xx/abc", "abc" },
     { "/xx//abc", "abc" },
     { "/xx//abc", "abc" },
     { "a", "a" },
     { "/a", "a" },
-    { "/a/", "a" },
     { "/b/a", "a" },
-    { "/b/a/", "a" },
-    { "/b/a///", "a" },
     { "/b//a", "a" },
     { "/", "/" },
-    { "//", "/" },
-    { "///", "/" },
-    { "", "" },
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH }
   };
 
   *msg = "test svn_path_basename";
@@ -404,6 +410,14 @@ test_decompose (const char **msg,
     "/foo", "/", "foo", NULL,
     "/foo/bar", "/", "foo", "bar", NULL,
     "foo/bar", "foo", "bar", NULL,
+    "foo/../bar", "foo", "..", "bar", NULL,
+    "./foo", SVN_EMPTY_PATH, "foo", NULL,
+
+    /* Are these canonical? Should the middle bits produce SVN_EMPTY_PATH? */
+    "foo//bar", "foo", SVN_EMPTY_PATH, "bar", NULL,
+    "foo//.//bar",
+    "foo", SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "bar", NULL,
+
     NULL,
   };
   int i = 0;
@@ -446,6 +460,79 @@ test_decompose (const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_canonicalize (const char **msg,
+                   svn_boolean_t msg_only,
+                   apr_pool_t *pool)
+{
+  const char *paths[][2] = {
+    { "",                     "" },
+    { ".",                    "" },
+    { "/",                    "/" },
+    { "/.",                   "/" },
+    { "./",                   "" },
+    { "./.",                  "" },
+    { "//",                   "/" },
+    { "/////",                "/" },
+    { "./././.",              "" },
+    { "////././.",            "/" },
+    { "foo",                  "foo" },
+    { ".foo",                 ".foo" },
+    { "foo.",                 "foo." },
+    { "/foo",                 "/foo" },
+    { "foo/",                 "foo" },
+    { "foo./",                "foo." },
+    { "foo./.",               "foo." },
+    { "foo././/.",            "foo." },
+    { "/foo/bar",             "/foo/bar" },
+    { "foo/..",               "foo/.." },
+    { "foo/../",              "foo/.." },
+    { "foo/../.",             "foo/.." },
+
+    /* Should canonicalization do these? */
+    { "foo//.//bar",          "foo//.//bar" },
+    { "///foo",               "///foo" },
+    { "/.//./.foo",           "/.//./.foo" },
+    { ".///.foo",             ".///.foo" },
+    { NULL, NULL }
+  };
+  int i;
+
+  *msg = "test svn_path_decompose";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  i = 0;
+  while (paths[i][0])
+    {
+      svn_stringbuf_t *sbuf = svn_stringbuf_create (paths[i][0], pool);
+      const char *canonical = svn_path_canonicalize_nts (paths[i][0], pool);
+
+      if (strcmp (canonical, paths[i][1]))
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "svn_path_canonicalize_nts(\"%s\") returned "
+                                  "\"%s\" expected \"%s\"",
+                                  paths[i][0], canonical, paths[i][1]);
+
+      if (strcmp (paths[i][0], paths[i][1]) == 0 && canonical != paths[i][0])
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "svn_path_canonicalize_nts(\"%s\") alloc'd",
+                                  paths[i][0]);
+
+      svn_path_canonicalize (sbuf);
+
+      if (strcmp (sbuf->data, paths[i][1]))
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "svn_path_canonicalize(\"%s\") returned "
+                                  "\"%s\" expected \"%s\"",
+                                  paths[i][0], canonical, paths[i][1]);
+
+      ++i;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -459,6 +546,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test_join),
     SVN_TEST_PASS (test_basename),
     SVN_TEST_PASS (test_decompose),
+    SVN_TEST_PASS (test_canonicalize),
     SVN_TEST_NULL
   };
 

@@ -91,8 +91,6 @@ wc_to_wc_copy (const char *src_path,
   if (dst_kind == svn_node_none)
     {
       svn_path_split_nts (dst_path, &parent, &base_name, pool);
-      if (svn_path_is_empty_nts (parent))
-        parent = ".";
     }
   else if (dst_kind == svn_node_dir)
     svn_path_split_nts (src_path, NULL, &base_name, pool);
@@ -135,8 +133,6 @@ wc_to_wc_copy (const char *src_path,
       assert (! optional_adm_access);
 
       svn_path_split_nts (src_path, &src_parent, NULL, pool);
-      if (svn_path_is_empty_nts (src_parent))
-        src_parent = ".";
 
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, src_parent, TRUE,
                                 src_kind == svn_node_dir, pool));
@@ -520,8 +516,6 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Split the SRC_PATH into a parent and basename. */
   svn_path_split_nts (src_path, &parent, &base_name, pool);
-  if (svn_path_is_empty_nts (parent))
-    parent = ".";
 
   /* ### Do we need locks for a wc->repos copy? */
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, TRUE, pool));
@@ -840,8 +834,6 @@ repos_to_wc_copy (const char *src_url,
       else
         {
           parent_path = svn_path_remove_component_nts (dst_path, pool);
-          if (svn_path_is_empty_nts (parent_path))
-            parent_path = ".";
         }
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
                                 pool));

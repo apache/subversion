@@ -88,7 +88,7 @@ svn_cl__checkout (apr_getopt_t *os,
         local_dir = svn_path_basename (((const char **) (targets->elts))[0],
                                        pool);
       else
-        local_dir = ".";
+        local_dir = "";
       (*((const char **) apr_array_push (targets))) = local_dir;
     }
 

@@ -68,7 +68,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   svn_error_t *err = NULL;
 
   /* Sanity check.  Without these, the switch is meaningless. */
-  assert (path && (path[0] != '\0'));
+  assert (path);
   assert (switch_url && (switch_url[0] != '\0'));
 
   SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
@@ -254,8 +254,6 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
         svn_wc_notify_state_t prop_state;
         svn_wc_adm_access_t *adm_access;
         const char *parent_path = svn_path_remove_component_nts (path, pool);
-        if (svn_path_is_empty_nts (parent_path))
-          parent_path = ".";
 
         SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
                                   pool));

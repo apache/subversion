@@ -60,7 +60,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   svn_wc_adm_access_t *adm_access;
 
   /* Sanity check.  Without this, the update is meaningless. */
-  assert (path && (path[0] != '\0'));
+  assert (path);
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));

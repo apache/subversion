@@ -442,8 +442,6 @@ svn_client__harvest_committables (apr_hash_t **committables,
              isn't) and possibly scheduled for addition (illegal target if
              it is). */
           svn_path_split_nts (target, &parent, &base_name, pool);
-          if (svn_path_is_empty_nts (parent))
-            parent = ".";
           SVN_ERR (svn_wc_entry (&p_entry, parent, FALSE, pool));
           if (! p_entry)
             return svn_error_createf 
