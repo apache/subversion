@@ -397,6 +397,19 @@ svn_error_t *svn_stream_for_stdout (svn_stream_t **out, apr_pool_t *pool);
 svn_stream_t *svn_stream_from_stringbuf (svn_stringbuf_t *str,
                                          apr_pool_t *pool);
 
+/** Wrap compression functions around the stream @a stream.
+ *
+ * Return a stream that decompresses all data read and compresses all
+ * data written. The stream @a stream is used to read and write all
+ * compressed data. All compression data structures are allocated on
+ * @a pool. If compression support is not compiled in then @c
+ * svn_stream_compressed() returns @a stream unmodified. Make sure you
+ * call @c svn_stream_close() on the stream returned by this function,
+ * so that all data are flushed and cleaned up.
+ */
+svn_stream_t *svn_stream_compressed (svn_stream_t *stream, 
+                                     apr_pool_t *pool);
+
 /** Read from a generic stream. */
 svn_error_t *svn_stream_read (svn_stream_t *stream, char *buffer,
                               apr_size_t *len);
