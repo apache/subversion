@@ -795,7 +795,8 @@ svn_client_export3 (svn_revnum_t *result_rev,
           
           /* Copied from apply_textdelta(). */
           SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
-                                            fb->path, ".tmp", FALSE, fb->pool));
+                                            fb->path, ".tmp", FALSE,
+                                            fb->pool));
 
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
@@ -805,7 +806,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                                     NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton
-           * with infomation. */
+           * with information. */
           for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
             {
               const char *propname;
