@@ -77,6 +77,8 @@ struct w_baton
 
 
 
+/*** Helpers for the walker callbacks. ***/
+
 static void
 maybe_prepend_dest (svn_string_t **name,
                     struct w_baton *wb,
@@ -98,81 +100,6 @@ maybe_prepend_dest (svn_string_t **name,
       svn_path_add_component (tmp, *name, SVN_PATH_LOCAL_STYLE, wb->pool);
       *name = tmp;
     }
-}
-
-
-
-static svn_error_t *
-delete (svn_string_t *name, void *walk_baton, void *parent_baton)
-{
-  struct w_baton *wb = (struct w_baton *) walk_baton;
-  svn_string_t *path = (svn_string_t *) parent_baton;
-
-  maybe_prepend_dest (&name, wb, path);
-
-  return 0;
-}
-
-
-static svn_error_t *
-add_directory (svn_string_t *name,
-               void *walk_baton, void *parent_baton,
-               svn_string_t *ancestor_path,
-               svn_vernum_t ancestor_version,
-               void **child_baton)
-{
-  svn_error_t *err;
-  struct w_baton *wb = (struct w_baton *) walk_baton;
-  svn_string_t *path = (svn_string_t *) parent_baton;
-
-  /* kff todo: this apparently didn't work. */
-  maybe_prepend_dest (&name, wb, path);
-
-  svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
-  printf ("%s/    (ancestor == %s, %d)\n",
-          path->data, ancestor_path->data, (int) ancestor_version);
-
-  /* kff todo: fooo working here.
-     Setup has to be done carefully.  We have set up the directory
-     NAME, but also let PATH know about it iff PATH is a concerned
-     working copy. */
-  err = svn_wc__set_up_new_dir (path,
-                                ancestor_path,
-                                ancestor_version,
-                                wb->pool);
-  if (err)
-    return err;
-  /* else */
-
-  *child_baton = path;
-  return 0;
-}
-
-
-static svn_error_t *
-replace_directory (svn_string_t *name,
-                   void *walk_baton, void *parent_baton,
-                   svn_string_t *ancestor_path,
-                   svn_vernum_t ancestor_version,
-                   void **child_baton)
-{
-  struct w_baton *wb = (struct w_baton *) walk_baton;
-  svn_string_t *path = (svn_string_t *) parent_baton;
-
-  maybe_prepend_dest (&name, wb, path);
-
-  return 0;
-}
-
-
-static svn_error_t *
-finish_directory (void *child_baton)
-{
-  svn_string_t *path = (svn_string_t *) child_baton;
-
-  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-
-  return 0;
 }
 
 
@@ -216,46 +143,223 @@ window_handler (svn_delta_window_t *window, void *baton)
         }
     }
 
-  return 0;
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** The callbacks we'll plug into an svn_delta_walk_t structure. ***/
+
+static svn_error_t *
+delete (svn_string_t *name, void *walk_baton, void *parent_baton)
+{
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) parent_baton;
+
+  maybe_prepend_dest (&name, wb, path);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+add_directory (svn_string_t *name,
+               void *walk_baton,
+               void *parent_baton,
+               svn_string_t *ancestor_path,
+               svn_vernum_t ancestor_version,
+               void **child_baton)
+{
+  svn_error_t *err;
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) parent_baton;
+
+  /* kff todo: this apparently didn't work. */
+  maybe_prepend_dest (&name, wb, path);
+
+  svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
+  printf ("%s/    (ancestor == %s, %d)\n",
+          path->data, ancestor_path->data, (int) ancestor_version);
+
+  /* kff todo: fooo working here.
+     Setup has to be done carefully.  We have set up the directory
+     NAME, but also let PATH know about it iff PATH is a concerned
+     working copy. */
+  err = svn_wc__set_up_new_dir (path,
+                                ancestor_path,
+                                ancestor_version,
+                                wb->pool);
+  if (err)
+    return err;
+  /* else */
+
+  *child_baton = path;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+replace_directory (svn_string_t *name,
+                   void *walk_baton,
+                   void *parent_baton,
+                   svn_string_t *ancestor_path,
+                   svn_vernum_t ancestor_version,
+                   void **child_baton)
+{
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *path = (svn_string_t *) parent_baton;
+
+  maybe_prepend_dest (&name, wb, path);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+change_dir_prop (void *walk_baton,
+                 void *dir_baton,
+                 svn_string_t *name,
+                 svn_string_t *value)
+{
+  /* kff todo */
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+change_dirent_prop (void *walk_baton,
+                    void *dir_baton,
+                    svn_string_t *entry,
+                    svn_string_t *name,
+                    svn_string_t *value)
+{
+  /* kff todo */
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+finish_directory (void *child_baton)
+{
+  svn_string_t *path = (svn_string_t *) child_baton;
+
+  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
+
+  return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
 add_file (svn_string_t *name,
-          void *walk_baton, void *parent_baton,
+          void *walk_baton,
+          void *parent_baton,
           svn_string_t *ancestor_path,
-          svn_vernum_t ancestor_version)
+          svn_vernum_t ancestor_version,
+          void **file_baton)
 {
   struct w_baton *wb = (struct w_baton *) walk_baton;
   svn_string_t *path = (svn_string_t *) parent_baton;
 
   /* kff todo: YO!  Need to make an adm subdir for orphan files, such
      as `iota' in checkout-1.delta. */
-  /* fooo workig here */
+
+  /* fooo working here -- don't forget to set *file_baton! */
 
   maybe_prepend_dest (&name, wb, path);
-
   svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
-
   printf ("%s\n   ", path->data);
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
 replace_file (svn_string_t *name,
-              void *walk_baton, void *parent_baton,
+              void *walk_baton,
+              void *parent_baton,
               svn_string_t *ancestor_path,
-              svn_vernum_t ancestor_version)
+              svn_vernum_t ancestor_version,
+              void **file_baton)
 {
   maybe_prepend_dest (&name,
                       (struct w_baton *) walk_baton,
                       (svn_string_t *) parent_baton);
 
+  /* kff todo: don't forget to set *file_baton! */
+
   printf ("replace file \"%s\" (%s, %ld)\n",
           name->data, ancestor_path->data, ancestor_version);
-  return 0;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+apply_textdelta (void *walk_baton,
+                 void *parent_baton,
+                 void *file_baton, 
+                 svn_text_delta_window_handler_t **handler,
+                 void **handler_baton)
+{
+  /* kff todo: this replaces begin_textdelta() and finish_textdelta(). */
+
+#if 0
+  static svn_error_t *
+    begin_textdelta (void *walk_baton,
+                     void *parent_baton,
+                     svn_text_delta_window_handler_t **handler,
+                     void **handler_baton)
+    {
+      /* kff todo: this also needs to handle already-present files by
+         applying a text-delta, eventually.  And operate on a tmp file
+         first, for atomicity/crash-recovery, etc, etc. */
+      
+      struct w_baton *wb = (struct w_baton *) walk_baton;
+      svn_string_t *fname = (svn_string_t *) parent_baton;
+      apr_file_t *sink = NULL;
+      apr_status_t apr_err;
+      
+      apr_err = apr_open (&sink, fname->data,
+                          (APR_WRITE | APR_CREATE),
+                          APR_OS_DEFAULT,
+                          wb->pool);
+      
+      if (apr_err)
+        return svn_create_error (apr_err, 0, fname->data, NULL, wb->pool);
+      
+      *handler_baton = sink;
+      *handler = window_handler;
+      
+      return SVN_NO_ERROR;
+    }
+  
+  
+  static svn_error_t *
+    finish_textdelta (void *walk_baton,
+                      void *parent_baton,
+                      void *handler_baton)
+    {
+      struct w_baton *wb = (struct w_baton *) walk_baton;
+      apr_file_t *f = (apr_file_t *) handler_baton;
+      apr_status_t apr_err = apr_close (f);
+      
+      if (apr_err)
+        return svn_create_error (apr_err, 0, NULL, NULL, wb->pool);
+      else
+        return SVN_NO_ERROR;
+    }
+#endif /* 0 */
+}
+
+
+svn_error_t *
+change_file_prop (void *walk_baton,
+                  void *parent_baton,
+                  void *file_baton,
+                  svn_string_t *name,
+                  svn_string_t *value)
+{
+  /* kff todo */
+  return SVN_NO_ERROR;
 }
 
 
@@ -267,50 +371,7 @@ finish_file (void *child_baton)
   printf ("\n");
   /* Lop off the filename, so baton is the parent directory again. */
   svn_path_remove_component (fname, SVN_PATH_LOCAL_STYLE);
-  return 0;
-}
-
-
-static svn_error_t *
-begin_textdelta (void *walk_baton, void *parent_baton,
-                 svn_text_delta_window_handler_t **handler,
-                 void **handler_baton)
-{
-  /* kff todo: this also needs to handle already-present files by
-     applying a text-delta, eventually.  And operate on a tmp file
-     first, for atomicity/crash-recovery, etc, etc. */
-
-  struct w_baton *wb = (struct w_baton *) walk_baton;
-  svn_string_t *fname = (svn_string_t *) parent_baton;
-  apr_file_t *sink = NULL;
-  apr_status_t apr_err;
-
-  apr_err = apr_open (&sink, fname->data,
-                      (APR_WRITE | APR_CREATE),
-                      APR_OS_DEFAULT,
-                      wb->pool);
-
-  if (apr_err)
-    return svn_create_error (apr_err, 0, fname->data, NULL, wb->pool);
-
-  *handler_baton = sink;
-  *handler = window_handler;
-
-  return 0;
-}
-
-
-static svn_error_t *
-finish_textdelta (void *walk_baton, void *parent_baton, void *handler_baton)
-{
-  struct w_baton *wb = (struct w_baton *) walk_baton;
-  apr_file_t *f = (apr_file_t *) handler_baton;
-  apr_status_t apr_err = apr_close (f);
-  
-  if (apr_err)
-    return svn_create_error (apr_err, 0, NULL, NULL, wb->pool);
-  else
-    return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -352,15 +413,17 @@ svn_wc_apply_delta (void *delta_src,
 
   /* Set up the walker callbacks... */
   memset (&walker, 0, sizeof (walker));
-  walker.delete            = delete;
-  walker.add_directory     = add_directory;
-  walker.replace_directory = replace_directory;
-  walker.finish_directory  = finish_directory;
-  walker.finish_file       = finish_file;
-  walker.add_file          = add_file;
-  walker.replace_file      = replace_file;
-  walker.begin_textdelta   = begin_textdelta;
-  walker.finish_textdelta  = finish_textdelta;
+  walker.delete             = delete;
+  walker.add_directory      = add_directory;
+  walker.replace_directory  = replace_directory;
+  walker.change_dir_prop    = change_dir_prop;
+  walker.change_dirent_prop = change_dirent_prop;
+  walker.finish_directory   = finish_directory;
+  walker.add_file           = add_file;
+  walker.replace_file       = replace_file;
+  walker.apply_textdelta    = apply_textdelta;
+  walker.change_file_prop   = change_file_prop;
+  walker.finish_file        = finish_file;
 
   /* Set up the batons... */
   memset (&w_baton, 0, sizeof (w_baton));
