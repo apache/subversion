@@ -279,7 +279,8 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
    cached property. */
 static svn_error_t * get_activity_collection(commit_ctx_t *cc,
                                              const svn_string_t **collection,
-                                             svn_boolean_t force)
+                                             svn_boolean_t force,
+                                             apr_pool_t *pool)
 {
   if (!force && cc->get_func != NULL)
     {
@@ -291,7 +292,7 @@ static svn_error_t * get_activity_collection(commit_ctx_t *cc,
                                "",
                                SVN_RA_DAV__LP_ACTIVITY_COLL,
                                collection,
-                               cc->ras->pool) );
+                               pool) );
 
       if (*collection != NULL)
         {
@@ -306,7 +307,7 @@ static svn_error_t * get_activity_collection(commit_ctx_t *cc,
   SVN_ERR( svn_ra_dav__get_activity_collection(collection,
                                                cc->ras,
                                                cc->ras->root.path,
-                                               cc->ras->pool) );
+                                               pool) );
 
   if (cc->push_func != NULL)
     {
@@ -315,13 +316,14 @@ static svn_error_t * get_activity_collection(commit_ctx_t *cc,
                                "",
                                SVN_RA_DAV__LP_ACTIVITY_COLL,
                                *collection,
-                               cc->ras->pool) );
+                               pool) );
     }
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * create_activity(commit_ctx_t *cc)
+static svn_error_t * create_activity(commit_ctx_t *cc,
+                                     apr_pool_t *pool)
 {
   const svn_string_t * activity_collection;
   apr_uuid_t uuid;
@@ -335,24 +337,22 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
 
   /* get the URL where we'll create activities, construct the URL
      for the activity, and create the activity. */
-  SVN_ERR( get_activity_collection(cc, &activity_collection, FALSE) );
+  SVN_ERR( get_activity_collection(cc, &activity_collection, FALSE, pool) );
   url = svn_path_url_add_component(activity_collection->data, 
-                                   uuid_buf, cc->ras->pool);
+                                   uuid_buf, pool);
   SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code, NULL,
-                          201 /* Created */,
-                          404 /* Not Found */,
-                          cc->ras->pool) );
+                          201 /* Created */, 404 /* Not Found */, pool) );
 
   /* if we get a 404, then it generally means that the cached activity
      collection no longer exists. Retry the sequence, but force a query
      to the server for the activity collection. */
   if (code == 404)
     {
-      SVN_ERR( get_activity_collection(cc, &activity_collection, TRUE) );
+      SVN_ERR( get_activity_collection(cc, &activity_collection, TRUE, pool) );
       url = svn_path_url_add_component(activity_collection->data, 
-                                       uuid_buf, cc->ras->pool);
+                                       uuid_buf, pool);
       SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code,
-                              NULL, 201, 0, cc->ras->pool) );
+                              NULL, 201, 0, pool) );
     }
 
   cc->activity_url = url;
@@ -972,7 +972,8 @@ static svn_error_t * commit_open_file(const char *path,
 }
 
 static svn_error_t * commit_stream_write(void *baton,
-                                         const char *data, apr_size_t *len)
+                                         const char *data, 
+                                         apr_size_t *len)
 {
   put_baton_t *pb = baton;
   apr_status_t status;
@@ -1121,7 +1122,6 @@ static svn_error_t * commit_close_edit(void *edit_baton,
   const char *committed_date;
   const char *committed_author;
 
-  /* ### different pool? */
   SVN_ERR( svn_ra_dav__merge_activity(&new_rev,
                                       &committed_date,
                                       &committed_author,
@@ -1130,7 +1130,7 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->activity_url,
                                       cc->valid_targets,
                                       cc->disable_merge_response,
-                                      cc->ras->pool) );
+                                      pool) );
   SVN_ERR( delete_activity(edit_baton, pool) );
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
 
@@ -1150,9 +1150,9 @@ static svn_error_t * commit_abort_edit(void *edit_baton,
 
 
 static svn_error_t * apply_log_message(commit_ctx_t *cc,
-                                       const char *log_msg)
+                                       const char *log_msg,
+                                       apr_pool_t *pool)
 {
-  apr_pool_t *pool = cc->ras->pool;
   const svn_string_t *vcc;
   const svn_string_t *baseline_url;
   resource_t baseline_rsrc = { SVN_INVALID_REVNUM };
@@ -1173,7 +1173,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   /* Get the Baseline from the DAV:checked-in value */
   SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess, vcc->data, 
                                     NULL, &svn_ra_dav__checked_in_prop, pool));
-  baseline_rsrc.pool = cc->ras->pool;
+  baseline_rsrc.pool = pool;
   baseline_rsrc.vsn_url = baseline_url->data;
   SVN_ERR( checkout_resource(cc, &baseline_rsrc, FALSE, pool) );
 
@@ -1188,8 +1188,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
   if (rv != NE_OK)
     {
-      const char *msg = apr_psprintf(cc->ras->pool,
-                                     "applying log message to %s",
+      const char *msg = apr_psprintf(pool, "applying log message to %s",
                                      baseline_rsrc.wr_url);
       return svn_ra_dav__convert_error(cc->ras->sess, msg, rv);
     }
@@ -1197,14 +1196,13 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   return SVN_NO_ERROR;
 }
 
-svn_error_t * svn_ra_dav__get_commit_editor(
-  void *session_baton,
-  const svn_delta_editor_t **editor,
-  void **edit_baton,
-  const char *log_msg,
-  svn_commit_callback_t callback,
-  void *callback_baton,
-  apr_pool_t *pool)
+svn_error_t * svn_ra_dav__get_commit_editor(void *session_baton,
+                                            const svn_delta_editor_t **editor,
+                                            void **edit_baton,
+                                            const char *log_msg,
+                                            svn_commit_callback_t callback,
+                                            void *callback_baton,
+                                            apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   svn_delta_editor_t *commit_editor;
@@ -1234,13 +1232,13 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   ** We will check out all further resources within the context of this
   ** activity.
   */
-  SVN_ERR( create_activity(cc) );
+  SVN_ERR( create_activity(cc, pool) );
 
   /*
   ** Find the latest baseline resource, check it out, and then apply the
   ** log message onto the thing.
   */
-  SVN_ERR( apply_log_message(cc, log_msg) );
+  SVN_ERR( apply_log_message(cc, log_msg, pool) );
 
   /*
   ** Set up the editor.
