@@ -12,186 +12,50 @@
 
 <p>
 
-Looking for a chance to help out with Subversion?  Then you've come to
-the right place...
+The Subversion bug database contains many issues classified as
+"bite-sized" tasks -- tasks that are well-defined and self-contained,
+and thus suitable for a volunteer looking to get involved with the
+project.  You <i>don't</i> need broad or detailed knowledge of
+Subversion's design to take on one of these, just a pretty good idea
+of how things generally work, and familiarity with the coding
+guidelines in the HACKING file.  Each task is something a volunteer
+could pick off in a spare evening or two.
 
 <p>
 
-This page lists tasks that are well-defined and self-contained.  You
-<i>don't</i> need broad or very detailed knowledge of Subversion's
-design to take on one of these tasks, you just need a pretty good idea
-of how things generally work, and to have read the coding guidelines
-in the HACKING file.  The idea is that each task is something that a
-volunteer could pick off in a spare evening or two.
-
-<p>
-
-If you'd like to take on one of these tasks, notify the other
-developers by mailing dev@subversion.tigris.org (of course, you should
-be <a
+If you start one one of these, please notify the other developers by
+mailing <a
+href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
+(of course, you should be <a
 href="http://subversion.tigris.org/servlets/ProjectMailingListList"
->subscribed</a> to that list) and start coding -- we'll put your name
-next to the task here so people can see who's working on what.  If you
-have questions as you go, ask the dev list, and send the patch there
-when ready.
-
-<p>
-
-Here are the tasks:
+>subscribed</a> to that list).  If you have questions as you go, ask
+the dev list, and send the patch there when ready.
 
 <p>
 
 <ul>
 
-   <!-- ***************************************************************** -->
-   <li><b>Rename some fields and functions throughout code</b>
-   <p> This is <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=560">issue
-   #560</a>.  It involves tweaks across quite a bit of code.  A
-   one-day task, at most.  Description:</p>
-   <pre>
-   There are many, many instances of "editors" in our codebase. (See
-   'svn_delta_edit_fns_t' in svn_delta.h).
+<li>
+Click here to see the <a
+href="http://subversion.tigris.org/issues/buglist.cgi?issue_type=DEFECT&issue_type=ENHANCEMENT&issue_type=FEATURE&issue_type=TASK&issue_type=PATCH&component=subversion&issue_status=UNCONFIRMED&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&issue_status=VERIFIED&target_milestone=bite-sized&email1=&emailtype1=substring&emailassigned_to1=1&email2=&emailtype2=substring&emailreporter2=1&issueidtype=include&issue_id=&changedin=&votes=&chfieldfrom=&chfieldto=Now&chfieldvalue=&short_desc=&short_desc_type=substring&long_desc=&long_desc_type=substring&issue_file_loc=&issue_file_loc_type=substring&status_whiteboard=&status_whiteboard_type=substring&field0-0-0=noop&type0-0-0=noop&value0-0-0=&newqueryname=&order=issues.target_milestone%2C%20issues.priority%2C%20issues.issue_type">bite-sized tasks</a>.
+</center>
+</li>
 
-   Due to Bad Planning, we would like to rename the editor functions
-   "replace_dir" and "replace_file" to "open_dir" and "open_file".
-   The word replace is historical baggage, and it doesn't mean what
-   people think it does.  Really, these functions exists for no
-   purpose but to return a baton that the editor-driver can use to
-   explore deeper and/or send a txdelta against.  Hence the "open"
-   terminology.  Besides, "close_file" and "close_dir" already exist
-   as counterparts.  This rename makes perfect sense.
+<p>
 
-   Also: we'd like to rename a field in an svn_wc_entry_t (see
-   svn_wc.h) structure.  For Hysterical Raisins, an entry's
-   corresponding repository URL is named "ancestor".  This is a
-   horribly loaded term, and the field has nothing to do with ancestry
-   relationships.  Instead, we simply want to call it "URL".
-
-   This is a lot of searching-and-replacing, and will give any newbie
-   the chance to survey the codebase, too.  :-)
-
-   This has been mostly completed.  All that is left is to look through 
-   the files subversion/include/svn_wc.h, subversion/libsvn_wc/wc.h, and 
-   subversion/libsvn_wc/entries.c and rename variables and function 
-   parameters as appropriate.
-   </pre>
-   </li>
-
-   <!-- ***************************************************************** -->
-   <li><b>Convert to more appropriate string types throughout code</b>
-   <p>This is <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=406">issue
-   #406</a>.  It involves tweaks across quite a bit of code, but
-   they're fairly minor tweaks.  Also, it can be done incrementally,
-   there's no particular reason why the whole change needs to happen
-   at once.  Estimate: one solid evening, or two at the most.  Here's
-   the description:</p>
-   <pre>
-   There are many places where, for historical reasons, we are using
-   svn_stringbuf_t to pass or return constant char * data.  We could
-   just use svn_string_t, or in some instances even go straight to
-   const char *. I will put "### todo" notes, referencing this issue,
-   in the code at some of these places. See in particular the
-   declarations of
-   
-      svn_fs_revision_prop()
-      svn_fs_revision_proplist()
-      svn_fs__get_prop()
-      svn_fs__make_prop_hash()
-   
-   Really, it is questionable that we even need to use svn_string_t
-   for property names.  I believe everyone agreed informally that
-   const char * would be fine, and usually more convenient for
-   callers.  If so, the fix for this issue is something like:
-   
-      1. Change all property getting functions to take a const char
-         *name, and return by reference svn_string_t *value.
-   
-      2. Change all property setting functions to take const char
-         *name and svn_string_t *value.
-   
-   Comments?  This affects not just svn_fs.h property interfaces, but
-   svn_delta_edit_fns_t in svn_delta.h as well, and probably some
-   stuff in svn_wc.h.
-   
-   -Karl
-   
-   ------- Additional Comments From Karl Fogel 2001-07-02 09:37 -------
-   
-   Note that making this change probably implies writing
-   svn_string_ncreate() and all that good stuff, or else doing it
-   inline.  All our old svn_string_* functions became svn_stringbuf_t
-   functions when we split the data type, and now there is a paucity
-   of svn_string_t functions.
-   </pre>
-   </li>
-
-   <!-- ***************************************************************** -->
-   <li><b>Add better usage descriptions to subcommand help.</b>
-   <p>This is <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=407">issue
-   #407</a>, filed by Ben, the description is:</p>
-   <pre>
-   $ svn help co
-   checkout (co): Check out a working directory from a repository.
-   usage: checkout REPOSPATH1 [REPOSPATH2 REPOSPATH3...]
-   
-   Notice that there's no mention of the fact that it accepts
-   the {-r, -d, -D} flags.  We can either just throw that information
-   into the usage command, or perhaps somebody can add an organized
-   system for specifying exactly which args a subcommand can accept.
-   This system would also be able to *report* which args a subcommand
-   can accept -- and thus be used in the usage messages.
-   
-   This is a "bite sized task" for a volunteer.
-   </pre>
-   </li>
-
-   <!-- ***************************************************************** -->
-   <li><b>Fix up date parsing library issues</b>
-   <p>This task is probably small, but will require some investigation
-   and list discussion first probably.  The basic issue is this: Ben
-   took the getdate.y date grammar file from CVS (that file has always
-   been in the public domain) and imported it into Subversion.  So now
-   Subversion has CVS's date parsing capabilities, which are good, but
-   not perfect.  Aside from the functionality issues, there's also the
-   problem that getdate.c needs to be automatically generated from
-   getdate.y, and it would be better to have a .c file that we edit
-   directly, than a .y file which causes Subversion developers to be
-   dependent on having the correct version of Yacc/Bison/Whatever
-   installed.</p>
-
-   <p>This message from Branko summarizes the issues pretty well; read
-   it, then move back and forth in the thread to get some context and
-   a sense of what people see as the solution domain right now:</p>
-   <p><a
-  href="http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&amp;listName=dev"
-   >http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&amp;listName=dev</a>
-   </p>
-
-   <!-- ***************************************************************** -->
-   <li><b>Constify svn_parse_date()'s first parameter</b>
-   <p>This is <a
-   href="http://subversion.tigris.org/issues/show_bug.cgi?id=408">issue
-   #408</a>, the description is:</p>
-   <pre>
-   The first argument of svn_parse_date() should be const.  However,
-   because the function originates in getdate.y and that parameter is
-   related to the global yyInput variable, there may be more to this
-   change than just adding the qualifier...
-   </pre>
-
-<!-- template for further items: -->
-<!--
-
-   <li><b></b>
-   <p>
-   </p>
-   </li>
--->
+<li>
+Click here to see <a
+href="http://subversion.tigris.org/issues/buglist.cgi?issue_type=DEFECT&issue_type=ENHANCEMENT&issue_type=FEATURE&issue_type=TASK&issue_type=PATCH&component=subversion&issue_status=UNCONFIRMED&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&issue_status=VERIFIED&email1=&emailtype1=substring&emailassigned_to1=1&email2=&emailtype2=substring&emailreporter2=1&issueidtype=include&issue_id=&changedin=&votes=&chfieldfrom=&chfieldto=Now&chfieldvalue=&short_desc=&short_desc_type=substring&long_desc=&long_desc_type=substring&issue_file_loc=&issue_file_loc_type=substring&status_whiteboard=&status_whiteboard_type=substring&field0-0-0=noop&type0-0-0=noop&value0-0-0=&newqueryname=&order=issues.target_milestone%2C%20issues.priority%2C%20issues.issue_type">a list of all open bugs</a>.
+<br>
+(A long list, but useful if you want an overall sense of the project's
+priorities, or if you're looking for something <i>really</i> big to
+take on.)
+</li>
 
 </ul>
 
+<p>
 
 </html>
+
+
