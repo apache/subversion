@@ -41,9 +41,10 @@
 /* If both Python and APR have threads available, we can optimize ourselves
  * by releasing the global interpreter lock when we drop into our SVN calls.
  *
- * In svn_types.i, release_py_lock is called before every function, then
- * acquire_py_lock is called after every function.  So, if these functions
- * become no-ops, then Python will start to block...
+ * In svn_types.i, svn_swig_py_release_py_lock is called before every
+ * function, then svn_swig_py_acquire_py_lock is called after every
+ * function.  So, if these functions become no-ops, then Python will
+ * start to block...
  *
  * The Subversion libraries can be assumed to be thread-safe *only* when
  * APR_HAS_THREAD is 1.  The APR pool allocations aren't thread-safe unless
@@ -59,14 +60,14 @@ static apr_threadkey_t *_saved_thread_key = NULL;
 static apr_pool_t *_saved_thread_pool = NULL;
 #endif
 
-void release_py_lock(void)
+void svn_swig_py_release_py_lock(void)
 {
 #ifdef ACQUIRE_PYTHON_LOCK
   PyThreadState *thread_state;
 
   if (_saved_thread_key == NULL) {
 
-    /* This is ugly.  We call release_py_lock before executing any
+    /* This is ugly.  We call svn_swig_py_release_py_lock before executing any
        subversion function.  Thus it gets called before any call to
        apr_initialize in our script.  This means we have to call
        apr_initialize ourselves, or otherwise we won't be able to
@@ -83,7 +84,7 @@ void release_py_lock(void)
 #endif
 }
 
-void acquire_py_lock(void)
+void svn_swig_py_acquire_py_lock(void)
 {
 #ifdef ACQUIRE_PYTHON_LOCK
   void *val;
@@ -394,7 +395,7 @@ static svn_error_t * close_baton(void *baton, const char *method)
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* If there is no baton object, then it is an edit_baton, and we should
      not bother to pass an object. Note that we still shove a NULL onto
@@ -424,7 +425,7 @@ static svn_error_t * close_baton(void *baton, const char *method)
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -436,7 +437,7 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_target_revision",
@@ -451,7 +452,7 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
   err = SVN_NO_ERROR;
   
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -464,7 +465,7 @@ static svn_error_t * thunk_open_root(void *edit_baton,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"open_root",
@@ -480,7 +481,7 @@ static svn_error_t * thunk_open_root(void *edit_baton,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -493,7 +494,7 @@ static svn_error_t * thunk_delete_entry(const char *path,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"delete_entry",
@@ -509,7 +510,7 @@ static svn_error_t * thunk_delete_entry(const char *path,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -524,7 +525,7 @@ static svn_error_t * thunk_add_directory(const char *path,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"add_directory",
@@ -541,7 +542,7 @@ static svn_error_t * thunk_add_directory(const char *path,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -555,7 +556,7 @@ static svn_error_t * thunk_open_directory(const char *path,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"open_directory",
@@ -572,7 +573,7 @@ static svn_error_t * thunk_open_directory(const char *path,
   err = SVN_NO_ERROR;
   
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -585,7 +586,7 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_dir_prop",
@@ -603,7 +604,7 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -624,7 +625,7 @@ static svn_error_t * thunk_add_file(const char *path,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"add_file",
@@ -642,7 +643,7 @@ static svn_error_t * thunk_add_file(const char *path,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -656,7 +657,7 @@ static svn_error_t * thunk_open_file(const char *path,
   PyObject *result;
   svn_error_t *err;
   
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"open_file",
@@ -673,7 +674,7 @@ static svn_error_t * thunk_open_file(const char *path,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -684,7 +685,7 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   if (window == NULL)
     {
@@ -716,7 +717,7 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -731,7 +732,7 @@ thunk_apply_textdelta(void *file_baton,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
@@ -763,7 +764,7 @@ thunk_apply_textdelta(void *file_baton,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -776,7 +777,7 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_file_prop",
@@ -794,7 +795,7 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
   err = SVN_NO_ERROR;
   
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -806,7 +807,7 @@ static svn_error_t * thunk_close_file(void *file_baton,
   PyObject *result;
   svn_error_t *err;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"close_file",
@@ -833,7 +834,7 @@ static svn_error_t * thunk_close_file(void *file_baton,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -934,7 +935,7 @@ void svn_swig_py_notify_func(void *baton,
   if (function == NULL || function == Py_None)
     return;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"(siisiii)", 
                                       path, action, kind,
@@ -944,7 +945,7 @@ void svn_swig_py_notify_func(void *baton,
     {
       Py_XDECREF(result);
     }
-  release_py_lock();
+  svn_swig_py_release_py_lock();
 }
 
 
@@ -959,14 +960,14 @@ void svn_swig_py_status_func(void *baton,
   if (function == NULL || function == Py_None)
     return;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
   /* ### shouldn't we set an exception if this fails? */
   if ((result = PyObject_CallFunction(function, (char *)"sO&", path,
                                       make_ob_status, status)) != NULL)
     {
       Py_DECREF(result);
     }
-  release_py_lock();
+  svn_swig_py_release_py_lock();
 }
 
 
@@ -980,7 +981,7 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
   if (function == NULL || function == Py_None)
     return SVN_NO_ERROR;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallFunction(function, NULL)) != NULL)
     {
       err = convert_python_error();
@@ -990,7 +991,7 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
   Py_DECREF(result);
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -1015,7 +1016,7 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
   if ((function == NULL) || (function == Py_None))
     return SVN_NO_ERROR;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   if (commit_items)
     {
@@ -1060,7 +1061,7 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
   err = convert_python_error();
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -1078,7 +1079,7 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
   if (function == NULL || function == Py_None)
     return SVN_NO_ERROR;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"slO&", 
                                       path, revision, 
@@ -1091,7 +1092,7 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
     }
   
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }
 
@@ -1114,7 +1115,7 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
   if ((receiver == NULL) || (receiver == Py_None))
     return SVN_NO_ERROR;
 
-  acquire_py_lock();
+  svn_swig_py_acquire_py_lock();
 
   if (changed_paths)
     {
@@ -1143,6 +1144,6 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
   err = SVN_NO_ERROR;
 
  finished:
-  release_py_lock();
+  svn_swig_py_release_py_lock();
   return err;
 }

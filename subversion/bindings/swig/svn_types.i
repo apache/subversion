@@ -284,15 +284,14 @@
 %typemap(perl5, in, numinputs=0) unsigned char digest[ANY] ($*1_type temp[33]) {
     $1 = ($1_ltype)temp;
 }
-
 %typemap(perl5, argout) unsigned char digest[ANY] {
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), svn_md5_digest_to_cstring ($1,_global_pool));
 }
 
-%apply unsigned char digest[ANY]
-    { unsigned char *digest
-    };
+#ifdef SWIGPERL
+%apply unsigned char digest[ANY] { unsigned char *digest };
+#endif
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
@@ -360,11 +359,11 @@
 
 %exception {
 #ifdef SWIGPYTHON
-    release_py_lock();
+    svn_swig_py_release_py_lock();
 #endif
     $action
 #ifdef SWIGPYTHON
-    acquire_py_lock();
+    svn_swig_py_acquire_py_lock();
 #endif
 }
 
