@@ -76,7 +76,8 @@ dir_deltas (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn,
+                                    svn_repos_deltify_foreground, subpool));
 
   /***********************************************************************/
   /* REVISION 1 */
@@ -137,7 +138,8 @@ dir_deltas (const char **msg,
     SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 10, 
                                         subpool));
   }
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn,
+                                    svn_repos_deltify_foreground, subpool));
 
   /***********************************************************************/
   /* REVISION 2 */
@@ -191,7 +193,8 @@ dir_deltas (const char **msg,
     };
     SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 4, subpool));
   }
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn,
+                                    svn_repos_deltify_foreground, subpool));
 
   /***********************************************************************/
   /* REVISION 3 */
@@ -244,7 +247,8 @@ dir_deltas (const char **msg,
   SVN_ERR (svn_fs_copy (revision_root, "A/epsilon",
                         txn_root, "A/B/epsilon",
                         subpool));
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn,
+                                    svn_repos_deltify_foreground, subpool));
 
   /***********************************************************************/
   /* REVISION 4 */
@@ -381,7 +385,8 @@ node_tree_delete_under_copy (const char **msg,
 
   /* Create and commit the greek tree. */
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, pool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn,
+                                    svn_repos_deltify_foreground, pool));
 
   /* Now, commit again, this time after copying a directory, and then
      deleting some paths under that directory. */
@@ -391,7 +396,8 @@ node_tree_delete_under_copy (const char **msg,
   SVN_ERR (svn_fs_copy (revision_root, "A", txn_root, "Z", pool));
   SVN_ERR (svn_fs_delete (txn_root, "Z/D/G/rho", pool));
   SVN_ERR (svn_fs_delete (txn_root, "Z/D/H", pool));
-  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, pool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn,
+                                    svn_repos_deltify_foreground, pool));
 
   /* Now, we run the node_tree editor code, and see that a) it doesn't
      bomb out, and b) that our nodes are all good. */

@@ -322,7 +322,8 @@ svn_ra_local__get_commit_editor (void *session_baton,
   SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
                                         sess->repos_url, sess->fs_path,
                                         sess->username, log_msg,
-                                        callback, callback_baton, pool));
+                                        callback, callback_baton,
+                                        svn_repos_deltify_foreground, pool));
 
   return SVN_NO_ERROR;
 }

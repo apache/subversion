@@ -539,9 +539,13 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
+  /* ### issue-1601-todo: For now, pass svn_repos_deltify_foreground
+     as that's safe in all modes.  The next step is for daemon mode to
+     deltify in the background. */
   SVN_CMD_ERR(svn_repos_get_commit_editor(&editor, &edit_baton, b->repos,
                                           b->repos_url, b->fs_path, b->user,
-                                          log_msg, commit_done, &ccb, pool));
+                                          log_msg, commit_done, &ccb,
+                                          svn_repos_deltify_foreground, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, &aborted));
   if (!aborted)

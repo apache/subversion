@@ -434,6 +434,21 @@ svn_repos_replay (svn_fs_root_t *root,
 
 /* Making commits. */
 
+/* This specifies whether and how deltification of the previous
+   revision tree is to be done.  If none, then do no deltification; if
+   foreground, then perform deltification in the same line of
+   execution and don't return from the commit until deltification is
+   completed; if background, then if possible, fork/spawn a separate
+   deltification process and return from the commit immediately, else
+   fall back to the foreground behavior. */
+enum svn_repos_deltify_how
+{
+  svn_repos_deltify_none,
+  svn_repos_deltify_foreground,
+  svn_repos_deltify_background
+};
+
+
 /** Return an @a editor and @a edit_baton to commit changes to @a session->fs,
  * beginning at location 'rev:@a base_path', where "rev" is the argument
  * given to @c open_root().  Store @a user as the author of the commit and
@@ -450,6 +465,9 @@ svn_repos_replay (svn_fs_root_t *root,
  * error will be returned from @c close_edit, otherwise if there was a
  * post-commit hook failure, then that error will be returned and will
  * have code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ *
+ * @a deltify_how says how to deltify the previous revision, if at
+ * all; see the type's documentation for more. 
  */
 svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           void **edit_baton,
@@ -460,6 +478,7 @@ svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           const char *log_msg,
                                           svn_commit_callback_t callback,
                                           void *callback_baton,
+                                          enum svn_repos_deltify_how deltify_how,
                                           apr_pool_t *pool);
 
 
@@ -614,11 +633,15 @@ svn_repos_get_logs (svn_repos_t *repos,
  * error, it knows that the commit succeeded anyway.
  *
  * @a conflict_p, @a new_rev, and @a txn are as in @c svn_fs_commit_txn().
+ *
+ * @a deltify_how says how to deltify the previous revision, if at
+ * all; see the type's documentation for more. 
  */
 svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
                                       svn_repos_t *repos,
                                       svn_revnum_t *new_rev,
                                       svn_fs_txn_t *txn,
+                                      enum svn_repos_deltify_how deltify_how,
                                       apr_pool_t *pool);
 
 /** Like @c svn_fs_begin_txn(), but use @a author and @a log_msg to set the

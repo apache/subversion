@@ -633,6 +633,7 @@ dav_error *dav_svn_checkin(dav_resource *resource,
                                          resource->info->repos->repos,
                                          &new_rev, 
                                          resource->info->root.txn,
+                                         svn_repos_deltify_background,
                                          resource->pool);
           if (serr != NULL)
             {
@@ -880,7 +881,8 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
   /* all righty... commit the bugger. */
   serr = svn_repos_fs_commit_txn(&conflict, source->info->repos->repos,
-                                 &new_rev, txn, pool);
+                                 &new_rev, txn, svn_repos_deltify_background,
+                                 pool);
   if (serr != NULL)
     {
       const char *msg;

@@ -301,9 +301,9 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 
 /** Callback function type for commits.
  *
- * When a commit succeeds, an instance of this is invoked on the @a
- * new_revision, @a date, and @a author of the commit, along with the
- * @a baton closure.
+ * When a commit succeeds (and the post-commit hook has exited), an
+ * instance of this is invoked on the @a new_revision, @a date, and
+ * @a author of the commit, along with the @a baton closure.
  */
 typedef svn_error_t * (*svn_commit_callback_t) (
     svn_revnum_t new_revision,

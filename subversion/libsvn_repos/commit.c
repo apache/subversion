@@ -80,6 +80,9 @@ struct edit_baton
   /* The new revision created by this commit. */
   svn_revnum_t *new_rev;
 
+  /* Whether and how to deltify the result of this commit. */
+  enum svn_repos_deltify_how deltify_how;
+
   /* The date (according to the repository) of this commit. */
   const char **committed_date;
 
@@ -528,7 +531,8 @@ close_edit (void *edit_baton,
 
   /* Commit. */
   err = svn_repos_fs_commit_txn (&conflict, eb->repos, 
-                                 &new_revision, eb->txn, pool);
+                                 &new_revision, eb->txn,
+                                 eb->deltify_how, pool);
 
   /* We want to abort the transaction *unless* the error code tells us
      the commit succeeded and something just went wrong in post-commit. */
@@ -612,6 +616,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                              const char *log_msg,
                              svn_commit_callback_t callback,
                              void *callback_baton,
+                             enum svn_repos_deltify_how deltify_how,
                              apr_pool_t *pool)
 {
   svn_delta_editor_t *e = svn_delta_default_editor (pool);
@@ -643,6 +648,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
   eb->repos_url = repos_url;
   eb->fs = svn_repos_fs (repos);
   eb->txn = NULL;
+  eb->deltify_how = deltify_how;
 
   *edit_baton = eb;
   *editor = e;

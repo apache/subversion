@@ -33,6 +33,7 @@ svn_repos_fs_commit_txn (const char **conflict_p,
                          svn_repos_t *repos,
                          svn_revnum_t *new_rev,
                          svn_fs_txn_t *txn,
+                         enum svn_repos_deltify_how deltify_how,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -52,6 +53,8 @@ svn_repos_fs_commit_txn (const char **conflict_p,
     return svn_error_create
       (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
        "Commit succeeded, but post-commit hook failed.");
+
+  /* ### issue-1601-todo: use deltify_how parameter here. */
 
   return SVN_NO_ERROR;
 }
