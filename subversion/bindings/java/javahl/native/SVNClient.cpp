@@ -35,7 +35,7 @@
 #include <svn_io.h>
 #include <svn_path.h>
 #include "svn_private_config.h"
-#include "org_tigris_subversion_javahl_Status_Kind.h"
+#include "org_tigris_subversion_javahl_StatusKind.h"
 #include "org_tigris_subversion_javahl_Revision.h"
 #include "org_tigris_subversion_javahl_NodeKind.h"
 #include <vector>
@@ -1389,10 +1389,10 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
 	jlong jLastChangedRevision = org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
 	jlong jLastChangedDate = 0;
 	jstring jLastCommitAuthor = NULL;
-	jint jTextType = org_tigris_subversion_javahl_Status_Kind_none;
-	jint jPropType = org_tigris_subversion_javahl_Status_Kind_none;
-	jint jRepositoryTextType = org_tigris_subversion_javahl_Status_Kind_none;
-	jint jRepositoryPropType = org_tigris_subversion_javahl_Status_Kind_none;
+	jint jTextType = org_tigris_subversion_javahl_StatusKind_none;
+	jint jPropType = org_tigris_subversion_javahl_StatusKind_none;
+	jint jRepositoryTextType = org_tigris_subversion_javahl_StatusKind_none;
+	jint jRepositoryPropType = org_tigris_subversion_javahl_StatusKind_none;
 	jboolean jIsLocked = JNI_FALSE;
 	jboolean jIsCopied = JNI_FALSE;
 	jboolean jIsSwitched = JNI_FALSE;
@@ -1529,33 +1529,33 @@ jint SVNClient::mapStatusKind(int svnKind)
 	{
     case svn_wc_status_none:
 	default:
-		return org_tigris_subversion_javahl_Status_Kind_none;
+		return org_tigris_subversion_javahl_StatusKind_none;
     case svn_wc_status_unversioned:
-		return org_tigris_subversion_javahl_Status_Kind_unversioned;
+		return org_tigris_subversion_javahl_StatusKind_unversioned;
     case svn_wc_status_normal:
-		return org_tigris_subversion_javahl_Status_Kind_normal;
+		return org_tigris_subversion_javahl_StatusKind_normal;
     case svn_wc_status_added:
-		return org_tigris_subversion_javahl_Status_Kind_added;
+		return org_tigris_subversion_javahl_StatusKind_added;
     case svn_wc_status_missing:
-		return org_tigris_subversion_javahl_Status_Kind_missing;
+		return org_tigris_subversion_javahl_StatusKind_missing;
     case svn_wc_status_deleted:
-		return org_tigris_subversion_javahl_Status_Kind_deleted;
+		return org_tigris_subversion_javahl_StatusKind_deleted;
     case svn_wc_status_replaced:
-		return org_tigris_subversion_javahl_Status_Kind_replaced;
+		return org_tigris_subversion_javahl_StatusKind_replaced;
     case svn_wc_status_modified:
-		return org_tigris_subversion_javahl_Status_Kind_modified;
+		return org_tigris_subversion_javahl_StatusKind_modified;
     case svn_wc_status_merged:
-		return org_tigris_subversion_javahl_Status_Kind_merged;
+		return org_tigris_subversion_javahl_StatusKind_merged;
     case svn_wc_status_conflicted:
-		return org_tigris_subversion_javahl_Status_Kind_conflicted;
+		return org_tigris_subversion_javahl_StatusKind_conflicted;
 	case svn_wc_status_ignored:
-		return org_tigris_subversion_javahl_Status_Kind_ignored;
+		return org_tigris_subversion_javahl_StatusKind_ignored;
     case svn_wc_status_obstructed:
-		return org_tigris_subversion_javahl_Status_Kind_obstructed;
+		return org_tigris_subversion_javahl_StatusKind_obstructed;
 	case svn_wc_status_external:
-		return org_tigris_subversion_javahl_Status_Kind_external;
+		return org_tigris_subversion_javahl_StatusKind_external;
 	case svn_wc_status_incomplete:
-		return org_tigris_subversion_javahl_Status_Kind_incomplete;
+		return org_tigris_subversion_javahl_StatusKind_incomplete;
 	}
 }
 svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t * changed_paths,

@@ -19,7 +19,7 @@
  * @brief Implementation of the native methods in the java class SVNClient
  */
 #include "org_tigris_subversion_javahl_SVNClient.h"
-#include "org_tigris_subversion_javahl_SVNClient_LogLevel.h"
+#include "org_tigris_subversion_javahl_SVNClientLogLevel.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
@@ -1066,16 +1066,16 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_enableLogging
 	int cLevel = JNIUtil::noLog;
 	switch(jlogLevel)
 	{
-	case org_tigris_subversion_javahl_SVNClient_LogLevel_NoLog:
+	case org_tigris_subversion_javahl_SVNClientLogLevel_NoLog:
 		cLevel = JNIUtil::noLog;
 		break;
-	case org_tigris_subversion_javahl_SVNClient_LogLevel_ErrorLog:
+	case org_tigris_subversion_javahl_SVNClientLogLevel_ErrorLog:
 		cLevel = JNIUtil::errorLog;
 		break;
-	case org_tigris_subversion_javahl_SVNClient_LogLevel_ExceptionLog:
+	case org_tigris_subversion_javahl_SVNClientLogLevel_ExceptionLog:
 		cLevel = JNIUtil::exceptionLog;
 		break;
-	case org_tigris_subversion_javahl_SVNClient_LogLevel_EntryLog:
+	case org_tigris_subversion_javahl_SVNClientLogLevel_EntryLog:
 		cLevel = JNIUtil::entryLog;
 		break;
 	}
