@@ -90,6 +90,27 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              apr_pool_t *pool);
 
 
+/* ---------------------------------------------------------------- */
+
+/*** Editor for repository diff ***/
+
+/* Create an editor for a pure repository comparison, i.e. comparing one
+   repository version against the other. TARGET can be a working copy path
+   or an URL. REVISION is the start revision in the comparison.
+   DIFF_CMD/DIFF_CMD_BATON define the diff callback for comparing two
+   files. RA_LIB/RA_SESSION define the ra session for requesting file
+   contents. The editor is returned in EDITOR/EDIT_BATON. */
+svn_error_t *
+svn_client__get_diff_editor (svn_stringbuf_t *target,
+                             svn_wc_diff_cmd_t diff_cmd,
+                             void *diff_cmd_baton,
+                             svn_boolean_t recurse,
+                             svn_ra_plugin_t *ra_lib,
+                             void *ra_session, 
+                             svn_revnum_t revision,
+                             const svn_delta_edit_fns_t **editor,
+                             void **edit_baton,
+                             apr_pool_t *pool);
 
 #endif /* CLIENT_H */
 

@@ -155,16 +155,43 @@ svn_client_file_diff (svn_stringbuf_t *path,
   return SVN_NO_ERROR;
 }
 
-/* Compare working copy against the repository */
+/* Display context diffs
+
+     There are four cases:
+        1. path is not an URL and start_revision != end_revision
+        2. path is not an URL and start_revision == end_revision
+        3. path is an URL and start_revision != end_revision
+        4. path is an URL and start_revision == end_revision
+
+     With only one distinct revision the working copy provides the other.
+     When path is an URL there is no working copy. Thus
+
+       1: compare repository versions for URL coresponding to working copy
+       2: compare working copy against repository version
+       3: compare repository versions for URL
+       4: nothing to do.
+
+     Case 4 is not as stupid as it looks, for example it may occur if the
+     user specifies two dates that resolve to the same revision.
+
+   ### TODO: Non-zero is not a good test for valid dates. Really all the
+   revision/date stuff needs to be reworked using a unifying revision
+   structure with validity flags etc.
+*/
+
 svn_error_t *
 svn_client_diff (svn_stringbuf_t *path,
                  const apr_array_header_t *diff_options,
                  svn_client_auth_baton_t *auth_baton,
-                 svn_revnum_t revision,
-                 apr_time_t tm,
+                 svn_revnum_t start_revision,
+                 apr_time_t start_date,
+                 svn_revnum_t end_revision,
+                 apr_time_t end_date,
                  svn_boolean_t recurse,
                  apr_pool_t *pool)
 {
+  svn_string_t path_str;
+  svn_boolean_t path_is_url;
   svn_stringbuf_t *anchor, *target;
   svn_wc_entry_t *entry;
   svn_stringbuf_t *URL;
@@ -177,48 +204,114 @@ svn_client_diff (svn_stringbuf_t *path,
   void *diff_edit_baton;
   struct diff_cmd_baton diff_cmd_baton;
 
-  /* If both REVISION and TM are specified, this is an error.
+  /* If both a revision and a date/time are specified, this is an error.
      They mostly likely contradict one another. */
-  if ((revision != SVN_INVALID_REVNUM) && tm)
+  if ((SVN_IS_VALID_REVNUM(start_revision) && start_date)
+      || (SVN_IS_VALID_REVNUM(end_revision) && end_date))
     return
       svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
                        "Cannot specify _both_ revision and time.");
 
-  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-  SVN_ERR (svn_wc_entry (&entry, anchor, pool));
-  URL = svn_stringbuf_create (entry->url->data, pool);
+  diff_cmd_baton.options = diff_options;
+  diff_cmd_baton.pool = pool;
 
+  /* Determine if the target we have been given is a path or an URL */
+  path_str.data = path->data;
+  path_str.len = path->len;
+  path_is_url = svn_path_is_url (&path_str);
+
+  if (path_is_url)
+    {
+      URL = path;
+      /* Need to set anchor since the ra callbacks use it for creating
+         temporary files. */
+      /* ### TODO: Need apr temp file support */
+      anchor = svn_stringbuf_create(".", pool);
+      target = NULL;
+    }
+  else
+    {
+      SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+      SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+      URL = svn_stringbuf_create (entry->url->data, pool);
+    }
+
+  /* Establish the RA session */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
-
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
                                          auth_baton,
                                          anchor,
                                          TRUE,
-                                         TRUE,
+                                         path_is_url ? FALSE : TRUE,
                                          pool));
   SVN_ERR (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool));
 
-  if (tm)
-    SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
+  if (start_date)
+    SVN_ERR (ra_lib->get_dated_revision (session, &start_revision, start_date));
+  if (end_date)
+    SVN_ERR (ra_lib->get_dated_revision (session, &end_revision, end_date));
 
-  diff_cmd_baton.options = diff_options;
-  diff_cmd_baton.pool = pool;
-  SVN_ERR (svn_wc_get_diff_editor (anchor, target,
-                                   svn_client__diff_cmd, &diff_cmd_baton,
-                                   recurse,
-                                   &diff_editor, &diff_edit_baton,
-                                   pool));
+  /* ### TODO: Warn the user? */
+  if (path_is_url && start_revision == end_revision)
+    return SVN_NO_ERROR;
 
-  SVN_ERR (ra_lib->do_update (session,
-                              &reporter, &report_baton,
-                              revision,
-                              target,
-                              recurse,
-                              diff_editor, diff_edit_baton));
+  if (start_revision == end_revision)
+    {
+      /* The working copy is involved if only one revision is given */
+      SVN_ERR (svn_wc_get_diff_editor (anchor, target,
+                                       svn_client__diff_cmd, &diff_cmd_baton,
+                                       recurse,
+                                       &diff_editor, &diff_edit_baton,
+                                       pool));
 
-  SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton,
-                                   FALSE, recurse, pool));
+      SVN_ERR (ra_lib->do_update (session,
+                                  &reporter, &report_baton,
+                                  end_revision,
+                                  target,
+                                  recurse,
+                                  diff_editor, diff_edit_baton));
+
+      SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton,
+                                       FALSE, recurse, pool));
+    }
+  else
+    {
+      /* Pure repository comparison if two revisions are given */
+
+      /* Open a second session used to request individual file
+         contents. Although a session can be used for multiple requests, it
+         appears that they must be sequential. Since the first request, for
+         the diff, is still being processed the first session cannot be
+         reused. This applies to ra_dav, ra_local does not appears to have
+         this limitation. */
+      void *session2;
+      SVN_ERR (ra_lib->open (&session2, URL, ra_callbacks, cb_baton, pool));
+
+      SVN_ERR (svn_client__get_diff_editor (target,
+                                            svn_client__diff_cmd,
+                                            &diff_cmd_baton,
+                                            recurse,
+                                            ra_lib, session2,
+                                            start_revision,
+                                            &diff_editor, &diff_edit_baton,
+                                            pool));
+
+      SVN_ERR (ra_lib->do_update (session,
+                                  &reporter, &report_baton,
+                                  end_revision,
+                                  target,
+                                  recurse,
+                                  diff_editor, diff_edit_baton));
+
+      SVN_ERR (reporter->set_path (report_baton,
+                                   svn_stringbuf_create ("", pool),
+                                   start_revision));
+
+      SVN_ERR (reporter->finish_report (report_baton));
+
+      SVN_ERR (ra_lib->close (session2));
+    }
 
   SVN_ERR (ra_lib->close (session));
 

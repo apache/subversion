@@ -42,8 +42,8 @@ def check_diff_output(diff_output, name, diff_type):
   "check diff output"
 
   i_re = re.compile('^Index:')
-  d_re = re.compile('^Index: \\./' + name)
-  p_re = re.compile('^--- \\./' + name)
+  d_re = re.compile('^Index: (\\./)?' + name)
+  p_re = re.compile('^--- (\\./)?' + name)
   add_re = re.compile('^\\+')
   sub_re = re.compile('^-')
 
@@ -245,6 +245,23 @@ def just_diff(wc_dir, rev_up, rev_check, check_fn):
   os.chdir(was_cwd)
   return 0
 
+######################################################################
+# check a pure repository rev1:rev2 diff
+
+def repo_diff(wc_dir, rev1, rev2, check_fn):
+  "check that the given pure repository diff is seen"
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 `rev2` + ':' + `rev1`)
+  if check_fn(diff_output):
+    os.chdir(was_cwd)
+    return 1
+
+  os.chdir(was_cwd)
+  return 0
 
 ######################################################################
 # Tests
@@ -299,10 +316,10 @@ def diff_replace_a_file():
                                  check_replace_a_file)
 
 # test 5
-def diff_two_add_reverse():
-  "two adds diff'd forwards and backwards"
+def diff_multiple_reverse():
+  "multiple revisions diff'd forwards and backwards"
 
-  sbox = sandbox(diff_two_add_reverse)
+  sbox = sandbox(diff_multiple_reverse)
   wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
   if svntest.actions.make_repo_and_wc(sbox): return 1
 
@@ -318,16 +335,41 @@ def diff_two_add_reverse():
                              check_add_a_file_in_a_subdir):
     return 1
 
+  #rev 4
+  if change_diff_commit_diff(wc_dir, 3,
+                             update_a_file,
+                             check_update_a_file):
+    return 1
+
   # check diffs both ways
-  if just_diff(wc_dir, 3, 1, check_add_a_file_in_a_subdir):
+  if just_diff(wc_dir, 4, 1, check_update_a_file):
     return 1
-  if just_diff(wc_dir, 3, 1, check_add_a_file):
+  if just_diff(wc_dir, 4, 1, check_add_a_file_in_a_subdir):
     return 1
-  if just_diff(wc_dir, 1, 3, check_add_a_file_in_a_subdir_reverse):
+  if just_diff(wc_dir, 4, 1, check_add_a_file):
     return 1
-  if just_diff(wc_dir, 1, 3, check_add_a_file_reverse):
+  if just_diff(wc_dir, 1, 4, check_update_a_file):
     return 1
-  
+  if just_diff(wc_dir, 1, 4, check_add_a_file_in_a_subdir_reverse):
+    return 1
+  if just_diff(wc_dir, 1, 4, check_add_a_file_reverse):
+    return 1
+
+  # check pure repository diffs
+  if repo_diff(wc_dir, 4, 1, check_update_a_file):
+    return 1
+  if repo_diff(wc_dir, 4, 1, check_add_a_file_in_a_subdir):
+    return 1
+  if repo_diff(wc_dir, 4, 1, check_add_a_file):
+    return 1
+  if repo_diff(wc_dir, 1, 4, check_update_a_file):
+    return 1
+# ### TODO: directory delete doesn't work yet
+#  if repo_diff(wc_dir, 1, 4, check_add_a_file_in_a_subdir_reverse):
+#    return 1
+  if repo_diff(wc_dir, 1, 4, check_add_a_file_reverse):
+    return 1
+
   return 0
 
 # test 6
@@ -381,7 +423,7 @@ test_list = [ None,
               diff_add_a_file,
               diff_add_a_file_in_a_subdir,
               diff_replace_a_file,
-              diff_two_add_reverse,
+              diff_multiple_reverse,
               diff_non_recursive
              ]
 
