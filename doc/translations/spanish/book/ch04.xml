@@ -656,25 +656,25 @@ Hunk #4 succeeded at 249.
 done
 </screen>
 
-        <para>In this particular case, yes, there really is no
-          difference.  But <command>svn merge</command> has special
-          abilities that surpass the <command>patch</command> program.
-          The file format used by <command>patch</command> is quite
-          limited; it's only able to tweak file contents.  There's no
-          way to represent changes to <emphasis>trees</emphasis>, such
-          as the addition, removal, or renaming of files and
-          directories.  If Sally's change had, say, added a new
-          directory, the output of <command>svn diff</command>
-          wouldn't have mentioned it at all.  <command>svn
-          diff</command> only outputs the limited patch-format, so
-          there are some ideas it simply can't express.  <footnote>
-          <para>In the future, the Subversion project plans to use (or
-          invent) an expanded patch format that describes
-          tree-changes.</para>
-          </footnote>
-          The <command>svn merge</command> command, however, can express
-          tree-changes by directly applying them to your working
-          copy.</para>
+        <para>En este caso particular, efectivamente, no hay
+          realmente diferencia alguna. Pero <command>svn
+          merge</command> tiene características especiales que
+          sobrepasan las del programa <command>patch</command>.
+          El formato de fichero usado por <command>patch</command>
+          es bastante limitado; sólo permite modificar el contenido
+          de los ficheros. No hay forma de representar cambios a
+          <emphasis>árboles</emphasis>, como añadir, eliminar o
+          renombrar ficheros y directorios.  Si el cambio de Sally,
+          digamos, hubiese añadido un nuevo directorio, la salida
+          de <command>svn diff</command> ni si quiera lo hubiese
+          mencionado. <command>svn diff</command> sólo genera
+          salida en el formato limitado de patch, por lo que hay
+          algunas ideas que no puede expresar. <footnote> <para>En
+          el futuro, el proyecto Subversion planea usar (o inventar)
+          un formato de parche que describe cambios a árboles.</para>
+          </footnote> El comando <command>svn merge</command>, no
+          obstante, puede expresar cambios a árboles directamente
+          aplicándolos a su copia local.</para>
 
       </sidebar>
       
