@@ -81,17 +81,22 @@ Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ sudirs:
 
    SVN/versions
-       here-props               /* Properties for this directory */
-       tree-changes             /* Records changes to tree structure */
-       prop-changes             /* Records changes to properties */
+       properties               /* Properties for this directory */
+       tree-edits               /* Records changes to tree structure */
+       prop-edits               /* Records changes to properties */
        read-lock                /* Optional, you know what this is */
        write-lock               /* Optional, you know what this is too */
        tmp                      /* Local tmp space is preferable to /tmp */
-       base/                    /* Each file in base in a hashdump...
+       text-base/               /* Pristine repos versions of the files... */
             foo.c
-            bar.c               /* ...holding contents _and_ properties */
-            baz.c
             qux/                /* Subdirs are empty, though */
+            bar.c
+            baz.c
+       prop-base/               /* Pristine repos hashdumps of these files
+            foo.c
+            bar.c               /* Hashdump of bar.c's file & dirent props */
+            baz.c
+            qux/                /* Hashdump of qux's dirent props */
 
 `versions':
 
@@ -134,11 +139,17 @@ analogous to CVS/ sudirs:
 
    Properties for this directory, in standard hashdump format.
 
-`tree-changes'
+`tree-edits'
 
    Records adds, renames, and deletes involving this directory.
 
       Operation NameHere OrigVersion OrigNameAsAbsolutePath
+
+`prop-edits'
+
+   Records changes to properties on this directory and files in it.
+
+      Target Op PropName [PropValue]
 
 `read-lock'
 
@@ -155,18 +166,24 @@ analogous to CVS/ sudirs:
    Use this instead of /tmp, for debuggability, recovery, easy
    avoidance of filename collisions.
 
-`base/'
+`text-base/'
 
-   Each file in base/ is in hashdump format, so it can hold both the
-   properties for the working file of the same name and its contents
-   (which are stored as the value of a special property named
-   "svn_contents").  Child directories of the current directory appear
-   here, but empty -- this is enough to make their existence known to
-   the current directory; all other information about the child
-   directory is of course stored in its own SVN/ subdir.
+   Each file in text-base/ is a pristine repository version of that
+   file, corresponding to the version indicated in `versions'.  These
+   files are used for sending diffs back to the server, etc.
 
-fooo
+   Child directories of the current directory appear here, but are
+   empty -- this is enough to make their existence known to the
+   current directory; all other information about the child directory
+   is of course stored in its own SVN/ subdir.
 
+`prop-base/'
+
+   Pristine repos properties for those files, in hashdump format.
+   todo: may also store dirent props here, lots of good formats for
+   mixing those two, would pick one when we implement the dirent
+   props.  Or may store them some other way; think this will be best
+   answered after having the rest of the library working.
 
 
 

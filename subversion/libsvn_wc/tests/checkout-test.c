@@ -56,12 +56,37 @@
 #include <apr_file_io.h>
 #include "svn_types.h"
 #include "svn_delta.h"
+/* #include "svn_wc.h" */
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 
+
+
+/* todo: prototype by hand until we're ready to include the real header. */
 svn_error_t *
-update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool);
+svn_wc_apply_delta (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool);
+
+
+
+static svn_error_t *
+test_read_fn (void *baton, char *buffer, apr_off_t *len)
+{
+  apr_file_t *src = (apr_file_t *) baton;
+
+  todo fooo working here;
+
+      svn_error_t *err
+        = svn_create_error
+        (SVN_ERR_MALFORMED_XML, 0,
+         apr_psprintf (pool, "%s at line %d",
+                       XML_ErrorString (XML_GetErrorCode (parsimonious)),
+                       XML_GetCurrentLineNumber (parsimonious)),
+         NULL, pool);
+      XML_ParserFree (parsimonious);
+      return err;
+}
+
 
 int
 main (void)
@@ -73,6 +98,15 @@ main (void)
 
   apr_initialize ();
   apr_create_pool (&pool, NULL);
+
+  /* On Tue, Aug 08, 2000 at 09:50:33PM -0500, Karl Fogel wrote:
+   * > Greg, I've got a stupid question for you:
+   * > 
+   * > How do I get an (apr_file_t *) that reads from stdin?  And one writing
+   * > to stdout?
+   * 
+   * Check out apr_put_os_file() in apr_portable.h
+   */
 
   apr_open (&src, "checkout-1.delta",
             (APR_READ | APR_CREATE),
