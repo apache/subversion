@@ -4,20 +4,6 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.0.0:
-================
-
-Release 1.0.0 is already frozen.  The candidate tarball was
-subversion-0.37.0.tar.gz for a four week soak period; we'll put out
-1.0.0-beta1 on Friday, February 20th as a final sanity check, then
-release 1.0.0 on February 23rd, 2004.  If you find a bug that you
-think is important enough to delay 1.0.0, please start a dev@ list
-thread and mention the thread below.
-
-Candidate changes:
-
-[None: time to party]
-
 Status of 1.0.1:
 ================
 
