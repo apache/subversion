@@ -644,16 +644,16 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
         {
           svn_error_t *err2 = svn_ra_svn_write_cmd_failure(conn, subpool, err);
           /* Flush so that error gets written whatever the caller does next */
-          if (! err2)
-            err2 = svn_ra_svn_flush (conn, subpool);
+          if (!err2)
+            err2 = svn_ra_svn_flush(conn, subpool);
           if (pass_through_errors)
             {
-              svn_error_clear (err2);
+              svn_error_clear(err2);
               return err;
             }
           if (err2)
             {
-              svn_error_clear (err);
+              svn_error_clear(err);
               return err2;
             }
         }
