@@ -257,7 +257,7 @@ I.    BUILD REQUIREMENTS
 
       With Unix-based systems, you can enable support for SSL from the
       Subversion build provided that you are building Neon in the
-      "./neon/" directory as described above in section I.5.  You also
+      "./neon/" directory as described above in section I.4.  You also
       need OpenSSL installed on your system.  Just add "--with-ssl" as
       a parameter when you run Subversion's "./configure", and it will
       be passed on to the Neon build system.  If your OpenSSL
@@ -584,13 +584,13 @@ II.   INSTALLATION
       suite after you build the source.
 
       To build the client components, you'll need a copy of neon
-      0.24.4.  See section I.5 for details on where to get one and
+      0.24.4.  See section I.4 for details on where to get one and
       what to do with it when you get it.
 
       [NOTE: The neon library supports secure connections with OpenSSL
           and on-the-wire compression with zlib. If you want to use
           those features, you should pass the options "--with-zlib" and
-          "--with-openssl" to the gen-make.py script. See Section I.11
+          "--with-openssl" to the gen-make.py script. See Section I.10
           for more details.]
 
       If you are installing under Win9x, NT4, or WinME, and svn.exe
@@ -600,7 +600,7 @@ II.   INSTALLATION
 
       If you want to build the (local) server components, you'll also
       need a copy of Berkeley DB, version 4.0.14 or newer (version 4.2.52
-      is preferred).  Details are in Section I.6. For your convenience, 
+      is preferred).  Details are in Section I.5. For your convenience,
       there is also a binary distribution on the Subversion downloads 
       page
 
@@ -758,7 +758,7 @@ III.  BUILDING A SUBVERSION SERVER
       line.  Make sure this is the same db as the one Subversion uses.
       This note assumes you have installed Berkeley DB 4.2.52
       at its default locations.  For more info about the db requirement,
-      see section I.6.
+      see section I.5.
 
       You may also want to include other modules in your build. Add
       --enable-ssl to turn on SSL support, and --enable-deflate to turn on
