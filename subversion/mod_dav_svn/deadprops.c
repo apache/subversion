@@ -226,7 +226,7 @@ static dav_error *dav_svn_db_output_value(dav_db *db, const dav_prop_name *name,
     return NULL;
 
   /* XML-escape our properties before sending them across the wire. */
-  svn_xml_escape_string(&xmlsafe, propval, db->p);
+  svn_xml_escape_stringbuf(&xmlsafe, propval, db->p);
 
   if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
     prefix = "C:";

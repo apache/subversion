@@ -1097,7 +1097,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_string (&qpath, path, rb->ras->pool);
+  svn_xml_escape_stringbuf (&qpath, path, rb->ras->pool);
   entry = apr_psprintf(rb->ras->pool,
                        "<S:entry rev=\"%ld\">%s</S:entry>" DEBUG_CR,
                        revision, qpath->data);
