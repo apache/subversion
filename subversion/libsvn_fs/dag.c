@@ -197,14 +197,13 @@ int svn_fs__dag_is_copy (dag_node_t *node)
 }
 
 
-int svn_fs__dag_is_mutable (dag_node_t *node)
+/* Helper for __dag_is_mutable and __dag_delete */
+static int
+has_mutable_flag (skel_t *node_content)
 {
-  /* ben todo: once dag_node_t no longer has a `contents' field, call
-     into node-rev.c to get the "fresh" content skel for our trail. */
-
   /* The node "header" is the first element of a node-revision skel,
      itself a list. */
-  skel_t *header = node->contents->children;
+  skel_t *header = node_content->children;
   
   /* The 3rd element of the header, IF it exists, is the header's
      first `flag'.  It could be NULL.  */
@@ -222,6 +221,14 @@ int svn_fs__dag_is_mutable (dag_node_t *node)
   
   /* Reached the end of the header skel, no mutable flag was found. */
   return FALSE;
+}
+
+
+int svn_fs__dag_is_mutable (dag_node_t *node)
+{
+  /* ben todo: once dag_node_t no longer has a `contents' field, call
+     into node-rev.c to get the "fresh" content skel for our trail. */
+  return has_mutable_flag (node->contents);
 }
 
 
@@ -405,13 +412,111 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
   return NULL;
 }
 
+
+
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  const char *name,
                                  trail_t *trail)
 {
-  abort();
-  /* NOTREACHED */
-  return NULL;
+  skel_t *content_skel, *new_dirent_list, *old_entry, *entry;
+  int deleted = FALSE;
+
+  /* Make sure we're looking at a directory node. */
+  if (! svn_fs__dag_is_directory (parent))
+    return 
+      svn_error_createf
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, parent->pool,
+       "Attempted to delete entry `%s' from *non*-directory node.",
+       name);    
+
+  /* Make sure the node is mutable. */
+  if (! svn_fs__dag_is_mutable (parent))
+    return 
+      svn_error_createf
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, parent->pool,
+       "Attempted to delete entry `%s' from *immutable* directory node.",
+       name);      
+
+  /* ben todo: once dag_node_t no longer has a `contents' field, call
+     into node-rev.c to get the "fresh" content skel for our trail. */
+  content_skel = parent->contents;
+  
+  /* Dup the parent's dirent list in trail->pool.  Then we can safely
+     munge it all we want. */
+  new_dirent_list = svn_fs__copy_skel (content_skel->children->next,
+                                       trail->pool);
+
+  entry = new_dirent_list->children;
+  old_entry = NULL;
+
+  while (entry)
+    {
+      if (svn_fs__matches_atom (entry->children, name))
+        {
+          /* Aha!  We want to remove this entry from the list. */
+
+          /* We actually have to *retrieve* this entry, however, and
+             make sure that we're not trying to remove a non-empty
+             dir.  (This is part of this routine's promise.) */
+          skel_t *entry_content;
+          skel_t *id_skel = entry->children->next;
+          svn_fs_id_t *id = svn_fs_parse_id (id_skel->data, id_skel->len,
+                                             trail->pool);
+          SVN_ERR (svn_fs__get_node_revision (&entry_content,
+                                              parent->fs,
+                                              id,
+                                              trail));
+
+          if (svn_fs__matches_atom (entry_content->children->children,
+                                    "dir"))
+            {
+              if (has_mutable_flag (entry_content))
+                {
+                  int len = 
+                    svn_fs__list_length (entry_content->children->next);
+                  if (len != 0)
+                    return 
+                      svn_error_createf
+                      (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
+                       "Attempted to delete *non-empty* directory `%s'.",
+                       name);                        
+                }
+            }
+
+          /* Just "lose" this entry by setting the *previous* entry's
+             next ptr to the current entry's next ptr. */          
+          if (! old_entry)
+            /* Base case:  the very *first* entry matched. */
+            new_dirent_list->children = entry->next;
+          else
+            old_entry->next = entry->next;
+
+          deleted = TRUE;
+          break;
+        }
+
+      /* No match, move to next entry. */
+      old_entry = entry;
+      entry = entry->next;
+    }
+    
+  if (! deleted)
+    return 
+      svn_error_createf
+      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, parent->pool,
+       "Can't delete entry `%s', not found in parent dir.",
+       name);      
+    
+  /* Else, the linked list has been appropriately modified.  Hook it
+     back into the content skel and re-write the node-revision. */
+  content_skel->children->next = new_dirent_list;
+
+  SVN_ERR (svn_fs__put_node_revision (parent->fs,
+                                      parent->id,
+                                      content_skel,
+                                      trail));
+  
+  return SVN_NO_ERROR;
 }
 
 

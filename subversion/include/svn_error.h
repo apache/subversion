@@ -141,6 +141,9 @@ typedef enum svn_errno_t {
   /* The filesystem has no transaction with the given name.  */
   SVN_ERR_FS_NO_SUCH_TRANSACTION,
 
+  /* An particular entry was not found in a directory. */
+  SVN_ERR_FS_NO_SUCH_ENTRY,
+
   /* There is no file by the given name.  */
   SVN_ERR_FS_NOT_FOUND,
 
@@ -156,6 +159,9 @@ typedef enum svn_errno_t {
   /* You tried to create a new file in a filesystem revision, but the
      file already exists. */
   SVN_ERR_FS_ALREADY_EXISTS,
+
+  /* Tried to remove a non-empty directory. */
+  SVN_ERR_FS_DIR_NOT_EMPTY,
 
   /* You tried to remove the root directory of a filesystem revision,
      or create another node named /.  */
