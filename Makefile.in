@@ -215,8 +215,13 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
                   '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
                   $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
+# First, set up Apache as documented in
+# subversion/tests/clients/cmdline/README.
 davcheck: 
 	@make check BASE_URL=http://localhost
+
+# First, run:
+#   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
 svncheck: 
 	@make check BASE_URL=svn://localhost
 
