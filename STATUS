@@ -111,13 +111,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: david, ghudson
 
-  * r11451, r11630
-    Fix pool usage and stalled object reference counts in Perl bindings.
-    Justification:
-      Reduce memory leaks in Perl bindings.
-    Votes:
-      +1: clkao, epg
-
   * r11730, r11743 (Issue #2108)
     Fix UNC paths on Cygwin.
     Justification:

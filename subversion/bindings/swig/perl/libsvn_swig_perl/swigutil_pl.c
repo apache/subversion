@@ -618,6 +618,7 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 	SVN_ERR (svn_swig_pl_callback_thunk (CALL_SV,
 				             handler, NULL, "O",
 				             &PL_sv_undef));
+        SvREFCNT_dec(handler);
     }
     else {
 	swig_type_info *tinfo = SWIG_TypeQuery("svn_txdelta_window_t *");
@@ -658,6 +659,7 @@ thunk_apply_textdelta(void *file_baton,
 				h_baton, void_info,0) < 0) {
 		croak("Unable to convert from SWIG Type ");
 	    }
+            SvREFCNT_dec(result);
 	}
 	else {
 	    *handler = thunk_window_handler;
@@ -862,6 +864,7 @@ static svn_error_t * thunk_open_tmp_file(apr_file_t **fp,
 	croak("Unable to convert from SWIG Type");
     }
 
+    SvREFCNT_dec(result);
     return SVN_NO_ERROR;
 }
 
@@ -917,8 +920,7 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
 	croak("Unable to convert from SWIG Type");
     }
     *c_baton = perl_callbacks;
-    SvREFCNT_inc(perl_callbacks);
-
+    svn_swig_pl_hold_ref_in_pool (pool, perl_callbacks);
     return SVN_NO_ERROR;
 }
 
