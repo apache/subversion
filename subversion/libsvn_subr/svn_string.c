@@ -88,7 +88,7 @@ svn_string_ncreate (const char *bytes, const apr_size_t size,
 {
   svn_string_t *new_string;
 
-  new_string = (svn_string_t *) apr_palloc (pool, sizeof(svn_string_t)); 
+  new_string = (svn_string_t *) apr_palloc (pool, sizeof (*new_string)); 
 
   /* +1 to account for null terminator. */
   new_string->data = (char *) apr_palloc (pool, size + 1);
