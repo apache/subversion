@@ -124,6 +124,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
   svn_error_t *err;
   const char *common;
   int i;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Condense our list of deletion targets. */
   SVN_ERR (svn_path_condense_targets (&common, &targets, paths, TRUE, pool));
@@ -170,15 +171,17 @@ delete_urls (svn_client_commit_info_t **commit_info,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX (targets, i, const char *);
+      svn_pool_clear (subpool);
       path = svn_path_uri_decode (path, pool);
       APR_ARRAY_IDX (targets, i, const char *) = path;
       SVN_ERR (svn_ra_check_path (ra_session, path, SVN_INVALID_REVNUM,
-                                  &kind, pool));
+                                  &kind, subpool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                                   "URL '%s' does not exist",
                                   svn_path_local_style (path, pool));
     }
+  svn_pool_destroy (subpool);
 
   /* Fetch RA commit editor */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
