@@ -667,6 +667,8 @@ read_entries (svn_wc_adm_access_t *adm_access,
                              svn_wc_adm_access_path (adm_access)));
   } while (! err);
 
+  svn_error_clear (err);
+
   /* Close the entries file. */
   SVN_ERR (svn_wc__close_adm_file (infile, svn_wc_adm_access_path (adm_access),
                                    SVN_WC__ADM_ENTRIES, 0, pool));
