@@ -88,7 +88,7 @@ svn_cl__propdel (apr_getopt_t *os,
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_set (pname_utf8, NULL,
                                        URL, &(opt_state->start_revision),
-                                       &rev, ctx, pool));
+                                       &rev, ctx, FALSE, pool));
       if (! opt_state->quiet) 
         {
           printf ("property `%s' deleted from repository revision '%"
