@@ -205,6 +205,15 @@ notify (void *baton,
 
       break;
 
+    case svn_wc_notify_status_external:
+      printf ("\nPerforming status on external item at %s\n", path_native);
+      break;
+
+    case svn_wc_notify_status_completed:
+      if (SVN_IS_VALID_REVNUM (revision))
+        printf ("Status against revision: %6" SVN_REVNUM_T_FMT "\n", revision);
+      break;
+
     case svn_wc_notify_commit_modified:
       printf ("Sending        %s\n", path_native);
       break;

@@ -83,6 +83,7 @@ tweak_status (void *baton,
 svn_error_t *
 svn_client_status (svn_revnum_t *youngest,
                    const char *path,
+                   svn_opt_revision_t *revision,
                    svn_wc_status_func_t status_func,
                    void *status_baton,
                    svn_boolean_t descend,
@@ -111,14 +112,17 @@ svn_client_status (svn_revnum_t *youngest,
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, 
                                   FALSE, FALSE, pool));
 
-  /* Get the entry for this path.  If the item is unversioned, we
-     can't really do a full status report on it, so we'll just call
-     svn_wc_status().  */
+  /* Get the entry for this path so we can determine our anchor and
+     target.  If the path is unversioned, and the caller requested
+     that we contact the repository, we error. */
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry)
     SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-  else
+  else if (! update)
     svn_path_split (path, &anchor, &target, pool);
+  else
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                              "'%s' is not a versioned resource", path);
   
   /* Close up our ADM area.  We'll be re-opening soon. */
   SVN_ERR (svn_wc_adm_close (adm_access));
@@ -146,6 +150,7 @@ svn_client_status (svn_revnum_t *youngest,
       const char *URL;
       svn_wc_adm_access_t *anchor_access;
       svn_node_kind_t kind;
+      svn_revnum_t revnum;
 
       /* Using pool cleanup to close it. This needs to be recursive so that
          auth data can be stored. */
@@ -195,8 +200,13 @@ svn_client_status (svn_revnum_t *youngest,
         {
           svn_wc_adm_access_t *tgt_access;
           
+          /* Get a revision number for our status operation. */
+          SVN_ERR (svn_client__get_revision_number
+                   (&revnum, ra_lib, session, revision, target, pool));
+
+          /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR (ra_lib->do_status (session, &reporter, &report_baton,
-                                      target, descend, editor, 
+                                      target, revnum, descend, editor, 
                                       edit_baton, pool));
 
           /* Drive the reporter structure, describing the revisions
@@ -215,6 +225,16 @@ svn_client_status (svn_revnum_t *youngest,
       SVN_ERR (editor->close_edit (edit_baton, pool));
     }
 
+  if (ctx->notify_func && update)
+    (ctx->notify_func) (ctx->notify_baton,
+                        path,
+                        svn_wc_notify_status_completed,
+                        svn_node_unknown,
+                        NULL,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        *youngest);
+
   /* Close the access baton here, as svn_client__recognize_externals()
      calls back into this function (and thus will be re-opening the
      working copy. */
@@ -226,7 +246,7 @@ svn_client_status (svn_revnum_t *youngest,
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether. */
-  if (0 && descend) /* ### disable for now */
+  if (descend)
     SVN_ERR (svn_client__do_external_status (traversal_info, status_func,
                                              status_baton, get_all, update,
                                              no_ignore, ctx, pool));

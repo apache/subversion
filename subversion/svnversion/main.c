@@ -107,7 +107,8 @@ main(int argc, char *argv[])
   int wc_format;
   svn_client_ctx_t ctx = { 0 };
   struct status_baton sb;
-
+  svn_opt_revision_t rev;
+  
   if (argc != 2 && argc != 3)
     {
       fprintf(stderr, "usage: svnversion wc_path [trail_url]\n");
@@ -151,8 +152,9 @@ main(int argc, char *argv[])
   sb.wc_path = wc_path;
   sb.wc_url = NULL;
   sb.pool = pool;
-  SVN_INT_ERR (svn_client_status (&youngest, wc_path, analyze_status, &sb,
-                                  TRUE, TRUE, FALSE, FALSE, &ctx, pool));
+  rev.kind = svn_opt_revision_unspecified;
+  SVN_INT_ERR (svn_client_status (&youngest, wc_path, &rev, analyze_status, 
+                                  &sb, TRUE, TRUE, FALSE, FALSE, &ctx, pool));
 
   if ((! sb.switched ) && (argc == 3))
     {

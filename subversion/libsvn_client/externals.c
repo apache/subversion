@@ -496,9 +496,34 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
            hi2 = apr_hash_next (hi2))
         {
           svn_revnum_t youngest;
-          apr_hash_this (hi2, &key, NULL, NULL);
-          SVN_ERR (svn_client_status (&youngest, 
-                                      svn_path_join (path, key, pool), 
+          const char *fullpath;
+          svn_wc_external_item_t *external;
+          svn_node_kind_t kind;
+
+          apr_hash_this (hi2, &key, NULL, &val);
+          external = val;
+          fullpath = svn_path_join (path, key, subpool);
+
+          /* If the external target directory doesn't exist on disk,
+             just skip it. */
+          SVN_ERR (svn_io_check_path (fullpath, &kind, subpool));
+          if (kind != svn_node_dir)
+            continue;
+
+          /* Tell the client we're staring an external status set. */
+          if (ctx->notify_func)
+            (ctx->notify_func) (ctx->notify_baton,
+                                fullpath,
+                                svn_wc_notify_status_external,
+                                svn_node_unknown,
+                                NULL,
+                                svn_wc_notify_state_unknown,
+                                svn_wc_notify_state_unknown,
+                                SVN_INVALID_REVNUM);
+
+          /* And then do the status. */
+          SVN_ERR (svn_client_status (&youngest, fullpath, 
+                                      &(external->revision),
                                       status_func, status_baton, 
                                       TRUE, get_all, update, no_ignore, 
                                       ctx, pool));

@@ -81,9 +81,10 @@ svn_client__can_delete (const char *path,
                         apr_pool_t *pool)
 {
   struct status_baton sb;
-
+  svn_opt_revision_t revision;
+  revision.kind = svn_opt_revision_unspecified;
   sb.err = SVN_NO_ERROR;
-  SVN_ERR (svn_client_status (NULL, path, find_undeletables, &sb,
+  SVN_ERR (svn_client_status (NULL, path, &revision, find_undeletables, &sb,
                               TRUE, FALSE, FALSE, FALSE, ctx, pool));
   return sb.err;
 }

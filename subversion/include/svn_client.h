@@ -661,14 +661,15 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  *
  *    - If @a update is set, then the repository will be contacted, so
  *      that the structures are augmented with information about
- *      out-of-dateness, and @a *youngest is set to the youngest
- *      repository revision (@a *youngest is not touched unless @a
- *      update is set).  This directly corresponds to the "-u"
- *      (--show-updates) flag in the commandline client app.
+ *      out-of-dateness (with respect to @a revision), and @a *youngest
+ *      is set to the youngest repository revision (@a *youngest is not
+ *      touched unless @a update is set).  This directly corresponds to
+ *      the "-u" (--show-updates) flag in the commandline client app.
  */
 svn_error_t *
 svn_client_status (svn_revnum_t *youngest,  /* only touched if `update' set */
                    const char *path,
+                   svn_opt_revision_t *revision,
                    svn_wc_status_func_t status_func,
                    void *status_baton,
                    svn_boolean_t descend,

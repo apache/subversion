@@ -69,6 +69,7 @@ svn_cl__status (apr_getopt_t *os,
   apr_pool_t * subpool;
   int i;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
+  svn_opt_revision_t rev;
   struct status_baton sb;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -76,6 +77,9 @@ svn_cl__status (apr_getopt_t *os,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
                                          FALSE, pool));
+
+  /* We want our -u statuses to be against HEAD. */
+  rev.kind = svn_opt_revision_unspecified;
 
   /* The notification callback. */
   svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE, 
@@ -100,18 +104,13 @@ svn_cl__status (apr_getopt_t *os,
       sb.show_last_committed = opt_state->verbose;
       sb.skip_unrecognized = opt_state->quiet;
       sb.pool = subpool;
-      SVN_ERR (svn_client_status (&youngest, target,
+      SVN_ERR (svn_client_status (&youngest, target, &rev,
                                   print_status, &sb,
                                   opt_state->nonrecursive ? FALSE : TRUE,
                                   opt_state->verbose,
                                   opt_state->update,
                                   opt_state->no_ignore,
                                   ctx, subpool));
-
-      /* If printing in detailed format, we might have a head revision to
-         print as well. */
-      if (sb.detailed && (youngest != SVN_INVALID_REVNUM))
-        printf ("Head revision: %6" SVN_REVNUM_T_FMT "\n", youngest);
 
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);

@@ -309,22 +309,38 @@ svn_error_t *svn_wc_parse_externals_description (apr_hash_t **externals_p,
  * Note that the callback is a 'void' return -- this is a simple
  * reporting mechanism, rather than an opportunity for the caller to
  * alter the operation of the WC library.
+ *
+ * Note also that some of the actions are used across several
+ * different Subversion commands.  For example, the update actions are
+ * also used for checkouts, switches, and merges.
  */
 
 /** The type of action occurring. */
 typedef enum svn_wc_notify_action_t
 {
+  /** Adding a path to revision control. */
   svn_wc_notify_add = 0,
-  svn_wc_notify_copy,
-  svn_wc_notify_delete,
-  svn_wc_notify_restore,
-  svn_wc_notify_revert,
-  svn_wc_notify_failed_revert,
-  svn_wc_notify_resolved,
-  svn_wc_notify_status,
-  svn_wc_notify_skip,
 
-  /* The update actions are also used for checkouts, switches, and merges. */
+  /** Copying a versioned path. */
+  svn_wc_notify_copy,
+  
+  /** Deleting a versioned path. */
+  svn_wc_notify_delete,
+
+  /** Restoring a missing path from the pristine text-base. */
+  svn_wc_notify_restore,
+  
+  /** Reverting a modified path. */
+  svn_wc_notify_revert,
+
+  /** A revert operation has failed. */
+  svn_wc_notify_failed_revert,
+
+  /** Resolving a conflict. */
+  svn_wc_notify_resolved,
+
+  /** Skipping a path. */
+  svn_wc_notify_skip,
 
   /** Got a delete in an update. */
   svn_wc_notify_update_delete,
@@ -335,19 +351,33 @@ typedef enum svn_wc_notify_action_t
   /** Got any other action in an update. */
   svn_wc_notify_update_update,
 
-  /** The last notification in an update */
+  /** The last notification in an update (including updates of externals). */
   svn_wc_notify_update_completed,
 
-  /** About to update an external module, use for checkouts and switches too,
-   * end with @c svn_wc_update_completed.
-   */
+  /** Updating an external module. */
   svn_wc_notify_update_external,
 
+  /** The last notification in a status (including status on externals). */
+  svn_wc_notify_status_completed,
+
+  /** Running status on an external module. */
+  svn_wc_notify_status_external,
+
+  /** Committing a modification. */
   svn_wc_notify_commit_modified,
+  
+  /** Committing an addition. */
   svn_wc_notify_commit_added,
+
+  /** Committing a deletion. */
   svn_wc_notify_commit_deleted,
+
+  /** Committing a replacement. */
   svn_wc_notify_commit_replaced,
+
+  /** Transmitting post-fix text-delta data for a file. */
   svn_wc_notify_commit_postfix_txdelta
+
 } svn_wc_notify_action_t;
 
 
