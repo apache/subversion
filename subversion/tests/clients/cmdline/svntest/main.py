@@ -48,8 +48,8 @@ import copy    # for deepcopy()
 
 
 # Global:  the locations of the svn and svnadmin binaries
-svn_binary = '../../../clients/cmdline/svn'
-svnadmin_binary = '../../../svnadmin/svnadmin'
+svn_binary = 'svn'
+svnadmin_binary = 'svnadmin'
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
