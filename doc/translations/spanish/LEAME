@@ -13,13 +13,40 @@ Pasos para poder compilar el libro:
 
 1. Obtener una copia fresca del libro en español. El libro está
    alojado en el repositorio principal de desarrollo de Subversion,
-   pero no hace falta descargar todo el árbol completo, únicamente
-   el subdirectorio con la traducción, tal y como muestra el
-   siguiente comando:
+   pero no hace falta descargar todo el árbol completo, únicamente el
+   subdirectorio con la traducción, tal y como muestra el siguiente
+   comando, más otro directorio con algunas herramientas usadas en
+   la transformación del libro de XML a HTML:
 
       svn co http://svn.collab.net/repos/svn/trunk/doc/translations/spanish svnbook-es
+      cd svnbook-es
+      svn co http://svn.collab.net/repos/svn/trunk/doc/book/tools tools
 
-2. Usar XSLT para transformar el libro
+2. Obtener las hojas de estilo XSL para Docbook y ponerlas en
+   tools/xsl
+
+   El "Docbook Open Repository" en Sourceforge tiene una
+   larga colección de hojas de estilo XSL que funcionan con
+   Docbook. Descarge e instale el paquete 'docbook-xsl-1.65.1'
+   de la siguiente página:
+  
+      http://sourceforge.net/project/showfiles.php?group_id=21935
+
+   Tras descargar la última versión de docbook-xsl, descomprima el
+   fichero, y renombre/mueva el directorio descomprimido a tools/xsl,
+   algo como esto:
+
+      $ cd svnbook-es/tools
+      $ tar zxvf docbook-xsl-1.65.1.tar.gz
+      $ mv docbook-xsl-1.65.1 xsl
+
+   Este proceso es importante porque el proceso de compilación del
+   libro espera que las hojas de estilo estén alojadas en tools/xsl/.
+   En el momento de escribir esto, las versiones 1.66.0 y 1.66.1
+   del paquete docbook-xsl generan el índice del libro de forma
+   incorrecta.
+
+3. Usar XSLT para transformar el libro
 
    XSLT aplica una hoja de estilo .xsl sobre un fichero .xml,
    y produce un nuevo documento.
@@ -44,13 +71,13 @@ Pasos para poder compilar el libro:
      paquete binario apropiado para su SO. Por ejemplo, en Debian puede
      instalar el paquete libxslt directamente y ahorrarse este paso.
 
-3. Ejecutar "make" desde el directorio svnbook-es. Obviamente
+4. Ejecutar "make" desde el directorio svnbook-es. Obviamente
    necesitaremos tener GNU make instalado. Si todo el software
    necesario está instalado, acabaremos con un libro en un sólo
    html en book/svn-book.html, y otro dividido en trozos en
    book/html-chunk/index.html.
 
-4. Opcionalmente, colaborar con el proyecto traduciendo ficheros
+5. Opcionalmente, colaborar con el proyecto traduciendo ficheros
    .xml o revisando el libro generado y enviando cualquier comentario
    a la lista de correo de traducción de Subversion (información
    sobre esto al final de este documento).
