@@ -61,7 +61,7 @@ extern "C" {
  *
  * Modify for every released patch.
  */
-#define SVN_VER_MICRO      4
+#define SVN_VER_MICRO      5
 
 /** Library version number.
  *
@@ -83,7 +83,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (r9844)"
+#define SVN_VER_TAG        " (dev build)"
 
 
 /** Number tag: a string describing the version.
@@ -98,7 +98,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_TAG.
  */
-#define SVN_VER_NUMTAG     ""
+#define SVN_VER_NUMTAG     "-dev"
 
 
 /** Revision number: The repository revision number of this release.
