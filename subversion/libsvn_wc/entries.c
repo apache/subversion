@@ -138,6 +138,193 @@ alloc_entry (apr_pool_t *pool)
 }
 
 
+svn_error_t *
+svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
+                       apr_uint16_t *modify_flags,
+                       apr_hash_t *atts,
+                       apr_pool_t *pool)
+{
+  svn_wc_entry_t *entry = alloc_entry (pool);
+  svn_string_t *name;
+  
+  *modify_flags = 0;
+  entry->attributes = atts;
+
+  /* Find the name and set up the entry under that name. */
+  name = apr_hash_get (entry->attributes,
+                       SVN_WC_ENTRY_ATTR_NAME,
+                       APR_HASH_KEY_STRING);
+
+  /* Attempt to set revision (resolve_to_defaults may do it later, too) */
+  {
+    svn_string_t *revision_str
+      = apr_hash_get (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING);
+
+    if (revision_str)
+      {
+        entry->revision = (svn_revnum_t) atoi (revision_str->data);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
+      }
+    else
+      entry->revision = SVN_INVALID_REVNUM;
+  }
+
+  /* Attempt to set up ancestor path (again, see resolve_to_defaults). */
+  {
+    entry->ancestor
+      = apr_hash_get (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING);
+  }
+
+  /* Set up kind. */
+  {
+    svn_string_t *kindstr
+      = apr_hash_get (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
+
+    entry->kind = svn_node_none;
+    if (kindstr)
+      {
+        if (! strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_FILE_STR))
+          entry->kind = svn_node_file;
+        else if (! strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_DIR_STR))
+          entry->kind = svn_node_dir;
+        else
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_NODE_KIND,
+             0,
+             NULL,
+             pool,
+             "Entry '%s' has invalid node kind",
+             (name ? name->data : SVN_WC_ENTRY_THIS_DIR));
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_KIND;
+      }
+  }
+
+  /* Look for a schedule attribute on this entry. */
+  {
+    svn_string_t *schedulestr
+      = apr_hash_get (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING);
+    
+    entry->schedule = svn_wc_schedule_normal;
+    if (schedulestr)
+      {
+        if (! strcmp (schedulestr->data, SVN_WC_ENTRY_VALUE_ADD))
+          entry->schedule = svn_wc_schedule_add;
+        else if (! strcmp (schedulestr->data, SVN_WC_ENTRY_VALUE_DELETE))
+              entry->schedule = svn_wc_schedule_delete;
+        else if (! strcmp (schedulestr->data, SVN_WC_ENTRY_VALUE_REPLACE))
+          entry->schedule = svn_wc_schedule_replace;
+        else if (! strcmp (schedulestr->data, ""))
+          entry->schedule = svn_wc_schedule_normal;
+        else
+          return svn_error_createf 
+            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC_ENTRY_ATTR_SCHEDULE);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+      }
+  }   
+  
+  /* Look for an existence attribute */
+  {
+    svn_string_t *existencestr
+      = apr_hash_get (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_EXISTENCE, APR_HASH_KEY_STRING);
+    
+    entry->existence = svn_wc_existence_normal;
+    if (existencestr)
+      {
+        if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_ADDED))
+          entry->schedule = svn_wc_existence_added;
+        else if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_DELETED))
+          entry->schedule = svn_wc_existence_deleted;
+        else if (! strcmp (existencestr->data, ""))
+          entry->schedule = svn_wc_existence_normal;
+        else
+          return svn_error_createf 
+            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC_ENTRY_ATTR_EXISTENCE);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_EXISTENCE;
+      }
+  }
+
+  /* Is this entry in a state of mental torment (conflict)? */
+  {
+    svn_string_t *conflictstr
+      = apr_hash_get (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_CONFLICTED, APR_HASH_KEY_STRING);
+        
+    entry->conflicted = FALSE;
+    if (conflictstr)
+      {
+        if (! strcmp (conflictstr->data, "true"))
+          entry->conflicted = TRUE;
+        else if (! strcmp (conflictstr->data, "false"))
+          entry->conflicted = FALSE;
+        else if (! strcmp (conflictstr->data, ""))
+          entry->conflicted = FALSE;
+        else
+          return svn_error_createf 
+            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC_ENTRY_ATTR_CONFLICTED);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICTED;
+      }
+  }
+
+  /* Attempt to set up timestamps. */
+  {
+    svn_string_t *text_timestr, *prop_timestr;
+    
+    text_timestr = apr_hash_get (entry->attributes,
+                                 SVN_WC_ENTRY_ATTR_TEXT_TIME,
+                                 APR_HASH_KEY_STRING);
+    if (text_timestr)
+      {
+        if (! strcmp (text_timestr->data, SVN_WC_TIMESTAMP_WC))
+          {
+            /* Special case:  a magic string that means 'get this value
+               from the working copy' -- we ignore it here. */
+          }
+        else
+          entry->text_time = svn_wc__string_to_time (text_timestr);
+        
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
+      }
+    
+    prop_timestr = apr_hash_get (entry->attributes,
+                                 SVN_WC_ENTRY_ATTR_PROP_TIME,
+                                 APR_HASH_KEY_STRING);
+    if (prop_timestr)
+      {
+        if (! strcmp (prop_timestr->data, SVN_WC_TIMESTAMP_WC))
+          {
+            /* Special case:  a magic string that means 'get this value
+               from the working copy' -- we ignore it here. */
+          }
+        else
+          entry->prop_time = svn_wc__string_to_time (prop_timestr);
+        
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
+      }
+  }
+  
+  *new_entry = entry;
+  return SVN_NO_ERROR;
+}
+
+                       
+
 /* Called whenever we find an <open> tag of some kind. */
 static void
 handle_start_tag (void *userData, const char *tagname, const char **atts)
@@ -148,109 +335,27 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
      and `wc-entries', are ignored. */
   if ((strcmp (tagname, SVN_WC__ENTRIES_ENTRY)) == 0)
     {
-      svn_wc_entry_t *entry = alloc_entry (accum->pool);
-      entry->attributes = svn_xml_make_att_hash (atts, accum->pool);
+      apr_hash_t *attributes = svn_xml_make_att_hash (atts, accum->pool);
+      svn_wc_entry_t *entry;
+      svn_string_t *name;
+      svn_error_t *err;
+      apr_uint16_t modify_flags = 0;
 
+      /* Make an entry from the attributes. */
+      err = svn_wc__atts_to_entry (&entry, &modify_flags, 
+                                   attributes, accum->pool);
+      if (err)
+        svn_xml_signal_bailout (err, accum->parser);
+        
       /* Find the name and set up the entry under that name. */
+      name = apr_hash_get (entry->attributes,
+                           SVN_WC_ENTRY_ATTR_NAME,
+                           APR_HASH_KEY_STRING);
       {
-        svn_string_t *name
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
         const char *nstr = name ? name->data : SVN_WC_ENTRY_THIS_DIR;
         apr_size_t len = name ? name->len : strlen (SVN_WC_ENTRY_THIS_DIR);
 
         apr_hash_set (accum->entries, nstr, len, entry);
-      }
-
-      /* Attempt to set revision (resolve_to_defaults may do it later, too) */
-      {
-        svn_string_t *revision_str
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING);
-
-        if (revision_str)
-          entry->revision = (svn_revnum_t) atoi (revision_str->data);
-        else
-          entry->revision = SVN_INVALID_REVNUM;
-      }
-
-      /* Attempt to set up ancestor path (again, see resolve_to_defaults). */
-      {
-        entry->ancestor
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING);
-      }
-
-      /* Set up kind. */
-      {
-        svn_string_t *kindstr
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
-
-        if ((! kindstr)
-            || (strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_FILE_STR) == 0))
-          entry->kind = svn_node_file;
-        else if (strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_DIR_STR) == 0)
-          entry->kind = svn_node_dir;
-        else
-          {
-            svn_string_t *name
-              = apr_hash_get (entry->attributes,
-                              SVN_WC_ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
-
-            svn_xml_signal_bailout 
-              (svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND,
-                                  0,
-                                  NULL,
-                                  accum->pool,
-                                  "entries.c:handle_start_tag(): "
-                                  "entry %s in dir %s",
-                                  (name ?
-                                   name->data : SVN_WC_ENTRY_THIS_DIR),
-                                  accum->path->data),
-               accum->parser);
-          }
-      }
-
-      /* Attempt to set up timestamps. */
-      {
-        svn_string_t *text_timestr, *prop_timestr;
-
-        text_timestr = apr_hash_get (entry->attributes,
-                                     SVN_WC_ENTRY_ATTR_TEXT_TIME,
-                                     APR_HASH_KEY_STRING);
-        if (text_timestr)
-          entry->text_time = svn_wc__string_to_time (text_timestr);
-
-        prop_timestr = apr_hash_get (entry->attributes,
-                                     SVN_WC_ENTRY_ATTR_PROP_TIME,
-                                     APR_HASH_KEY_STRING);
-        if (prop_timestr)
-          entry->prop_time = svn_wc__string_to_time (prop_timestr);        
-      }
-
-      /* Look for any action flags. */
-      {
-        svn_string_t *addstr
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING);
-        svn_string_t *delstr
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING);
-        svn_string_t *conflictstr
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING);
-        
-
-        /* Technically, the value has to be "true".  But we only have
-           these attributes at all when they have values of "true", so
-           let's not go overboard on the paranoia here. */
-        if (addstr)
-          entry->state |= SVN_WC_ENTRY_ADD;
-        if (delstr)
-          entry->state |= SVN_WC_ENTRY_DELETE;
-        if (conflictstr)
-          entry->state |= SVN_WC_ENTRY_CONFLICTED;
       }
     }
 }
@@ -270,7 +375,9 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   
   /* Inherits parent's ancestor if doesn't have an ancestor of one's
      own and is not marked for addition */
-  if ((! dst->ancestor) && (! (dst->state & SVN_WC_ENTRY_ADD)))
+  if ((! dst->ancestor) 
+      && (! ((dst->schedule == svn_wc_schedule_add)
+             || (dst->schedule == svn_wc_schedule_replace))))
     {
       svn_string_t *name = apr_hash_get (dst->attributes,
                                          SVN_WC_ENTRY_ATTR_NAME,
@@ -359,59 +466,96 @@ resolve_to_defaults (svn_string_t *path,
 static void
 normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 {
-  /* Revision. */
-  if (entry->revision != SVN_INVALID_REVNUM)
+  svn_string_t *valuestr;
+
+  /* Revision */
+  if (SVN_IS_VALID_REVNUM (entry->revision))
     apr_hash_set (entry->attributes,
                   SVN_WC_ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
                   svn_string_createf (pool, "%ld", entry->revision));
   
-  /* Ancestor. */
+  /* Ancestor */
   if ((entry->ancestor) && (entry->ancestor->len))
   apr_hash_set (entry->attributes,
                 SVN_WC_ENTRY_ATTR_ANCESTOR, APR_HASH_KEY_STRING,
                 entry->ancestor);
   
-  /* Kind. */
-  if (entry->kind == svn_node_dir)
-    apr_hash_set (entry->attributes,
-                  SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
-                  svn_string_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool));
-  else if (entry->kind != svn_node_none)  /* default to file kind */
-    apr_hash_set (entry->attributes,
-                  SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
-                  NULL);
+  /* Kind */
+  switch (entry->kind)
+    {
+    case svn_node_dir:
+      valuestr = svn_string_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool);
+      break;
+
+    case svn_node_none:
+      valuestr = NULL;
+      break;
+
+    case svn_node_file:
+    case svn_node_unknown:
+    default:
+      valuestr = svn_string_create (SVN_WC__ENTRIES_ATTR_FILE_STR, pool);
+      break;
+    }
+
+  apr_hash_set (entry->attributes,
+                SVN_WC_ENTRY_ATTR_KIND, APR_HASH_KEY_STRING,
+                valuestr);
+
+  /* Schedule */
+  switch (entry->schedule)
+    {
+    case svn_wc_schedule_add:
+      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_ADD, pool);
+      break;
+
+    case svn_wc_schedule_delete:
+      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_DELETE, pool);
+      break;
+
+    case svn_wc_schedule_replace:
+      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_REPLACE, pool);
+      break;
+
+    case svn_wc_schedule_normal:
+    default:
+      valuestr = NULL;
+      break;
+    }
+
+  apr_hash_set (entry->attributes,
+                SVN_WC_ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING,
+                valuestr);
+
+  /* Existence */
+  switch (entry->existence)
+    {
+    case svn_wc_existence_added:
+      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_ADDED, pool);
+      break;
+
+    case svn_wc_existence_deleted:
+      valuestr = svn_string_create (SVN_WC_ENTRY_VALUE_DELETED, pool);
+      break;
+
+    case svn_wc_existence_normal:
+    default:
+      valuestr = NULL;
+      break;
+    }
+
+  apr_hash_set (entry->attributes,
+                SVN_WC_ENTRY_ATTR_EXISTENCE, APR_HASH_KEY_STRING,
+                valuestr);
+
+  /* Conflicted */
+  valuestr = entry->conflicted ? svn_string_create ("true", pool) : NULL;
+
+  apr_hash_set (entry->attributes,
+                SVN_WC_ENTRY_ATTR_CONFLICTED, APR_HASH_KEY_STRING,
+                valuestr);
   
-  /* State. */
-  {
-    /* Just make the att hash *exactly* reflect the `state' flags.  
-
-       By the time we get here, the CLEAR_NAMED and CLEAR_ALL flags
-       should *not* be set in the entry.  This would meaningless;
-       entry->state is a data-state, not a command.  The only routine
-       to interpret the "command" flag-style is fold_sync(). */
-
-    apr_hash_set (entry->attributes,
-                  SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING,
-                  (entry->state & SVN_WC_ENTRY_ADD) ?
-                  svn_string_create ("true", pool) : NULL);
-
-    apr_hash_set (entry->attributes,
-                  SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING,
-                  (entry->state & SVN_WC_ENTRY_DELETE) ?
-                  svn_string_create ("true", pool) : NULL);
-
-    apr_hash_set (entry->attributes,
-                  SVN_WC_ENTRY_ATTR_MERGED, APR_HASH_KEY_STRING,
-                  (entry->state & SVN_WC_ENTRY_MERGED) ?
-                  svn_string_create ("true", pool) : NULL);
-
-    apr_hash_set (entry->attributes,
-                  SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING,
-                  (entry->state & SVN_WC_ENTRY_CONFLICTED) ?
-                  svn_string_create ("true", pool) : NULL);
-  }
-  
-  /* Timestamps. */
+  /* Timestamps */
   if (entry->text_time)
     {
       apr_hash_set (entry->attributes,
@@ -765,52 +909,55 @@ svn_wc__entries_write (apr_hash_t *entries,
 static void
 fold_entry (apr_hash_t *entries,
             svn_string_t *name,
+            apr_uint16_t modify_flags,
             svn_revnum_t revision,
             enum svn_node_kind kind,
-            int state,
+            enum svn_wc_schedule_t schedule,
+            enum svn_wc_existence_t existence,
+            svn_boolean_t conflicted,
             apr_time_t text_time,
             apr_time_t prop_time,
-            apr_pool_t *pool,
             apr_hash_t *atts,
+            apr_pool_t *pool,
             va_list ap)
 {
   apr_hash_index_t *hi;
-  struct svn_wc_entry_t *entry
-    = apr_hash_get (entries, name->data, name->len);
-  int incoming_flags = state;
+  svn_wc_entry_t *entry = apr_hash_get (entries, name->data, name->len);
   
   assert (name != NULL);
 
   if (! entry)
     entry = alloc_entry (pool);
 
-  /* Set up the explicit attributes. */
-  if (revision != SVN_INVALID_REVNUM)
+  /* Revision */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_REVISION)
     entry->revision = revision;
-  if (kind != svn_node_none)
+
+  /* Kind */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
     entry->kind = kind;
-  if (text_time)
+
+  /* Schedule */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
+    entry->schedule = schedule;
+
+  /* Existence */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_EXISTENCE)
+    entry->existence = existence;
+
+  /* Conflicted */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICTED)
+    entry->conflicted = conflicted;
+
+  /* Text modification time */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
     entry->text_time = text_time;
-  if (prop_time)
+
+  /* Property modification time */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
     entry->prop_time = prop_time;
 
-  /* Merge the incoming_flags into the entry's flags, correctly
-     interpreting "clear" bits. */
-  if (incoming_flags)
-    {
-      if (incoming_flags & SVN_WC_ENTRY_CLEAR_ALL)
-        entry->state = 0;
-
-      else if (incoming_flags & SVN_WC_ENTRY_CLEAR_NAMED)
-        {
-          entry->state &= ~incoming_flags;
-        }
-
-      else
-        entry->state |= incoming_flags;
-    }
-
-  /* Do any other attributes. */
+  /* Attributes */
   if (atts)
     {
       for (hi = apr_hash_first (atts); hi; hi = apr_hash_next (hi))
@@ -872,195 +1019,283 @@ svn_wc__entry_remove (apr_hash_t *entries,
 }
 
 
+/* Our general purpose intelligence module for handling state changes
+   to a single entry.
 
-/*
-  Our general purpose intelligence module for "interpreting" changes
-  to a single entry.
-
-  Given an entryname NAME in ENTRIES, examine the caller's requested
-  change in *STATE.  Compare against existing state, and possibly
-  modify *STATE (or ENTRIES) so that when merged, it will reflect the
-  caller's original intent.
-
-  Right now, the interface is simple (only examines "add" and "delete"
-  flag bits), but we can expand later to include other arguments.  */
+   Given an entryname NAME in ENTRIES, examine the caller's requested
+   change in *SCHEDULE.  Compare against existing state, and possibly
+   modify *SCHEDULE and *MODIFY_FLAGS so that when merged, it will
+   reflect the caller's original intent. */
 static svn_error_t *
-interpret_changes (apr_hash_t *entries,
-                   svn_string_t *name,
-                   int *state,
-                   apr_pool_t *pool)
+fold_state_changes (apr_hash_t *entries,
+                    svn_string_t *name,
+                    apr_uint16_t *modify_flags,
+                    enum svn_wc_schedule_t *schedule,
+                    apr_pool_t *pool)
 {
-  int current_state, new_state;
-  struct svn_wc_entry_t *entry;
-  struct svn_wc_entry_t *this_dir_entry;
+  svn_wc_entry_t *entry, *this_dir_entry;
 
-  char current_addonly, current_delonly, current_both, current_neither;
-  char new_addonly, new_delonly;
-
-  /* If no flags are being changed, GET OUT! */
-  if ( (! (*state & SVN_WC_ENTRY_DELETE))
-       && (! (*state & SVN_WC_ENTRY_ADD)) )
-    return SVN_NO_ERROR;
-
-  /* Get the entry */
+  /* Get the current entry */
   entry = apr_hash_get (entries, name->data, name->len);
 
   /* Get the default entry */
   this_dir_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
                                  APR_HASH_KEY_STRING);
 
+  /* Make sure the input is valid. */
 
-  if ((*state & SVN_WC_ENTRY_ADD)
-      && (this_dir_entry)
-      && (entry != this_dir_entry)
-      && (this_dir_entry->state & SVN_WC_ENTRY_DELETE)
-      && (this_dir_entry->state & SVN_WC_ENTRY_ADD))
-    {
-      /* If there is a default entry in this entries list, and
-         this is not it, and that default entry is marked for
-         deletion only, we cannot marking anything for addition in
-         this directory. */
-      return 
-        svn_error_createf 
-        (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-         "error: cannot add entry `%s' to deleted directory",
-         name->data);
-    }
+  /* If we're not supposed to be bothering with this anyway...return. */
+  if (! (*modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE))
+    return SVN_NO_ERROR;
 
-  /* What if the entry doesn't yet exist?  That's ok.  Presumably the
-     fold_entry() routines are being asked to create it. */
-  if (! entry)
+  /* The only operation valid on an item not already in revision
+     control is addition. */
+  if ((! entry) || (entry->existence == svn_wc_existence_deleted))
     {
-      if (*state == SVN_WC_ENTRY_ADD)
-        /* The -only- permissible flag to set, if the entry doesn't
-           yet exist, is the ADD flag. */
+      if (*schedule == svn_wc_schedule_add)
         return SVN_NO_ERROR;
-
       else
-        /* Any other flag state is verboten, or at least nonsensical. */
         return 
           svn_error_createf 
           (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-           "error: bogus flags (%d) used in creation of entry `%s'",
-           *state, name->data);
+           "do_state_changes: '%s' is not a versioned resource",
+           name->data);
     }
 
-  /* For convenience. */
-  current_state = entry->state;
-  new_state = *state;
-
-  /* If the caller is trying to simultaneously set add and delete,
-     this is an egregious error.  (It's possible to have both flags
-     set at the same time, but *only* because some caller first set
-     the delete flag, then another caller set the add flag later.) */
-  if ((new_state & SVN_WC_ENTRY_DELETE)
-      && (new_state & SVN_WC_ENTRY_ADD))
-    return 
-      svn_error_createf 
-      (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool, 
-       "error: simultaneous set of add & del flags on `%s'", name->data);
-
-  /* All the (remaining) possible current states. */
-  current_addonly = ((current_state & SVN_WC_ENTRY_ADD)
-                     && (! (current_state & SVN_WC_ENTRY_DELETE)));
-  current_delonly = ((current_state & SVN_WC_ENTRY_DELETE)
-                     && (! (current_state & SVN_WC_ENTRY_ADD)));
-  current_both = ((current_state & SVN_WC_ENTRY_DELETE)
-                  && (current_state & SVN_WC_ENTRY_ADD));
-  current_neither = ((! (current_state & SVN_WC_ENTRY_DELETE))
-                     && (! (current_state & SVN_WC_ENTRY_ADD)));
-
-  /* All the (remaining) possible proposed states. */
-  new_addonly = ((new_state & SVN_WC_ENTRY_ADD)
-                 && (! (new_state & SVN_WC_ENTRY_DELETE)));
-  new_delonly = ((new_state & SVN_WC_ENTRY_DELETE)
-                 && (! (new_state & SVN_WC_ENTRY_ADD)));
-  
-
-  /* Remaining logic, yum. */
-
-  if (new_addonly)
+  /* If we're not merging in changes, only the _add, _delete, _replace
+     and _normal schedules are allowed. */
+  if (*modify_flags & SVN_WC__ENTRY_MODIFY_FORCE)
     {
-      if (current_addonly || current_neither)
+      switch (*schedule)
         {
-          return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool, 
-                                    "%s is already under version control",
-                                    name->data);
-        }
-      else if (current_both)
-        {
-          /* TODO: generate a friendly warning here someday */
+        case svn_wc_schedule_add:
+        case svn_wc_schedule_delete:
+        case svn_wc_schedule_replace:
+        case svn_wc_schedule_normal:
+          /* Since we aren't merging in a change, not only are these
+             schedules legal, but they are final.  */
+          return SVN_NO_ERROR;
+
+        default:
+          return 
+            svn_error_createf 
+            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+             "do_state_changes: Illegal schedule in state set operation");
         }
     }
-  
-  else if (new_delonly)
+
+  /* At this point, we know the following things:
+
+     1. There is already an entry for this item in the entries file
+        whose existence is either _normal or _added, which for our
+        purposes mean the same thing.
+
+     2. We have been asked to merge in a state change, not to
+        explicitly set the state.  */
+
+  /* Here are some cases that are parent-directory sensitive.
+     Basically, we make sure that we are not allowing versioned
+     resources to just sorta dangle below directories marked for
+     deletion. */
+  if ((entry != this_dir_entry)
+      && (this_dir_entry->schedule == svn_wc_schedule_delete))
     {
-      if (current_delonly)
+      if (*schedule == svn_wc_schedule_add)
+        return 
+          svn_error_createf 
+          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+           "do_state_changes: Can't add '%s' to deleted directory"
+           "--try undeleting its parent directory first",
+           name->data);
+      if (*schedule == svn_wc_schedule_replace)
+        return 
+          svn_error_createf 
+          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+           "do_state_changes: Can't replace '%s' in deleted directory"
+           "--try undeleting its parent directory first",
+           name->data);
+      if (*schedule == svn_wc_schedule_undelete)
+        return 
+          svn_error_createf 
+          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+           "do_state_changes: Can't undelete '%s' in deleted directory"
+           "--try undeleting its parent directory first",
+           name->data);
+    }
+
+  switch (entry->schedule)
+    {
+    case svn_wc_schedule_normal:
+      switch (*schedule)
         {
-          /* TODO: generate a friendly warning here someday */
+        case svn_wc_schedule_normal:
+        case svn_wc_schedule_unadd:
+        case svn_wc_schedule_undelete:
+          /* There are all no-op cases.  _normal is trivial, _unadd
+             and _undelete might merit a warning, but whatever.  Reset
+             the schedule modification bit and move along. */
+          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          return SVN_NO_ERROR;
+
+
+        case svn_wc_schedule_delete:
+        case svn_wc_schedule_replace:
+          /* These are all good. */
+          return SVN_NO_ERROR;
+            
+
+        case svn_wc_schedule_add:
+          /* You can't add something that's already been added to
+             revision control. */
+          return 
+            svn_error_createf 
+            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+             "do_state_changes: Entry '%s' already under revision control",
+             name->data);
         }
-      else if (current_addonly)
+      break;
+
+    case svn_wc_schedule_add:
+      switch (*schedule)
         {
-          /* The caller wants to set the delete flag, but entry has
-             nothing but the add flag set.  Obviously, this entry was
-             added and is now being removed before a commit ever
-             happens.  So the logical thing to do is remove the entry
-             completely. */
+        case svn_wc_schedule_normal:
+        case svn_wc_schedule_add:
+        case svn_wc_schedule_replace:
+        case svn_wc_schedule_undelete:
+          /* These are all no-op cases.  Normal is obvious, as is add.
+             Replace on an entry marked for addition breaks down to
+             (add + (delete + add)), which resolves to just (add), and
+             since this entry is already marked with (add), this too
+             is a no-op.  Undelete might merit a warning about
+             undeleting stuff that isn't deleted, but we opt not to
+             care. */
+          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          return SVN_NO_ERROR;
+
+
+        case svn_wc_schedule_delete:
+        case svn_wc_schedule_unadd:
+          /* Not-yet-versioned item being deleted or un-added?  Just
+             remove the entry altogether. */
           apr_hash_set (entries, name->data, name->len, NULL);
+          return SVN_NO_ERROR;
         }
-      else if (current_both)
+      break;
+
+    case svn_wc_schedule_delete:
+      switch (*schedule)
         {
-          /* The caller wants to set the delete flag, but entry
-             already has both add and del flags set -- which means:
+        case svn_wc_schedule_normal:
+        case svn_wc_schedule_delete:
+        case svn_wc_schedule_unadd:
+          /* These are no-op cases. */
+          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          return SVN_NO_ERROR;
 
-             1. the user deleted an old entry
-             2. the user added a new entry with the same name
-             3. the user reversed decision #2, and now wants to
-                deleted the added file.
-                
-             So the logical thing to do is just make sure that the add
-             flag gets *un*set during the flag merge. */
 
-          /* Unset the delete flag, it's irrelevant. */
-          *state &= ~SVN_WC_ENTRY_DELETE;
+        case svn_wc_schedule_add:
+          /* Re-adding an entry marked for deletion?  This is really a
+             replace operation. */
+          *schedule = svn_wc_schedule_replace;
+          return SVN_NO_ERROR;
 
-          /* Set the add and "clear" flag */
-          *state |= SVN_WC_ENTRY_ADD;
-          *state |= SVN_WC_ENTRY_CLEAR_NAMED;
 
-          /* When *state is merged, fold_entry should only unset the
-             add flag now. */
+        case svn_wc_schedule_replace:
+          /* Replacing an item marked for deletion breaks down to
+             (delete + (delete + add)), which might deserve a warning,
+             but whatever. */
+          return SVN_NO_ERROR;
+            
+
+        case svn_wc_schedule_undelete:
+          /* Undeleting a to-be-deleted entry resets the schedule to
+             'normal'. */
+          *schedule = svn_wc_schedule_normal;
+          return SVN_NO_ERROR;
         }
+      break;
+
+    case svn_wc_schedule_replace:
+      switch (*schedule)
+        {
+        case svn_wc_schedule_normal:
+          /* These are all no-op cases. */
+        case svn_wc_schedule_add:
+          /* Adding a to-be-replaced entry breaks down to ((delete +
+             add) + add) which might deserve a warning, but we'll just
+             no-op it. */
+        case svn_wc_schedule_replace:
+          /* Replacing a to-be-replaced entry breaks down to ((delete
+             + add) + (delete + add)), which is insane!  Make up your
+             friggin' mind, dude! :-)  Well, we'll no-op this one,
+             too. */
+          *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
+          return SVN_NO_ERROR;
+          
+
+        case svn_wc_schedule_delete:
+          /* Deleting a to-be-replaced entry breaks down to ((delete +
+             add) + delete) which resolves to a flat deletion. */
+        case svn_wc_schedule_unadd:
+          /* Unadding a to-be-replaced entry breaks down to ((delete +
+             add) - add), which leaves just the deletion. */
+          *schedule = svn_wc_schedule_delete;
+          return SVN_NO_ERROR;
+
+
+        case svn_wc_schedule_undelete:
+          /* Despite the fact that the to-be-replaced state of this
+             entry implies a deletion action, that's buried under an
+             addition action. */
+          return 
+            svn_error_createf 
+            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+             "do_state_changes: Can't undelete '%s' marked for replacement"
+             "--try unadding this entry first",
+             name->data);
+        }
+      break;
+
+    default:
+      return 
+        svn_error_createf 
+        (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+         "do_state_changes: Entry '%s' has illegal schedule",
+         name->data);
     }
-  
   return SVN_NO_ERROR;
 }
 
 
 
 
-/* Shared by __entry_fold_sync() and   __entry_fold_sync_intelligently().
+/* Your one-stop shop for entry modification.
 
    Loads up an entries file, calls the "logic" module if necessary to
    transform the requested changes, folds the changes, then syncs
    entries to disk.  */
-static svn_error_t *
-internal_fold_sync (svn_boolean_t be_intelligent,
-                    svn_string_t *path,
-                    svn_string_t *name,
-                    svn_revnum_t revision,
-                    enum svn_node_kind kind,
-                    int state,
-                    apr_time_t text_time,
-                    apr_time_t prop_time,
-                    apr_pool_t *pool,
-                    apr_hash_t *atts,
-                    va_list ap)
+svn_error_t *
+svn_wc__entry_modify (svn_string_t *path,
+                      svn_string_t *name,
+                      apr_uint16_t modify_flags,
+                      svn_revnum_t revision,
+                      enum svn_node_kind kind,
+                      enum svn_wc_schedule_t schedule,
+                      enum svn_wc_existence_t existence,
+                      svn_boolean_t conflicted,
+                      apr_time_t text_time,
+                      apr_time_t prop_time,
+                      apr_hash_t *attributes,
+                      apr_pool_t *pool,
+                      ...)
 {
   svn_error_t *err;
   svn_wc_entry_t *entry_before, *entry_after;
   svn_boolean_t entry_was_deleted_p = FALSE;
   apr_hash_t *entries = NULL;
+
+  va_list ap;
+  va_start (ap, pool);
 
   /* Load whole entries file */
   err = svn_wc_entries_read (&entries, path, pool);
@@ -1068,18 +1303,17 @@ internal_fold_sync (svn_boolean_t be_intelligent,
   
   if (name == NULL)
     name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
-
-  /* Optional:  -interpret- the changes */
-  if (be_intelligent)
+ 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
+      /* Keep a copy of the unmodified entry on hand. */
       entry_before = apr_hash_get (entries, name->data, name->len);
+      
+      /* Now, go interpret the changes. */
+      SVN_ERR (fold_state_changes (entries, name, &modify_flags,
+                                   &schedule, pool));
 
-      /* Right now, the intelligence module only (possibly) changes
-         the state flags, and (possibly) removes the whole entry.  */
-      err = interpret_changes (entries, name, &state, pool);
-      if (err) return err;
-
-      /* Special case:  interpret_changes() may have actually REMOVED
+      /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
          this will just recreate the entry again. */
       entry_after = apr_hash_get (entries, name->data, name->len);
@@ -1089,8 +1323,9 @@ internal_fold_sync (svn_boolean_t be_intelligent,
 
   /* Fold changes into (or create) the entry. */
   if (! entry_was_deleted_p)
-    fold_entry (entries, name, revision, kind, state, text_time,
-                prop_time, pool, atts, ap);
+    fold_entry (entries, name, modify_flags, revision, kind, 
+                schedule, existence, conflicted, text_time,
+                prop_time, attributes, pool, ap);
   
   /* Write whole entries file */
   err = svn_wc__entries_write (entries, path, pool);
@@ -1098,87 +1333,6 @@ internal_fold_sync (svn_boolean_t be_intelligent,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/*
-   NOTES on svn_wc__entry_fold_sync functions
-   ==============================================
-
-   There are three ways to change an entry on disk:
-
-     1.  Use entry_fold_sync() to directly merge changes into a single
-         entry
-
-     2.  Use entry_fold_sync_intelligently() to *logically* merge
-         changes into a single entry
-
-     3.  read all entries into a hash with svn_wc_entries_read, modify
-         the entry structures manually, and write them all out again
-         with svn_wc__entries_write.
-
- */
-
-
-/* The "stupid" version of fold_sync, which simply merges the changes
-   directly into an entry, no questions asked.  */
-svn_error_t *
-svn_wc__entry_fold_sync (svn_string_t *path,
-                         svn_string_t *name,
-                         svn_revnum_t revision,
-                         enum svn_node_kind kind,
-                         int state,
-                         apr_time_t text_time,
-                         apr_time_t prop_time,
-                         apr_pool_t *pool,
-                         apr_hash_t *atts,
-                         ...)
-{
-  svn_error_t *err;
-  va_list ap;
-
-  va_start (ap, atts);
-  err = internal_fold_sync (FALSE,  /* be "stupid" */
-                            path, name, revision, kind, state,
-                            text_time, prop_time, pool, atts, ap);
-  va_end (ap);
-  
-  if (err) return err;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* The "smart" version of fold_sync, which tries to deduce the
-   caller's intent; may end up folding a different set of changes than
-   what was literally requested.  */
-svn_error_t *
-svn_wc__entry_fold_sync_intelligently (svn_string_t *path,
-                                       svn_string_t *name,
-                                       svn_revnum_t revision,
-                                       enum svn_node_kind kind,
-                                       int state,
-                                       apr_time_t text_time,
-                                       apr_time_t prop_time,
-                                       apr_pool_t *pool,
-                                       apr_hash_t *atts,
-                                       ...)
-{
-  svn_error_t *err;
-  va_list ap;
-
-  va_start (ap, atts);
-  err = internal_fold_sync (TRUE,  /* be "smart" */
-                            path, name, revision, kind, state,
-                            text_time, prop_time, pool, atts, ap);
-  va_end (ap);
-  
-  if (err) return err;
-
-  return SVN_NO_ERROR;
-}
-
 
 
 svn_wc_entry_t *
@@ -1191,7 +1345,9 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
   if (entry->ancestor)
     dupentry->ancestor = svn_string_dup (entry->ancestor, pool);
   dupentry->kind       = entry->kind;
-  dupentry->state      = entry->state;
+  dupentry->schedule   = entry->schedule;
+  dupentry->existence  = entry->existence;
+  dupentry->conflicted = entry->conflicted;
   dupentry->text_time  = entry->text_time;
   dupentry->prop_time  = entry->prop_time;
 

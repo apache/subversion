@@ -467,41 +467,91 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
                                     apr_pool_t *pool);
 
 
+/* Create a new entry from the attributes hash ATTS.  Use POOL for all
+   allocations, EXCEPT that **NEW_ENTRY->attributes will simply point
+   to the ATTS passed to the function -- this hash is not copied into
+   a new pool!  MODIFY_FLAGS are set to the fields that were
+   explicitly modified by the attribute hash.  */
+svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
+                                    apr_uint16_t *modify_flags,
+                                    apr_hash_t *atts,
+                                    apr_pool_t *pool);
+
 /* Your one-stop shopping for changing an entry:
- *
- * For PATH's entries file, create or modify an entry NAME by folding
- * (merging) changes into it.
- * 
- * If REVISION is SVN_INVALID_REVNUM, then the entry's revision number
- * will not be changed, else it will be set to REVISION.
- * 
- * If KIND is svn_node_none, then the entry's kind will not be
- * changed, else it will be set to KIND.
- * 
- * The set bits in STATE will be OR'd into the entry's state, unless:
- *
- *    - If STATE has the SVN_WC_ENTRY_CLEAR_ALL bit set, then all of
- *      the entry's state will be cleared,
- *
- *    - Else if the SVN_WC_ENTRY_CLEAR_NAMED bit is set in STATE, then
- *      each other set bit in STATE will result in a clear bit in the
- *      entry's STATE, and unset bits in STATE will result in no
- *      change to the corresponding bit in entry's state. 
- * 
- * If TEXT_TIME is 0, the entry's textual timestamp will not be
- * changed, else it will be set to TEXT_TIME.  Analogous behavior for
- * PROP_TIME for the property timestamp.
- * 
- * ATTS is hash of attributes to be changed or added.  The keys are
- * (const char *) and the values are (svn_string_t *).  These
- * overwrite where they collide with existing attributes.
- *
- * Remaining (const char *) arguments are attributes to be removed
- * from the entry, terminated by a final NULL.  These will be removed
- * even if they also appear in ATTS.
- * 
- * NOTE: when you call this function, the entries file will be read,
- * tweaked, and written back out.  */
+
+   For PATH's entries file, create or modify an entry NAME by folding
+   (merging) changes into it.
+
+   Use MODIFY_FLAGS to denote which of the following function
+   arguments to pay attention to and how to interpret those arguments.
+   If the flag that corresponds to the argument is not passed to the
+   function, that field in the entry structure will not be modified at
+   all.  Note that in the descriptions below, the "valid values"
+   restrictions on a field only apply when that field is being
+   "noticed" via the MODIFY_FLAGS.
+ 
+   - REVISION is the entry's revision number.  
+
+   - KIND is the node type of this entry.  Valid values are
+     svn_node_dir and _file.
+
+   - SCHEDULE is the scheduled action pending on this entry.  When the
+     _MODIFY_FORCE flag is set, valid values are
+     svn_wc_schedule_normal, _add, _delete, and _replace.
+
+   - EXISTENCE is the current state of existence of this entry.
+
+   - CONFLICTED reflects whether or not this entry stands in a state
+     of conflict with the repository.
+
+   - TEXT_TIME is the entry's textual timestamp.
+
+   - PROP_TIME is the entry's property timestamp.
+
+   - ATTRIBUTES is a hash of properties on the entry.  The keys are
+     (const char *) and the values are (svn_string_t *).  These
+     overwrite where they collide with existing attributes.
+     
+   Remaining (const char *) arguments are attributes to be removed
+   from the entry, terminated by a final NULL.  These will be removed
+   even if they also appear in ATTS.
+     
+   NOTE: when you call this function, the entries file will be read,
+   tweaked, and written back out.  */
+
+/* The MODIFY_FLAGS to note which of the parameters to pay attention to are
+   as follows: */
+#define SVN_WC__ENTRY_MODIFY_REVISION      0x0001
+#define SVN_WC__ENTRY_MODIFY_KIND          0x0002
+#define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x0004
+#define SVN_WC__ENTRY_MODIFY_EXISTENCE     0x0008
+#define SVN_WC__ENTRY_MODIFY_CONFLICTED    0x0010
+#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0020
+#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0040
+#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0080
+
+/* or perhaps this to mean all of those above... */
+#define SVN_WC__ENTRY_MODIFY_ALL           0x7FFF
+
+/* ORed together with this to mean "I really mean this, don't be
+   trying to protect me from myself on this one." */
+#define SVN_WC__ENTRY_MODIFY_FORCE         0x8000
+
+svn_error_t *svn_wc__entry_modify (svn_string_t *path,
+                                   svn_string_t *name,
+                                   apr_uint16_t modify_flags,
+                                   svn_revnum_t revision,
+                                   enum svn_node_kind kind,
+                                   enum svn_wc_schedule_t schedule,
+                                   enum svn_wc_existence_t existence,
+                                   svn_boolean_t conflicted,
+                                   apr_time_t text_time,
+                                   apr_time_t prop_time,
+                                   apr_hash_t *attributes,
+                                   apr_pool_t *pool,
+                                   ...);
+
+#if 0 && THE_OLD_WAY_OF_DOING_THINGS
 svn_error_t *svn_wc__entry_fold_sync (svn_string_t *path,
                                       svn_string_t *name,
                                       svn_revnum_t revision,
@@ -511,32 +561,7 @@ svn_error_t *svn_wc__entry_fold_sync (svn_string_t *path,
                                       apr_time_t prop_time,
                                       apr_pool_t *pool,
                                       apr_hash_t *atts,
-                                      ...);
-
-
-/* The "smarter" version of __entry_fold_sync.
- *
- * The previous routine does exactly what it's told;  it merges
- * exactly those changes that are given to it.
- *
- * This routine actually *interprets* the requested changes, and
- * intelligently merges changes that reflect the *intent* of the
- * caller.  For example:   if the entry has only the "add" flag set,
- * and the caller requests the "delete" flag be set, this routine
- * simply removes the entry altogether.  For other examples, see the C
- * routine. 
- */
-svn_error_t *svn_wc__entry_fold_sync_intelligently (svn_string_t *path,
-                                                    svn_string_t *name,
-                                                    svn_revnum_t revision,
-                                                    enum svn_node_kind kind,
-                                                    int state,
-                                                    apr_time_t text_time,
-                                                    apr_time_t prop_time,
-                                                    apr_pool_t *pool,
-                                                    apr_hash_t *atts,
-                                                    ...);
-
+#endif
 
 
 /* Remove entry NAME from ENTRIES, unconditionally. */

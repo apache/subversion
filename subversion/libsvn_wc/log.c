@@ -422,17 +422,19 @@ log_do_detect_conflict (struct log_runner *loggy,
          entry as conflicted! */
       apr_hash_t *atthash = svn_xml_make_att_hash (atts, loggy->pool);
 
-      err = svn_wc__entry_fold_sync_intelligently
+      err = svn_wc__entry_modify
         (loggy->path,
          svn_string_create (name, loggy->pool),
-         SVN_INVALID_REVNUM, /* ignore */
-         svn_node_none,      /* ignore */
-         SVN_WC_ENTRY_CONFLICTED,
-         0,                  /* ignore */
-         0,                  /* ignore */
+         (SVN_WC__ENTRY_MODIFY_CONFLICTED | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
+         SVN_INVALID_REVNUM,
+         svn_node_none,
+         svn_wc_schedule_normal,
+         svn_wc_existence_normal,
+         TRUE,
+         0,
+         0,
+         atthash, /* contains SVN_WC_ATTR_REJFILE */
          loggy->pool,
-         atthash,  /* contains
-                      SVN_WC_ATTR_REJFILE */
          NULL);
     }
 
@@ -449,160 +451,87 @@ log_do_modify_entry (struct log_runner *loggy,
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
-      
-  apr_time_t text_time, prop_time;
-  svn_string_t *tfile, *pfile;
   svn_string_t *sname = svn_string_create (name, loggy->pool);
-  svn_string_t *revstr = apr_hash_get (ah,
-                                       SVN_WC_ENTRY_ATTR_REVISION,
-                                       APR_HASH_KEY_STRING);
-  svn_revnum_t new_revision = (revstr ? atoi (revstr->data)
-                               : SVN_INVALID_REVNUM);
-  int state = 0;
-          
-  enum svn_node_kind kind = svn_node_unknown;
-  svn_string_t *kindstr = apr_hash_get (ah,
-                                        SVN_WC_ENTRY_ATTR_KIND,
-                                        APR_HASH_KEY_STRING);
+  svn_string_t *tfile = svn_string_dup (loggy->path, loggy->pool);
+  svn_string_t *pfile;
+  svn_wc_entry_t *entry;
+  apr_uint16_t modify_flags;
+  svn_string_t *valuestr;
+  apr_time_t text_time;
+  apr_time_t prop_time;
 
-  /* Create a full path to the file's textual component */
-  tfile = svn_string_dup (loggy->path, loggy->pool);
-  if (strcmp (sname->data, SVN_WC_ENTRY_THIS_DIR) != 0)
+
+  /* Convert the attributes into an entry structure. */
+  SVN_ERR (svn_wc__atts_to_entry (&entry, &modify_flags, ah, loggy->pool));
+
+  /* Did the log command give us any timestamps?  There are three
+     possible scenarios here.  We must check both text_time
+     and prop_time for each of the three scenarios.  */
+
+  /* TEXT_TIME: */
+  valuestr = apr_hash_get (ah, SVN_WC_ENTRY_ATTR_TEXT_TIME, 
+                           APR_HASH_KEY_STRING);
+
+  if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
+      && (! strcmp (valuestr->data, SVN_WC_TIMESTAMP_WC)))
     {
-      svn_path_add_component (tfile, sname, svn_path_local_style);
+      enum svn_node_kind tfile_kind;
+      if (strcmp (sname->data, SVN_WC_ENTRY_THIS_DIR))
+        svn_path_add_component (tfile, sname, svn_path_local_style);
+      
+      err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
+      if (err)
+        return svn_error_createf
+          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+           "error checking path %s", tfile->data);
+          
+      err = svn_io_file_affected_time (&text_time, tfile, loggy->pool);
+      if (err)
+        return svn_error_createf
+          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+           "error getting file affected time on %s", tfile->data);
     }
 
-  /* Create a full path to the file's property component */
-  err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
-  if (err)
-    signal_error (loggy, err);
+  /* PROP_TIME: */
+  valuestr = apr_hash_get (ah, SVN_WC_ENTRY_ATTR_PROP_TIME, 
+                           APR_HASH_KEY_STRING);
 
-  /* kff todo: similar to code in entries.c:handle_start().
-             Would be nice to either write a function mapping string
-             to kind, and/or write an equivalent of
-             svn_wc__entry_fold_sync() that takes a hash and does the
-             same thing, without all the specialized args. */
-  if (! kindstr)
-    kind = svn_node_none;
-  else if (strcmp (kindstr->data, "file") == 0)
-    kind = svn_node_file;
-  else if (strcmp (kindstr->data, "dir") == 0)
-    kind = svn_node_dir;
-  else
-    kind = svn_node_none;
-          
-  /* Stuff state flags. */
-  if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_ADD,
-                    APR_HASH_KEY_STRING))
-    state |= SVN_WC_ENTRY_ADD;
-  if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_DELETE,
-                    APR_HASH_KEY_STRING))
-    state |= SVN_WC_ENTRY_DELETE;
-  if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_MERGED,
-                    APR_HASH_KEY_STRING))
-    state |= SVN_WC_ENTRY_MERGED;
-  if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_CONFLICT,
-                    APR_HASH_KEY_STRING))
-    state |= SVN_WC_ENTRY_CONFLICTED;
+  if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
+      && (! strcmp (valuestr->data, SVN_WC_TIMESTAMP_WC)))
+    {
+      enum svn_node_kind pfile_kind;
+      err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
+      if (err)
+        signal_error (loggy, err);
+      
+      err = svn_io_check_path (pfile, &pfile_kind, loggy->pool);
+      if (err)
+        return svn_error_createf
+          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+           "error checking path %s", pfile->data);
+      
+      err = svn_io_file_affected_time (&prop_time, tfile, loggy->pool);
+      if (err)
+        return svn_error_createf
+          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+           "error getting file affected time on %s", pfile->data);
+    }
 
-          /* Did the log command give us any timestamps?  There are three
-             possible scenarios here.  We must check both text_time
-             and prop_time for each of the three scenarios.  
+  /* Now write the new entry out */
+  err = svn_wc__entry_modify (loggy->path,
+                              sname,
+                              modify_flags,
+                              entry->revision,
+                              entry->kind,
+                              entry->schedule,
+                              entry->existence,
+                              entry->conflicted,
+                              entry->text_time,
+                              entry->prop_time,
+                              entry->attributes,
+                              loggy->pool,
+                              NULL);
 
-             TODO: The next two code blocks might benefit from
-             factorization.  Then again, factorization might make them
-             more confusing.  :) */
-
-  {
-    /* GET VALUE OF TEXT_TIME: */
-    svn_string_t *text_timestr = 
-      apr_hash_get (ah, SVN_WC_ENTRY_ATTR_TEXT_TIME,
-                    APR_HASH_KEY_STRING);
-            
-    /* Scenario 1:  no timestamp mentioned at all */
-    if (! text_timestr)
-      text_time = 0;  /* this tells fold_sync to ignore the
-                         field */
-            
-    /* Scenario 2:  use the working copy's timestamp */
-    else if (! strcmp (text_timestr->data, SVN_WC_TIMESTAMP_WC))
-      {
-        enum svn_node_kind tfile_kind;
-        err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
-        if (err)
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "error checking path %s", tfile->data);
-
-        err = svn_io_file_affected_time (&text_time,
-                                         tfile,
-                                         loggy->pool);
-        if (err)
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "error getting file affected time on %s", tfile->data);
-      }
-            
-    /* Scenario 3:  use the integer provided, as-is. */
-    else
-      /* Is atol appropriate here for converting an apr_time_t
-         to a string and then back again?  Or should we just use
-         our svn_wc__time_to_string and string_to_time? */
-      text_time = (apr_time_t) atol (text_timestr->data);
-  }
-          
-  {
-    /* GET VALUE OF PROP_TIME: */
-    svn_string_t *prop_timestr = 
-      apr_hash_get (ah, SVN_WC_ENTRY_ATTR_PROP_TIME,
-                    APR_HASH_KEY_STRING);
-            
-    /* Scenario 1:  no timestamp mentioned at all */
-    if (! prop_timestr)
-      prop_time = 0;  /* this tells merge_sync to ignore the
-                                 field */
-            
-            /* Scenario 2:  use the working copy's timestamp */
-    else if (! strcmp (prop_timestr->data, SVN_WC_TIMESTAMP_WC))
-      {
-        enum svn_node_kind pfile_kind;
-        err = svn_io_check_path (pfile, &pfile_kind, loggy->pool);
-        if (err)
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "error checking path %s", pfile->data);
-
-        err = svn_io_file_affected_time (&prop_time,
-                                         pfile,
-                                         loggy->pool);
-        if (err)
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "error getting file affected time on %s", pfile->data);
-      }
-            
-            
-    /* Scenario 3:  use the integer provided, as-is. */
-    else
-      /* Is atol appropriate here for converting an apr_time_t
-                 to a string and then back again?  Or should we just use
-                 our svn_wc__time_to_string and string_to_time? */
-      prop_time = (apr_time_t) atol (prop_timestr->data);
-  }
-          
-  /** End of Timestamp deductions **/
-
-          /* Now write the new entry out */
-  err = svn_wc__entry_fold_sync_intelligently (loggy->path,
-                                               sname,
-                                               new_revision,
-                                               kind,
-                                               state,
-                                               text_time,
-                                               prop_time,
-                                               loggy->pool,
-                                               ah,
-                                               NULL);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                               "error merge_syncing entry %s", name);
@@ -708,20 +637,21 @@ conflict_if_rejfile (svn_string_t *parent_dir,
                "conflict_if_rejfile: trouble removing %s",
                rejfile_full_path->data);
 
-          err = svn_wc__entry_fold_sync_intelligently
-            (parent_dir,
-             svn_string_create (entry, pool),
-             SVN_INVALID_REVNUM,
-             svn_node_none,
-             (SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_CONFLICTED),
-             0,
-             0,
-             pool,
-             NULL,
-             rejfile_type,
-             NULL);
-          if (err)
-            return err;
+          SVN_ERR (svn_wc__entry_modify
+                   (parent_dir,
+                    svn_string_create (entry, pool),
+                    SVN_WC__ENTRY_MODIFY_CONFLICTED,
+                    SVN_INVALID_REVNUM,
+                    svn_node_none,
+                    svn_wc_schedule_normal,
+                    svn_wc_existence_normal,
+                    FALSE,
+                    0,
+                    0,
+                    NULL,
+                    pool,
+                    rejfile_type,
+                    NULL));
         }
       else  /* reject file size > 0 means the entry has conflicts. */
         {
@@ -731,19 +661,20 @@ conflict_if_rejfile (svn_string_t *parent_dir,
                         rejfile_type, APR_HASH_KEY_STRING,
                         svn_string_create (rejfile, pool));
 
-          err = svn_wc__entry_fold_sync_intelligently
-            (parent_dir,
-             svn_string_create (entry, pool),
-             SVN_INVALID_REVNUM,
-             svn_node_none,
-             SVN_WC_ENTRY_CONFLICTED,
-             0,
-             0,
-             pool,
-             att_overlay,
-             NULL);
-          if (err)
-            return err;
+          SVN_ERR (svn_wc__entry_modify
+                   (parent_dir,
+                    svn_string_create (entry, pool),
+                    SVN_WC__ENTRY_MODIFY_CONFLICTED,
+                    SVN_INVALID_REVNUM,
+                    svn_node_none,
+                    svn_wc_schedule_normal,
+                    svn_wc_existence_normal,
+                    TRUE,
+                    0,
+                    0,
+                    att_overlay,
+                    pool,
+                    NULL));
         } 
     }
 
@@ -823,7 +754,8 @@ log_do_committed (struct log_runner *loggy,
         SVN_ERR (svn_wc_entry (&entry, full_path, loggy->pool));
       }
 
-      if (entry && (entry->state & SVN_WC_ENTRY_DELETE))
+      if (entry && ((entry->schedule == svn_wc_schedule_delete)
+                    || (entry->schedule == svn_wc_schedule_replace)))
         {
           if (entry->kind == svn_node_file)
             SVN_ERR (svn_wc_remove_from_revision_control (loggy->path, sname,
@@ -897,21 +829,21 @@ log_do_committed (struct log_runner *loggy,
 
           /* Get property file pathnames, depending on whether we're
              examining a file or THIS_DIR */
-          err = svn_wc__prop_path (&prop_path,
-                                   is_this_dir ? loggy->path : working_file,
-                                   0 /* not tmp */, loggy->pool);
-          if (err) return err;
+          SVN_ERR (svn_wc__prop_path 
+                   (&prop_path,
+                    is_this_dir ? loggy->path : working_file,
+                    0 /* not tmp */, loggy->pool));
           
-          err = svn_wc__prop_path (&tmp_prop_path, 
-                                   is_this_dir ? loggy->path : working_file,
-                                   1 /* tmp */, loggy->pool);
-          if (err) return err;
+          SVN_ERR (svn_wc__prop_path 
+                   (&tmp_prop_path, 
+                    is_this_dir ? loggy->path : working_file,
+                    1 /* tmp */, loggy->pool));
           
-          err = svn_wc__prop_base_path (&prop_base_path,
-                                        is_this_dir ? 
-                                          loggy->path : working_file,
-                                        0 /* not tmp */, loggy->pool);
-          if (err) return err;
+          SVN_ERR (svn_wc__prop_base_path 
+                   (&prop_base_path,
+                    is_this_dir ? 
+                    loggy->path : working_file,
+                    0 /* not tmp */, loggy->pool));
 
           /* Check for existence of tmp_prop_path */
           err = svn_io_check_path (tmp_prop_path, &kind, loggy->pool);
@@ -962,17 +894,24 @@ log_do_committed (struct log_runner *loggy,
 
           /* Files have been moved, and timestamps are found.  Time
              for The Big Merge Sync. */
-          err = svn_wc__entry_fold_sync_intelligently 
+          err = svn_wc__entry_modify
             (loggy->path,
              sname,
+             (SVN_WC__ENTRY_MODIFY_REVISION |
+              SVN_WC__ENTRY_MODIFY_SCHEDULE |
+              SVN_WC__ENTRY_MODIFY_EXISTENCE |
+              SVN_WC__ENTRY_MODIFY_CONFLICTED |
+              SVN_WC__ENTRY_MODIFY_TEXT_TIME |
+              SVN_WC__ENTRY_MODIFY_PROP_TIME),
              atoi (revstr),
              svn_node_none,
-             SVN_WC_ENTRY_CLEAR_ALL,
+             svn_wc_schedule_normal,
+             svn_wc_existence_normal,
+             FALSE,
              text_time,
              prop_time,
-             loggy->pool,
              NULL,
-             /* remove the rejfile atts! */
+             loggy->pool,
              SVN_WC_ENTRY_ATTR_REJFILE,
              SVN_WC_ENTRY_ATTR_PREJFILE,
              NULL);

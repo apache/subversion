@@ -192,11 +192,21 @@ svn_wc_set_revision (void *baton,
 
       bname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
-      SVN_ERR (svn_wc__entry_fold_sync (pdir, bname, new_revnum,
-                                        svn_node_none, 
-                                        (SVN_WC_ENTRY_CLEAR_NAMED |
-                                         SVN_WC_ENTRY_ADD),
-                                        0, 0, pool, NULL, NULL));
+      SVN_ERR (svn_wc__entry_modify
+               (pdir, 
+                bname, 
+                (SVN_WC__ENTRY_MODIFY_REVISION 
+                 | SVN_WC__ENTRY_MODIFY_SCHEDULE), 
+                new_revnum,
+                svn_node_none, 
+                svn_wc_schedule_unadd,
+                svn_wc_existence_normal,
+                FALSE,
+                0, 
+                0, 
+                NULL, 
+                pool, 
+                NULL));
     }
 
   /* Regardless of whether it's a file or dir, the "main" logfile
@@ -346,19 +356,33 @@ mark_tree (svn_string_t *dir, enum mark_tree_state state, apr_pool_t *pool)
       switch (state)
         {
         case mark_tree_state_delete:
-          SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-                   (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-                    SVN_WC_ENTRY_DELETE, 0, 0, pool, NULL, NULL));
+          SVN_ERR (svn_wc__entry_modify
+                   (dir, basename, 
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                    SVN_INVALID_REVNUM, entry->kind,
+                    svn_wc_schedule_delete,
+                    svn_wc_existence_normal,
+                    FALSE, 0, 0, NULL, pool, NULL));
           break;
 
         case mark_tree_state_unadd:
-          SVN_ERR (svn_wc__entry_fold_sync
-                   (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-                    SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADD,
-                    0, 0, pool, NULL, NULL));
+          SVN_ERR (svn_wc__entry_modify
+                   (dir, basename, 
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                    SVN_INVALID_REVNUM, entry->kind,
+                    svn_wc_schedule_unadd,
+                    svn_wc_existence_normal,
+                    FALSE, 0, 0, NULL, pool, NULL));
           break;
 
-        case mark_tree_state_undelete:
+        case mark_tree_state_undelete: 
+          SVN_ERR (svn_wc__entry_modify
+                   (dir, basename, 
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                    SVN_INVALID_REVNUM, entry->kind,
+                    svn_wc_schedule_undelete,
+                    svn_wc_existence_normal,
+                    FALSE, 0, 0, NULL, pool, NULL));
           break;
         }
 
@@ -396,9 +420,13 @@ svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
   if (svn_path_is_empty (dir, svn_path_local_style))
     svn_string_set (dir, ".");
   
-  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-           (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-            SVN_WC_ENTRY_DELETE, 0, 0, pool, NULL, NULL));
+  SVN_ERR (svn_wc__entry_modify
+           (dir, basename, 
+            SVN_WC__ENTRY_MODIFY_SCHEDULE,
+            SVN_INVALID_REVNUM, entry->kind,
+            svn_wc_schedule_delete,
+            svn_wc_existence_normal,
+            FALSE, 0, 0, NULL, pool, NULL));
 
   return SVN_NO_ERROR;
 }
@@ -408,13 +436,24 @@ svn_error_t *
 svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
 {
   svn_string_t *parent_dir, *basename;
-  svn_wc_entry_t *entry;
+  svn_wc_entry_t *orig_entry, *entry;
   svn_string_t *ancestor_path;
 
-  svn_path_split (dir, &parent_dir, &basename, svn_path_local_style, pool);
+  /* Get the original entry for this directory if one exists (perhaps
+     this is actually a replacement of a previously deleted thing). */
+  SVN_ERR (svn_wc_entry (&orig_entry, dir, pool));
+
+  /* You can only add something that is a) not in revision control, or
+     b) slated for deletion from revision control. */
+  if (orig_entry && orig_entry->schedule != svn_wc_schedule_delete)
+    return svn_error_createf 
+      (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+       "Directory '%s' has already been added to revision control",
+       dir->data);
 
   /* Get the entry for this directory's parent.  We need to snatch the
      ancestor path out of there. */
+  svn_path_split (dir, &parent_dir, &basename, svn_path_local_style, pool);
   if (svn_path_is_empty (parent_dir, svn_path_local_style))
     parent_dir = svn_string_create (".", pool);
   SVN_ERR (svn_wc_entry (&entry, parent_dir, pool));
@@ -429,15 +468,25 @@ svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
 
   /* Now, add the entry for this directory to the parent_dir's entries
      file, marking it for addition. */
-  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-           (parent_dir, basename, 0, svn_node_dir, SVN_WC_ENTRY_ADD,
-            0, 0, pool, NULL, NULL));
+  SVN_ERR (svn_wc__entry_modify
+           (parent_dir, basename, 
+            (SVN_WC__ENTRY_MODIFY_SCHEDULE
+             | SVN_WC__ENTRY_MODIFY_KIND),
+            SVN_INVALID_REVNUM, svn_node_dir,
+            svn_wc_schedule_add,
+            svn_wc_existence_normal,
+            FALSE, 0, 0, NULL, pool, NULL));
 
   /* And finally, make sure this entry is marked for addition in its
      own administrative directory. */
-  SVN_ERR (svn_wc__entry_fold_sync
-           (dir, NULL, 0, svn_node_dir, SVN_WC_ENTRY_ADD,
-            0, 0, pool, NULL, NULL));
+  SVN_ERR (svn_wc__entry_modify
+           (dir, NULL,
+            (SVN_WC__ENTRY_MODIFY_SCHEDULE
+             | SVN_WC__ENTRY_MODIFY_KIND),
+            SVN_INVALID_REVNUM, svn_node_dir,
+            svn_wc_schedule_add,
+            svn_wc_existence_normal,
+            FALSE, 0, 0, NULL, pool, NULL));
 
   return SVN_NO_ERROR;
 }
@@ -447,12 +496,30 @@ svn_error_t *
 svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 {
   svn_string_t *dir, *basename;
+  svn_wc_entry_t *orig_entry;
+
+  /* Get the original entry for this directory if one exists (perhaps
+     this is actually a replacement of a previously deleted thing). */
+  SVN_ERR (svn_wc_entry (&orig_entry, file, pool));
+
+  /* You can only add something that is a) not in revision control, or
+     b) slated for deletion from revision control. */
+  if (orig_entry && orig_entry->schedule != svn_wc_schedule_delete)
+    return svn_error_createf 
+      (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+       "File '%s' has already been added to revision control",
+       file->data);
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
-  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-           (dir, basename, 0, svn_node_file, SVN_WC_ENTRY_ADD,
-            0, 0, pool, NULL, NULL));
+  SVN_ERR (svn_wc__entry_modify
+           (dir, basename,
+            (SVN_WC__ENTRY_MODIFY_SCHEDULE
+             | SVN_WC__ENTRY_MODIFY_KIND),
+            SVN_INVALID_REVNUM, svn_node_file,
+            svn_wc_schedule_add,
+            svn_wc_existence_normal,
+            FALSE, 0, 0, NULL, pool, NULL));
 
   return SVN_NO_ERROR;
 }
@@ -480,10 +547,13 @@ svn_wc_unadd (svn_string_t *path,
   if (svn_path_is_empty (dir, svn_path_local_style))
     svn_string_set (dir, ".");
   
-  SVN_ERR (svn_wc__entry_fold_sync
-           (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-            SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADD,
-            0, 0, pool, NULL, NULL));
+  SVN_ERR (svn_wc__entry_modify
+           (dir, basename,
+            SVN_WC__ENTRY_MODIFY_SCHEDULE,
+            SVN_INVALID_REVNUM, svn_node_none,
+            svn_wc_schedule_unadd,
+            svn_wc_existence_normal,
+            FALSE, 0, 0, NULL, pool, NULL));
 
   return SVN_NO_ERROR;
 }
