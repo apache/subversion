@@ -49,7 +49,7 @@ import copy    # for deepcopy()
 python_required_version = 2.0
 
 # Global:  set this to the location of the svn binary
-svn_binary = '../../../client/svn'
+svn_binary = '../../../clients/cmdline/svn'
 # Global:  set this to the location of the svnadmin binary
 svnadmin_binary = '../../../svnadmin/svnadmin'
 
