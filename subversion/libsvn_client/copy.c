@@ -469,6 +469,28 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
      it will be as if the new tree isn't really there yet. */
   SVN_ERR (ra_lib->do_checkout (sess, src_rev, 1, editor, edit_baton));
 
+  if (! SVN_IS_VALID_REVNUM(src_rev))
+    {
+      /* If we just checked out from the "head" revision, that's fine,
+         but we don't want to pass a '-1' as a copyfrom_rev to
+         svn_wc_add().  That function will dump it right into the
+         entry, and when we try to commit later on, the
+         'add-dir-with-history' step will be -very- unhappy; it only
+         accepts specific revisions.
+
+         On the other hand, we *could* say that -1 is a legitimate
+         copyfrom_rev, but I think that's bogus.  Somebody made a copy
+         from a particular revision;  if they wait a long time to
+         commit, it would be terrible if the copied happened from a
+         newer revision!! */
+
+      /* We just did a checkout; whatever revision we just got, that
+         should be the copyfrom_revision when we commit later. */
+      svn_wc_entry_t *d_entry;
+      SVN_ERR (svn_wc_entry (&d_entry, dst_path, pool));
+      src_rev = d_entry->revision;
+    }
+
   /* Switch the tree over to the new ancestry, incidentally adding an
      entry in parent.  See long comment in svn_wc_add()'s doc string
      about whether svn_wc_add() is appropriate for this. */
