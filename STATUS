@@ -89,16 +89,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, sussman, philip
 
-  * r12630
-    Dataloss bug in svndumpfilter - copyfrom information lost for files
-    copied-with-modifications.
-    Justification:
-      Dataloss!
-    Branch:
-      1.1.x-svndumpfilter r12655:12656
-    Votes:
-      +1: maxb, sussman, dionisos
-
   * r12637, r12640
     Very bad memory handling in svndumpfilter - caches an entire revision
     of data in memory.
