@@ -677,7 +677,7 @@ svn_client_export (svn_revnum_t *result_rev,
         {
           use_ra = TRUE;
           SVN_ERR (svn_client_url_from_path (&URL, from, pool));
-          if (! from)
+          if (! URL)
             return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                                       "'%s' has no URL", from);
         }
