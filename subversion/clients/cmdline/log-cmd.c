@@ -36,6 +36,7 @@
 
 /*** Code. ***/
 
+/* This implements `svn_log_message_receiver_t'. */
 static svn_error_t *
 log_message_receiver (void *baton,
                       const apr_hash_t *changed_paths,
