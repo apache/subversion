@@ -618,13 +618,18 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
 {
   PyObject *receiver = baton;
   PyObject *result;
+  swig_type_info *tinfo = SWIG_TypeQuery("SWIGTYPE_p_svn_log_changed_path_t");
+  PyObject *chpaths;
 
-  /* ### for now, we're leaving CHANGED_PATHS outta this. */
+  if (changed_paths)
+    chpaths = svn_swig_py_convert_hash (changed_paths, tinfo);
+  else
+    chpaths = Py_None;
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallFunction(receiver, 
-                                      (char *)"lsssO&", 
-                                      rev, author, date, msg, 
+                                      (char *)"OlsssO&", 
+                                      chpaths, rev, author, date, msg, 
                                       make_ob_pool, pool)) == NULL)
     {
       return convert_python_error(pool);
