@@ -75,7 +75,8 @@ enum
     svnlook__show_ids,
     svnlook__no_diff_deleted,
     svnlook__no_diff_added,
-    svnlook__revprop_opt
+    svnlook__revprop_opt,
+    svnlook__full_paths
   };
 
 /*
@@ -115,6 +116,10 @@ static const apr_getopt_option_t options_table[] =
 
     {"revprop",       svnlook__revprop_opt, 0,
                       N_("operate on a revision property (use with -r)")},
+
+    {"full-paths", svnlook__full_paths, 0,
+     N_("show full paths instead of indenting them")},
+
 
     {0,               0, 0, 0}
   };
@@ -200,7 +205,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
         "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
         "of the tree otherwise), optionally showing node revision ids.\n"),
-     {'r', 't', svnlook__show_ids} },
+     {'r', 't', svnlook__show_ids, svnlook__full_paths} },
 
     {"uuid", subcommand_uuid, {0},
      N_("usage: svnlook uuid REPOS_PATH\n\n"
@@ -231,6 +236,7 @@ struct svnlook_opt_state
   svn_boolean_t no_diff_added;    /* --no-diff-added */
   svn_boolean_t verbose;          /* --verbose */
   svn_boolean_t revprop;          /* --revprop */
+  svn_boolean_t full_paths;       /* --full-paths */
 };
 
 
@@ -242,6 +248,7 @@ typedef struct svnlook_ctxt_t
   svn_boolean_t show_ids;
   svn_boolean_t no_diff_deleted;
   svn_boolean_t no_diff_added;
+  svn_boolean_t full_paths;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
@@ -1017,6 +1024,7 @@ print_tree (svn_fs_root_t *root,
             svn_boolean_t is_dir,
             int indentation,
             svn_boolean_t show_ids,
+            svn_boolean_t full_paths,
             apr_pool_t *pool)
 {
   apr_pool_t *subpool;
@@ -1027,14 +1035,14 @@ print_tree (svn_fs_root_t *root,
   SVN_ERR (check_cancel (NULL));
 
   /* Print the indentation. */
-  for (i = 0; i < indentation; i++)
-    {
+  if(!full_paths)
+    for (i = 0; i < indentation; i++)
       SVN_ERR (svn_cmdline_fputs (" ", stdout, pool));
-    }
 
   /* Print the node. */
   SVN_ERR (svn_cmdline_printf (pool, "%s%s",
-                               svn_path_basename (path, pool),
+                               full_paths ? path : svn_path_basename (path,
+                                                                      pool),
                                is_dir ? "/" : ""));
 
   if (show_ids)
@@ -1068,7 +1076,7 @@ print_tree (svn_fs_root_t *root,
       entry = val;
       SVN_ERR (print_tree (root, svn_path_join (path, entry->name, pool),
                            entry->id, (entry->kind == svn_node_dir),
-                           indentation + 1, show_ids, subpool));
+                           indentation + 1, show_ids, full_paths, subpool));
     }
   svn_pool_destroy (subpool);
 
@@ -1548,6 +1556,7 @@ static svn_error_t *
 do_tree (svnlook_ctxt_t *c, 
          const char *path,
          svn_boolean_t show_ids, 
+         svn_boolean_t full_paths, 
          apr_pool_t *pool)
 {
   svn_fs_root_t *root;
@@ -1557,7 +1566,7 @@ do_tree (svnlook_ctxt_t *c,
   SVN_ERR (get_root (&root, c, pool));
   SVN_ERR (svn_fs_node_id (&id, root, path, pool));
   SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
-  SVN_ERR (print_tree (root, path, id, is_dir, 0, show_ids, pool));
+  SVN_ERR (print_tree (root, path, id, is_dir, 0, show_ids, full_paths, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1587,6 +1596,7 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
   baton->show_ids = opt_state->show_ids;
   baton->no_diff_deleted = opt_state->no_diff_deleted;
   baton->no_diff_added = opt_state->no_diff_added;
+  baton->full_paths = opt_state->full_paths;
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup (pool, opt_state->txn);
@@ -1857,7 +1867,7 @@ subcommand_tree (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_tree (c, opt_state->arg1 ? opt_state->arg1 : "", 
-                    opt_state->show_ids, pool));
+                    opt_state->show_ids, opt_state->full_paths, pool));
   return SVN_NO_ERROR;
 }
 
@@ -2011,6 +2021,10 @@ main (int argc, const char * const *argv)
 
         case svnlook__no_diff_added:
           opt_state.no_diff_added = TRUE;
+          break;
+
+        case svnlook__full_paths:
+          opt_state.full_paths = TRUE;
           break;
 
         default:
