@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-30 09:06+0800\n"
+"POT-Creation-Date: 2004-10-13 10:15+0800\n"
 "PO-Revision-Date: 2004-09-12 22:05+0800\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
@@ -51,7 +51,7 @@ msgstr "目的目錄已存在; 請刪除目錄或用 --force 來覆寫目錄"
 #: clients/cmdline/help-cmd.c:35
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
-"Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svn help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Most subcommands take file and/or directory arguments, recursing\n"
 "on the directories.  If no arguments are supplied to such a\n"
@@ -61,7 +61,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "用法: svn <subcommand> [options] [args]\n"
-"請使用 \"svn help <subcommand>\" 顯示子命令的輔助說明.\n"
+"請使用 'svn help <subcommand>' 顯示子命令的輔助說明.\n"
+"\n"
 "大多數的子命令可接受檔案或目錄引數, 對目錄進行遞迴存取.\n"
 "如無指定引數給命令, 預設行為將會自目前的目錄 (包含) 進\n"
 "行遞迴式存取\n"
@@ -349,8 +350,8 @@ msgid "specify a password ARG"
 msgstr "指定密碼 ARG"
 
 #: clients/cmdline/main.c:100
-msgid "pass ARG as bundled options to GNU diff"
-msgstr "把 ARG 當附加選項傳送到 GNU diff"
+msgid "pass ARG as bundled options to diff (default: '-u')"
+msgstr "把 ARG 當附加選項傳送到 diff (預設: '-u')"
 
 #: clients/cmdline/main.c:102
 msgid "pass contents of file ARG as additional args"
@@ -451,7 +452,7 @@ msgstr ""
 msgid "maximum number of log entries"
 msgstr "顯示紀錄訊息的上限值"
 
-#: clients/cmdline/main.c:173
+#: clients/cmdline/main.c:179
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -461,7 +462,7 @@ msgstr ""
 "下一次送交時新增進去.\n"
 "用法: add PATH...\n"
 
-#: clients/cmdline/main.c:180
+#: clients/cmdline/main.c:186
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -470,7 +471,7 @@ msgstr ""
 "輸出指定檔案或 URL 的內容, 每行包含修訂版與作者資料.\n"
 "用法: blame TARGET...\n"
 
-#: clients/cmdline/main.c:186
+#: clients/cmdline/main.c:192
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET...\n"
@@ -478,7 +479,7 @@ msgstr ""
 "輸出指定檔案或 URL 的內容.\n"
 "usage: cat TARGET...\n"
 
-#: clients/cmdline/main.c:191
+#: clients/cmdline/main.c:197
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL... [PATH]\n"
@@ -494,7 +495,7 @@ msgstr ""
 "  注意: 如果省略 PATH 的話, URL 的主檔名會被視為目標. 如果指定多個\n"
 "  URL 的話, 每一個都會取出為 PATH 的子目錄, 其名稱為 URL 的主檔名.\n"
 
-#: clients/cmdline/main.c:201
+#: clients/cmdline/main.c:207
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -503,7 +504,7 @@ msgstr ""
 "遞迴式地清除工作複本, 移除未完成動作的鎖定, 繼續未完全的動作等等.\n"
 "用法: cleanup [PATH...]\n"
 
-#: clients/cmdline/main.c:207
+#: clients/cmdline/main.c:213
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -517,7 +518,7 @@ msgstr ""
 "  必須提供紀錄訊息, 但是可以為空內容. 如果不是以 --message 或 --file\n"
 "  選項來指定, 就會啟動你的文字編輯器.\n"
 
-#: clients/cmdline/main.c:217
+#: clients/cmdline/main.c:222
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -537,7 +538,7 @@ msgstr ""
 "    URL -> WC:   將 URL 取出至 WC, 並排定新增它\n"
 "    URL -> URL:  完成伺服器端的複製. 這通常是用來進行分支與標記\n"
 
-#: clients/cmdline/main.c:230
+#: clients/cmdline/main.c:235
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -562,7 +563,7 @@ msgstr ""
 "\n"
 "  2. 以 URL 指定的項目, 會透過立即送交自檔案庫中刪除.\n"
 
-#: clients/cmdline/main.c:247
+#: clients/cmdline/main.c:251
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
@@ -612,7 +613,7 @@ msgstr ""
 "\n"
 "  僅僅使用 'svn diff' 時, 會顯示工作複本中的本地修改.\n"
 
-#: clients/cmdline/main.c:287
+#: clients/cmdline/main.c:291
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL [PATH]\n"
@@ -644,7 +645,7 @@ msgstr ""
 "     如果沒有指定 REV 的話, 所有的本地修改都還會保持著, 但是未納入\n"
 "     版本控制的檔案不會被複製.\n"
 
-#: clients/cmdline/main.c:311
+#: clients/cmdline/main.c:315
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -652,7 +653,7 @@ msgstr ""
 "描述本程式或其子命令的用法.\n"
 "用法: help [SUBCOMMAND...]\n"
 
-#: clients/cmdline/main.c:320
+#: clients/cmdline/main.c:324
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -667,7 +668,7 @@ msgstr ""
 "  遞迴式地送交 PATH 的複本至 URL. 如果省略 PATH, 預設為 '.'. 父目錄會\n"
 "  依需要於檔案庫內建立.\n"
 
-#: clients/cmdline/main.c:331
+#: clients/cmdline/main.c:334
 msgid ""
 "Display information about a file or directory.\n"
 "usage: info [PATH...]\n"
@@ -679,7 +680,7 @@ msgstr ""
 "\n"
 "  顯示每個 PATH 的資訊 (預設: '.').\n"
 
-#: clients/cmdline/main.c:338
+#: clients/cmdline/main.c:341
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET...]\n"
@@ -713,7 +714,7 @@ msgstr ""
 "    大小 (以位元組為單位)\n"
 "    前次送交的日期與時間\n"
 
-#: clients/cmdline/main.c:359
+#: clients/cmdline/main.c:362
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -763,7 +764,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: clients/cmdline/main.c:391
+#: clients/cmdline/main.c:394
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -807,7 +808,7 @@ msgstr ""
 "  '.', 除非來源的主檔名符合 '.' 裡的某個檔案; 在這種情況下, 檔案\n"
 "  差異將會直接套用至該檔案去.\n"
 
-#: clients/cmdline/main.c:421
+#: clients/cmdline/main.c:424
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -836,7 +837,7 @@ msgstr ""
 "\n"
 "  在這兩個情況下, 所有的中介目錄都必須事先存在.\n"
 
-#: clients/cmdline/main.c:441
+#: clients/cmdline/main.c:444
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -856,7 +857,7 @@ msgstr ""
 "    WC  -> WC:   移動並排入新增時程 (連同歷史紀錄)\n"
 "    URL -> URL:  完全是伺服器端的更名.\n"
 
-#: clients/cmdline/main.c:454
+#: clients/cmdline/main.c:456
 msgid ""
 "Remove PROPNAME from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -872,7 +873,7 @@ msgstr ""
 "  1. 移除納入版本控制的工作複本性質.\n"
 "  2. 移除無版本控制的遠端檔案庫修訂版性質.\n"
 
-#: clients/cmdline/main.c:464
+#: clients/cmdline/main.c:466
 msgid ""
 "Edit property PROPNAME with an external editor on targets.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -888,7 +889,7 @@ msgstr ""
 "  1. 編輯納入版本控制的工作複本性質.\n"
 "  2. 編輯無版本控制的遠端檔案庫修訂版性質更動.\n"
 
-#: clients/cmdline/main.c:475
+#: clients/cmdline/main.c:477
 msgid ""
 "Print value of PROPNAME on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [PATH...]\n"
@@ -916,7 +917,7 @@ msgstr ""
 "  所對應到的路徑. 使用 --strict 選項以關閉這項美化行為 (舉例來說,\n"
 "  將二進制性質內容重導至一個檔案時就很有用).\n"
 
-#: clients/cmdline/main.c:492
+#: clients/cmdline/main.c:494
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [PATH...]\n"
@@ -932,7 +933,7 @@ msgstr ""
 "  1. 列出納入版本管理的工作複本性質.\n"
 "  2. 列出無版本控制的遠端檔案庫修訂版性質更動.\n"
 
-#: clients/cmdline/main.c:502
+#: clients/cmdline/main.c:504
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -997,7 +998,7 @@ msgstr ""
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 
-#: clients/cmdline/main.c:546
+#: clients/cmdline/main.c:548
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1012,7 +1013,7 @@ msgstr ""
 "  注意: 本子命令不會依語法來解決衝突或是移除衝突標記; 它只是移除衝突的\n"
 "        相關檔案, 然後讓 PATH 可以再度送交.\n"
 
-#: clients/cmdline/main.c:555
+#: clients/cmdline/main.c:557
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1026,7 +1027,7 @@ msgstr ""
 "  注意: 本子命令不會存取網路, 並且會解除衝突的狀況. 但是它不會復原\n"
 "        被刪除的目錄\n"
 
-#: clients/cmdline/main.c:565
+#: clients/cmdline/main.c:567
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1153,7 +1154,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Head revision:   981\n"
 
-#: clients/cmdline/main.c:632
+#: clients/cmdline/main.c:634
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1179,7 +1180,7 @@ msgstr ""
 "     URL 變動 (像是綱要或是主機名稱變動), 但是工作複本仍舊對映到同一\n"
 "     檔案庫的同一目錄時用之.\n"
 
-#: clients/cmdline/main.c:653
+#: clients/cmdline/main.c:655
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1216,43 +1217,43 @@ msgstr ""
 "\n"
 "  第一欄的字元表示實際檔案的更新, 而檔案性質顯示在第二欄.\n"
 
-#: clients/cmdline/main.c:677
+#: clients/cmdline/main.c:679
 msgid "Print client version info\n"
 msgstr "輸出用戶端版本資料\n"
 
-#: clients/cmdline/main.c:731 svnadmin/main.c:75
+#: clients/cmdline/main.c:733 svnadmin/main.c:75
 msgid "Caught signal"
 msgstr "捕捉到信號"
 
-#: clients/cmdline/main.c:831 svnadmin/main.c:1006
+#: clients/cmdline/main.c:833 svnadmin/main.c:1006
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr "遇到了多個修訂版引數; 請試著將 '-r M -r N' 改為 '-r M:N'"
 
-#: clients/cmdline/main.c:843 svnadmin/main.c:1023
+#: clients/cmdline/main.c:845 svnadmin/main.c:1023
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "修訂版引數 '%s' 中有語法錯誤"
 
-#: clients/cmdline/main.c:988 clients/cmdline/main.c:998
+#: clients/cmdline/main.c:990 clients/cmdline/main.c:1000
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 與 --no-auto-props 是互相排斥的"
 
-#: clients/cmdline/main.c:1014
+#: clients/cmdline/main.c:1016
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "原生換列符號引數 '%s' 中有語法錯誤"
 
-#: clients/cmdline/main.c:1057
+#: clients/cmdline/main.c:1059
 msgid "Subcommand argument required\n"
 msgstr "必須提供子命令引數\n"
 
-#: clients/cmdline/main.c:1075 svnadmin/main.c:1143 svnlook/main.c:1968
+#: clients/cmdline/main.c:1077 svnadmin/main.c:1143 svnlook/main.c:1968
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知的命令: '%s'\n"
 
-#: clients/cmdline/main.c:1108
+#: clients/cmdline/main.c:1110
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1261,18 +1262,18 @@ msgstr ""
 "子命令 '%s' 不接受選項 '%s'\n"
 "請輸入 'svn help %s' 以取得用法.\n"
 
-#: clients/cmdline/main.c:1142
+#: clients/cmdline/main.c:1144
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "紀錄訊息檔是一個版本控制中的檔案; 請使用 '--force-log' 以略過此限制"
 
-#: clients/cmdline/main.c:1160
+#: clients/cmdline/main.c:1162
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
 "紀錄訊息是一個路徑名稱 (-F 是故意的嗎?); 請使用 '--force-log' 以略過此限制"
 
-#: clients/cmdline/main.c:1363
+#: clients/cmdline/main.c:1365
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1529,12 +1530,12 @@ msgstr "用戶憑證檔名: "
 msgid "Passphrase for '%s': "
 msgstr "'%s' 的密碼: "
 
-#: clients/cmdline/propdel-cmd.c:85 clients/cmdline/propedit-cmd.c:92
+#: clients/cmdline/propdel-cmd.c:85 clients/cmdline/propedit-cmd.c:91
 #: clients/cmdline/proplist-cmd.c:79 clients/cmdline/propset-cmd.c:116
 msgid "No URL target available"
 msgstr "沒有提供 URL 目標"
 
-#: clients/cmdline/propdel-cmd.c:91 clients/cmdline/propedit-cmd.c:98
+#: clients/cmdline/propdel-cmd.c:91 clients/cmdline/propedit-cmd.c:97
 #: clients/cmdline/proplist-cmd.c:85 clients/cmdline/propset-cmd.c:121
 msgid "Either a URL or versioned item is required"
 msgstr "必須提供 URL 或納入版本控制的項目"
@@ -1559,46 +1560,46 @@ msgstr "性質 '%s' 自 '%s' 刪除 (遞迴式).\n"
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "性質 '%s' 自 '%s' 刪除.\n"
 
-#: clients/cmdline/propedit-cmd.c:130 clients/cmdline/propedit-cmd.c:259
+#: clients/cmdline/propedit-cmd.c:123 clients/cmdline/propedit-cmd.c:244
 #: clients/cmdline/propset-cmd.c:87
 msgid "Bad encoding option: prop value not stored as UTF8"
 msgstr "有問題的編碼選項: 性質內容未以 UTF8 儲存"
 
-#: clients/cmdline/propedit-cmd.c:139
+#: clients/cmdline/propedit-cmd.c:132
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "性質 '%s' 於修訂版 %ld 設為新值\n"
 
-#: clients/cmdline/propedit-cmd.c:145
+#: clients/cmdline/propedit-cmd.c:138
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
 msgstr "性質 '%s' 於修訂版 %ld 沒有更動\n"
 
-#: clients/cmdline/propedit-cmd.c:153
+#: clients/cmdline/propedit-cmd.c:146
 #, c-format
 msgid "Cannot specify revision for editing versioned property '%s'"
 msgstr "編輯納入版本控制的性質 '%s' 時不可指定修訂版"
 
-#: clients/cmdline/propedit-cmd.c:179 clients/cmdline/propset-cmd.c:179
+#: clients/cmdline/propedit-cmd.c:172 clients/cmdline/propset-cmd.c:179
 msgid "Explicit target argument required"
 msgstr "必須明確地提供目標"
 
-#: clients/cmdline/propedit-cmd.c:204
+#: clients/cmdline/propedit-cmd.c:196
 #, c-format
 msgid "Editing property on non-local target '%s' not yet supported"
 msgstr "尚不支援編輯非本地目標 '%s' 的性質"
 
-#: clients/cmdline/propedit-cmd.c:227
+#: clients/cmdline/propedit-cmd.c:219
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' 不像是工作複本路徑"
 
-#: clients/cmdline/propedit-cmd.c:265
+#: clients/cmdline/propedit-cmd.c:250
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
 msgstr "性質 '%s' 於 '%s' 設為新值\n"
 
-#: clients/cmdline/propedit-cmd.c:272
+#: clients/cmdline/propedit-cmd.c:257
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
 msgstr "性質 '%s' 於 '%s' 沒有更動\n"
@@ -1646,7 +1647,7 @@ msgstr ""
 "\n"
 "送交修訂版 %ld.\n"
 
-#: clients/cmdline/util.c:125
+#: clients/cmdline/util.c:128
 msgid ""
 "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and "
 "no 'editor-cmd' run-time configuration option was found"
@@ -1654,50 +1655,50 @@ msgstr ""
 "沒有一個 SVN_EDITOR, VISUAL 或 EDITOR 環境變數被設定, 執行時期的設定中也沒有 "
 "'editor-cmd' 選項"
 
-#: clients/cmdline/util.c:135
+#: clients/cmdline/util.c:155
 msgid "Can't get working directory"
 msgstr "無法取得工作目錄"
 
-#: clients/cmdline/util.c:146
+#: clients/cmdline/util.c:166
 #, c-format
 msgid "Can't change working directory to '%s'"
 msgstr "無法更改工作複本至 '%s'"
 
-#: clients/cmdline/util.c:172
+#: clients/cmdline/util.c:192
 #, c-format
 msgid "Can't write to '%s'"
 msgstr "無法寫入至 '%s'"
 
 # as-is
-#: clients/cmdline/util.c:187 clients/cmdline/util.c:211
+#: clients/cmdline/util.c:207 clients/cmdline/util.c:231
 #: libsvn_fs_fs/fs_fs.c:3334 libsvn_subr/io.c:2135
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Can't stat '%s'"
 
-#: clients/cmdline/util.c:202
+#: clients/cmdline/util.c:222
 #, c-format
 msgid "system('%s') returned %d"
 msgstr "system('%s') 傳回 %d"
 
-#: clients/cmdline/util.c:258
+#: clients/cmdline/util.c:287
 msgid "Can't restore working directory"
 msgstr "無法還原工作目錄"
 
-#: clients/cmdline/util.c:296
+#: clients/cmdline/util.c:325
 msgid "Log message contains a zero byte"
 msgstr "紀錄訊息中有一個零位元組"
 
-#: clients/cmdline/util.c:354
+#: clients/cmdline/util.c:383
 msgid "Your commit message was left in a temporary file:"
 msgstr "你的送交訊息遺留在暫存檔中:"
 
 # as-is
-#: clients/cmdline/util.c:406
+#: clients/cmdline/util.c:435
 msgid "--This line, and those below, will be ignored--"
 msgstr "--This line, and those below, will be ignored--"
 
-#: clients/cmdline/util.c:527
+#: clients/cmdline/util.c:547
 msgid ""
 "Could not use external editor to fetch log message; consider setting the "
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
@@ -1706,7 +1707,7 @@ msgstr ""
 "無法使用外部編輯器取得紀錄訊息; 請試著設定 $SVN_EDITOR 環境變數, 或是使用 --"
 "message (-m) 或 --file (-F) 選項"
 
-#: clients/cmdline/util.c:562
+#: clients/cmdline/util.c:582
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -2625,7 +2626,7 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "送交項目 '%s' 有複製旗標, 但是修訂版無效"
 
 #: libsvn_client/copy.c:102 libsvn_client/copy.c:646 libsvn_client/copy.c:834
-#: libsvn_ra_dav/commit.c:869
+#: libsvn_ra_dav/commit.c:897
 #, c-format
 msgid "File '%s' already exists"
 msgstr "檔案 '%s' 已存在"
@@ -2812,7 +2813,7 @@ msgid "At least one revision must be non-local for a pegged diff"
 msgstr "對於 peg 差異, 必須至少有一個非本地端的修訂版"
 
 #: libsvn_client/diff.c:2268 libsvn_client/diff.c:2273
-#: libsvn_client/diff.c:2384 libsvn_client/export.c:729 libsvn_client/ra.c:694
+#: libsvn_client/diff.c:2384 libsvn_client/export.c:737 libsvn_client/ra.c:694
 #: libsvn_client/ra.c:814
 #, c-format
 msgid "'%s' has no URL"
@@ -2823,26 +2824,26 @@ msgstr "'%s' 沒有 URL"
 msgid "'%s' is not a valid EOL value"
 msgstr "'%s' 不是一個有效的 EOL 值"
 
-#: libsvn_client/export.c:137
+#: libsvn_client/export.c:143
 msgid "Destination directory exists, and will not be overwritten unless forced"
 msgstr "目的目錄已存在, 除非強迫為之, 否則不會複寫過去"
 
 # as-is
-#: libsvn_client/export.c:264
+#: libsvn_client/export.c:272
 msgid "(local)"
 msgstr "(local)"
 
-#: libsvn_client/export.c:322 libsvn_client/export.c:464
+#: libsvn_client/export.c:330 libsvn_client/export.c:472
 #, c-format
 msgid "'%s' exists and is not a directory"
 msgstr "'%s' 已存在, 但不是目錄"
 
-#: libsvn_client/export.c:325 libsvn_client/export.c:468
+#: libsvn_client/export.c:333 libsvn_client/export.c:476
 #, c-format
 msgid "'%s' already exists"
 msgstr "'%s' 已存在"
 
-#: libsvn_client/export.c:639 libsvn_wc/update_editor.c:1584
+#: libsvn_client/export.c:647 libsvn_wc/update_editor.c:1584
 #: libsvn_wc/update_editor.c:2331
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
@@ -3251,21 +3252,21 @@ msgstr "無法辨識的 URL 綱要 '%s'"
 msgid "  - handles '%s' schema\n"
 msgstr "  - handles '%s' schema\n"
 
-#: libsvn_ra_dav/commit.c:150
+#: libsvn_ra_dav/commit.c:167
 #, c-format
 msgid "Could not create a request (%s '%s')"
 msgstr "無法建立要求 (%s '%s')"
 
-#: libsvn_ra_dav/commit.c:984
+#: libsvn_ra_dav/commit.c:1018
 msgid "Could not write svndiff to temp file"
 msgstr "無法寫 svndiff 至暫存檔"
 
-#: libsvn_ra_dav/commit.c:1074
+#: libsvn_ra_dav/commit.c:1108
 #, c-format
 msgid "Could not create a PUT request (%s)"
 msgstr "無法產生一個 PUT 要求 (%s)"
 
-#: libsvn_ra_dav/commit.c:1221
+#: libsvn_ra_dav/commit.c:1255
 #, c-format
 msgid "applying log message to %s"
 msgstr "套用紀錄訊息至 '%s'"
@@ -3303,38 +3304,38 @@ msgstr ""
 "  預期的總和檢查值:  %s\n"
 "  實際的總和檢查值:    %s\n"
 
-#: libsvn_ra_dav/fetch.c:1089
+#: libsvn_ra_dav/fetch.c:1087
 msgid "Server does not support date-based operations"
 msgstr "伺服器不支援基於日期的動作"
 
-#: libsvn_ra_dav/fetch.c:1096
+#: libsvn_ra_dav/fetch.c:1094
 msgid "Invalid server response to dated-rev request"
 msgstr "對 dated-rev 要求的無效伺服器回應"
 
 # as-is
-#: libsvn_ra_dav/fetch.c:1235
+#: libsvn_ra_dav/fetch.c:1233
 msgid "get-locations REPORT not implemented"
 msgstr "get-locations REPORT not implemented"
 
-#: libsvn_ra_dav/fetch.c:1303
+#: libsvn_ra_dav/fetch.c:1301
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
 msgstr ""
 "DAV 要求失敗; 可能是檔案庫的 pre-revprop-change 掛勾執行失敗, 或是不存在"
 
-#: libsvn_ra_dav/fetch.c:2018
+#: libsvn_ra_dav/fetch.c:2016
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "寫入 '%s' 時發生錯誤: 不預期的 EOF"
 
-#: libsvn_ra_dav/fetch.c:2155
+#: libsvn_ra_dav/fetch.c:2153
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "未知的 XML 編碼: '%s'"
 
 # as-is
-#: libsvn_ra_dav/fetch.c:2413
+#: libsvn_ra_dav/fetch.c:2411
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "REPORT response handling failed to complete the editor drive"
 
@@ -3500,28 +3501,28 @@ msgstr "無法連接到伺服器"
 msgid "timed out waiting for server"
 msgstr "等待伺服器逾時"
 
-#: libsvn_ra_dav/util.c:455
+#: libsvn_ra_dav/util.c:467
 msgid "Can't calculate the request body size"
 msgstr "無法算出要求的本體大小"
 
-#: libsvn_ra_dav/util.c:641
+#: libsvn_ra_dav/util.c:653
 #, c-format
 msgid "'%s' path not found"
 msgstr "找不到路徑 '%s'"
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:646 libsvn_ra_dav/util.c:789
+#: libsvn_ra_dav/util.c:658 libsvn_ra_dav/util.c:801
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s of '%s'"
 
-#: libsvn_ra_dav/util.c:657
+#: libsvn_ra_dav/util.c:669
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "%s 要求的回應傳回無效的 XML: %s (%s)"
 
-#: libsvn_ra_dav/util.c:671
+#: libsvn_ra_dav/util.c:683
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "%s 要求於 '%s' 的失敗"
@@ -3568,7 +3569,7 @@ msgstr "本地 URL '%s' 僅含主機名稱, 沒有路徑"
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "本地 URL '%s' 包含未支援的主機名稱"
 
-#: libsvn_ra_local/split_url.c:108 libsvn_ra_local/split_url.c:115
+#: libsvn_ra_local/split_url.c:109 libsvn_ra_local/split_url.c:116
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "無法開啟檔案庫 '%s'"
@@ -5175,12 +5176,12 @@ msgstr "完成.\n"
 #: svnadmin/main.c:578
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"請使用 \"svnadmin help <subcommand>\" 以取得特定子命令的求助資訊.\n"
+"請使用 'svnadmin help <subcommand>' 以取得特定子命令的求助資訊.\n"
 "\n"
 "可用的子命令:\n"
 
@@ -5314,12 +5315,12 @@ msgstr ""
 #: svndumpfilter/main.c:799
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "一般用法: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"請使用 \"svndumpfilter help <subcommand>\" 以取得特定子命令的求助資訊.\n"
+"請使用 'svndumpfilter help <subcommand>' 以取得特定子命令的求助資訊.\n"
 "\n"
 "可用的子命令:\n"
 
@@ -5356,11 +5357,6 @@ msgstr "修訂版被重新編號, 如下:\n"
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (dropped)\n"
-
-#: svndumpfilter/main.c:925
-#, c-format
-msgid "   %ld => %ld\n"
-msgstr "   %ld => %ld\n"
 
 #: svndumpfilter/main.c:936
 #, c-format
@@ -5640,14 +5636,14 @@ msgid ""
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
 "      options will, if invoked without one of those options, act on\n"
 "      the repository's youngest revision.\n"
-"Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnlook help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "一般用法: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "注意: 任何接受 '--revision' 與 '--transaction' 選項的子命令, 在沒有\n"
 "      指定兩者其一的情況下使用, 會直接作用在檔案庫最年輕的修訂版.\n"
-"請使用 \"svnlook help <subcommand>\" 以取得特定子命令的求助資訊.\n"
+"請使用 'svnlook help <subcommand>' 以取得特定子命令的求助資訊.\n"
 "\n"
 "可用的子命令:\n"
 
@@ -5690,7 +5686,7 @@ msgstr ""
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
-"  Produce a compact \"version number\" for the working copy path\n"
+"  Produce a compact 'version number' for the working copy path\n"
 "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
 "  determine if WC_PATH itself is switched (detection of switches\n"
 "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
@@ -5710,13 +5706,13 @@ msgid ""
 "   4123:4168MS   mixed revision, modified, switched working copy\n"
 "\n"
 "  If invoked on a directory that is not a working copy, an\n"
-"  exported directory say, the program will output \"exported\".\n"
+"  exported directory say, the program will output 'exported'.\n"
 "\n"
 "Valid options:\n"
 msgstr ""
 "用法: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
-"  為工作複本路徑 WC_PATH 產生簡潔的 \"版本號碼\". TRAIL_URL 是\n"
+"  為工作複本路徑 WC_PATH 產生簡潔的 '版本號碼'. TRAIL_URL 是\n"
 "  URL 的結尾部份, 用以決定 WC_PATH 是否已被切換 (WC_PATH 內的切換\n"
 "  偵測並不倚賴 TRAIL_URL). 版本號碼會寫至標準輸出. 舉例說明:\n"
 "\n"
@@ -5733,7 +5729,7 @@ msgstr ""
 "   4123:4168MS   混合修訂版, 有修改, 切換了的工作複本\n"
 "\n"
 "  如果在非工作複本的目錄中, 例如匯出的目錄執行的話, 那麼\n"
-"  這個程式會輸出 \"已匯出\".\n"
+"  這個程式會輸出 '已匯出'.\n"
 "\n"
 "有效選項:\n"
 
@@ -5754,22 +5750,3 @@ msgstr "已匯出%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' 未納入版本控制, 並未匯出\n"
-
-#~ msgid "exported\n"
-#~ msgstr "已匯出\n"
-
-#~ msgid ""
-#~ "usage: svnadmin recover REPOS_PATH\n"
-#~ "\n"
-#~ "Run the Berkeley DB recovery procedure on a repository.  Do\n"
-#~ "this if you've been getting errors indicating that recovery\n"
-#~ "ought to be run.  Recovery requires exclusive access and will\n"
-#~ "exit if the repository is in use by another process.\n"
-#~ "\n"
-#~ msgstr ""
-#~ "用法: svnadmin recover REPOS_PATH\n"
-#~ "\n"
-#~ "對檔案庫進行 Berkeley DB 修復程序. 如果你遇到要求進行修復的\n"
-#~ "錯誤訊息, 請執行本命令. 修復需要獨佔的存取權, 如果檔案庫被其\n"
-#~ "它行程所佔用, 它會馬上結束\n"
-#~ "\n"
