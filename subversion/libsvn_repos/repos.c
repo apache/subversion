@@ -15,6 +15,8 @@
  * ====================================================================
  */
 
+#include <assert.h>
+
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
@@ -23,7 +25,15 @@
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_config.h"
+#include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
+
 #include "repos.h"
+
+
+/* When creating the on-disk structure for a repository, we will look for
+   a builtin template of this name.  */
+#define DEFAULT_TEMPLATE_NAME "default"
 
 
 
@@ -41,13 +51,6 @@ const char *
 svn_repos_db_env (svn_repos_t *repos, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, repos->db_path);
-}
-
-
-const char *
-svn_repos_conf_dir (svn_repos_t *repos, apr_pool_t *pool)
-{
-  return apr_pstrdup (pool, repos->conf_path);
 }
 
 
@@ -124,13 +127,36 @@ svn_repos_post_revprop_change_hook (svn_repos_t *repos, apr_pool_t *pool)
 
 
 static svn_error_t *
+create_repos_dir (const char *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
+  if (err && (APR_STATUS_IS_EEXIST (err->apr_err)))
+    {
+      svn_boolean_t is_empty;
+
+      svn_error_clear (err);
+
+      SVN_ERR (svn_io_dir_empty (&is_empty, path, pool));
+
+      err = svn_error_createf (SVN_ERR_DIR_NOT_EMPTY, 0,
+                               "`%s' exists and is non-empty",
+                               path);
+    }
+
+  return err;
+}
+
+
+static svn_error_t *
 create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
   /* Create the locks directory. */
-  SVN_ERR_W (svn_io_dir_make (path, APR_OS_DEFAULT, pool),
-                              "creating lock dir");
+  SVN_ERR_W (create_repos_dir (path, pool),
+             "creating lock dir");
 
   /* Create the DB lockfile under that directory. */
   {
@@ -182,7 +208,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
   apr_size_t written;
 
   /* Create the hook directory. */
-  SVN_ERR_W (svn_io_dir_make (path, APR_OS_DEFAULT, pool),
+  SVN_ERR_W (create_repos_dir (path, pool),
              "creating hook directory");
 
   /*** Write a default template for each standard hook file. */
@@ -673,54 +699,23 @@ init_repos_dirs (svn_repos_t *repos, apr_pool_t *pool)
 {
   repos->db_path = svn_path_join (repos->path, SVN_REPOS__DB_DIR, pool);
   repos->dav_path = svn_path_join (repos->path, SVN_REPOS__DAV_DIR, pool);
-  repos->conf_path = svn_path_join (repos->path, SVN_REPOS__CONF_DIR, pool);
   repos->hook_path = svn_path_join (repos->path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_path_join (repos->path, SVN_REPOS__LOCK_DIR, pool);
 }
 
 
-svn_error_t *
-svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
+static svn_error_t *
+create_repos_structure (svn_repos_t *repos,
+                        const char *path,
+                        apr_pool_t *pool)
 {
-  svn_repos_t *repos;
-  apr_status_t apr_err;
-  svn_error_t *err;
-
-  /* Allocate a repository object. */
-  repos = apr_pcalloc (pool, sizeof (*repos));
-
   /* Create the top-level repository directory. */
-  err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
-  if (err && (APR_STATUS_IS_EEXIST (err->apr_err)))
-    {
-      svn_boolean_t is_empty;
-      SVN_ERR (svn_io_dir_empty (&is_empty, path, pool));
-      if (! is_empty)
-        return svn_error_createf
-          (SVN_ERR_DIR_NOT_EMPTY, 0,
-           "`%s' exists and is non-empty, repository creation failed",
-           path);
-    }
-  else if (err)
-    return err;
-
-  /* Initialize the repository paths. */
-  repos->path = apr_pstrdup (pool, path);
-  init_repos_dirs (repos, pool);
-  
-  /* Initialize the filesystem object. */
-  repos->fs = svn_fs_new (pool);
-
-  /* Create a Berkeley DB environment for the filesystem. */
-  SVN_ERR (svn_fs_create_berkeley (repos->fs, repos->db_path));
+  SVN_ERR_W (create_repos_dir (path, pool),
+             "could not create top-level directory");
 
   /* Create the DAV sandbox directory.  */
-  SVN_ERR_W (svn_io_dir_make (repos->dav_path, APR_OS_DEFAULT, pool),
+  SVN_ERR_W (create_repos_dir (repos->dav_path, pool),
              "creating DAV sandbox dir");
-
-  /* Create the conf directory.  */
-  SVN_ERR_W (svn_io_dir_make (repos->conf_path, APR_OS_DEFAULT, pool),
-             "creating conf dir");
 
   /* Create the lock directory.  */
   SVN_ERR (create_locks (repos, repos->lock_path, pool));
@@ -730,6 +725,7 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
 
   /* Write the top-level README file. */
   {
+    apr_status_t apr_err;
     apr_file_t *readme_file = NULL;
     const char *readme_file_name 
       = svn_path_join (path, SVN_REPOS__README, pool);
@@ -768,6 +764,137 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
   SVN_ERR (svn_io_write_version_file 
            (svn_path_join (path, SVN_REPOS__FORMAT, pool),
             SVN_REPOS__VERSION, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+struct copy_ctx_t {
+  const char *path;     /* target location to construct */
+  apr_size_t base_len;  /* length of the template dir path */
+};
+
+static svn_error_t *copy_structure (void *baton,
+                                    const char *path,
+                                    const apr_finfo_t *finfo,
+                                    apr_pool_t *pool)
+{
+  const struct copy_ctx_t *cc = baton;
+  apr_size_t len = strlen (path);
+  const char *target;
+
+  if (len == cc->base_len)
+    {
+      /* The walked-path is the template base. Therefore, target is
+         the repository base path.  */
+      target = cc->path;
+    }
+  else
+    {
+      /* Take whatever is after the template base path, and append that
+         to the repository base path. Note that we get the right
+         slashes in here, based on how we slice the walked-pat.  */
+      target = apr_pstrcat (pool, cc->path, &path[cc->base_len], NULL);
+    }
+
+  if (finfo->filetype == APR_DIR)
+    {
+      SVN_ERR (create_repos_dir (target, pool));
+    }
+  else
+    {
+      apr_status_t apr_err;
+
+      assert (finfo->filetype == APR_REG);
+
+      apr_err = apr_file_copy (path, target, APR_FILE_SOURCE_PERMS, pool);
+      if (apr_err)
+        return svn_error_createf (apr_err, NULL,
+                                  "could not copy `%s'", path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_create (svn_repos_t **repos_p,
+                  const char *path,
+                  const char *on_disk_template,
+                  const char *in_repos_template,
+                  apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_error_t *err;
+  svn_config_t *cfg = NULL;
+  const char *template_root = NULL;
+  const char *template_path;
+  struct copy_ctx_t cc;
+
+  /* Allocate a repository object. */
+  repos = apr_pcalloc (pool, sizeof (*repos));
+
+  /* Initialize the repository paths. */
+  repos->path = apr_pstrdup (pool, path);
+  init_repos_dirs (repos, pool);
+
+  /* If the template is just a name, then look for it in the standard
+     templates. Otherwise, we'll assume it is a path.  */
+  if (on_disk_template == NULL || strchr(on_disk_template, '/') == NULL)
+    {
+      /* Get the root directory of the standard templates */
+      SVN_ERR (svn_config_read_config (&cfg, pool));
+      svn_config_get (cfg, &template_root, "miscellany", "template_root",
+                      SVN_TEMPLATE_ROOT_DIR);
+
+      template_path = svn_path_join_many (pool,
+                                          template_root,
+                                          "on-disk",
+                                          on_disk_template
+                                            ? on_disk_template
+                                            : DEFAULT_TEMPLATE_NAME,
+                                          NULL);
+    }
+  else
+    template_path = on_disk_template;
+
+  /* Set up the baton and attempt to walk over the template, copying
+     its files and directories to the repository location.  */
+  cc.path = path;
+  cc.base_len = strlen (template_path);
+  err = svn_io_dir_walk (template_path,
+                         0,
+                         copy_structure,
+                         &cc,
+                         pool);
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* We could not find the specified template. If the user
+             actually specified one, then bail.  */
+          if (on_disk_template != NULL)
+            return err;
+
+          /* Don't need the error any more. */
+          svn_error_clear (err);
+
+          /* We were trying the default. Oops... install problem?
+             Fall back to the builtin structure.  */
+          SVN_ERR_W (create_repos_structure (repos, path, pool),
+                     "repository creation failed");
+        }
+      else
+        return err;
+    }
+
+  /* The on-disk structure should be built now. */
+  
+  /* Initialize the filesystem object. */
+  repos->fs = svn_fs_new (pool);
+
+  /* Create a Berkeley DB environment for the filesystem. */
+  SVN_ERR (svn_fs_create_berkeley (repos->fs, repos->db_path));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
