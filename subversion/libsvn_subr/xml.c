@@ -26,6 +26,7 @@
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
+#include "utf_impl.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include "xmlparse.h"
@@ -68,12 +69,12 @@ svn_xml_is_xml_safe (const char *data, apr_size_t len)
   const char *end = data + len;
   const char *p;
 
+  if (! svn_utf__is_valid (data, len))
+    return FALSE;
+
   for (p = data; p < end; p++)
     {
       unsigned char c = *p;
-
-      if (! svn_ctype_isutf8(c))
-        return FALSE;
 
       if (svn_ctype_iscntrl(c))
         {
