@@ -284,10 +284,10 @@ project files included in the source tree are from Microsoft Visual
 C++ 6.x; earlier versions of the compiler are not supported at this
 time.
 
-To build the client components, you'll need a copy of neon 0.17.0. The
+To build the client components, you'll need a copy of neon 0.17.2. The
 sources are available at
 
-    http://www.webdav.org/neon/neon-0.17.0.tar.gz
+    http://www.webdav.org/neon/neon-0.17.2.tar.gz
 
 Unpack the distribution into the root directory of the Subversion
 source tree and rename the directory neon-0.17.0 to neon.  The MSVC
@@ -295,15 +295,22 @@ project files in this archive are not up-to-date, so building the neon
 libraries is not straight-forward.  Pre-built neon libraries are
 available at
 
-   http://www.xbc.nu/svn/libneon-0.17.0-svn-win32.zip
+   http://www.xbc.nu/svn/libneon-0.17.2-svn-win32.zip
 
-Unpack the two files in this archive, libneon.lib and libneonD.lib,
-into the <SVN>/neon directory. (<SVN> is the root of the source tree,
-the directory where you found the file you're reading.)
+Unpack the archive into the <SVN>/neon directory. (<SVN> is the root
+of the source tree, the directory where you found the file you're
+reading.)  You'll get the pre-built libneon.lib and libneonD.lib, as
+well as the modified project files used to build them, the config.hw
+file and the complete (unmodified) neon/src directory.
 
-IMPORTANT NOTE: These neon libraries should *only* be used when
-     building Subversion. They were build to depend on the verson of
-     expat-lite in the Subversion sources.
+    IMPORTANT NOTE: These neon libraries should *only* be used when
+         building Subversion. They were build to depend on the verson
+         of expat-lite in the Subversion sources.
+
+If you want to rebuild the neon libraries using the project files in
+this package, you'll have to set the NEON_EXPAT_LITE_WIN32 environment
+variable to <SVN>/expat-lite before starting Visual Studio, so that
+neon can find the expat-lite includes.
 
 If you want to build the server components, you'll also need a copy of
 Berkeley DB, version 3.3.11 or newer. The sources are available at
@@ -329,6 +336,10 @@ drivers.
 
 You will have to edit the file svn_private_config.hw to set the
 correct paths for diff and patch.
+
+
+NOTE: There have been rumours that Subversion on Win32 can be build
+using the latest cygwin. ymmv.
 
 
 
