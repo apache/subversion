@@ -91,12 +91,11 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
    dup'ed from STREAM using APRPOOL too.) */
 static svn_error_t *
 stream_to_string (svn_string_t **string,
-                  svn_stream_t *stream,
-                  apr_pool_t *aprpool)
+                  svn_stream_t *stream)
 {
   char buf[50];
   apr_size_t len;
-  svn_string_t *str = svn_string_create ("", aprpool);
+  svn_string_t *str = svn_string_create ("", pool);
 
   do 
     {
@@ -117,17 +116,16 @@ stream_to_string (svn_string_t **string,
 static svn_error_t *
 set_file_contents (svn_fs_root_t *root,
                    const char *path,
-                   const char *contents,
-                   apr_pool_t *aprpool)
+                   const char *contents)
 {
   svn_txdelta_window_handler_t *consumer_func;
   void *consumer_baton;
-  svn_string_t *wstring = svn_string_create (contents, aprpool);
+  svn_string_t *wstring = svn_string_create (contents, pool);
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
-                                   root, path, aprpool));
+                                   root, path, pool));
   SVN_ERR (svn_txdelta_send_string (wstring, consumer_func,
-                                    consumer_baton, aprpool));
+                                    consumer_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -367,11 +365,11 @@ write_and_read_file (const char **msg)
   SVN_ERR (svn_fs_make_file (txn_root, "beer.txt", pool));
 
   /* And write some data into this file. */
-  SVN_ERR (set_file_contents (txn_root, "beer.txt", wstring->data, pool));
+  SVN_ERR (set_file_contents (txn_root, "beer.txt", wstring->data));
   
   /* Now let's read the data back from the file. */
   SVN_ERR (svn_fs_file_contents (&rstream, txn_root, "beer.txt", pool));  
-  SVN_ERR (stream_to_string (&rstring, rstream, pool));
+  SVN_ERR (stream_to_string (&rstring, rstream));
 
   /* Compare what was read to what was written. */
   if (! svn_string_compare (rstring, wstring))
@@ -443,48 +441,48 @@ create_greek_tree_transaction (const char **msg)
   /* Create a friggin' tree, already! */
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
   SVN_ERR (set_file_contents (txn_root, "iota",
-                              "This is the file 'iota'.", pool));
+                              "This is the file 'iota'."));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
   SVN_ERR (set_file_contents (txn_root, "A/mu",
-                              "This is the file 'mu'.", pool));
+                              "This is the file 'mu'."));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/lambda", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
-                              "This is the file 'lambda'.", pool));
+                              "This is the file 'lambda'."));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/alpha", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/E/alpha",
-                              "This is the file 'alpha'.", pool));
+                              "This is the file 'alpha'."));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/E/beta",
-                              "This is the file 'beta'.", pool));
+                              "This is the file 'beta'."));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E/F", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/C", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/gamma", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/D/gamma",
-                              "This is the file 'gamma'.", pool));
+                              "This is the file 'gamma'."));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D/G", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/pi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/D/G/pi",
-                              "This is the file 'pi'.", pool));
+                              "This is the file 'pi'."));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/rho", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/D/G/rho",
-                              "This is the file 'rho'.", pool));
+                              "This is the file 'rho'."));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/G/tau", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/D/G/tau",
-                              "This is the file 'tau'.", pool));
+                              "This is the file 'tau'."));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/D/H", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/chi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/D/H/chi",
-                              "This is the file 'chi'.", pool));
+                              "This is the file 'chi'."));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/psi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/D/H/psi",
-                              "This is the file 'psi'.", pool));
+                              "This is the file 'psi'."));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/D/H/omega", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/D/H/omega",
-                              "This is the file 'omega'.", pool));
+                              "This is the file 'omega'."));
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
