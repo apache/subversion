@@ -57,7 +57,7 @@ else
 fi
 
 # Handle the neon/ subdir
-NEON_WANTED=0.8.1
+NEON_WANTED=0.11.0
 if [ ! -d neon ]; then
   echo ""
   echo "...Uh oh, there is a problem."
