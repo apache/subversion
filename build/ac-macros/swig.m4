@@ -105,6 +105,13 @@ AC_DEFUN(SVN_FIND_SWIG,
         SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
       done
     fi
+
+    if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+      SWIG_PL_INCLUDES=""
+      SWIG_PL_COMPILE="`$PERL -MConfig -e 'print $Config{cc}'` `$PERL -MExtUtils::Embed -e ccopts`"
+      SWIG_PL_LINK="`$PERL -MConfig -e 'print $Config{ld}'` `$PERL -MConfig -e 'print $Config{lddlflags}'` `$PERL -MExtUtils::Embed -e ldopts`"
+    fi
+
   fi
   AC_SUBST(SWIG_BUILD_RULES)
   AC_SUBST(SWIG_INSTALL_RULES)
@@ -112,6 +119,9 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_JAVA_INCLUDES)
+  AC_SUBST(SWIG_PL_INCLUDES)
+  AC_SUBST(SWIG_PL_COMPILE)
+  AC_SUBST(SWIG_PL_LINK)
   AC_SUBST(SWIG_LIBSWIG_DIR)
   AC_SUBST(SWIG_LDFLAGS)
 ])
