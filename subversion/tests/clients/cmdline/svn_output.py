@@ -77,12 +77,13 @@ def compare_line_lists(expected_lines, actual_lines, regexp):
    are said to match."""
 
   remachine = re.compile(regexp)
-  elist, alist = expected_lines, actual_lines # copy lists so we can change 'em
+  elist = expected_lines [:]     # make copies so we can change them
+  alist = actual_lines [:]
 
   for eline in elist:
     for aline in alist:  # alist will shrink each time this loop starts
       if not compare_lines(eline, aline, remachine):
-        del alist[alist.index(aline)] # safe to delete aline, because...
+        alist.remove(aline) # safe to delete aline, because...
         break # we're killing this aline loop, starting over with new eline.
     return 1  # failure:  we examined all alines, found no match for eline.
 
@@ -92,3 +93,17 @@ def compare_line_lists(expected_lines, actual_lines, regexp):
     return 1  # failure: alist had extra junk
   else:
     return 0  # success: we got a 1-to-1 mapping between sets.
+
+
+# Temporary: testing this module
+
+el = ['A   /foo/bar', 'M  /foo/baz', 'D   blee']
+al = ['M  /foo/baz', 'D   blee', 'A   /foo/bar',]
+rm = re.compile(r"^(..)\s+(.+)")
+
+# Result should be 0 (sameness)...
+print "comparing sets, result is:", compare_line_lists(el, al, rm)
+
+
+
+
