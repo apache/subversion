@@ -30,13 +30,16 @@
 
 
 /* Fill in the first four characters of STR_STATUS with status code
-   characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED. */
-static void
-generate_status_codes (char *str_status,
-                       enum svn_wc_status_kind text_status,
-                       enum svn_wc_status_kind prop_status,
-                       svn_boolean_t locked,
-                       svn_boolean_t copied)
+   characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED.
+
+   This function is also used by commit-cmd.c
+*/
+void
+svn_cl__generate_status_codes (char *str_status,
+                               enum svn_wc_status_kind text_status,
+                               enum svn_wc_status_kind prop_status,
+                               svn_boolean_t locked,
+                               svn_boolean_t copied)
 {
   char text_statuschar, prop_statuschar;
 
@@ -129,11 +132,11 @@ print_short_format (const char *path,
     return;
 
   /* Create local-mod status code block. */
-  generate_status_codes (str_status,
-                         status->text_status,
-                         status->prop_status,
-                         status->locked,
-                         status->copied);
+  svn_cl__generate_status_codes (str_status,
+                                 status->text_status,
+                                 status->prop_status,
+                                 status->locked,
+                                 status->copied);
 
   printf ("%s   %s\n", str_status, path);
 }
@@ -155,11 +158,11 @@ print_long_format (const char *path,
     return;
 
   /* Create local-mod status code block. */
-  generate_status_codes (str_status,
-                         status->text_status,
-                         status->prop_status,
-                         status->locked,
-                         status->copied);
+  svn_cl__generate_status_codes (str_status,
+                                 status->text_status,
+                                 status->prop_status,
+                                 status->locked,
+                                 status->copied);
 
   /* Get local revision number */
   if (status->entry)
