@@ -291,6 +291,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnlook
+/usr/lib/libsvn_auth*so*
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
 /usr/lib/libsvn_fs*so*
