@@ -220,8 +220,8 @@ splay_range_index (apr_off_t offset, range_index_node_t *tree)
     }
 
   /* Link in the left and right subtrees */
-  left->right  = tree->left;
-  right->left  = tree->right;
+  left->right = tree->left;
+  right->left = tree->right;
   tree->left  = scratch_node.right;
   tree->right = scratch_node.left;
 
@@ -239,7 +239,7 @@ splay_range_index (apr_off_t offset, range_index_node_t *tree)
         {
           /* A single right rotation is enough. */
           range_index_node_t *const node = tree->left;
-          tree->left = node->right; /* Which is always NULL */
+          tree->left = node->right; /* Which is always NULL. */
           node->right = tree;
           tree = node;
         }
@@ -290,6 +290,11 @@ delete_subtree (range_index_t *ndx, range_index_node_t *node)
     {
       delete_subtree(ndx, node->left);
       delete_subtree(ndx, node->right);
+
+      if (node->next)
+        node->next->prev = node->prev;
+      if (node->prev)
+        node->prev->next = node->next;
       free_range_index_node(ndx, node);
     }
 }
@@ -355,10 +360,9 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
           /* We have to make the same sort of checks as clean_tree()
              does for superseded ranges. Have to merge these someday. */
 
-          svn_boolean_t insert_range_p = FALSE;
-          svn_boolean_t left_overrides_p = FALSE;
+          svn_boolean_t insert_range_p = (ndx->tree->right == NULL);
 
-          if (ndx->tree->right != NULL)
+          if (!insert_range_p)
             {
               node = ndx->tree->right;
               while (node->left != NULL)
@@ -372,6 +376,8 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
             {
               /* Again, we have to check if the new node in and the one
                  to the left of the root override root's range. */
+
+              svn_boolean_t left_overrides_p = FALSE;
 
               /* FIXME: splay_range_index should return a pointer to this
                  node, because it does the exact same traversal before
@@ -418,9 +424,9 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
 
           /* Insert the range left of the splayed node */
           node = alloc_range_index_node(ndx, offset, limit, target_offset);
-          node->left = NULL;
-          node->right = ndx->tree;
-          ndx->tree = node;
+          node->left = node->prev = NULL;
+          node->right = node->next = ndx->tree;
+          ndx->tree = node->next->prev = node;
           clean_tree(ndx, limit);
         }
       else
