@@ -446,11 +446,13 @@
                      ["svn proplist" svn-status-property-list t]
                      ["set multiple properties" svn-status-property-set t]
                      ["edit one property" svn-status-property-edit-one-entry t]
+                     ["svn propdel" svn-status-property-delete t]
+                     "---"
                      ["svn:ignore file" svn-status-property-ignore-file t]
                      ["svn:ignore file extension" svn-status-property-ignore-file-extension t]
                      ["edit svn:ignore file" svn-status-property-edit-svn-ignore t]
+                     "---"
                      ["set svn:keyword list" svn-status-property-set-keyword-list t]
-                     ["svn propdel" svn-status-property-delete t]
                      )
                     "---"
                     ["edit next svn cmd line" svn-status-toggle-edit-cmd-flag t]
