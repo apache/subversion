@@ -27,15 +27,14 @@ This build requires certain other packages to be installed.
 
     To build the latest release directly from the subversion repository:
 
-    $ cd ../..; svn update; cd packages/rpm/redhat-7.x; make
-      or
-    $ cd ../..; svn update; cd packages/rpm/redhat-8+; make
+    $ cd ../..; svn update; cd packages/rpm/<distribution>; make
 
-    To make a particular release:
+    To make a particular Subversion revision:
 
-    $ cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm/redhat-7.x; make
-      or   
-    $ cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm/redhat-u+; make
+    $ cd ../..; svn update -r <RevisionNumber>
+    $ cd packages/rpm/<distribution>; make
+        or
+    $ cd packages/rpm/<distribution>; make RELEASE=1
 
 If you have any questions or problems, please direct them to the
 dev@subversion.tigris.org mailing list.  I'm on that list and will help out
