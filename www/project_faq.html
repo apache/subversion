@@ -2220,7 +2220,7 @@ contact the Subversion Users <a
   change "<tt>type=recno</tt>" to "<tt>type=btree</tt>", and delete
   the line beginning "<tt>re_len=</tt>".</li>
   <li><tt>rm copies</tt></li>
-  <li><tt>db_load &lt; copies.dump</tt></li>
+  <li><tt>db_load copies &lt; copies.dump</tt></li>
   <li><tt>svnadmin dump .. &gt; ../../my-recovered.svndump</tt></li>
   <li>Now create a new repository, reload the dump file just produced,
   and copy across any custom hooks or configuration.  Verify that the
