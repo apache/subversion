@@ -3,7 +3,7 @@
 <center>
 <img src="subversion.jpg">
 <h2>Weekly Status</h2>
-Last updated:  Monday, April 9, 2001
+Last updated:  Monday, April 16, 2001
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -13,7 +13,7 @@ Last updated:  Monday, April 9, 2001
 <ul>
 <li> <b>Milestone 1</b> (20 Oct 2000):  basic working copy manipulation;
       client can checkout/update/commit using XML files. </li>
-<li> <b>Milestone 2</b> (1 Apr 2001):  rudimentary working filesystem;
+<li> <b>Milestone 2</b> (20 Apr 2001):  rudimentary working filesystem;
       client can checkout/update/commit using WebDAV layer. </li>
 <li> <b>Alpha</b> (15 May 2001):  feature complete. </li>
 <li> <b>Beta</b> (15 June 2001):  release candidate, heavy testing. </li>
@@ -47,9 +47,9 @@ Last updated:  Monday, April 9, 2001
     <td align="left">Networking Layer</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=300 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>75%</font></td>
-          <td width=100 bgcolor="FF0000">&nbsp;</td>
+          <td width=320 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>80%</font></td>
+          <td width=80 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -96,19 +96,22 @@ Last updated:  Monday, April 9, 2001
 <h3>Last Week's Activities</h3>
 
 <p>
- Subversion developers held a hefty set of meetings at the
- pre-ApacheCon Hackathon (on the Apple campus) and at CollabNet's
- Brisbane office.  We discussed many topics, resulting in the
- formulation of a roadmap for reaching the M2 and 1.0 milestones, and
- beyond.  As a result of these meetings (which for some developers
- happened nearly every day of the past week) and other events (such as
- the Hackathon, ApacheCon itself, etc.), actual code contribution to
- Subversion was at a minimum, though some much-welcomed bug fixes were
- submitted.
+Milestone 2 contains two big leaps: a working repository filesystem
+and a working network layer.  Over the last two months, the Chicago
+team (Karl, Mike, Ben) completed the filesystem (minus certain
+optimizations) and it can be hooked directly to the client for "local"
+checkouts, commits, and updates.  This week, Greg Stein is finishing
+the DAV layer.  When we're able to do checkouts, commits, and updates
+through Apache, we'll tag the code as 'M2' and move on.
 <p>
- Karl and Greg S. gave a presentation at the Silicon Valley Linux
- Users' Group. More details on <a
- href="http://www.newsforge.com/article.pl?sid=01/04/06/0325253">Newsforge</a>
+Meanwhile, our many meetings in SF have resulted in a comprehensive
+"to-do" list to reach a feature-complete alpha.  (See
+notes/alpha_checklist in our source tree.)
+<p>
+Last week, we worked on squashing existing memory bugs and
+implementing a 'black-box' testing system in python.  This week, we'll
+be re-architecting some internals which will allow client subcommands
+to accept multiple target paths.
 
 
 <!----------------------------------------------------------------->
@@ -116,9 +119,9 @@ Last updated:  Monday, April 9, 2001
 <h3>What People Are Currently Working On</h3>
 
 <ul>
-<li><b>Filesystem</b>:  kfogel, jimb, cmpilato </li>
-<li><b>Repository Access layer</b>:  gstein, sussman </li>
-<li><b>Client libs</b>:  fitz, sussman, cmpilato </li>
+<li><b>Filesystem</b>: jimb, cmpilato </li>
+<li><b>Repository Access layers</b>:  gstein, sussman </li>
+<li><b>Client libs</b>:  fitz, sussman, cmpilato, kfogel </li>
 <li><b>Migration tools</b>:  -- </li>
 <li><b>Docs</b>:  everyone, but on hold during fs work </li>
 </ul>
