@@ -324,6 +324,33 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           return;
         }
     }
+  else if (strcmp (eltname, SVN_WC__LOG_RM) == 0)
+    {
+      apr_status_t status;
+
+      if (! name)
+        {
+          signal_error
+            (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                       0,
+                                       NULL,
+                                       loggy->pool,
+                                       "missing name attr in %s",
+                                       loggy->path->data));
+          return;
+        }
+
+      status = apr_remove_file (name, loggy->pool);
+      if (status)
+        {
+          err = svn_error_createf (status, 0, NULL, loggy->pool,
+                                   "apr_remove_file couldn't remove %s",
+                                   name);
+          signal_error (loggy, err);
+          return;
+        }
+    }
+
   else if (strcmp (eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0)
     {
       apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);

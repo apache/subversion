@@ -301,6 +301,9 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 /* Copy a file from one place to another */
 #define SVN_WC__LOG_CP                  "cp"
 
+/* Delete a file */
+#define SVN_WC__LOG_RM                  "rm"
+
 /* Append one file onto another */
 #define SVN_WC__LOG_APPEND              "append"
 
