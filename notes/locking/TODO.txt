@@ -18,8 +18,6 @@ MUST HAVE
 
    * need to xml-escape lock-comments over http.  (sussman;  almost done)
 
-* 'svn commit' can easily create a no-op revision (fitz)
-
 * fs lock-enforcement issues (cmpilato)
 
 * fix svn_fs_access_t handling in svnserve (lundblad?)
