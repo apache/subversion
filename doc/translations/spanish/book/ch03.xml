@@ -1760,12 +1760,13 @@ $
 </screen>
       </tip>
 
-      <para>The repository doesn't know or care if your changes make
-        any sense as a whole; it only checks to make sure that nobody
-        else has changed any of the same files that you did when you
-        weren't looking.  If somebody <emphasis>has</emphasis> done
-        that, the entire commit will fail with a message informing you
-        that one or more of your files is out-of-date:</para>
+      <para>El repositorio no sabe ni cuida<!--TODO:doesn't know or care-->
+        si sus cambios tienen algún sentido en su totalidad; solo comprueba
+        para asegurarse que nadie haya cambiado cualquiera de los mismos
+        ficheros que usted mientras usted no miraba. Si alguien
+        <emphasis>ha</emphasis> hecho esto, el envio entero fallará con
+        un mensaje informandole que uno o más de sus ficheros está
+        fuera-de-fecha:</para>
 
 <screen>
 $ svn commit --message "Add another rule"
@@ -1774,16 +1775,18 @@ svn: Commit failed (details follow):
 svn: Out of date: 'rules.txt' in transaction 'g'
 </screen>
 
-      <para>At this point, you need to run <command>svn
-        update</command>, deal with any merges or conflicts that
-        result, and attempt your commit again.</para>
+      <para>En este punto, necesita ejecutar <command>svn
+        update</command>, ocupandose<!--TODO:deal with any merges or
+        conflicts--> con cualquier fusión o conflicto que resulte
+        y procure enviarlo otra vez.</para>
 
            
-      <para>That covers the basic work cycle for using Subversion.
-        There are many other features in Subversion that you can use
-        to manage your repository and working copy, but you can get by
-        quite easily using only the commands that we've discussed so
-        far in this chapter.</para>
+      <para>Eso cubre el ciclo basico de trabajo para usar Subversion.
+        Hay muchas otras características en Subversion que usted puede
+        usar para administrar su repositorio y copia de trabajo, pero
+        puede pasar facilmente<!--TODO: but you can get by
+        quite easily using--> usando solo los comandos que hemos visto
+        <!--TODO:discussed so far--> hasta ahora en este capítulo.</para>
 
     </sect2>
 
@@ -1793,18 +1796,18 @@ svn: Out of date: 'rules.txt' in transaction 'g'
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-6">
-    <title>Examining History</title>
-
-    <para>As we mentioned earlier, the repository is like a time
-      machine.  It keeps a record of every change ever committed,
-      and allows you to explore this history by examining previous
-      versions of files and directories as well as the metadata that
-      accompanies them.  With a single Subversion command, you can
-      check out the repository (or restore an existing working copy)
-      exactly as it was at any date or revision number in the past.
-      However, sometimes you just want to <emphasis>peer
-      into</emphasis> the past instead of <emphasis>going
-      into</emphasis> the past.</para>
+    <title>Examinando el historial</title>
+    <!--TODO:Examining History..."la historia" o "el historial"?-->
+    <para>Como hemos mencionado anteriormente, el repositorio es como
+      una máquina del tiempo. Este mantiene un expediente de cada cambio
+      enviado, y le permite explorar este historial examinando versiones
+      anteriores de ficheros y directorios así como los metadatos que
+      los acompañan. Con un único comando de Subversion, puede descargar
+      el repositorio (o restaurar una copia de trabajo existente)
+      exactamente como era en cualquier fecha o número de revisión en el
+      pasado. Sin embargo, a veces solo desea <emphasis>mirar</emphasis>
+      <!--TODO:peer into--> al pasado en vez de <emphasis>ir</emphasis>
+      al pasado<!--TODO:going into-->.</para>
            
     <para>Hay varios comandos que pueden proporcionarle datos históricos
       del repositorio:</para>
@@ -1875,12 +1878,11 @@ Initial import
 ------------------------------------------------------------------------
 </screen>
            
-      <para>Note that the log messages are printed in
-        <emphasis>reverse chronological order</emphasis> by default.
-        If you wish to see a different range of revisions in a
-        particular order, or just a single revision, pass the
-        <option>--revision</option> (<option>-r</option>)
-        switch:</para>
+      <para>Observe que los mensajes de registro son impresos en
+        <emphasis>orden cronológico inverso</emphasis> por defecto.
+        Si desea ver un rango diferente de revisiones en un orden
+        particular, o solo una única revisión, pase la opción
+        <option>--revision</option> (<option>-r</option>):</para>
            
       <screen>
 $ svn log --revision 5:19    # shows logs 5 through 19 in chronological order
@@ -1890,8 +1892,8 @@ $ svn log -r 19:5            # shows logs 5 through 19 in reverse order
 $ svn log -r 8               # shows log for revision 8
 </screen>
         
-      <para>You can also examine the log history of a single file or directory.
-      For example:</para>
+      <para>También puede examinar el historial de registro de un único
+      fichero o directorio. Por ejemplo:</para>
            
       <screen>
 $ svn log foo.c
@@ -1900,9 +1902,9 @@ $ svn log http://foo.com/svn/trunk/code/foo.c
 &hellip;
 </screen>
            
-      <para>These will display log messages <emphasis>only</emphasis>
-        for those revisions in which the working file (or URL)
-        changed.</para>
+      <para>Ésto mostrará los mensajes de registro
+        <emphasis>solo</emphasis> para esas revisiones en las cuales
+        el fichero de trabajo (o URL) cambió.</para>
            
       <para>If you want even more information about a file or
         directory, <command>svn log</command> also takes a
