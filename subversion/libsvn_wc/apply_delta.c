@@ -115,6 +115,8 @@ check_existence (svn_string_t *path,
 
 struct w_baton
 {
+  svn_string_t *top_dir;
+  int top_dir_done_p;
 
 };
 
@@ -149,8 +151,12 @@ add_directory (svn_string_t *name,
                svn_pdelta_t *pdelta,
                void **child_baton)
 {
-  printf ("dir \"%s\" (%s, %ld)\n",
-          name->data, base_path->data, base_version);
+  /* todo: we're not yet special-casing top_dir.  When we do, it'll be
+     like "cvs checkout -d foo bar", which produces a tree whose top
+     dir is named foo, but everything underneath is within the
+     project's namespace and appears as in the project. */
+
+  /* fooo */
   return 0;
 }
 
@@ -294,6 +300,12 @@ svn_wc_apply_delta (void *delta_src,
   walker.finish_file       = finish_file;
   walker.add_file          = add_file;
   walker.replace_file      = replace_file;
+
+  /* Set up the batons... */
+  memset (&w_baton, 0, sizeof (w_baton));
+  memset (&p_baton, 0, sizeof (p_baton));
+
+  w_baton.top_dir = target;   /* Remember, target might be null. */
 
   /* ... and walk! */
   err = svn_delta_parse (read_fn, delta_src,

@@ -89,16 +89,17 @@ main (int argc, char **argv)
   apr_status_t apr_err = 0;
   apr_file_t *src = NULL;     /* init to NULL very important! */
   svn_error_t *err = NULL;
-  svn_string_t *target = NULL;
-
-  if (argc < 2)
-    {
-      fprintf (stderr, "need TARGET argument\n");
-      return 1;
-    }
+  svn_string_t *target = NULL;  /* init to NULL also important here,
+                                   because NULL implies delta's top dir */
 
   apr_initialize ();
   apr_create_pool (&pool, NULL);
+
+  if (argc > 2)
+    {
+      fprintf (stderr, "usage: %s [TARGET]\n", argv[0]);
+      return 1;
+    }
 
   /* On Tue, Aug 08, 2000 at 09:50:33PM -0500, Karl Fogel wrote:
    * > Greg, I've got a stupid question for you:
@@ -121,7 +122,8 @@ main (int argc, char **argv)
       exit (1);
     }
 
-  target = svn_string_create (argv[1], pool);
+  if (argc == 2)
+    target = svn_string_create (argv[1], pool);
 
   err = svn_wc_apply_delta (src, test_read_fn, target, pool);
 
