@@ -38,7 +38,7 @@ Candidate changes:
     Justification:
       Shallow silly bug.
     Votes:
-      +1: bliss, kfogel
+      +1: bliss, kfogel, lundblad
 
   * r11172
     Fix encoding bug in svnlook log and author.
