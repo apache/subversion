@@ -820,6 +820,12 @@ svn_diff3(svn_diff_t **diff,
                                              1, 2,
                                              subpool2);
 
+                    if (position[0])
+                      position[0]->next = position_list[1];
+
+                    if (position[1])
+                      position[1]->next = position_list[2];
+
                     /* Fix up the EOF lcs element in case one of
                      * the two sequences was NULL.
                      */
