@@ -85,6 +85,7 @@ svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
       break;
     case svn_wc_status_conflicted:
       statuschar = 'C';
+      break;
     default:
       statuschar = '?';
       break;

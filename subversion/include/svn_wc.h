@@ -364,7 +364,7 @@ svn_error_t *svn_wc_make_delta (void *delta_src,
 /* Given a PATH to a node in the working copy, return all of its
    properties in PROPS.  (If the node has no properties, an empty hash
    is returned.) */
-svn_error_t *svn_wc_prop_find (apr_hash_t **props,
+svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                svn_string_t *path,
                                apr_pool_t *pool);
 
@@ -378,10 +378,10 @@ svn_error_t *svn_wc_prop_get (svn_string_t **value,
 
 /* Set a local value of property NAME to VALUE for the file or
    directory PATH. */
-svn_error_t *svn_wc_prop_patch (svn_string_t *name,
-                                svn_string_t *value,
-                                svn_string_t *path,
-                                apr_pool_t *pool);
+svn_error_t *svn_wc_prop_set (svn_string_t *name,
+                              svn_string_t *value,
+                              svn_string_t *path,
+                              apr_pool_t *pool);
 
 
 #endif  /* SVN_WC_H */
