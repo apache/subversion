@@ -90,10 +90,13 @@ static fs_vtable_t fs_vtable = {
 static svn_error_t *
 fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd;
+
   SVN_ERR (check_already_open (fs));
 
+  ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
-  fs->fsap_data = NULL;
+  fs->fsap_data = ffd;
 
   SVN_ERR (svn_fs_fs__create (fs, path, pool));
 
@@ -110,10 +113,13 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 static svn_error_t *
 fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd;
+
   SVN_ERR (svn_fs_fs__open (fs, path, fs->pool));
 
+  ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
-  fs->fsap_data = NULL;
+  fs->fsap_data = ffd;
 
   return SVN_NO_ERROR;
 }

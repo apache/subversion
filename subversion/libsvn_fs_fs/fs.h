@@ -32,8 +32,10 @@ extern "C" {
 
 typedef struct
 {
-  /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
-  const char *uuid;
+  /* A cache of the last directory opened within the filesystem. */
+  svn_fs_id_t *dir_cache_id;
+  apr_hash_t *dir_cache;
+  apr_pool_t *dir_cache_pool;
 } fs_fs_data_t;
 
 

@@ -1485,14 +1485,11 @@ merge (svn_stringbuf_t *conflict_p,
      entries hash where necessary below than to allocate an empty hash
      here, but another day, another day... */
   SVN_ERR (svn_fs_fs__dag_dir_entries (&s_entries, source, pool));
-  if (! s_entries)
-    s_entries = apr_hash_make (pool);
+  s_entries = svn_fs_fs__copy_dir_entries (s_entries, pool);
   SVN_ERR (svn_fs_fs__dag_dir_entries (&t_entries, target, pool));
-  if (! t_entries)
-    t_entries = apr_hash_make (pool);
+  t_entries = svn_fs_fs__copy_dir_entries (t_entries, pool);
   SVN_ERR (svn_fs_fs__dag_dir_entries (&a_entries, ancestor, pool));
-  if (! a_entries)
-    a_entries = apr_hash_make (pool);
+  a_entries = svn_fs_fs__copy_dir_entries (a_entries, pool);
 
   /* for each entry E in a_entries... */
   for (hi = apr_hash_first (pool, a_entries); 
@@ -1581,7 +1578,7 @@ merge (svn_stringbuf_t *conflict_p,
                        "Unexpected immutable node at '%s'", target_path);
 
                   SVN_ERR (svn_fs_fs__dag_set_entry
-                           (target, t_entry->name, s_entry->id, 
+                           (target, t_entry->name, s_entry->id, s_entry->kind,
                             txn_id, pool));
                 }
               /* or if target entry is different from both and
@@ -1767,7 +1764,8 @@ merge (svn_stringbuf_t *conflict_p,
                "Unexpected immutable node at '%s'", target_path);
               
           SVN_ERR (svn_fs_fs__dag_set_entry
-                   (target, s_entry->name, s_entry->id, txn_id, pool));
+                   (target, s_entry->name, s_entry->id, s_entry->kind,
+                    txn_id, pool));
         }
       /* E exists in target but is different from E in source */
       else if (! s_ancestorof_t)
@@ -2066,71 +2064,25 @@ svn_fs_fs__deltify (svn_fs_t *fs,
 
 /* Directories.  */
 
-/* Set *TABLE_P to an APR hash of dirent_t structures corresponding to
-   the subdirectories of PATH under ROOT.  If PATH is not a directory,
-   *TABLE_P is set to NULL.  The return hash is allocated in POOL. */
-static svn_error_t *
-get_dir_entries (apr_hash_t **table_p,
-                 svn_fs_root_t *root,
-                 const char *path,
-                 apr_pool_t *pool)
-{
-  dag_node_t *node;
-  apr_hash_t *entries;
-
-  SVN_ERR (get_dag (&node, root, path, pool));
-
-  /* Get the entries for PARENT_PATH. */
-  SVN_ERR (svn_fs_fs__dag_dir_entries (&entries, node, pool));
-
-  /* Potentially initialize the return value to an empty hash. */
-  *table_p = entries ? entries : apr_hash_make (pool);
-  return SVN_NO_ERROR;
-}
-
-
 /* Set *TABLE_P to a newly allocated APR hash table containing the
    entries of the directory at PATH in ROOT.  The keys of the table
    are entry names, as byte strings, excluding the final null
    character; the table's values are pointers to svn_fs_dirent_t
-   structures.  allocate the table and its contents in POOL. */
+   structures.  Allocate the table and its contents in POOL. */
 static svn_error_t *
 fs_dir_entries (apr_hash_t **table_p,
                 svn_fs_root_t *root,
                 const char *path,
                 apr_pool_t *pool)
 {
-  apr_hash_t *table;
+  dag_node_t *node;
+  apr_hash_t *entries;
 
-  SVN_ERR (get_dir_entries (&table, root, path, pool));
-
-  /* Add in the kind data. */
-  if (table)
-    {
-      apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create (pool);
-      for (hi = apr_hash_first (subpool, table); hi; hi = apr_hash_next (hi))
-        {
-          svn_fs_dirent_t *entry;
-          void *val;
-          dag_node_t *node;
-
-          /* KEY will be the entry name in ancestor (about which we
-             simple don't care), VAL the dirent. */
-          apr_hash_this (hi, NULL, NULL, &val);
-          entry = val;
-
-          /* Use the node id to get the real kind. */
-          SVN_ERR (svn_fs_fs__dag_get_node (&node, root->fs, entry->id, pool));
-          entry->kind = svn_fs_fs__dag_node_kind (node);
-        }
-    }
-  else
-    {
-      table = apr_hash_make (pool);
-    }
-
-  *table_p = table;
+  /* Get the entries for this path and copy them into the callers's
+     pool. */
+  SVN_ERR (get_dag (&node, root, path, pool));
+  SVN_ERR (svn_fs_fs__dag_dir_entries (&entries, node, pool));
+  *table_p = svn_fs_fs__copy_dir_entries (entries, pool);
   return SVN_NO_ERROR;
 }
 

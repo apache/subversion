@@ -222,31 +222,28 @@ svn_error_t *svn_fs_fs__dag_open (dag_node_t **child_p,
                                apr_pool_t *pool);
 
 
-/* Set *ENTRIES_P to a hash table of NODE's entries, or NULL if NODE
-   has no entries.  The keys of the table are entry names, and the
-   values are svn_fs_dirent_t's.
+/* Set *ENTRIES_P to a hash table of NODE's entries.  The keys of the
+   table are entry names, and the values are svn_fs_dirent_t's.  Use
+   POOL for temporary allocations.
 
-   The returned table is allocated in *either* POOL or the pool NODE
-   was allocated in, at this function's discretion; the caller must
-   finish using it while both of those remain live.  If the caller
-   needs the table to live longer, it should copy the hash.
-
-   NOTE: the 'kind' field of the svn_fs_dirent_t's is set to
-   svn_node_unknown by this function -- callers that need in
-   interesting value in these slots should fill them in using a new
-   invocation, since the list of entries can be arbitrarily large.  */
+   The returned table is *not* allocated in POOL, and becomes invalid
+   on the next call to this function or svn_fs_fs__rep_contents_dir.
+   If the caller needs the table to live longer, it should copy the
+   hash using svn_fs_fs__copy_dir_entries. */
 svn_error_t *svn_fs_fs__dag_dir_entries (apr_hash_t **entries_p,
                                       dag_node_t *node,
                                       apr_pool_t *pool);
 
 
-/* Set ENTRY_NAME in NODE to point to ID, allocating from POOL.  NODE
-   must be a mutable directory.  ID can refer to a mutable or
-   immutable node.  If ENTRY_NAME does not exist, it will be created.
-   TXN_ID is the Subversion transaction under which this occurs.*/
+/* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
+   from POOL.  NODE must be a mutable directory.  ID can refer to a
+   mutable or immutable node.  If ENTRY_NAME does not exist, it will
+   be created.  TXN_ID is the Subversion transaction under which this
+   occurs.*/
 svn_error_t *svn_fs_fs__dag_set_entry (dag_node_t *node,
                                     const char *entry_name,
                                     const svn_fs_id_t *id,
+                                    svn_node_kind_t kind,
                                     const char *txn_id, 
                                     apr_pool_t *pool);
 
