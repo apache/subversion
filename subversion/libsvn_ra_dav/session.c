@@ -248,7 +248,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
-  compress_str    = "yes";
+  compress_str    = "no";
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -355,7 +355,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   if (compress_str)
     *compression = (strcasecmp(compress_str, "yes") == 0) ? TRUE : FALSE;
   else
-    *compression = TRUE;
+    *compression = FALSE;
 
   return SVN_NO_ERROR;
 }
