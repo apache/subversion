@@ -750,7 +750,7 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  * @c svn_wc_notify_commit_deleted, @c svn_wc_notify_commit_replaced,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * If @a nonrecursive is true, subdicrectories of directories in @a targets
+ * If @a recurse is false, subdirectories of directories in @a targets
  * will be ignored.
  *
  * Unlock paths in the repository, unless @a keep_locks is true.
@@ -764,14 +764,15 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_commit2 (svn_client_commit_info_t **commit_info,
                     const apr_array_header_t *targets,
-                    svn_boolean_t nonrecursive,
+                    svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
- * Similar to @c svn_client_commit2, but with @a keep_locks set to true.
+ * Similar to @c svn_client_commit2, but with @a keep_locks set to
+ * true and a @a nonrecursive argument instead of "recurse".
  */
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
