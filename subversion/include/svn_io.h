@@ -748,6 +748,18 @@ svn_error_t *
 svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
                         apr_pool_t *pool);
 
+/**
+ * @since New in 1.1.
+ *
+ * Same as svn_io_dir_make, but sets the sgid on the directory on
+ * systems that support it.  On Unix filesystems, setting the sgid
+ * bit on a directory ensures that files and subdirectories created
+ * within inherit group ownership from the parent instead of from the
+ * primary gid. */
+svn_error_t *
+svn_io_dir_make_sgid (const char *path, apr_fileperms_t perm,
+                      apr_pool_t *pool);
+
 /** Wrapper for @c apr_dir_open(), which see.  @a dirname is utf8-encoded. */
 svn_error_t *
 svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
