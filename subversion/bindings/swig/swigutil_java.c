@@ -731,3 +731,271 @@ svn_error_t *svn_swig_java_log_message_receiver(void *baton,
     return svn_error_create(APR_EGENERAL, NULL, "TODO: svn_swig_java_get_commit_log_func is not implemented yet");
 }
 
+/* This baton type is used for stream operations */
+typedef struct {
+  jobject stream;       /* Java stream object */
+  apr_pool_t *pool;     /* pool to use for errors */
+  JNIEnv *jenv;         /* Java native interface structure */
+} stream_baton_t;
+
+/* Create a stream baton. */
+static stream_baton_t *make_stream_baton(JNIEnv *jenv,
+                                         jobject stream,
+                                         apr_pool_t *pool)
+{
+  jobject globalref;
+  stream_baton_t *stream_baton;
+
+  /* The global reference is not necessary in all cases
+     e.g. for a call to svn_client_cat()
+     But we need it for svn_text_delta_t */
+  globalref = JCALL1(NewGlobalRef, jenv, stream);
+  if (globalref == NULL)
+    {
+      /* Exception occured */
+      return 0;
+    }
+
+  stream_baton = apr_palloc(pool, sizeof(*stream_baton));
+
+  stream_baton->stream = globalref;
+  stream_baton->pool = pool;
+  stream_baton->jenv = jenv;
+  
+  return stream_baton;
+}
+
+/* Pool cleanup handler. Removes global reference */
+static apr_status_t stream_baton_cleanup_handler(void *baton)
+{
+  stream_baton_t *stream_baton = (stream_baton_t *) baton;
+  JCALL1(DeleteGlobalRef, stream_baton->jenv, stream_baton->stream);
+  return APR_SUCCESS;
+}
+
+/* read/write/close functions for an OutputStream */
+
+/* Read function for the OutputStream :-)
+   Since this is a write only stream we simply generate 
+   an error. */
+static svn_error_t *read_outputstream(void *baton,
+                                      char *buffer,
+                                      apr_size_t *len)
+{
+  svn_error_t *svn_error = svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, 
+                                            NULL,
+	                                    "Can't read from write only stream");
+  return svn_error;                   
+} 
+
+/* Writes to the OutputStream */
+static svn_error_t *write_outputstream(void *baton,
+                                       const char *buffer,
+                                       apr_size_t *len)
+{
+  stream_baton_t *stream_baton;
+  JNIEnv *jenv;
+  jthrowable exc;
+  jclass cls_outputstream;
+  jmethodID MID_write;
+  jbyteArray bytearray;
+  svn_error_t *result;
+
+  stream_baton = (stream_baton_t *) baton;
+  jenv = stream_baton->jenv;
+  cls_outputstream = JCALL1(FindClass, jenv, "java/io/OutputStream"); /* ### FIXME */
+  MID_write = JCALL3(GetMethodID, jenv, cls_outputstream, "write", "([B)V"); /* ### FIXME */
+  bytearray = JCALL1(NewByteArray, jenv, (jsize) *len);
+  if (bytearray == NULL)
+    {
+      goto outofmemory_error;
+    }
+  JCALL4(SetByteArrayRegion, jenv, bytearray, (jsize) 0, 
+                             (jsize) *len, (jbyte *) buffer);
+  exc = JCALL0(ExceptionOccurred, jenv);
+  if (exc)
+    {
+      goto error;
+    }
+
+  JCALL3(CallVoidMethod, jenv, stream_baton->stream, MID_write, bytearray);
+  exc = JCALL0(ExceptionOccurred, jenv);
+  if (exc)
+    {
+      goto error;
+    }
+
+  JCALL1(DeleteLocalRef, jenv, bytearray);
+  return SVN_NO_ERROR;
+
+outofmemory_error:
+  /* We now for sure that there is an exception pending */
+  exc = JCALL0(ExceptionOccurred, jenv);
+
+error:
+  /* ### Better exception handling
+     At this point, we now that there is exception exc pending.
+     These are:
+     - OutOfMemoryError (NewByteArray)
+     - ArrayIndexOutOfBounds (SetByteArrayRegion)
+     - IOException (CallVoidMethod[write])
+     At least, the OutOfMemory error should get a special treatment... */
+  /* DEBUG JCALL0(ExceptionDescribe, jenv); */
+  JCALL0(ExceptionClear, jenv);
+  result = svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL, 
+                            "Write error on stream");
+  JCALL1(DeleteLocalRef, jenv, exc);
+  return result;
+}
+
+/* Closes the OutputStream
+   Does nothing because we are not the owner of the stream.
+   May flush the stream in future. */
+static svn_error_t *close_outputstream(void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
+/* read/write/close functions for an InputStream */
+
+/* Reads from the InputStream */
+static svn_error_t *read_inputstream(void *baton,
+     char *buffer,
+     apr_size_t *len) 
+{
+  stream_baton_t *stream_baton;
+  JNIEnv *jenv;
+  jthrowable exc;
+  jclass cls_inputstream;
+  jmethodID MID_read;
+  jbyteArray bytearray;
+  jsize read_len;
+  svn_error_t *result;
+
+  stream_baton = (stream_baton_t *) baton;
+  jenv = stream_baton->jenv;
+  cls_inputstream = JCALL1(FindClass, jenv, "java/io/InputStream"); /* ### FIXME */
+  MID_read = JCALL3(GetMethodID, jenv, cls_inputstream, "read", "([B)I"); /* ### FIXME */
+  bytearray = JCALL1(NewByteArray, jenv, (jsize) *len);
+  if (bytearray == NULL) 
+    {
+      goto outofmemory_error;
+    }
+
+  read_len = JCALL3(CallIntMethod, jenv, stream_baton->stream, 
+                    MID_read, bytearray);
+  exc = JCALL0(ExceptionOccurred, jenv);
+  if (exc)
+    {
+      goto error;
+    }
+
+  JCALL4(GetByteArrayRegion, jenv, bytearray, (jsize) 0, (jsize) read_len, 
+         (jbyte *) buffer);
+  exc = JCALL0(ExceptionOccurred, jenv);
+  if (exc)
+    {
+      goto error;
+    }
+
+  JCALL1(DeleteLocalRef, jenv, bytearray);
+  *len = read_len;
+  return SVN_NO_ERROR;
+
+outofmemory_error:
+  /* We now for sure that there is an exception pending */
+  exc = JCALL0(ExceptionOccurred, jenv);
+
+error:
+  /* ### Better exception handling
+     At this point, we now that there is exception exc pending.
+     These are:
+     - OutOfMemoryError (NewByteArray)
+     - ArrayIndexOutOfBounds (SetByteArrayRegion)
+     - IOException (CallIntMethod[read])
+     At least, the OutOfMemory error should get a special treatment... */
+  /* DEBUG JCALL0(ExceptionDescribe, jenv); */
+  JCALL0(ExceptionClear, jenv);
+  result = svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                            "Write error on stream");
+  JCALL1(DeleteLocalRef, jenv, exc);
+  return result;
+} 
+
+/* Write function for the InputStream :-)
+   Since this is a read only stream we simply generate 
+   an error. */
+static svn_error_t *write_inputstream(void *baton,
+     const char *buffer,
+     apr_size_t *len) 
+{
+  svn_error_t *svn_error = svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, 
+                                            NULL,
+	                                    "Can't write on read only stream");
+  return svn_error;                   
+}
+
+/* Closes the InputStream
+   Does nothing because we are not the owner of the stream. */
+static svn_error_t *close_inputstream(void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
+/* Create a svn_stream_t from a java.io.OutputStream object.
+   Registers a pool cleanup handler for deallocating JVM
+   resources. */
+svn_stream_t *svn_swig_java_outputstream_to_stream(JNIEnv *jenv, 
+      jobject outputstream, apr_pool_t *pool)
+{
+  stream_baton_t *baton;
+  svn_stream_t *stream;
+
+  baton = make_stream_baton(jenv, outputstream, pool);
+  if (baton == NULL)
+    {
+      return NULL;
+    }
+  apr_pool_cleanup_register(pool, baton, stream_baton_cleanup_handler, 
+                            apr_pool_cleanup_null);
+
+  stream = svn_stream_create(baton, pool);
+  if (stream == NULL) 
+    {
+      return NULL;
+    }
+  svn_stream_set_read(stream, read_outputstream);
+  svn_stream_set_write(stream, write_outputstream);
+  svn_stream_set_close(stream, close_outputstream);
+
+  return stream;
+}
+
+/* Create a svn_stream_t from a java.io.InputStream object.
+   Registers a pool cleanup handler for deallocating JVM
+   resources. */
+svn_stream_t *svn_swig_java_inputstream_to_stream(JNIEnv *jenv, 
+      jobject inputstream, apr_pool_t *pool)
+{
+  stream_baton_t *baton;
+  svn_stream_t *stream;
+
+  baton = make_stream_baton(jenv, inputstream, pool);
+  if (baton == NULL) 
+    {
+      return NULL;
+    }
+  apr_pool_cleanup_register(pool, baton, stream_baton_cleanup_handler, 
+                            apr_pool_cleanup_null);
+
+  stream = svn_stream_create(baton, pool);
+  if (stream == NULL) 
+    {
+      return NULL;
+    }
+  svn_stream_set_read(stream, read_inputstream);
+  svn_stream_set_write(stream, write_inputstream);
+  svn_stream_set_close(stream, close_inputstream);
+
+  return stream;
+}
