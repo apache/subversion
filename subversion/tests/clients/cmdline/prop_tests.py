@@ -20,7 +20,12 @@
 import shutil, string, sys, re, os.path
 
 # The `svntest' module
-import svntest
+try:
+  import svntest
+except SyntaxError:
+  print "<<< Please make sure you have Python 2.1 or better! >>>"
+  traceback.print_exc()
+  raise SystemExit
 
 # Quick macro for auto-generating sandbox names
 def sandbox(x):
