@@ -39,7 +39,6 @@ svn_cl__propget (apr_getopt_t *os,
                  apr_pool_t *pool)
 {
   svn_stringbuf_t *propname;
-  apr_hash_t *prop_hash = apr_hash_make (pool);
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
@@ -60,6 +59,7 @@ svn_cl__propget (apr_getopt_t *os,
     {
       svn_stringbuf_t *propval;
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+      apr_hash_t *prop_hash = apr_hash_make (pool);
       err = svn_wc_prop_get (&propval, propname, target, pool);
       if (err)
         return err;
