@@ -372,14 +372,14 @@ tpush_write_handler (void *baton, const char *data, apr_size_t *len)
       /* Make sure we're all full up on source data, if possible. */
       if (tb->source_len == 0 && !tb->source_done)
         {
-          tb->source_len = SVN_STREAM_CHUNK_SIZE;
+          tb->source_len = SVN_DELTA_WINDOW_SIZE;
           SVN_ERR (svn_stream_read (tb->source, tb->buf, &tb->source_len));
-          if (tb->source_len < SVN_STREAM_CHUNK_SIZE)
+          if (tb->source_len < SVN_DELTA_WINDOW_SIZE)
             tb->source_done = TRUE;
         }
 
-      /* Copy in the target data, up to SVN_STREAM_CHUNK_SIZE. */
-      chunk_len = SVN_STREAM_CHUNK_SIZE - tb->target_len;
+      /* Copy in the target data, up to SVN_DELTA_WINDOW_SIZE. */
+      chunk_len = SVN_DELTA_WINDOW_SIZE - tb->target_len;
       if (chunk_len > data_len)
         chunk_len = data_len;
       memcpy (tb->buf + tb->source_len + tb->target_len, data, chunk_len);
@@ -388,7 +388,7 @@ tpush_write_handler (void *baton, const char *data, apr_size_t *len)
       tb->target_len += chunk_len;
 
       /* If we're full of target data, compute and fire off a window. */
-      if (tb->target_len == SVN_STREAM_CHUNK_SIZE)
+      if (tb->target_len == SVN_DELTA_WINDOW_SIZE)
         {
           window = compute_window (tb->buf, tb->source_len, tb->target_len,
                                    tb->source_offset, pool);
@@ -441,7 +441,7 @@ svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
   tb->wh = handler;
   tb->whb = handler_baton;
   tb->pool = pool;
-  tb->buf = apr_palloc (pool, 2 * SVN_STREAM_CHUNK_SIZE);
+  tb->buf = apr_palloc (pool, 2 * SVN_DELTA_WINDOW_SIZE);
   tb->source_offset = 0;
   tb->source_len = 0;
   tb->source_done = FALSE;
