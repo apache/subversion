@@ -29,6 +29,159 @@ extern "C" {
 #include "svn_delta.h"
 #include "svn_wc.h"
 
+/*** RA: TNG ***/
+
+#if 0
+/* A function type for "cleaning up" after a commit.  The client layer
+   supplies this routine to an RA layer.  RA calls this routine on
+   each PATH that was committed, allowing the client to bump revision
+   numbers. */
+typedef svn_error_t *svn_ra_close_commit_func_t (void *close_baton,
+                                                 svn_string_t *path,
+                                                 svn_revnum_t new_rev);
+
+
+/* A function type which allows the RA layer to store WC properties
+   after a commit.  */
+typedef svn_error_t *svn_ra_set_wc_prop_func_t (void *close_baton,
+                                                svn_string_t *path,
+                                                svn_string_t *name,
+                                                svn_string_t *value);
+
+
+/* A vtable structure which allows a working copy to describe a
+   subset (or possibly all) of its working-copy to an RA layer. */
+  
+typedef struct svn_ra_reporter_t
+{
+  /* Given a ROOT_PATH within a working copy, describe the REVISION
+     and REPOSITORY_PATH it corresponds to.   (ROOT_PATH will be where
+     the WC update begins.) */
+  svn_error_t *(*set_baseline) (void *report_baton,
+                                svn_revnum_t revision,
+                                svn_string_t *repository_path,
+                                svn_string_t *root_path);
+
+  /* Describe an entire subtree DIR_PATH as being at a particular
+     REVISION; this will *override* any previous set_directory() calls
+     made on DIR_PATH's parents.  DIR_PATH is relative to the ROOT_PATH
+     specified in set_baseline(). */
+  svn_error_t *(*set_directory) (void *report_baton,
+                                 svn_string_t *dir_path,
+                                 svn_revnum_t revision);
+  
+  /* Describe a file FILE_PATH as being at a particular REVISION; this
+     will *override* any previous set_file() calls made on FILE_PATH's
+     parents.  FILE_PATH is relative to the ROOT_PATH specified
+     in set_baseline(). */
+  svn_error_t *(*set_file) (void *report_baton,
+                            svn_string_t *file_path,
+                            svn_revnum_t revision);
+  
+  /* WC calls this when the state report is finished; any directories
+     or files not explicitly `set' above are assumed to be at the
+     baseline revision.  */
+  svn_error_t *(*finish_report) (void *report_baton);
+
+} svn_ra_reporter_t;
+
+
+
+
+  /* A vtable structure which encapsulates all the functionality of a
+     particular repository-access implementation.
+     
+     Note: libsvn_client will keep an array of these objects,
+     representing all RA libraries that it has simultaneously loaded
+     into memory.  Depending on the situation, the client can look
+     through this array and find the appropriate implementation it
+     needs. */
+
+typedef struct svn_ra_plugin_t
+{
+  const char *name;         /* The name of the ra library,
+                                 e.g. "ra_dav" or "ra_local" */
+
+  const char *description;  /* Short documentation string */
+
+  /* The vtable hooks */
+  
+  /* Open a "session" with a repository at URL.  *SESSION_BATON is
+     returned and then used (opaquely) for all further interactions
+     with the repository. */
+  svn_error_t *(*open) (void **session_baton,
+                        svn_string_t *repository_URL,
+                        apr_pool_t *pool);
+
+
+  /* Close a repository session. */
+  svn_error_t *(*close) (void *session_baton);
+
+  /* Get the latest revision number from the repository. This is
+     usefule for the `svn status' command.  :) */
+  svn_error_t *(*get_latest_revnum) (void *session_baton,
+                                     svn_revnum_t *latest_revnum);
+
+
+  /* Begin a commit, using LOG_MSG.  RA returns an *EDITOR and
+     *EDIT_BATON capable of transmitting a commit to the repository,
+     which is then driven by the client.
+
+     RA must guarantee:
+     
+          1. That it will track each item that is committed
+          2. That close_edit() will "finish" the commit by calling
+             CLOSE_FUNC (with CLOSE_BATON) on each item that was
+             committed.  
+
+     Optionally, the RA layer may also call SET_FUNC to store WC
+     properties on committed items.  */
+  svn_error_t *(*get_commit_editor) (void *session_baton,
+                                     const svn_delta_edit_fns_t **editor,
+                                     void **edit_baton,
+                                     svn_string_t *log_msg,
+                                     svn_ra_close_commit_func_t close_func,
+                                     svn_ra_set_wc_prop_func_t set_func,
+                                     void *close_baton);
+
+
+  /* Ask the network layer to check out a copy of ROOT_PATH from the
+     repository's filesystem, using EDITOR and EDIT_BATON to create a
+     working copy. */
+  svn_error_t *(*do_checkout) (void *session_baton,
+                               svn_string_t *root_path,
+                               const svn_delta_edit_fns_t *editor,
+                               void *edit_baton);
+
+
+  /* Ask the network layer to update part (or all) of a working copy.
+
+     The client initially provides an UPDATE_EDITOR and UPDATE_BATON
+     to the RA layer, and receives a REPORTER structure and
+     REPORT_BATON in return.
+
+     The client describes its working-copy revision numbers (of items
+     relevant to TARGETS only!) by making calls into the REPORTER
+     structure, starting at the top-most directory it wishes to be
+     updated.  When finished, it calls REPORTER->finish_report().
+
+     The RA layer then uses UPDATE_EDITOR to update each target in
+     TARGETS.  */
+  svn_error_t *(*do_update) (void *session_baton,
+                             const svn_ra_reporter_t **reporter,
+                             void **report_baton,
+                             apr_array_header_t *targets,
+                             const svn_delta_edit_fns_t *update_editor,
+                             void *update_baton);
+
+} svn_ra_plugin_t;
+
+#endif  /*** RA: TNG ***/
+
+
+
+/* --------------------------------------------------------------------*/
+
 
 /* A vtable structure that encapsulates all the functionality of a
    particular repository-access implementation.
@@ -111,6 +264,9 @@ typedef struct svn_ra_plugin_t
                              void *update_baton);
 
 } svn_ra_plugin_t;
+
+
+
 
 
 /* svn_ra_init_func_t :
