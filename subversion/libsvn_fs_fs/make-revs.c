@@ -34,7 +34,6 @@ struct entry
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
   struct entry *copyroot;
-  svn_boolean_t soft_copy;
 };
 
 struct parse_baton
@@ -131,7 +130,6 @@ new_entry(apr_pool_t *pool)
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->copyfrom_path = NULL;
   entry->copyroot = NULL;
-  entry->soft_copy = FALSE;
   return entry;
 }
 
@@ -163,7 +161,7 @@ find_entry(struct entry *entry, const char *path, apr_pool_t *pool)
 
 /* Initialize new_entry from the fields of old_entry, tweaking them as
    appropriate for a modification.  (Further changes will be needed
-   for soft and hard copies.) */
+   for copy operations.) */
 static void
 copy_entry(struct parse_baton *pb, struct entry *new_entry,
            struct entry *old_entry)
@@ -211,20 +209,16 @@ get_child(struct parse_baton *pb, struct entry *entry, const char *name,
            through its created path, then we don't change the copy ID.
          - If child is derived from a copy and we are not accessing
            it through its created path, then we create a "soft copy"
-           with a fresh copy ID. */
+           with a fresh copy ID.  Unlike true copies, we do not assign
+           copy history and we inherit copy root information from the
+           predecessor. */
       if (child->node_id != child->copyroot->node_id)
         {
           new_child->copy_id = entry->copy_id;
           new_child->copyroot = entry->copyroot;
         }
       else if (strcmp(child->created_path, new_child->created_path) != 0)
-        {
-          new_child->copy_id = pb->next_copy_id++;
-          new_child->copyfrom_rev = child->node_rev;
-          new_child->copyfrom_path = child->created_path;
-          new_child->soft_copy = TRUE;
-          new_child->copyroot = new_child;
-        }
+        new_child->copy_id = pb->next_copy_id++;
 
       name = apr_pstrdup(pb->pool, name);
       apr_hash_set(entry->children, name, APR_HASH_KEY_STRING, new_child);
@@ -415,13 +409,12 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
                         repstr(&entry->props_rep, pool)));
   SVN_ERR(write_field(out, pool, "cpath", "%s", entry->created_path));
   if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
-    SVN_ERR(write_field(out, pool, "copyfrom",
-                        "%s %" SVN_REVNUM_T_FMT " %s",
-                        (entry->soft_copy) ? "soft" : "hard",
+    SVN_ERR(write_field(out, pool, "copyfrom", "%" SVN_REVNUM_T_FMT " %s",
                         entry->copyfrom_rev, entry->copyfrom_path));
   if (entry->copyroot != entry)
-    SVN_ERR(write_field(out, pool, "copyroot", "%s",
-                        node_rev_id(entry->copyroot, pool)));
+    SVN_ERR(write_field(out, pool, "copyroot", "%" SVN_REVNUM_T_FMT " %s",
+                        entry->copyroot->node_rev,
+                        entry->copyroot->created_path));
   SVN_ERR(svn_stream_printf(out, pool, "\n"));
 
   return SVN_NO_ERROR;
@@ -572,20 +565,23 @@ txn_node_rev_id(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
 }
 
 static const char *
+txn_revstr(struct parse_baton *pb, svn_revnum_t rev, apr_pool_t *pool)
+{
+  return (rev == pb->current_rev) ? "this"
+    : apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, rev);
+}
+
+static const char *
 txn_repstr(struct parse_baton *pb, struct rep_pointer *rep,
            svn_boolean_t only_this, apr_pool_t *pool)
 {
-  const char *revstr;
-
   if (rep->rev == pb->current_rev && only_this)
     return "this";
 
-  revstr = (rep->rev == pb->current_rev) ? "this"
-    : apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, rep->rev);
-
   return apr_psprintf(pool, "%s %" APR_OFF_T_FMT " %" APR_OFF_T_FMT
                       " %" APR_OFF_T_FMT " %s",
-                      revstr, rep->off, rep->len, rep->len, rep->digest);
+                      txn_revstr(pb, rep->rev, pool),
+                      rep->off, rep->len, rep->len, rep->digest);
 }
 
 static svn_error_t *
@@ -713,13 +709,12 @@ dump_txn_node_rev(struct parse_baton *pb, struct entry *entry,
                         txn_repstr(pb, &entry->props_rep, TRUE, pool)));
   SVN_ERR(write_field(out, pool, "cpath", "%s", entry->created_path));
   if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
-    SVN_ERR(write_field(out, pool, "copyfrom",
-                        "%s %" SVN_REVNUM_T_FMT " %s",
-                        (entry->soft_copy) ? "soft" : "hard",
+    SVN_ERR(write_field(out, pool, "copyfrom", "%" SVN_REVNUM_T_FMT " %s",
                         entry->copyfrom_rev, entry->copyfrom_path));
   if (entry->copyroot != entry)
-    SVN_ERR(write_field(out, pool, "copyroot", "%s",
-                        node_rev_id(entry->copyroot, pool)));
+    SVN_ERR(write_field(out, pool, "copyroot", "%s %s",
+                        txn_revstr(pb, entry->copyroot->node_rev, pool),
+                        entry->copyroot->created_path));
   SVN_ERR(svn_stream_printf(out, pool, "\n"));
 
   SVN_ERR(svn_io_file_close(nrfile, pool));
@@ -865,7 +860,6 @@ new_node_record(void **node_baton, apr_hash_t *headers, void *baton,
           entry->copy_id = pb->next_copy_id++;
           entry->copyfrom_rev = copy_src->node_rev;
           entry->copyfrom_path = apr_pstrdup(pb->pool, copyfrom_path);
-          entry->soft_copy = FALSE;
           entry->copyroot = entry;
         }
       else
