@@ -240,7 +240,6 @@ add_file (svn_string_t *name,
 
   *file_baton = child_fb;
 
-  printf ("A  %s\n", child_fb->path->data);
   return SVN_NO_ERROR;
 }
 
