@@ -488,7 +488,8 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
 
   /* Send URL to server and read UUID response. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "c", url));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c", &conn->uuid));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c", &conn->uuid,
+                                       &conn->repos_root));
 
   *sess = conn;
   return SVN_NO_ERROR;
@@ -533,6 +534,14 @@ static svn_error_t *ra_svn_get_uuid(void *sess, const char **uuid,
 {
   svn_ra_svn_conn_t *conn = sess;
   *uuid = conn->uuid;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *ra_svn_get_repos_root(void *sess, const char **url,
+                                          apr_pool_t *pool)
+{
+  svn_ra_svn_conn_t *conn = sess;
+  *url = conn->repos_root;
   return SVN_NO_ERROR;
 }
 
@@ -954,7 +963,8 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_diff,
   ra_svn_log,
   ra_svn_check_path,
-  ra_svn_get_uuid
+  ra_svn_get_uuid,
+  ra_svn_get_repos_root
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,

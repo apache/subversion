@@ -264,6 +264,19 @@ svn_ra_local__get_uuid (void *session_baton,
 }
 
 static svn_error_t *
+svn_ra_local__get_repos_root (void *session_baton,
+                              const char **url,
+                              apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = 
+    (svn_ra_local__session_baton_t *) session_baton;
+
+  *url = baton->repos_url;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_local__rev_proplist (void *session_baton,
                             svn_revnum_t rev,
                             apr_hash_t **props,
@@ -827,7 +840,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__do_diff,
   svn_ra_local__get_log,
   svn_ra_local__do_check_path,
-  svn_ra_local__get_uuid
+  svn_ra_local__get_uuid,
+  svn_ra_local__get_repos_root
 };
 
 

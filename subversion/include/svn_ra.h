@@ -686,6 +686,17 @@ typedef struct svn_ra_plugin_t
                             const char **uuid,
                             apr_pool_t *pool);
 
+  /** Set @a *url to the repository's root URL.  The value
+   * will not include a trailing '/'.
+   *
+   * NOTE: the URL has the same lifetime as the session_baton. 
+   *
+   * Use @a pool for temporary memory allocation.
+   */
+  svn_error_t *(*get_repos_root) (void *session_baton,
+                                  const char **url,
+                                  apr_pool_t *pool);
+
 } svn_ra_plugin_t;
 
 
