@@ -562,13 +562,13 @@ NODE-ID  CREATED-REV HAS_PROPS?  SIZE  NAME
         </listitem>
         <listitem> 
           <para>Switch to the user who owns and manages the database.</para>
-      </listitem>
-      <listitem>
-        <para>Run the command <command>svnadmin recover
-          /path/to/repos</command>.  You should see output like
-          this:</para>
+        </listitem>
+        <listitem>
+          <para>Run the command <command>svnadmin recover
+            /path/to/repos</command>.  You should see output like
+            this:</para>
               
-        <screen>
+          <screen>
 Acquiring exclusive lock on repository db, and running recovery procedures.
 Please stand by...
 Recovery completed.
