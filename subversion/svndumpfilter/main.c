@@ -965,7 +965,7 @@ do_filter (apr_getopt_t *os,
            hi = apr_hash_next (hi))
         {
           apr_hash_this (hi, &key, NULL, NULL);
-          APR_ARRAY_PUSH (keys, svn_revnum_t) = *((svn_revnum_t *) key);
+          APR_ARRAY_PUSH (keys, svn_revnum_t) = *((const svn_revnum_t *) key);
         }
       qsort (keys->elts, keys->nelts, 
              keys->elt_size, svn_sort_compare_revisions);
