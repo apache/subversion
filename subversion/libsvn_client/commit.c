@@ -405,9 +405,10 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   apr_status_t apr_err;
   svn_error_t *err;
   apr_file_t *dst = NULL; /* old habits die hard */
-  const svn_delta_editor_t *track_editor;
-  const svn_delta_edit_fns_t *commit_editor, *wrap_editor;
-  void *commit_edit_baton, *track_edit_baton, *wrap_edit_baton;
+  const svn_delta_editor_t *track_editor, *commit_editor;
+  const svn_delta_edit_fns_t *wrap_cmt_editor, *wrap_trk_editor;
+  void *commit_edit_baton, *track_edit_baton;
+  void *wrap_cmt_edit_baton, *wrap_trk_edit_baton;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
 #if 0  /* restore post-M2, see related #if farther down */
@@ -460,10 +461,16 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                                          &commit_editor, &commit_edit_baton,
                                          pool));
 
-      if (!SVN_IS_VALID_REVNUM(revision))
+      /* ### todo: This is a TEMPORARY wrapper around our editor so we
+         can use it with an old driver. */
+      svn_delta_compat_wrap (&wrap_cmt_editor, &wrap_cmt_edit_baton, 
+                             commit_editor, commit_edit_baton, pool);
+
+
+      if (! SVN_IS_VALID_REVNUM (revision))
         {
-          editor = commit_editor;
-          edit_baton = commit_edit_baton;
+          editor = wrap_cmt_editor;
+          edit_baton = wrap_cmt_edit_baton;
         }
       else
         {
@@ -481,12 +488,13 @@ send_to_repos (svn_client_commit_info_t **commit_info,
 
           /* ### todo:  This is a TEMPORARY wrapper around our editor so we
              can use it with an old driver. */
-          svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+          svn_delta_compat_wrap (&wrap_trk_editor, &wrap_trk_edit_baton, 
                                  track_editor, track_edit_baton, pool);
                                                       
           svn_delta_compose_editors (&editor, &edit_baton,
-                                     commit_editor, commit_edit_baton,
-                                     wrap_editor, wrap_edit_baton, pool);
+                                     wrap_cmt_editor, wrap_cmt_edit_baton,
+                                     wrap_trk_editor, wrap_trk_edit_baton, 
+                                     pool);
         }        
     }
   else   /* Else we're committing to an RA layer. */

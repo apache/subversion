@@ -8,7 +8,7 @@ DONE    clients/cmdline/trace-update.c
         libsvn_delta/compose_editors.c
         libsvn_delta/pipe_editors.c
 DONE    libsvn_delta/track_editor.c
-        libsvn_delta/xml_output.c
+DONE    libsvn_delta/xml_output.c
 DONE    libsvn_ra_dav/commit.c
 DONE    libsvn_ra_local/commit_editor.c
         libsvn_repos/node_tree.c

@@ -34,26 +34,19 @@
 int main(int argc, char **argv)
 {
   apr_pool_t *pool;
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
   svn_txdelta_window_handler_t handler;
   svn_txdelta_window_t window;
   svn_txdelta_op_t op;
   void *edit_baton, *root_baton, *dir_baton, *file_baton, *handler_baton;
-  svn_stringbuf_t *foo_string;
-  svn_stringbuf_t *bar_string;
-  svn_stringbuf_t *baz_string;
-  svn_stringbuf_t *aaa_string;
-  svn_stringbuf_t *bbb_string;
-  svn_stringbuf_t *ccc_string;
+  svn_string_t *bbb_string;
+  svn_string_t *ccc_string;
 
   apr_initialize();
   pool = svn_pool_create (NULL);
-  foo_string = svn_stringbuf_create ("foo", pool);
-  bar_string = svn_stringbuf_create ("bar", pool);
-  baz_string = svn_stringbuf_create ("baz", pool);
-  aaa_string = svn_stringbuf_create ("aaa", pool);
-  bbb_string = svn_stringbuf_create ("bbb", pool);
-  ccc_string = svn_stringbuf_create ("ccc", pool);
+
+  bbb_string = svn_string_create ("bbb", pool);
+  ccc_string = svn_string_create ("ccc", pool);
 
   window.sview_offset = 0;
   window.sview_len = 0;
@@ -69,18 +62,19 @@ int main(int argc, char **argv)
 
   svn_delta_get_xml_editor (svn_stream_from_stdio (stdout, pool),
 			    &editor, &edit_baton, pool);
+
   editor->set_target_revision (edit_baton, 3);
-  editor->open_root (edit_baton, 2, &root_baton);
-  editor->open_directory (foo_string, root_baton, 2, &dir_baton);
-  editor->open_file (bar_string, dir_baton, 0, &file_baton);
+  editor->open_root (edit_baton, 2, pool, &root_baton);
+  editor->open_directory ("foo", root_baton, 2, pool, &dir_baton);
+  editor->open_file ("bar", dir_baton, 0, pool, &file_baton);
   editor->apply_textdelta (file_baton, &handler, &handler_baton);
   handler (&window, handler_baton);
   handler (NULL, handler_baton);
   editor->close_file (file_baton);
-  editor->open_file (baz_string, dir_baton, 0, &file_baton);
-  editor->change_file_prop (file_baton, bbb_string, ccc_string);
-  editor->change_file_prop (file_baton, aaa_string, NULL);
-  editor->change_dir_prop (dir_baton, ccc_string, bbb_string);
+  editor->open_file ("baz", dir_baton, 0, pool, &file_baton);
+  editor->change_file_prop (file_baton, "bbb", ccc_string, pool);
+  editor->change_file_prop (file_baton, "aaa", NULL, pool);
+  editor->change_dir_prop (dir_baton, "ccc", bbb_string, pool);
   editor->close_directory (dir_baton);
   editor->close_directory (root_baton);
   editor->apply_textdelta (file_baton, &handler, &handler_baton);
