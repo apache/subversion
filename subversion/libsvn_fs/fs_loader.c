@@ -22,6 +22,12 @@
 
 #include "fs.h"
 
+/* The implementation of this library is deliberately not separated
+   into multiple files, to avoid circular dependency problems with
+   Unix static linking.  We want FS back ends to be able to use our
+   functions without forcing applications to link against this library
+   twice. */
+
 
 svn_fs_t *
 svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
@@ -82,25 +88,8 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 {
 }
 
-int
-svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b)
-{
-}
-
-svn_boolean_t
-svn_fs_check_related (const svn_fs_id_t *id1, const svn_fs_id_t *id2)
-{
-}
-
-svn_fs_id_t *
-svn_fs_parse_id (const char *data, apr_size_t len, apr_pool_t *pool)
-{
-}
-
-svn_string_t *
-svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool)
-{
-}
+
+/* --- Transaction functions --- */
 
 svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
@@ -174,6 +163,9 @@ svn_fs_change_txn_prop (svn_fs_txn_t *txn, const char *name,
 {
   return txn->vtable->change_prop (txn, name, value, pool);
 }
+
+
+/* --- Root functions --- */
 
 svn_error_t *
 svn_fs_revision_root (svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev,
@@ -493,4 +485,133 @@ svn_error_t *
 svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 {
   return fs->vtable->set_uuid (fs, uuid, pool);
+}
+
+
+/* --- Public node-ID functions --- */
+
+svn_fs_id_t *
+svn_fs_parse_id (const char *data, apr_size_t data_len, apr_pool_t *pool)
+{
+  svn_fs_id_t *id;
+  char *data_copy;
+  char *dot;
+
+  /* Dup the ID data into POOL.  Our returned ID will have references
+     into this memory. */
+  data_copy = apr_pstrmemdup (pool, data, data_len);
+
+  /* Alloc a new svn_fs_id_t structure. */
+  id = apr_palloc (pool, sizeof (*id));
+
+  /* Now, we basically just need to "split" this data on `.'
+     characters.  There should be exactly three pieces (around two
+     `.'s) as a result.  To do this, we'll just replace the `.'s with
+     NULL terminators, and do fun pointer-y things.  */
+
+  /* Node Id */
+  id->node_id = data_copy;
+  dot = strchr (id->node_id, '.');
+  if ((! dot) || (dot <= id->node_id))
+    return NULL;
+  *dot = 0;
+
+  /* Copy Id */
+  id->copy_id = dot + 1;
+  dot = strchr (id->copy_id, '.');
+  if ((! dot) || (dot <= id->copy_id))
+    return NULL;
+  *dot = 0;
+  
+  /* Txn Id */
+  id->txn_id = dot + 1;
+  dot = strchr (id->copy_id, '.');
+  if (dot)
+    return NULL;
+
+  /* Return our ID */
+  return id;
+}
+
+svn_string_t *
+svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool)
+{
+  return svn_string_createf (pool, "%s.%s.%s", 
+                             id->node_id, id->copy_id, id->txn_id);
+}
+
+svn_boolean_t
+svn_fs_check_related (const svn_fs_id_t *id1, const svn_fs_id_t *id2)
+{
+  if (id1 == id2)
+    return TRUE;
+  if (id1->node_id == id2->node_id)
+    return TRUE;
+  return (strcmp (id1->node_id, id2->node_id) == 0) ? TRUE : FALSE;
+}
+
+int 
+svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b)
+{
+  if (svn_fs__id_eq (a, b))
+    return 0;
+  return (svn_fs_check_related (a, b) ? 1 : -1);
+}
+
+
+/* --- Node-rev ID utility functions --- */
+
+svn_fs_id_t *
+svn_fs__create_id (const char *node_id, const char *copy_id,
+                   const char *txn_id, apr_pool_t *pool)
+{
+  svn_fs_id_t *id = apr_palloc (pool, sizeof (*id));
+  id->node_id = apr_pstrdup (pool, node_id);
+  id->copy_id = apr_pstrdup (pool, copy_id);
+  id->txn_id = apr_pstrdup (pool, txn_id);
+  return id;
+}
+
+const char *
+svn_fs__id_node_id (const svn_fs_id_t *id)
+{
+  return id->node_id;
+}
+
+const char *
+svn_fs__id_copy_id (const svn_fs_id_t *id)
+{
+  return id->copy_id;
+}
+
+const char *
+svn_fs__id_txn_id (const svn_fs_id_t *id)
+{
+  return id->txn_id;
+}
+
+svn_fs_id_t *
+svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
+{
+  svn_fs_id_t *new_id = apr_palloc (pool, sizeof (*new_id));
+
+  new_id->node_id = apr_pstrdup (pool, id->node_id);
+  new_id->copy_id = apr_pstrdup (pool, id->copy_id);
+  new_id->txn_id = apr_pstrdup (pool, id->txn_id);
+  return new_id;
+}
+
+svn_boolean_t
+svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
+{
+  if (a != b)
+    {  
+      if (a->node_id != b->node_id && strcmp (a->node_id, b->node_id) != 0)
+        return FALSE;
+      if (a->copy_id != b->copy_id && strcmp (a->copy_id, b->copy_id) != 0)
+        return FALSE;
+      if (a->txn_id != b->txn_id && strcmp (a->txn_id, b->txn_id) != 0)
+        return FALSE;
+    }
+  return TRUE;
 }
