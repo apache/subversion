@@ -38,6 +38,7 @@
 #include "bdb/txn-table.h"
 #include "bdb/copies-table.h"
 #include "bdb/changes-table.h"
+#include "../libsvn_fs/fs_loader.h"
 
 
 

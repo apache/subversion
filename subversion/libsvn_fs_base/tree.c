@@ -54,6 +54,7 @@
 #include "bdb/nodes-table.h"
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
+#include "../libsvn_fs/fs_loader.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.

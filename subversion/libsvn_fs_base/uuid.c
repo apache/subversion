@@ -21,6 +21,7 @@
 #include "trail.h"
 #include "err.h"
 #include "bdb/uuids-table.h"
+#include "../libsvn_fs/fs_loader.h"
 
 
 struct get_uuid_args 
@@ -43,13 +44,15 @@ svn_fs_get_uuid (svn_fs_t *fs,
                  const char **uuid,
                  apr_pool_t *pool)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
+
   SVN_ERR (svn_fs__check_fs (fs));
 
   /* Check for a cached UUID first.  Failing that, we hit the
      database. */
-  if (fs->uuid)
+  if (bfd->uuid)
     {
-      *uuid = apr_pstrdup (pool, fs->uuid);
+      *uuid = apr_pstrdup (pool, bfd->uuid);
     }
   else
     {
@@ -60,7 +63,7 @@ svn_fs_get_uuid (svn_fs_t *fs,
 
       /* Toss what we find into the cache. */
       if (*uuid)
-        fs->uuid = apr_pstrdup (fs->pool, *uuid);
+        bfd->uuid = apr_pstrdup (fs->pool, *uuid);
     }
 
   return SVN_NO_ERROR;
@@ -88,6 +91,7 @@ svn_fs_set_uuid (svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   struct set_uuid_args args;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
@@ -97,7 +101,7 @@ svn_fs_set_uuid (svn_fs_t *fs,
 
   /* Toss our value into the cache. */
   if (uuid)
-    fs->uuid = apr_pstrdup (fs->pool, uuid);
+    bfd->uuid = apr_pstrdup (fs->pool, uuid);
 
   return SVN_NO_ERROR;
 }

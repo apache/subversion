@@ -25,6 +25,7 @@
 #include "err.h"
 #include "bdb/bdb-err.h"
 #include "trail.h"
+#include "../libsvn_fs/fs_loader.h"
 
 
 #if defined(SVN_FS__TRAIL_DEBUG)
@@ -95,6 +96,7 @@ begin_trail (trail_t **trail_p,
              svn_boolean_t use_txn,
              apr_pool_t *pool)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
 
   trail->pool = svn_pool_create (pool);
@@ -105,12 +107,13 @@ begin_trail (trail_t **trail_p,
     {
       /* If we're already inside a trail operation, abort() -- this is
          a coding problem (and will likely hang the repository anyway). */
-      if (fs->in_txn_trail)
+      if (bfd->in_txn_trail)
         abort();
 
       SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
-                         fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
-      fs->in_txn_trail = TRUE;
+                         bfd->env->txn_begin (bfd->env, 0,
+                                              &trail->db_txn, 0)));
+      bfd->in_txn_trail = TRUE;
     }
   else
     {
@@ -127,6 +130,7 @@ abort_trail (trail_t *trail)
 {
   struct undo *undo;
   svn_fs_t *fs = trail->fs;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Undo those changes which should only persist when the transaction
      succeeds.  */
@@ -138,7 +142,7 @@ abort_trail (trail_t *trail)
     {
       SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
                          trail->db_txn->abort (trail->db_txn)));
-      fs->in_txn_trail = FALSE;
+      bfd->in_txn_trail = FALSE;
     }
   svn_pool_destroy (trail->pool);
 
@@ -152,6 +156,7 @@ commit_trail (trail_t *trail)
   struct undo *undo;
   int db_err;
   svn_fs_t *fs = trail->fs;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Undo those changes which should persist only while the
      transaction is active.  */
@@ -166,13 +171,13 @@ commit_trail (trail_t *trail)
     {
       SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
                          trail->db_txn->commit (trail->db_txn, 0)));
-      fs->in_txn_trail = FALSE;
+      bfd->in_txn_trail = FALSE;
     }
 
   /* Do a checkpoint here, if enough has gone on.
      The checkpoint parameters below are pretty arbitrary.  Perhaps
      there should be an svn_fs_berkeley_mumble function to set them.  */
-  db_err = fs->env->txn_checkpoint (fs->env, 1024, 5, 0);
+  db_err = bfd->env->txn_checkpoint (bfd->env, 1024, 5, 0);
 
   /* Pre-4.1 Berkeley documentation says:
 
