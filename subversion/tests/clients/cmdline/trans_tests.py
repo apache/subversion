@@ -705,9 +705,15 @@ def propset_revert_noerror(sbox):
   # set/del all svn:keywords
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:keywords', 'Rev', mu_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Revert the propset
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', mu_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
   
 ########################################################################
 # Run the tests
