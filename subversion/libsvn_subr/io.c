@@ -993,6 +993,28 @@ svn_stringbuf_from_file (svn_stringbuf_t **result,
 }
 
 
+/* Get the name of FILE, or NULL if FILE is an unnamed stream. */
+static svn_error_t *
+file_name_get (const char **fname_utf8, apr_file_t *file, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  const char *fname;
+
+  apr_err = apr_file_name_get (&fname, file);
+  if (apr_err)
+    return svn_error_create
+      (apr_err, NULL,
+       "failed to get file name from APR");
+
+  if (fname)
+    SVN_ERR (svn_path_cstring_to_utf8 (fname_utf8, fname, pool));
+  else
+    *fname_utf8 = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
                             apr_file_t *file,
@@ -1001,22 +1023,9 @@ svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
   apr_size_t len;
   apr_status_t apr_err;
   svn_stringbuf_t *res = svn_stringbuf_create("", pool);
-  const char *fname;
   char buf[BUFSIZ];
 
   /* XXX: We should check the incoming data for being of type binary. */
-
-  apr_err = apr_file_name_get (&fname, file);
-  if (apr_err)
-    return svn_error_create
-      (apr_err, NULL,
-       "svn_stringbuf_from_aprfile: failed to get filename");
-
-  /* If the apr_file_t was opened with apr_file_open_std{in,out,err}, then we
-   * wont get a filename for it. We assume that since we are reading, that in
-   * this case we would only ever be using stdin.  */
-  if (NULL == fname)
-    fname = "stdin";
 
   /* apr_file_read will not return data and eof in the same call. So this loop
    * is safe from missing read data.  */
@@ -1033,9 +1042,14 @@ svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
   if (!APR_STATUS_IS_EOF(apr_err))
     {
       const char *fname_utf8;
+      SVN_ERR (file_name_get (&fname_utf8, file, pool));
       
-      SVN_ERR (svn_path_cstring_to_utf8 (&fname_utf8, fname, pool));
-      
+      /* If the apr_file_t was opened with apr_file_open_std{in,out,err}, then
+       * we won't get a filename for it. We assume that since we are reading,
+       * that in this case we would only ever be using stdin. */
+      if (NULL == fname_utf8)
+        fname_utf8 = "(stdin)";
+
       return svn_error_createf 
         (apr_err, NULL,
          "svn_stringbuf_from_aprfile: EOF not seen for '%s'", fname_utf8);
@@ -1702,6 +1716,29 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
                               "svn_io_file_open: can't open '%s'", fname);
   else
     return SVN_NO_ERROR;  
+}
+
+
+svn_error_t *
+svn_io_file_close (apr_file_t *file, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_file_close (file);
+
+  if (status)
+    {
+      const char *fname_utf8;
+      SVN_ERR (file_name_get (&fname_utf8, file, pool));
+      
+      if (NULL == fname_utf8)
+        fname_utf8 = "(stdin/out/err?)";
+
+      return svn_error_createf (status, NULL,
+                                "svn_io_file_close: can't close '%s'",
+                                fname_utf8);
+    }
+  return SVN_NO_ERROR;  
 }
 
 
