@@ -73,7 +73,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Return, in @a *adm_access, a pointer to a new access baton for the working
  * copy administrative area associated with the directory @a path.  If
@@ -100,6 +100,9 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * an error.  The error @c SVN_ERR_WC_LOCKED will be returned if a
  * subdirectory of @a path is already write locked.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
  * @a pool will be used to allocate memory for the baton and any subsequently
  * cached items.  If @a adm_access has not been closed when the pool is
  * cleared, it will be closed automatically at that point, and removed from
@@ -109,6 +112,21 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * The first baton in a set, with @a associated passed as @c NULL, must have 
  * the longest lifetime of all the batons in the set.  This implies it must be
  * the root of the hierarchy.
+ */
+svn_error_t *svn_wc_adm_open3 (svn_wc_adm_access_t **adm_access,
+                               svn_wc_adm_access_t *associated,
+                               const char *path,
+                               svn_boolean_t write_lock,
+                               int depth,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_adm_open3().  @a depth is set to -1 if @a tree_lock
+ * is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
                                svn_wc_adm_access_t *associated,
@@ -120,7 +138,7 @@ svn_error_t *svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_open2().  @a depth is set to -1 if @a tree_lock
+ * Similar to svn_wc_adm_open3().  @a depth is set to -1 if @a tree_lock
  * is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
@@ -131,17 +149,32 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Checks the working copy to determine the node type of @a path.  If 
  * @a path is a versioned directory then the behaviour is like that of
- * @c svn_wc_adm_open2, otherwise, if @a path is a file or does not
- * exist, then the behaviour is like that of @c svn_wc_adm_open2 with
+ * @c svn_wc_adm_open3, otherwise, if @a path is a file or does not
+ * exist, then the behaviour is like that of @c svn_wc_adm_open3 with
  * @a path replaced by the parent directory of @a path.  If @a path is
  * an unversioned directory, the behaviour is also like that of
- * @c svn_wc_adm_open2 on the parent, except that if the open fails,
+ * @c svn_wc_adm_open3 on the parent, except that if the open fails,
  * then the returned SVN_ERR_WC_NOT_DIRECTORY error refers to @a path,
  * not to @a path's parent.
+ */
+svn_error_t *svn_wc_adm_probe_open3 (svn_wc_adm_access_t **adm_access,
+                                     svn_wc_adm_access_t *associated,
+                                     const char *path,
+                                     svn_boolean_t write_lock,
+                                     int depth,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
+                                     apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_adm_probe_open3().  @a depth is set to -1 if
+ * @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
                                      svn_wc_adm_access_t *associated,
@@ -153,7 +186,7 @@ svn_error_t *svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_probe_open2().  @a depth is set to -1 if
+ * Similar to svn_wc_adm_probe_open3().  @a depth is set to -1 if
  * @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
@@ -176,7 +209,10 @@ svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
  * versioned directory, @c depth is ignored otherwise.  If @c write_lock is
  * @c TRUE the access batons will hold write locks.
  *
- * This function is essentially a combination of svn_wc_adm_open2 and
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
+ * This function is essentially a combination of svn_wc_adm_open3 and
  * svn_wc_get_actual_target, with the emphasis on reducing physical IO.
  */
 svn_error_t *
@@ -186,6 +222,8 @@ svn_wc_adm_open_anchor (svn_wc_adm_access_t **anchor_access,
                         const char *path,
                         svn_boolean_t write_lock,
                         int depth,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *pool);
 
 /** Return, in @a *adm_access, a pointer to an existing access baton associated
@@ -215,13 +253,13 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
                                         apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Try various ways to obtain an access baton for @a path.
  *
  * First, try to obtain @a *adm_access via @c svn_wc_adm_probe_retrieve(),
  * but if this fails because @a associated can't give a baton for
- * @a path or @a path's parent, then try @c svn_wc_adm_probe_open2(),
+ * @a path or @a path's parent, then try @c svn_wc_adm_probe_open3(),
  * this time passing @a write_lock and @a depth.  If there is
  * still no access because @a path is not a versioned directory, then
  * just set @a *adm_access to null and return success.  But if it is
@@ -230,10 +268,28 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
  * fails for any other reason, return the corresponding error, and the
  * effect on @a *adm_access is also undefined.)
  *
- * If @c svn_wc_adm_probe_open() succeeds, then add @a *adm_access to
+ * If @c svn_wc_adm_probe_open3() succeeds, then add @a *adm_access to
  * @a associated.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
  * Use @a pool only for local processing, not to allocate @a *adm_access.
+ */
+svn_error_t *svn_wc_adm_probe_try3 (svn_wc_adm_access_t **adm_access,
+                                    svn_wc_adm_access_t *associated,
+                                    const char *path,
+                                    svn_boolean_t write_lock,
+                                    int depth,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
+                                    apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_adm_probe_try3().  @a depth is set to -1 if
+ * @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
@@ -245,7 +301,7 @@ svn_error_t *svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_probe_try2().  @a depth is set to -1 if
+ * Similar to svn_wc_adm_probe_try3().  @a depth is set to -1 if
  * @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,

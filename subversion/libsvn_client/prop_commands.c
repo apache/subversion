@@ -203,8 +203,8 @@ svn_client_propset2 (const char *propname,
     return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                               _("Bad property name: '%s'"), propname);
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, TRUE,
-                                   recurse ? -1 : 0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target, TRUE,
+                                   recurse ? -1 : 0, NULL, NULL, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -429,8 +429,8 @@ maybe_convert_to_url (const char **new_target,
       else
         pdir = target;
       
-      SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, pdir, FALSE,
-                                 0, pool));
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, pdir, FALSE,
+                                 0, NULL, NULL, pool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -579,8 +579,10 @@ svn_client_propget2 (apr_hash_t **props,
     {
       svn_boolean_t pristine;
 
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                       FALSE, recurse ? -1 : 0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
+                                       FALSE, recurse ? -1 : 0,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf 
@@ -931,8 +933,10 @@ svn_client_proplist2 (apr_array_header_t **props,
     {
       svn_boolean_t pristine;
 
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                       FALSE, recurse ? -1 : 0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
+                                       FALSE, recurse ? -1 : 0,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf 

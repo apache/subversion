@@ -171,7 +171,7 @@ apr_hash_t *svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
 
 /* Return an access baton for PATH in *ADM_ACCESS.  This function is used
    to lock the working copy during construction of the admin area, it
-   necessarily does less checking than svn_wc_adm_open2. */
+   necessarily does less checking than svn_wc_adm_open3. */
 svn_error_t *svn_wc__adm_pre_open (svn_wc_adm_access_t **adm_access,
                                    const char *path,
                                    apr_pool_t *pool);

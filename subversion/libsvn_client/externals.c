@@ -101,7 +101,8 @@ relegate_external (const char *path,
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path, TRUE, -1, pool));
+  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, path, TRUE, -1, cancel_func,
+                             cancel_baton, pool));
   err = svn_wc_remove_from_revision_control (adm_access,
                                              SVN_WC_ENTRY_THIS_DIR,
                                              TRUE, FALSE,
@@ -262,7 +263,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       svn_error_t *err;
       svn_wc_adm_access_t *adm_access;
 
-      SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path, TRUE, -1,
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, path, TRUE, -1,
+                                 ib->ctx->cancel_func, ib->ctx->cancel_baton,
                                  ib->pool));
 
       /* We don't use relegate_external() here, because we know that
@@ -337,8 +339,9 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       SVN_ERR (svn_io_check_path (path, &kind, ib->pool));
       if (kind == svn_node_dir)
         {
-          SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path, TRUE, -1,
-                                     ib->pool));
+          SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, path, TRUE, -1,
+                                     ib->ctx->cancel_func,
+                                     ib->ctx->cancel_baton, ib->pool));
           SVN_ERR (svn_wc_entry (&ext_entry, path, adm_access, 
                                  FALSE, ib->pool));
           SVN_ERR (svn_wc_adm_close (adm_access));

@@ -467,8 +467,8 @@ svn_wc_copy (const char *src_path,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, src_path, FALSE, -1,
-                                   pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
+                                   cancel_func, cancel_baton, pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   

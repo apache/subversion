@@ -61,7 +61,9 @@ revert (const char *path,
                                 FALSE));
 
   SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_access, &target, path,
-                                   TRUE, recursive ? -1 : 0, pool));
+                                   TRUE, recursive ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
 
   err = svn_wc_revert (path, adm_access, recursive, use_commit_times,
                        ctx->cancel_func, ctx->cancel_baton,

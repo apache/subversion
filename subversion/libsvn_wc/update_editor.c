@@ -661,8 +661,9 @@ prep_directory (struct dir_baton *db,
         ? svn_wc_adm_access_pool (db->edit_baton->adm_access)
         : db->edit_baton->pool;
 
-      SVN_ERR (svn_wc_adm_open2 (&adm_access, db->edit_baton->adm_access,
-                                 db->path, TRUE, 0, adm_access_pool));
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, db->edit_baton->adm_access,
+                                 db->path, TRUE, 0, NULL, NULL,
+                                 adm_access_pool));
       if (!db->edit_baton->adm_access)
         db->edit_baton->adm_access = adm_access;
     }
@@ -2733,7 +2734,8 @@ check_wc_root (svn_boolean_t *wc_root,
   if (! p_access)
     /* For historical reasons we cannot rely on the caller having opened
        the parent, so try it here.  I'd like this bit to go away.  */
-    err = svn_wc_adm_probe_open2 (&p_access, NULL, parent, FALSE, 0, pool);
+    err = svn_wc_adm_probe_open3 (&p_access, NULL, parent, FALSE, 0,
+                                  NULL, NULL, pool);
 
   if (! err)
     err = svn_wc_entry (&p_entry, parent, p_access, FALSE, pool);
@@ -2792,8 +2794,8 @@ svn_wc_get_actual_target (const char *path,
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, FALSE, 0,
-                                   pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path, FALSE, 0,
+                                   NULL, NULL, pool));
   SVN_ERR (check_wc_root (&is_wc_root, &kind, path, adm_access, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 

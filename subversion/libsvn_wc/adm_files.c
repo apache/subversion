@@ -883,8 +883,8 @@ check_adm_exists (svn_boolean_t *exists,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
-      SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path, FALSE, 0,
-                                 pool));
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, path, FALSE, 0,
+                                 NULL, NULL, pool));
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
       if (!entry)

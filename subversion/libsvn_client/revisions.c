@@ -78,8 +78,8 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
         return svn_error_create
           (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL, NULL);
 
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, FALSE,
-                                       0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path, FALSE,
+                                       0, NULL, NULL, pool));
       SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
 
