@@ -62,7 +62,16 @@ C.  'svn merge' needs to track renames better.
      See http://www.contactor.se/~dast/svn/archive-2004-07/0084.shtml
      about our rename woes and the relationship to merge tracking.
 
+D.  Whatever solution is chosen must play well with 'svnadmin dump'
+    and 'svnadmin load'.  For example, the metadata used to store
+    merge tracking history must not be stored in terms of some
+    filesystem backend implementation detail (like
+    "node-revision-ids") unless, perhaps, those IDs are present for
+    all items in the dump as a sort of "soft data" (which would allow
+    them to be used for "translating" the merge tracking data at load
+    time, where those IDs would be otherwise irrelevant).
 
+    
 ---------------------------------------------
 Here's an example of problem B above, demonstrating how individual
 lines of code can be "merge tracked".  
