@@ -402,7 +402,13 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 dnl Final step:  create the Makefile ----------------------------
 
-AC_CONFIG_FILES([Makefile svn-config])
+AC_CONFIG_FILES([Makefile svn-config 
+  tools/backup/hot-backup.py
+  tools/client-side/svn_load_dirs.pl
+  tools/hook-scripts/commit-access-control.pl
+  tools/hook-scripts/commit-email.pl
+  tools/hook-scripts/propchange-email.pl
+  ])
 AC_CONFIG_COMMANDS([default], [chmod +x svn-config])
 AC_OUTPUT
 
