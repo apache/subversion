@@ -165,7 +165,7 @@ svn_wc__adm_path_exists (const char *path,
  * be empty after this no matter what.
  */
 svn_error_t *
-svn_wc__make_adm_thing (const char *path,
+svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                         const char *thing,
                         int type,
                         apr_fileperms_t perms,
@@ -175,8 +175,11 @@ svn_wc__make_adm_thing (const char *path,
   svn_error_t *err = NULL;
   apr_file_t *f = NULL;
   apr_status_t apr_err = 0;
+  const char *path;
 
-  path = extend_with_adm_name (path, NULL, tmp, pool, thing, NULL);
+  SVN_ERR (svn_wc_adm_write_check (adm_access));
+
+  path = extend_with_adm_name (adm_access->path, NULL, tmp, pool, thing, NULL);
 
   if (type == svn_node_file)
     {
@@ -1044,34 +1047,34 @@ init_adm_file (const char *path,
 
 
 static svn_error_t *
-init_adm_tmp_area (const char *path,
+init_adm_tmp_area (svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool)
 {
   /* Default perms */
   apr_fileperms_t perms = APR_OS_DEFAULT;
 
   /* SVN_WC__ADM_TMP */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TMP,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_TMP,
                                    svn_node_dir, perms, 0, pool));
   
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_TEXT_BASE,
                                    svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_PROP_BASE,
                                    svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_PROPS,
                                    svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_WCPROPS */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_WCPROPS,
                                    svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_AUTH_DIR */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_AUTH_DIR,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_AUTH_DIR,
                                    svn_node_dir,
                                    (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
                                    1, pool));
@@ -1087,6 +1090,8 @@ init_adm (const char *path,
           const char *url,
           apr_pool_t *pool)
 {
+  svn_wc_adm_access_t *adm_access;
+
   /* Default perms */
   apr_fileperms_t perms = APR_OS_DEFAULT;
 
@@ -1102,35 +1107,35 @@ init_adm (const char *path,
   /* Lock it immediately.  Theoretically, no compliant wc library
      would ever consider this an adm area until a README file were
      present... but locking it is still appropriately paranoid. */
-  SVN_ERR (svn_wc_lock (path, 0, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
 
 
   /** Make subdirectories. ***/
 
   /* SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_TEXT_BASE,
                                    svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_PROP_BASE */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_PROP_BASE,
                                    svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_PROPS */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_PROPS,
                                    svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_WCPROPS */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_WCPROPS,
                                    svn_node_dir, perms, 0, pool));
 
   /* SVN_WC__ADM_AUTH_DIR */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_AUTH_DIR,
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_AUTH_DIR,
                                    svn_node_dir, 
                                    (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
                                    0, pool));
 
   /** Init the tmp area. ***/
-  SVN_ERR (init_adm_tmp_area (path, pool));
+  SVN_ERR (init_adm_tmp_area (adm_access, pool));
   
   /** Initialize each administrative file. */
 
@@ -1146,8 +1151,8 @@ init_adm (const char *path,
      file temporarily, only to delete it again, would appear to be less
      efficient than just having one around. It doesn't take up much space
      after all. */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_EMPTY_FILE, svn_node_file,
-                                   APR_UREAD, 0, pool));
+  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_EMPTY_FILE,
+                                   svn_node_file, APR_UREAD, 0, pool));
 
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
@@ -1155,7 +1160,7 @@ init_adm (const char *path,
 
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */
-  SVN_ERR (svn_wc_unlock (path, pool));
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Else no problems, we're outta here. */
   return SVN_NO_ERROR;
@@ -1178,10 +1183,11 @@ svn_wc__ensure_adm (const char *path,
 svn_error_t *
 svn_wc__adm_destroy (const char *path, apr_pool_t *pool)
 {
+  svn_wc_adm_access_t *adm_access;
   /* Try to lock the admin directory, hoping that this function will
      eject an error if we're already locked (which is fine, cause if
      it is already locked, we certainly don't want to blow it away. */
-  SVN_ERR (svn_wc_lock (path, 0, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
 
   /* Well, I think the coast is clear for blowing away this directory
      (which will also remove the lock file we created above) */
@@ -1193,27 +1199,19 @@ svn_wc__adm_destroy (const char *path, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc__adm_cleanup_tmp_area (const char *path, apr_pool_t *pool)
+svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 {
-  svn_boolean_t was_locked;
   const char *tmp_path;
 
-  /* Lock the admin area if it's not already locked. */
-  SVN_ERR (svn_wc_locked (&was_locked, path, pool));
-  if (! was_locked)
-    SVN_ERR (svn_wc_lock (path, 0, pool));
+  SVN_ERR (svn_wc_adm_write_check (adm_access));
 
   /* Get the path to the tmp area, and blow it away. */
-  tmp_path = extend_with_adm_name (path, NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
+  tmp_path = extend_with_adm_name (adm_access->path, NULL, 0, pool,
+                                   SVN_WC__ADM_TMP, NULL);
   SVN_ERR (svn_io_remove_dir (tmp_path, pool));
 
   /* Now, rebuild the tmp area. */
-  SVN_ERR (init_adm_tmp_area (path, pool));
-
-  /* Unlock the admin area if it wasn't locked when we entered this
-     function. */
-  if (! was_locked)
-    SVN_ERR (svn_wc_unlock (path, pool));
+  SVN_ERR (init_adm_tmp_area (adm_access, pool));
 
   return SVN_NO_ERROR;
 }

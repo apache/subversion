@@ -197,6 +197,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_LOCKED,
               "Attempted to lock an already-locked dir")
 
+  SVN_ERRDEF (SVN_ERR_WC_NOT_LOCKED,
+              "Working copy not locked")
+
   SVN_ERRDEF (SVN_ERR_WC_NOT_DIRECTORY,
               "Path is not a working copy directory")
 

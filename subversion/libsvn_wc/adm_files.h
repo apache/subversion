@@ -53,7 +53,7 @@ svn_boolean_t svn_wc__adm_path_exists (const char *path,
 
 
 /* Make `PATH/<adminstrative_subdir>/THING'. */
-svn_error_t *svn_wc__make_adm_thing (const char *path,
+svn_error_t *svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                                      const char *thing,
                                      int type,
                                      apr_fileperms_t perms,
@@ -267,7 +267,7 @@ svn_error_t *svn_wc__adm_destroy (const char *path,
 
 /* Cleanup the temporary storage area of the administrative
    directory. */
-svn_error_t *svn_wc__adm_cleanup_tmp_area (const char *path, 
+svn_error_t *svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access,
                                            apr_pool_t *pool);
 
 

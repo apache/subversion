@@ -618,9 +618,12 @@ unlock_dirs (apr_hash_t *locked_dirs,
   for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
     {
       const void *key;
+      void *val;
+      svn_wc_adm_access_t *adm_access;
 
-      apr_hash_this (hi, &key, NULL, NULL);
-      SVN_ERR (svn_wc_unlock (key, pool));
+      apr_hash_this (hi, &key, NULL, &val);
+      adm_access = val;
+      SVN_ERR (svn_wc_adm_close (adm_access));
     }
 
   return SVN_NO_ERROR;

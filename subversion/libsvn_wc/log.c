@@ -676,18 +676,30 @@ log_do_committed (struct log_runner *loggy,
              higher, then the process that sees KILLME and destroys
              the directory can also place a 'deleted' dir entry in the
              parent. */
+          svn_wc_adm_access_t *adm_access;
           svn_wc_entry_t tmpentry;
           tmpentry.revision = new_rev;
           tmpentry.kind = svn_node_dir;
+
           SVN_ERR (svn_wc__entry_modify (loggy->path, NULL, &tmpentry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
                                          | SVN_WC__ENTRY_MODIFY_KIND,
                                          pool));
 
+          /* ### Need an adm access baton to create the killme file.  This
+             ### is temporary, the adm access baton should be part of the
+             ### log_runner structure.  A write access baton will be
+             ### required to create the log file and will get passed to
+             ### svn_wc__run_log, at which point this call will fail and
+             ### can be removed */
+          SVN_ERR (svn_wc_adm_open (&adm_access, loggy->path, TRUE, pool));
+
           /* Drop the 'killme' file. */
-          return svn_wc__make_adm_thing (loggy->path, SVN_WC__ADM_KILLME,
-                                         svn_node_file, APR_OS_DEFAULT,
-                                         0, pool);
+          SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_KILLME,
+                                           svn_node_file, APR_OS_DEFAULT,
+                                           0, pool));
+
+          return svn_wc_adm_close (adm_access);
         }
 
       /* Else, we're deleting a file, and we can safely remove files
@@ -1216,8 +1228,8 @@ svn_wc_cleanup (const char *path,
   apr_hash_index_t *hi;
   const char *log_path = svn_wc__adm_path (path, 0, pool,
                                            SVN_WC__ADM_LOG, NULL);
-  svn_boolean_t locked;
   enum svn_node_kind kind;
+  svn_wc_adm_access_t *adm_access;
   svn_boolean_t is_wc;
 
   SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
@@ -1255,10 +1267,8 @@ svn_wc_cleanup (const char *path,
         }
     }
 
-  /* Lock this working copy directory if it isn't already. */
-  SVN_ERR (svn_wc_locked (&locked, path, pool));
-  if (! locked)
-    SVN_ERR (svn_wc_lock (path, 0, pool));
+  /* Lock this working copy directory, or steal an existing lock */
+  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, path, pool));
 
   /* Is there a log?  If so, run it. */
   err = svn_io_check_path (log_path, &kind, pool);
@@ -1274,13 +1284,13 @@ svn_wc_cleanup (const char *path,
 
   /* Cleanup the tmp area of the admin subdir.  The logs have been
      run, so anything left here has no hope of being useful. */
-  SVN_ERR (svn_wc__adm_cleanup_tmp_area (path, pool));
+  SVN_ERR (svn_wc__adm_cleanup_tmp_area (adm_access, pool));
 
   /* Remove the lock here, making sure that the administrative
      directory still exists after running the log! */
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
     {
-      err = svn_wc_unlock (path, pool);
+      err = svn_wc_adm_close (adm_access);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         svn_error_clear_all (err);
       else if (err)
