@@ -911,34 +911,56 @@ main (int argc, const char * const *argv)
   {
     const char *store_password_val = NULL;
 
+    /* The whole list of registered providers */
     apr_array_header_t *providers
       = apr_array_make (pool, 1, sizeof (svn_auth_provider_object_t *));
 
-    svn_auth_provider_object_t *wc_provider 
-      = apr_pcalloc (pool, sizeof(*wc_provider));
-    
-    svn_auth_provider_object_t *prompt_provider 
-      = apr_pcalloc (pool, sizeof(*prompt_provider));
+    /* The main disk-caching auth providers, for both
+       'username/password' creds and 'username' creds.  */
+    svn_auth_provider_object_t *simple_wc_provider 
+      = apr_pcalloc (pool, sizeof(*simple_wc_provider));
 
-    /* Fetch our two existing authentication providers, and order them
-       in an array. */
-    svn_wc_get_simple_provider (&(wc_provider->vtable),
-                                &(wc_provider->provider_baton), pool);
-    *(svn_auth_provider_object_t **)apr_array_push (providers) = wc_provider;
+    svn_auth_provider_object_t *username_wc_provider 
+      = apr_pcalloc (pool, sizeof(*username_wc_provider));
+
+    svn_wc_get_simple_provider (&(simple_wc_provider->vtable),
+                                &(simple_wc_provider->provider_baton), pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers) 
+      = simple_wc_provider;
+
+    svn_wc_get_username_provider 
+      (&(username_wc_provider->vtable),
+       &(username_wc_provider->provider_baton), pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers) 
+      = username_wc_provider;
 
     if (opt_state.non_interactive == FALSE)
       {
+        /* Two prompting providers, one for username/password, one for
+           just username. */
+        svn_auth_provider_object_t *simple_prompt_provider 
+          = apr_pcalloc (pool, sizeof(*simple_prompt_provider));
+
+        svn_auth_provider_object_t *username_prompt_provider 
+          = apr_pcalloc (pool, sizeof(*username_prompt_provider));
+
         svn_client_get_simple_prompt_provider 
-          (&(prompt_provider->vtable),
-           &(prompt_provider->provider_baton),
+          (&(simple_prompt_provider->vtable),
+           &(simple_prompt_provider->provider_baton),
+           svn_cl__prompt_user, NULL,
+           2, /* retry limit */ pool);
+
+        svn_client_get_username_prompt_provider 
+          (&(username_prompt_provider->vtable),
+           &(username_prompt_provider->provider_baton),
            svn_cl__prompt_user, NULL,
            2, /* retry limit */ pool);
 
         *(svn_auth_provider_object_t **)apr_array_push (providers) 
-          = prompt_provider;
+          = simple_prompt_provider;
 
-        /* ### cmpilato, you can register your username prompt
-           provider riiiiiiight here. */
+        *(svn_auth_provider_object_t **)apr_array_push (providers) 
+          = username_prompt_provider;       
       }
 
     /* Build an authentication baton to give to libsvn_client. */
