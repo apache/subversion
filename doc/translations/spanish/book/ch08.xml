@@ -694,28 +694,32 @@ The following repository access (RA) modules are available:
       </sect3>
 
       <sect3 id="svn-ch-8-sect-1.2.2">
-        <title>RA-SVN (Custom Protocol Repository Access)</title>
+        <title>RA-SVN (Acceso al repositorio usando protocolo propio)</title>
 
-        <para>In addition to the standard HTTP/WebDAV protocol,
-          Subversion also provides an RA implementation that uses a
-          custom protocol.  The libsvn_ra_svn module implements
-          its own network socket connectivity, and communicates with a
-          stand-alone server&mdash;the <filename>svnserve</filename>
-          program&mdash;on the machine that hosts the
-          repository.  Clients access the repository using the
-          <literal>svn://</literal> schema.</para>
+        <para>Además del protocolo estándar HTTP/WebDAV, Subversion
+          también proporciona una implementación RA que usa un
+          protocolo propio.  El módulo libsvn_ra_svn implementa su
+          propia conectividad por red, y se comunica con un servidor
+          <!-- TODO stand-alone podría traducirse como independiente,
+          pero pierde "gancho" --> autosuficiente&mdash;el
+          programa <filename>svnserve</filename>&mdash;
+          en la máquina que almacena el repositorio. Los
+          clientes acceden al repositorio usando el esquema
+          <literal>svn://</literal>.</para>
 
-        <para>This RA implementation lacks most of the advantages of
-          Apache mentioned in the previous section; however, it may be
-          appealing to some sysadmins nonetheless.  It is dramatically
-          easier to configure and run; setting up an
-          <filename>svnserve</filename> process is nearly
-          instantaneous.  It is also much smaller (in terms of lines
-          of code) than Apache, making it much easier to audit, for
-          security reasons or otherwise.  Furthermore, some sysadmins
-          may already have an SSH security infrastructure in place,
-          and want Subversion to use it.  Clients using ra_svn can
-          easily tunnel the protocol over SSH.</para>
+        <para>Esta implementación RA carece de la mayoría de las
+          ventajas de Apache mencionadas en la sección anterior;
+          no obstante, puede ser atractiva para algunos
+          administradores de sistemas. Es dramáticamente más
+          fácil de configurar y ejecutar; configurar un proceso
+          <filename>svnserve</filename> es casi instantáneo.
+          También es mucho más pequeño (en líneas de código) que
+          Apache, haciéndolo más fácil de auditar, <!-- TODO ¿auditar
+          o revisar? --> por razones de seguridad u otras. Además,
+          algunos administradores de sistemas pueden tener ya
+          instalada una infraestructura de seguridad SSH, que quieren
+          que Subversion aproveche. Los clientes usando ra_svn pueden
+          canalizar fácilmente el protocolo por SSH.</para>
 
       </sect3>
 
