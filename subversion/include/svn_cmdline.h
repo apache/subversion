@@ -37,13 +37,30 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** Set up the locale for character conversion, and initialize APR.
+/**
+ *
+ * @since New in 1.2
+ *
+ * Set up the locale and initialize APR and gettext.
+ * Only set up LC_CTYPE when @a server_mode is true, LC_ALL otherwise.
  * If @a error_stream is non-null, print error messages to the stream,
  * using @a progname as the program name. Return @c EXIT_SUCCESS if
  * successful, otherwise @c EXIT_FAILURE.
  *
  * @note This function should be called exactly once at program startup,
  *       before calling any other APR or Subversion functions.
+ *
+ */
+int svn_cmdline_init2 (const char *progname, FILE *error_stream,
+                       svn_boolean_t server_mode);
+
+
+/**
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Same as svn_cmdline_init2, but with @a server_mode set to FALSE
+ *
  */
 int svn_cmdline_init (const char *progname, FILE *error_stream);
 

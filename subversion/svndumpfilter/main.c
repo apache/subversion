@@ -1061,7 +1061,7 @@ main (int argc, const char * const *argv)
 
 
   /* Initialize the app. */
-  if (svn_cmdline_init ("svndumpfilter", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init2 ("svndumpfilter", stderr, FALSE) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,

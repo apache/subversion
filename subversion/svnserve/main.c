@@ -123,14 +123,22 @@ static const apr_getopt_option_t svnserve__options[] =
   };
 
 
+static void enable_message_translation()
+{
+  /* discard the result; if setlocale fails, we'll just be serving
+     the english text instead of the localized version. */
+  setlocale (LC_ALL, "");
+}
+
 static void usage(const char *progname, apr_pool_t *pool)
 {
   if (!progname)
     progname = "svnserve";
 
-  svn_error_clear (svn_cmdline_fprintf(stderr, pool,
-                                       _("Type '%s --help' for usage.\n"),
-                                       progname));
+  enable_message_translation();
+  svn_error_clear (svn_cmdline_fprintf (stderr, pool,
+                                        _("Type '%s --help' for usage.\n"),
+                                        progname));
   exit(1);
 }
 
@@ -138,6 +146,7 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
+  enable_message_translation();
   svn_error_clear (svn_cmdline_fputs(_("Usage: svnserve [options]\n"
                                        "\n"
                                        "Valid options:\n"),
@@ -154,6 +163,7 @@ static void help(apr_pool_t *pool)
 
 static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 {
+  enable_message_translation();
   return svn_opt_print_help(os, "svnserve", TRUE, FALSE, NULL, NULL,
                             NULL, NULL, NULL, pool);
 }
@@ -248,7 +258,7 @@ int main(int argc, const char *const *argv)
   const char *host = NULL;
 
   /* Initialize the app. */
-  if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init2("svn", stderr, TRUE) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */
@@ -258,6 +268,7 @@ int main(int argc, const char *const *argv)
   err = check_lib_versions ();
   if (err)
     {
+      enable_message_translation();
       svn_handle_error (err, stderr, FALSE);
       svn_error_clear (err);
       svn_pool_destroy (pool);
@@ -328,16 +339,18 @@ int main(int argc, const char *const *argv)
 
         case 'R':
           params.read_only = TRUE;
+          /* Don't translate the warning below: we may stay in
+             server mode (and thus don't want to translate messages) */
           svn_error_clear
             (svn_cmdline_fprintf
                (stderr, pool,
-                _("Warning: -R is deprecated.\n"
-                  "Anonymous access is now read-only by default.\n"
-                  "To change, use conf/svnserve.conf in repos:\n"
-                  "  [general]\n"
-                  "  anon-access = read|write|none (default read)\n"
-                  "  auth-access = read|write|none (default write)\n"
-                  "Forcing all access to read-only for now\n")));
+                "Warning: -R is deprecated.\n"
+                "Anonymous access is now read-only by default.\n"
+                "To change, use conf/svnserve.conf in repos:\n"
+                "  [general]\n"
+                "  anon-access = read|write|none (default read)\n"
+                "  auth-access = read|write|none (default write)\n"
+                "Forcing all access to read-only for now\n"));
           break;
 
         case 'T':
@@ -350,6 +363,7 @@ int main(int argc, const char *const *argv)
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
+      enable_message_translation();
       svn_error_clear
         (svn_cmdline_fprintf
            (stderr, pool,
@@ -359,9 +373,10 @@ int main(int argc, const char *const *argv)
 
   if (run_mode == run_mode_none)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool, _("You must specify one of -d, -i, -t or -X.\n")));
+      enable_message_translation();
+      svn_error_clear (svn_cmdline_fputs
+                       (_("You must specify one of -d, -i, -t or -X.\n"),
+                        stderr, pool));
       usage(argv[0], pool);
     }
 
@@ -386,10 +401,8 @@ int main(int argc, const char *const *argv)
 #endif
   if (status)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool, _("Can't create server socket: %s\n"),
-            apr_strerror(status, errbuf, sizeof(errbuf))));
+      fprintf (stderr, "Can't create server socket: %s\n",
+               apr_strerror(status, errbuf, sizeof(errbuf)));
       exit(1);
     }
 
@@ -400,32 +413,20 @@ int main(int argc, const char *const *argv)
   status = apr_sockaddr_info_get(&sa, host, APR_INET, port, 0, pool);
   if (status)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool, _("Can't get address info: %s\n"),
-            apr_strerror(status, errbuf, sizeof(errbuf))));
+      fprintf (stderr, "Can't get address info: %s\n",
+               apr_strerror(status, errbuf, sizeof(errbuf)));
       exit(1);
     }
 
   status = apr_socket_bind(sock, sa);
   if (status)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool, _("Can't bind server socket: %s\n"),
-            apr_strerror(status, errbuf, sizeof(errbuf))));
+      fprintf (stderr, "Can't bind server socket: %s\n",
+               apr_strerror(status, errbuf, sizeof(errbuf)));
       exit(1);
     }
 
   apr_socket_listen(sock, 7);
-
-  /* svn_cmdline_init() sets up the locale, but when we serve clients, we
-     always want the "C" locale for messages. */
-  /* ### LC_MESSAGES isn't available on all platforms. TEMPORARILY disable
-     this call on those platforms. ### */
-#ifdef LC_MESSAGES
-  setlocale (LC_MESSAGES, "C");
-#endif
 
 #if APR_HAS_FORK
   if (run_mode != run_mode_listen_once && !foreground)
