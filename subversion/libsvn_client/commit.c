@@ -221,6 +221,7 @@ import_file (const svn_delta_editor_t *editor,
       notify->mime_type = mimetype;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
     }
 
@@ -320,6 +321,7 @@ import_dir (const svn_delta_editor_t *editor,
               notify->kind = svn_node_dir;
               notify->content_state = notify->prop_state
                 = svn_wc_notify_state_inapplicable;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
               (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
             }
           continue;
@@ -363,6 +365,7 @@ import_dir (const svn_delta_editor_t *editor,
               notify->kind = svn_node_dir;
               notify->content_state = notify->prop_state
                 = svn_wc_notify_state_inapplicable;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
               (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
             }
 

@@ -531,7 +531,19 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_commit_postfix_txdelta,
 
   /** Processed a single revision's blame. */
-  svn_wc_notify_blame_revision
+  svn_wc_notify_blame_revision,
+
+  /** @since New in 1.2.  Locking a path. */
+  svn_wc_notify_locked,
+
+  /** @since New in 1.2.  Unlocking a path. */
+  svn_wc_notify_unlocked,
+
+  /** @since New in 1.2.  Failed to lock a path. */
+  svn_wc_notify_failed_lock,
+
+  /** @since New in 1.2.  Failed to unlock a path. */
+  svn_wc_notify_failed_unlock
 } svn_wc_notify_action_t;
 
 
@@ -567,12 +579,14 @@ typedef enum svn_wc_notify_state_t
  *
  * What happened to a lock during an operation.
  *
- * ### This isn't currently used in the notify API.
  */
 typedef enum svn_wc_notify_lock_state_t {
   svn_wc_notify_lock_state_inapplicable = 0,
+  svn_wc_notify_lock_state_unknown,
   /** The lock wasn't changed. */
   svn_wc_notify_lock_state_unchanged,
+  /** The item was locked. */
+  svn_wc_notify_lock_state_locked,
   /** The item was unlocked. */
   svn_wc_notify_lock_state_unlocked
 } svn_wc_notify_lock_state_t;
@@ -588,9 +602,15 @@ typedef struct svn_wc_notify_t {
   svn_wc_notify_action_t action;
   svn_node_kind_t kind;
   const char *mime_type;
+  const svn_lock_t *lock;
+  svn_error_t *err;
   svn_wc_notify_state_t content_state;
   svn_wc_notify_state_t prop_state;
+  svn_wc_notify_lock_state_t lock_state;
   svn_revnum_t revision;
+  /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update svn_wc_create_notify
+     and svn_wc_dup_notify. */
 } svn_wc_notify_t;
 
 /** @since New in 1.2.

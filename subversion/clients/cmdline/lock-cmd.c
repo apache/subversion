@@ -88,46 +88,6 @@ get_comment (const char **comment, const char **tmp_file,
   return SVN_NO_ERROR;
 }
 
-struct lock_baton
-{
-  svn_boolean_t had_print_error;
-  apr_pool_t *pool;
-};
-
-/* This callback is called by the client layer with BATON, the PATH
- * being locked, and the LOCK itself.
- */
-static svn_error_t *
-print_lock_info (void *baton,
-                 const char *path,
-                 svn_boolean_t do_lock,
-                 const svn_lock_t *lock,
-                 svn_error_t *ra_err)
-{
-  svn_error_t *err = NULL;
-  struct lock_baton *lb = baton;
-
-  if (ra_err)
-    svn_handle_error (ra_err, stderr, FALSE);
-  else
-    err = svn_cmdline_printf (lb->pool, _("'%s' locked by user '%s'.\n"),
-                              path, lock->owner);
-
-  if (err)
-    {
-      /* Print if it is the first error. */
-      if (!lb->had_print_error)
-        {
-          lb->had_print_error = TRUE;
-          svn_handle_error (err, stderr, FALSE);
-        }
-      svn_error_clear (err);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__lock (apr_getopt_t *os,
@@ -136,12 +96,11 @@ svn_cl__lock (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  apr_array_header_t *targets, *locks;
+  apr_array_header_t *targets;
   const char *base_dir;
   const char *comment;
   const char *tmp_file = NULL;
   svn_error_t *err;
-  struct lock_baton lb;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
                                           opt_state->targets, pool));
@@ -163,10 +122,11 @@ svn_cl__lock (apr_getopt_t *os,
   /* Get comment. */
   SVN_ERR (get_comment (&comment, &tmp_file, ctx, opt_state, base_dir, pool));
 
-  lb.had_print_error = FALSE;
-  lb.pool = pool;
-  err = svn_client_lock (&locks, targets, comment, opt_state->force,
-                         print_lock_info, &lb, ctx, pool);
+  svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                        FALSE, FALSE, pool);
+
+  err = svn_client_lock (targets, comment, opt_state->force,
+                         ctx, pool);
   if (err && tmp_file)
     svn_error_compose
       (err,

@@ -557,13 +557,14 @@ def build_generic_tree(nodelist):
 
 # Parse co/up output into a tree.
 #
-#   Tree nodes will contain no contents, and only one 'status' att.
+#   Tree nodes will contain no contents, a 'status' att, and a
+#   'writelocked' att.
 
 def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
   
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])\s+(.+)')
+  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])([B ])\s+(.+)')
   # There may be other verbs we need to match, in addition to
   # "Restored".  If so, add them as alternatives in the first match
   # group below.
@@ -572,7 +573,7 @@ def build_tree_from_checkout(lines):
   for line in lines:
     match = rm1.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(2), None, {},
+      new_branch = create_from_path(match.group(3), None, {},
                                     {'status' : match.group(1)})
       root.add_child(new_branch)
     else:

@@ -118,10 +118,21 @@ svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
   ret->action = action;
   ret->kind = svn_node_unknown;
   ret->mime_type = NULL;
+  ret->lock = NULL;
+  ret->err = SVN_NO_ERROR;
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
+  ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
 
   return ret;
+}
+
+/* Pool cleanup function to clear an svn_error_t *. */
+static apr_status_t err_cleanup (void *data)
+{
+  svn_error_clear (data);
+
+  return APR_SUCCESS;
 }
 
 svn_wc_notify_t *
@@ -129,12 +140,20 @@ svn_wc_dup_notify (const svn_wc_notify_t *notify, apr_pool_t *pool)
 {
   svn_wc_notify_t *ret = apr_palloc (pool, sizeof (*ret));
 
-  memcpy (ret, notify, sizeof (*ret));
+  *ret = *notify;
 
   if (ret->path)
     ret->path = apr_pstrdup (pool, ret->path);
   if (ret->mime_type)
     ret->mime_type = apr_pstrdup (pool, ret->mime_type);
+  if (ret->lock)
+    ret->lock = svn_lock_dup (ret->lock, pool);
+  if (ret->err)
+    {
+      ret->err = svn_error_dup (ret->err);
+      apr_pool_cleanup_register (pool, ret->err, err_cleanup,
+                                 apr_pool_cleanup_null);
+    }
 
   return ret;
 }

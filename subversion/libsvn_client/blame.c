@@ -412,6 +412,7 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       notify->revision = revnum;
       frb->ctx->notify_func2 (frb->ctx->notify_baton2, notify, pool);
     }
@@ -782,6 +783,7 @@ old_blame (const char *target, const char *url,
           notify->kind = svn_node_none;
           notify->content_state = notify->prop_state
             = svn_wc_notify_state_inapplicable;
+          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
           notify->revision = rev->revision;
           frb->ctx->notify_func2 (frb->ctx->notify_baton2, notify, pool);
         }                               

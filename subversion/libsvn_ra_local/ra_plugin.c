@@ -1053,20 +1053,16 @@ svn_ra_local__get_locations (svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__lock (svn_ra_session_t *session,
-                    apr_array_header_t **locks_p,
                     apr_hash_t *path_revs,
                     const char *comment,
                     svn_boolean_t force,
-                    svn_lock_callback_t lock_func, 
+                    svn_ra_lock_callback_t lock_func, 
                     void *lock_baton,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_array_header_t *locks;
   apr_hash_index_t *hi;
-
-  locks = apr_array_make (pool, apr_hash_count (path_revs), 
-                          sizeof (svn_lock_t *));
+  apr_pool_t *iterpool = svn_pool_create (pool);
 
   /* A username is absolutely required to lock a path. */
   SVN_ERR (get_username (session, pool));
@@ -1076,39 +1072,35 @@ svn_ra_local__lock (svn_ra_session_t *session,
       svn_lock_t *lock;
       const void *key;
       const char *path;
-      apr_ssize_t keylen;
       void *val;
       svn_revnum_t *revnum;
       const char *abs_path;
       svn_error_t *err, *callback_err = NULL;
  
-      apr_hash_this (hi, &key, &keylen, &val);
+      svn_pool_clear (iterpool);
+      apr_hash_this (hi, &key, NULL, &val);
       path = key;
       revnum = val;
 
-      abs_path = svn_path_join (sess->fs_path, path, pool);
+      abs_path = svn_path_join (sess->fs_path, path, iterpool);
 
       /* This wrapper will call pre- and post-lock hooks. */
       err = svn_repos_fs_lock (&lock, sess->repos, abs_path, comment, force,
-                               0 /* no timeout */, *revnum, pool);
+                               0 /* no timeout */, *revnum, iterpool);
 
       if (err && !svn_error_is_lock_error (err))
         return err;
 
-      /* Run the lock callback if we have one. */
       if (lock_func)
-        callback_err = lock_func (lock_baton, path, TRUE, lock, err);
+        callback_err = lock_func (lock_baton, path, TRUE, lock, err, iterpool);
 
       svn_error_clear (err);
 
       if (callback_err)
         return callback_err;
-
-      /* Add lock to the array of locks */
-      APR_ARRAY_PUSH (locks, svn_lock_t *) = lock;
     }
 
-  *locks_p = locks;
+  svn_pool_destroy (iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1118,12 +1110,13 @@ static svn_error_t *
 svn_ra_local__unlock (svn_ra_session_t *session,
                       apr_hash_t *path_tokens,
                       svn_boolean_t force,
-                      svn_lock_callback_t lock_func, 
+                      svn_ra_lock_callback_t lock_func, 
                       void *lock_baton,
                       apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create (pool);
 
   /* A username is absolutely required to unlock a path. */
   SVN_ERR (get_username (session, pool));
@@ -1132,12 +1125,12 @@ svn_ra_local__unlock (svn_ra_session_t *session,
     {
       const void *key;
       const char *path;
-      apr_ssize_t keylen;
       void *val;
       const char *abs_path, *token;
       svn_error_t *err, *callback_err = NULL;
  
-      apr_hash_this (hi, &key, &keylen, &val);
+      svn_pool_clear (iterpool);
+      apr_hash_this (hi, &key, NULL, &val);
       path = key;
       /* Since we can't store NULL values in a hash, we turn "" to
          NULL here. */
@@ -1146,17 +1139,17 @@ svn_ra_local__unlock (svn_ra_session_t *session,
       else
         token = NULL;
 
-      abs_path = svn_path_join (sess->fs_path, path, pool);
+      abs_path = svn_path_join (sess->fs_path, path, iterpool);
 
       /* This wrapper will call pre- and post-unlock hooks. */
-      err = svn_repos_fs_unlock (sess->repos, abs_path, token, force, pool);
+      err = svn_repos_fs_unlock (sess->repos, abs_path, token, force,
+                                 iterpool);
 
       if (err && !svn_error_is_unlock_error (err))
         return err;
 
-      /* Run the lock callback if we have one. */
       if (lock_func)
-        callback_err = lock_func (lock_baton, path, FALSE, NULL, err);
+        callback_err = lock_func (lock_baton, path, FALSE, NULL, err, iterpool);
 
       svn_error_clear (err);
 
@@ -1164,7 +1157,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
         return callback_err;
     }
 
-
+  svn_pool_destroy (iterpool);
 
   return SVN_NO_ERROR;
 }

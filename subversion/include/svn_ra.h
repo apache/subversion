@@ -142,6 +142,32 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
         apr_array_header_t *prop_diffs,
         apr_pool_t *pool);
 
+/** 
+ * @since New in 1.2.
+ *
+ * Callback function type for locking and unlocking actions.
+ * 
+ * @a do_lock should be TRUE when locking @a path, and FALSE
+ * otherwise.
+ * 
+ * @a lock is a lock for @a path.
+ *
+ * @a ra_err is NULL unless the ra layer encounters a locking related
+ * error which it passes back for notification purposes (although the
+ * callback can also re-throw the error).  The caller is responsible
+ * for clearing @a ra_err after the callback is run.
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.  @a pool may be used for
+ * temporary allocation.
+ */
+typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
+                                                const char *path,
+                                                svn_boolean_t do_lock,
+                                                const svn_lock_t *lock,
+                                                svn_error_t *ra_err,
+                                                apr_pool_t *pool);
+
 
 /** @since New in 1.2.
  *
@@ -899,29 +925,28 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
 /**
  * @since New in 1.2.
  *
- * @a path_revs is a hash whose keys are the paths to be locked, and
- * whose values are the corresponding base revisions for each path.
- * 
- * Lock each path in @a path_revs and set @a *locks to an array of
- * locks representing the new locks, allocated in @a pool.
+ * Lock each path in @a path_revs, which is a hash whose keys are the
+ * paths to be locked, and whose values are the corresponding bas
+ * revisions for each path.
  *
  * Note that locking is never anonymous, so any server implementing
  * this function will have to "pull" a username from the client, if
  * it hasn't done so already.
  *
- * @a comment is optional: it's either an xml-escapable UTF8 string
+ * @a comment is optional: it's either an xml-escapable string
  * which describes the lock, or it is NULL.
  *
- * If any path is already locked by a different user, then return
- * error.  If @a force is true, then "steal" the existing lock(s)
- * anyway, even if the RA username does not match the current lock's
- * owner.  Delete any lock on the path, and unconditionally create a
- * new lock.
+ * If any path is already locked by a different user, then call @a
+ * lock_func/@a lock_baton with an error.  If @a force is true, then
+ * "steal" the existing lock(s) anyway, even if the RA username does
+ * not match the current lock's owner.  Delete any lock on the path,
+ * and unconditionally create a new lock.
  *
  * For each path, if its base revision (in @a path_revs) is a valid
  * revnum, then do an out-of-dateness check.  If the revnum is less
  * than the last-changed-revision of any path (or if a path doesn't
- * exist in HEAD), return SVN_ERR_RA_OUT_OF_DATE.
+ * exist in HEAD), call @a lock_func/@a lock_baton with an
+ * SVN_ERR_RA_OUT_OF_DATE error.
  *
  * After successfully locking a file, @a lock_func is called with the
  * @a lock_baton.
@@ -929,34 +954,32 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
  * Use @a pool for temporary allocations.
  */
 svn_error_t *svn_ra_lock (svn_ra_session_t *session,
-                          apr_array_header_t **locks,
                           apr_hash_t *path_revs,
                           const char *comment,
                           svn_boolean_t force,
-                          svn_lock_callback_t lock_func, 
+                          svn_ra_lock_callback_t lock_func, 
                           void *lock_baton,
                           apr_pool_t *pool);
 
 /**
  * @since New in 1.2.
  *
+ * Remove the repository lock for each path in @a path_tokens.
  * @a path_tokens is a hash whose keys are the paths to be locked, and
- * whose values are the corresponding lock tokens for each path (if
+ * whose values are the corresponding lock tokens for each path.  If
  * the path has no corresponding lock token, or if @a force is TRUE,
- * then the corresponding value is "").
+ * then the corresponding value shall be "".
  * 
- * Remove the repostory lock for each path in path_tokens.
- *
  * Note that unlocking is never anonymous, so any server
  * implementing this function will have to "pull" a username from
  * the client, if it hasn't done so already.
  *
  * If @a token points to a lock, but the RA username doesn't match
- * the lock's owner, return error.  If @a force is true, however,
- * don't return error; allow the lock to be "broken" by the
- * RA user.  In the latter case, @a token shall be @c NULL.
+ * the lock's owner, call @a lockfunc/@a lock_baton with an error.  If
+ * @a force is true, however, instead allow the lock to be "broken" by the
+ * RA user.
  *
- * After successfully unlocking a file, @a lock_func is called with
+ * After successfully unlocking a path, @a lock_func is called with
  * the @a lock_baton.
  *
  * Use @a pool for temporary allocations.
@@ -964,7 +987,7 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
 svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
                             apr_hash_t *path_tokens,
                             svn_boolean_t force,
-                            svn_lock_callback_t lock_func, 
+                            svn_ra_lock_callback_t lock_func, 
                             void *lock_baton,
                             apr_pool_t *pool);
 

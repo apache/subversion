@@ -2413,9 +2413,9 @@ close_file (void *file_baton,
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR (maybe_bump_dir_info (eb, fb->bump_info, pool));
 
-  /* ### TODO: Add lock_state to notification. */
   if (((content_state != svn_wc_notify_state_unchanged) ||
-       (prop_state != svn_wc_notify_state_unchanged)) &&
+       (prop_state != svn_wc_notify_state_unchanged) ||
+       (lock_state != svn_wc_notify_lock_state_unchanged)) &&
       eb->notify_func)
     {
       svn_wc_notify_t *notify
@@ -2425,6 +2425,7 @@ close_file (void *file_baton,
       notify->kind = svn_node_file;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
+      notify->lock_state = lock_state;
       /* ### use install_file() mimetype here */
       (*eb->notify_func) (eb->notify_baton, notify, pool);
     }

@@ -179,6 +179,7 @@ svn_client_switch (svn_revnum_t *result_rev,
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       notify->revision = revnum;
       (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
     }

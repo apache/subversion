@@ -1402,22 +1402,18 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
-                                apr_array_header_t **locks_p,
                                 apr_hash_t *path_revs,
                                 const char *comment,
                                 svn_boolean_t force,
-                                svn_lock_callback_t lock_func, 
+                                svn_ra_lock_callback_t lock_func, 
                                 void *lock_baton,
                                 apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
   apr_array_header_t *list;
-  apr_array_header_t *locks;
   apr_hash_index_t *hi;
-
-  locks = apr_array_make(pool, apr_hash_count (path_revs), 
-                         sizeof (svn_lock_t *));
+  apr_pool_t *iterpool = svn_pool_create (pool);
 
   /* ###TODO send all the locks over the wire at once.  This loop is
         just a temporary shim. */
@@ -1426,16 +1422,17 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       svn_lock_t *lock;
       const void *key;
       const char *path;
-      apr_ssize_t keylen;
       void *val;
       svn_revnum_t *revnum;
       svn_error_t *err, *callback_err = NULL;
 
-      apr_hash_this(hi, &key, &keylen, &val);
+      svn_pool_clear (iterpool);
+
+      apr_hash_this(hi, &key, NULL, &val);
       path = key;
       revnum = val;
 
-      SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "lock", "c(?c)b(?r)", 
+      SVN_ERR(svn_ra_svn_write_cmd(conn, iterpool, "lock", "c(?c)b(?r)", 
                                    path, comment,
                                    force, revnum));
 
@@ -1444,28 +1441,24 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
                                      _("Server doesn't support "
                                        "the lock command")));
 
-      err = svn_ra_svn_read_cmd_response(conn, pool, "l", &list);
+      err = svn_ra_svn_read_cmd_response(conn, iterpool, "l", &list);
 
       if (!err)
-        SVN_ERR(parse_lock(list, pool, &lock));
-      
+        SVN_ERR(parse_lock(list, iterpool, &lock));
+
       if (err && !svn_error_is_lock_error (err))
         return err;
 
-      /* Run the lock callback if we have one. */
       if (lock_func)
-        callback_err = lock_func(lock_baton, path, TRUE, lock, err);
+        callback_err = lock_func(lock_baton, path, TRUE, lock, err, iterpool);
 
       svn_error_clear (err);
 
       if (callback_err)
         return callback_err;
-
-      /* Add lock to the array of locks */
-      APR_ARRAY_PUSH(locks, svn_lock_t *) = lock;
     }
 
-  *locks_p = locks;
+  svn_pool_destroy (iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1473,13 +1466,14 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
                                   apr_hash_t *path_tokens,
                                   svn_boolean_t force,
-                                  svn_lock_callback_t lock_func, 
+                                  svn_ra_lock_callback_t lock_func, 
                                   void *lock_baton,
                                   apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create (pool);
 
   /* ###TODO send all the lock tokens over the wire at once.  This
         loop is just a temporary shim. */
@@ -1487,41 +1481,42 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
     {
       const void *key;
       const char *path;
-      apr_ssize_t keylen;
       void *val;
       const char *token;
       svn_error_t *err, *callback_err = NULL;
 
-      apr_hash_this(hi, &key, &keylen, &val);
+      svn_pool_clear (iterpool);
+
+      apr_hash_this(hi, &key, NULL, &val);
       path = key;
       if (strcmp (val, "") != 0)
         token = val;
       else
         token = NULL;
 
-
-      SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "c(?c)b",
+      SVN_ERR(svn_ra_svn_write_cmd(conn, iterpool, "unlock", "c(?c)b",
                                    path, token, force));
 
       /* Servers before 1.2 don't support locking.  Check this here. */
-      SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+      SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, iterpool),
                                      _("Server doesn't support the unlock "
                                        "command")));
 
-      err = svn_ra_svn_read_cmd_response(conn, pool, "");
+      err = svn_ra_svn_read_cmd_response(conn, iterpool, "");
 
       if (err && !svn_error_is_unlock_error (err))
         return err;
 
-      /* Run the lock callback if we have one. */
       if (lock_func)
-        callback_err = lock_func(lock_baton, path, FALSE, NULL, err);
+        callback_err = lock_func(lock_baton, path, FALSE, NULL, err, pool);
 
       svn_error_clear (err);
 
       if (callback_err)
         return callback_err;
     }
+
+  svn_pool_destroy (iterpool);
 
   return SVN_NO_ERROR;
 }

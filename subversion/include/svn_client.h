@@ -1770,48 +1770,64 @@ svn_client_cat (svn_stream_t *out,
 
 /** @since New in 1.2.
  *
- * Lock @a targets in the repository.  Return an error any * @a
- * targets are already locked, unless @a force is true, in which case
- * the locks are stolen.  @a comment, if non-null, is an xml-escapable
- * UTF8 description stored with each lock in the repository.  Each
- * acquired lock will be stored in the working copy.
+ * Lock @a targets in the repository.  @a targets is an array of
+ * <tt>const char *</tt> paths - either all working copy paths or URLs.  All
+ * @a targets must be in the same repository.
  *
- * Call @a svn_lock_callback_t/lock_baton once for each file target is
- * locked.
+ * If a target is already locked in the repository, no lock will be
+ * acquired unless @a force is TRUE, in which case the locks are stolen.
+ * @a comment, if non-null, is an xml-escapable description stored with each
+ * lock in the repository.  Each acquired lock will be stored in the working
+ * copy if the targets are WC paths.
  *
- * Return the acquired lock in @a *lock, allocated in @a pool.
+ * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
+ * whether it was locked.  An action of @c svn_wc_notify_state_locked
+ * means that the path was locked.  If the path was not locked because
+ * it was out-of-date or there was already a lock in the repository,
+ * the notification function will be called with @c
+ * svn_wc_notify_failed_lock, and the error passed in the notification
+ * structure. 
+ *
+ * Use @a pool for temporary allocations.
  */
 svn_error_t *
-svn_client_lock (apr_array_header_t **locks_p,
-                 apr_array_header_t *targets,
+svn_client_lock (const apr_array_header_t *targets,
                  const char *comment,
                  svn_boolean_t force,
-                 svn_lock_callback_t lock_func,
-                 void *lock_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /** @since New in 1.2.
  *
- * Unlock @a targets in the repository.
+ * Unlock @a targets in the repository.  @a targets is an array of
+ * <tt>const char *</tt> paths - either all working copy paths or all URLs.
+ * All @a targets must be in the same reposotiry.
  *
- * If @a force is false, the working copy must contain a lock for @a path.
+ * If the targets are WC paths, and @a force is false, the working
+ * copy must contain a locks for each target.
  * If this is not the case, or the working copy lock doesn't match the
- * lock token in the repository, an error will be returned.
+ * lock token in the repository, an error will be signaled.
  *
- * If @a force is true, the lock will be broken in the repository.  In
- * both cases, the lock, if any, will be removed from the working copy.
+ * If the targets are URLs, the locks may be broken even if @a force
+ * is false, but only if the lock owner is the same as the
+ * authenticated user.
  *
- * Call @a svn_lock_callback_t/lock_baton once for each file target is
- * locked.
+ * If @a force is true, the locks will be broken in the repository.  In
+ * both cases, the locks, if any, will be removed from the working
+ * copy if the targets are WC paths.
  *
+ * The notification functions in @a ctx will be called for each
+ * target.  If the target was successfully unlocked, @c
+ * svn_wc_notify_unlocked will be used.  Else, if the error is
+ * directly related to unlocking the path (see @c
+ * svn_error_is_unlock_error), @c svn_wc_notify_failed_unlock will be
+ * used and the error will be passed in the notification structure.
+
  * Use @a pool for temporary allocations.
  */
 svn_error_t *
-svn_client_unlock (apr_array_header_t *targets,
+svn_client_unlock (const apr_array_header_t *targets,
                    svn_boolean_t force,
-                   svn_lock_callback_t unlock_func,
-                   void *lock_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 

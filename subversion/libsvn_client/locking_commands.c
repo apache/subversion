@@ -33,58 +33,11 @@
 
 /*** Code. ***/
 
-#if 0
-/* ### This will probably not be necessary. */
-/* Check if TARGET is out-of-date, meaning that it was committed to in a
-   revision newer than REV. RA_LIB, SESSION is an open RA session pointing to
-   TARGET's parent. */
-static svn_error_t *check_out_of_date (svn_ra_plugin_t *ra_lib, void *session,
-                                       svn_wc_entry_t *entry,
-                                       const char *path,
-                                       apr_pool_t *pool)
-{
-  apr_hash_t *dirents;
-  svn_dirent_t *dirent;
-
-  /* Get a directory listing of the target's parent. */
-  SVN_ERR (ra_lib->get_dir (session, "", SVN_INVALID_REVNUM, &dirents, NULL,
-                            NULL, pool));
-  dirent = apr_hash_get(dirents, entry->name, APR_HASH_KEY_STRING);
-  
-  /* Schedule add is handled specially. */
-  if (entry->schedule == svn_wc_schedule_add)
-    {
-      /* If the path exists, it is out-of-date in the WC. */
-      if (dirent)
-        return svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
-                                  _("'%s' already exists in the repository"),
-                                  svn_path_local_style (path, pool));
-      else
-        return SVN_NO_ERROR;
-    }
-
-  if (! dirent)
-    return svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
-                              _("'%s' does no longer exist in the repository"),
-                              svn_path_local_style (path, pool));
-
-  /* Path exists, check that our revision is the latest. */
-  if (entry->revision < dirent->created_rev)
-    return svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
-                              _("The repository has a newer revision of '%s' "
-                                "than the working copy"),
-                              svn_path_local_style (path, pool));
-
-  return SVN_NO_ERROR;
-}
-#endif
-
 /* For use with store_locks_callback, below. */
 struct lock_baton
 {
-  svn_lock_callback_t nested_callback;
-  void *nested_baton;
   svn_wc_adm_access_t *adm_access;
+  svn_client_ctx_t *ctx;
   apr_pool_t *pool;
 };
 
@@ -98,21 +51,31 @@ struct lock_baton
  * whether DO_LOCK is true or false respectively), but only if RA_ERR
  * is null, or (in the unlock case) is something other than
  * SVN_ERR_FS_LOCK_OWNER_MISMATCH.
- *
- * Assuming the above went without error, invoke BATON->nested_callback
- * with BATON->nested_baton, PATH, DO_LOCK, LOCK, and RA_ERR as
- * arguments.
  */
 static svn_error_t *
 store_locks_callback (void *baton, 
                       const char *path, 
                       svn_boolean_t do_lock,
                       const svn_lock_t *lock,
-                      svn_error_t *ra_err)
+                      svn_error_t *ra_err, apr_pool_t *pool)
 {
   struct lock_baton *lb = baton;
   svn_wc_adm_access_t *adm_access;
   const char *abs_path;
+  svn_wc_notify_t *notify;
+
+  /* Create the notify struct first, so we can tweak it below. */
+  notify = svn_wc_create_notify (path,
+                                 do_lock
+                                 ? (ra_err
+                                    ? svn_wc_notify_failed_lock
+                                    : svn_wc_notify_locked)
+                                 : (ra_err
+                                    ? svn_wc_notify_failed_unlock
+                                    : svn_wc_notify_unlocked),
+                                 pool);
+  notify->lock = lock;
+  notify->err = ra_err;
 
   if (lb->adm_access)
     {
@@ -125,7 +88,12 @@ store_locks_callback (void *baton,
       if (do_lock)
         {
           if (!ra_err)
-            SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
+            {
+              SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
+              notify->lock_state = svn_wc_notify_lock_state_locked;
+            }
+          else
+            notify->lock_state = svn_wc_notify_lock_state_unchanged;
         }
       else /* unlocking */
         {
@@ -133,16 +101,20 @@ store_locks_callback (void *baton,
              we got any error except for owner mismatch.  Note that the only
              errors that are handed to this callback will be locking-related
              errors. */
+
           if (!ra_err ||
               (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
-            SVN_ERR (svn_wc_remove_lock (abs_path, adm_access, lb->pool));
+            {
+              SVN_ERR (svn_wc_remove_lock (abs_path, adm_access, lb->pool));
+              notify->lock_state = svn_wc_notify_lock_state_unlocked;
+            }
+          else
+            notify->lock_state = svn_wc_notify_lock_state_unchanged;
         }
     }
   
-  /* Call our callback, if we've got one. */
-  if (lb->nested_callback)
-    SVN_ERR (lb->nested_callback (lb->nested_baton, path, do_lock,
-                                  lock, ra_err));
+  if (lb->ctx->notify_func2)
+    lb->ctx->notify_func2 (lb->ctx->notify_baton2, notify, pool);
 
   return SVN_NO_ERROR;
 }
@@ -182,7 +154,7 @@ organize_lock_targets (const char **common_parent,
                        const svn_wc_entry_t **parent_entry_p,
                        svn_wc_adm_access_t **parent_adm_access_p,
                        apr_hash_t **rel_targets_p,
-                       apr_array_header_t *targets,
+                       const apr_array_header_t *targets,
                        svn_boolean_t do_lock,
                        svn_boolean_t force,
                        svn_client_ctx_t *ctx,
@@ -348,12 +320,9 @@ fetch_tokens (svn_ra_session_t *ra_session, apr_hash_t *path_tokens,
 
 
 svn_error_t *
-svn_client_lock (apr_array_header_t **locks_p,
-                 apr_array_header_t *targets,
+svn_client_lock (const apr_array_header_t *targets,
                  const char *comment,
                  svn_boolean_t force,
-                 svn_lock_callback_t lock_func,
-                 void *lock_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -362,7 +331,6 @@ svn_client_lock (apr_array_header_t **locks_p,
   const svn_wc_entry_t *entry;
   const char *url;
   svn_ra_session_t *ra_session;
-  apr_array_header_t *locks;
   apr_hash_t *path_revs;
   struct lock_baton cb;
   svn_boolean_t is_url;
@@ -393,31 +361,23 @@ svn_client_lock (apr_array_header_t **locks_p,
             adm_access, NULL, FALSE, FALSE, ctx, pool));
 
   cb.pool = pool;
-  cb.nested_callback = lock_func;
-  cb.nested_baton = lock_baton;
   cb.adm_access = adm_access;
+  cb.ctx = ctx;
 
   /* Lock the paths. */
-  SVN_ERR (svn_ra_lock (ra_session, &locks, path_revs, comment, 
+  SVN_ERR (svn_ra_lock (ra_session, path_revs, comment, 
                         force, store_locks_callback, &cb, pool));
 
   /* Unlock the wc. */
   if (adm_access)
     svn_wc_adm_close (adm_access);
 
- /* ###TODO Since we've got callbacks all over the place, is there
-    still any point in providing the list of locks back to our
-    caller? */
-  *locks_p = locks;
-
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_unlock (apr_array_header_t *targets,
+svn_client_unlock (const apr_array_header_t *targets,
                    svn_boolean_t force,
-                   svn_lock_callback_t unlock_func,
-                   void *lock_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -454,9 +414,8 @@ svn_client_unlock (apr_array_header_t *targets,
     SVN_ERR (fetch_tokens (ra_session, path_tokens, pool));
 
   cb.pool = pool;
-  cb.nested_callback = unlock_func;
-  cb.nested_baton = lock_baton;
   cb.adm_access = adm_access;
+  cb.ctx = ctx;
 
   /* Unlock the paths. */
   SVN_ERR (svn_ra_unlock (ra_session, path_tokens, force, 
