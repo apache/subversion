@@ -16,7 +16,12 @@
  * ====================================================================
  */
 
+#ifdef SWIGPERL
+%module "SVN::_Fs"
+#else
 %module fs
+#endif
+
 %include typemaps.i
 
 %import apr.i
