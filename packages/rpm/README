@@ -13,20 +13,11 @@ This build requires certain other packages to be installed.
 
     A. To run:
 
-       db >= 4.0.14
-       expat (comes with RedHat)
-       neon = 0.19.4
-       apache >= 2.0.37 (includes apr/apr-util) (for subversion-server)
+       See the "Requires:" lines in the subversion.spec file.
 
     B. To compile:
 
-       autoconf >= 2.52
-       apache >= 2.0.37
-       apache-devel >= 2.0.37
-       expat-devel
-       libtool >= 1.4.2
-       neon = 0.19.4
-       python >= 1.5.2 (2.0 or greater to run check programs)
+       See the "PreReq:" lines in the subversion.spec file.
 
     The non-standard packages apache, db, and neon, can be found at:
 
