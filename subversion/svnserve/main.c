@@ -48,6 +48,15 @@ enum connection_handling_mode {
   connection_mode_single  /* One connection at a time in this process */
 };
 
+/* The mode in which to run svnserve */
+enum run_mode {
+  run_mode_none,
+  run_mode_inetd,
+  run_mode_daemon,
+  run_mode_tunnel,
+  run_mode_listen_once,
+};
+
 #if APR_HAS_FORK
 #if APR_HAS_THREADS
 
@@ -81,6 +90,7 @@ enum connection_handling_mode {
  */
 #define SVNSERVE_OPT_LISTEN_PORT 256
 #define SVNSERVE_OPT_LISTEN_HOST 257
+#define SVNSERVE_OPT_FOREGROUND  258
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -89,7 +99,10 @@ static const apr_getopt_option_t svnserve__options[] =
      "listen port (for daemon mode)"},
     {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
      "listen hostname or IP address (for daemon mode)"},
+    {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
+     "run in foreground (useful for debugging)"},
     {"help",             'h', 0, "display this help"},
+    {"inetd",            'i', 0, "inetd mode"},
     {"root",             'r', 1, "root of directory to serve"},
     {"read-only",        'R', 0, "deprecated; use repository config file"},
     {"tunnel",           't', 0, "tunnel mode"},
@@ -172,8 +185,8 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 
 int main(int argc, const char *const *argv)
 {
-  svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
-  svn_boolean_t read_only = FALSE;
+  enum run_mode run_mode = run_mode_none;
+  svn_boolean_t read_only = FALSE, foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
@@ -219,7 +232,15 @@ int main(int argc, const char *const *argv)
           break;
 
         case 'd':
-          daemon_mode = TRUE;
+          run_mode = run_mode_daemon;
+          break;
+
+        case SVNSERVE_OPT_FOREGROUND:
+          foreground = TRUE;
+          break;
+
+        case 'i':
+          run_mode = run_mode_inetd;
           break;
 
         case SVNSERVE_OPT_LISTEN_PORT:
@@ -231,11 +252,11 @@ int main(int argc, const char *const *argv)
           break;
 
         case 't':
-          tunnel_mode = TRUE;
+          run_mode = run_mode_tunnel;
           break;
 
         case 'X':
-          listen_once = TRUE;
+          run_mode = run_mode_listen_once;
           break;
 
         case 'r':
@@ -263,14 +284,21 @@ int main(int argc, const char *const *argv)
   if (os->ind != argc)
     usage(argv[0]);
 
-  if (!daemon_mode && !listen_once)
+  if (run_mode == run_mode_none)
+    {
+      fprintf(stdout, "You must specify one of -d, -i, -t or -X.\n");
+      usage(argv[0]);
+    }
+
+  if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
     {
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-      svn_error_clear(serve(conn, root, tunnel_mode, read_only, pool));
+      svn_error_clear(serve(conn, root, run_mode == run_mode_tunnel,
+                            read_only, pool));
       exit(0);
     }
 
@@ -304,7 +332,7 @@ int main(int argc, const char *const *argv)
   apr_socket_listen(sock, 7);
 
 #if APR_HAS_FORK
-  if (!listen_once)
+  if (run_mode != run_mode_listen_once && !foreground)
     apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
   apr_signal(SIGCHLD, sigchld_handler);
@@ -344,12 +372,11 @@ int main(int argc, const char *const *argv)
 
       conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
 
-      if (listen_once)
+      if (run_mode == run_mode_listen_once)
         {
           err = serve(conn, root, FALSE, read_only, connection_pool);
 
-          if (listen_once && err
-              && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+          if (err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
             svn_handle_error(err, stdout, FALSE);
           svn_error_clear(err);
 
