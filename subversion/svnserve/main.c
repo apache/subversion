@@ -50,26 +50,25 @@ enum connection_handling_mode {
 #if APR_HAS_THREADS
 
 #define CONNECTION_DEFAULT connection_mode_fork
-#define CONNECTION_USAGE "[-F|-T|-S] "
-#define CONNECTION_OPT "FTS"
+#define CONNECTION_USAGE "|-T"
+#define CONNECTION_OPT "T"
 
 #else /* ! APR_HAS_THREADS */
 
 #define CONNECTION_DEFAULT connection_mode_fork
-#define CONNECTION_USAGE "[-F|-S] "
-#define CONNECTION_OPT "FS"
+#define CONNECTION_USAGE
+#define CONNECTION_OPT
 
 #endif /* ! APR_HAS_THREADS */
 #elif APR_HAS_THREADS /* and ! APR_HAS_FORK */
 
 #define CONNECTION_DEFAULT connection_mode_thread
-#define CONNECTION_USAGE "[-T|-S] "
-#define CONNECTION_OPT "TS"
+#define CONNECTION_USAGE
+#define CONNECTION_OPT
 
 #else /* ! APR_HAS_THREADS and ! APR_HAS_FORK */
 
 #define CONNECTION_DEFAULT connection_mode_single
-/* No point having option -S if that is the only available mode */
 #define CONNECTION_USAGE
 #define CONNECTION_OPT
 
@@ -80,7 +79,7 @@ static void usage(const char *progname)
   if (!progname)
     progname = "svn-server";
   fprintf(stderr,
-          "Usage: %s [-X|-d|-t|-R] " CONNECTION_USAGE "[-r root]\n", progname);
+          "Usage: %s [-X|-d|-t|-R" CONNECTION_USAGE "] [-r root]\n", progname);
   exit(1);
 }
 
@@ -146,13 +145,9 @@ int main(int argc, const char *const *argv)
 #if APR_HAS_THREADS
   apr_threadattr_t *tattr;
   apr_thread_t *tid;
-#endif
   struct serve_thread_t *thread_data;
+#endif
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
-
-  /* Silence some "false-alarm" unitialized warnings from gcc */
-  thread_data = NULL;
-  connection_pool = NULL;
 
   /* Initialize the app. */
   if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
@@ -194,16 +189,8 @@ int main(int argc, const char *const *argv)
           read_only = TRUE;
           break;
 
-        case 'F':
-          handling_mode = connection_mode_fork;
-          break;
-
         case 'T':
           handling_mode = connection_mode_thread;
-          break;
-
-        case 'S':
-          handling_mode = connection_mode_single;
           break;
         }
     }
@@ -245,28 +232,18 @@ int main(int argc, const char *const *argv)
   apr_listen(sock, 7);
 
 #if APR_HAS_FORK
-  if (!listen_once && handling_mode != connection_mode_single)
+  if (!listen_once)
     apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
   apr_signal(SIGCHLD, sigchld_handler);
 #endif
 
-  if (handling_mode != connection_mode_thread)
-    connection_pool = svn_pool_create(pool);
-
   while (1)
     {
-      if (handling_mode == connection_mode_thread)
-        {
-          /* The server never blocks to join threads so it cannot clean up
-             after each thread, thus each thread needs a separate pool that
-             it can clear when it is finished. */
-          connection_pool = svn_pool_create(NULL);
-          thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
-        }
-      else
-        /* Clear the pool for each iteration. */
-        apr_pool_clear(connection_pool);
+      /* Non-standard pool handling.  The main thread never blocks to join
+         the connection threads so it cannot clean up after each one.  So
+         separate pools, that can be cleared at thread exit, are used */
+      connection_pool = svn_pool_create(NULL);
 
       status = apr_accept(&usock, sock, connection_pool);
       if (handling_mode == connection_mode_fork)
@@ -278,8 +255,7 @@ int main(int argc, const char *const *argv)
         }
       if (APR_STATUS_IS_EINTR(status))
         {
-          if (handling_mode == connection_mode_thread)
-            svn_pool_destroy(connection_pool);
+          svn_pool_destroy(connection_pool);
           continue;
         }
       if (status)
@@ -325,6 +301,7 @@ int main(int argc, const char *const *argv)
               /* Log an error, when we support logging. */
               apr_socket_close(usock);
             }
+          svn_pool_destroy(connection_pool);
 #endif
           break;
 
@@ -347,6 +324,7 @@ int main(int argc, const char *const *argv)
                       apr_strerror(status, errbuf, sizeof(errbuf)));
               exit(1);
             }
+          thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
           thread_data->conn = conn;
           thread_data->root = root;
           thread_data->read_only = read_only;
@@ -365,6 +343,7 @@ int main(int argc, const char *const *argv)
         case connection_mode_single:
           /* Serve one connection at a time. */
           svn_error_clear(serve(conn, root, FALSE, read_only, connection_pool));
+          svn_pool_destroy(connection_pool);
         }
     }
 
