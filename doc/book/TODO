@@ -68,9 +68,6 @@ To be fixed by cmpilato:
   - Please point out and explain why BerkeleyDB environments aren't
     portable.  You can't just move it from Unix to Win32.
 
-  - book says that deleting a ~/.subversion file will recreate it,
-    which is wrong.  the whole directory needs to be renamed and recreated.
-
   - ch06: externals chapter.  Please be explicit about exactly which
     commands honor 'svn:externals' (co, up, st, etc.), and exactly
     which commands don't (commit).
