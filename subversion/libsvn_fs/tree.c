@@ -293,14 +293,14 @@ check_for_clone (svn_fs_node_t *node,
   /* Are we looking for the clone of the transaction's root directory?  */
   if (! node->clone_path)
     {
-      /* Find the transaction's current root directory.  */
       const svn_fs_id_t *node_id = svn_fs__dag_get_id (node->dag_node);
       svn_fs_id_t *root_id, *base_root_id;
 
+      /* Find the transaction's current root directory.  */
       svn_fs__get_txn (&root_id, &base_root_id, node->txn, trail);
 
       /* If NODE refers to the transaction's current root, we're up to
-         date.  */
+	 date.  */
       if (svn_fs_id_eq (node_id, root_id))
 	return 0;
 
@@ -319,7 +319,7 @@ check_for_clone (svn_fs_node_t *node,
 	}
 
       /* Otherwise, NODE has no clone path, but it's referring to
-	 neither the old nor the new directory.  Freak out.  */
+	 neither the old nor the new root directory.  Freak out.  */
       else
 	abort ();
     }
