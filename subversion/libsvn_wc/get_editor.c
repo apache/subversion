@@ -1200,6 +1200,18 @@ close_file (void *file_baton)
                                  SVN_WC__LOG_ATTR_NAME,
                                  received_diff_filename,
                                  NULL);
+
+          /* Remove the reject file that patch will have used, IFF the
+           reject file is empty (zero bytes) -- implying that there
+           was no conflict. */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_RM_IF_EMPTY,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 reject_filename,
+                                 NULL);
+
         }
       else
         {

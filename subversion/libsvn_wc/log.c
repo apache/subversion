@@ -431,6 +431,7 @@ log_do_file_xfer (struct log_runner *loggy,
 }
 
 
+/* Remove file NAME in log's CWD. */
 static svn_error_t *
 log_do_rm (struct log_runner *loggy, const char *name)
 {
@@ -447,6 +448,38 @@ log_do_rm (struct log_runner *loggy, const char *name)
 
   return SVN_NO_ERROR;
 }
+
+
+/* Remove file NAME in log's CWD iff it's zero bytes in size. */
+static svn_error_t *
+log_do_rm_if_empty (struct log_runner *loggy, const char *name)
+{
+  apr_status_t apr_err;
+  apr_finfo_t finfo;
+  svn_string_t *full_path;
+
+  full_path = svn_string_dup (loggy->path, loggy->pool);
+  svn_path_add_component_nts (full_path, name, svn_path_local_style);
+
+  apr_err = apr_stat (&finfo, full_path->data, loggy->pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, loggy->pool,
+                              "log_do_rm_if_empty: couldn't stat %s",
+                              full_path->data);
+
+  if (finfo.size == 0)
+    {
+      apr_err = apr_remove_file (full_path->data, loggy->pool);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
+                                  "log_do_rm_if_empty: couldn't remove %s", 
+                                  name);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 static svn_error_t *
@@ -997,6 +1030,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm (loggy, name);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_RM_IF_EMPTY) == 0) {
+    err = log_do_rm_if_empty (loggy, name);
   }
   else if (strcmp (eltname, SVN_WC__LOG_MV) == 0) {
     err = log_do_file_xfer (loggy, name, svn_wc__xfer_mv, atts);
