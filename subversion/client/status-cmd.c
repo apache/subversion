@@ -1,5 +1,5 @@
 /*
- *  st-cmd.c - Display status information in current directory
+ *  status-cmd.c - Display status information in current directory
  *
  *  svn is free software copyrighted by CollabNet.
  *  
@@ -51,23 +51,23 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__status( int argc, char** argv, apr_pool_t* pool )
+svn_cl__status( int argc, char** argv, apr_pool_t* pool,
+                svn_cl__opt_state_t *p_opt_state )
 {
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
-  svn_string_t *xml_file = NULL;
-  svn_string_t *target = NULL;
-  svn_string_t *ancestor_path = NULL;
-  svn_boolean_t force = 0;
   svn_error_t *err = NULL;
   apr_hash_t *statushash;
-
-  svn_cl__parse_options (argc, argv, svn_cl__status_command,
-                 &xml_file, &target, &revision, &ancestor_path, &force,
-                 pool);
-
-  err = svn_client_status (&statushash, target, pool);
+  err = svn_client_status (&statushash,
+                           GET_OPT_STATE(p_opt_state,target),
+                           pool);
   if (! err) 
     svn_cl__print_status_list (statushash, pool);
 
   return err;
 }
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end: 
+ */

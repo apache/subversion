@@ -1,5 +1,5 @@
 /*
- *  up-cmd.c - Bring work tree in sync with repository
+ *  update-cmd.c - Bring work tree in sync with repository
  *
  *  svn is free software copyrighted by CollabNet.
  *  
@@ -51,28 +51,29 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__update( int argc, char** argv, apr_pool_t* pool )
+svn_cl__update( int argc, char** argv, apr_pool_t* pool,
+                svn_cl__opt_state_t *p_opt_state )
 {
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
-  svn_string_t *xml_file = NULL;
-  svn_string_t *target = NULL;
-  svn_string_t *ancestor_path = NULL;
-  svn_boolean_t force = 0;
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
   svn_error_t *err = NULL;
-
-  svn_cl__parse_options (argc, argv, svn_cl__update_command,
-                 &xml_file, &target, &revision, &ancestor_path, &force,
-                 pool);
-
   err = svn_cl__get_trace_editor (&trace_editor,
 				  &trace_edit_baton,
-				  target,
+				  GET_OPT_STATE(p_opt_state, target),
 				  pool);
   if (err == NULL)
     err = svn_client_update (NULL, NULL,
 			     trace_editor, trace_edit_baton,
-			     target, xml_file, revision, pool);
+			     GET_OPT_STATE(p_opt_state, target),
+                             GET_OPT_STATE(p_opt_state, xml_file),
+                             GET_OPT_STATE(p_opt_state, revision),
+                             pool);
   return err;
 }
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end: 
+ */
