@@ -57,6 +57,7 @@ typedef enum {
   svn_cl__force_opt,
   svn_cl__ignore_ancestry_opt,
   svn_cl__incremental_opt,
+  svn_cl__limit_opt,
   svn_cl__merge_cmd_opt,
   svn_cl__native_eol_opt,
   svn_cl__new_cmd_opt,
