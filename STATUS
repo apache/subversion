@@ -64,4 +64,4 @@ Candidate changes:
     Disable wait_for_input on Windows.
     Justification: Fix prompting on Windows so it actually works right.
     Votes:
-      +1: breser, sussman
+      +1: breser, sussman, cmpilato
