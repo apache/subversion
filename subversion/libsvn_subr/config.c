@@ -113,7 +113,7 @@ svn_config_read (svn_config_t **cfgp, const char *file,
  *
  *    2. USR_REGISTRY_PATH
  *
- *    3. USR_FILE_PATH
+ *    3. USR_FILE_PATH   (ignored if NULL)
  *
  * Allocate *CFGP in POOL.
  */
@@ -137,7 +137,8 @@ read_all (svn_config_t **cfgp,
 #endif  /* SVN_WIN32 */
 
   /* Try user config file in both Windows and non-Windows. */
-  SVN_ERR (svn_config_merge (*cfgp, usr_file_path, FALSE));
+  if (usr_file_path)
+    SVN_ERR (svn_config_merge (*cfgp, usr_file_path, FALSE));
 
   return SVN_NO_ERROR;
 }
