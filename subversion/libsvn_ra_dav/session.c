@@ -108,12 +108,14 @@ svn_ra_dav__open (void **session_baton,
   if (uri_parse(repository, &uri, NULL) 
       || uri.host == NULL || uri.path == NULL)
     {
+      uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
                               "illegal URL for repository");
     }
 
   /* Can we initialize network? */
   if (sock_init() != 0) {
+    uri_free(&uri);
     return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                             "network socket initialization failed");
   }
@@ -151,6 +153,7 @@ svn_ra_dav__open (void **session_baton,
         }
       if (ne_set_secure(sess, 1))
         {
+          uri_free(&uri);
           return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
@@ -173,6 +176,7 @@ svn_ra_dav__open (void **session_baton,
 
   if (ne_session_server(sess, uri.host, uri.port))
     {
+      uri_free(&uri);
       return svn_error_createf(SVN_ERR_RA_HOSTNAME_LOOKUP, 0, NULL, pool,
                                "Hostname not found: %s", uri.host);
     }

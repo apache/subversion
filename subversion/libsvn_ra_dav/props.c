@@ -312,6 +312,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   svn_string_t my_url;
   svn_stringbuf_t *url_str;
   ne_request *req;
+  int status_code;
 
   my_url.data = url;
   my_url.len = strlen(url);
@@ -342,6 +343,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
       rv = ne_propfind_allprop(pc.dph, process_results, &pc);
     }
 
+  status_code = ne_get_status(req)->code;
+
   ne_propfind_destroy(pc.dph);
 
   if (rv != NE_OK)
@@ -364,7 +367,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
         }
     }
 
-  if (404 == ne_get_status(req)->code)
+  if (404 == status_code)
     return svn_error_createf(SVN_ERR_RA_PROPS_NOT_FOUND, 0, NULL, pool,
                              "Failed to fetch props for '%s'", url_str->data);
 
@@ -497,6 +500,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
      ### and omit relpath when bc_relative is NULL. */
   SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, parsed_url.path,
                                           NULL, starting_props, pool) );
+  uri_free(&parsed_url);
 
   if (is_dir != NULL)
     *is_dir = rsrc->is_collection;
