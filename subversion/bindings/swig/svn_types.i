@@ -352,16 +352,25 @@
         else if (strcasecmp(input, "PREV") == 0)
             rev.kind = svn_opt_revision_previous;
         else if (*input == '{') {
-            time_t tm;
+            svn_boolean_t matched;
+            apr_time_t tm;
+            svn_error_t *err;
+
             char *end = strchr(input,'}');
             if (!end)
                 SWIG_croak("unknown opt_revision_t type");
             *end = '\0';
-            tm = svn_parse_date (input + 1, NULL);
-            if (tm == -1)
+            err = svn_parse_date (&matched, &tm, input + 1, apr_time_now(),
+                                  svn_swig_pl_make_pool ((SV *)NULL));
+            if (err) {
+                svn_error_clear (err);
                 SWIG_croak("unknown opt_revision_t type");
+            }
+            if (!matched)
+                SWIG_croak("unknown opt_revision_t type");
+
             rev.kind = svn_opt_revision_date;
-            apr_time_ansi_put(&(rev.value.date), tm);
+            rev.value.date = tm;
         } else
             SWIG_croak("unknown opt_revison_t type");
     } else
