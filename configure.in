@@ -273,6 +273,22 @@ AC_HELP_STRING([--enable-debug],
     fi
 ])
 
+AC_ARG_WITH(editor,
+AC_HELP_STRING([--with-editor=PATH],
+               [Specify a default editor for the subversion client.]),
+[
+
+    if test "$withval" = "yes" ; then
+      AC_MSG_ERROR([--with-editor requires an argument.])
+    else
+      SVN_CLIENT_EDITOR=$withval
+    fi
+
+])
+    
+AC_DEFINE_UNQUOTED(SVN_CLIENT_EDITOR, "$SVN_CLIENT_EDITOR",
+                   [Define to the path of a default editor for the client.])
+
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
 AC_HELP_STRING([--disable-mod-activation],
