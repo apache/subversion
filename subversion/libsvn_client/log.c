@@ -61,6 +61,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   const char *path;
   const char *URL;
   const char *base_name = NULL;
+  const char *auth_dir;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
   svn_error_t *err;
@@ -139,16 +140,23 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
   /* Open a repository session to the URL. If we got here from a full URL
-     passed to the command line, then we don't pass base_name or
-     do_auth/use_admin to open the ra_session.  */
+     passed to the command line, then if the current directory is a
+     working copy, we pass it as base_name for authentication
+     purposes.  But we make sure to treat it as read-only, since when
+     one operates on URLs, one doesn't expect it to change anything in
+     the working copy. */
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
                                           NULL, NULL, TRUE, TRUE, TRUE, 
                                           auth_baton, pool));
   else
-    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL, NULL,
-                                          NULL, FALSE, FALSE, TRUE, 
-                                          auth_baton, pool));
+    {
+      SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
+                                            auth_dir,
+                                            NULL, NULL, FALSE, FALSE, TRUE, 
+                                            auth_baton, pool));
+    }
 
   /* Get the revisions based on the users "hints".  */
   SVN_ERR (svn_client__get_revision_number

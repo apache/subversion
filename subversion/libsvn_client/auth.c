@@ -39,7 +39,61 @@
 
 /*-----------------------------------------------------------------------*/
 
-/* Callback routines that RA libraries use to pull or store auth info. */
+
+svn_error_t *
+svn_client__dir_if_wc (const char **dir_p,
+                       const char *dir,
+                       apr_pool_t *pool)
+{
+  int wc_format;
+  
+  SVN_ERR (svn_wc_check_wc (dir, &wc_format, pool));
+  
+  if (wc_format == 0)
+    *dir_p = NULL;
+  else
+    *dir_p = dir;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__default_auth_dir (const char **auth_dir_p,
+                              const char *path,
+                              apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_dir)
+    {
+      SVN_ERR (svn_client__dir_if_wc (auth_dir_p, path, pool));
+      SVN_ERR (svn_client__dir_if_wc (auth_dir_p, path, pool));
+
+      /* Handle unversioned dir in a versioned parent. */
+      if (! *auth_dir_p)
+        goto try_parent;
+    }
+  else if ((kind == svn_node_file) || (kind == svn_node_none))
+    {
+    try_parent:
+      svn_path_split (path, auth_dir_p, NULL, pool);
+      SVN_ERR (svn_client__dir_if_wc (auth_dir_p, *auth_dir_p, pool));
+    }
+  else
+    {
+      return svn_error_createf
+        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+         "unknown node kind for `%s'", path);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+/** Callback routines that RA libraries use to pull or store auth info. **/
 
 
 /* Set *USERNAME to the username to use for authentication.  

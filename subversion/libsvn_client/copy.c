@@ -191,6 +191,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *committed_author = NULL;
   svn_revnum_t src_revnum;
   const char *piece, *telepath;
+  const char *auth_dir;
 
   /* ### TODO:  Currently, this function will violate the depth-first
      rule of editors when doing a move of something up into one of its
@@ -254,10 +255,13 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool));
 
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
+
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url,
+                                        auth_dir,
+                                        NULL, NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
@@ -529,6 +533,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   svn_boolean_t commit_in_progress = FALSE;
   const char *base_path;
   const char *base_url;
+  const char *auth_dir;
 
   /* The commit process uses absolute paths, so we need to open the access
      baton using absolute paths, and so we really need to use absolute
@@ -584,7 +589,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Crawl the working copy for commit items. */
   SVN_ERR (svn_io_check_path (base_path, &src_kind, pool));
   if (src_kind == svn_node_dir)
-    SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, base_path, pool));
+     SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, base_path, pool));
   else
     dir_access = adm_access;
   if ((cmt_err = svn_client__get_copy_committables (&committables, 
@@ -611,9 +616,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   /* Open an RA session to BASE_URL. */
-  if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url, NULL,
-                                              NULL, commit_items, FALSE, FALSE,
-                                              FALSE, auth_baton, pool)))
+  SVN_ERR (svn_client__default_auth_dir (&auth_dir, base_path, pool));
+  if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url,
+                                              auth_dir, NULL, commit_items,
+                                              FALSE, FALSE, FALSE,
+                                              auth_baton, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -684,17 +691,20 @@ repos_to_wc_copy (const char *src_url,
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *props = NULL;
   apr_hash_index_t *hi;
+  const char *auth_dir;
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, src_url, pool));
 
+  SVN_ERR (svn_client__default_auth_dir (&auth_dir, dst_path, pool));
+
   /* Open a repository session to the given URL. We do not (yet) have a
      working copy, so we don't have a corresponding path and tempfiles
      cannot go into the admin area. We do want to store the resulting
      auth data, though, once the WC is built. */
-  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL, NULL,
-                                        NULL, TRUE, FALSE, TRUE, 
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, auth_dir,
+                                        NULL, NULL, TRUE, FALSE, TRUE, 
                                         auth_baton, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
