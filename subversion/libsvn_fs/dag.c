@@ -12,6 +12,7 @@
  */
 
 #include "svn_path.h"
+#include "svn_error.h"
 #include "svn_fs.h"
 #include "dag.h"
 #include "err.h"
@@ -686,7 +687,10 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
   /* ... And when it is grown
    *      Then my own little clone
    *        Will be of the opposite sex!
-   *
+   */
+  SVN_ERR (svn_fs__set_txn_root (fs, svn_txn, root_id, trail));
+
+  /*
    * (Sung to the tune of "Home, Home on the Range", with thanks to
    * Randall Garrett and Isaac Asimov.)
    */
