@@ -7,17 +7,33 @@ HOW-TO:  svn repository upgrade procedure
 WHO IS AFFECTED:
 ---------------
 
-Anyone upgrading to svn 0.28 (or later) who has a repository created
-with an earlier release.
+Anyone upgrading between versions of subversion that have different
+repository schemas.  Schema versions are as follows:
+
+    SUBVERSION VERSION NUMBER           SCHEMA VERSION
+    -------------------------           --------------
+    Up to and including 0.27            1
+    0.28 - 0.33.1                       2
+    0.34 and newer                      3
+
+If necessary you can see which schema version your repository is
+currently using by looking at the format file in the repository.
+
+It should be noted that these changes are extremely rare.  Now that
+subversion has reached 1.0.0 our compatibility guarantees require
+forward and backward compatible repository formats for all patch
+releases and backward compatible for minor releases.  So until
+2.0.0 comes out there will be no change that should require a 
+dump for upgrading to newer versions.
 
 
 PROBLEM:
 -------
 
-In revision (6752, /trunk) [August 16, 2003], the underlying database
-schema for subversion repositories (libsvn_fs) was changed.  Thus, if
-a 'new' libsvn_fs library tries to access an 'old' repository, you'll
-see an error like:
+At times during the development of subversion it has and will be
+necessary to change the underlying database schema for subversion
+repositories (libsvn_fs).  Thus, if a 'new' libsvn_fs library tries
+to access an 'old' repository, you'll see an error like:
 
    Expected version '2' of repository; found version '1'
 
@@ -35,22 +51,22 @@ you might see an error like:
    svn: Malformed skeleton data
    svn: Malformed node-revision skeleton
 
-This schema change became public in svn 0.28.  So if you're upgrading
-a server to svn 0.28 or later, you need to convert your repository to
-the new schema.
+So if you're seeing an error like these you will need to upgrade or
+downgrade your repository version.
 
 
-HOW TO UPGRADE YOUR REPOSITORY:
-------------------------------
+HOW TO UPGRADE/DOWNGRADE YOUR REPOSITORY:
+----------------------------------------
 
-  1. Use an 'svnadmin' binary from release 0.27 (or older) to create a
-     dumpfile of your repository:
+  1. Use an 'svnadmin' binary from a release with the same schema version
+     as your repository to create a dumpfile of your repository:
 
         $ mv myrepos old-repos
         $ svnadmin dump old-repos > dumpfile
 
-  2. Use an 'svnadmin' binary from release 0.28 (or newer) to load the
-     dumpfile into a new repository:
+  2. Use an 'svnadmin' binary from a release with the same schema version
+     as you want your repository to have to load the dumpfile into a new
+     repository:
 
         $ svnadmin create myrepos
         $ svnadmin load myrepos < dumpfile
@@ -67,6 +83,10 @@ HOW TO UPGRADE YOUR REPOSITORY:
 
         $ svnadmin list-unused-dblogs newrepos | xargs rm
 
+     Note: If you're using BerkeleyDB 4.2 or newer this will be done
+     automatically for you, unless you've configured the repository
+     not to behave this way.
+
   4. Don't forget to copy over any hook scripts (and DB_CONFIG, if you
      changed it) from the old to the new repository:
 
@@ -77,24 +97,11 @@ HOW TO UPGRADE YOUR REPOSITORY:
 WHY DID YOU CHANGE THE SCHEMA?
 -----------------------------
 
-Subversion is still pre-1.0, and thus constantly improving.  These
-changes were planned long ago, and took a long time to complete.
-They fix both efficiency and correctness problems in the database
-code.
+Subversion was still pre-1.0 when these changes were made, and thus
+constantly improving.  These changes were planned, and took a long
+time to complete.  They fix both efficiency and correctness problems
+in the database code.
 
-More tangible results of this change are:
-
-  * 'svn log branch/foo.c' now shows the branch-creation as a real
-    event in foo.c's history, even though foo.c itself was only
-    *implicitly* copied when its parent got copied.
-
-  * 'svn log -rX:Y' is doing less work.
-
-  * Fixes bugs in 'svn log --strict'.
-
-  * We have a new fs API for walking the history of a node using a
-    cursor-like interface.
-
-  * Internally, the mechanism for choosing copyids was broken.  (OK,
-    that's not tangible, but a matter of correctness.)
-
+In the future it may be necessary to make changes to support new 
+features.  But we will do so in a manner that is consistent with our
+compatibility guarantees.
