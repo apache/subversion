@@ -47,9 +47,11 @@ typedef struct svn_ra_local__session_baton_t
 
 
 
-/* A baton that will be passed to the `commit hook' routine by
-   svn_fs_get_editor */
-typedef struct svn_ra_local__commit_hook_baton_t
+/* A device for record the targets of commits, and ensuring that
+   proper commit closure happens on them (namely, revision setting and
+   wc property setting).  This is passed to the `commit hook' routine
+   by svn_fs_get_editor.  kff question: what routine is that? */
+typedef struct svn_ra_local__commit_closer_t
 {
   /* Allocation for this baton, as well as all committed_targets */
   apr_pool_t *pool;
@@ -68,7 +70,7 @@ typedef struct svn_ra_local__commit_hook_baton_t
   /* The baton to use with above functions */
   void *close_baton;
 
-} svn_ra_local__commit_hook_baton_t;
+} svn_ra_local__commit_closer_t;
 
 
 
@@ -77,13 +79,16 @@ typedef struct svn_ra_local__commit_hook_baton_t
 /** Private routines **/
 
 /* Allocate and return an EDITOR (in POOL) whose only purpose is to
-   `track' commits by storing committed targets in HOOK_BATON. */
+   track commits by storing committed targets in CLOSER.  For every
+   target in the edit, the editor will record the target (if you want
+   to know, it's storing the target as a relative path in
+   CLOSER->target_array).  Later, after the edit is over, the targets
+   will have their revision numbers updated appropriately. */
 svn_error_t *
 svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
                                        apr_pool_t *pool,
-                                       svn_ra_local__commit_hook_baton_t
-                                                      *hook_baton);
+                                       svn_ra_local__commit_closer_t *closer);
     
 
 

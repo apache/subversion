@@ -26,10 +26,10 @@ static svn_error_t *
 cleanup_commit (svn_revnum_t new_revision, void *baton)
 {
   /* Recover our hook baton: */
-  /*  svn_ra_local__commit_hook_baton_t *hook_baton =
-      (svn_ra_local__commit_hook_baton_t *) baton; */
+  /*  svn_ra_local__commit_closer_t *closer =
+      (svn_ra_local__commit_closer_t *) baton; */
 
-  /* Call hook_baton->close_func() on each committed target! */
+  /* Call closer->close_func() on each committed target! */
   /* TODO */
 
   return SVN_NO_ERROR;
@@ -189,15 +189,15 @@ get_commit_editor (void *session_baton,
     (svn_ra_local__session_baton_t *) session_baton;
 
   /* Construct a Magick commit-hook baton */
-  svn_ra_local__commit_hook_baton_t *hook_baton
-    = apr_pcalloc (sess_baton->pool, sizeof(*hook_baton));
+  svn_ra_local__commit_closer_t *closer
+    = apr_pcalloc (sess_baton->pool, sizeof(*closer));
 
-  hook_baton->pool = sess_baton->pool;
-  hook_baton->close_func = close_func;
-  hook_baton->set_func = set_func;
-  hook_baton->close_baton = close_baton;
-  hook_baton->target_array = apr_pcalloc (hook_baton->pool,
-                                          sizeof(*(hook_baton->target_array)));
+  closer->pool = sess_baton->pool;
+  closer->close_func = close_func;
+  closer->set_func = set_func;
+  closer->close_baton = close_baton;
+  closer->target_array = apr_pcalloc (closer->pool,
+                                          sizeof(*(closer->target_array)));
 
   /* Get the filesystem commit-editor */     
   /*  err = svn_fs_get_editor (&commit_editor,
@@ -206,16 +206,16 @@ get_commit_editor (void *session_baton,
                            base_revision,
                            log_msg,
                            cleanup_commit, 
-                           hook_baton,
+                           closer,
                            sess_baton->pool); */
   if (err) return err;
 
   /* Get the commit `tracking' editor, telling it to store committed
-     targets inside our hook_baton */
+     targets inside our closer */
   err = svn_ra_local__get_commit_track_editor (&tracking_editor,
                                                &tracking_editor_baton,
                                                sess_baton->pool,
-                                               hook_baton);
+                                               closer);
   if (err) return err;
 
   /* TEMPORARY:  shut up compile warnings until we're able to pass
