@@ -1,0 +1,201 @@
+/************************************************************************/
+/* Custom style-sheet stuffs for the Subversion book in HTML form.      */
+/************************************************************************/
+
+BODY
+{
+    background: white;
+    margin: 0.5in;
+    font-family: arial,helvetica,sans-serif;
+}
+
+H1.title
+{
+    font-size: 250%;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+H2.subtitle
+{
+    font-size: 150%;
+    font-style: italic;
+    color: black;
+}
+
+H2.title
+{
+    font-size: 150%;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+H3.title
+{
+    font-size: 125%;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+H4.title
+{
+    font-size: 100%;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+.toc B
+{
+    font-size: 125%;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+P,LI,UL,OL,DD,DT
+{
+    font-style: normal;
+    font-weight: normal;
+    color: black;
+}
+
+TT,PRE
+{
+    font-family: courier new,courier,fixed;
+}
+
+.command, .screen, .programlisting
+{
+    font-family: courier new,courier,fixed;
+    font-style: normal;
+    font-weight: normal;
+}
+
+.filename
+{
+    font-family: arial,helvetica,sans-serif;
+    font-style: italic;
+}
+
+A
+{
+    color: blue;
+    text-decoration: underline;
+}	
+
+A:hover 
+{
+    background: rgb(75%,75%,100%);
+    color: blue;
+    text-decoration: underline;
+}
+
+A:visited 
+{
+    color: purple;
+    text-decoration: underline;
+}
+
+IMG
+{
+    border: none;
+}
+
+.figure, .example, .table
+{
+    margin: 0.125in 0.5in;
+}
+
+.table TABLE
+{
+    border: 1px rgb(180,180,200) solid;
+    border-spacing: 0px;
+}
+
+.table TD
+{
+    border: 1px rgb(180,180,200) solid;
+}
+
+.table TH
+{
+    background: rgb(180,180,200);
+    border: 1px rgb(180,180,200) solid;
+}
+
+.table P.title, .figure P.title, .example P.title
+{
+    text-align: left !important;
+    font-size: 100% !important;
+}
+
+.author
+{
+    font-size: 100%;
+    font-style: italic;
+    font-weight: normal;
+    color: black;
+}
+
+.sidebar 
+{
+    border: 2px black solid;
+    background: rgb(230,230,235);
+    padding: 0.12in;
+    margin: 0 0.5in;
+}
+
+.sidebar P.title
+{
+    text-align: center;
+    font-size: 125%;
+}
+
+.tip
+{
+    border: black solid 1px;
+    background: url(./images/info.png) no-repeat;
+    margin: 0.12in 0;
+    padding: 0 55px;
+}
+
+.warning
+{
+    border: black solid 1px;
+    background: url(./images/warning.png) no-repeat;
+    margin: 0.12in 0;
+    padding: 0 55px;
+}
+
+.note
+{
+    border: black solid 1px;
+    background: url(./images/note.png) no-repeat;
+    margin: 0.12in 0;
+    padding: 0 55px;
+}
+
+.programlisting, .screen
+{
+    font-family: courier new,courier,fixed;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 90%;
+    color: black;
+    margin: 0 0.5in;
+}
+
+.navheader, .navfooter
+{
+    border: black solid 1px;
+    background: rgb(180,180,200);
+}
+
+.navheader HR, .navfooter HR
+{
+    display: none;
+}

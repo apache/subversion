@@ -1,0 +1,40 @@
+This file tracks the status of releases in the 1.1.x line.
+
+See "Stabilizing and maintaining releases" in trunk/HACKING for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.1.4:
+================
+
+Candidate changes that seem to have become stalled
+due to persistent lack of votes:
+
+  * r12075, r12448
+    Add pre-0.14 dumpfile compatability.
+    Justification: Some very old clients were recently spotted in
+    the wild.  And: Dumpfile compatibility is always good.
+    Notes: These look good to me, but are complex enough that I'm not
+      comfortable +1'ing without testing on an old dumpfile, and I
+      haven't done that yet.  -kfogel
+    Votes:
+      +1: maxb, dionisos
+      -0: ringstrom (because the patch is non-trivial and there is only a
+                     single known pre-0.14 user)
+      -0: ghudson (not really comfortable having this code in the trunk,
+                   much less 1.1; dumpfile compatibility in general
+                   good, pre-0.14 compatibility not so important)
+      +0: kfogel
+
+Candidate changes:
+
+  * r13715
+    Teach swig-1.3.19-3 to co-exist with swig package that comes with Redhat.
+    Justification: Less hassle for software developers because packages
+      co-exist.
+    Votes:
+      +1: david
+
+Approved changes (further review is welcome, but not required):
+
+  

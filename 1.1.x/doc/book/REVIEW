@@ -1,0 +1,68 @@
+Review and comments on the Subversion book listed by chapter.
+
+Overall Book Comments
+
+        #1) Blair
+
+            It may be a good idea where possible to set up a little
+            example repository for the book.  It could live as
+
+            http://www.svnbook.org/examples/
+
+Chapter 3
+
+        #1) ghudson (also affects ch 9 a little bit)
+
+            The new date parser requires a change to the doc formats.
+            A minimal patch can be found in issue #408.
+
+            The new date parser accepts three varieties kinds of
+	    formats.  The first is very nicely documented by the W3C
+	    in <http://www.w3.org/TR/NOTE-datetime>; we allow the time
+	    zone designator to be missing, in which case we use system
+	    local time.  The second variety is just like the first
+	    variety, except the punctuation characters '-' and ':' are
+	    omitted.  The third variety is what we use in the output
+	    of "svn log", and can look like:
+
+              YYYY-MM-DD hh:mm[:ss[.uuuuuu]][ +hh[:mm]]
+
+            There can be fewer than six digits in the microseconds
+	    designation, and of course the time zone designation may
+	    be "-hh[:mm]" instead of "+hh[:mm]".
+
+Chapter 5
+
+    Section svn-ch-5-sect-6
+
+        #1) Blair
+
+            I don't know if the "Adding Projects" sections works best
+            here.  It follows pretty specific information on setting
+            up a repository, debugging, recovering, which are highly
+            specific and not generally used.  This section could be
+            missed.  This information is also used by people who
+            aren't Subversion "administrator's".  For example, at my
+            work, there are people creating new projects pretty
+            consistently and we have 61 projects.  While I'm the
+            administrator, the users and programmers also need to know
+            project layout information.
+
+            There's a repository layout section in chapter 4 that this
+            could well be merged into.  If that doesn't work, I would
+            consider moving it up to the front of this chapter.
+
+
+Chapter 9
+
+    Section svn-ch-9-sect-1.2
+
+        #1) naked
+
+            "svn diff" synopsis differs from actual usage and there is
+            no explanation or examples of the --old and --new
+            arguments which are bound to be confusing.
+
+        #2) naked
+
+            "svn merge" has the same problem as above.
