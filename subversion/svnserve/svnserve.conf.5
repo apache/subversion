@@ -46,8 +46,7 @@ Sets the authentication realm of the repository.  If two repositories
 have the same password database, they should have the same realm, and
 vice versa; this association allows clients to use a single cached
 password for several repositories.  The default realm value is the
-path to the repository, relative to the server process's virtual
-repository root.
+repository's uuid.
 .SH EXAMPLE
 The following example \fBsvnserve.conf\fP allows read access for
 authenticated users, no access for anonymous users, points to a passwd

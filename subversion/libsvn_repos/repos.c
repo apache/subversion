@@ -831,9 +831,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### have the same password database, and vice versa.  The default realm"
       APR_EOL_STR
-      "### is the path to the repository, relative to the server's repository"
-      APR_EOL_STR
-      "### root."
+      "### is repository's uuid."
       APR_EOL_STR
       "# realm = My First Repository"
       APR_EOL_STR;
