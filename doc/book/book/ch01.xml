@@ -410,7 +410,7 @@
 
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-7">
 
@@ -422,7 +422,8 @@
       designed to give "bottom up" learners a fighting chance.  If
       you're one of those folks who prefers to learn by
       experimentation, the following demonstration will get you up and
-      running, with links to the relevant sections of the book.</para>
+      running.  Along the way, we give links to the relevant chapters
+      of this book.</para>
 
     <para>If you're new to the entire concept of version control or to
       the <quote>copy-modify-merge</quote> model used by both CVS and
@@ -441,7 +442,8 @@
       URLs.</para>
     </note>
 
-    <para>First, create a new repository:</para>
+    <para>Subversion stores all versioned data in a central
+    repository.  To begin, create a new repository:</para>
 
     <screen>
 $ svnadmin create /path/to/repos
@@ -458,8 +460,8 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
     information about repository creation and maintenance, see <xref
     linkend="svn-ch-5"/>.</para>
 
-    <para>Next, create a tree of files and directories into import
-    into the repository.  For reasons that will be clear later on (see
+    <para>Next, create a tree of files and directories to import into
+    the repository.  For reasons that will be clear later on (see
     <xref linkend="svn-ch-4"/>), your structure should contain three
     top-level directories named <filename>branches</filename>,
     <filename>tags</filename>, and <filename>trunk</filename>:</para>
