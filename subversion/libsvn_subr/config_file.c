@@ -311,23 +311,29 @@ svn_config__user_config_path (const char *config_dir,
 
 #else  /* ! WIN32 */
   {
-    apr_status_t apr_err;
-    apr_uid_t uid;
-    apr_gid_t gid;
-    char *username, *homedir;
+    char *homedir;
     const char *homedir_utf8;
 
-    apr_err = apr_uid_current (&uid, &gid, pool);
-    if (apr_err)
-      return SVN_NO_ERROR;
-    
-    apr_err = apr_uid_name_get (&username, uid, pool);
-    if (apr_err)
-      return SVN_NO_ERROR;
-    
-    apr_err = apr_uid_homepath_get (&homedir, username, pool);
-    if (apr_err)
-      return SVN_NO_ERROR;
+    homedir = getenv ("HOME");
+    if (! homedir)
+      {
+        apr_status_t apr_err;
+        apr_uid_t uid;
+        apr_gid_t gid;
+        char *username;
+
+        apr_err = apr_uid_current (&uid, &gid, pool);
+        if (apr_err)
+          return SVN_NO_ERROR;
+
+        apr_err = apr_uid_name_get (&username, uid, pool);
+        if (apr_err)
+          return SVN_NO_ERROR;
+
+        apr_err = apr_uid_homepath_get (&homedir, username, pool);
+        if (apr_err)
+          return SVN_NO_ERROR;
+      }
 
     SVN_ERR (svn_utf_cstring_to_utf8 (&homedir_utf8, homedir, pool));
 
