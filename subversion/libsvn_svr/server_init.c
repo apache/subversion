@@ -1,10 +1,5 @@
-
-/* 
-   plugin_security.c:  a simple server-side plugin for Subversion
-                       which implements basic filesystem authorization.
-*/
-
 /*
+ * server_init.c :   parse server configuration file
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -53,71 +48,30 @@
  */
 
 
-/*
-   We're assuming that the network layer has *already* authenticated
-   the user in question, and now simply wants to know if the user is
-   permitted to perform an action on some data.
+/* Makes the server library re-load `/etc/svn.conf'.  Network layers
+   *must* call this routine when first loaded!  
 
-  This plug-in consults the `svn_security' file.
-
-  (An alternate tigris plug-in would actually look up roles in a mySQL
-  database and return the same information.)
-
- */
-
-
-/* Note: remember to build plugins with -k PIC and in a way that
-   libltdl can use them! */
-
-
-#include <svn_types.h>   /* defines common Subversion data types */
-#include <svn_svr.h>     /* defines the server-side plug-in structure */
-
-
-
-/*
-  Here is a basic example of an "authorization hook" routine.
-
-  Input:   a `user' structure from the network layer
-  
-  Returns: either NULL if the action is denied, or non-NULL on success.
-           
-  If successful, fill in the "canonical" username in the user
-  structure to use with the filesystem.
-  
+   Returns failure (NULL) or success (non-NULL).
 */
-  
-char
-svn_internal_authorization (svn_string_t *repos,
-                            svn_user_t *user,
-                            svr_action_t requested_action,
-                            svn_string_t *path)
+
+char 
+svn_svr_init (svn_string_t *config_file)
 {
 
-  /* this routine should consult the repository's `svn_security' file
-     to make the authorization decision.  */
+  /* read config_file and... */
+
+  /* keep a list of repository aliases, */
+
+  /* keep a list of general security policies, */
+
+  /* use libltdl to load all server plugins, calling
+     svn_register_plugin() within each library and saving them in a
+     list */
 
 }
 
 
-/* ALL server plugins MUST have this routine; svn_svr_init() calls
-   this function to register the plugin after loading it. 
-   
-   It simply creates a plugin structure and returns a pointer to it.
 
- */
-
-svn_svr_plugin *
-svn_register_plugin ()
-{
-  svn_svr_plugin plugin_basic_security = 
-  { 
-    svn_internal_authorization,         /* authorization hook */
-    NULL                                /* conflict resolution hook */
-  };
-
-  return (&plugin_basic_security);
-}
 
 
 
