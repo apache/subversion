@@ -126,7 +126,7 @@ static const apr_getopt_option_t options_table[] =
     {"force-uuid", svnadmin__force_uuid, 0,
      "set repos UUID to that found in stream, if any."},
 
-    {"bdb-txn-nosync", svnadmin__bdb_txn_nosync, 0,
+    {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
      "disable fsync at database transaction commit [Berkeley DB]."},
 
     {NULL}
@@ -240,7 +240,8 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->bdb_txn_nosync)
     {
       fs_config = apr_hash_make (pool);
-      apr_hash_set (fs_config, "bdb-txn-nosync", 14, "1");
+      apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                    SVN_FS_CONFIG_BDB_TXN_NOSYNC_LEN, "1");
     }
 
   SVN_ERR (svn_config_get_config (&config, pool));
