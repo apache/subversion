@@ -39,6 +39,7 @@ svn_cl__commit (apr_getopt_t *os,
   svn_string_t *message;
   svn_string_t *base_dir;
   svn_string_t *cur_dir;
+  svn_string_t *trace_dir;
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
 
@@ -69,10 +70,15 @@ svn_cl__commit (apr_getopt_t *os,
      difference between the absolute path of the current working
      directory and the absolute path of the common parent directory
      used in the commit (give or take a slash :-). */
+  if (cur_dir->len < base_dir->len)
+    trace_dir = svn_string_create (&(base_dir->data[cur_dir->len + 1]), pool);
+  else
+    trace_dir = svn_string_create ("", pool);
+
   SVN_ERR (svn_cl__get_trace_commit_editor 
            (&trace_editor,
             &trace_edit_baton,
-            svn_string_create (&(base_dir->data[cur_dir->len + 1]), pool),
+            trace_dir,
             pool));
 
   /* Commit. */
