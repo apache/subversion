@@ -629,16 +629,16 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
           SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
           err = svn_client_add (path, FALSE, ctx, pool);
 
-          /* Trying to add a directory with the same name as a file that is
-             scheduled for deletion is not supported.  Leaving an unversioned
-             directory makes the working copy hard to use.  */
-          if (err && err->apr_err == SVN_ERR_WC_NODE_KIND_CHANGE)
+          /* We just created a new directory, but couldn't add it to
+             version control. Don't leave unversioned directoies behind. */
+          if (err)
             {
-              svn_error_t *err2 = svn_io_remove_dir (path, pool);
-              if (err2)
-                svn_error_clear (err2);
+              /* ### If this returns an error, should we link it onto
+                 err instead, so that the user is warned that we just
+                 created an unversioned directory? */
+              svn_error_clear (svn_io_remove_dir (path, pool));
+              return err;
             }
-          SVN_ERR (err);
 
           svn_pool_clear (subpool);
         }

@@ -637,7 +637,25 @@ def add_recursive_already_versioned(sbox):
 
   return svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-
+#----------------------------------------------------------------------
+# Regression test for the case where "svn mkdir" outside a working copy
+# would create a directory, but then not clean up after itself when it
+# couldn't add it to source control.
+def fail_add_directory(sbox):
+  "'svn mkdir' should clean up after itself on error"
+  # This test doesn't use a working copy
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  os.makedirs(sbox.wc_dir)
+  saved_wd = os.getcwd()
+  try:
+    os.chdir(sbox.wc_dir)
+    svntest.actions.run_and_verify_svn('Failed mkdir', None,
+                                       ["svn: '.' is not a working copy\n"],
+                                       'mkdir', 'A')
+    if os.path.exists('A'):
+      raise svntest.Failure('svn mkdir created an unversioned directory')
+  finally:
+    os.chdir(saved_wd)
 
 
 ########################################################################
@@ -669,6 +687,7 @@ test_list = [ None,
               revert_inside_newly_added_dir,
               status_add_deleted_directory,
               add_recursive_already_versioned,
+              fail_add_directory,
              ]
 
 if __name__ == '__main__':
