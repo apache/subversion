@@ -14,7 +14,7 @@ This is a summary of the current state of the locking implementation.
 
 * rev svn_wc_notify_func_t (on trunk) (lundblad)
 
-* svn status -u shows lock info from repos.
+* svn status -u shows lock info from repos.  (lundblad?  depends on update?)
 
 * client test cases (fitz) [broad cases done]
 
@@ -33,9 +33,17 @@ This is a summary of the current state of the locking implementation.
 * DAV bugs:
 
    * need to xml-escape lock-comments over http.  (sussman;  almost done)
-   * need to send tokens in MERGE body  (sussman, jerenkranttz; almost done)
    
 * get httpd 2.0.54 released, so that svn 1.2 can compile on win32 (??)
+
+* get neon 0.25 released, so the control-c bug can go away?? (jorton)
+
+* Nice to Have, but not showstoppers, because they're client-only:
+
+   * 'svn lock URL' should work, no working copy required.  easy to
+     do, just throw away the svn_lock_t that comes back.
+
+   * 'svn unlock URL --force' should work with no working copy present.
 
 * Questions:
 
