@@ -647,6 +647,10 @@ def diff_pure_repository_update_a_file(sbox):
 def diff_only_property_change(sbox):
   "diff when property was changed but text was not"
 
+  ### FIXME: Subversion erroneously tried to run an external diff
+  ### program and aborted.  This test catches that problem, but it
+  ### really ought to check that the property diff gets output.
+
   if sbox.build():
     return 1
 
@@ -654,26 +658,25 @@ def diff_only_property_change(sbox):
 
   current_dir = os.getcwd();
   os.chdir(sbox.wc_dir);
+  try:
 
-  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'none', "iota")
-  svntest.main.run_svn(None, 'ci', '-m', 'empty-msg')
+    output, errput = svntest.main.run_svn(None, 'propset',
+                                          'svn:eol-style', 'native', 'iota')
+    if errput: return 1
+    output, errput = svntest.main.run_svn(None, 'ci', '-m', 'empty-msg')
+    if errput: return 1
 
-  result = 0
+    output, errput = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+    if errput: return 1
 
-  output, errput = svntest.main.run_svn(None, 'diff', '-r', '1:2')
-  if len (errput) > 0:
-    print "error forward diffing a prop change"
-    print errput
-    return 1
+    output, errput = svntest.main.run_svn(None, 'diff', '-r', '2:1')
+    if errput: return 1
 
-  output, errput = svntest.main.run_svn(None, 'diff', '-r', '2:1')
-  if len (errput) > 0:
-    print "error reverse diffing a prop change"
-    print errput
-    return 1
+    output, errput = svntest.main.run_svn(None, 'diff', '-r', '1')
+    if errput: return 1
 
-  os.chdir(current_dir)
-  return result
+  finally:
+    os.chdir(current_dir)
 
 
 
