@@ -28,6 +28,7 @@ PASS
 
 # Create the object directory
 START "create object directory" "Creating object directory..."
+umount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" >> $LOG_FILE 2>&1 || FAIL 
 $RM_RF "$TEST_ROOT/$OBJ" >> $LOG_FILE 2>&1 || FAIL
 $MKDIR "$TEST_ROOT/$OBJ" >> $LOG_FILE 2>&1 || FAIL
 $MKDIR_P "$TEST_ROOT/$OBJ/subversion/tests" >> $LOG_FILE 2>&1 || FAIL

@@ -86,6 +86,7 @@ CAT="$BIN/cat"
 CP="$BIN/cp"
 CP_F="$CP -f"
 CUT="$USRBIN/cut"
+DATE="$BIN/date"
 GREP="$BIN/grep"
 GZIP="$BIN/gzip"
 GZIP_C="$GZIP -9c"
@@ -173,11 +174,12 @@ umount_ramdisk() {
     local mount_dir="$1"
     if test "xyes" == "x$RAMDISK";
     then
-        test -z "$mount_dir" && return 
+        test -z "$mount_dir" && return 1
 
         test -f "$mount_dir/.ramdisk" && {
-            $UMOUNT "$mount_dir" >> /dev/null 2>&1
+            $UMOUNT "$mount_dir" >> /dev/null 2>&1 || return 1
         }
     fi
+    return 0
 }
 
