@@ -55,7 +55,7 @@ import os, sys, string, shutil, traceback
 import getopt
 import ConfigParser
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvcuf:sS:',
+opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:f:sS:',
                            ['release', 'debug', 'verbose', 'cleanup', 'url=',
                             'svnserve-args=', 'fs-type='])
 if len(args) > 1:
