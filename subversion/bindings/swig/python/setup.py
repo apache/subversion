@@ -54,8 +54,8 @@ if len(sys.argv) < 2:
 # all the options that we allow (which is FAR less than the set of
 # distutils options).  If we find that people actually care, we can
 # revisit this.
-options, leftovers = getopt.getopt(sys.argv[1:], "I:L:S:s:",
-                                   ["prefix=", "install-dir="])
+options, leftovers = getopt.getopt(sys.argv[1:], "I:L:S:s:h",
+                                   ["prefix=", "install-dir=", "help"])
 for option in options:
   if option[0] == '-I':
     include_dirs.append(option[1])
@@ -65,6 +65,11 @@ for option in options:
     source_dir = option[1]
   if option[0] == '-s':
     swig_location = option[1]
+  if option[0] == '-h':
+    _do_usage()
+
+  if option[0] == '--help':
+    _do_usage()
 
   # All long options just get passed through
   if option[0][:2] == '--':
