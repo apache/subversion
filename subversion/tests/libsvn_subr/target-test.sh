@@ -1,6 +1,8 @@
 #!/bin/sh
 
-if ! test -d "z"; then
+if test -d "z"; then
+    :
+else
     mkdir z
     mkdir z/A
     mkdir z/A/B
