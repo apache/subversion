@@ -1802,12 +1802,52 @@ svn_wc_get_actual_target (svn_stringbuf_t *path,
     }
   else
     {
-      /* Case III: If PATH is an entry of a versioned directory, lop
-         off its basename. */
-      *parent_dir = dirname;
-      if (svn_path_is_empty (dirname, svn_path_local_style))
-        svn_stringbuf_set (*parent_dir, ".");
-      *entry = basename;
+      svn_wc_entry_t *p_entry;
+      svn_wc_entry_t *my_entry;
+
+      /* PATH is an entry of a versioned directory.  Let's see if it
+         really is our parent. */
+
+      /* Get our parent's ancestry. */
+      SVN_ERR (svn_wc_entry (&p_entry, dirname, pool));
+      if (! p_entry)
+        return svn_error_createf 
+          (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+           "svn_wc_get_actual_target: Error get parent's entry");
+
+      /* Get our ancestry. */
+      SVN_ERR (svn_wc_entry (&my_entry, path, pool));
+      if (! my_entry)
+        return svn_error_createf 
+          (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+           "svn_wc_get_actual_target: Error get parent's entry");
+
+      if (p_entry->ancestor && my_entry->ancestor)
+        {
+          svn_stringbuf_t *my_ancestry = svn_stringbuf_dup (p_entry->ancestor, 
+                                                            pool);
+
+          svn_path_add_component (my_ancestry, basename, svn_path_repos_style);
+          
+          if (svn_stringbuf_compare (my_ancestry, my_entry->ancestor))
+            {
+              /* Case III: If PATH is an entry of a versioned directory, lop
+                 off its basename. */
+              *parent_dir = dirname;
+              if (svn_path_is_empty (dirname, svn_path_local_style))
+                svn_stringbuf_set (*parent_dir, ".");
+              *entry = basename;
+            }
+          else
+            {
+              /* Case IV: If PATH is an entry of a versioned
+                 directory in the working copy, but is not an entry of
+                 the same parent in the repository, do NOT lop off a
+                 basename. */
+              *parent_dir = svn_stringbuf_dup (path, pool);
+              *entry = NULL;
+            }
+        }
     }
 
   return SVN_NO_ERROR;
