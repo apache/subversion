@@ -34,6 +34,9 @@ To be fixed by cmpilato:
 
 To be fixed by fitz:
 
+  - Be clear that PREV, BASE, and COMMITTED only refer to local paths,
+    not to URLs.
+
 --------------------------------------------------------------
 
 To be fixed by sussman:
