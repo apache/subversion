@@ -848,9 +848,6 @@ static svn_error_t * window_handler(svn_txdelta_window_t *window, void *baton)
 
   if (! wb->seen_first_window)
     {
-      if (window == NULL)
-        return SVN_NO_ERROR;
-
       wb->seen_first_window = TRUE;
       send_xml(wb->uc, "<S:txdelta>");
     }
