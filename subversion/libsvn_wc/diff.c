@@ -586,7 +586,6 @@ directory_elements_diff (struct dir_baton *dir_baton,
                                              subpool);
 
               SVN_ERR (directory_elements_diff (subdir_baton, added));
-              svn_pool_destroy (subdir_baton->pool);
             }
           break;
 
