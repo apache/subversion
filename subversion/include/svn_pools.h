@@ -119,6 +119,10 @@ extern "C" {
 apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 
 
+/* SWIG doesn't like the declarations in the feedback table, and we don't
+   need to export them for now. */
+#ifndef SWIG
+
 /* The convention here is that the recipient of the feedback has the
    option of returning an APR error value that indicates whether or
    not the calling code should treat the feedback condition as a fatal
@@ -156,6 +160,8 @@ typedef struct svn_pool_feedback_t
 /* Retrieve a pointer to the global feedback vtable structure, which
    lives in top-level Subversion pools. */
 svn_pool_feedback_t *svn_pool_get_feedback_vtable (apr_pool_t *p);
+
+#endif /* SWIG */
 
 
 #ifndef SVN_POOL_DEBUG
