@@ -919,8 +919,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
 
       if (!mecharg)  /* Must be present */
         return SVN_NO_ERROR;
-      if (apr_uid_current(&uid, &gid, pool) != APR_SUCCESS
-          || apr_uid_name_get((char **) &user, uid, pool) != APR_SUCCESS)
+      if (apr_current_userid(&uid, &gid, pool) != APR_SUCCESS
+          || apr_get_username((char **) &user, uid, pool) != APR_SUCCESS)
         {
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
                                          "Can't determine username"));
