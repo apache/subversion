@@ -67,3 +67,11 @@ Candidate changes:
       APR_STATUS_IS_SUCCESS is no longer defined in APR HEAD.
     Votes:
       +1: mbk
+      
+  * r10722
+    Display the targets printed for propedit in local style.
+    Justificatoin:
+      Very tiny error in the output of the propedit command.
+    Votes:
+      +1: breser
+
