@@ -55,6 +55,10 @@ typedef struct svn_ra_plugin_t
   /* Close a repository session. */
   svn_error_t *(*close) (void *session_baton);
 
+  /* Get the latest revision number from the repository. */
+  svn_error_t *(get_latest_revnum) (void *session_baton,
+                                    svn_revnum_t *latest_revnum);
+
 
   /* Return an *EDITOR and *EDIT_BATON capable of transmitting a
      commit to the repository beginning at absolute repository path
