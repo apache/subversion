@@ -547,9 +547,15 @@ close_edit (void *edit_baton,
          needs to update and commit again  :) */
 
       /* We don't care about the error return here, we want to return the
-         orignal error. There's likely something seriously wrong already, and
+         original error. There's likely something seriously wrong already, and
          we don't want to cover it up.  */
-      svn_fs_abort_txn (eb->txn);
+
+      /* The specific post-commit-hook errorcode implies that the
+         commit already went through; we only abort the transaction we
+         know the commit *didn't* happen.  */
+      if (err->apr_err != SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED)
+        svn_fs_abort_txn (eb->txn);
+
       return err;
     }
 
