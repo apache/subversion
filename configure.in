@@ -727,10 +727,7 @@ AC_OUTPUT
 
 
 dnl Create all of the build directories
-
-if test "$abs_srcdir" != "$abs_builddir"; then
-    make mkdir-init
-fi
+make mkdir-init
 
 
 dnl  Print warning messages about what we did and didn't configure at the 
