@@ -61,7 +61,7 @@ _svn()
 		cmdOpts="--auto-props --no-auto-props --targets $nOpts $qOpts"
 		;;
 	blame|annotate|ann|praise)
-		cmdOpts="$rOpts $pOpts --strict"
+		cmdOpts="$rOpts $pOpts"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
@@ -102,7 +102,7 @@ _svn()
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts"
 		;;
 	log)
-		cmdOpts="$rOpts -v --verbose --targets $pOpts --strict \
+		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
 		         --incremental --xml $qOpts"
 		;;
 	merge)
@@ -252,7 +252,7 @@ _svnadmin ()
 		cmdOpts="--clean-logs"
 		;;
 	load)
-		cmdOpts="--ignore-uuid --force-uuid --parent-dir"
+		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet"
 		;;
 	list-dblogs)
 		;;
