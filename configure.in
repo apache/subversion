@@ -102,4 +102,6 @@ AC_OUTPUT([Makefile                                           \
            subversion/Makefile                                \
            subversion/libsvn_string/Makefile                  \
            subversion/libsvn_string/tests/Makefile            \
+           subversion/libsvn_subr/Makefile                  \
+           subversion/libsvn_subr/tests/Makefile            \
           ])
