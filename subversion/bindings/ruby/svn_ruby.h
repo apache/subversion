@@ -34,6 +34,15 @@ extern "C" {
 #endif
 
 #include <svn_error.h>
+
+#define SVN_RB_ERR(expr, pool) do { \
+  svn_error_t *svn_rb__err = expr;  \
+  if (svn_rb__err) {                \
+    svn_pool_destroy (pool);        \
+    svn_ruby_raise (svn_rb__err);   \
+  }                                 \
+} while (0)
+
 extern VALUE svn_ruby_mSvn;
 
 void svn_ruby_init_apr (void);

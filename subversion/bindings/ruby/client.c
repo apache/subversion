@@ -137,7 +137,6 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   svn_client_auth_baton_t *auth_baton;
   svn_opt_revision_t revision;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aRevOrTime, &rest);
   Check_Type (aURL, T_STRING);
@@ -151,15 +150,13 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
    * canonical path,  it would be nice if we could find a better way to do 
    * that, so we could pass relative paths to this function. */
 
-  err = svn_client_checkout (NULL, NULL, auth_baton, StringValuePtr(aURL),
-                             svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                        pool),
-                             &revision, TRUE, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_checkout (NULL, NULL, auth_baton,
+                                   StringValuePtr(aURL),
+                                   svn_path_canonicalize_nts (StringValuePtr
+                                                               (aPath),
+                                                              pool), 
+                                   &revision, TRUE, pool),
+              pool);
 
   return Qnil;
 }
@@ -171,24 +168,21 @@ cl_update (int argc, VALUE *argv, VALUE self)
   svn_client_auth_baton_t *auth_baton;
   svn_opt_revision_t revision;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   rb_scan_args (argc, argv, "3*", &aPath, &aRevOrTime, &recurse, &rest);
   Check_Type (aPath, T_STRING);
   revision = parse_revision (aRevOrTime);
 
   pool = svn_pool_create (NULL);
+
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
-  err = svn_client_update (auth_baton,
-                           svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                      pool),
-                           &revision, RTEST (recurse), NULL, NULL, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_update (auth_baton,
+                                 svn_path_canonicalize_nts (StringValuePtr
+                                                             (aPath),
+                                                            pool),
+                                 &revision, RTEST (recurse), NULL, NULL, pool),
+              pool);
 
   return Qnil;
 }
@@ -197,19 +191,16 @@ static VALUE
 cl_add (VALUE class, VALUE aPath, VALUE recursive)
 {
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
   pool = svn_pool_create (NULL);
 
-  err = svn_client_add (svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                   pool), 
-                        RTEST (recursive), NULL, NULL, pool);
+  SVN_RB_ERR (svn_client_add (svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                         pool), 
+                              RTEST (recursive), NULL, NULL, pool),
+              pool);
 
-  apr_pool_destroy (pool);
-
-  if (err)
-    svn_ruby_raise (err);
+  svn_pool_destroy (pool);
 
   return Qnil;
 }
@@ -222,7 +213,6 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
   const char *message;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   rb_scan_args (argc, argv, "11", &aPath, &aMessage);
   Check_Type (aPath, T_STRING);
@@ -238,20 +228,17 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
   else
     message = StringValuePtr (aMessage);
 
-  err = svn_client_mkdir (&commit_info,
-                          svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                     pool),
-                          auth_baton, cl_log_message_func, (void *) message,
-                          NULL, NULL, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_mkdir (&commit_info,
+                                svn_path_canonicalize_nts (StringValuePtr
+                                                            (aPath),
+                                                           pool),
+                                auth_baton, cl_log_message_func,
+                                (void *) message, NULL, NULL, pool),
+              pool);
 
   {
     VALUE obj = commit_info_to_array (commit_info);
-    apr_pool_destroy (pool);
+    svn_pool_destroy (pool);
     return obj;
   }
 }
@@ -264,7 +251,6 @@ cl_delete (int argc, VALUE *argv, VALUE self)
   svn_client_auth_baton_t *auth_baton;
   const char * message;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   rb_scan_args (argc, argv, "21", &aPath, &force, &aMessage);
   Check_Type (aPath, T_STRING);
@@ -279,17 +265,14 @@ cl_delete (int argc, VALUE *argv, VALUE self)
   else
     message = StringValuePtr (aMessage);
 
-  err = svn_client_delete (&commit_info,
-                           svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                      pool),
-                           NULL,
-                           RTEST (force), auth_baton, cl_log_message_func,
-                           (void *) message, NULL, NULL, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_delete (&commit_info,
+                                 svn_path_canonicalize_nts (StringValuePtr
+                                                             (aPath),
+                                                            pool),
+                                 NULL, RTEST (force), auth_baton,
+                                 cl_log_message_func, (void *) message, NULL,
+                                 NULL, pool),
+              pool);
 
   /* if we were called on a url, there will be commit info, otherwise, we 
    * were called on a working copy, so we should just return true, since 
@@ -297,7 +280,7 @@ cl_delete (int argc, VALUE *argv, VALUE self)
   if (commit_info)
     {
       VALUE obj = commit_info_to_array (commit_info);
-      apr_pool_destroy (pool);
+      svn_pool_destroy (pool);
       return obj;
     }
   else 
@@ -314,7 +297,6 @@ cl_import (int argc, VALUE *argv, VALUE self)
   svn_client_auth_baton_t *auth_baton;
   svn_revnum_t revision = SVN_INVALID_REVNUM;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aEntry, &rest);
   Check_Type (aURL, T_STRING);
@@ -327,19 +309,17 @@ cl_import (int argc, VALUE *argv, VALUE self)
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
   /* XXX it'd be nice if we could specify a log message */
-  err = svn_client_import (&commit_info, NULL, NULL, auth_baton, 
-                           svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                        pool),
-                           StringValuePtr (aURL), StringValuePtr (aEntry),
-                           cl_log_message_func, NULL, revision, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_import (&commit_info, NULL, NULL, auth_baton, 
+                                 svn_path_canonicalize_nts (StringValuePtr
+                                                             (aPath),
+                                                            pool),
+                                 StringValuePtr (aURL), StringValuePtr (aEntry),
+                                 cl_log_message_func, NULL, revision, pool),
+              pool);
+
   {
     VALUE obj = commit_info_to_array (commit_info);
-    apr_pool_destroy (pool);
+    svn_pool_destroy (pool);
     return obj;
   }
 }
@@ -352,7 +332,6 @@ cl_commit (int argc, VALUE *argv, VALUE self)
   svn_client_auth_baton_t *auth_baton;
   apr_array_header_t *targets;
   apr_pool_t *pool;
-  svn_error_t *err;
   char *log = NULL;
   int i;
 
@@ -371,17 +350,13 @@ cl_commit (int argc, VALUE *argv, VALUE self)
 
   /* XXX need to get a log from somewhere */
 
-  err = svn_client_commit (&commit_info, NULL, NULL, auth_baton, targets, 
-                           cl_log_message_func, log, FALSE, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_commit (&commit_info, NULL, NULL, auth_baton, targets, 
+                                 cl_log_message_func, log, FALSE, pool),
+              pool);
 
   {
     VALUE obj = commit_info_to_array (commit_info);
-    apr_pool_destroy (pool);
+    svn_pool_destroy (pool);
     return obj;
   }
 }
@@ -398,24 +373,19 @@ cl_status (VALUE self, VALUE aPath,
   svn_revnum_t youngest;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
-  svn_error_t *err;
   VALUE obj;
 
   Check_Type (aPath, T_STRING);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
   pool = svn_pool_create (NULL);
 
-  err = svn_client_status (&statushash, &youngest,
-                           svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                      pool),
-                           auth_baton, RTEST (descend), RTEST (get_all),
-                           RTEST (update), RTEST (no_ignore), pool);
-
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_status (&statushash, &youngest,
+                                 svn_path_canonicalize_nts (StringValuePtr
+                                                             (aPath),
+                                                            pool),
+                                 auth_baton, RTEST (descend), RTEST (get_all),
+                                 RTEST (update), RTEST (no_ignore), pool),
+              pool);
 
   if (RTEST (update))
     {
@@ -425,6 +395,7 @@ cl_status (VALUE self, VALUE aPath,
     }
   else
     obj = svn_ruby_wc_to_statuses (statushash, pool);
+
   return obj;
 }
 #endif
@@ -436,7 +407,6 @@ cl_log (int argc, VALUE *argv, VALUE self)
 
   VALUE aStart, aEnd, discover_changed_paths, strict_node_history;
   apr_array_header_t *paths;
-  svn_error_t *err;
   svn_ruby_log_receiver_baton_t baton;
   svn_opt_revision_t start, end;
   apr_pool_t *pool = svn_pool_create (NULL);
@@ -450,17 +420,13 @@ cl_log (int argc, VALUE *argv, VALUE self)
   start = parse_revision (aStart);
   end = parse_revision (aEnd);
 
-  err = svn_client_log (auth_baton,
-                        paths, &start, &end,
-                        RTEST (discover_changed_paths),
-                        RTEST (strict_node_history),
-                        svn_ruby_log_receiver,
-                        &baton,
-                        pool);
+  SVN_RB_ERR (svn_client_log (auth_baton, paths, &start, &end,
+                              RTEST (discover_changed_paths),
+                              RTEST (strict_node_history),
+                              svn_ruby_log_receiver, &baton, pool),
+              pool);
 
   svn_pool_destroy (pool);
-  if (err)
-    svn_ruby_raise (err);
 
   return Qnil;
 }
@@ -470,19 +436,17 @@ cl_cleanup (VALUE class, VALUE aPath)
 {
   apr_pool_t *pool;
 
-  svn_error_t *err;
-
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
 
-  err = svn_client_cleanup (svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                       pool),
-                            pool);
+  SVN_RB_ERR (svn_client_cleanup (svn_path_canonicalize_nts (StringValuePtr
+                                                              (aPath),
+                                                             pool),
+                                  pool),
+              pool);
 
-  apr_pool_destroy (pool);
-  if (err)
-    svn_ruby_raise (err);
+  svn_pool_destroy (pool);
 
   return Qnil;
 }
@@ -492,19 +456,17 @@ cl_revert (VALUE class, VALUE aPath, VALUE recursive)
 {
   apr_pool_t *pool;
 
-  svn_error_t *err;
-
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
 
-  err = svn_client_revert (svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                      pool),
-                           RTEST (recursive), NULL, NULL, pool);
+  SVN_RB_ERR (svn_client_revert (svn_path_canonicalize_nts (StringValuePtr
+                                                             (aPath),
+                                                            pool),
+                                 RTEST (recursive), NULL, NULL, pool),
+              pool);
 
-  apr_pool_destroy (pool);
-  if (err)
-    svn_ruby_raise (err);
+  svn_pool_destroy (pool);
 
   return Qnil;
 }
@@ -519,7 +481,6 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   svn_client_auth_baton_t *auth_baton;
   svn_opt_revision_t src_revision;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   rb_scan_args (argc, argv, "31", &srcPath, &srcRev, &dstPath,
                 &aMessage);
@@ -537,19 +498,15 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   else
     message = StringValuePtr (aMessage);
 
-  err = svn_client_copy (&commit_info, StringValuePtr (srcPath), &src_revision,
-                         StringValuePtr (dstPath), NULL, auth_baton, 
-                         cl_log_message_func, (char *) message, NULL, NULL, 
-                         pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_copy (&commit_info, StringValuePtr (srcPath),
+                               &src_revision, StringValuePtr (dstPath), NULL,
+                               auth_baton, cl_log_message_func, 
+                               (char *) message, NULL, NULL, pool),
+              pool);
 
   {
     VALUE obj = commit_info_to_array (commit_info);
-    apr_pool_destroy (pool);
+    svn_pool_destroy (pool);
     return obj;
   }
 }
@@ -560,7 +517,6 @@ static VALUE
 cl_propset (VALUE class, VALUE name, VALUE val, VALUE aTarget, VALUE recurse)
 {
   apr_pool_t *pool;
-  svn_error_t *err;
   svn_string_t propval;
 
   Check_Type (name, T_STRING);
@@ -570,14 +526,11 @@ cl_propset (VALUE class, VALUE name, VALUE val, VALUE aTarget, VALUE recurse)
   pool = svn_pool_create (NULL);
   propval.data = StringValuePtr (val);
   propval.len = RSTRING (val)->len;
-  err = svn_client_propset (StringValuePtr (name), &propval,
-                            StringValuePtr (aTarget), RTEST (recurse), pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_propset (StringValuePtr (name), &propval,
+                                  StringValuePtr (aTarget), RTEST (recurse),
+                                  pool),
+              pool);
 
   return Qnil;
 }
@@ -587,24 +540,20 @@ cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
 {
   apr_hash_t *props;
   apr_pool_t *pool;
-  svn_error_t *err;
   VALUE obj;
 
   Check_Type (name, T_STRING);
   Check_Type (aTarget, T_STRING);
 
   pool = svn_pool_create (NULL);
-  err = svn_client_propget (&props, StringValuePtr (name),
-                            StringValuePtr (aTarget), RTEST (recurse), pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_propget (&props, StringValuePtr (name),
+                                  StringValuePtr (aTarget), RTEST (recurse),
+                                  pool),
+              pool);
 
   obj = svn_ruby_strbuf_hash (props, pool);
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   return obj;
 }
 
@@ -613,19 +562,14 @@ cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
 {
   apr_array_header_t *props;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aTarget, T_STRING);
 
   pool = svn_pool_create (NULL);
-  err = svn_client_proplist (&props, StringValuePtr (aTarget),
-                             RTEST (recurse), pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_client_proplist (&props, StringValuePtr (aTarget),
+                                   RTEST (recurse), pool),
+              pool);
 
   {
     VALUE obj;
@@ -641,7 +585,7 @@ cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
                                   item->node_name->len),
                       svn_ruby_strbuf_hash (item->prop_hash, pool));
       }
-    apr_pool_destroy (pool);
+    svn_pool_destroy (pool);
     return obj;
   }
 }
