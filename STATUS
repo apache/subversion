@@ -81,7 +81,7 @@ Candidate changes:
     Justification: Hard to use svn:executable in shared working copies
                    without it.
     Votes:
-      +1: philip
+      +1: philip, dlr
 
   * r8949, r9084
     Use subpools when processing multiple update and commit targets. (#1635)
