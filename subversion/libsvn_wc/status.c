@@ -36,6 +36,8 @@
 #include "props.h"
 
 
+/* Get the run-time configured list of ignore patterns, and store them
+   in *PATTERNS.  Allocate *PATTERNS and its contents in POOL.  */
 static svn_error_t *
 get_default_ignores (apr_array_header_t **patterns,
                      apr_pool_t *pool)
@@ -43,11 +45,15 @@ get_default_ignores (apr_array_header_t **patterns,
   struct svn_config_t *cfg;
   const char *val;
 
+  /* Check the Subversion run-time configuration for global ignores.
+     If no configuration value exists, we fall back to our defaults. */
   SVN_ERR (svn_config_read_config (&cfg, pool));
-  svn_config_get (cfg, &val, "miscellany", "global-ignores", "");
-  *patterns = apr_array_make (pool, 4, sizeof (const char *));
-  svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);
+  svn_config_get (cfg, &val, "miscellany", "global-ignores",
+                  "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*");
+  *patterns = apr_array_make (pool, 16, sizeof (const char *));
 
+  /* Split the patterns on whitespace, and stuff them into *PATTERNS. */
+  svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);
   return SVN_NO_ERROR;
 }
 
