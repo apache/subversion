@@ -427,7 +427,6 @@ typedef struct svn_delta_edit_fns_t
        
   /* Remove the directory entry named NAME.  */
   svn_error_t *(*delete) (svn_string_t *name,
-			  void *edit_baton,
                           void *parent_baton);
 
 
@@ -440,7 +439,6 @@ typedef struct svn_delta_edit_fns_t
      ANCESTOR_PATH is zero, the changes are relative to an empty
      directory. */
   svn_error_t *(*add_directory) (svn_string_t *name,
-				 void *edit_baton,
                                  void *parent_baton,
 				 svn_string_t *ancestor_path,
 				 svn_vernum_t ancestor_version,
@@ -453,7 +451,6 @@ typedef struct svn_delta_edit_fns_t
      changes to the base; if ANCESTOR_PATH is zero, the changes are
      relative to an empty directory.  */
   svn_error_t *(*replace_directory) (svn_string_t *name,
-				     void *edit_baton,
                                      void *parent_baton,
 				     svn_string_t *ancestor_path,
 				     svn_vernum_t ancestor_version,
@@ -464,8 +461,7 @@ typedef struct svn_delta_edit_fns_t
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
-  svn_error_t *(*change_dir_prop) (void *edit_baton,
-                                   void *dir_baton,
+  svn_error_t *(*change_dir_prop) (void *dir_baton,
                                    svn_string_t *name,
                                    svn_string_t *value);
 
@@ -476,8 +472,7 @@ typedef struct svn_delta_edit_fns_t
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
-  svn_error_t *(*change_dirent_prop) (void *edit_baton,
-                                      void *dir_baton,
+  svn_error_t *(*change_dirent_prop) (void *dir_baton,
                                       svn_string_t *entry,
                                       svn_string_t *name,
                                       svn_string_t *value);
@@ -486,8 +481,7 @@ typedef struct svn_delta_edit_fns_t
      (set by add_directory or replace_directory).  We won't be using
      the baton any more, so whatever resources it refers to may now be
      freed.  */
-  svn_error_t *(*close_directory) (void *edit_baton,
-                                   void *dir_baton);
+  svn_error_t *(*close_directory) (void *dir_baton);
 
 
   /* Creating and modifying files.  */
@@ -497,7 +491,6 @@ typedef struct svn_delta_edit_fns_t
      it stores there will be passed through to apply_textdelta and/or
      apply_propdelta.  */
   svn_error_t *(*add_file) (svn_string_t *name,
-			    void *edit_baton,
                             void *parent_baton,
 			    svn_string_t *ancestor_path,
 			    svn_vernum_t ancestor_version,
@@ -508,7 +501,6 @@ typedef struct svn_delta_edit_fns_t
      whatever value it stores there will be passed through to
      apply_textdelta and/or apply_propdelta.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
-				void *edit_baton,
                                 void *parent_baton,
 				svn_string_t *ancestor_path,
 				svn_vernum_t ancestor_version,
@@ -525,9 +517,7 @@ typedef struct svn_delta_edit_fns_t
      delta windows as we receive them.  The callback should set
      *HANDLER_BATON to the value we should pass as the BATON
      argument to *HANDLER.  */
-  svn_error_t *(*apply_textdelta) (void *edit_baton,
-                                   void *parent_baton,
-                                   void *file_baton, 
+  svn_error_t *(*apply_textdelta) (void *file_baton, 
                                    svn_txdelta_window_handler_t **handler,
                                    void **handler_baton);
 
@@ -536,17 +526,14 @@ typedef struct svn_delta_edit_fns_t
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
-  svn_error_t *(*change_file_prop) (void *edit_baton,
-                                    void *parent_baton,
-                                    void *file_baton,
+  svn_error_t *(*change_file_prop) (void *file_baton,
                                     svn_string_t *name,
                                     svn_string_t *value);
 
   /* We are done processing a file, whose baton is FILE_BATON (set by
      `add_file' or `replace_file').  We won't be using the baton any
      more, so whatever resources it refers to may now be freed.  */
-  svn_error_t *(*close_file) (void *edit_baton,
-                              void *file_baton);
+  svn_error_t *(*close_file) (void *file_baton);
 
   /* All delta processing is done.  Call this, with the EDIT_BATON for
      the entire edit. */
