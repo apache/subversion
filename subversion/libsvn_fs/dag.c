@@ -99,16 +99,6 @@ svn_fs__dag_init_fs (svn_fs_t *fs)
    ### without them, we get undefined references from tree.c
    ### obviously, they don't work and will need to be filled in...
 */
-svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
-                                   svn_fs_t *fs,
-                                   const char *txn,
-                                   const svn_fs_id_t *id,
-                                   trail_t *trail)
-{
-  abort();
-  /* NOTREACHED */
-  return NULL;
-}
 void svn_fs__dag_close (dag_node_t *node)
 {
   abort();
