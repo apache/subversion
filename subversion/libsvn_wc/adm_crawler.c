@@ -607,7 +607,7 @@ svn_wc_transmit_text_deltas (const char *path,
 
 svn_error_t *
 svn_wc_transmit_prop_deltas (const char *path,
-                             svn_node_kind_t kind,
+                             svn_wc_entry_t *entry,
                              const svn_delta_editor_t *editor,
                              void *baton,
                              const char **tempfile,
@@ -623,7 +623,16 @@ svn_wc_transmit_prop_deltas (const char *path,
   SVN_ERR (svn_wc__prop_path (&props, path, 0, pool));
   
   /* Get the full path of the prop-base `pristine' file */
-  SVN_ERR (svn_wc__prop_base_path (&props_base, path, 0, pool));
+  if ((entry->schedule == svn_wc_schedule_replace)
+      || (entry->schedule == svn_wc_schedule_add))
+    {
+      /* do nothing: baseprop hash should be -empty- for comparison
+         purposes.  if they already exist on disk, they're "leftover"
+         from the old file that was replaced. */
+    }
+  else
+    /* the real prop-base hash */
+    SVN_ERR (svn_wc__prop_base_path (&props_base, path, 0, pool));
 
   /* Copy the local prop file to the administrative temp area */
   SVN_ERR (svn_wc__prop_path (&props_tmp, path, 1, pool));
@@ -646,7 +655,7 @@ svn_wc_transmit_prop_deltas (const char *path,
   for (i = 0; i < propmods->nelts; i++)
     {
       const svn_prop_t *p = &APR_ARRAY_IDX (propmods, i, svn_prop_t);
-      if (kind == svn_node_file)
+      if (entry->kind == svn_node_file)
         SVN_ERR (editor->change_file_prop (baton, p->name, p->value, pool));
       else
         SVN_ERR (editor->change_dir_prop (baton, p->name, p->value, pool));

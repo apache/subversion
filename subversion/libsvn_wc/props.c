@@ -1222,6 +1222,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   const char *prop_path;
   const char *prop_base_path;
   svn_boolean_t different_filesizes, equal_timestamps;
+  svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* First, get the paths of the working and 'base' prop files. */
@@ -1231,6 +1232,22 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   /* Decide if either path is "empty" of properties. */
   SVN_ERR (empty_props_p (&wempty, prop_path, subpool));
   SVN_ERR (empty_props_p (&bempty, prop_base_path, subpool));
+
+  /* If something is scheduled for replacement, we do *not* want to
+     pay attention to any base-props;  they might be residual from the
+     old deleted file. */
+  SVN_ERR (svn_wc_entry (&entry, path, TRUE, pool));  
+  if (entry 
+      && ((entry->schedule == svn_wc_schedule_replace)
+          || (entry->schedule == svn_wc_schedule_add)))
+    {
+      /* svn_wc_add() guarantees that a newly added file has no
+         working props at all; thus if this file is non-empty, the
+         user must have modified them.  Hopefully the caller will know
+         to ignore the baseprops as well!  */
+      *modified_p = wempty ? FALSE : TRUE;
+      goto cleanup;        
+    }
 
   /* Easy out:  if the base file is empty, we know the answer
      immediately. */

@@ -1477,7 +1477,7 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
                                           apr_pool_t *pool);
 
 
-/* Given a PATH of a given node KIND, transmit all local property
+/* Given a PATH with its accompanying ENTRY, transmit all local property
    modifications using the appropriate EDITOR method (in conjunction
    with BATON).  Use POOL for all allocations.
 
@@ -1485,7 +1485,7 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
    path to that file is returned in *TEMPFILE (so the caller can clean
    this up if it wishes to do so).  */
 svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
-                                          svn_node_kind_t kind,
+                                          svn_wc_entry_t *entry,
                                           const svn_delta_editor_t *editor,
                                           void *baton,
                                           const char **tempfile,
