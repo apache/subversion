@@ -67,7 +67,6 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
 
 /* ---------------------------------------------------------------*/
 
-/* The `reporter' vtable routines (for updates). */
 
 /* Construct and return a REPORT_BATON to hold context while collecting
    working copy revision state. When the collection of state is completed,
@@ -86,14 +85,14 @@ svn_repos_begin_report (void **report_baton,
                         apr_pool_t *pool);
 
 
-/* Given a REPORT_BATON constructed by svn_repos_begin_report(), this routine
-   will build REVISION:PATH into the current transaction.  This routine is
-   called multiple times to create a transaction that is a "mirror" of a
-   working copy.
+/* Given a REPORT_BATON constructed by svn_repos_begin_report(), this
+   routine will build REVISION:PATH into the current transaction.
+   This routine is called multiple times to create a transaction that
+   is a "mirror" of a working copy.
 
-   The first call should pass an empty PATH, allowing the reporter to
-   do any setup that depends on just the revision number (such as
-   creating a txn).  */
+   The first call of this in a given report usually passes an empty
+   PATH; that allows the reporter to set up the correct root revision
+   (useful when creating a txn, for example).  */
 svn_error_t *
 svn_repos_set_path (void *report_baton,
                     svn_string_t *path,
