@@ -209,7 +209,10 @@ dump_node (svn_fs_root_t *fs_root,
     {
       SVN_ERR (svn_stream_printf (stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
-                                  ": delete\n"));  
+                                  ": delete\n\n"));  
+      /* Notice the extra \n above;  that's because this is the -last-
+         header in the block.  (Normally, we have a double \n after the
+         Content-length header.) */
 
       /* Get out!  We're done! */
       return SVN_NO_ERROR;
