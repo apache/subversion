@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "svn_config.h"
+#include "svn_path.h"
 
 #include "wc.h"
 #include "log.h"

@@ -21,11 +21,9 @@
 #define SVN_LIBSVN_WC_LOG_H
 
 #include <apr_pools.h>
+
 #include "svn_types.h"
-#include "svn_string.h"
 #include "svn_error.h"
-#include "svn_path.h"
-#include "svn_xml.h"
 #include "svn_wc.h"
 
 #ifdef __cplusplus

@@ -28,6 +28,7 @@
 #include "svn_types.h"
 #include "svn_time.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 
 #include "wc.h"
 #include "adm_files.h"

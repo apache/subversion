@@ -21,6 +21,8 @@
 #include "svn_wc.h"
 #include "svn_diff.h"
 #include "svn_config.h"
+#include "svn_path.h"
+
 #include "wc.h"
 #include "entries.h"
 #include "translate.h"
