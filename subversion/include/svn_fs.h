@@ -103,15 +103,15 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 /* Create a new, empty Subversion filesystem, stored in a Berkeley DB
-   environment under PATH.  Make FS refer to this new filesystem.
-   FS provides the memory pool, warning function, etc.  If PATH
-   exists, it must be an empty directory.  */
+   environment under PATH, a utf8-encoded path.  Make FS refer to this
+   new filesystem.  FS provides the memory pool, warning function,
+   etc.  If PATH exists, it must be an empty directory.  */
 svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 
 
 /* Make FS refer to the Berkeley DB-based Subversion filesystem at
-   PATH.  PATH must refer to a file or directory created by
-   `svn_fs_create_berkeley'.
+   PATH.  PATH is utf8-encoded, and must refer to a file or directory
+   created by `svn_fs_create_berkeley'.
 
    Only one thread may operate on any given filesystem object at once.
    Two threads may access the same filesystem simultaneously only if
@@ -123,9 +123,10 @@ svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 
 
-/* Return the path to FS's repository, allocated in POOL.
-   Note: this is just what was passed to svn_fs_create_berkeley() or
-   svn_fs_open_berkeley() -- might be absolute, might not.  */
+/* Return the utf8-encoded path to FS's repository, allocated in
+   POOL.  Note: this is just what was passed to
+   svn_fs_create_berkeley() or svn_fs_open_berkeley() -- might be
+   absolute, might not.  */
 const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
 
 
@@ -884,7 +885,7 @@ svn_error_t *svn_fs_make_dir (svn_fs_root_t *root,
    in POOL.
 
    If the node being deleted is a directory, it must be empty, else
-   the error SVN_ERR_FS_DIR_NOT_EMPTY is returned.
+   the error SVN_ERR_DIR_NOT_EMPTY is returned.
 
    Attempting to remove the root dir also results in an error,
    SVN_ERR_FS_ROOT_DIR, even if the dir is empty.  */

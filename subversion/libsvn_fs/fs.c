@@ -27,6 +27,8 @@
 
 #include "svn_pools.h"
 #include "svn_fs.h"
+#include "svn_path.h"
+#include "svn_utf.h"
 #include "fs.h"
 #include "err.h"
 #include "dag.h"
@@ -392,14 +394,16 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
   apr_status_t apr_err;
   svn_error_t *svn_err;
+  const char *path_native;
 
   SVN_ERR (check_already_open (fs));
 
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
+  SVN_ERR (svn_utf_cstring_from_utf8 (fs->path, &path_native, fs->pool));
 
   /* Create the directory for the new Berkeley DB environment.  */
-  apr_err = apr_dir_make (fs->path, APR_OS_DEFAULT, fs->pool);
+  apr_err = apr_dir_make (path_native, APR_OS_DEFAULT, fs->pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, 0, 0, fs->pool,
                               "creating Berkeley DB environment dir `%s'",
@@ -408,8 +412,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   /* Write the DB_CONFIG file. */
   {
     apr_file_t *dbconfig_file = NULL;
-    const char *dbconfig_file_name = apr_psprintf (fs->pool,
-                                                   "%s/DB_CONFIG", path);
+    const char *dbconfig_file_name
+      = svn_path_join (path, "DB_CONFIG", fs->pool);
+
     static const char * const dbconfig_contents =
       "# This is the configuration file for the Berkeley DB environment\n"
       "# used by your Subversion repository.\n"
@@ -425,12 +430,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       "set_lk_max_lockers 2000\n"
       "set_lk_max_objects 2000\n";
 
-    apr_err = apr_file_open (&dbconfig_file, dbconfig_file_name,
-                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                             fs->pool);
-    if (apr_err != APR_SUCCESS)
-      return svn_error_createf (apr_err, 0, 0, fs->pool,
-                                "opening `%s' for writing", dbconfig_file_name);
+    SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
+                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
+                               fs->pool));
 
     apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
                                    strlen (dbconfig_contents), NULL);
@@ -449,7 +451,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   /* Create the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "creating environment",
-                     fs->env->open (fs->env, fs->path,
+                     fs->env->open (fs->env, path_native,
                                     (DB_CREATE
                                      | DB_INIT_LOCK 
                                      | DB_INIT_LOG
@@ -506,18 +508,20 @@ svn_error_t *
 svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 {
   svn_error_t *svn_err;
+  const char *path_native;
 
   SVN_ERR (check_already_open (fs));
 
   /* Initialize paths. */
   fs->path = apr_pstrdup (fs->pool, path);
+  SVN_ERR (svn_utf_cstring_from_utf8 (fs->path, &path_native, fs->pool));
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "opening environment",
-                     fs->env->open (fs->env, fs->path,
+                     fs->env->open (fs->env, path_native,
                                     (DB_INIT_LOCK
                                      | DB_INIT_LOG
                                      | DB_INIT_MPOOL
@@ -572,6 +576,9 @@ svn_fs_berkeley_recover (const char *path,
 {
   int db_err;
   DB_ENV *env;
+  const char *path_native;
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
 
   db_err = db_env_create (&env, 0);
   if (db_err)
@@ -587,10 +594,10 @@ svn_fs_berkeley_recover (const char *path,
      we leave the region around, the application that should create
      it will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
-  db_err = env->open (env, path, (DB_RECOVER | DB_CREATE
-                                  | DB_INIT_LOCK | DB_INIT_LOG
-                                  | DB_INIT_MPOOL | DB_INIT_TXN
-                                  | DB_PRIVATE),
+  db_err = env->open (env, path_native, (DB_RECOVER | DB_CREATE
+                                         | DB_INIT_LOCK | DB_INIT_LOG
+                                         | DB_INIT_MPOOL | DB_INIT_TXN
+                                         | DB_PRIVATE),
                       0666);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
@@ -613,13 +620,16 @@ svn_fs_delete_berkeley (const char *path,
 {
   int db_err;
   DB_ENV *env;
+  const char *path_native;
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
 
   /* First, use the Berkeley DB library function to remove any shared
      memory segments.  */
   db_err = db_env_create (&env, 0);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
-  db_err = env->remove (env, path, DB_FORCE);
+  db_err = env->remove (env, path_native, DB_FORCE);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
 
