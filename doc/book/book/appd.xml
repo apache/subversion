@@ -451,7 +451,8 @@
         Subversion client from changing the file via a normal
         <command>svn commit</command>!  If you use this technique,
         you're giving users the opportunity to stomp on each others'
-        changes.</para>
+        changes.  In particular, a WebDAV client might accidentally
+        overwrite a change committed by regular svn client.</para>
 
       <para>On the other hand, if you set up your environment very
         carefully, you may mitigate the risk.  For example, if
@@ -506,17 +507,13 @@
         </listitem>
 
         <listitem>
-          <para>As expected, a file can't be opened for direct editing
-            from the share, due to mod_dav_svn's lack of
-            <command>LOCK</command> support.  Even the mod_dav_lock
-            technique doesn't seem to help.  When a file is
-            double-clicked, Internet Explorer is launched by default,
-            and it displays the file as read-only.  If you use an
-            application to open the file directly, it still treats the
-            file as read-only.  The previously mentioned <quote>copy,
-            edit, re-copy</quote> method does work, however.  The file
-            on the share can be successfully overwritten by a locally
-            edited copy.</para>
+          <para>A file can't be opened for direct editing from the
+            share; it always comes up read-only.  The mod_dav_lock
+            technique doesn't help, because WebFolders doesn't use the
+            <command>LOCK</command> method at all.  The previously
+            mentioned <quote>copy, edit, re-copy</quote> method does
+            work, however.  The file on the share can be successfully
+            overwritten by a locally edited copy.</para>
         </listitem>
 
       </itemizedlist>
