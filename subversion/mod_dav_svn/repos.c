@@ -1521,7 +1521,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         if (resource->info->repos_path == NULL)
           title = "unknown location";
         else
-          title = ap_escape_uri(resource->pool, resource->info->repos_path);
+          title = resource->info->repos_path;
 
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
           title = apr_psprintf(resource->pool,
@@ -1593,20 +1593,20 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         (void) svn_fs_is_dir(&is_dir, resource->info->root.root,
                              entry_path, entry_pool);
 
-        name = ap_escape_uri(entry_pool, item->key);
-
+	name = item->key;
+	
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
         if (is_dir)
-          href = apr_pstrcat(entry_pool, name, "/", NULL);
-        else
-          href = name;
+          name = apr_pstrcat(entry_pool, name, "/", NULL);
+	
+        href = ap_escape_uri(entry_pool, name);
 
         if (gen_html)
           ap_fprintf(output, bb,
                      "  <li><a href=\"%s\">%s</a></li>\n",
-                     href, href);
+                     href, name);
         else
           {
             const char *const tag = (is_dir ? "dir" : "file");
