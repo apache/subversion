@@ -348,6 +348,7 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
       file_baton->chunk[idx]++;
       length = file_baton->chunk[idx] == last_chunk ? offset_in_chunk(file_baton->size[idx]) : CHUNK_SIZE;
       endp += length;
+      file_baton->endp[idx] = endp;
 
       SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
                          curp, length, chunk_to_offset(file_baton->chunk[idx])));
