@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.9 $ of this document.)
+              ($Revision: 1.10 $ of this document.)
 
 * Introduction
 
@@ -603,7 +603,7 @@ branch?
 
 *** Change a previously committed log message
 
-** more to come...
+*** more to come...
 
 
 * Meta-implementation
