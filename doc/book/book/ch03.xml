@@ -1587,7 +1587,7 @@ Committed revision 3.
 
       <screen>
 $ svn commit --file logmsg 
-Sending        sandwich
+Sending        sandwich.txt
 Transmitting file data .
 Committed revision 4.
 </screen>
