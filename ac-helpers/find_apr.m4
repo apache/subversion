@@ -65,7 +65,7 @@ build directory, or an apr-config file.])
     fi
   ],[
     dnl always look in the builtin/default places
-    if apr-config --help 2>&1 > /dev/null; then
+    if apr-config --help > /dev/null 2>&1 ; then
       apr_found="yes"
       apr_config="apr-config"
     else
