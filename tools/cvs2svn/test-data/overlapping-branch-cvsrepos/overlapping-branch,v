@@ -27,8 +27,8 @@ desc
 1.1
 log
 @The content of this file is unimportant, what matters is that the
-same branch has two different symbolic names, an illegal condition
-that cvs2svn.py should detect early.
+same branch has two different symbolic names, a condition which
+cvs2svn.py should warn about.
 @
 text
 @Nothing to see here.

@@ -62,6 +62,9 @@ tmp_dir = 'tmp'
 class RunProgramException:
   pass
 
+class MissingErrorException:
+  pass
+
 def run_program(program, error_re, *varargs):
   """Run PROGRAM with VARARGS, return stdout as a list of lines.
   If there is any stderr and ERROR_RE is None, raise
@@ -69,15 +72,15 @@ def run_program(program, error_re, *varargs):
   svntest.main.verbose_mode is true.
 
   If ERROR_RE is not None, it is a string regular expression that must
-  match some line of the error output; if it matches, return None,
-  else return 1."""
+  match some line of stderr.  If it fails to match, raise
+  MissingErrorExpection."""
   out, err = svntest.main.run_command(program, 1, 0, *varargs)
   if err:
     if error_re:
       for line in err:
         if re.match(error_re, line):
-          return None
-      return 1  # We never matched, so return 1 for failure to match
+          return out
+      raise MissingErrorException
     else:
       if svntest.main.verbose_mode:
         print '\n%s said:\n' % program
@@ -85,8 +88,6 @@ def run_program(program, error_re, *varargs):
           print '   ' + line,
         print
       raise RunProgramException
-  elif error_re:
-    return 1
   return out
 
 
@@ -97,8 +98,8 @@ def run_cvs2svn(error_re, *varargs):
   svntest.main.verbose_mode is true.
 
   If ERROR_RE is not None, it is a string regular expression that must
-  match some line of the error output; if it matches, return None,
-  else return 1."""
+  match some line of stderr.  If it fails to match, raise
+  MissingErrorException."""
   if sys.platform == "win32":
     # For an unknown reason, without this special case, the cmd.exe process
     # invoked by os.system('sort ...') in cvs2svn.py receives invalid stdio
@@ -175,7 +176,16 @@ def parse_log(svn_repos):
       line = out.readline()
       if len(line) == 1: return
       line = line[:-1]
-      log.changed_paths[line[5:]] = line[3:4]
+      op_portion = line[3:4]
+      path_portion = line[5:]
+      # # We could parse out history information, but currently we
+      # # just leave it in the path portion because that's how some
+      # # tests expect it.
+      #
+      # m = re.match("(.*) \(from /.*:[0-9]+\)", path_portion)
+      # if m:
+      #   path_portion = m.group(1)
+      log.changed_paths[path_portion] = op_portion
 
   def absorb_message_body(out, num_lines, log):
     'Read NUM_LINES of log message body from OUT into Log item LOG.'
@@ -258,18 +268,14 @@ def ensure_conversion(name, error_re=None, trunk_only=None, no_prune=None):
   ...log_dict being the type of dictionary returned by parse_log().
 
   If ERROR_RE is a string, it is a regular expression expected to
-  match some error line from a failed conversion, in which case return
-  the tuple (None, None, None) if it fails as expected, or (1, 1, 1)
-  if it fails to fail in the expected way.
+  match some line of stderr printed by the conversion.  If there is an
+  error and ERROR_RE is not set, then raise svntest.Failure.
 
   If TRUNK_ONLY is set, then pass the --trunk-only option to cvs2svn.py
   if converting NAME for the first time.
 
   If NO_PRUNE is set, then pass the --no-prune option to cvs2svn.py
   if converting NAME for the first time.
-
-  If there is an error, but ERROR_RE is not set, then just raise
-  svntest.Failure.
 
   NAME is just one word.  For example, 'main' would mean to convert
   './test-data/main-cvsrepos', and after the conversion, the resulting
@@ -303,25 +309,27 @@ def ensure_conversion(name, error_re=None, trunk_only=None, no_prune=None):
       try:
         if no_prune:
           if trunk_only:
-            ret = run_cvs2svn(error_re, '--trunk-only', '--no-prune',
-                              '--create', '-s',
-                              svnrepos, cvsrepos)
+            run_cvs2svn(error_re, '--trunk-only', '--no-prune',
+                        '--create', '-s', svnrepos, cvsrepos)
           else:
-            ret = run_cvs2svn(error_re, '--no-prune', '--create', '-s',
-                              svnrepos, cvsrepos)
+            run_cvs2svn(error_re, '--no-prune', '--create', '-s',
+                        svnrepos, cvsrepos)
         else:
           if trunk_only:
-            ret = run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
-                              svnrepos, cvsrepos)
+            run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
+                        svnrepos, cvsrepos)
           else:
-            ret = run_cvs2svn(error_re, '--create', '-s', svnrepos, cvsrepos)
+            run_cvs2svn(error_re, '--create', '-s', svnrepos, cvsrepos)
       except RunProgramException:
         raise svntest.Failure
+      except MissingErrorException:
+        print "Test failed because no error matched '%s'" % error_re
+        raise svntest.Failure
 
-      # If we were expecting an error with error_re, then return Nones
-      # if we matched it, or 1s if not.
-      if error_re:
-        return ret, ret, ret
+      if not os.path.isdir(svnrepos):
+        print "Repository not created: '%s'" \
+              % os.path.join(os.getcwd(), svnrepos)
+        raise svntest.Failure
 
       run_svn('co', repos_to_url(svnrepos), wc)
       log_dict = parse_log(svnrepos)
@@ -355,10 +363,24 @@ def bogus_tag():
 
 
 def overlapping_branch():
-  "fail early on encountering a branch with two names"
-  ret, ign, ign = ensure_conversion('overlapping-branch',
-                                    '.*already has name')
-  if ret:
+  "ignore a file with a branch with two names"
+  repos, wc, logs = ensure_conversion('overlapping-branch',
+                                      '.*cannot also have name \'vendorB\'')
+  nonlap_path = '/trunk/nonoverlapping-branch'
+  lap_path = '/trunk/overlapping-branch'
+  if not (logs[3].changed_paths.get('/branches/vendorA (from /trunk:2)')
+          == 'A'):
+    raise svntest.Failure
+  # We don't know what order the first two commits would be in, since
+  # they have different log messages but the same timestamps.  As only
+  # one of the files would be on the vendorB branch in the regression
+  # case being tested here, we allow for either order.
+  if ((logs[3].changed_paths.get('/branches/vendorB (from /trunk:1)')
+       == 'A')
+      or (logs[3].changed_paths.get('/branches/vendorB (from /trunk:2)')
+          == 'A')):
+    raise svntest.Failure
+  if len(logs) > 3:
     raise svntest.Failure
 
 
@@ -591,6 +613,7 @@ def simple_tags():
     '/tags/T_ALL_INITIAL_FILES_BUT_ONE/partial-prune': 'D',
     '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubB': 'D',
     }:
+    print "KFF: ", rev
     raise svntest.Failure
 
   rev = 17
@@ -599,6 +622,7 @@ def simple_tags():
   if not logs[rev].changed_paths == {
     '/branches/vendorbranch/proj (from /trunk/proj:16)': 'A',
     }:
+    print "KFF: ", rev
     raise svntest.Failure
 
   rev = 16
@@ -620,6 +644,7 @@ def simple_tags():
     '/trunk/proj/sub3': 'A',
     '/trunk/proj/sub3/default': 'A',
     }:
+    print "KFF: ", rev
     raise svntest.Failure
 
 
