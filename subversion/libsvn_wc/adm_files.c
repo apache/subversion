@@ -322,19 +322,39 @@ apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 #endif /* apr_copy_file */
 
 
+svn_error_t *
+svn_wc__copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+
+  apr_err = apr_copy_file (src->data, dst->data, pool);
+  if (apr_err)
+    {
+      const char *msg
+        = apr_psprintf (pool, "copying %s to %s", src->data, dst->data);
+      return svn_error_create (apr_err, 0, NULL, pool, msg);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+
 /* Copy SRC to DST if SRC exists, else create DST empty. */
 static svn_error_t *
 maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
+  enum svn_node_kind kind;
+  svn_error_t *err;
   apr_status_t apr_err;
-  apr_file_t *f = NULL;
 
   /* First test if SRC exists. */
-  apr_err = apr_open (&f, src->data, (APR_READ), APR_OS_DEFAULT, pool);
-
-  if (apr_err)    /* DST doesn't exist, so create it. */
+  err = svn_io_check_path (src, &kind, pool);
+  if (err)
+    return err;
+  else if (kind == svn_invalid_kind)
     {
-      f = NULL;
+      /* SRC doesn't exist, create DST empty. */
+      apr_file_t *f = NULL;
       apr_err = apr_open (&f,
                           dst->data,
                           (APR_WRITE | APR_CREATE),
@@ -351,21 +371,11 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
             return SVN_NO_ERROR;
         }
     }
-
-  /* Else SRC exists, so copy it to DST. */
-
-  /* close... */ 
-  apr_err = apr_close (f);
-  if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool, dst->data);
-
-  /* ...then copy */
-  apr_err = apr_copy_file (src->data, dst->data, pool);
-  if (apr_err)
-    {
-      const char *msg
-        = apr_psprintf (pool, "copying %s to %s", src->data, dst->data);
-      return svn_error_create (apr_err, 0, NULL, pool, msg);
+  else /* SRC exists, so copy it to DST. */
+    {    
+      err = svn_wc__copy_file (src, dst, pool);
+      if (err)
+        return err;
     }
 
   return SVN_NO_ERROR;

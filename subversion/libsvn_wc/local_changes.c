@@ -226,7 +226,7 @@ svn_wc__gnudiff_patcher (void *user_data,
 #if 0
   struct svn_wc__diff_holder *dh = user_data;
 #endif
-  apr_status_t apr_err;
+  svn_error_t *err;
 
   /* kff todo: someday, take CHANGES, which are the result of "diff -c
      SVN/text-base/foo ./foo", and re-apply them to the 
@@ -235,10 +235,9 @@ svn_wc__gnudiff_patcher (void *user_data,
   /* kff todo: "Patch?  We don't need no stinkin' patch."  Just
      overwrite local mods for now, like the barbarians we are. */
 
-  apr_err = apr_copy_file (src->data, target->data, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
-                              "copying %s to %s", src->data, target->data);
+  err = svn_wc__copy_file (src, target, pool);
+  if (err)
+    return err;
   
   return SVN_NO_ERROR;
 }

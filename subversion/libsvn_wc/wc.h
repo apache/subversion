@@ -391,6 +391,10 @@ apr_time_t svn_wc__string_to_time (svn_string_t *timestr);
 
 /*** This will go into APR eventually. ***/
 
+svn_error_t *svn_wc__copy_file (svn_string_t *src,
+                                svn_string_t *dst,
+                                apr_pool_t *pool);
+
 apr_status_t apr_copy_file (const char *src,
                             const char *dst,
                             apr_pool_t *pool);
