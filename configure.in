@@ -8,8 +8,25 @@ dnl Ensure that subversion is configured with autoconf 2.50 or newer
 dnl Don't even think about removing this check!
 AC_PREREQ(2.50)
 
-dnl First line is *required*;  sanity-checks that the our src dir exists.
-AC_INIT(subversion/include/svn_types.h)
+dnl Get the version number of Subversion, using m4's esyscmd() command to run
+dnl the command at m4-generation time. This allows us to create an m4
+dnl symbol holding the correct version number. AC_INIT() requires the
+dnl version number at m4-time, rather than when ./configure is run, so
+dnl all this must happen as part of m4, not as part of the shell code
+dnl contained in ./configure.
+dnl
+dnl NOTE: esyscmd() is a GNU M4 extension. Thus, we wrap it in an apprpriate
+dnl test. I believe this test will work, but I don't have a place with non-
+dnl GNU M4 to test it right now.
+define([subversion_version],
+       ifdef([__gnu__],
+	     [esyscmd(build/get-version.sh subversion/include/svn_version.h)],
+	     [0.x]))
+AC_INIT(subversion, subversion_version, [http://subversion.tigris.org])
+undefine([subversion_version])
+
+dnl AC_CONFIG_SRCDIR is *required*;  sanity-checks that our src dir exists.
+AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR(ac-helpers)
 
 abs_srcdir="`cd $srcdir && pwd`"
@@ -414,7 +431,9 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 dnl Final step:  create the Makefile ----------------------------
 
-AC_OUTPUT([Makefile svn-config], [chmod +x svn-config])
+AC_CONFIG_FILES([Makefile svn-config])
+AC_CONFIG_COMMANDS([default], [chmod +x svn-config])
+AC_OUTPUT
 
 
 dnl Create all of the build directories
