@@ -235,7 +235,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
-    "usage: revert [TARGETS]\n\n"
+    "usage: revert TARGET1 [TARGET2 [TARGET3 ... ]]\n\n"
     "    Note:  this routine does not require network access, and will\n"
     "    remove any .rej produced when a file is in a state of conflict.\n",
     {svn_cl__recursive_opt} },
