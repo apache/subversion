@@ -235,7 +235,7 @@ remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
   apr_hash_t *entries = NULL;
   
   /* Remove this entry from the entries file. */
-  err = svn_wc__entries_read (&entries, loggy->path, loggy->pool);
+  err = svn_wc_entries_read (&entries, loggy->path, loggy->pool);
   if (err)
     return err;
   svn_wc__entry_remove (entries, name);
@@ -855,7 +855,7 @@ log_do_committed (struct log_runner *loggy,
       svn_wc_entry_t *entry;
       svn_string_t *prop_path, *tmp_prop_path, *prop_base_path;
 
-      err = svn_wc__entries_read (&entries, loggy->path, loggy->pool);
+      err = svn_wc_entries_read (&entries, loggy->path, loggy->pool);
       if (err)
         return err;
           
@@ -1191,7 +1191,7 @@ svn_wc__cleanup (svn_string_t *path,
   svn_boolean_t care_about_this_dir = 0;
 
   /* Recurse on versioned subdirs first, oddly enough. */
-  err = svn_wc__entries_read (&entries, path, pool);
+  err = svn_wc_entries_read (&entries, path, pool);
   if (err)
     return err;
 
@@ -1304,7 +1304,7 @@ svn_wc__log_commit (svn_string_t *path,
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
 
-  err = svn_wc__entries_read (&entries, path, pool);
+  err = svn_wc_entries_read (&entries, path, pool);
   if (err)
     return err;
 

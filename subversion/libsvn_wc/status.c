@@ -230,7 +230,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                       svn_path_local_style, pool);      
 
       /* Load entries file for file's parent */
-      err = svn_wc__entries_read (&entries, dirpath, pool);
+      err = svn_wc_entries_read (&entries, dirpath, pool);
       if (err) return err;
 
       /* Get the entry by looking up file's basename */
@@ -255,7 +255,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       apr_hash_index_t *hi;
 
       /* Load entries file for the directory */
-      err = svn_wc__entries_read (&entries, path, pool);
+      err = svn_wc_entries_read (&entries, path, pool);
       if (err) return err;
 
       /* Loop over entries hash */

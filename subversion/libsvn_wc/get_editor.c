@@ -714,9 +714,9 @@ add_or_replace_file (svn_string_t *name,
   svn_wc_entry_t *entry;
   svn_boolean_t is_wc;
 
-  err = svn_wc__entries_read (&entries,
-                              parent_dir_baton->path,
-                              parent_dir_baton->pool);
+  err = svn_wc_entries_read (&entries,
+                             parent_dir_baton->path,
+                             parent_dir_baton->pool);
   if (err)
     return err;
 

@@ -132,7 +132,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
     svn_path_split (path, &dirpath, &entryname, svn_path_local_style, pool);
 
   /* Get the timestamp from the entries file */
-  err = svn_wc__entries_read (&entries, dirpath, pool);
+  err = svn_wc_entries_read (&entries, dirpath, pool);
   if (err)
     return err;
   entry = apr_hash_get (entries, entryname->data, entryname->len);

@@ -132,11 +132,17 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 
-/* Set *ENTRY according to PATH. */
+/* Fill in *ENTRY according to PATH. */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            svn_string_t *path,
                            apr_pool_t *pool);
 
+
+/* Parse the `entries' file for PATH and return a hash ENTRIES, whose
+   keys are entry names and values are (svn_wc_entry_t *). */
+svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
+                                  svn_string_t *path,
+                                  apr_pool_t *pool);
 
 /* Given a DIR_PATH under version control, decide if one of its
    entries (ENTRY) is in state of conflict; return the answers in
