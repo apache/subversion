@@ -2278,7 +2278,7 @@ $ svn checkout svn://example.com/repos/projects
           attempts to connect to that machine on port 3690,
           <command>inetd</command> will launch a
           <quote>one-off</quote> <command>svnserve</command> process
-          to handle that client's request.  
+          to handle that client's request.</para>
 
         <para>When configuring this type of setup, keep in mind that
           you might not want to launch the <command>svnserve</command>
