@@ -412,26 +412,25 @@ parse_input (int *finished,
 
   if (subcommand == NULL)
     return SVN_NO_ERROR;
-
   else if (! strcmp(subcommand, "cd"))
     return cd (state, shcxt, pool);
-  
   else if (! strcmp(subcommand, "cr"))
     return cr (SVN_STR_TO_REV(state), shcxt, pool);
-
   else if (! strcmp(subcommand, "ls"))
     return ls (shcxt, state, pool);
-
   else if (! strcmp(subcommand, "help"))
     {
       help();
       return SVN_NO_ERROR;
     }
-
   else if ((! strcmp(subcommand, "quit"))
            || (! strcmp(subcommand, "exit")))
-    *finished = 1;
-
+    {
+      *finished = 1;
+      return SVN_NO_ERROR;
+    }
+  else
+    printf ("Unrecognized command \"%s\"\n", subcommand);
 
   return SVN_NO_ERROR;
 }
