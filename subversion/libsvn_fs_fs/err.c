@@ -288,3 +288,16 @@ svn_fs_fs__err_path_locked (svn_fs_t *fs, svn_lock_t *lock)
      _("Path '%s' is locked by user '%s' in filesystem '%s'"),
      lock->path, lock->owner, fs->path);
 }
+
+
+svn_error_t *
+svn_fs_fs__err_lock_owner_mismatch (svn_fs_t *fs,
+                                    const char *username,
+                                    const char *lock_owner)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_LOCK_OWNER_MISMATCH, 0,
+     _("User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"),
+     username, lock_owner, fs->path);
+}

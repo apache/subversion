@@ -68,6 +68,7 @@ merge_paths (char **result,
   return SVN_NO_ERROR;
 }
 
+/* ###TODO Take just the lock and grab lock->path*/
 static svn_error_t *
 abs_path_to_lock_file (char **abs_path,
                        svn_fs_t *fs,
@@ -82,6 +83,7 @@ abs_path_to_lock_file (char **abs_path,
 }
 
 
+/* ###TODO Take just the lock and grab lock->token*/
 static svn_error_t *
 abs_path_to_lock_token_file (char **abs_path,
                              svn_fs_t *fs,
@@ -254,7 +256,7 @@ delete_lock (svn_fs_t *fs,
     }
 
   /* Delete lock from tokens area */
-  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->path, pool));
+  SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->token, pool));
   SVN_ERR (svn_io_remove_file (abs_path, pool));
 
   return SVN_NO_ERROR;
@@ -397,6 +399,30 @@ read_lock_from_file (svn_lock_t **lock_p,
 
 
 static svn_error_t *
+get_lock_from_path (svn_lock_t **lock_p,
+                    svn_fs_t *fs,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  svn_lock_t *lock;
+    
+  SVN_ERR (read_lock_from_file (&lock, fs, path, pool));
+
+  /* Possibly auto-expire the lock. */
+  if (lock->expiration_date 
+      && (apr_time_now() > lock->expiration_date))
+    {
+      SVN_ERR (delete_lock (fs, lock, pool));
+      *lock_p = NULL;
+      return svn_fs_fs__err_lock_expired (fs, lock->token); 
+    }
+
+  *lock_p = lock;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 get_lock_from_path_helper (svn_fs_t *fs,
                            svn_lock_t **lock_p,
                            const char *path,
@@ -405,7 +431,7 @@ get_lock_from_path_helper (svn_fs_t *fs,
   svn_lock_t *lock;
   svn_error_t *err;
   
-  err = svn_fs_fs__get_lock_from_path (&lock, fs, path, pool);
+  err = get_lock_from_path (&lock, fs, path, pool);
 
   /* We've deliberately decided that this function doesn't tell the
      caller *why* the lock is unavailable.  */
@@ -507,8 +533,31 @@ svn_fs_fs__unlock (svn_fs_t *fs,
                    svn_boolean_t force,
                    apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  svn_lock_t *existing_lock;
+
+  /* Sanity check:  we don't want to lookup a NULL path. */
+  if (! token)
+    return svn_fs_fs__err_bad_lock_token (fs, "null");
+  
+  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or
+     SVN_ERR_FS_LOCK_EXPIRED. */
+  SVN_ERR (svn_fs_fs__get_lock_from_token(&existing_lock, fs, token, pool));
+  
+  /* There better be a username attached to the fs. */
+  if (!fs->access_ctx || !fs->access_ctx->username)
+    return svn_fs_fs__err_no_user (fs);
+
+  /* And that username better be the same as the lock's owner. */
+  if (!force
+      && strcmp(fs->access_ctx->username, existing_lock->owner) != 0)
+    return svn_fs_fs__err_lock_owner_mismatch (fs,
+                                               fs->access_ctx->username,
+                                               existing_lock->owner);
+  
+  /* Remove lock and lock token files. */
+  SVN_ERR (delete_lock (fs, existing_lock, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -519,20 +568,7 @@ svn_fs_fs__get_lock_from_path (svn_lock_t **lock_p,
                                const char *path,
                                apr_pool_t *pool)
 {
-  svn_lock_t *lock;
-    
-  SVN_ERR (read_lock_from_file (&lock, fs, path, pool));
-
-  /* Possibly auto-expire the lock. */
-  if (lock->expiration_date 
-      && (apr_time_now() > lock->expiration_date))
-    {
-      SVN_ERR (delete_lock (fs, lock, pool));
-      *lock_p = NULL;
-      return svn_fs_fs__err_lock_expired (fs, lock->token); 
-    }
-
-  *lock_p = lock;
+  SVN_ERR (get_lock_from_path_helper (fs, lock_p, path, pool));
   return SVN_NO_ERROR;
 }
 
@@ -550,8 +586,7 @@ svn_fs_fs__get_lock_from_token (svn_lock_t **lock_p,
   /* Read lock token from disk */
   SVN_ERR (read_path_from_lock_token_file(fs, &path, token, pool));
 
-  /* Pass path to read_lock_from_file */
-  read_lock_from_file(&lock, fs, path, pool);
+  SVN_ERR (get_lock_from_path (&lock, fs, path, pool));
 
   /* Get lock back, check for null */
   if (!lock)
