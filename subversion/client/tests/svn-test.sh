@@ -25,7 +25,7 @@ echo
 ### Checking out.
 echo "Checking out ${TEST_DIR_1}."
 ${SVN_PROG} checkout                                      \
-      -d ${TEST_DIR_1}                                    \
+      --target-dir ${TEST_DIR_1}                          \
       --xml-file ../../tests-common/xml/co1-inline.xml    \
       --revision 1                                        \
       --ancestor-path ${ANCESTOR_PATH}
