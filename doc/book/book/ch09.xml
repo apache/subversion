@@ -53,7 +53,7 @@ $ svn status -v myfile
         <varlistentry>
           <term><option>--auto-props</option></term>
           <listitem>
-            <para>Enable auto-props, overriding the
+            <para>Enables auto-props, overriding the
             <literal>enable-auto-props</literal> directive in the
             <filename>config</filename> file.</para>
           </listitem>
@@ -197,8 +197,8 @@ $ svn status -v myfile
         <varlistentry>
           <term><option>--ignore-ancestry</option></term>
           <listitem>
-            <para>Ignore ancestry when calculating differences (rely
-            on path contents alone).</para>
+            <para>Tells Subversion to ignore ancestry when calculating
+            differences (rely on path contents alone).</para>
           </listitem>
         </varlistentry>
       
@@ -244,7 +244,7 @@ $ svn commit -m "They don't make Sunday."
         <varlistentry>
           <term><option>--no-auto-props</option></term>
           <listitem>
-            <para>Disable auto-props, overriding the
+            <para>Disables auto-props, overriding the
             <literal>enable-auto-props</literal> directive in the
             <filename>config</filename> file.</para>
           </listitem>
@@ -484,7 +484,7 @@ $ svn log -r 1729:{2002-02-17}
       <refentry>
         <refnamediv>
           <refname>svn add</refname>
-          <refpurpose>Adds files and directories</refpurpose>
+          <refpurpose>Add files and directories.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title> 
@@ -493,8 +493,8 @@ $ svn log -r 1729:{2002-02-17}
         <refsect1>
           <title>Description</title>
           
-          <para>Adds files and directories to your working copy and
-            schedules them for addition to the repository.  They
+          <para>Add files and directories to your working copy and
+            schedule them for addition to the repository.  They
             will be uploaded and added to the repository on your
             next commit.  If you add something and change your mind
             before committing, you can unschedule the addition using
@@ -560,7 +560,7 @@ A         otherdir
       <refentry>
         <refnamediv>
           <refname>svn blame</refname>
-          <refpurpose>Shows author and revision information in-line
+          <refpurpose>Show author and revision information in-line
             for the specified files or URLs.</refpurpose>
         </refnamediv>
         <refsect1>
@@ -570,7 +570,7 @@ A         otherdir
         <refsect1>
           <title>Description</title>
           
-          <para>Shows author and revision information in-line for the
+          <para>Show author and revision information in-line for the
             specified files or URLs.  Each line of text is annotated
             at the beginning with the author (username) and the
             revision number for the last change to that line.</para>
@@ -622,7 +622,7 @@ $ svn blame http://svn.red-bean.com/repos/test/readme.txt
       <refentry>
         <refnamediv>
           <refname>svn cat</refname>
-          <refpurpose>Outputs the contents of the specified files or
+          <refpurpose>Output the contents of the specified files or
             URLs.</refpurpose>
         </refnamediv>
         <refsect1>
@@ -632,7 +632,7 @@ $ svn blame http://svn.red-bean.com/repos/test/readme.txt
         <refsect1>
           <title>Description</title>
           
-          <para>Outputs the contents of the specified files or URLs.
+          <para>Output the contents of the specified files or URLs.
             For listing the contents of directories, see <command>svn
             list</command>.</para>
         </refsect1>
@@ -701,7 +701,7 @@ Latest revision fresh from the repository!
       <refentry>
         <refnamediv>
           <refname>svn checkout</refname>
-          <refpurpose>Checks out a working copy from a repository.</refpurpose>
+          <refpurpose>Check out a working copy from a repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -710,12 +710,12 @@ Latest revision fresh from the repository!
         <refsect1>
           <title>Description</title>
           
-          <para>Checks out a working copy from a repository. If
+          <para>Check out a working copy from a repository. If
             <replaceable>PATH</replaceable> is omitted, the
             basename of the URL will be used as the
             destination. If multiple URLs are given each will be
-            checked out into a sub-directory of PATH, with the
-            name of the sub-directory being the basename of the
+            checked out into a subdirectory of PATH, with the
+            name of the subdirectory being the basename of the
             URL.</para>
 
         </refsect1>
@@ -1551,7 +1551,7 @@ Index: COMMITTERS
       <refentry>
         <refnamediv>
           <refname>svn export</refname>
-          <refpurpose>Exports a clean directory tree.</refpurpose>
+          <refpurpose>Export a clean directory tree.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -1961,8 +1961,8 @@ $ svn list --verbose file:///tmp/repos
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svn log</refname> <refpurpose>Displays commit log
-          messages.</refpurpose>
+          <refname>svn log</refname>
+          <refpurpose>Display commit log messages.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -2593,7 +2593,7 @@ property 'release-date' deleted from repository revision '26'
         <refsect1>
           <title>Description</title>
 
-          <para>Edits one or more properties using your favorite
+          <para>Edit one or more properties using your favorite
             editor. The first form edits versioned properties in
             your working copy, while the second edits unversioned
             remote properties on a repository revision.</para>
@@ -2652,7 +2652,7 @@ Set new value for property 'svn:keywords' on 'foo.c'
       <refentry>
         <refnamediv>
           <refname>svn propget</refname>
-          <refpurpose>Prints the value of a property.</refpurpose>
+          <refpurpose>Print the value of a property.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -2662,7 +2662,7 @@ Set new value for property 'svn:keywords' on 'foo.c'
         <refsect1>
           <title>Description</title>
 
-          <para>Prints the value of a property on files,
+          <para>Print the value of a property on files,
             directories, or revisions.  The first form prints the
             versioned property of an item or items in your working
             copy, while the second prints unversioned remote
@@ -2729,7 +2729,7 @@ Began journal.
       <refentry>
         <refnamediv>
           <refname>svn proplist</refname>
-          <refpurpose>Lists all properties.</refpurpose>
+          <refpurpose>List all properties.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -2739,7 +2739,7 @@ Began journal.
         <refsect1>
           <title>Description</title>
 
-          <para>Lists all properties on files, directories, or
+          <para>List all properties on files, directories, or
             revisions.  The first form lists versioned properties in
             working copy, while the second lists unversioned remote
             properties on a repository revision.</para>
@@ -3190,7 +3190,7 @@ $ svn status
               <term>'I'</term>
               <listitem>
                 <para>Item is being ignored (e.g. with the 
-                  svn:ignore property)</para>
+                  svn:ignore property).</para>
               </listitem>
             </varlistentry>
 
@@ -3215,7 +3215,7 @@ $ svn status
               <term>'~'</term>
               <listitem>
                 <para>Item is versioned as a directory, but has
-                  been replaced by a file, or vice versa</para>
+                  been replaced by a file, or vice versa.</para>
               </listitem>
             </varlistentry>
 
@@ -3563,7 +3563,7 @@ At revision 3.
       <refentry>
         <refnamediv>
           <refname>svn update</refname>
-          <refpurpose>Updates your working copy.</refpurpose>
+          <refpurpose>Update your working copy.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -3820,8 +3820,7 @@ Updated to revision 30.
       <refentry>
         <refnamediv>
           <refname>svnadmin create</refname>
-          <refpurpose>Create a new, empty repository at
-            <replaceable>REPOS_PATH</replaceable>.</refpurpose>
+          <refpurpose>Create a new, empty repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -3989,7 +3988,7 @@ Content-length: 101
       <refentry>
         <refnamediv>
           <refname>svnadmin hotcopy</refname>
-          <refpurpose>Makes a hot copy of a repository.</refpurpose>
+          <refpurpose>Make a hot copy of a repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4183,7 +4182,7 @@ $ svnadmin lstxns /usr/local/svn/repos/
       <refentry>
         <refnamediv>
           <refname>svnadmin recover</refname>
-          <refpurpose>Recovers any lost state in a repository.</refpurpose>
+          <refpurpose>Recover any lost state in a repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4217,7 +4216,7 @@ The latest repos revision is 34.
       <refentry>
         <refnamediv>
           <refname>svnadmin rmtxns</refname>
-          <refpurpose>Deletes transactions from a repository.</refpurpose>
+          <refpurpose>Delete transactions from a repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4226,7 +4225,7 @@ The latest repos revision is 34.
         <refsect1>
           <title>Description</title>
 
-          <para>Deletes outstanding transactions from a repository.
+          <para>Delete outstanding transactions from a repository.
             This is covered in detail in <xref
             linkend="svn-ch-5-sect-3.2"/>.</para>
         </refsect1>
@@ -4320,7 +4319,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
       <refentry>
         <refnamediv>
           <refname>svnadmin verify</refname>
-          <refpurpose>Verifies the data stored in the repository.</refpurpose>
+          <refpurpose>Verify the data stored in the repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4434,7 +4433,7 @@ $ svnadmin verify /usr/local/svn/repos/
       <refentry>
         <refnamediv>
           <refname>svnlook author</refname>
-          <refpurpose>Prints the author.</refpurpose>
+          <refpurpose>Print the author.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4443,7 +4442,7 @@ $ svnadmin verify /usr/local/svn/repos/
         <refsect1>
           <title>Description</title>
 
-          <para>Prints the author of a revision or transaction in
+          <para>Print the author of a revision or transaction in
             the repository.</para>
         </refsect1>
 
@@ -4614,7 +4613,7 @@ $ svnlook date -r 40 /tmp/repos/
       <refentry>
         <refnamediv>
           <refname>svnlook diff</refname>
-          <refpurpose>Prints differences of changed files and properties.</refpurpose>
+          <refpurpose>Print differences of changed files and properties.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4623,7 +4622,7 @@ $ svnlook date -r 40 /tmp/repos/
         <refsect1>
           <title>Description</title>
 
-          <para>Prints GNU-style differences of changed files and
+          <para>Print GNU-style differences of changed files and
             properties in a repository.</para>
         </refsect1>
 
@@ -4987,7 +4986,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
       <refentry>
         <refnamediv>
           <refname>svnlook tree</refname>
-          <refpurpose>Print the tree</refpurpose>
+          <refpurpose>Print the tree.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
