@@ -33,6 +33,7 @@
 #include "trail.h"
 #include "reps-strings.h"
 #include "revs-txns.h"
+#include "id.h"
 
 #include "util/fs_skels.h"
 
@@ -129,7 +130,7 @@ copy_node_revision (node_revision_t *noderev,
   node_revision_t *nr = apr_pcalloc (pool, sizeof (*nr));
   nr->kind = noderev->kind;
   if (noderev->predecessor_id)
-    nr->predecessor_id = svn_fs__id_copy (noderev->predecessor_id, pool);
+    nr->predecessor_id = svn_fs_base__id_copy (noderev->predecessor_id, pool);
   nr->predecessor_count = noderev->predecessor_count;
   if (noderev->prop_key)
     nr->prop_key = apr_pstrdup (pool, noderev->prop_key);
@@ -233,7 +234,7 @@ set_node_revision (dag_node_t *node,
 svn_boolean_t svn_fs_base__dag_check_mutable (dag_node_t *node,
                                               const char *txn_id)
 {
-  return (strcmp (svn_fs__id_txn_id (svn_fs_base__dag_get_id (node)),
+  return (strcmp (svn_fs_base__id_txn_id (svn_fs_base__dag_get_id (node)),
                   txn_id) == 0);
 }
 
@@ -250,7 +251,7 @@ svn_fs_base__dag_get_node (dag_node_t **node,
   /* Construct the node. */
   new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
   new_node->fs = fs;
-  new_node->id = svn_fs__id_copy (id, trail->pool);
+  new_node->id = svn_fs_base__id_copy (id, trail->pool);
   new_node->pool = trail->pool;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
@@ -275,7 +276,7 @@ svn_fs_base__dag_get_revision (svn_revnum_t *rev,
      get its revision number.  */
   return svn_fs_base__txn_get_revision
     (rev, svn_fs_base__dag_get_fs (node),
-     svn_fs__id_txn_id (svn_fs_base__dag_get_id (node)), trail);
+     svn_fs_base__id_txn_id (svn_fs_base__dag_get_id (node)), trail);
 }
 
 
@@ -353,7 +354,7 @@ txn_body_dag_init_fs (void *baton, trail_t *trail)
   svn_string_t date;
   const char *txn_id;
   const char *copy_id;
-  svn_fs_id_t *root_id = svn_fs_parse_id ("0.0.0", 5, trail->pool);
+  svn_fs_id_t *root_id = svn_fs_base__id_create ("0", "0", "0", trail->pool);
 
   /* Create empty root directory with node revision 0.0.0. */
   memset (&noderev, 0, sizeof (noderev));
@@ -622,7 +623,7 @@ make_entry (dag_node_t **child_p,
   new_noderev.created_path = svn_path_join (parent_path, name, trail->pool);
   SVN_ERR (svn_fs_base__create_node
            (&new_node_id, svn_fs_base__dag_get_fs (parent), &new_noderev,
-            svn_fs__id_copy_id (svn_fs_base__dag_get_id (parent)),
+            svn_fs_base__id_copy_id (svn_fs_base__dag_get_id (parent)),
             txn_id, trail));
 
   /* Create a new dag_node_t for our new node */
@@ -857,7 +858,8 @@ svn_fs_base__dag_clone_child (dag_node_t **child_p,
       SVN_ERR (get_node_revision (&noderev, cur_entry, trail));
 
       /* Do the clone thingy here. */
-      noderev->predecessor_id = svn_fs__id_copy (cur_entry->id, trail->pool);
+      noderev->predecessor_id = svn_fs_base__id_copy (cur_entry->id,
+                                                      trail->pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
       noderev->created_path = svn_path_join (parent_path, name, trail->pool);
@@ -893,9 +895,9 @@ svn_fs_base__dag_clone_root (dag_node_t **root_p,
   /* Oh, give me a clone...
      (If they're the same, we haven't cloned the transaction's root
      directory yet.)  */
-  if (svn_fs__id_eq (root_id, base_root_id))
+  if (svn_fs_base__id_eq (root_id, base_root_id))
     {
-      const char *base_copy_id = svn_fs__id_copy_id (base_root_id);
+      const char *base_copy_id = svn_fs_base__id_copy_id (base_root_id);
 
       /* Of my own flesh and bone...
          (Get the NODE-REVISION for the base node, and then write
@@ -907,7 +909,8 @@ svn_fs_base__dag_clone_root (dag_node_t **root_p,
       /* ### todo: Does it even makes sense to have a different copy id for
          the root node?  That is, does this function need a copy_id
          passed in?  */
-      noderev->predecessor_id = svn_fs__id_copy (base_root_id, trail->pool);
+      noderev->predecessor_id = svn_fs_base__id_copy (base_root_id,
+                                                      trail->pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
       SVN_ERR (svn_fs_base__create_successor (&root_id, fs, base_root_id,
@@ -1382,7 +1385,7 @@ svn_fs_base__dag_dup (dag_node_t *node,
 
   new_node->fs = node->fs;
   new_node->pool = pool;
-  new_node->id = svn_fs__id_copy (node->id, pool);
+  new_node->id = svn_fs_base__id_copy (node->id, pool);
   new_node->kind = node->kind;
   new_node->created_path = apr_pstrdup (pool, node->created_path);
 
@@ -1449,7 +1452,7 @@ svn_fs_base__dag_copy (dag_node_t *to_node,
 
       /* Create a successor with its predecessor pointing at the copy
          source. */
-      to_noderev->predecessor_id = svn_fs__id_copy (src_id, trail->pool);
+      to_noderev->predecessor_id = svn_fs_base__id_copy (src_id, trail->pool);
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
       to_noderev->created_path =
@@ -1616,7 +1619,7 @@ is_ancestor_callback (void *baton,
   if (node)
     {
       /* ... compare NODE's ID with the ID we're looking for. */
-      if (svn_fs__id_eq (b->node1_id, svn_fs_base__dag_get_id (node)))
+      if (svn_fs_base__id_eq (b->node1_id, svn_fs_base__dag_get_id (node)))
         b->is_ancestor = TRUE;
 
       /* Now, if we only are interested in parenthood, we don't care

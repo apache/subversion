@@ -33,6 +33,7 @@
 #include "tree.h"
 #include "revs-txns.h"
 #include "key-gen.h"
+#include "id.h"
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
 #include "bdb/copies-table.h"
@@ -364,7 +365,7 @@ svn_fs_base__set_txn_root (svn_fs_t *fs,
   if (txn->kind != transaction_kind_normal)
     return svn_fs_base__err_txn_not_mutable (fs, txn_name);
 
-  if (! svn_fs__id_eq (txn->root_id, new_id))
+  if (! svn_fs_base__id_eq (txn->root_id, new_id))
     {
       txn->root_id = new_id;
       SVN_ERR (put_txn (fs, txn, txn_name, trail));
@@ -385,7 +386,7 @@ svn_fs_base__set_txn_base (svn_fs_t *fs,
   if (txn->kind != transaction_kind_normal)
     return svn_fs_base__err_txn_not_mutable (fs, txn_name);
 
-  if (! svn_fs__id_eq (txn->base_id, new_id))
+  if (! svn_fs_base__id_eq (txn->base_id, new_id))
     {
       txn->base_id = new_id;
       SVN_ERR (put_txn (fs, txn, txn_name, trail));
@@ -667,7 +668,7 @@ txn_body_open_txn (void *baton,
   SVN_ERR (get_txn (&fstxn, trail->fs, args->name, FALSE, trail));
   if (fstxn->kind != transaction_kind_committed)
     {
-      txn_id = svn_fs__id_txn_id (fstxn->base_id);
+      txn_id = svn_fs_base__id_txn_id (fstxn->base_id);
       SVN_ERR (svn_fs_base__txn_get_revision (&base_rev, trail->fs, txn_id,
                                               trail));
     }
@@ -794,7 +795,7 @@ delete_txn_tree (svn_fs_t *fs,
   svn_error_t *err;
 
   /* If this sucker isn't mutable, there's nothing to do. */
-  if (svn_fs_base__key_compare (svn_fs__id_txn_id (id), txn_id) != 0)
+  if (svn_fs_base__key_compare (svn_fs_base__id_txn_id (id), txn_id) != 0)
     return SVN_NO_ERROR;
 
   /* See if the thing has dirents that need to be recursed upon.  If

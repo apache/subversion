@@ -20,6 +20,7 @@
 #include "svn_string.h"
 #include "fs_skels.h"
 #include "skel.h"
+#include "../id.h"
 
 
 static svn_error_t *
@@ -432,13 +433,13 @@ svn_fs_base__parse_transaction_skel (transaction_t **transaction_p,
     {
       /* ...where unfinished transactions have a base node-revision-id. */
       transaction->revision = SVN_INVALID_REVNUM;
-      transaction->base_id = svn_fs_parse_id (base_id_or_rev->data,
-                                              base_id_or_rev->len, pool);
+      transaction->base_id = svn_fs_base__id_parse (base_id_or_rev->data,
+                                                    base_id_or_rev->len, pool);
     }
 
   /* ROOT-ID */
-  transaction->root_id = svn_fs_parse_id (root_id->data,
-                                          root_id->len, pool);
+  transaction->root_id = svn_fs_base__id_parse (root_id->data,
+                                                root_id->len, pool);
 
   /* PROPLIST */
   SVN_ERR (svn_fs_base__parse_proplist_skel (&(transaction->proplist),
@@ -606,8 +607,8 @@ svn_fs_base__parse_node_revision_skel (node_revision_t **noderev_p,
   if (header_skel->children->next->next)
     {
       noderev->predecessor_id
-        = svn_fs_parse_id (header_skel->children->next->next->data,
-                           header_skel->children->next->next->len, pool);
+        = svn_fs_base__id_parse (header_skel->children->next->next->data,
+                                 header_skel->children->next->next->len, pool);
 
       /* PREDECESSOR-COUNT */
       noderev->predecessor_count = -1;
@@ -674,8 +675,8 @@ svn_fs_base__parse_copy_skel (copy_t **copy_p,
 
   /* DST-NODE-ID */
   copy->dst_noderev_id
-    = svn_fs_parse_id (skel->children->next->next->next->data,
-                       skel->children->next->next->next->len, pool);
+    = svn_fs_base__id_parse (skel->children->next->next->next->data,
+                             skel->children->next->next->next->len, pool);
 
   /* Return the structure. */
   *copy_p = copy;
@@ -713,8 +714,8 @@ svn_fs_base__parse_entries_skel (apr_hash_t **entries_p,
           /* Get the entry's name and ID. */
           name = apr_pstrmemdup (pool, elt->children->data,
                                  elt->children->len);
-          id = svn_fs_parse_id (elt->children->next->data,
-                                elt->children->next->len, pool);
+          id = svn_fs_base__id_parse (elt->children->next->data,
+                                      elt->children->next->len, pool);
 
           /* Add the entry to the hash. */
           apr_hash_set (entries, name, elt->children->len, id);
@@ -748,9 +749,9 @@ svn_fs_base__parse_change_skel (change_t **change_p,
 
   /* NODE-REV-ID */
   if (skel->children->next->next->len)
-    change->noderev_id = svn_fs_parse_id (skel->children->next->next->data,
-                                          skel->children->next->next->len,
-                                          pool);
+    change->noderev_id = svn_fs_base__id_parse
+      (skel->children->next->next->data, skel->children->next->next->len,
+       pool);
 
   /* KIND */
   change->kind = kind;

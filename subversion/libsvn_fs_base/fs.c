@@ -37,6 +37,7 @@
 #include "revs-txns.h"
 #include "uuid.h"
 #include "tree.h"
+#include "id.h"
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
@@ -880,5 +881,6 @@ fs_library_vtable_t svn_fs_base__vtable = {
   base_hotcopy,
   base_bdb_set_errcall,
   base_bdb_recover,
-  base_bdb_logfiles
+  base_bdb_logfiles,
+  svn_fs_base__id_parse
 };
