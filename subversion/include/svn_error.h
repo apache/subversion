@@ -14,19 +14,21 @@
 
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
+#include <apr.h>
+#include <apr_errno.h>     /* APR's error system */
+
+#define APR_WANT_STDIO
+#include <apr_want.h>
 
 #include <svn_types.h>
-#include <svn_string.h>
-#include <apr_errno.h>     /* APR's error system */
-#include <stdio.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 #define SVN_NO_ERROR   0   /* the best kind of (svn_error_t *) ! */
 
@@ -376,10 +378,7 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
                                 apr_pool_t *pool,
                                 const char *fmt, 
                                 ...)
-#ifdef __GNUC__
-    __attribute__ ((format (printf, 5, 6)))
-#endif /* __GNUC__ */
-;
+       __attribute__ ((format (printf, 5, 6)));
 
 
 /* A quick n' easy way to create a wrappered exception with your own
@@ -426,11 +425,11 @@ void svn_handle_warning (void *data, const char *fmt, ...);
   } while (0)
 
 
-#endif   /* SVN_ERROR_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif   /* SVN_ERROR_H */
 
 
 /* ----------------------------------------------------------------
