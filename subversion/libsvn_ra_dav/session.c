@@ -121,7 +121,7 @@ static const svn_ra_plugin_t dav_plugin = {
   "(DeltaV) protocol.",
   svn_ra_open,
   svn_ra_close,
-  NULL,         /* ### need get_latest_revnum */
+  svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_commit_editor,
   svn_ra_dav__do_checkout,
   svn_ra_dav__do_update
