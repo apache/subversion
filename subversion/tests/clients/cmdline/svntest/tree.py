@@ -105,11 +105,12 @@ class SVNTreeIsNotDirectory(Exception): pass
 def attribute_merge(orighash, newhash):
   "Merge the attributes in NEWHASH into ORIGHASH."
 
-  # Special case: if a commit reports a node as "deleted", then
-  # "added", it's a replacment.
-  if orighash['verb'] == "Deleting":
-    if newhash['verb'] == "Adding":
-      orighash['verb'] == "Replacing"
+  if orighash.has_key('verb') and newhash.has_key('verb'):
+    # Special case: if a commit reports a node as "deleted", then
+    # "added", it's a replacment.
+    if orighash['verb'] == "Deleting":
+      if newhash['verb'] == "Adding":
+        orighash['verb'] = "Replacing"
 
   # Add future stackable attributes here...
 
@@ -474,15 +475,16 @@ def build_tree_from_status(lines):
   "Return a tree derived by parsing the output LINES from 'st'."
 
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^(..)\s+(\d+)\s+\(\s+(\d+)\)\s+(.+)')
+  rm = re.compile ('^(..)(.)\s+(\d+)\s+\(\s+(\d+)\)\s+(.+)')
   
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(4), None, {},
+      new_branch = create_from_path(match.group(5), None, {},
                                     {'status' : match.group(1),
-                                     'wc_rev' : match.group(2),
-                                     'repos_rev' : match.group(3)})
+                                     'locked' : match.group(2),
+                                     'wc_rev' : match.group(3),
+                                     'repos_rev' : match.group(4)})
       root.add_child(new_branch)
 
   return root

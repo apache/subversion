@@ -26,14 +26,16 @@
 
 
 
-/* Edit the three-byte string STR_STATUS, based on the contents of
-   TEXT_STATUS and PROP_STATUS.  PROP_TIME is used to determine if
-   properties exist in the first place (when prop_status is 'none') */
+/* Edit the foud-byte string STR_STATUS, based on the contents of
+   TEXT_STATUS, PROP_STATUS, and LOCKED.  PROP_TIME is used to
+   determine if properties exist in the first place (when prop_status
+   is 'none') */
 static void
 generate_status_codes (char *str_status,
                        enum svn_wc_status_kind text_status,
                        enum svn_wc_status_kind prop_status,
-                       apr_time_t prop_time)
+                       apr_time_t prop_time,
+                       svn_boolean_t locked)
 {
   char text_statuschar, prop_statuschar;
 
@@ -89,20 +91,24 @@ generate_status_codes (char *str_status,
       break;
     }
   
-  sprintf (str_status, "%c%c", text_statuschar, prop_statuschar);
+  sprintf (str_status, "%c%c%c", 
+           text_statuschar, 
+           prop_statuschar,
+           locked ? 'L' : ' ');
 }
 
 void
 svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status)
 {
   svn_revnum_t entry_rev;
-  char str_status[3];
+  char str_status[4];
 
   /* Create either a one or two character status code */
   generate_status_codes (str_status,
                          status->text_status,
                          status->prop_status,
-                         status->entry->prop_time);
+                         status->entry->prop_time,
+                         status->locked);
   
   /* Grab the entry revision once, safely. */
   if (status->entry)

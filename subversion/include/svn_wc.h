@@ -260,6 +260,7 @@ typedef struct svn_wc_status_t
      component.  */
   enum svn_wc_status_kind text_status;
   enum svn_wc_status_kind prop_status;
+  svn_boolean_t locked;
 
 } svn_wc_status_t;
 

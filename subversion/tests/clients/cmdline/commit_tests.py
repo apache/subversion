@@ -533,7 +533,7 @@ def hudson_part_1_variation_2():
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   
   # After committing, status should show only gamma at revision 2.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
   for item in status_list:
     if item[0] != gamma_path:
       item[3]['wc_rev'] = '1'
