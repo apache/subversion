@@ -230,27 +230,27 @@ The `strings' table stores only raw bytes.  A given string could be
 any one of these:
 
    - a file's contents
-   - a delta that when reconstructed is file contents
+   - a delta that reconstructs file contents, or part of a file's contents
    - a directory entry list skel
-   - a delta that when reconstructed is a directory entry list skel
+   - a delta that reconstructs a dir entry list skel, or part of same
    - a property list skel
-   - a delta that when reconstructed is a property list skel
+   - a delta that reconstructs a property list skel, or part of same
 
 There is no way to tell, from looking at a string, what kind of data
 it is.  A directory entry list skel is indistinguishable from file
 contents that just happen to look exactly like the unparsed form of a
 directory entry list skel.  File contents that just happen to look
-like svndiff data are indistinguishable from an actual delta.
+like svndiff data are indistinguishable from delta data.
 
 The code is able to interpret a given string because Subversion
 
-   a) knows the `kind' of the node revision in question,
-
-   b) knows whether to be looking for a property list or some
+   a) knows whether to be looking for a property list or some
       kind-specific data,
 
+   b) knows the `kind' of the node revision in question,
+
    c) always goes through the `representations' table to discover if
-      any undeltification is needed.
+      any undeltification or other transformation is needed.
 
 The `representations' table is an intermediary between node revisions
 and strings.  Node revisions never refer directly into the `strings'
@@ -273,16 +273,27 @@ representation.  Here are the two forms currently recognized:
    (("fulltext" ...) KEY)
        The data is at KEY in the `strings' table.
 
-   (("delta" ...) REP-KEY DIFF SIZE CHECKSUM)
-       where DIFF is, right now, ("svndiff" STRING-KEY).  Apply the
-       delta at STRING-KEY in the `strings' table against the fulltext
-       derived from REP-KEY in the `representations' table.  "Derived"
-       because REP-KEY might not refer to a fulltext, in which case
-       further processing is necessary before the data at STRING-KEY
-       can be applied against it.
+   (("delta" ...) (OFFSET WINDOW) ...)
+       Each OFFSET indicates the point in the fulltext that this
+       element reconstructs, and WINDOW says how to reconstruct it:
 
-       SIZE is the length in bytes of the resulting fulltext, and
-       CHECKSUM is a checksum on the fulltext.
+       WINDOW ::= (DIFF SIZE CHECKSUM [REP-KEY [REP-OFFSET]]) ;
+       DIFF   ::= ("svndiff" STRING-KEY)
+
+       Notice that a WINDOW holds only metadata.  REP-KEY says what
+       the window should be applied against (it's absent if this is a
+       self-compressed delta); SIZE says how much this window
+       reconstructs; CHECKSUM is a checksum on just the portion of
+       fulltext reconstructed by this window; and STRING-KEY says
+       which string contains the actual svndiff data.  Thus, there is
+       no diff data held directly in the representations table.
+
+       Note also that REP-KEY might refer to a representation that
+       itself requires undeltification.  For now, we just reconstruct
+       fulltexts recursively until we get what we need; in the future,
+       an efficient delta-combiner is planned that will retrieve the
+       required data directly without expanding anything; that's where
+       REP-OFFSET may prove useful.  We think. :-)
 
 In the future, there may be other representations, for example
 indicating that the text is stored elsewhere in the database, or
@@ -294,7 +305,7 @@ Let's work through an example node revision:
 
 The entry for key "2345" in `representations' is:
 
-   (("delta") "2343" ("svndiff" "1729") 65 CHECKSUM)
+   (("delta") (0 (("svndiff" "1729") 65 CHECKSUM "2343")))
 
 and the entry for key "2343" in `representations' is:
 
@@ -344,8 +355,8 @@ of itself, change the representation referring to it, and know that
 we're not messing up any other reps by doing so.
 
 
-A Note For The Near Future: How To Deltify:
--------------------------------------------
+Further Notes On Deltifying:
+----------------------------
 
 When a representation is deltified, it is changed in place, along with
 its underlying string.  That is, the node revision referring to that
@@ -355,23 +366,7 @@ for free: if someone is reading a file while Subversion is deltifying
 that file, one of the two sides will get a DB_DEADLOCK and
 svn_fs__retry_txn() will retry.
 
-Also, we need to do cycle-checking.  When a rep is deltified, we must
-make sure that a fulltext is reachable from it.  For example, suppose
-rep "2342" looks like this:
-
-   (("fulltext") "50956")
-
-So it's saying to use string "50956" and treat it as fulltext.  Now we
-deltify that rep, so it looks like this:
-
-   (("delta") "2343" ("svndiff" "50956") ...)
-
-Before making this change, we must examine rep "2343".  If it is a
-fulltext, then we're okay.  If it is not, we must recurse into 2343's
-base rep, and so on, until we reach a fulltext (we'll check for cycles
-as we go).  If we never reach a fulltext, there's a big problem in the
-filesystem, and we shouldn't add to it by committing another delta rep
-against the mess.
+### todo: add a note about cycle-checking here, too.
 
 
 
@@ -687,11 +682,14 @@ Representations:
 
          REPRESENTATION ::= FULLTEXT | DELTA ;
                FULLTEXT ::= (("fulltext" FLAG ...) STRING-KEY) ;
-                  DELTA ::= (("delta" FLAG ...) REP-KEY DIFF SIZE CHECKSUM) ;
+                  DELTA ::= (("delta" FLAG ...) (OFFSET WINDOW) ...) ;
                    FLAG ::= "mutable" | ;
+                 WINDOW ::= (DIFF SIZE CHECKSUM [REP-KEY [REP-OFFSET]]) ;
                    DIFF ::= ("svndiff" STRING-KEY) ;
                 REP-KEY ::= atom ;
              STRING-KEY ::= atom ;
+                 OFFSET ::= number ;
+             REP-OFFSET ::= number ;
 
                    SIZE ::= number ;
                CHECKSUM ::= ("md5" BYTES) ;
