@@ -58,9 +58,9 @@
 /* Test that we can create a lock--nothing more.  */
 static svn_error_t *
 lock_only (const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+           svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
+           apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -104,9 +104,9 @@ lock_only (const char **msg,
    each of the five public fs locking functions.  */
 static svn_error_t *
 lookup_lock_by_path (const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -214,9 +214,9 @@ attach_lock (const char **msg,
 /* Test that we can get all locks under a directory. */
 static svn_error_t *
 get_locks (const char **msg,
-            svn_boolean_t msg_only,
-            svn_test_opts_t *opts,
-            apr_pool_t *pool)
+           svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
+           apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
