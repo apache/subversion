@@ -1422,10 +1422,9 @@ class SymbolicNameTracker:
         self.copy_descend(dumper, ctx, name, val, ent, parent_rev,
                           next_src, next_dst, is_tag)
 
-  def fill_name(self, dumper, ctx, name, svn_rev, svn_path, is_tag):
+  def fill_name(self, dumper, ctx, name, is_tag):
     """Use DUMPER to create all currently available parts of symbolic
-    name NAME that have not been created already, and make sure that
-    SVN_REV of SVN_PATH is in the copy afterwards.
+    name NAME that have not been created already.
 
     If IS_TAG is true, NAME is treated as a tag, else as a branch."""
 
@@ -1495,18 +1494,22 @@ class SymbolicNameTracker:
     if parent.has_key(ctx.trunk_base):
       self.copy_descend(dumper, ctx, name, parent, ctx.trunk_base,
                         SVN_INVALID_REVNUM, ctx.trunk_base, "", is_tag)
+    ### FIXME: ctx.tags_base and ctx.branches_base are also possible
+    ### sources, so we should copy_descend() on them too.
 
-  def fill_tag(self, dumper, ctx, tag, svn_rev, svn_path):
+  def fill_tag(self, dumper, ctx, tag):
     """Use DUMPER to create all currently available parts of TAG that
-    have not been created already, and make sure that SVN_REV of
-    SVN_PATH is in the tag afterwards."""
-    self.fill_name(dumper, ctx, tag, svn_rev, svn_path, 1)
+    have not been created already.  Use CTX.trunk_base, CTX.tags_base, 
+    and CTX.branches_base to determine the source and destination
+    paths in the Subversion repository."""
+    self.fill_name(dumper, ctx, tag, 1)
 
-  def fill_branch(self, dumper, ctx, branch, svn_rev, svn_path):
-    """Use DUMPER to create all currently available parts of BRANCH
-    that have not been created already, and make sure that SVN_REV of
-    SVN_PATH is in the branch afterwards."""
-    self.fill_name(dumper, ctx, branch, svn_rev, svn_path, None)
+  def fill_branch(self, dumper, ctx, branch):
+    """Use DUMPER to create all currently available parts of BRANCH that
+    haven't been created already.  Use CTX.trunk_base, CTX.tags_base,  
+    and CTX.branches_base to determine the source and destination
+    paths in the Subversion repository."""
+    self.fill_name(dumper, ctx, branch, None)
 
 
 class Commit:
