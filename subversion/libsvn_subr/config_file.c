@@ -639,7 +639,8 @@ svn_config_ensure (apr_pool_t *pool)
         "###   http-proxy-port      Port number of proxy host service\n"
         "###   http-proxy-username  Username for auth to proxy service\n"
         "###   http-proxy-password  Password for auth to proxy service\n"
-        "###   http-timeout         Timeout for HTTP requests\n"
+        "###   http-timeout         Timeout (in seconds) for HTTP requests\n"
+        "###   neon-debug-mask      Debug mask for Neon HTTP library\n"
         "###   svn-tunnel-agent     Program to connect to svn server\n"
         "###\n"
         "### HTTP timeouts, if given, are specified in seconds.  A timeout\n"
@@ -665,7 +666,7 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-username = blah\n"
         "# http-proxy-password = doubleblah\n"
         "# http-timeout = 60\n"
-        "# http-debug = 130\n"
+        "# neon-debug-mask = 130\n"
         "\n"
         "### Information for the second group:\n"
         "# [othergroup]\n"
@@ -695,7 +696,7 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-username = defaultusername\n"
         "# http-proxy-password = defaultpassword\n"
         "# No http-timeout, so just use the builtin default.\n"
-        "# No http-debug, so neon debugging is disabled.\n";
+        "# No neon-debug-mask, so neon debugging is disabled.\n";
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
