@@ -165,7 +165,7 @@ svn_client_revprop_set (const char *propname,
  * is true, or else the working value if PRISTINE is false.  
  *
  * The keys of *PROPS will be `const char *' property names, and the
- * values `const svn_stringbuf_t *' property values.  Allocate *PROPS
+ * values `const svn_string_t *' property values.  Allocate *PROPS
  * and its contents in POOL.
  */
 static svn_error_t *
@@ -627,7 +627,7 @@ push_props_on_list (apr_array_header_t *list,
  * containing the properties for "TARGET_PREFIX/TARGET_RELATIVE" in
  * REVNUM, obtained using RA_LIB and SESSION.  The item->node_name
  * will be "TARGET_PREFIX/TARGET_RELATIVE", and the value will be a
- * hash mapping `const char *' property names onto `svn_stringbuf_t *'
+ * hash mapping `const char *' property names onto `svn_string_t *'
  * property values.  Allocate the new item and its contents in POOL.
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
