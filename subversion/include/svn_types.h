@@ -14,26 +14,23 @@
 
 /* ==================================================================== */
 
-/* This is more or less an implementation of the filesystem "schema"
-   defined tin the design doc. */
+#ifndef SVN_TYPES_H
+#define SVN_TYPES_H
 
+#include <apr.h>        /* for apr_size_t */
+
+/* ### these should go away, but I don't feel like working on it yet */
+#include <stdlib.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#ifndef SVN_TYPES_H
-#define SVN_TYPES_H
-
-
-#include <stdlib.h>          /* defines size_t */
-#include <apr_pools.h>       /* APR memory pools for everyone. */
-#include <apr_hash.h>        /* proplists are hashtables */
-
-
 
-/* useful macro, suggested by Greg Stein */
-#define APR_ARRAY_GET_ITEM(ary,i,type) (((type *)(ary)->elts)[i])
+/* index into an apr_array_header_t */
+#define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
 enum svn_node_kind
 {
@@ -50,7 +47,7 @@ typedef struct svn_item_t {
     /** The key for the current table entry */
     char *key; 
     /** Size of the opaque block comprising the item's content. */
-    size_t size;
+    apr_size_t size;
     /** A pointer to the content itself. */
     void *data;
 } svn_item_t;
@@ -102,11 +99,11 @@ typedef int svn_boolean_t;
 
 
 
-#endif  /* SVN_TYPES_H */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* SVN_TYPES_H */
 
 
 /* ----------------------------------------------------------------

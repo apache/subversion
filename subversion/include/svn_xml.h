@@ -13,17 +13,22 @@
 
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_XML_H
 #define SVN_XML_H
 
+#include <apr.h>
+#include <apr_pools.h>
+#include <apr_hash.h>
+
 #include "xmlparse.h"
+
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_string.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 #define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
@@ -207,12 +212,12 @@ void svn_xml_make_close_tag (svn_string_t **str,
 			     const char *tagname);
 
 
-#endif /* SVN_XML_H */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
+#endif /* SVN_XML_H */
 
 /* ----------------------------------------------------------------
  * local variables:

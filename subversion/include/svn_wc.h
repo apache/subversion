@@ -12,11 +12,6 @@
  * ====================================================================
  */
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_WC_H
 #define SVN_WC_H
 
@@ -35,12 +30,20 @@ extern "C" {
  *            Clients.
  */
 
+#include <apr.h>
+#include <apr_pools.h>
 #include <apr_tables.h>
+#include <apr_hash.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /*** Asking questions about a working copy. ***/
@@ -528,12 +531,12 @@ svn_wc_run_cmd_in_directory (svn_string_t *path,
                              apr_file_t *errfile,
                              apr_pool_t *pool);
 
-#endif  /* SVN_WC_H */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
+#endif  /* SVN_WC_H */
 
 /* ----------------------------------------------------------------
  * local variables:
