@@ -176,7 +176,8 @@ hash_write (apr_hash_t *hash, svn_stream_t *stream, apr_pool_t *pool)
       limit = strlen (buf);
       SVN_ERR (svn_stream_write (stream, buf, &limit));
 
-      SVN_ERR (svn_stream_write (stream, (const char *) key, &keylen));
+      limit = (apr_size_t) keylen;
+      SVN_ERR (svn_stream_write (stream, (const char *) key, &limit));
       SVN_ERR (svn_stream_printf (stream, iterpool, "\n"));
 
       /* Output value length, then value. */
@@ -1052,6 +1053,7 @@ get_root_changes_offset (apr_off_t *root_offset,
   apr_off_t offset;
   char buf[65];
   int i, num_bytes;
+  apr_size_t len;
   
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
@@ -1062,8 +1064,12 @@ get_root_changes_offset (apr_off_t *root_offset,
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
   /* Read in this last block, from which we will identify the last line. */
-  num_bytes=64;
-  SVN_ERR (svn_io_file_read (rev_file, buf, &num_bytes, pool));
+  len=64;
+  SVN_ERR (svn_io_file_read (rev_file, buf, &len, pool));
+
+  /* This cast should be safe since the maximum amount read, 64, will
+     never be bigger than the size of an int. */
+  num_bytes = (int) len;
 
   /* The last byte should be a newline. */
   if (buf[num_bytes - 1] != '\n')
@@ -3101,6 +3107,8 @@ get_next_revision_ids (const char **node_id,
                              "Corrupt current file.");
 
   *copy_id = apr_pstrdup (pool, str);
+
+  SVN_ERR (svn_io_file_close (revision_file, pool));
 
   return SVN_NO_ERROR;
 }
