@@ -318,11 +318,13 @@ typedef svn_error_t * (*svn_commit_callback_t) (
  * processing a stream of data.
  *
  * For example, when copying data from one stream to another, do it in
- * blocks of this size.
+ * blocks of this size; also, the standard size of one svndiff window;
+ * etc.
  */
-#define SVN_STREAM_CHUNK_SIZE 8192
+#define SVN_STREAM_CHUNK_SIZE 102400
 
 /** The maximum amount we can ever hold in memory. */
+/* FIXME: Should this be the same as SVN_STREAM_CHUNK_SIZE? */
 #define SVN_MAX_OBJECT_SIZE (((apr_size_t) -1) / 2)
 
 
