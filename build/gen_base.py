@@ -262,12 +262,25 @@ class DependencyNode:
 class ObjectFile(DependencyNode):
   pass
 class ApacheObject(ObjectFile):
-  pass
+  build_cmd = '$(COMPILE_APACHE_MOD)'
 class SWIGObject(ObjectFile):
   def __init__(self, fname, lang):
     ObjectFile.__init__(self, fname)
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
+    self.build_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+
+# the SWIG utility libraries
+class SWIGUtilPython(ObjectFile):
+  build_cmd = '$(COMPILE_SWIG_PY)'
+class SWIGUtilJava(ObjectFile):
+  build_cmd = '$(COMPILE_SWIG_JAVA)'
+
+_custom_build = {
+  'apache-mod' : ApacheObject,
+  'swig-py' : SWIGUtilPython,
+  'swig-java' : SWIGUtilJava,
+  }
 
 class SWIGLibrary(DependencyNode):
   def __init__(self, fname, lang):
@@ -339,10 +352,8 @@ class Target:
       if src[-2:] == '.c':
         objname = src[:-2] + self.objext
 
-        if self.custom == 'apache-mod':
-          ofile = ApacheObject(objname)
-        else:
-          ofile = ObjectFile(objname)
+        cls = _custom_build.get(self.custom, ObjectFile)
+        ofile = cls(objname)
 
         # object depends upon source
         graph.add(DT_OBJECT, ofile, src)

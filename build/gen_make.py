@@ -94,22 +94,6 @@ class MakefileGenerator(gen_base.GeneratorBase):
            target_ob.ldflags, targ_varname, string.join(libs))
         )
 
-      if target_ob.custom == 'swig-py':
-        self.ofile.write('# build this with -DSWIGPYTHON\n')
-        for obj in objects:
-          ### we probably shouldn't take only the first source, but do
-          ### this for back-compat right now
-          src = self.graph.get_sources(gen_base.DT_OBJECT, obj)[0]
-          self.ofile.write('%s: %s\n\t$(COMPILE_SWIG_PY)\n' % (obj, src))
-        self.ofile.write('\n')
-      elif target_ob.custom == 'swig-java':
-        self.ofile.write('# build this with -DSWIGJAVA and -I$(JDK)/include\n')
-        for obj in objects:
-          ### FIXME: We have no back-compat requirements, so use all sources
-          src = self.graph.get_sources(gen_base.DT_OBJECT, obj)[0]
-          self.ofile.write('%s: %s\n\t$(COMPILE_SWIG_JAVA)\n' % (obj, src))
-        self.ofile.write('\n')
-
     # for each install group, write a rule to install its outputs
     for itype, i_targets in self.graph.get_deps(gen_base.DT_INSTALL):
       outputs = [ ]
@@ -231,11 +215,9 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
       deps = string.join(sources)
-      if isinstance(objname, gen_base.ApacheObject):
-        self.ofile.write('%s: %s\n\t$(COMPILE_APACHE_MOD)\n' % (objname, deps))
-      elif isinstance(objname, gen_base.SWIGObject):
-        self.ofile.write('%s: %s\n\t$(COMPILE_%s_WRAPPER)\n'
-                         % (objname, deps, string.upper(objname.lang_abbrev)))
+      cmd = getattr(objname, 'build_cmd', '')
+      if cmd:
+        self.ofile.write('%s: %s\n\t%s\n' % (objname, deps, cmd))
       else:
         self.ofile.write('%s: %s\n' % (objname, deps))
 
