@@ -29,20 +29,62 @@ apr_pool_t *pool;
 
 /** Helper routines. **/
 
+
+static void
+berkeley_error_handler (const char *errpfx,
+                        char *msg)
+{
+  fprintf (stderr, "%s%s\n", errpfx ? errpfx : "", msg);
+}
+
+
+/* Set *FS_P to a fresh, unopened FS object, with the right warning
+   handling function set.  */
+static svn_error_t *
+fs_new (svn_fs_t **fs_p)
+{
+  *fs_p = svn_fs_new (pool);
+  if (! *fs_p)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "Couldn't alloc a new fs object.");
+
+  /* Provide a warning function that just dumps the message to stderr.  */
+  svn_fs_set_warning_func (*fs_p, svn_handle_warning, 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Create a berkeley db repository in a subdir NAME, and return a new
    FS object which points to it.  */
 static svn_error_t *
-create_fs_and_repos (svn_fs_t **fs, const char *name)
+create_fs_and_repos (svn_fs_t **fs_p, const char *name)
 {
-  *fs = svn_fs_new (pool);
-  if (! fs)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-                             "Couldn't alloc a new fs object.");
+  apr_finfo_t finfo;
+
+  /* If there's already a repository named NAME, delete it.  Doing
+     things this way means that repositories stick around after a
+     failure for postmortem analysis, but also that tests can be
+     re-run without cleaning out the repositories created by prior
+     runs.  */
+  if (apr_stat (&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
+    {
+      if (finfo.filetype == APR_DIR)
+        SVN_ERR (svn_fs_delete_berkeley (name, pool));
+      else
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "there is already a file named `%s'", name);
+    }
+
+  SVN_ERR (fs_new (fs_p));
+  SVN_ERR (svn_fs_create_berkeley (*fs_p, name));
   
-  SVN_ERR (svn_fs_create_berkeley (*fs, name));
-  
+  /* Provide a handler for Berkeley DB error messages.  */
+  SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
+
   return SVN_NO_ERROR;
 }
+
 
 /* Read all data from a generic read STREAM, and return it in STRING.
    Allocate the svn_string_t in POOL.  (All data in STRING will be
@@ -124,12 +166,12 @@ open_berkeley_filesystem (const char **msg)
 
   /* Create a different fs object, and use it to re-open the
      repository again.  */
-  fs2 = svn_fs_new (pool);
-  if (! fs2)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-                             "Couldn't alloc a new fs object.");
-
+  SVN_ERR (fs_new (&fs2));
   SVN_ERR (svn_fs_open_berkeley (fs2, "test-repo-2"));
+
+  /* Provide a handler for Berkeley DB error messages.  */
+  SVN_ERR (svn_fs_set_berkeley_errcall (fs2, berkeley_error_handler));
+
   SVN_ERR (svn_fs_close_fs (fs2));
 
   return SVN_NO_ERROR;
