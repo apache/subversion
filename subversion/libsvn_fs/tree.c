@@ -4146,8 +4146,11 @@ txn_body_history_prev (void *baton, trail_t *trail)
 
   /* The Subversion filesystem is written in such a way that a given
      line of history may have at most one interesting history point
-     per filesystem revision.  So, if our history revision matches its
-     node's commit revision, we know that ... */
+     per filesystem revision.  Either that node was edited (and
+     possibly copied), or it was copied but not edited.  And a copy
+     source cannot be from the same revision as its destination.  So,
+     if our history revision matches its node's commit revision, we
+     know that ... */
   if (revision == commit_rev)
     {
       if (! reported)
@@ -4188,6 +4191,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   if (! end_copy_id)
     end_copy_id = examine_copy_inheritance (parent_path);
 
+  /* Initialize some state variables. */
   src_path = NULL;
   src_rev = SVN_INVALID_REVNUM;
   dst_rev = SVN_INVALID_REVNUM;
@@ -4253,6 +4257,19 @@ txn_body_history_prev (void *baton, trail_t *trail)
       *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
                                         dst_rev, 1, src_path, src_rev, 
                                         retpool);
+      /* It's possible for us to find a copy location that is the same
+         as the history point we've just reported.  If that happens,
+         we simply need to take another trip through this history
+         search. */
+      if ((dst_rev == revision) && reported)
+        {
+          struct history_prev_args prev_args;
+          prev_args.prev_history_p = prev_history;
+          prev_args.history = *prev_history;
+          prev_args.cross_copies = args->cross_copies;
+          prev_args.pool = args->pool;
+          SVN_ERR (txn_body_history_prev (&prev_args, trail));
+        }
     }
   else
     {
