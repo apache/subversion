@@ -367,24 +367,13 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 #define SVN_POOL_FUNC_DEFINE(rettype, name) \
   rettype name(apr_pool_t *pool)
 
-#define SVN_POOL_WRAPPER_DEFINE(rettype, name) \
-  rettype name##_debug(apr_pool_t *pool, const char *file_line) \
-  { \
-    return name(pool); \
-  }
-
 #else /* APR_POOL_DEBUG */
 #undef svn_pool_create
 #undef svn_pool_clear
 
 #define SVN_POOL_FUNC_DEFINE(rettype, name) \
   rettype name##_debug(apr_pool_t *pool, const char *file_line)
-
-#define SVN_POOL_WRAPPER_DEFINE(rettype, name) \
-  rettype name(apr_pool_t *pool) \
-  { \
-    return name##_debug(pool, "svn:<undefined>"); \
-  }
+   
 #endif /* APR_POOL_DEBUG */
 
 
@@ -465,8 +454,33 @@ SVN_POOL_FUNC_DEFINE(void, svn_pool_clear)
 }
 
 
-SVN_POOL_WRAPPER_DEFINE(apr_pool_t *, svn_pool_create)
-SVN_POOL_WRAPPER_DEFINE(void, svn_pool_clear)
+/* Wrappers that ensure binary compatibility */
+#if !APR_POOL_DEBUG
+apr_pool_t *
+svn_pool_create_debug (apr_pool_t *pool, const char *file_line)
+{
+  return svn_pool_create (pool);
+}
+
+void
+svn_pool_clear_debug (apr_pool_t *pool, const char *file_line)
+{
+  svn_pool_clear (pool);
+}
+
+#else /* APR_POOL_DEBUG */
+apr_pool_t *
+svn_pool_create (apr_pool_t *pool)
+{
+  return svn_pool_create_debug (pool, "svn:<undefined>");
+}
+
+void
+svn_pool_clear (apr_pool_t *pool)
+{
+  svn_pool_clear_debug (pool, "svn:<undefined>");
+}
+#endif /* APR_POOL_DEBUG */
 
 
 
