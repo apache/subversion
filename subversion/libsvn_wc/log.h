@@ -132,7 +132,15 @@ extern "C" {
 #define SVN_WC__LOG_ATTR_ARG_4          "arg4"
 #define SVN_WC__LOG_ATTR_ARG_5          "arg5"
 
+/* Return the path to use for logfile number LOG_NUMBER.  The returned
+   string will be allocated from POOL.
 
+   For log number 0, this will just be SVN_WC__ADM_LOG to maintain
+   compatability with 1.0.x.  Higher numbers have the digits of the
+   number appended to SVN_WC__ADM_LOG so that they look like "log.1",
+   "log.2", etc. */
+const char *svn_wc__logfile_path (int log_number,
+                                  apr_pool_t *pool);
 
 /* Process the instructions in the log file for ADM_ACCESS. 
    DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'

@@ -1263,12 +1263,23 @@ handle_killme (svn_wc_adm_access_t *adm_access,
 
 /*** Using the parser to run the log file. ***/
 
+/* Determine the log file that should be used for a given number. */
+const char *
+svn_wc__logfile_path (int log_number,
+                      apr_pool_t *pool)
+{
+  return apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
+                       (log_number == 0) ? ""
+                       : apr_psprintf (pool, ".%d", log_number));
+}
+
+/* Run a sequence of log files. */
 svn_error_t *
 svn_wc__run_log (svn_wc_adm_access_t *adm_access,
                  const char *diff3_cmd,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *err2;
   svn_xml_parser_t *parser;
   struct log_runner *loggy = apr_pcalloc (pool, sizeof (*loggy));
   char buf[BUFSIZ];
@@ -1299,9 +1310,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
   for (log_number = 0; ; log_number++)
     {
       svn_pool_clear (iterpool);
-      logfile_path = apr_psprintf (iterpool, SVN_WC__ADM_LOG "%s",
-                                   (log_number == 0) ? ""
-                                   : apr_psprintf (pool, ".%d", log_number));
+      logfile_path = svn_wc__logfile_path (log_number, iterpool);
       /* Parse the log file's contents. */
       err = svn_wc__open_adm_file (&f, svn_wc_adm_access_path (adm_access),
                                    logfile_path, APR_READ, iterpool);
@@ -1328,8 +1337,13 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
              _("Error reading administrative log file in '%s'"),
              svn_wc_adm_access_path (adm_access));
         
-        SVN_ERR (svn_xml_parse (parser, buf, buf_len, 0));
-        
+        err2 = svn_xml_parse (parser, buf, buf_len, 0);
+        if (err2)
+          {
+            if (err)
+              svn_error_clear (err);
+            SVN_ERR (err2);
+          }
       } while (! err);
       
       svn_error_clear (err);
@@ -1360,10 +1374,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
       for (log_number--; log_number >= 0; log_number--)
         {
           svn_pool_clear (iterpool);
-          logfile_path = apr_psprintf (iterpool, SVN_WC__ADM_LOG "%s",
-                                       (log_number == 0) ? ""
-                                       : apr_psprintf (pool, ".%d",
-                                                       log_number));
+          logfile_path = svn_wc__logfile_path (log_number, iterpool);
           
           /* No 'killme'?  Remove the logfile;  its commands have been executed. */
           SVN_ERR (svn_wc__remove_adm_file (svn_wc_adm_access_path (adm_access),
