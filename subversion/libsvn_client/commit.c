@@ -817,6 +817,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                    base_dir_access,
                                                    rel_targets, 
                                                    nonrecursive,
+                                                   ctx,
                                                    pool)))
     goto cleanup;
 
