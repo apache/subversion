@@ -213,7 +213,7 @@ The specified activity does not exist.
 
 
         <sect3 id="svn-ap-c-sect-1.2.6">
-          <title>Under Windows Xp, the Subversion Server Sometimes
+          <title>Under Windows XP, the Subversion Server Sometimes
             Seems to Send Out Corrupted Data.</title>
 
           <para>You need to install Window XP Service Pack 1.  You can
@@ -235,7 +235,7 @@ The specified activity does not exist.
             <para>The following instructions are specific to the
               graphical version of Ethereal, and may not apply to the
               commandline version (whose binary is usually named
-              tethereal).</para>
+              <command>tethereal</command>).</para>
           </note>
 
           <itemizedlist>
