@@ -60,7 +60,7 @@
       og kataloger.
       Ethvert antall <firstterm>klienter</firstterm> kobler seg til 
       depotet, og leser eller skriver deretter til disse filene.
-      Ved &#229; skrive data, gj&#248;r klientenen informasjonen tilgjengelig for 
+      Ved &#229; skrive data, gj&#248;r klienten informasjonen tilgjengelig for 
       andre; ved &#229; lese data henter klienten informasjon fra andre. 
       <xref linkend="svn-ch-2-dia-1"/> illustrerer dette.</para>
 
@@ -89,7 +89,7 @@
       Det som gj&#248;r Subversiondepotet spesielt er at <emphasis>det husker 
       hver eneste forandring</emphasis> noensinne skrevet til det: Hver 
       forandring til hver eneste fil, og til og med forandringer i selve 
-      katalogtreet, som opprettelser, slettinger og ommb&#248;bleringer p&#229; 
+      katalogtreet, som opprettelser, slettinger og omm&#248;bleringer p&#229; 
       filer og kataloger.</para>
 
     <!-- @ENGLISH {{{
@@ -365,7 +365,7 @@
         I denne modellen kontakter klienten til hver bruker og lager en 
         personlig <firstterm>arbeidskopi</firstterm> &#8212; et lokalt speil 
         av depotets filer og kataloger.
-        Brukere arbeider s&#229; parallellt ved &#229; modifisere deres private 
+        Brukere arbeider s&#229; parallelt ved &#229; modifisere deres private 
         kopier.
         Til slutt blir de private kopiene flettet inn i en ny, endelig 
         versjon.
@@ -469,7 +469,7 @@
       @ENGLISH }}} -->
       <para><quote>Kopier-rediger-flett</quote>-modellen kan h&#248;res litt 
         kaotisk ut, men i praksis g&#229;r det ekstremt glatt.
-        Brukere kan jobbe parallellt, og aldri vente p&#229; hverandre.
+        Brukere kan jobbe parallelt, og aldri vente p&#229; hverandre.
         N&#229;r de arbeider p&#229; de samme filene, viser det seg at mesteparten 
         av de samtidige forandringene ikke overlapper i det hele tatt; 
         konflikter er sjeldne.
@@ -568,7 +568,7 @@
         til de andre personene som arbeider med deg p&#229; prosjektet ditt 
         (ved &#229; skrive til depotet).
         Hvis andre personer publiserer deres egne forandringer, gir 
-        Subversion deg kommandoer for &#229; flette desse forandringene inn i 
+        Subversion deg kommandoer for &#229; flette disse forandringene inn i 
         din arbeidskopi (ved &#229; lese fra depotet).</para>
 
       <!-- @ENGLISH {{{
@@ -604,7 +604,7 @@
         vanligvis har hvert prosjekt sin egen underkatalog i depotets 
         filsystemtre.
         Med dette arrangementet vil en brukers arbeidskopi samsvare med 
-        et spesielt subtre av depotet.</para>
+        et spesielt deltre av depotet.</para>
       
       <!-- @ENGLISH {{{
       <para>For example, suppose you have a repository that contains
@@ -829,7 +829,7 @@ C:\&gt; svn checkout "file:///X|/path/to/repos"
           the vertical bar character is not interpreted as a pipe.</para>
         @ENGLISH }}} -->
         <para>I den andre syntaksen m&#229; du kapsle inn URLen s&#229; den 
-          verticale stolpen (<quote>|</quote>) ikke blir tolket som et 
+          vertikale stolpen (<quote>|</quote>) ikke blir tolket som et 
           r&#248;r.</para>
 
         <!-- @ENGLISH {{{
@@ -1451,7 +1451,7 @@ calc/Makefile:6
           model.</para>
         @ENGLISH }}} -->
         <para>Vi har sett noen enkle eksempler p&#229; hvordan to 
-          arbeidskollegaer kan bruke Subversion til &#229; publisere og motta 
+          arbeidskolleger kan bruke Subversion til &#229; publisere og motta 
           forandringer til og fra hverandre, ved &#229; bruke 
           <quote>kopier-rediger-flett</quote>-modellen.</para>
       </listitem>

@@ -36,9 +36,9 @@
       see <xref linkend="svn-ch-9"/>.</para>
     @ENGLISH }}} -->
     <para>Merk at dette kapittelet ikke er ment &#229; v&#230;re en fullstendig 
-      liste over Subversions kommandoer &#8212; det er heller en 
-      &#164;conversational introduksjon til de mest vanlige 
-      Subversionoppgavene du vil komme ut for.
+      liste over Subversions kommandoer &#8212; det er heller en uformell 
+      introduksjon til de mest vanlige Subversionoppgavene du vil komme 
+      ut for.
       Dette kapittelet forutsetter at du har lest og forst&#229;tt <xref 
       linkend="svn-ch-2"/> og er kjent med den generelle modellen til 
       Subversion.
@@ -109,7 +109,8 @@
     <!-- @ENGLISH {{{
     <title>Revisions: Numbers, Keywords, and Dates, Oh My!</title>
     @ENGLISH }}} -->
-    <title>Revisjoner: Nummer, n&#248;kkelord og datoer, &#164;oh my!</title>
+    <title>Revisjoner: Nummer, n&#248;kkelord og datoer, <!-- &#164; 
+    -->oj!</title>
 
     <!-- @ENGLISH {{{
     <para>Before we go on, you should know a bit about how to identify
@@ -550,13 +551,13 @@ $ svn log --revision {2002-11-20}:4040
         altogether.  This will wreak havoc on the internal
         date-to-revision conversion that Subversion performs.</para>
       @ENGLISH }}} -->
-      <para>Brukerne b&#248;r v&#230;re klar over en &#164;subtlety som kan bli litt av 
-        en snublestein ved bruk av datoer i Subversion.
+      <para>Brukerne b&#248;r v&#230;re klar over en spissfindighet som kan bli 
+        litt av en snublestein ved bruk av datoer i Subversion.
         Siden tidspunktet p&#229; en revisjon er lagret som en egenskap for 
         revisjonen &#8212; en uversjonert, modifiserbar egenskap &#8212; kan 
         revisjonsegenskaper bli forandret til &#229; representere helt feil 
         kronologi, eller kan til og med bli fjernet helt.
-        Dette vil <!-- &#164; -->bokstavelig talt herpe den interne 
+        Dette vil rote til den interne 
         <quote>dato-til-revisjons</quote>-konverteringen som Subversion 
         utf&#248;rer.</para>
         
@@ -625,8 +626,8 @@ Checked out revision 2499.
       <title>Oppbygning av depotet</title>
       <para>Hvis du lurer p&#229; hva det g&#229;r i med <literal>trunk</literal> 
         i URLen ovenfor, s&#229; er den en del av m&#229;ten vi anbefaler du 
-        legger ut Suversiondepotet, noe som vi vil snakke en god del mer 
-        om i <xref linkend="svn-ch-4"/>.</para>
+        legger ut Subversiondepotet, noe som vi vil snakke en god del 
+        mer om i <xref linkend="svn-ch-4"/>.</para>
 
     </sidebar>
 
@@ -710,7 +711,7 @@ Checked out revision 2499.
       Subversion server that you've done anything.</para>
     @ENGLISH }}} -->
     <para>S&#229;fremt du ikke er klar til &#229; legge inn en ny fil eller 
-      katalog, eller foranfringer til eksisterende, er det ikke 
+      katalog, eller forandringer til eksisterende, er det ikke 
       n&#248;dvendig &#229; fortelle Subversiontjeneren at du har gjort 
       noe.</para>
 
@@ -747,9 +748,9 @@ Checked out revision 2499.
       a directory after your repository URL.  This places your working
       copy in the new directory that you name.  For example:</para>
     @ENGLISH }}} -->
-    <para>Selv om du <!-- &#164; certainly --> kan hente ut en arbeidskopi 
-      med URLen til depotet som det eneste argumentet, kan du ogs&#229; 
-      spesifisere en katalog etter depot-URLen.
+    <para>Selv om du s&#229; absolutt kan hente ut en arbeidskopi med URLen 
+      til depotet som det eneste argumentet, kan du ogs&#229; spesifisere en 
+      katalog etter depot-URLen.
       Dette plasserer arbeidskopien din i den nye katalogen som du gir 
       navn til.
       For eksempel:</para>
@@ -804,7 +805,7 @@ Checked out revision 2499.
       find yourself doing with Subversion in the course of a day's work.</para>
     @ENGLISH }}} -->
     <para>Subversion har mange funksjoner, valg og <!-- &#164; -->avanserte 
-      funksjoner, men p&#229; en dag-til-dag-basis er oddsene store for at du 
+      muligheter, men p&#229; en dag-til-dag-basis er oddsene store for at du 
       bare vil bruke et f&#229;tall av dem.
       I denne seksjonen vil vi g&#229; gjennom de vanligste tingene som du 
       vil komme ut for med Subversion i l&#248;pet av en dags arbeid.</para>
@@ -908,9 +909,9 @@ Checked out revision 2499.
         <command>svn update</command> to bring your working copy into
         sync with the latest revision in the repository.</para>
       @ENGLISH }}} -->
-      <para>N&#229;r du arbeider p&#229; et prosjekt med et <!-- &#164; -->team, vil du 
-        oppdatere arbeidskopien din med alle forandringer gjort av andre 
-        utviklere siden den forrige oppdateringen av prosjektet.
+      <para>N&#229;r du arbeider p&#229; et prosjekt med et team, vil du oppdatere 
+        arbeidskopien din med alle forandringer gjort av andre utviklere 
+        siden den forrige oppdateringen av prosjektet.
         Bruk <command>svn update</command> for &#229; f&#229; arbeidskopien i synk 
         med den siste revisjonen i depotet.</para>
       
@@ -1001,8 +1002,8 @@ Updated to revision 2.
               objects with distinct histories.</para>
             @ENGLISH }}} -->
             <para>Filen eller katalogen <filename>foo</filename> ble 
-              erstatted (<computeroutput>R</computeroutput>eplaced) i 
-              arkeidskopien; det vil si, <filename>foo</filename> ble 
+              erstattet (<computeroutput>R</computeroutput>eplaced) i 
+              arbeidskopien; det vil si, <filename>foo</filename> ble 
               slettet og et nytt element med det samme navnet ble lagt 
               til.
               Selv om de har det samme navnet, anser depotet dem for &#229; 
@@ -1108,7 +1109,7 @@ Updated to revision 2.
             <para>Dette er den enkleste typen forandring.
               Du trenger ikke &#229; fortelle Subversion at du har tenkt &#229; 
               forandre en fil; bare sett i gang med forandringene.
-              Subversion vil bli i stant til &#229; automatisk finne ut av 
+              Subversion vil bli i stand til &#229; automatisk finne ut av 
               hvilke filer som er blitt forandret.</para>
           </listitem>
         </varlistentry>
@@ -1127,7 +1128,7 @@ Updated to revision 2.
           <term>Forandringer i trestrukturen</term>
           <listitem>
             <para>Du kan sp&#248;rre Subversion om &#229; <quote>merke</quote> 
-              filer og kataloger for oppf&#248;rte fjerninger, tillegginger, 
+              filer og kataloger for oppf&#248;rte slettinger, tillegginger, 
               kopieringer eller flytting.
               Selv om disse forandringene tar plass &#248;yeblikkelig i 
               arbeidskopien din, vil ingen tillegginger eller slettinger 
@@ -1249,7 +1250,7 @@ Updated to revision 2.
               N&#229;r <filename>bar</filename> blir lagt til depotet under 
               neste innlegging, blir kopieringshistorien lagret (som om 
               den kommer originalt fra <filename>foo</filename>).
-              <command>svn copy</command> lager ikke &#164;intermediate 
+              <command>svn copy</command> lager ikke mellomliggende
               kataloger.</para>
           </listitem>
         </varlistentry>
@@ -1271,7 +1272,7 @@ Updated to revision 2.
               Det vil si, <filename>bar</filename> er klargjort for 
               tillegging som en kopi av <filename>foo</filename>, og 
               <filename>foo</filename> blir klargjort for fjerning.
-              <command>svn move</command> lager ikke &#164;intermediate 
+              <command>svn move</command> lager ikke mellomliggende 
               kataloger.</para>
           </listitem>
         </varlistentry>
@@ -1396,10 +1397,10 @@ Updated to revision 2.
         working files have changed, or even allow you to undo your
         changes without contacting the repository.</para>
       @ENGLISH }}} -->
-      <para>Subversion har blitt optimalisert for &#229; hjelpe deg med denne 
+      <para>Subversion er blitt optimalisert for &#229; hjelpe deg med denne 
         oppgaven, og er i stand til &#229; gj&#248;re mange ting uten &#229; 
         kommunisere med depotet.
-        <!-- &#164;In particular, -->Arbeidskopien inneholder en hemmelig 
+        N&#230;rmere forklart, arbeidskopien inneholder en hemmelig 
         <quote>ur&#248;rt</quote> kopi av hver versjonskontrollert fil i 
         <filename>.svn</filename>-omr&#229;det.
         P&#229; grunn av dette kan Subversion raskt vise deg hvordan 
@@ -1849,7 +1850,7 @@ C      stuff/loot/lump.c   # denne filen inneholder en konflikt fra en
         <para>Den femte kolonnen vil bare vise blanktegn eller en 
           <computeroutput>S</computeroutput>.
           Dette viser at filen eller katalogen er blitt svitsjet fra 
-          stien som restenb av arbeidskopien bruker (ved bruk av 
+          stien som resten av arbeidskopien bruker (ved bruk av 
           <command>svn switch</command>) til en forgrening.</para>
         
         <!-- @ENGLISH {{{
@@ -1988,7 +1989,7 @@ Status against revision:   46
           spesifiser et eksternt diffprogram ved &#229; bruke 
           <option>--diff-cmd</option> og legg til alle flagg du vil 
           trenge ved &#229; bruke <option>--extensions</option>-bryteren.
-          For eksempel, for &#229; se lokale foskjeller i filen 
+          For eksempel, for &#229; se lokale forskjeller i filen 
           <filename>foo.c</filename> i <foreignphrase>context 
           format</foreignphrase> mens forandringer i blanktegn blir 
           ignorert, kan du kj&#248;re <command>svn diff --diff-cmd 
@@ -2315,7 +2316,7 @@ Updated to revision 46.
         <computeroutput>G</computeroutput>-en st&#229;r for 
         <quote>mer<computeroutput>G</computeroutput>ed</quote> 
         (flettet), noe som betyr at filen hadde lokale forandringer til 
-        &#229; begynne med, men firandringene som kom fra depotet overlappet 
+        &#229; begynne med, men forandringene som kom fra depotet overlappet 
         ikke med de lokale forandringene.</para>
            
       <!-- @ENGLISH {{{
@@ -2519,7 +2520,7 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict
             <para>Copy one of the temporary files on top of your
               working file.</para>
             @ENGLISH }}} -->
-            <para>Kopiere en av de midlertidige filene opp&#229; arbeidsfilen 
+            <para>Kopiere en av de midlertidige filene over arbeidsfilen 
               din.</para>
           </listitem>
 
@@ -2568,7 +2569,7 @@ Resolved conflicted state of 'sandwich.txt'
           first time you attempt it, but with a little practice, it
           can become as easy as falling off a bike.</para>
         @ENGLISH }}} -->
-        <para>&#197; flette konflikter for h&#229;nd kan v&#230;re ganske &#164;intimidating 
+        <para>&#197; flette konflikter for h&#229;nd kan v&#230;re ganske skremmende 
           den f&#248;rste gangen du pr&#248;ver det, men med litt &#248;velse kan det 
           bli like lett som &#229; ramle av en sykkel.</para>
 
@@ -2667,9 +2668,8 @@ Grilled Chicken
           S&#229; det er n&#229; du tar opp telefonen eller g&#229;r til andre enden av 
           kontoret og forklarer til Sally at du f&#229;r ikke <!-- &#164; 
           -->sauerkraut fra en italiensk &#164;deli.<footnote><para>Og hvis 
-          du <!-- &#164; Litt vel muntlig, kanskje? -->sp&#248;r dem
-          etter det, kan de like gjerne kj&#248;re deg ut av byen &#164;on a 
-          rail.</para></footnote>
+          du sp&#248;r dem om det, <!-- &#164; -->kan det hende de b&#230;rer deg ut av 
+          byen p&#229; en planke.</para></footnote>
           N&#229;r dere er blitt enige om forandringene du vil legge inn, 
           rediger filen din og fjern konfliktmerkene.</para>
 
@@ -2720,7 +2720,7 @@ $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
         <!-- @ENGLISH {{{
         <title>Copying a File Onto Your Working File</title>
         @ENGLISH }}} -->
-        <title>Kopiere en fil opp&#229; arbeidsfilen din</title>
+        <title>Kopiere en fil over arbeidsfilen din</title>
 
         <!-- @ENGLISH {{{
         <para>If you get a conflict and decide that you want to throw
@@ -2749,7 +2749,8 @@ $ svn resolved sandwich.txt
         <!-- @ENGLISH {{{
         <title>Punting: Using <command>svn revert</command></title>
         @ENGLISH }}} -->
-        <title>&#164;Punting: Bruke <command>svn revert</command></title>
+        <title><!-- &#164; Punting: -->Bruke <command>svn 
+        revert</command></title>
 
         <!-- @ENGLISH {{{
         <para>If you get a conflict, and upon examination decide that
@@ -2884,10 +2885,10 @@ Committed revision 4.
 
         @ENGLISH }}} -->
         <para>Hvis du skriver en loggmelding i tekstbehandleren og 
-          bestemmer deg for &#229; avbryte innleggingen, kan duu bare avbryte 
+          bestemmer deg for &#229; avbryte innleggingen, kan du bare avbryte 
           uten &#229; lagre endringene.
           Hvis du allerede har lagret innleggingsmeldingen, kan du 
-          slette teksten og lagre p&#229; nytt.</para> 
+          slette teksten og lagre p&#229; nytt.</para>
         <screen>
 $ svn commit
 Waiting for Emacs...Done
@@ -2907,7 +2908,7 @@ $
         that, the entire commit will fail with a message informing you
         that one or more of your files is out-of-date:</para>
       @ENGLISH }}} -->
-      <para>Depotet vet ikke og bryer seg ikke om forandringene dine gir 
+      <para>Depotet vet ikke og bryr seg ikke om forandringene dine gir 
         noen mening som helhet; det sjekker bare for &#229; v&#230;re sikker at 
         ingen andre har forandret noen av de samme filene som du gjorde 
         n&#229;r du ikke fulgte med.
@@ -3064,7 +3065,7 @@ svn: Out of date: 'rules.txt' in transaction 'g'
         <command>svn log</command> vil gi deg en oversikt over hvem som 
         gjorde forandringer til en fil eller katalog, i hvilken revisjon 
         den forandret seg, tid og dato for denne revisjonen, og, hvis 
-        den ble skrevetm loggmeldingen som h&#248;rer til 
+        den ble skrevet, loggmeldingen som h&#248;rer til 
         innleggingen.</para>
            
       <!-- &#164; Som sagt, eksempler ordnes seinere. -->
@@ -3094,7 +3095,8 @@ Initial import
         switch:</para>
       @ENGLISH }}} -->
       <para>Legg merke til at loggmeldinger listes ut i 
-        <emphasis>omvendt kronlogisk rekkef&#248;lge</emphasis> som standard.
+        <emphasis>omvendt kronologisk rekkef&#248;lge</emphasis> som 
+        standard.
         Hvis du &#248;nsker &#229; se et annet omr&#229;de av revisjoner i en spesiell 
         rekkef&#248;lge, eller bare en enkelt revisjon, bruk 
         <option>--revision</option> (<option>-r</option>)-valget:</para>
@@ -3223,7 +3225,7 @@ $
           Men husk at mens revisjoner gjelder for hele depotet, opererer 
           <command>svn log</command> p&#229; en sti i depotet.
           Hvis du ikke spesifiserer en sti, bruker Subversion den 
-          gjeldene arbeidskatalogen som standard.
+          gjeldende arbeidskatalogen som standard.
           Hvis du opererer i en underkatalog i arbeidskopien din og 
           fors&#248;ker &#229; se loggen for en revisjon der hverken denne 
           katalogen eller noen av dens barn forandret seg, vil 
@@ -3247,8 +3249,8 @@ $
         our working copy before committing to the repository.</para>
       @ENGLISH }}} -->
       <para>Vi har allerede sett <command>svn diff</command> f&#248;r &#8212; den 
-        viser filforskjeller i <foreignhphrase>unified 
-        diff</foreignhphrase>-format; den ble brukt til &#229; vise de lokale 
+        viser filforskjeller i <foreignphrase>unified 
+        diff</foreignphrase>-format; den ble brukt til &#229; vise de lokale 
         forandringene i en arbeidskopi f&#248;r de ble lagt inn i 
         depotet.</para>
       
@@ -3639,8 +3641,8 @@ $ svn update --revision 1729 # Oppdaterer en eksisterende arbeidskopi
         drept eller maskinen kr&#230;sjer, for eksempel), blir loggfilen 
         liggende p&#229; disken.
         Ved &#229; utf&#248;re kommandoene i loggfilen en gang til kan Subversion 
-        fullf&#248;re den tidligere startede operasjonen, og arbeidskopien 
-        din kan sette seg tilbake til en &#164;consisent state.</para>
+        fullf&#248;re den tidligere p&#229;begynte operasjonen, og arbeidskopien 
+        din kan sette seg tilbake til en fullverdig tilstand.</para>
 
       <!-- @ENGLISH {{{
       <para>And this is exactly what <command>svn cleanup</command>
@@ -3686,7 +3688,7 @@ M      somedir/foo.c
       @ENGLISH }}} -->
       <para><command>svn import</command>-kommandoen er en rask m&#229;te &#229; 
         kopiere et uversjonert filtre inn i et depot og lage 
-        &#164;intermediate kataloger som trengs.</para>
+        mellomliggende kataloger der det er n&#248;dvendig.</para>
 
       <!-- @ENGLISH {{{
       <screen>
