@@ -48,28 +48,40 @@ struct log_receiver_baton
 };
 
 
-static void send_xml(struct log_receiver_baton *lrb, const char *fmt, ...)
+static svn_error_t * send_xml(struct log_receiver_baton *lrb, 
+                              const char *fmt, ...)
 {
+  apr_status_t apr_err;
   va_list ap;
 
   va_start(ap, fmt);
-  (void) apr_brigade_vprintf(lrb->bb, ap_filter_flush, lrb->output, fmt, ap);
+  apr_err = apr_brigade_vprintf(lrb->bb, ap_filter_flush, 
+                                lrb->output, fmt, ap);
   va_end(ap);
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* ### check for an aborted connection, since the brigade functions
+     don't appear to be return useful errors when the connection is
+     dropped. */
+  if (lrb->output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
 }
 
 
 /* If LRB->needs_header is true, send the "<S:log-report>" start
    element and set LRB->needs_header to zero.  Else do nothing. */
-static void maybe_send_header(struct log_receiver_baton *lrb)
+static svn_error_t * maybe_send_header(struct log_receiver_baton *lrb)
 {
   if (lrb->needs_header)
     {
-      send_xml(lrb,
-               DAV_XML_HEADER DEBUG_CR
-               "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR);
+      SVN_ERR( send_xml(lrb,
+                        DAV_XML_HEADER DEBUG_CR
+                        "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                        "xmlns:D=\"DAV:\">" DEBUG_CR) );
       lrb->needs_header = FALSE;
     }
+  return SVN_NO_ERROR;
 }
 
 /* This implements `svn_log_message_receiver_t'.
@@ -84,29 +96,24 @@ static svn_error_t * log_receiver(void *baton,
 {
   struct log_receiver_baton *lrb = baton;
 
-  maybe_send_header(lrb);
+  SVN_ERR( maybe_send_header(lrb) );
 
-  send_xml(lrb,
-           "<S:log-item>" DEBUG_CR
-           "<D:version-name>%" SVN_REVNUM_T_FMT "</D:version-name>" DEBUG_CR,
-           rev);
+  SVN_ERR( send_xml(lrb, "<S:log-item>" DEBUG_CR "<D:version-name>%" 
+                    SVN_REVNUM_T_FMT "</D:version-name>" DEBUG_CR, rev) );
 
   if (author)
-    send_xml(lrb,
-             "<D:creator-displayname>%s</D:creator-displayname>" DEBUG_CR,
-             apr_xml_quote_string(pool, author, 0));
+    SVN_ERR( send_xml(lrb, "<D:creator-displayname>%s</D:creator-displayname>" 
+                      DEBUG_CR, apr_xml_quote_string(pool, author, 0)) );
 
   /* ### this should be DAV:creation-date, but we need to format
      ### that date a bit differently */
   if (date)
-    send_xml(lrb,
-             "<S:date>%s</S:date>" DEBUG_CR,
-             apr_xml_quote_string(pool, date, 0));
+    SVN_ERR( send_xml(lrb, "<S:date>%s</S:date>" DEBUG_CR,
+                      apr_xml_quote_string(pool, date, 0)) );
 
   if (msg)
-    send_xml(lrb,
-             "<D:comment>%s</D:comment>" DEBUG_CR,
-             apr_xml_quote_string(pool, msg, 0));
+    SVN_ERR( send_xml(lrb, "<D:comment>%s</D:comment>" DEBUG_CR,
+                      apr_xml_quote_string(pool, msg, 0)) );
 
 
   if (changed_paths)
@@ -131,45 +138,51 @@ static svn_error_t * log_receiver(void *baton,
             case 'A':
               if (log_item->copyfrom_path 
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
-                send_xml(lrb, 
-                         "<S:added-path"
-                         " copyfrom-path=\"%s\"" 
-                         " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
-                         "%s</S:added-path>" DEBUG_CR,
-                         apr_xml_quote_string(pool, log_item->copyfrom_path, 
-                                              1), /* escape quotes */
-                         log_item->copyfrom_rev,
-                         apr_xml_quote_string(pool, path, 0));
+                SVN_ERR( send_xml(lrb, 
+                                  "<S:added-path"
+                                  " copyfrom-path=\"%s\"" 
+                                  " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
+                                  "%s</S:added-path>" DEBUG_CR,
+                                  apr_xml_quote_string(pool, 
+                                                       log_item->copyfrom_path,
+                                                       1), /* escape quotes */
+                                  log_item->copyfrom_rev,
+                                  apr_xml_quote_string(pool, path, 0)) );
               else
-                send_xml(lrb, "<S:added-path>%s</S:added-path>" DEBUG_CR,
-                         apr_xml_quote_string(pool, path, 0));
+                SVN_ERR( send_xml(lrb, "<S:added-path>%s</S:added-path>" 
+                                  DEBUG_CR, 
+                                  apr_xml_quote_string(pool, path, 0)) );
               break;
 
             case 'R':
               if (log_item->copyfrom_path 
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
-                send_xml(lrb, 
-                         "<S:replaced-path"
-                         " copyfrom-path=\"%s\"" 
-                         " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
-                         "%s</S:replaced-path>" DEBUG_CR,
-                         apr_xml_quote_string(pool, log_item->copyfrom_path, 
-                                              1), /* escape quotes */
-                         log_item->copyfrom_rev,
-                         apr_xml_quote_string(pool, path, 0));
+                SVN_ERR( send_xml(lrb, 
+                                  "<S:replaced-path"
+                                  " copyfrom-path=\"%s\"" 
+                                  " copyfrom-rev=\"%" SVN_REVNUM_T_FMT "\">"
+                                  "%s</S:replaced-path>" DEBUG_CR,
+                                  apr_xml_quote_string(pool, 
+                                                       log_item->copyfrom_path,
+                                                       1), /* escape quotes */
+                                  log_item->copyfrom_rev,
+                                  apr_xml_quote_string(pool, path, 0)) );
               else
-                send_xml(lrb, "<S:replaced-path>%s</S:replaced-path>" DEBUG_CR,
-                         apr_xml_quote_string(pool, path, 0));
+                SVN_ERR( send_xml(lrb, "<S:replaced-path>%s</S:replaced-path>" 
+                                  DEBUG_CR, 
+                                  apr_xml_quote_string(pool, path, 0)) );
               break;
 
             case 'D':
-              send_xml(lrb, "<S:deleted-path>%s</S:deleted-path>" DEBUG_CR,
-                       apr_xml_quote_string(pool, path, 0));
+              SVN_ERR( send_xml(lrb, "<S:deleted-path>%s</S:deleted-path>" 
+                                DEBUG_CR,
+                                apr_xml_quote_string(pool, path, 0)) );
               break;
 
             case 'M':
-              send_xml(lrb, "<S:modified-path>%s</S:modified-path>" DEBUG_CR,
-                       apr_xml_quote_string(pool, path, 0));
+              SVN_ERR( send_xml(lrb, "<S:modified-path>%s</S:modified-path>" 
+                                DEBUG_CR,
+                                apr_xml_quote_string(pool, path, 0)) );
               break;
               
             default:
@@ -178,7 +191,7 @@ static svn_error_t * log_receiver(void *baton,
         }
     }
 
-  send_xml(lrb, "</S:log-item>" DEBUG_CR);
+  SVN_ERR( send_xml(lrb, "</S:log-item>" DEBUG_CR) );
 
   return SVN_NO_ERROR;
 }
@@ -191,6 +204,8 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                                 ap_filter_t *output)
 {
   svn_error_t *serr;
+  apr_status_t apr_err;
+  dav_error *derr = NULL;
   apr_xml_elem *child;
   struct log_receiver_baton lrb;
   const dav_svn_repos *repos = resource->info->repos;
@@ -284,43 +299,33 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                             log_receiver,
                             &lrb,
                             resource->pool);
-
   if (serr)
     {
-      /* If we can, report a DAV error. */
-      if (lrb.needs_header)
-        {
-          /* Bail out before writing any of <S:log-report>. */
-          return dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message);
-        }
-      else
-        {
-          /* ### We've sent some content to the output filter, meaning
-             ### that we cannot simply return an error here.  In the
-             ### future, mod_dav may specify a way to signal an error
-             ### even after the response stream has begun.
-
-             ### For now we punt, sending the error message to the
-             ### client as a <S:log-item> (using its <D:version-name>
-             ### and <D:comment> children).
-
-             ### http://subversion.tigris.org/issues/show_bug.cgi?id=816
-             ### describes a situation where this helps.*/
-          log_receiver(&lrb,
-                       NULL,
-                       SVN_INVALID_REVNUM,
-                       "", "",
-                       serr->message,
-                       resource->pool);
-        }
+      derr = dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message);
+      goto cleanup;
     }
   
-  /* End the log report. */
-  maybe_send_header(&lrb);
-  send_xml(&lrb, "</S:log-report>" DEBUG_CR);
+  if ((serr = maybe_send_header(&lrb)))
+    {
+      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Error beginning REPORT reponse.");
+      goto cleanup;
+    }
+    
+  if ((serr = send_xml(&lrb, "</S:log-report>" DEBUG_CR)))
+    {
+      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Error ending REPORT reponse.");
+      goto cleanup;
+    }
 
-  /* flush the contents of the brigade */
-  ap_fflush(output, lrb.bb);
+ cleanup:
 
-  return NULL;
+  /* Flush the contents of the brigade (returning an error only if we
+     don't already have one). */
+  if (((apr_err = ap_fflush(output, lrb.bb))) && (! derr))
+    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error flushing brigade.");
+  return derr;
 }

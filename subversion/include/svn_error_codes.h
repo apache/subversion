@@ -699,6 +699,10 @@ SVN_ERROR_START
               SVN_ERR_APMOD_CATEGORY_START + 3,
               "Baseline incorrect")
 
+  SVN_ERRDEF (SVN_ERR_APMOD_CONNECTION_ABORTED,
+              SVN_ERR_APMOD_CATEGORY_START + 4,
+              "Input/output error")
+
   /* libsvn_client errors */
 
   SVN_ERRDEF (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
