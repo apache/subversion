@@ -769,7 +769,7 @@ svn_fs_dir_entries (apr_hash_t **table_p,
 
 svn_error_t *
 svn_fs_make_dir (svn_fs_node_t *parent,
-		 char *path,
+		 const char *path,
 		 apr_pool_t *pool)
 {
   abort ();
