@@ -106,7 +106,15 @@ svn_fs__representation_t *svn_fs__fs_rep_copy (svn_fs__representation_t *rep,
 svn_error_t *svn_fs__fs_file_checksum (unsigned char digest[],
                                        svn_fs__node_revision_t *noderev,
                                        apr_pool_t *pool);
-                                       
+
+/* Find the paths which were changed in revision REV of filesystem FS
+   and store them in *CHANGED_PATHS_P.  Get any temporary allocations
+   from POOL. */
+svn_error_t *svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
+                                       svn_fs_t *fs,
+                                       svn_revnum_t rev,
+                                       apr_pool_t *pool);
+  
 
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
@@ -127,6 +135,17 @@ svn_error_t *svn_fs__fs_file_checksum (unsigned char digest[],
 #define SVN_FS_FS__CPATH             "cpath"
 #define SVN_FS_FS__COPYFROM          "copyfrom"
 #define SVN_FS_FS__COPYROOT          "copyroot"
+
+/* Kinds that a change can be. */
+#define SVN_FS_FS__ACTION_MODIFY     "modify"
+#define SVN_FS_FS__ACTION_ADD        "add"
+#define SVN_FS_FS__ACTION_DELETE     "delete"
+#define SVN_FS_FS__ACTION_REPLACE    "replace"
+#define SVN_FS_FS__ACTION_RESET      "reset"
+
+/* True and False flags. */
+#define SVN_FS_FS__TRUE              "true"
+#define SVN_FS_FS__FALSE             "false"
 
 /* Kinds that a node-rev can be. */
 #define SVN_FS_FS__FILE              "file"   /* node-rev kind for file */
