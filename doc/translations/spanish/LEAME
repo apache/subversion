@@ -6,6 +6,7 @@ Este documento contiene las siguientes secciones:
   Cambios futuros que se realizarán en el libro
   Herramientas para ayudar en la traducción
   Reglas mínimas para traductores
+  Traducción de la web del libro
   Lista de correo para discutir la traducción
 
 
@@ -335,6 +336,26 @@ Reglas mínimas para traductores
     svn propedit svn:log -r113 --revprop
 
 A medida que salgan cosas, ser irán poniendo aquí.
+
+
+Traducción de la web del libro
+==============================
+
+La página web del libro está en http://svnbook.red-bean.com/. Se
+considera deber de este proyecto traducir esa misma página y añadir
+información actualizada sobre la traducción. Esto se puede ver en
+http://svnbook.red-bean.com/index.es.html.  El coordinador debe
+encargarse de la actualización de esta página. Las modificaciones
+se realizan con svn y hay una lista de correo que informa de los
+cambios, para que los traductores puedan mantener la actualización
+al día.
+
+Si por alguna razón la traducción de la página queda desactualizada,
+dar un tirón de orejas al coordinador. Si no responde, será que
+le han abducido, en cuyo caso hay que ponerse en contacto con los
+webmasters de la página para obtener instrucciones sobre acceso
+de escritura.  Y de paso, cambiar al coordinador del proyecto. Ya
+le vale, qué vago.
 
 
 Lista de correo para discutir la traducción
