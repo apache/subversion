@@ -497,7 +497,7 @@ ensure_auth_dirs (const char *path,
     apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
 
   auth_subdir = svn_path_join_many (pool, auth_dir,
-                                    SVN_AUTH_CRED_SERVER_SSL, NULL);
+                                    SVN_AUTH_CRED_SSL_SERVER_TRUST, NULL);
   svn_io_check_path (auth_subdir, &kind, pool);
   if (kind == svn_node_none)
     apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);

@@ -1080,11 +1080,11 @@ main (int argc, const char * const *argv)
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
     /* The server-cert, client-cert, and client-cert-password providers. */
-    svn_client_get_ssl_server_file_provider (&provider, pool);
+    svn_client_get_ssl_server_trust_file_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_file_provider (&provider, pool);
+    svn_client_get_ssl_client_cert_file_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_pw_file_provider (&provider, pool);
+    svn_client_get_ssl_client_cert_pw_file_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
     if (opt_state.non_interactive == FALSE)
@@ -1106,16 +1106,16 @@ main (int argc, const char * const *argv)
 
         /* Three ssl prompt providers, for server-certs, client-certs,
            and client-cert-passphrases.  */
-        svn_client_get_ssl_server_prompt_provider
-          (&provider, svn_cl__auth_ssl_server_prompt, NULL, pool);
+        svn_client_get_ssl_server_trust_prompt_provider
+          (&provider, svn_cl__auth_ssl_server_trust_prompt, NULL, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-        svn_client_get_ssl_client_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_prompt, NULL, pool);
+        svn_client_get_ssl_client_cert_prompt_provider
+          (&provider, svn_cl__auth_ssl_client_cert_prompt, NULL, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-        svn_client_get_ssl_pw_prompt_provider
-          (&provider, svn_cl__auth_ssl_pw_prompt, NULL, pool);
+        svn_client_get_ssl_client_cert_pw_prompt_provider
+          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, NULL, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
       }
 

@@ -170,23 +170,22 @@ typedef struct
     optionally @a key_file (if the private key is separate) as the
     full paths to the files, and sets @a cert_type for the type of
     certificate file to load */
-#define SVN_AUTH_CRED_CLIENT_SSL "svn.ssl.client-cert"
+#define SVN_AUTH_CRED_SSL_CLIENT_CERT "svn.ssl.client-cert"
 typedef struct
 {
   const char *cert_file;
-} svn_auth_cred_client_ssl_t;
+} svn_auth_cred_ssl_client_cert_t;
 
 /** SSL client passphrase.
  *
  * @a password gets set with the appropriate password for the
  * certificate.
  */
-#define SVN_AUTH_CRED_CLIENT_PASS_SSL "svn.ssl.client-passphrase"
+#define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
 typedef struct
 {
   const char *password;
-
-} svn_auth_cred_client_ssl_pass_t;
+} svn_auth_cred_ssl_client_cert_pw_t;
 
 /** SSL server verification.
  *
@@ -194,12 +193,12 @@ typedef struct
  *  certificate will be trusted permanently. The member @a
  *  accepted_failures is only valid if @a trust_permanently is true.
  */
-#define SVN_AUTH_CRED_SERVER_SSL "svn.ssl.server"
+#define SVN_AUTH_CRED_SSL_SERVER_TRUST "svn.ssl.server"
 typedef struct
 {
   svn_boolean_t trust_permanently;
   int accepted_failures;
-} svn_auth_cred_server_ssl_t;
+} svn_auth_cred_ssl_server_trust_t;
 
 
 /** SSL server certificate information.
@@ -279,29 +278,30 @@ typedef svn_error_t *
 #define SVN_AUTH_SSL_CNMISMATCH  (1<<2)
 #define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
 
-typedef svn_error_t *(*svn_auth_ssl_server_prompt_func_t) (
-  svn_auth_cred_server_ssl_t **cred,
+typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
+  svn_auth_cred_ssl_server_trust_t **cred,
   void *baton,
   int failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
   apr_pool_t *pool);
 
+
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.
  */
-typedef svn_error_t *
-(*svn_auth_ssl_client_prompt_func_t) (svn_auth_cred_client_ssl_t **cred,
-                                      void *baton,
-                                      apr_pool_t *pool);
+typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t) (
+  svn_auth_cred_ssl_client_cert_t **cred,
+  void *baton,
+  apr_pool_t *pool);
 
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.
  */
-typedef svn_error_t *
-(*svn_auth_ssl_pw_prompt_func_t) (svn_auth_cred_client_ssl_pass_t **cred,
-                                  void *baton,
-                                  apr_pool_t *pool);
+typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t) (
+  svn_auth_cred_ssl_client_cert_pw_t **cred,
+  void *baton,
+  apr_pool_t *pool);
 
 
 
