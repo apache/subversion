@@ -99,11 +99,7 @@ public class NativeResources
             return;
         }
 
-        // Load the Apache Portable Runtime.
-        System.loadLibrary("apr-1");
-
-        // Load the SWIG-based JNI bindings.
-        System.loadLibrary("svn_swig_java-1");
+        System.loadLibrary("_core");
 
         // Initialize the Apache Portable Runtime used by Subversion's
         // C implementation.

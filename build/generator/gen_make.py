@@ -61,7 +61,9 @@ class Generator(gen_base.GeneratorBase):
       libs = [ ]
 
       for source in sources:
-        if isinstance(source, gen_base.TargetLinked):
+        if isinstance(source, gen_base.TargetJava):
+          deps.append(source.name)
+        elif isinstance(source, gen_base.TargetLinked):
           if source.external_lib:
             libs.append(source.external_lib)
           else:
