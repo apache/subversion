@@ -1,7 +1,15 @@
 # if you see @VERSION@ or @RELEASE@ here, then this spec file
 # was not generated from the makefile. you can replace these tokens
 # with the appropraite numbers, or use the makefile.
-%define _topdir	@RPMDIR@
+
+# To provide protection against accidental ~/.rpmmacros override
+%define _topdir        @RPMDIR@
+%define _builddir      %{_topdir}/BUILD
+%define _rpmdir        %{_topdir}/RPMS
+%define _sourcedir     %{_topdir}/SOURCES
+%define _specdir       %{_topdir}/SPECS
+%define _srcrpmdir     %{_topdir}/SRPMS
+
 %define _tmppath /tmp
 %define _signature	gpg
 %define _gpg_name	Mandrake Linux
