@@ -122,7 +122,7 @@ svn_string_ncreate (const char *bytes, const size_t size,
   /* Null termination is the convention -- even if we suspect the data
      to be binary, it's not up to us to decide, it's the caller's
      call.  Heck, that's why they call it the caller! */
-  new_string->data[new_string->len + 1] = '\0';
+  new_string->data[new_string->len] = '\0';
 
   return new_string;
 }
@@ -165,7 +165,7 @@ svn_string_chop (svn_string_t *str, size_t nbytes)
     str->len -= nbytes;
 
   if (str->len > 0)
-    str->data[0] = '\0';
+    str->data[str->len] = '\0';
 }
 
 
@@ -192,7 +192,7 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
   /* if we need to realloc our first buffer to hold the concatenation,
      then make it twice the total size we need. */
 
-  if (total_len >= str->blocksize)
+  if ((total_len + 1) >= str->blocksize)
     {
       str->blocksize = total_len * 2;
       str->data = (char *) my__realloc (str->data, 
@@ -207,9 +207,9 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
   memcpy (start_address, (void *) bytes, count);
   str->len = total_len;
 
-  str->data[str->len + 1] = '\0';  /* We don't know if this is binary
-                                      data or not, but convention is
-                                      to null-terminate. */
+  str->data[str->len] = '\0';  /* We don't know if this is binary
+                                  data or not, but convention is
+                                  to null-terminate. */
 }
 
 
@@ -278,7 +278,7 @@ svn_string_compare_2cstring (const svn_string_t *str, const char *cstr)
 /* return an allocated C string from a bytestring */
 
 char *
-svn_string_2cstring (const svn_string_t *str, apr_pool_t *pool)
+svn_string_dup2cstring (const svn_string_t *str, apr_pool_t *pool)
 {
   /* allocate memory for C string, +1 for \0 */
   char *cstring = apr_palloc (pool, (str->len + 1));
