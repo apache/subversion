@@ -268,3 +268,10 @@ Automated Tests:
 For a description of how to use and add tests to Subversion's
 automated test framework, please read subversion/tests-common/README.
 
+
+APR Status Codes:
+=================
+
+Always check for APR status codes (except APR_SUCCESS) with the
+APR_STATUS_IS_...() macros, not by direct comparison. This is
+required for portability to non-Unix platforms.
