@@ -190,11 +190,13 @@ svn_ra_local__open (void **session_baton,
          challenge going on, so we use whatever creds we get back on
          the first try. */
       username_creds = creds;
-      if (username_creds == NULL
-          || (username_creds->username == NULL))
-        session->username = "";
+      if (username_creds && username_creds->username)
+        {
+          session->username = apr_pstrdup (pool, username_creds->username);
+          svn_error_clear (svn_auth_save_credentials (iterstate, pool));
+        }
       else
-        session->username = apr_pstrdup (pool, username_creds->username);
+        session->username = "";
     }
 
   *session_baton = session;
