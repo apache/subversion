@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-10-14 19:03+0200\n"
+"POT-Creation-Date: 2004-10-26 05:31+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -260,7 +260,7 @@ msgstr ""
 "\n"
 
 #: clients/cmdline/log-cmd.c:95 include/svn_error_codes.h:220
-#: libsvn_subr/cmdline.c:316 libsvn_subr/cmdline.c:333
+#: libsvn_subr/cmdline.c:326 libsvn_subr/cmdline.c:343
 msgid "Write error"
 msgstr "Feil ved skriving"
 
@@ -284,6 +284,14 @@ msgstr "Endrede filstier:\n"
 #, c-format
 msgid " (from %s:%ld)"
 msgstr " (fra %s:%ld)"
+
+#: clients/cmdline/log-cmd.c:508
+msgid "When specifying working copy paths, only one target may be given"
+msgstr "Ved spesifisering av arbeidskopistier kan bare ett mål bli angitt"
+
+#: clients/cmdline/log-cmd.c:520
+msgid "Only relative paths can be specified after a URL"
+msgstr "Bare relative stier kan bli spesifisert etter en URL"
 
 #: clients/cmdline/main.c:64
 msgid "force operation to run"
@@ -1758,7 +1766,7 @@ msgid "Can't write to '%s'"
 msgstr "Kan ikke skrive til '%s'"
 
 #: clients/cmdline/util.c:207 clients/cmdline/util.c:231
-#: libsvn_fs_fs/fs_fs.c:3351 libsvn_subr/io.c:2147
+#: libsvn_fs_fs/fs_fs.c:3343 libsvn_subr/io.c:2147
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Finner ikke status for '%s'"
@@ -2000,502 +2008,506 @@ msgstr "Ingen støtte for formatet i arbeidskopien"
 msgid "Path syntax not supported in this context"
 msgstr "Filstiens sammensetning støttes ikke i denne sammenhengen"
 
-#: include/svn_error_codes.h:368
+#: include/svn_error_codes.h:367
+msgid "Invalid schedule"
+msgstr "Ugyldig klargjøring"
+
+#: include/svn_error_codes.h:373
 msgid "General filesystem error"
 msgstr "Generell filsystemsfeil"
 
-#: include/svn_error_codes.h:372
+#: include/svn_error_codes.h:377
 msgid "Error closing filesystem"
 msgstr "Feil under lukking av filsystem"
 
-#: include/svn_error_codes.h:376
+#: include/svn_error_codes.h:381
 msgid "Filesystem is already open"
 msgstr "Filsystemet er allerede åpent"
 
-#: include/svn_error_codes.h:380
+#: include/svn_error_codes.h:385
 msgid "Filesystem is not open"
 msgstr "Filsystemet er ikke åpent"
 
-#: include/svn_error_codes.h:384
+#: include/svn_error_codes.h:389
 msgid "Filesystem is corrupt"
 msgstr "Filsystemet er ødelagt"
 
-#: include/svn_error_codes.h:388
+#: include/svn_error_codes.h:393
 msgid "Invalid filesystem path syntax"
 msgstr "Filstiens sammensetning er ugyldig"
 
-#: include/svn_error_codes.h:392
+#: include/svn_error_codes.h:397
 msgid "Invalid filesystem revision number"
 msgstr "Filsystemet har ugyldig revisjonsnummer"
 
-#: include/svn_error_codes.h:396
+#: include/svn_error_codes.h:401
 msgid "Invalid filesystem transaction name"
 msgstr "Filsystemet har ugyldig transaksjonsnavn"
 
-#: include/svn_error_codes.h:400
+#: include/svn_error_codes.h:405
 msgid "Filesystem directory has no such entry"
 msgstr "Filsystemets katalog har ingen slik post"
 
-#: include/svn_error_codes.h:404
+#: include/svn_error_codes.h:409
 msgid "Filesystem has no such representation"
 msgstr "Filsystemet har ingen slik representasjon"
 
-#: include/svn_error_codes.h:408
+#: include/svn_error_codes.h:413
 msgid "Filesystem has no such string"
 msgstr "Filsystemet har ingen slik streng"
 
-#: include/svn_error_codes.h:412
+#: include/svn_error_codes.h:417
 msgid "Filesystem has no such copy"
 msgstr "Filsystemet har ingen slik kopi"
 
-#: include/svn_error_codes.h:416
+#: include/svn_error_codes.h:421
 msgid "The specified transaction is not mutable"
 msgstr "Transaksjonen kan ikke endres"
 
-#: include/svn_error_codes.h:420
+#: include/svn_error_codes.h:425
 msgid "Filesystem has no item"
 msgstr "Filsystemet har ingen objekt"
 
-#: include/svn_error_codes.h:424
+#: include/svn_error_codes.h:429
 msgid "Filesystem has no such node-rev-id"
 msgstr "Filsystemet har ingen slik node-rev-id"
 
-#: include/svn_error_codes.h:428
+#: include/svn_error_codes.h:433
 msgid "String does not represent a node or node-rev-id"
 msgstr "Tekststrengen representerer ikke en node eller node-rev-id"
 
-#: include/svn_error_codes.h:432
+#: include/svn_error_codes.h:437
 msgid "Name does not refer to a filesystem directory"
 msgstr "Navnet refererer ikke til noen katalog i filsystemet"
 
-#: include/svn_error_codes.h:436
+#: include/svn_error_codes.h:441
 msgid "Name does not refer to a filesystem file"
 msgstr "Navnet refererer ikke til noen fil i filsystemet"
 
-#: include/svn_error_codes.h:440
+#: include/svn_error_codes.h:445
 msgid "Name is not a single path component"
 msgstr "Navnet er ikke en enkelt filstidel"
 
-#: include/svn_error_codes.h:444
+#: include/svn_error_codes.h:449
 msgid "Attempt to change immutable filesystem node"
 msgstr "Forsøk på å endre node i filsystemet som ikke kan endres"
 
-#: include/svn_error_codes.h:448
+#: include/svn_error_codes.h:453
 msgid "Item already exists in filesystem"
 msgstr "Objektet finnes allerede i filsystemet"
 
-#: include/svn_error_codes.h:452
+#: include/svn_error_codes.h:457
 msgid "Attempt to remove or recreate fs root dir"
 msgstr "Forsøk på å fjerne eller lage roten i filsystemet på nytt"
 
-#: include/svn_error_codes.h:456
+#: include/svn_error_codes.h:461
 msgid "Object is not a transaction root"
 msgstr "Objektet er ikke en transaksjonsrot"
 
-#: include/svn_error_codes.h:460
+#: include/svn_error_codes.h:465
 msgid "Object is not a revision root"
 msgstr "Objektet er ikke en revisjonsrot"
 
-#: include/svn_error_codes.h:464
+#: include/svn_error_codes.h:469
 msgid "Merge conflict during commit"
 msgstr "Konflikt med fletting under innsending"
 
-#: include/svn_error_codes.h:468
+#: include/svn_error_codes.h:473
 msgid "A representation vanished or changed between reads"
 msgstr "En representasjon forsvant eller ble endret mellom lesninger"
 
-#: include/svn_error_codes.h:472
+#: include/svn_error_codes.h:477
 msgid "Tried to change an immutable representation"
 msgstr "Forsøk på å endre en representasjon som ikke kan endres"
 
-#: include/svn_error_codes.h:476
+#: include/svn_error_codes.h:481
 msgid "Malformed skeleton data"
 msgstr "Ugyldige skjelettdata"
 
-#: include/svn_error_codes.h:480
+#: include/svn_error_codes.h:485
 msgid "Transaction is out of date"
 msgstr "Transaksjonen er uaktuell"
 
-#: include/svn_error_codes.h:484
+#: include/svn_error_codes.h:489
 msgid "Berkeley DB error"
 msgstr "Berkeley DB-feil"
 
-#: include/svn_error_codes.h:488
+#: include/svn_error_codes.h:493
 msgid "Berkeley DB deadlock error"
 msgstr "Vranglås-feil i Berkeley DB"
 
-#: include/svn_error_codes.h:492
+#: include/svn_error_codes.h:497
 msgid "Transaction is dead"
 msgstr "Transaksjonen er død"
 
-#: include/svn_error_codes.h:496
+#: include/svn_error_codes.h:501
 msgid "Transaction is not dead"
 msgstr "Transaksjonen er ikke død"
 
-#: include/svn_error_codes.h:501
+#: include/svn_error_codes.h:506
 msgid "Unknown FS type"
 msgstr "Filsystemtypen er ukjent"
 
-#: include/svn_error_codes.h:507
+#: include/svn_error_codes.h:512
 msgid "The repository is locked, perhaps for db recovery"
 msgstr "Depotet er låst, muligens på grunn av gjenopprettelse av databasen"
 
-#: include/svn_error_codes.h:511
+#: include/svn_error_codes.h:516
 msgid "A repository hook failed"
 msgstr "En påhakning i depotet feilet"
 
-#: include/svn_error_codes.h:515
+#: include/svn_error_codes.h:520
 msgid "Incorrect arguments supplied"
 msgstr "Det er gitt feilaktige argument"
 
-#: include/svn_error_codes.h:519
+#: include/svn_error_codes.h:524
 msgid "A report cannot be generated because no data was supplied"
 msgstr "En rapport kan ikke genereres fordi data ikke ble gitt"
 
-#: include/svn_error_codes.h:523
+#: include/svn_error_codes.h:528
 msgid "Bogus revision report"
 msgstr "Ugyldig revisjonsrapport"
 
-#: include/svn_error_codes.h:527
+#: include/svn_error_codes.h:532
 msgid "Unsupported repository version"
 msgstr "Depotets versjon støttes ikke"
 
-#: include/svn_error_codes.h:531
+#: include/svn_error_codes.h:536
 msgid "Disabled repository feature"
 msgstr "Avslått funksjon i depotet"
 
-#: include/svn_error_codes.h:535
+#: include/svn_error_codes.h:540
 msgid "Error running post-commit hook"
 msgstr "Feil ved kjøring av post-innsendingshake"
 
-#: include/svn_error_codes.h:541
+#: include/svn_error_codes.h:546
 msgid "Bad URL passed to RA layer"
 msgstr "Feilaktig nettadresse sendt til RA-lag"
 
-#: include/svn_error_codes.h:545
+#: include/svn_error_codes.h:550
 msgid "Authorization failed"
 msgstr "Autorisasjonen feilet"
 
-#: include/svn_error_codes.h:549
+#: include/svn_error_codes.h:554
 msgid "Unknown authorization method"
 msgstr "Autorisasjonsmetoden er ukjent"
 
-#: include/svn_error_codes.h:553
+#: include/svn_error_codes.h:558
 msgid "Repository access method not implemented"
 msgstr "Depotet er ikke forberedt for denne tilgangsmetoden"
 
-#: include/svn_error_codes.h:557
+#: include/svn_error_codes.h:562
 msgid "Item is out-of-date"
 msgstr "Objektet er uaktuelt"
 
-#: include/svn_error_codes.h:561
+#: include/svn_error_codes.h:566
 msgid "Repository has no UUID"
 msgstr "Depotet mangler UUID"
 
-#: include/svn_error_codes.h:565
+#: include/svn_error_codes.h:570
 msgid "Unsupported RA plugin ABI version"
 msgstr "RA-programtilleggets ABI-versjon støttes ikke"
 
-#: include/svn_error_codes.h:571
+#: include/svn_error_codes.h:576
 msgid "RA layer failed to init socket layer"
 msgstr "RA-laget kunne ikke igangsette sokkel-lag"
 
-#: include/svn_error_codes.h:575
+#: include/svn_error_codes.h:580
 msgid "RA layer failed to create HTTP request"
 msgstr "RA-lag kunne ikke utføre HTTP-forespørsel"
 
-#: include/svn_error_codes.h:579
+#: include/svn_error_codes.h:584
 msgid "RA layer request failed"
 msgstr "Forespørsel feilet i RA-lag"
 
-#: include/svn_error_codes.h:583
+#: include/svn_error_codes.h:588
 msgid "RA layer didn't receive requested OPTIONS info"
 msgstr "RA-laget mottok ikke informasjon om forespurte valg"
 
-#: include/svn_error_codes.h:587
+#: include/svn_error_codes.h:592
 msgid "RA layer failed to fetch properties"
 msgstr "RA-laget kunne ikke hente egenskapene"
 
-#: include/svn_error_codes.h:591
+#: include/svn_error_codes.h:596
 msgid "RA layer file already exists"
 msgstr "RA-lagets fil finnes allerede"
 
-#: include/svn_error_codes.h:595
+#: include/svn_error_codes.h:600
 msgid "Invalid configuration value"
 msgstr "Ugyldig verdi i innstilling"
 
-#: include/svn_error_codes.h:599
+#: include/svn_error_codes.h:604
 msgid "HTTP Path Not Found"
 msgstr "Finner ikke HTTP-sti"
 
-#: include/svn_error_codes.h:603
+#: include/svn_error_codes.h:608
 msgid "Failed to excute WebDAV PROPPATCH"
 msgstr "Kunne ikke kjøre WebDAV PROPPATCH"
 
-#: include/svn_error_codes.h:610 include/svn_error_codes.h:639
+#: include/svn_error_codes.h:615 include/svn_error_codes.h:644
 msgid "Couldn't find a repository"
 msgstr "Kunne ikke finne depotet"
 
-#: include/svn_error_codes.h:614
+#: include/svn_error_codes.h:619
 msgid "Couldn't open a repository"
 msgstr "Kunne ikke åpne depotet"
 
-#: include/svn_error_codes.h:619
+#: include/svn_error_codes.h:624
 msgid "Special code for wrapping server errors to report to client"
 msgstr ""
 "Spesialkode for innkapsling av feilmeldinger for tjener som rapporteres til "
 "klient"
 
-#: include/svn_error_codes.h:623
+#: include/svn_error_codes.h:628
 msgid "Unknown svn protocol command"
 msgstr "svn-protokollen kjenner ikke kommandoen"
 
-#: include/svn_error_codes.h:627
+#: include/svn_error_codes.h:632
 msgid "Network connection closed unexpectedly"
 msgstr "Nettverkstilkoblingen brøt plutselig"
 
-#: include/svn_error_codes.h:631
+#: include/svn_error_codes.h:636
 msgid "Network read/write error"
 msgstr "Lese-/skrivefeil i nettverket"
 
-#: include/svn_error_codes.h:635 libsvn_ra_svn/marshal.c:592
+#: include/svn_error_codes.h:640 libsvn_ra_svn/marshal.c:592
 #: libsvn_ra_svn/marshal.c:700 libsvn_ra_svn/marshal.c:727
 msgid "Malformed network data"
 msgstr "Feilaktig nettverksdata"
 
-#: include/svn_error_codes.h:643
+#: include/svn_error_codes.h:648
 msgid "Client/server version mismatch"
 msgstr "Versjon for klient/tjener samsvarer ikke"
 
-#: include/svn_error_codes.h:651
+#: include/svn_error_codes.h:656
 msgid "Credential data unavailable"
 msgstr "Akkreditiv data er utilgjengelige"
 
-#: include/svn_error_codes.h:655
+#: include/svn_error_codes.h:660
 msgid "No authentication provider available"
 msgstr "Ingen autentiseringsinstans er tilgjengelig"
 
-#: include/svn_error_codes.h:659 include/svn_error_codes.h:663
+#: include/svn_error_codes.h:664 include/svn_error_codes.h:668
 msgid "All authentication providers exhausted"
 msgstr "Alle autentiseringsinstanser er brukt opp"
 
-#: include/svn_error_codes.h:669
+#: include/svn_error_codes.h:674
 msgid "Read access denied for root of edit"
 msgstr "Lesetilgang er nektet for redigeringens opphav"
 
-#: include/svn_error_codes.h:674
+#: include/svn_error_codes.h:679
 msgid "Item is not readable."
 msgstr "Element er ikke lesbart."
 
-#: include/svn_error_codes.h:679
+#: include/svn_error_codes.h:684
 msgid "Item is partially readable."
 msgstr "Element er delvis lesbart."
 
-#: include/svn_error_codes.h:686
+#: include/svn_error_codes.h:691
 msgid "Svndiff data has invalid header"
 msgstr "Svndiff-data har ugyldig hode"
 
-#: include/svn_error_codes.h:690
+#: include/svn_error_codes.h:695
 msgid "Svndiff data contains corrupt window"
 msgstr "Svndiff-data inneholder ødelagt vindu"
 
-#: include/svn_error_codes.h:694
+#: include/svn_error_codes.h:699
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "Svndiff-data inneholder kildevisning med forflytninger baklengs"
 
-#: include/svn_error_codes.h:698
+#: include/svn_error_codes.h:703
 msgid "Svndiff data contains invalid instruction"
 msgstr "Svndiff-data inneholder ugyldig instruksjon"
 
-#: include/svn_error_codes.h:702
+#: include/svn_error_codes.h:707
 msgid "Svndiff data ends unexpectedly"
 msgstr "Svndiff-data sluttet uventet"
 
-#: include/svn_error_codes.h:708
+#: include/svn_error_codes.h:713
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache har ingen sti til SVN-filsystemet"
 
-#: include/svn_error_codes.h:712
+#: include/svn_error_codes.h:717
 msgid "Apache got a malformed URI"
 msgstr "Apache fikk en ugyldig oppsettsadresse"
 
-#: include/svn_error_codes.h:716
+#: include/svn_error_codes.h:721
 msgid "Activity not found"
 msgstr "Fant ikke aktivitet"
 
-#: include/svn_error_codes.h:720
+#: include/svn_error_codes.h:725
 msgid "Baseline incorrect"
 msgstr "Grunnlinjen er feil"
 
-#: include/svn_error_codes.h:724
+#: include/svn_error_codes.h:729
 msgid "Input/output error"
 msgstr "Feil på inndata/utdata"
 
-#: include/svn_error_codes.h:730
+#: include/svn_error_codes.h:735
 msgid "A path under version control is needed for this operation"
 msgstr "For denne operasjonen kreves en filsti under versjonskontroll"
 
-#: include/svn_error_codes.h:734
+#: include/svn_error_codes.h:739
 msgid "Repository access is needed for this operation"
 msgstr "For denne operasjonen kreves tilgang til depotet"
 
-#: include/svn_error_codes.h:738
+#: include/svn_error_codes.h:743
 msgid "Bogus revision information given"
 msgstr "Angitt revisjonsinformasjon er ugyldig"
 
-#: include/svn_error_codes.h:742
+#: include/svn_error_codes.h:747
 msgid "Attempting to commit to a URL more than once"
 msgstr "Forsøk på å sende inn til en nettadresse mer enn en gang"
 
-#: include/svn_error_codes.h:746
+#: include/svn_error_codes.h:751
 msgid "Operation does not apply to binary file"
 msgstr "Operasjonen gjelder ikke for binære filer"
 
-#: include/svn_error_codes.h:752
+#: include/svn_error_codes.h:757
 msgid "Format of an svn:externals property was invalid"
 msgstr "Formatet på egenskapen svn:externals var ugyldig"
 
-#: include/svn_error_codes.h:756
+#: include/svn_error_codes.h:761
 msgid "Attempting restricted operation for modified resource"
 msgstr "Forsøkte en begrenset operasjon på en endret ressurs"
 
-#: include/svn_error_codes.h:760
+#: include/svn_error_codes.h:765
 msgid "Operation does not apply to directory"
 msgstr "Operasjonen gjelder ikke for kataloger"
 
-#: include/svn_error_codes.h:764
+#: include/svn_error_codes.h:769
 msgid "Revision range is not allowed"
 msgstr "Ugyldig revisjonsområde"
 
-#: include/svn_error_codes.h:768
+#: include/svn_error_codes.h:773
 msgid "Inter-repository relocation not allowed"
 msgstr "Flytting mellom kodearkiv er ikke tillatt"
 
-#: include/svn_error_codes.h:772
+#: include/svn_error_codes.h:777
 msgid "Author name cannot contain a newline"
 msgstr "Forfatternavn kan ikke inneholde linjeskift"
 
-#: include/svn_error_codes.h:776
+#: include/svn_error_codes.h:781
 msgid "Bad property name"
 msgstr "Feil navn på egenskap"
 
-#: include/svn_error_codes.h:781
+#: include/svn_error_codes.h:786
 msgid "Two versioned resources are unrelated"
 msgstr "To versjonerte ressurser er urelaterte"
 
-#: include/svn_error_codes.h:788
+#: include/svn_error_codes.h:793
 msgid "A problem occurred; see later errors for details"
 msgstr "Et problem har oppstått. Se på videre feilmeldinger for detaljer"
 
-#: include/svn_error_codes.h:792
+#: include/svn_error_codes.h:797
 msgid "Failure loading plugin"
 msgstr "Feil ved innlasting av programtillegg"
 
-#: include/svn_error_codes.h:796
+#: include/svn_error_codes.h:801
 msgid "Malformed file"
 msgstr "Feil i fil"
 
-#: include/svn_error_codes.h:800
+#: include/svn_error_codes.h:805
 msgid "Incomplete data"
 msgstr "Ufullstendige data"
 
-#: include/svn_error_codes.h:804
+#: include/svn_error_codes.h:809
 msgid "Incorrect parameters given"
 msgstr "Feil parameter er oppgitt"
 
-#: include/svn_error_codes.h:808
+#: include/svn_error_codes.h:813
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr "Forsøkte en versjonert operasjon på en ikke-versjonert ressurs"
 
-#: include/svn_error_codes.h:812
+#: include/svn_error_codes.h:817
 msgid "Test failed"
 msgstr "Testen feilet"
 
-#: include/svn_error_codes.h:816
+#: include/svn_error_codes.h:821
 msgid "Trying to use an unsupported feature"
 msgstr "Forsøker å bruke en funksjon som ikke støttes"
 
-#: include/svn_error_codes.h:820
+#: include/svn_error_codes.h:825
 msgid "Unexpected or unknown property kind"
 msgstr "Uventet eller ukjent egenskapstype"
 
-#: include/svn_error_codes.h:824
+#: include/svn_error_codes.h:829
 msgid "Illegal target for the requested operation"
 msgstr "Den forespurte operasjonen har ulovlig mål"
 
-#: include/svn_error_codes.h:828
+#: include/svn_error_codes.h:833
 msgid "MD5 checksum is missing"
 msgstr "Mangler MD5-kontrollsum"
 
-#: include/svn_error_codes.h:832
+#: include/svn_error_codes.h:837
 msgid "Directory needs to be empty but is not"
 msgstr "Katalogen må være tom, men den er ikke det"
 
-#: include/svn_error_codes.h:836
+#: include/svn_error_codes.h:841
 msgid "Error calling external program"
 msgstr "Feil under anrop til eksternt program"
 
-#: include/svn_error_codes.h:840
+#: include/svn_error_codes.h:845
 msgid "Python exception has been set with the error"
 msgstr "Et Python-unntak er satt for feilen"
 
-#: include/svn_error_codes.h:844
+#: include/svn_error_codes.h:849
 msgid "A checksum mismatch occurred"
 msgstr "Kontrollsummene stemmer ikke"
 
-#: include/svn_error_codes.h:848
+#: include/svn_error_codes.h:853
 msgid "The operation was interrupted"
 msgstr "Operasjonen ble avbrutt"
 
-#: include/svn_error_codes.h:852
+#: include/svn_error_codes.h:857
 msgid "The specified diff option is not supported"
 msgstr "Det angitte diff-valget er ikke støttet"
 
-#: include/svn_error_codes.h:856
+#: include/svn_error_codes.h:861
 msgid "Property not found"
 msgstr "Fant ikke egenskap"
 
-#: include/svn_error_codes.h:860
+#: include/svn_error_codes.h:865
 msgid "No auth file path available"
 msgstr "Søkesti til autentiseringsfil er utilgjengelig"
 
-#: include/svn_error_codes.h:865
+#: include/svn_error_codes.h:870
 msgid "Incompatible library version"
 msgstr "Bibliotekversjonen er ikke kompatibel"
 
-#: include/svn_error_codes.h:871
+#: include/svn_error_codes.h:876
 msgid "Client error in parsing arguments"
 msgstr "Klientfeil under analysering av argumenter"
 
-#: include/svn_error_codes.h:875
+#: include/svn_error_codes.h:880
 msgid "Not enough args provided"
 msgstr "For få argumenter"
 
-#: include/svn_error_codes.h:879
+#: include/svn_error_codes.h:884
 msgid "Mutually exclusive arguments specified"
 msgstr "Disse argumentene kan ikke brukes samtidig"
 
-#: include/svn_error_codes.h:883
+#: include/svn_error_codes.h:888
 msgid "Attempted command in administrative dir"
 msgstr "Forsøk på kommando i administrativ katalog"
 
-#: include/svn_error_codes.h:887
+#: include/svn_error_codes.h:892
 msgid "The log message file is under version control"
 msgstr "Loggmeldingen er under versjonskontroll"
 
-#: include/svn_error_codes.h:891
+#: include/svn_error_codes.h:896
 msgid "The log message is a pathname"
 msgstr "Loggmeldingen er en søkesti"
 
-#: include/svn_error_codes.h:895
+#: include/svn_error_codes.h:900
 msgid "Committing in directory scheduled for addition"
 msgstr "Sender inn katalog som er planlagt for tilføying"
 
-#: include/svn_error_codes.h:899
+#: include/svn_error_codes.h:904
 msgid "No external editor available"
 msgstr "Ingen ekstern redigerer er tilgjengelig"
 
-#: include/svn_error_codes.h:903
+#: include/svn_error_codes.h:908
 msgid "Something is wrong with the log message's contents"
 msgstr "Noe er galt i loggmeldingens innhold"
 
@@ -2509,21 +2521,21 @@ msgstr "Feil under rekursiv tillegging av '%s'"
 msgid "Can't close directory '%s'"
 msgstr "Kan ikke lukke katalogen '%s'"
 
-#: libsvn_client/blame.c:389 libsvn_client/blame.c:766
+#: libsvn_client/blame.c:383 libsvn_client/blame.c:760
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "Kan ikke beregne 'blame'-informasjon for binær fil '%s'"
 
-#: libsvn_client/blame.c:549
+#: libsvn_client/blame.c:543
 msgid "Start revision must precede end revision"
 msgstr "Startrevisjonen må angis før sluttrevisjonen"
 
-#: libsvn_client/blame.c:652 libsvn_client/cat.c:65
+#: libsvn_client/blame.c:646 libsvn_client/cat.c:65
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "URL-en '%s' refererer til en katalog"
 
-#: libsvn_client/blame.c:724
+#: libsvn_client/blame.c:718
 #, c-format
 msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
 msgstr ""
@@ -2648,13 +2660,13 @@ msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 
 #: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
-#: libsvn_client/diff.c:1206 libsvn_client/diff.c:1856
-#: libsvn_client/diff.c:2291 libsvn_client/diff.c:2396
+#: libsvn_client/diff.c:1230 libsvn_client/diff.c:1880
+#: libsvn_client/diff.c:2315 libsvn_client/diff.c:2421 libsvn_client/log.c:131
 #: libsvn_client/prop_commands.c:171 libsvn_client/prop_commands.c:387
 #: libsvn_client/prop_commands.c:538 libsvn_client/prop_commands.c:881
-#: libsvn_client/revisions.c:92 libsvn_client/status.c:120
-#: libsvn_client/status.c:169 libsvn_client/switch.c:114
-#: libsvn_client/update.c:85 libsvn_wc/adm_ops.c:2095 libsvn_wc/copy.c:304
+#: libsvn_client/revisions.c:92 libsvn_client/status.c:125
+#: libsvn_client/status.c:190 libsvn_client/switch.c:114
+#: libsvn_client/update.c:85 libsvn_wc/adm_ops.c:2095 libsvn_wc/copy.c:387
 #: libsvn_wc/entries.c:1374 libsvn_wc/entries.c:1793 libsvn_wc/props.c:282
 #: libsvn_wc/questions.c:171
 #, c-format
@@ -2846,30 +2858,30 @@ msgstr "'%s' er ikke støttet"
 
 #. xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
 #. strings are used to tag onto a filename in case of a merge conflict
-#: libsvn_client/diff.c:659
+#: libsvn_client/diff.c:662
 msgid ".working"
 msgstr ".working"
 
-#: libsvn_client/diff.c:661
+#: libsvn_client/diff.c:664
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-left.r%ld"
 
-#: libsvn_client/diff.c:664
+#: libsvn_client/diff.c:667
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1262 libsvn_client/diff.c:1963
-#: libsvn_client/diff.c:2043
+#: libsvn_client/diff.c:1286 libsvn_client/diff.c:1987
+#: libsvn_client/diff.c:2067
 msgid "Not all required revisions are specified"
 msgstr "Noen nødvendige revisjoner er ikke spesifisert"
 
-#: libsvn_client/diff.c:1551
+#: libsvn_client/diff.c:1575
 msgid "Sorry, svn_client_diff was called in a way that is not yet supported"
 msgstr "svn_client_diff ble kalt opp på en måte som foreløpig mangler støtte"
 
-#: libsvn_client/diff.c:1591
+#: libsvn_client/diff.c:1615
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
@@ -2877,22 +2889,22 @@ msgstr ""
 "For øyeblikket støttes kun forskjeller mellom filstiers tekstbase og deres "
 "arbeidsfiler"
 
-#: libsvn_client/diff.c:1723 libsvn_client/diff.c:1728
+#: libsvn_client/diff.c:1747 libsvn_client/diff.c:1752
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "'%s' ble ikke funnet i depotet ved revisjon %ld"
 
-#: libsvn_client/diff.c:1859 libsvn_client/switch.c:117
+#: libsvn_client/diff.c:1883 libsvn_client/switch.c:117
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "Katalogen '%s' mangler adresse"
 
-#: libsvn_client/diff.c:2054
+#: libsvn_client/diff.c:2078
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Minst én revisjon må være ikke-lokal for en bundet diff"
 
-#: libsvn_client/diff.c:2268 libsvn_client/diff.c:2273
-#: libsvn_client/diff.c:2384 libsvn_client/export.c:737 libsvn_client/ra.c:694
+#: libsvn_client/diff.c:2292 libsvn_client/diff.c:2297
+#: libsvn_client/diff.c:2409 libsvn_client/export.c:739 libsvn_client/ra.c:694
 #: libsvn_client/ra.c:814
 #, c-format
 msgid "'%s' has no URL"
@@ -2903,25 +2915,25 @@ msgstr "'%s' har ingen nettadresse"
 msgid "'%s' is not a valid EOL value"
 msgstr "'%s' er ikke en gyldig EOL-verdi"
 
-#: libsvn_client/export.c:143
+#: libsvn_client/export.c:144
 msgid "Destination directory exists, and will not be overwritten unless forced"
 msgstr "Målkatalogen finnes allerede og vil ikke bli overskrevet uten tvang"
 
-#: libsvn_client/export.c:272
+#: libsvn_client/export.c:274
 msgid "(local)"
 msgstr "(lokal)"
 
-#: libsvn_client/export.c:330 libsvn_client/export.c:472
+#: libsvn_client/export.c:332 libsvn_client/export.c:474
 #, c-format
 msgid "'%s' exists and is not a directory"
 msgstr "'%s' finnes og er ikke en katalog"
 
-#: libsvn_client/export.c:333 libsvn_client/export.c:476
+#: libsvn_client/export.c:335 libsvn_client/export.c:478
 #, c-format
 msgid "'%s' already exists"
 msgstr "'%s' finnes allerede"
 
-#: libsvn_client/export.c:647 libsvn_wc/update_editor.c:1584
+#: libsvn_client/export.c:649 libsvn_wc/update_editor.c:1584
 #: libsvn_wc/update_editor.c:2331
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
@@ -2931,13 +2943,13 @@ msgstr "Kontrollsum for '%s' er feil. Forventet: '%s', gjeldende: '%s'"
 msgid "Missing required revision specification"
 msgstr "Mangler påkrevet revisjonsspesifikasjon"
 
-#: libsvn_client/log.c:145 libsvn_client/status.c:173
+#: libsvn_client/log.c:137 libsvn_client/status.c:194
 #: libsvn_client/update.c:88
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "Posten '%s' mangler nettadresse"
 
-#: libsvn_client/log.c:308
+#: libsvn_client/log.c:300
 msgid "No commits in repository."
 msgstr "Ingen innsendinger i depotet"
 
@@ -3194,7 +3206,7 @@ msgstr "Misformet copyroot-linje i node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Misformet copyfrom-linje i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2945
+#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2937
 msgid "Attempted to write to non-transaction"
 msgstr "Forsøk på å skrive til en ikke-transaksjon"
 
@@ -3222,101 +3234,101 @@ msgstr "Siste linje i revisjonsfil er lengre enn 64 tegn"
 msgid "Final line in revision file missing space"
 msgstr "Siste linje i revisjonsfil mangler mellomrom"
 
-#: libsvn_fs_fs/fs_fs.c:990 libsvn_fs_fs/fs_fs.c:1022
-#: libsvn_fs_fs/fs_fs.c:1050 libsvn_repos/log.c:239 libsvn_repos/log.c:243
+#: libsvn_fs_fs/fs_fs.c:990 libsvn_fs_fs/fs_fs.c:1042 libsvn_repos/log.c:239
+#: libsvn_repos/log.c:243
 #, c-format
 msgid "No such revision %ld"
 msgstr "Ingen slik revisjon %ld"
 
-#: libsvn_fs_fs/fs_fs.c:1125
+#: libsvn_fs_fs/fs_fs.c:1117
 msgid "Malformed svndiff data in representation"
 msgstr "Misformet svndiff-data i fremstillingen"
 
-#: libsvn_fs_fs/fs_fs.c:1241 libsvn_fs_fs/fs_fs.c:1261
-#: libsvn_fs_fs/fs_fs.c:1274
+#: libsvn_fs_fs/fs_fs.c:1233 libsvn_fs_fs/fs_fs.c:1253
+#: libsvn_fs_fs/fs_fs.c:1266
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr ""
 "Lesing av et svndiff-vindu førte til lesing forbi slutten av fremstillingen"
 
-#: libsvn_fs_fs/fs_fs.c:1363
+#: libsvn_fs_fs/fs_fs.c:1355
 msgid "svndiff data requested non-existent source"
 msgstr "svndiff-data forespurte ikke-eksisterende kilde"
 
-#: libsvn_fs_fs/fs_fs.c:1369
+#: libsvn_fs_fs/fs_fs.c:1361
 msgid "svndiff requested position beyond end of stream"
 msgstr "svndiff forespurte posisjon forbi slutten av datastrømmen"
 
-#: libsvn_fs_fs/fs_fs.c:1391
+#: libsvn_fs_fs/fs_fs.c:1383
 msgid "svndiff window length is corrupt"
 msgstr "Korrupt vindulengde for svndiff"
 
-#: libsvn_fs_fs/fs_fs.c:1566 libsvn_fs_fs/fs_fs.c:1579
-#: libsvn_fs_fs/fs_fs.c:1585
+#: libsvn_fs_fs/fs_fs.c:1558 libsvn_fs_fs/fs_fs.c:1571
+#: libsvn_fs_fs/fs_fs.c:1577
 msgid "Directory entry corrupt"
 msgstr "Kataloginnslag er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:1752
+#: libsvn_fs_fs/fs_fs.c:1744
 msgid "Missing required node revision ID"
 msgstr "Mangler påkrevet noderevisjonsidentifikator"
 
-#: libsvn_fs_fs/fs_fs.c:1762
+#: libsvn_fs_fs/fs_fs.c:1754
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "Ugyldig endringsrekkefølge: Ny node-revisjons-ID uten sletting"
 
-#: libsvn_fs_fs/fs_fs.c:1773
+#: libsvn_fs_fs/fs_fs.c:1765
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr ""
 "Ugyldig endringsrekkefølge: Annen endring enn tillegg på slettet filsti"
 
-#: libsvn_fs_fs/fs_fs.c:1918 libsvn_fs_fs/fs_fs.c:1926
-#: libsvn_fs_fs/fs_fs.c:1958 libsvn_fs_fs/fs_fs.c:1978
-#: libsvn_fs_fs/fs_fs.c:2012 libsvn_fs_fs/fs_fs.c:2017
+#: libsvn_fs_fs/fs_fs.c:1910 libsvn_fs_fs/fs_fs.c:1918
+#: libsvn_fs_fs/fs_fs.c:1950 libsvn_fs_fs/fs_fs.c:1970
+#: libsvn_fs_fs/fs_fs.c:2004 libsvn_fs_fs/fs_fs.c:2009
 msgid "Invalid changes line in rev-file"
 msgstr "Ugyldig endringslinje i rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:1951
+#: libsvn_fs_fs/fs_fs.c:1943
 msgid "Invalid change kind in rev file"
 msgstr "Ugyldig type endring i revisjonsfil"
 
-#: libsvn_fs_fs/fs_fs.c:1971
+#: libsvn_fs_fs/fs_fs.c:1963
 msgid "Invalid text-mod flag in rev-file"
 msgstr "Ugyldig text-mod-merke i rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:1991
+#: libsvn_fs_fs/fs_fs.c:1983
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ugyldig prop-mod-merke i rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:2174
+#: libsvn_fs_fs/fs_fs.c:2166
 msgid "Copying from transactions not allowed"
 msgstr "Kopiering fra transaksjoner er ikke tillatt"
 
-#: libsvn_fs_fs/fs_fs.c:2416 libsvn_fs_fs/fs_fs.c:2423
+#: libsvn_fs_fs/fs_fs.c:2408 libsvn_fs_fs/fs_fs.c:2415
 msgid "next-id file corrupt"
 msgstr "next-id-fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:2649
+#: libsvn_fs_fs/fs_fs.c:2641
 msgid "Invalid change type"
 msgstr "Ugyldig endringstype"
 
-#: libsvn_fs_fs/fs_fs.c:2964
+#: libsvn_fs_fs/fs_fs.c:2956
 msgid "Can't set text contents of a directory"
 msgstr "Kan ikke sette tekstinnholdet til en katalog"
 
-#: libsvn_fs_fs/fs_fs.c:3054 libsvn_fs_fs/fs_fs.c:3059
-#: libsvn_fs_fs/fs_fs.c:3066
+#: libsvn_fs_fs/fs_fs.c:3046 libsvn_fs_fs/fs_fs.c:3051
+#: libsvn_fs_fs/fs_fs.c:3058
 msgid "Corrupt current file"
 msgstr "Gjeldende fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:3354
+#: libsvn_fs_fs/fs_fs.c:3346
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Kan ikke endre filrettigheter på '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3487
+#: libsvn_fs_fs/fs_fs.c:3479
 msgid "Transaction out of date"
 msgstr "Transaksjonen er foreldet"
 
-#: libsvn_fs_fs/fs_fs.c:3728
+#: libsvn_fs_fs/fs_fs.c:3718
 msgid "No such transaction"
 msgstr "Ingen slik transaksjon"
 
@@ -3651,12 +3663,12 @@ msgstr "Lokal URL '%s' inneholder ikke 'file://'-prefiks"
 msgid "Local URL '%s' contains only a hostname, no path"
 msgstr "Lokal URL '%s' inneholder bare et vertsnavn, ingen sti"
 
-#: libsvn_ra_local/split_url.c:66
+#: libsvn_ra_local/split_url.c:74
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "Lokal URL '%s' inneholder vertsnavn som ikke er støttet"
 
-#: libsvn_ra_local/split_url.c:109 libsvn_ra_local/split_url.c:116
+#: libsvn_ra_local/split_url.c:124 libsvn_ra_local/split_url.c:131
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "Kunne ikke åpne depotet '%s'"
@@ -4271,12 +4283,12 @@ msgstr ""
 "Net/).\n"
 "\n"
 
-#: libsvn_subr/opt.c:760
+#: libsvn_subr/opt.c:762
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "Skriv '%s help' for bruk.\n"
 
-#: libsvn_subr/subst.c:946 libsvn_wc/props.c:986
+#: libsvn_subr/subst.c:946 libsvn_wc/props.c:975
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "Filen '%s' har ikke ensartede linjeskift"
@@ -4336,8 +4348,8 @@ msgstr ""
 "Din .svn/tmp-katalog mangler kanskje eller er ødelagt. Kjør 'svn cleanup'  "
 "og prøv igjen"
 
-#: libsvn_wc/adm_files.c:626 libsvn_wc/adm_files.c:701 libsvn_wc/lock.c:374
-#: libsvn_wc/lock.c:599
+#: libsvn_wc/adm_files.c:626 libsvn_wc/adm_files.c:701 libsvn_wc/lock.c:375
+#: libsvn_wc/lock.c:600
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "'%s' er ikke en arbeidskopi"
@@ -4461,28 +4473,28 @@ msgstr "Ukjent eller uventet type av filstien '%s':"
 msgid "File '%s' has local modifications"
 msgstr "Filen '%s' har lokale endringer"
 
-#: libsvn_wc/copy.c:149
+#: libsvn_wc/copy.c:150
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' finnes allerede og er i veien"
 
-#: libsvn_wc/copy.c:161
+#: libsvn_wc/copy.c:162
 #, c-format
 msgid ""
 "'%s' is scheduled for deletion; it must be committed before being overwritten"
 msgstr "'%s' er klarert for sletting og må sendes inn før den overskrives"
 
-#: libsvn_wc/copy.c:166
+#: libsvn_wc/copy.c:167
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "Objektet '%s' er allerede versjonert"
 
-#: libsvn_wc/copy.c:177
+#: libsvn_wc/copy.c:178
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr "Kan ikke kopiere eller flytte '%s': Den er ikke under versjonskontroll"
 
-#: libsvn_wc/copy.c:184
+#: libsvn_wc/copy.c:185
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -4491,7 +4503,7 @@ msgstr ""
 "Kan ikke kopiere eller flytte '%s': Den er foreløpig ikke under "
 "versjonskontroll, prøv innsending først"
 
-#: libsvn_wc/copy.c:310
+#: libsvn_wc/copy.c:393
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -4499,6 +4511,11 @@ msgid ""
 msgstr ""
 "Kan ikke kopiere eller flytte '%s': Den er foreløpig ikke i depotet. Prøv "
 "innsending først"
+
+#: libsvn_wc/copy.c:468
+#, c-format
+msgid "Cannot copy to '%s' as it is scheduled for deletion"
+msgstr "Kan ikke kopiere til '%s' fordi den er klargjort for sletting"
 
 #: libsvn_wc/entries.c:119
 #, c-format
@@ -4642,33 +4659,33 @@ msgstr "'%s' har en ukjent nodetype"
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "Fant '%s' uventet: Filstien er merket som savnet"
 
-#: libsvn_wc/lock.c:158 libsvn_wc/lock.c:356
+#: libsvn_wc/lock.c:158 libsvn_wc/lock.c:357
 #, c-format
 msgid "Working copy '%s' locked"
 msgstr "Arbeidskopien '%s' er låst"
 
-#: libsvn_wc/lock.c:278
+#: libsvn_wc/lock.c:279
 #, c-format
 msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr ""
 "Filstien '%s' slutter på '%s' som ikke er støttet til denne operasjonen"
 
-#: libsvn_wc/lock.c:647
+#: libsvn_wc/lock.c:648
 #, c-format
 msgid "Working copy '%s' not locked"
 msgstr "Arbeidskopien '%s' er ikke låst"
 
-#: libsvn_wc/lock.c:841
+#: libsvn_wc/lock.c:842
 #, c-format
 msgid "Write-lock stolen in '%s'"
 msgstr "Skrivelåsen er stjålet i '%s'"
 
-#: libsvn_wc/lock.c:848
+#: libsvn_wc/lock.c:849
 #, c-format
 msgid "No write-lock in '%s'"
 msgstr "Ingen skrivelås i '%s'"
 
-#: libsvn_wc/lock.c:868
+#: libsvn_wc/lock.c:869
 #, c-format
 msgid "Lock file '%s' is not a regular file"
 msgstr "Låsfilen '%s' er ikke en vanlig fil"
@@ -4836,47 +4853,47 @@ msgstr "Feil under skriving av loggfil for '%s'"
 msgid "Unknown node kind: '%s'"
 msgstr "Ukjent nodetype: '%s'"
 
-#: libsvn_wc/props.c:777 libsvn_wc/props.c:799 libsvn_wc/props.c:893
-#: libsvn_wc/props.c:1096
+#: libsvn_wc/props.c:777 libsvn_wc/props.c:799 libsvn_wc/props.c:882
+#: libsvn_wc/props.c:1085
 msgid "Failed to load properties from disk"
 msgstr "Feilet under lesing av egenskaper fra disk"
 
-#: libsvn_wc/props.c:815 libsvn_wc/props.c:1126
+#: libsvn_wc/props.c:815 libsvn_wc/props.c:1115
 #, c-format
 msgid "Cannot write property hash for '%s'"
 msgstr "Kan ikke skrive egenskapstabell for '%s'"
 
-#: libsvn_wc/props.c:885 libsvn_wc/props.c:1017
+#: libsvn_wc/props.c:874 libsvn_wc/props.c:1006
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "Egenskapen '%s' er en oppføringsegenskap"
 
-#: libsvn_wc/props.c:929
+#: libsvn_wc/props.c:918
 #, c-format
 msgid "Cannot set '%s' on a directory (%s)"
 msgstr "Kan ikke sette '%s' på en katalog (%s)"
 
-#: libsvn_wc/props.c:937
+#: libsvn_wc/props.c:926
 #, c-format
 msgid "Cannot set '%s' on a file (%s)"
 msgstr "Kan ikke sette '%s' på en fil (%s)"
 
-#: libsvn_wc/props.c:942
+#: libsvn_wc/props.c:931
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "'%s' er ikke en fil eller katalog"
 
-#: libsvn_wc/props.c:965
+#: libsvn_wc/props.c:954
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "Filen '%s' har en binær MIME-type-egenskap"
 
-#: libsvn_wc/props.c:1539
+#: libsvn_wc/props.c:1528
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Feil mens egenskapen %s ble behandlet på '%s': '%s"
 
-#: libsvn_wc/props.c:1550
+#: libsvn_wc/props.c:1539
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target involves '.' or '..' or is an absolute "
