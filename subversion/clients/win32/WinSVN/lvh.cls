@@ -68,6 +68,9 @@ Private Sub AssignIcons(iRow As Long, status As SVNCOMLib.SVNStatus)
         If .text_status = eWCStatus_Modified Or _
            .prop_status = eWCStatus_Modified Then
             grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 6
+        ElseIf .text_status = eWCStatus_Deleted Or _
+               .prop_status = eWCStatus_Deleted Then
+            grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 8
         ElseIf .text_status = eWCStatus_Conflicted Or _
                .prop_status = eWCStatus_Conflicted Then
             grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 2
@@ -77,12 +80,9 @@ Private Sub AssignIcons(iRow As Long, status As SVNCOMLib.SVNStatus)
         ElseIf .text_status = eWCStatus_Added Or _
                .prop_status = eWCStatus_Added Then
             grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 6
-        ElseIf .text_status = eWCStatus_Deleted Or _
-               .prop_status = eWCStatus_Deleted Then
-            grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 6
         ElseIf .text_status = eWCStatus_NotInWC Or _
                .prop_status = eWCStatus_NotInWC Then
-            grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 0
+            grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 9
         Else
             grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 7
         End If
@@ -94,7 +94,7 @@ Public Function FindRow(sCol As String, s As String) As Long
     
     iCol = grdFiles.ColumnIndex(sCol)
     For i = 1 To grdFiles.Rows
-        If grdFiles.Cell(i, iCol).Text = s Then
+        If grdFiles.Cell(i, iCol).Key = s Then
             FindRow = i
             Exit Function
         End If
@@ -123,7 +123,7 @@ Public Sub PopulateSGrid(sPath As String)
         grdFiles.Cell(i, grdFiles.ColumnIndex("date")).Text = FormatDateTime(f.DateLastModified)
         grdFiles.Cell(i, grdFiles.ColumnIndex("size")).Text = Str(f.Size)
         If Not IsSVNDir Then
-            grdFiles.Cell(i, grdFiles.ColumnIndex("file")).IconIndex = 0
+            grdFiles.Cell(i, grdFiles.ColumnIndex("file")).IconIndex = 9
         End If
         i = i + 1
     Next
@@ -136,14 +136,21 @@ Public Sub PopulateSGrid(sPath As String)
             If iRow <> -1 Then
                 AssignIcons iRow, aStatus(i)
             Else
-                'grdFiles.AddRow , aStatus(i).Name
-                'grdFiles.Cell(grdFiles.Rows, grdFiles.ColumnIndex("file")).Text = aStatus(i).Name
+                grdFiles.AddRow , aStatus(i).Name
+                iRow = FindRow("file", aStatus(i).Name)
+                grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).Text = aStatus(i).Name
+                If aStatus(i).text_status = eWCStatus_Deleted Then
+                   grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 8
+                Else
+                   grdFiles.Cell(iRow, grdFiles.ColumnIndex("file")).IconIndex = 4
+                End If
+                   
             End If
         Next i
         ' Fixup any icons for files we don't know about
         For i = 1 To grdFiles.Rows
             If grdFiles.CellIcon(i, grdFiles.ColumnIndex("file")) = -1 Then
-                grdFiles.CellIcon(i, grdFiles.ColumnIndex("file")) = 0
+                grdFiles.CellIcon(i, grdFiles.ColumnIndex("file")) = 9
             End If
         Next i
     End If
@@ -151,7 +158,6 @@ Public Sub PopulateSGrid(sPath As String)
         WC.watch_dir sPath
         g_sListViewPath = sPath
     End If
-    grdFiles.AutoWidthColumn "file"
     grdFiles.Redraw = True
     
 End Sub
