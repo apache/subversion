@@ -88,6 +88,14 @@ Some ideas for the future.
    <names snipped>
 
 
+** Useful for integration with Emacs, etc.
+
+   When integrating Subversion support into Emacs vc-mode, using the
+   interactive mode wold avoid having to start a new process for each
+   operation. This wold be useful even without readline or getline.
+
+   -- Brane Cibej <brane@xbc.nu>
+
 * possible cvs-compatibility wrapper for svn
 
   Daniel Stenberg <daniel@haxx.se> wrote:
@@ -205,3 +213,167 @@ editor.
     pulled from the repository
 
     -Fitz
+
+
+* Reserved and unreserved checkouts
+
+  From Karl Fogel <kfogel@collab.net>
+
+  Brian Behlendorf <brian@collab.net> writes:
+  > I would also ask that reserved checkouts not be made impossible to
+  > do, for the same reasons.
+
+   Oh, not to worry -- nothing in the current design makes them
+  impossible to implement later.  It's a matter of the repository
+  keeping records about who has checked out what, that's all.
+
+  To prove that it's not a problem, here's an implementation:
+
+     1. Client A requests a reserved checkout of tree T
+
+     2. Server sets a non-historical property on T noting that client
+        has reserved it and sends T to client.
+
+     3. Client B tries to commit to T, the commit fails because the
+        repository notices the property.
+
+     4. Client A releases the reservation.  Server removes the
+        non-historical property.
+
+     5. Client B commits and succeeds.
+
+  With a flexible server-side hook interface, such as Subversion will
+  have, you don't even need much (any?) extra code in Subversion itself
+  to support this.
+
+
+  From Branko Cibej <brane@xbc.nu>
+
+  Jim Blandy wrote:
+  > I think the most interesting issues here are in the human interface
+  > side of things.  I designed `cvs watch' and `cvs edit', and they suck
+  > rocks.  Nobody can remember how you're supposed to do things.  Perhaps
+  > someone on the list could describe a reserved checkout interface they
+  > enjoyed using...
+
+  [snip]
+  As for user interface thingies ... Off the top of my head I'd propose
+  something like this, given the following commands: get, update, commit
+  checkout, checkin:
+
+    get:
+        create working copy, making files writable or not depending
+        on each file's reserved-checkout policy;
+
+    update:
+        update the WC, with same behaviour WRT file flags;
+
+    commit:
+        commit changes in the usual way, /without/ changing
+        file flags or lock status;
+
+    checkout:
+        update, and for files with unreserved checkout policy,
+        lock it and make it writable; With appropriate permissions,
+        can override the file's checkout policy (with a flag) until
+        the next checkin;
+
+    checkin:
+        commit, and if it was locked, unlock it and set the file
+        flag according to the file's checkout policy (meaning that
+        it might become readonly, or it might not).
+
+  Note that when I say "file", I should in fact say "object version".
+  You might want to allow unreserved checkouts on files, for instance,
+  but require reserved checkouts for directories when adding new
+  objects.
+
+
+Notice that we get paired commands: `update' vs. `checkout', `commit'
+vs. `checkin'. This means that `checkout' and `checkin' should behave
+like `update' and `commit', respectively, on files with unreserved
+checkout policy. Maybe we don't even need pairs of commands, just a
+flag for `update' to change the checkout policy for the current update?
+
+Maybe `status' should show locks on files? Perhaps another command
+would be better for that, so as not to slow down `status'. Should
+show a) locks on working-copy branch; b) locks on all branches.
+
+Users with appropriate privileges would be allowed to break locks.
+
+  -- Brane Cibej <brane@xbc.nu>
+
+
+* Handling conflicts in the client and working copy
+
+  From Branko Cibej <brane@xbc.nu>
+
+  Ben Collins-Sussman wrote:
+  > 
+  > > Branko =?iso-8859-2?Q?=C8ibej?= <brane@xbc.nu> writes:
+  > > 
+  > > I thought it should be possible for status to report that a file is
+  > > currently in conflict? After an update, of course. Oh, that would be
+  > > nice! Let's not have any ">>>>>>"'s in working copy files, let's not
+  > > have to update to see conflicts ...
+  > 
+  > 
+  > Sounds like some bells and whistles -- a good idea, but of course this
+  > goes beyond what CVS does, which is all we're trying to do at this
+  > moment.
+  > 
+  > Right now, the `status' command just grabs a version number
+  > from the repository.  Perhaps we can eventually pass an extra flag
+  > which makes it fetch the *entire* repos file and attempt to merge it
+  > in a scratch area.
+  > 
+  > Of course, this starts to blur the line between `status' and `update'.
+
+  Notice what I said above: "After an update, of course."
+
+  I see it working like this: when update detects a conflict, it stores
+  the current repository version of the file somewhere in the admin
+  directory, probably near the stored original version. Status would
+  just look if that locally stored version exists, and subsequent
+  updates would pull in a new version, or remove it if the conflict goes
+  away. Extra bonus: you can do a three-way merge locally.
+
+  >   Suppose the status command tells you that your locally modified file
+  > is currently in conflict.  What then?  What are you going to do about
+  > it?  Do you expect to see the conflict in a scratch area?  Are you
+  > going to update that one file to see the conflict?  I'm not sure I
+  > understand what itch is being scratched.
+
+  a) You don't have to do an update to check if you currently have any
+  conflics; b) you can still compile in the local copy without tripping
+  over those wakas; c) works well for binary files that can have special
+  merge tools; d) etcetera ad nauseam.
+
+
+Here's how `update', `status' and `commit' could cooperate:
+
+    update:
+        If there is a conflict, put the text of the current repository
+        version into SVN/conflicts. Could also store a diff against
+        the pristine copy in SVN/text-base, instead.
+
+        If a conflict is resolved by a later update, remove the entry
+        in SVN/conflicts.
+
+    status:
+        Report `C' instead of `M' if the entry in SVN/conflicts
+        exists. This operation is completely local.
+
+    commit:
+        Refuse commit if there is a conflict. Should not do only a
+        local check, as the user may have resolved the conflict in
+        the meantime. If successful, remove the entry in
+        SVN/conflicts.
+
+        Could have a --force flag to force the commit anyway; could
+        allow or forbid --force based on user privileges or repository
+        policy.
+
+
+Declaring a "pure" merge (see list archives, can't find that thread
+right now) could remove the entry in SVN/conflicts, too.
