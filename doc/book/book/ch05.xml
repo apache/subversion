@@ -818,6 +818,28 @@ Available subcommands:
           </varlistentry>
 
           <varlistentry>
+            <term><literal>list-dblogs</literal></term>
+            <listitem>
+              <para>Lists the paths of Berkeley DB log files
+                associated with the repository.  This list includes
+                all logfiles&mdash;those still in use by Subversion, as
+                well as those no longer in use.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>list-unused-dblogs</literal></term>
+            <listitem>
+              <para>Lists the paths of Berkeley DB log files
+                associated with, but no longer used by, the
+                repository.  You may safely remove these logfiles from
+                the repository layout, possibly archiving them for use
+                in the event that you ever need to perform a
+                catastrophic recovery of the repository.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
             <term><literal>load</literal></term>
             <listitem>
               <para>Loads a set of revisions into a repository from a
