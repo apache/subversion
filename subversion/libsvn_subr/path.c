@@ -508,6 +508,57 @@ svn_path_is_single_path_component (svn_stringbuf_t *path,
 
 /*** URI Stuff ***/
 
+
+svn_boolean_t 
+svn_path_is_url (const svn_string_t *path)
+{
+  int j;
+
+  /* ### This function is reaaaaaaaaaaaaaally stupid right now.
+     We're just going to look for:
+ 
+        (scheme)://(optional_servername)/(optional_stuff)
+
+     Where (scheme) has no ':' or '/' characters.
+
+     Someday it might be nice to have an actual URI parser here.
+  */
+
+  /* Make sure we have enough characters to even compare. */
+  if (path->len < 5)
+    return FALSE;
+
+  /* Look for the sequence '://' */
+  for (j = 0; j < path->len - 3; j++)
+    {
+      /* We hit a '/' before finding the sequence. */
+      if (path->data[j] == '/')
+        return FALSE;
+
+      /* Skip stuff up to the first ':'. */
+      if (path->data[j] != ':')
+        continue;
+
+      /* Current character is a ':' now.  It better not be the first
+         character. */
+      if (j == 0)
+        return FALSE;
+
+      /* Expecting the next two chars to be '/', and somewhere
+         thereafter another '/'. */
+      if ((path->data[j + 1] == '/')
+          && (path->data[j + 2] == '/')
+          && (strchr (path->data + j + 3, '/') != NULL))
+        return TRUE;
+      
+      return FALSE;
+    }
+     
+  return FALSE;
+}
+
+
+
 /* Here is the BNF for path components in a URI. "pchar" is a
    character in a path component.
 

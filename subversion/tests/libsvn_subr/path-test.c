@@ -126,6 +126,54 @@ test_path_split (const char **msg,
 
 
 static svn_error_t *
+test_is_url (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{
+  int i;
+
+  /* Paths to test. */
+  const char *paths[5] = { 
+    "://blah/blah",
+    "a:abb://boo/",
+    "http://svn.collab.net/repos/svn",
+    "scheme/with://slash/",
+    "file:///path/to/repository",
+  };
+
+  /* Expected results of the tests. */
+  svn_boolean_t retvals[5] = {
+    FALSE,
+    FALSE,
+    TRUE,
+    FALSE,
+    TRUE };
+
+  *msg = "test svn_path_is_url";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Now, do the tests. */
+  for (i = 0; i < 5; i++)
+    {
+      svn_boolean_t retval;
+      svn_string_t str;
+
+      str.data = paths[i];
+      str.len  = strlen (str.data);
+      retval = svn_path_is_url (&str);
+      if (retvals[i] != retval)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+           "svn_path_is_url (%s) returned %s instead of %s",
+           paths[i], retvals[i] ? "TRUE" : "FALSE", retval ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_uri_encode (const char **msg,
                  svn_boolean_t msg_only,
                  apr_pool_t *pool)
@@ -195,6 +243,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   0,
   test_path_is_child,
   test_path_split,
+  test_is_url,
   test_uri_encode,
   0
 };
