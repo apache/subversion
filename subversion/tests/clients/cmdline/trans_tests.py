@@ -73,6 +73,33 @@ path_index = svntest.actions.path_index
 #    (now throw conflicting local property mods into the picture)
 
 
+def setup_working_copy(sbox):
+  "setup a standard test working copy + files for testing translation"
+  
+  # NOTE: Only using author and revision keywords in tests for now,
+  # since they return predictable substitutions.
+  
+  # Get a default working copy all setup.
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  ### Here are the new added files
+  key1_path = os.path.join(sbox, 'key1')
+  key2_path = os.path.join(sbox, 'key2')
+  key3_path = os.path.join(sbox, 'key3')
+
+  # 'key1' has author and rev contracted keywords
+  svntest.main.file_append (key1_path, "$Author$\n$Rev$")
+
+  # 'key2' has author and rev expanded keywords
+  svntest.main.file_append (key2_path, "$Author: nobody $\n$Rev: 0 $")
+
+  # 'key3' has bogus keywords
+  svntest.main.file_append (key3_path, "$Arthur$\n$The Rev: 0$")
+      
+  return 0
+
+
 ### Helper functions for setting/removing properties
 
 # Set property NAME to VALUE for versioned PATH in the working copy.
@@ -94,6 +121,9 @@ def del_property(path, name):
 def enable_translation():
   "enable translation, check status, commit"
 
+  sbox = sandbox(basic_commit)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
   # TODO: Turn on newline conversion and/or keyword substition for all
   # sorts of files, with and without local mods, and verify that
   # status shows the right stuff.  The, commit those mods.
