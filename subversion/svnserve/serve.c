@@ -1209,7 +1209,9 @@ static svn_error_t *find_repos(const char *url, const char *root,
       pwdb_path = svn_path_join(svn_repos_conf_dir(b->repos, pool),
                                 pwdb_path, pool);
       SVN_ERR(svn_config_read(&b->pwdb, pwdb_path, TRUE, pool));
-      b->realm = apr_pstrmemdup(pool, path, strlen(repos_root));
+
+      /* Use the repository UUID as the default realm. */
+      SVN_ERR(svn_fs_get_uuid(b->fs, &b->realm, pool));
       svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,
                      SVN_CONFIG_OPTION_REALM, b->realm);
     }
