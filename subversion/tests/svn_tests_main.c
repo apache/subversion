@@ -210,6 +210,7 @@ main (int argc, char *argv[])
   svn_pool_destroy (pool);
   apr_terminate();
 
+  exit (got_error);
   return got_error;
 }
 
