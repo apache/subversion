@@ -648,15 +648,25 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
 
   if (! ras->uuid)
     {
-      const svn_string_t *value;
-      static const ne_propname uuid_propname =
-        { SVN_DAV_PROP_NS_DAV, "repository-uuid" };
+      svn_ra_dav_resource_t *rsrc;
+      const char *lopped_path;
+      const svn_string_t *uuid_propval;
 
-      SVN_ERR( svn_ra_dav__get_one_prop(&value, ras->sess, ras->url, NULL,
-                                        &uuid_propname, pool) );
-      
-      if (value && (value->len > 0))
-        ras->uuid = apr_pstrdup(ras->pool, value->data); /* cache UUID */
+      SVN_ERR (svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                     ras->sess, ras->url,
+                                                     pool) );
+
+      uuid_propval = apr_hash_get(rsrc->propset,
+                                  SVN_RA_DAV__PROP_REPOSITORY_UUID,
+                                  APR_HASH_KEY_STRING);
+      if (uuid_propval == NULL)
+        /* ### better error reporting... */
+        return svn_error_create(APR_EGENERAL, NULL,
+                                "The UUID property was not found on the "
+                                "resource or any of its parents.");
+
+      if (uuid_propval && (uuid_propval->len > 0))
+        ras->uuid = apr_pstrdup(ras->pool, uuid_propval->data); /* cache */
       else
         return svn_error_create(SVN_ERR_RA_NO_REPOS_UUID, NULL,
                                 "Please upgrade the server to 0.19 or later.");
