@@ -54,14 +54,12 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
-  * r8731
+  * r8731, r8754
     Change the version numbering scheme according to the rules in HACKING.
     Justification: Follow the agreed-on rules.
+    Notes: These changes plus a tweak: change SVN_VER_MINOR to 0, of course!
     Votes:
-      +1: brane
-      -1: kfogel  (I don't understand how this change is what it
-                   claims to be, have followed up on dev@, see thread
-                   "Re: svn commit: r8731 - trunk/subversion/include")
+      +1: brane, kfogel
 
 
 Status of 1.0.1:
