@@ -107,7 +107,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
       sprintf (msg, "closing `%s' database", name);
 
       *db_ptr = 0;
-      SVN_ERR (DB_ERR (fs, msg, db->close (db, 0)));
+      SVN_ERR (DB_WRAP (fs, msg, db->close (db, 0)));
     }
 
   return 0;
@@ -126,7 +126,7 @@ cleanup_fs (svn_fs_t *fs)
       sleep (1);
       db_err = txn_checkpoint (fs->env, 0, 0, 0);
     }
-  SVN_ERR (DB_ERR (fs, "checkpointing environment", db_err));
+  SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
       
   /* Close the databases.  */
   SVN_ERR (cleanup_fs_db (fs, &fs->versions, "versions"));
@@ -134,8 +134,8 @@ cleanup_fs (svn_fs_t *fs)
 
   /* Finally, close the environment.  */
   if (fs->env)
-    SVN_ERR (DB_ERR (fs, "closing environment",
-		     fs->env->close (fs->env, 0)));
+    SVN_ERR (DB_WRAP (fs, "closing environment",
+		      fs->env->close (fs->env, 0)));
 
   return 0;
 }
@@ -249,13 +249,13 @@ static svn_error_t *
 allocate_env (svn_fs_t *fs)
 {
   /* Allocate a Berkeley DB environment object.  */
-  SVN_ERR (DB_ERR (fs, "allocating environment object",
-		   db_env_create (&fs->env, 0)));
+  SVN_ERR (DB_WRAP (fs, "allocating environment object",
+		    db_env_create (&fs->env, 0)));
 
   /* If we detect a deadlock, select a transaction to abort at random
      from those participating in the deadlock.  */
-  SVN_ERR (DB_ERR (fs, "setting deadlock detection policy",
-		   fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM)));
+  SVN_ERR (DB_WRAP (fs, "setting deadlock detection policy",
+		    fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM)));
 
   return 0;
 }
@@ -276,14 +276,14 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
-  svn_err = DB_ERR (fs, "creating environment",
-		    fs->env->open (fs->env, path,
-				   (DB_CREATE
-				    | DB_INIT_LOCK 
-				    | DB_INIT_LOG
-				    | DB_INIT_MPOOL
-				    | DB_INIT_TXN),
-				   0666));
+  svn_err = DB_WRAP (fs, "creating environment",
+		     fs->env->open (fs->env, path,
+				    (DB_CREATE
+				     | DB_INIT_LOCK 
+				     | DB_INIT_LOG
+				     | DB_INIT_MPOOL
+				     | DB_INIT_TXN),
+				    0666));
   if (svn_err) goto error;
 
   /* Create the databases in the environment.  */
@@ -314,13 +314,13 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
-  svn_err = DB_ERR (fs, "opening environment",
-		    fs->env->open (fs->env, path,
-				   (DB_INIT_LOCK
-				    | DB_INIT_LOG
-				    | DB_INIT_MPOOL
-				    | DB_INIT_TXN),
-				   0666));
+  svn_err = DB_WRAP (fs, "opening environment",
+		     fs->env->open (fs->env, path,
+				    (DB_INIT_LOCK
+				     | DB_INIT_LOG
+				     | DB_INIT_MPOOL
+				     | DB_INIT_TXN),
+				    0666));
   if (svn_err) goto error;
 
   /* Open the various databases.  */

@@ -115,7 +115,7 @@ get_version_skel (skel_t **skel,
 			      &key, &value, DB_SET_RECNO);
   if (db_err == DB_NOTFOUND)
     return no_such_version (fs, v);
-  SVN_ERR (DB_ERR (fs, "reading version root from filesystem", db_err));
+  SVN_ERR (DB_WRAP (fs, "reading version root from filesystem", db_err));
   svn_fs__track_dbt (&value, pool);
 
   version = svn_fs__parse_skel (value.data, value.size, pool);
@@ -193,9 +193,9 @@ put_version_skel (svn_fs_t *fs,
   key.flags |= DB_DBT_USERMEM;
 
   svn_fs__set_dbt (&value, version->data, version->len);
-  SVN_ERR (DB_ERR (fs, "adding new version",
-		   fs->versions->put (fs->versions, txn, &key, &value, 
-				      DB_APPEND)));
+  SVN_ERR (DB_WRAP (fs, "adding new version",
+		    fs->versions->put (fs->versions, txn, &key, &value, 
+				       DB_APPEND)));
 
   /* Turn the record number into a Subversion version number.
      Versions are numbered starting with zero; Berkeley DB record numbers
@@ -218,12 +218,15 @@ make_versions (svn_fs_t *fs, int create)
 {
   DB *versions;
 
-  SVN_ERR (DB_ERR (fs, "allocating `versions' table object",
-		   db_create (&versions, fs->env, 0)));
-  SVN_ERR (DB_ERR (fs, "creating `versions' table",
-		   versions->open (versions, "versions", 0, DB_RECNO,
-				   create ? (DB_CREATE | DB_EXCL) : 0,
-				   0666)));
+  SVN_ERR (DB_WRAP (fs, "allocating `versions' table object",
+		    db_create (&versions, fs->env, 0)));
+  SVN_ERR (DB_WRAP (fs,
+		    (create
+		     ? "creating `versions' table"
+		     : "opening `versions' table"),
+		    versions->open (versions, "versions", 0, DB_RECNO,
+				    create ? (DB_CREATE | DB_EXCL) : 0,
+				    0666)));
 
   if (create)
     {

@@ -85,13 +85,13 @@ svn_error_t *svn_fs__dberrf (apr_pool_t *pool, int db_err,
    - FS is the Subversion filesystem we're operating on.
    - OPERATION is a gerund clause describing what we were trying to do.
    - DB_ERR is the return status from the Berkeley DB function.  */
-svn_error_t *svn_fs__check_db (svn_fs_t *fs,
-			       const char *operation,
-			       int db_err);
+svn_error_t *svn_fs__wrap_db (svn_fs_t *fs,
+			      const char *operation,
+			      int db_err);
 
 
 /* A terse wrapper for svn_fs__check_db.  */
-#define DB_ERR(fs, op, err) (svn_fs__check_db ((fs), (op), (err)))
+#define DB_WRAP(fs, op, err) (svn_fs__wrap_db ((fs), (op), (err)))
 
 
 /* Verify that FS refers to an open database; return an appropriate
