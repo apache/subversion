@@ -61,7 +61,7 @@ extern "C" {
  *
  * Modify for every released patch.
  */
-#define SVN_VER_MICRO      3
+#define SVN_VER_MICRO      4
 
 /** Library version number.
  *
