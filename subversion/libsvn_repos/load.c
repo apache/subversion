@@ -887,7 +887,14 @@ new_node_record (void **node_baton,
 {
   struct revision_baton *rb = revision_baton;
   struct parse_baton *pb = rb->pb;
-  struct node_baton *nb = make_node_baton (headers, rb, pool);
+  struct node_baton *nb;
+  
+  if (rb->rev == 0)
+    return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             "Malformed dumpstream: "
+                             "Revision 0 must not contain node records");
+
+  nb = make_node_baton (headers, rb, pool);
 
   switch (nb->action)
     {
