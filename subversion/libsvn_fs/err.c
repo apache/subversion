@@ -205,3 +205,25 @@ svn_fs__err_not_mutable (svn_fs_t *fs, const svn_fs_id_t *id)
      "attempt to modify committed node revision `%s' in filesystem `%s'",
      unparsed_id->data, fs->env_path);
 }
+
+
+svn_error_t *
+svn_fs__err_path_syntax (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_PATH_SYNTAX, 0, 0, fs->pool,
+     "search for malformed path `%s' in filesystem `%s'",
+     path, fs->env_path);
+}
+
+
+svn_error_t *
+svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_TRANSACTION, 0, 0, fs->pool,
+     "no transaction named `%s' in filesystem `%s'",
+     txn, fs->env_path);
+}

@@ -123,4 +123,11 @@ svn_error_t *svn_fs__err_corrupt_txn (svn_fs_t *fs, const char *txn);
    which is not mutable.  */
 svn_error_t *svn_fs__err_not_mutable (svn_fs_t *fs, const svn_fs_id_t *id);
 
+/* SVN_ERR_FS_PATH_SYNTAX: PATH is not a valid path name.  */
+svn_error_t *svn_fs__err_path_syntax (svn_fs_t *fs, const char *path);
+
+/* SVN_ERR_FS_NO_SUCH_TRANSACTION: there is no transaction named TXN in FS.  */
+svn_error_t *svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn);
+
+
 #endif /* SVN_LIBSVN_FS_ERR_H */
