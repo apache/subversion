@@ -87,6 +87,13 @@ section for approved changes.)
        +1: cmpilato, kfogel
 
 
+    * r8333
+      Change 'expl' to 'expt' to avoid conflict with C99 builtins.
+      Justification: avoids compile warnings, trivial & low risk
+      Votes:
+        +1: kfogel
+
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
