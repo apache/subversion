@@ -139,6 +139,16 @@ svn_client_status (apr_hash_t **statushash,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
+  svn_boolean_t strict;
+
+  /* If we're not updating, we might be getting new paths from the
+     repository, and we don't want svn_wc_statuses to error on these
+     paths. However, if we're not updating and we see a path that
+     doesn't exist in the wc, we should throw an error */
+  if (update)
+    strict = FALSE;
+  else
+    strict = TRUE;
 
   /* Ask the wc to give us a list of svn_wc_status_t structures.
      These structures contain nothing but information found in the
@@ -147,7 +157,7 @@ svn_client_status (apr_hash_t **statushash,
      Pass the GET_ALL and DESCEND flags;  this working copy function
      understands these flags too, and will return the correct set of
      structures.  */
-  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all, pool));
+  SVN_ERR (svn_wc_statuses (hash, path, descend, get_all, strict, pool));
 
 
   /* If the caller wants us to contact the repository also... */

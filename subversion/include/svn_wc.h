@@ -358,6 +358,12 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * a directory; its status will simply be stored in STATUSHASH like
  * any other.
  *
+ * If STRICT is non-zero, then if we encounter a path that is not in
+ * the wc, we'll return an error. STRICT should be zero if we're
+ * updating, as the update will catch any non wc path errors (and
+ * properly deal with files that are in the repository but missing
+ * from the wc for whatever reason).
+ *
  * Assuming PATH is a directory, then:
  * 
  * If GET_ALL is zero, then only locally-modified entries will be
@@ -374,6 +380,7 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_stringbuf_t *path,
                               svn_boolean_t descend,
                               svn_boolean_t get_all,
+                              svn_boolean_t strict,
                               apr_pool_t *pool);
 
 
