@@ -510,7 +510,7 @@ def delete_file_and_dir(sbox):
 
   outlines,errlines = svntest.main.run_svn(None, 'copy', B_path, B2_path)
   if errlines:
-    return 1
+    raise svntest.Failure
 
   expected_output = wc.State(wc_dir, {
     'A/B2'       : Item(verb='Adding'),
@@ -557,9 +557,43 @@ def delete_file_and_dir(sbox):
                                         None, None,
                                         wc_dir)
 
+  # Local mods in B2
+  B2_E_path = os.path.join(B2_path, 'E')
+  B2_lambda_path = os.path.join(B2_path, 'lambda')
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'foo_val',
+                                            B2_E_path, B2_lambda_path)
+  if errlines:
+    raise svntest.Failure
+  expected_status.tweak(
+    'A/B2/E', 'A/B2/lambda',  status=' M'
+    )
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
   # Merge rev 3 into B2
+
+  # dry-run without force fails to delete local mods
+  outlines, errlines = svntest.main.run_svn(1, 'merge', '-r', '2:3', B_url,
+                                            B2_path, '--dry-run')
+  if not errlines:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  # force dry-run to delete
   outlines, errlines = svntest.main.run_svn(None, 'merge', '-r', '2:3', B_url,
+                                            B2_path, '--dry-run', '--force')
+  if errlines:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # merge without force fails to delete local mods
+  outlines, errlines = svntest.main.run_svn(1, 'merge', '-r', '2:3', B_url,
                                             B2_path)
+  if not errlines:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # force merge to delete
+  outlines, errlines = svntest.main.run_svn(None, 'merge', '-r', '2:3', B_url,
+                                            B2_path, '--force')
   if errlines:
     raise svntest.Failure
   
@@ -1070,7 +1104,7 @@ def merge_with_implicit_target (sbox):
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
-      return 1
+      raise svntest.Failure
 
     # merge using filename for sourcepath
     out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2',
