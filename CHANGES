@@ -7,9 +7,13 @@ http://svn.collab.net/repos/svn/tags/???
  * fixed: mod_dav_svn accepting too many authors. (issue #1786)
  * fixed: create runtime config files with native EOLs. (Issue #1802)
  * fixed: recursive propset can corrupt .svn/entries (issue #1794)
- * fixed: better support for shared working copies [not finished] (issue #1509)
+ * fixed: allow shared working copies [mostly working now] (issue #1509)
  * fixed: mod_authz_svn should ignore uri on MERGE request (partial #1821)
  * fixed: svnserve assertion failure on empty error messages
+ * fixed: commit/update memory leaks when working on many targets (issue #1635)
+ * fixed: don't display repos-paths or URLs with '\' on win32.
+ * new example script:  svnserve 'sgid' wrapper.
+ * minor book fixes, new 'best-practices' doc.
 
  Developer-visible changes:
  * fixed: deprecation warning from SWIG 1.3.20_
