@@ -108,7 +108,8 @@ svn_config__win_config_path (const char **folder, int system_path,
                             : "Can't determine the user's config path"));
 }
 
-
+/* Convert UTF8, a UTF-8 encoded string, to UCS2, a UCS-2 encoded
+   string, using POOL for temporary allocations. */
 static svn_error_t *
 utf8_to_ucs2 (WCHAR **ucs2, const char *utf8, apr_pool_t *pool)
 {
@@ -125,7 +126,7 @@ utf8_to_ucs2 (WCHAR **ucs2, const char *utf8, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr (apr_err, "Can't convert config path to UCS-2");
 
-  /* Note that apr_conv_ucs2_to_utf8 does _not_ terminate the
+  /* Note that apr_conv_utf8_to_ucs2 does _not_ terminate the
      outgoing buffer. */
   (*ucs2)[outlength - outwords] = L'\0';
   return SVN_NO_ERROR;
