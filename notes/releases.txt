@@ -14,9 +14,9 @@
 
    a. Create the branch
 
-      svn cp -rHEAD -m"Create release-X.YY.Z branch" \
+      svn cp -rHEAD -m"Create release X.YY.Z branch" \
           http://svn.collab.net/repos/svn/trunk \
-          http://svn.collab.net/repos/svn/branches/release-X.YY.Z
+          http://svn.collab.net/repos/svn/branches/X.YY.Z
 
    (Note that only the release manager commits to the branch;
     everyone else continues working on trunk, and the release
@@ -24,11 +24,11 @@
 
    b. Check out a working copy of the branch
 
-      svn co http://svn.collab.net/repos/svn/branches/release-X.YY.Z
+      svn co http://svn.collab.net/repos/svn/branches/X.YY.Z
 
     or
 
-      svn switch http://svn.collab.net/repos/svn/branches/release-X.YY.Z
+      svn switch http://svn.collab.net/repos/svn/branches/X.YY.Z
 
     if you have an existing working copy
 
@@ -38,9 +38,6 @@
       apr           (see INSTALL, section I)
       apr-util      (see INSTALL, section I)
       neon          (see INSTALL, section I)
-      DocBook Tools (see doc/book/README)
-
-            *ALL* of these are needed to build Subversion.
 
       To install apr/apr-util, see INSTALL, section I.1.
 
@@ -60,15 +57,19 @@
       'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
       detailed build information.
 
-   d. Grab the latest docs from http://svnbook.red-bean.com/
+   d. Run './autogen.sh && ./configure' so the design docs can get
+      built in the branch tree (in step 4, dist.sh will move the built
+      design docs into the release sandbox).
+
+   e. Grab the latest prebuilt book from http://svnbook.red-bean.com/
 
       cd doc/book/book
       wget http://svnbook.red-bean.com/book.pdf .
       wget http://svnbook.red-bean.com/book.html .
+      cd ../../..
 
-   e. Run './autogen.sh && ./configure' so the docs can get built in
-      the branch tree (in step 4, dist.sh will move the built docs
-      into the release sandbox).
+      (The book maintainers keep those files up to date, so the
+      release manager doesn't have to rebuild the book.)
 
 4. Run './dist.sh [ARGS ...]'    (see dist.sh for details about ARGS)
    Watch dist.sh's output to make sure everything goes smoothly; when
@@ -123,19 +124,19 @@
          subversion/clients/cmdline/svn co \
                         http://svn.collab.net/repos/svn/trunk
 
-7. Post tarball to the "File sharing" section of the tigris.org web
-   site <http://subversion.tigris.org/servlets/ProjectDownloadList>:
+7. Upload the tarball to /usr/www/docroot/tarballs/ on svn.collab.net,
+   then link to it from subversion.tigris.org.  
 
    The ability to upload a public, automatically approved tarball
    requires the "Project Document - Approve" permission, which is a
    standard part of the "Download Manager" or "Content Developer"
-   roles.  If you don't have this access, make sure you
-   'Request a New Role' from the tigris web site.
+   roles.  If you don't have this access, make sure you 'Request a New
+   Role' from the tigris web site.
 
    Once Download Manager status has been granted:
 
     a. Log into http://subversion.tigris.org
-    b. Click on the 'file sharing' link (left frame at the top)
+    b. Click on the 'Downloads link (left frame at the top)
     c. Click on the 'Source tarballs' link (main frame)
     d. Click on the 'Add a file' link (top, main frame, under 'File Sharing')
     e. Fill in the following fields:
@@ -143,30 +144,16 @@
       Name: subversion-X.YY.Z.tar.gz (replace X.YY.Z with the release number)
       Status: Stable
       Description: Subversion release X.YY.Z (MD5: <md5sum of tarball>)
-      Contents:  (select 'Link, 
-		  enter http://svn.collab.net/repos/svn/tags/X.YY.Z)
+      Contents: (Link, then enter
+          http://svn.collab.net/tarballs/subversion-X.YY.Z.tar.gz)
 
     f. Click Submit
 
-   To get the MD5 checksum for the tarball, make sure you have the
-   md5sum command installed and from the release branch wc, run:
-
-          md5sum subversion-X.YY.Z.tar.gz
-
-   There will be a single line of 2 fields returned looking something like:
-
-         $ md5sum subversion-0.25.tar.gz 
-         a018220d5c790161bc712ccb7d0f1b38  subversion-0.25.tar.gz
-
-   The 32 character alpha-numeric string on the left is the checksum.
-   Use this in the Description field, and also mention it in the
-   Announcement e-mail explained below.
-
 8. Move branch into the tags directory in the repository.
 
-     svn mv http://svn.collab.net/repos/svn/branches/release-X.YY.Z \
+     svn mv http://svn.collab.net/repos/svn/branches/X.YY.Z \
           http://svn.collab.net/repos/svn/tags/X.YY.Z \
-          -m"Moved Release X.YY.Z branch to tags/"
+          -m"Moved Release X.YY.Z branch to tags/."
 
    Now that the release is public, no more changes can happen on that
    branch.  If we discover problems with the release, then we make a
@@ -194,6 +181,7 @@
 
 10. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
     and send an announcement to dev@, users@, and announce@ lists.
+    Remember to include the URL and MD5 checksum in the announcement.
 
 11. Someone with administrative access upgrade svn.collab.net to head,
-    then repeat step 5e.  This is *NOT* usually the release manager.
+    then repeat step 5e.  (This is not usually the release manager.)
