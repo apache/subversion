@@ -51,7 +51,7 @@ main (int argc, const char * const *argv)
   apr_pool_t *pool;
   svn_stringbuf_t *string, *digest_str;
   unsigned char digest[MD5_DIGESTSIZE];
-  
+
   if (apr_initialize () != APR_SUCCESS)
     {
       printf ("apr_initialize() failed.\n");
@@ -75,7 +75,10 @@ main (int argc, const char * const *argv)
 
   /* Create our expected digest. */
   if (strlen (argv[1]) != (MD5_DIGESTSIZE * 2))
-    exit (-2);
+    {
+      printf ("md5 checksum has unexpected length.\n");
+      exit (-2);
+    }
   
   /* Build the string of space-separated arguments. */
   string = svn_stringbuf_create ("", pool);
@@ -85,6 +88,8 @@ main (int argc, const char * const *argv)
       svn_stringbuf_appendcstr (string, " ");
     }
   svn_stringbuf_appendcstr (string, argv[argc - 1]);
+
+  printf ("args=%s\n", string->data);
 
   /* Now, run the MD5 digest calculation on that string. */
   apr_md5 (digest, string->data, string->len);
@@ -98,13 +103,15 @@ main (int argc, const char * const *argv)
 
   /* Exit with an error if the two digests don't match. */
   if (strcmp (argv[1], digest_str->data))
-    exit (1);
+    {
+      printf ("md5 checksum failure.\n");
+      exit (1);
+    }
 
   /* Clean up APR */
   svn_pool_destroy (pool);
   apr_terminate();
 
-  printf ("ok\n");
   exit (0);
 }
 
