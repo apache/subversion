@@ -647,7 +647,7 @@ add_change (svn_fs_t *fs,
             const char *txn_id,
             const char *path,
             const svn_fs_id_t *noderev_id,
-            svn_fs__change_kind_t change_kind,
+            svn_fs_path_change_kind_t change_kind,
             int text_mod,
             int prop_mod,
             trail_t *trail)
@@ -1027,7 +1027,7 @@ txn_body_change_node_prop (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (args->root), txn_id, 
                        args->path, svn_fs__dag_get_id (parent_path->node),
-                       svn_fs__change_modify, 0, 1, trail));
+                       svn_fs_path_change_modify, 0, 1, trail));
   
   return SVN_NO_ERROR;
 }
@@ -2320,7 +2320,7 @@ txn_body_make_dir (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs__dag_get_id (sub_dir),
-                       svn_fs__change_add, 0, 0, trail));
+                       svn_fs_path_change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2392,7 +2392,7 @@ txn_body_delete (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs__dag_get_id (parent_path->node),
-                       svn_fs__change_delete, 0, 0, trail));
+                       svn_fs_path_change_delete, 0, 0, trail));
   
   return SVN_NO_ERROR;
 }
@@ -2476,16 +2476,16 @@ txn_body_copy (void *baton,
 
   if (svn_fs_is_revision_root (from_root))
     {
-      svn_fs__change_kind_t kind;
+      svn_fs_path_change_kind_t kind;
       const char *txn_id = svn_fs_txn_root_name (to_root, trail->pool);
       dag_node_t *new_node;
 
       /* If TO_PATH already existed prior to the copy, note that this
          operation is a replacement, not an addition. */
       if (to_parent_path->node)
-        kind = svn_fs__change_replace;
+        kind = svn_fs_path_change_replace;
       else
-        kind = svn_fs__change_add;
+        kind = svn_fs_path_change_add;
 
       /* Make sure the target node's parents are mutable.  */
       SVN_ERR (make_path_mutable (to_root, to_parent_path->parent, 
@@ -2659,7 +2659,7 @@ txn_body_make_file (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        path, svn_fs__dag_get_id (child),
-                       svn_fs__change_add, 0, 0, trail));
+                       svn_fs_path_change_add, 0, 0, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2936,7 +2936,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        tb->path, svn_fs__dag_get_id (tb->node),
-                       svn_fs__change_modify, 1, 0, trail));
+                       svn_fs_path_change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;
 }
@@ -3051,7 +3051,7 @@ txn_body_apply_text (void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        tb->path, svn_fs__dag_get_id (tb->node),
-                       svn_fs__change_modify, 1, 0, trail));
+                       svn_fs_path_change_modify, 1, 0, trail));
 
   return SVN_NO_ERROR;
 }

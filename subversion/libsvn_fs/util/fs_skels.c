@@ -254,7 +254,7 @@ is_valid_copy_skel (skel_t *skel)
 
 
 static int
-is_valid_change_skel (skel_t *skel, svn_fs__change_kind_t *kind)
+is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
 {
   if ((svn_fs__list_length (skel) == 6)
       && svn_fs__matches_atom (skel->children, "change")
@@ -270,25 +270,25 @@ is_valid_change_skel (skel_t *skel, svn_fs__change_kind_t *kind)
       if (svn_fs__matches_atom (kind_skel, "add"))
         {
           if (kind)
-            *kind = svn_fs__change_add;
+            *kind = svn_fs_path_change_add;
           return 1;
         }
       if (svn_fs__matches_atom (kind_skel, "delete"))
         {
           if (kind)
-            *kind = svn_fs__change_delete;
+            *kind = svn_fs_path_change_delete;
           return 1;
         }
       if (svn_fs__matches_atom (kind_skel, "replace"))
         {
           if (kind)
-            *kind = svn_fs__change_replace;
+            *kind = svn_fs_path_change_replace;
           return 1;
         }
       if (svn_fs__matches_atom (kind_skel, "modify"))
         {
           if (kind)
-            *kind = svn_fs__change_modify;
+            *kind = svn_fs_path_change_modify;
           return 1;
         }
     }
@@ -655,7 +655,7 @@ svn_fs__parse_change_skel (svn_fs__change_t **change_p,
                            apr_pool_t *pool)
 {
   svn_fs__change_t *change;
-  svn_fs__change_kind_t kind;
+  svn_fs_path_change_kind_t kind;
 
   /* Validate the skel. */
   if (! is_valid_change_skel (skel, &kind))
@@ -1100,7 +1100,7 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
 {
   skel_t *skel;
   svn_string_t *tmp_str;
-  svn_fs__change_kind_t kind;
+  svn_fs_path_change_kind_t kind;
 
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
@@ -1120,18 +1120,17 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
   /* KIND */
   switch (change->kind)
     {
-    default:
-      break;
-    case svn_fs__change_add:
+    case svn_fs_path_change_add:
       svn_fs__prepend (svn_fs__str_atom ("add", pool), skel);
       break;
-    case svn_fs__change_delete:
+    case svn_fs_path_change_delete:
       svn_fs__prepend (svn_fs__str_atom ("delete", pool), skel);
       break;
-    case svn_fs__change_replace:
+    case svn_fs_path_change_replace:
       svn_fs__prepend (svn_fs__str_atom ("replace", pool), skel);
       break;
-    case svn_fs__change_modify:
+    case svn_fs_path_change_modify:
+    default:
       svn_fs__prepend (svn_fs__str_atom ("modify", pool), skel);
       break;
     }

@@ -232,17 +232,6 @@ typedef struct
 } svn_fs__copy_t;
 
 
-/*** Change Kind ***/
-typedef enum
-{
-  svn_fs__change_add = 1,
-  svn_fs__change_delete,
-  svn_fs__change_replace,
-  svn_fs__change_modify
-  
-} svn_fs__change_kind_t;
-
-
 /*** Change ***/
 typedef struct
 {
@@ -253,7 +242,7 @@ typedef struct
   const svn_fs_id_t *noderev_id;
 
   /* The kind of change. */
-  svn_fs__change_kind_t kind;
+  svn_fs_path_change_kind_t kind;
 
   /* Text or property mods? */
   int text_mod;

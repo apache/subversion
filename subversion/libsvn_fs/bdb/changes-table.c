@@ -140,16 +140,16 @@ merge_change (apr_hash_t *changes,
          revision ID as our last change except where the last change
          was a deletion. */
       if ((! svn_fs__id_eq (old_change->noderev_id, change->noderev_id))
-          && (old_change->kind != svn_fs__change_delete))
+          && (old_change->kind != svn_fs_path_change_delete))
         return svn_error_create 
           (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
            "Invalid change ordering: new node revision ID without delete");
 
       /* Sanity check:  an add or replacement must be the first thing
          to follow a deletion. */
-      if ((old_change->kind == svn_fs__change_delete)
-          && (! ((change->kind == svn_fs__change_add) 
-                 || (change->kind == svn_fs__change_replace))))
+      if ((old_change->kind == svn_fs_path_change_delete)
+          && (! ((change->kind == svn_fs_path_change_add) 
+                 || (change->kind == svn_fs_path_change_replace))))
         return svn_error_create 
           (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
            "Invalid change ordering: non-add change on deleted path");
@@ -157,31 +157,28 @@ merge_change (apr_hash_t *changes,
       /* Now, merge that change in. */
       switch (change->kind)
         {
-        case svn_fs__change_delete:
+        case svn_fs_path_change_delete:
           /* A deletion overrules all previous changes. */
-          old_change->kind = svn_fs__change_delete;
+          old_change->kind = svn_fs_path_change_delete;
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           break;
 
-        case svn_fs__change_add:
-        case svn_fs__change_replace:
-          old_change->kind = svn_fs__change_replace;
+        case svn_fs_path_change_add:
+        case svn_fs_path_change_replace:
+          old_change->kind = svn_fs_path_change_replace;
           old_change->noderev_id = svn_fs__id_copy (change->noderev_id, pool);
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           break;
 
-        case svn_fs__change_modify:
+        case svn_fs_path_change_modify:
+        default:
           if (change->text_mod)
             old_change->text_mod = 1;
           if (change->prop_mod)
             old_change->prop_mod = 1;
           break;
-
-        default:
-          /* Huh?  Ignore this change. */
-          return SVN_NO_ERROR;
         }
 
       /* Point our new_change to our (possibly modified) old_change. */

@@ -51,16 +51,16 @@ static const char *standard_changes[16][6]
       { "5",  "baz",  "5.0.5",  "modify", "1", 0  } };
 
 
-static svn_fs__change_kind_t string_to_kind (const char *str)
+static svn_fs_path_change_kind_t string_to_kind (const char *str)
 {
   if (strcmp (str, "add") == 0)
-    return svn_fs__change_add;
+    return svn_fs_path_change_add;
   if (strcmp (str, "delete") == 0)
-    return svn_fs__change_delete;
+    return svn_fs_path_change_delete;
   if (strcmp (str, "replace") == 0)
-    return svn_fs__change_replace;
+    return svn_fs_path_change_replace;
   if (strcmp (str, "modify") == 0)
-    return svn_fs__change_modify;
+    return svn_fs_path_change_modify;
   return 0;
 }
 
@@ -225,7 +225,7 @@ changes_fetch_raw (const char **msg,
       for (j = 0; j < args.raw_changes->nelts; j++)
         {
           svn_string_t *noderev_id;
-          svn_fs__change_kind_t kind;
+          svn_fs_path_change_kind_t kind;
           svn_fs__change_t *change 
             = APR_ARRAY_IDX (args.raw_changes, j, svn_fs__change_t *);
           int mod_bit = 0;
@@ -336,7 +336,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "foo";
       change->noderev_id = svn_fs_parse_id ("1.0.0", 5, pool);
-      change->kind = svn_fs__change_add;
+      change->kind = svn_fs_path_change_add;
       change->text_mod = 0;
       change->prop_mod = 1;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -344,7 +344,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "bar";
       change->noderev_id = svn_fs_parse_id ("2.0.0", 5, pool);
-      change->kind = svn_fs__change_add;
+      change->kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 1;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -352,7 +352,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "baz";
       change->noderev_id = svn_fs_parse_id ("3.0.0", 5, pool);
-      change->kind = svn_fs__change_add;
+      change->kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -362,7 +362,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "foo";
       change->noderev_id = svn_fs_parse_id ("1.0.1", 5, pool);
-      change->kind = svn_fs__change_modify;
+      change->kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -372,7 +372,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "foo";
       change->noderev_id = svn_fs_parse_id ("1.0.2", 5, pool);
-      change->kind = svn_fs__change_modify;
+      change->kind = svn_fs_path_change_modify;
       change->text_mod = 0;
       change->prop_mod = 1;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -380,7 +380,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "bar";
       change->noderev_id = svn_fs_parse_id ("2.0.2", 5, pool);
-      change->kind = svn_fs__change_modify;
+      change->kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -390,7 +390,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "baz";
       change->noderev_id = svn_fs_parse_id ("3.0.3", 5, pool);
-      change->kind = svn_fs__change_modify;
+      change->kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -400,7 +400,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "fob";
       change->noderev_id = svn_fs_parse_id ("4.0.4", 5, pool);
-      change->kind = svn_fs__change_add;
+      change->kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
@@ -410,7 +410,7 @@ get_ideal_changes (const char *txn_id,
       change = apr_palloc (pool, sizeof (*change));
       change->path = "baz";
       change->noderev_id = svn_fs_parse_id ("5.0.5", 5, pool);
-      change->kind = svn_fs__change_replace;
+      change->kind = svn_fs_path_change_replace;
       change->text_mod = 1;
       change->prop_mod = 1;
       apr_hash_set (ideal, change->path, APR_HASH_KEY_STRING, change);
