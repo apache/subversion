@@ -218,11 +218,11 @@ contents_identical_p (svn_boolean_t *identical_p,
 
   SVN_ERR_W (svn_io_file_open (&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                                pool),
-             "contents_identical_p: apr_file_open failed on file 1");
+             "contents_identical_p: open failed on file 1");
 
   SVN_ERR_W (svn_io_file_open (&file2_h, file2, APR_READ, APR_OS_DEFAULT,
                                pool),
-             "contents_identical_p: apr_file_open failed on file 2");
+             "contents_identical_p: open failed on file 2");
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
   for (status = 0; ! APR_STATUS_IS_EOF(status); )
@@ -231,14 +231,14 @@ contents_identical_p (svn_boolean_t *identical_p,
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_full() failed on %s.", 
+           "contents_identical_p: full read failed on %s.", 
            file1);
 
       status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_full() failed on %s.", 
+           "contents_identical_p: full read failed on %s.", 
            file2);
       
       if ((bytes_read1 != bytes_read2)
@@ -253,13 +253,13 @@ contents_identical_p (svn_boolean_t *identical_p,
   if (status)
     return svn_error_createf 
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_close failed on %s.", file1);
+       "contents_identical_p: failed to close %s.", file1);
 
   status = apr_file_close (file2_h);
   if (status)
     return svn_error_createf 
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_close failed on %s.", file2);
+       "contents_identical_p: failed to close %s.", file2);
 
   return SVN_NO_ERROR;
 }
