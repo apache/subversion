@@ -24,12 +24,14 @@
 #include <apr_file_io.h>
 #include <apr_file_info.h>
 #include <apr_time.h>
+#include <apr_mmap.h>
 
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_io.h"
+#include "svn_pools.h"
 
 
 typedef struct svn_diff__file_token_t
@@ -96,6 +98,23 @@ svn_diff__file_datasource_open(void *baton,
                                file_baton->path[idx]);
     }
 
+#if APR_HAS_MMAP
+  {
+    apr_mmap_t *mm;
+
+    rv = apr_mmap_create(&mm, file,
+                         0, finfo.size, APR_MMAP_READ,
+                         file_baton->pool);
+    if (rv != APR_SUCCESS)
+      {
+        return svn_error_createf(rv, NULL, "Failed to mmap file '%s'.",
+                                 file_baton->path[idx]);
+      }
+
+    file_baton->buffer[idx] = mm->mm;
+  }
+
+#else /* APR_HAS_MMAP */
   file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size);
   rv = apr_file_read_full(file, file_baton->buffer[idx], finfo.size, NULL);
   if (rv != APR_SUCCESS)
@@ -110,6 +129,7 @@ svn_diff__file_datasource_open(void *baton,
       return svn_error_createf(rv, NULL, "failed to close file '%s'.",
                                file_baton->path[idx]);
     }
+#endif /* APR_HAS_MMAP */
 
   file_baton->curp[idx] = file_baton->buffer[idx];
   file_baton->endp[idx] = file_baton->buffer[idx] + finfo.size;
@@ -205,6 +225,16 @@ svn_diff__file_token_discard(void *baton,
   file_baton->reuse_token = file_baton->token == token;
 }
 
+static
+void
+svn_diff__file_token_discard_all(void *baton)
+{
+  svn_diff__file_baton_t *file_baton = baton;
+
+  /* This will also close any open files and destroy mmap segments */
+  svn_pool_clear(file_baton->pool);
+}
+
 static const svn_diff_fns_t svn_diff__file_vtable =
 {
   svn_diff__file_datasource_open,
@@ -212,7 +242,7 @@ static const svn_diff_fns_t svn_diff__file_vtable =
   svn_diff__file_datasource_get_next_token,
   svn_diff__file_token_compare,
   svn_diff__file_token_discard,
-  NULL
+  svn_diff__file_token_discard_all
 };
 
 svn_error_t *
@@ -226,9 +256,12 @@ svn_diff_file(svn_diff_t **diff,
   memset(&baton, 0, sizeof(baton));
   baton.path[0] = original;
   baton.path[1] = modified;
-  baton.pool = pool;
+  baton.pool = svn_pool_create(pool);
 
-  return svn_diff(diff, &baton, &svn_diff__file_vtable, pool);
+  SVN_ERR(svn_diff(diff, &baton, &svn_diff__file_vtable, pool));
+
+  svn_pool_destroy(baton.pool);
+  return NULL;
 }
 
 svn_error_t *
@@ -244,9 +277,12 @@ svn_diff3_file(svn_diff_t **diff,
   baton.path[0] = original;
   baton.path[1] = modified;
   baton.path[2] = latest;
-  baton.pool = pool;
+  baton.pool = svn_pool_create(pool);
 
-  return svn_diff3(diff, &baton, &svn_diff__file_vtable, pool);
+  SVN_ERR(svn_diff3(diff, &baton, &svn_diff__file_vtable, pool));
+
+  svn_pool_destroy(baton.pool);
+  return NULL;
 }
 
 
