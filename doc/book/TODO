@@ -88,9 +88,6 @@ ch01:
 
 ch02:
 
-  - "After completing a commit to the repository, the freshly
-     committed files and directories are _AT A_ more recent working
-     revision than the rest of the working copy.
 
 ch04:
 
@@ -104,15 +101,9 @@ ch04:
      rather 405:some-specific-HEAD number.  we need to know the head
      number so we can write a good log message.
 
-   - from tatiana: seems to be an extra space in code on page
-     63. "Transmitting file data [extra space]."
 
 ch06:
 
-   - in Body text, Sally and Harry are in lowercase.  Correct these
-     throughout where they appear in the paragraphs?
 
 appA:
 
-   - be fair when we criticize 'cvs up';  many users run 'cvs up -n'
-     to preview local mods rather than just 'cvs up'.

@@ -733,7 +733,7 @@ baz
 
       <para>When running over a tunnel, authorization is primarily
         controlled by operating system permissions to the repository's
-        database files; it's very much the same as if harry were
+        database files; it's very much the same as if Harry were
         accessing the repository directly via a
         <literal>file:///</literal> URL.  If multiple system users are
         going to be accessing the repository directly, you may want to
@@ -1623,8 +1623,8 @@ harry = rw
 sally = r
 </screen>
 
-        <para>In this first example, user harry has full read and
-          write access on the
+        <para>In this first example, user <literal>harry</literal> has
+          full read and write access on the
           <filename>/branches/calc/bug-142</filename> directory in the
           <literal>calc</literal> repository, but user
           <literal>sally</literal> has read-only access.  Any other
@@ -1633,7 +1633,7 @@ sally = r
         <para>Of course, permissions <quote>inherit</quote> from
           parent to child directory.  That means that we can specify a
           subdirectory with a different access policy for
-          sally:</para>
+          Sally:</para>
 
         <screen>
 [calc:/branches/calc/bug-142]
@@ -1645,7 +1645,7 @@ sally = r
 sally = rw
 </screen>
 
-        <para>Now sally can write to the <filename>testing</filename>
+        <para>Now Sally can write to the <filename>testing</filename>
           subdirectory of the branch, but can still only read other
           parts.  Harry, meanwhile, continues to have complete
           read-write access to the whole branch.</para>
@@ -1663,7 +1663,7 @@ sally = r
 harry =
 </screen>
         
-        <para>In this example, harry has read-write access to the
+        <para>In this example, Harry has read-write access to the
           entire <filename>bug-142</filename> tree, but has absolutely no
           access at all to the <filename>secret</filename>
           subdirectory within it.</para>

@@ -201,9 +201,10 @@
       Unfortunately, because of CVS's hard-to-read status output, many
       CVS users don't take advantage of this command at all.  Instead,
       they've developed a habit of running <command>cvs up</command>
-      to quickly see their mods.  Of course, this has the side effect
-      of merging repository changes that you may not be ready to deal
-      with!</para>
+      or <command>cvs up -n</command> to quickly see their mods.  If
+      users forget to use the <option>-n</option> option, this has the
+      side effect of merging repository changes they may not be ready
+      to deal with.</para>
 
     <para>With Subversion, we've tried to remove this muddle by making
       the output of <command>svn status</command> easy to read for
