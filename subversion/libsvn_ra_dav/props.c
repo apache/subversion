@@ -405,6 +405,8 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
           apr_hash_this(hi, NULL, NULL, &ent);
           *rsrc = ent;
         }
+      else
+        *rsrc = NULL;
     }
   else
     {
@@ -416,7 +418,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
       /* ### hmmm, should have been in there... */
       return svn_error_createf(APR_EGENERAL, NULL,
                                "failed to find label \"%s\" for url \"%s\"",
-                               label, url_path);
+                               label ? label : "NULL", url_path);
     }
 
   return SVN_NO_ERROR;
