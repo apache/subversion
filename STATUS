@@ -43,7 +43,7 @@ Candidate changes:
       Bug can cause FSFS to fail to report some changed-paths, leading to
       data loss because those paths aren't included in a dump.
     Votes:
-      +1: ghudson, bliss
+      +1: ghudson, bliss, jpieper
 
   * r10800 (Issue #2031)
     Add -lstdc++ to javahl binding DSO at link-time.
@@ -67,7 +67,7 @@ Candidate changes:
     Justification:
       Crashes bad.
     Votes:
-      +1: ghudson, lundblad
+      +1: ghudson, lundblad, jpieper
 
   * r10860
     Trivial message fixes.
@@ -81,7 +81,7 @@ Candidate changes:
      complex for 1.1.0, but can go into 1.1.1 if we add a placeholder
      to the 1.1.0 API.
     Votes:
-      +1: ghudson
+      +1: ghudson, jpieper
 
   * r10772, r10858
     Allow 'svn commit' to delete schedule-delete symlinks. (issue 2045)
@@ -95,7 +95,7 @@ Candidate changes:
     Justification:
         Segfaults are bad.  One-line fix to prevent deref'ing NULL.
     Votes:
-      +1: sussman
+      +1: sussman, jpieper
       +0: (philip?  sussman is guessing here)
 
   * r10851
