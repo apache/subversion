@@ -11,7 +11,7 @@ implement a set of @dfn{repositories} and make them available to other
 programs.  No networking is required.
 
 Of course, for the initial release of Subversion, the ``server'' process
-will be Apache interacting with the Subversion server libraries.  The
+will be Apache interacting with the Subversion server libraries, a the
 ``server'' computer will be any machine running this special Apache
 process.  (@xref{Protocol}.)
 
@@ -217,28 +217,28 @@ root directory.
 
 @c ---------------------
 
-This is the same API that the client calls;  for a full explanation, see
-@xref{The repository access library}.
+This is the same API that the client calls, prefixed with @code{fs_}.
+For a full explanation, see @xref{The repository access library}.
 
 @table @code
-@item ver_t latest (repos, user)
-@item prop_t get_ver_prop (repos, user, ver, propname)
-@item proplist_t get_ver_proplist (repos, user, ver)
-@item proplist_t get_ver_propnames (repos, user, ver)
-@item node_t read (repos, user, ver, path)
-@item str_t get_node_prop (repos, user, ver, path, propname)
-@item str_t get_dirent_prop (repos, user, ver, path, propname)
-@item proplist_t get_node_proplist (repos, ver, path)
-@item proplist_t get_dirent_proplist (repos, user, ver, path)
-@item proplist_t get_node_propnames (repos, user, ver, path)
-@item proplist_t get_dirent_propnames (repos, user, ver, path)
-@item skelta_t get_status (repos, user, skelta)
-@item delta_t get_update (repos, user, skelta)
-@item delta_t get_delta (repos, user, ver1, path1, ver2, path2)
-@item diff_t get_diff (repos, user, ver1, path1, ver2, path2)
-@item token_t submit (repos, user, skelta)
-@item ver_t write (repos, user, delta, token)
-@item bool_t abandon (repos, user, token)
+@item ver_t fs_latest (repos, user)
+@item prop_t fs_get_ver_prop (repos, user, ver, propname)
+@item proplist_t fs_get_ver_proplist (repos, user, ver)
+@item proplist_t fs_get_ver_propnames (repos, user, ver)
+@item node_t fs_read (repos, user, ver, path)
+@item str_t fs_get_node_prop (repos, user, ver, path, propname)
+@item str_t fs_get_dirent_prop (repos, user, ver, path, propname)
+@item proplist_t fs_get_node_proplist (repos, ver, path)
+@item proplist_t fs_get_dirent_proplist (repos, user, ver, path)
+@item proplist_t fs_get_node_propnames (repos, user, ver, path)
+@item proplist_t fs_get_dirent_propnames (repos, user, ver, path)
+@item skelta_t fs_get_status (repos, user, skelta)
+@item delta_t fs_get_update (repos, user, skelta)
+@item delta_t fs_get_delta (repos, user, ver1, path1, ver2, path2)
+@item diff_t fs_get_diff (repos, user, ver1, path1, ver2, path2)
+@item token_t fs_submit (repos, user, skelta)
+@item ver_t fs_write (repos, user, delta, token)
+@item bool_t fs_abandon (repos, user, token)
 @end table
 
 
@@ -371,12 +371,46 @@ Subversion client.  (@xref{The repository access library}.)
 
 Specifically, note that all of the client's calls into the repository
 begin with a @code{repos} argument.  The Main Subversion Library
-provides the exact same API as the client repository library;  when it
-receives the client's function call, it examines this argument, locates
-a particular repository on disk, and then makes the filesystem
-call.
+provides the exact same API as the client repository library, prefixed
+by @code{main_}:
+
+@table @code
+@item ver_t main_latest (repos, user)
+@item prop_t main_get_ver_prop (repos, user, ver, propname)
+@item proplist_t main_get_ver_proplist (repos, user, ver)
+@item proplist_t main_get_ver_propnames (repos, user, ver)
+@item node_t main_read (repos, user, ver, path)
+@item str_t main_get_node_prop (repos, user, ver, path, propname)
+@item str_t main_get_dirent_prop (repos, user, ver, path, propname)
+@item proplist_t main_get_node_proplist (repos, ver, path)
+@item proplist_t main_get_dirent_proplist (repos, user, ver, path)
+@item proplist_t main_get_node_propnames (repos, user, ver, path)
+@item proplist_t main_get_dirent_propnames (repos, user, ver, path)
+@item skelta_t main_get_status (repos, user, skelta)
+@item delta_t main_get_update (repos, user, skelta)
+@item delta_t main_get_delta (repos, user, ver1, path1, ver2, path2)
+@item diff_t main_get_diff (repos, user, ver1, path1, ver2, path2)
+@item token_t main_submit (repos, user, skelta)
+@item ver_t main_write (repos, user, delta, token)
+@item bool_t main_abandon (repos, user, token)
+@end table
+
+These routines are ``wrappers'' that make the real filesystem calls into
+a particular repository.
 
 @subsection Policy Enforcement
+
+When starting up, svn_main will read a configuration file @file{svn.conf}
+(much like Apache's @file{httpd.conf}) which, among other things, will
+specify a list of server policies to implement.
+
+Because filesystem calls are ``wrappered'' by svn_main, it has the
+opportunity to intercept and interpret them according to policy.  
+
+For example, an administrator may wish to take a repository ``off-line''
+for backup purposes.  She can specify this in the @file{svn.conf} file,
+and any filesystem calls to the particular repository are then
+intercepted and (kindly) rejected by svn_main.
 
 
 @subsection Plug-Ins
@@ -387,32 +421,30 @@ grow forever.
 
 We define the term @dfn{plug-in} to refer to a library designed to be
 loaded into svn_main's address space.  This term is used intentionally
-(instead of "module") so as not to be confused with Apache modules.
-Each plug-in can potentially implement a new set of server "methods"
-(@xref{Methods}.)
+(instead of "module") so as not to be confused with either Apache
+modules or ``CVS-like'' modules.  Each plug-in potentially implements a
+new set of server "methods" availabe to the client.
 
-When starting up, svn_main will read a configuration file @file{svn.conf}
-(much like Apache's @file{httpd.conf}) which, among other things, will
-specify a list of available plug-ins, the new methods they provide, and
-their actual locations on disk.  If and when a client requests a
-particular method, svn_main then knows which plug-in to "auto-load" as
-necessary.
+The @file{svn.conf} file specifies a list of available plug-ins, the new
+methods they provide, and the real shared-object pathnames on disk.
+When a client requests a particular method, svn_main then knows which
+plug-in to "auto-load" as necessary.
 
 Here are some ideas for future plug-ins:
 
 @itemize @bullet
 @item
   @strong{annotate} : provides annotation of individual files (i.e. who
-  wrote which line in which version).  This is a basic command in CVS,
-  but is not critical for Subversion's first release.  By implementing
-  it later as a plug-in, the command becomes much more customizable.
+wrote which line in which version).  This is a basic command in CVS, but
+is not critical for Subversion's first release.  By implementing it
+later as a plug-in, the command becomes more customizable.
 @item
   @strong{grep} : the ability to search the Subversion filesystem
-  quickly for text or properties
+quickly for text or properties
 @item
   @strong{guile} : a plug-in which provides glue between svn_main and
-  libguile.so, thereby giving the Subversion server an extensible
-  scripting language.  (This could also be done with @strong{perl} or
-  @strong{python}.)
+libguile.so, thereby giving the Subversion server-libraries an
+extensible scripting language.  (This could also be done with
+@strong{perl} or @strong{python}.)
 @end itemize
 
