@@ -95,6 +95,9 @@ get_username (char **username,
          any cached info in the working copy (later on). */
       ab->overwrite = TRUE;
 
+      /* Store a copy of the username in the auth_baton too. */
+      ab->username = apr_pstrdup (pool, *username);
+
       return SVN_NO_ERROR;
     }
 
@@ -138,6 +141,9 @@ get_username (char **username,
                                      "Error in UID->username.");
           *username = un;                       
         }
+
+      /* Store a copy of the username in the auth_baton too. */
+      ab->username = apr_pstrdup (pool, *username);
     }
 
   return SVN_NO_ERROR;
@@ -168,6 +174,9 @@ get_password (char **password,
       /* Since we got new totally new info, it's okay to overwrite
          any cached info in the working copy (later on). */
       ab->overwrite = TRUE;
+
+      /* Store a copy of the password in the auth_baton too. */
+      ab->password = apr_pstrdup (pool, *password);
 
       return SVN_NO_ERROR;
     }
@@ -203,6 +212,9 @@ get_password (char **password,
              any cached info in the working copy (later on). */
           ab->overwrite = TRUE;
         }
+      
+      /* Store a copy of the password in the auth_baton too. */
+      ab->password = apr_pstrdup (pool, *password);
     }
   
   return SVN_NO_ERROR;
@@ -250,8 +262,7 @@ static svn_error_t *
 store_username (const char *username,
                 void *auth_baton)
 {
-  svn_client_auth_baton_t *ab = 
-    (svn_client_auth_baton_t *) auth_baton;
+  svn_client_auth_baton_t *ab = (svn_client_auth_baton_t *) auth_baton;
   
   /* Sanity check:  only store auth info if the `overwrite' flag is
      set.  This flag is set if the user was either prompted or
@@ -268,8 +279,7 @@ static svn_error_t *
 store_password (const char *password,
                 void *auth_baton)
 {
-  svn_client_auth_baton_t *ab = 
-    (svn_client_auth_baton_t *) auth_baton;
+  svn_client_auth_baton_t *ab = (svn_client_auth_baton_t *) auth_baton;
   
   /* Sanity check:  only store auth info if the `overwrite' flag is
      set.  This flag is set if the user was either prompted or
@@ -284,13 +294,16 @@ store_password (const char *password,
 
 
 static svn_error_t *
-store_user_and_pass (const char *username,
-                     const char *password,
-                     void *auth_baton)
+store_user_and_pass (void *auth_baton)
 {
-  SVN_ERR (store_username (username, auth_baton));
-  SVN_ERR (store_password (password, auth_baton));
+  svn_client_auth_baton_t *ab = (svn_client_auth_baton_t *) auth_baton;
+  
+  if (ab->username)
+    SVN_ERR (store_username (ab->username, auth_baton));
 
+  if (ab->password)
+    SVN_ERR (store_password (ab->password, auth_baton));
+  
   return SVN_NO_ERROR;
 }
 
@@ -305,8 +318,7 @@ get_authenticator (void **authenticator,
                    void *callback_baton,
                    apr_pool_t *pool)
 {
-  svn_client_auth_baton_t *cb = 
-    (svn_client_auth_baton_t *) callback_baton;
+  svn_client_auth_baton_t *cb = (svn_client_auth_baton_t *) callback_baton;
 
   /* At the moment, the callback_baton *is* the baton needed by the
      authenticator objects.  This may change. */

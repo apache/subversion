@@ -151,26 +151,19 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info (svn_ra_session_t *ras)
 {
-  /* Did we have to authenticate at some point?  */
-  if (ras->username)
-    {
-      void *a, *auth_baton;
-      svn_ra_simple_password_authenticator_t *authenticator;
-
-      SVN_ERR (ras->callbacks->get_authenticator (&a, &auth_baton, 
-                                                  SVN_RA_AUTH_SIMPLE_PASSWORD, 
-                                                  ras->callback_baton,
-                                                  ras->pool));
-      authenticator = (svn_ra_simple_password_authenticator_t *) a;      
+  void *a, *auth_baton;
+  svn_ra_simple_password_authenticator_t *authenticator;
   
-      /* If we have a auth-info storage callback, use it.  If the
-         storage callback is NULL, do nothing -- we just performed an
-         import, rather than a commit. */
-      if (authenticator->store_user_and_pass)
-        SVN_ERR (authenticator->store_user_and_pass (ras->username,
-                                                     ras->password,
-                                                     auth_baton));
-    }
+  SVN_ERR (ras->callbacks->get_authenticator (&a, &auth_baton, 
+                                              SVN_RA_AUTH_SIMPLE_PASSWORD, 
+                                              ras->callback_baton,
+                                              ras->pool));
+  authenticator = (svn_ra_simple_password_authenticator_t *) a;      
+  
+  /* If we have a auth-info storage callback, use it. */
+  if (authenticator->store_user_and_pass)
+    /* Storage will only happen if AUTH_BATON is already caching auth info. */
+    SVN_ERR (authenticator->store_user_and_pass (auth_baton));
   
   return SVN_NO_ERROR;
 }
