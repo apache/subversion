@@ -136,15 +136,17 @@ static const svn_ra_plugin_t dav_plugin = {
 
 svn_error_t *svn_ra_dav_init(int abi_version,
                              apr_pool_t *pconf,
-                             const char **url_type,
-                             const svn_ra_plugin_t **plugin)
+                             apr_hash_t *hash)
 {
   /* ### need a version number to check here... */
   if (abi_version != 0)
     ;
 
-  *url_type = "http";
-  *plugin = &dav_plugin;
+  apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
+
+  /* ### should ask neon whether it supports SSL or not, and skip this
+     ### if it doesn't. */
+  apr_hash_set (hash, "https", APR_HASH_KEY_STRING, &dav_plugin);
 
   return NULL;
 }
