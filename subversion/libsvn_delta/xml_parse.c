@@ -86,6 +86,7 @@
    NULL so that we have the ability to loop over the array easily. */
 static const char * const svn_delta__tagmap[] =
 {
+  "delta-pkg",
   "tree-delta",
   "add",
   "delete",
@@ -93,6 +94,7 @@ static const char * const svn_delta__tagmap[] =
   "file",
   "dir",
   "text-delta",
+  "text-delta-ref",
   "prop-delta",
   "set",
   NULL
@@ -316,14 +318,15 @@ do_stack_append (svn_xml__digger_t *digger,
       /* The stack contains only the "root" frame, so this is our
          first time appending. */
 
-      /* Make sure that it's indeed a tree-delta we're appending. */
-      if (new_frame->tag != svn_delta__XML_treedelta)
+      /* Make sure that it's indeed a delta-pkg we're appending. */
+      if (new_frame->tag != svn_delta__XML_deltapkg)
         return xml_validation_error (pool, tagname, FALSE);
     }
   
-  /* <tree-delta> must follow <dir> */
+  /* <tree-delta> must follow either <dir> or <delta-pkg> */
   else if ((new_frame->tag == svn_delta__XML_treedelta)
-           && (youngest_frame->tag != svn_delta__XML_dir))
+           && ((youngest_frame->tag != svn_delta__XML_dir) 
+               && (youngest_frame->tag != svn_delta__XML_deltapkg)))
     return xml_validation_error (pool, tagname, FALSE);
   
   /* <add>, <replace> must follow <tree-delta> */
@@ -357,14 +360,15 @@ do_stack_append (svn_xml__digger_t *digger,
            && (youngest_frame->tag != svn_delta__XML_dir))
     return xml_validation_error (pool, tagname, FALSE);
   
-  /* <text-delta> must follow <file> */
+  /* <text-delta> must follow either <file> or <delta-pkg> */
   else if ((new_frame->tag == svn_delta__XML_textdelta)
-           && (youngest_frame->tag != svn_delta__XML_file))
+           && ((youngest_frame->tag != svn_delta__XML_file)
+               && (youngest_frame->tag != svn_delta__XML_deltapkg)))
     return xml_validation_error (pool, tagname, FALSE);
   
   /* <set> must follow <prop-delta> */
-  else if ((new_frame->tag == svn_delta__XML_textdelta)
-           && (youngest_frame->tag != svn_delta__XML_file))
+  else if ((new_frame->tag == svn_delta__XML_set)
+           && (youngest_frame->tag != svn_delta__XML_propdelta))
     return xml_validation_error (pool, tagname, FALSE);
   
   /* ancestry information can only appear as <file> or <dir> attrs */
@@ -646,18 +650,47 @@ do_close_file (svn_xml__digger_t *digger)
   if (! (digger->editor->close_file))
     return SVN_NO_ERROR;
 
-  /* Call the editor's callback. */
-  err = (* (digger->editor->close_file)) (digger->edit_baton,
-                                           digger->stack->file_baton);
-  if (err)
-    return err;
+  /* Call the editor's callback ONLY IF the frame's file_baton isn't
+     stored in a hashtable!! */
+  if (! digger->stack->hashed)
+    {
+      err = (* (digger->editor->close_file)) (digger->edit_baton,
+                                              digger->stack->file_baton);
+      if (err)
+        return err;
+    }
 
-  /* Drop the current parsers! */
+  /* Drop the current parsers and file_baton. */
   digger->vcdiff_parser = NULL;
-
-  /* Drop the current file baton */
   digger->file_baton = NULL;
 
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Given a REF_ID key, return FILE_BATON from DIGGER's
+   postfix-hashtable. */
+static svn_error_t *
+lookup_file_baton (void **file_baton,
+                   svn_xml__digger_t *digger,
+                   svn_string_t *ref_id)
+{
+  *file_baton = apr_hash_get (digger->postfix_hash,
+                              ref_id->data,
+                              ref_id->len);
+
+  if (! *file_baton)
+    {
+      char *msg = apr_psprintf 
+        (digger->pool,
+         "lookup_file_baton: ref_id `%s' has no associated file",
+         ref_id->data);
+        
+      return svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg,
+                               NULL, digger->pool);
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -672,17 +705,61 @@ do_begin_textdelta (svn_xml__digger_t *digger)
 {
   svn_error_t *err;
   svn_txdelta_window_handler_t *window_consumer = NULL;
+  void *file_baton = NULL;
   void *consumer_baton = NULL;
 
+  /* Sanity check: skip everything if the editor doesn't know how to
+     receive text-deltas in the first place.  */
   if (digger->editor->apply_textdelta == NULL)
     return SVN_NO_ERROR;
+
+  /* Error check: if this is an "in-line" text-delta, it should NOT
+     have a ref_id field.  */
+  if (digger->stack->previous)
+    if ((digger->stack->previous->tag == svn_delta__XML_file)
+        && (digger->stack->ref_id))
+      return 
+        svn_create_error (SVN_ERR_MALFORMED_XML, 0,
+                          "do_begin_textdelta: in-line text-delta has ID.",
+                          NULL, digger->pool);
+
+  /* Error check: if this is a "postfix" text-delta, is MUST have a
+     ref_id field. */
+  if (digger->stack->previous)
+    if ((digger->stack->previous->tag == svn_delta__XML_deltapkg)
+        && (! digger->stack->ref_id))
+      return 
+        svn_create_error (SVN_ERR_MALFORMED_XML, 0,
+                          "do_begin_textdelta: postfix text-delta lacks ID.",
+                          NULL, digger->pool);
+  
+  /* Now fetch the appropriate file_baton. */
+  if (digger->stack->ref_id) 
+    {
+      /* postfix: look it up in hashtable. */
+      err = lookup_file_baton (&file_baton, digger, digger->stack->ref_id);
+      if (err)
+        return err;
+      /* for later convenience, store it inside the text-delta frame. */
+      digger->stack->file_baton = file_baton;
+    }
+  else
+    {
+      /* in-line: use file_baton from the parent <file> frame. 
+         Luckily, it happens to be stashed directly in digger, too. */
+      file_baton = digger->file_baton;
+    }
+
+
 
   /* Get a window consumer & baton! */
   err = (* (digger->editor->apply_textdelta)) (digger->edit_baton,
                                                digger->dir_baton,
-                                               digger->file_baton,
+                                               file_baton,
                                                &window_consumer,
                                                &consumer_baton);
+  if (err)
+    return err;
 
   /* Now create a vcdiff parser based on the consumer/baton we got. */  
   digger->vcdiff_parser = svn_make_vcdiff_parser (window_consumer,
@@ -690,6 +767,34 @@ do_begin_textdelta (svn_xml__digger_t *digger)
                                                   digger->pool);
   return SVN_NO_ERROR;
 }
+
+
+
+/* When we find a new <text-delta-ref> */
+static svn_error_t *
+do_begin_textdeltaref (svn_xml__digger_t *digger)
+{
+
+  /* Error check:  there *must* be a ref_id field in this frame. */
+  if (! digger->stack->ref_id)
+    return svn_create_error (SVN_ERR_MALFORMED_XML, 0,
+                             "do_begin_textdeltaref:  reference has no `id'.",
+                             NULL, digger->pool);
+
+  /* Store the parent <file> frame's `file_baton' in a hash table,
+     keyed by the ref_id string. */
+  apr_hash_set (digger->postfix_hash,
+                digger->stack->ref_id->data,
+                digger->stack->ref_id->len,
+                digger->stack->previous->file_baton);
+  
+  /* Mark the parent <file> tag, which lets us know (later on) that
+     its file_baton is stored in a hash. */
+  digger->stack->previous->hashed = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -938,6 +1043,11 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (value)
     new_frame->ancestor_version = atoi (value);
 
+  /* Set "id" in frame, if there's any such attribute in ATTS */
+  value = svn_xml_get_attr_value ("id", atts);
+  if (value)
+    new_frame->ref_id = svn_string_create (value, my_digger->pool);
+
   /* If this frame represents a tree-delta, initialize an internal
      hashtable to hold dirent names. */
   if (new_frame->tag == svn_delta__XML_treedelta)
@@ -1019,6 +1129,15 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       return;
     }
 
+  /* EVENT:  Are we starting a new text-delta?  */
+  if (new_frame->tag == svn_delta__XML_textdeltaref) 
+    {
+      err = do_begin_textdeltaref (my_digger);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+      return;
+    }
+
   /* EVENT:  Are we starting a new prop-delta?  */
   if (new_frame->tag == svn_delta__XML_propdelta) 
     {
@@ -1076,7 +1195,8 @@ xml_handle_end (void *userData, const char *name)
   /* Now look for special events that the uber-caller (of
      svn_delta_parse()) might want to know about.  */
 
-  /* EVENT:  When we get a </dir> pass back the dir_baton. */
+  /* EVENT: When we get a </dir> pass back the dir_baton and call
+     editor. */
   if (strcmp (name, "dir") == 0)
     {
       err = do_close_directory (digger);
@@ -1084,15 +1204,17 @@ xml_handle_end (void *userData, const char *name)
         signal_expat_bailout (err, digger);
     }      
 
-  /* EVENT: when we get a </file>, drop our digger's parsers. */
+  /* EVENT: when we get a </file>, drop our digger's parsers and call
+     editor. */
   if (strcmp (name, "file") == 0)
     {
+      /* closes digger->stack->file_baton, which is good. */
       err = do_close_file (digger);
       if (err)
         signal_expat_bailout (err, digger);
     }
 
-  /* EVENT: when we get a </text-delta>, let the vcdiff parser know! */
+  /* EVENT: when we get a </text-delta>, do major cleanup.  */
   if (strcmp (name, "text-delta") == 0)
     {
       if (digger->vcdiff_parser)
@@ -1101,6 +1223,17 @@ xml_handle_end (void *userData, const char *name)
              Let the parser flush its buffer, clean up, whatever it wants
              to do. */
           err = svn_vcdiff_parse (digger->vcdiff_parser, NULL, 0);
+          if (err)
+            signal_expat_bailout (err, digger);
+        }
+
+      /* If we're finishing a "postfix" text-delta, we must
+         deliberately close the file_baton, since no </file> tag will
+         make this happen automatically. */
+      if (digger->stack->ref_id)
+        {
+          /* closes digger->stack->file_baton, which is good. */
+          err = do_close_file (digger); 
           if (err)
             signal_expat_bailout (err, digger);
         }
@@ -1298,6 +1431,7 @@ svn_make_xml_parser (svn_xml_parser_t **parser,
   digger->dir_baton        = rootdir_baton;
   digger->validation_error = SVN_NO_ERROR;
   digger->vcdiff_parser    = NULL;
+  digger->postfix_hash     = apr_make_hash (main_subpool);
 
   /* Create an expat parser */
   expat_parser = XML_ParserCreate (NULL);

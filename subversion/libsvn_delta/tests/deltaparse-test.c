@@ -99,7 +99,7 @@ test_delete (svn_string_t *filename, void *edit_baton, void *parent_baton)
 
   print_spaces (edit_baton);
 
-  printf ("DELETE event:  delete filename '%s'\n", Aname);
+  printf ("DELETE file '%s'\n", Aname);
   return SVN_NO_ERROR;         
 }
 
@@ -117,7 +117,7 @@ test_add_directory (svn_string_t *name,
   inc_spaces (edit_baton);
   print_spaces (edit_baton);
 
-  printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
+  printf ("ADD_DIR:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
 
   /* Set child_baton to the name of the new directory. */
@@ -155,7 +155,7 @@ test_replace_directory (svn_string_t *name,
   inc_spaces (edit_baton);
   print_spaces (edit_baton);
 
-  printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
+  printf ("REPLACE_DIR:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
   
   /* Set child_baton to the name of the new directory. */
@@ -190,7 +190,7 @@ test_close_file (void *edit_baton, void *file_baton)
     printf ("CLOSE_FILE '%s'\n", 
             (char *)((svn_string_t *) file_baton)->data);
   else
-    printf ("CLOSE_DIR:  no name!!\n");
+    printf ("CLOSE_FILE:  no name!!\n");
 
   return SVN_NO_ERROR;    
 }
@@ -207,7 +207,7 @@ test_apply_textdelta (void *edit_baton, void *parent_baton, void *file_baton,
 
   print_spaces (edit_baton);
 
-  printf ("TEXT-DELTA event within file '%s'.\n", Aname);
+  printf ("TEXT-DELTA on file '%s':\n", Aname);
 
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
@@ -233,7 +233,7 @@ test_add_file (svn_string_t *name,
   inc_spaces (edit_baton);
   print_spaces (edit_baton);
 
-  printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
+  printf ("ADD_FILE:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
   
   /* Put the filename in file_baton */
@@ -257,7 +257,7 @@ test_replace_file (svn_string_t *name,
   inc_spaces (edit_baton);
   print_spaces (edit_baton);
 
-  printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
+  printf ("REPLACE_FILE:  name '%s', ancestor '%s' version %d\n",
           Aname, ancestor, ancestor_version);
 
   /* Put the filename in file_baton */
@@ -273,14 +273,14 @@ test_change_file_prop (void *edit_baton, void *parent_baton, void *file_baton,
 {
   print_spaces (edit_baton);
 
-  printf ("GOT PROPCHANGE event on file '%s': ",
+  printf ("PROPCHANGE on file '%s': ",
           (char *) ((svn_string_t *) file_baton)->data);
 
   if (value == NULL)
-    printf (" delete property '%s'\n", (char *) name->data);
+    printf (" delete `%s'\n", (char *) name->data);
 
   else
-    printf (" set property '%s' to '%s'\n",
+    printf (" set `%s' to `%s'\n",
             (char *) name->data, (char *) value->data);
 
   return SVN_NO_ERROR;
@@ -293,14 +293,14 @@ test_change_dir_prop (void *edit_baton, void *parent_baton,
 {
   print_spaces (edit_baton);
 
-  printf ("GOT PROPCHANGE event on dir '%s': ",
+  printf ("PROPCHANGE on directory '%s': ",
           (char *) ((svn_string_t *) parent_baton)->data);
 
   if (value == NULL)
-    printf (" delete property '%s'\n", (char *) name->data);
+    printf (" delete `%s'\n", (char *) name->data);
 
   else
-    printf (" set property '%s' to '%s'\n",
+    printf (" set  `%s' to `%s'\n",
             (char *) name->data, (char *) value->data);
 
   return SVN_NO_ERROR;
@@ -314,13 +314,13 @@ test_change_dirent_prop (void *edit_baton, void *parent_baton,
 {
   print_spaces (edit_baton);
 
-  printf ("GOT PROPCHANGE event on dirent '%s': ", (char *) entry->data);
+  printf ("PROPCHANGE on dir-entry '%s': ", (char *) entry->data);
 
   if (value == NULL)
-    printf (" delete property '%s'\n", (char *) name->data);
+    printf (" delete  `%s'\n", (char *) name->data);
 
   else
-    printf (" set property '%s' to '%s'\n",
+    printf (" set `%s' to `%s'\n",
             (char *) name->data, (char *) value->data);
 
   return SVN_NO_ERROR;
