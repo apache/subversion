@@ -78,3 +78,10 @@ Candidate changes:
        +1: bliss, maxb, ghudson
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
+
+  * r10841
+    Fix crash bug in "svn st -u" on out-of-sync working copies
+    Justification:
+      Crashes bad.
+    Votes:
+      +1: ghudson
