@@ -712,41 +712,46 @@ Updated to revision 2.
         <varlistentry>
           <term><command>svn add foo</command></term>
           <listitem>
-            <para>Schedule <filename>foo</filename> to be added to the
-              repository.  When you next commit,
-              <filename>foo</filename> will become a child of its
-              parent directory.  Note that if <filename>foo</filename>
-              is a directory, everything underneath <filename>foo</filename>
-              will be scheduled for addition.  If you only want to
-              schedule <filename>foo</filename> itself, pass the
-              <option>--non-recursive</option> (<option>-N</option>)
-              switch.</para>
+            <para>Programe añadir <filename>foo</filename> al repositorio.
+              <!--TODO:schedule foo to be added-->Cuando haga su proximo
+              envio, <filename>foo</filename> se convertirá en hijo de
+              su directorio padre. Fijese que si <filename>foo</filename>
+              es un directorio, todo por debajo de <filename>foo</filename>
+              será programado para la adición <!--TODO:will be scheduled
+              for addition-->. Si solo quiere añadir el propio
+              <filename>foo</filename><!--TODO:schedule foo itself-->,
+              pase la opción <option>--non-recursive</option>
+              (<option>-N</option>) <!--TODO:pass -N switch-->.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><command>svn delete foo</command></term>
           <listitem>
-            <para>Schedule <filename>foo</filename> to be deleted from
-              the repository.  If <filename>foo</filename> is a file,
-              it is immediately deleted from your working copy.  If
-              <filename>foo</filename> is a directory, it is not
-              deleted, but Subversion schedules it for deletion.  When
-              you commit your changes, <filename>foo</filename> will
-              be removed from your working copy and the repository.
-              <footnote><para>Of course, nothing is ever totally
-              deleted from the repository&mdash;just from the
-              <literal>HEAD</literal> of the repository.  You can get
-              back anything you delete by checking out (or updating
-              your working copy) a revision earlier than the one in
-              which you deleted it.</para> </footnote></para>
+            <para>Programe <!--TODO:schedule--> borrar
+              <filename>foo</filename> del repositorio. Si
+              <filename>foo</filename> es un fichero, se borrará
+              inmediatamente de su copia de trabajo local. Si
+              <filename>foo</filename> es un directorio, este no es
+              borrado, pero Subversion lo programa para borrarlo. <!--TODO:
+              schedules it for deletion--> Cuando envie sus cambios,
+              <filename>foo</filename> será borrado de su copia de trabajo
+              y del repositorio.<footnote><para>Por supuesto, nada es
+              borrado totalmente del repositorio&mdash;solo del<!--TODO:
+              just from the--><literal>HEAD</literal> del repositorio.
+              Puede conseguir cualquier cosa que borró descargando (o
+              actualizando su copia de trabajo) a una revisión anterior a
+              la que lo borró.</para> </footnote></para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><command>svn copy foo bar</command></term>
           <listitem>
-            <para>Create a new item <filename>bar</filename> as a
+            <para>Cree un nuevo objeto <filename>bar</filename>
+
+
+            Create a new item <filename>bar</filename> as a
               duplicate of <filename>foo</filename>.
               <filename>bar</filename> is automatically scheduled for
               addition.  When <filename>bar</filename> is added to the
