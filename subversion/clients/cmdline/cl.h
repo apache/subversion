@@ -344,7 +344,9 @@ svn_cl__generate_status_codes (char *str_status,
 /* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
  * operations, allocated in POOL.
  * 
- * If this is a checkout, set IS_CHECKOUT.
+ * If this is a checkout, set IS_CHECKOUT to true, so that the
+ * notifier will print the appropriate summary line at the end of the
+ * output.
  * 
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.

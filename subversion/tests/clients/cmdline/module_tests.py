@@ -31,6 +31,26 @@ import svntest
 
 #----------------------------------------------------------------------
 
+def externals_test_cleanup(sbox):
+  """Clean up the 'other' repository for SBOX."""
+  if os.path.exists(sbox.repo_dir):
+    shutil.rmtree(sbox.repo_dir)
+  if os.path.exists(sbox.wc_dir):
+    shutil.rmtree(sbox.wc_dir)
+  if os.path.exists(sbox.wc_dir + ".other"):
+    shutil.rmtree(sbox.wc_dir + ".other")
+  if os.path.exists(sbox.repo_dir + ".other"):
+    shutil.rmtree(sbox.repo_dir + ".other")
+  if os.path.exists(sbox.wc_dir + ".init"):
+    shutil.rmtree(sbox.wc_dir + ".init")
+
+### todo: it's inefficient to keep calling externals_test_setup() for
+### every test.  It's slow.  But it's very safe -- we're guaranteed to
+### have a clean repository, built from the latest Subversion, with
+### the svn:externals properties preset in a known way.  Right now I
+### can't think of any other way to achieve that guarantee, so the
+### result is that each individual test is slow.
+
 def externals_test_setup(sbox):
   """Set up a repository in which some directories have the externals property,
   and set up another repository, referred to by some of those externals.
@@ -53,6 +73,8 @@ def externals_test_setup(sbox):
   remove a previous incarnation of the other repository.
   """
   
+  externals_test_cleanup(sbox)
+
   if sbox.build():
     return 1
 
@@ -78,40 +100,34 @@ def externals_test_setup(sbox):
   # Create a working copy.
   out_lines, err_lines = svntest.main.run_svn \
                          (None, 'checkout', repo_url, '-d', wc_init_dir)
-  if err_lines:
-    return 1
+  if err_lines: return 1
 
   # Make revisions 2 through 5, but don't bother with pre- and
   # post-commit status checks.
 
   svntest.main.file_append(mu_path, "\nAdded to mu in revision 2.\n")
-  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
-                                              '--quiet', wc_init_dir)
-  if (err_lines):
-    return 1
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'ci', '-m', 'log msg', '--quiet', wc_init_dir)
+  if (err_lines): return 1
 
   svntest.main.file_append(pi_path, "\nAdded to pi in revision 3.\n")
-  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
-                                              '--quiet', wc_init_dir)
-  if (err_lines):
-    return 1
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'ci', '-m', 'log msg', '--quiet', wc_init_dir)
+  if (err_lines): return 1
 
   svntest.main.file_append(lambda_path, "\nAdded to lambda in revision 4.\n")
-  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
-                                              '--quiet', wc_init_dir)
-  if (err_lines):
-    return 1
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'ci', '-m', 'log msg', '--quiet', wc_init_dir)
+  if (err_lines): return 1
 
   svntest.main.file_append(omega_path, "\nAdded to omega in revision 5.\n")
-  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
-                                              '--quiet', wc_init_dir)
-  if (err_lines):
-    return 1
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'ci', '-m', 'log msg', '--quiet', wc_init_dir)
+  if (err_lines): return 1
 
   # Get the whole working copy to revision 5.
   out_lines, err_lines = svntest.main.run_svn(None, 'up', wc_init_dir)
-  if (err_lines):
-    return 1
+  if (err_lines): return 1
 
   # Now copy the initial repository to create the "other" repository,
   # the one to which the first repository's `svn:externals' properties
@@ -127,11 +143,8 @@ def externals_test_setup(sbox):
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'propset', '-F', tmp_f,
-                          'svn:externals', B_path)
-
-  if err_lines:
-    return 1
+                         (None, 'pset', '-F', tmp_f, 'svn:externals', B_path)
+  if err_lines: return 1
    
   os.remove(tmp_f)
 
@@ -147,10 +160,8 @@ def externals_test_setup(sbox):
 
   svntest.main.file_append(tmp_f, externals_desc)
   out_lines, err_lines = svntest.main.run_svn \
-                         (None, 'propset', '-F', tmp_f,
-                          'svn:externals', D_path)
-  if err_lines:
-    return 1
+                         (None, 'pset', '-F', tmp_f, 'svn:externals', D_path)
+  if err_lines: return 1
 
   os.remove(tmp_f)
 
@@ -173,24 +184,11 @@ def externals_test_setup(sbox):
                                                None, None, None, None, None,
                                                wc_init_dir)
 
-
-def externals_test_cleanup(sbox):
-  """Clean up the 'other' repository for SBOX."""
-  if os.path.exists(sbox.repo_dir):
-    shutil.rmtree(sbox.repo_dir)
-  if os.path.exists(sbox.wc_dir):
-    shutil.rmtree(sbox.wc_dir)
-  if os.path.exists(sbox.repo_dir + ".other"):
-    shutil.rmtree(sbox.repo_dir + ".other")
-  if os.path.exists(sbox.wc_dir + ".init"):
-    shutil.rmtree(sbox.wc_dir + ".init")
-
 #----------------------------------------------------------------------
 
-def checkout(sbox):
+def checkout_with_externals(sbox):
   "check out a directory with some external modules attached"
 
-  externals_test_cleanup(sbox)
   if externals_test_setup(sbox):
     return 1
 
@@ -199,10 +197,9 @@ def checkout(sbox):
   repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
 
   # Create a working copy.
-  out_lines, err_lines = svntest.main.run_svn (None, 'checkout', repo_url, \
-                                               '-d', wc_dir)
-  if err_lines:
-    return 1
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', wc_dir)
+  if err_lines: return 1
 
   # Probe the working copy a bit, see if it's as expected.
   exdir_D_path    = os.path.join(wc_dir, "A/B/exdir_D")
@@ -247,6 +244,7 @@ def checkout(sbox):
     print "Probing for", beta_path, "failed."
     return 1
 
+  # Pick a file at random, make sure it has the expected contents.
   fp = open(exdir_H_omega_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.")):
@@ -257,6 +255,78 @@ def checkout(sbox):
 
 #----------------------------------------------------------------------
 
+def update_receive_new_external(sbox):
+  "Update to receive a new external module."
+
+  if externals_test_setup(sbox):
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  other_wc_dir   = wc_dir + ".other"
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  other_repo_url = repo_url + ".other"
+
+  # Checkout two working copies.
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', wc_dir)
+  if err_lines: return 1
+
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', other_wc_dir)
+  if err_lines: return 1
+
+  # Add one new external item to the property on A/D.  The new item is
+  # "exdir_E", deliberately added in the middle not at the end.
+  new_externals_desc = \
+           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
+           "\n"                                                         + \
+           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
+           "\n"                                                         + \
+           "exdir_E           " + os.path.join(other_repo_url, "A/B/E") + \
+           "\n"                                                         + \
+           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
+           "\n"                                                         + \
+           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "\n"
+
+  # Set and commit the property
+  D_path = os.path.join(wc_dir, "A/D")
+  tmp_f = os.tempnam(wc_dir, 'tmp')
+  svntest.main.file_append(tmp_f, new_externals_desc)
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'pset', '-F', tmp_f, 'svn:externals', D_path)
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'ci', '-m', 'log msg', '--quiet', wc_dir)
+  if (err_lines): return 1
+
+  os.remove(tmp_f)
+
+  # Update the other working copy, see if we get the new item.
+  ### todo: use the new wc.py system to check the output?
+  out_lines, err_lines = svntest.main.run_svn (None, 'up', other_wc_dir)
+  if err_lines: return 1
+
+  exdir_E_path = os.path.join(other_wc_dir, "A", "D", "exdir_E")
+  if (not os.path.exists(exdir_E_path)):
+    print "Probing for", exdir_E_path, "failed."
+    return 1
+
+  return 0
+
+
+#----------------------------------------------------------------------
+
+def update_lose_external(sbox):
+  "(UNFINISHED) Update to lose an external module."
+  return 0
+
+
+#----------------------------------------------------------------------
+
+def update_modify_external(sbox):
+  "(UNFINISHED) Update to receive a change to an external module."
+  return 0
 
 
 ########################################################################
@@ -265,7 +335,10 @@ def checkout(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              checkout,
+              checkout_with_externals,
+              update_receive_new_external,
+              update_lose_external,
+              update_modify_external,
              ]
 
 if __name__ == '__main__':
