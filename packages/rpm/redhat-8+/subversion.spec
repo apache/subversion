@@ -101,6 +101,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> 1.1.2-12650
+- Delete apr, apr-util, and neon from the distribution tree as those
+  packages are already installed.
+
 * Wed Dec 29 2004 David Summers <david@summersoft.fay.ar.us> 1.1.2-12531
 - Added "noreplace" option to subversion.conf to not replace it if it has
   been changed.  This (hopefully) prevents the server from failing when doing
@@ -370,6 +374,10 @@ sed -e \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
 echo "${RELEASE_NAME}" > doc/book/book/package.version
+
+# Delete apr, apr-util, and neon from the tree as those packages should already
+# be installed.
+rm -rf apr apr-util neon
 
 # Configure static.
 %configure \
