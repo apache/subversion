@@ -28,6 +28,7 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 #include <apr_lib.h>
+#include <apr_general.h>
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
@@ -1192,8 +1193,18 @@ expand_keyword (svn_wc_keywords_t *keywords,
   
   *is_valid_p = TRUE;
 
+  /* Using strcasecmp() to accept downcased short versions of
+   * keywords.  Note that this doesn't apply to the strings being
+   * expanded in the file -- rather, it's so users can do
+   *
+   *    $ svn propset svn:keywords "date url" readme.txt
+   *
+   * and not have to worry about capitalization in the property
+   * value.
+   */
+
   if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
-      || (! strcmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+      || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
       if (entry)
         value = (svn_stringbuf_t *)
@@ -1210,7 +1221,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->revision = svn_string_create_from_buf (value, pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
-           || (! strcmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+           || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
     {
       if (entry)
         value = (svn_stringbuf_t *)
@@ -1224,7 +1235,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->date = svn_wc__friendly_date (value->data, pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
-           || (! strcmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+           || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
     {
       if (entry) 
         value = (svn_stringbuf_t *)
@@ -1238,7 +1249,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->author = svn_string_create_from_buf (value, pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
-           || (! strcmp (keyword, SVN_KEYWORD_URL_SHORT)))
+           || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
     {
       if (entry)
         value = (svn_stringbuf_t *)
