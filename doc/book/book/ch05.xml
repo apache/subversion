@@ -2115,139 +2115,192 @@ ServerName svn.red-bean.com
         stand-alone server program, <command>svnserve</command>.  This
         program is considerably more lightweight than Apache, and
         easier to configure.  It speaks a custom protocol with the svn
-        client over an ordinary TCP/IP connection. (It listens for
-        incoming requests on port 3690.<footnote><para>This port
-        number has been assigned by IANA.</para></footnote>) Clients
-        access the server with libsvn_ra_svn (using the
-        <literal>svn://</literal> URL schema) and can tunnel the
-        entire network session over SSH.</para>
+        client over an ordinary TCP/IP connection, listening for
+        incoming requests on port 3690.
+        <footnote>
+          <para>This port number has been assigned by the Internet Assigned
+            Numbers Authority (IANA).</para>
+        </footnote>
+        Clients access the server with libsvn_ra_svn, using the
+        <literal>svn://</literal> URL schema.</para>
 
       <sect3 id="svn-ch-5-sect-4.2.1">
-        <title>Anonymous TCP access</title>
-        
+        <title>Running <command>svnserve</command></title>
+
         <para>When run with no switches, <command>svnserve</command>
-          makes every repository in your system available to the
-          network.  In other words, if a client tries to checkout
-          <systemitem
-            class="url">svn://foo.bar.com/usr/local/repos/project</systemitem>,
+          makes your entire disk available to the network.  In other
+          words, if a client tries to checkout <systemitem
+          class="url">svn://example.com/usr/local/repos/project</systemitem>,
           an <command>svnserve</command> process running on
-          foo.bar.com would look for a repository at the absolute path
+          example.com would look for a repository at the absolute path
           <filename>/usr/local/repos/project</filename>.  To increase
           security, you can pass the <option>-r</option> option to
           <command>svnserve</command>, which restricts it to exporting
-          only repositories below that path.  For example, if the
-          server process were started like: </para>
-        
+          only repositories below that path:</para>
+
         <screen>
-svnserve -r /usr/local/repos
-        </screen>
+$ svnserve -r /usr/local
+&hellip;
+</screen>
 
-        <para>... then a client would need to use <systemitem
-            class="url">svn://foo.bar.com/project</systemitem> to
-          access the same repository.</para>
-        
-        <para>If you want to allow <emphasis>nothing</emphasis> but
-          read-only access, then start <command>svnserve</command>
-          with the <option>-R</option> option.</para>
-        
-        <para>There are two ways of running the
-          <command>svnserve</command> process.  The first option is to
-          register an <quote>svn</quote> service with
-          <command>inetd</command>, so that each incoming request on
-          port 3690 spawns a server on demand.  The more common way of
-          running <command>svnserve</command> is as a standalone
-          daemon.  Simply run </para>
-          
-      <screen>
-$ svnserve -r /repos/root -d
-      </screen>
+        <para>Using the <option>-r</option> option effectively
+          modifies the location that the program treats as the root of
+          the versioned filesystem space.  Clients then use URLs that
+          have that path portion removed from them, leaving much
+          shorter (and much less revealing) URLs:</para>
+
+        <screen>
+$ svn co svn://example.com/repos/projects
+&hellip;
+</screen>
+
+        <para>To disable write access for your repositories, start
+          <command>svnserve</command> with the <option>-R</option>
+          option.  This will permit only read operations on the data
+          in your repository.</para>
+
+        <para>You can have <command>svnserve</command> run in one of a
+          couple of different ways.  One option is to run as a sort of
+          <quote>one-off</quote> server process&mdash;initiated by the
+          <command>inetd</command> daemon on Unix systems.  To do
+          this, add port 3690 to your
+          <filename>/etc/services</filename> file, if not already
+          present:</para>
+
+        <screen>
+svn    3690/tcp   # Subversion server
+</screen>
+
+        <para>Then instruct inetd daemon to launch an
+          <command>svnserve</command> process to handle incoming
+          requests on that port by adding this line to
+          <filename>/etc/inetd.conf</filename>:</para>
+
+        <screen>
+svn  stream  tcp  nowait  root  /usr/local/bin/svnserve -r /repos/root
+</screen>
       
-        <para>The <option>-d</option> switch causes the server to
-          detach from the terminal and run in the background, waiting
-          indefinitely for requests on port 3690.</para>
-       
-        <para>When the client connects to <command>svnserve</command>,
-          no authentication takes place at all.  The server process
-          accesses the repository as whatever user it's running as,
-          and if the client performs a commit, the new revision has an
-          <quote>anonymous</quote> author.</para>
-        
+        <para>Of course, you may not want to launch the
+          <command>svnserve</command> process as root.  Depending on
+          the ownership and permissions of the repositories you're
+          exporting, a different&mdash;perhaps custom&mdash;user might
+          be more appropriate.  For example, you might wish to create
+          a new user named <literal>svn</literal>, grant that user
+          exclusive rights to the Subversion repositories, and
+          configure your <command>svnserve</command> processes to run
+          as that user.</para>
+
+        <para>Another option is to run <command>svnserve</command> as
+          a standalone daemon process.  When started with the
+          <option>-d</option> option, <command>svnserve</command> will
+          immediately detach from the current shell process, and will
+          execute as a background process which runs indefinitely,
+          again waiting for incoming requests on port 3690.</para>
+
+        <screen>
+$ svnserve -r /usr/local -d
+$ # svnserve is still running, but the user is returned to the prompt 
+</screen>
+
       </sect3>
-      
-      <sect3 id="svn-ch-5-sect-4.2.2">
-        <title>Tunneling over SSH</title>
 
-        <para>A Subversion client using libsvn_ra_svn knows how to
-          tunnel the entire session over SSH, or any other similar
-          tool.  To do this, the user only needs to add options to her
-          run-time <filename>servers</filename> configuration file.
-          After defining an appropriate server group, set the variable
-          <literal>svn-tunnel-agent</literal> within the group.  For
-          example:</para>
+      <sect3 id="svn-ch-5-sect-4.2.2">
+        <title>ra_svn authentication</title>
+
+        <para>When a client connects makes a network connection to the
+          <command>svnserve</command> process (either as a daemon, or
+          launched as a <quote>one-off</quote>), no authentication
+          takes place at all.  The server process accesses the
+          repository as whatever user it's running as, and if the
+          client performs a commit, the new revision uses the username
+          <literal>anonymous</literal> as the author of the
+          commit.</para>
+
+        <para>Of course, it is generally interesting to know which
+          user (of a potentially unbounded number of users) is
+          responsible for a set of changes.  To accomplish this,
+          clients using libsvn_ra_svn can tunnel their entire session
+          over SSH or another similar protocol.  To do this, edit your
+          <filename>servers</filename> run-time configuration file to
+          instruct your client to tunnel its network communications
+          when you are accessing repositories that are served using
+          <command>svnserve</command>.  Simply add a new group to the
+          <literal>groups</literal> section of that file whose value
+          is the name of the server you'll be communicating with, and
+          then create a new section using your newly created group's
+          name.  Inside the section, define the
+          <literal>svn-tunnel-agent</literal> option to mentioned the
+          name of the tunneling agent program.  In the case of SSH
+          tunneling, this is typically the <command>ssh</command>
+          program.</para>
 
         <example id="svn-ch-5-sect-4.2.2-ex-1">
           <title>Using an ssh tunnel-agent</title>
+
           <programlisting>
-          [groups]
-          mygroup = foo.bar.com
+[groups]
+mygroup = foo.bar.com
           
-          [mygroup]
-          svn-tunnel-agent = ssh
-          </programlisting>
+[mygroup]
+svn-tunnel-agent = ssh
+</programlisting>
         </example>
         
-        <para>For more information about configuring the
-        <filename>servers</filename> file, see <xref
-        linkend="svn-ch-6-sect-1.3.1"/>.</para>
+        <para>Now when you use your Subversion client to access that
+          repository, its network communications with
+          <command>svnserve</command> will be tunneled using the
+          configured tool.  If that tool requires authentication,
+          <command>svnserve</command> will use the authenticated
+          username as the author of any modifications you
+          perform.</para>
 
-        <para>Just like CVS, the Subversion client uses SSH to invoke
-          a remote <command>svnserve</command> process for the
-          duration of the connection.  If, as a system administrator,
-          you plan to have all your users tunnel over SSH, then
-          there's no need to run <command>svnserve -d</command>.</para>
+        <para>For more information about setting up the
+          <filename>servers</filename> run-time configuration file,
+          see <xref linkend="svn-ch-6-sect-1.3.1"/>.</para>
 
       </sect3>
-
     </sect2>
 
     <sect2 id="svn-ch-5-sect-4.3">
       <title>Which server to use?</title>
 
-      <para>When choosing between Apache/mod_dav_svn and svnserve,
-        there is no <quote>right</quote> choice.  It all depends on
-        who you are, your environment, and what you need.  To recap
-        the previous two sections, here's a short reminder of why you
-        might prefer one server or another.</para>
+      <para>When choosing between Apache HTTP Server and the custom
+        <command>svnserve</command> program, there is no single
+        correct decision.  Depending on your particular requirements,
+        one of the available solutions might seem more right for you.
+        And in fact, these servers can run in parallel, each accessing
+        your repositories in its own way, and each without hindering
+        the other.  To recap the previous two sections, here's a brief
+        list of the highlist of the two available Subversion
+        servers&mdash;choose whatever works best for you and your
+        users.</para>
       
       <variablelist>
         <varlistentry>
           <term>Apache/mod_dav_svn</term>
           <listitem>
-            
             <itemizedlist>
               <listitem>
-                <para>No need to create system accounts.</para>
+                <para>No need to create system accounts</para>
               </listitem>
               <listitem>
-                <para>No need to open a new firewall port.</para>
+                <para>No need to open a new firewall port</para>
               </listitem>
               <listitem>
                 <para>Built-in repository web browsing (limited)</para>
               </listitem>
               <listitem>
-                <para>Interoperability with other WebDAV clients
-                (limited)</para>
+                <para>Limited interoperability with other WebDAV clients</para>
               </listitem>
               <listitem>
                 <para>Ability to use caching HTTP proxies</para>
               </listitem>
               <listitem>
-                <para>Expandable: access to numerous existing
-                  authentication and authorization methods,
-                  encryption, compression, etc.</para>
+                <para>Vastly expandable:  access to numerous existing
+                  authentication and authorization methods, encryption,
+                  compression, etc.</para>
               </listitem>
             </itemizedlist>
-
           </listitem>
         </varlistentry>
 
@@ -2256,20 +2309,17 @@ $ svnserve -r /repos/root -d
           <listitem>
             <itemizedlist>
               <listitem>
-                <para>Vastly easier to configure and run.</para>
+                <para>Vastly easier to configure and run than Apache</para>
               </listitem>
               <listitem>
-                <para>Can use existing SSH security infrastructure.</para>
+                <para>Can use existing SSH security infrastructure</para>
               </listitem>
             </itemizedlist>
-
           </listitem>
         </varlistentry>
-
       </variablelist>
 
     </sect2>
-
   </sect1>
 
   <!-- ******************************************************************* -->
