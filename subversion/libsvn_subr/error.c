@@ -152,6 +152,7 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
       chain = chain->child;
       *chain = *new_err;
       chain->message = apr_pstrdup (pool, new_err->message);
+      chain->pool = pool;
       new_err = new_err->child;
     }
 
