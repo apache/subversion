@@ -393,31 +393,6 @@ static const svn_delta_walk_t change_walker =
 
 
 svn_error_t *
-svn_wc_apply_delta (void *delta_src,
-                    svn_delta_read_fn_t *read_fn,
-                    svn_string_t *dest,
-                    svn_string_t *repos,
-                    svn_vernum_t version,
-                    apr_pool_t *pool)
-{
-  const svn_delta_walk_t *walker;
-  void *walk_baton;
-  void *dir_baton;
-  svn_error_t *err;
-
-  /* get the change-walker information */
-  err = svn_wc_get_change_walker(dest, repos, version,
-                                 &walker, &walk_baton, &dir_baton, pool);
-  if (err)
-    return err;
-
-  /* ... and walk! */
-  return svn_xml_parse (read_fn, delta_src,
-                        walker, walk_baton, dir_baton, pool);
-}
-
-
-svn_error_t *
 svn_wc_get_change_walker (svn_string_t *dest,
                           svn_string_t *repos,
                           svn_vernum_t version,
