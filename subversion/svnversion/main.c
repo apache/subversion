@@ -62,7 +62,7 @@ main(int argc, char *argv[])
   svn_boolean_t switched = FALSE, modified = FALSE;
   svn_revnum_t min_revnum = SVN_INVALID_REVNUM, max_revnum = SVN_INVALID_REVNUM;
   const svn_wc_status_t *status;
-  svn_client_ctx_t ctx;
+  svn_client_ctx_t ctx = { 0 };
 
   if (argc != 2 && argc != 3)
     {
@@ -83,8 +83,6 @@ main(int argc, char *argv[])
     }
 
   pool = svn_pool_create (NULL);
-
-  memset (&ctx, 0, sizeof (ctx));
 
   SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], NULL, pool));
   wc_path = svn_path_canonicalize (wc_path, pool);
