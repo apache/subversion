@@ -1221,22 +1221,6 @@ svn_fs__rep_deltify (svn_fs_t *fs,
        "svn_fs__rep_deltify: attempt to deltify \"%s\" against itself",
        target);
 
-#if 0 /* This bit'll go waaaay, waay, away. */
-  /* To favor time over space, we don't currently deltify files that
-     are larger than the svndiff window size.  This might seem
-     counterintuitive, but most files are smaller than a window
-     anyway, and until we write the delta combiner or something
-     approaching it, the cost of retrieval for large files becomes
-     simply prohibitive after about 10 or so revisions.  See issue
-     #531 for more details. */
-  {
-    apr_size_t size;
-    SVN_ERR (svn_fs__rep_contents_size (&size, fs, target, trail));
-    if (size > SVN_STREAM_CHUNK_SIZE)
-      return SVN_NO_ERROR;
-  }
-#endif
-
   /* Set up a handler for the svndiff data, which will write each
      window to its own string in the `strings' table. */
   new_target_baton.fs = fs;
