@@ -8,6 +8,7 @@
 # allocate - reservere
 # ancestor - opprinnelse
 # bump - øke
+# cached - lagrede
 # checkout - hente ut, uthenting
 # client - klient
 # commit - sende inn, innsending
@@ -3995,21 +3996,22 @@ msgstr "Kunne ikke lage forespørsel (%s «%s»)"
 msgid ""
 "Could not fetch the Version Resource URL (needed during an import or when it "
 "is missing from the local, cached props)"
-msgstr ""
+msgstr "Klarte ikke å hente URL for versjonsressurs (nødvendig under en importering "
+"eller når den mangler i de lokale, lagrede egenskapene)"
 
 #: libsvn_ra_dav/commit.c:433
-#, fuzzy, c-format
+#, c-format
 msgid "Could not create a CHECKOUT request (%s)"
-msgstr "Kunne ikke lage en PUT-forespørsel (%s)"
+msgstr "Klarte ikke å opprette en CHECKOUT-forespørsel (%s)"
 
 #: libsvn_ra_dav/commit.c:505
-#, fuzzy, c-format
+#, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
-msgstr "Loggkommando for katalogen «%s» er feilplassert"
+msgstr "Filen eller katalogen «%s» er sannsynligvis utdatert"
 
 #: libsvn_ra_dav/commit.c:513
 msgid "The CHECKOUT response did not contain a 'Location:' header"
-msgstr ""
+msgstr "CHECKOUT-responsen inneholdt ikke en «Location:»-header"
 
 #: libsvn_ra_dav/commit.c:1016
 msgid "Could not write svndiff to temp file"
@@ -4067,9 +4069,8 @@ msgid "Invalid server response to dated-rev request"
 msgstr "Ugyldig tjenersvar på forespørsel for dated-rev"
 
 #: libsvn_ra_dav/fetch.c:1241
-#, fuzzy
 msgid "'get-locations' REPORT not implemented"
-msgstr "get-locations REPORT er ikke implementert"
+msgstr "«get-locations» REPORT ikke implementert"
 
 #: libsvn_ra_dav/fetch.c:1309
 msgid ""
@@ -4096,9 +4097,8 @@ msgstr ""
 "redigeringsprogrammet."
 
 #: libsvn_ra_dav/file_revs.c:359
-#, fuzzy
 msgid "'get-file-revs' REPORT not implemented"
-msgstr "get-file-revs REPORT er ikke implementert"
+msgstr "«get-file-revs» REPORT ikke implementert"
 
 #: libsvn_ra_dav/file_revs.c:366
 msgid "The file-revs report didn't contain any revisions"
@@ -4442,23 +4442,20 @@ msgid "Changed-path entry not a list"
 msgstr "Post med stiforandring er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1164
-#, fuzzy
 msgid "'stat' not implemented"
-msgstr "stat ikke implementert"
+msgstr "«stat» ikke implementert"
 
 #: libsvn_ra_svn/client.c:1227
-#, fuzzy
 msgid "'get-locations' request not implemented"
-msgstr "get-locations ikke implementert"
+msgstr "«get-locations»-forespørsel ikke implementert"
 
 #: libsvn_ra_svn/client.c:1240
 msgid "Location entry not a list"
 msgstr "Post for beliggenhet er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1294
-#, fuzzy
 msgid "'get-file-revs' request not implemented"
-msgstr "get-file-revs ikke implementert"
+msgstr "«get-file-revs»-forespørsel ikke implementert"
 
 #: libsvn_ra_svn/client.c:1308
 msgid "Revision entry not a list"
@@ -6910,9 +6907,9 @@ msgstr ""
 "Vis det yngste revisjonsnummeret.\n"
 
 #: svnlook/main.c:566
-#, fuzzy, c-format
+#, c-format
 msgid "Error creating dir '%s' (path exists)"
-msgstr "Feil under lesing av filen «%s»"
+msgstr "Feil under opprettelse av katalogen «%s» (stien eksisterer)"
 
 #: svnlook/main.c:833
 #, c-format
