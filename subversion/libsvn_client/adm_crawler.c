@@ -50,8 +50,109 @@
 /* ==================================================================== */
 
 
-#include <svn_types.h>
-#include <svn_delta.h>
+#include "svn_types.h"
+#include "svn_delta.h"
+#include "apr_pools.h"
+#include "apr_file_io.h"
+
+
+/* Send the entire contents of XML_BUFFER to be parsed by XML_PARSER;
+   then clear the buffer and return. */
+static svn_error_t *
+flush_xml_buffer (svn_string_t *xml_buffer,
+                  svn_xml_parser_t *xml_parser)
+{
+  svn_error_t *err = svn_xml_parsebytes (xml_buffer->data,
+                                         xml_buffer->len,
+                                         0,
+                                         xml_parser);
+  if (err)
+    return err;
+
+  svn_string_setempty (xml_buffer);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Fetch the next child subdirectory of CURRENT_DIR by searching in
+   DIRHANDLE.  If there are no more subdir children, return NULL.  */
+static svn_string_t *
+get_next_child_subdir (svn_string_t *current_dir,
+                       apr_dir_t *dirhandle,
+                       apr_pool_t *pool)
+{
+  /* Todo: get this right, using apr's functions for grabbing "next"
+     dirent in a apr_dir_t and examining the "current dirent".  */
+}
+
+
+/* Return a bytestring containing the contents of `DIR/SVN/delta_here',
+   using whatever abstraction methods libsvn_wc implements.  If the
+   file is empty, return NULL instead.  */
+static svn_string_t *
+get_delta_here_contents (svn_string_t *dir,
+                         apr_pool_t *pool)
+{
+  svn_string_t *localmod_buffer = svn_string_create ("", pool);
+
+  /* Have libsvn_wc return a filehandle to `delta_here' using its
+     abstract methods to search DIR */
+  apr_file_t *delta_here = svn_wc_get_delta_here (dir);
+
+  apr_open (delta_here);
+  apr_full_read (delta_here, localmod_buffer);
+  apr_close (delta_here);
+
+  if (file is empty)
+    return NULL;
+
+  else
+    return localmod_buffer;
+}
+
+
+
+
+/* Recursive working-copy crawler. Push xml out to parser when
+   appropriate. */
+static svn_error_t *
+do_crawl (svn_string_t *current_dir,
+          svn_string_t *xml_buffer,
+          svn_xml_parser_t *xml_parser,
+          apr_pool_t *pool)
+
+{
+  svn_error_t *err;
+  svn_string_t *child;
+
+  /* grab contents of current `delta-here' file */
+
+  svn_string_t *localmod_buffer = get_delta_here_contents (current_dir);
+  
+  /* if non-empty, send the contents to the parser */
+
+  if (localmod_buffer)
+    {
+      svn_string_appendbytes (xml_buffer, localmod_buffer, pool)
+      err = flush_xml_buffer (xml_buffer, xml_parser);
+      if (err)
+        return err;
+    }
+
+  /* recurse depth-first */
+
+  while (child = get_next_child_subdir ())
+    {
+      write 3 "down" tags into xml_buffer;
+      err = do_crawl (child);
+      if (err)
+        return err;
+    } 
+  
+  write 3 "up" tags into xml_buffer;
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -68,10 +169,30 @@
 
 svn_error_t *
 svn_cl_crawl_local_mods (svn_string_t *root_directory,
-                         svn_xml_parser_t *xml_parser)
+                         svn_xml_parser_t *xml_parser,
+                         apr_pool_t *pool)
 {
+  svn_error_t *err;
+  
+  svn_string_t *xml_buffer = svn_string_create ("", pool);
 
+  /* Always begin with a lone "<text-delta"> */
+  svn_string_appendbytes (xml_buffer, "<text-delta>", 12, pool);
 
+  /* Do the recursive crawl, starting at the root directory.  */
+  err = do_crawl (root_directory, xml_buffer, xml_parser, pool);
+  if (err)
+    return err;
+
+  /* Always finish with a lone "</text-delta>" */
+  svn_string_appendbytes (xml_buffer, "</text-delta>", 13, pool);
+
+  /* Send whatever xml is left and exit. */
+  err = flush_xml_buffer (xml_buffer, xml_parser);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
 }
 
 
