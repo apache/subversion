@@ -2,7 +2,8 @@
 
 EXEC_PATH="`dirname $0`"
 BUILD_TYPE="$1"
-BUILD_STAT="$2"
+RA_TYPE="$2"
+BUILD_STAT="$3"
 
 # Source the configuration file.
 . "$EXEC_PATH/svntest-config.sh"
@@ -11,6 +12,10 @@ BUILD_STAT="$2"
 LOG_FILE="$LOG_FILE_PREFIX.$BUILD_TYPE"
 TEST="`$GUESS` $BUILD_TYPE"
 REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
+test -z "$RA_TYPE" || {
+    LOG_FILE="$LOG_FILE.$RA_TYPE"
+    TEST="$TEST $RA_TYPE"
+}
 
 # The log file must exist
 if [ ! -f $LOG_FILE ]
