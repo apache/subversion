@@ -1,8 +1,9 @@
-dnl   SVN_LIB_BERKELEY_DB(major, minor, patch)
+dnl   SVN_LIB_BERKELEY_DB(major, minor, patch, libname)
 dnl
 dnl   Search for a useable version of Berkeley DB in a number of
 dnl   common places.  The installed DB must be no older than the
-dnl   version given by MAJOR, MINOR, and PATCH.
+dnl   version given by MAJOR, MINOR, and PATCH.  LIBNAME is the name of 
+dnl   the library to attempt to link against, typically 'db' or 'db4'.
 dnl
 dnl   If we find a useable version, set CPPFLAGS and LIBS as
 dnl   appropriate, and set the shell variable `svn_lib_berkeley_db' to
@@ -24,6 +25,7 @@ dnl   from the cache.
 AC_DEFUN(SVN_LIB_BERKELEY_DB,
 [
   db_version=$1.$2.$3
+  db_libname=$4
   dnl  Process the `with-berkeley-db' switch.  We set `status' to one
   dnl  of the following values:
   dnl    `required' --- the user specified that they did want to use
@@ -105,7 +107,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     if test "$enable_shared" = "yes"; then
         SVN_DB_LIBS="$dbdir/libdb-4.0.la"
     else
-        SVN_DB_LIBS="-L$dbdir -ldb"
+        SVN_DB_LIBS="-L$dbdir -ldb" # ignoring $db_libname here on purpose.
     fi
   elif test "$status" = "skip"; then
     svn_lib_berkeley_db=no
@@ -114,14 +116,12 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     if test "$places" = "search"; then
 
       # This is pretty messed up.  It seems that the FreeBSD port of Berkeley
-      # DB 3.2.9 puts the header file in /usr/local/include/db3, but the
-      # database library in /usr/local/lib, as libdb.a.  There is no
+      # DB 4 puts the header file in /usr/local/include/db4, but the
+      # database library in /usr/local/lib, as libdb4.[a|so].  There is no
       # /usr/local/include/db.h.  So if you check for /usr/local first, you'll
       # get the old header file from /usr/include, and the new library from
-      # /usr/local/lib.  Disaster.  We check for that bogosity first,
-      # and assume that the bogosity has carried over to the Berkeley
-      # 4.0.x series -- if it hasn't, someone please make a noise.
-      places="std /usr/local/include/db4:/usr/local/lib /usr/local
+      # /usr/local/lib.  Disaster.  We check for that bogosity first.
+      places="/usr/local/include/db4:/usr/local/lib std /usr/local
               /usr/local/BerkeleyDB.$1.$2 /usr/include/db4:/usr/lib"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
@@ -156,20 +156,20 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         ;;
       esac
 
-      # We generate a separate cache variable for each prefix we
-      # search under.  That way, we avoid caching information that
+      # We generate a separate cache variable for each prefix and libname
+      # we search under.  That way, we avoid caching information that
       # changes if the user runs `configure' with a different set of
       # switches.
       changequote(,)
-      cache_id="`echo svn_cv_lib_berkeley_db_$1_$2_$3_in_${place} \
+      cache_id="`echo svn_cv_lib_berkeley_db_$1_$2_$3_$4_in_${place} \
                  | sed -e 's/[^a-zA-Z0-9_]/_/g'`"
       changequote([,])
       dnl We can't use AC_CACHE_CHECK here, because that won't print out
       dnl the value of the computed cache variable properly.
-      AC_MSG_CHECKING([for Berkeley DB in $description])
+      AC_MSG_CHECKING([for Berkeley DB in $description (as $db_libname)])
       AC_CACHE_VAL($cache_id,
         [
-	  SVN_LIB_BERKELEY_DB_TRY($1, $2, $3)
+	  SVN_LIB_BERKELEY_DB_TRY($1, $2, $3, $4)
           eval "$cache_id=$svn_have_berkeley_db"
         ])
       result="`eval echo '$'$cache_id`"
@@ -190,13 +190,13 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     case "$found" in
       "not" )
 	if test "$status" = "required"; then
-	  AC_MSG_ERROR([Could not find Berkeley DB $1.$2.$3.])
+	  AC_MSG_ERROR([Could not find Berkeley DB $1.$2.$3. with libname $4])
 	fi
 	svn_lib_berkeley_db=no
       ;;
       "std" )
         SVN_DB_INCLUDES=
-        SVN_DB_LIBS=-ldb
+        SVN_DB_LIBS=-l$db_libname
         svn_lib_berkeley_db=yes
       ;;
       *":"* )
@@ -204,13 +204,13 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	lib="`echo $found | sed -e 's/^.*://'`"
         SVN_DB_INCLUDES="-I$header"
 dnl ### should look for a .la file
-        SVN_DB_LIBS="-L$lib -ldb"
+        SVN_DB_LIBS="-L$lib -l$db_libname"
         svn_lib_berkeley_db=yes
       ;;
       * )
         SVN_DB_INCLUDES="-I$found/include"
 dnl ### should look for a .la file
-        SVN_DB_LIBS="-L$found/lib -ldb"
+        SVN_DB_LIBS="-L$found/lib -l$db_libname"
 	svn_lib_berkeley_db=yes
       ;;
     esac
@@ -218,14 +218,15 @@ dnl ### should look for a .la file
 ])
 
 
-dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch)
+dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch, db_name)
 dnl
 dnl   A subroutine of SVN_LIB_BERKELEY_DB.
 dnl
 dnl   Check that a new-enough version of Berkeley DB is installed.
 dnl   "New enough" means no older than the version given by MAJOR,
 dnl   MINOR, and PATCH.  The result of the test is not cached; no
-dnl   messages are printed.
+dnl   messages are printed.  Use DB_NAME as the library to link against.
+dnl   (e.g. DB_NAME should usually be "db" or "db4".)
 dnl
 dnl   Set the shell variable `svn_have_berkeley_db' to `yes' if we found
 dnl   an appropriate version installed, or `no' otherwise.
@@ -237,11 +238,14 @@ dnl   function, then this macro assumes it is too old.
 AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
   [
     svn_lib_berkeley_db_try_save_libs="$LIBS"
-    LIBS="$LIBS -ldb"
 
     svn_check_berkeley_db_major=$1
     svn_check_berkeley_db_minor=$2
     svn_check_berkeley_db_patch=$3
+    svn_berkeley_db_lib_name=$4
+
+    LIBS="$LIBS -l$svn_berkeley_db_lib_name"
+
     AC_TRY_RUN(
       [
 #include <stdio.h>

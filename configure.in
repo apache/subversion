@@ -146,8 +146,14 @@ dnl AC_CHECK_LIB() calls go here, if we ever need any
 SVN_FS_WANT_DB_MAJOR=4
 SVN_FS_WANT_DB_MINOR=0
 SVN_FS_WANT_DB_PATCH=14
+# Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
-                    $SVN_FS_WANT_DB_PATCH)
+                    $SVN_FS_WANT_DB_PATCH, "db4")
+if test "$svn_lib_berkeley_db" = "no"; then
+  # ...try libdb.so otherwise.
+  SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
+                    $SVN_FS_WANT_DB_PATCH, "db")
+fi
 
 SVN_LIB_XMLRPC_EPI()
 
