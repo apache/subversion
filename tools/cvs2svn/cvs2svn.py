@@ -13,7 +13,6 @@ import fileinput
 import string
 import getopt
 import stat
-import math
 import md5
 import shutil
 
@@ -354,13 +353,14 @@ class Dump:
     # are always the same for revisions.
     
     # Calculate the total length of the props section.
-    total_len = 10                                     # 'PROPS-END\n'
+    total_len = 10  # len('PROPS-END\n')
     for propname in props.keys():
-      klen = len(propname) + 1                         # propname + '\n'
-      klen_len = int(math.ceil(math.log10(klen))) + 3  # 'K ' + klen + '\n'
-      vlen = len(props[propname]) + 1                  # propval + '\n'
-      vlen_len = int(math.ceil(math.log10(vlen))) + 3  # 'V ' + vlen + '\n'
-      total_len = total_len + klen + klen_len + vlen + vlen_len
+      klen = len(propname)
+      klen_len = len('K %d' % klen)
+      vlen = len(props[propname])
+      vlen_len = len('V %d' % vlen)
+      # + 4 for the four newlines within a given property's section
+      total_len = total_len + klen + klen_len + vlen + vlen_len + 4
         
     # Print the revision header and props
     self.dumpfile.write('Revision-number: %d\n'
@@ -377,6 +377,7 @@ class Dump:
                                     propname,
                                     len(props[propname]),
                                     props[propname]))
+
     self.dumpfile.write('PROPS-END\n')
     self.dumpfile.write('\n')
 
