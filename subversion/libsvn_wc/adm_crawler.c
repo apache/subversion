@@ -1058,17 +1058,27 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
 
      Note that the first thing the crawler will do is push a new stack
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
-  SVN_ERR (report_local_mods (root_directory, NULL,
-                              edit_fns, edit_baton,
-                              &stack, affected_targets, locked_dirs,
-                              pool));
+  err = report_local_mods (root_directory, NULL,
+                           edit_fns, edit_baton,
+                           &stack, affected_targets, locked_dirs,
+                           pool);
+  if (err)
+    {
+      remove_all_locks (locked_dirs, pool);
+      return err;
+    }
 
   /* The crawler has returned, so affected_targets potentially has some
      still-open file batons.  */
 
   /* Loop through affected_targets, and fire off any postfix text-deltas that
      may be needed. */
-  SVN_ERR (do_postfix_text_deltas (affected_targets, edit_fns, pool));
+  err = do_postfix_text_deltas (affected_targets, edit_fns, pool);
+  if (err)
+    {
+      remove_all_locks (locked_dirs, pool);
+      return err;
+    }
 
   /* Have any edits been made at all?  We can tell by looking at the
      top-level stackframe left over from the crawl; it might still
@@ -1076,7 +1086,11 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
   if (stack->baton)
     {
       err = edit_fns->close_edit (edit_baton);
-      if (err) return err;
+      if (err)
+        {
+          remove_all_locks (locked_dirs, pool);
+          return err;
+        }
     }
 
   /* The commit is complete, and revisions have been bumped. */
