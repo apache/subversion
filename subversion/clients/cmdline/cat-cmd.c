@@ -57,11 +57,6 @@ svn_cl__cat (apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
-  /* Build an authentication baton to give to libsvn_client. */
-  svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool),
-                                 svn_cl__create_auth_baton (opt_state, pool));
-
   status = apr_file_open_stdout (&std_out, pool);
   if (!APR_STATUS_IS_SUCCESS (status))
     return svn_error_create (status, NULL, "Error opening stdout.");

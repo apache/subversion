@@ -54,13 +54,9 @@ svn_cl__status (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* Build an authentication object to give to libsvn_client. */
-  svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool),
-                                 svn_cl__create_auth_baton (opt_state, pool));
-
   /* The notification callback. */
-  svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE, pool);
+  svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, 
+                        FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);

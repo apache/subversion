@@ -69,10 +69,6 @@ svn_cl__export (apr_getopt_t *os,
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, TRUE, FALSE,
 			  pool);
 
-  svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool),
-                                 svn_cl__create_auth_baton (opt_state, pool));
-
   /* Do the export. */
   SVN_ERR (svn_client_export (from,
                               to,

@@ -880,6 +880,11 @@ main (int argc, const char * const *argv)
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
   command_baton.ctx = svn_client_ctx_create (pool);
+
+  /* Build an authentication baton to give to libsvn_client. */
+  svn_client_ctx_set_auth_baton (command_baton.ctx,
+                                 svn_cl__make_auth_baton (&opt_state, pool),
+                                 svn_cl__create_auth_baton (&opt_state, pool));
   
   /* Place any default --username or --password credentials into the cxt. */
   if (opt_state.auth_username || opt_state.auth_password)

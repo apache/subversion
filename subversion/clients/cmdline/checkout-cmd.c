@@ -123,17 +123,6 @@ svn_cl__checkout (apr_getopt_t *os,
                                     svn_path_basename (repos_url, subpool),
                                     subpool);
 
-      /* ### BUG?  Need a new auth_baton each time, allocating once from
-         ### pool doesn't work. Even when allocated from pool the
-         ### auth_baton appears to allocate username and password from the
-         ### subpool, so when the subpool is cleared nasty things
-         ### happen. */
-      svn_client_ctx_set_auth_baton (ctx, 
-                                     svn_cl__make_auth_baton (opt_state,
-                                                              subpool),
-                                     svn_cl__create_auth_baton (opt_state,
-                                                                pool));
-
       SVN_ERR (svn_client_checkout (notify_func,
                                     notify_baton,
                                     repos_url,

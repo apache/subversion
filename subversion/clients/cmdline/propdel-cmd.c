@@ -73,11 +73,6 @@ svn_cl__propdel (apr_getopt_t *os,
 
       /* Else some revision was specified, so proceed. */
 
-      svn_client_ctx_set_auth_baton (ctx,
-                                     svn_cl__make_auth_baton (opt_state, pool),
-                                     svn_cl__create_auth_baton (opt_state,
-                                                                pool));
-
       /* Either we have a URL target, or an implicit wc-path ('.')
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)
