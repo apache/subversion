@@ -466,7 +466,7 @@ get_creds (const char **username,
            svn_boolean_t *got_creds,
            prompt_provider_baton_t *pb,
            apr_hash_t *parameters,
-           svn_boolean_t use_defaults,
+           svn_boolean_t first_time,
            apr_pool_t *pool)
 {
   const char *prompt_username = NULL, *prompt_password = NULL;
@@ -481,11 +481,28 @@ get_creds (const char **username,
 
   /* If we're allowed to check for default usernames and passwords, do
      so. */
-  if (! use_defaults)
+  if (first_time)
     {
       def_username = apr_hash_get (parameters, 
                                    SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                    APR_HASH_KEY_STRING);
+
+      /* No default username?  Try the UID. */
+      if (! def_username)
+        {
+          char *un;
+          apr_uid_t uid;
+          apr_gid_t gid;
+          apr_status_t status;
+          
+          if ((status = apr_uid_current (&uid, &gid, pool)))
+            return svn_error_create (status, NULL, "Error getting UID");
+          if ((status = apr_uid_name_get (&un, uid, pool)))
+            return svn_error_create (status, NULL, "Error getting username");
+          SVN_ERR (svn_utf_cstring_to_utf8 ((const char **)&def_username,
+                                            un, NULL, pool));
+        }
+
       def_password = apr_hash_get (parameters, 
                                    SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                    APR_HASH_KEY_STRING);
