@@ -2675,6 +2675,111 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
 
 /* --- End machinery for svn_fs_apply_textdelta() ---  */
 
+/* --- Machinery for svn_fs_apply_text() ---  */
+
+/* Baton for svn_fs_apply_text(). */
+struct text_baton_t
+{
+  /* The original file info */
+  svn_fs_root_t *root;
+  const char *path;
+  
+  /* Derived from the file info */
+  dag_node_t *node;
+  
+  /* The returned stream that will accept the file's new contents. */
+  svn_stream_t *stream;
+
+  /* The actual fs stream that the returned stream will write to. */
+  svn_stream_t *file_stream;
+
+  /* Pool used by db txns */
+  apr_pool_t *pool;
+};
+
+
+/* A different trail-ready wrapper around svn_fs__dag_finalize_edits. */
+static svn_error_t *
+another_txn_body_finalize_edits (void *baton, trail_t *trail)
+{
+  struct text_baton_t *tb = baton;
+  return svn_fs__dag_finalize_edits (tb->node, trail);
+}
+
+/* Write function for the publically returned stream. */
+static svn_error_t *
+text_stream_writer (void *baton,
+                    const char *data,
+                    apr_size_t *len)
+{
+  struct text_baton_t *tb = baton;
+
+  /* Psst, here's some data.  Pass it on to the -real- file stream. */
+  return svn_stream_write (tb->file_stream, data, len);
+}
+
+/* Close function for the publically returned stream. */
+static svn_error_t *
+text_stream_closer (void *baton)
+{
+  struct text_baton_t *tb = baton;
+
+  /* Need to tell fs that we're done sending text */
+  return svn_fs__retry_txn (svn_fs_root_fs (tb->root),
+                            another_txn_body_finalize_edits, tb, tb->pool);
+}
+
+
+static svn_error_t *
+txn_body_apply_text (void *baton, trail_t *trail)
+{
+  struct text_baton_t *tb = baton;
+  parent_path_t *parent_path;
+
+  /* Call open_path with no flags, as we want this to return an error
+     if the node for which we are searching doesn't exist. */
+  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, trail));
+
+  /* Now, make sure this path is mutable. */
+  SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
+  tb->node = parent_path->node;
+
+  /* Make a writable stream for replacing the file's text. */
+  SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->file_stream),
+                                        tb->node,
+                                        tb->pool,
+                                        trail));
+
+  /* Create a 'returnable' stream which writes to the file_stream. */
+  tb->stream = svn_stream_create (tb, tb->pool);
+  svn_stream_set_write (tb->stream, text_stream_writer);
+  svn_stream_set_close (tb->stream, text_stream_closer);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_apply_text (svn_stream_t **contents_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  struct text_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
+
+  tb->root = root;
+  tb->path = path;
+  tb->pool = pool;
+
+  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
+                              txn_body_apply_text, tb, pool));
+  
+  *contents_p = tb->stream;
+  return SVN_NO_ERROR;
+}
+
+/* --- End machinery for svn_fs_apply_text() ---  */
+
 
 /* Note: we're sharing the `things_changed_args' struct with
    svn_fs_props_changed(). */

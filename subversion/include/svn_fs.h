@@ -1016,6 +1016,24 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                                      apr_pool_t *pool);
 
 
+/* Write data directly to the file PATH in ROOT.  ROOT must be the
+   root of a transaction, not a revision.
+
+   Set *CONTENTS_P to a stream ready to receive full textual data.
+   When the caller closes this stream, the data replaces the previous
+   contents of the file.
+
+   If PATH does not exist in ROOT, return an error.  (You cannot use
+   this routine to create new files;  use svn_fs_make_file to create
+   an empty file first.)
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_apply_text (svn_stream_t **contents_p,
+                                svn_fs_root_t *root,
+                                const char *path,
+                                apr_pool_t *pool);
+
+
 /* Set *CHANGED_P to 1 if the contents at PATH1 under ROOT1 differ
    from those at PATH2 under ROOT2, or set it to 0 if they are the
    same.  Both paths must exist under their respective roots, and both
