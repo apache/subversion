@@ -161,10 +161,17 @@ svn_ra_local__get_file_revs (svn_ra_session_t *session,
 static apr_status_t
 cleanup_access (void *data)
 {
+  svn_error_t *serr;
   svn_fs_t *fs = data;
 
-  /* ### What could go wrong here? Currently, it always succeeds. */
-  svn_error_clear (svn_fs_set_access (fs, NULL));
+  serr = svn_fs_set_access (fs, NULL);
+
+  if (serr)
+    {
+      apr_status_t apr_err = serr->apr_err;
+      svn_error_clear(serr);
+      return apr_err;
+    }
 
   return APR_SUCCESS;
 }

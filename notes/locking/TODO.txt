@@ -32,10 +32,6 @@ These are in the format of
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
 
-* subversion/libsvn_ra_local/ra_plugin.c:166
-    /* ### What could go wrong here? Currently, it always succeeds. */
-      (NOTE: See subversion/svnserve/serve.c:153 for how to do this)
-
 * subversion/libsvn_ra_local/ra_plugin.c:445
     ### What about the other errors? Collecting them all could mean
     ### a lot of errors for the user. Should we just collect the first
