@@ -147,6 +147,9 @@ class GeneratorBase:
         if sources[0].source_generated == 1:
           continue
 
+      if not os.path.isfile(sources[0].filename):
+        continue
+
       hdrs = [ ]
       for short in _find_includes(sources[0].filename, include_deps):
         self.graph.add(DT_OBJECT, objname, include_deps[short][0])
@@ -696,15 +699,7 @@ class TargetJavaClasses(TargetJava):
     self.output_dir = self.classes
 
   def add_dependencies(self, graph, cfg, extmap):
-    ### FIXME: SWIG/Java's generated .java source directory and files
-    ### are created by the build process, and are not available when
-    ### this code is run.  This HACK supresses the GenError thrown by
-    ### the _collect_paths() function.
-    sources = None
-    try:
-      sources =_collect_paths(self.sources, self.path)
-    except GenError:
-      sources = ()
+    sources =_collect_paths(self.sources, self.path)
 
     for src, reldir in sources:
       if src[-5:] == '.java':
@@ -752,20 +747,6 @@ class TargetJavaClasses(TargetJava):
                                                         pattern[:idx]))
 
     graph.add(DT_INSTALL, self.name, self)
-
-  class Section(TargetLib.Section):
-    def create_targets(self, graph, name, cfg, extmap):
-      self.targets = { }
-      target = self.target_class(name, self.options, cfg, extmap)
-      target.add_dependencies(graph, cfg, extmap)
-      self.targets = target
-
-    def get_targets(self):
-      return self.targets.values()
-
-    def get_dep_targets(self, target):
-      target = self.targets
-      return target and [target] or [ ]
 
 
 _build_types = {
@@ -832,9 +813,7 @@ def _collect_paths(pats, path=None):
       pattern = os.path.join(path, base_pat)
     else:
       pattern = base_pat
-    files = glob.glob(pattern)
-    if not files:
-      raise GenError('ERROR: "%s" found no files.' % pattern)
+    files = glob.glob(pattern) or [pattern]
 
     if path is None:
       # just append the names to the result list

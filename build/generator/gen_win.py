@@ -301,6 +301,15 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    custom_build=cbuild, custom_target=ctarget))
 
+    if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
+      classdir = os.path.join(rootpath, target.classes)
+      jarfile = os.path.join(classdir, target.jar)
+      cbuild = "jar cf %s -C %s %s" \
+               % (jarfile, classdir, string.join(target.packages))
+      deps = map(lambda x: x.custom_target, sources)
+      sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
+                                 custom_build=cbuild, custom_target=jarfile))
+
     if isinstance(target, gen_base.TargetSWIG):
       for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
         if isinstance(obj, gen_base.SWIGObject):

@@ -244,7 +244,24 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
         copy Release\subversion\bindings\swig\perl\_Wc.dll %PERL_LIBS%\auto\SVN\_Wc
         copy Release\subversion\bindings\swig\perl\_Wc.pdb %PERL_LIBS%\auto\SVN\_Wc
 
-      For Java, ???
+      For Java, there really is no installation procedure because Java doesn't
+      have a central location where libraries can go.
+      
+      To use the Subversion bindings in a Java application you just need the
+      following files:
+
+        subversion\bindings\swig\java\build\svn-api.jar
+        Release\subversion\bindings\swig\java\_client.dll
+        Release\subversion\bindings\swig\java\_core.dll
+        Release\subversion\bindings\swig\java\_delta.dll
+        Release\subversion\bindings\swig\java\_fs.dll
+        Release\subversion\bindings\swig\java\_ra.dll
+        Release\subversion\bindings\swig\java\_repos.dll
+        Release\subversion\bindings\swig\java\_wc.dll
+
+     Your app needs to load one or more of the DLLs files by calling
+     System.loadLibrary() or System.load() and have the JAR file in
+     its classpath.
 
 TESTING AND USING SWIG BINDINGS
 
