@@ -8,8 +8,9 @@ SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
 DESIGN_DIR = doc/programmer/design
-BOOK_DIR = doc/book/book
-MDOCS_DIR = doc/book/misc-docs
+BOOK_TOP = doc/book
+BOOK_DIR = ${BOOK_TOP}/book
+MDOCS_DIR = ${BOOK_TOP}/misc-docs
 DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
 
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
@@ -231,20 +232,20 @@ doc-design-pdf: doc/programmer/design/svn-design.pdf
 # Different outputs for the main Subversion 'book', written in docbook.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-book-html:
-	cd doc/book && make book-html
+	cd ${BOOK_TOP} && make book-html
 doc-book-pdf:
-	cd doc/book && make book-pdf
+	cd ${BOOK_TOP} && make book-pdf
 doc-book-ps:
-	cd doc/book && make book-ps
+	cd ${BOOK_TOP} && make book-ps
 
 # Different outputs for the misc docs.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
-	cd doc/book && make misc-docs-html
+	cd ${BOOK_TOP} && make misc-docs-html
 doc-misc-docs-pdf:
-	cd doc/book && make misc-docs-pdf
+	cd ${BOOK_TOP} && make misc-docs-pdf
 doc-misc-docs-ps:
-	cd doc/book && make misc-docs-ps
+	cd ${BOOK_TOP} && make misc-docs-ps
 
 
 doc-clean:
