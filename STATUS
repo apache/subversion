@@ -99,13 +99,6 @@ Candidate changes:
     Votes:
       +1: sussman, ghudson, cmpilato
 
-  * r10507,r10508,r10509
-    Perform checksum verification in FSFS (r10507) and verify file
-    contents in 'svnadmin verify' (r10508,r10509).
-    Justification: Must keeps the precious data nice and safe
-    Votes:
-     +1: ghudson, kfogel, brane
-
   * r10528
      Fix bug in overzealous out-of-dateness commit checks.
      (Allows 'svn cp wc URL' to work correctly. (issue #1994))

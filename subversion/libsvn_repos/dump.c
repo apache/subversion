@@ -939,6 +939,7 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_revnum_t youngest;
   const char *uuid;
+  svn_boolean_t dumping = (stream != NULL);
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
@@ -948,6 +949,8 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
     start_rev = 0;
   if (! SVN_IS_VALID_REVNUM(end_rev))
     end_rev = youngest;
+  if (! stream)
+    stream = svn_stream_empty (pool);
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
@@ -1067,7 +1070,8 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
       if (feedback_stream)
         SVN_ERR (svn_stream_printf (feedback_stream, pool,
                                     _("* %s revision %ld.\n"),
-                                    stream ? "Dumped" : "Verified", to_rev));
+                                    dumping ? "Dumped" : "Verified",
+                                    to_rev));
     }
 
   svn_pool_destroy (subpool);
