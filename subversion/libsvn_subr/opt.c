@@ -385,8 +385,7 @@ svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 #define DEFAULT_ARRAY_SIZE 5
 
 
-/* Copy STR into POOL and push the copy onto ARRAY.
-   ### todo: Hmm. This should probably find its way into libsvn_subr -Fitz */
+/* Copy STR into POOL and push the copy onto ARRAY. */
 static void 
 array_push_str (apr_array_header_t *array,
                 const char *str,
