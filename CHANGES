@@ -6,7 +6,7 @@ Version 0.14.5 [Alpha Interim 5] (released 29 Oct 2002, revision r3566)
  Developer-visible changes:
  * autoconf bugfix for berkeley-db detection
  * clean up property interface mess (part of #806)
- * dish.sh bugfix:  build the new docbook docs correctl
+ * dish.sh bugfix:  build the new docbook docs correctly
  * python tests now log commands
  * gen-make.py now assumes 'build.conf'
 
