@@ -1404,7 +1404,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           goto cleanup;
         }
 
-      serr = dav_svn__send_xml(uc.bb, uc.output, "<S:resource-walk>" DEBUG_CR);
+      serr = send_xml(&uc, "<S:resource-walk>" DEBUG_CR);
       if (serr)
         {
           derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1432,8 +1432,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           goto cleanup;
         }
           
-      serr = dav_svn__send_xml(uc.bb, uc.output, 
-                               "</S:resource-walk>" DEBUG_CR);
+      serr = send_xml(&uc, "</S:resource-walk>" DEBUG_CR);
       if (serr)
         {
           derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
