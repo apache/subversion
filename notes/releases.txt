@@ -89,18 +89,39 @@
    To make sure httpd.conf is properly set up for DAV access, see
    subversion/tests/clients/cmdline/README.
 
+   You should also have libtool-1.4.3 and autoconf-2.5x installed
+   from source.   It is important that you do not use distribution
+   shipped versions of this software as they are often patched in
+   ways that are not portable.
+
    Also, see sections 'Building the Latest Source under Unix' and
    'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
    detailed build information.
 
+   When building the Windows .zip release be sure to use the apr files
+   from the .zip packaging of Apache.  Additionally you'll want to 
+   also include the apr-iconv directory from right next to apr-util in
+   the Apache zip file.  See INSTALL, section I.1, for details.
+
 7. Merge CHANGES into the release branch. Do it the same way as described in
    section 4 in this document when merging fixes to the release branch.
 
-8. Run './dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z'
+8. Build the tarballs and zip file
 
-   Watch dist.sh's output to make sure everything goes smoothly; when
-   it's done, you'll have 'subversion-X.Y.Z.tar.gz' and 
-   'subversion-X.Y.Z.tar.bz2' in the cwd.
+   a) Run './dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z'
+
+     Watch dist.sh's output to make sure everything goes smoothly; when
+     it's done, you'll have 'subversion-X.Y.Z.tar.gz' and 
+     'subversion-X.Y.Z.tar.bz2' in the cwd.
+
+   b) Be sure to replace the apr, apr-util and apr-iconv dirs with the 
+      ones from the .zip packaging of Apache, before building the .zip,
+      as mentioned above in 6.
+
+   c) Run './dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z -zip'
+
+     Again watch dist.sh's output to make sure everything goes smoothly;
+     when it's done, you'll have 'subversion-X.Y.Z.zip' in the cwd.
 
 9. Test one or both of the tarballs:
      a) tar zxvf subversion-X.Y.Z.tar.gz;  cd subversion-X.Y.Z
@@ -181,7 +202,9 @@
 
 10. Use GPG to sign release. 
 
-   [Details to be filled in later].
+    gpg -b --armor subversion-X.Y.Z.tar.gz
+    gpg -b --armor subversion-X.Y.Z.tar.bz2
+    gpg -b --armor subversion-X.Y.Z.zip
 
 11. Upload the tarballs to http://subversion.tigris.org/tarballs/.
 
