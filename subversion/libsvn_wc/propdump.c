@@ -214,7 +214,7 @@ guaranteed_ap_write (ap_file_t *dest, const void *buf, ap_ssize_t n)
 
 /* kff todo: should it return ap_status_t? */
 void
-svn_wc_proplist_write (svn_proplist_t *proplist, 
+svn_wc_proplist_write (ap_hash_t *proplist, 
                        svn_string_t *destfile_name)
 {
   ap_file_t *destfile = NULL;   /* this init to NULL is actually important */
@@ -305,7 +305,7 @@ svn_wc_proplist_write (svn_proplist_t *proplist,
 
 
 #if 0
-svn_proplist_t *
+ap_hash_t *
 svn_wc_proplist_read (svn_string_t *propfile, apr_pool_t *pool)
 {
   /* kff todo: fooo in progress */
@@ -320,7 +320,7 @@ void
 main ()
 {
   ap_pool_t *pool = NULL;
-  svn_proplist_t *proplist;
+  ap_hash_t *proplist;
   svn_string_t *key;
 
   /* Our longest piece of test data. */

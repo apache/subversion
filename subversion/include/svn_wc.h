@@ -96,16 +96,16 @@ svn_prop_t *svn_wc_get_dirent_prop (svn_string_t *path,
                                     svn_string_t *propname);
 
 /* Return all properties (names and values) of file or directory PATH. */
-svn_proplist_t *svn_wc_get_node_proplist (svn_string_t *path);
+ap_hash_t *svn_wc_get_node_proplist (svn_string_t *path);
 
 /* Return all properties (names and values) of directory entry PATH. */
-svn_proplist_t *svn_wc_get_dirent_proplist (svn_string_t *path);
+ap_hash_t *svn_wc_get_dirent_proplist (svn_string_t *path);
 
 /* Return all property names of file or directory PATH. */
-svn_proplist_t *svn_wc_get_node_propnames (path);
+ap_hash_t *svn_wc_get_node_propnames (path);
 
 /* Return all property names of directory entry PATH. */
-svn_proplist_t *svn_wc_get_dirent_propnames (path);
+ap_hash_t *svn_wc_get_dirent_propnames (path);
 
 #endif  /* __SVN_SVR_H__ */
 

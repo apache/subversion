@@ -147,16 +147,16 @@ typedef struct svn_svr_policies_t
 {
   /* A hash which maps repositories -> aliases.
      KEY = (svn_string_t *),  VAL = (svn_string_t *)  */
-  svn_proplist_t *repos_aliases;
+  ap_hash_t *repos_aliases;
 
   /* A hash which maps security commands -> command args.
      (These commands describe global security policies.)
      KEY = (svn_string_t *),  VAL = (svn_string_t *)  */
-  svn_proplist_t *global_restrictions;
+  ap_hash_t *global_restrictions;
   
   /* A hash which maps DSO pathnames -> loaded plugin objects.
      KEY = (svn_string_t *),  VAL = (svn_svr_plugin_t *)   */
-  svn_proplist_t *plugins;
+  ap_hash_t *plugins;
 
   /* A convience memory pool, in case a server routine ever needs one */
   ap_pool_t *pool;                   
@@ -232,15 +232,15 @@ svn_string_t * svn_svr_get_ver_prop (svn_svr_policies_t *policy,
                                      unsigned long ver, 
                                      svn_string_t *propname);
 
-svn_proplist_t * svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
-                                           svn_string_t *repos, 
-                                           svn_user_t *user, 
-                                           unsigned long ver);
+ap_hash_t * svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
+                                      svn_string_t *repos, 
+                                      svn_user_t *user, 
+                                      unsigned long ver);
 
-svn_proplist_t * svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
-                                            svn_string_t *repos, 
-                                            svn_user_t *user, 
-                                            unsigned long ver);
+ap_hash_t * svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
+                                       svn_string_t *repos, 
+                                       svn_user_t *user, 
+                                       unsigned long ver);
  
 
 
@@ -266,28 +266,28 @@ svn_string_t * svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
                                         svn_string_t *path, 
                                         svn_string_t *propname);
  
-svn_proplist_t * svn_svr_get_node_proplist (svn_svr_policies_t *policy,
-                                            svn_string_t *repos, 
-                                            unsigned long ver, 
-                                            svn_string_t *path);
+ap_hash_t * svn_svr_get_node_proplist (svn_svr_policies_t *policy,
+                                       svn_string_t *repos, 
+                                       unsigned long ver, 
+                                       svn_string_t *path);
  
-svn_proplist_t * svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
-                                              svn_string_t *repos, 
-                                              svn_user_t *user, 
-                                              unsigned long ver, 
-                                              svn_string_t *path);
+ap_hash_t * svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
+                                         svn_string_t *repos, 
+                                         svn_user_t *user, 
+                                         unsigned long ver, 
+                                         svn_string_t *path);
  
-svn_proplist_t * svn_svr_get_node_propnames (svn_svr_policies_t *policy,
-                                             svn_string_t *repos, 
-                                             svn_user_t *user, 
-                                             unsigned long ver, 
-                                             svn_string_t *path);
+ap_hash_t * svn_svr_get_node_propnames (svn_svr_policies_t *policy,
+                                        svn_string_t *repos, 
+                                        svn_user_t *user, 
+                                        unsigned long ver, 
+                                        svn_string_t *path);
  
-svn_proplist_t * svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
-                                               svn_string_t *repos, 
-                                               svn_user_t *user, 
-                                               unsigned long ver, 
-                                               svn_string_t *path); 
+ap_hash_t * svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
+                                          svn_string_t *repos, 
+                                          svn_user_t *user, 
+                                          unsigned long ver, 
+                                          svn_string_t *path); 
 
 
 
