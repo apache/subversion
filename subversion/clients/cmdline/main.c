@@ -968,9 +968,6 @@ main (int argc, const char * const *argv)
   command_baton.opt_state = &opt_state;
   command_baton.ctx = &ctx;
 
-  ctx.prompt_func = svn_cl__prompt_user; 
-  ctx.prompt_baton = NULL;
-
   if ((err = svn_config_get_config (&(ctx.config), opt_state.config_dir, pool)))
     {
       svn_handle_error (err, stderr, 0);
@@ -1021,30 +1018,33 @@ main (int argc, const char * const *argv)
 
     if (opt_state.non_interactive == FALSE)
       {
-        /* Two prompting providers, one for username/password, one for
-           just username. */
+        /* Two basic prompt providers: username/password, and just username. */
         svn_client_get_simple_prompt_provider (&provider,
-                                               svn_cl__prompt_user, NULL, 
-                                               2, /* retry limit */ pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-        svn_client_get_username_prompt_provider (&provider,
-                                                 svn_cl__prompt_user, NULL, 
-                                                 2, /* retry limit */ pool);
+                                               svn_cl__auth_simple_prompt,
+                                               NULL,
+                                               2, /* retry limit */
+                                               pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-        /* Three prompting providers for server-certs, client-certs,
+        svn_client_get_username_prompt_provider (&provider,
+                                                 svn_cl__auth_username_prompt,
+                                                 NULL, 
+                                                 2, /* retry limit */
+                                                 pool);
+        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+
+        /* Three ssl prompt providers, for server-certs, client-certs,
            and client-cert-passphrases.  */
-        svn_client_get_ssl_server_prompt_provider (&provider,
-                                                   svn_cl__prompt_user,
-                                                   NULL, pool);
+        svn_client_get_ssl_server_prompt_provider
+          (&provider, svn_cl__auth_ssl_server_prompt, NULL, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-        svn_client_get_ssl_client_prompt_provider (&provider,
-                                                   svn_cl__prompt_user,
-                                                   NULL, pool);
+
+        svn_client_get_ssl_client_prompt_provider
+          (&provider, svn_cl__auth_ssl_client_prompt, NULL, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-        svn_client_get_ssl_pw_prompt_provider (&provider,
-                                               svn_cl__prompt_user,
-                                               NULL, pool);
+
+        svn_client_get_ssl_pw_prompt_provider
+          (&provider, svn_cl__auth_ssl_pw_prompt, NULL, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
       }
 

@@ -65,63 +65,51 @@ extern "C" {
 /*  The new authentication system allows the RA layer to "pull"
     information as needed from libsvn_client.  See svn_ra.h */
 
-/** A callback function type defined by a top-level svn application.
- *
- * If libsvn_client is unable to retrieve certain authorization
- * information, it can use this callback; the application will then
- * directly query the user with @a prompt and return the answer in 
- * @a info, allocated in @a pool.  @a baton is provided at the same 
- * time as the callback, and @a hide indicates that the user's answer 
- * should not be displayed on the screen.
- */
-typedef svn_error_t *
-(*svn_client_prompt_t) (const char **info,
-                        const char *prompt,
-                        svn_boolean_t hide,
-                        void *baton,
-                        apr_pool_t *pool);
-
-
 /** Create and return @a *provider, an authentication provider of type
  * svn_auth_cred_simple_t that gets information by prompting the user
- * with @a prompt_func and @a prompt_baton.  If either @c
- * SVN_AUTH_PARAM_DEFAULT_USERNAME or @c
- * SVN_AUTH_PARAM_DEFAULT_PASSWORD is defined as a runtime parameter
- * in the @c auth_baton, then return the default argument(s) when @c
- * svn_auth_first_credentials is called.  If @c
- * svn_auth_first_credentials fails, then re-prompt @a retry_limit
- * number of times (via @c svn_auth_next_credentials).
+ * with @a prompt_func and @a prompt_baton.  Allocate @a *provider in
+ * @a pool.
+ *
+ * If either @c SVN_AUTH_PARAM_DEFAULT_USERNAME or
+ * @c SVN_AUTH_PARAM_DEFAULT_PASSWORD is defined as a runtime
+ * parameter in the @c auth_baton, then @a *provider will return the
+ * default argument(s) when @c svn_auth_first_credentials is called.  If 
+ * @c svn_auth_first_credentials fails, then @a *provider will
+ * re-prompt @a retry_limit times (via @c svn_auth_next_credentials).
  */
-void 
-svn_client_get_simple_prompt_provider (svn_auth_provider_object_t **provider,
-                                       svn_client_prompt_t prompt_func,
-                                       void *prompt_baton,
-                                       int retry_limit,
-                                       apr_pool_t *pool);
+void svn_client_get_simple_prompt_provider
+   (svn_auth_provider_object_t **provider,
+    svn_auth_simple_prompt_func_t prompt_func,
+    void *prompt_baton,
+    int retry_limit,
+    apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets information by prompting the
- * user with @a prompt_func and @a prompt_baton.  If @c
- * SVN_AUTH_PARAM_DEFAULT_USERNAME is defined as a runtime parameter
- * in the @c auth_baton, then return the default argument when @c
- * svn_auth_first_credentials is called.  If @c
- * svn_auth_first_credentials fails, then re-prompt @a retry_limit
- * number of times (via @c svn_auth_next_credentials).
+ * user with @a prompt_func and @a prompt_baton.  Allocate @a *provider
+ * in @a pool.
+ *
+ * If @c SVN_AUTH_PARAM_DEFAULT_USERNAME is defined as a runtime
+ * parameter in the @c auth_baton, then @a *provider will return the
+ * default argument when @c svn_auth_first_credentials is called.  If
+ * @c svn_auth_first_credentials fails, then @a *provider will
+ * re-prompt @a retry_limit times (via @c svn_auth_next_credentials).
  */
-void 
-svn_client_get_username_prompt_provider (svn_auth_provider_object_t **provider,
-                                         svn_client_prompt_t prompt_func,
-                                         void *prompt_baton,
-                                         int retry_limit,
-                                         apr_pool_t *pool);
+void svn_client_get_username_prompt_provider
+   (svn_auth_provider_object_t **provider,
+    svn_auth_username_prompt_func_t prompt_func,
+    void *prompt_baton,
+    int retry_limit,
+    apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
- * ~/.subversion configuration directory.
+ * ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
  *  
- * If a default username or password is available, this provider will
+ * If a default username or password is available, @a *provider will
  * honor them as well, and return them when @c
  * svn_auth_first_credentials is called.  (see @c
  * SVN_AUTH_PARAM_DEFAULT_USERNAME and @c
@@ -134,9 +122,10 @@ svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
- * ~/.subversion configuration directory.
+ * ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
  *
- * If a default username is available, this provider will honor it,
+ * If a default username is available, @a *provider will honor it,
  * and return it when @c svn_auth_first_credentials is called.  (see
  * @c SVN_AUTH_PARAM_DEFAULT_USERNAME). 
  */
@@ -146,11 +135,13 @@ svn_client_get_username_provider (svn_auth_provider_object_t **provider,
 
 
 /** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_server_ssl_t. This provider retrieves its credentials
- * from the configuration mechanism. The returned credential is used
- * to override SSL security on an error.
+ * svn_auth_cred_server_ssl_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials from the configuration
+ * mechanism.  The returned credential is used to override SSL
+ * security on an error.
  *  
- * This provider requires certain run-time parameters be present in
+ * @a *provider requires certain run-time parameters be present in
  * the auth_baton:
  *
  *     - a loaded @c svn_config_t object
@@ -167,12 +158,13 @@ svn_client_get_ssl_server_file_provider (svn_auth_provider_object_t **provider,
                                          apr_pool_t *pool);
 
 /** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_client_ssl_t. This provider retrieves its credentials
- * from the configuration mechanism. The returned credential is used
- * to load the appropriate client certificate for authentication when
- * requested by a server.
+ * svn_auth_cred_client_ssl_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials from the configuration
+ * mechanism.  The returned credential is used to load the appropriate
+ * client certificate for authentication when requested by a server.
  *  
- * This provider requires certain run-time parameters be present in
+ * @a *provider requires certain run-time parameters be present in
  * the auth_baton:
  *
  *     - a loaded @c svn_config_t object
@@ -186,12 +178,13 @@ svn_client_get_ssl_client_file_provider (svn_auth_provider_object_t **provider,
                                          apr_pool_t *pool);
 
 /** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_client_ssl_pass_t. This provider retrieves its
- * credentials from the configuration mechanism. The returned
- * credential is used when a loaded client certificate is protected by
- * a passphrase.
+ * svn_auth_cred_client_ssl_pass_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials from the configuration
+ * mechanism.  The returned credential is used when a loaded client
+ * certificate is protected by a passphrase.
  *  
- * This provider requires certain run-time parameters be present in
+ * @a *provider requires certain run-time parameters be present in
  * the auth_baton:
  *
  *     - a loaded @c svn_config_t object
@@ -205,49 +198,54 @@ svn_client_get_ssl_pw_file_provider (svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 
 /** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_server_ssl_t. This provider retrieves its credentials
- * by using the @a prompt_func and @a prompt_baton. The returned
- * credential is used to override SSL security on an error.
+ * svn_auth_cred_server_ssl_t, allocated in @a pool.  
+ *
+ * @a *provider retrieves its credentials by using the @a prompt_func
+ * and @a prompt_baton.  The returned credential is used to override
+ * SSL security on an error.
  *  
- * This provider requires certain run-time parameters be present in
- * the auth_baton:
+ * @a *provider requires certain run-time parameters be present in
+ * the @c auth_baton:
  *
  *     - the failure bitmask reported by the ssl certificate validator
  *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN)
  */
-void
-svn_client_get_ssl_server_prompt_provider (svn_auth_provider_object_t **provider,
-                                           svn_client_prompt_t prompt_func,
-                                           void *prompt_baton,
-                                           apr_pool_t *pool);
+void svn_client_get_ssl_server_prompt_provider
+   (svn_auth_provider_object_t **provider,
+    svn_auth_ssl_server_prompt_func_t prompt_func,
+    void *prompt_baton,
+    apr_pool_t *pool);
 
 /** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_client_ssl_t. This provider retrieves its credentials
- * by using the @a prompt_func and @a prompt_baton. The returned
- * credential is used to load the appropriate client certificate for
- * authentication when requested by a server.
- *  
- * There are no run-time parameters required for this provider. 
- */
-void
-svn_client_get_ssl_client_prompt_provider (svn_auth_provider_object_t **provider,
-                                           svn_client_prompt_t prompt_func,
-                                           void *prompt_baton,
-                                           apr_pool_t *pool);
-
-/** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_client_ssl_pass_t. This provider retrieves its
- * credentials by using the @a prompt_func and @a prompt_baton.  The
- * returned credential is used when a loaded client certificate is
- * protected by a passphrase.
+ * svn_auth_cred_client_ssl_t, allocated in @a pool.
  *
- * There are no run-time parameters required for this provider. 
+ * @a *provider retrieves its credentials by using the @a prompt_func
+ * and @a prompt_baton.  The returned credential is used to load the
+ * appropriate client certificate for authentication when requested by
+ * a server.
+ *  
+ * @a *provider requires no run-time parameters.
  */
-void
-svn_client_get_ssl_pw_prompt_provider (svn_auth_provider_object_t **provider,
-                                       svn_client_prompt_t prompt_func,
-                                       void *prompt_baton,
-                                       apr_pool_t *pool);
+void svn_client_get_ssl_client_prompt_provider
+   (svn_auth_provider_object_t **provider,
+    svn_auth_ssl_client_prompt_func_t prompt_func,
+    void *prompt_baton,
+    apr_pool_t *pool);
+
+/** Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_client_ssl_pass_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials by using the @a prompt_func
+ * and @a prompt_baton.  The returned credential is used when a loaded
+ * client certificate is protected by a passphrase.
+ *
+ * @a *provider requires no run-time parameters. 
+ */
+void svn_client_get_ssl_pw_prompt_provider
+   (svn_auth_provider_object_t **provider,
+    svn_auth_ssl_pw_prompt_func_t prompt_func,
+    void *prompt_baton,
+    apr_pool_t *pool);
 
 
 /** This is a structure which stores a filename and a hash of property
@@ -363,12 +361,6 @@ typedef struct svn_client_ctx_t
 {
   /** main authentication baton. */
   svn_auth_baton_t *auth_baton;
-
-  /** prompt callback function */
-  svn_client_prompt_t prompt_func;
-
-  /** prompt callback baton */
-  void *prompt_baton;
 
   /** notification callback function */
   svn_wc_notify_func_t notify_func;
