@@ -214,9 +214,9 @@
         disk.  By default, whenever the commandline client
         successfully authenticates itself to a server, it saves the
         credentials in the user's private runtime configuration
-        area&mdash;in <literal>~/.subversion/auth/</literal> on
+        area&mdash;in <filename>~/.subversion/auth/</filename> on
         Unix-like systems or
-        <literal>%APPDATA%/Subversion/auth/</literal> on Windows.
+        <filename>%APPDATA%/Subversion/auth/</filename> on Windows.
         (The runtime area is covered in more detail in <xref
         linkend="svn-ch-7-sect-1"/>.)  Successful credentials are
         cached on disk, keyed on a combination of hostname, port, and
@@ -231,12 +231,12 @@
       <para>The security-paranoid people may be thinking to
         themselves, <quote>Caching passwords on disk?  That's
         terrible!  You should never do that!</quote>  But please remain
-        calm.  First, the <literal>auth/</literal> caching area is
+        calm.  First, the <filename>auth/</filename> caching area is
         permission-protected so that only the user (owner) can read
         data from it, not the world at large.  If that's still not
         safe enough for you, you can disable credential caching.  To
         disable caching for a single command, pass the
-        <literal>--no-auth-cache</literal> option:</para>
+        <option>--no-auth-cache</option> option:</para>
 
 <screen>
 $ svn commit -F log_msg.txt --no-auth-cache
@@ -258,20 +258,20 @@ Username:  joe
 </screen>
 
       <para>Or, if you want to disable credential caching permanently,
-        you can edit your runtime <literal>config</literal> file
-        (located next to the <literal>auth/</literal> directory).
-        Simply set </para>
+        you can edit your runtime <filename>config</filename> file
+        (located next to the <filename>auth/</filename> directory).
+        Simply set <literal>store-auth-creds</literal> to
+        <literal>no</literal>, and no credentials will be cached on
+        disk, ever.</para>
 
 <screen>
 [auth]
 store-auth-creds = no
 </screen>
 
-      <para>... and no credentials will be cached on disk, ever.</para>
-
       <para>Sometimes users will want to remove specific credentials
         from the disk cache.  To do this, you need to navigate into
-        the <literal>auth/</literal> area and manually delete the
+        the <filename>auth/</filename> area and manually delete the
         appropriate cache file.  Credentials are cached in individual
         files;  if you look inside each file, you will see keys and
         values.  The <literal>svn:realmstring</literal> key describes
@@ -302,11 +302,11 @@ END
 </screen>
 
       <para>Once you have located the proper cache file, just delete
-      it.</para>
+        it.</para>
 
       <para>One last word about client authentication behavior: a bit
-        of explanation about the <literal>--username</literal> and
-        <literal>--password</literal> options is needed.  Many client
+        of explanation about the <option>--username</option> and
+        <option>--password</option> options is needed.  Many client
         subcommands accept these options; however it is important to
         understand using these options <emphasis>does not</emphasis>
         automatically send credentials to the server.  As discussed
@@ -319,8 +319,8 @@ END
 
           <footnote><para>Again, a common mistake is to misconfigure a
            server so that it never issues an authentication challenge.
-           When users pass <literal>--username</literal> and
-           <literal>--password</literal> options to the client,
+           When users pass <option>--username</option> and
+           <option>--password</option> options to the client,
            they're surprised to see that they're never used, i.e. new
            revisions still appear to have been committed
            anonymously!</para></footnote>
@@ -345,14 +345,14 @@ END
       <orderedlist>
         <listitem>
           <para>Check whether the user specified any credentials as
-            commandline options, via <literal>--username</literal>
-            and/or <literal>--password</literal>.  If not, or if these
+            commandline options, via <option>--username</option>
+            and/or <option>--password</option>.  If not, or if these
             options fail to authenticate successfully, then</para>
         </listitem>
 
         <listitem>
           <para>Look up the server's realm in the runtime
-            <literal>auth/</literal> area, to see if the user already
+            <filename>auth/</filename> area, to see if the user already
             has the appropriate credentials cached.  If not, or if the
             cached credentials fail to authenticate, then</para>
         </listitem>
@@ -411,7 +411,7 @@ $ svnserve -i
         the standard behavior for a program being run via
         <command>inetd</command>.  The IANA has reserved port 3690
         for the Subversion protocol, so on a Unix-like system you can
-        add lines to <literal>/etc/services</literal> like these (if
+        add lines to <filename>/etc/services</filename> like these (if
         they don't already exist):</para>
 
 <screen>
@@ -641,7 +641,7 @@ sally = barpassword
         and <literal>auth-access</literal> can be set to the values
         <literal>none</literal>, <literal>read</literal>, or
         <literal>write</literal>.  Setting the value to
-        <literal>none</literal>" restricts all access of any kind;
+        <literal>none</literal> restricts all access of any kind;
         <literal>read</literal> allows read-only access to the
         repository, and <literal>write</literal> allows complete
         read/write access to the repository.  For example:</para>
@@ -720,16 +720,16 @@ baz
       <para>What's happening here is that the Subversion client is
         invoking a local <command>ssh</command> process, connecting to
         <literal>host.example.com</literal>, authenticating as user
-        'harry', then spawning a private <command>svnserve</command>
-        process on the remote machine, running as user 'harry'.  The
-        <command>svnserve</command> command is being invoked in tunnel
-        mode (<option>-t</option>) and all network protocol is being
-        <quote>tunneled</quote> over the encrypted connection by
-        <command>ssh</command>, the tunnel-agent.
-        <command>svnserve</command> is aware that it's running as user
-        'harry', and if the client performs a commit, the
-        authenticated username will be attributed as the author of the
-        new revision.</para>
+        <literal>harry</literal>, then spawning a private
+        <command>svnserve</command> process on the remote machine,
+        running as user 'harry'.  The <command>svnserve</command>
+        command is being invoked in tunnel mode (<option>-t</option>)
+        and all network protocol is being <quote>tunneled</quote> over
+        the encrypted connection by <command>ssh</command>, the
+        tunnel-agent.  <command>svnserve</command> is aware that it's
+        running as user 'harry', and if the client performs a commit,
+        the authenticated username will be attributed as the author of
+        the new revision.</para>
 
       <para>When running over a tunnel, authorization is primarily
         controlled by operating system permissions to the repository's
@@ -1588,13 +1588,13 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
           used by <command>svnserve.conf</command> and the runtime
           configuration files.  Lines that start with hash
           (<literal>#</literal>) are ignored.  In its simplest form,
-          each <quote>section</quote> names a repository and path
-          within it, and the authenticated usernames are the
-          <quote>variables</quote> within each section.  The value of
-          each variable describes the user's level of access to the
-          repository path: either <literal>r</literal> (read-only) or
-          <literal>rw</literal> (read-write).  If the user is not
-          mentioned at all, no access is allowed.</para>
+          each section names a repository and path within it, and the
+          authenticated usernames are the option names within each
+          section.  The value of each option describes the user's
+          level of access to the repository path: either
+          <literal>r</literal> (read-only) or <literal>rw</literal>
+          (read-write).  If the user is not mentioned at all, no
+          access is allowed.</para>
 
         <para>To be more specific: the value of the section-names are
           either of the form <literal>[repos-name:path]</literal> or
@@ -1618,9 +1618,9 @@ sally = r
         <para>In this first example, user harry has full read and
           write access on the
           <filename>/branches/calc/bug-142</filename> directory in the
-          <literal>calc</literal> repository, but user sally has
-          read-only access.  Any other users are blocked from
-          accessing this directory.</para>
+          <literal>calc</literal> repository, but user
+          <literal>sally</literal> has read-only access.  Any other
+          users are blocked from accessing this directory.</para>
 
         <para>Of course, permissions <quote>inherit</quote> from
           parent to child directory.  That means that we can specify a
@@ -1704,7 +1704,8 @@ everyone = harry, sally, joe, frank, sally, jane
 </screen>
 
         <para>Groups can be granted access control just like users.
-          Distinguish them with a <literal>@</literal> prefix:</para>
+          Distinguish them with an ampersane (<literal>@</literal>)
+          prefix:</para>
 
         <screen>
 [calc:/projects/calc]
