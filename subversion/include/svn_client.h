@@ -505,6 +505,13 @@ svn_client_switch (svn_revnum_t *result_rev,
  * directory, all of its contents will be scheduled for addition as 
  * well.
  *
+ * If @a force is not set and @a path is already under version
+ * control, return the error @c SVN_ERR_ENTRY_EXISTS.  If @a force is
+ * set, do not error on already-versioned items.  When used on a
+ * directory in conjunction with the @a recursive flag, this has the
+ * effect of scheduling for addition unversioned files and directories
+ * scattered deep within a versioned tree.
+ *
  * If @a ctx->notify_func is non-null, then for each added item, call
  * @a ctx->notify_func with @a ctx->notify_baton and the path of the 
  * added item.
@@ -512,6 +519,19 @@ svn_client_switch (svn_revnum_t *result_rev,
  * Important:  this is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert.
+ */
+svn_error_t *
+svn_client_add2 (const char *path,
+                 svn_boolean_t recursive,
+                 svn_boolean_t force,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_client_add2(), but with the @a force parameter
+ * always set to @c FALSE.
  */
 svn_error_t *
 svn_client_add (const char *path,
