@@ -176,6 +176,15 @@ However, it is possible, that the sorting is wrong in this case.")
   "*List of operations after which all user marks will be removed.
 Possible values are: commit, revert.")
 
+(defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
+
+(defvar svn-status-svn-environment-var-list nil
+  "*A list of environment variables that should be set for that svn process.
+If you set that variable, svn is called with that environment variables set.
+That is done via the env program.
+
+You could set it for example to '(\"LANG=C\")")
+
 (defvar svn-status-short-mod-flag-p t
   "*Whether the mark for out of date files is short or long.
 
@@ -457,6 +466,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run-svn %s: %S" cmdtype arglist))
         (let* ((proc-buf (get-buffer-create "*svn-process*"))
+               (svn-exe svn-status-svn-executable)
                (svn-proc))
           (when (listp (car arglist))
             (setq arglist (car arglist)))
@@ -471,12 +481,18 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
+            (when svn-status-svn-environment-var-list
+              (setq arglist (append svn-status-svn-environment-var-list
+                                    (list svn-status-svn-executable)
+                                    arglist))
+              (setq svn-exe "env"))
             (if run-asynchron
                 (progn
-                  (setq svn-proc (apply 'start-process "svn" proc-buf "svn" arglist))
+                  ;;(message "running asynchron: %s %S" svn-exe arglist)
+                  (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist))
                   (set-process-sentinel svn-proc 'svn-process-sentinel))
-              ;;(message "running synchron: svn %S" arglist)
-              (apply 'call-process "svn" nil proc-buf nil arglist)
+              ;;(message "running synchron: %s %S" svn-exe arglist)
+              (apply 'call-process svn-exe nil proc-buf nil arglist)
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
