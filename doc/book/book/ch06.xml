@@ -1675,13 +1675,9 @@ Fetching external item into calc/third-party/skins
         first vendor drop.</para>
 
       <screen>
-$ svn mkdir http://svn.example.com/repos/calc/vendor/libcomplex  \
-            -m 'creating vendor branch area'
-
 &hellip;
-$ svn import http://svn.example.com/repos/calc/vendor/libcomplex \
-             /path/to/libcomplex-1.0                             \
-             current                                             \
+$ svn import /path/to/libcomplex-1.0 \
+             http://svn.example.com/repos/calc/vendor/libcomplex/current \
              -m 'importing initial 1.0 vendor drop'
 &hellip;
 </screen>

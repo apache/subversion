@@ -311,7 +311,9 @@ import_dir (const svn_delta_editor_t *editor,
  * in the top repository target directory as there are entries in the
  * top of PATH; but if NEW_ENTRY is non-null, it is the name of a new
  * subdirectory in the repository to hold the import.  If PATH is a
- * file, NEW_ENTRY may not be null.
+ * file, NEW_ENTRY may not be null.  NEW_ENTRY can have multiple
+ * components in which case parent directories are created as
+ * needed. 
  * 
  * NEW_ENTRY can never be the empty string.
  * 
@@ -341,6 +343,7 @@ import (const char *path,
   void *root_baton;
   svn_node_kind_t kind;
   apr_array_header_t *ignores;
+  apr_array_header_t *batons = NULL;
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
@@ -350,6 +353,37 @@ import (const char *path,
 
   /* Import a file or a directory tree. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+  if (new_entry)
+    {
+      apr_array_header_t *dirs;
+      const char *new_path = "";
+      int i;
+
+      dirs = svn_path_decompose (new_entry, pool);
+
+      /* If we are importing a file then NEW_ENTRY's basename is
+       * the desired filename in the repository.  We don't create
+       * a directory with that name. */
+      if (kind == svn_node_file)
+        apr_array_pop (dirs);
+
+      for (i = 0; i < dirs->nelts; i++)
+        {
+          void *temp;
+
+          if (! batons)
+            batons = apr_array_make (pool, 1, sizeof (void *));
+
+          *((void **) apr_array_push (batons)) = root_baton;
+          new_path = svn_path_join (new_path, ((char **)dirs->elts)[i], pool);
+          SVN_ERR (editor->add_directory (new_path,
+                                          root_baton,
+                                          NULL, SVN_INVALID_REVNUM,
+                                          pool, &temp));
+          root_baton = temp;
+        }
+    }
 
   /* Note that there is no need to check whether PATH's basename is
      the same name that we reserve for our admistritave
@@ -361,7 +395,7 @@ import (const char *path,
   if (kind == svn_node_file)
     {
       SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
-      if (!svn_cstring_match_glob_list (path, ignores))
+      if (! svn_cstring_match_glob_list (path, ignores))
         {
           if (! new_entry)
             return svn_error_create
@@ -374,14 +408,6 @@ import (const char *path,
     }
   else if (kind == svn_node_dir)
     {
-      void *new_dir_baton = NULL;
-
-      /* Grab a new baton, making two we'll have to close. */
-      if (new_entry)
-        SVN_ERR (editor->add_directory (new_entry, root_baton,
-                                        NULL, SVN_INVALID_REVNUM,
-                                        pool, &new_dir_baton));
-
 #if 0 /* Temporarily blocked out for consideration, see below. */
       /* If we activate this notification, then
        *
@@ -415,23 +441,28 @@ import (const char *path,
 #endif /* 0 */
 
       SVN_ERR (import_dir (editor, 
-                           new_dir_baton ? new_dir_baton : root_baton, 
+                           root_baton,
                            path, new_entry ? new_entry : "",
                            nonrecursive, excludes, ctx, pool));
 
-      /* Close one baton or two. */
-      if (new_dir_baton)
-        SVN_ERR (editor->close_directory (new_dir_baton, pool));
     }
   else if (kind == svn_node_none)
     {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         "'%s' does not exist.", path);  
+      return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL, 
+                                "'%s' does not exist.", path);  
     }
 
   /* Close up the show; it's time to go home. */
   SVN_ERR (editor->close_directory (root_baton, pool));
+  if (batons)
+    {
+      void **baton;
+      while ((baton = (void **) apr_array_pop (batons)))
+        {
+          SVN_ERR (editor->close_directory (*baton, pool));
+        }
+    }
+
   SVN_ERR (editor->close_edit (edit_baton, pool));
 
   return SVN_NO_ERROR;
@@ -469,6 +500,20 @@ get_ra_editor (void **ra_baton,
                                         is_commit, !is_commit,
                                         ctx, pool));
 
+  /* If this is an import (aka, not a commit), we need to verify that
+     our repository URL exists. */
+  if (! is_commit)
+    {
+      svn_node_kind_t kind;
+
+      SVN_ERR ((*ra_lib)->check_path (&kind, *session, "", 
+                                      SVN_INVALID_REVNUM, pool));
+      if (kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
+                                  "the path '%s' does not exist",
+                                  base_url);
+    }
+
   /* Fetch the latest revision if requested. */
   if (latest_rev)
     SVN_ERR ((*ra_lib)->get_latest_revnum (*session, latest_rev, pool));
@@ -486,13 +531,12 @@ svn_error_t *
 svn_client_import (svn_client_commit_info_t **commit_info,
                    const char *path,
                    const char *url,
-                   const char *new_entry,
                    svn_boolean_t nonrecursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *log_msg;
+  const char *log_msg = "";
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *ra_baton, *session;
@@ -501,19 +545,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   apr_hash_t *excludes = apr_hash_make (pool);
-
-  /* Sanity check: NEW_ENTRY can be null or non-empty, but it can't be
-     empty. */
-  if (new_entry && (strcmp (new_entry, "") == 0))
-    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
-                             "empty string is an invalid entry name");
-
-  /* The repository doesn't know about the reserved. */
-  if (new_entry && strcmp (new_entry, SVN_WC_ADM_DIR_NAME) == 0)
-    return svn_error_createf
-      (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
-       "the name \"%s\" is reserved and cannot be imported",
-       SVN_WC_ADM_DIR_NAME);
+  const char *new_entry = NULL;
 
   /* Create a new commit item and add it to the array. */
   if (ctx->log_msg_func)
@@ -543,24 +575,84 @@ svn_client_import (svn_client_commit_info_t **commit_info,
           apr_hash_set (excludes, abs_path, APR_HASH_KEY_STRING, (void *)1);
         }
     }
-  else
-    log_msg = "";
 
   /* We're importing to an RA layer. */
     {
       svn_node_kind_t kind;
       const char *base_dir = path;
+      apr_array_header_t *dirs = NULL;
+      const char *temp;
+      const char *dir;
+      apr_pool_t *subpool;
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       if (kind == svn_node_file)
         svn_path_split (path, &base_dir, NULL, pool);
 
-      SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
-                              &editor, &edit_baton, ctx, url, base_dir,
-                              NULL, log_msg, NULL, &committed_rev,
-                              &committed_date, &committed_author, 
-                              FALSE, pool));
+      err = NULL;
+      subpool = svn_pool_create (pool);
+
+      do
+        {
+          svn_pool_clear (subpool);
+
+          /* See if the user is interested in cancelling this operation. */
+          if (ctx->cancel_func)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
+          if (err)
+            {
+              /* If get_ra_editor below failed we either tried to open
+                 an invalid url, or else some other kind of error.  In case
+                 the url was bad we back up a directory and try again. */
+
+              if (err->apr_err != SVN_ERR_FS_NO_SUCH_ENTRY)
+                return err;
+              else
+                svn_error_clear (err);
+
+              if (! dirs)
+                dirs = apr_array_make (pool, 1, sizeof (const char *));
+
+              svn_path_split (url, &temp, &dir, pool);
+              *((const char **)apr_array_push (dirs)) = dir;
+              url = temp;
+            }
+        }
+      while ((err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
+                                   &editor, &edit_baton, ctx, url, base_dir,
+                                   NULL, log_msg, NULL, &committed_rev,
+                                   &committed_date, &committed_author,
+                                   FALSE, subpool)));
+
+      /* If there were some intermediate directories that needed to be
+         created, we'll tack those */
+      if (dirs && dirs->nelts)
+        {
+          const char **child;
+          new_entry = *((const char **)apr_array_pop (dirs));
+          while ((child = (const char **)apr_array_pop (dirs)))
+            {
+              new_entry = svn_path_join (new_entry, *child, pool);
+            }
+        }
+
+      /* NEW_ENTRY == NULL means the first call to get_ra_editor()
+         above succeeded.  That means that URL corresponds to an
+         already existing filesystem entity. */
+      if (kind == svn_node_file && (! new_entry))
+        return svn_error_createf
+          (SVN_ERR_ENTRY_EXISTS, NULL,
+           "the path \"%s\" already exists", url);
     }
+
+  /* The repository doesn't know about the reserved. */
+  if (new_entry && (strcmp (new_entry, SVN_WC_ADM_DIR_NAME) == 0))
+    return svn_error_createf
+      (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
+       "the name \"%s\" is reserved and cannot be imported",
+       SVN_WC_ADM_DIR_NAME);
+
 
   /* If an error occured during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */

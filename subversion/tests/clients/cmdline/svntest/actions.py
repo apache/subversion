@@ -78,7 +78,7 @@ def guarantee_greek_repository(path):
                                   '--username', main.wc_author,
                                   '--password', main.wc_passwd,
                                   '-m', 'Log message for revision 1.',
-                                  url, main.greek_dump_dir)
+                                  main.greek_dump_dir, url)
 
     # check for any errors from the import
     if len(errput):
