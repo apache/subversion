@@ -96,8 +96,8 @@ II. New Client Behaviors
       This section describes a user interface to accomplish "locking",
       as described in the functional spec.  A new property is used to
       enforce locking and prevent people from wasting time;  lock
-      tokens are objects stored in the working that represent a lock;
-      and two new subcommands (lock/unlock) are described.
+      tokens are objects stored in the working copy that represent a
+      lock; and two new subcommands (lock/unlock) are described.
 
    B. The "svn:lock" property
 
@@ -201,7 +201,7 @@ II. New Client Behaviors
             The 'svn lock' command automatically implies running 'svn
             update' on a path.  In other words, it's not possible to
             lock a non-HEAD version of a path.  If a file has the
-            'svn:lock' property and has been hijacked, both 'svn lock'
+            'svn:lock' property and has been hijacked, 'svn lock'
             will interactively ask the user whether to use the
             repository or local version of the file, just as 'svn
             update' does.
@@ -295,7 +295,7 @@ II. New Client Behaviors
 
             1. seeing lock tokens in a working copy
 
-               'svn status' conisders a lock token "interesting", and
+               'svn status' considers a lock token "interesting", and
                displays it using some new symbol, in a new column:
 
                    $ svn status
