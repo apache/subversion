@@ -3406,6 +3406,8 @@ write_final_changed_path_info (apr_off_t *offset_p,
 
   svn_pool_destroy (iterpool);
 
+  SVN_ERR (svn_io_file_close (changes_file, pool));
+  
   SVN_ERR (svn_stream_close (changes_stream));
 
   *offset_p = offset;
