@@ -1,3 +1,12 @@
+Version 0.24.1 (released 16 June 2003, revision 6249, branches/release-0.24.1)
+
+ User-visible changes:
+ * Fix bug in 'svn log'.
+
+ Developer-visible changes:
+ * none
+
+
 Version 0.24.0 (released 15 June 2003, revision 6234, branches/release-0.24.0)
 
  User-visible changes:
