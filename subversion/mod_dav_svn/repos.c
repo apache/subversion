@@ -1387,45 +1387,54 @@ static int dav_svn_is_parent_resource(const dav_resource *res1,
 dav_error * dav_svn_is_new_resource (request_rec *r,
                                      const char *uri,
                                      const char *root_path,
-                                     int *is_new)
+                                     int *is_new,
+                                     svn_node_kind_t *kind)
 {
   dav_error *derr;
   svn_error_t *serr;
   dav_resource *resource;
   svn_revnum_t base_rev;
-  svn_fs_root_t *base_rev_root;
-  svn_node_kind_t kind;
+  svn_fs_root_t *base_rev_root, *the_root;
+  svn_node_kind_t k;
+  char *saved_uri;
 
-  /* parse the uri and prep the associated resource. */
+  /* Temporarily insert the uri that the user actually wants us to
+     convert into a resource.  Typically, this is already r->uri, so
+     this is usually a no-op.  But sometimes the caller may pass in
+     the Destination: header uri.  */
+  saved_uri = r->uri;
+  r->uri = apr_pstrdup(r->pool, uri);
+
+  /* convert r->uri into a resource, in the context of r.  This opens
+     the appropriate repository filesystem, too. */
   derr = dav_svn_get_resource(r, root_path,
                               /* ### I can't believe that every single
                                  parser ignores the LABEL and USE_CHECKED_IN
                                  args below!! */
                               "ignored_label", 1,
                               &resource);
+
+  /* Restore r back to normal. */
+  r->uri = saved_uri;
+
   if (derr)
     return derr;
 
-  /* verify that we've got a working resource */
-  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
-    {
-      /* callers can look for this specific parse error, as a way of
-         knowing that it's not a working resource. */
-      return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
-                           DAV_ERR_IF_PARSE,
-                           "is_new_resource called on non-working resource.");
+  /* Return the node kind. */
+  if (! resource->exists)
+    *kind = svn_node_none;
+  else
+    { 
+      if (resource->collection)
+        *kind = svn_node_dir;
+      else 
+        *kind = svn_node_file;
     }
 
-  /* easy out: if the working resource doesn't exist in the txn, then
-     yes indeed, the uri should be considered "new". */
-  if (! resource->exists)
+  if (resource->type == DAV_RESOURCE_TYPE_WORKING)
     {
-      *is_new = 1;
-    }
-  else
-    {
-      /* we have a tangible item in the txn; see if it exists in the
-         original revision as well. */
+      /* The 'newness' of an item is a question of whether the item
+         existed in the original revision or not. */
       base_rev = svn_fs_txn_base_revision (resource->info->root.txn);
       serr = svn_fs_revision_root (&base_rev_root, resource->info->repos->fs,
                                    base_rev, r->pool);
@@ -1436,8 +1445,8 @@ dav_error * dav_svn_is_new_resource (request_rec *r,
                                            "Could not open root of revision %"
                                            SVN_REVNUM_T_FMT, base_rev));
       
-      kind = svn_fs_check_path (base_rev_root,
-                                resource->info->repos_path, r->pool);
+      k = svn_fs_check_path (base_rev_root,
+                             resource->info->repos_path, r->pool);
       
       *is_new = (kind == svn_node_none) ? 1 : 0;
     }
@@ -1618,9 +1627,7 @@ const char * dav_svn_getetag(const dav_resource *resource)
     }
   
   return apr_psprintf(resource->pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
-                      created_rev,
-                      apr_xml_quote_string(resource->pool,
-                                           resource->info->repos_path, 1));
+                      created_rev, resource->info->repos_path);
 }
 
 static dav_error * dav_svn_set_headers(request_rec *r,
@@ -2135,8 +2142,6 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
                                          int depth,
                                          dav_response **response)
 {
-  svn_error_t *serr;
-
   /* ### source must be from a collection under baseline control. the
      ### baseline will (implicitly) indicate the source revision, and the
      ### path will be derived simply from the URL path */
@@ -2152,14 +2157,7 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
       return dav_new_error(src->pool, HTTP_NOT_IMPLEMENTED, 0, msg);
   */
 
-  /* ### Safeguard: see issue #916, whereby we're allowing an
-     auto-checkout of a baseline for PROPPATCHing, *without* creating
-     a new baseline afterwards.  We need to safeguard here that nobody
-     is calling COPY with the baseline as a Destination! */
-  if (dst->baselined && dst->type == DAV_RESOURCE_TYPE_VERSION)
-    return dav_new_error(src->pool, HTTP_PRECONDITION_FAILED, 0,
-                         "Illegal: COPY Destination is a baseline.");
-
+  svn_error_t *serr;
   
   serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
                       src->info->repos_path, /* the relative path of src */

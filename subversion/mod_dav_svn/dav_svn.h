@@ -417,21 +417,20 @@ dav_error * dav_svn_split_uri (request_rec *r,
 
 
 
-/* Given an apache request R, a working-resource URI, and a ROOT_PATH
-   to the svn location block, answer the question: "does this resource
-   -not- exist in the original baseline?"  (In svn terms, this is
-   equivalent to asking, "does this transaction resource -not- exist
-   in the original revision?")  Place the boolean answer into IS_NEW
-   as true (nonzero) or false (zero).
- 
-   The URI must represent a working resource, else error is returned.
+/* Given an apache request R, a URI, and a ROOT_PATH to the svn
+   location block, answer two questions:
 
-   Use r->pool for temporary allocation.
-*/
+    1. what is the node_kind of the uri?
+
+    2. if the URI is a working resource, is it the path "new" in the
+       transaction?  i.e. does this object exist in the original
+       revision? 
+ */
 dav_error * dav_svn_is_new_resource (request_rec *r,
                                      const char *uri,
                                      const char *root_path,
-                                     int *is_new);
+                                     int *is_new,
+                                     svn_node_kind_t *kind);
 
 
 /* Generate the HTTP response body for a successful MERGE. */
