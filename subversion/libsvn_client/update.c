@@ -128,7 +128,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
   /* ### todo:  This is a TEMPORARY wrapper around our editor so we
      can use it with an old driver. */
   svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
-                         update_editor, update_edit_baton, pool);
+                         wrap_editor, wrap_edit_baton, pool);
 
   /* Using an RA layer */
   if (! xml_src)
