@@ -243,8 +243,9 @@ def chmod_tree(path, mode, mask):
     mode, mask = arg
     for name in names:
       fullname = os.path.join(dirname, name)
-      new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
-      os.chmod(fullname, new_mode)
+      if not os.path.islink(fullname):
+        new_mode = (os.stat(fullname)[stat.ST_MODE] & ~mask) | mode
+        os.chmod(fullname, new_mode)
   os.path.walk(path, visit, (mode, mask))
 
 # For clearing away working copies

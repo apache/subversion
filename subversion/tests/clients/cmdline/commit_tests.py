@@ -1499,6 +1499,34 @@ def commit_multiple_wc(sbox):
   if svntest.actions.run_and_verify_status(wc2_dir, expected_status2):
     return 1
 
+
+def commit_symlink(sbox):
+  "committing a symlink should fail"
+
+  # Symlinks are a Unix phenonenon anyway.
+  if svntest.main.windows:
+    return 0
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  linktarget_path = os.path.join(wc_dir, 'linktarget')
+  svntest.main.file_append(newfile_path, 'this is a new file')
+  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  svntest.main.run_svn(None, 'add', newfile_path)
+  os.remove(newfile_path)
+  os.symlink('linktarget', newfile_path)
+
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', wc_dir)
+  if err:
+    return 0
+  else:
+    return 1
+
+
 ########################################################################
 # Run the tests
 
@@ -1530,6 +1558,7 @@ test_list = [ None,
               commit_current_dir,
               commit_multiple_wc,
               XFail(failed_commit),
+              commit_symlink,
              ]
 
 if __name__ == '__main__':
