@@ -1419,18 +1419,10 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
 
 
 
-/* -------------------------------------------------------------------- */
-
-/* Helper for dav_svn_merge().  Return a hash that maps (const char *)
-   absolute fs paths to (const char *) locktokens.  Allocate the hash
-   and all keys/vals in POOL.  PATH_PREFIX is the prefix we need to
-   prepend to each relative 'lock-path' in the xml in order to create
-   an absolute fs-path.
-*/
-static dav_error *build_lock_hash(apr_hash_t **locks,
-                                  request_rec *r,
-                                  const char *path_prefix,
-                                  apr_pool_t *pool)
+dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
+                                    request_rec *r,
+                                    const char *path_prefix,
+                                    apr_pool_t *pool)
 {
   apr_status_t apr_err;
   dav_error *derr;
@@ -1440,10 +1432,10 @@ static dav_error *build_lock_hash(apr_hash_t **locks,
   int ns;
   apr_hash_t *hash = apr_hash_make(pool);
   
-  /* Grab the MERGE body out of r->pool, as it contains all of the
+  /* Grab the request body out of r->pool, as it contains all of the
      lock tokens.  It should have been stashed already by our custom
      input filter. */
-  apr_err = apr_pool_userdata_get(&data, "svn-merge-body", r->pool);
+  apr_err = apr_pool_userdata_get(&data, "svn-request-body", r->pool);
   if (apr_err)
     return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,
@@ -1460,22 +1452,30 @@ static dav_error *build_lock_hash(apr_hash_t **locks,
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      /* This must be a MERGE from an old svn client, which means it
-         can't possibly have an svn namespace in the body, nor any
-         lock tokens.  Just punt. */
+      /* If there's no svn: namespace in the body, then there are
+         definitely no lock-tokens to harvest.  This is likely a
+         request from an old client. */
       *locks = hash;
       return SVN_NO_ERROR;
     }
 
-  /* Search all the doc's children until we find the <lock-token-list>. */
-  for (child = doc->root->first_child; child != NULL; child = child->next)
+  if ((doc->root->ns == ns) 
+      && (strcmp(doc->root->name, "lock-token-list") == 0))
     {
-      /* if this element isn't one of ours, then skip it */
-      if (child->ns != ns)
-        continue;
-
-      if (strcmp(child->name, "lock-token-list") == 0)
-        break;
+      child = doc->root;
+    }
+  else
+    {
+      /* Search doc's children until we find the <lock-token-list>. */
+      for (child = doc->root->first_child; child != NULL; child = child->next)
+        {
+          /* if this element isn't one of ours, then skip it */
+          if (child->ns != ns)
+            continue;
+          
+          if (strcmp(child->name, "lock-token-list") == 0)
+            break;
+        }
     }
 
   /* Then look for N different <lock> structures within. */
@@ -1536,6 +1536,49 @@ static dav_error *build_lock_hash(apr_hash_t **locks,
   
   *locks = hash;
   return SVN_NO_ERROR;
+}
+
+
+
+dav_error *dav_svn__push_locks(dav_resource *resource,
+                               apr_hash_t *locks,
+                               apr_pool_t *pool)
+{
+  svn_fs_access_t *fsaccess;
+  apr_hash_index_t *hi;
+  svn_error_t *serr;
+  
+  serr = svn_fs_get_access (&fsaccess, resource->info->repos->fs);
+  if (serr)
+    {
+      /* If an authenticated username was attached to the request,
+         then dav_svn_get_resource() should have already noticed and
+         created an fs_access_t in the filesystem.  */
+      const char *new_msg = "Lock token(s) in request, but no username.";
+      svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                      NULL, new_msg);
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, resource->info->r,
+                    "%s", serr->message);
+      svn_error_clear(serr);
+      return dav_svn_convert_err (sanitized_error, HTTP_BAD_REQUEST,
+                                  apr_psprintf(pool, new_msg), pool);
+    }
+  
+  for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+    {
+      const char *token;
+      void *val;
+      apr_hash_this(hi, NULL, NULL, &val);
+      token = val;
+      
+      serr = svn_fs_access_add_lock_token (fsaccess, token);
+      if (serr)
+        return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error pushing token into filesystem.",
+                                    pool);
+    }
+
+  return NULL;
 }
 
 
@@ -1614,46 +1657,17 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
      notices them and does this work for us.  In the case of MERGE,
      however, svn clients are sending them in the request body. */
 
-  err = build_lock_hash(&locks, target->info->r,
-                        target->info->repos_path,
-                        pool);
+  err = dav_svn__build_lock_hash(&locks, target->info->r,
+                                 target->info->repos_path,
+                                 pool);
   if (err != NULL)
     return err;
 
   if (apr_hash_count(locks))
     {
-      svn_fs_access_t *fsaccess;
-      apr_hash_index_t *hi;
-
-      serr = svn_fs_get_access (&fsaccess, source->info->repos->fs);
-      if (serr)
-        {
-          /* If an authenticated username was attached to the MERGE
-             request, then dav_svn_get_resource() should have already
-             noticed and created an fs_access_t in the filesystem.  */
-          const char *new_msg = "Lock token(s) in request, but no username.";
-          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
-                                                          NULL, new_msg);
-          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, source->info->r,
-                        "%s", serr->message);
-          svn_error_clear(serr);
-          return dav_svn_convert_err (sanitized_error, HTTP_BAD_REQUEST,
-                                      apr_psprintf(pool, new_msg), pool);
-        }
-      
-      for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
-        {
-          const char *token;
-          void *val;
-          apr_hash_this(hi, NULL, NULL, &val);
-          token = val;
-
-          serr = svn_fs_access_add_lock_token (fsaccess, token);
-          if (serr)
-            return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
-                                        "Error pushing token into filesystem.",
-                                        pool);
-        }
+      err = dav_svn__push_locks(source, locks, pool);
+      if (err != NULL)
+        return err;
     }
 
   /* We will ignore no_auto_merge and no_checkout. We can't do those, but the

@@ -592,6 +592,26 @@ struct dav_locktoken
 };
 
 
+/* Helper for reading lock-tokens out of request bodies, by looking
+   for cached body in R->pool's userdata.
+
+   Return a hash that maps (const char *) absolute fs paths to (const
+   char *) locktokens.  Allocate the hash and all keys/vals in POOL.
+   PATH_PREFIX is the prefix we need to prepend to each relative
+   'lock-path' in the xml in order to create an absolute fs-path.
+*/
+dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
+                                    request_rec *r,
+                                    const char *path_prefix,
+                                    apr_pool_t *pool);
+
+
+/* Helper: push all of the lock-tokens (hash values) in LOCKS into
+   RESOURCE's already-open svn_fs_t. */
+dav_error *dav_svn__push_locks(dav_resource *resource,
+                               apr_hash_t *locks,
+                               apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
