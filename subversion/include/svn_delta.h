@@ -54,9 +54,9 @@
 #ifndef SVN_DELTA_H
 #define SVN_DELTA_H
 
+#include <apr_pools.h>
+#include <xmlparse.h>
 #include "svn_types.h"
-#include "apr_pools.h"
-
 
 
 /* These are the in-memory tree deltas; you can convert them to and
@@ -227,7 +227,13 @@ typedef struct svn_delta_digger_t
 
 
 
+
+/* Creates a parser with the common callbacks and userData registered. */
+XML_Parser svn_xml_make_parser (svn_delta_digger_t *diggy);
+
+
 #endif  /* SVN_DELTA_H */
+
 
 
 /* 
