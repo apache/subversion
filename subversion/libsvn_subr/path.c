@@ -57,7 +57,7 @@
 /*** A path manipulation library. ***/
 
 static void
-canonicalize (svn_string_t *path, enum svn_path_style style)
+svn_path_canonicalize (svn_string_t *path, enum svn_path_style style)
 {
   /* kff todo: `style' ignored presently. */
 
