@@ -498,11 +498,11 @@
             seems to be unable to connect to the WebDAV share.  It
             repeatedly asks for a name and password, even when the
             Apache server isn't issuing an authentication challenge!
-            Some have speculated that this might happen because that
+            Some have speculated that this might happen because
             WebFolders is specifically designed to operate against
             Microsoft's SharePoint DAV server.  If the machine isn't
             part of an NT Domain, then the share is mounted without a
-            problem.</para>
+            problem.  This mystery is not yet solved.</para>
         </listitem>
 
         <listitem>
