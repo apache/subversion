@@ -329,35 +329,35 @@ Checked out revision 341.
 
       <itemizedlist>
         <listitem><para>
-          You make a change to
+          Ha realizado un cambio en
           <filename>/calc/branches/my-calc-branch/button.c</filename>,
-          which creates revision 342.</para>
+          creando la revisión 342.</para>
         </listitem>
 
         <listitem><para>
-          You make a change to
+          Ha realizado un cambio en
           <filename>/calc/branches/my-calc-branch/integer.c</filename>,
-          which creates revision 343.</para>
+          creando la revisión 343.</para>
         </listitem>
 
         <listitem><para>
-          Sally makes a change to
-          <filename>/calc/trunk/integer.c</filename>, which creates
-          revision 344.</para>
+          Sally ha realizado un cambio en
+          <filename>/calc/trunk/integer.c</filename>, creando la
+          revisión 344.</para>
         </listitem>
       </itemizedlist>
 
-      <para>There are now two independent lines of development, shown
-        in <xref linkend="svn-ch-4-dia-4"/>, happening on
-        <filename>integer.c</filename>.</para>
+      <para>Ahora hay dos líneas independientes de desarrollo,
+        mostradas en <xref linkend="svn-ch-4-dia-4"/>, sobre el
+        fichero <filename>integer.c</filename>.</para>
 
       <figure id="svn-ch-4-dia-4">
-        <title>The branching of one file's history</title>
+        <title>Bifurcación de la historia de un fichero</title>
         <graphic fileref="images/ch04dia4.png"/>
       </figure>
 
-      <para>Things get interesting when you look at the history of
-        changes made to your copy of
+      <para>Las cosas se ponen interesantes cuando mira el historial
+        de cambios realizados a su copia de
         <filename>integer.c</filename>:</para>
 
 <screen>
@@ -396,14 +396,15 @@ Changed paths:
 ------------------------------------------------------------------------
 </screen>
 
-      <para>Notice that Subversion is tracing the history of your
-      branch's <filename>integer.c</filename> all the way back through
-      time, even traversing the point where it was copied.  It shows
-      the creation of the branch as an event in the history, because
-      <filename>integer.c</filename> was implicitly copied when all of
-      <filename>/calc/trunk/</filename> was copied.  Now look what
-      happens when Sally runs the same command on her copy of the
-      file:</para>
+      <para>Fíjese como Subversion sigue la historia de
+        <filename>integer.c</filename> en su rama hacia atrás,
+        traspasando incluso el punto donde el fichero fue copiado.
+        Muestra la creación de la rama como un evento en la
+        historia, porque <filename>integer.c</filename> fue
+        copiado de forma implícita cuando realizó la copia de
+        <filename>/calc/trunk/</filename>. Ahora mire qué es lo
+        que ocurre cuando Sally ejecuta el mismo comando sobre su
+        copia del fichero:</para>
 
 <screen>
 $ pwd
