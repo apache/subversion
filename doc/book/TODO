@@ -19,6 +19,17 @@ To be fixed by someone:
 
 --------------------------------------------------------------
 
+To be fixed by cmpilato:
+
+ch05:
+
+   - document that if either the start-commit or pre-commit hook
+     fails, STDERR is marshalled back to the client.  (not true of
+     post-commit, see issue 443).
+
+
+--------------------------------------------------------------
+
 To be fixed by sussman:
 
 ch01:
