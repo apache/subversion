@@ -30,15 +30,6 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
   - some folks want a glossary.  that's good, since we have a
     glossary.xml anyway.  :-)  probably something we do at the last minute.
 
-  - svnserve documentation: four people have already gotten confused
-    (in the same way) by this phrase: "To configure your client to
-    perform SSH tunneling, you just need to edit your servers run-time
-    configuration file".  They think the book is talking about some
-    config file on the *server*, rather than the client.  oof, clarify.
-
-  - document new svn+ssh:// syntax.  also explain 'svnserve -t' flag.
-    and the new SVN_SSH environment variable.
-
   - ch07: maybe a explanation for the person writing a new main()
     application... what are all those callbacks in the ctx_t used for?
     people have asked this in irc.  what sort of things does an
@@ -79,3 +70,13 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
     knowledge that users/admins need to use svn well.
 
   - document 'svn switch --relocate'.
+
+  - cvs2svn.py is a lot more complex now, with many more switches,
+    especially since it now converts branches and tags.  Need to
+    expand our coverage of this in Appendix B.
+
+  - ch06:  document the [tunnels] section of ~/.subversion/config
+
+  - document mod_authz_svn!  and don't forget to mention it in the
+    'svnserve vs. apache' comparison section of ch05.
+
