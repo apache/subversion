@@ -315,16 +315,7 @@ static svn_error_t * add_child(resource_t **child,
      until it's "checked out". */
   else
     {
-      svn_stringbuf_t *vsn_url_value;
-
-      /* Someday, we could call get_versioned_resource(), which does
-         the get_func() check itself.  */
-
-      SVN_ERR( (*cc->get_func)(cc->close_baton,
-                               rsrc->local_path,
-                               cc->vsn_url_name,
-                               &vsn_url_value) );
-      rsrc->vsn_url = vsn_url_value->data;
+      SVN_ERR( get_version_url(cc, rsrc) );
     }
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
