@@ -53,6 +53,9 @@
    defined tin the design doc. */
 
 
+#ifndef __SVN_TYPES__
+#define __SVN_TYPES__
+
 /* a string of bytes.  "bytes is bytes" */
 typedef struct svn_string_t
 {
@@ -134,12 +137,23 @@ typedef struct svn_ver_t
 /* a repository is a node table and a history */
 
 
+/* This is totally wrong right now; these should be filesystem-level
+   actions, not client-level actions.  */
+
+typedef enum svr_action {add, rm, mv, checkout, 
+                         commit, import, update} svr_action_t;
+
+
 
 /* temporary placeholders, till we write the real thing!  */
 typedef unsigned long                 svn_token_t;
 typedef int                           svn_skelta_t;
 typedef int                           svn_delta_t;
 typedef int                           svn_diff_t;
+
+
+
+#endif  /* __SVN_TYPES__ */
 
 
 /* --------------------------------------------------------------
