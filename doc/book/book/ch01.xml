@@ -216,7 +216,7 @@
       website (<systemitem
       class="url">http://subversion.tigris.org</systemitem>) often has
       binaries available for download, posted by volunteers.  The site
-      usually contains graphical installer packages for users for
+      usually contains graphical installer packages for users of
       Microsoft operating systems.  If you run a Unix-like operating
       system, you can use your system's native package-distribution
       system (rpm, deb, ports tree) to get Subversion.</para>
@@ -224,8 +224,8 @@
     <para>Alternately, you can build Subversion directly from source
       code.  From the website, you can download the latest source-code
       release.  After unpacking it, follow the instructions in INSTALL
-      to build it.  Note that released source package contains
-      everything you need to build a commandline-client capable of
+      to build it.  Note that a released source package contains
+      everything you need to build a command-line client capable of
       talking to a remote repository (in particular, the apr,
       apr-util, and neon libraries.)  But Subversion has many other
       dependencies, such as Berkeley DB and possibly Apache httpd.

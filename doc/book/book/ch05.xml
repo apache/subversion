@@ -77,7 +77,7 @@
         completes, the temporary transaction is deleted.</para>
           
       <para>The use of transaction trees is the only way to make
-        permanent changes to repository's versioned filesystem.
+        permanent changes to a repository's versioned filesystem.
         However, it's important to understand that the lifetime of a
         transaction is completely flexible.  In the case of updates,
         transactions are temporary trees that are immediately

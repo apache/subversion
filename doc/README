@@ -59,8 +59,9 @@ were derived from
 
 http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
 
-1) Use `` and '' for quoting any text.  Do not use a single ' or a
-   single ".
+1) Use <quote>...</quote> for quoting any text in the Subversion book.
+   [Do not use the standard Texinfo practice which is `` and ''.
+   Do not use a single ' or a single ".]
 2) When quoting single characters, such as discussing the output from
    an svn merge or svn update, use @samp{}.
 3) Use @samp{} for any commands to run on the command line.  Do not use
