@@ -34,6 +34,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "questions.h"
 
 
 
@@ -119,21 +120,14 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
    mark it for removal?
 */
 
-enum svn_wc__timestamp_kind
-{
-  svn_wc__text_time = 1,
-  svn_wc__prop_time
-};
-
-
 /* Is PATH's timestamp the same as the one recorded in our
    `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_KIND
    should be one of the enumerated type above. */
-static svn_error_t *
-timestamps_equal_p (svn_boolean_t *equal_p,
-                    svn_stringbuf_t *path,
-                    const enum svn_wc__timestamp_kind timestamp_kind,
-                    apr_pool_t *pool)
+svn_error_t *
+svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
+                            svn_stringbuf_t *path,
+                            const enum svn_wc__timestamp_kind timestamp_kind,
+                            apr_pool_t *pool)
 {
   apr_time_t wfile_time, entrytime = 0;
   svn_stringbuf_t *dirpath, *entryname;
@@ -201,58 +195,11 @@ timestamps_equal_p (svn_boolean_t *equal_p,
 }
 
 
-
-
-/* Set *DIFFERENT_P to non-zero if FILENAME1 and FILENAME2 have
-   different sizes, else set to zero.  If the size of one or both of
-   the files cannot be determined, then the sizes are not "definitely"
-   different, so *DIFFERENT_P will be set to 0. */
-static svn_error_t *
-filesizes_definitely_different_p (svn_boolean_t *different_p,
-                                  svn_stringbuf_t *filename1,
-                                  svn_stringbuf_t *filename2,
-                                  apr_pool_t *pool)
-{
-  apr_finfo_t finfo1;
-  apr_finfo_t finfo2;
-  apr_status_t status;
-
-  /* Stat both files */
-  status = apr_stat (&finfo1, filename1->data, APR_FINFO_MIN, pool);
-  if (status)
-    {
-      /* If we got an error stat'ing a file, it could be because the
-         file was removed... or who knows.  Whatever the case, we
-         don't know if the filesizes are definitely different, so
-         assume that they're not. */
-      *different_p = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  status = apr_stat (&finfo2, filename2->data, APR_FINFO_MIN, pool);
-  if (status)
-    {
-      /* See previous comment. */
-      *different_p = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-
-  /* Examine file sizes */
-  if (finfo1.size == finfo2.size)
-    *different_p = FALSE;
-  else
-    *different_p = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Do a byte-for-byte comparison of FILE1 and FILE2. */
 static svn_error_t *
 contents_identical_p (svn_boolean_t *identical_p,
-                      svn_stringbuf_t *file1,
-                      svn_stringbuf_t *file2,
+                      const char *file1,
+                      const char *file2,
                       apr_pool_t *pool)
 {
   apr_status_t status;
@@ -261,19 +208,19 @@ contents_identical_p (svn_boolean_t *identical_p,
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
-  status = apr_file_open (&file1_h, file1->data, 
+  status = apr_file_open (&file1_h, file1, 
                           APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_open failed on `%s'", file1->data);
+       "contents_identical_p: apr_file_open failed on `%s'", file1);
 
-  status = apr_file_open (&file2_h, file2->data, APR_READ, 
+  status = apr_file_open (&file2_h, file2, APR_READ, 
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_open failed on `%s'", file2->data);
+       "contents_identical_p: apr_file_open failed on `%s'", file2);
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
   while (!APR_STATUS_IS_EOF(status))
@@ -283,14 +230,14 @@ contents_identical_p (svn_boolean_t *identical_p,
         return svn_error_createf
           (status, 0, NULL, pool,
            "contents_identical_p: apr_file_read_full() failed on %s.", 
-           file1->data);
+           file1);
 
       status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
            "contents_identical_p: apr_file_read_full() failed on %s.", 
-           file2->data);
+           file2);
       
       if ((bytes_read1 != bytes_read2)
           || (memcmp (buf1, buf2, bytes_read1)))
@@ -304,13 +251,13 @@ contents_identical_p (svn_boolean_t *identical_p,
   if (status)
     return svn_error_createf 
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_close failed on %s.", file1->data);
+       "contents_identical_p: apr_file_close failed on %s.", file1);
 
   status = apr_file_close (file2_h);
   if (status)
     return svn_error_createf 
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_close failed on %s.", file2->data);
+       "contents_identical_p: apr_file_close failed on %s.", file2);
 
   return SVN_NO_ERROR;
 }
@@ -326,7 +273,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
   svn_error_t *err;
   svn_boolean_t q;
 
-  err = filesizes_definitely_different_p (&q, file1, file2, pool);
+  err = svn_io__filesizes_different_p (&q, file1->data, file2->data, pool);
   if (err)
     return err;
 
@@ -336,7 +283,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
       return SVN_NO_ERROR;
     }
   
-  err = contents_identical_p (&q, file1, file2, pool);
+  err = contents_identical_p (&q, file1->data, file2->data, pool);
   if (err)
     return err;
 
@@ -394,8 +341,8 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
      wrong in certain rare cases, but with the addition of a forced
      delay after commits (see revision 419 and issue #542) it's highly
      unlikely to be a problem. */
-  SVN_ERR (timestamps_equal_p (&equal_timestamps, filename,
-                               svn_wc__text_time, subpool));
+  SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps, filename,
+                                       svn_wc__text_time, subpool));
   if (equal_timestamps)
     {
       *modified_p = FALSE;
@@ -427,232 +374,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
 
 
 
-/* Helper to optimize svn_wc_props_modified_p().
-
-   If PATH_TO_PROP_FILE is nonexistent, or is of size 4 bytes ("END"),
-   then set EMPTY_P to true.   Otherwise set EMPTY_P to false, which
-   means that the file must contain real properties.  */
-static svn_error_t *
-empty_props_p (svn_boolean_t *empty_p,
-               svn_stringbuf_t *path_to_prop_file,
-               apr_pool_t *pool)
-{
-  enum svn_node_kind kind;
-
-  SVN_ERR (svn_io_check_path (path_to_prop_file->data, &kind, pool));
-
-  if (kind == svn_node_none)
-    *empty_p = TRUE;
-
-  else 
-    {
-      apr_finfo_t finfo;
-      apr_status_t status;
-
-      status = apr_stat (&finfo, path_to_prop_file->data, APR_FINFO_MIN, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "couldn't stat '%s'...",
-                                  path_to_prop_file->data);
-
-      /* If we remove props from a propfile, eventually the file will
-         contain nothing but "END\n" */
-      if (finfo.size == 4)  
-        *empty_p = TRUE;
-
-      else
-        *empty_p = FALSE;
-
-      /* ### really, if the size is < 4, then something is corrupt.
-         If the size is between 4 and 16, then something is corrupt,
-         because 16 is the -smallest- the file can possibly be if it
-         contained only one property.  someday we should check for
-         this. */
-
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Simple wrapper around previous helper func, and inversed. */
-svn_error_t *
-svn_wc__has_props (svn_boolean_t *has_props,
-                   svn_stringbuf_t *path,
-                   apr_pool_t *pool)
-{
-  svn_boolean_t is_empty;
-  svn_stringbuf_t *prop_path;
-
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
-  SVN_ERR (empty_props_p (&is_empty, prop_path, pool));
-
-  if (is_empty)
-    *has_props = FALSE;
-  else
-    *has_props = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-svn_error_t *
-svn_wc_props_modified_p (svn_boolean_t *modified_p,
-                         svn_stringbuf_t *path,
-                         apr_pool_t *pool)
-{
-  svn_boolean_t bempty, wempty;
-  svn_stringbuf_t *prop_path;
-  svn_stringbuf_t *prop_base_path;
-  svn_boolean_t different_filesizes, equal_timestamps;
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  /* First, get the paths of the working and 'base' prop files. */
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, subpool));
-  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, subpool));
-
-  /* Decide if either path is "empty" of properties. */
-  SVN_ERR (empty_props_p (&wempty, prop_path, subpool));
-  SVN_ERR (empty_props_p (&bempty, prop_base_path, subpool));
-
-  /* Easy out:  if the base file is empty, we know the answer
-     immediately. */
-  if (bempty)
-    {
-      if (! wempty)
-        {
-          /* base is empty, but working is not */
-          *modified_p = TRUE;
-          goto cleanup;
-        }
-      else
-        {
-          /* base and working are both empty */
-          *modified_p = FALSE;
-          goto cleanup;
-        }
-    }
-
-  /* OK, so the base file is non-empty.  One more easy out: */
-  if (wempty)
-    {
-      /* base exists, working is empty */
-      *modified_p = TRUE;
-      goto cleanup;
-    }
-
-  /* At this point, we know both files exists.  Therefore we have no
-     choice but to start checking their contents. */
-  
-  /* There are at least three tests we can try in succession. */
-  
-  /* Easy-answer attempt #1:  */
-  
-  /* Check if the the local and prop-base file have *definitely*
-     different filesizes. */
-  SVN_ERR (filesizes_definitely_different_p (&different_filesizes,
-                                             prop_path, prop_base_path,
-                                             subpool));
-  if (different_filesizes) 
-    {
-      *modified_p = TRUE;
-      goto cleanup;
-    }
-  
-  /* Easy-answer attempt #2:  */
-      
-  /* See if the local file's prop timestamp is the same as the one
-     recorded in the administrative directory.  */
-  SVN_ERR (timestamps_equal_p (&equal_timestamps, path,
-                               svn_wc__prop_time, subpool));
-  if (equal_timestamps)
-    {
-      *modified_p = FALSE;
-      goto cleanup;
-    }
-  
-  /* Last ditch attempt:  */
-  
-  /* If we get here, then we know that the filesizes are the same,
-     but the timestamps are different.  That's still not enough
-     evidence to make a correct decision;  we need to look at the
-     files' contents directly.
-
-     However, doing a byte-for-byte comparison won't work.  The two
-     properties files may have the *exact* same name/value pairs, but
-     arranged in a different order.  (Our hashdump format makes no
-     guarantees about ordering.)
-
-     Therefore, rather than use contents_identical_p(), we use
-     svn_wc__get_local_propchanges(). */
-  {
-    apr_array_header_t *local_propchanges;
-    apr_hash_t *localprops = apr_hash_make (subpool);
-    apr_hash_t *baseprops = apr_hash_make (subpool);
-
-    SVN_ERR (svn_wc__load_prop_file (prop_path->data, localprops, subpool));
-    SVN_ERR (svn_wc__load_prop_file (prop_base_path->data,
-                                     baseprops,
-                                     subpool));
-    SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
-                                            localprops,
-                                            baseprops,
-                                            subpool));
-                                         
-    if (local_propchanges->nelts > 0)
-      *modified_p = TRUE;
-    else
-      *modified_p = FALSE;
-  }
- 
- cleanup:
-  svn_pool_destroy (subpool);
-  
-  return SVN_NO_ERROR;
-}
-
-
-
-svn_error_t *
-svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
-                       apr_hash_t **original_props,
-                       const char *path,
-                       apr_pool_t *pool)
-{
-  svn_stringbuf_t *path_s, *prop_path, *prop_base_path;
-  apr_array_header_t *local_propchanges;
-  apr_hash_t *localprops = apr_hash_make (pool);
-  apr_hash_t *baseprops = apr_hash_make (pool);
-
-  path_s = svn_stringbuf_create (path, pool);
-
-  SVN_ERR (svn_wc__prop_path (&prop_path, path_s, 0, pool));
-  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path_s, 0, pool));
-
-  SVN_ERR (svn_wc__load_prop_file (prop_path->data, localprops, pool));
-  SVN_ERR (svn_wc__load_prop_file (prop_base_path->data, baseprops, pool));
-
-  /* At this point, if either of the propfiles are non-existent, then
-     the corresponding hash is simply empty. */
-
-  SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
-                                          localprops,
-                                          baseprops,
-                                          pool));
-
-  if (original_props != NULL)
-    *original_props = baseprops;
-
-  *propchanges = local_propchanges;
-
-  return SVN_NO_ERROR;
-}
-
-
-
 
-
 svn_error_t *
 svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,

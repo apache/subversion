@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
+#include "svn_time.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_error.h"
@@ -39,6 +40,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "translate.h"
 
 
 
@@ -800,6 +802,241 @@ svn_string_t *svn_wc__friendly_date (const char *date, apr_pool_t *pool)
     return svn_string_ncreate (date, dot_spot - date, pool);
   else
     return svn_string_create (date, pool);
+}
+
+
+svn_error_t *
+svn_wc__get_eol_style (enum svn_wc__eol_style *style,
+                       const char **eol,
+                       const char *path,
+                       apr_pool_t *pool)
+{
+  const svn_string_t *propval;
+
+  /* Get the property value. */
+  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EOL_STYLE, path, pool));
+
+  /* Convert it. */
+  svn_wc__eol_style_from_value (style, eol, propval ? propval->data : NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+void 
+svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
+                              const char **eol,
+                              const char *value)
+{
+  if (value == NULL)
+    {
+      /* property dosen't exist. */
+      *style = svn_wc__eol_style_none;
+      *eol = NULL;
+    }
+  else if (! strcmp ("native", value))
+    {
+      *style = svn_wc__eol_style_native;
+      *eol = APR_EOL_STR;       /* whee, a portability library! */
+    }
+  else if (! strcmp ("LF", value))
+    {
+      *style = svn_wc__eol_style_fixed;
+      *eol = "\n";
+    }
+  else if (! strcmp ("CR", value))
+    {
+      *style = svn_wc__eol_style_fixed;
+      *eol = "\r";
+    }
+  else if (! strcmp ("CRLF", value))
+    {
+      *style = svn_wc__eol_style_fixed;
+      *eol = "\r\n";
+    }
+  else
+    {
+      *style = svn_wc__eol_style_unknown;
+      *eol = NULL;
+    }
+}
+
+
+void
+svn_wc__eol_value_from_string (const char **value, const char *eol)
+{
+  if (eol == NULL)
+    *value = NULL;
+  else if (! strcmp ("\n", eol))
+    *value = "LF";
+  else if (! strcmp ("\r", eol))
+    *value = "CR";
+  else if (! strcmp ("\r\n", eol))
+    *value = "CRLF";
+  else
+    *value = NULL;
+}
+
+
+/* Helper for svn_wc__get_keywords().
+   
+   If KEYWORD is a valid keyword, look up its value in ENTRY, fill in
+   the appropriate field in KEYWORDS with that value (allocated in
+   POOL), and set *IS_VALID_P to TRUE.  If the value is not available,
+   use "" instead.
+
+   If KEYWORD is not a valid keyword, set *IS_VALID_P to FALSE and
+   return with no error.
+*/
+static svn_error_t *
+expand_keyword (svn_wc_keywords_t *keywords,
+                svn_boolean_t *is_valid_p,
+                const char *keyword,
+                svn_wc_entry_t *entry,
+                apr_pool_t *pool)
+{
+  *is_valid_p = TRUE;
+
+  /* Using strcasecmp() to accept downcased short versions of
+   * keywords.  Note that this doesn't apply to the strings being
+   * expanded in the file -- rather, it's so users can do
+   *
+   *    $ svn propset svn:keywords "date url" readme.txt
+   *
+   * and not have to worry about capitalization in the property
+   * value.
+   */
+
+  if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
+      || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+    {
+      if ((entry) && (entry->cmt_rev))
+        keywords->revision = svn_string_createf (pool, "%ld", entry->cmt_rev);
+      else
+        /* We found a recognized keyword, so it needs to be expanded
+           no matter what.  If the expansion value isn't available,
+           we at least send back an empty string.  */
+        keywords->revision = svn_string_create ("", pool);
+    }
+  else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
+           || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+    {
+      if (entry && (entry->cmt_date))
+        keywords->date = svn_wc__friendly_date 
+          (svn_time_to_nts (entry->cmt_date, pool), pool);
+      else
+        keywords->date = svn_string_create ("", pool);
+    }
+  else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
+           || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+    {
+      if (entry && (entry->cmt_author))
+        keywords->author = svn_string_create_from_buf (entry->cmt_author, pool);
+      else
+        keywords->author = svn_string_create ("", pool);
+    }
+  else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
+           || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
+    {
+      if (entry && (entry->url))
+        keywords->url = svn_string_create_from_buf (entry->url, pool);
+      else
+        keywords->url = svn_string_create ("", pool);
+    }
+  else
+    *is_valid_p = FALSE;
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__get_keywords (svn_wc_keywords_t **keywords,
+                      const char *path,
+                      const char *force_list,
+                      apr_pool_t *pool)
+{
+  const char *list;
+  int offset = 0;
+  svn_stringbuf_t *found_word;
+  svn_wc_keywords_t tmp_keywords;
+  svn_boolean_t got_one = FALSE;
+  svn_wc_entry_t *entry = NULL;
+
+  /* Start by assuming no keywords. */
+  *keywords = NULL;
+  memset (&tmp_keywords, 0, sizeof (tmp_keywords));
+
+  /* Choose a property list to parse:  either the one that came into
+     this function, or the one attached to PATH. */
+  if (force_list == NULL)
+    {
+      const svn_string_t *propval;
+
+      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_KEYWORDS, path, pool));
+      
+      list = propval ? propval->data : NULL;
+    }
+  else
+    list = force_list;
+
+  /* Now parse the list for words.  For now, this parser assumes that
+     the list will contain keywords separated by whitespaces.  This
+     can be made more complex later if somebody cares. */
+
+  /* The easy answer. */
+  if (list == NULL)
+    return SVN_NO_ERROR;
+
+  do 
+    {
+      /* Find the start of a word by skipping past whitespace. */
+      while ((list[offset] != '\0') && (apr_isspace (list[offset])))
+        offset++;
+    
+      /* Hit either a non-whitespace or NULL char. */
+
+      if (list[offset] != '\0') /* found non-whitespace char */
+        {
+          svn_boolean_t is_valid;
+          int word_start, word_end;
+          
+          word_start = offset;
+          
+          /* Find the end of the word by skipping non-whitespace chars */
+          while ((list[offset] != '\0') && (! apr_isspace (list[offset])))
+            offset++;
+          
+          /* Hit either a whitespace or NULL char.  Either way, it's the
+             end of the word. */
+          word_end = offset;
+          
+          /* Make a temporary copy of the word */
+          found_word = svn_stringbuf_ncreate (list + word_start,
+                                              (word_end - word_start),
+                                              pool);
+          
+          /* If we haven't already read the entry in, do so now. */
+          if (! entry)
+            SVN_ERR (svn_wc_entry (&entry, 
+                                   svn_stringbuf_create (path, pool), pool));
+
+          /* Now, try to expand the keyword. */
+          SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,
+                                   found_word->data, entry, pool));
+          if (is_valid)
+            got_one = TRUE;
+        }
+      
+    } while (list[offset] != '\0');
+
+  if (got_one)
+    {
+      *keywords = apr_pcalloc (pool, sizeof (**keywords));
+      memcpy (*keywords, &tmp_keywords, sizeof (**keywords));
+    }
+      
+  return SVN_NO_ERROR;
 }
 
 

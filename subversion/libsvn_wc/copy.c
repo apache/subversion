@@ -32,7 +32,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
-
+#include "props.h"
 
 
 /*** Code. ***/

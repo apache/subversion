@@ -30,7 +30,9 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_wc.h"
-#include "wc.h"   
+
+#include "wc.h"
+#include "props.h"
 
 
 static void add_default_ignores (apr_array_header_t *patterns)

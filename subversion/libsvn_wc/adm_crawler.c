@@ -36,6 +36,8 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "props.h"
+#include "translate.h"
 
 /* The values stored in `affected_targets' hashes are of this type.
  *
