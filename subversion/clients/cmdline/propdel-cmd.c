@@ -51,7 +51,7 @@ svn_cl__propdel (apr_getopt_t *os,
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os,
                                          opt_state->targets,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
@@ -60,14 +60,18 @@ svn_cl__propdel (apr_getopt_t *os,
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
-  /* Decide if we're deleting a versioned working copy prop or an
-     unversioned repository revision prop.  The existence of the '-r'
-     flag is the key. */
-  if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
+  if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
       const char *URL, *target;
       svn_client_auth_baton_t *auth_baton;
+
+      /* All property commands insist on a specific revision when
+         operating on a revprop. */
+      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+        return svn_cl__revprop_no_rev_error (pool);
+
+      /* Else some revision was specified, so proceed. */
 
       auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
@@ -96,8 +100,14 @@ svn_cl__propdel (apr_getopt_t *os,
                   pname, rev);
         }      
     }
-
-  else
+  else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
+    {
+      return svn_error_createf
+        (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+         "Cannot specify revision for deleting versioned property '%s'.",
+         pname);
+    }
+  else  /* operate on a normal, versioned property (not a revprop) */
     {
       /* For each target, remove the property PNAME. */
       for (i = 0; i < targets->nelts; i++)

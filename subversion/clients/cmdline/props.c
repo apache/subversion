@@ -36,6 +36,16 @@
 
 
 svn_error_t *
+svn_cl__revprop_no_rev_error (apr_pool_t *pool)
+{
+  return svn_error_create
+    (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+     "Must specify revision explicitly when operating on a "
+     "revision property.");
+}
+
+
+svn_error_t *
 svn_cl__print_prop_hash (apr_hash_t *prop_hash,
                          apr_pool_t *pool)
 {
