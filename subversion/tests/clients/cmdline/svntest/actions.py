@@ -223,7 +223,8 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                           singleton_handler_a = None,
                           a_baton = None,
                           singleton_handler_b = None,
-                          b_baton = None):
+                          b_baton = None,
+                          *args):
   """Export the URL into a new directory WC_DIR_NAME.
 
   The subcommand output will be verified against OUTPUT_TREE,
@@ -243,7 +244,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   output, errput = main.run_svn (None, 'export',
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
-                                 URL, export_dir_name)
+                                 URL, export_dir_name, *args)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.

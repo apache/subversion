@@ -253,7 +253,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "export", svn_cl__export, {0},
     "Create an unversioned copy of a tree.\n"
     "usage: 1. export [-r REV] URL [PATH]\n"
-    "       2. export PATH1 PATH2\n"
+    "       2. export [-r REV] PATH1 [PATH2]\n"
     "\n"
     "  1. Exports a clean directory tree from the repository specified by\n"
     "     URL, at revision REV if it is given, otherwise at HEAD, into\n"
@@ -261,8 +261,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "     for the local directory name.\n"
     "\n"
     "  2. Exports a clean directory tree from the working copy specified by\n"
-    "     PATH1 into PATH2.  All local changes will be preserved, but files\n"
-    "     not under version control will not be copied.\n",
+    "     PATH1, at revision REV if it is given, otherwise at WORKING, into\n"
+    "     PATH2.  If PATH2 is omitted, the last component of the PATH1 is used\n"
+    "     for the local directory name. If REV is not specified, all local\n"
+    "     changes will be preserved, but files not under version control will\n"
+    "     not be copied.\n",
     {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 

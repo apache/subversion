@@ -190,6 +190,81 @@ def export_eol_translation(sbox):
                                         expected_output,
                                         expected_disk)
 
+def export_working_copy_with_keyword_translation(sbox):
+  "export working copy with keyword translation"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Add a keyword to A/mu and set the svn:keywords property
+  # appropriately to make sure it's translated during
+  # the export operation
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '$LastChangedRevision$')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords', 
+                       'LastChangedRevision', mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents + 
+                      '$LastChangedRevision: 1M $')
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_export(wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk)
+
+def export_working_copy_with_property_mods(sbox):
+  "export working copy with property mods"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Make a local property mod to A/mu
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '\n')
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style',
+                       'CR', mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents +
+                      '\r')
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_export(wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk)
+
+def export_working_copy_at_base_revision(sbox):
+  "export working copy at base revision"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Add a keyword to A/mu and set the svn:keywords property
+  # appropriately to make sure it's translated during
+  # the export operation
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, 'Appended text')
+
+  # Note that we don't tweak the expected disk tree at all,
+  # since the appended text should not be present.
+  expected_disk = svntest.main.greek_state.copy()
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_export(wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk,
+                                        None, None, None, None,
+                                        '-rBASE')
+
 ########################################################################
 # Run the tests
 
@@ -202,7 +277,10 @@ test_list = [ None,
               export_working_copy_with_mods,
               export_over_existing_dir,
               export_keyword_translation,
-              export_eol_translation
+              export_eol_translation,
+              export_working_copy_with_keyword_translation,
+              export_working_copy_with_property_mods,
+              export_working_copy_at_base_revision
              ]
 
 if __name__ == '__main__':
