@@ -230,6 +230,9 @@ do_apply_textdelta (svn_string_t *filename,
       svn_txdelta_free_window (txdelta_window);
     }
 
+  err = (* (window_handler)) (NULL, window_handler_baton);
+  if (err) return err;
+
   /* Free the stream */
   svn_txdelta_free (txdelta_stream);
 
