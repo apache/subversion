@@ -57,6 +57,7 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
 
+  const char *uuid;                     /* repository UUID */
 } svn_ra_session_t;
 
 
@@ -223,6 +224,8 @@ svn_error_t *svn_ra_dav__do_check_path(
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
 #define SVN_RA_DAV__PROP_MD5_CHECKSUM SVN_DAV_PROP_NS_DAV "md5-checksum"
+
+#define SVN_RA_DAV__PROP_REPOSITORY_UUID SVN_DAV_PROP_NS_DAV "repository-uuid"
 
 
 typedef struct {
@@ -437,7 +440,8 @@ enum {
   ELEM_name_creationdate,
   ELEM_name_creator_displayname,
   ELEM_svn_error,
-  ELEM_human_readable
+  ELEM_human_readable,
+  ELEM_repository_uuid
 };
 
 /* ### docco */

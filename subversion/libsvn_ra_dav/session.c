@@ -494,6 +494,27 @@ static svn_error_t *svn_ra_dav__close (void *session_baton)
   return NULL;
 }
 
+
+static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
+                                            const char **uuid)
+{
+  svn_ra_session_t *ras = session_baton;
+
+  if (! ras->uuid)
+    {
+      apr_hash_t *props;
+      const svn_string_t *value;
+      SVN_ERR(svn_ra_dav__get_dir(ras, "", 0, NULL, NULL, &props));
+      value = apr_hash_get(props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING);
+      ras->uuid = value->data;
+    }
+
+  *uuid = ras->uuid;
+  return SVN_NO_ERROR; 
+}
+
+
+
 static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
   "Module for accessing a repository via WebDAV (DeltaV) protocol.",
@@ -513,8 +534,10 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__do_status,
   svn_ra_dav__do_diff,
   svn_ra_dav__get_log,
-  svn_ra_dav__do_check_path
+  svn_ra_dav__do_check_path,
+  svn_ra_dav__do_get_uuid
 };
+
 
 svn_error_t *svn_ra_dav_init(int abi_version,
                              apr_pool_t *pconf,
