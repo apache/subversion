@@ -341,7 +341,16 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n\n"
     "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
-    "  Else synchronize working copy to revision given by -r or -D.\n",
+    "  Else synchronize working copy to revision given by -r or -D.\n"
+    "\n"
+    "  For each updated item a line will start with a character reporting the\n"
+    "  action taken.  These characters have the following meaning:\n"
+    "\n"
+    "    A  Added\n"
+    "    D  Deleted\n"
+    "    U  Updated\n"
+    "    C  Conflict\n"
+    "    G  Merged\n",
     {'r', 'D', 'n', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__xml_file_opt} },
 
