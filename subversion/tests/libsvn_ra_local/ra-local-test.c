@@ -55,32 +55,6 @@ apr_pool_t *pool;
 
 /** Helper routines. **/
 
-/* (all stolen from fs-test.c) */
-
-static void
-berkeley_error_handler (const char *errpfx,
-                        char *msg)
-{
-  fprintf (stderr, "%s%s\n", errpfx ? errpfx : "", msg);
-}
-
-
-/* Set *FS_P to a fresh, unopened FS object, with the right warning
-   handling function set.  */
-static svn_error_t *
-fs_new (svn_fs_t **fs_p)
-{
-  *fs_p = svn_fs_new (pool);
-  if (! *fs_p)
-    return svn_error_create (SVN_ERR_FS_GENERAL, NULL, pool,
-                             "Couldn't alloc a new fs object.");
-
-  /* Provide a warning function that just dumps the message to stderr.  */
-  svn_fs_set_warning_func (*fs_p, svn_handle_warning, stderr);
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Create a berkeley db repository in a subdir NAME, and return a new
    FS object which points to it.  */
@@ -103,7 +77,7 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
                                   "there is already a file named `%s'", name);
     }
 
-  SVN_ERR (fs_new (fs_p));
+  SVN_ERR (svn_test__fs_new (fs_p, pool));
   SVN_ERR (svn_fs_create_berkeley (*fs_p, name));
   
   /* Provide a handler for Berkeley DB error messages.  */

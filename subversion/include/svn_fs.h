@@ -69,28 +69,17 @@ svn_error_t *svn_fs_close_fs (svn_fs_t *fs);
  *
  * The type of a warning callback function.  @a baton is the value specified
  * in the call to @c svn_fs_set_warning_func; the filesystem passes it through
- * to the callback.  @a fmt is a printf-style format string, which tells us
- * how to interpret any successive arguments.  @a pool can be used for any
- * allocations, but the implemntation may decide to pass a pool around
- * in the baton.
+ * to the callback.  @a msg contains the warning message.
  */
-#ifndef SWIG
-typedef void (*svn_fs_warning_callback_t) (apr_pool_t *pool, void *baton,
-                                           const char *fmt, ...);
-#endif
+typedef void (*svn_fs_warning_callback_t) (void *baton, svn_error_t *err);
 
 
 /** Provide a callback function, @a warning, that @a fs should use to report
  * warning messages.
  *
  * Provide a callback function, @a warning, that @a fs should use to report
- * warning messages.  To print a warning message, the filesystem will
- * call @a warning, passing it @a baton, a printf-style format string, and
- * any further arguments as appropriate for the format string.
- *
- * If it's acceptable to print messages on a standard stream, then the
- * function @c svn_handle_warning, declared in @c svn_error.h, would be
- * a suitable warning function.
+ * (non-fatal) errors.  To print an error, the filesystem will call
+ * @a warning, passing it @a baton and the error.
  *
  * By default, this is set to a function that will crash the process.
  * Dumping to @c stderr or <tt>/dev/tty</tt> is not acceptable default 
