@@ -223,12 +223,14 @@ svn_path_compare_paths (const svn_stringbuf_t *path1,
 
   if ((path1->len == path2->len) && (i >= min_len))
     return 0;     /* the paths are the same */
-  else if (path1->data[i] == dirsep)
+  if (path1->data[i] == dirsep)
     return 1;     /* path1 child of path2, parent always comes before child */
-  else if (path2->data[i] == dirsep)
+  if (path2->data[i] == dirsep)
     return -1;    /* path2 child of path1, parent always comes before child */
-  else
-    return strncmp (path1->data + i, path2->data + i, (min_len - i));
+
+  /* Common prefix was skipped above, next character is compared to
+     determine order */
+  return path1->data[i] < path2->data[i] ? -1 : 1;
 }
 
 
