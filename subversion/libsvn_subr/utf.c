@@ -213,9 +213,9 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 
   for (; len > 0; --len, data++)
     {
-      if ((! apr_isascii (*((unsigned char *) data)))
-          || ((! apr_isspace (*((unsigned char *) data)))
-              && apr_iscntrl (*((unsigned char *) data))))
+      if ((! apr_isascii (*((const unsigned char *) data)))
+          || ((! apr_isspace (*((const unsigned char *) data)))
+              && apr_iscntrl (*((const unsigned char *) data))))
         {
           /* Show the printable part of the data, followed by the
              decimal code of the questionable character.  Because if a
@@ -238,7 +238,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
                  "\n"
                  "Non-ascii character detected (see above), "
                  "and unable to convert to UTF-8.\n",
-                 error_data, *((unsigned char *) data));
+                 error_data, *((const unsigned char *) data));
             }
           else
             {
@@ -246,7 +246,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
                 (APR_EINVAL, 0, NULL, pool,
                  "Non-ascii character (code %d) detected, "
                  "and unable to convert to UTF-8.\n",
-                 *((unsigned char *) data));
+                 *((const unsigned char *) data));
             }
         }
     }
@@ -560,10 +560,10 @@ svn_utf_utf8_to_native (const char *utf8_string,
          check_non_ascii(), but is it important to do so? */
 
       for (i=0; i<bufsize && *utf8_string; utf8_string++)
-        if (*(unsigned char *)utf8_string < 128)
+        if (*(const unsigned char *)utf8_string < 128)
           /* ASCII character */
           buf[i++] = *utf8_string;
-        else if(*(unsigned char *)utf8_string >= 192)
+        else if(*(const unsigned char *)utf8_string >= 192)
           /* First octet of a multibyte sequence */
           buf[i++] = '?';
       
