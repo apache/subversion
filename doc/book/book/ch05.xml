@@ -1633,7 +1633,7 @@ close LASTDUMPED;
         repository access at all&mdash;and then will clean out the
         dead Berkeley logfiles from your live repository.</para>
 
-      <para>Even if you also have an incrementalyou might want to run
+      <para>Even if you also have an incremental backup, you might want to run
         this program on a regular basis.  For example, you might
         consider adding <command>hot-backup.py</command> to a program
         scheduler (such as <command>crond</command> on Unix systems).
@@ -1669,7 +1669,7 @@ close LASTDUMPED;
         between successive versions of Subversion itself.  Since a
         full repository dump and load are generally required to
         upgrade your repository to the new schema, it's very
-        convenience to already have half of that process (the dump
+        convenient to already have half of that process (the dump
         part) finished.  Unfortunately, the creation of&mdash;and
         restoration from&mdash;incremental backups takes longer, as
         each commit is effectively replayed into either the dumpfile
