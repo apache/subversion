@@ -150,28 +150,6 @@
 %apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
-   handle the providers array as an input type.
-*/
-%typemap(python, in) apr_array_header_t *providers {
-    svn_auth_provider_object_t *provider;
-    int targlen;
-    if (!PySequence_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "not a sequence");
-        return NULL;
-    }
-    targlen = PySequence_Length($input);
-    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
-    ($1)->nelts = targlen;
-    while (targlen--) {
-        SWIG_ConvertPtr(PySequence_GetItem($input, targlen),
-                        (void **)&provider, 
-                        $descriptor(svn_auth_provider_object_t *),
-                        SWIG_POINTER_EXCEPTION | 0);
-        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
-    }
-}
-
-/* -----------------------------------------------------------------------
    fix up the svn_stream_read() ptr/len arguments
 */
 %typemap(python, in) (char *buffer, apr_size_t *len) ($*2_type temp) {
@@ -235,12 +213,52 @@
     $result = sv_2mortal (newSViv(*$2));
 }
 
-/* auth provider convertors */
-
+/* -----------------------------------------------------------------------
+   auth provider convertors 
+*/
 %typemap(perl5, in) apr_array_header_t *providers {
     $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input, SWIGTYPE_p_svn_auth_provider_object_t, _global_pool);
 }
 
+%typemap(python, in) apr_array_header_t *providers {
+    svn_auth_provider_object_t *provider;
+    int targlen;
+    if (!PySequence_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "not a sequence");
+        return NULL;
+    }
+    targlen = PySequence_Length($input);
+    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
+    ($1)->nelts = targlen;
+    while (targlen--) {
+        SWIG_ConvertPtr(PySequence_GetItem($input, targlen),
+                        (void **)&provider, 
+                        $descriptor(svn_auth_provider_object_t *),
+                        SWIG_POINTER_EXCEPTION | 0);
+        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
+    }
+}
+
+/* -----------------------------------------------------------------------
+   auth parameter set/get
+*/
+%typemap(python, in) const void *value {
+    if (PyString_Check($input)) {
+        $1 = (void *)PyString_AS_STRING($input);
+    }
+    else if (PyLong_Check($input)) {
+        $1 = (void *)PyLong_AsLong($input);
+    }
+    else if (PyInt_Check($input)) {
+        $1 = (void *)PyInt_AsLong($input);
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError, "not a known type");
+        return NULL;
+    }
+}
+
+%ignore svn_auth_get_parameter;
 
 /* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
