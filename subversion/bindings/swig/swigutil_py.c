@@ -706,7 +706,11 @@ svn_swig_py_get_commit_log_func (const char **log_msg,
 
   Py_DECREF(cmt_items);
 
-  if (!PyString_Check(result)) 
+  if (result == Py_None)
+    {
+      *log_msg = NULL;
+    }
+  else if (!PyString_Check(result)) 
     {
       Py_DECREF(result);
       PyErr_SetString(PyExc_TypeError, "not a string");
@@ -714,7 +718,6 @@ svn_swig_py_get_commit_log_func (const char **log_msg,
     }
 
   *log_msg = PyString_AS_STRING(result);
-  Py_DECREF(result);
   return SVN_NO_ERROR;
 }
 
