@@ -108,6 +108,7 @@ assemble_status (svn_wc_status_t **status,
                  svn_stringbuf_t *path,
                  svn_wc_entry_t *entry,
                  svn_boolean_t get_all,
+                 svn_boolean_t strict,
                  apr_pool_t *pool)
 {
   svn_wc_status_t *stat;
@@ -139,6 +140,14 @@ assemble_status (svn_wc_status_t **status,
          unversioned. */
       if (path_kind != svn_node_none)
         stat->text_status = svn_wc_status_unversioned;
+
+      /* If we're in strict mode and we encounter a path that doesn't
+         exist in the wc, then we return an error*/
+      if (strict && (path_kind == svn_node_none))
+        return svn_error_createf (APR_ENOENT, 0, NULL, pool,
+                                  "assemble_status: "
+                                  "%s: No such file or directory",
+                                  path->data);
 
       *status = stat;
       return SVN_NO_ERROR;
@@ -271,11 +280,13 @@ add_status_structure (apr_hash_t *statushash,
                       svn_stringbuf_t *path,
                       svn_wc_entry_t *entry,
                       svn_boolean_t get_all,
+                      svn_boolean_t strict,
                       apr_pool_t *pool)
 {
   svn_wc_status_t *statstruct;
   
-  SVN_ERR (assemble_status (&statstruct, path, entry, get_all, pool));
+  SVN_ERR (assemble_status (&statstruct, path, entry, 
+                            get_all, strict, pool));
   if (statstruct)
     apr_hash_set (statushash, path->data, path->len, statstruct);
   
@@ -357,6 +368,7 @@ add_unversioned_items (svn_stringbuf_t *path,
                                          printable_path,
                                          NULL, /* no entry */
                                          FALSE,
+                                         FALSE,
                                          pool));
         }
     }
@@ -384,7 +396,7 @@ svn_wc_status (svn_wc_status_t **status,
      'absent' status filled in. */
   svn_wc_entry (&entry, path, pool);
 
-  SVN_ERR (assemble_status (&s, path, entry, TRUE, pool));
+  SVN_ERR (assemble_status (&s, path, entry, TRUE, FALSE, pool));
   *status = s;
   return SVN_NO_ERROR;
 }
@@ -396,6 +408,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_stringbuf_t *path,
                  svn_boolean_t descend,
                  svn_boolean_t get_all,
+                 svn_boolean_t strict,
                  apr_pool_t *pool)
 {
   enum svn_node_kind kind;
@@ -427,7 +440,8 @@ svn_wc_statuses (apr_hash_t *statushash,
          ### Notice that because we're getting one specific file,
          we're ignoring the GET_ALL flag and unconditionally fetching
          the status structure. */
-      SVN_ERR (add_status_structure (statushash, path, entry, TRUE, pool));
+      SVN_ERR (add_status_structure (statushash, path, entry, 
+                                     TRUE, strict, pool));
     }
 
 
@@ -486,7 +500,8 @@ svn_wc_statuses (apr_hash_t *statushash,
                                                  fullpath->len);
               if (! s)
                 SVN_ERR (add_status_structure (statushash, fullpath,
-                                               entry, get_all, pool));
+                                               entry, get_all, 
+                                               strict, pool));
             }
           else
             {
@@ -499,15 +514,17 @@ svn_wc_statuses (apr_hash_t *statushash,
 
                   SVN_ERR (svn_wc_entry (&subdir, fullpath, pool));
                   SVN_ERR (add_status_structure (statushash, fullpath,
-                                                 subdir, get_all, pool));
+                                                 subdir, get_all, 
+                                                 strict, pool));
                   SVN_ERR (svn_wc_statuses (statushash, fullpath,
-                                            descend, get_all, pool)); 
+                                            descend, get_all, strict, pool)); 
                 }
               else if ((kind == svn_node_file) || (kind == svn_node_none))
                 {
                   /* File entries are ... just fine! */
                   SVN_ERR (add_status_structure (statushash, fullpath,
-                                                 entry, get_all, pool));
+                                                 entry, get_all, 
+                                                 strict, pool));
                 }
             }
         }
