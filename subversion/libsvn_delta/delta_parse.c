@@ -224,7 +224,8 @@ maybe_derive_ancestry (svn_delta__stackframe_t *first_frame,
                */
 
               derived_ancestor_path = svn_string_dup (p->ancestor_path, pool);
-              svn_path_add_component (derived_ancestor_path, this_name, pool);
+              svn_path_add_component (derived_ancestor_path, this_name, 
+                                      SVN_PATH_REPOS_STYLE, pool);
               dest_frame->ancestor_path = derived_ancestor_path;
             }
 
