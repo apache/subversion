@@ -43,15 +43,6 @@
 
 /* The node structure.  */
 
-/* kff todo: just a question -- should we just use
-   svn_types.h:svn_node_kind instead of this enum, or... ? */
-typedef enum {
-  kind_unset,
-  kind_file,
-  kind_directory
-} kind_t;
-
-
 /* The path of directory entry names from some node to the root of a
    revision.  The root directory's path is the null pointer.  This is
    the path of parent directory entries we need to update to clone a
@@ -107,7 +98,7 @@ struct svn_fs_node_t
   apr_pool_t *pool;
 
   /* What kind of node is this?  */
-  kind_t kind;
+  enum svn_node_kind kind;
 
   /* For transaction nodes, the name of that transaction, allocated in
      POOL.  For revision nodes, this is zero.  */
@@ -166,7 +157,7 @@ new_node_object (svn_fs_t *fs,
 
   node->fs = fs;
   node->pool = pool;
-  node->kind = kind_unset;
+  node->kind = svn_node_unknown;
   node->rev = -1;
 
   return node;
@@ -529,14 +520,14 @@ svn_fs_close_node (svn_fs_node_t *node)
 int
 svn_fs_node_is_dir (svn_fs_node_t *node)
 {
-  return node->kind == kind_directory;
+  return node->kind == svn_node_dir;
 }
 
 
 int
 svn_fs_node_is_file (svn_fs_node_t *node)
 {
-  return node->kind == kind_file;
+  return node->kind == svn_node_file;
 }
 
 
@@ -885,7 +876,7 @@ svn_fs__txn_root_node (svn_fs_node_t **root_p,
   SVN_ERR (svn_fs__dag_txn_node (&dag_root, fs, txn, root_id, trail));
 
   root = new_node_object (fs, trail->pool);
-  root->kind = kind_directory;
+  root->kind = svn_node_dir;
   root->txn = apr_pstrdup (root->pool, txn);
   root->is_cloned = ! svn_fs_id_eq (root_id, base_root_id);
   root->clone_path = 0;		/* accurate in either case */
