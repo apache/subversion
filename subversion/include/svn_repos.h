@@ -217,11 +217,16 @@ svn_repos_begin_report (void **report_baton,
  * @a path; that allows the reporter to set up the correct root revision
  * (useful when creating a txn, for example).
  *
+ * If @a start_empty is set and @a path is a directory, then remove
+ * all children of the freshly-linked directory.  This is for 'low
+ * confidence' client reporting.
+ * 
  * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_set_path (void *report_baton,
                                  const char *path,
                                  svn_revnum_t revision,
+                                 svn_boolean_t start_empty,
                                  apr_pool_t *pool);
 
 
@@ -231,12 +236,17 @@ svn_error_t *svn_repos_set_path (void *report_baton,
  * anchor/target used in the creation of the @a report_baton, @a link_path 
  * is an absolute filesystem path!
  *
+ * If @a start_empty is set and @a path is a directory, then remove
+ * all children of the freshly-linked directory.  This is for 'low
+ * confidence' client reporting.
+ *
  * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_link_path (void *report_baton,
                                   const char *path,
                                   const char *link_path,
                                   svn_revnum_t revision,
+                                  svn_boolean_t start_empty,
                                   apr_pool_t *pool);
 
 /** Given a @a report_baton constructed by @c svn_repos_begin_report(), 

@@ -818,6 +818,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
             const char *linkpath = NULL;
+            svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
 
             while (this_attr)
@@ -826,6 +827,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                   rev = SVN_STR_TO_REV(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
+                else if (! strcmp(this_attr->name, "start-empty"))
+                  start_empty = TRUE;
 
                 this_attr = this_attr->next;
               }
@@ -847,10 +850,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             path = dav_xml_get_cdata(child, resource->pool, 1);
             
             if (! linkpath)
-              serr = svn_repos_set_path(rbaton, path, rev, resource->pool);
+              serr = svn_repos_set_path(rbaton, path, rev,
+                                        start_empty, resource->pool);
             else
               serr = svn_repos_link_path(rbaton, path, linkpath, rev,
-                                         resource->pool);
+                                         start_empty, resource->pool);
             if (serr != NULL)
               {
                 /* ### This removes the fs txn.  todo: check error. */

@@ -260,12 +260,14 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                           this_path,
                                           current_entry->url,
                                           current_entry->revision,
+                                          FALSE,
                                           iterpool));
           /* ... or perhaps just a differing revision. */
           else if (current_entry->revision !=  dir_rev)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          current_entry->revision,
+                                         FALSE,
                                          iterpool));
         } /* end file case */
       
@@ -311,12 +313,14 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                           this_path,
                                           subdir_entry->url,
                                           subdir_entry->revision,
+                                          FALSE,
                                           iterpool));
           /* ... or perhaps just a differing revision. */
           else if (subdir_entry->revision != dir_rev)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          subdir_entry->revision,
+                                         FALSE,
                                          iterpool));
 
           /* Recurse. */
@@ -381,7 +385,7 @@ svn_wc_crawl_revisions (const char *path,
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR (reporter->set_path (report_baton, "", base_rev, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", base_rev, FALSE, pool));
 
   if (entry->schedule != svn_wc_schedule_delete)
     {
@@ -464,6 +468,7 @@ svn_wc_crawl_revisions (const char *path,
                                         "",
                                         entry->url,
                                         entry->revision,
+                                        FALSE,
                                         pool));
         }
       else if (entry->revision != base_rev)
@@ -473,7 +478,7 @@ svn_wc_crawl_revisions (const char *path,
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path (report_baton, "", base_rev, pool);
+          err = reporter->set_path (report_baton, "", base_rev, FALSE, pool);
           if (err)
             goto abort_report;
         }

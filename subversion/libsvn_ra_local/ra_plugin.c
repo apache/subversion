@@ -121,10 +121,12 @@ static svn_error_t *
 reporter_set_path (void *reporter_baton,
                    const char *path,
                    svn_revnum_t revision,
+                   svn_boolean_t start_empty,
                    apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_set_path (rbaton->report_baton, path, revision, pool);
+  return svn_repos_set_path (rbaton->report_baton, path,
+                             revision, start_empty, pool);
 }
 
 
@@ -143,6 +145,7 @@ reporter_link_path (void *reporter_baton,
                     const char *path,
                     const char *url,
                     svn_revnum_t revision,
+                    svn_boolean_t start_empty,
                     apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
@@ -159,7 +162,7 @@ reporter_link_path (void *reporter_baton,
   fs_path = url + repos_url_len;
 
   return svn_repos_link_path (rbaton->report_baton, path,
-                              fs_path, revision, pool);
+                              fs_path, revision, start_empty, pool);
 }
 
 

@@ -2204,6 +2204,7 @@ static int end_element(void *userdata,
 static svn_error_t * reporter_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
+                                       svn_boolean_t start_empty,
                                        apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
@@ -2212,11 +2213,18 @@ static svn_error_t * reporter_set_path(void *report_baton,
   svn_stringbuf_t *qpath = NULL;
 
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
-  entry = apr_psprintf(pool,
-                       "<S:entry rev=\"%"
-                       SVN_REVNUM_T_FMT
-                       "\">%s</S:entry>" DEBUG_CR,
-                       revision, qpath->data);
+  if (start_empty)
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%"
+                         SVN_REVNUM_T_FMT
+                         "\" start-empty=\"true\">%s</S:entry>" DEBUG_CR,
+                         revision, qpath->data);
+  else
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%"
+                         SVN_REVNUM_T_FMT
+                         "\">%s</S:entry>" DEBUG_CR,
+                         revision, qpath->data);
 
   status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
   if (status)
@@ -2235,6 +2243,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
                                         svn_revnum_t revision,
+                                        svn_boolean_t start_empty,
                                         apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
@@ -2254,11 +2263,18 @@ static svn_error_t * reporter_link_path(void *report_baton,
   
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
-  entry = apr_psprintf(pool,
-                       "<S:entry rev=\"%" SVN_REVNUM_T_FMT
-                       "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
-                       revision, qlinkpath->data, qpath->data);
-
+  if (start_empty)
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%" SVN_REVNUM_T_FMT
+                         "\" linkpath=\"/%s\" start-empty=\"true\""
+                         ">%s</S:entry>" DEBUG_CR,
+                         revision, qlinkpath->data, qpath->data);
+  else
+    entry = apr_psprintf(pool,
+                         "<S:entry rev=\"%" SVN_REVNUM_T_FMT
+                         "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
+                         revision, qlinkpath->data, qpath->data);
+    
   status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
   if (status)
     {

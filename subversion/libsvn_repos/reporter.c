@@ -19,6 +19,7 @@
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_pools.h"
 #include "repos.h"
 
 /* A structure used by the routines within the `reporter' vtable,
@@ -148,15 +149,49 @@ static const char *get_from_path_map(apr_hash_t *hash,
 }
 
 
+/* Use POOL to delete all children of directory FS_PATH in TXN_ROOT. */
+static svn_error_t *
+remove_directory_children (const char *fs_path,
+                           svn_fs_root_t *txn_root,
+                           apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *children;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  SVN_ERR (svn_fs_dir_entries (&children, txn_root, fs_path, pool));
+  
+  for (hi = apr_hash_first (pool, children); hi;
+       hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_fs_dirent_t *dirent;
+      const char *child_path;
+      
+      apr_hash_this (hi, &key, &klen, &val);
+      dirent = val;
+      
+      child_path = svn_path_join (fs_path, dirent->name, subpool);
+      SVN_ERR (svn_fs_delete_tree (txn_root, child_path, subpool));
+      
+      svn_pool_clear (subpool);
+    }
+
+  svn_pool_destroy (subpool);  
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_repos_set_path (void *report_baton,
                     const char *path,
                     svn_revnum_t revision,
+                    svn_boolean_t start_empty,
                     apr_pool_t *pool)
 {
   svn_repos_report_baton_t *rbaton = report_baton;
-  svn_revnum_t *rev_ptr = apr_palloc (pool, sizeof (*rev_ptr));
   
   /* If this is the very first call, no txn exists yet. */
   if (! rbaton->txn)
@@ -172,7 +207,7 @@ svn_repos_set_path (void *report_baton,
           (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
            "svn_repos_set_path: initial revision report was bogus.");
 
-      /* Start a transaction based on REVISION. */
+      /* Start a transaction based on initial_rev. */
       SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn),
                                                   rbaton->repos,
                                                   revision,
@@ -184,8 +219,8 @@ svn_repos_set_path (void *report_baton,
 
   else  /* this is not the first call to set_path. */ 
     {
-      svn_fs_root_t *from_root;
       const char *from_path;
+      svn_fs_root_t *from_root;
       const char *link_path;
 
       /* The path we are dealing with is the anchor (where the
@@ -198,17 +233,16 @@ svn_repos_set_path (void *report_baton,
                                       rbaton->target ? rbaton->target : path,
                                       rbaton->target ? path : NULL,
                                       NULL);
-
+      
       /* However, the path may be the child of a linked thing, in
          which case we'll be linking from somewhere entirely
          different. */
-      link_path = get_from_path_map (rbaton->linked_paths, from_path, 
-                                     pool);
-
+      link_path = get_from_path_map (rbaton->linked_paths, from_path, pool);
+          
       /* Create the "from" root. */
       SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                      revision, pool));
-
+      
       /* Copy into our txn (use svn_fs_revision_link if we can). */
       if (strcmp (link_path, from_path))
         SVN_ERR (svn_fs_copy (from_root, link_path,
@@ -216,6 +250,12 @@ svn_repos_set_path (void *report_baton,
       else
         SVN_ERR (svn_fs_revision_link (from_root, rbaton->txn_root, 
                                        from_path, pool));
+      
+      if (start_empty)
+        /* Destroy any children in the path.  We assume that the
+           client will (later) re-add the entries it knows about.  */
+        SVN_ERR (remove_directory_children (from_path, rbaton->txn_root,
+                                            pool));
     }
 
   return SVN_NO_ERROR;
@@ -226,12 +266,12 @@ svn_repos_link_path (void *report_baton,
                      const char *path,
                      const char *link_path,
                      svn_revnum_t revision,
+                     svn_boolean_t start_empty,
                      apr_pool_t *pool)
 {
   svn_fs_root_t *from_root;
   const char *from_path;
   svn_repos_report_baton_t *rbaton = report_baton;
-  svn_revnum_t *rev_ptr = apr_palloc (pool, sizeof(*rev_ptr));
 
   /* If this is the very first call, no second txn exists yet.  Of
      course, we'll only use it if we're "updating", not when we're
@@ -282,6 +322,11 @@ svn_repos_link_path (void *report_baton,
   if (! rbaton->linked_paths)
     rbaton->linked_paths = apr_hash_make (rbaton->pool);
   add_to_path_map (rbaton->linked_paths, from_path, link_path);
+  
+  if (start_empty)
+    /* Destroy any children in the path.  We assume that the
+       client will (later) re-add the entries it knows about.  */
+    SVN_ERR (remove_directory_children (from_path, rbaton->txn_root, pool));
 
   return SVN_NO_ERROR;
 }
