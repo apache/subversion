@@ -4243,17 +4243,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
                     svn_fs__id_txn_id (copy->dst_noderev_id), trail));
           src_path = svn_path_join (copy->src_path, remainder, 
                                     trail->pool);
-
           if (copy->kind == svn_fs__copy_kind_soft)
             retry = TRUE;
-                   
-        }
-      else
-        {
-          /* Something bad has happened.  We expected to find a
-             relevant copy at END_COPY_ID, and we didn't.  Either this
-             repository is goofed up, or cmpilato is.  */
-          abort();
         }
     }
 
