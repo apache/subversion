@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# USAGE: enable-dupkey.sh REPOS_PATH
+# USAGE: enable-dupkeys.sh REPOS_PATH
 #
 # This script will upgrade an existing repository to enable "duplicates"
 # in the 'strings' table. The addition of that flag was added in r1384
