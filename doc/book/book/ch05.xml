@@ -641,6 +641,18 @@ pre-commit.tmpl
         programs, and <filename>.bat</filename> for batch
         files.</para>
 
+      <tip>
+        <para>For security reasons, the Subversion repository executes
+        hook scripts with an empty environment&mdash;that is, no
+        environment variables are set at all, not even
+        <literal>$PATH</literal> or <literal>%PATH%</literal>.
+        Because of this, a lot of administrators are baffled when
+        their hook script runs fine by hand, but doesn't work when run
+        by Subversion.  Be sure to explicitly set environment
+        variables in your hook and/or use absolute paths to
+        programs.</para>
+      </tip>
+
       <para>Currently there are five hooks implemented by the
         Subversion repository:</para>
 
@@ -703,8 +715,9 @@ pre-commit.tmpl
               and the new revision number that was created.  The exit
               code of the program is ignored.</para>
                 
-            <para>The Subversion distribution includes a
-              <command>commit-email.pl</command> script (located in
+            <para>The Subversion distribution includes
+              <command>mailer.py</command> and
+              <command>commit-email.pl</command> scripts (located in
               the <filename>tools/hook-scripts/</filename> directory
               of the Subversion source tree) that can be used to send
               email with (and/or append to a log file) a description

@@ -18,10 +18,6 @@ To be fixed by someone:
     (i.e. through an update), must own that file.  There is no way to
     do this automatically which does not involve possible data loss.
 
-  - With svn 1.1, it's now possible to set up svn+ssh using just one
-    Unix account on the server.  The book should perhaps document this
-    way of setting up svn+ssh.  See notes/ssh-tricks for details.
-
   - ch06 talks about Basic authentication and recommends https.
     Add a mention of Digest authentication now that Apache's bug
     has been fixed that broke it and potentially update the 
@@ -37,16 +33,6 @@ To be fixed by someone:
 To be fixed by fitz:
 
 
-   - ch03, description of the 3 fulltext files that appear in a
-     conflict.  it turns out that if the file is marked as a binary
-     file, then
-
-          - no conflict markers are made
-          - the '.mine' file isn't created, since it would be
-            identical to the working file anyway.
-
-     these things need to be mentioned, perhaps with an xref to ch7
-     properties/binary mime-types.
 
 
 --------------------------------------------------------------
@@ -57,11 +43,6 @@ To be fixed by cmpilato:
      note the "replacing 1.0 with 1.1 and 'missing files' stuff (files
      not overwritten by a tarball explode wouldn't be missing, they'd
      be untouched).
-
-   - In 'hooks' section, explain that hooks launch with no environment
-     (and thus no $PATH), so absolute paths to binaries need to be
-     used.  This FAQ comes up over and over and over and over and over
-     and over.
 
 
 --------------------------------------------------------------
@@ -77,30 +58,8 @@ ch04:
      versions and adding-with-history the older file versions.
      Definitely a big 'gotcha' to watch out for.
 
-   - 'mixed tag' section.  explain how 'svn cp URL' works, that it's
-     not just a literal 'cp -R' to the repository.  mixed-rev
-     directories can create a repos tree different than you expect.
-     the mixed-tag example assumes you start with a WC all at one
-     revision, then only back/fore-date *files*, not dirs.
-
-   - document merge conflicts:  fulltexts are named {.working, .left,
-     .right}, which is confusingly just-slightly-different from the
-     fulltext files produced by 'svn up' conflicts:  {.mine, .rX, .rY}.
-
-   - describe another best-practice branch/merge pattern: namely, the
-     one we used to do the locking-branch.  Weekly sync of trunk to
-     branch (which is just like an 'svn up'), then a final merge to
-     trunk, done by comparing the tip of trunk with the tip of branch
-     (which is just like 'svn commit'.)
-
-   - possibly new sidebar:  [what do 'skipped missing target' messages mean?]
-
 
 ch06:  
-
-   - in server comparison table, add a footnote to svnserve
-     authorization cell: note that per-directory *write* access can
-     still be done by a hook script (but not read access).
 
 appA:
 
@@ -121,7 +80,13 @@ List of 1.1 features/changes (that still need to be documented)
     (What chapter should this section go in?)
 
   * New 'SVNPathAuthz Off' directive, to disable path-based authz in
-    apache (and increase speed.)
+    apache (and increase speed.)  Really, chapter 9 needs a
+    'definitive list' of all mod_dav_svn directives.
+
+  - With svn 1.1, it's now possible to set up svn+ssh using just one
+    Unix account on the server.  The book should perhaps document this
+    way of setting up svn+ssh.  See notes/ssh-tricks for details.
+
 
 
 List of 1.2 features/changes (that still need to be documented)

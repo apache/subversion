@@ -1267,8 +1267,8 @@ Updated to revision 46.
         with your own, and now you have to manually choose between
         them.</para>
            
-      <para>Whenever a conflict occurs, three things occur to assist
-        you in noticing and resolving that conflict:</para>
+      <para>Whenever a conflict occurs, three things typically occur
+        to assist you in noticing and resolving that conflict:</para>
            
       <itemizedlist>
 
@@ -1279,16 +1279,20 @@ Updated to revision 46.
         </listitem>
 
         <listitem>
-          <para>Subversion places <firstterm>conflict
+          <para>If Subversion considers the file to be of a mergable
+            type, it places <firstterm>conflict
             markers</firstterm>&mdash;special strings of text which
             delimit the <quote>sides</quote> of the
             conflict&mdash;into the file to visibly demonstrate the
-            overlapping areas.</para>
+            overlapping areas.  (Subversion uses the
+            <literal>svn:mime-type</literal> property to decide if a
+            file is capable of contextual, line-based merging.  See
+            <xref linkend="svn-ch-7-sect-2.3.2"/> to learn more.)</para>
         </listitem>
 
         <listitem>
-          <para>For every conflicted file, Subversion places three
-            extra files in your working copy:</para>
+          <para>For every conflicted file, Subversion places up to
+            three extra unversioned files in your working copy:</para>
 
           <variablelist>
             
@@ -1298,7 +1302,11 @@ Updated to revision 46.
                 <para>This is your file as it existed in your working
                   copy before you updated your working copy&mdash;that
                   is, without conflict markers.  This file has your
-                  latest changes in it and nothing else.</para>
+                  latest changes in it and nothing else.  (If
+                  Subversion considers the file to be unmergeable,
+                  then the <filename>.mine</filename> file isn't
+                  created, since it would be identical to the working
+                  file.)</para>
               </listitem>
             </varlistentry>
             
