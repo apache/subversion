@@ -421,10 +421,3 @@ svn_repos_begin_report (void **report_baton,
   *report_baton = rbaton;
   return SVN_NO_ERROR;
 }
-
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

@@ -390,11 +390,3 @@ svn_wc_copy (const char *src_path,
       committing foo3 first?  That would break.
 
 */
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

@@ -545,11 +545,3 @@ svn_utf_utf8_to_native (const char *utf8_string,
       return buf;
     }
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

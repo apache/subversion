@@ -963,11 +963,3 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   return reconcile_errors (cmt_err, unlock_err, bump_err, cleanup_err, pool);
 }
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

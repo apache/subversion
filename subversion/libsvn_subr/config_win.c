@@ -217,11 +217,3 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
 }
 
 #endif /* SVN_WIN32 */
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

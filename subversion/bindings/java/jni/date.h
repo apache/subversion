@@ -64,11 +64,3 @@ date__create_from_apr_time_t(JNIEnv *env, jboolean *hasException,
 #endif /* __cplusplus */
 
 #endif
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */
-
-
-

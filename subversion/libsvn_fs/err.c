@@ -262,12 +262,3 @@ svn_fs__err_not_directory (svn_fs_t *fs, const char *path)
      "`%s' is not a directory in filesystem `%s'",
      path, fs->path);
 }
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

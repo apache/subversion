@@ -3693,11 +3693,3 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
   *root_p = root;
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

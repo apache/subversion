@@ -89,10 +89,3 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_TXN_TABLE_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

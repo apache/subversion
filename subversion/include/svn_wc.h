@@ -1726,9 +1726,3 @@ svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
 #endif /* __cplusplus */
 
 #endif  /* SVN_WC_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */

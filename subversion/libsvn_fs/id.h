@@ -96,10 +96,3 @@ svn_fs_id_t *svn_fs__id_copy (const svn_fs_id_t *id,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_ID_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

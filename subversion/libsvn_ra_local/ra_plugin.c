@@ -931,16 +931,3 @@ svn_ra_local_init (int abi_version,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -108,9 +108,3 @@ apr_hash_sorted_keys (apr_hash_t *ht,
 #endif /* __cplusplus */
 
 #endif /* SVN_SORTS_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -745,11 +745,3 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (copy_string),
     SVN_TEST_NULL
   };
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -1666,11 +1666,3 @@ svn_wc_walk_entries (const char *path,
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
                               "%s: unrecognized node kind.", path);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -1458,11 +1458,3 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

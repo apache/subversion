@@ -162,10 +162,3 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

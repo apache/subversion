@@ -666,10 +666,3 @@ svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
 #endif /* __cplusplus */
 
 #endif /* SVN_DELTA_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

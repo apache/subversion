@@ -434,10 +434,3 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
   return SVN_NO_ERROR;
 }
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

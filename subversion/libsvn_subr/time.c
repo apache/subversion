@@ -264,10 +264,3 @@ svn_time_to_human_nts (apr_time_t t, apr_pool_t *pool)
 
   return datestr;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

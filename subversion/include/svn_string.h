@@ -269,9 +269,3 @@ void svn_cstring_split_append (apr_array_header_t *array,
 #endif /* __cplusplus */
 
 #endif  /* SVN_STRING_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

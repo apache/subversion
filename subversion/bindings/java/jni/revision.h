@@ -45,8 +45,3 @@ revision__create(JNIEnv *env, jboolean *hasException, jlong revision);
 #endif /* __cplusplus */
 
 #endif
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

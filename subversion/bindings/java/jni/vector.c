@@ -175,11 +175,3 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
       (*hasException) = JNI_TRUE;
     }
 } 
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */
-
-

@@ -77,11 +77,3 @@ svn_cl__export (apr_getopt_t *os,
                               pool));
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
- */

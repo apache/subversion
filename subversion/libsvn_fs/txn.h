@@ -43,10 +43,3 @@ apr_pool_t *svn_fs__txn_pool (svn_fs_txn_t *txn);
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_TXN_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

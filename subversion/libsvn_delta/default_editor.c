@@ -130,11 +130,3 @@ svn_delta_default_editor (apr_pool_t *pool)
 {
   return apr_pmemdup (pool, &default_editor, sizeof (default_editor));
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

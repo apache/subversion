@@ -1705,7 +1705,6 @@ A  build.conf
 
 <!--
 local variables: 
-eval: (load-file "../tools/svnbook.el")
 sgml-parent-document: ("book.xml" "chapter")
 end:
 -->

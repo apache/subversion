@@ -127,10 +127,3 @@ svn_client__compare_revisions (svn_opt_revision_t *revision1,
   /* Else. */
   return TRUE;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

@@ -493,10 +493,3 @@ svn_ra_dav__request_dispatch(int *code,
 #endif /* __cplusplus */
 
 #endif  /* SVN_LIBSVN_RA_DAV_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -269,11 +269,3 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 
   return apr_strerror (statcode, buf, bufsize);
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -590,10 +590,3 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
   svn_stream_set_close (stream, close_handler);
   return stream;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

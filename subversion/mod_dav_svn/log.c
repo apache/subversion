@@ -287,11 +287,3 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
 
   return NULL;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

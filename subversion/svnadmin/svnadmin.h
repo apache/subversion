@@ -77,11 +77,3 @@ typedef struct shcxt_t
 #endif /* __cplusplus */
 
 #endif /* SVN_SVNADMIN_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

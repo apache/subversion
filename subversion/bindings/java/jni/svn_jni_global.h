@@ -72,20 +72,3 @@ svn_jni_misc__make_auth_baton(JNIEnv *env, jobject jobj);
 #endif /* __cplusplus */
 
 #endif
-
-/* local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: */
-
-
-
-
-
-
-
-
-
-
-
-
-

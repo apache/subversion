@@ -118,9 +118,3 @@ date__create_from_apr_time_t(JNIEnv *env, jboolean *hasException,
   jlong milliseconds = time / 1000;
   return date__create(env, hasException, milliseconds);
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

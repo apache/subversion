@@ -31,10 +31,3 @@ public class Factory
             return client;
         }
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */
-

@@ -133,10 +133,3 @@ svn_fs_undeltify (svn_fs_root_t *root,
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -89,10 +89,3 @@ svn_ra_pipe__get_reporter (const svn_ra_reporter_t **reporter,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_RA_PIPE_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

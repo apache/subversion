@@ -88,10 +88,3 @@ svn_cl__move (apr_getopt_t *os,
   return SVN_NO_ERROR;
 }
 
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
- */

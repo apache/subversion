@@ -183,11 +183,3 @@ svn_cl__print_status_list (apr_hash_t *statushash,
   if (detailed && (youngest != SVN_INVALID_REVNUM))
     printf ("Head revision: %6" SVN_REVNUM_T_FMT "\n", youngest);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
- */

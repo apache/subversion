@@ -88,10 +88,3 @@ SVN_ERROR_END
 #endif /* __cplusplus */
 
 #endif /* SVN_CLIENT_ERRORS_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -940,10 +940,3 @@ svn_client_ls (apr_hash_t **dirents,
 #endif /* __cplusplus */
 
 #endif  /* SVN_CLIENT_H */
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */

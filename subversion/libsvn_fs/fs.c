@@ -737,11 +737,3 @@ svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
 
   return newpath;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -79,10 +79,3 @@ svn_error_t *svn_fs__delete_node_revision (svn_fs_t *fs,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_NODE_REV_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -116,10 +116,3 @@ svn_wc__maybe_set_executable (svn_boolean_t *did_set,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_WC_TRANSLATE_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

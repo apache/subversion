@@ -489,11 +489,3 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
 
   return count;
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

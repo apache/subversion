@@ -217,10 +217,3 @@ svn_fs__same_keys (const char *a, const char *b)
     return 0;
   return (! strcmp (a, b));
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -826,11 +826,3 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
   composite->tview_len = window_B->tview_len;
   return composite;
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

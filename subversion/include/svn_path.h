@@ -356,10 +356,3 @@ const char *svn_path_url_add_component (const char *url,
 
 
 #endif /* SVN_PATH_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

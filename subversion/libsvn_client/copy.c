@@ -1075,14 +1075,3 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                      notify_func, notify_baton,
                      pool);
 }
-
-
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

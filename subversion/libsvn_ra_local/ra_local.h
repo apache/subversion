@@ -96,10 +96,3 @@ svn_ra_local__split_URL (svn_repos_t **repos,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_RA_LOCAL_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

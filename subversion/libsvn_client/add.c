@@ -257,10 +257,3 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
 
   return err;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

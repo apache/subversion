@@ -125,9 +125,3 @@ public class VectorTests extends TestCase
 	    }
 	}
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */

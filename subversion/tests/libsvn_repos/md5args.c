@@ -119,11 +119,3 @@ main (int argc, const char * const *argv)
 
   exit (0);
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

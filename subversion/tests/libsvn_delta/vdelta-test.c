@@ -189,11 +189,3 @@ main (int argc, char **argv)
   apr_terminate();
   exit (0);
 }
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

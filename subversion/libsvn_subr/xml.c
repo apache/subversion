@@ -509,11 +509,3 @@ void svn_xml_make_close_tag (svn_stringbuf_t **str,
   svn_stringbuf_appendcstr (*str, tagname);
   svn_stringbuf_appendcstr (*str, ">\n");
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -389,13 +389,3 @@ svn_ra_dav__request_dispatch(int *code,
                            "%s of %s returned status code %d (%s)",
                            method, url, *code, code_desc);
 }
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

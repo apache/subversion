@@ -305,10 +305,3 @@ svn_diff_file_output_unified(apr_file_t *output_file,
 #endif /* __cplusplus */
 
 #endif /* SVN_DIFF_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

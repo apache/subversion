@@ -415,9 +415,6 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
 
 /* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
  * vim:ts=4:sw=4:expandtab:tw=80:fo=tcroq 
  * vim:isk=a-z,A-Z,48-57,_,.,-,> 
  * vim:cino=>1s,e0,n0,f0,{.5s,}0,^-.5s,=.5s,t0,+1s,c3,(0,u0,\:0

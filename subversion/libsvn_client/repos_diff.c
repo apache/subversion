@@ -872,10 +872,3 @@ svn_client__get_diff_editor (const char *target,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

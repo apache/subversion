@@ -171,11 +171,3 @@ svn_error_t *svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_WC_LOG_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

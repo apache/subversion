@@ -194,11 +194,3 @@ svn_pool_clear (apr_pool_t *pool)
   svn_pool_clear_debug (pool, SVN_FILE_LINE_UNDEFINED);
 }
 #endif /* APR_POOL_DEBUG */
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: 
- */

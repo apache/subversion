@@ -914,13 +914,3 @@ svn_repos_dump_fs (svn_repos_t *repos,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

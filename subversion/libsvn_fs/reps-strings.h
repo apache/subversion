@@ -166,10 +166,3 @@ svn_error_t *svn_fs__rep_undeltify (svn_fs_t *fs,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_REPS_STRINGS_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

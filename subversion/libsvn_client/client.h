@@ -452,11 +452,3 @@ svn_error_t *svn_client__handle_externals
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_CLIENT_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

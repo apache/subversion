@@ -290,11 +290,3 @@ int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
       return i;
   return -1;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

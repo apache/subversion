@@ -301,10 +301,3 @@ module AP_MODULE_DECLARE_DATA dav_svn_module =
     dav_svn_cmds,		/* command table */
     register_hooks,             /* register hooks */
 };
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

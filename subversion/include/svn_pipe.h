@@ -89,10 +89,3 @@ svn_pipe_receive(svn_pipe_t *pipe,
 #endif /* __cplusplus */
 
 #endif /* SVN_PIPE_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

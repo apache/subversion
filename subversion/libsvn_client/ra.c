@@ -200,10 +200,3 @@ svn_client__open_ra_session (void **session_baton,
 
   return SVN_NO_ERROR;
 }
-                                        
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

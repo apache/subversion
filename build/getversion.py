@@ -51,6 +51,3 @@ if __name__ == '__main__':
 
 
 ### End of file.
-# local variables:
-# eval: (load-file "../tools/dev/svn-dev.el")
-# end:

@@ -96,11 +96,3 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -561,10 +561,3 @@ svn_error_t *svn_ra_dav_init(int abi_version,
 
   return NULL;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

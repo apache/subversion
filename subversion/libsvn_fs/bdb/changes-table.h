@@ -80,10 +80,3 @@ svn_error_t *svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_CHANGES_TABLE_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

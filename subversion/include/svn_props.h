@@ -194,10 +194,3 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 #endif /* __cplusplus */
 
 #endif /* SVN_PROPS_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -379,17 +379,20 @@ In addition to the GNU standards, Subversion uses these conventions:
          svn_fs_get_rev_prop ()       /* Part of published API. */
          svn_fs__parse_props ()       /* For internal use only. */
 
-   *  Put this comment at the bottom of new source files to make Emacs
-      automatically load svn-dev.el:
+   *  If you use Emacs, put something like this in your .emacs file,
+      so you get svn-dev.el and svnbook.el when needed:
 
-         /*
-          * local variables:
-          * eval: (load-file "../../tools/dev/svn-dev.el")
-          * end:
-          */
+         ;;; Begin Subversion development section
+         (defun svn-find-file-hook ()
+           (if (string-match "projects/svn/" buffer-file-name)
+               (load "~/projects/svn/tools/dev/svn-dev"))
+           (if (string-match "projects/svn/doc/book" buffer-file-name)
+               (load "~/projects/svn/doc/book/tools/svnbook")))
 
-      (This assumes the C file is located in a subdirectory of
-      subversion/subversion/, which most are.)
+         (add-hook 'find-file-hooks 'svn-find-file-hook)
+         ;;; End Subversion development section
+
+      (Don't forget to customize the paths for your setup.)
 
    *  We have a tradition of not marking files with the names of
       individual authors (i.e., we don't put lines like "Author: foo"

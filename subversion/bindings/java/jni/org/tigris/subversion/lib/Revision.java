@@ -53,10 +53,3 @@ public final class Revision {
 	return _revision.toLong();
     }
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */
-

@@ -398,10 +398,3 @@ svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
   *changes_p = changes;
   return SVN_NO_ERROR;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

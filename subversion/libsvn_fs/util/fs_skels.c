@@ -1198,11 +1198,3 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
   *skel_p = skel;
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -2492,10 +2492,3 @@ const dav_hooks_repository dav_svn_hooks_repos =
   dav_svn_walk,
   dav_svn_getetag,
 };
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -168,13 +168,3 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
   
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

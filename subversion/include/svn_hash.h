@@ -101,10 +101,3 @@ svn_error_t *svn_hash_diff (apr_hash_t *hash_a,
 #endif /* __cplusplus */
 
 #endif /* SVN_HASH_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

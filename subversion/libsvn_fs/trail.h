@@ -229,10 +229,3 @@ void svn_fs__record_completion (trail_t *trail,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_TRAIL_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

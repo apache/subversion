@@ -231,10 +231,3 @@ svn_pipe_receive(svn_pipe_t *pipe,
 
   return SVN_NO_ERROR;
 }
-
-
-  /* --------------------------------------------------------------
-   * local variables:
-   * eval: (load-file "../../tools/dev/svn-dev.el")
-   * end:
-   */

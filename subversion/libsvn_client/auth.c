@@ -374,12 +374,3 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
   
   return SVN_NO_ERROR;
 }
-
-
-
-/* --------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */
-
-

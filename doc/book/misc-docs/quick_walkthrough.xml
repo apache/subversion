@@ -213,7 +213,6 @@ D   ./baz
 
 <!--
 local variables: 
-eval: (load-file "../tools/svnbook.el")
 sgml-parent-document: ("misc-docs.xml" "chapter")
 end:
 -->

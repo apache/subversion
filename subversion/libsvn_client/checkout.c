@@ -132,10 +132,3 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */

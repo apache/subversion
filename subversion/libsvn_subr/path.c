@@ -1005,11 +1005,3 @@ svn_path_split_if_file(const char *path,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

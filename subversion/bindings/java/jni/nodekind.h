@@ -53,8 +53,3 @@ nodekind__create_from_svn_node_kind(JNIEnv *env, jboolean *hasException,
 #endif /* __cplusplus */
 
 #endif
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */

@@ -675,10 +675,3 @@ svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
   else
     return adm_access->entries_deleted;
 }
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

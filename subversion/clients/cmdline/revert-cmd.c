@@ -73,11 +73,3 @@ svn_cl__revert (apr_getopt_t *os,
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
- */

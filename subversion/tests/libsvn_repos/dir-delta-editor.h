@@ -50,10 +50,3 @@ dir_delta_get_editor (const svn_delta_editor_t **editor,
 #endif /* __cplusplus */
 
 #endif /* SVN_TEST__DIR_DELTA_EDITOR_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

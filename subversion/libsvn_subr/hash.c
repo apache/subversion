@@ -319,12 +319,3 @@ svn_hash_diff (apr_hash_t *hash_a,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -149,11 +149,3 @@ svn_fs__str_to_dbt (DBT *dbt, char *str)
   svn_fs__set_dbt (dbt, str, strlen (str));
   return dbt;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -1307,13 +1307,3 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

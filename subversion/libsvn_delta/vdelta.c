@@ -345,12 +345,3 @@ svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
   }
 #endif
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
-

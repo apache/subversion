@@ -1133,10 +1133,3 @@ svn_wc_diff (svn_wc_adm_access_t *anchor,
 
   return SVN_NO_ERROR;
 }
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

@@ -593,9 +593,3 @@ svn_io_write_version_file (const char *path, int version, apr_pool_t *pool);
 #endif /* __cplusplus */
 
 #endif /* SVN_IO_H */
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

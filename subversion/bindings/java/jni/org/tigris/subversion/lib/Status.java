@@ -115,12 +115,3 @@ public class Status
             return reposPropStatus;
         }
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */
-
-
-

@@ -35,6 +35,3 @@ def run_tests(test_list):
 
 
 ### End of file.
-# local variables:
-# eval: (load-file "../../../tools/dev/svn-dev.el")
-# end:

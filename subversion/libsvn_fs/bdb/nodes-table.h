@@ -105,10 +105,3 @@ svn_error_t *svn_fs__put_node_revision (svn_fs_t *fs,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_NODES_TABLE_H */
-
-
-/* 
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

@@ -853,9 +853,3 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
   Py_DECREF(chpaths);
   return SVN_NO_ERROR;
 }
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

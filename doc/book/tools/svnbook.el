@@ -1,15 +1,4 @@
 ;;;; Emacs Lisp help for writing Subversion books. ;;;;
-;;;
-;;; In xml files, put something like this to load this file automatically:
-;;;
-;;;   <!--
-;;;    local variables:
-;;;    eval: (load-file "../tools/svnbook.el")
-;;;    end:
-;;;    -->
-;;;
-;;; (note: make sure to get the path right in the argument to load-file).
-
 
 (if (not (boundp 'visited-svnbook-el))
     (progn

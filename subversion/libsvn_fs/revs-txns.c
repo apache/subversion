@@ -568,11 +568,3 @@ svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
   return SVN_NO_ERROR;
 }
-
-
-
-/* 
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */

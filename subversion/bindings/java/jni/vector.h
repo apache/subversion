@@ -39,17 +39,3 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
 #endif /* __cplusplus */
 
 #endif
-
-/* 
- * local variables:
- * eval: (load-file "../../../../tools/dev/svn-dev.el")
- * end: 
- */
-
-
-
-
-
-
-
-
