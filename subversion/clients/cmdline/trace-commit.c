@@ -27,6 +27,7 @@
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
+#include <assert.h>
 
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -44,6 +45,19 @@ struct edit_baton
 };
 
 
+static const int svn_cl__item_added = 0;
+static const int svn_cl__item_added_binary = 0;
+static const int svn_cl__item_deleted = 0;
+static const int svn_cl__item_replaced = 0;
+static const int svn_cl__item_replaced_binary = 0;
+
+#define ITEM_ADDED (&svn_cl__item_added)
+#define ITEM_ADDED_BINARY (&svn_cl__item_added_binary)
+#define ITEM_DELETED (&svn_cl__item_deleted)
+#define ITEM_REPLACED (&svn_cl__item_replaced)
+#define ITEM_REPLACED_BINARY (&svn_cl__item_replaced_binary)
+
+
 struct dir_baton
 {
   struct edit_baton *edit_baton;
@@ -51,6 +65,7 @@ struct dir_baton
   svn_stringbuf_t *path;
   svn_boolean_t added;
   svn_boolean_t prop_changed;
+  apr_hash_t *added_or_deleted;
   apr_pool_t *subpool;
   int ref_count;
 };
@@ -80,6 +95,33 @@ decrement_dir_ref_count (struct dir_baton *db)
   if (db->ref_count == 0)
     {
       struct dir_baton *dbparent = db->parent_dir_baton;
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first (db->subpool, db->added_or_deleted); 
+           hi; 
+           hi = apr_hash_next (hi))
+        {
+          const char *pattern;
+          const void *key;
+          void *val;
+
+          apr_hash_this (hi, &key, NULL, &val);
+
+          if (val == ITEM_REPLACED)
+            pattern = "Replacing       %s\n";
+          else if (val == ITEM_REPLACED_BINARY)
+            pattern = "Replacing (bin) %s\n";
+          else if (val == ITEM_DELETED)
+            pattern = "Deleting        %s\n";
+          else if (val == ITEM_ADDED)
+            pattern = "Adding          %s\n";
+          else if (val == ITEM_ADDED_BINARY)
+            pattern = "Adding   (bin)  %s\n";
+          else
+            assert(0); /* this should never happen */
+
+          printf (pattern, (const char *)key);
+        }
 
       /* Destroy all memory used by this baton, including the baton
          itself! */
@@ -107,6 +149,8 @@ open_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
   rb->subpool = subpool;
   rb->ref_count = 1;
 
+  rb->added_or_deleted = apr_hash_make (subpool);
+
   *root_baton = rb;
 
   return SVN_NO_ERROR;
@@ -119,10 +163,23 @@ delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
   struct dir_baton *d = parent_baton;
   svn_stringbuf_t *printable_name = 
     svn_stringbuf_dup (d->path, d->edit_baton->pool);
+  void *vp;
 
   svn_path_add_component (printable_name, name);
 
-  printf ("Deleting        %s\n", printable_name->data);
+  vp = apr_hash_get (d->added_or_deleted, printable_name->data, 
+                     printable_name->len);
+
+  if (vp == ITEM_ADDED)
+    vp = (void *)ITEM_REPLACED;
+  else if (vp == ITEM_ADDED_BINARY)
+    vp = (void *)ITEM_REPLACED_BINARY;
+  else
+    vp = (void *)ITEM_DELETED;
+
+  apr_hash_set (d->added_or_deleted, printable_name->data, printable_name->len, 
+                vp);
+
   return SVN_NO_ERROR;
 }
 
@@ -137,6 +194,7 @@ add_directory (svn_stringbuf_t *name,
   apr_pool_t *subpool;
   struct dir_baton *parent_d = parent_baton;
   struct dir_baton *child_d;
+  void *vp;
 
   subpool = svn_pool_create (parent_d->edit_baton->pool);
   child_d = apr_pcalloc (subpool, sizeof (*child_d));
@@ -150,7 +208,17 @@ add_directory (svn_stringbuf_t *name,
   child_d->ref_count = 1;
   parent_d->ref_count++;
 
-  printf ("Adding          %s\n", child_d->path->data);
+  child_d->added_or_deleted = apr_hash_make (subpool);
+
+  vp = apr_hash_get (parent_d->added_or_deleted, child_d->path->data, 
+                     child_d->path->len);
+  if (vp == ITEM_DELETED)
+    apr_hash_set (parent_d->added_or_deleted, child_d->path->data, 
+                  child_d->path->len, ITEM_REPLACED);
+  else
+    apr_hash_set (parent_d->added_or_deleted, child_d->path->data, 
+                  child_d->path->len, ITEM_ADDED);
+
   *child_baton = child_d;
 
   return SVN_NO_ERROR;
@@ -177,6 +245,8 @@ open_directory (svn_stringbuf_t *name,
   child_d->subpool = subpool;
   child_d->ref_count = 1;
   parent_d->ref_count++;
+
+  child_d->added_or_deleted = apr_hash_make (subpool);
 
   *child_baton = child_d;
 
@@ -206,9 +276,28 @@ close_file (void *file_baton)
   struct file_baton *fb = file_baton;
 
   if (fb->added)
-    printf ("Adding   %s  %s\n", 
-            fb->binary ? "(bin)" : "     ", 
-            fb->path->data);
+    {
+      void *vp = apr_hash_get (fb->parent_dir_baton->added_or_deleted, 
+                               fb->path->data, fb->path->len);
+      if (vp == NULL)
+        {
+          if (fb->binary)
+            vp = (void *)ITEM_ADDED_BINARY;
+          else
+            vp = (void *)ITEM_ADDED;
+        }
+      else
+        {
+          if (fb->binary)
+            vp = (void *)ITEM_REPLACED_BINARY;
+          else
+            vp = (void*)ITEM_REPLACED;
+        }
+
+      apr_hash_set (fb->parent_dir_baton->added_or_deleted, 
+                    fb->path->data, fb->path->len, vp);
+
+    }
   else
     printf ("Sending         %s\n", fb->path->data);
 
