@@ -1296,23 +1296,24 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
  *                </S:token>
  *           <S:owner>fred</S:owner>
  *           <S:comment encoding="base64">ET39IGCB93LL4M</S:comment>
- *           <S:creationdate>2005-02-07 14:17:08 -0600 (Mon, 07 Feb 2005)
- *                </S:creationdate>
- *           <S:expirationdate>2005-02-08 14:17:08 -0600 (Mon, 08 Feb 2005)
- *                </S:expirationdate>
+ *           <S:creationdate>2005-02-07T14:17:08Z</S:creationdate>
+ *           <S:expirationdate>2005-02-08T14:17:08Z</S:expirationdate>
  *        </S:lock>
  *        ...
  *    </S:get-locks-report>
  *
  *
  * The <path> and <token> and date-element cdata is xml-escaped by mod_dav_svn.
- * The <owner> and <comment> cdata is xml-escaped, or *possibly* base64.
+ *
+ * The <owner> and <comment> cdata is always xml-escaped, but
+ * possibly also base64-encoded if necessary, as indicated by the
+ * encoding attribute.
+ *
  * The absence of <expirationdate> means that there's no expiration.
  *
  * If there are no locks to return, then the response will look just
  * like the request.
  */
-
 
 
 /* Context for parsing server's response. */
@@ -1322,6 +1323,8 @@ typedef struct {
   const char *encoding;            /* normally NULL, else the value of
                                       'encoding' attribute on cdata's tag.*/
   apr_hash_t *lock_hash;           /* the final hash returned */
+
+  svn_error_t *err;                /* if the parse needs to return an err */
 
   apr_pool_t *scratchpool;         /* temporary stuff goes in here */
   apr_pool_t *pool;                /* permanent stuff goes in here */
@@ -1417,7 +1420,18 @@ static int getlocks_end_element(void *userdata, int state,
   switch (elm->id)
     {
     case ELEM_lock:
-      /* finish the whole svn_lock_t. */
+      /* is the final svn_lock_t valid?  all fields must be present
+         except for 'comment' and 'expiration_date'. */
+      if ((! baton->current_lock->path)
+          || (! baton->current_lock->token)
+          || (! baton->current_lock->owner)
+          || (! baton->current_lock->creation_date))
+        {
+          baton->err = svn_error_create (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                         _("Incomplete lock data returned"));
+          return NE_XML_ABORT;
+        }
+
       apr_hash_set(baton->lock_hash, baton->current_lock->path,
                    APR_HASH_KEY_STRING, baton->current_lock);
       break;
@@ -1444,6 +1458,11 @@ static int getlocks_end_element(void *userdata, int state,
       err = svn_time_from_cstring(&(baton->current_lock->creation_date),
                                   baton->cdata_accum->data,
                                   baton->scratchpool);
+      if (err)
+        {
+          baton->err = err;
+          return NE_XML_ABORT;
+        }
       /* clean up the accumulator. */
       svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
@@ -1453,6 +1472,11 @@ static int getlocks_end_element(void *userdata, int state,
       err = svn_time_from_cstring(&(baton->current_lock->expiration_date),
                                   baton->cdata_accum->data,
                                   baton->scratchpool);
+      if (err)
+        {
+          baton->err = err;
+          return NE_XML_ABORT;
+        }
       /* clean up the accumulator. */
       svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
@@ -1549,12 +1573,14 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    NULL, /* extra headers */
                                    &status_code,
                                    pool);
+  if (baton->err)
+    return baton->err;
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (status_code == 501)
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("Server does not support locking features."));
+                             _("Server does not support locking features"));
 
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err,

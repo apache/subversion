@@ -658,6 +658,11 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
               "Failed to excute WebDAV PROPPATCH")
 
+  /* @since New in 1.2 */
+  SVN_ERRDEF (SVN_ERR_RA_DAV_MALFORMED_DATA,
+              SVN_ERR_RA_DAV_CATEGORY_START + 9,
+              "Malformed network data")
+
 
   /* ra_local errors */
   
