@@ -36,10 +36,6 @@
  * the admin's temp area, but in a more general area (/tmp, $TMPDIR) as
  * then diff could be run on a read-only working copy.
  *
- * ### TODO: Provide an interface to directory_elements_diff that can
- * be called by the client, to do local only diff without contacting the
- * repository.
- *
  * ### TODO: Replacements where the node kind changes needs support. It
  * mostly works when the change is in the repository, but not when it is
  * in the working copy.
@@ -615,9 +611,9 @@ open_file (svn_stringbuf_t *name,
 }
 
 /* This is an apr cleanup handler. It is called whenever the associated
- * pool is cleared or destroyed. It is only installed while the temporary
- * file exists, and is called if an error causes the program to abort, in
- * which case it removes the temporary file.
+ * pool is cleared or destroyed. It is installed when the temporary file is
+ * created, and removes the file when the file pool is deleted, whether in
+ * the normal course of events, or if an error occurs.
  *
  * ARG is the file baton for the working copy file associated with the
  * temporary file.
@@ -631,8 +627,18 @@ temp_file_cleanup_handler (void *arg)
   svn_stringbuf_t *temp_file_path
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
 
-  /* Remove the temporary file. */
   return apr_file_remove (temp_file_path->data, b->pool);
+}
+
+/* This removes the temp_file_cleanup_handler in the child process before
+ * exec'ing diff.
+ */
+static apr_status_t
+temp_file_cleanup_handler_remover (void *arg)
+{
+  struct file_baton *b = arg;
+  apr_pool_cleanup_kill (b->pool, b, temp_file_cleanup_handler);
+  return APR_SUCCESS;
 }
 
 /* An svn_delta_edit_fns_t editor function.  Do the work of applying the
@@ -698,7 +704,7 @@ apply_textdelta (void *file_baton,
      with some error. So register a pool cleanup handler to delete the
      file. This handler is removed just before deleting the file. */
   apr_pool_cleanup_register (b->pool, file_baton, temp_file_cleanup_handler,
-                             NULL);
+                             temp_file_cleanup_handler_remover);
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->original_file, b->pool),
                      svn_stream_from_aprfile (b->temp_file, b->pool),
@@ -719,52 +725,38 @@ close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
   svn_wc_diff_cmd_t diff_cmd = b->edit_baton->diff_cmd;
-  svn_error_t *err;
 
   /* The path to the temporary copy of the pristine repository version. */
   svn_stringbuf_t *temp_file_path
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
-
-  /* ### TODO: at present the diff callback uses apr_proc_create, which
-     runs the cleanup handlers in the child process before exec'ing the
-     diff process, one of which is responsible for deleting the temporary
-     file. Needless to say this is catastrophic! So we need to remove the
-     cleanup handler here and handle errors manually. */
-  apr_pool_cleanup_kill (b->pool, file_baton, temp_file_cleanup_handler);
 
   if (b->added)
     {
       /* Add is required to change working-copy into requested revision, so
          diff should show this as and delete. Thus compare the current
          working copy against the empty file. */
-      err = diff_cmd (temp_file_path,
-                      svn_wc__empty_file_path (b->wc_path, b->pool),
-                      b->path, b->edit_baton->diff_cmd_baton);
+      SVN_ERR (diff_cmd (temp_file_path,
+                         svn_wc__empty_file_path (b->wc_path, b->pool),
+                         b->path, b->edit_baton->diff_cmd_baton));
     }
   else
     {
+      /* Be careful with errors to ensure that the temporary translated
+         file is deleted. */
+      svn_error_t *err1, *err2 = SVN_NO_ERROR;
       svn_stringbuf_t *translated;
       
       SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
       
-      err = diff_cmd (temp_file_path, translated, b->path,
+      err1 = diff_cmd (temp_file_path, translated, b->path,
                        b->edit_baton->diff_cmd_baton);
       
       if (translated != b->path)
-        SVN_ERR (svn_io_remove_file (translated->data, b->pool));
+        err2 = svn_io_remove_file (translated->data, b->pool);
+
+      if (err1 || err2)
+        return err1 ? err1 : err2;
     }
-
-#if 0
-  /* This is where the cleanup handler should be removed */
-  apr_pool_cleanup_kill (b->pool, file_baton, temp_file_cleanup_handler);
-#endif
-
-  /* Remove the temporary file, after this normal error handling can
-     resume */
-  apr_file_remove (temp_file_path->data, b->pool);
-
-  if (err != SVN_NO_ERROR)
-    return err;
 
   /* Add this file to the parent directory's list of elements that have
      been compared. */
