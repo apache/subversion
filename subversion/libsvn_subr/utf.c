@@ -490,7 +490,7 @@ svn_utf_utf8_to_native (const char *utf8_string,
     }
   else
     {
-      int i;
+      apr_size_t i;
       
       /* Just replace non-ASCII characters with '?' here... 
          This could be rewritten to be more in line with
