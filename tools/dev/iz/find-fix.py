@@ -66,16 +66,14 @@ _milestone_filter = []
 
 noncore_milestone_filter = [
   'Post-1.0',
+  '1.1',
   'cvs2svn-1.0',
   'cvs2svn-opt',
   'inapplicable',
+  'no milestone',
   ]
 
-one_point_oh_milestone_filter = [
-  'Post-1.0',
-  'cvs2svn-opt',
-  'inapplicable',
-  ]
+one_point_oh_milestone_filter = noncore_milestone_filter + []
 
 beta_milestone_filter = one_point_oh_milestone_filter + ['1.0']
 
@@ -183,9 +181,6 @@ def main():
 def summary(datafile, d_start, d_end):
   "Prints a summary of activity within a specified date range."
 
-  global _types
-  global _milestone_filter
-
   data = load_data(datafile)
 
   # activity during the requested period
@@ -202,21 +197,18 @@ def summary(datafile, d_start, d_end):
   alltypes_found = alltypes_fixed = alltypes_inval = alltypes_dup \
                    = alltypes_other = alltypes_rem = 0
   for t in _types:
+    fromzerorem_t = fromzerofound[t]\
+                    - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t] 
+                       + fromzeroother[t])
     print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
           'other=%3d  remain=%3d' \
-          % (t, found[t], fixed[t], inval[t], dup[t], other[t],
-             fromzerofound[t]
-             - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t] 
-                + fromzeroother[t]))
+          % (t, found[t], fixed[t], inval[t], dup[t], other[t], fromzerorem_t)
     alltypes_found = alltypes_found + found[t]
     alltypes_fixed = alltypes_fixed + fixed[t]
     alltypes_inval = alltypes_inval + inval[t]
     alltypes_dup   = alltypes_dup   + dup[t]
     alltypes_other = alltypes_other + other[t]
-    alltypes_rem = alltypes_rem \
-            + fromzerofound[t] \
-            - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t]
-               + fromzeroother[t])
+    alltypes_rem   = alltypes_rem + fromzerorem_t
 
   print '-' * 77
   print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
