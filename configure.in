@@ -114,7 +114,7 @@ changequote([, ])
 SVN_LIB_APR($APR_VER_REGEX)
 SVN_LIB_APRUTIL($APU_VER_REGEX)
 
-if test -d $abs_srcdir/db ; then
+if test -d "$abs_srcdir/db" ; then
     # Note: We have to configure and build a db subdirectory even if
     # some other berkeley db is configured via --with-berkeley-db
     ### why do we "have to" ?? -gjs
@@ -431,7 +431,7 @@ else
 fi
 if test "$PYTHON" != "none"; then
   echo "checking for Python 2.0 or newer"
-  ${PYTHON} ${abs_srcdir}/build/pycheck.py
+  ${PYTHON} "${abs_srcdir}/build/pycheck.py"
 fi
 
 SVN_CHECK_JDK
