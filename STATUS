@@ -53,7 +53,9 @@ Candidate changes:
     copy when the switch was interrupted.
     Justification: simple fix; very annoying when WC gets messed up.
     Votes:
-       +1: julianfoad, philip
+       +1: julianfoad
+       -1: philip (It exchanges one bug for another more serious bug,
+                   see "1.0.1 veto for r8959" on dev@s.t.o)
 
   * r8962
     Followup to r8842 ('svn st -v' shows unwanted status of externals).
