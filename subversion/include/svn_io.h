@@ -544,7 +544,7 @@ svn_error_t *svn_io_run_cmd (const char *path,
  */
 svn_error_t *svn_io_run_diff (const char *dir,
                               const char *const *user_args,
-                              const int num_user_args,
+                              int num_user_args,
                               const char *label1,
                               const char *label2,
                               const char *from,

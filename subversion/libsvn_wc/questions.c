@@ -122,7 +122,7 @@ svn_error_t *
 svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
                             const char *path,
                             svn_wc_adm_access_t *adm_access,
-                            const enum svn_wc__timestamp_kind timestamp_kind,
+                            enum svn_wc__timestamp_kind timestamp_kind,
                             apr_pool_t *pool)
 {
   apr_time_t wfile_time, entrytime = 0;

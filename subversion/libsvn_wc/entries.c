@@ -1609,7 +1609,7 @@ svn_error_t *
 svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
-                     const svn_revnum_t new_rev,
+                     svn_revnum_t new_rev,
                      svn_boolean_t *write_required,
                      apr_pool_t *pool)
 {
