@@ -720,15 +720,15 @@ baz
 
       <para>What's happening here is that the Subversion client is
         invoking a local <command>ssh</command> process, connecting to
-        <literal>host.example.com</literal>, authenticating as user
+        <literal>host.example.com</literal>, authenticating as the user
         <literal>harry</literal>, then spawning a private
         <command>svnserve</command> process on the remote machine,
-        running as user <literal>harry</literal>.  The
+        running as the user <literal>harry</literal>.  The
         <command>svnserve</command> command is being invoked in tunnel
         mode (<option>-t</option>) and all network protocol is being
         <quote>tunneled</quote> over the encrypted connection by
         <command>ssh</command>, the tunnel-agent.
-        <command>svnserve</command> is aware that it's running as user
+        <command>svnserve</command> is aware that it's running as the user
         <literal>harry</literal>, and if the client performs a commit,
         the authenticated username will be attributed as the author of
         the new revision.</para>
@@ -824,7 +824,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       writing&mdash;capabilities.  The result is a standardized,
       robust system that is conveniently packaged as part of the
       Apache 2.0 software, is supported by numerous operating systems
-      and third-party products, and which doesn't require network
+      and third-party products, and doesn't require network
       administrators to open up yet another custom port.
       <footnote>
         <para>They really hate doing that.</para>
@@ -1400,7 +1400,7 @@ ssl-client-cert-password = somepassword
           to your <literal>&lt;Location&gt;</literal> block.  Using
           our previous example, this would mean that only clients that
           claimed to be either <literal>harry</literal> or
-          <literal>sally</literal>, and which provided the correct
+          <literal>sally</literal>, and provided the correct
           password for their respective username, would be allowed to
           do anything with the Subversion repository:</para>
     
@@ -1603,7 +1603,7 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
 
         <para>The syntax of the access file is the same familiar one
           used by <command>svnserve.conf</command> and the runtime
-          configuration files.  Lines that start with hash
+          configuration files.  Lines that start with a hash
           (<literal>#</literal>) are ignored.  In its simplest form,
           each section names a repository and path within it, and the
           authenticated usernames are the option names within each
@@ -1632,14 +1632,14 @@ harry = rw
 sally = r
 </screen>
 
-        <para>In this first example, user <literal>harry</literal> has
+        <para>In this first example, the user <literal>harry</literal> has
           full read and write access on the
           <filename>/branches/calc/bug-142</filename> directory in the
-          <literal>calc</literal> repository, but user
+          <literal>calc</literal> repository, but the user
           <literal>sally</literal> has read-only access.  Any other
           users are blocked from accessing this directory.</para>
 
-        <para>Of course, permissions <quote>inherit</quote> from
+        <para>Of course, permissions are inherited from
           parent to child directory.  That means that we can specify a
           subdirectory with a different access policy for
           Sally:</para>
@@ -1694,7 +1694,7 @@ harry =
           all repositories world readable to all users, whether you're
           using <literal>SVNPath</literal> or
           <literal>SVNParentPath</literal>.  Once all users have
-          read-access to the repositor(ies), you can give explicit
+          read-access to the repositories, you can give explicit
           <literal>rw</literal> permission to certain users on specific
           subdirectories within specific repositories.</para>
 

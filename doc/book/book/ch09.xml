@@ -2522,7 +2522,7 @@ Committed revision 27.
 
           <para>This removes properties from files, directories, or
             revisions.  The first form removes versioned properties
-            in working copy, while the second removes unversioned
+            in your working copy, while the second removes unversioned
             remote properties on a repository revision.</para>
         </refsect1>
 
@@ -2741,7 +2741,7 @@ Began journal.
 
           <para>List all properties on files, directories, or
             revisions.  The first form lists versioned properties in
-            working copy, while the second lists unversioned remote
+            your working copy, while the second lists unversioned remote
             properties on a repository revision.</para>
         </refsect1>
 
@@ -3310,7 +3310,7 @@ $ svn status
             <varlistentry>
               <term>' '</term>
               <listitem>
-                <para>Item is child of its parent directory.</para>
+                <para>Item is a child of its parent directory.</para>
               </listitem>
             </varlistentry>
             
@@ -4387,7 +4387,7 @@ $ svnadmin verify /usr/local/svn/repos/
       
       <para>Switches in <command>svnlook</command> are global, just
         like in <command>svn</command> and
-        <command>svnadmin</command>, however, most switches only
+        <command>svnadmin</command>; however, most switches only
         apply to one subcommand since the functionality of
         <command>svnlook</command> is (intentionally) limited in
         scope.</para>
@@ -4418,7 +4418,7 @@ $ svnadmin verify /usr/local/svn/repos/
           <term><option>--transaction</option>
             (<option>-t</option>)</term>
           <listitem>
-            <para>Specify a particular transaction id that you wish to
+            <para>Specify a particular transaction ID that you wish to
               examine. </para>
           </listitem>
         </varlistentry>
@@ -4920,8 +4920,8 @@ Rearrange lunch.
         <refsect1>
           <title>Examples</title>
 
-          <para>This shows the value of the file
-            <filename>/trunk/sandwich</filename> in the
+          <para>This shows the value of the <quote>seasonings</quote> property
+            on the file <filename>/trunk/sandwich</filename> in the
             <literal>HEAD</literal> revision:</para>
 
           <screen>
@@ -5006,7 +5006,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
 
           <para>Print the tree, starting at <replaceable>PATH_IN_REPOS</replaceable> (if
             supplied, at the root of the tree otherwise), optionally
-            showing node revision ids.</para>
+            showing node revision IDs.</para>
         </refsect1>
 
         <refsect1>

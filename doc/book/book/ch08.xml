@@ -293,7 +293,7 @@
         added dimension to the Subversion filesystem universe.</para>
 
       <figure id="svn-ch-8-dia-2">
-        <title>Revisioning time&mdash;the third dimension!</title>
+        <title>Versioning time&mdash;the third dimension!</title>
         <graphic fileref="images/ch08dia2.png"/>
       </figure>
 
@@ -336,7 +336,7 @@
         repository layer because they have hooks associated with them.
         In the future, other events may be wrapped by the repository
         API.  All of the remaining filesystem interaction will
-        continue to occur directly with libsvn_fs API, though.</para>
+        continue to occur directly via the libsvn_fs API, though.</para>
 
       <para>For example, here is a code segment that illustrates the
         use of both the repository and filesystem interfaces to create
@@ -615,8 +615,8 @@ The following repository access (RA) modules are available:
           communications with the Apache server (whose own mod_ssl can
           <quote>speak the language</quote>).  Also, both Neon itself
           and Apache's mod_deflate can understand the
-          <quote>deflate</quote> algorithm (the same used by the PKZIP
-          and gzip programs), so requests can be sent in smaller,
+          <quote>deflate</quote> algorithm (the same one used by the
+          PKZIP and gzip programs), so requests can be sent in smaller,
           compressed chunks across the wire.  Other complex features
           that Subversion hopes to support in the future include the
           ability to automatically handle server-specified redirects
@@ -672,8 +672,8 @@ The following repository access (RA) modules are available:
           repository and filesystem libraries, so no network
           communication is required at all.</para>
 
-        <para>Subversion requires the server name included as part of
-          the <literal>file:</literal> URL be either
+        <para>Subversion requires that the server name included as part
+          of the <literal>file:</literal> URL be either
           <literal>localhost</literal> or empty, and that there be no
           port specification.  In other words, your URLs should look
           like either
@@ -1644,7 +1644,7 @@ A  build.conf
 
       <para>In the best-case scenario, you will have actually added
         appropriate tests to that test suite which verify that your
-        proposed changes actually work as expected.  In fact,
+        proposed changes work as expected.  In fact,
         sometimes the best contribution a person can make is solely
         the addition of new tests.  You can write regression tests for
         functionality that currently works in Subversion as a way to

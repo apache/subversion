@@ -583,9 +583,9 @@ Updated to revision 2.
         that you will use here are <command>svn add</command>,
         <command>svn delete</command>, <command>svn copy</command>,
         and <command>svn move</command>.  However, if you are merely
-        editing a file (or files) that is already in Subversion, you
-        may not need to use any of these commands until you commit.
-        Changes you can make to your working copy:</para>
+        editing files that are already in Subversion, you may not need
+        to use any of these commands until you commit.  Changes you can
+        make to your working copy:</para>
       
       <variablelist>
         
@@ -856,7 +856,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>M      file</computeroutput></term>
             <listitem>
-              <para>The contents of file <filename>file</filename> have
+              <para>The contents of the file <filename>file</filename> have
                 been modified.</para>
             </listitem>
           </varlistentry>
