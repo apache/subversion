@@ -493,7 +493,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* EVENT:  Are we adding a new directory?  */
   if (new_frame->previous)
     if ((new_frame->previous->tag == svn_XML_new) 
-        & (new_frame->tag == svn_XML_dir))
+        && (new_frame->tag == svn_XML_dir))
       {
         err = do_directory_callback (my_digger, new_frame, atts, FALSE);
         if (err)
@@ -504,7 +504,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* EVENT:  Are we replacing a directory?  */
   if (new_frame->previous)
     if ((new_frame->previous->tag == svn_XML_replace) 
-        & (new_frame->tag == svn_XML_dir))
+        && (new_frame->tag == svn_XML_dir))
       {
         err = do_directory_callback (my_digger, new_frame, atts, TRUE);
         if (err)
@@ -515,13 +515,13 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* EVENT:  Are we adding a new file?  */
   if (new_frame->previous)
     if ((new_frame->previous->tag == svn_XML_new) 
-        & (new_frame->tag == svn_XML_file))
+        && (new_frame->tag == svn_XML_file))
       do_add_file (my_digger, new_frame);
 
   /* EVENT:  Are we replacing a file?  */
   if (new_frame->previous)
     if ((new_frame->previous->tag == svn_XML_replace) 
-        & (new_frame->tag == svn_XML_file))
+        && (new_frame->tag == svn_XML_file))
       do_replace_file (my_digger, new_frame);
   
 
