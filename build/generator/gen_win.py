@@ -481,8 +481,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                         ""],
                                        rootpath)
 
-    if isinstance(target, gen_base.TargetSWIG) \
-       or isinstance(target, gen_base.TargetSWIGLib):
+    if self.swig_libdir \
+       and (isinstance(target, gen_base.TargetSWIG)
+            or isinstance(target, gen_base.TargetSWIGLib)):
       fakeincludes.append(self.swig_libdir)
 
     return self.make_windirs(fakeincludes)
@@ -638,6 +639,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     base_version = '1.3.19'
     vernum = base_vernum = 103019
     options = '-c'
+    libdir = ''
 
     infp, outfp = os.popen4('swig -version')
     infp.close()
@@ -662,7 +664,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if vernum >= 103020:
           options = '-noruntime'
 
-        self._find_swig_libdir()
+        libdir = self._find_swig_libdir()
       else:
         sys.stderr.write('Could not find installed SWIG,'
                          ' assuming version %s\n' % base_version)
@@ -672,19 +674,20 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     self.swig_defines = 'SVN_SWIG_VERSION=%d' % vernum
     self.swig_options = '%s -D%s' % (options, self.swig_defines)
+    self.swig_libdir = libdir
 
   def _find_swig_libdir(self):
     fp = os.popen('swig -swiglib', 'r')
     try:
-      self.swig_libdir = string.rstrip(fp.readline())
-      if self.swig_libdir:
-        sys.stderr.write('Using SWIG library directory %s\n'
-                         % self.swig_libdir)
+      libdir = string.rstrip(fp.readline())
+      if libdir:
+        sys.stderr.write('Using SWIG library directory %s\n' % libdir)
+        return libdir
       else:
         sys.stderr.write('WARNING: could not find SWIG library directory\n')
-        self.swig_libdir = ''
     finally:
       fp.close()
+    return ''
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
