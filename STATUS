@@ -140,12 +140,7 @@ Bindings changes that affect the build system:
 
 Bindings changes that don't affect the build system:
 
-     * r8397, r8400
-     Fix declaration after statement bug.
-     Votes:
-      +1: epg, breser
-
-     * r8398
+    * r8398
      Use LIBS rather than OTHERLDFLAGS in Makefile.PL.
      Votes:
       +1: epg
