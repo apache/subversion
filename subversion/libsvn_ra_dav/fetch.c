@@ -318,7 +318,20 @@ fetch_dirents (svn_ra_session_t *ras,
   rv = dav_propfind_named(fc->dph, fetch_props, fc);
   if (rv != HTTP_OK)
     {
-      /* ### raise an error */
+      switch (rv)
+        {
+        case HTTP_CONNECT:
+          return svn_error_createf(0, 0, NULL, fc->pool,
+                                   "Could not connect to server (%s, port %d).",
+                                   ras->root.host, ras->root.port);
+        case HTTP_AUTH:
+          return svn_error_create(SVN_ERR_NOT_AUTHORIZED, 0, NULL, 
+                                  fc->pool,
+                                  "Authentication failed on server.");
+        default:
+          return svn_error_create(0, 0, NULL, fc->pool,
+                                  http_get_error(ras->sess));
+        }
     }
 
   /* ### how to toss dph? */
