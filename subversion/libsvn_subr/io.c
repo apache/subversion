@@ -657,7 +657,7 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
 
   /* Reserve space for the data, ensuring that the stringbuf's pool is
      used. */
-  svn_stringbuf_ensure (res, finfo.size);
+  svn_stringbuf_ensure (res, finfo.size + 1);
   res->len = finfo.size;
 
   apr_err = apr_file_read_full (file, res->data, res->len, &len);
@@ -672,6 +672,9 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
        "svn_string_from_aprfile: EOF not seen for '%s'", fname);
+
+  /* Null terminate the stringbuf. */
+  res->data[res->len] = 0;
 
   *result = res;
   return SVN_NO_ERROR;
