@@ -39,10 +39,10 @@ topics covered by the book, keyed on CVS tasks.</p>
 
 <li>Basic Work Cycle</li>
    <ul>
-     <li>Seeing locally changed items</li>
-     <li>Seeing out-of-date items</li>
-     <li>Scheduling additions or deletions</li>
-     <li>Copying and moving</li>
+     <li><a href="#changeditems">Seeing locally changed items</a></li>
+     <li><a href="#outofdate">Seeing out-of-date items</a></li>
+     <li><a href="#scheduling">Scheduling additions or deletions</a></li>
+     <li><a href="#copying">Copying and moving</a></li>
      <li>Undoing local changes</li>
      <li>Updating and committing</li>
      <li>Resolving conflicts</li>
@@ -650,6 +650,83 @@ topics covered by the book, keyed on CVS tasks.</p>
     </dl>
   </td>
 </tr>
+
+
+<!-- =========================================================== -->
+
+<tr>
+   <td colspan="2" bgcolor="#ccccff">
+    <h2><a name="copying">Copying and moving</a></h2>
+    <dl>
+      <dt>Task Description:</dt>
+
+      <dd>Copy or move/rename a file or directory.</dd>
+
+      <dt>Book References:</dt> <dd><a
+      href="http://svnbook.red-bean.com/svnbook/ch03s05.html#svn-ch-3-sect-4.2">
+      Make Changes to Your Working Copy</a>
+      </dd>
+      <dd><a href="http://svnbook.red-bean.com/svnbook/re07.html">
+          svn copy</a> 
+      <dd><a href="http://svnbook.red-bean.com/svnbook/re18.html">
+          svn move</a> 
+      </dd>
+
+    </dl>
+  </td>
+</tr>
+<tr valign="top">
+  <td>
+    <p align="center"><b>CVS</b></p>
+    <dl>
+      <dt>Commands:</dt>
+      <dd>(not possible.)</dd>
+
+
+      <dt>Explanation:</dt>
+
+      <dd>Not possible, unless an administrator directly mucks with
+      RCS files in the repository.  (And in that case, no history
+      records the act of copying or renaming.)</dd>
+
+    </dl>
+  </td>
+  <td>
+    <p align="center"><b>Subversion</b></p>
+    <dl>
+      <dt>Commands:</dt>
+      <dd><tt>$&nbsp;svn&nbsp;copy&nbsp;foo.c&nbsp;foo2.c</tt></dd>
+      <dd><tt>A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;foo2.c</tt></dd>
+      <dd><tt>&nbsp;</tt></dd>
+      <dd><tt>$&nbsp;svn&nbsp;copy&nbsp;dir&nbsp;dir2</tt></dd>
+      <dd><tt>A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dir2</tt></dd>
+      <dd><tt>&nbsp;</tt></dd>
+      <dd><tt>$&nbsp;svn&nbsp;move&nbsp;bar.c&nbsp;baz.c</tt></dd>
+      <dd><tt>A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;baz.c</tt></dd>
+      <dd><tt>D&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bar.c</tt></dd>
+      <dd><tt>&nbsp;</tt></dd>
+      <dd><tt>$&nbsp;svn&nbsp;move&nbsp;dirA&nbsp;dirB</tt></dd>
+      <dd><tt>A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirB</tt></dd>
+      <dd><tt>D&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirA/file1</tt></dd>
+      <dd><tt>D&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dirA/file2</tt></dd>
+      <dd><tt>...</tt></dd>
+
+      <dt>Explanation:</dt>
+
+      <dd>The <tt>svn copy</tt> command schedules a file or directory
+      for addition to the repository, recording the "source" of the
+      copy.  After committing, <tt>svn log</tt> on the copied item
+      will trace history back through the original copy-source.  The
+      <tt>svn move</tt> command is exactly equivalent to running
+      <tt>svn copy</tt>, followed by an <tt>svn delete</tt> on the
+      copy-source: the result is a new item scheduled for additon
+      (with copy-history attached) and the original item scheduled for
+      deletion.</dd>
+
+    </dl>
+  </td>
+</tr>
+
 
 <!-- =========================================================== -->
 
