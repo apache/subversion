@@ -95,7 +95,6 @@ add_committable (apr_hash_t *committables,
 }
 
 
-
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
@@ -119,12 +118,11 @@ harvest_committables (apr_hash_t *committables,
                       svn_boolean_t nonrecursive,
                       apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);  /* ### why? */
   apr_hash_t *entries = NULL;
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
   const char *p_path;
-  svn_boolean_t tconflict, pconflict;
+  svn_boolean_t tc, pc;
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
 
@@ -148,35 +146,43 @@ harvest_committables (apr_hash_t *committables,
          recurse anyway, so... ) */
       svn_error_t *err;
       const svn_wc_entry_t *e = NULL;
-      err = svn_wc_entries_read (&entries, adm_access, FALSE, subpool);
+      err = svn_wc_entries_read (&entries, adm_access, FALSE, pool);
+
+      /* If we failed to get an entries hash for the directory, no
+         sweat.  Cleanup and move along.  */
       if (err)
         {
           svn_error_clear (err);
           entries = NULL;
         }
-
-      if ((entries) 
-          && ((e = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
-                                 APR_HASH_KEY_STRING))))
+      
+      /* If we got an entries hash, and the "this dir" entry is
+         present, override our current ENTRY with it, and check for
+         conflicts. */
+      if ((entries) && ((e = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
+                                           APR_HASH_KEY_STRING))))
         {
           entry = e;
-          SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, path, 
-                                        entry, subpool));
+          SVN_ERR (svn_wc_conflicted_p (&tc, &pc, path, entry, pool));
         }
+
+      /* No new entry?  Just check the parent's pointer for
+         conflicts. */
       else
         {
-          SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, p_path, 
-                                        entry, subpool));
+          SVN_ERR (svn_wc_conflicted_p (&tc, &pc, p_path, entry, pool));
         }
     }
+
+  /* If this is not a directory, check for conflicts using the
+     parent's path. */
   else
     {
-      /* If not a directory, use the parent path. */
-      SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, p_path, 
-                                    entry, subpool));
+      SVN_ERR (svn_wc_conflicted_p (&tc, &pc, p_path, entry, pool));
     }
 
-  if (tconflict || pconflict)
+  /* Bail now if any conflicts exist for the ENTRY. */
+  if (tc || pc)
     return svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL,
                               "Aborting commit: '%s' remains in conflict.",
                               path);
@@ -189,7 +195,7 @@ harvest_committables (apr_hash_t *committables,
 
   /* Check for the deletion case.  Deletes can occur only when we are
      not in "adds-only mode".  They can be either explicit
-     (schedule==delete) or implicit (schedule==replace==delete+add).  */
+     (schedule == delete) or implicit (schedule == replace ::= delete+add).  */
   if ((! adds_only)
       && ((entry->schedule == svn_wc_schedule_delete)
           || (entry->schedule == svn_wc_schedule_replace)))
@@ -198,8 +204,8 @@ harvest_committables (apr_hash_t *committables,
     }
 
   /* Check for the trivial addition case.  Adds can be explicit
-     (schedule==add) or implicit (schedule==replace==delete+add).  We
-     also note whether or not this is an add with history here.  */
+     (schedule == add) or implicit (schedule == replace ::= delete+add).  
+     We also note whether or not this is an add with history here.  */
   if ((entry->schedule == svn_wc_schedule_add)
       || (entry->schedule == svn_wc_schedule_replace))
     {
@@ -225,7 +231,7 @@ harvest_committables (apr_hash_t *committables,
 
       /* If this is not a WC root then its parent's revision is
          admissible for comparitive purposes. */
-      SVN_ERR (svn_wc_is_wc_root (&wc_root, path, adm_access, subpool));
+      SVN_ERR (svn_wc_is_wc_root (&wc_root, path, adm_access, pool));
       if (! wc_root)
         {
           if (parent_entry)
@@ -236,6 +242,8 @@ harvest_committables (apr_hash_t *committables,
           (SVN_ERR_WC_CORRUPT, 0, NULL,
            "Did not expect `%s' to be a working copy root", path);
 
+      /* If the ENTRY's revision differs from that of its parent, we
+         have to explicitly commit ENTRY as a copy. */
       if (entry->revision != p_rev)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
@@ -259,15 +267,15 @@ harvest_committables (apr_hash_t *committables,
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
       /* See if there are property modifications to send. */
-      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, subpool));
+      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, pool));
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
       if (entry->kind == svn_node_file)
         {
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR (svn_wc_text_modified_p (&text_mod, path, adm_access,
-                                             subpool));
+            SVN_ERR (svn_wc_text_modified_p (&text_mod, path,
+                                             adm_access, pool));
           else
             text_mod = TRUE;
         }
@@ -282,9 +290,9 @@ harvest_committables (apr_hash_t *committables,
       if (entry->kind == svn_node_file)
         {
           SVN_ERR (svn_wc_text_modified_p (&text_mod, path, 
-                                           adm_access, subpool));
+                                           adm_access, pool));
         }
-      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, subpool));
+      SVN_ERR (svn_wc_props_modified_p (&prop_mod, path, adm_access, pool));
     }
 
   /* Set text/prop modification flags accordingly. */
@@ -311,11 +319,11 @@ harvest_committables (apr_hash_t *committables,
     {
       apr_hash_index_t *hi;
       const svn_wc_entry_t *this_entry;
-      apr_pool_t *loop_pool = svn_pool_create (subpool);
+      apr_pool_t *loop_pool = svn_pool_create (pool);
 
       /* Loop over all other entries in this directory, skipping the
          "this dir" entry. */
-      for (hi = apr_hash_first (subpool, entries);
+      for (hi = apr_hash_first (pool, entries);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -324,13 +332,10 @@ harvest_committables (apr_hash_t *committables,
           const char *name;
           const char *used_url = NULL;
           const char *name_uri = NULL;
-          svn_wc_adm_access_t *dir_access;
-
-          /* ### Why do we need to alloc these? */
-          const char *full_path = apr_pstrdup (loop_pool, path);
-          const char *this_url = apr_pstrdup (loop_pool, url);
-          const char *this_cf_url
-            = cf_url ? apr_pstrdup (loop_pool, cf_url) : NULL;
+          const char *full_path = NULL;
+          const char *this_url = url;
+          const char *this_cf_url = NULL;
+          svn_wc_adm_access_t *dir_access = adm_access;
 
           /* Get the next entry.  Name is an entry name; value is an
              entry structure. */
@@ -356,7 +361,7 @@ harvest_committables (apr_hash_t *committables,
           if ((this_entry->kind == svn_node_dir) && nonrecursive)
             continue;
 
-          full_path = svn_path_join (full_path, name, loop_pool);
+          full_path = svn_path_join (path, name, loop_pool);
           if (this_cf_url)
             this_cf_url = svn_path_join (this_cf_url, name_uri, loop_pool);
 
@@ -372,7 +377,7 @@ harvest_committables (apr_hash_t *committables,
           /* Recurse. */
           if (this_entry->kind == svn_node_dir)
             SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path,
-                                          subpool));
+                                          loop_pool));
           else
             dir_access = adm_access;
 
@@ -385,13 +390,13 @@ harvest_committables (apr_hash_t *committables,
                     adds_only,
                     copy_mode,
                     FALSE,
-                    subpool));
+                    loop_pool));
 
           svn_pool_clear (loop_pool);
         }
-    }
 
-  svn_pool_destroy (subpool);
+      svn_pool_destroy (loop_pool);
+    }
 
   return SVN_NO_ERROR;
 }
