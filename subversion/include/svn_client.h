@@ -534,12 +534,6 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * contains locally modified and/or unversioned items. If @a force is set 
  * such items will be deleted.
  *
- * If deleting from a working copy, @a optional_adm_access can either be a
- * baton that holds a write lock for the parent of @a path, or it can be
- * @c NULL. If it is @c NULL the lock for the parent will be acquired and
- * released by the function.  If deleting from a repository (@a path is an
- * URL) then @a optional_adm_access is irrelevant.
- *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
  * this function can use to query for a commit log message when one is
  * needed.
@@ -551,7 +545,6 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
-                   svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);

@@ -86,10 +86,8 @@ svn_cl__delete (apr_getopt_t *os,
       SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
                                            NULL, ctx->config, pool));
 
-      err = svn_client_delete
-        (&commit_info, target, NULL, opt_state->force, 
-         ctx, subpool);
-
+      err = svn_client_delete (&commit_info, target, opt_state->force, ctx, 
+                               subpool);
       if (err)
         err = svn_cl__may_need_force (err);
       SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton, err));

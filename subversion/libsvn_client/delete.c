@@ -99,15 +99,13 @@ svn_client__can_delete (const char *path,
 }
 
 svn_error_t *
-svn_client_delete (svn_client_commit_info_t **commit_info,
-                   const char *path,
-                   svn_wc_adm_access_t *optional_adm_access,
-                   svn_boolean_t force, 
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client__delete (svn_client_commit_info_t **commit_info,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t force, 
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-
   if (svn_path_is_url (path))
     {
       /* This is a remote removal.  */
@@ -192,18 +190,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 
       return SVN_NO_ERROR;
     }
-  
-
-  if (! optional_adm_access)
-    {
-      const char *parent_path;
-  
-      parent_path = svn_path_dirname (path, pool);
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE,
-                                pool));
-    }
-  else
-    adm_access = optional_adm_access;
 
   if (!force)
     {
@@ -216,8 +202,38 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                           ctx->cancel_func, ctx->cancel_baton,
                           ctx->notify_func, ctx->notify_baton, pool));
 
-  if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_delete (svn_client_commit_info_t **commit_info,
+                   const char *path,
+                   svn_boolean_t force, 
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+
+  if (svn_path_is_url (path))
+    {
+      adm_access = NULL;
+    }
+  else
+    {
+      const char *parent_path = svn_path_dirname (path, pool);
+
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE,
+                                pool));
+    }
+
+  SVN_ERR (svn_client__delete (commit_info,
+                               path,
+                               adm_access,
+                               force,
+                               ctx,
+                               pool));
+
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
