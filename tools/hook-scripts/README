@@ -1,9 +1,6 @@
 These are scripts that might be useful run from repository hooks.
 Your Mileage May Vary.
 
-[note to self: as long as these are small and simple, perhaps they
-should just be put into repository custom/ dir when the repos is
-created?  Hmmm.]
 
 Contents:
 
@@ -20,3 +17,12 @@ Contents:
 
       The commit-access-control.cfg is a sample configuration file
       that you should modify for your own use.
+
+   3. mailer.py
+      Uses the Python/SWIG bindings to directly query the repository
+      about the changes made by a particular revision. The program
+      uses a configuration file for basic setup and to fine-tune where
+      changes are delivered. Compared to commit-email.pl, the output
+      contains a bit more information about property changes, is
+      smarter with binary files, and it streams its output into the
+      mailer (to avoid in-memory buffering).
