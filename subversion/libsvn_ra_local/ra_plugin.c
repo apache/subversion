@@ -359,9 +359,34 @@ get_log (void *session_baton,
          void *receiver_baton)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
+  apr_array_header_t *abs_paths
+    = apr_array_make (sbaton->pool, paths->nelts, sizeof (svn_stringbuf_t *));
+  int i;
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      svn_stringbuf_t *relative_path
+        = (((svn_stringbuf_t **)(paths)->elts)[i]);
+
+      svn_stringbuf_t *abs_path
+        = svn_stringbuf_dup (sbaton->fs_path, sbaton->pool);
+
+      /* ### Not sure if this counts as a workaround or not.  The
+         session baton uses the empty string to mean root, and not
+         sure that should change.  However, it would be better to use
+         a path library function to add this separator -- hardcoding
+         it is totally bogus.  See issue #559, though it may be only
+         tangentially related. */
+      if (abs_path->len == 0)
+        svn_stringbuf_appendcstr (abs_path, "/");
+
+      svn_path_add_component (abs_path, relative_path,
+                              svn_path_repos_style);
+      (*((svn_stringbuf_t **)(apr_array_push (abs_paths)))) = abs_path;
+    }
 
   return svn_repos_get_logs (sbaton->fs,
-                             paths,
+                             abs_paths,
                              start,
                              end,
                              discover_changed_paths,

@@ -181,8 +181,7 @@ log_end_element(void *userdata,
                                              lb->revision,
                                              lb->author,
                                              lb->date,
-                                             lb->msg,
-                                             0);
+                                             lb->msg);
         
         reset_log_item (lb);
         

@@ -514,7 +514,8 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
       else
         /* Recursively mark a whole tree for deletion. */
         SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                            svn_wc_schedule_delete, NULL, pool));
+                            svn_wc_schedule_delete,
+                            svn_wc_existence_normal, pool));
     }
 
   /* Deleting a directory that has been added but not yet
@@ -735,7 +736,8 @@ add_to_revision_control (svn_stringbuf_t *path,
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_EXISTENCE,
-                              NULL, svn_wc_existence_copied, pool));
+                              svn_wc_schedule_normal,
+                              svn_wc_existence_copied, pool));
         }
     }
   

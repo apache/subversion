@@ -39,10 +39,8 @@ static svn_error_t *
 recursively_remove_all_wcprops (svn_stringbuf_t *dirpath,
                                 apr_pool_t *pool)
 {
-  apr_status_t status;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_wc_entry_t *this_dir;
   svn_stringbuf_t *wcprop_path;
   apr_pool_t *subpool = svn_pool_create (pool);
   
