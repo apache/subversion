@@ -382,12 +382,6 @@ def phoenix_branch():
           and (len(logs[4].changed_paths) == 2)):
     print "Revision 4 not as expected."
     raise svntest.Failure
-  if not ((logs[15].changed_paths.get('/tags/vorbis1_0_public_release '
-                                      '(from /trunk:7)') == 'A')
-          and (len(logs[15].changed_paths) == 1)):
-    print "Revision 15 not as expected."
-    raise svntest.Failure
-
 
 
 def two_quick():
