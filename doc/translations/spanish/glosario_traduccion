@@ -107,7 +107,7 @@ trunk -> tronco
     en particular. Traducción obtenida del manual de CVS en español.
 
 log, log message -> informe de cambios, mensaje del informe de cambios
-    Traducción estraída del manual de CVS en españól. La traducción
+    Traducción extraída del manual de CVS en español. La traducción
     de "log message" es muy larga, pero únicamente porque no se
     tiene contexto alguno. Con contexto suele ser posible omitir
     la palabra informe si se considera apropiado.
@@ -130,7 +130,7 @@ ancestry -> ascendencia
 
 Harry, Sally -> Juan, Carmen
     Estos nombres se traducen en todos los sitios en los que
-    aparecen, incluída la salida de texto de los comandos de
+    aparecen, incluida la salida de texto de los comandos de
     svn, como por ejemplo nombres de usuario que se ven al hacer
     "svn log".
 

@@ -1,6 +1,6 @@
 TAREA CON PRIORIDAD: Recoger y aprobar en grupo un conjunto de reglas
 que definan las responsabilidades del coordinador de proyecto,
-su elección, su destitución, etc. Estas reglas deben incluír los
+su elección, su destitución, etc. Estas reglas deben incluir los
 deberes del coordinador respecto a la comunidad de traductores y
 la comunidad de desarrolladores (debido a que la traducción está
 alojada en el mismo repositorio). Las reglas han sido propuestas,
@@ -31,7 +31,7 @@ http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=80015.
 Una solución es seguir el camino de la traducción a noruego del
 libro. Es decir, hacer nuestras propias imágenes. La más difícil
 sería crear un programa que añade textos en cualquier idioma a la
-imágen y que sea usado por todo el mundo.
+imagen y que sea usado por todo el mundo.
 
 Licencias creative commons en español. ¿Merece la pena pegarse
 por esto?
