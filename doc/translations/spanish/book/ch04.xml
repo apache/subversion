@@ -1386,18 +1386,19 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       cambiar su copia local a la <quote>punta</quote> <!-- TODO
       tip != punta? --> de la rama.</para>
 
-    <para>Of course, most projects are more complicated than our
-      <filename>calc</filename> example, containing multiple
-      subdirectories.  Subversion users often follow a specific
-      algorithm when using branches:</para>
+    <para>Por supuesto, la mayoría de los proyectos son más
+      complicados que nuestro ejemplo <filename>calc</filename>,
+      y contienen múltiples subdirectorios. Los usuarios de
+      Subversion frecuentemente siguen un algoritmo específico al
+      usar ramas:</para>
 
       <orderedlist>
-        <listitem> <para>Copy the project's entire 'trunk' to a new
-        branch directory.</para>
+        <listitem> <para>Copiar el 'tronco' entero a un nuevo
+        directorio rama.</para>
         </listitem>
         <listitem>
-          <para>Switch only <emphasis>part</emphasis> of the trunk
-          working copy to mirror the branch.</para>
+          <para>Cambiar sólo <emphasis>parte</emphasis> de la copia
+          de trabajo del tronco para que refleje esa rama.</para>
         </listitem>
       </orderedlist>
     
