@@ -60,7 +60,6 @@ svn_error_t *
 svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
-  int empty_stack = 0;
 
   /* kff todo: hmmm, feel kind of bad about this -- we're allocating
      another error for every time we try and fail to get a lock.  But
@@ -69,30 +68,16 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
      this pool stuff. :-) */
 
   do {
- 
-    /* Locking is not merely about the lockfile.  We cannot set or
-       clear a lock unless the unwind stack here is empty too. */
-    err = svn_wc__unwind_empty_p (path, &empty_stack, pool);
-    if (err)
-      return err;
-    
-    if (! empty_stack)
-      goto maybe_wait;
-
     err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
                                   svn_file_kind, pool);
     if (err)
       {
-        if (err->apr_err == APR_EEXIST)
+        if (wait && (err->apr_err == APR_EEXIST))
           {
-          maybe_wait:
-            if (wait)
-              {
-                /* kff todo: hey, apr_sleep() is broken. */
-                apr_sleep (1000);  /* micro-seconds */
-                wait--;
-                continue;
-              }
+            /* kff todo: hey, apr_sleep() is broken. */
+            apr_sleep (1000);  /* micro-seconds */
+            wait--;
+            continue;
           }
         else
           return err;
@@ -108,24 +93,6 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 svn_error_t *
 svn_wc__unlock (svn_string_t *path, apr_pool_t *pool)
 {
-  int empty_stack;
-  svn_error_t *err;
-
-  err = svn_wc__unwind_empty_p (path, &empty_stack, pool);
-  if (err)
-    return err;
-  
-  if (! empty_stack)
-    {
-      return svn_create_error (SVN_ERR_WC_UNWIND_NOT_EMPTY,
-                               0,
-                               "trying to unlock with unwind stack present",
-                               NULL,
-                               pool);
-    }
-  
-  /* Else unwind stack empty, so proceed with regular unlock. */
-
   return svn_wc__remove_adm_thing (path, SVN_WC__ADM_LOCK, pool);
 }
 
