@@ -823,6 +823,11 @@ svn_io_set_file_executable (const char *path,
           if (finfo.protection & APR_WREAD)
             perms_to_set |= APR_WEXECUTE;
 
+          /* If we aren't changing anything then just return, this save
+             some system calls and helps with shared working copies */
+          if (perms_to_set == finfo.protection)
+            return SVN_NO_ERROR;
+
           status = apr_file_perms_set (path_apr, perms_to_set);
           if (status)
             {

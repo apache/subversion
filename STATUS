@@ -46,14 +46,6 @@ Candidate changes:
     Votes:
       +1: josander
 
-  * r9254
-    Fix for updates to svn:executable files in shared working copies.
-    Justification: Hard to use svn:executable in shared working copies
-                   without it.
-    Notes: r9138 should be merged first.
-    Votes:
-      +1: philip, dlr, breser
-
   * r9315
     Change the formating codes used in svn_swig_pl_callback_thunk.
     Justification: The old ones weren't portable and caused problems on Win32.
