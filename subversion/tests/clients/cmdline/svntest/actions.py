@@ -89,9 +89,9 @@ def guarantee_greek_repository(path):
   # Now that the pristine repos exists, copy it to PATH.
   if os.path.exists(path):
     shutil.rmtree(path)
-  if not os.path.exists(os.path.dirname(path)):
-    os.makedirs(os.path.dirname(path))
-  shutil.copytree(main.pristine_dir, path)
+  if main.copy_repos(main.pristine_dir, path, 1):
+    print "ERROR:  copying repository failed."
+    sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
