@@ -301,6 +301,14 @@ public interface SVNClientInterface
      */
     PropertyData[] properties(String path) throws ClientException;
     /**
+     * Retrieves the properties of an item
+     * @param path      the path of the item
+     * @param revision  the revision of the item
+     * @return array of property objects
+     */
+    PropertyData[] properties(String path, Revision revision)
+            throws ClientException;
+    /**
      * Sets one property of an item with a String value
      * @param path      path of the item
      * @param name      name of the property
@@ -360,6 +368,27 @@ public interface SVNClientInterface
     PropertyData revProperty(String path, String name, Revision rev)
             throws ClientException;
     /**
+     * Retrieve all revsision properties of one item
+     * @param path      path of the item
+     * @param rev       revision to retrieve
+     * @return the Properties
+     * @throws ClientException
+     */
+    PropertyData[] revProperties(String path, Revision rev)
+            throws ClientException;
+    /**
+     * set one revsision property of one item
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param rev       revision to retrieve
+     * @param value     value of the property
+     * @param force     use force to set
+     * @throws ClientException
+     */
+    void setRevProperty(String path, String name, Revision rev, String value,
+                        boolean force)
+            throws ClientException;
+    /**
      * Retrieve one property of one iten
      * @param path      path of the item
      * @param name      name of property
@@ -367,6 +396,16 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     PropertyData propertyGet(String path, String name) throws ClientException;
+    /**
+     * Retrieve one property of one iten
+     * @param path      path of the item
+     * @param name      name of property
+     * @param revision  revision of the item
+     * @return the Property
+     * @throws ClientException
+     */
+    PropertyData propertyGet(String path, String name, Revision revision)
+            throws ClientException;
     /**
      *  Retrieve the content of a file
      * @param path      the path of the file
@@ -383,7 +422,8 @@ public interface SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @throws ClientException
      */
-    void relocate(String from, String to, String path, boolean recurse) throws ClientException;
+    void relocate(String from, String to, String path, boolean recurse)
+            throws ClientException;
     /**
      * Return for each line of the file, the author and the revision of the
      * last together with the content.
@@ -394,7 +434,8 @@ public interface SVNClientInterface
      * @return  the content together with author and revision of last change
      * @throws ClientException
      */
-    byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
+    byte[] blame(String path, Revision revisionStart, Revision revisionEnd)
+            throws ClientException;
     /**
      * Retrieve the content together with the author, the revision and the date
      * of the last change of each line
@@ -405,7 +446,8 @@ public interface SVNClientInterface
      *                      information
      * @throws ClientException
      */
-    void blame(String path, Revision revisionStart, Revision revisionEnd, BlameCallback callback) throws ClientException;
+    void blame(String path, Revision revisionStart, Revision revisionEnd,
+               BlameCallback callback) throws ClientException;
     /**
      * Set directory for the configuration information
      * @param configDir     path of the directory
@@ -431,4 +473,15 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     Info info(String path) throws ClientException;
+
+    /**
+     *  Produce a compact "version number" for a working copy
+     * @param path          path of the working copy
+     * @param trailUrl      to detect switches of the whole working copy
+     * @param lastChanged   last changed rather than current revisions
+     * @return      the compact "version number"
+     * @throws ClientException
+     */
+    String getVersionInfo(String path, String trailUrl, boolean lastChanged)
+            throws ClientException;
 }

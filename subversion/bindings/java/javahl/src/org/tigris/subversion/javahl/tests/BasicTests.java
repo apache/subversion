@@ -1289,4 +1289,12 @@ public class BasicTests extends SVNTests
         assertNull("wrong copy source path", cp[0].getCopySrcPath());
         assertEquals("wrong action", 'A', cp[0].getAction());
     }
+
+    public void testBasicVersionInfo() throws Throwable
+    {
+        // create the working copy
+        OneTest thisTest = new OneTest();
+        assertEquals("wrong version info","1",
+                client.getVersionInfo(thisTest.getWCPath(), null, false));        
+    }
 }
