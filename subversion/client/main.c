@@ -218,7 +218,9 @@ parse_options (int argc,
                "to specify target version\n", s);
       exit (1);
     }
-  if (((*command == checkout_command) || (*command == update_command))
+  if (((*command == checkout_command) 
+       || (*command == update_command)
+       || (*command == commit_command))
       && (*target == NULL))
     *target = svn_string_create (".", pool);
 }
