@@ -510,8 +510,13 @@ svn_error_t *svn_txdelta_skip_svndiff_window (apr_file_t *file,
  * may use the batons:
  *
  * 1. The producer may call @c open_directory, @c add_directory,
- *    @c open_file, @c add_file, or @c delete_entry at most once on
- *    any given directory entry.
+ *    @c open_file, @c add_file at most once on any given directory
+ *    entry.  @c delete_entry may be called at most once on any given
+ *    directory entry and may later be followed by @c add_directory or
+ *    @c add_file on the same directory entry.  @c delete_entry may
+ *    not be called on any directory entry after @c open_directory,
+ *    @c add_directory, @c open_file or @c add_file has been called on
+ *    that directory entry.
  *
  * 2. The producer may not close a directory baton until it has
  *    closed all batons for its subdirectories.
