@@ -476,7 +476,8 @@ svn_client_checkout2 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to svn_client_checkout2(), but with the @a peg_revision
- * parameter always set to @c svn_opt_revision_unspecified.
+ * parameter always set to @c svn_opt_revision_unspecified and
+ * ignore_externals always set to @c FALSE.
  */
 svn_error_t *
 svn_client_checkout (svn_revnum_t *result_rev,
@@ -536,8 +537,8 @@ svn_client_update2 (apr_array_header_t **result_revs,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to svn_client_update2 except that it accepts only a single
- * target in @a path and returns a single revision if @a result_rev is not
- * NULL.
+ * target in @a path, returns a single revision if @a result_rev is
+ * not NULL, and ignore_externals is always set to @c FALSE.
  */
 svn_error_t *
 svn_client_update (svn_revnum_t *result_rev,
@@ -1391,7 +1392,8 @@ svn_client_propset2 (const char *propname,
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  * 
- * Like svn_client_propset2(), but with @a force always false.
+ * Like svn_client_propset2(), but with @a force always false and a
+ * newly created @a ctx.
  */
 svn_error_t *
 svn_client_propset (const char *propname,
@@ -1645,7 +1647,9 @@ svn_client_export3 (svn_revnum_t *result_rev,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to svn_client_export3, but with the @a peg_revision
- * parameter always set to @c svn_opt_revision_unspecified.
+ * parameter always set to @c svn_opt_revision_unspecified, @a
+ * ignore_externals always set to FALSE, and @a recurse always set to
+ * TRUE.
  */
 svn_error_t *
 svn_client_export2 (svn_revnum_t *result_rev,
