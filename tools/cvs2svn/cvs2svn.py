@@ -434,10 +434,6 @@ class TreeMirror:
     
     return path
 
-  def close(self):
-    self.db.close()
-    os.remove(self.db_file)
-
 
 class Dump:
   def __init__(self, dumpfile_path, revision):
@@ -639,7 +635,6 @@ class Dump:
 
   def close(self):
     self.dumpfile.close()
-    self.head_mirror.close()
 
 
 def format_date(date):
@@ -680,12 +675,6 @@ class SymbolicNameTracker:
     self.bound_db_file = bound_db_file
     self.open_db = anydbm.open(open_db_file, 'n')
     self.bound_db = anydbm.open(bound_db_file, 'n')
-
-  def close(self):
-    self.open_db.close()
-    self.bound_db.close()
-    os.remove(self.open_db_file)
-    os.remove(self.bound_db_file)
 
   def track_names(self, svn_path, svn_rev, names):
     """Track that the the symbolic names in NAMES can earliest be
@@ -768,7 +757,7 @@ class Commit:
     return author, log, date
 
 
-  def commit(self, dump, ctx):
+  def commit(self, dump, ctx, tag_tracker, branch_tracker):
     # commit this transaction
     seconds = self.t_max - self.t_min
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
@@ -830,8 +819,8 @@ class Commit:
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       if svn_rev == SVN_INVALID_REVNUM:
         svn_rev = dump.start_revision(props)
-      ctx.tag_tracker.track_names(svn_path, svn_rev, tags)
-      ctx.branch_tracker.track_names(svn_path, svn_rev, branches)
+      tag_tracker.track_names(svn_path, svn_rev, tags)
+      branch_tracker.track_names(svn_path, svn_rev, branches)
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
@@ -854,8 +843,8 @@ class Commit:
         ### won't show up 'svn log' output, even when invoked on the
         ### root -- because no paths changed!  That needs to be fixed,
         ### regardless of whether cvs2svn creates such revisions.
-        ctx.tag_tracker.track_names(svn_path, svn_rev, tags)
-        ctx.branch_tracker.track_names(svn_path, svn_rev, branches)
+        tag_tracker.track_names(svn_path, svn_rev, tags)
+        branch_tracker.track_names(svn_path, svn_rev, branches)
         dump.delete_path(svn_path, ctx.prune)
 
     if svn_rev != SVN_INVALID_REVNUM:
@@ -1119,6 +1108,9 @@ def pass4(ctx):
   else:
     t_fs = t_repos = None
 
+  tag_tracker = TagTracker()
+  branch_tracker = BranchTracker()
+
   # A dictionary of Commit objects, keyed by digest.  Each object
   # represents one logical commit, which may involve multiple files.
   #
@@ -1174,7 +1166,7 @@ def pass4(ctx):
     # part of any of them.  Sort them into time-order, then commit 'em.
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx)
+      c.commit(dump, ctx, tag_tracker, branch_tracker)
     count = count + len(process)
 
     # Add this item into the set of still-available commits.
@@ -1191,7 +1183,7 @@ def pass4(ctx):
       process.append((c.t_max, c))
     process.sort()
     for t_max, c in process:
-      c.commit(dump, ctx)
+      c.commit(dump, ctx, tag_tracker, branch_tracker)
     count = count + len(process)
 
   dump.close()
@@ -1262,8 +1254,6 @@ def main():
   ctx.dry_run = 0
   ctx.prune = 1
   ctx.create_repos = 0
-  ctx.tag_tracker = TagTracker()
-  ctx.branch_tracker = BranchTracker()
   ctx.trunk_base = "trunk"
   ctx.tags_base = "tags"
   ctx.branches_base = "branches"
@@ -1313,8 +1303,6 @@ def main():
       ctx.encoding = value
 
   convert(ctx, start_pass=start_pass)
-  ctx.tag_tracker.close()
-  ctx.branch_tracker.close()
 
 if __name__ == '__main__':
   main()
