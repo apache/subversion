@@ -2,12 +2,12 @@ VERSION 5.00
 Object = "{F9043C88-F6F2-101A-A3C9-08002B2F49FB}#1.2#0"; "comdlg32.ocx"
 Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0"; "MSCOMCTL.OCX"
 Object = "{396F7AC0-A0DD-11D3-93EC-00C0DFE7442A}#1.0#0"; "vbalIml6.ocx"
-Object = "{4D4325C0-BD54-473C-8CE8-3C856739E161}#1.0#0"; "SVNControls.ocx"
+Object = "{4D4325C0-BD54-473C-8CE8-3C856739E161}#1.1#0"; "SVNControls.ocx"
 Begin VB.Form frmMain 
    Caption         =   "WinSVN"
    ClientHeight    =   6780
    ClientLeft      =   132
-   ClientTop       =   996
+   ClientTop       =   1032
    ClientWidth     =   6264
    LinkTopic       =   "Form1"
    ScaleHeight     =   6780
@@ -27,7 +27,7 @@ Begin VB.Form frmMain
    Begin SVNControls.SGrid grdFiles 
       Height          =   4812
       Left            =   2160
-      TabIndex        =   7
+      TabIndex        =   6
       Top             =   840
       Width           =   3132
       _ExtentX        =   5525
@@ -105,7 +105,7 @@ Begin VB.Form frmMain
       ScaleHeight     =   2084.849
       ScaleMode       =   0  'User
       ScaleWidth      =   468
-      TabIndex        =   6
+      TabIndex        =   5
       Top             =   705
       Visible         =   0   'False
       Width           =   72
@@ -138,12 +138,12 @@ Begin VB.Form frmMain
          BeginProperty Panel2 {8E3867AB-8586-11D1-B16A-00C0F0283628} 
             Style           =   6
             AutoSize        =   2
-            TextSave        =   "1/10/2001"
+            TextSave        =   "2/5/2001"
          EndProperty
          BeginProperty Panel3 {8E3867AB-8586-11D1-B16A-00C0F0283628} 
             Style           =   5
             AutoSize        =   2
-            TextSave        =   "3:06 PM"
+            TextSave        =   "12:45 AM"
          EndProperty
       EndProperty
    End
@@ -195,11 +195,30 @@ Begin VB.Form frmMain
             ImageIndex      =   2
          EndProperty
       EndProperty
+      Begin MSComctlLib.ImageList ilComboBox 
+         Left            =   3840
+         Top             =   120
+         _ExtentX        =   804
+         _ExtentY        =   804
+         BackColor       =   -2147483643
+         ImageWidth      =   20
+         ImageHeight     =   20
+         MaskColor       =   12632256
+         UseMaskColor    =   0   'False
+         _Version        =   393216
+         BeginProperty Images {2C247F25-8591-11D1-B16A-00C0F0283628} 
+            NumListImages   =   1
+            BeginProperty ListImage1 {2C247F27-8591-11D1-B16A-00C0F0283628} 
+               Picture         =   "frmMain.frx":37F6
+               Key             =   ""
+            EndProperty
+         EndProperty
+      End
    End
    Begin MSComctlLib.TreeView tvTreeView 
       Height          =   4788
       Left            =   0
-      TabIndex        =   5
+      TabIndex        =   4
       Top             =   840
       Width           =   2016
       _ExtentX        =   3556
@@ -228,16 +247,18 @@ Begin VB.Form frmMain
       TabStop         =   0   'False
       Top             =   528
       Width           =   6264
-      Begin VB.Label lblTitle 
-         BorderStyle     =   1  'Fixed Single
-         Caption         =   " TreeView:"
-         Height          =   276
-         Index           =   0
+      Begin MSComctlLib.ImageCombo cmbDir 
+         Height          =   300
          Left            =   0
-         TabIndex        =   3
-         Tag             =   "1044"
-         Top             =   12
-         Width           =   2016
+         TabIndex        =   7
+         Top             =   0
+         Width           =   2052
+         _ExtentX        =   3620
+         _ExtentY        =   529
+         _Version        =   393216
+         ForeColor       =   -2147483640
+         BackColor       =   -2147483643
+         ImageList       =   "ilComboBox"
       End
       Begin VB.Label lblTitle 
          BorderStyle     =   1  'Fixed Single
@@ -245,7 +266,7 @@ Begin VB.Form frmMain
          Height          =   276
          Index           =   1
          Left            =   2076
-         TabIndex        =   4
+         TabIndex        =   3
          Tag             =   "1045"
          Top             =   12
          Width           =   3216
@@ -441,24 +462,34 @@ Option Explicit
 
 Private Declare Function OSWinHelp% Lib "user32" Alias "WinHelpA" (ByVal hwnd&, ByVal HelpFile$, ByVal wCommand%, dwData As Any)
 Public g_oLVH As grdHelper
+Public g_oTVH As ExplorerViewHelpers
+Public g_oCDH As cmbDirHelper
 
 Dim mbMoving As Boolean
 Const sglSplitLimit = 500
 
+
+
 Private Sub Form_Load()
+    Dim oItem As ComboItem
+    
     LoadResStrings Me
     imgSplitter.MouseIcon = LoadResPicture(101, vbResCursor)
     
     Set g_oLVH = New grdHelper
+    Set g_oTVH = New ExplorerViewHelpers
+    Set g_oCDH = New cmbDirHelper
+
     
     Me.Left = GetSetting(App.Title, "Settings", "MainLeft", 1000)
     Me.Top = GetSetting(App.Title, "Settings", "MainTop", 1000)
     Me.Width = GetSetting(App.Title, "Settings", "MainWidth", 6500)
     Me.Height = GetSetting(App.Title, "Settings", "MainHeight", 6500)
     
-    InitTreeView
+    g_oTVH.InitTreeView
     
-    
+    Set oItem = cmbDir.ComboItems.Add(, "___COMPUTER", "My Computer", 1)
+    oItem.Selected = True
 End Sub
 Private Sub Form_Unload(Cancel As Integer)
     Dim i As Integer
@@ -527,9 +558,10 @@ Sub SizeControls(X As Single)
     imgSplitter.Left = X
     grdFiles.Left = X + 40
     grdFiles.Width = Me.Width - (tvTreeView.Width + 140)
-    lblTitle(0).Width = tvTreeView.Width
+    cmbDir.Width = tvTreeView.Width
     lblTitle(1).Left = grdFiles.Left + 20
     lblTitle(1).Width = grdFiles.Width - 40
+    lblTitle(1).Height = cmbDir.Height
 
     ' set the top
     If tbToolBar.Visible Then
@@ -742,74 +774,3 @@ Private Sub mnuFileOpen_Click()
 End Sub
 
 
-Private Sub tvTreeView_Collapse(ByVal Node As MSComctlLib.Node)
-    Dim oChild As Node
-    Dim oNext As Node
-    
-    ' We can't very well go deleting our drive nodes,
-    ' now can we?
-    If Node.Key <> "Computer" Then
-        ' Since this is a virtual tree, remove the nodes
-        ' when we collapse.
-        Set oChild = Node.Child
-        While Not oChild Is Nothing
-            Set oNext = oChild.Next
-            ' This recursively removes all of oChild's
-            ' children as well.
-            tvTreeView.Nodes.Remove oChild.Index
-            Set oChild = oNext
-        Wend
-        AddLazyNode Node
-    End If
-End Sub
-
-Private Sub tvTreeView_Expand(ByVal Node As MSComctlLib.Node)
-    Dim sPath As String
-    Dim oNode2 As Node
-    Dim f As Folder
-    Dim fldrs As Folders
-    
-    ' Need to virtally expand the nodes here.
-    If Node.Children = 1 And Node.Child.Tag = "LAZY" Then
-        sPath = StripRootNode(Node.FullPath)
-        ' Remove the lazy node
-        tvTreeView.Nodes.Remove Node.Child.Index
-        ' TODO: Handle GetFolder() failing, it can for removable drives.
-        On Error Resume Next
-        Set f = g_fs.GetFolder(sPath)
-        If Err.Number <> 0 Then
-            'TODO: display error message here
-            On Error GoTo 0
-            GoTo NextLabel
-        End If
-        On Error GoTo 0
-        Set fldrs = f.SubFolders
-        For Each f In fldrs
-            If f.Attributes And Hidden Or _
-               f.Attributes And System Then
-               GoTo NextLabel
-            End If
-            If g_SVN_WC.check_wc(f.Path) Then
-                Set oNode2 = tvTreeView.Nodes.Add(Node, tvwChild, , f.Name, "SVNCLOSED", "SVNOPEN")
-                oNode2.Tag = "WC"
-            Else
-                ' Hide SVN meta-data directories
-                If Node.Tag = "WC" And _
-                   f.Name = "SVN" Then
-                    GoTo NextLabel
-                End If
-                Set oNode2 = tvTreeView.Nodes.Add(Node, tvwChild, , f.Name, "CLOSED", "OPEN")
-            End If
-            AddLazyNode oNode2
-NextLabel:
-        Next
-    End If
-End Sub
-
-Private Sub tvTreeView_NodeClick(ByVal Node As MSComctlLib.Node)
-    Dim sPath As String
-    
-    sPath = StripRootNode(Node.FullPath)
-    g_oLVH.PopulateSGrid sPath
-    
-End Sub
