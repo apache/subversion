@@ -36,7 +36,7 @@ Please either remove that subdir or don't use the --with-neon option.])
         neon_config="$withval/bin/neon-config"
       fi
 
-      SVN_SEARCH_NEON()
+      SVN_NEON_CONFIG()
     fi
   ],
   [
@@ -86,7 +86,7 @@ dnl Configure neon --------------------------
     else
       # no --with-neon switch, and no neon subdir, look in PATH
       AC_PATH_PROG(neon_config,neon-config)
-      SVN_SEARCH_NEON()
+      SVN_NEON_CONFIG()
     fi
 
   ])
@@ -100,9 +100,9 @@ dnl Configure neon --------------------------
   AC_SUBST(NEON_LIBS)
 ])
 
-dnl SVN_SEARCH_NEON()
+dnl SVN_NEON_CONFIG()
 dnl neon-config found, gather relevant information from it
-AC_DEFUN(SVN_SEARCH_NEON,
+AC_DEFUN(SVN_NEON_CONFIG,
 [
   if test "$neon_config" != ""; then
     AC_MSG_CHECKING([neon library version])
