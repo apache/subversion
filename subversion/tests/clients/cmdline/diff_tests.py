@@ -1318,6 +1318,61 @@ def diff_file_urls(sbox):
   verify_expected_output(out, "+abcdefg")
   verify_expected_output(out, "+opqrstuv")
   
+#----------------------------------------------------------------------
+def diff_prop_change_local_edit(sbox):
+  "diff a property change plus a local edit"
+
+  sbox.build()
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  iota_url = svntest.main.current_repo_url + '/iota'
+
+  # Change a property on iota, and commit.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'pname', 'pvalue', iota_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', iota_path)
+
+  # Make local edits to iota.
+  svntest.main.file_append(iota_path, "\nMore text.\n")
+
+  # diff r0:PREV should show neither the property change nor the local edit.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'diff', '-r0:PREV', iota_path)
+  for line in out:
+    if line.find("+More text.") != -1:
+      raise svntest.Failure
+    if line.find("   + pvalue") != -1:
+      raise svntest.Failure
+
+  # diff r0:COMMITTED should show the property change but not the local edit.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'diff', '-r0:COMMITTED', iota_path)
+  for line in out:
+    if line.find("+More text.") != -1:
+      raise svntest.Failure
+  verify_expected_output(out, "   + pvalue")
+
+  # diff r0:BASE should show the property change but not the local edit.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'diff', '-r0:BASE', iota_path)
+  for line in out:
+    if line.find("+More text.") != -1:
+      raise svntest.Failure                   # fails at r7481
+  verify_expected_output(out, "   + pvalue")  # fails at r7481
+
+  # diff r0:WC should show the property change as well as the local edit.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'diff', '-r0', iota_path)
+  verify_expected_output(out, "+More text.")
+  verify_expected_output(out, "   + pvalue")  # fails at r7481
+
+  # diff r1:WC should show the local edit as well as the property change.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'diff', '-r1', iota_path)
+  verify_expected_output(out, "+More text.")  # fails at r7481
+  verify_expected_output(out, "   + pvalue")
+
 ########################################################################
 #Run the tests
 
@@ -1343,6 +1398,7 @@ test_list = [ None,
               diff_branches,
               diff_repos_and_wc,
               diff_file_urls,
+              XFail(diff_prop_change_local_edit),
               ]
 
 if __name__ == '__main__':
