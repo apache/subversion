@@ -1542,15 +1542,6 @@ class SymbolicNameTracker:
           self.copy_descend(dumper, ctx, name, branch_base, this_source,
                             SVN_INVALID_REVNUM, src_path, "",
                             is_tag, jit_new_rev)
-    if parent.has_key(ctx.tags_base):
-      tag_base_key = parent[ctx.tags_base]
-      tag_base = marshal.loads(self.db[tag_base_key])
-      for this_source in tag_base:
-        if this_source[0] != '/':
-          src_path = ctx.tags_base + '/' + this_source
-          self.copy_descend(dumper, ctx, name, tag_base, this_source,
-                            SVN_INVALID_REVNUM, src_path, "",
-                            is_tag, jit_new_rev)
 
   def fill_tag(self, dumper, ctx, tag, jit_new_rev=None):
     """Use DUMPER to create all currently available parts of TAG that
