@@ -42,6 +42,7 @@ struct parse_baton
   svn_stream_t *outstream;
   enum svn_repos_load_uuid uuid_action;
   const char *parent_dir;
+  svn_boolean_t verbose;
 };
 
 struct revision_baton
@@ -836,7 +837,7 @@ maybe_add_with_history (struct node_baton *nb,
       SVN_ERR (svn_fs_copy (copy_root, nb->copyfrom_path,
                             rb->txn_root, nb->path, pool));
 
-      if (pb->outstream)
+      if (pb->outstream && pb->verbose)
         {
           apr_size_t len = 9;
           SVN_ERR (svn_stream_write (pb->outstream, "COPIED...", &len));
@@ -882,7 +883,7 @@ new_node_record (void **node_baton,
     {
     case svn_node_action_change:
       {
-        if (pb->outstream)
+        if (pb->outstream && pb->verbose)
           SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                       "     * editing path : %s ...",
                                       nb->path));
@@ -890,7 +891,7 @@ new_node_record (void **node_baton,
       }
     case svn_node_action_delete:
       {
-        if (pb->outstream)
+        if (pb->outstream && pb->verbose)
           SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                       "     * deleting path : %s ...",
                                       nb->path));
@@ -899,7 +900,7 @@ new_node_record (void **node_baton,
       }
     case svn_node_action_add:
       {
-        if (pb->outstream)
+        if (pb->outstream && pb->verbose)
           SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                       "     * adding path : %s ...",
                                       nb->path));
@@ -909,7 +910,7 @@ new_node_record (void **node_baton,
       }
     case svn_node_action_replace:
       {
-        if (pb->outstream)
+        if (pb->outstream && pb->verbose)
           SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                       "     * replacing path : %s ...",
                                       nb->path));
@@ -1056,7 +1057,7 @@ close_node (void *baton)
   struct revision_baton *rb = nb->rb;
   struct parse_baton *pb = rb->pb;
 
-  if (pb->outstream)
+  if (pb->outstream && pb->verbose)
     {
       apr_size_t len = 7;
       SVN_ERR (svn_stream_write (pb->outstream, " done.\n", &len));
@@ -1100,7 +1101,7 @@ close_revision (void *baton)
                                      SVN_PROP_REVISION_DATE, rb->datestamp,
                                      rb->pool));
 
-  if (pb->outstream)
+  if (pb->outstream && pb->verbose)
     {
       if (new_rev == rb->rev)
         {
@@ -1133,17 +1134,21 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **callbacks,
                                 svn_boolean_t use_history,
                                 enum svn_repos_load_uuid uuid_action,
                                 svn_stream_t *outstream,
+                                svn_boolean_t verbose,
                                 const char *parent_dir,
                                 apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *fns;
   svn_repos_parser_fns2_t *parser;
+  struct parse_baton *pb;
 
   /* Fetch the old-style vtable and baton, convert the vtable to a
    * new-style vtable, and set the new callbacks. */
   SVN_ERR (svn_repos_get_fs_build_parser (&fns, parse_baton, repos,
                                           use_history, uuid_action, outstream,
                                           parent_dir, pool));
+  pb = *(struct parse_baton**)parse_baton;
+  pb->verbose = verbose;
   parser = fns2_from_fns (fns, pool);
   parser->delete_node_property = delete_node_property;
   parser->apply_textdelta = apply_textdelta;
@@ -1182,12 +1187,45 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
   pb->outstream = outstream;
   pb->uuid_action = uuid_action;
   pb->parent_dir = parent_dir;
+  pb->verbose = TRUE;
 
   *parser_callbacks = parser;
   *parse_baton = pb;
   return SVN_NO_ERROR;
 }
 
+
+
+svn_error_t *
+svn_repos_load_fs2 (svn_repos_t *repos,
+                    svn_stream_t *dumpstream,
+                    svn_stream_t *feedback_stream,
+                    svn_boolean_t verbose,
+                    enum svn_repos_load_uuid uuid_action,
+                    const char *parent_dir,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool)
+{
+  const svn_repos_parser_fns2_t *parser;
+  void *parse_baton;
+  
+  /* This is really simple. */  
+
+  SVN_ERR (svn_repos_get_fs_build_parser2 (&parser, &parse_baton,
+                                           repos,
+                                           TRUE, /* look for copyfrom revs */
+                                           uuid_action,
+                                           feedback_stream,
+                                           verbose,
+                                           parent_dir,
+                                           pool));
+
+  SVN_ERR (svn_repos_parse_dumpstream2 (dumpstream, parser, parse_baton,
+                                        cancel_func, cancel_baton, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *
@@ -1200,21 +1238,13 @@ svn_repos_load_fs (svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  const svn_repos_parser_fns2_t *parser;
-  void *parse_baton;
-  
-  /* This is really simple. */  
-
-  SVN_ERR (svn_repos_get_fs_build_parser2 (&parser, &parse_baton,
-                                           repos,
-                                           TRUE, /* look for copyfrom revs */
-                                           uuid_action,
-                                           feedback_stream,
-                                           parent_dir,
-                                           pool));
-
-  SVN_ERR (svn_repos_parse_dumpstream2 (dumpstream, parser, parse_baton,
-                                        cancel_func, cancel_baton, pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_load_fs2 (repos,
+                             dumpstream,
+                             feedback_stream,
+                             TRUE,
+                             uuid_action,
+                             parent_dir,
+                             cancel_func,
+                             cancel_baton,
+                             pool);
 }
