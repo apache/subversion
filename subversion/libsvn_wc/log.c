@@ -818,7 +818,8 @@ log_do_committed (struct log_runner *loggy,
         /* Get the timestamp of our chosen file. */
         if ((err = svn_io_file_affected_time (&prop_time, chosen, pool)))
           return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
-                                    "error getting affected time: %s", chosen);
+                                    "error getting affected time: %s",
+                                    chosen->data);
         
         /* Make the tmp prop file the new pristine one.  Note that we
            have to temporarily set the file permissions for writability. */
