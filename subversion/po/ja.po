@@ -89,12 +89,13 @@
 # versioned               バージョン管理された
 # view                    ビュー
 # working copy            作業コピー
+# youngest revision       最新リビジョン
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-02-25 22:17+0900\n"
-"PO-Revision-Date: 2005-02-25 22:15+0900\n"
+"POT-Creation-Date: 2005-03-25 16:08+0900\n"
+"PO-Revision-Date: 2005-03-25 16:12+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1577,11 +1578,12 @@ msgstr "--auto-props と --no-auto-props は互いに排他的です"
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 
-#: clients/cmdline/main.c:1082
+#: clients/cmdline/main.c:1082 svndumpfilter/main.c:1166 svnlook/main.c:1993
 msgid "Subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: clients/cmdline/main.c:1100 svnadmin/main.c:1200 svnlook/main.c:2016
+#: clients/cmdline/main.c:1100 svnadmin/main.c:1200 svndumpfilter/main.c:1188
+#: svnlook/main.c:2016
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知のコマンドです: '%s'\n"
@@ -4191,32 +4193,32 @@ msgstr "log エントリがリストではありません"
 msgid "Changed-path entry not a list"
 msgstr "changed-path エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1174
+#: libsvn_ra_svn/client.c:1173
 msgid "get-locations not implemented"
 msgstr "get-locations は実装されていません"
 
-#: libsvn_ra_svn/client.c:1187
+#: libsvn_ra_svn/client.c:1186
 msgid "Location entry not a list"
 msgstr "location エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1241
+#: libsvn_ra_svn/client.c:1240
 msgid "get-file-revs not implemented"
 msgstr "get-file-revs は実装されていません"
 
-#: libsvn_ra_svn/client.c:1255
+#: libsvn_ra_svn/client.c:1254
 msgid "Revision entry not a list"
 msgstr "revision エントリはリストではありません"
 
 # ? text delta chunk
-#: libsvn_ra_svn/client.c:1268 libsvn_ra_svn/client.c:1293
+#: libsvn_ra_svn/client.c:1267 libsvn_ra_svn/client.c:1292
 msgid "Text delta chunk not a string"
 msgstr "テキスト差分の塊が文字列ではありません"
 
-#: libsvn_ra_svn/client.c:1305
+#: libsvn_ra_svn/client.c:1304
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "コマンド get-file-revs がリビジョンを返しませんでした"
 
-#: libsvn_ra_svn/client.c:1359
+#: libsvn_ra_svn/client.c:1358
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr ""
@@ -4673,6 +4675,11 @@ msgstr "終了リビジョン '%ld' が不正です"
 #: libsvn_repos/rev_hunt.c:314
 msgid "Unreadable path encountered; access denied."
 msgstr "読み込み不可能なパスが見つかりました。アクセスを拒否されました。"
+
+#: libsvn_repos/rev_hunt.c:540
+#, c-format
+msgid "'%s' is not a file"
+msgstr "'%s' はファイルではありません"
 
 #: libsvn_subr/config.c:632
 #, c-format
@@ -5235,10 +5242,17 @@ msgstr ""
 
 #: libsvn_subr/utf.c:543
 #, c-format
-msgid "Valid UTF-8 data (hex:%s)followed by invalid UTF-8 sequence (hex:%s)"
+msgid ""
+"Valid UTF-8 data\n"
+"(hex:%s)\n"
+"followed by invalid UTF-8 sequence\n"
+"(hex:%s)"
 msgstr ""
-"有効な UTF-8 のデータ (16 進数:%s) の後に無効な UTF-8 文字列 (16 進数:%s) が"
-"あります"
+"有効な UTF-8 のデータ\n"
+"(16 進数:%s)\n"
+"の後に無効な UTF-8 文字列\n"
+"(16 進数:%s)\n"
+"があります"
 
 #: libsvn_subr/validate.c:48
 #, c-format
@@ -6299,6 +6313,15 @@ msgstr ""
 "\n"
 "リポジトリに格納されたデータを検証します。\n"
 
+#: svnadmin/main.c:435
+msgid "Invalid revision specifier"
+msgstr "リビジョン識別子が不正です"
+
+#: svnadmin/main.c:440
+#, c-format
+msgid "Revisions must not be greater than the youngest revision (%ld)"
+msgstr "リビジョンは、最新のリビジョン (%ld) よりも大きくてはいけません"
+
 #: svnadmin/main.c:508 svnadmin/main.c:589
 msgid "First revision cannot be higher than second"
 msgstr "最初のリビジョンが 2 以上であることはありません"
@@ -6380,7 +6403,7 @@ msgstr "リビジョンの指定は 1 つだけしかできません"
 msgid "Exactly one file argument required"
 msgstr "ファイルの引数が 1 つだけ必要です"
 
-#: svnadmin/main.c:1178 svndumpfilter/main.c:1166 svnlook/main.c:1993
+#: svnadmin/main.c:1178
 msgid "subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
@@ -6531,11 +6554,6 @@ msgstr "   %ld => (取り除かれました)\n"
 msgid "Dropped %d node(s):\n"
 msgstr "%d 個のノードを取り除きました:\n"
 
-#: svndumpfilter/main.c:1188
-#, c-format
-msgid "unknown command: '%s'\n"
-msgstr "未知のコマンドです: '%s'\n"
-
 #: svndumpfilter/main.c:1207
 msgid ""
 "\n"
@@ -6547,7 +6565,7 @@ msgstr ""
 #: svndumpfilter/main.c:1250
 #, c-format
 msgid ""
-"subcommand '%s' doesn't accept option '%s'\n"
+"Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
@@ -6881,7 +6899,7 @@ msgid ""
 msgstr "'--transaction' (-t) と '--revision' (-r) の引数は一緒に指定できません"
 
 #: svnlook/main.c:2049
-msgid "repository argument required\n"
+msgid "Repository argument required\n"
 msgstr "リポジトリの引数が必要です\n"
 
 #: svnlook/main.c:2058
@@ -6892,7 +6910,7 @@ msgstr "'%s' は URL です。そこはパスで指定するべきです\n"
 #: svnlook/main.c:2106
 #, c-format
 msgid ""
-"subcommand '%s' doesn't accept option '%s'\n"
+"Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnlook help %s' for usage.\n"
 msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
@@ -7034,6 +7052,10 @@ msgstr "アドレス情報を取得できません: %s\n"
 msgid "Can't bind server socket: %s\n"
 msgstr "サーバソケットをバインドできません: %s\n"
 
+#: svnversion/main.c:108
+msgid "Finished"
+msgstr "終了しました"
+
 #: svnversion/main.c:123
 msgid "Type 'svnversion --help' for usage.\n"
 msgstr "使用方法を知りたいときは 'svnversion --help' と打ってください。\n"
@@ -7120,21 +7142,34 @@ msgstr "エクスポートされたものです%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
+#~ msgid ""
+#~ "subcommand '%s' doesn't accept option '%s'\n"
+#~ "Type 'svnlook help %s' for usage.\n"
+#~ msgstr ""
+#~ "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
+#~ "使用方法を知りたいときは 'svnlook help %s' と打ってください。\n"
+
+#~ msgid ""
+#~ "subcommand '%s' doesn't accept option '%s'\n"
+#~ "Type 'svndumpfilter help %s' for usage.\n"
+#~ msgstr ""
+#~ "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
+#~ "使用方法を知りたいときは 'svndumpfilter help %s' と打ってください。\n"
+
+#~ msgid "repository argument required\n"
+#~ msgstr "リポジトリの引数が必要です\n"
+
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "未知のコマンドです: '%s'\n"
+
+#~ msgid "Valid UTF-8 data (hex:%s)followed by invalid UTF-8 sequence (hex:%s)"
+#~ msgstr ""
+#~ "有効な UTF-8 のデータ (16 進数:%s) の後に無効な UTF-8 文字列 (16 進数:%s) "
+#~ "があります"
+
 #~ msgid "'svn info' only works on working copy paths, not URLs"
 #~ msgstr ""
 #~ "'svn info' は作業コピーパスに対してのみ使えます。URL に対しては使えません"
-
-#~ msgid ""
-#~ "Valid UTF-8 data\n"
-#~ "(hex:%s)\n"
-#~ "followed by invalid UTF-8 sequence\n"
-#~ "(hex:%s)"
-#~ msgstr ""
-#~ "有効な UTF-8 のデータ\n"
-#~ "(16 進数:%s)\n"
-#~ "の後に無効な UTF-8 文字列\n"
-#~ "(16 進数:%s)\n"
-#~ "があります"
 
 #~ msgid ""
 #~ "Safe data:\n"
