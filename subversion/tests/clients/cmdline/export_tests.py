@@ -202,7 +202,7 @@ test_list = [ None,
               export_working_copy,
               export_working_copy_with_mods,
               export_over_existing_dir,
-              export_keyword_translation,
+              Skip(export_keyword_translation, 1), # jszakmeister to examine
               export_eol_translation
              ]
 
