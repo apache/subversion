@@ -87,6 +87,11 @@ void SVNAdmin::finalize()
 void SVNAdmin::create(const char *path, bool disableFsyncCommits, bool keepLogs, const char *configPath)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   if(configPath != NULL)
 	configPath = svn_path_internal_style(configPath, subpool.pool());
@@ -123,6 +128,11 @@ void SVNAdmin::create(const char *path, bool disableFsyncCommits, bool keepLogs,
 void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
 {
   Pool masterpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, masterpool.pool());
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -202,6 +212,11 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
 void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut, Revision &revsionStart, Revision &revisionEnd, bool incremental)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -278,6 +293,16 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut, R
 void SVNAdmin::hotcopy(const char *path, const char *targetPath, bool cleanLogs)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(targetPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("targetPath");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   targetPath = svn_path_internal_style(targetPath, subpool.pool());
   svn_error_t *err = svn_repos_hotcopy (path, 
@@ -295,6 +320,11 @@ static void
 list_dblogs (const char *path, MessageReceiver &receiver, bool only_unused)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   apr_array_header_t *logfiles;
   int i;
@@ -336,6 +366,11 @@ void SVNAdmin::listUnusedDBLogs(const char *path, MessageReceiver &messageReceiv
 void SVNAdmin::load(const char *path, Inputer &dataIn, Outputer &messageOut, bool ignoreUUID, bool forceUUID, const char *relativePath)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   svn_repos_t *repos;
   enum svn_repos_load_uuid uuid_action;
@@ -366,6 +401,11 @@ void SVNAdmin::load(const char *path, Inputer &dataIn, Outputer &messageOut, boo
 void SVNAdmin::lstxns(const char *path, MessageReceiver &messageReceiver)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -398,6 +438,11 @@ void SVNAdmin::lstxns(const char *path, MessageReceiver &messageReceiver)
 jlong SVNAdmin::recover(const char *path)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   svn_revnum_t youngest_rev;
   svn_repos_t *repos;
@@ -430,6 +475,11 @@ jlong SVNAdmin::recover(const char *path)
 void SVNAdmin::rmtxns(const char *path, Targets &transactions)
 {
   Pool masterpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, masterpool.pool());
   svn_repos_t *repos;
   svn_fs_t *fs;
@@ -484,6 +534,16 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
 void SVNAdmin::setLog(const char *path, Revision &revision, const char *message, bool bypassHooks)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    if(message == NULL)
+    {
+        JNIUtil::throwNullPointerException("message");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   svn_repos_t *repos;
   svn_string_t *log_contents = svn_string_create (message, subpool.pool());
@@ -533,6 +593,11 @@ void SVNAdmin::setLog(const char *path, Revision &revision, const char *message,
 void SVNAdmin::verify(const char *path, Outputer &messageOut, Revision &revisionStart, Revision &revisionEnd)
 {
   Pool subpool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
   path = svn_path_internal_style(path, subpool.pool());
   svn_repos_t *repos;
   svn_revnum_t youngest;
