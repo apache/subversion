@@ -208,7 +208,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   svn_fs_root_t *root;
   svn_error_t *serr;
   const char *vcc;
-  char revbuf[20]; /* long enough for a long int */
+  const char *rev;
   svn_string_t *creationdate, *creator_displayname;
 
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
@@ -229,7 +229,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                           NULL, 0 /* add_href */, pool);
 
   /* the version-name of the baseline is the revision number */
-  sprintf(revbuf, "%ld", new_rev);
+  rev = apr_psprintf(pool, "%ld", new_rev);
 
   /* get the creationdate and creator-displayname of the new revision, too. */
   serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,
@@ -265,7 +265,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                         ### we need to tell the client to look at *this*
                         ### resource for the version-name. */
                      "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR
-                     "<D:version-name>", revbuf, "</D:version-name>" DEBUG_CR,
+                     "<D:version-name>", rev, "</D:version-name>" DEBUG_CR,
                      NULL);
   if (creationdate)
     {
