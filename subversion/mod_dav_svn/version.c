@@ -53,46 +53,57 @@ static const dav_report_elem avail_reports[] = {
 static dav_error *dav_svn_make_activity(dav_resource *resource);
 
 
-/* Helper: attach an auto-generated svn:log property to a txn within
-   an auto-checked-out working resource. */
-static dav_error *set_auto_revprops(dav_resource *resource)
+svn_error_t *dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
+                                          const char *fs_path,
+                                          apr_pool_t *pool)
 {
   const char *logmsg;
   svn_string_t *logval;
   svn_error_t *serr;
 
-  if (! (resource->type == DAV_RESOURCE_TYPE_WORKING
-         && resource->info->auto_checked_out))
-    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                         "set_auto_revprops called on invalid resource.");
-
-  /* Set the log message for this revision. */
-  logmsg = apr_psprintf(resource->pool,  
+  logmsg = apr_psprintf(pool,  
                         "Autoversioning commit:  a non-deltaV client made "
-                        "a change to\n%s", resource->info->repos_path);
+                        "a change to\n%s", fs_path);
 
-  logval = svn_string_create(logmsg, resource->pool);
-  if ((serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
-                                           SVN_PROP_REVISION_LOG, logval,
-                                           resource->pool)))
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Error setting '" SVN_PROP_REVISION_LOG
-                               "' on auto-checked-out resource's transaction.",
-                               resource->pool);
+  logval = svn_string_create(logmsg, pool);
+  if ((serr = svn_repos_fs_change_txn_prop(txn, SVN_PROP_REVISION_LOG, logval,
+                                           pool)))
+    return serr;
 
   /* Notate that this revision was created by autoversioning.  (Tools
      like post-commit email scripts might not care to send an email
      for every autoversioning change.) */
-  if ((serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
+  if ((serr = svn_repos_fs_change_txn_prop(txn,
                                            SVN_PROP_REVISION_AUTOVERSIONED, 
-                                           svn_string_create("*", resource->pool),
+                                           svn_string_create("*", pool),
+                                           pool)))
+    return serr;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper: attach an auto-generated svn:log property to a txn within
+   an auto-checked-out working resource. */
+static dav_error *set_auto_revprops(dav_resource *resource)
+{
+  svn_error_t *serr;
+
+  if (! (resource->type == DAV_RESOURCE_TYPE_WORKING
+         && resource->info->auto_checked_out))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         "Set_auto_revprops called on invalid resource.");
+
+  if ((serr = dav_svn_attach_auto_revprops(resource->info->root.txn,
+                                           resource->info->repos_path,
                                            resource->pool)))
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Error setting '" SVN_PROP_REVISION_AUTOVERSIONED
-                               "' on auto-checked-out resource's transaction.",
+                               "Error setting a revision property "
+                               " on auto-checked-out resource's txn. ",
                                resource->pool);
   return NULL;
 }
+
 
 static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
                            const char *txn_name, apr_pool_t *pool)

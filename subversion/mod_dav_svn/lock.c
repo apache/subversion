@@ -718,6 +718,73 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Tried to attach multiple locks to a resource.");
 
+  /* RFC2518bis (section 7.4) doesn't require us to support
+     'lock-null' resources at all.  Instead, it asks that we treat
+     'LOCK nonexistentURL' as a PUT (followed by a LOCK) of a 0-byte file.  */
+  if (! resource->exists)
+    {
+      svn_revnum_t rev, new_rev;
+      svn_fs_txn_t *txn;
+      svn_fs_root_t *txn_root;
+      const char *conflict_msg;
+      dav_svn_repos *repos = resource->info->repos;
+
+      if (resource->info->repos->is_svn_client)
+        return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,
+                             DAV_ERR_LOCK_SAVE_LOCK,
+                             "Subversion clients may not lock "
+                             "nonexistent paths.");
+
+      else if (! resource->info->repos->autoversioning)
+        return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,
+                             DAV_ERR_LOCK_SAVE_LOCK,
+                             "Attempted to lock non-existent path;"
+                             " turn on autoversioning first.");
+      
+      /* Commit a 0-byte file: */
+
+      if ((serr = svn_fs_youngest_rev(&rev, repos->fs, resource->pool)))
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not determine youngest revision", 
+                                   resource->pool);
+      
+      if ((serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->repos, rev,
+                                                    repos->username, NULL, 
+                                                    resource->pool)))
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not begin a transaction", 
+                                   resource->pool);
+
+      if ((serr = svn_fs_txn_root (&txn_root, txn, resource->pool)))
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not begin a transaction", 
+                                   resource->pool);
+
+      if ((serr = svn_fs_make_file(txn_root, resource->info->repos_path,
+                                   resource->pool)))
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not create empty file.",
+                                   resource->pool);
+      
+      if ((serr = dav_svn_attach_auto_revprops(txn,
+                                               resource->info->repos_path,
+                                               resource->pool)))
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not create empty file.",
+                                   resource->pool);
+      
+      if ((serr = svn_repos_fs_commit_txn(&conflict_msg, repos->repos,
+                                          &new_rev, txn, resource->pool)))
+        {
+          svn_error_clear(svn_fs_abort_txn(txn, resource->pool));
+          return dav_svn_convert_err(serr, HTTP_CONFLICT, 
+                                     apr_psprintf(resource->pool,
+                                                  "Conflict when committing "
+                                                  "'%s'.", conflict_msg),
+                                     resource->pool);
+        }
+    }
+
   /* Convert the dav_lock into an svn_lock_t. */  
   derr = dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
                               info, resource->info->repos->is_svn_client,
