@@ -827,11 +827,22 @@ svn_wc_diff (svn_stringbuf_t *anchor,
 {
   struct edit_baton *eb;
   struct dir_baton *b;
+  svn_wc_entry_t *entry;
+  svn_stringbuf_t *target_path;
 
   eb = make_editor_baton (anchor, target, diff_cmd, diff_cmd_baton, recurse,
                           pool);
 
-  b = make_dir_baton (target, NULL, eb, FALSE, eb->pool);
+  target_path = svn_stringbuf_dup (anchor, eb->pool);
+  if (target)
+    svn_path_add_component (target_path, target, svn_path_local_style);
+
+  SVN_ERR (svn_wc_entry (&entry, target_path, eb->pool));
+
+  if (entry->kind == svn_node_dir)
+    b = make_dir_baton (target, NULL, eb, FALSE, eb->pool);
+  else
+    b = make_dir_baton (NULL, NULL, eb, FALSE, eb->pool);
 
   SVN_ERR (directory_elements_diff (b, FALSE));
 
