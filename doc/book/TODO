@@ -23,6 +23,11 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
+  - convert any Perl examples to Python ones.  and stick with the
+    Python coding conventions when doing so.  and do error checking.
+    and then chuckle about how the examples are still shorter and
+    easier to read than they were before.
+
   - deltification no longer happens in-process -- repository
     administrators *must* use 'svnadmin deltify', preferably
     backgrounded in the post-commit hook, to keep their repositories
