@@ -18,10 +18,14 @@ dnl
 dnl NOTE: esyscmd() is a GNU M4 extension. Thus, we wrap it in an apprpriate
 dnl test. I believe this test will work, but I don't have a place with non-
 dnl GNU M4 to test it right now.
+dnl
+dnl 
 define([subversion_version],
+dnl The following line is long and must be.  When this file is checked out with
+dnl CRLF line endings the carriage return ends up being interpreted as an
+dnl argument of its own and the script will fail.
        ifdef([__gnu__],
-	     [esyscmd(/usr/bin/env python build/getversion.py \
-	              subversion/include/svn_version.h)],
+	     [esyscmd(/usr/bin/env python build/getversion.py subversion/include/svn_version.h)],
 	     [0.x]))
 AC_INIT(subversion, subversion_version, [http://subversion.tigris.org/])
 undefine([subversion_version])
