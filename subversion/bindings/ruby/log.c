@@ -23,21 +23,21 @@
 #include "util.h"
 #include "error.h"
 
-struct log_receiver_baton_t
+typedef struct svn_ruby_log_receiver_baton_t
 {
   VALUE proc;
   apr_pool_t *pool;
-};
+} svn_ruby_log_receiver_baton_t;
 
 static svn_error_t *
-log_receiver (void *baton,
-	      apr_hash_t *changed_paths,
-	      svn_revnum_t revision,
-	      const char *author,
-	      const char *date,
-	      const char *message)
+svn_ruby_log_receiver (void *baton,
+                       apr_hash_t *changed_paths,
+                       svn_revnum_t revision,
+                       const char *author,
+                       const char *date,
+                       const char *message)
 {
-  struct log_receiver_baton_t *bt = baton;
+  svn_ruby_log_receiver_baton_t *bt = baton;
   VALUE paths;
   int error;
   VALUE args[7];
@@ -82,25 +82,27 @@ log_receiver (void *baton,
   return SVN_NO_ERROR;
 }
 
-static VALUE
-get_log (int argc,
-         VALUE *argv,
-         VALUE self,
-         svn_boolean_t ra_p,
-         svn_ra_plugin_t *plugin,
-         void *session_baton,
-         svn_client_auth_baton_t *auth_baton,
-         apr_pool_t *pool)
+/* Get args for ra->get_log and svn_client_log.
+   This function is tricky because it tries to delay pool creation until
+   Ruby can't throw exception.
+   New subpool is created and stored into baton->pool. */
+void
+svn_ruby_get_log_args (int argc,
+                       VALUE *argv,
+                       VALUE self,
+                       apr_array_header_t **paths,
+                       VALUE *start,
+                       VALUE *end,
+                       VALUE *discover_changed_paths,
+                       svn_ruby_log_receiver_baton_t *baton,
+                       apr_pool_t *pool)
 {
-  VALUE aPaths, aStart, aEnd, discover_changed_paths, receiver;
-  apr_array_header_t *paths;
-  apr_pool_t *subpool;
-  svn_error_t *err;
   int i;
-  struct log_receiver_baton_t baton;
+  apr_pool_t *subpool;
+  VALUE aPaths, receiver;
 
-  rb_scan_args (argc, argv, "40&", &aPaths, &aStart, &aEnd,
-		&discover_changed_paths, &receiver);
+  rb_scan_args (argc, argv, "40&", &aPaths, start, end,
+                discover_changed_paths, &receiver);
   if (receiver == Qnil)
     rb_raise (rb_eRuntimeError, "no block is given");
 
@@ -109,45 +111,17 @@ get_log (int argc,
     Check_Type (RARRAY (aPaths)->ptr[i], T_STRING);
 
   subpool = svn_pool_create (pool);
-  paths = apr_array_make (subpool, RARRAY (aPaths)->len,
-			  sizeof (svn_stringbuf_t *));
+  *paths = apr_array_make (subpool, RARRAY (aPaths)->len,
+                           sizeof (svn_stringbuf_t *));
   for (i = 0; i < RARRAY (aPaths)->len; i++)
-    (*((svn_stringbuf_t **) apr_array_push (paths))) =
+    (*((svn_stringbuf_t **) apr_array_push (*paths))) =
       svn_stringbuf_create (StringValuePtr (RARRAY (aPaths)->ptr[i]), subpool);
 
+  baton->proc = receiver;
+  baton->pool = subpool;
+
+  /* GC protect */
   rb_iv_set (self, "@receiver", receiver);
-  baton.proc = receiver;
-  baton.pool = subpool;
-  if (ra_p)
-    {
-      svn_revnum_t start, end;
-      start = NUM2LONG (aStart);
-      end = NUM2LONG (aEnd);
-
-      err = plugin->get_log (session_baton,
-                             paths, start, end,
-                             RTEST (discover_changed_paths),
-                             log_receiver,
-                             (void *)&baton);
-    }
-  else
-    {
-      svn_client_revision_t start, end;
-      start = svn_ruby_parse_revision (aStart);
-      end = svn_ruby_parse_revision (aEnd);
-      err = svn_client_log (auth_baton,
-                            paths, &start, &end,
-                            RTEST (discover_changed_paths),
-                            log_receiver,
-                            (void *)&baton,
-                            subpool);
-    }
-
-  apr_pool_destroy (subpool);
-  if (err)
-    svn_ruby_raise (err);
-
-  return Qnil;
 }
 
 VALUE
@@ -158,10 +132,29 @@ svn_ruby_ra_get_log (int argc,
                      void *session_baton,
                      apr_pool_t *pool)
 {
-  return get_log (argc, argv, self,
-                  TRUE, plugin, session_baton,
-                  NULL,
-                  pool);
+  VALUE aStart, aEnd, discover_changed_paths;
+  apr_array_header_t *paths;
+  svn_error_t *err;
+  svn_ruby_log_receiver_baton_t baton;
+  svn_revnum_t start, end;
+
+  svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
+                         &discover_changed_paths, &baton, pool);
+ 
+  start = NUM2LONG (aStart);
+  end = NUM2LONG (aEnd);
+
+  err = plugin->get_log (session_baton,
+                         paths, start, end,
+                         RTEST (discover_changed_paths),
+                         svn_ruby_log_receiver,
+                         (void *)&baton);
+
+  apr_pool_destroy (baton.pool);
+  if (err)
+    svn_ruby_raise (err);
+
+  return Qnil;
 }
 
 VALUE
@@ -170,8 +163,28 @@ svn_ruby_client_log (int argc,
                      VALUE self,
                      svn_client_auth_baton_t *auth_baton)
 {
-  return get_log (argc, argv, self,
-                  FALSE, NULL, NULL,
-                  auth_baton,
-                  NULL);
+  VALUE aStart, aEnd, discover_changed_paths;
+  apr_array_header_t *paths;
+  svn_error_t *err;
+  svn_ruby_log_receiver_baton_t baton;
+  svn_client_revision_t start, end;
+
+  svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
+                         &discover_changed_paths, &baton, NULL);
+
+  start = svn_ruby_parse_revision (aStart);
+  end = svn_ruby_parse_revision (aEnd);
+
+  err = svn_client_log (auth_baton,
+                        paths, &start, &end,
+                        RTEST (discover_changed_paths),
+                        svn_ruby_log_receiver,
+                        (void *)&baton,
+                        baton.pool);
+
+  apr_pool_destroy (baton.pool);
+  if (err)
+    svn_ruby_raise (err);
+
+  return Qnil;
 }
