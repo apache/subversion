@@ -1,7 +1,7 @@
 /*
- * wc_adm_files.c: helper routines for handling files & dirs in the
- *                 working copy administrative area (creating,
- *                 deleting, opening, and closing).
+ * adm_files.c: helper routines for handling files & dirs in the
+ *              working copy administrative area (creating,
+ *              deleting, opening, and closing).
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.

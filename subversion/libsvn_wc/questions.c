@@ -1,5 +1,5 @@
 /*
- * paths.c:   a path manipulation library using svn_string_t
+ * questions.c:  routines for asking questions about working copies
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -49,82 +49,48 @@
 
 
 
+#include <apr_pools.h>
+#include <apr_file_io.h>
+#include <apr_time.h>
+#include "svn_types.h"
 #include "svn_string.h"
+#include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_wc.h"
+#include "wc.h"
 
 
 
-/*** A path manipulation library. ***/
-
-/* kff todo: this will need to handle escaping/unescaping, for files
-   that have slashes in their names. */
-
-/* Helper for svn_path_path_add_component_*, which see. */
-static void
-add_component_internal (svn_string_t *path,
-                        const char *component,
-                        size_t len,
-                        int style,
-                        apr_pool_t *pool)
+svn_error_t *
+svn_wc__working_copy_p (int *answer, svn_string_t *path, apr_pool_t *pool)
 {
-  /* kff todo: `style' ignored presently. */
+  /* Nothing fancy, just check for an administrative subdir and a
+     `repository' file. */ 
+  apr_file_t *f = NULL;
+  svn_error_t *err = NULL;
 
-  char dirsep = SVN_PATH_REPOS_SEPARATOR;
-
-  if (! svn_string_isempty (path))
-    svn_string_appendbytes (path, &dirsep, sizeof (dirsep), pool);
-
-  svn_string_appendbytes (path, component, len, pool);
-}
-
-
-/* Like svn_path_path_add_component(), but COMPONENT is a null-terminated
-   c-string ("nts"). */
-void
-svn_path_add_component_nts (svn_string_t *path, 
-                            char *component,
-                            int style,
-                            apr_pool_t *pool)
-{
-  add_component_internal (path, component, strlen (component), style, pool);
-}
-
-
-/* Extend PATH with new COMPONENT, destructively. */
-void
-svn_path_add_component (svn_string_t *path, 
-                        svn_string_t *component,
-                        int style,
-                        apr_pool_t *pool)
-{
-  add_component_internal (path, component->data, component->len, style, pool);
-}
-
-
-/* Remove PATH's deepest COMPONENT, destructively. */
-void
-svn_path_remove_component (svn_string_t *path, int style)
-{
-  /* kff todo: `style' ignored presently. */
-
-  if (! svn_string_chop_back_to_char (path, SVN_PATH_REPOS_SEPARATOR))
-    svn_string_setempty (path);
-}
-
-
-/* Duplicate and return PATH's last component, w/o separator. */
-svn_string_t *
-svn_path_last_component (svn_string_t *path, apr_pool_t *pool)
-{
-  apr_off_t i;
-
-  i = svn_string_find_char_backward (path, SVN_PATH_REPOS_SEPARATOR);
-
-  if (i < path->len)
+  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_REPOSITORY,
+                               APR_READ, pool);
+  if (err)
     {
-      i += 1;  /* Get past the separator char. */
-      return svn_string_ncreate (path->data + i, (path->len - i), pool);
+      /* It really doesn't matter what kind of error it is; for our
+         purposes, this is not a working copy. */
+      *answer = 0;
+      return err;
     }
-  else
-    return svn_string_dup (path, pool);
+
+  /* Else. */
+
+  *answer = 1;
+  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_REPOSITORY, pool);
+  return err;
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -80,7 +80,8 @@ Structure of the Working Copy
 Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ sudirs:
 
-   SVN/repository               /* Where this stuff came from. */
+   SVN/wc_fmt                   /* Contains wc adm format version. */
+       repository               /* Where this stuff came from. */
        versions                 /* Version numbers for this directory */
        properties               /* Properties for this directory */
        tree-edits               /* Records changes to tree structure */
@@ -104,6 +105,15 @@ analogous to CVS/ sudirs:
        dprop-base/              /* Tentative dirent entry property storage */
             foo.c
             bar.c                   /* Would store bar.c's dirent props */
+
+`wc_vn'
+
+   Says what version of the working copy adm format this is (so future
+   clients can be backwards compatible easily).
+
+`repository'
+
+   Where this dir came from (syntax TBD).
 
 `versions':
 

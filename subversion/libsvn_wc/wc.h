@@ -57,6 +57,18 @@
 
 
 
+/*** Asking questions about a working copy. ***/
+
+/* Set *ANSWER to non-zero iff PATH appears to be a working copy. 
+   The return error would usually be ignored, but you can examine it
+   to find out exactly why *ANSWER is what it is, if you want. */
+svn_error_t *svn_wc__working_copy_p (int *answer,
+                                     svn_string_t *path,
+                                     apr_pool_t *pool);
+
+
+
+
 /* Lock the working copy administrative area.
    Wait for WAIT seconds if encounter another lock, trying again every
    second, then return 0 if success or an SVN_ERR_ENCOUNTERED_LOCK
@@ -81,6 +93,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
    other #define with the same name. */
 
 /* The files within the administrative subdir. */
+#define SVN_WC__ADM_REPOSITORY          "repository"
 #define SVN_WC__ADM_VERSIONS            "versions"
 #define SVN_WC__ADM_PROPERTIES          "properties"
 #define SVN_WC__ADM_TREE_EDITS          "tree-edits"
@@ -129,6 +142,12 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
 svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
                                        char *thing,
                                        apr_pool_t *pool);
+
+
+
+/*** General utilities that may get moved upstairs at some point. */
+svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
+
 
 
 /* 

@@ -68,51 +68,10 @@
 
 
 
-/* If PATH exists already, return an svn error containing ERR_TO_REPORT.
- *
- * If PATH doesn't exist, return 0.
- *
- * If unable to determine whether or not PATH exists, due to another
- * error condition, return an svn error containing that apr error.
- */
-static svn_error_t *
-check_existence (svn_string_t *path,
-                 apr_status_t err_to_report,
-                 apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  apr_file_t *tmp_f = NULL;  /* init to NULL hugely important to APR */
-
-  apr_err = apr_open (&tmp_f, path->data,
-                     (APR_READ | APR_CREATE | APR_EXCL),
-                     APR_OS_DEFAULT, pool);
-
-  if (apr_err == APR_EEXIST)
-    {
-      svn_error_t *err 
-        = svn_create_error (err_to_report, 0, path->data, NULL, pool);
-      return err;
-    }
-  else if (apr_err)  /* some error other than APR_EEXIST */
-    {
-      svn_error_t *err 
-        = svn_create_error (apr_err, 0, path->data, NULL, pool);
-      return err;
-    }
-  else              /* path definitely does not exist */
-    {
-      apr_close (tmp_f);
-      apr_remove_file (path->data, pool);
-      return 0;
-    }
-}
-
-
-
 struct w_baton
 {
-  svn_string_t *top_dir;
-  int top_dir_done_p;
+  svn_string_t *dest_dir;
+  svn_string_t *repository;
   apr_pool_t *pool;
 };
 
@@ -132,7 +91,7 @@ add_directory (svn_string_t *name,
                svn_vernum_t ancestor_version,
                void **child_baton)
 {
-  /* todo: we're not yet special-casing top_dir.  When we do, it'll be
+  /* todo: we're not yet special-casing dest_dir.  When we do, it'll be
      like "cvs checkout -d foo bar", which produces a tree whose top
      dir is named foo, but everything underneath is within the
      project's namespace and appears as in the project.  This is
@@ -322,7 +281,8 @@ finish_textdelta (void *walk_baton, void *parent_baton, void *handler_baton)
 svn_error_t *
 svn_wc_apply_delta (void *delta_src,
                     svn_delta_read_fn_t *read_fn,
-                    svn_string_t *encasing_dir,
+                    svn_string_t *dest,
+                    svn_string_t *repos,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -330,18 +290,27 @@ svn_wc_apply_delta (void *delta_src,
   struct w_baton w_baton;
   svn_string_t *telescoping_path;
 
-  /* Check existence of ENCASING_DIR.  If present, just error out for now -- we
-     can't do real updates, only fresh checkouts.  In the future, if
-     ENCASING_DIR exists we'll check if it's a working copy and only error
-     out if it's not. */
-  if (encasing_dir)
+  if (dest)
     {
-      err = check_existence (encasing_dir, SVN_ERR_OBSTRUCTED_UPDATE, pool);
+      err = svn_wc__ensure_directory (dest, pool);
 
-      /* Whether or not err->apr_err == SVN_ERR_OBSTRUCTED_UPDATE, we
-         want to return it to caller. */
       if (err)
         return err;
+      else
+        {
+          /* kff todo: actually, we can't always err out if dest turns out
+             to be a working copy; instead, we just need to note it
+             somewhere and be careful.  Right now, though, punt. */
+
+          int is_working_copy = 0;
+          
+          err = svn_wc__working_copy_p (&is_working_copy, dest, pool);
+
+          if (err)
+            return err;
+          else if (is_working_copy)
+            return svn_create_error (SVN_ERR_OBSTRUCTED_UPDATE, 0, dest, pool);
+        }
     }
 
   /* Else nothing in the way, so continue. */
@@ -360,8 +329,9 @@ svn_wc_apply_delta (void *delta_src,
 
   /* Set up the batons... */
   memset (&w_baton, 0, sizeof (w_baton));
-  w_baton.top_dir = encasing_dir;   /* Remember, encasing_dir might be null. */
-  w_baton.pool = pool;
+  w_baton.dest_dir   = dest;      /* Remember, DEST might be null. */
+  w_baton.repository = repos;
+  w_baton.pool       = pool;
   telescoping_path = svn_string_create ("", pool);
 
   /* ... and walk! */
