@@ -44,8 +44,7 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
                    svn_boolean_t descend,
-                   svn_client_auth_info_callback_t callback,
-                   void *callback_baton,
+                   svn_client_auth_t *auth_obj,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -86,20 +85,16 @@ svn_client_status (apr_hash_t **statushash,
         {
           apr_hash_index_t *hi;
           svn_revnum_t latest_revnum;
-          void *storage_baton;
-          svn_client_auth_storage_callback_t storage_callback;
 
           /* Open an RA session to URL, get latest revnum, close session. */
           SVN_ERR (svn_client_authenticate (&session, 
-                                            &storage_callback, &storage_baton,
                                             ra_lib,
                                             svn_stringbuf_create (URL, pool),
-                                            path,
-                                            callback, callback_baton, pool));
+                                            path, auth_obj, pool));
           SVN_ERR (ra_lib->get_latest_revnum (session, &latest_revnum));
           SVN_ERR (ra_lib->close (session));
-          if (storage_callback)
-            SVN_ERR (storage_callback (storage_baton));
+          if (auth_obj->storage_callback)
+            SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
 
           /* Write the latest revnum into each status structure. */
           for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))

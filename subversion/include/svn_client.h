@@ -51,6 +51,11 @@ extern "C" {
     targets may come from different repositories.  */
 
 
+
+
+/*** Authentication framework -- new in M3 ***/
+
+
 /*  A callback function type defined by the top-level client
     application (the user of libsvn_client.)
 
@@ -67,51 +72,101 @@ typedef svn_error_t *(*svn_client_auth_info_callback_t)
         void *baton,
         apr_pool_t *pool);
 
+
 /* Function type possibly returned along with an RA session baton.  If
    returned, the user should call this routine after closing the RA
    session. */
 typedef svn_error_t *(*svn_client_auth_storage_callback_t) (void *baton);
 
 
-
-/*** Milestone 3 Interfaces ***/
 
-
-/* Open an authenticated session to REPOS_URL using RA_LIB.  
-
-   This routine will negotiate with the RA library and authenticate
-   the user.  CALLBACK/BATON is a routine that the client library can
-   use to fetch information from the calling application (by say,
-   displaying a prompt to the user.)  PATH is a working copy path that
-   can be searched for previously-stored authentication data.
-
-   If successful, *SESSION_BATON will be set to an object that
-   represents an "open" session with the repository.  (The
-   session_baton is necessary for further interaction with RA layer.)
+/* A structure for holding authentication information.  This is the
+   main structure "processed" by svn_client_authenticate and all of
+   its protocol helpers.  */
+typedef struct svn_client_auth_t
+{
+  /* These fields are optionally filled in by the application --
+     through command-line arguments, dialog boxes, whatever.  They
+     will eventually be used by the libsvn_client "authenticator
+     drivers" and presented to the RA layer. */
+  const char *username;
+  const char *password;  /* ### add more fields here for other protocols. */
  
-   This routine might also return an *STORAGE_CALLBACK/BATON for
-   storing the authentication information in the working copy at PATH.
-   If a non-NULL routine is returned, the caller of this function must
-   remember to call the storage callback after closing the RA session.
-   If the authentication requires no storage, *STORAGE_CALLBACK is set
-   to NULL. */
+  /* A callback pointer that libsvn_client can use to make the
+     application prompt the user for information (see earlier
+     typedef.)   This -must- be provided by the calling application. */
+  svn_client_auth_info_callback_t prompt_callback;
+  void *prompt_baton;
+
+  /* A callback double-pointer for storing auth info in the working
+     copy.  After authentication completes, this -might- be filled
+     in by the client-side authentication drivers. */
+  svn_client_auth_storage_callback_t storage_callback;
+  void *storage_baton;
+
+} svn_client_auth_t;
+
+
+
+
+/* Return an authenticated session to REPOS_URL via RA_LIB.  
+
+   This routine will negotiate with an RA library and authenticate
+   the user using the data in AUTH_OBJ:
+
+      - RA_LIB's supported authentication methods will be examined,
+        and one method selected.
+
+      - a specific "authenticator" vtable will be fetched from RA_LIB,
+        and then paired with an appropriate driver routine that
+        understands the protocol.
+
+      - the authenticator-driver will provide all necessary
+        information to the authenticator using any combination of
+        four methods:
+
+           1.  checking if the information is already present within
+               AUTH_OBJ   (e.g. was given as a command-line arg.)
+           2.  checking if the information is already stored in the
+               working copy at PATH.
+           3.  checking if the information can be derived automatically 
+               (e.g. calling getuid() )
+           4.  forcing the application to prompt the user
+               (using AUTH_OBJ->PROMPT_CALLBACK)
+ 
+    Assuming no error occurs, *SESSION_BATON will be set to an object
+    that represents an "open" session with the repository.  This
+    session_baton is necessary for all further interaction with RA
+    layer.
+ 
+    This routine might also return an *STORAGE_CALLBACK/BATON within
+    AUTH_OBJ for storing the authentication information in the working
+    copy at PATH.  If a non-NULL routine is returned, the caller of
+    this function -must- remember to call the storage callback after
+    closing the RA session.  If the authentication requires no
+    storage, *STORAGE_CALLBACK will be set to NULL. */
 svn_error_t *
 svn_client_authenticate (void **session_baton,
-                         svn_client_auth_storage_callback_t *storage_callback,
-                         void **storage_baton,
                          svn_ra_plugin_t *ra_lib,
                          svn_stringbuf_t *repos_URL,
                          svn_stringbuf_t *path,
-                         svn_client_auth_info_callback_t callback,
-                         void *callback_baton,
+                         svn_client_auth_t *auth_obj,
                          apr_pool_t *pool);
 
-/* Defines -- names of files that contain authorization information.
-   libsvn_client will store these in the working copy, depending on
-   whatever authorization methods are being used. */
+
+/* Names of files that contain authorization information.  (Notice
+   that these also correspond to the fields of svn_client_auth_t.)
+   libsvn_client will create these in the working copy administrative
+   area, depending on which authentication methods are being used. */
 #define SVN_CLIENT_AUTH_USERNAME             "username"
 #define SVN_CLIENT_AUTH_PASSWORD             "password"
 
+
+
+
+
+
+/*** Milestone 3 Interfaces ***/
 
 
 /* Perform a checkout from URL, providing pre- and post-checkout hook
@@ -141,8 +196,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
                      const svn_delta_edit_fns_t *after_editor,
                      void *after_edit_baton,
-                     svn_client_auth_info_callback_t callback,
-                     void *callback_baton,
+                     svn_client_auth_t *auth_obj,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
                      svn_revnum_t revision,
@@ -176,8 +230,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
-                   svn_client_auth_info_callback_t callback,
-                   void *callback_baton,
+                   svn_client_auth_t *auth_obj,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
@@ -249,9 +302,8 @@ svn_client_undelete (svn_stringbuf_t *path,
 svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
                                 const svn_delta_edit_fns_t *after_editor,
-                                void *after_edit_baton,    
-                                svn_client_auth_info_callback_t callback,
-                                void *callback_baton,
+                                void *after_edit_baton, 
+                                svn_client_auth_t *auth_obj,   
                                 svn_stringbuf_t *path,
                                 svn_stringbuf_t *url,
                                 svn_stringbuf_t *new_entry,
@@ -288,8 +340,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
-                   svn_client_auth_info_callback_t callback,
-                   void *callback_baton,
+                   svn_client_auth_t *auth_obj,
                    const apr_array_header_t *targets,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
@@ -306,8 +357,7 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
                    svn_boolean_t descend,
-                   svn_client_auth_info_callback_t callback,
-                   void *callback_baton,
+                   svn_client_auth_t *auth_obj,
                    apr_pool_t *pool);
 
 

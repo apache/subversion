@@ -38,11 +38,15 @@ svn_cl__checkout (apr_getopt_t *os,
   void *trace_edit_baton;
   svn_error_t *err;
   int i;
-
+  svn_client_auth_t *auth_obj;
+  
   err = svn_cl__parse_all_args (os, opt_state, "checkout", pool);
 
   if (err)
     return err;
+  
+  /* Build an authentication object to give to libsvn_client. */
+  auth_obj = svn_cl__make_auth_obj (opt_state, pool);
 
   /* TODO Fixme: This only works for one repo checkout at a shot.  In
      CVS, when we checkout one project and give it a destination
@@ -108,7 +112,7 @@ svn_cl__checkout (apr_getopt_t *os,
       err = svn_client_checkout (NULL, NULL,
                                  opt_state->quiet ? NULL : trace_editor, 
                                  opt_state->quiet ? NULL : trace_edit_baton,
-                                 svn_cl__prompt_user, NULL,
+                                 auth_obj,
                                  repos_url,
                                  local_dir,
                                  opt_state->revision,

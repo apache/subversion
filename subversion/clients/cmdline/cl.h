@@ -24,6 +24,7 @@
 #include <apr_getopt.h>
 
 #include "svn_wc.h"
+#include "svn_client.h"
 #include "svn_string.h"
 
 
@@ -37,7 +38,10 @@ typedef enum {
   svn_cl__ancestor_path_opt,
   svn_cl__force_opt,
   svn_cl__recursive_opt,
-  svn_cl__locale_opt
+  svn_cl__locale_opt,
+  /* Here are authentication args: */
+  svn_cl__auth_username_opt,
+  svn_cl__auth_password_opt,
 } svn_cl__longopt_t;
 
 
@@ -61,6 +65,9 @@ typedef struct svn_cl__opt_state_t
   /* TODO fixme. This still doesn't handle binary data from a file! */
   svn_stringbuf_t *filedata;
   svn_boolean_t help;
+  /* Here begin authentication args;  add more as needed. */
+  svn_stringbuf_t *auth_username;
+  svn_stringbuf_t *auth_password;
 } svn_cl__opt_state_t;
 
 
@@ -209,6 +216,11 @@ svn_cl__prompt_user (char **result,
                      void *baton,
                      apr_pool_t *pool);
 
+/* Helper for subcommands: given parsed OPT_STATE arguments from the
+   command-line, build a client authentication object in POOL. */
+svn_client_auth_t *
+svn_cl__make_auth_obj (svn_cl__opt_state_t *opt_state,
+                       apr_pool_t *pool);
 
 
 
