@@ -92,7 +92,12 @@ if test -n "$APXS" -a "$APXS" != "no"; then
 VERSION_OKAY
 #endif],
         [AC_MSG_RESULT([recent enough])],
-        [AC_MSG_ERROR([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
+        [AC_MSG_RESULT([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])
+         if test "$APXS_EXPLICIT" != ""; then
+             AC_MSG_ERROR([Apache APXS build explicitly requested, but apache version is too old])
+         fi
+         APXS=""
+        ])
 
     elif test "$APXS_EXPLICIT" != ""; then
 	AC_MSG_ERROR(no - APXS refers to an old version of Apache

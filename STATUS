@@ -21,15 +21,6 @@ Candidate changes:
           1.1?)
       +1: cmpilato
 
-  * r10674
-    Make ./configure behave nicer in the presence of old Apache.
-    Justification:
-      Tiny patch. If a user has an old apache on their system, but didn't ask
-      us to use it, we shouldn't abort ./configure, just don't use it.
-    Votes:
-      +1: maxb, ghudson, sussman
-      +0: bliss
-
   * r10775
     Wrap svn_config_enumerator_t for Perl bindings.
     Justification:
