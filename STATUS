@@ -91,6 +91,13 @@ section for approved changes.)
        +1: ghudson
 
 
+    * r8343
+      Use 'unsigned char secret[64]' instead of 'char secret[64]'.
+      Justification: SVN won't compile on AIX with xlc without this.
+      Votes:
+       +1: kfogel
+
+
     * r8346
       Fix infinite recursion in libsvn_subr/utf.c.
       Votes:
