@@ -103,12 +103,19 @@ svn_wc__ensure_wc (svn_string_t *path,
 /*** Closing commits. ***/
 
 svn_error_t *
-svn_wc_close_commit (svn_string_t *root_dir,
+svn_wc_close_commit (svn_string_t *path,
                      svn_vernum_t new_version,
                      apr_pool_t *pool)
 {
-  /* kff todo: walk down from root, updating adm areas with the
-     version number of the successful commit. */ 
+  svn_error_t *err;
+
+  err = svn_wc__log_commit (path, new_version, pool);
+  if (err)
+    return err;
+
+  err = svn_wc__cleanup (path, pool);
+  if (err)
+    return err;
 
   return SVN_NO_ERROR;
 }
