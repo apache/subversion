@@ -503,7 +503,7 @@ svn_cl__log (apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX (targets, 0, const char *);
 
       /* If the first target is a URL, then we default to HEAD:1.
-         Otherwise, the default is BASE:1. */
+         Otherwise, the default is BASE:1 since WC@HEAD may not exist. */
       if (svn_path_is_url (target))
         opt_state->start_revision.kind = svn_opt_revision_head;
       else
