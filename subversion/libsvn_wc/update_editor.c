@@ -596,9 +596,10 @@ add_directory (const char *path,
          optimization, and actually copy one part of the wc to another.
          Then it will recursively "normalize" all the ancestry in the
          copied tree.  Someday! */      
-      return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                                "copyfrom args not yet supported",
-                                pb->path->data);
+      return svn_error_createf
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+         "failed to add dir`%s': copyfrom args not yet supported",
+         pb->path->data);
     }
   else  /* ...or we got invalid copyfrom args. */
     {
@@ -877,14 +878,14 @@ add_or_open_file (const char *path,
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
        "Can't add '%s':\n object of same name already exists in '%s'",
-       fb->name, pb->path->data);
+       fb->name->data, pb->path->data);
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, subpool,
                               "trying to open non-versioned file "
                               "%s in directory %s",
-                              fb->name, pb->path->data);
+                              fb->name->data, pb->path->data);
   
         
   /* Make sure we've got a working copy to put the file in. */
