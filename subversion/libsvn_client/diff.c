@@ -677,13 +677,13 @@ do_merge (svn_wc_notify_func_t notify_func,
   svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
                          new_diff_editor, new_diff_edit_baton, pool);
   
-  SVN_ERR (ra_lib->do_switch (session,
-                              &reporter, &report_baton,
-                              end_revnum,
-                              NULL,
-                              recurse,
-                              URL2,
-                              diff_editor, diff_edit_baton));
+  SVN_ERR (ra_lib->do_diff (session,
+                            &reporter, &report_baton,
+                            end_revnum,
+                            NULL,
+                            recurse,
+                            URL2,
+                            diff_editor, diff_edit_baton));
   
   SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
   
@@ -1112,13 +1112,13 @@ do_diff (const apr_array_header_t *options,
                              new_diff_editor, new_diff_edit_baton, pool);
 
       /* We want to switch our txn into URL2 */
-      SVN_ERR (ra_lib->do_switch (session,
-                                  &reporter, &report_baton,
-                                  end_revnum,
-                                  target1,
-                                  recurse,
-                                  URL2,
-                                  diff_editor, diff_edit_baton));      
+      SVN_ERR (ra_lib->do_diff (session,
+                                &reporter, &report_baton,
+                                end_revnum,
+                                target1,
+                                recurse,
+                                URL2,
+                                diff_editor, diff_edit_baton));      
 
       SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
       SVN_ERR (reporter->finish_report (report_baton));

@@ -1923,6 +1923,7 @@ make_reporter (void *session_baton,
                const char *target,
                const char *dst_path,
                svn_boolean_t recurse,
+               svn_boolean_t resource_walk,
                const svn_delta_edit_fns_t *editor,
                void *edit_baton,
                svn_boolean_t fetch_content)
@@ -2024,7 +2025,19 @@ make_reporter (void *session_baton,
       status = apr_file_write_full(rb->tmpfile, data, strlen(data), NULL);
       if (status)
         {
-          msg = "Failed writing the target to the report tempfile.";
+          msg = "Failed writing the recurse flag to the report tempfile.";
+          goto error;
+        }
+    }
+
+  /* If we want a resource walk to occur, note that now. */
+  if (resource_walk)
+    {
+      const char * data = "<S:resource-walk>yes</S:resource-walk>";
+      status = apr_file_write_full(rb->tmpfile, data, strlen(data), NULL);
+      if (status)
+        {
+          msg = "Failed writing the resource-walk flag to the report tempfile.";
           goto error;
         }
     }
@@ -2056,6 +2069,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         update_target,
                         NULL,
                         recurse,
+                        FALSE,
                         wc_update,
                         wc_update_baton,
                         TRUE); /* fetch_content */
@@ -2077,6 +2091,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         status_target,
                         NULL,
                         recurse,
+                        FALSE,
                         wc_status,
                         wc_status_baton,
                         FALSE); /* fetch_content */
@@ -2100,10 +2115,36 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         update_target,
                         switch_url,
                         recurse,
+                        TRUE,
                         wc_update,
                         wc_update_baton,
                         TRUE); /* fetch_content */
 }
+
+
+svn_error_t * svn_ra_dav__do_diff(void *session_baton,
+                                  const svn_ra_reporter_t **reporter,
+                                  void **report_baton,
+                                  svn_revnum_t revision,
+                                  const char *diff_target,
+                                  svn_boolean_t recurse,
+                                  const char *versus_url,
+                                  const svn_delta_edit_fns_t *wc_diff,
+                                  void *wc_diff_baton)
+{
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        revision,
+                        diff_target,
+                        versus_url,
+                        recurse,
+                        FALSE,
+                        wc_diff,
+                        wc_diff_baton,
+                        TRUE); /* fetch_content */
+}
+
 
 
 
