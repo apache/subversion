@@ -459,7 +459,8 @@ write_handler (void *baton,
   db->subpool = svn_pool_create (db->pool);
   p += newlen;
   remaining = db->buffer->data + db->buffer->len - (const char *) p;
-  db->buffer = svn_stringbuf_ncreate ((const char *) p, remaining, db->subpool);
+  db->buffer = 
+    svn_stringbuf_ncreate ((const char *) p, remaining, db->subpool);
 
   /* Remember the offset and length of the source view for next time.  */
   db->last_sview_offset = sview_offset;
