@@ -201,6 +201,28 @@ def dump_quiet(sbox):
     'STDERR', [], errput):
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+
+def dump_head(sbox):
+  "test 'svnadmin dump -r 0:HEAD' on modified child of copied directory"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  Q_path = os.path.join(wc_dir, 'A', 'Q')
+  svntest.main.run_svn(None, 'cp', B_path, Q_path)
+  svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
+  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
+
+  output, errput = svntest.main.run_svnadmin("dump", "-r", "0:HEAD", repo_dir)
+  if svntest.actions.compare_and_display_lines(
+    "Output of 'svnadmin dump' is unexpected.",
+    'STDERR', ["* Dumped revision 0.\n",
+               "* Dumped revision 1.\n",
+               "* Dumped revision 2.\n"], errput):
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -214,6 +236,7 @@ test_list = [ None,
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,
+              dump_head,
              ]
 
 if __name__ == '__main__':

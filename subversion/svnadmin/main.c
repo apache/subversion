@@ -292,11 +292,15 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* ### We only handle revision numbers right now, not dates. */
   if (opt_state->start_revision.kind == svn_opt_revision_number)
     lower = opt_state->start_revision.value.number;
+  else if (opt_state->start_revision.kind == svn_opt_revision_head)
+    svn_fs_youngest_rev (&lower, fs, pool);
   else
     lower = SVN_INVALID_REVNUM;
 
   if (opt_state->end_revision.kind == svn_opt_revision_number)
     upper = opt_state->end_revision.value.number;
+  else if (opt_state->end_revision.kind == svn_opt_revision_head)
+    svn_fs_youngest_rev (&upper, fs, pool);
   else
     upper = SVN_INVALID_REVNUM;
 
