@@ -630,9 +630,15 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */
 
-  /* Read the repository's uuid. */
+  /* Read the repository's uuid and root URL. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c", &conn->uuid,
                                        &conn->repos_root));
+  /* We should check that the returned string is a prefix of url, since that's
+     the API guarantee, but this isn't true for 1.0 servers.  Checking the
+     length prevents client crashes. */
+  if (strlen(conn->repos_root) > strlen(url))
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("impossibly long repository root from server"));
 
   *baton = sess;
   return SVN_NO_ERROR;
