@@ -31,7 +31,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
+#define SVN_XML_NAMESPACE "svn:"
 
 /* Used as style argument to svn_xml_make_open_tag() and friends. */
 enum svn_xml_open_tag_style {

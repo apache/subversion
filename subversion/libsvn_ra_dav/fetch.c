@@ -44,7 +44,7 @@
 static const ne_propname starting_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
-  { "SVN:", "baseline-relative-path" },
+  { SVN_PROP_PREFIX, "baseline-relative-path" },
   { "DAV:", "resourcetype" },
   { NULL }
 };
@@ -237,7 +237,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
   struct uri parsed_url;
   apr_hash_index_t *hi;
 
-  /* Fetch all properties so we can snarf ones out of the SVN:custom
+  /* Fetch all properties so we can snarf ones out of the svn:custom
    * namspace. */
   SVN_ERR( svn_ra_dav__get_props(&dirents, ras, url, NE_DEPTH_ONE, NULL,
                                  NULL /* allprop */, pool) );
@@ -414,7 +414,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                                         pool) );
 
   /* fetch the DAV:version-controlled-configuration, and the
-     SVN:baseline-relative-path properties from the session root URL */
+     svn:baseline-relative-path properties from the session root URL */
 
   SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, ras->root.path,
                                           NULL, starting_props, pool) );

@@ -72,7 +72,8 @@ static const struct ne_xml_elm neon_descriptions[] =
   { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
 
   /* SVN elements */
-  { "SVN:", "baseline-relative-path", ELEM_baseline_relpath, NE_XML_CDATA },
+  { SVN_PROP_PREFIX, "baseline-relative-path", ELEM_baseline_relpath,
+    NE_XML_CDATA },
 
   { NULL }
 };
