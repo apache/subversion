@@ -1475,6 +1475,26 @@ def wc_to_wc_copy_deleted(sbox):
                                          None, None, None, None, None,
                                          wc_dir)
 
+#----------------------------------------------------------------------
+# Test for copy into a non-existent URL path 
+def url_to_non_existent_url_path(sbox):
+  "svn cp src-URL non-existent-URL-path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dirURL1  =  svntest.main.current_repo_url + "/A/B/E"
+  dirURL2  =  svntest.main.current_repo_url + "/G/C/E/I"
+
+  # Expect failure on 'svn cp SRC DST' where one or more ancestor
+  # directories of DST do not exist
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'cp', dirURL1, dirURL2,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'fooogle')
+
+
 ########################################################################
 # Run the tests
 
@@ -1505,6 +1525,7 @@ test_list = [ None,
               repos_to_wc_1634,
               double_uri_escaping_1814,
               wc_to_wc_copy_deleted,
+              url_to_non_existent_url_path,
              ]
 
 if __name__ == '__main__':

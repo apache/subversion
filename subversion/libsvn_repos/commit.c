@@ -296,11 +296,13 @@ open_directory (const char *path,
   svn_node_kind_t kind;
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
-  /* Check PATH in our transaction.  Make sure it does not exist,
-     else return an out-of-dateness error. */
+  /* Check PATH in our transaction.  If it does not exist,
+     return a 'Path not present' error. */
   SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
   if (kind == svn_node_none)
-    return out_of_date (full_path, eb->txn_name);
+    return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                              _("Path '%s' not present"),
+                              path);
 
   /* Build a new dir baton for this directory */
   new_dirb = apr_pcalloc (pool, sizeof (*new_dirb));
