@@ -1066,9 +1066,9 @@ def commit_uri_unsafe(sbox):
 
   # Note: on Windows, files can't have angle brackets in them, so we
   # don't tests that case.
-  if svntest.main.windows:
-    angle_name = '$angle$'
-    nasty_name = '#![]{}()$$%'
+  if svntest.main.windows or sys.platform == 'cygwin':
+    angle_name = '_angle_'
+    nasty_name = '#![]{}()__%'
     tab_name   = 'tab-path'
   else:
     angle_name = '<angle>'
