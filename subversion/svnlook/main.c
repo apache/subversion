@@ -16,6 +16,7 @@
  * ====================================================================
  */
 
+#include <assert.h>
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
@@ -546,6 +547,81 @@ dump_contents (apr_file_t *fh,
 }
 
 
+/* Prepare temporary files *TMPFILE1 and *TMPFILE2 for diffing
+   PATH1@ROOT1 versus PATH2@ROOT2.  If either ROOT1 or ROOT2 is NULL,
+   the temporary file for its path/root will be an empty one.
+   Otherwise, its temporary file will contain the contents of that
+   path/root in the repository.
+
+   An exception to this is when either path/root has an svn:mime-type
+   property set on it which indicates that the file contains
+   non-textual data -- in this case, the *IS_BINARY flag is set and no
+   temporary files are created.
+
+   Use POOL for all that allocation goodness. */
+static svn_error_t *
+prepare_tmpfiles (const char **tmpfile1,
+                  const char **tmpfile2,
+                  svn_boolean_t *is_binary,
+                  svn_fs_root_t *root1,
+                  const char *path1,
+                  svn_fs_root_t *root2,
+                  const char *path2,
+                  apr_pool_t *pool)
+{
+  svn_string_t *mimetype;
+  apr_file_t *fh;
+
+  /* Init the return values. */
+  *tmpfile1 = NULL;
+  *tmpfile2 = NULL;
+  *is_binary = FALSE;
+
+  assert (path1 && path2);
+
+  /* Check for binary mimetypes.  If either file has a binary
+     mimetype, get outta here.  */
+  if (root1)
+    {
+      SVN_ERR (svn_fs_node_prop (&mimetype, root1, path1, 
+                                 SVN_PROP_MIME_TYPE, pool));
+      if (mimetype && svn_mime_type_is_binary (mimetype->data))
+        {
+          *is_binary = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+  if (root2)
+    {
+      SVN_ERR (svn_fs_node_prop (&mimetype, root2, path2, 
+                                 SVN_PROP_MIME_TYPE, pool));
+      if (mimetype && svn_mime_type_is_binary (mimetype->data))
+        {
+          *is_binary = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Now, prepare the two temporary files, each of which will either
+     be empty, or will have real contents.  The first file we will
+     make in our temporary directory. */
+  *tmpfile2 = svn_path_join (SVNLOOK_TMPDIR, path2, pool);
+  SVN_ERR (open_writable_binary_file (&fh, *tmpfile2, pool));
+  if (root2)
+    SVN_ERR (dump_contents (fh, root2, path2, pool));
+  apr_file_close (fh);
+
+  /* The second file is constructed from the first one's path. */
+  SVN_ERR (svn_io_open_unique_file (&fh, tmpfile1, *tmpfile2, 
+                                    NULL, FALSE, pool));
+  if (root1)
+    SVN_ERR (dump_contents (fh, root1, path1, pool));
+  apr_file_close (fh);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Generate a diff label for PATH in ROOT, allocating in POOL. */
 static const char *
 generate_label (svn_fs_root_t *root,
@@ -579,8 +655,9 @@ print_diff_tree (svn_fs_root_t *root,
                  apr_pool_t *pool)
 {
   const char *orig_path = NULL, *new_path = NULL, *path_native;
-  apr_file_t *fh1, *fh2;
+  svn_boolean_t do_diff = FALSE;
   svn_boolean_t is_copy = FALSE;
+  svn_boolean_t binary = FALSE;
 
   if (! node)
     return SVN_NO_ERROR;
@@ -620,6 +697,11 @@ print_diff_tree (svn_fs_root_t *root,
     {
       /* Here's the generalized way we do our diffs:
 
+         - First, we'll check for svn:mime-type properties on the old
+           and new files.  If either has such a property, and it
+           represents a binary type, we won't actually be doing a real
+           diff.
+           
          - First, dump the contents of the new version of the file
            into the svnlook temporary directory, building out the
            actual directories that need to be created in order to
@@ -632,7 +714,7 @@ print_diff_tree (svn_fs_root_t *root,
            new version of the file there in case something actually
            versioned has a name that looks like one of our unique
            identifiers).
-           
+
          - Next, we run 'diff', passing the repository path as the
            label.  
 
@@ -641,44 +723,25 @@ print_diff_tree (svn_fs_root_t *root,
            handling has been finished).  */
       if ((node->action == 'R') && (node->text_mod))
         {
-          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
-          SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
-          SVN_ERR (dump_contents (fh1, root, path, pool));
-          apr_file_close (fh1);
-
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
-                                            NULL, FALSE, pool));
-          SVN_ERR (dump_contents
-                   (fh2, base_root, base_path, pool));
-          apr_file_close (fh2);
+          do_diff = TRUE;
+          SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
+                                     base_root, base_path, root, path, pool));
         }
       if ((node->action == 'A') && (node->text_mod))
         {
-          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
-          SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
-          SVN_ERR (dump_contents (fh1, root, path, pool));
-          apr_file_close (fh1);
-
-          /* Create an empty file. */
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
-                                            NULL, FALSE, pool));
-          apr_file_close (fh2);
+          do_diff = TRUE;
+          SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
+                                     NULL, base_path, root, path, pool));
         }
       if (node->action == 'D')
         {
-          new_path = svn_path_join (SVNLOOK_TMPDIR, path, pool);
-          SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
-          apr_file_close (fh1);
-
-          SVN_ERR (svn_io_open_unique_file (&fh2, &orig_path, new_path,
-                                            NULL, FALSE, pool));
-          SVN_ERR (dump_contents
-                   (fh2, base_root, base_path, pool));
-          apr_file_close (fh2);
+          do_diff = TRUE;
+          SVN_ERR (prepare_tmpfiles (&orig_path, &new_path, &binary,
+                                     base_root, base_path, NULL, path, pool));
         }
     }
 
-  if (orig_path && new_path)
+  if (do_diff)
     {
       if (! is_copy)
         printf ("%s: %s\n", 
@@ -690,26 +753,10 @@ print_diff_tree (svn_fs_root_t *root,
       if ((! no_diff_deleted) || (node->action != 'D'))
         {
           svn_diff_t *diff;
-          svn_string_t *mimetype;
-          svn_boolean_t binary = FALSE;
 
           printf ("===========================================================\
 ===================\n");
           fflush (stdout);
-
-          /* Read the mime-type property of our two diffy items, and
-             if either indicates binariness, don't do the diff. */
-          SVN_ERR (svn_fs_node_prop (&mimetype, root, path,
-                                     SVN_PROP_MIME_TYPE, pool));
-          if (mimetype && svn_mime_type_is_binary (mimetype->data))
-            binary = TRUE;
-          if (! binary)
-            {
-              SVN_ERR (svn_fs_node_prop (&mimetype, base_root, base_path,
-                                         SVN_PROP_MIME_TYPE, pool));
-              if (mimetype && svn_mime_type_is_binary (mimetype->data))
-                binary = TRUE;
-            }
 
           if (binary)
             {
