@@ -182,7 +182,9 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
    batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
    AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.
 
-   PATH is where the commit will begin in the working copy.
+   TARGETS is an array of svn_string_t * paths to commit.  They need
+   not be canonicalized nor condensed; this function will take care of
+   that.
 
    If XML_DST is NULL, then the commit will write to a repository, and
    the REVISION argument is ignored.
@@ -198,7 +200,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
-                   svn_string_t *path,
+                   const apr_array_header_t *targets,
                    svn_string_t *log_msg,
                    svn_string_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */

@@ -142,21 +142,44 @@ svn_path_split_if_file(svn_string_t *path,
                        svn_string_t **pfile,
                        apr_pool_t *pool);
 
-/* Find the common part of all the paths in TARGETS.  The elements in 
-   TARGETS must be existing files or directories, in local path style.
-   PBASEDIR will be set to the absolute path that is common to all of the
-   items.  Additionally, if PCONDENSED_TARGETS is non-null, it will be 
-   set to a list of targets relative to *PBASEDIR, with no overlapping
-   targets. If there are no items in TARGETS, *PBASENAME and (if applicable)
-   *PCONDENSED_TARGETS will be NULL.  If an item in TARGETS is equal to
-   *PBASENAME, it will be returned as an empty string.
-
-    NOTE: There is no guarantee that *PBASENAME is within a working copy. */
+/* Find the common prefix of the paths in TARGETS, and remove redundancies.
+ *
+ * The elements in TARGETS must be existing files or directories, in
+ * local path style.
+ *
+ * If there are multiple targets, or exactly one target and it's not a
+ * directory, then 
+ *
+ *   - *PBASENAME is set to the absolute path of the common parent
+ *     directory of all of those targets, and
+ *
+ *   - If PCONDENSED_TARGETS is non-null, *PCONDENSED_TARGETS is set
+ *     to an array of targets relative to *PBASENAME, with
+ *     redundancies removed (meaning that none of these targets will
+ *     be the same as, nor have an ancestor/descendant relationship
+ *     with, any of the other targets; nor will any of them be the
+ *     same as *PBASENAME).  Else if PCONDENSED_TARGETS is null, it is
+ *     left untouched.
+ *
+ * Else if there is exactly one directory target, then
+ *
+ *   - *PBASENAME is set to that directory, and
+ *
+ *   - If PCONDENSED_TARGETS is non-null, *PCONDENSED_TARGETS is set
+ *     to an array containing zero elements.  Else if
+ *     PCONDENSED_TARGETS is null, it is left untouched.
+ *
+ * If there are no items in TARGETS, *PBASENAME and (if applicable)
+ * *PCONDENSED_TARGETS will be NULL.
+ *
+ * NOTE: There is no guarantee that *PBASENAME is within a working
+ * copy.
+ */
 svn_error_t *
-svn_path_condense_targets(svn_string_t **pbasedir,
-                          apr_array_header_t **pcondensed_targets,
-                          const apr_array_header_t *targets,
-                          apr_pool_t *pool);
+svn_path_condense_targets (svn_string_t **pbasename,
+                           apr_array_header_t **pcondensed_targets,
+                           const apr_array_header_t *targets,
+                           apr_pool_t *pool);
 
 /* Decompose PATH into an array of svn_string_t components, allocated
    in POOL.  STYLE indicates the dir separator to split the string on.
