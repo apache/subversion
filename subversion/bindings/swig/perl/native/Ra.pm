@@ -78,8 +78,7 @@ sub AUTOLOAD {
     die "no such method $AUTOLOAD"
 	unless $self->can("plugin_invoke_$AUTOLOAD");
 
-    my @ret = &{"plugin_invoke_$AUTOLOAD"}(@{$self}{qw/ra session/}, @_,
-					   $self->{pool});
+    my @ret = &{"plugin_invoke_$AUTOLOAD"}(@{$self}{qw/ra session/}, @_);
 
     return $ret[0] unless $#ret;
 
