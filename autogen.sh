@@ -2,17 +2,6 @@
 
 ### Run this to produce everything needed for configuration. ###
 
-# Ensure some permissions for executables used by this script
-for execfile in gen-make.py \
-                dist.sh \
-                build/buildcheck.sh \
-                build/getversion.py \
-                build/PrintPath \
-                ac-helpers/get-neon-ver.sh \
-                ac-helpers/install-sh; do
-  chmod +x $execfile                
-done
-
 
 # Run tests to ensure that our build requirements are met
 VERSION_CHECK=""
