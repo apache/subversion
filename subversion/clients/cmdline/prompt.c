@@ -49,6 +49,15 @@ static apr_status_t wait_for_input (apr_file_t *f,
   apr_pollfd_t pollset;
   int srv, n;
 
+/* APR specs say things that are unimplemented are supposed to return
+ * APR_ENOTIMPL.  But when trying to use APR_POLL_FILE with apr_poll
+ * on Windows it returns APR_EBADF instead.  So just return APR_ENOTIMPL
+ * ourselves here.
+ */
+#ifdef WIN32
+  return APR_ENOTIMPL;
+#endif /* WIN32 */
+  
   pollset.desc_type = APR_POLL_FILE;
   pollset.desc.f = f;
   pollset.p = pool;
