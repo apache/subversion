@@ -230,8 +230,7 @@ path_driver_cb_func (void **dir_baton,
           SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool, 
                                             &delta_handler, 
                                             &delta_handler_baton));
-          if (delta_handler)
-            SVN_ERR (delta_handler (NULL, delta_handler_baton));
+          SVN_ERR (delta_handler (NULL, delta_handler_baton));
         }
     }
 
