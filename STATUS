@@ -104,12 +104,12 @@ Candidate changes:
     Votes:
       +1: sussman
 
-  * r8539
-    Fix shebang line in propchange-email.pl.in.
-    Justification:  propchange-email.pl doesn't run at all!
+  * r8539, r8540
+    Fix shebang line in three Perl scripts in tools.
+    Justification:  They won't run at all!
     Notes: 
     Votes:
-      +1: sussman
+      +1: sussman, blair
 
   * r8564
     Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
