@@ -106,17 +106,77 @@ entry consists of:
    New Name           (if any)
    New Version        (only if other than repository latest)
 
-First of all, the snapshot must be consistent with itself -- if it
-claims that two files have been renamed to the same name, or something
-equally ridiculous, then the server simply rejects it out of hand.
 
-Assuming the snapshot makes sense, the server
+How the server uses the snapshot to perform a pre-commit check.
+===============================================================
 
-fooo working here
+First, the server checks the snapshot for internal consistency -- if
+the snapshot claims that two files have been renamed to the same name,
+or something equally ridiculous, it is rejected out of hand.
+
+Assuming the snapshot is consistent, the server checks whether each
+entity in it has changed in the repository since the given base
+version.  Direct changes mean the pre-commit check fails
+automatically.  Indirect changes cause failure iff they mention the
+same child name.
+
+(See the section "Conflict/Merge Tables" farther down for a more
+formal accounting of these rules.)
+
+When a pre-commit check fails, the server doesn't just send back a
+terse denial; it tells the client exactly which entities are out of
+date, so the client can update efficiently.
+
+If the check succeeds, the server sends back a token (unique among all
+other pending commits), which the client will use to complete the
+commit.
 
 
-C = conflict
-M = mergeable
+How the client completes the commit.
+------------------------------------
+
+The client sends back the success token it received from the server,
+along with a full delta describing the changes.  (In practice,
+probably a filled-in version of the skelta it sent previously.)  The
+server applies these changes, creating a new version, and sends a
+success ACK back to the client.  The client-side entities involved in
+the commit are, for that instant at least, up-to-date.
+
+
+How the server uses the snapshot to generate an update delta.
+=============================================================
+
+
+
+
+
+How the client applies an update delta.
+---------------------------------------
+
+
+
+Conflict/Merge Tables.
+======================
+
+The tables below describe how client and server behave in various
+change scenarios.  Each intersection describes what happens when one
+type of change meets another change on the same entity.  Fortunately,
+the principles involved are symmetrical, so it doesn't matter which
+side is the working copy and which is the repository.
+
+   Table 1:   Direct changes   <==>   Indirect changes
+   Table 2:   Indirect changes  <==>  Indirect changes
+   Table 3:   Direct changes   <==>   Direct changes
+
+In each cell, "C" means "Conflict" and "M" means "Mergeable".  
+
+todo: run through a couple of cells from both sides, to show how these
+scenarios play out in real-life.
+
+todo: hmmm, vet for things listed as "merge" below that really mean "a
+conflict, both sides of which can be displayed conveniently in the
+working copy".  There are a few of these.
+
 
           Table 1: Direct changes against indirect changes
           ************************************************
@@ -202,28 +262,6 @@ M = mergeable
 
 
 [Not clear if `rename' shoud be a separate operation...]
-
-
-
-
-How the server uses the snapshot to perform a pre-commit check.
-===============================================================
-
-
-
-How the client completes the commit.
-====================================
-
-
-
-How the server uses the snapshot to generate an update delta.
-=============================================================
-
-
-
-How the client applies an update delta.
-=======================================
-
 
 
 
