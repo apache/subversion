@@ -396,6 +396,8 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
   int i;
   svn_error_t *err;
   svn_boolean_t is_dir;
+  const char * str;
+  apr_off_t len;
   
   /* Zillions of pathnames to compute!  yeargh!  */
   svn_stringbuf_t *base_propfile_path, *local_propfile_path;
@@ -593,61 +595,21 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
   /* Compute pathnames for the "mv" log entries.  Notice that these
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
      that each .svn subdir remains separable when executing run_log().  */
-  if (is_dir)
-    {
-      tmp_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                        1, /* tmp */
-                                        pool,
-                                        SVN_WC__ADM_DIR_PROP_BASE,
-                                        NULL);
-      real_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                         0, /* no tmp */
-                                         pool,
-                                         SVN_WC__ADM_DIR_PROP_BASE,
-                                         NULL);
-      
-      tmp_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                    1, /* tmp */
-                                    pool,
-                                    SVN_WC__ADM_DIR_PROPS,
-                                    NULL);
-      real_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                     0, /* no tmp */
-                                     pool,
-                                     SVN_WC__ADM_DIR_PROPS,
-                                     NULL);
-    }
-  else 
-    {
-      tmp_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                        1, /* tmp */
-                                        pool,
-                                        SVN_WC__ADM_PROP_BASE,
-                                        name->data,
-                                        NULL);
-      svn_stringbuf_appendcstr(tmp_prop_base, SVN_WC__BASE_EXT);
-      real_prop_base = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                         0, /* no tmp */
-                                         pool,
-                                         SVN_WC__ADM_PROP_BASE,
-                                         name->data,
-                                         NULL);
-      svn_stringbuf_appendcstr(real_prop_base, SVN_WC__BASE_EXT);
-      
-      tmp_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                    1, /* tmp */
-                                    pool,
-                                    SVN_WC__ADM_PROPS,
-                                    name->data,
-                                    NULL);
-      real_props = svn_wc__adm_path (svn_stringbuf_create ("", pool),
-                                     0, /* no tmp */
-                                     pool,
-                                     SVN_WC__ADM_PROPS,
-                                     name->data,
-                                     NULL);
-    }
-  
+  str = strstr (base_prop_tmp_path->data, SVN_WC_ADM_DIR_NAME);
+  len = base_prop_tmp_path->data + base_prop_tmp_path->len - str;
+  tmp_prop_base = svn_stringbuf_ncreate (str, len, pool);
+
+  str = strstr (base_propfile_path->data, SVN_WC_ADM_DIR_NAME);
+  len = base_propfile_path->data + base_propfile_path->len - str;
+  real_prop_base = svn_stringbuf_ncreate (str, len, pool);
+
+  str = strstr (local_prop_tmp_path->data, SVN_WC_ADM_DIR_NAME);
+  len = local_prop_tmp_path->data + local_prop_tmp_path->len - str;
+  tmp_props = svn_stringbuf_ncreate (str, len, pool);
+
+  str = strstr (local_propfile_path->data, SVN_WC_ADM_DIR_NAME);
+  len = local_propfile_path->data + local_propfile_path->len - str;
+  real_props = svn_stringbuf_ncreate (str, len, pool);
   
   /* Write log entry to move pristine tmp copy to real pristine area. */
   svn_xml_make_open_tag (entry_accum,
