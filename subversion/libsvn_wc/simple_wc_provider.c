@@ -146,20 +146,12 @@ simple_wc_save_creds (svn_boolean_t *saved,
   svn_auth_cred_simple_t *creds = credentials;
   simple_wc_provider_baton_t *pb = provider_baton;
 
-  return svn_wc_save_simple_creds (saved, pb->base_dir, pb->base_access, 
-                                   creds, pool);
+  *saved = FALSE;
+  if (pb->base_dir)
+    SVN_ERR (svn_wc_save_simple_creds (saved, pb->base_dir, pb->base_access, 
+                                       creds, pool));
+  return SVN_NO_ERROR;
 }
-
-
-
-/* The provider. */
-static const svn_auth_provider_t simple_wc_provider = 
-  {
-    SVN_AUTH_CRED_SIMPLE,  /* username/passwd creds */
-    simple_wc_first_creds,
-    NULL,                  /* do, or do not.  there is no retry. */
-    simple_wc_save_creds
-  };
 
 
 /* Public API */
@@ -172,12 +164,19 @@ svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
                                const char *default_password,
                                apr_pool_t *pool)
 {
-  simple_wc_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
+  simple_wc_provider_baton_t *pb = apr_pcalloc (pool, sizeof (*pb));
+  svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
+
+  prov->cred_kind = SVN_AUTH_CRED_SIMPLE;
+  prov->first_credentials = simple_wc_first_creds;
+  prov->next_credentials = NULL; /* no retry. */
+  prov->save_credentials = wc_dir ? simple_wc_save_creds : NULL;
+
   pb->base_dir = apr_pstrdup (pool, wc_dir);
   pb->base_access = wc_dir_access;
   pb->default_username = apr_pstrdup (pool, default_username);
   pb->default_password = apr_pstrdup (pool, default_password);
 
-  *provider = &simple_wc_provider;
+  *provider = prov;
   *provider_baton = pb;
 }
