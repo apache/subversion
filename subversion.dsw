@@ -291,7 +291,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_deltaparse"=.\subversion\libsvn_delta\tests\deltaparse_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_delta_deltaparse"=.\subversion\tests\libsvn_delta\deltaparse_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -306,7 +306,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_random"=.\subversion\libsvn_delta\tests\random_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_delta_random"=.\subversion\tests\libsvn_delta\random_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -321,7 +321,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_svndiff"=.\subversion\libsvn_delta\tests\svndiff_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_delta_svndiff"=.\subversion\tests\libsvn_delta\svndiff_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -336,7 +336,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_vdelta"=.\subversion\libsvn_delta\tests\vdelta_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_delta_vdelta"=.\subversion\tests\libsvn_delta\vdelta_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -351,7 +351,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_xml_output"=.\subversion\libsvn_delta\tests\xml_output_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_delta_xml_output"=.\subversion\tests\libsvn_delta\xml_output_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -366,7 +366,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_fs_fs"=.\subversion\libsvn_fs\tests\fs_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_fs_fs"=.\subversion\tests\libsvn_fs\fs_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -381,7 +381,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_fs_skel"=.\subversion\libsvn_fs\tests\skel_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_fs_skel"=.\subversion\tests\libsvn_fs\skel_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -396,7 +396,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_subr_hashdump"=.\subversion\libsvn_subr\tests\hashdump_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_subr_hashdump"=.\subversion\tests\libsvn_subr\hashdump_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -411,7 +411,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_subr_string"=.\subversion\libsvn_subr\tests\string_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_subr_string"=.\subversion\tests\libsvn_subr\string_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -426,7 +426,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_wc_checkout"=.\subversion\libsvn_wc\tests\checkout_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_wc_checkout"=.\subversion\tests\libsvn_wc\checkout_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -441,7 +441,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_wc_commit"=.\subversion\libsvn_wc\tests\commit_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_wc_commit"=.\subversion\tests\libsvn_wc\commit_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
