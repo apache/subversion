@@ -92,25 +92,29 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
      by a not-yet-existant APR function.  See issue #929. */
 
      
-  /* Try to find an editor in the environment. */
+  /* Look for the Subversion specific environment variable. */
   editor = getenv ("SVN_EDITOR");
+
+  /* If not found then fall back on the config file. */
+  if (! editor)
+    {
+      cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
+                                   APR_HASH_KEY_STRING) : NULL;
+      svn_config_get (cfg, &editor, SVN_CONFIG_SECTION_HELPERS, 
+                      SVN_CONFIG_OPTION_EDITOR_CMD, NULL);
+    }
+
+  /* If not found yet then try general purpose environment variables. */
   if (! editor)
     editor = getenv ("VISUAL");
   if (! editor)
     editor = getenv ("EDITOR");
 
 #ifdef SVN_CLIENT_EDITOR
+  /* If still not found then fall back on the hard-coded default. */
   if (! editor)
     editor = SVN_CLIENT_EDITOR;
 #endif
-
-  /* Now, override this editor choice with a selection from our config
-     file (using what we have found thus far as the default in case no
-     config option exists). */
-  cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
-                               APR_HASH_KEY_STRING) : NULL;
-  svn_config_get (cfg, &editor, SVN_CONFIG_SECTION_HELPERS, 
-                  SVN_CONFIG_OPTION_EDITOR_CMD, editor);
 
   /* Abort if there is no editor specified */
   if (! editor)
