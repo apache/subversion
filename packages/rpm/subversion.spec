@@ -1,4 +1,4 @@
-%define apache_version 2.0.36-0.1
+%define apache_version 2.0.36-0.2
 %define neon_version 0.19.2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
@@ -244,4 +244,4 @@ rm -rf $RPM_BUILD_ROOT
 
 %files server
 %defattr(-,root,root)
-/usr/lib/apache/libmod_dav_svn.*
+/usr/lib/apache/mod_dav_svn.*
