@@ -42,7 +42,8 @@ struct notify_baton
   svn_boolean_t is_export;
   svn_boolean_t suppress_final_line;
   svn_boolean_t sent_first_txdelta;
-  apr_pool_t *pool;
+  apr_pool_t *pool; /* this pool is cleared after every notification,
+                       so don't keep anything here! */
 };
 
 
@@ -59,20 +60,16 @@ notify (void *baton,
 {
   struct notify_baton *nb = baton;
   char statchar_buf[3] = "  ";
-
-  /* the pool (BATON) is typically the global pool; don't keep filling it */
-  apr_pool_t *subpool = svn_pool_create (nb->pool);
-
   const char *path_stdout;
   svn_error_t *err;
 
   err = svn_cmdline_cstring_from_utf8 (&path_stdout,
-                                       svn_path_local_style (path, subpool),
-                                       subpool);
+                                       svn_path_local_style (path, nb->pool),
+                                       nb->pool);
   if (err)
     {
       printf ("WARNING: error decoding UTF-8 for ?\n");
-      svn_pool_destroy (subpool);
+      svn_pool_clear (nb->pool);
       return;
     }
   switch (action)
@@ -248,7 +245,7 @@ notify (void *baton,
       break;
     }
 
-  svn_pool_destroy (subpool);
+  svn_pool_clear (nb->pool);
 }
 
 
@@ -267,7 +264,7 @@ svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
   nb->is_checkout = is_checkout;
   nb->is_export = is_export;
   nb->suppress_final_line = suppress_final_line;
-  nb->pool = pool;
+  nb->pool = svn_pool_create (pool);
 
   *notify_func_p = notify;
   *notify_baton_p = nb;
