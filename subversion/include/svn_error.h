@@ -95,6 +95,9 @@ typedef enum svn_errno_t {
 
   /* Unable to get ancestry for an entry. */
   SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
+  
+  /* Bogus attributes are trying to be merged into an entry */
+  SVN_ERR_WC_ENTRY_BOGUS_MERGE,
 
   /* Working copy is not up-to-date w.r.t. the repository. */
   SVN_ERR_WC_NOT_UP_TO_DATE,

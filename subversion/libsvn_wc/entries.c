@@ -337,7 +337,7 @@ resolve_to_defaults (apr_hash_t *entries, apr_pool_t *pool)
 /* Update an entry's attribute hash according to its structure fields,
    which should always dominate the hash when the two differ. */
 static void
-sync_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
+normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 {
   /* Revision. */
   if (entry->revision != SVN_INVALID_REVNUM)
@@ -602,7 +602,7 @@ svn_wc__entries_write (apr_hash_t *entries,
       /* Get the entry and make sure its attributes are up-to-date. */
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
-      sync_entry (this_entry, pool);
+      normalize_entry (this_entry, pool);
 
       /* Append the entry onto the accumulating string. */
       svn_xml_make_open_tag_hash (&bigstr,
@@ -631,19 +631,26 @@ svn_wc__entries_write (apr_hash_t *entries,
 }
 
 
-/* Create or modify an entry NAME in ENTRIES, using the arguments given.
-   ATTS may be null. */
+/* Update an entry NAME in ENTRIES, according to a set of changes
+   {REVISION, KIND, STATE, TEXT_TIME, PROP_TIME, ATTS}.  ATTS may be
+   null.
+
+   If the entry already exists, the requested changes will be folded
+   (merged) into the entry's existing state.
+
+   If the entry doesn't exist, the entry will be created with exactly
+   those properties described by the set of changes. */
 static void
-stuff_entry (apr_hash_t *entries,
-             svn_string_t *name,
-             svn_revnum_t revision,
-             enum svn_node_kind kind,
-             int state,
-             apr_time_t text_time,
-             apr_time_t prop_time,
-             apr_pool_t *pool,
-             apr_hash_t *atts,
-             va_list ap)
+fold_entry (apr_hash_t *entries,
+            svn_string_t *name,
+            svn_revnum_t revision,
+            enum svn_node_kind kind,
+            int state,
+            apr_time_t text_time,
+            apr_time_t prop_time,
+            apr_pool_t *pool,
+            apr_hash_t *atts,
+            va_list ap)
 {
   apr_hash_index_t *hi;
   struct svn_wc_entry_t *entry
@@ -702,7 +709,7 @@ stuff_entry (apr_hash_t *entries,
   }
 
   /* Make attribute hash reflect the explicit attributes. */
-  sync_entry (entry, pool);
+  normalize_entry (entry, pool);
 
   /* Remove any attributes named for removal. */
   {
@@ -727,107 +734,272 @@ svn_wc__entry_remove (apr_hash_t *entries,
 }
 
 
+
 /*
-   NOTES on svn_wc__entry_merge_sync
-   =================================
+  Our general purpose intelligence module for "interpreting" changes
+  to a single entry.
 
-   There are only two ways to change an entry on disk:
+  Given an entryname NAME in ENTRIES, examine the caller's requested
+  change in *STATE.  Compare against existing state, and possibly
+  modify *STATE (or ENTRIES) so that when merged, it will reflect the
+  caller's original intent.
 
-     1.  Use entry_merge_sync to change a single entry, or 
+  Right now, the interface is simple (only examines "add" and "delete"
+  flag bits), but we can expand later to include other arguments.  */
+static svn_error_t *
+interpret_changes (apr_hash_t *entries,
+                   svn_string_t *name,
+                   int *state,
+                   apr_pool_t *pool)
+{
+  int current_state, new_state;
+  struct svn_wc_entry_t *entry;
 
-     2.  read all entries into a hash (svn_wc_entries_read), modify
-     the entry structures manually, and write them all out again
-     (svn_wc__entries_write).
+  char current_addonly, current_delonly, current_both, current_neither;
+  char new_addonly, new_delonly;
 
-   The wc library is repsonsible for enforcing *correct* logic when
-   manipulating an entry's flags.  In the first case, entry_merge_sync
-   has the power to do this, and this is what we document below.  In
-   the second case, there's nothing the wc lib can do -- so let the
-   tweaker beware!
+  /* If no flags are being changed, GET OUT! */
+  if ( (! (*state & SVN_WC_ENTRY_DELETED))
+       && (! (*state & SVN_WC_ENTRY_ADDED)) )
+    return SVN_NO_ERROR;
 
-   Here we list all of the cases for setting an entry's "add" and
-   "delete" flags, and how merge_sync should behave in each situation:
+  /* Get the entry */
+  entry = apr_hash_get (entries, name->data, name->len);
 
-   [entry doesn't exist]
- 
-      "set add":  create entry, set add flag.
-      "set del":  return error.
+  /* What if the entry doesn't yet exist?  That's ok.  Presumably the
+     fold_entry() routines are being asked to create it. */
+  if (! entry)
+    {
+      if (*state == SVN_WC_ENTRY_ADDED)
+        /* The -only- permissible flag to set, if the entry doesn't
+           yet exist, is the ADD flag. */
+        return SVN_NO_ERROR;
 
-   [entry exists, neither add nor del flag set]
+      else
+        /* Any other flag state is verboten, or at least nonsensical. */
+        return 
+          svn_error_createf 
+          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+           "error: bogus flags (%d) used in creation of entry `%s'",
+           *state, name->data);
+    }
 
-      "set add":  set add flag.
-      "set del":  set del flag.
+  /* For convenience. */
+  current_state = entry->state;
+  new_state = *state;
 
-   [entry has only add flag set]
+  /* If the caller is trying to simultaneously set add and delete,
+     this is an egregious error.  (It's possible to have both flags
+     set at the same time, but *only* because some caller first set
+     the delete flag, then another caller set the add flag later.) */
+  if ((new_state & SVN_WC_ENTRY_DELETED)
+      && (new_state & SVN_WC_ENTRY_ADDED))
+    return 
+      svn_error_createf 
+      (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool, 
+       "error: simultaneous set of add & del flags on `%s'", name->data);
 
-      "set add":  return warning - "entry already marked for addition"
-      "set del":  remove the entry from disk.
-                  (obviously, somebody changed their mind about adding
-                  the entry *before* the commit.)
+  /* All the (remaining) possible current states. */
+  current_addonly = ((current_state & SVN_WC_ENTRY_ADDED)
+                     && (! (current_state & SVN_WC_ENTRY_DELETED)));
+  current_delonly = ((current_state & SVN_WC_ENTRY_DELETED)
+                     && (! (current_state & SVN_WC_ENTRY_ADDED)));
+  current_both = ((current_state & SVN_WC_ENTRY_DELETED)
+                  && (current_state & SVN_WC_ENTRY_ADDED));
+  current_neither = ((! (current_state & SVN_WC_ENTRY_DELETED))
+                     && (! (current_state & SVN_WC_ENTRY_ADDED)));
 
-   [entry has only del flag set]
+  /* All the (remaining) possible proposed states. */
+  new_addonly = ((new_state & SVN_WC_ENTRY_ADDED)
+                 && (! (new_state & SVN_WC_ENTRY_DELETED)));
+  new_delonly = ((new_state & SVN_WC_ENTRY_DELETED)
+                 && (! (new_state & SVN_WC_ENTRY_ADDED)));
+  
 
-      "set add":  set add flag.
-                  (it's ok to have both flags set;  this means that an
-                  old version was removed, and a new version is being
-                  added.  this is the only meaningful interpretation,
-                  and it's what `svn commit' assumes when it sees both
-                  flags set.)
-      "set del":  return warning - "entry already marked for deletion"
+  /* Remaining logic, yum. */
 
-    [entry has BOTH add and del flags set]
+  if (new_addonly)
+    {
+      if (current_addonly || current_both)
+        {
+          /* TODO: generate a friendly warning here someday */
+        }
+    }
+  
+  else if (new_delonly)
+    {
+      if (current_delonly)
+        {
+          /* TODO: generate a friendly warning here someday */
+        }
+      else if (current_addonly)
+        {
+          /* The caller wants to set the delete flag, but entry has
+             nothing but the add flag set.  Obviously, this entry was
+             added and is now being removed before a commit ever
+             happens.  So the logical thing to do is remove the entry
+             completely. */
+          apr_hash_set (entries, name->data, name->len, NULL);
+        }
+      else if (current_both)
+        {
+          /* The caller wants to set the delete flag, but entry
+             already has both add and del flags set -- which means:
 
-      "set add":  return warning - "entry already marked for addition"
-      "set del":  UNSET the add flag.
-                  (this covers the bizarre case of the user doing
+             1. the user deleted an old entry
+             2. the user added a new entry with the same name
+             3. the user reversed decision #2, and now wants to
+                deleted the added file.
+                
+             So the logical thing to do is just make sure that the add
+             flag gets *un*set during the flag merge. */
 
-                         svn delete foo
-                         svn add foo
-                         svn delete foo
+          /* Unset the delete flag, it's irrelevant. */
+          *state &= ~SVN_WC_ENTRY_DELETED;
 
-                   In other words, the user deleted the old foo, added
-                   a new foo, then changed her mind and removed the
-                   new foo again.  The result is that the old foo
-                   should *still* be marked for deletion.)
+          /* Set the add and "clear" flag */
+          *state |= SVN_WC_ENTRY_ADDED;
+          *state |= SVN_WC_ENTRY_CLEAR_NAMED;
 
-      Phew!
+          /* When *state is merged, fold_entry should only unset the
+             add flag now. */
+        }
+    }
+  
+  return SVN_NO_ERROR;
+}
 
- */
 
-svn_error_t *
-svn_wc__entry_merge_sync (svn_string_t *path,
-                          svn_string_t *name,
-                          svn_revnum_t revision,
-                          enum svn_node_kind kind,
-                          int state,
-                          apr_time_t text_time,
-                          apr_time_t prop_time,
-                          apr_pool_t *pool,
-                          apr_hash_t *atts,
-                          ...)
+
+
+/* Shared by __entry_fold_sync() and   __entry_fold_sync_intelligently().
+
+   Loads up an entries file, calls the "logic" module if necessary to
+   transform the requested changes, folds the changes, then syncs
+   entries to disk.  */
+static svn_error_t *
+internal_fold_sync (svn_boolean_t be_intelligent,
+                    svn_string_t *path,
+                    svn_string_t *name,
+                    svn_revnum_t revision,
+                    enum svn_node_kind kind,
+                    int state,
+                    apr_time_t text_time,
+                    apr_time_t prop_time,
+                    apr_pool_t *pool,
+                    apr_hash_t *atts,
+                    va_list ap)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
-  va_list ap;
 
+  /* Load whole entries file */
   err = svn_wc_entries_read (&entries, path, pool);
-  if (err)
-    return err;
+  if (err) return err;
   
   if (name == NULL)
     name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
-  va_start (ap, atts);
-  stuff_entry (entries, name, revision, kind, state, text_time,
-               prop_time, pool, atts, ap);
-  va_end (ap);
+  /* Optional:  -interpret- the changes */
+  if (be_intelligent)
+    {
+      /* Right now, the intelligence module only (possibly) changes
+         the state flags.  */
+      err = interpret_changes (entries, name, &state, pool);
+      if (err) return err;
+    }
+
+  /* Build the entry */
+  fold_entry (entries, name, revision, kind, state, text_time,
+              prop_time, pool, atts, ap);
   
+  /* Write whole entries file */
   err = svn_wc__entries_write (entries, path, pool);
-  if (err)
-    return err;
+  if (err) return err;
 
   return SVN_NO_ERROR;
 }
+
+
+
+/*
+   NOTES on svn_wc__entry_fold_sync functions
+   ==============================================
+
+   There are three ways to change an entry on disk:
+
+     1.  Use entry_fold_sync() to directly merge changes into a single
+         entry
+
+     2.  Use entry_fold_sync_intelligently() to *logically* merge
+         changes into a single entry
+
+     3.  read all entries into a hash with svn_wc_entries_read, modify
+         the entry structures manually, and write them all out again
+         with svn_wc__entries_write.
+
+ */
+
+
+/* The "stupid" version of fold_sync, which simply merges the changes
+   directly into an entry, no questions asked.  */
+svn_error_t *
+svn_wc__entry_fold_sync (svn_string_t *path,
+                         svn_string_t *name,
+                         svn_revnum_t revision,
+                         enum svn_node_kind kind,
+                         int state,
+                         apr_time_t text_time,
+                         apr_time_t prop_time,
+                         apr_pool_t *pool,
+                         apr_hash_t *atts,
+                         ...)
+{
+  svn_error_t *err;
+  va_list ap;
+
+  va_start (ap, atts);
+  err = internal_fold_sync (FALSE,  /* be "stupid" */
+                            path, name, revision, kind, state,
+                            text_time, prop_time, pool, atts, ap);
+  va_end (ap);
+  
+  if (err) return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* The "smart" version of fold_sync, which tries to deduce the
+   caller's intent; may end up folding a different set of changes than
+   what was literally requested.  */
+svn_error_t *
+svn_wc__entry_fold_sync_intelligently (svn_string_t *path,
+                                       svn_string_t *name,
+                                       svn_revnum_t revision,
+                                       enum svn_node_kind kind,
+                                       int state,
+                                       apr_time_t text_time,
+                                       apr_time_t prop_time,
+                                       apr_pool_t *pool,
+                                       apr_hash_t *atts,
+                                       ...)
+{
+  svn_error_t *err;
+  va_list ap;
+
+  va_start (ap, atts);
+  err = internal_fold_sync (TRUE,  /* be "smart" */
+                            path, name, revision, kind, state,
+                            text_time, prop_time, pool, atts, ap);
+  va_end (ap);
+  
+  if (err) return err;
+
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_wc_entry_t *

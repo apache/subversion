@@ -118,16 +118,16 @@ svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
-  err = svn_wc__entry_merge_sync (dir,
-                                  basename,
-                                  SVN_INVALID_REVNUM,
-                                  svn_node_file,
-                                  SVN_WC_ENTRY_DELETED,
-                                  0,
-                                  0,
-                                  pool,
-                                  NULL,
-                                  NULL);
+  err = svn_wc__entry_fold_sync_intelligently (dir,
+                                               basename,
+                                               SVN_INVALID_REVNUM,
+                                               svn_node_file,
+                                               SVN_WC_ENTRY_DELETED,
+                                               0,
+                                               0,
+                                               pool,
+                                               NULL,
+                                               NULL);
   if (err)
     return err;
 
@@ -143,16 +143,16 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
-  err = svn_wc__entry_merge_sync (dir,
-                                  basename,
-                                  0,
-                                  svn_node_file,
-                                  SVN_WC_ENTRY_ADDED,
-                                  0,
-                                  0,
-                                  pool,
-                                  NULL,
-                                  NULL);
+  err = svn_wc__entry_fold_sync_intelligently (dir,
+                                               basename,
+                                               0,
+                                               svn_node_file,
+                                               SVN_WC_ENTRY_ADDED,
+                                               0,
+                                               0,
+                                               pool,
+                                               NULL,
+                                               NULL);
   if (err)
     return err;
 

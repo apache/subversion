@@ -409,8 +409,8 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
 
 /* Your one-stop shopping for changing an entry:
  *
- * For PATH's entries file, create or modify an entry NAME, using
- * explicit fields and, secondarily, the attributes in ATTS.
+ * For PATH's entries file, create or modify an entry NAME by folding
+ * (merging) changes into it.
  * 
  * If REVISION is SVN_INVALID_REVNUM, then the entry's revision number
  * will not be changed, else it will be set to REVISION.
@@ -442,16 +442,41 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * 
  * NOTE: when you call this function, the entries file will be read,
  * tweaked, and written back out.  */
-svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
-                                       svn_string_t *name,
-                                       svn_revnum_t revision,
-                                       enum svn_node_kind kind,
-                                       int state,
-                                       apr_time_t text_time,
-                                       apr_time_t prop_time,
-                                       apr_pool_t *pool,
-                                       apr_hash_t *atts,
-                                       ...);
+svn_error_t *svn_wc__entry_fold_sync (svn_string_t *path,
+                                      svn_string_t *name,
+                                      svn_revnum_t revision,
+                                      enum svn_node_kind kind,
+                                      int state,
+                                      apr_time_t text_time,
+                                      apr_time_t prop_time,
+                                      apr_pool_t *pool,
+                                      apr_hash_t *atts,
+                                      ...);
+
+
+/* The "smarter" version of __entry_fold_sync.
+ *
+ * The previous routine does exactly what it's told;  it merges
+ * exactly those changes that are given to it.
+ *
+ * This routine actually *interprets* the requested changes, and
+ * intelligently merges changes that reflect the *intent* of the
+ * caller.  For example:   if the entry has only the "add" flag set,
+ * and the caller requests the "delete" flag be set, this routine
+ * simply removes the entry altogether.  For other examples, see the C
+ * routine. 
+ */
+svn_error_t *svn_wc__entry_fold_sync_intelligently (svn_string_t *path,
+                                                    svn_string_t *name,
+                                                    svn_revnum_t revision,
+                                                    enum svn_node_kind kind,
+                                                    int state,
+                                                    apr_time_t text_time,
+                                                    apr_time_t prop_time,
+                                                    apr_pool_t *pool,
+                                                    apr_hash_t *atts,
+                                                    ...);
+
 
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
