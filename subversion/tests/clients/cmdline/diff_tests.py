@@ -104,6 +104,13 @@ def verify_expected_output(diff_output, expected):
   else:
     raise svntest.Failure
 
+def verify_excluded_output(diff_output, excluded):
+  "verify given line does not exist in diff output as diff line"
+  for line in diff_output:
+    if re.match("^(\\+|-)%s" % re.escape(excluded), line):
+      print 'Sought: %s' % excluded
+      print 'Found:  %s' % line
+      raise svntest.Failure
 
 def extract_diff_path(line):
   l2 = line[(line.find("(")+1):]
@@ -1605,6 +1612,90 @@ def diff_prop_on_named_dir(sbox):
   finally:
     os.chdir(current_dir)
 
+#----------------------------------------------------------------------
+def diff_keywords(sbox):
+  "ensure that diff won't show keywords"
+
+  sbox.build()
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps',
+                                     'svn:keywords',
+                                     'Id Rev Date',
+                                     iota_path)
+
+  fp = open(iota_path, 'w')
+  fp.write("$Date$\n")
+  fp.write("$Id$\n")
+  fp.write("$Rev$\n")
+  fp.write("$Date::%s$\n" % (' ' * 80))
+  fp.write("$Id::%s$\n"   % (' ' * 80))
+  fp.write("$Rev::%s$\n"  % (' ' * 80))
+  fp.close()
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'keywords', sbox.wc_dir)
+
+  svntest.main.file_append(iota_path, "bar\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'added bar', sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', sbox.wc_dir)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff',
+                                                        '-r', 'prev:head',
+                                                        sbox.wc_dir)
+  verify_expected_output(diff_output, "+bar")
+  verify_excluded_output(diff_output, "$Date:")
+  verify_excluded_output(diff_output, "$Rev:")
+  verify_excluded_output(diff_output, "$Id:")
+  
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff',
+                                                        '-r', 'head:prev',
+                                                        sbox.wc_dir)
+  verify_expected_output(diff_output, "-bar")
+  verify_excluded_output(diff_output, "$Date:")
+  verify_excluded_output(diff_output, "$Rev:")
+  verify_excluded_output(diff_output, "$Id:")
+
+  # Check fixed length keywords will show up
+  # when the length of keyword has changed
+  fp = open(iota_path, 'w')
+  fp.write("$Date$\n")
+  fp.write("$Id$\n")
+  fp.write("$Rev$\n")
+  fp.write("$Date::%s$\n" % (' ' * 79))
+  fp.write("$Id::%s$\n"   % (' ' * 79))
+  fp.write("$Rev::%s$\n"  % (' ' * 79))
+  fp.close()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'keywords 2', sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', sbox.wc_dir)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff',
+                                                        '-r', 'prev:head',
+                                                        sbox.wc_dir)
+  # these should show up
+  verify_expected_output(diff_output, "+$Id:: ")
+  verify_expected_output(diff_output, "-$Id:: ")
+  verify_expected_output(diff_output, "-$Rev:: ")
+  verify_expected_output(diff_output, "+$Rev:: ")
+  verify_expected_output(diff_output, "-$Date:: ")
+  verify_expected_output(diff_output, "+$Date:: ")
+  # ... and these won't
+  verify_excluded_output(diff_output, "$Date: ")
+  verify_excluded_output(diff_output, "$Rev: ")
+  verify_excluded_output(diff_output, "$Id: ")
+
+
 ########################################################################
 #Run the tests
 
@@ -1635,6 +1726,7 @@ test_list = [ None,
               diff_renamed_file,
               diff_within_renamed_dir,
               XFail(diff_prop_on_named_dir),
+              diff_keywords,
               ]
 
 if __name__ == '__main__':

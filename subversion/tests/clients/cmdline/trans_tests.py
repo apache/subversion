@@ -93,7 +93,20 @@ embd_author_rev_unexp_path = ''
 embd_author_rev_exp_path = ''
 embd_bogus_keywords_path = ''
 
-def setup_working_copy(wc_dir):
+def check_keywords(actual_kw, expected_kw, name):
+  """A Helper function to compare two keyword lists"""
+
+  if len(actual_kw) != len(expected_kw):
+    print "Keyword lists are different by size"
+    raise svntest.Failure
+
+  for i in range(0,len(actual_kw)):
+    if actual_kw[i] != expected_kw[i]:
+      print '%s, Expected: %s' % (name, expected_kw[i][:-1])
+      print '%s, Got:      %s' % (name, actual_kw[i][:-1])
+      raise svntest.Failure
+ 
+def setup_working_copy(wc_dir, value_len):
   """Setup a standard test working copy, then create (but do not add)
   various files for testing translation."""
   
@@ -107,6 +120,7 @@ def setup_working_copy(wc_dir):
   global embd_author_rev_unexp_path
   global embd_author_rev_exp_path
   global embd_bogus_keywords_path
+  global fixed_length_keywords_path
 
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
@@ -123,6 +137,7 @@ def setup_working_copy(wc_dir):
   embd_author_rev_unexp_path = os.path.join(wc_dir, 'embd_author_rev_unexp')
   embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
   embd_bogus_keywords_path = os.path.join(wc_dir, 'embd_bogus_keywords')
+  fixed_length_keywords_path = os.path.join(wc_dir, 'fixed_length_keywords')
 
   svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
   svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
@@ -137,7 +152,29 @@ def setup_working_copy(wc_dir):
                             "blue $Author: blah $ fish$Rev: 0 $\nI fish")
   svntest.main.file_append (embd_bogus_keywords_path,
                             "you fish $Arthur$then\n we$Rev0$ \n\nchew fish")
-      
+
+  keyword_test_targets = [
+    # User tries to shoot him or herself on the foot
+    "$URL::$\n",
+    "$URL:: $\n",
+    "$URL::  $\n",
+    # Following are valid entries
+    "$URL::   $\n",
+    "$URL:: %s $\n" % (' ' * (value_len-1)),
+    "$URL:: %s $\n" % (' ' * value_len),
+    # Check we will clean the truncate marker when the value fits exactly
+    "$URL:: %s#$\n" % ('a' * value_len),
+    "$URL:: %s $\n" % (' ' * (value_len+1)),
+    # These are syntactically wrong
+    "$URL::x%s $\n" % (' ' * value_len),
+    "$URL:: %sx$\n" % (' ' * value_len),
+    "$URL::x%sx$\n" % (' ' * value_len)
+    ]
+
+  for i in keyword_test_targets:
+    svntest.main.file_append (fixed_length_keywords_path, i)
+
+
 
 ### Helper functions for setting/removing properties
 
@@ -168,7 +205,13 @@ def keywords_from_birth(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  setup_working_copy (wc_dir)
+  canonized_repo_url = svntest.main.canonize_url(sbox.repo_url)
+  if canonized_repo_url[-1:] != '/':
+    url_expand_test_data = canonized_repo_url + '/fixed_length_keywords'
+  else:
+    url_expand_test_data = canonized_repo_url + 'fixed_length_keywords'
+  
+  setup_working_copy (wc_dir, len(url_expand_test_data))
 
   # Add all the files
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -183,6 +226,7 @@ def keywords_from_birth(sbox):
     'embd_author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
     'embd_author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
     'embd_bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'fixed_length_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
     })
 
   svntest.main.run_svn (None, 'add', author_rev_unexp_path)
@@ -195,6 +239,7 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn (None, 'add', embd_author_rev_unexp_path)
   svntest.main.run_svn (None, 'add', embd_author_rev_exp_path)
   svntest.main.run_svn (None, 'add', embd_bogus_keywords_path)
+  svntest.main.run_svn (None, 'add', fixed_length_keywords_path)
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -205,6 +250,7 @@ def keywords_from_birth(sbox):
   keywords_on (id_unexp_path)
   keywords_on (id_exp_path)
   keywords_on (embd_author_rev_exp_path)
+  keywords_on (fixed_length_keywords_path)
 
   # Commit.
   expected_output = svntest.wc.State(wc_dir, {
@@ -218,6 +264,7 @@ def keywords_from_birth(sbox):
     'embd_author_rev_unexp' : Item(verb='Adding'),
     'embd_author_rev_exp' : Item(verb='Adding'),
     'embd_bogus_keywords' : Item(verb='Adding'),
+    'fixed_length_keywords' : Item(verb='Adding'),
     })
 
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -259,8 +306,48 @@ def keywords_from_birth(sbox):
     print "Id expansion failed for", id_exp_path
     raise svntest.Failure
   fp.close()
+  
+  # Check fixed length keywords.
+  kw_workingcopy = [
+    '$URL::$\n',
+    '$URL:: $\n',
+    '$URL::  $\n',
+    '$URL:: %s#$\n' % url_expand_test_data[0:1],
+    '$URL:: %s#$\n' % url_expand_test_data[:-1],
+    '$URL:: %s $\n' % url_expand_test_data,
+    '$URL:: %s $\n' % url_expand_test_data,
+    '$URL:: %s  $\n'% url_expand_test_data,
+    '$URL::x%s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %sx$\n' % (' ' * len(url_expand_test_data)),
+    '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
+  ]
 
+  fp = open(fixed_length_keywords_path, 'r')
+  actual_workingcopy_kw = fp.readlines()
+  fp.close()
+  check_keywords(actual_workingcopy_kw, kw_workingcopy, "working copy")
 
+  # Check text base for fixed length keywords.
+  kw_textbase = [
+    '$URL::$\n',
+    '$URL:: $\n',
+    '$URL::  $\n',
+    '$URL::   $\n',
+    '$URL:: %s $\n' % (' ' * len(url_expand_test_data[:-1])),
+    '$URL:: %s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %s  $\n'% (' ' * len(url_expand_test_data)),
+    '$URL::x%s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %sx$\n' % (' ' * len(url_expand_test_data)),
+    '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
+    ]
+  
+  fp = open(os.path.join(wc_dir, '.svn', 'text-base',
+			 'fixed_length_keywords.svn-base'), 'rb')
+  actual_textbase_kw = fp.readlines()
+  fp.close()
+  check_keywords(actual_textbase_kw, kw_textbase, "text base")
+  
 def enable_translation(sbox):
   "enable translation, check status, commit"
 
