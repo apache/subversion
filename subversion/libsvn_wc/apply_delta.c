@@ -79,6 +79,7 @@ struct w_baton
 
 /*** Helpers for the walker callbacks. ***/
 
+/* Prepend WB->dest_dir to *NAME, iff PARENT is an empty path or null. */
 static void
 maybe_prepend_dest (svn_string_t **name,
                     struct w_baton *wb,
@@ -90,39 +91,37 @@ maybe_prepend_dest (svn_string_t **name,
      as it will will get passed along automatically underneath that.
      So we should only do this if parent_baton hasn't been set yet. */
       
-  /* kff todo: the right way would be to write
-     svn_string_prepend_str(), obviating the need to pass by
-     reference.  Do that soon. */
+  /* kff todo: or, write svn_string_prepend_str(), obviating the need
+     to pass by reference. */
 
   if (wb->dest_dir && (svn_path_isempty (parent, SVN_PATH_LOCAL_STYLE)))
     {
-      svn_string_t *tmp = svn_string_dup (wb->dest_dir, wb->pool);
-      svn_path_add_component (tmp, *name, SVN_PATH_LOCAL_STYLE, wb->pool);
-      *name = tmp;
+      *name = svn_path_add_component (wb->dest_dir, *name,
+                                      SVN_PATH_LOCAL_STYLE, wb->pool);
     }
 }
 
 
 static svn_error_t *
-window_handler (svn_delta_window_t *window, void *baton)
+window_handler (svn_txdelta_window_t *window, void *baton)
 {
   int i;
   apr_file_t *dest = (apr_file_t *) baton;
 
   for (i = 0; i < window->num_ops; i++)
     {
-      svn_delta_op_t this_op = (window->ops)[i];
+      svn_txdelta_op_t this_op = (window->ops)[i];
       switch (this_op.action_code)
         {
-        case svn_delta_source:
+        case svn_txdelta_source:
           /* todo */
           break;
 
-        case svn_delta_target:
+        case svn_txdelta_target:
           /* todo */
           break;
 
-        case svn_delta_new:
+        case svn_txdelta_new:
           {
             apr_status_t apr_err;
             apr_size_t written;
@@ -172,28 +171,32 @@ add_directory (svn_string_t *name,
 {
   svn_error_t *err;
   struct w_baton *wb = (struct w_baton *) walk_baton;
-  svn_string_t *path = (svn_string_t *) parent_baton;
+  svn_string_t *path_so_far = (svn_string_t *) parent_baton;
+  svn_string_t *npath;
 
-  /* kff todo: this apparently didn't work. */
-  maybe_prepend_dest (&name, wb, path);
+  /* kff todo: fooo this apparently didn't work. */
+  maybe_prepend_dest (&name, wb, path_so_far);
 
-  svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
+  npath = svn_path_add_component (path_so_far, name,
+                                  SVN_PATH_LOCAL_STYLE, wb->pool);
+
   printf ("%s/    (ancestor == %s, %d)\n",
-          path->data, ancestor_path->data, (int) ancestor_version);
+          npath->data, ancestor_path->data, (int) ancestor_version);
 
   /* kff todo: fooo working here.
      Setup has to be done carefully.  We have set up the directory
      NAME, but also let PATH know about it iff PATH is a concerned
      working copy. */
-  err = svn_wc__set_up_new_dir (path,
+  err = svn_wc__set_up_new_dir (npath,
                                 ancestor_path,
                                 ancestor_version,
                                 wb->pool);
   if (err)
     return err;
+
   /* else */
 
-  *child_baton = path;
+  *child_baton = npath;
   return SVN_NO_ERROR;
 }
 
@@ -226,7 +229,7 @@ change_dir_prop (void *walk_baton,
 }
 
 
-svn_error_t *
+static svn_error_t *
 change_dirent_prop (void *walk_baton,
                     void *dir_baton,
                     svn_string_t *entry,
@@ -241,10 +244,7 @@ change_dirent_prop (void *walk_baton,
 static svn_error_t *
 finish_directory (void *child_baton)
 {
-  svn_string_t *path = (svn_string_t *) child_baton;
-
-  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-
+  /* kff todo ? */
   return SVN_NO_ERROR;
 }
 
@@ -258,16 +258,18 @@ add_file (svn_string_t *name,
           void **file_baton)
 {
   struct w_baton *wb = (struct w_baton *) walk_baton;
-  svn_string_t *path = (svn_string_t *) parent_baton;
+  svn_string_t *path_so_far = (svn_string_t *) parent_baton;
+  svn_string_t *npath;
 
   /* kff todo: YO!  Need to make an adm subdir for orphan files, such
      as `iota' in checkout-1.delta. */
 
   /* fooo working here -- don't forget to set *file_baton! */
 
-  maybe_prepend_dest (&name, wb, path);
-  svn_path_add_component (path, name, SVN_PATH_LOCAL_STYLE, wb->pool);
-  printf ("%s\n   ", path->data);
+  maybe_prepend_dest (&name, wb, path_so_far);
+  npath = svn_path_add_component (path_so_far, name,
+                                  SVN_PATH_LOCAL_STYLE, wb->pool);
+  printf ("%s\n   ", npath->data);
 
   return SVN_NO_ERROR;
 }
@@ -293,11 +295,11 @@ replace_file (svn_string_t *name,
 }
 
 
-svn_error_t *
+static svn_error_t *
 apply_textdelta (void *walk_baton,
                  void *parent_baton,
                  void *file_baton, 
-                 svn_text_delta_window_handler_t **handler,
+                 svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
   /* kff todo: this replaces begin_textdelta() and finish_textdelta(). */
@@ -306,7 +308,7 @@ apply_textdelta (void *walk_baton,
   static svn_error_t *
     begin_textdelta (void *walk_baton,
                      void *parent_baton,
-                     svn_text_delta_window_handler_t **handler,
+                     svn_txdelta_window_handler_t **handler,
                      void **handler_baton)
     {
       /* kff todo: this also needs to handle already-present files by
@@ -348,10 +350,12 @@ apply_textdelta (void *walk_baton,
         return SVN_NO_ERROR;
     }
 #endif /* 0 */
+
+  return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
+static svn_error_t *
 change_file_prop (void *walk_baton,
                   void *parent_baton,
                   void *file_baton,
@@ -366,11 +370,8 @@ change_file_prop (void *walk_baton,
 static svn_error_t *
 finish_file (void *child_baton)
 {
-  svn_string_t *fname = (svn_string_t *) child_baton;
-
+  /* kff todo */
   printf ("\n");
-  /* Lop off the filename, so baton is the parent directory again. */
-  svn_path_remove_component (fname, SVN_PATH_LOCAL_STYLE);
   return SVN_NO_ERROR;
 }
 
@@ -470,7 +471,7 @@ svn_error_t *svn_wc_get_change_walker(svn_string_t *dest,
 
   *walker = &change_walker;
 
-  w_baton = ap_pcalloc(pool, sizeof(*w_baton));
+  w_baton = apr_pcalloc(pool, sizeof(*w_baton));
   w_baton->dest_dir   = dest;   /* Remember, DEST might be null. */
   w_baton->pool       = pool;
   *walk_baton = w_baton;

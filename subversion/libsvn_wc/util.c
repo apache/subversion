@@ -73,40 +73,44 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
 
   if (apr_err && (apr_err != APR_ENOENT))
     {
-      /* Some error other than dir non-existence, so just return the error. */
+      /* If got an error other than dir non-existence, then we can't
+         ensure this directory's existence, so just return the error.
+         Might happen if there's a file in the way, for example. */
       return svn_create_error (apr_err, 0, npath->data, NULL, pool);
     }
-  else if (apr_err)   /* The dir doesn't exist... let's change that! */
+  else if (apr_err == APR_ENOENT)  /* (yes, redundant conditional) */
     {
+      /* The dir doesn't exist, and it's our job to change that. */
+
       apr_err = apr_make_dir (npath->data, APR_OS_DEFAULT, pool);
 
       if (apr_err && (apr_err != APR_ENOENT))
         {
+          /* Tried to create the dir, and encountered some problem
+             other than non-existence of intermediate dirs.  We can't
+             ensure the desired directory's existence, so just return
+             the error. */ 
           return svn_create_error (apr_err, 0, npath->data, NULL, pool);
         }
-      else if (apr_err)   /* Again, some error other than APR_ENOENT */
+      else if (apr_err == APR_ENOENT) /* (redundant conditional and comment) */
         {
-          /* Back up one level and recursively ensure parents' existence. */
-          svn_string_t *last_component
-            = svn_path_last_component (npath, SVN_PATH_LOCAL_STYLE, pool);
-          svn_path_remove_component (npath, SVN_PATH_LOCAL_STYLE);
+          /* Okay, so the problem is a missing intermediate
+             directory.  We don't know which one, so we recursively
+             back up and try again. */
+          svn_string_t *shorter_path
+            = svn_path_remove_component (npath, SVN_PATH_LOCAL_STYLE, pool);
 
-          if (svn_string_isempty (npath))
+          if (svn_string_isempty (shorter_path))
             {
               /* A weird and probably rare situation. */
               return svn_create_error (0, 0,
                                        "unable to make any directories",
                                        NULL, pool);
             }
-          else  /* We have a path, so let's try to create it. */
+          else  /* We have a valid path, so recursively ensure it. */
             {
-              svn_error_t *err = svn_wc__ensure_directory (npath, pool);
+              svn_error_t *err = svn_wc__ensure_directory (shorter_path, pool);
           
-              /* Restore last component before doing anything else. */
-              if (last_component)
-                svn_path_add_component (npath, last_component,
-                                        SVN_PATH_LOCAL_STYLE, pool);
-              
               if (err)
                 return (err);
               else
@@ -114,7 +118,7 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
             }
         }
     }
-  else
+  else  /* No problem, the dir already existed, so just close it and leave. */
     apr_err = apr_closedir (this_attempt_dir);
   
   if (apr_err)
