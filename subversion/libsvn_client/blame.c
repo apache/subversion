@@ -326,7 +326,6 @@ svn_client_blame (const char *target,
   svn_ra_plugin_t *ra_lib; 
   void *ra_baton, *session;
   const char *url;
-  const char *auth_dir;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk;
   apr_file_t *file;
@@ -354,9 +353,7 @@ svn_client_blame (const char *target,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
 
-  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL,
                                         NULL, NULL, FALSE, FALSE,
                                         ctx, pool));
 
@@ -403,7 +400,7 @@ svn_client_blame (const char *target,
   if (! lmb.eldest)
     return SVN_NO_ERROR;
 
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, reposURL, auth_dir,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, reposURL, NULL,
                                         NULL, NULL, FALSE, FALSE,
                                         ctx, pool));
 

@@ -406,7 +406,6 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
   void *edit_baton;
   void *commit_baton;
   const char *log_msg;
-  const char *auth_dir;
   apr_array_header_t *targets;
   const char *common;
   int i;
@@ -477,11 +476,8 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, common, pool));
 
   /* Open an RA session for the URL. Note that we don't have a local
-     directory, nor a place to put temp files or store the auth
-     data, although we'll try to retrieve auth data from the
-     current directory. */
-  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, common, auth_dir,
+     directory, nor a place to put temp files. */
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, common, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 

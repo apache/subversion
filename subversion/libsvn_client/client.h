@@ -131,7 +131,8 @@ typedef struct
         structures, present only for working copy commits, NULL otherwise.
 
       - USE_ADMIN indicates that the RA layer should create tempfiles
-        in the administrative area instead of in the working copy itself.
+        in the administrative area instead of in the working copy itself,
+        and read properties from the administrative area.
 
       - READ_ONLY_WC indicates that the RA layer should not attempt to
         modify the WC props directly.
@@ -151,33 +152,6 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            svn_boolean_t use_admin,
                                            svn_boolean_t read_only_wc,
                                            svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
-
-
-/* Set *DIR_P to DIR if DIR is a working copy directory, else set to NULL.
- * DIR may not be a file.  Use POOL only for temporary allocation.
- *
- * Purpose: Helper for callers of svn_client__open_ra_session(),
- * who if not passed a working copy path as an argument, will often
- * wish to try the current directory for auth information, but only if
- * it is a working copy.
- */
-svn_error_t *svn_client__dir_if_wc (const char **dir_p,
-                                    const char *dir,
-                                    apr_pool_t *pool);
-
-
-/* Set *AUTH_DIR_P to PATH if PATH is a working copy directory, else
- * to PATH's parent if the parent is a working copy directory, else to
- * null.
- *
- * If set *AUTH_DIR_P to PATH's parent, allocate *AUTH_DIR_P in POOL;
- * otherwise, use POOL only for temporary allocation.
- *
- * Purpose: similar to svn_client__dir_if_wc().
- */
-svn_error_t *svn_client__default_auth_dir (const char **auth_dir_p,
-                                           const char *path,
                                            apr_pool_t *pool);
 
 

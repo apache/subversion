@@ -61,7 +61,6 @@ svn_client_log (const apr_array_header_t *targets,
   const char *path;
   const char *base_url;
   const char *base_name = NULL;
-  const char *auth_dir;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
   svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
@@ -168,25 +167,12 @@ svn_client_log (const apr_array_header_t *targets,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, base_url, pool));
 
-  /* Open a repository session to the BASE_URL.  If we got here from a full 
-     URL passed to the command line, then if the current directory is a
-     working copy, we pass it as base_name for authentication
-     purposes.  But we make sure to treat it as read-only, since when
-     one operates on URLs, one doesn't expect it to change anything in
-     the working copy. */
+  /* Open a repository session to the BASE_URL. */
   SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
-  if (NULL != base_name)
-    SVN_ERR (svn_client__open_ra_session (&session, ra_lib, base_url, 
-                                          base_name, NULL, NULL, TRUE, TRUE, 
-                                          ctx, pool));
-  else
-    {
-      SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, base_url,
-                                            auth_dir,
-                                            NULL, NULL, FALSE, TRUE, 
-                                            ctx, pool));
-    }
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, base_url, 
+                                        base_name, NULL, NULL,
+                                        (NULL != base_name), TRUE, 
+                                        ctx, pool));
 
   /* It's a bit complex to correctly handle the special revision words
    * such as "BASE", "COMMITTED", and "PREV".  For example, if the

@@ -712,8 +712,7 @@ svn_client_status (svn_revnum_t *result_rev,
  * @a targets contains all the working copy paths (as <tt>const char 
  * *</tt>'s) for which log messages are desired.  The repository info is
  * determined by taking the common prefix of the target entries' URLs.
- * The common prefix of @a targets, if it is a valid working copy, 
- * determines the auth info.  @a receiver is invoked only on messages 
+ * @a receiver is invoked only on messages 
  * whose revisions involved a change to some path in @a targets.
  *
  * ### todo: the above paragraph is not fully implemented yet.
