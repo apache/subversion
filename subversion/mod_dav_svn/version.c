@@ -1255,6 +1255,10 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
         {
           return dav_svn__get_locks_report(resource, doc, output);
         }
+
+      /* NOTE: if you add a report, don't forget to add it to the
+       *       avail_reports[] array at the top of this file.
+       */
     }
 
   /* ### what is a good error for an unknown report? */

@@ -1210,7 +1210,7 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "stat", "c(?r)", path, rev));
 
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 _("stat not implemented")));
+                                 _("'stat' not implemented")));
 
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
 
@@ -1267,7 +1267,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
 
   /* Servers before 1.1 don't support this command. Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 _("get-locations not implemented")));
+                                 _("'get-locations' not implemented")));
 
   /* Read the hash items. */
   is_done = FALSE;
@@ -1329,7 +1329,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
 
   /* Servers before 1.1 don't support this command.  Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
-                                 _("get-file-revs not implemented")));
+                                 _("'get-file-revs' not implemented")));
 
   while (1)
     {
