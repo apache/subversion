@@ -33,6 +33,8 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ra_svn.h"
+#include "svn_utf.h"
+#include "svn_path.h"
 
 #include "server.h"
 
@@ -48,6 +50,14 @@ static void sigchld_handler(int signo)
 {
   /* Nothing to do; we just need to interrupt the accept(). */
 }
+
+#define INT_ERR(expr)                                       \
+  do {                                                      \
+    svn_error_t *svnserve_err__temp = (expr);               \
+    if (svnserve_err__temp) {                               \
+      svn_handle_error (svnserve_err__temp, stderr, FALSE); \
+      return EXIT_FAILURE; }                                \
+  } while (0)
 
 int main(int argc, const char *const *argv)
 {
@@ -94,7 +104,8 @@ int main(int argc, const char *const *argv)
           break;
 
         case 'r':
-          root = arg;
+          INT_ERR(svn_utf_cstring_to_utf8(&root, arg, NULL, pool));
+          INT_ERR(svn_path_get_absolute(&root, root, pool));
           break;
         }
     }
