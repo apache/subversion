@@ -270,6 +270,8 @@ svn_fs__rep_read_get_baton (svn_fs_t *fs,
   b->pool = pool;
   b->rep_key = rep_key;
   b->offset = offset;
+
+  return b;
 }
 
 

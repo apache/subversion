@@ -50,7 +50,6 @@ svn_fs__create_node (svn_fs_id_t **id_p,
 
 /* Creating new revisions of existing nodes.  */
 
-
 svn_error_t *
 svn_fs__create_successor (svn_fs_id_t **new_id_p,
                           svn_fs_t *fs,
@@ -74,10 +73,57 @@ svn_fs__create_successor (svn_fs_id_t **new_id_p,
 
 /* Stable nodes and deltification.  */
 
+/* ### kff todo: tempting to generalize this string-writing stuff and
+   put it into reps-strings.h or something.  But not sure it's
+   actually worth it yet, will see what other string-writing occasions
+   arise.  This way of wrapping svn_fs__string_append() is so simple
+   that generalizing it may be pointless.  */
+
+/* Baton for svn_write_fn_t write_string(). */
+struct write_string_baton
+{
+  /* The fs where lives the string we're writing. */
+  svn_fs_t *fs;
+
+  /* The key of the string we're writing to.  Typically this is
+     initialized to NULL, so svn_fs__string_append() can fill in a
+     value. */
+  const char *key;
+
+  /* The trail we're writing in. */
+  trail_t *trail;
+};
+
+
+/* Function of type `svn_write_fn_t', for writing to a string;
+   BATON is `struct write_string_baton *'.
+
+   On the first call, BATON->key is null.  A new string key in
+   BATON->fs is chosen and stored in BATON->key; each call appends
+   *LEN bytes from DATA onto the string.  *LEN is never changed; if
+   the write fails to write all *LEN bytes, an error is returned.  */
+static svn_error_t *
+write_string (void *baton, const char *data, apr_size_t *len)
+{
+  struct write_string_baton *wb = baton;
+
+  printf ("*** window data: ");
+  fwrite (data, sizeof (*data), *len, stdout);
+  printf ("\n");
+
+  SVN_ERR (svn_fs__string_append (wb->fs,
+                                  &(wb->key),
+                                  *len,
+                                  data,
+                                  wb->trail));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* In FS, change TARGET's representation to be a delta against SOURCE,
-   as part of TRAIL.  If TARGET or SOURCE does not exist, simply
-   return success having done nothing.  */
+   as part of TRAIL.  If TARGET or SOURCE does not exist, do nothing
+   and return success.  */
 static svn_error_t *
 deltify (svn_fs_id_t *target_id,
          svn_fs_id_t *source_id,
@@ -95,8 +141,8 @@ deltify (svn_fs_id_t *target_id,
     *source_dkey;         /* source data rep key      */
 
   svn_stream_t
-    *source_stream,       /* stream to read the source     */
-    *target_stream;       /* stream to read the target     */
+    *source_stream,       /* stream to read the source */
+    *target_stream;       /* stream to read the target */
   svn_txdelta_stream_t
     *txdelta_stream;      /* stream to read delta windows  */
 
@@ -104,19 +150,32 @@ deltify (svn_fs_id_t *target_id,
     *source_rb,           /* stream reading baton for source */
     *target_rb;           /* stream reading baton for target */
 
+
+  /* stream to write new (deltified) target data */
+  svn_stream_t *new_target_stream;
+  struct write_string_baton new_target_baton;
+
+  /* window handler for writing to above stream */
+  svn_txdelta_window_handler_t new_target_handler;
+
+  /* baton for aforementioned window handler */
+  void *new_target_handler_baton;
+
+  /* yes, we do windows */
   svn_txdelta_window_t *window;
 
 
+  /* Turn those IDs into skels, so we can get the rep keys. */
   SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
   SVN_ERR (svn_fs__get_node_revision (&source_nr, fs, source_id, trail));
 
-  /* It is not an error to attempt to deltify something that does not
-     exist, or against something that does not exist.  However, no
-     deltification occurs, of course. */
+  /* Check that target and source exist.  It is not an error to
+     attempt to deltify something that does not exist, or deltify
+     against a non-existent base.  However, nothing happens. */
   if ((target_nr == NULL) || (source_nr == NULL))
     return SVN_NO_ERROR;
 
-  /* Get all the keys. */
+  /* We have a target and a source.  Get all the rep keys... */
   {
     skel_t
       *target_pkey_skel,
@@ -165,7 +224,14 @@ deltify (svn_fs_id_t *target_id,
       source_dkey = NULL;
   }
 
-  /* Let's just do data deltification for now, no props. */
+  new_target_baton.fs = fs;
+  new_target_baton.trail = trail;
+  new_target_baton.key = NULL;
+  new_target_stream = svn_stream_create (&new_target_baton, trail->pool);
+  svn_stream_set_write (new_target_stream, write_string);
+
+  /* We're just doing data deltification for now, no props. */
+ 
   source_rb = svn_fs__rep_read_get_baton
     (fs, source_dkey, 0, trail, trail->pool);
   target_rb = svn_fs__rep_read_get_baton
@@ -186,21 +252,27 @@ deltify (svn_fs_id_t *target_id,
 
   svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
 
+  /* Prepare to produce an svndiff-format diff from text delta windows.
+     OUTPUT is a writable generic stream to write the svndiff data to.
+     Allocation takes place in a sub-pool of POOL.  On return, *HANDLER
+     is set to a window handler function and *HANDLER_BATON is set to
+     the value to pass as the BATON argument to *HANDLER.  */
+  svn_txdelta_to_svndiff (new_target_stream,
+                          trail->pool,
+                          &new_target_handler,
+                          &new_target_handler_baton);
+
   do
     {
       SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
+      SVN_ERR (new_target_handler (window, new_target_handler_baton));
       if (window)
-        {
-          /* kff working here:
-             Okay, now we need a write stream for target, and we'll
-             have to do a fancy swaparoo to make the same string have
-             the new contents... */
-
-          /* printf ("*** Got window %p.\n", window); */
-          svn_txdelta_free_window (window);
-        }
+        svn_txdelta_free_window (window);
+      
     } while (window);
   
+  /* todo: Now `new_target_baton.key' has the key of the new string.
+     We should hook it into the representation. */
 
   return SVN_NO_ERROR;
 }
