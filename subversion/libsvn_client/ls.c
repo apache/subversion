@@ -111,15 +111,12 @@ svn_client_ls2 (apr_hash_t **dirents,
       const char *parent_url, *base_name;
       svn_dirent_t *the_ent;
 
-      /* Split 'url' to get the parent, but split 'path_or_url' to get
-         the basename.  We're going to use the former as a URL, but
-         the latter as a non-URL.  If any URI-encoding happened in the
-         earlier conversion from 'path_or_url' to 'url', we want the
-         effects reflected in 'parent_url' but not in 'base_name'. */
-      svn_path_split (url, &parent_url, NULL, pool);
-      svn_path_split (path_or_url, NULL, &base_name, pool);
-
       /* Re-open the session to the file's parent instead. */
+      svn_path_split (url, &parent_url, &base_name, pool);
+      /* 'base_name' is now the last component of an URL, but we want
+         to use it as a plain file name. Therefore, we must URI-decode
+         it. */
+      base_name = svn_path_uri_decode(base_name, pool);
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
                                             NULL,
                                             NULL, NULL, FALSE, TRUE, 
