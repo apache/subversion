@@ -230,6 +230,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
     case svn_hash_diff_key_a:
     case svn_hash_diff_key_b:
     default:
+      ;
       /* ### in progress */
     }
 
