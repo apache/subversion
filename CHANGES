@@ -1,3 +1,17 @@
+Version 0.18.1 (released 26 Feb 2003, revision 5115)
+
+ User-visible changes:
+ * editor environment variables no longer incorrectly required
+ * 'svn help import' now displays correct usage
+ * fix crashes in the internal diff library and ra_dav
+ * fix Win9x/Me console issue
+ * cvs2svn.py api fix
+ * hot_backup.py now correctly removes old backups
+
+ Developer-visible changes:
+ * none
+
+
 Version 0.18.0 (released 19 Feb 2003, revision 4959)
 
  User-visible changes:
