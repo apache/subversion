@@ -45,7 +45,7 @@ _svn()
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
 	if [[ "$cur" != -* ]] || \
-	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @${optsParam} ]] ; then
 		return 0
 	fi
 
@@ -181,7 +181,7 @@ _svn()
 		esac
 
 		# skip next option if this one requires a parameter
-		if [[ $opt == @($optsParam) ]] ; then
+		if [[ $opt == @${optsParam} ]] ; then
 			((++i))
 		fi
 	done
