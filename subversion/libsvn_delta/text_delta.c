@@ -60,13 +60,13 @@
 
 struct svn_txdelta_stream_t {
   /* These are copied from parameters passed to svn_txdelta. */
-  svn_read_fn_t* source_fn;
-  void* source_baton;
-  svn_read_fn_t* target_fn;
-  void* target_baton;
+  svn_read_fn_t *source_fn;
+  void *source_baton;
+  svn_read_fn_t *target_fn;
+  void *target_baton;
 
   /* Private data */
-  apr_pool_t* pool;             /* Pool to allocate stream data from. */
+  apr_pool_t *pool;             /* Pool to allocate stream data from. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   apr_off_t pos;                /* Position in source file. */
 };
