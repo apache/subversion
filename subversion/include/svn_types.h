@@ -61,8 +61,11 @@ typedef long int svn_revnum_t;
 /* Valid revision numbers begin at 0 */
 #define SVN_IS_VALID_REVNUM(n) (n >= 0)
 #define SVN_INVALID_REVNUM (-1) /* The 'official' invalid revision num */
-#define SVN_IGNORED_REVNUM (-2) /* Not really invalid...just
-                                   unimportant */
+#define SVN_IGNORED_REVNUM (-1) /* Not really invalid...just
+                                   unimportant -- one day, this can be
+                                   its own unique value, for now, just
+                                   make it the same as
+                                   SVN_INVALID_REVNUM. */
 
 /* YABT:  Yet Another Boolean Type */
 typedef int svn_boolean_t;

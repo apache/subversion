@@ -510,7 +510,9 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
   resource_t *rsrc;
   resource_t **prsrc;
 
-  err = (*editor->begin_edit)(edit_baton, &root_baton);
+  /* In the checkout case, we don't really have a base revision, so
+     pass SVN_IGNORED_REVNUM. */
+  err = (*editor->replace_root)(edit_baton, SVN_IGNORED_REVNUM, &root_baton);
   if (err != SVN_NO_ERROR)
     return err;
 

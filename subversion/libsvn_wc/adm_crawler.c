@@ -223,7 +223,9 @@ do_dir_replaces (void **newest_baton,
              root baton. */
           void *root_baton;
 
-          err = editor->begin_edit (edit_baton, &root_baton);  
+          err = editor->replace_root (edit_baton,
+                                      stackptr->this_dir->revision, 
+                                      &root_baton);  
           if (err) return err;
           
           /* Store it */
@@ -254,7 +256,6 @@ do_dir_replaces (void **newest_baton,
           err = 
             editor->replace_directory (dirname, /* current dir */
                                        stackptr->previous->baton, /* parent */
-                                       stackptr->this_dir->ancestor,
                                        stackptr->this_dir->revision,
                                        &dir_baton);
           if (err) return err;
@@ -698,7 +699,7 @@ report_local_mods (svn_string_t *path,
       /* Is the entry marked for deletion? */
       if (current_entry->state & SVN_WC_ENTRY_DELETED)
         {
-          /* Do what's necesary to get a baton for current directory */
+          /* Do what's necessary to get a baton for current directory */
           if (! dir_baton)
             {
               err = do_dir_replaces (&dir_baton,
@@ -871,7 +872,6 @@ report_local_mods (svn_string_t *path,
                   /* Replace the file's text, getting a file baton */
                   err = editor->replace_file (current_entry_name,
                                               dir_baton,          /* parent */
-                                              current_entry->ancestor,
                                               current_entry->revision,
                                               &(tb->editor_baton)); /* child */
                   if (err) return err;
@@ -1033,7 +1033,7 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
                             
   master_revnum = root_entry->revision;
 
-  /* Next, call begin_edit() and push as first item on stack...? */
+  /* Next, call replace_root() and push as first item on stack...? */
 
 
   /* Start the mini-crawler. 
@@ -1088,7 +1088,7 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
    We can't simply call report_local_mods (A), followed by
    process_subdirecotry (B).  Why?  Because do_dir_replaces() crawls
    up the tree trying to create dir_batons, and when it reaches `A' or
-   `B', it calls begin_edit().  We can't call begin_edit() more
+   `B', it calls replace_root().  We can't call replace_root() more
    than once during the entire commit!
 
    Here's the solution:
@@ -1102,7 +1102,7 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
    going from `Q' down to `A'.  Again, no dir_batons.
 
    4.  Start the first crawl at `A'.  do_dir_replaces() will
-   automatically walk all the way up to `Q' and call begin_edit().
+   automatically walk all the way up to `Q' and call replace_root().
 
    5.  When the first crawl is done, remove all the stackframes until
    there's only the lone `Q' frame left.  (This frame now contains the

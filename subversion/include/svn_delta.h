@@ -270,7 +270,6 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
    callback function describes a piece of the delta --- a file's
    contents changing, something being renamed, etc.  */
 
-
 /* A structure full of callback functions the delta source will invoke
    as it produces the delta.  */
 typedef struct svn_delta_edit_fns_t
@@ -389,14 +388,19 @@ typedef struct svn_delta_edit_fns_t
      directory within the <directory> element.  However, it does allow
      text deltas to appear at the end.  */
 
+  /* Set the target revision for this edit to TARGET_REVISION.  This
+     call, if used, should precede all other editor calls. */
+  svn_error_t *(*set_target_revision) (void *edit_baton,
+                                       svn_revnum_t target_revision);
 
   /* Set *ROOT_BATON to a baton for the top directory of the change.
      (This is the top of the subtree being changed, not necessarily
      the root of the filesystem.)  Like any other directory baton, the
      producer should call `close_directory' on ROOT_BATON when they're
      done.  */
-  svn_error_t *(*begin_edit) (void *edit_baton,
-                              void **root_baton);
+  svn_error_t *(*replace_root) (void *edit_baton,
+                                svn_revnum_t base_revision,
+                                void **root_baton);
 
 
   /* Deleting things.  */
@@ -424,8 +428,8 @@ typedef struct svn_delta_edit_fns_t
      directory. */
   svn_error_t *(*add_directory) (svn_string_t *name,
                                  void *parent_baton,
-                                 svn_string_t *ancestor_path,
-                                 svn_revnum_t ancestor_revision,
+                                 svn_string_t *base_path,
+                                 svn_revnum_t base_revision,
                                  void **child_baton);
 
   /* We are going to change the directory entry named NAME to a
@@ -436,8 +440,7 @@ typedef struct svn_delta_edit_fns_t
      relative to an empty directory.  */
   svn_error_t *(*replace_directory) (svn_string_t *name,
                                      void *parent_baton,
-                                     svn_string_t *ancestor_path,
-                                     svn_revnum_t ancestor_revision,
+                                     svn_revnum_t base_revision,
                                      void **child_baton);
 
   /* Change the value of a directory's property.
@@ -464,8 +467,8 @@ typedef struct svn_delta_edit_fns_t
      apply_propdelta.  */
   svn_error_t *(*add_file) (svn_string_t *name,
                             void *parent_baton,
-                            svn_string_t *ancestor_path,
-                            svn_revnum_t ancestor_revision,
+                            svn_string_t *base_path,
+                            svn_revnum_t base_revision,
                             void **file_baton);
 
   /* We are going to change the directory entry named NAME to a file.
@@ -474,8 +477,7 @@ typedef struct svn_delta_edit_fns_t
      apply_textdelta and/or apply_propdelta.  */
   svn_error_t *(*replace_file) (svn_string_t *name,
                                 void *parent_baton,
-                                svn_string_t *ancestor_path,
-                                svn_revnum_t ancestor_revision,
+                                svn_revnum_t base_revision,
                                 void **file_baton);
 
   /* Apply a text delta, yielding the new revision of a file.

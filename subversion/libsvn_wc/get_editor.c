@@ -371,7 +371,19 @@ prep_directory (svn_string_t *path,
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
 static svn_error_t *
-begin_edit (void *edit_baton,
+set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+{
+  struct edit_baton *eb = edit_baton;
+
+  /* Stashing a target_revision in the baton */
+  eb->target_revision = target_revision;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+replace_root (void *edit_baton,
+              svn_revnum_t base_revision, /* This is ignored in co */
               void **dir_baton)
 {
   struct edit_baton *eb = edit_baton;
@@ -462,8 +474,8 @@ delete_entry (svn_string_t *name, void *parent_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *ancestor_path,
-               svn_revnum_t ancestor_revision,
+               svn_string_t *base_path,
+               svn_revnum_t base_revision,
                void **child_baton)
 {
   svn_error_t *err;
@@ -493,8 +505,8 @@ add_directory (svn_string_t *name,
 
   err = prep_directory (this_dir_baton->path,
                         this_dir_baton->edit_baton->repository,
-                        ancestor_path,
-                        ancestor_revision,
+                        base_path,
+                        base_revision,
                         1, /* force */
                         this_dir_baton->pool);
   if (err)
@@ -509,8 +521,7 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   svn_string_t *ancestor_path,
-                   svn_revnum_t ancestor_revision,
+                   svn_revnum_t base_revision,
                    void **child_baton)
 {
   struct dir_baton *parent_dir_baton = parent_baton;
@@ -766,24 +777,23 @@ add_or_replace_file (svn_string_t *name,
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *ancestor_path,
-          svn_revnum_t ancestor_revision,
+          svn_string_t *base_path,
+          svn_revnum_t base_revision,
           void **file_baton)
 {
   return add_or_replace_file
-    (name, parent_baton, ancestor_path, ancestor_revision, file_baton, 1);
+    (name, parent_baton, base_path, base_revision, file_baton, 1);
 }
 
 
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              svn_string_t *ancestor_path,
-              svn_revnum_t ancestor_revision,
+              svn_revnum_t base_revision,
               void **file_baton)
 {
   return add_or_replace_file
-    (name, parent_baton, ancestor_path, ancestor_revision, file_baton, 0);
+    (name, parent_baton, NULL, base_revision, file_baton, 0);
 }
 
 
@@ -1357,7 +1367,8 @@ make_editor (svn_string_t *dest,
   eb->target_revision = target_revision;
 
   /* Construct an editor. */
-  tree_editor->begin_edit = begin_edit;
+  tree_editor->set_target_revision = set_target_revision;
+  tree_editor->replace_root = replace_root;
   tree_editor->delete_entry = delete_entry;
   tree_editor->add_directory = add_directory;
   tree_editor->replace_directory = replace_directory;
@@ -1386,7 +1397,7 @@ svn_wc_get_update_editor (svn_string_t *dest,
 {
   return
     make_editor (dest, target_revision,
-                 0, NULL, NULL,
+                 FALSE, NULL, NULL,
                  editor, edit_baton, pool);
 }
 
@@ -1401,7 +1412,7 @@ svn_wc_get_checkout_editor (svn_string_t *dest,
                             apr_pool_t *pool)
 {
   return make_editor (dest, target_revision,
-                      1, repos, ancestor_path,
+                      TRUE, repos, ancestor_path,
                       editor, edit_baton, pool);
 }
 

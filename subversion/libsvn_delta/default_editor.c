@@ -20,7 +20,14 @@
 
 
 static svn_error_t *
-begin_edit (void *edit_baton, void **root_baton)
+set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+{
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 {
   *root_baton = edit_baton;
   return SVN_NO_ERROR;
@@ -37,8 +44,8 @@ delete_entry (svn_string_t *name, void *parent_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *ancestor_path,
-               long int ancestor_revision,
+               svn_string_t *base_path,
+               long int base_revision,
                void **child_baton)
 {
   *child_baton = parent_baton;
@@ -49,8 +56,7 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
-                   svn_string_t *ancestor_path,
-                   long int ancestor_revision,
+                   long int base_revision,
                    void **child_baton)
 {
   *child_baton = parent_baton;
@@ -93,8 +99,8 @@ apply_textdelta (void *file_baton,
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *ancestor_path,
-          long int ancestor_revision,
+          svn_string_t *base_path,
+          long int base_revision,
           void **file_baton)
 {
   *file_baton = parent_baton;
@@ -105,8 +111,7 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
-              svn_string_t *ancestor_path,
-              long int ancestor_revision,
+              long int base_revision,
               void **file_baton)
 {
   *file_baton = parent_baton;
@@ -144,7 +149,8 @@ close_edit (void *edit_baton)
    implementions above, and added here. */
 static const svn_delta_edit_fns_t default_editor =
 {
-  begin_edit,
+  set_target_revision,
+  replace_root,
   delete_entry,
   add_directory,
   replace_directory,

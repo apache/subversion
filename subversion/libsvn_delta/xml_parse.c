@@ -452,10 +452,10 @@ do_directory_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ANCESTOR, atts);
+  ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_VER, atts);
+  ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (ver)
     youngest_frame->ancestor_revision = atoi (ver);
 
@@ -464,7 +464,6 @@ do_directory_callback (svn_xml__digger_t *digger,
     err = digger->editor->replace_directory
       (dir_name,
        youngest_frame->baton,
-       youngest_frame->ancestor_path,
        youngest_frame->ancestor_revision,
        &(youngest_frame->baton));
   else
@@ -546,10 +545,10 @@ do_file_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ANCESTOR, atts);
+  ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_VER, atts);
+  ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (ver)
     youngest_frame->ancestor_revision = atoi (ver);
 
@@ -558,7 +557,6 @@ do_file_callback (svn_xml__digger_t *digger,
     err = digger->editor->replace_file
       (filename,
        youngest_frame->baton,
-       youngest_frame->ancestor_path,
        youngest_frame->ancestor_revision,
        &(youngest_frame->file_baton));
   else
@@ -575,7 +573,6 @@ do_file_callback (svn_xml__digger_t *digger,
   /* Store FILE_BATON in the digger, too, for safekeeping. */
   digger->file_baton = youngest_frame->file_baton;
 
-  
   return SVN_NO_ERROR;
 }
 
@@ -978,12 +975,12 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     new_frame->name = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor path in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ANCESTOR, atts);
+  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_PATH, atts);
   if (value)
     new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor revision in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_VER, atts);
+  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_BASE_REV, atts);
   if (value)
     new_frame->ancestor_revision = atoi (value);
 
@@ -1003,6 +1000,19 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     {
       new_frame->ancestor_path = my_digger->base_path;
       new_frame->ancestor_revision = my_digger->base_revision;
+
+      /* Set target revision, if there's any such attribute in ATTS */
+      value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_TARGET_REV, 
+                                      atts);
+      if (value)
+        my_digger->target_revision = atoi (value);
+
+      /* Set the global target revision by calling into the editor */
+      if (my_digger->editor->set_target_revision)
+        {
+          err = my_digger->editor->set_target_revision
+            (my_digger->edit_baton, my_digger->target_revision);
+        }
     }
 
   /* If this frame represents a new tree-delta, we need to fill in its
@@ -1017,12 +1027,13 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       if (my_digger->stack->tag == svn_delta__XML_deltapkg)
         {
           /* Fetch the rootdir_baton by calling into the editor */
-          if (my_digger->editor->begin_edit) 
+          if (my_digger->editor->replace_root) 
             {
               void *rootdir_baton;
 
-              err = my_digger->editor->begin_edit
-                (my_digger->edit_baton, &rootdir_baton);
+              err = my_digger->editor->replace_root
+                (my_digger->edit_baton, new_frame->ancestor_revision, 
+                 &rootdir_baton);
               if (err)
                 svn_xml_signal_bailout (err, my_digger->svn_parser);
 
