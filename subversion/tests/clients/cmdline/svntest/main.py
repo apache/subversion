@@ -307,7 +307,7 @@ def run_one_test(n, test_list):
     print "FAIL:",
   else:
     print "PASS:",
-  print sys.argv[0], n, ":", test_list[n].__doc__
+  print os.path.basename(sys.argv[0]), str(n) + ":", test_list[n].__doc__
   return error
 
 def _internal_run_tests(test_list, testnum=None):
