@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-02 10:01+0200\n"
+"POT-Creation-Date: 2004-09-07 20:16+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1297,13 +1297,13 @@ msgstr "Vis versjonsinformasjon for klienten\n"
 msgid "Caught signal"
 msgstr "Fanget signal"
 
-#: clients/cmdline/main.c:826 svnadmin/main.c:1005
+#: clients/cmdline/main.c:826 svnadmin/main.c:1006
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Flere revisjonsargument ble brukt. Prøv '-r M:N' i stedet for '-r M -r N'"
 
-#: clients/cmdline/main.c:838 svnadmin/main.c:1022
+#: clients/cmdline/main.c:838 svnadmin/main.c:1023
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaksfeil i revisjonsargumentet '%s'"
@@ -1321,7 +1321,7 @@ msgstr "Syntaksfeil i 'native-eol'-argumentet '%s'"
 msgid "Subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: clients/cmdline/main.c:1070 svnadmin/main.c:1142 svnlook/main.c:1962
+#: clients/cmdline/main.c:1070 svnadmin/main.c:1143 svnlook/main.c:1962
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Ukjent kommando: '%s'\n"
@@ -1857,8 +1857,8 @@ msgstr "Rammefeil i rørprotokollen"
 msgid "Read error in pipe"
 msgstr "Lesefeil i rør"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:286
-#: libsvn_subr/cmdline.c:303
+#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:311
+#: libsvn_subr/cmdline.c:328
 msgid "Write error"
 msgstr "Feil ved skriving"
 
@@ -2927,11 +2927,11 @@ msgstr "Posten '%s' mangler nettadresse"
 msgid "No commits in repository."
 msgstr "Ingen innsendinger i depotet"
 
-#: libsvn_client/ls.c:48 libsvn_client/ls.c:122
+#: libsvn_client/ls.c:49 libsvn_client/ls.c:126
 msgid "No get_dir() available for URL schema"
 msgstr "Ingen get_dir() tilgjengelig for URL-klasse"
 
-#: libsvn_client/ls.c:129 libsvn_client/ls.c:136
+#: libsvn_client/ls.c:133 libsvn_client/ls.c:140
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL-en '%s' finnes ikke i den revisjonen"
@@ -5017,10 +5017,14 @@ msgstr ""
 "Tilgjengelige delkommandoer:\n"
 
 #: svnadmin/main.c:653
-msgid "Please wait; recovering the repository may take some time...\n"
-msgstr "Vennligst vent. Gjenoppretting av depotet kan ta lang tid...\n"
+msgid ""
+"Repository lock acquired.\n"
+"Please wait; recovering the repository may take some time...\n"
+msgstr ""
+"Depotlåsen er overtatt.\n"
+"Vennligst vent, gjenoppretting av depotet kan ta lang tid...\n"
 
-#: svnadmin/main.c:687
+#: svnadmin/main.c:688
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -5028,11 +5032,11 @@ msgstr ""
 "Klarte ikke å få eksklusiv tilgang til depotet. Kanskje en annen\n"
 "prosess som for eksempel httpd, svnserve eller svn holder det åpent?"
 
-#: svnadmin/main.c:692
+#: svnadmin/main.c:693
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr "Venter på depotlås; kanskje en annen prosess har åpnet depotet?\n"
 
-#: svnadmin/main.c:699
+#: svnadmin/main.c:700
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -5040,33 +5044,33 @@ msgstr ""
 "\n"
 "Gjenoppretting er fullført.\n"
 
-#: svnadmin/main.c:706
+#: svnadmin/main.c:707
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "Siste depotrevisjon er %ld.\n"
 
-#: svnadmin/main.c:814
+#: svnadmin/main.c:815
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transaksjonen '%s' er fjernet.\n"
 
-#: svnadmin/main.c:838
+#: svnadmin/main.c:839
 msgid "Missing revision"
 msgstr "Mangler revisjon"
 
-#: svnadmin/main.c:841
+#: svnadmin/main.c:842
 msgid "Only one revision allowed"
 msgstr "Kun én revisjon er tillatt"
 
-#: svnadmin/main.c:847
+#: svnadmin/main.c:848
 msgid "Exactly one file argument required"
 msgstr "Kun ett filargument behøves"
 
-#: svnadmin/main.c:1120 svndumpfilter/main.c:1103 svnlook/main.c:1939
+#: svnadmin/main.c:1121 svndumpfilter/main.c:1103 svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: svnadmin/main.c:1210
+#: svnadmin/main.c:1211
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
