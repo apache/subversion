@@ -74,119 +74,101 @@ exactly how to massage a working copy from one state to another.
 Structure of the Working Copy
 =============================
 
-     [Note: this is redundant with some of client.texi, but 
-     overrides it.  We'll sync them up after implementation.]
+     [Note: this obsoletes parts of client.texi.  We'll sync them up
+     after implementation.] 
 
 Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ sudirs:
 
    SVN/versions
-       properties
-       here-changes
-       under-changes
-       lock                     /* optional */
-       tmp
-       base/foo.c
-            bar.c               /* holds contents _and_ properties */
-            ... (no subdirs) ...
+       here-props               /* Properties for this directory */
+       tree-changes             /* Records changes to tree structure */
+       prop-changes             /* Records changes to properties */
+       read-lock                /* Optional, you know what this is */
+       write-lock               /* Optional, you know what this is too */
+       tmp                      /* Local tmp space is preferable to /tmp */
+       base/                    /* Each file in base in a hashdump...
+            foo.c
+            bar.c               /* ...holding contents _and_ properties */
             baz.c
+            qux/                /* Subdirs are empty, though */
 
 `versions':
 
    This file holds the version number of this directory and its
-   children.  The first line represents the current directory and
-   looks like:
+   children -- that is to say, the version number for the root of the
+   repository tree from which this directory/file is derived.  
 
-      . VersionNumber DirName
+   The first line represents the current directory:
 
-   and each succeeding line like
+      . VersionNumber ThisDirName
 
-      VersionNumber FileOrDirName
+   and succeeding lines record files not at that version:
 
-   with names escaped so all characters are possible.  The directory's
-   own VersionNumber is implicit for every child of the directory, so
-   only the exceptions need to be recorded.  For example
+      OtherVersionNumber FileName
+
+   (names escaped appropriately, of course).  The directory's own
+   VersionNumber is implicit for every child of the directory, so only
+   the exceptions need to be recorded.  For example
 
       . 15 blah       /* Current dir is at 15, and all its files too... */
       17 foo.c        /* ... except foo.c, which is at 17, and... */
-      20 bar.c        /* ... bar.c, which is at 20, and also...
+      20 bar.c        /* ... bar.c, which is at 20, and...
       12 baz.c        /* ... bar.c, whose 12 might be result of "update -r" */
 
    The versions of child directories are not recorded, because they
-   have their own `SVN/versions' files.
+   would have their own `SVN/versions'.  
 
-
-[Ben sez:  remember that our audience here is CVS users, and we can't
-assume that all of them have read about "bubble-up" in the design
-doc.  When those folks read the above section, they're going to think
-we're talking about per-file RCS revision numbers.  We need to make it
-*explicit* that the line "17 foo.c" does not mean "the 17th revision
-of foo.c", but instead "foo.c is identical to the blah/foo.c found in
-tree #17 in the repository."  And while we're at it, since we're
-discussing merges in general, it may be good to remind folks that "17
-foo.c" and "18 foo.c" *might* be exactly identical in contents -- just
-to drive the point home.]
-
-
-
-
-fooo working here
-
-      [todo: should list all files, so one can know what files this
-      dir contains even if user removed them all with Unix `rm' and
-      not a word to subversion?  Or should it list only the ones that
-      are different from top version?]
-
-[Ben sez:  um, I think we do need to list all files under version
-control *somewhere* in the SVN/ subdir, maybe not necessarily in the
-Versions file, though.  I mean, we still need the "Entries" file
-functionality in order to send our magic 'black box' list to the
-server when reporting on the working copy's status -- this needs to be
-a complete list of all files under version control.]
-
-
-   Anything asserted by a `versions' file is known to the repository;
-   for example, if the user does "svn rename foo.c qux.c", the
-   versions file will still claim that foo.c is at version 17 (the
-   rename gets recorded in the `changes' file, described later).
-   After the rename is committed, the line for foo.c becomes:
+   The `versions' file discusses only things that exist in the
+   repository.  For example, if the user does "svn rename foo.c
+   qux.c", the versions file will still claim that foo.c is at version
+   17 (the rename gets recorded in the `tree-changes' file, described
+   later).  Only after the rename is committed does the line for foo.c
+   change to:
 
       21 qux.c
 
-   with version number adjusted appropriately of course.
+   (the version number might be something other than 21, of course).
    
 `properties'
 
    Properties for this directory, in standard hashdump format.
 
-`changes'
+`tree-changes'
 
-   Records changes made to this directory.  Oh ho, this needs a
-   careful format, each line like
+   Records adds, renames, and deletes involving this directory.
 
-      Operation oVersion oName [nVersion or "L"] [nName]
+      Operation NameHere OrigVersion OrigNameAsAbsolutePath
 
-   All names are full paths, so we can identify unambiguously.
+`read-lock'
 
-[Again, this is where 'svn {add|rm|mv}' would queue changes to be sent
-to the repository the next time 'svn ci' is run.  But doesn't the
-status-black-box still need to contain a list of *all* files and
-associated base-revisions?]
+   Present iff some client is reading this SVN/ subdir.
+   Write locks block on this.
 
-
-`lock'
+`write-lock'
 
    Present iff some client is making changes in this SVN/ subdir.
-   (Do we need read vs write locks?  Hmm, yes, probably.)
+   Both read and write locks block on this.
 
 `tmp'
 
-   Use this instead of /tmp, for debuggability and easy avoidance of
-   filename collisions.
+   Use this instead of /tmp, for debuggability, recovery, easy
+   avoidance of filename collisions.
 
-Now, about the `base/' subdir:
+`base/'
 
-explain how it holds *both* properties and contents...
+   Each file in base/ is in hashdump format, so it can hold both the
+   properties for the working file of the same name and its contents
+   (which are stored as the value of a special property named
+   "svn_contents").  Child directories of the current directory appear
+   here, but empty -- this is enough to make their existence known to
+   the current directory; all other information about the child
+   directory is of course stored in its own SVN/ subdir.
+
+fooo
+
+
+
 
 
 ------------------------
