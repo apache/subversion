@@ -104,7 +104,6 @@ svn_wc__ensure_wc (svn_string_t *path,
 
 svn_error_t *
 svn_wc_close_commit (svn_string_t *root_dir,
-                     svn_string_t *tok,
                      svn_vernum_t new_version,
                      apr_pool_t *pool)
 {
