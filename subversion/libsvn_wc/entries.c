@@ -487,8 +487,32 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   entry->lock_token = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
                                     APR_HASH_KEY_STRING);
   if (entry->lock_token)
-    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK; /* ### */
-  /* ### Rest of lock fields. */
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_TOKEN;
+
+  /* lock owner. */
+  entry->lock_owner = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_owner)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_OWNER;
+
+  /* lock comment. */
+  entry->lock_comment = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_comment)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_COMMENT;
+
+  /* lock creation date. */
+  {
+    const char *cdate_str = 
+      apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_CRT_DATE,
+                    APR_HASH_KEY_STRING);
+    if (cdate_str)
+      {
+        SVN_ERR (svn_time_from_cstring (&entry->lock_crt_date, cdate_str,
+                                        pool));
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE;
+      }
+  }
   
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -1024,7 +1048,21 @@ write_entry (svn_stringbuf_t **output,
   if (entry->lock_token)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN, APR_HASH_KEY_STRING,
                   entry->lock_token);
-  /* ### Rest of lock fields */
+
+  /* Lock owner */
+  if (entry->lock_owner)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER, APR_HASH_KEY_STRING,
+                  entry->lock_owner);
+
+  /* Lock comment */
+  if (entry->lock_comment)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT, APR_HASH_KEY_STRING,
+                  entry->lock_comment);
+
+  /* Lock creation date */
+  if (entry->lock_crt_date)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_CRT_DATE, APR_HASH_KEY_STRING,
+                  svn_time_to_cstring (entry->lock_crt_date, pool));
 
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
@@ -1312,11 +1350,26 @@ fold_entry (apr_hash_t *entries,
                             : NULL;
 
   /* Lock token */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK)
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_TOKEN)
     cur_entry->lock_token = (entry->lock_token
                              ? apr_pstrdup (pool, entry->lock_token)
                              : NULL);
-  /* ### Rest of lock fields. */
+
+  /* Lock owner */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_OWNER)
+    cur_entry->lock_owner = (entry->lock_owner
+                             ? apr_pstrdup (pool, entry->lock_owner)
+                             : NULL);
+
+  /* Lock comment */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_COMMENT)
+    cur_entry->lock_comment = (entry->lock_comment
+                               ? apr_pstrdup (pool, entry->lock_comment)
+                               : NULL);
+
+  /* Lock creation date */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE)
+    cur_entry->lock_crt_date = entry->lock_crt_date;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */

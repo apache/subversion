@@ -182,7 +182,24 @@ print_entry (const char *target,
       SVN_ERR (svn_cmdline_printf (pool, _("Conflict Properties File: %s\n"),
                                    svn_path_local_style (entry->prejfile,
                                                          pool)));
- 
+
+  if (entry->lock_token)
+    SVN_ERR (svn_cmdline_printf (pool, _("Lock Token: %s\n"),
+                                         entry->lock_token));
+
+  if (entry->lock_owner)
+    SVN_ERR (svn_cmdline_printf (pool, _("Lock Owner: %s\n"),
+                                         entry->lock_owner));
+
+  if (entry->lock_comment)
+    /* NOTE: The stdio will handle newline translation. */
+    SVN_ERR (svn_cmdline_printf (pool, _("Lock Comment: %s\n"),
+                                 entry->lock_comment));
+
+  if (entry->lock_crt_date)
+    SVN_ERR (svn_cl__info_print_time (entry->lock_crt_date,
+                                      _("Lock Creation Date"), pool));
+
   /* Print extra newline separator. */
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
 
