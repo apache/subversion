@@ -82,17 +82,17 @@ status__create(JNIEnv *env, jboolean *hasException)
                                  SVN_JNI_STATUS__CLASS);
 
       if( !_hasException )
-	{
-	  statusConstructor = 
+        {
+          statusConstructor = 
             j__get_method(env, &_hasException,
                           statusClass, "<init>", 
                           SVN_JNI_STATUS__SIG);
 
-	  if( statusConstructor == NULL )
-	  {
-	      _hasException = JNI_TRUE;
-	  }
-	}
+          if( statusConstructor == NULL )
+          {
+              _hasException = JNI_TRUE;
+          }
+        }
 
       if( !_hasException )
         {

@@ -34,8 +34,8 @@ extern "C" {
  */
 void
 misc__throw_exception_by_name(JNIEnv *env,
-			      const char *name,
-			      const char *msg);
+                              const char *name,
+                              const char *msg);
 svn_client_auth_baton_t *
 misc__make_auth_baton(JNIEnv *env, jobject jobj);
 

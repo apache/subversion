@@ -53,7 +53,7 @@ typedef struct {
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
-		((child)->field ? (child)->field : (parent)->field)
+                ((child)->field ? (child)->field : (parent)->field)
 
 /* Note: the "dav_svn" prefix is mandatory */
 extern module AP_MODULE_DECLARE_DATA dav_svn_module;
@@ -329,10 +329,10 @@ static void register_hooks(apr_pool_t *pconf)
 module AP_MODULE_DECLARE_DATA dav_svn_module =
 {
     STANDARD20_MODULE_STUFF,
-    dav_svn_create_dir_config,	/* dir config creater */
-    dav_svn_merge_dir_config,	/* dir merger --- default is to override */
-    dav_svn_create_server_config,	/* server config */
-    dav_svn_merge_server_config,	/* merge server config */
-    dav_svn_cmds,		/* command table */
-    register_hooks,             /* register hooks */
+    dav_svn_create_dir_config,    /* dir config creater */
+    dav_svn_merge_dir_config,     /* dir merger --- default is to override */
+    dav_svn_create_server_config, /* server config */
+    dav_svn_merge_server_config,  /* merge server config */
+    dav_svn_cmds,                 /* command table */
+    register_hooks,               /* register hooks */
 };

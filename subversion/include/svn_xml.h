@@ -259,20 +259,20 @@ void svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool);
  * @a style is one of the enumerated styles in @c svn_xml_open_tag_style.
  */
 void svn_xml_make_open_tag (svn_stringbuf_t **str,
-			    apr_pool_t *pool,
-			    enum svn_xml_open_tag_style style,
-			    const char *tagname,
-			    ...);
+                            apr_pool_t *pool,
+                            enum svn_xml_open_tag_style style,
+                            const char *tagname,
+                            ...);
 
 
 /** Like @c svn_xml_make_open_tag, but takes a @c va_list instead of being
  * variadic.
  */
 void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
-			      apr_pool_t *pool,
-			      enum svn_xml_open_tag_style style,
-			      const char *tagname,
-			      va_list ap);
+                              apr_pool_t *pool,
+                              enum svn_xml_open_tag_style style,
+                              const char *tagname,
+                              va_list ap);
 
 
 /** Like @c svn_xml_make_tag, but takes a hash table of attributes 
@@ -294,16 +294,16 @@ void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
  * convert Expat attr lists into hashes when necessary.
  */
 void svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
-				 apr_pool_t *pool,
-				 enum svn_xml_open_tag_style style,
-				 const char *tagname,
-				 apr_hash_t *attributes);
+                                 apr_pool_t *pool,
+                                 enum svn_xml_open_tag_style style,
+                                 const char *tagname,
+                                 apr_hash_t *attributes);
 
 
 /** Makes a close tag. */
 void svn_xml_make_close_tag (svn_stringbuf_t **str,
-			     apr_pool_t *pool,
-			     const char *tagname);
+                             apr_pool_t *pool,
+                             const char *tagname);
 
 
 

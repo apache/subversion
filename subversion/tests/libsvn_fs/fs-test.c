@@ -947,15 +947,15 @@ node_props (const char **msg,
   /* Change some of the above properties. */
   SET_STR (&s1, "P.O.D.");
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", "Best Rock Artist",
-				    &s1, pool));
+                                    &s1, pool));
 
   SET_STR (&s1, "Busta Rhymes");
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", "Best Rap Artist",
-				    &s1, pool));
+                                    &s1, pool));
 
   /* Remove a property altogether */
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt",
-				    "Best Country Artist", NULL, pool));
+                                    "Best Country Artist", NULL, pool));
 
   /* Copy a property's value into a new property. */
   SVN_ERR (svn_fs_node_prop (&value, txn_root, "music.txt",
@@ -964,7 +964,7 @@ node_props (const char **msg,
   s1.data = value->data;
   s1.len = value->len;
   SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt",
-				    "Biggest Cakewalk Fanatic", &s1, pool));
+                                    "Biggest Cakewalk Fanatic", &s1, pool));
 
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */

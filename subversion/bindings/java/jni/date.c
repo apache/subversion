@@ -67,27 +67,27 @@ date__create(JNIEnv *env, jboolean *hasException, jlong time)
 
       /* get method reference */
       if( !_hasException )
-	{
-	  constructor = 
+        {
+          constructor = 
             j__get_method(env, &_hasException,
                           class,
                           "<init>",
                           SVN_JNI_DATE__SIG);
-	}
+        }
 
       /* create new instance */
       if( !_hasException )
-	{
-	  /* the apr_time_t parameter time may be passed
-	   * directly to the java.util.Date(long) constructor
-	   */
-	  result = (*env)->NewObject(env, class, constructor, time);
+        {
+          /* the apr_time_t parameter time may be passed
+           * directly to the java.util.Date(long) constructor
+           */
+          result = (*env)->NewObject(env, class, constructor, time);
 
-	  if( result == NULL )
-	    {
-	      _hasException = JNI_TRUE;
-	    }
-	}
+          if( result == NULL )
+            {
+              _hasException = JNI_TRUE;
+            }
+        }
 
       (*env)->PopLocalFrame(env, result);
     }
@@ -97,7 +97,7 @@ date__create(JNIEnv *env, jboolean *hasException, jlong time)
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, ")\n");
 #endif
-				    
+
   if( (hasException != NULL) && _hasException )
     {
       *hasException = JNI_TRUE;

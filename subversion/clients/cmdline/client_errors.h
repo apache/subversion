@@ -39,16 +39,16 @@ extern "C" {
 #if defined(SVN_ERROR_BUILD_ARRAY)
 
 #define SVN_ERROR_START \
-	static const err_defn error_table[] = { \
-	  { SVN_ERR_CDMLINE__WARNING, "Warning" },
+        static const err_defn error_table[] = { \
+          { SVN_ERR_CDMLINE__WARNING, "Warning" },
 #define SVN_ERRDEF(n, s) { n, s },
 #define SVN_ERROR_END { 0, NULL } };
 
 #elif !defined(SVN_CMDLINE_ERROR_ENUM_DEFINED)
 
 #define SVN_ERROR_START \
-	typedef enum svn_client_errno_t { \
-	  SVN_ERR_CDMLINE__WARNING = SVN_ERR_LAST + 1,
+        typedef enum svn_client_errno_t { \
+          SVN_ERR_CDMLINE__WARNING = SVN_ERR_LAST + 1,
 #define SVN_ERRDEF(n, s) n,
 #define SVN_ERROR_END SVN_ERR_CMDLINE__ERR_LAST } svn_client_errno_t;
 

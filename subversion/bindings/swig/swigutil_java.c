@@ -165,15 +165,15 @@ void svn_swig_java_add_to_map(JNIEnv* jenv, apr_hash_t *hash, jobject map)
       apr_hash_this(hi, &key, NULL, &val);
       keyname = JCALL1(NewStringUTF, jenv, key);
       value = make_pointer(jenv, val);
-	  
+
       oldvalue = JCALL4(CallObjectMethod, jenv, map, put, keyname, value);
   
       JCALL1(DeleteLocalRef, jenv, value);
       JCALL1(DeleteLocalRef, jenv, oldvalue);
       JCALL1(DeleteLocalRef, jenv, keyname);
 
-	  if (JCALL0(ExceptionOccurred, jenv))
-          return;
+      if (JCALL0(ExceptionOccurred, jenv))
+        return;
     }
 }
 
@@ -287,7 +287,7 @@ const apr_array_header_t *svn_swig_java_strings_to_array(JNIEnv *jenv,
   while (targlen--)
     {
       jobject o = JCALL3(CallObjectMethod, jenv, source, get, targlen);
-	  const char * c_string;
+      const char * c_string;
       if (o == NULL)
           return NULL;
       else if (!JCALL2(IsInstanceOf, jenv, o,
@@ -962,7 +962,7 @@ static svn_error_t *read_outputstream(void *baton,
 {
   svn_error_t *svn_error = svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, 
                                             NULL,
-	                                    "Can't read from write only stream");
+                                            "Can't read from write only stream");
   return svn_error;                   
 } 
 
@@ -1108,7 +1108,7 @@ static svn_error_t *write_inputstream(void *baton,
 {
   svn_error_t *svn_error = svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, 
                                             NULL,
-	                                    "Can't write on read only stream");
+                                            "Can't write on read only stream");
   return svn_error;                   
 }
 
@@ -1183,7 +1183,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
     JNIEnv *jenv;
     if ((*jvm)->GetEnv(jvm, (void **) &jenv, JNI_VERSION_1_2)) 
       {
-	  return JNI_ERR;
+        return JNI_ERR;
       }
 #define SVN_SWIG_JAVA_INIT_CACHE
 #include "swigutil_java_cache.h"
@@ -1196,7 +1196,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved)
     JNIEnv *jenv;
     if ((*jvm)->GetEnv(jvm, (void **) &jenv, JNI_VERSION_1_2)) 
       {
-	  return ;
+        return;
       } 
 #define SVN_SWIG_JAVA_TERM_CACHE
 #include "swigutil_java_cache.h"

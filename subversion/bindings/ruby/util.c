@@ -96,7 +96,7 @@ svn_ruby_str_hash (apr_hash_t *hash, apr_pool_t *pool)
       apr_hash_this (hi, &key, &key_len, &val);
       value = (svn_string_t *) val;
       rb_hash_aset (obj, rb_str_new (key, key_len),
-		    rb_str_new (value->data, value->len));
+                    rb_str_new (value->data, value->len));
     }
 
   return obj;

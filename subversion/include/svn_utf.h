@@ -79,8 +79,8 @@ svn_error_t *svn_utf_cstring_to_utf8 (const char **dest,
  * allocate @a *dest in @a pool.
  */
 svn_error_t *svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
-					  const svn_stringbuf_t *src,
-					  apr_pool_t *pool);
+                                          const svn_stringbuf_t *src,
+                                          apr_pool_t *pool);
 
 
 /** Set @a *dest to a natively-encoded string from utf8 string @a src;

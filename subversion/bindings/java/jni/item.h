@@ -30,7 +30,7 @@ extern "C" {
 /* functions */
 jobject
 item__create(JNIEnv *env, jobject jpath, jobject jstatus, 
-	     jboolean *hasException);
+             jboolean *hasException);
 
 
 #ifdef __cplusplus

@@ -67,25 +67,25 @@ nodekind__create(JNIEnv *env, jboolean *hasException, jint nodekind)
 
       /* get method reference */
       if( !_hasException )
-	{
-	  constructor = 
+        {
+          constructor = 
             j__get_method(env, &_hasException,
                           class,
                           "<init>",
                           SVN_JNI_NODEKIND__SIG);
-	}
+        }
 
       /* create new instance */
       if( !_hasException )
-	{
-	  result = (*env)->NewObject(env, class, constructor, 
+        {
+          result = (*env)->NewObject(env, class, constructor, 
                                      nodekind);
 
-	  if( result == NULL )
-	    {
-	      _hasException = JNI_TRUE;
-	    }
-	}
+          if( result == NULL )
+            {
+              _hasException = JNI_TRUE;
+            }
+        }
 
       (*env)->PopLocalFrame(env, result);
     }
@@ -95,7 +95,7 @@ nodekind__create(JNIEnv *env, jboolean *hasException, jint nodekind)
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, ")\n");
 #endif
-				    
+
   if( (hasException != NULL) && _hasException )
     {
       *hasException = JNI_TRUE;

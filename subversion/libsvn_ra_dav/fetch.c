@@ -134,7 +134,7 @@ typedef struct {
   const svn_delta_editor_t *editor;
   void *edit_baton;
 
-  apr_array_header_t *dirs;	/* stack of directory batons/vsn_urls */
+  apr_array_header_t *dirs;  /* stack of directory batons/vsn_urls */
 #define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
 #define PUSH_BATON(rb,b) (*(void **)apr_array_push((rb)->dirs) = (b))
 
@@ -622,7 +622,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
       svn_txdelta_op_t op;
       svn_string_t data;
 
-      data.data	= buf;
+      data.data = buf;
       data.len = len;
 
       op.action_code = svn_txdelta_new;

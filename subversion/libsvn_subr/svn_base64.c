@@ -203,7 +203,7 @@ struct decode_baton {
   svn_stream_t *output;
   unsigned char buf[4];         /* Bytes waiting to be decoded */
   int buflen;                   /* Number of bytes waiting */
-  svn_boolean_t done;		/* True if we already saw an '=' */
+  svn_boolean_t done;           /* True if we already saw an '=' */
   apr_pool_t *pool;
 };
 
@@ -237,28 +237,28 @@ decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
   for (p = data; !*done && p < data + len; p++)
     {
       if (*p == '=')
-	{
-	  /* We are at the end and have to decode a partial group.  */
-	  if (*inbuflen >= 2)
-	    {
-	      memset (inbuf + *inbuflen, 0, 4 - *inbuflen);
-	      decode_group (inbuf, group);
-	      svn_stringbuf_appendbytes (str, group, *inbuflen - 1);
-	    }
-	  *done = TRUE;
-	}
+        {
+          /* We are at the end and have to decode a partial group.  */
+          if (*inbuflen >= 2)
+            {
+              memset (inbuf + *inbuflen, 0, 4 - *inbuflen);
+              decode_group (inbuf, group);
+              svn_stringbuf_appendbytes (str, group, *inbuflen - 1);
+            }
+          *done = TRUE;
+        }
       else
-	{
-	  find = strchr (base64tab, *p);
-	  if (find != NULL)
-	    inbuf[(*inbuflen)++] = find - base64tab;
-	  if (*inbuflen == 4)
-	    {
-	      decode_group (inbuf, group);
-	      svn_stringbuf_appendbytes (str, group, 3);
-	      *inbuflen = 0;
-	    }
-	}
+        {
+          find = strchr (base64tab, *p);
+          if (find != NULL)
+            inbuf[(*inbuflen)++] = find - base64tab;
+          if (*inbuflen == 4)
+            {
+              decode_group (inbuf, group);
+              svn_stringbuf_appendbytes (str, group, 3);
+              *inbuflen = 0;
+            }
+        }
     }
 }
 

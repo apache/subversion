@@ -29,17 +29,17 @@ svn_jni_hashtable__create(JNIEnv *env, jboolean *hasException);
 
 void
 svn_jni_hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
-		       jobject value, jboolean *hasException);
+                       jobject value, jboolean *hasException);
 
 /* svn_jni_status */
 jobject
 svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status, 
-		       jboolean *hasException);
+                       jboolean *hasException);
 
 /* svn_jni_item */
 jobject
 svn_jni_item__create(JNIEnv *env, jobject jpath, jobject jstatus, 
-		     jboolean *hasException);
+                     jboolean *hasException);
 
 /* svn_jni_string */
 svn_string_t *
@@ -59,8 +59,8 @@ svn_jni_string__svn_to_j(JNIEnv *env,
 /* svn_jni_misc */
 void
 svn_jni_misc__throw_exception_by_name(JNIEnv *env,
-				      const char *name,
-				      const char *msg);
+                                      const char *name,
+                                      const char *msg);
 
 svn_client_auth_baton_t *
 svn_jni_misc__make_auth_baton(JNIEnv *env, jobject jobj);

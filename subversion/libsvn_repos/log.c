@@ -187,7 +187,7 @@ svn_repos_get_logs (svn_repos_t *repos,
 
           if (! matched)
             continue;
-	}
+        }
 
       SVN_ERR (svn_fs_revision_prop
                (&author, fs, this_rev, SVN_PROP_REVISION_AUTHOR, subpool));

@@ -312,7 +312,7 @@ change_node_prop (VALUE self, VALUE path, VALUE aName, VALUE aValue)
     value = svn_string_ncreate (StringValuePtr (aValue),
                                 RSTRING (aValue)->len, pool);
   err = svn_fs_change_node_prop (root->root, StringValuePtr (path),
-				 StringValuePtr (aName), value, pool);
+                                 StringValuePtr (aName), value, pool);
   apr_pool_destroy (pool);
 
   if (err)

@@ -136,7 +136,7 @@ main (int argc, char *argv[])
             iRetVal = 1;
           }
       }
-	  return (iRetVal);
+    return (iRetVal);
 }
 
 /*** svn_add9x ***/
