@@ -157,10 +157,11 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
   
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
-  """Invokes main.run_svn with *VARARGS.  If EXPECTED_STDOUT or
-  EXPECTED_STDERR is not 'None', invokes compare_and_display_lines
-  with MESSAGE and the expected output.  If the comparison fails,
-  compare_and_display_lines will raise."""
+  """Invokes main.run_svn with *VARARGS, return stdout and stderr as
+  lists of lines.  If EXPECTED_STDOUT or EXPECTED_STDERR is not
+  'None', invokes compare_and_display_lines with MESSAGE and the
+  expected output.  If the comparison fails, compare_and_display_lines
+  will raise."""
   ### TODO catch and throw particular exceptions from above
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
