@@ -400,7 +400,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, cls):
 
       if isinstance(obj, gen_base.TargetSWIG):
-        tname = obj.install + '-' + gen_base.lang_abbrev[target.language]
+        tname = 'swig-' + gen_base.lang_abbrev[target.language]
         for dep in self.graph.get_sources(gen_base.DT_INSTALL, tname):
           deps[dep] = None
         continue
