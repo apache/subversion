@@ -32,7 +32,7 @@ struct svn_fs_txn_t
 
      Freeing this must completely clean up the transaction object,
      write back any buffered data, and release any database or system
-     resources it holds.  (But don't confused the transaction object
+     resources it holds.  (But don't confuse the transaction object
      with the transaction it represents: freeing this does *not* abort
      the transaction.)  */
   apr_pool_t *pool;
@@ -108,6 +108,19 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
   
   *txn_p = txn;
   return 0;
+}
+
+
+svn_error_t *
+svn_fs_close_txn (svn_fs_txn_t *txn)
+{
+  /* Anything done with this transaction was written immediately to
+     the filesystem (database), so there's no pending state to flush.
+     We can just destroy the pool; the transaction will persist, but
+     this handle on it will go away, which is the goal. */
+  apr_destroy_pool (txn->pool);
+
+  return SVN_NO_ERROR;
 }
 
 
