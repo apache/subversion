@@ -79,6 +79,8 @@
     but I know my repository URL is correct.  What's wrong?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
+<li><a href="#linux-bdb42-build">I'm having trouble building
+    Subversion under *NIX with BerkeleyDB 4.2 What should I do?</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
     Subversion under Windows with MSVC++ 6.0.  What should I do?</a></li>
 <li><a href="#windows-drive-letter">How can I specify a Windows drive letter in
@@ -1103,6 +1105,84 @@ You probably have old copies of
 sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
 building with are completely up-to-date, and try again.
 </p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="linux-bdb42-build">I'm having trouble building
+    Subversion under *NIX with BerkeleyDB 4.2.x What should I do?</a></h3>
+
+<p>Subversion compiles against BerkeleyDB by asking apr-util for the
+appropriate BDB build options.  This means that either the apr-util in
+your Subversion tarball or the one in your Apache tree must
+successfully detect BDB.  Normally one does this by passing
+"--with-berkeley-db" to apr-util's ./configure.  (When you pass this
+argument to either Apache or Subversion's ./configure, it's really
+just getting passed down to apr-util's ./configure.)</p>
+
+<p>The problem is that BerkeleyDB 4.2 is newer than the latest
+released version of apr-util, so apr-util doesn't know how to detect
+it.</p>
+
+<p>The long-term solution is already in place: the latest apr-util in
+CVS has code to explicitly detect BDB 4.2.  When either apr-util or
+Apache httpd does another release, this ability will widely
+available.</p>
+
+<p>In the short term, the best thing to do is apply <a
+href="db42-support-patch.txt">this patch</a> to your apr-util's
+./configure script -- either to the apr-util in your apache tree (if
+you're building Apache before Subversion), or to the apr-util in your
+Subversion tarball (if you're not building Apache at all.)  This patch
+is the new DB 4.2 detection code already in the latest apr-util
+CVS.</p>
+
+<p>If you've building Apache first, apply the patch to httpd-2.0.48's
+apr-util's configure script, and then build with these options:</p>
+
+<pre>
+  $ configure \
+  --enable-dav \
+  --enable-so \
+  --with-berkeley-db=/usr/local/BerkeleyDB.4.2
+  --with-dbm=db42
+</pre>
+<p>
+You can confirm that Apache is built with the proper BDB libraries with the
+following command:
+</p>
+<pre>
+  $ ldd /usr/local/apache2/bin/httpd | fgrep libdb
+      libdb-4.2.so => /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
+</pre>
+
+<p>And then you can simply build Subversion with no mention of BDB.
+(...although Subversion <i>might</i> need to be told where to find
+your Apache installation, if it's in a non-standard place.)</p>
+
+<p>If you're not building Apache, apply the patch to the apr-util
+ ./configure script in your Subversion tree, and use similar build
+ options:</p>
+
+<pre>
+  $ configure \
+  --with-berkeley-db=/usr/local/BerkeleyDB.4.2
+  --with-dbm=db42
+</pre>
+
+<p>
+Again, you can confirm that Subversion was built against the proper BDB
+library with the following:
+</p>
+<pre>
+  $ ldd /usr/local/bin/svn | fgrep libdb
+      libdb-4.2.so => /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
+</pre>
+</ol>
+
+<p>
+If you install your libraries in locations other than the defaults, you would
+need to adjust the paths at each step accordingly.</p>
+
 
 <![CDATA[-----------------------------------------------------------]]>
  
