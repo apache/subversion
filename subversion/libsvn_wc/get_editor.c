@@ -849,6 +849,7 @@ close_file (void *file_baton)
       Because we must preserve local changes, the actual order of
       operations to update F is this:
 
+         0. fooo
          1. receive svndiff data D
          2. svnpatch SVN/text-base/F < D > SVN/tmp/text-base/F
          3. gdiff -u SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.tmp
@@ -931,15 +932,42 @@ close_file (void *file_baton)
 
   if (fb->text_changed)
     {
+      svn_string_t *tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
+      svn_string_t *txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
+
+      /* Preserve any local modifications. */
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_RUN_CMD,
+                             SVN_WC__LOG_ATTR_NAME,  /* kff todo */
+                             tmp_txtb,
+                             SVN_WC__LOG_ATTR_NAME,  /* kff todo */
+                             txtb,
+                             SVN_WC__LOG_ATTR_DEST,  /* kff todo */
+                             svn_string_create ("kff todo", fb->pool),
+                             NULL);
+
       /* Move new text base over old text base. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
                              svn_xml_self_closing,
                              SVN_WC__LOG_MV,
                              SVN_WC__LOG_ATTR_NAME,
-                             svn_wc__text_base_path (fb->name, 1, fb->pool),
+                             tmp_txtb,
                              SVN_WC__LOG_ATTR_DEST,
-                             svn_wc__text_base_path (fb->name, 0, fb->pool),
+                             txtb,
+                             NULL);
+
+      /* kff todo: Overwrite local mods again, briefly. */
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP,
+                             SVN_WC__LOG_ATTR_NAME,
+                             txtb,
+                             SVN_WC__LOG_ATTR_DEST,
+                             fb->name,
                              NULL);
     }
 
