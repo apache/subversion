@@ -201,13 +201,18 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
 
 # a regexp machine for matching the name of the administrative dir.
-rm = re.compile("^SVN/|/SVN/|/SVN$|^/SVN/|^SVN$")
+admin_dir = main.get_admin_name()
+rm = re.compile("^" + admin_dir + "/"
+                + "|/" + admin_dir + "/"
+                + "|/" + admin_dir + "$"
+                + "|^/" + admin_dir + "/"
+                + "|^" + admin_dir + "$")
 
 # helper for handle_dir(), which is a helper for build_tree_from_wc()
 def get_props(path):
   "Return a hash of props for PATH, using the svn client."
 
-  # It's not kosher to look inside SVN/ and try to read the internal
+  # It's not kosher to look inside .svn/ and try to read the internal
   # property storage format.  Instead, we use 'svn proplist'.  After
   # all, this is the only way the user can retrieve them, so we're
   # respecting the black-box paradigm.
@@ -249,7 +254,7 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
   # put dirs and files in their own lists, and remove SVN dirs
   for f in all_files:
     f = os.path.join(path, f)
-    if (os.path.isdir(f) and os.path.basename(f) != 'SVN'):
+    if (os.path.isdir(f) and os.path.basename(f) != main.get_admin_name()):
       dirs.append(f)
     elif os.path.isfile(f):
       files.append(f)
@@ -517,7 +522,7 @@ def build_tree_from_status(lines):
 def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
     """Takes WC_PATH as the path to a working copy.  Walks the tree below
     that path, and creates the tree based on the actual found
-    files.  If IGNORE_SVN is true, then exclude SVN dirs from the tree.
+    files.  If IGNORE_SVN is true, then exclude SVN admin dirs from the tree.
     If LOAD_PROPS is true, the props will be added to the tree."""
 
     root = SVNTreeNode(root_node_name, None)
