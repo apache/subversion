@@ -133,9 +133,29 @@ svn_error_t *svn_wc_apply_delta (void *delta_src,
                                  svn_string_t *repos,
                                  apr_pool_t *pool);
 
+/*
+ * Return a walker that will be consumed by the Repository Access Layer.
+ * This walker will effect the changes during an update/checkout.
+ */
+svn_error_t *svn_wc_get_change_walker(svn_string_t *dest,
+                                      const svn_delta_walk_t **walker,
+                                      void **walk_baton,
+                                      void **dir_baton,
+                                      apr_pool_t *pool);
+
 
 #if 0
-/* Will have to think about the interface here a bit more. */
+/* kff: Will have to think about the interface here a bit more. */
+
+/* GJS: the function will look something like this:
+ *
+ * svn_wc_commit(source, commit_walker, commit_walk_baton, dir_baton, pool)
+ *
+ * The Client Library will fetch the commit_walker (& baton) from RA.
+ * Source is something that describes the files/dirs (and recursion) to
+ * commit. Internally, WC will walk the local dirs and push changes into
+ * the commit walker.
+ */
 
 svn_error_t *svn_wc_make_skelta (void *delta_src,
                                  svn_delta_write_fn_t *delta_stream_writer,
