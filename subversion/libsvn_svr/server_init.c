@@ -108,7 +108,7 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
        hash_index;                              /* NULL if out of entries */
        hash_index = ap_hash_next (hash_index))  /* get next hash entry */
     {
-      /* call 
+      /* call */
     }
 }
 
@@ -117,54 +117,61 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
 
 
 /* 
-   svn_svr_init()
+   svn_svr_init()   -- create a new, empty "policy" structure
 
-   This routine does any necessary server setup, so it must be called first!
-
-   Input:  a hash of hashes, containing all server-policy data.
+   Input:  ptr to policy ptr, pool
     
-   Returns: a pointer to a server policy structure.
-
-   --> The hash of hashes can be created either manually, or by running
-       svn_parse (filename), e.g.
-        
-                my_filename = svn_string_create ("/etc/svn.conf");
-                my_policy = svn_svr_init (svr_parse (my_filename, p), p);
-
-   --> The returned policy structure is a global context that must be
-   passed to all server routines... don't lose it!
+   Returns: alloc's empty policy structure, 
+            returns svn_error_t * or SVN_SUCCESS
 
 */
 
-svn_svr_policies_t *
-svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
+svn_error_t *
+svn_svr_init (svn_svr_policies_t **policy,
+              ap_pool_t *pool)
 {
   ap_status_t result;
 
-  /* First, allocate a `policies' structure and all of its internal
+  /* First, allocate a `policy' structure and all of its internal
      lists */
 
-  svn_svr_policies_t *my_policies = 
-    (svn_svr_policies_t *) ap_palloc (pool, sizeof(svn_svr_policies_t *));
+  *policy = 
+    (svn_svr_policies_t *) ap_palloc (pool, sizeof(svn_svr_policies_t));
 
-  my_policies->repos_aliases = ap_make_hash (pool);
-  my_policies->global_restrictions = ap_make_hash (pool);
-  my_policies->plugins = ap_make_hash (pool);
+  *policy->repos_aliases = ap_make_hash (pool);
+  *policy->global_restrictions = ap_make_hash (pool);
+  *policy->plugins = ap_make_hash (pool);
 
-  /* A policy structure has its own private memory pool, too, for
-     miscellaneous useful things.  */
 
-  result = ap_create_pool (& (my_policies->pool), NULL);
+  /* A policy structure has its own private memory pool, a sub-pool of
+     the pool passed in.  */
+
+  result = ap_create_pool (& (*policy->pool), pool);
 
   if (result != APR_SUCCESS)
     {
-      /* Can't create a private memory pool for the policy structure?
-         Then just use the one that was passed in instead.  */
-      char *msg = "svr_init(): warning: can't alloc pool for policy struct";
-      svn_handle_error (svn_create_error (result, msg, NULL, pool));
-
-      my_policies->pool = pool;
+      char *msg = "svr_init(): can't create sub-pool within policy struct";
+      return (svn_create_error (result, msg, NULL, pool));
     }
+
+  return SVN_SUCCESS;
+}
+
+
+
+svn_error_t *
+svn_svr_load_policy (svn_svr_policies_t *policy, 
+                     const char *filename)
+{
+  ap_hash_t *configdata;
+  svn_error_t *err;
+
+  /* Parse the file, get a hash-of-hashes back */
+  err = svn_parse (&configdata, filename, policy->pool);
+  if (err)
+    return (svn_quick_wrap_error
+            (err, "svn_svr_load_policy():  parser failed."));
+
 
   /* Ben sez:  we need a debugging system here.  Let's get one quick. (TODO)
      i.e.  
@@ -172,7 +179,8 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
   */
   svn_uberhash_print (configdata, stdout);
 
-  /* Now walk through our Uberhash, just as we do in svn_uberhash_print(). */
+
+  /* Now walk through our Uberhash, filling in the policy as we go. */
   {
     ap_hash_index_t *hash_index;
     void *key, *val;
@@ -195,7 +203,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
                in our policy structure! */
 
             printf ("svr_init(): got repository aliases.\n");
-            my_policies->repos_aliases = (ap_hash_t *) val;
+            policy->repos_aliases = (ap_hash_t *) val;
           }
 
         else if (svn_string_compare_2cstring ((svn_string_t *) key,
@@ -206,7 +214,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
                in our policy (the commands are interpreted elsewhere) */
 
             printf ("svr_init(): got security restrictions.\n");
-            my_policies->global_restrictions = (ap_hash_t *) val;
+            policy->global_restrictions = (ap_hash_t *) val;
           }
 
         else if (svn_string_compare_2cstring ((svn_string_t *) key,
@@ -218,27 +226,30 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
             
             printf ("svr_init(): loading list of plugins...\n");
             
-            svn__svr_load_all_plugins ((ap_hash_t *) val, my_policies);
+            svn__svr_load_all_plugins ((ap_hash_t *) val, policy);
 
           }
 
         else
           {
             svn_string_t *msg = 
-              svn_string_create ("svr_init(): warning: unknown section: ", 
+              svn_string_create 
+              ("svn_svr_load_policy(): warning: ignoring unknown section: ", 
                                  pool);
             svn_string_appendstr (msg, (svn_string_t *) key, pool);
             svn_handle_error (svn_create_error 
                               (SVN_ERR_UNRECOGNIZED_SECTION, 
                                svn_string_2cstring (msg, pool),
-                               NULL, pool));            
+                               NULL, pool), stderr);            
           }
       }    /* for (hash_index...)  */
        
   } /* closing of Uberhash walk-through */
   
-  return my_policies;
+
+  return SVN_SUCCESS;
 }
+
 
 
 
