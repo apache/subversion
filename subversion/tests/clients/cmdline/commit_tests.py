@@ -1529,9 +1529,28 @@ def commit_symlink(sbox):
     return 1
 
 def commit_nonrecursive(sbox):
-  "commit named targets with -N (issue #1195)"
+  "commit named targets with -N (issues #1195, #1239)"
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  #####################################################
+  ### Issue #1195:
+  ###
+  ### 1. Create these directories and files:
+  ###
+  ###    file1
+  ###    dir1
+  ###    dir1/file2
+  ###    dir1/file3
+  ###    dir1/dir2
+  ###    dir1/dir2/file4
+  ###   
+  ### 2. run 'svn add -N <all of the above>'
+  ###
+  ### 3. run 'svn ci -N <all of the above>'
+  ###
+  ### (The bug was that only 4 entities would get committed, when it
+  ### should be 6: dir2/ and file4 were left out.)
 
   # These paths are relative to the top of the test's working copy.
   file1_path = 'file1'
@@ -1596,6 +1615,118 @@ def commit_nonrecursive(sbox):
                                         os.path.join(wc_dir, file3_path),
                                         os.path.join(wc_dir, dir2_path),
                                         os.path.join(wc_dir, file4_path))
+
+  #####################################################
+  ### Issue #1239:
+  ###
+  ### 1. Create these directories and files:
+  ###
+  ###    dirA
+  ###    dirA/fileA
+  ###    dirA/fileB
+  ###    dirA/dirB
+  ###    dirA/dirB/fileC
+  ###    dirA/dirB/nocommit
+  ###   
+  ### 2. run 'svn add -N <all of the above>'
+  ###
+  ### 3. run 'svn ci -N <all but nocommit>'
+  ###
+  ### The bug was that it would attempt to commit the file `nocommit',
+  ### when it shouldn't, and then get an error anyway:
+  ###
+  ###    Adding         wc/dirA
+  ###    Adding         wc/dirA/fileA
+  ###    Adding         wc/dirA/fileB
+  ###    Adding         wc/dirA/dirB
+  ###    Adding         wc/dirA/dirB/nocommit
+  ###    Adding         wc/dirA/dirB/fileC
+  ###    Transmitting file data ....svn: A problem occured; see later errors
+  ###    for details
+  ###    svn: Commit succeeded, but other errors follow:
+  ###    svn: Problem running log
+  ###    svn: Error bumping revisions post-commit (details follow):
+  ###    svn: in directory
+  ###    'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
+  ###    svn: start_handler: error processing command 'committed' in
+  ###    'F:/Programmation/Projets/subversion/svnant/test/wc/dirA'
+  ###    svn: Working copy not locked
+  ###    svn: directory not locked
+  ###    (F:/Programmation/Projets/subversion/svnant/test/wc)  
+  ### 
+
+  # Now add these directories and files, except the last:
+  dirA_path  = 'dirA'
+  fileA_path = os.path.join('dirA', 'fileA')
+  fileB_path = os.path.join('dirA', 'fileB')
+  dirB_path  = os.path.join('dirA', 'dirB')
+  fileC_path = os.path.join(dirB_path, 'fileC')
+  nocommit_path = os.path.join(dirB_path, 'nocommit')
+
+  # Create the new files and directories.
+  os.mkdir(os.path.join(wc_dir, dirA_path))
+  svntest.main.file_append(os.path.join(wc_dir, fileA_path), 'fileA')
+  svntest.main.file_append(os.path.join(wc_dir, fileB_path), 'fileB')
+  os.mkdir(os.path.join(wc_dir, dirB_path))
+  svntest.main.file_append(os.path.join(wc_dir, fileC_path), 'fileC')
+  svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
+
+  # Add them to version control.
+  out, err = svntest.main.run_svn(None, 'add', '-N',
+                                  os.path.join(wc_dir, dirA_path),
+                                  os.path.join(wc_dir, fileA_path),
+                                  os.path.join(wc_dir, fileB_path),
+                                  os.path.join(wc_dir, dirB_path),
+                                  os.path.join(wc_dir, fileC_path),
+                                  os.path.join(wc_dir, nocommit_path))
+  if err:
+    raise svntest.Failure
+
+  expected_output = svntest.wc.State(
+    wc_dir,
+    { dirA_path  : Item(verb='Adding'),
+      fileA_path : Item(verb='Adding'),
+      fileB_path : Item(verb='Adding'),
+      dirB_path  : Item(verb='Adding'),
+      fileC_path : Item(verb='Adding'),
+      }
+    )
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+
+  # Expect the leftovers from the first part of the test.
+  expected_status.add({
+    file1_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    dir1_path  : Item(status='  ', repos_rev=3, wc_rev=2),
+    file2_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    file3_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    dir2_path  : Item(status='  ', repos_rev=3, wc_rev=2),
+    file4_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    })
+
+  # Expect the commits (and one noncommit) from this part of the test.
+  expected_status.add({
+    dirA_path     : Item(status='  ', repos_rev=3, wc_rev=3),
+    fileA_path    : Item(status='  ', repos_rev=3, wc_rev=3),
+    fileB_path    : Item(status='  ', repos_rev=3, wc_rev=3),
+    dirB_path     : Item(status='  ', repos_rev=3, wc_rev=3),
+    fileC_path    : Item(status='  ', repos_rev=3, wc_rev=3),
+    nocommit_path : Item(status='A ', repos_rev=3, wc_rev=0)
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '-N',
+                                        os.path.join(wc_dir, dirA_path),
+                                        os.path.join(wc_dir, fileA_path),
+                                        os.path.join(wc_dir, fileB_path),
+                                        os.path.join(wc_dir, dirB_path),
+                                        os.path.join(wc_dir, fileC_path))
 
 #----------------------------------------------------------------------
 # Regression for #1017: ra_dav was allowing the deletion of out-of-date
