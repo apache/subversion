@@ -142,13 +142,6 @@ node_rev_has_mutable_flag (skel_t *node_content)
   
   /* The 3rd element of the header, IF it exists, is the header's
      first `flag'.  It could be NULL.  */
-  /* ### tweakit: Heh.  Funny the way this worked out: the proplist
-     disappeared from the header, so FLAGS would now start at the
-     second element... except that we're proposing to add a REV field,
-     so FLAGS would once again be the third element.  Stick dummy,
-     empty-string REVs in there now, so everything stays at the same
-     place, and only start using them later, after the strings/reps
-     stuff is done. */
   skel_t *flag = header->children->next->next;
   
   while (flag)
