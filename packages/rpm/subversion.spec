@@ -156,7 +156,7 @@ fi
 %files
 %defattr(-,root,root)
 %doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL NEWS PORTING
-%doc README STACK TASKS
+%doc README TASKS
 %doc tools subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
