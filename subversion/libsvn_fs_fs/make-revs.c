@@ -41,8 +41,12 @@ struct parse_baton
   apr_array_header_t *roots;
   struct entry *current_node;
   svn_revnum_t current_rev;
+  apr_pool_t *rev_pool;
   apr_file_t *rev_file;
   svn_stream_t *rev_stream;
+  apr_hash_t *deleted_paths;
+  apr_hash_t *added_paths;
+  apr_hash_t *modified_paths;
   apr_md5_ctx_t md5_ctx;
   int next_node_id;
   int next_copy_id;
@@ -447,6 +451,60 @@ write_entry(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Return the string form of a changed-path entry. */
+static svn_error_t *
+write_change(svn_stream_t *out, const char *path, struct entry *entry,
+             const char *action, apr_pool_t *pool)
+{
+  svn_boolean_t text_mod = FALSE, props_mod = FALSE;
+
+  if (strcmp(action, "delete") != 0)
+    {
+      text_mod = (entry->text_rep.rev == entry->node_rev);
+      props_mod = (entry->props_rep.rev == entry->node_rev);
+    }
+  return svn_stream_printf(out, pool, "%" APR_SIZE_T_FMT ":%s %s %s %s %s\n",
+                           strlen(path), path, node_rev_id(entry, pool),
+                           action, text_mod ? "true" : "false",
+                           props_mod ? "true" : "false");
+}
+
+static svn_error_t *
+write_changed_path_data(struct parse_baton *pb, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  const char *action;
+  svn_stream_t *out = pb->rev_stream;
+
+  for (hi = apr_hash_first(pool, pb->added_paths); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      if (apr_hash_get(pb->deleted_paths, key, APR_HASH_KEY_STRING))
+        {
+          apr_hash_set(pb->deleted_paths, key, APR_HASH_KEY_STRING, NULL);
+          action = "replace";
+        }
+      else
+        action = "add";
+      SVN_ERR(write_change(out, key, val, action, pool));
+    }
+  for (hi = apr_hash_first(pool, pb->deleted_paths); hi;
+       hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      SVN_ERR(write_change(out, key, val, "delete", pool));
+    }
+  for (hi = apr_hash_first(pool, pb->modified_paths); hi;
+       hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      SVN_ERR(write_change(out, key, val, "modify", pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* --- The parser functions --- */
 
 static svn_error_t *
@@ -466,11 +524,18 @@ new_revision_record(void **revision_baton, apr_hash_t *headers, void *baton,
   assert(rev == pb->current_rev + 1);
   pb->current_rev = rev;
 
+  pb->rev_pool = svn_pool_create(pb->pool);
+
   /* Open a file for this revision. */
   SVN_ERR(svn_io_file_open(&pb->rev_file, revstr,
                            APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
-                           APR_OS_DEFAULT, pb->pool));
-  pb->rev_stream = svn_stream_from_aprfile(pb->rev_file, pb->pool);
+                           APR_OS_DEFAULT, pb->rev_pool));
+  pb->rev_stream = svn_stream_from_aprfile(pb->rev_file, pb->rev_pool);
+
+  /* Initialize the changed-path hash tables. */
+  pb->deleted_paths = apr_hash_make(pb->rev_pool);
+  pb->added_paths = apr_hash_make(pb->rev_pool);
+  pb->modified_paths = apr_hash_make(pb->rev_pool);
 
   /* Set up a new root for this rev. */
   root = new_entry(pb->pool);
@@ -512,12 +577,17 @@ new_node_record(void **node_baton, apr_hash_t *headers, void *baton,
   get_node_info(headers, &path, &kind, &action, &copyfrom_rev, &copyfrom_path);
   svn_path_split(path, &parent_path, &name, pool);
   parent = follow_path(pb, parent_path, pool);
+  path = apr_pstrdup(pb->rev_pool, path);
   switch (action)
     {
     case svn_node_action_change:
-      pb->current_node = get_child(pb, parent, name, pool);
+      entry = get_child(pb, parent, name, pool);
+      apr_hash_set(pb->modified_paths, path, APR_HASH_KEY_STRING, entry);
+      pb->current_node = entry;
       break;
     case svn_node_action_delete:
+      entry = apr_hash_get(parent->children, name, APR_HASH_KEY_STRING);
+      apr_hash_set(pb->deleted_paths, path, APR_HASH_KEY_STRING, entry);
       apr_hash_set(parent->children, name, APR_HASH_KEY_STRING, NULL);
       pb->current_node = NULL;
       break;
@@ -543,6 +613,7 @@ new_node_record(void **node_baton, apr_hash_t *headers, void *baton,
       entry->created_path = apr_pstrdup(pb->pool, path);
       name = apr_pstrdup(pb->pool, name);
       apr_hash_set(parent->children, name, APR_HASH_KEY_STRING, entry);
+      apr_hash_set(pb->added_paths, path, APR_HASH_KEY_STRING, entry);
       pb->current_node = entry;
       break;
     default:
@@ -665,24 +736,23 @@ close_node(void *baton)
 svn_error_t *close_revision(void *baton)
 {
   struct parse_baton *pb = baton;
-  apr_pool_t *pool = svn_pool_create(pb->pool);
   struct entry *root = get_root(pb, pb->current_rev);
   apr_off_t offset;
 
-  SVN_ERR(write_entry(pb, root, pool));
+  SVN_ERR(write_entry(pb, root, pb->rev_pool));
 
   /* Get the rev file offset of the changed-path data. */
   offset = 0;
-  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pool));
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pb->rev_pool));
 
-  /* XXX changed-path data goes here */
+  SVN_ERR(write_changed_path_data(pb, pb->rev_pool));
 
   /* Write out the offsets for the root node and changed-path data. */
-  SVN_ERR(svn_stream_printf(pb->rev_stream, pool,
+  SVN_ERR(svn_stream_printf(pb->rev_stream, pb->rev_pool,
                             "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
                             root->node_off, offset));
-  SVN_ERR(svn_io_file_close(pb->rev_file, pool));
-  svn_pool_destroy(pool);
+  SVN_ERR(svn_io_file_close(pb->rev_file, pb->rev_pool));
+  svn_pool_destroy(pb->rev_pool);
   return SVN_NO_ERROR;
 }
 

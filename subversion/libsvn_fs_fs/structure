@@ -27,6 +27,8 @@ we must be able to efficiently look up a node-rev given only its ID.
 To allow this, the txn-id field of a node-ID contains either
 "r<rev>/<offset>" for a node-revision within a committed revision, or
 "t<txnid>" for a node-revision within an uncommitted transaction.
+Node-revision IDs within in a rev file can only use the
+"r<rev>/<offset>" txn-id form.
 
 Revision file format
 --------------------
@@ -90,7 +92,20 @@ type, than the node-rev itself does.)
 
 A node-revision with no properties may omit the "props" field.
 
-[Don't know how changed-path data is represented yet.]
+Changed-path data is represented as a series of lines, each containing
+"<len>:<path> <id> <action> <text-mod> <prop-mod>\n", where
+<len>:<path> is a counted string representation of the pathname, <id>
+is the node-rev ID of the new node-rev, <action> is "add", "delete",
+"replace", or "modify", and <text-mod> and <prop-mod> are "true" or
+"false" indicating whether the text and/or properties changed.  For
+deletes, <id> is the node-rev ID of the deleted node-rev, and
+<text-mod> and <prop-mod> are always "false".
+
+[NOTE: We could speed up svn_repos_get_logs significantly by storing
+copy history in the changed-path data and caching it upon reading the
+changed-path data in svn_fs_paths_changed.  Before we finalize the
+structure, we should measure the performance impact of this operation
+on "svn log -v" of a large import.]
 
 At the very end of a rev file is a pair of lines containing
 "\noffsets: <root-offset> <cp-offset>\n", where <root-offset> is the
