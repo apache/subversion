@@ -527,8 +527,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
                               apr_pool_t *pool)
 {
   int i;
-  svn_opt_revision_t *firstrev = NULL, *secondrev = NULL;
-   apr_array_header_t *input_targets =
+  apr_array_header_t *input_targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
   apr_array_header_t *output_targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
@@ -626,6 +625,8 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
 
   if (extract_revisions)
     {
+      svn_opt_revision_t *firstrev = NULL, *secondrev = NULL;
+
       for (i = 0; i < output_targets->nelts; i++)
         {
           const char *truepath;
