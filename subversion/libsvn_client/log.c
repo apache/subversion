@@ -34,6 +34,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_path.h"
 
 
 
@@ -46,7 +47,7 @@
 
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
-                apr_hash_t *paths,
+                apr_array_header_t *targets,
                 svn_revnum_t start,
                 svn_revnum_t end,
                 svn_boolean_t discover_changed_paths,
@@ -54,38 +55,31 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                 void *receiver_baton,
                 apr_pool_t *pool)
 {
-  /* ### todo: ignore PATHS for now, since the server does too. */
-
   svn_ra_plugin_t *ra_lib;  
   svn_ra_callbacks_t *ra_callbacks;
   void *ra_baton, *cb_baton, *session;
-  svn_stringbuf_t *anchor, *target, *URL;
+  svn_stringbuf_t *URL;
   svn_wc_entry_t *entry;
+  svn_stringbuf_t *basename;
+  apr_array_header_t *condensed_targets;
 
-  /* Use PATH to get the update's anchor and targets. */
-  {
-    svn_stringbuf_t *path = svn_stringbuf_create (".", pool);
-    SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-  }
+  SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
+                                      targets, svn_path_local_style, pool));
 
-  /* ### todo: this is exactly the same logic as in status.c.  I
-     wonder how many other places it's repeated in... perhaps it's
-     time to abstract this? */
-
-  /* Get full URL from the ANCHOR. */
-  SVN_ERR (svn_wc_entry (&entry, anchor, pool));
+  /* Get full URL from the common path, carefully. */
+  SVN_ERR (svn_wc_entry (&entry, basename, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", anchor->data);
+       "svn_client_update: %s is not under revision control", basename->data);
   if (entry->existence == svn_wc_existence_deleted)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_client_update: entry '%s' has been deleted", anchor->data);
+       "svn_client_update: entry '%s' has been deleted", basename->data);
   if (! entry->ancestor)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0, NULL, pool,
-       "svn_client_update: entry '%s' has no URL", anchor->data);
+       "svn_client_update: entry '%s' has no URL", basename->data);
   URL = svn_stringbuf_create (entry->ancestor->data, pool);
 
   /* Do RA interaction here to figure out what is out of date with
@@ -98,13 +92,13 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
-                                         auth_baton, anchor, TRUE,
+                                         auth_baton, basename, TRUE,
                                          TRUE, pool));
   if (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool) != NULL)
     return SVN_NO_ERROR;
 
   SVN_ERR (ra_lib->get_log (session,
-                            paths,
+                            condensed_targets,  /* ### todo: or `targets'? */
                             start,
                             end,
                             discover_changed_paths,
