@@ -43,7 +43,7 @@ http://svn.collab.net/repos/svn/tags/0.33.0
  * ra_dav checkouts/updates no longer do O(n) number of GET, PROPFIND requests
  * new svn_io_temp_dir function, will morph to apr_temp_dir_get soon
  * new svn_io_file_close wrapper for apr_file_close
- * new helper scripts for testing, see tools/test-scripts/svntest/
+ * tools/test-scripts/svntest/ scripts now support ra_dav and ramdisk
  * many other changes not listed here
 
 
