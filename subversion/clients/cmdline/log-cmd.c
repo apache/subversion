@@ -75,16 +75,15 @@ num_lines (const char *msg)
 }
 
 
-/* Baton for log_message_receiver(). */
+/* Baton for log_message_receiver() and log_message_receiver_xml(). */
 struct log_receiver_baton
 {
   /* Check for cancellation on each invocation of a log receiver. */
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 
-  /* Don't print log message body nor line count.  This is ignored for
-     xml output. */
-  svn_boolean_t quiet;
+  /* Don't print log message body nor its line count. */
+  svn_boolean_t omit_log_message;
 
   /* Output stream */
   svn_stream_t *out;
@@ -105,7 +104,7 @@ struct log_receiver_baton
  * First, print a header line.  Then if CHANGED_PATHS is non-null,
  * print all affected paths in a list headed "Changed paths:\n",
  * immediately following the header line.  Then print a newline
- * followed by the message body, unless BATON->quiet is true.
+ * followed by the message body, unless BATON->omit_log_message is true.
  *
  * Here are some examples of the output:
  *
@@ -228,7 +227,7 @@ log_message_receiver (void *baton,
   else
     date_stdout = "(no date)";
   
-  if (! lb->quiet)
+  if (! lb->omit_log_message)
     {
       if (msg == NULL)
         msg = "";
@@ -247,7 +246,7 @@ log_message_receiver (void *baton,
                               "rev %" SVN_REVNUM_T_FMT ":  %s | %s",
                               rev, author_stdout, date_stdout));
 
-  if (! lb->quiet)
+  if (! lb->omit_log_message)
     {
       lines = num_lines (msg_stdout);
       SVN_ERR (svn_stream_printf (lb->out, pool,
@@ -296,7 +295,7 @@ log_message_receiver (void *baton,
         }
     }
 
-  if (! lb->quiet)
+  if (! lb->omit_log_message)
     {
       /* A blank line always precedes the log message. */
       SVN_ERR (svn_stream_printf (lb->out, pool, APR_EOL_STR "%s" APR_EOL_STR,
@@ -307,8 +306,9 @@ log_message_receiver (void *baton,
 }
 
 
-/* This implements `svn_log_message_receiver_t', printing the logs in
- * XML.  BATON is ignored.
+/* This implements `svn_log_message_receiver_t', printing the logs in XML.
+ *
+ * BATON is of type `struct log_receiver_baton'.
  *
  * Here is an example of the output; note that the "<log>" and
  * "</log>" tags are not emitted by this function:
@@ -438,20 +438,23 @@ log_message_receiver_xml (void *baton,
       svn_xml_make_close_tag (&sb, pool, "paths");
     }
 
-  if (msg == NULL)
-    msg = "";
+  if (! lb->omit_log_message)
+    {
+      if (msg == NULL)
+        msg = "";
 
-  /* <msg>xxx</msg> */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
-  SVN_ERR (svn_subst_translate_cstring (msg, &msg_native_eol,
-                                        APR_EOL_STR, /* the 'native' eol */
-                                        FALSE,       /* no need to repair */
-                                        NULL,        /* no keywords */
-                                        FALSE,       /* no expansion */
-                                        pool));
-  svn_xml_escape_cdata_cstring (&sb, msg_native_eol, pool);
-  svn_xml_make_close_tag (&sb, pool, "msg");
-  
+      /* <msg>xxx</msg> */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
+      SVN_ERR (svn_subst_translate_cstring (msg, &msg_native_eol,
+                                            APR_EOL_STR, /* the 'native' eol */
+                                            FALSE,       /* no need to repair */
+                                            NULL,        /* no keywords */
+                                            FALSE,       /* no expansion */
+                                            pool));
+      svn_xml_escape_cdata_cstring (&sb, msg_native_eol, pool);
+      svn_xml_make_close_tag (&sb, pool, "msg");
+    }
+
   /* </logentry> */
   svn_xml_make_close_tag (&sb, pool, "logentry");
 
@@ -515,7 +518,7 @@ svn_cl__log (apr_getopt_t *os,
 
   lb.cancel_func = ctx->cancel_func;
   lb.cancel_baton = ctx->cancel_baton;
-  lb.quiet = opt_state->quiet;
+  lb.omit_log_message = opt_state->quiet;
   SVN_ERR (svn_stream_for_stdout (&lb.out, pool));
 
   if (! opt_state->quiet)
