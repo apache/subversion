@@ -395,8 +395,19 @@ V.  BUILDING A SUBVERSION SERVER
       NOTE: Make sure that the user 'nobody' (or whatever UID the
       httpd process runs as) has permission to read and write the
       Berkeley DB files!  This is a very common problem.
+
+9.  In order for 'svn cp' to work (which is actually implemented as a
+    DAV COPY command), mod_dav needs to be able to be able to determine
+    the hostname of the server.  A standard way of doing this is to use
+    Apache's ServerName directive to set the server's hostname.  Edit
+    your /usr/local/apache2/conf/httpd.conf to include:
+
+          ServerName svn.myserver.org
+
+    If you are using virtual hosting through Apache's NameVirtualHost
+    directive, this will not be an issue.
  
-  9.  Now fire up apache 2.0:
+10. Now fire up apache 2.0:
 
            /usr/local/apache2/bin/apachectl stop
            /usr/local/apache2/bin/apachectl start
@@ -404,7 +415,7 @@ V.  BUILDING A SUBVERSION SERVER
       Check /usr/local/apache2/logs/error_log to make sure it started
       up okay.
 
-  10. Finally, try doing a network checkout from the repository:
+11. Finally, try doing a network checkout from the repository:
 
           svn co http://localhost/svn/repos -d wc
 
