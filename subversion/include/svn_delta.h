@@ -185,7 +185,7 @@ typedef struct svn_vcdiff_parser_t
   /* The current subpool which contains our current window-buffer */
   apr_pool_t *subpool;
 
-  /* The actual vcdiff data buffer, living within current_subpool. */
+  /* The actual vcdiff data buffer, living within subpool. */
   svn_string_t *buffer;
 
 } svn_vcdiff_parser_t;
@@ -195,16 +195,82 @@ typedef struct svn_vcdiff_parser_t
 
 /* Property deltas.  */
 
-/* A property diff */
-typedef struct svn_pdelta_t {
+/*  
+    Because pdelta "operations" are well-defined by XML tags, things
+have the potential to be a little simpler than in in the
+text-delta-parsing universe.  The pdelta parser can send commands to
+the caller's svn_walk_t callbacks in two different, *non*-mutually
+exclusive ways.
+
+  1.  If the svn_walk_t structure has non-NULL callbacks set in
+  "apply_*_propchange": buffer the propname and propvalue completely
+  into RAM, and send it to these callbacks.
+
+  2.  If the svn_walk_t callbacks "begin_*delta" return non-NULL
+  handlers: buffer the propname and propvalue gradually, and send off
+  `chunks' to these handlers.  This is similar to the text-delta
+  strategy.
+      
+Again, note that these methods are non-mututally-exclusive.  The
+caller of svn_delta_parse() may actually want us to do both strategies.
+
+*/
+
+
+/* This represents an *entire* propchange, all in memory (see (1)
+   above).  This is what gets passed to the apply_*_propchange()
+   callbacks */
+typedef struct svn_propchange_t
+{
   enum {
     svn_prop_set = 1,
     svn_prop_delete
   } kind;
   svn_string_t *name;
   svn_string_t *value;
-  struct svn_pdelta_t *next;
-} svn_pdelta_t;
+
+} svn_propchange_t;
+
+
+
+/* The type of propchange chunk we're sending to a handler (see (2)
+   above). */
+typedef enum 
+{
+  svn_prop_name_chunk = 1,
+  svn_prop_value_chunk
+} svn_prop_change_chunk_type_t;   /* yes, we're serious. */
+
+
+/* A function to consume a series of propchange chunks.  Must be
+   defined by the caller of the parser.  */
+typedef svn_error_t *(svn_prop_change_chunk_handler_t)
+     (svn_string_t *chunk, void *baton, svn_prop_change_chunk_type_t type);
+
+
+/* A pdelta parser object.  */
+typedef struct svn_pdelta_parser_t 
+{
+  /* Once this parser has enough data buffered to create a propchange
+     "chunk", it passes the window to the caller's consumer routine.  */
+  svn_prop_change_chunk_handler_t *consumer_func;
+  void *consumer_baton;
+
+  /* Pool to create subpools from; each developing chunk will live in
+     a subpool */
+  apr_pool_t *pool;
+
+  /* The current subpool which contains our current chunk */
+  apr_pool_t *subpool;
+
+  /* The actual parser data buffer, living within subpool. */
+  svn_string_t *buffer;
+
+} svn_vcdiff_parser_t;
+
+
+
+
 
 
 
@@ -240,9 +306,21 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*delete) (svn_string_t *name,
 			  void *walk_baton, void *parent_baton);
 
+  /* If these routines are non-NULL, then entire RAM-buffered
+     PROPCHANGE will be sent all at once to them. */
+  svn_error_t *(apply_dir_propchange) (svn_propchange_t *propchange,
+                                       void *walk_baton, void *parent_baton);
+
+  svn_error_t *(apply_file_propchange) (svn_propchange_t *propchange,
+                                        void *walk_baton, void *parent_baton);
+
+  svn_error_t *(apply_dir_propchange) (svn_propchange_t *propchange,
+                                       void *walk_baton, void *parent_baton);
+                                   
+                                   
   /* Apply the property delta ENTRY_PDELTA to the property list of the
      directory entry named NAME.  */
-  svn_error_t *(*entry_pdelta) (svn_string_t *name,
+  svn_error_t *(*dirent_pdelta) (svn_string_t *name,
 				void *walk_baton, void *parent_baton,
 				svn_pdelta_t *entry_pdelta);
 
@@ -255,7 +333,6 @@ typedef struct svn_delta_walk_t
 				 void *walk_baton, void *parent_baton,
 				 svn_string_t *base_path,
 				 svn_vernum_t base_version,
-				 svn_pdelta_t *pdelta,
 				 void **child_baton);
 
   /* We are going to change the directory entry named NAME to a
@@ -268,7 +345,6 @@ typedef struct svn_delta_walk_t
 				     void *walk_baton, void *parent_baton,
 				     svn_string_t *base_path,
 				     svn_vernum_t base_version,
-				     svn_pdelta_t *pdelta,
 				     void **child_baton);
 
   /* We are done processing a subdirectory, whose baton is
@@ -279,17 +355,31 @@ typedef struct svn_delta_walk_t
   /* We are done processing a file */
   svn_error_t *(*finish_file) (void *child_baton);
 
-  /* We are going to add a new file named NAME.  HANDLER and
-     HANDLER_BATON specify a function to consume a series of vcdiff
+  
+  /* We're about to start receiving text-delta windows. HANDLER and
+     HANDLER_BATON specify a function to consume a series of these
      windows.  If BASE_PATH is zero, the changes are relative to the
-     empty file.  */
+     empty file. */
+  svn_error_t *(*begin_textdelta) (void *walk_baton, void *parent_baton,
+                                   svn_text_delta_window_handler_t **handler,
+                                   void **handler_baton);
+
+
+  /* We're about to start receiving a prop-delta. HANDLER and
+     HANDLER_BATON specify a function to consume a series of
+     propchange chunks.  If BASE_PATH is zero, the changes are
+     relative to the empty file. */
+  svn_error_t *(*begin_propdelta) (void *walk_baton, void *parent_baton,
+                                   svn_prop_change_chunk_handler_t **handler,
+                                   void **handler_baton);
+
+
+  /* We are going to add a new file named NAME.    */
   svn_error_t *(*add_file) (svn_string_t *name,
 			    void *walk_baton, void *parent_baton,
 			    svn_string_t *base_path,
-			    svn_vernum_t base_version,
-			    svn_pdelta_t *pdelta,
-                            svn_text_delta_window_handler_t **handler,
-			    void **handler_baton);
+			    svn_vernum_t base_version);
+
 
   /* We are going to change the directory entry named NAME to a file.
      TEXT_DELTA specifies the file contents as a delta relative to the
@@ -297,10 +387,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*replace_file) (svn_string_t *name,
 				void *walk_baton, void *parent_baton,
 				svn_string_t *base_path,
-				svn_vernum_t base_version,
-				svn_pdelta_t *pdelta,
-                                svn_text_delta_window_handler_t **handler,
-                                void **handler_baton);
+				svn_vernum_t base_version);
 
 
 } svn_delta_walk_t;
