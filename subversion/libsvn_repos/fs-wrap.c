@@ -421,6 +421,11 @@ svn_repos_fs_lock (svn_lock_t **lock,
   svn_error_t *err;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
+  /* Setup an array of paths in anticipation of the ra layers handling
+     multiple locks in one request (1.3 most likely).  This is only
+     used by svn_repos__hooks_post_lock. */
+  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = path;
 
   SVN_ERR (svn_fs_get_access (&access_ctx, repos->fs));
   if (access_ctx)
@@ -440,7 +445,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
                         timeout, current_rev, pool));
 
   /* Run post-lock hook. */
-  if ((err = svn_repos__hooks_post_lock (repos, path, username, pool)))
+  if ((err = svn_repos__hooks_post_lock (repos, paths, username, pool)))
     return svn_error_create
       (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
        "Lock succeeded, but post-lock hook failed");
@@ -458,6 +463,11 @@ svn_repos_fs_attach_lock (svn_lock_t *lock,
                           apr_pool_t *pool)
 {
   svn_error_t *err;
+  /* Setup an array of paths in anticipation of the ra layers handling
+     multiple locks in one request (1.3 most likely).  This is only
+     used by svn_repos__hooks_post_lock. */
+  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = lock->path;
 
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
@@ -467,7 +477,7 @@ svn_repos_fs_attach_lock (svn_lock_t *lock,
   SVN_ERR (svn_fs_attach_lock (lock, repos->fs, force, current_rev, pool));
   
   /* Run post-lock hook. */
-  if ((err = svn_repos__hooks_post_lock (repos, lock->path,
+  if ((err = svn_repos__hooks_post_lock (repos, paths,
                                          lock->owner, pool)))
     return svn_error_create
       (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
@@ -488,6 +498,11 @@ svn_repos_fs_unlock (svn_repos_t *repos,
   svn_error_t *err;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
+  /* Setup an array of paths in anticipation of the ra layers handling
+     multiple locks in one request (1.3 most likely).  This is only
+     used by svn_repos__hooks_post_lock. */
+  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = path;
 
   SVN_ERR (svn_fs_get_access (&access_ctx, repos->fs));
   if (access_ctx)
@@ -507,7 +522,7 @@ svn_repos_fs_unlock (svn_repos_t *repos,
   SVN_ERR (svn_fs_unlock (repos->fs, path, token, force, pool));
 
   /* Run post-unlock hook. */
-  if ((err = svn_repos__hooks_post_unlock (repos, path, username, pool)))
+  if ((err = svn_repos__hooks_post_unlock (repos, paths, username, pool)))
     return svn_error_create
       (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
        _("Unlock succeeded, but post-unlock hook failed"));

@@ -188,10 +188,11 @@ svn_repos__hooks_pre_lock (svn_repos_t *repos,
 /* Run the post-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
 
-   PATH is the path that was locked, USERNAME is the person who did it.  */
+   PATHS is an array of paths being locked, USERNAME is the person
+   who did it.  */
 svn_error_t *
 svn_repos__hooks_post_lock (svn_repos_t *repos,
-                            const char *path,
+                            apr_array_header_t *paths,
                             const char *username,
                             apr_pool_t *pool);
 
@@ -208,10 +209,11 @@ svn_repos__hooks_pre_unlock (svn_repos_t *repos,
 /* Run the post-unlock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
    
-   PATH is the path that was unlocked, USERNAME is the person who did it.  */
+   PATHS is an array of paths being unlocked, USERNAME is the person
+   who did it.  */
 svn_error_t *
 svn_repos__hooks_post_unlock (svn_repos_t *repos,
-                              const char *path,
+                              apr_array_header_t *paths,
                               const char *username,
                               apr_pool_t *pool);
 

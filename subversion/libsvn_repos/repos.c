@@ -1051,9 +1051,17 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#   [1] REPOS-PATH   (the path to this repository)"
       APR_EOL_STR
-      "#   [2] PATH         (the path within the repository,  just locked)"
+      "#   [2] USER         (the user who created the lock)"
       APR_EOL_STR
-      "#   [3] USER         (the user who created the lock)"
+      "#"
+      APR_EOL_STR
+      "# The paths that were just locked are passed to the hook via STDIN (As"
+      APR_EOL_STR
+      "# of Subversion 1.2, only one path is passed per invocation, but the"
+      APR_EOL_STR
+      "# plan is to pass all locked paths at once in Subversion 1.3 and"
+      APR_EOL_STR
+      "# later)."
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -1108,14 +1116,14 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "REPOS=\"$1\""
       APR_EOL_STR
-      "PATH=\"$2\""
+      "USER=\"$2\""
       APR_EOL_STR
-      "USER=\"$3\""
+      "read PATHS"
       APR_EOL_STR
       APR_EOL_STR
       "# Send email to interested parties, let them know a lock was created:"
       APR_EOL_STR
-      "lock-email.py \"$REPOS\" \"$REV\" \"$USER\" lock-watchers@example.org"
+      "lock-email.py \"$REPOS\" \"$USER\" lock-watchers@example.org $PATHS"
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
@@ -1151,9 +1159,17 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#   [1] REPOS-PATH   (the path to this repository)"
       APR_EOL_STR
-      "#   [2] PATH         (the path within the repository,  just unlocked)"
+      "#   [2] USER         (the user who destroyed the lock)"
       APR_EOL_STR
-      "#   [3] USER         (the user who destroyed the lock)"
+      "#"
+      APR_EOL_STR
+      "# The paths that were just unlocked are passed to the hook via STDIN"
+      APR_EOL_STR
+      "# (As of Subversion 1.2, only one path is passed per invocation, but"
+      APR_EOL_STR
+      "# the plan is to pass all locked paths at once in Subversion 1.3 and"
+      APR_EOL_STR
+      "# later)."
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -1204,14 +1220,14 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "REPOS=\"$1\""
       APR_EOL_STR
-      "PATH=\"$2\""
+      "USER=\"$2\""
       APR_EOL_STR
-      "USER=\"$3\""
+      "read PATHS"
       APR_EOL_STR
       APR_EOL_STR
       "# Send email to interested parties, let them know a lock was removed:"
       APR_EOL_STR
-      "unlock-email.py \"$REPOS\" \"$REV\" \"$USER\" lock-watchers@example.org"
+      "unlock-email.py \"$REPOS\" \"$USER\" lock-watchers@example.org $PATHS"
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
