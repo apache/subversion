@@ -63,9 +63,6 @@
 
 /*** Code. ***/
 
-/* Hrm... how to get a private enum namespace?  Do I have to use the
-   svn prefix, or is there another way?  There's no storage being
-   declared here, so `static' shouldn't work. */
 enum command { checkout_command = 1,
                update_command,
                add_command,
