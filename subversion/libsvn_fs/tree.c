@@ -3180,6 +3180,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   /* Now, create a custom window handler that uses our two streams. */
   svn_txdelta_apply (tb->source_stream,
                      tb->string_stream,
+                     NULL,
                      tb->pool,
                      &(tb->interpreter),
                      &(tb->interpreter_baton));

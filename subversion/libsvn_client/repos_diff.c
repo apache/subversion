@@ -658,6 +658,7 @@ apply_textdelta (void *file_baton,
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->file_start_revision, b->pool),
                      svn_stream_from_aprfile (b->file_end_revision, b->pool),
+                     NULL,
                      b->pool,
                      &(b->apply_handler), &(b->apply_baton));
 
