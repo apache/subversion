@@ -3,6 +3,15 @@ This is a -*- text -*- file.
 
 --------------------------------------------------------------
 
+To be fixed by someone:
+
+  - When using shared working copies, a user changing the permissions
+    of a file directly (svn ps svn:executable) or indirectly
+    (i.e. through an update), must own that file.  There is no way to
+    do this automatically which does not involve possible data loss.
+
+--------------------------------------------------------------
+
 Put in best-practices doc:
 
   - (perhaps) suggest the use of environment variables to represent
