@@ -15,6 +15,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <apr_general.h>
 #include <apr_md5.h>
 #include "svn_types.h"
