@@ -804,10 +804,6 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
   wlen = len;
   svn_stream_write(stream, buf, &wlen);
 
- 
-  /* ### todo#689: this doesn't handle checksums yet.  It's ultimately
-         used by the ra_plugin->get_file() interface. */
-
 #if 0
   /* Neon's callback won't let us return error.  Joe knows this is a
      bug in his API, so this section can be reactivated someday. */

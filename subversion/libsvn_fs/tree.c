@@ -3300,9 +3300,12 @@ txn_body_fulltext_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
 
-  /* ### todo#689: When svn_fs_apply_text() takes a checksum argument
-         (like svn_fs_apply_textdelta does now), it will need to be
-         propagated through to here. */
+  /* ### When svn_fs_apply_text() takes a checksum argument (like
+   * svn_fs_apply_textdelta does now), it will need to be propagated
+   * through to here.
+   * 
+   * See http://subversion.tigris.org/issues/show_bug.cgi?id=1102
+   */ 
 
   SVN_ERR (svn_stream_close (tb->file_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
