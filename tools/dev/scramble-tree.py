@@ -128,7 +128,7 @@ talented scramble-tree.py script.
 
   ### Helpers
   def shrink_list(self, list, remove_count):
-    if len(list) < remove_count:
+    if len(list) <= remove_count:
       return []
     for i in range(remove_count):
       j = self.rand.randrange(len(list) - 1)
