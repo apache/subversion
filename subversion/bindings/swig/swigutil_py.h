@@ -143,6 +143,13 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              void *baton,
                                              apr_pool_t *pool);
 
+/* thunked repos authz callback function */
+svn_error_t *svn_swig_py_thunk_repos_authz_func(svn_boolean_t *allowed,
+                                                svn_fs_root_t *root,
+                                                const char *path,
+                                                void *baton,
+                                                apr_pool_t *pool);
+
 /* thunker history callback function */
 svn_error_t *svn_swig_py_repos_history_func(void *baton,
                                             const char *path,
