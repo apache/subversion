@@ -736,8 +736,12 @@ static svn_error_t * commit_close_edit(void *edit_baton)
          cc->activity_url ? cc->activity_url : "(activity)");
 
   /* ### different pool? */
-  SVN_ERR( svn_ra_dav__merge_activity(cc->ras, cc->ras->root.path,
+  SVN_ERR( svn_ra_dav__merge_activity(cc->ras,
+                                      cc->ras->root.path,
                                       cc->activity_url,
+                                      cc->set_func,
+                                      cc->close_func,
+                                      cc->close_baton,
                                       cc->ras->pool) );
 
   /* ### set new_revision according to response from server */
