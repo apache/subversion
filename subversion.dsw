@@ -24,6 +24,12 @@ Package=<4>
     Project_Dep_Name apriconv
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name apriconv_ccs_modules
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv_ces_modules
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
@@ -153,6 +159,44 @@ Package=<5>
 Package=<4>
 {{{
 }}}
+
+###############################################################################
+
+Project: "apriconv_ccs_modules"=".\apr-iconv\ccs\apriconv_ccs_modules.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "apriconv_ces_modules"=".\apr-iconv\ces\apriconv_ces_modules.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
+    End Project Dependency
+}}}
+
+###############################################################################
 
 Project: "aprutil"=".\apr-util\aprutil.dsp" - Package Owner=<4>
 
@@ -545,6 +589,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_auth
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
