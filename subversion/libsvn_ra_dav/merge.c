@@ -502,6 +502,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
                 /* ### create an error structure? */
                 mc->response_has_error = TRUE;
               }
+            free(hs.reason_phrase);
           }
         if (mc->response_has_error && mc->err == NULL)
           {
