@@ -58,7 +58,7 @@ def blame_space_in_name(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(blame_space_in_name)
+              blame_space_in_name
              ]
 
 if __name__ == '__main__':
