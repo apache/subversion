@@ -943,9 +943,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                "of a repository.");
         }
 
-      magic_end = strchr(relative + 1, '/');
+      magic_end = ap_strchr_c(relative + 1, '/');
       if (!magic_end)
         {
+          /* ### Request was for parent directory with no trailing
+             slash; we probably ought to just redirect to same with
+             trailing slash appended. */
           magic_component = relative + 1;
           true_relative_path = "/";
         }
