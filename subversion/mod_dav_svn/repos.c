@@ -460,6 +460,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   *stream = apr_pcalloc(info->pool, sizeof(**stream));
   (*stream)->res = resource;
 
+#if 0
   /* get an FS file object for the resource [from the node] */
   (*stream)->file = svn_fs_node_to_file(node);
   /* assert: file != NULL   (we shouldn't be here if node is a DIR) */
@@ -473,6 +474,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
       return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not prepare to read the file");
     }
+#endif
 
   return NULL;
 }
@@ -481,7 +483,9 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
 {
   /* ### anything that needs to happen with stream->baton? */
 
+#if 0
   svn_fs_close_file(stream->file);
+#endif
 
   return NULL;
 }

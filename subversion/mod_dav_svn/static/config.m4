@@ -23,8 +23,8 @@ if test "$enable_dav_svn" != "no"; then
       ;;
   esac
 
-  modpath_static=libmod_dav_svn.la
-  BUILTIN_LIBS="$BUILTIN_LIBS $modpath_current/$modpath_static"
+  modpath_static="libmod_dav_svn.la libsvn_fs.la libsvn_subr.la"
+  BUILTIN_LIBS="$BUILTIN_LIBS $modpath_current/libmod_dav_svn.la $modpath_current/libsvn_fs.la $modpath_current/libsvn_subr.la"
 fi
 
 APACHE_MODPATH_FINISH
