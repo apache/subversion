@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "POT-Creation-Date: 2004-09-30 16:40+0900\n"
-"PO-Revision-Date: 2004-10-07 23:43+0900\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
+"PO-Revision-Date: 2004-10-14 12:22+0900\n"
+"Last-Translator: Hojin Choi <pynoos@users.kldp.net>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -2972,28 +2972,28 @@ msgstr "'%s' (리비전 %ld)는 연관이 없는 개체입니다."
 #: libsvn_client/ra.c:761
 #, c-format
 msgid "The location for '%s' for revision %ld does not exist in the repository or refers to an unrelated object"
-msgstr ""
+msgstr "'%s'에 대한 위치(리비전 %ld)가 저장소내에 존재하지 않거나 연관되지 않는 개체를 참조하고 있습니다."
 
 #: libsvn_client/relocate.c:56
 #, c-format
 msgid "The repository at '%s' has uuid '%s', but the WC has '%s'"
-msgstr ""
+msgstr "'%s'의 저장소는 '%s'라는 uuid를 가지고 있습니다만 작업사본은 '%s' 입니다."
 
 #: libsvn_client/revisions.c:107
 #, c-format
 msgid "Unrecognized revision type requested for '%s'"
-msgstr ""
+msgstr "'%s'에 대한 인식 불가능한 리비전 종류의 요청을 받았습니다."
 
 #: libsvn_fs/fs-loader.c:100
 #: libsvn_ra/ra_loader.c:123
 #, c-format
 msgid "'%s' does not define '%s()'"
-msgstr ""
+msgstr "'%s'는 '%s()'를 정의하지 않습니다."
 
 #: libsvn_fs/fs-loader.c:137
 #, c-format
 msgid "Unknown FS type '%s'"
-msgstr ""
+msgstr "알수 없는 파일시스템 종류 '%s'"
 
 #: libsvn_fs/fs-loader.c:143
 #, c-format
@@ -3004,19 +3004,19 @@ msgstr "FS 모듈 버전 불일치 '%s': 발견된 것 %d.%d.%d%s, 기대되는 
 #: libsvn_fs_fs/err.c:71
 #, c-format
 msgid "Corrupt filesystem revision %ld in filesystem '%s'"
-msgstr ""
+msgstr "손상된 파일시스템 리비전 %ld (파일시스템 '%s')"
 
 #: libsvn_fs_base/err.c:112
 #: libsvn_fs_fs/err.c:114
 #, c-format
 msgid "Reference to non-existent revision %ld in filesystem '%s'"
-msgstr ""
+msgstr "리비전 %ld 에 대한 파일 시스템 %s 내의 참조"
 
 #: libsvn_fs_base/err.c:167
 #: libsvn_fs_fs/err.c:169
 #, c-format
 msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
-msgstr ""
+msgstr "파일은 변경될 수 없습니다: 파일시스템 '%s', 리비전 %ld, 경로 '%s'"
 
 #: libsvn_fs_base/fs.c:1113
 msgid ""
@@ -3025,6 +3025,10 @@ msgid ""
 "the problem persists, try deactivating this feature \n"
 "in DB_CONFIG."
 msgstr ""
+"로그파일 복사 오류; DB_LOG_AUTOREMOVE 속성이 \n"
+"hotcopy 알고리즘과 간섭을 일으키는 것 같습니다.\n"
+"만약 문제가 지속되면, DB_CONFIG 내에서 본 속성을\n"
+"끄십시오."
 
 #: libsvn_fs_base/fs.c:1132
 msgid ""
@@ -3033,102 +3037,106 @@ msgid ""
 "hotcopy algorithm.  If the problem persists, try deactivating \n"
 "this feature in DB_CONFIG."
 msgstr ""
+"hotcopy 도중 복원오류; DB_LOG_AUTOREMOVE 속성이 \n"
+"hotcopy 알고리즘과 간섭을 일으키는 것 같습니다.\n"
+"만약 문제가 지속되면, DB_CONFIG 내에서 본 속성을\n"
+"끄십시오."
 
 #: libsvn_fs_base/fs.c:1269
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
-msgstr ""
+msgstr "BDB의 지원하지 않는 FS 로더 버전 (%d)"
 
 #: libsvn_fs_base/tree.c:381
 #: libsvn_fs_fs/tree.c:301
 #, c-format
 msgid "File not found: revision %ld, path '%s'"
-msgstr ""
+msgstr "파일 발견되지 않음: 리비전 %ld, 경로 '%s'"
 
 #: libsvn_fs_base/tree.c:402
 #: libsvn_fs_fs/tree.c:322
 #, c-format
 msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
-msgstr ""
+msgstr "파일이 이미 존재함: 파일시스템 '%s', 리비전 %ld, 경로 '%s'"
 
 #: libsvn_fs_fs/err.c:40
 msgid "Filesystem object has not been opened yet"
-msgstr ""
+msgstr "파일시스템 개체가 아직 열리지 않았습니다."
 
 #: libsvn_fs_fs/err.c:61
 #, c-format
 msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-msgstr ""
+msgstr "손상된 노드 리비전 (노드 '%s', 파일시스템 '%s')"
 
 #: libsvn_fs_fs/err.c:84
 #, c-format
 msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-msgstr ""
+msgstr "손상된 복제 레코드 '%s' (트랜잭션 '%s', 파일 시스템 '%s')"
 
 #: libsvn_fs_fs/err.c:93
 #, c-format
 msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
-msgstr ""
+msgstr "손상된 노드 리비전 아이디 '%s'가 파일 시스템 '%s'에서 발견되었습니다."
 
 #: libsvn_fs_fs/err.c:104
 #, c-format
 msgid "Reference to non-existent node '%s' in filesystem '%s'"
-msgstr ""
+msgstr "존재하지 않는 노드 '%s'에 대한 참조, 파일시스템 '%s'"
 
 #: libsvn_fs_fs/err.c:125
 #, c-format
 msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-msgstr ""
+msgstr "잘못된 형식의 아이디가 파일시스템 '%s'의 노드 테이블의 키로 있습니다."
 
 #: libsvn_fs_fs/err.c:135
 #, c-format
 msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
-msgstr ""
+msgstr "'next-id' 키에 대한 손상된 값이 '%s' 테이블에 있습니다. 파일시스템 '%s'"
 
 #: libsvn_fs_fs/err.c:147
 #, c-format
 msgid "Corrupt entry in 'transactions' table for '%s' in filesystem '%s'"
-msgstr ""
+msgstr "손상된 등록정보가 '%s'를 위한 'transactions' 테이블에 있습니다. 파일시스템 '%s'"
 
 #: libsvn_fs_fs/err.c:158
 #, c-format
 msgid "Corrupt entry in 'copies' table for '%s' in filesystem '%s'"
-msgstr ""
+msgstr "손상된 등록정보가 '%s'를 위한 'copies' 테이블에 있습니다. 파일 시스템 '%s'"
 
 #: libsvn_fs_fs/err.c:180
 #, c-format
 msgid "Search for malformed path '%s' in filesystem '%s'"
-msgstr ""
+msgstr "잘못된 경로 '%s'에 대한 (파일시스템 '%s') 검색을 시도하였습니다."
 
 #: libsvn_fs_fs/err.c:191
 #, c-format
 msgid "No transaction named '%s' in filesystem '%s'"
-msgstr ""
+msgstr "트랜잭션 이름이 '%s'로는 존재하지 않습니다. 파일 시스템 '%s'"
 
 #: libsvn_fs_fs/err.c:202
 #, c-format
 msgid "Cannot modify transaction named '%s' in filesystem '%s'"
-msgstr ""
+msgstr "'%s' 라는 트랜잭션은 수정될 수 없습니다. 파일 시스템 '%s'"
 
 #: libsvn_fs_fs/err.c:213
 #, c-format
 msgid "No copy with id '%s' in filesystem '%s'"
-msgstr ""
+msgstr "'%s'라는 아이디의 사본이 없습니다. 파일시스템 '%s'"
 
 #: libsvn_fs_fs/err.c:223
 #, c-format
 msgid "'%s' is not a directory in filesystem '%s'"
-msgstr ""
+msgstr "'%s'는 디렉토리가 아닙니다.  파일시스템 '%s'"
 
 #: libsvn_fs_fs/fs.c:290
 #, c-format
 msgid "Unsupported FS loader version (%d) for fsfs"
-msgstr ""
+msgstr "fsfs에 대한 지원하지 않는 파일시스템 로더 버전(%d)입니다."
 
 #: libsvn_fs_fs/fs_fs.c:364
 #: libsvn_fs_fs/fs_fs.c:378
 msgid "Found malformed header in revision file"
-msgstr ""
+msgstr "리비전 파일내에 잘못된 형식의 헤더가 있습니다."
 
 #: libsvn_fs_fs/fs_fs.c:480
 #: libsvn_fs_fs/fs_fs.c:494
