@@ -347,9 +347,11 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   const char *target_label = ".working";
-  const char *left_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
+  const char *left_label = apr_psprintf (subpool,
+                                         ".merge-left.r%" SVN_REVNUM_T_FMT,
                                          older_rev);
-  const char *right_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
+  const char *right_label = apr_psprintf (subpool,
+                                          ".merge-right.r%" SVN_REVNUM_T_FMT,
                                           yours_rev);
   svn_boolean_t has_local_mods;
   enum svn_wc_merge_outcome_t merge_outcome;
