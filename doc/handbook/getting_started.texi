@@ -24,15 +24,15 @@ a central @dfn{repository}.  The repository is much like an ordinary
 file server, except that it remembers every change ever made to your
 files.  This allows you to recover older versions of your files, or
 browse the history of how your files changed.  Many people think of
-revision-control as a sort of ``time machine.''
+a revision control system as a sort of ``time machine.''
 
 Some revision control systems are also @dfn{software configuration
 management (SCM)} systems.  These systems are specifically tailored to
 manage trees of source code, and have many features that are specific to
 software development (such as natively understanding programming
-languages.)  Subversion, however, is not one of these systems; it a
+languages).  Subversion, however, is not one of these systems; it is a
 general system that can be used to manage @emph{any} sort of collection
-of files.  (And is still darn good at managing source code.)
+of files, including source code.
 
 
 @subsection History
@@ -40,17 +40,18 @@ of files.  (And is still darn good at managing source code.)
 Subversion aims to be the successor to CVS (@uref{http://www.cvshome.org/}).
 
 At the time of writing, CVS is the standard Free revision control system
-used by the open-source community.  It has a hard-earned, well deserved
+used by the open-source community.  It has a hard-earned, well-deserved
 reputation as stable and useful software, and has a design that makes it
 perfect for open-source development.  However, it also has a number of
 problems that are difficult to fix.
 
-Subversion's original designers settled on a few simple goals: it was
-decided that Subversion should be a functional replacement for CVS.
-It should do everything that CVS does -- preserving the same
-development model while fixing the most obvious flaws.  Existing CVS
-users are the first target audience: any CVS user should be able to
-start using Subversion with little effort.
+Subversion's original designers settled on a few simple goals.  First,
+it was decided that Subversion should be a functional replacement for
+CVS.  That is, it should do everything that CVS does, preserving the
+same development model while fixing the most obvious flaws.  Secondly,
+with existing CVS users as the first target audience, Subversion should
+be written such that any CVS user should be able to start using it with
+little effort.
 
 Collabnet (@uref{http://www.collab.net/}) provided the initial funding
 in 2000 to begin development work, and the effort has now blossomed
@@ -68,7 +69,7 @@ comfortable at a Unix command-line.
 People familiar with CVS may want to skip some of the introductory
 sections that describe Subversion's concurrent versioning model.
 Also, there is a quick guide for CVS users attached as an appendix
-(@xref{SVN for CVS users}.)
+(@xref{SVN for CVS users}).
 
 
 @subsection Features
@@ -79,11 +80,11 @@ list to whet your appetite:
 @itemize @bullet
 
 @item 
-@b{Directory versioning} The Subversion repository doesn't use RCS
-files like CVS; instead, it implements a ``virtual'' versioned
-filesystem that tracks tree-structures over time.  Files @emph{and}
-directories are versioned.  At last, there are real client-side 
-`move' and `copy' commands.
+@b{Directory versioning} The Subversion repository doesn't use RCS files
+like CVS; instead, it implements a ``virtual'' versioned filesystem that
+tracks changes to directory/file heirarchies over time.  Files
+@emph{and} directories are versioned.  At last, there are real
+client-side `move' and `copy' commands.
 
 @item 
 @b{Atomic commits} A commit either goes into the repository
@@ -176,12 +177,11 @@ the top of the diagram (initiated by the user) and flows ``downward.''
 @subsection Filesystem
 
 The Subversion Filesystem is not a kernel-level filesystem that one
-would install in an operating system (like the Linux ext2 fs.)  Instead,
-it refers to the design of Subversion's repository.  The repository is
-built on top of a database -- currently Berkeley DB -- and thus is a
-collection of .db files.  However, a library accesses these files and
-exports a C API that simulates a filesystem -- specifically, a
-"versioned" filesystem.
+would install in an operating system (like the Linux ext2 or NTFS), but
+a virtual filesystem.  It is implemented as library which exports a C
+API that simulates a filesystem -- specifically, a ``versioned''
+filesystem -- but uses a database system for the back-end storage
+mechanism.  
 
 This means that writing a program to access the repository is like
 writing against other filesystem APIs: you can open files and
@@ -190,18 +190,18 @@ that this particular filesystem never loses data when written to; old
 versions of files and directories are always saved as historical
 artifacts.
 
-Using a database backend also provides other nice features that
-Subversion needs: data integrity, atomic writes, recoverability, and hot
-backups.
+Currently, the database system in use is BerkeleyDB, which provides
+other nice features that Subversion needs: data integrity, atomic
+writes, recoverability, and hot backups.
 
 
 @subsection Network Layer
 
 Subversion has the mark of Apache all over it.  At its very core, the
-client uses the Apache Portable Runtime (APR) library.  (This means that
-Subversion client compiles and run anywhere Apache httpd does -- right
-now, this list includes all flavors of Unix, Win32, BeOS, OS/2, Mac OS
-X, and possibly Netware.)
+client uses the Apache Portable Runtime (APR) library.  This means that
+the Subversion client compiles and runs anywhere Apache httpd does --
+right now, this list includes all flavors of Unix, Win32, BeOS, OS/2,
+Mac OS X, and possibly Netware.
 
 However, Subversion depends on more than just APR -- the Subversion
 "server" is Apache httpd itself.  Apache httpd is a time-tested,
@@ -220,13 +220,13 @@ support for this protocol: all of the latest file-browsers for Win32,
 MacOS, and GNOME speak this protocol already.  Interoperability will
 (hopefully) become more and more of a boon over time.
 
-For users who simply wish to access Subversion repositories on local
-disk, the client can do this too; no network is required.  The
+For users who simply wish to access Subversion repositories on their
+local disk, the client can do this too; no network is required.  The
 "Repository Access" layer (RA) is an abstract API implemented by both
 the DAV and local-access RA libraries.  This is a specific benefit of
-writing a ``librarized'' revision control system: feel like writing a new
-network protocol for Subversion?  Just write a new library that
-implements the RA API.
+writing a ``librarized'' revision control system -- if you feel like
+writing a new network protocol for Subversion, just write a new library
+that implements the RA API.
 
 
 @subsection Client Libraries
@@ -236,9 +236,10 @@ administrative information within special .svn subdirectories, similar
 in purpose to the CVS administrative directories found in CVS working
 copies.
 
-A glance inside the typical .svn directory turns up a bit more than
-usual, however.  The `entries' file contains XML which describes the
-current state of the working copy directory (and which basically
+A glance inside the typical .svn directory turns up a bit more than what
+CVS maintains in its administrative directories, however.  
+The `entries' file contains XML which describes
+the current state of the working copy directory (and which basically
 serves the purposes of CVS's Entries, Root, and Repository files
 combined).  But other items present (and not found in CVS) include
 storage locations for the versioned ``properties'' (the metadata
