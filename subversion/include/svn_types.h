@@ -119,7 +119,7 @@ typedef struct svn_node_t
 
 
 /* a version is a node number and property list */
-typedef struct svn_ver
+typedef struct svn_ver_t
 {
   unsigned long node_num;             /* the root node of a tree */
   apr_hash_t *proplist;           /* version's properties */
@@ -170,7 +170,7 @@ typedef enum
    network layer when it performs initial authentication with some
    database.  */
 
-typedef struct svn_user
+typedef struct svn_user_t
 {
   /* The first three fields are filled in by the network layer,
      and possibly used by the server for informational or matching purposes */
@@ -291,6 +291,7 @@ typedef struct svn_edit_content_t
   svn_ancestor_t *ancestor;         /* "Hoosier paw?!" */
   svn_pdelta_t *pdelta;             /* Change to property list, or NULL. */
   svn_vdelta_t *vdelta;             /* Change to file contents, or NULL. */
+  struct svn_delta_t *tree_delta;   /* A further tree delta, or NULL. */
 } svn_edit_content_t;
 
 
