@@ -1728,7 +1728,6 @@ Then move to that line."
          (newcursorpos-fname)
          (i-fname)
          (current-line svn-start-of-file-list-line-number))
-    (message "%s..." (if set-mark "Marking" "Unmarking"))
     (while st-info
       (when (svn-status-line-info->is-visiblep (car st-info))
         (setq current-line (1+ current-line)))
@@ -1738,20 +1737,21 @@ Then move to that line."
         (when (svn-status-line-info->is-visiblep (car st-info))
           (when (or (not only-this-line) (string= file-name i-fname))
             (setq newcursorpos-fname i-fname)
-            (message "%s: %s" (if set-mark "Marking" "Unmarking") i-fname)
-            (setq mark-count (+ 1 mark-count))
-            (setcar (svn-status-line-info->ui-status (car st-info)) set-mark)
-            (save-excursion
-              (let ((buffer-read-only nil))
-                (goto-line current-line)
-                (delete-region (point-at-bol) (point-at-eol))
-                (svn-insert-line-in-status-buffer (car st-info))
-                (delete-char 1))))))
+            (unless (eq (car (svn-status-line-info->ui-status (car st-info))) set-mark)
+              (setcar (svn-status-line-info->ui-status (car st-info)) set-mark)
+              (setq mark-count (+ 1 mark-count))
+              (save-excursion
+                (let ((buffer-read-only nil))
+                  (goto-line current-line)
+                  (delete-region (point-at-bol) (point-at-eol))
+                  (svn-insert-line-in-status-buffer (car st-info))
+                  (delete-char 1)))
+              (message "%s %s" (if set-mark "Marked" "Unmarked") i-fname)))))
       (setq st-info (cdr st-info)))
     ;;(svn-status-update-buffer)
     (svn-status-goto-file-name newcursorpos-fname)
     (when (> mark-count 1)
-      (message "%s...done" (if set-mark "Marking" "Unmarking")))))
+      (message "%s %d files" (if set-mark "Marked" "Unmarked") mark-count))))
 
 (defun svn-status-apply-usermark-checked (check-function set-mark)
   "Mark or unmark files, whether a given function returns t.
@@ -1759,19 +1759,18 @@ The function is called with the line information. Therefore the
 svn-status-line-info->* functions can be used in the check."
   (let ((st-info svn-status-info)
         (mark-count 0))
-    (message "%s..." (if set-mark "Marking" "Unmarking"))
     (while st-info
       (when (apply check-function (list (car st-info)))
-        (when (not (svn-status-line-info->has-usermark (car st-info)))
+        (unless (eq (svn-status-line-info->has-usermark (car st-info)) set-mark)
           (setq mark-count (+ 1 mark-count))
-          (message "%s: %s"
-                   (if set-mark "Marking" "Unmarking")
+          (message "%s %s"
+                   (if set-mark "Marked" "Unmarked")
                    (svn-status-line-info->filename (car st-info))))
         (setcar (svn-status-line-info->ui-status (car st-info)) set-mark))
       (setq st-info (cdr st-info)))
     (svn-status-update-buffer)
     (when (> mark-count 1)
-      (message "%s...done" (if set-mark "Marking" "Unmarking")))))
+      (message "%s %d files" (if set-mark "Marked" "Unmarked") mark-count))))
 
 (defun svn-status-mark-unknown (arg)
   "Mark all unknown files.
@@ -2942,7 +2941,7 @@ When called with a prefix argument, ask the user for the revision."
         (dot-svn-dir)
         (dir-below (expand-file-name default-directory)))
     (setq dot-svn-dir (concat base-dir ".svn"))
-    (while (when (file-exists-p dot-svn-dir)
+    (while (when (and dir-below (file-exists-p dot-svn-dir))
              (setq base-dir (file-name-directory dot-svn-dir))
              (string-match "\\(.+/\\).+/" dir-below)
              (setq dir-below (match-string 1 dir-below))
