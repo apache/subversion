@@ -46,9 +46,12 @@ Long term ideas:
 - fulltext cache:
   If we've recently computed a node's fulltext, we might want to keep
   that around in case we need to compute one of its nearby ancestors'
-  fulltext, too.  This could be a waste, though --- best to record
-  some data on how many delta applications the cache would avoid
-  before implementing it.
+  fulltext, too.  This could be a waste, though --- the access
+  patterns are a mix of linear scan (backwards to reconstruct a given
+  version) and random (who knows what node we'll hit next), so it's
+  not clear what cache policy would be effective.  Best to record some
+  data on how many delta applications a given cache would avoid before
+  implementing it.
 
 - delta cache:
   As people update, we're going to be recomputing text deltas for the
