@@ -384,26 +384,26 @@ class Dump:
     # are always the same for revisions.
     
     # Calculate the total length of the props section.
-    total_len = 0
-    for pname in props.keys():
-      klen = len(pname) + 1
-      klen_len = int(math.ceil(math.log10(klen))) + 1
-      plen = len(props[pname]) + 1
-      plen_len = int(math.ceil(math.log10(plen))) + 1
-      total_len = total_len + klen + klen_len + plen + plen_len
+    total_len = 10                                     # 'PROPS-END\n'
+    for propname in props.keys():
+      klen = len(propname) + 1                         # propname + '\n'
+      klen_len = int(math.ceil(math.log10(klen))) + 3  # 'K ' + klen + '\n'
+      vlen = len(props[propname]) + 1                  # propval + '\n'
+      vlen_len = int(math.ceil(math.log10(vlen))) + 3  # 'V ' + vlen + '\n'
+      total_len = total_len + klen + klen_len + vlen + vlen_len
         
     # Print the revision header and props
     self.dumpfile.write('Revision-number: %d\n' % self.revision)
     self.dumpfile.write('Prop-content-length: %d\n' % total_len)
     self.dumpfile.write('Content-length: %d\n' % total_len)
     self.dumpfile.write('\n')
-    for pname in props.keys():
-      self.dumpfile.write('K %d\n' % len(pname))
-      self.dumpfile.write('%s\n' % pname)
-      self.dumpfile.write('V %d\n' % len(props[pname]))
-      self.dumpfile.write('%s\n' % props[pname])
-      self.dumpfile.write('PROPS-END\n')
-      self.dumpfile.write('\n')
+    for propname in props.keys():
+      self.dumpfile.write('K %d\n' % len(propname))
+      self.dumpfile.write('%s\n' % propname)
+      self.dumpfile.write('V %d\n' % len(props[propname]))
+      self.dumpfile.write('%s\n' % props[propname])
+    self.dumpfile.write('PROPS-END\n')
+    self.dumpfile.write('\n')
 
   def end_revision(self):
     old_rev = self.revision
