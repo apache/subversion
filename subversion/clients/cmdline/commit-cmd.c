@@ -627,10 +627,11 @@ svn_cl__commit (apr_getopt_t *os,
           for (len=message->len; len>=0; len--)
             if (!apr_isspace (message->data[len]))
               {
-                message = NULL;
                 break;
               }
-          if (message)
+          if (len < 0)
+            message = NULL;
+          else
             used_editor_for_message = TRUE;
         }
 
