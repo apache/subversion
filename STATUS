@@ -33,13 +33,6 @@ Candidate changes:
       +1: ghudson, jerenkrantz
       Nominated by: David James <james82@gmail.com>
 
-  * r12576
-    Fix JavaHL run-time link error by properly depending on libsvn_repos.
-    Justification: 
-      Fixes run-time error seen by Subclipse users with RedHat Fedora.
-    Votes:
-      +1: jerenkrantz, maxb, sussman
-
   * r12630
     Dataloss bug in svndumpfilter - copyfrom information lost for files
     copied-with-modifications.
@@ -151,13 +144,6 @@ Candidate changes:
     Votes:
       +1: epg
 
-  * r12325
-    Fix segfault or infinite memory consumption loop.
-    Justification:
-      Obvious bug, dire consequences, and an obvious one-line fix.
-    Votes:
-      +1: ringstrom, philip
-
   * r13358
     Fix a case where merge breaks the wc.
     Justification:
@@ -202,3 +188,18 @@ Approved changes (further review is welcome, but not required):
       Regression from 1.0, move/copy can fail in some non-UTF-8 locales.
     Votes:
       +1: philip, lundblad, maxb
+
+  * r12576
+    Fix JavaHL run-time link error by properly depending on libsvn_repos.
+    Justification: 
+      Fixes run-time error seen by Subclipse users with RedHat Fedora.
+    Votes:
+      +1: jerenkrantz, maxb, sussman
+
+  * r12325
+    Fix segfault or infinite memory consumption loop.
+    Justification:
+      Obvious bug, dire consequences, and an obvious one-line fix.
+    Votes:
+      +1: ringstrom, philip, maxb
+
