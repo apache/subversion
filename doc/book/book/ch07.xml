@@ -1549,7 +1549,7 @@ crawl_dir (apr_array_header_t *files,
         methods include downloading the latest binary distribution (if
         such is available for your platform), or downloading the
         latest source tarball and building your own Subversion client.
-        If you build from source, make sure read the INSTALL file in
+        If you build from source, make sure to read the INSTALL file in
         the top level of the source tree for instructions.</para>
 
       <para>After you have a working Subversion client, you are now
