@@ -20,7 +20,7 @@
       perhaps, all over the world.</para>-->
 
     <para>Esta sección describe como publicar su repositorio Subversion
-      para ser accedido por clientes remotos.<!--TODO: Es correcta la simplifación del término "...outside its host machine for use by remote clients"--> Cubrirermos los tipos
+      para ser accedido por clientes remotos.<!--TODO: Es correcta la simplificación del término "...outside its host machine for use by remote clients"--> Cubriremos los tipos
       de mecanismos de servidor disponibles actualmente <!--TODO: Es correcto? "...currently available server mechanisms"-->, debatiendo la configuración
       y uso de cada uno de éstos. Después de que haya leído está sección,
       usted debería estar capacitado para decidir que tipo de configuración
@@ -46,8 +46,8 @@
     <!--REMOVE:<title>Overview</title>-->
     
     <para>Subversion cuenta con un diseño de la capa de red abstracto.<!--TODO: Subversion was designed with an abstract network layer.-->
-      Esto significa que el repositorio puede ser accesido por cualquier
-      clase de proceso de servidor y el API<footnote><para>N.T.: <quote>Interfaz de programación de aplicaciones</quote>. Este acrónimo se considera reconocido internacionalmente motivo por el cuál no será traducido.</para></footnote> de <quote>acceso al repositorio</quote> cliente
+      Esto significa que el repositorio puede ser accedido por cualquier
+      clase de proceso de servidor y el API<footnote><para>N.T.: Application programmmers interface, o interfaz de programación de aplicaciones. Este acrónimo se considera reconocido internacionalmente motivo por el cuál no será traducido.</para></footnote> de <quote>acceso al repositorio</quote> cliente
       permite a los programadores escribir componentes que se comuniquen<!--TODO: "...and the client <quote>repository access</quote> API"-->
       a través de su protocolo de red pertinente. En teoría, Subversion puede
       lucir <!--TODO: sports = lucir?--> una infinidad de implementaciones de red. En la
@@ -63,7 +63,7 @@
       practice, there are only two servers at the time of
       writing.</para>-->
     
-    <para>Apache es un servidor web extremadamente <!--TODO: altamente-sumamente-extremdamente--> popular; utilizando
+    <para>Apache es un servidor web extremadamente <!--TODO: altamente-sumamente-extremadamente--> popular; utilizando
      el módulo <command>mod_dav_svn</command>, Apache puede acceder a
      un repositorio y hacerlo disponible a los clientes a través del
      protocolo WebDAV/DeltaV, el cuál es una extensión del HTTP. En la
@@ -281,7 +281,7 @@
 
     <para>En esta sección se debate en términos generales como interactúan
       el cliente y servidor Subversión entre sí, independientemente de la
-      implementación de red que esté utilizando. A sú término, usted
+      implementación de red que esté utilizando. A su término, usted
       comprenderá como se comporta un servidor y las diferentes
       formas en que un cliente puede ser configurado para responder.</para>
     
@@ -298,7 +298,7 @@
 
       <para>El cliente Subversion insume la mayor parte de su tiempo
         manejando copias de trabajo. No obstante, cuando necesita
-        informacion del repositorio efectúa una solicitud a través de
+        información del repositorio efectúa una solicitud a través de
         la red, y el servidor responde apropiadamente. Los detalles del
         protocolo de red son ocultados por el usuario; el cliente<!--TODO: "The details of the network protocol are hidden from the user" son ocultados por el usuario o son ocultados al usuario?-->
         intenta acceder a una URL, y dependiendo del esquema URL,
@@ -356,13 +356,13 @@
       <para>Si la solicitud de red del cliente escribe datos nuevos
         en el repositorio (ej: <command>svn commit</command>), un nuevo
         árbol de revisión es creado. Si la solicitud del cliente fue
-        autenticada, el nombre de usuario es guardado como valor de la
+        autenticada, el nombre del usuario es guardado como valor de la
         propiedad <literal>svn:author</literal> en la nueva revisión
         (ver <xref linkend="svn-ch-5-sect-1.2"/>). Si el cliente no
         fue autenticado (en otras palabras, si el servidor nunca
         promulgó la autenticación), la propiedad <literal>svn:author</literal>
         de la revisión está en blanco.<footnote><para>Este problema es actualmente
-        una FAQ, está asociado a la mala configuración de la
+        una FAQ, como resultado de una configuración equivocada de la
         instalación.</para></footnote></para>
     
       <!--REMOVE:<para>If the client's network request writes new data to the
@@ -380,18 +380,30 @@
     </sect2>
 
     <sect2 id="svn-ch-6-sect-2.2">
-      <title>Client Credentials Caching</title>
+      <title>Client Credentials Caching</title><!--TODO: Cómo traducir "Caching"?-->
 
       <para>Muchos servidores son configurados para requerir
         autenticación por cada solicitud que reciban. Esto puede
         convertirse en una gran molestia para los usuarios, quienes son
-        forzados a escribir sus claves una y otra vez.</para>
+        forzados a escribir sus contraseñas una y otra vez.</para>
         
       <!--REMOVE:<para>Many servers are configured to require authentication on
         every request.  This can become a big annoyance to users, who
         are forced to type their passwords over and over again.</para>-->
 
-      <para>Happily, the Subversion client has a remedy for this: a
+      <para>Afortunadamente, el cliente Subversion ha remediado ésto: un
+        sistema incorporado para ocultar las credenciales en el disco.
+        Por defecto, en el momento en que el cliente se autentica
+        satisfactoriamente con un servidor, éste guarda las credenciales
+        en el área de configuración de ejecución privada del usuario&mdash; en
+        <filename>~/.subversion/auth/</filename> en los sistemas tipo
+        Unix o <filename>%APPDATA%/Subversion/auth/</filename> en Windows.
+        (El área de ejecución es cubierto con mayor detalle en <xref
+        linkend="svn-ch-7-sect-1"/>.) Con éxito las crendenciales son
+        ocultadas en el disco, encerradas en una combinación de hostname,<!--TODO: hostname? ORCA dice: "nombre de anfitrión", pero resulta más que confuso a mi entender-->
+        puerto y realm<!--TODO: realm? reino-esfera-par de usuario/clave?--> de autenticación.</para>
+
+      <!--REMOVE:<para>Happily, the Subversion client has a remedy for this: a
         built-in system for caching authentication credentials on
         disk.  By default, whenever the commandline client
         successfully authenticates itself to a server, it saves the
@@ -402,15 +414,32 @@
         (The runtime area is covered in more detail in <xref
         linkend="svn-ch-7-sect-1"/>.)  Successful credentials are
         cached on disk, keyed on a combination of hostname, port, and
-        authentication realm.</para>  
+        authentication realm.</para>--> 
 
-      <para>When the client receives an authentication challenge, it
+      <para>Cuando el cliente recibe la solicitud para que se autentique,<!--TODO: When the cliente receives an authentication challenge-->
+        primero busca las credenciales apropiadas en el caché de disco;
+        sino existen, o si las credenciales fallan en la autenticación,
+        el cliente simplemente pregunta al usuario por la información.</para>
+      
+      <!--REMOVE:<para>When the client receives an authentication challenge, it
         first looks for the appropriate credentials in the disk cache;
         if not present, or if the cached credentials fail to
         authenticate, then the client simply prompts the user for the
-        information.</para>
+        information.</para>-->
 
-      <para>The security-paranoid people may be thinking to
+      <para>Las personas que sufren de paranoia sobre asuntos de
+        seguridad<!--TODO: The security-paranoid people--> pueden estar pensando,
+        <quote>Contraseñas ocultas en el disco? Eso es terrible!</quote> Pero
+        por favor conserve la calma. Primero, el área de caché <!--TODO: caching area--><filename>auth/</filename>
+        se encuentra protegida por permisos<!--TODO: permission-protected--> a fin de que sólo el
+        usuario (dueño) puede leer la información que se encuentra en
+        ella, evitando que otros puedan acceder.<!--TODO: "so that only the user (owner) can read data from it, not the world at large."--> Si
+        eso no es lo suficientemente seguro para usted, puede deshabilitar
+        el caché de credenciales.<!--TODO: disable credential caching--> Para
+        lograrlo, sólo basta con un único comando, pasando la opción
+        <option>--no-auth-cache</option>:</para>
+      
+      <!--REMOVE:<para>The security-paranoid people may be thinking to
         themselves, <quote>Caching passwords on disk?  That's
         terrible!  You should never do that!</quote>  But please remain
         calm.  First, the <filename>auth/</filename> caching area is
@@ -418,7 +447,7 @@
         data from it, not the world at large.  If that's still not
         safe enough for you, you can disable credential caching.  To
         disable caching for a single command, pass the
-        <option>--no-auth-cache</option> option:</para>
+        <option>-no-auth-cache</option> option:</para>-->
 
 <screen>
 $ svn commit -F log_msg.txt --no-auth-cache
@@ -439,12 +468,18 @@ Username:  joe
 [...]
 </screen>
 
-      <para>Or, if you want to disable credential caching permanently,
+      <para>O, si usted desea deshabilitar el caché de credenciales en forma
+        permanente, puede editar su archivo de configuración <filename>config</filename>
+        (ubicado dentro del directorio <filename>auth/</filename>).
+        Simplemente coloque <literal>no</literal> a <literal>store-auth-creds</literal>,
+        y las credenciales no serán guardadas en el caché nunca más.</para>
+      
+      <!--REMOVE:<para>Or, if you want to disable credential caching permanently,
         you can edit your runtime <filename>config</filename> file
         (located next to the <filename>auth/</filename> directory).
         Simply set <literal>store-auth-creds</literal> to
         <literal>no</literal>, and no credentials will be cached on
-        disk, ever.</para>
+        disk, ever.</para>-->
 
 <screen>
 [auth]
@@ -452,13 +487,13 @@ store-auth-creds = no
 </screen>
 
       <para>Algunas veces los usuario desearán eliminar credenciales
-        específicas del "caché" de disco.<!--TODO: disk cache?--> Para hacer esto, necesitará
-        navegar dentro del área <filename>auth/</filename> y eliminar manualmente
-        el archivo de "caché" apropiado<!--TODO: cache?-->. Las crendenciales
-        son almacenadas en el área de "caché" en archivos individuales; si
+        específicas del caché de disco.<!--TODO: disk cache?--> Para hacer ésto, necesitará
+        navegar dentro del área <filename>auth/</filename> y eliminar
+        el archivo de caché <!--TODO: cache?-->apropiado en forma manual. Las credenciales
+        son almacenadas en el área de caché en archivos individuales; si
         usted mira dentro de cada archivo, verá claves y valores. La clave
         <literal>svn:realmstreng</literal> describe el "realm"<!--TODO: realm?--> servidor
-        particular que el archivo es asociado mediante:<!--TODO: "...key describes
+        particular con el que que el archivo es asociado:<!--TODO: "...key describes
         the particular server realm that the file is associated
         with:"--></para>
         
@@ -494,12 +529,38 @@ V 45
 END
 </screen>
 
-      <para>Once you have located the proper cache file, just delete
-        it.</para>
+      <para>Una vez que haya localizado el archivo de caché apropiado,
+        sencillamente elimínelo.</para>
+      <!--REMOVE:<para>Once you have located the proper cache file, just delete
+        it.</para>-->
 
-      <para>One last word about client authentication behavior: a bit
-        of explanation about the <option>--username</option> and
-        <option>--password</option> options is needed.  Many client
+      <para>Una última palabra acerca del comportamiento de autenticación
+        del cliente: es necesaria una pequeña explicación respecto de
+        las opciones <option>--username</option> y <option>--pasword</option>.
+        Muchos sub-comandos del cliente aceptan estas opciones; sin embargo,
+        es importante comprender que la utilización de las mismas
+        <emphasis>no</emphasis> envía automáticamente las credenciales
+        al servidor. Como se dijo anteriormente, el servidor
+        <quote>exige tomar</quote><!--TODO: pulls?--> las credenciales del cliente cuando lo
+        considera necesario; el cliente no puede <quote>impulsarlas</quote><!--TODO: push?-->
+        a voluntad. Si un usuario y/o contraseña son pasados como opción,
+        ellos serán presentados al servidor <emphasis>sólo</emphasis> si este
+        así lo demanda.
+        
+          <footnote><para>Una vez más, un error frecuente es
+            configurar de forma equivocada el servidor para que este
+            nunca emita una demanda de autenticación. Cuando los usuarios pasen
+            la opción <option>--username</option> y <option>--pasword</option>
+            al cliente, ellos se sorprenderán al ver que éstos nunca son
+            utilizados, ej: a pesar de aparecer una nueva revisión, ha sido enviada
+            anónimamente!<!--TODO: new revisions still appear to have been commited anonymously!--></para></footnote>
+        
+      Típicamente, estas opciones son utilizadas cuando:
+      </para>
+      
+      <!--REMOVE:<para>One last word about client authentication behavior: a bit
+        of explanation about the <option>-username</option> and
+        <option>-password</option> options is needed.  Many client
         subcommands accept these options; however it is important to
         understand using these options <emphasis>does not</emphasis>
         automatically send credentials to the server.  As discussed
@@ -512,34 +573,65 @@ END
 
           <footnote><para>Again, a common mistake is to misconfigure a
            server so that it never issues an authentication challenge.
-           When users pass <option>--username</option> and
-           <option>--password</option> options to the client,
+           When users pass <option>-username</option> and
+           <option>-password</option> options to the client,
            they're surprised to see that they're never used, i.e. new
            revisions still appear to have been committed
            anonymously!</para></footnote>
         
         Typically, these options are used when:
-      </para>
+      </para>-->
 
       <itemizedlist>
+        <listitem><para>el usuario desea autenticarse con un
+            nombre diferente a su usuario de sistema, o</para>
+        </listitem>
+        <listitem><para>un guión desea autenticarse sin utilizar
+            las credenciales del caché.<!--TODO: using cached credentials--></para>
+        </listitem>
+      </itemizedlist>
+      
+      <!--REMOVE:<itemizedlist>
         <listitem><para>the user wants to authenticate as a
             different user than her system login name, or</para>
         </listitem>
         <listitem><para>a script wants to authenticate without
             using cached credentials.</para>
         </listitem>
-      </itemizedlist>
+      </itemizedlist>-->
           
-
-      <para>Here is a final summary that describes how a Subversion
+      <para>Aquí hay un resumen final que describe como se comporta un
+        cliente Subversion cuando recibe la demanda de autenticación:</para>
+        
+      <!--REMOVE:<para>Here is a final summary that describes how a Subversion
         client behaves when it receives an authentication
-        challenge:</para>
+        challenge:</para>-->
+
 
       <orderedlist>
         <listitem>
+          <para>Verifica si el usuario ha especificado algunas credenciales
+            como opción de línea de comando, a través de la opción
+            <option>--username</option> y/o <option>--pasword</option>. Sino, o
+            si esas opciones no pertenecen a una autenticación válida, entonces</para>
+        </listitem>
+
+        <listitem>
+          <para>Busca en el "realm" del servidor en el área de ejecución
+            <filename>auth/</filename>, para ver si el usuario ya dispone de credenciales
+            apropiadas en el caché. Sino, o si las credenciales del caché fallan
+             en la autenticación, entonces</para>
+        </listitem>
+
+        <listitem>
+          <para>Recurre a preguntarle al usuario.</para>
+        </listitem>
+      </orderedlist>
+      <!--REMOVE<orderedlist>
+        <listitem>
           <para>Check whether the user specified any credentials as
-            commandline options, via <option>--username</option>
-            and/or <option>--password</option>.  If not, or if these
+            commandline options, via <option>-username</option>
+            and/or <option>-password</option>.  If not, or if these
             options fail to authenticate successfully, then</para>
         </listitem>
 
@@ -553,12 +645,18 @@ END
         <listitem>
           <para>Resort to prompting the user.</para>
         </listitem>
-      </orderedlist>
+      </orderedlist>-->
 
-      <para>If the client successfully authenticates by any of the
+      <para>Si el cliente se autentica correctamente a través de alguno
+        de los métodos listados aquí arriba, éste intentará guardar en
+        las credenciales en el caché de disco (a no ser que el usuario haya
+        deshabilitado ese funcionamiento, como hemos mencionado
+        anteriormente.)</para>
+      
+      <!--REMOVE:<para>If the client successfully authenticates by any of the
         methods listed above, it will attempt to cache the credentials
         on disk (unless the user has disabled this behavior, as
-        mentioned earlier.)</para>
+        mentioned earlier.)</para>-->
 
     </sect2>
 
