@@ -3,8 +3,6 @@
 # shell) and bash's completion mechanism will know all about svn's options!
 # Who wants to read man pages/help text...
 
-# Doesn't do --xml-file and its associated options, that's intentional :)
-
 # Known to work with bash 2.05a with programmable completion and extended
 # pattern matching enabled (use 'shopt -s extglob progcomp' to enable
 # these if they are not already enabled).
@@ -66,7 +64,7 @@ _svn()
 		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	checkout|co)
-		cmdOpts="$nOpts $rOpts $pOpts $qOpts"
+		cmdOpts="$rOpts $qOpts $nOpts $pOpts"
 		;;
 	cleanup)
 		;;
@@ -74,51 +72,53 @@ _svn()
 		cmdOpts="$mOpts $qOpts $nOpts --targets --force $pOpts"
 		;;
 	copy|cp)
-		cmdOpts="$mOpts $rOpts $pOpts $qOpts"
+		cmdOpts="$mOpts $rOpts $qOpts $pOpts"
 		;;
 	delete|del|remove|rm)
-		cmdOpts="--force $mOpts --targets $pOpts $qOpts"
+		cmdOpts="--force $mOpts $qOpts --targets $pOpts"
 		;;
 	diff|di)
-		cmdOpts="$nOpts $rOpts $pOpts -x --extensions"
+		cmdOpts="$rOpts -x --extensions $nOpts $pOpts"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts"
 		;;
 	import)
-		cmdOpts="$mOpts $qOpts $nOpts $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --targets --force $pOpts"
 		;; 
 	info)
 		cmdOpts="--targets -R --recursive"
 		;;
 	list|ls)
-		cmdOpts="$rOpts -v --verbose $pOpts -R --recursive"
+		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts"
 		;;
 	log)
-		cmdOpts="$rOpts -v --verbose --strict --targets --xml $pOpts"
+		cmdOpts="$rOpts -v --verbose --targets $pOpts --strict \
+		        --incremental --xml"
 		;;
 	merge)
-		cmdOpts="$rOpts --force $nOpts $pOpts $qOpts"
+		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run $pOpts"
 		;;
 	mkdir)
-		cmdOpts="$mOpts $pOpts $qOpts"
+		cmdOpts="$mOpts $qOpts $pOpts"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $pOpts --force $qOpts"
+		cmdOpts="$mOpts $rOpts $qOpts $pOpts --force"
 		;;
 	propdel|pdel)
-		cmdOpts="$qOpts -R --recursive"
+		cmdOpts="$qOpts -R --recursive $rOpts"
 		;;
 	propedit|pedit|pe)
+		cmdOpts="$rOpts"
 		;;
 	propget|pget|pg)
-		cmdOpts="-R --recursive"
+		cmdOpts="-R --recursive $rOpts"
 		;;
 	proplist|plist|pl)
-		cmdOpts="-v --verbose -R --recursive"
+		cmdOpts="-v --verbose -R --recursive $rOpts"
 		;;
 	propset|pset|ps)
-		cmdOpts="-F --file --targets -R --recursive $qOpts"
+		cmdOpts="-F --file $qOpts --targets -R --recursive"
 		;;
 	revert)
 		cmdOpts="--targets -R --recursive $qOpts"
@@ -131,10 +131,10 @@ _svn()
                          --no-ignore"
 		;;
 	switch|sw)
-		cmdOpts="$rOpts $nOpts $pOpts $qOpts"
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts"
 		;;
 	update|up)
-		cmdOpts="$rOpts $nOpts $pOpts $qOpts"
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts"
 		;;
 	*)
 		;;

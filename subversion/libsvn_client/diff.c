@@ -319,6 +319,7 @@ diff_callbacks =
 
 struct merge_cmd_baton {
   svn_boolean_t force;
+  svn_boolean_t dry_run;
   const char *target;                 /* Working copy target of merge */
   const char *url;                    /* The second URL in the merge */
   const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
@@ -344,8 +345,8 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
                                          older_rev);
   const char *right_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
                                           yours_rev);
-  svn_error_t *err;
-  svn_boolean_t has_local_mods = FALSE;
+  svn_boolean_t has_local_mods;
+  enum svn_wc_merge_outcome_t merge_outcome;
 
   /* This callback is essentially no more than a wrapper around
      svn_wc_merge().  Thank goodness that all the
@@ -353,30 +354,28 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
      fulltexts! */
 
   SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, adm_access, subpool));
+  SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
 
-  err = svn_wc_merge (older, yours, mine, adm_access,
-                      left_label, right_label, target_label,
-                      subpool);
+                         left_label, right_label, target_label,
+                         merge_b->dry_run, &merge_outcome,
+                         subpool));
 
-  if (err && (err->apr_err == SVN_ERR_WC_CONFLICT))
+  /* Philip asks "Why?"  Why does the notification depend on whether the
+     file had modifications before the merge?  If the merge didn't change
+     the file because the local mods already included the change why does
+     that result it "merged" notification?  That's information available
+     through the status command, while the fact that the merge didn't
+     change the file is lost :-( */
+
+  if (state)
     {
-      if (state)
+      if (merge_outcome == svn_wc_merge_conflict)
         *state = svn_wc_notify_state_conflicted;
-    }
-  else if (err)
-    return err;
-  else if (has_local_mods && state)
-    *state = svn_wc_notify_state_merged;
-  else if (state)
-    {
-      /* It's possible that the merged changes were already present,
-         so that the file still is not modified w.r.t. text base.
-         Therefore we test again, in order to report state accurately. */ 
-      SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, adm_access,
-                                       subpool));
-      if (has_local_mods)
+      else if (has_local_mods)
+        *state = svn_wc_notify_state_merged;
+      else if (merge_outcome == svn_wc_merge_merged)
         *state = svn_wc_notify_state_modified;
-      else
+      else /* merge_outcome == svn_wc_merge_unchanged */
         *state = svn_wc_notify_state_unchanged;
     }
 
@@ -401,16 +400,19 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_none:
-      child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
-      assert (child != NULL);
-      copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
-      /* ### FIXME: This will get the file again! */
-      /* ### 838 When 838 stops using svn_client_copy the adm_access
-         parameter can be removed from the function. */
-      SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
-                                adm_access,
-                                merge_b->auth_baton, NULL, NULL, NULL, NULL,
-                                merge_b->pool));
+      if (! merge_b->dry_run)
+        {
+          child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
+          assert (child != NULL);
+          copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
+          /* ### FIXME: This will get the file again! */
+          /* ### 838 When 838 stops using svn_client_copy the adm_access
+             parameter can be removed from the function. */
+          SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
+                                    adm_access,
+                                    merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                    merge_b->pool));
+        }
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
@@ -422,7 +424,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
       {
         /* file already exists, is it under version control? */
         const svn_wc_entry_t *entry;
-        svn_error_t *err;
+        enum svn_wc_merge_outcome_t merge_outcome;
         SVN_ERR (svn_wc_entry (&entry, mine, adm_access, FALSE, subpool));
 
         /* If it's an unversioned file, don't touch it.  If its scheduled
@@ -434,11 +436,9 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                                     "Cannot create file '%s' for addition, "
                                     "because an unversioned file by that name "
                                     "already exists.", mine);
-        err = svn_wc_merge (older, yours, mine, adm_access,
-                            ".older", ".yours", ".working", /* ###? */
-                            subpool);
-        if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-          return err;
+        SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
+                               ".older", ".yours", ".working", /* ###? */
+                               merge_b->dry_run, &merge_outcome, subpool));
         break;      
       }
     default:
@@ -508,16 +508,18 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_none:
-      /* ### FIXME: This will get the directory tree again! */
-      SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                adm_access,
-                                merge_b->auth_baton, NULL, NULL, NULL, NULL,
-                                subpool));
+      if (! merge_b->dry_run)
+        /* ### FIXME: This will get the directory tree again! */
+        SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
+                                  adm_access,
+                                  merge_b->auth_baton, NULL, NULL, NULL, NULL,
+                                  subpool));
       break;
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));
-      if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
+      if (!merge_b->dry_run
+          && (! entry || (entry && entry->schedule == svn_wc_schedule_delete)))
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
                                   adm_access,
@@ -597,7 +599,7 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (regular_props)
     SVN_ERR (svn_wc_merge_prop_diffs (state, path, adm_access, regular_props,
-                                      subpool));
+                                      FALSE, merge_b->dry_run, subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -691,6 +693,7 @@ do_merge (svn_wc_notify_func_t notify_func,
           const char *target_wcpath,
           svn_wc_adm_access_t *adm_access,
           svn_boolean_t recurse,
+          svn_boolean_t dry_run,
           const svn_wc_diff_callbacks_t *callbacks,
           void *callback_baton,
           apr_pool_t *pool)
@@ -737,6 +740,7 @@ do_merge (svn_wc_notify_func_t notify_func,
                                         callbacks,
                                         callback_baton,
                                         recurse,
+                                        dry_run,
                                         ra_lib, session2,
                                         start_revnum,
                                         notify_func,
@@ -777,10 +781,10 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
                       const svn_opt_revision_t *revision2,
                       const char *target_wcpath,
                       svn_wc_adm_access_t *adm_access,
+                      svn_boolean_t dry_run,
                       apr_pool_t *pool)
 {
   apr_status_t status;
-  svn_error_t *err;
   apr_file_t *fp1 = NULL, *fp2 = NULL;
   const char *tmpfile1, *tmpfile2;
   svn_stream_t *fstream1, *fstream2;
@@ -792,6 +796,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   svn_ra_plugin_t *ra_lib;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
+  enum svn_wc_merge_outcome_t merge_outcome;
   
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
@@ -841,17 +846,13 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
      current working file. */
   oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT, rev1);
   newrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT, rev2); 
-  err = svn_wc_merge (tmpfile1, tmpfile2,
-                      target_wcpath, adm_access,
-                      oldrev_str, newrev_str, ".working", pool);
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_WC_CONFLICT)
-        return err;  
-      else
-        text_state = svn_wc_notify_state_conflicted;
-    }
-             
+  SVN_ERR (svn_wc_merge (tmpfile1, tmpfile2,
+                         target_wcpath, adm_access,
+                         oldrev_str, newrev_str, ".working", dry_run,
+                         &merge_outcome, pool));
+  if (merge_outcome == svn_wc_merge_conflict)
+    text_state = svn_wc_notify_state_conflicted;
+
   SVN_ERR (svn_io_remove_file (tmpfile1, pool));
   SVN_ERR (svn_io_remove_file (tmpfile2, pool));
   
@@ -859,7 +860,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   SVN_ERR (svn_wc_get_local_propchanges (&propchanges,
                                          props1, props2, pool));
   SVN_ERR (svn_wc_merge_prop_diffs (&prop_state, target_wcpath, adm_access,
-                                    propchanges, pool));
+                                    propchanges, FALSE, dry_run, pool));
 
   if (notify_func)
     {
@@ -1185,6 +1186,7 @@ do_diff (const apr_array_header_t *options,
                                             callbacks,
                                             callback_baton,
                                             recurse,
+                                            FALSE,  /* does't matter for diff */
                                             ra_lib, session2,
                                             start_revnum,
                                             NULL, /* no notify_func */
@@ -1308,13 +1310,14 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
+                  svn_boolean_t dry_run,
                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target_wcpath,
-                                  TRUE, recurse, pool));
+                                  ! dry_run, recurse, pool));
 
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, adm_access, FALSE, pool));
   if (entry == NULL)
@@ -1334,6 +1337,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                                      URL2, revision2,
                                      target_wcpath,
                                      adm_access,
+                                     dry_run,
                                      pool));
     }
 
@@ -1343,6 +1347,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
     {
       struct merge_cmd_baton merge_cmd_baton;
       merge_cmd_baton.force = force;
+      merge_cmd_baton.dry_run = dry_run;
       merge_cmd_baton.target = target_wcpath;
       merge_cmd_baton.url = URL2;
       merge_cmd_baton.revision = revision2;
@@ -1359,6 +1364,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                          target_wcpath,
                          adm_access,
                          recurse,
+                         dry_run,
                          &merge_callbacks,
                          &merge_cmd_baton,
                          pool));

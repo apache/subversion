@@ -394,7 +394,7 @@ log_do_merge (struct log_runner *loggy,
 {
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
-  svn_error_t *err;
+  enum svn_wc_merge_outcome_t merge_outcome;
   apr_pool_t *subpool = svn_pool_create (loggy->pool);
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
@@ -425,14 +425,9 @@ log_do_merge (struct log_runner *loggy,
                         subpool);
   
   /* Now do the merge with our full paths. */
-  err = svn_wc_merge (left, right, name, loggy->adm_access,
-                      left_label, right_label, target_label,
-                      subpool);
-
-  if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-    /* Got a *real* error. */
-    return svn_error_quick_wrap 
-      (err, "svn_wc_merge() returned an unexpected error");
+  SVN_ERR (svn_wc_merge (left, right, name, loggy->adm_access,
+                         left_label, right_label, target_label,
+                         FALSE, &merge_outcome, subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;

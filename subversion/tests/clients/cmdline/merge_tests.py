@@ -592,6 +592,153 @@ def delete_file_and_dir(sbox):
 
 #----------------------------------------------------------------------
 
+# Issue 953
+def simple_property_merges(sbox):
+  "some simple property merges"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Add a property to a file and a directory
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'foo_val',
+                                            alpha_path)
+  if errlines:
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'foo_val',
+                                            E_path)
+  if errlines:
+    return 1
+
+  # Commit change as rev 2
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(verb='Sending'),
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output, expected_status,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'up', wc_dir)
+  if errlines:
+    return 1
+
+  # Copy B to B2 as rev 3
+  B_url = os.path.join(svntest.main.current_repo_url, 'A', 'B')
+  B2_url = os.path.join(svntest.main.current_repo_url, 'A', 'B2')
+
+  outlines,errlines = svntest.main.run_svn(None, 'copy', B_url, B2_url)
+  if errlines:
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'up', wc_dir)
+  if errlines:
+    return 1
+
+  # Modify a property and add a property for the file and directory
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'mod_foo',
+                                            alpha_path)
+  if errlines:
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'bar', 'bar_val',
+                                            alpha_path)
+  if errlines:
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'foo', 'mod_foo',
+                                            E_path)
+  if errlines:
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'propset', 'bar', 'bar_val',
+                                            E_path)
+  if errlines:
+    return 1
+
+  # Commit change as rev 4
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(repos_rev=4)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=4, status='  ')
+  expected_status.add({
+    'A/B2'         : Item(status='  ', wc_rev=3, repos_rev=4),
+    'A/B2/E'       : Item(status='  ', wc_rev=3, repos_rev=4),
+    'A/B2/E/alpha' : Item(status='  ', wc_rev=3, repos_rev=4),
+    'A/B2/E/beta'  : Item(status='  ', wc_rev=3, repos_rev=4),
+    'A/B2/F'       : Item(status='  ', wc_rev=3, repos_rev=4),
+    'A/B2/lambda'  : Item(status='  ', wc_rev=3, repos_rev=4),
+    })
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output, expected_status,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+  outlines, errlines = svntest.main.run_svn(None, 'up', wc_dir)
+  if errlines:
+    return 1
+
+  ### This test needs more work.  It's good enough to test issue 953,
+  ### which is what caused me to write it, but it is not a thorough
+  ### test of merge.  It should be using run_and_verify_merge but I
+  ### cannot get that to work.  Half the tests in this file have the
+  ### same problem, that's probably because I wrote them :-/
+  
+  # Merge B 3:4 into B2
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
+  expected_output = wc.State(wc_dir, {'A/B2/E'        : Item(status=' U'),
+                                      'A/B2/E/alpha'  : Item(status=' U'),
+                                      })
+  expected_status.tweak(wc_rev=4)
+  expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' M')
+  dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
+                                          '-r3:4', B_url, B2_path)
+  std_out, std_err = svntest.main.run_svn(None, 'merge',
+                                          '-r3:4', B_url, B2_path)
+  if dry_err or std_err or dry_out != std_out:
+    return 1
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Revert merge
+  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
+                                            wc_dir)
+  if errlines:
+    return 1
+  expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status='  ')
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Merge B 2:1 into B2
+  expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' M')
+  dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
+                                          '-r2:1', B_url, B2_path)
+  std_out, std_err = svntest.main.run_svn(None, 'merge',
+                                          '-r2:1', B_url, B2_path)
+  if dry_err or std_err or dry_out != std_out:
+    return 1
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Merge B 3:4 into B2 now causes a conflict
+  expected_output = wc.State(wc_dir, {'A/B2/E'        : Item(status=' U'),
+                                      'A/B2/E/alpha'  : Item(status=' U'),
+                                      })
+  expected_status.tweak(wc_rev=4)
+  expected_status.tweak('A/B2/E', 'A/B2/E/alpha', status=' C')
+  dry_out, dry_err = svntest.main.run_svn(None, 'merge', '--dry-run',
+                                          '-r3:4', B_url, B2_path)
+  std_out, std_err = svntest.main.run_svn(None, 'merge',
+                                          '-r3:4', B_url, B2_path)
+  if dry_err or std_err or dry_out != std_out:
+    return 1
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+#----------------------------------------------------------------------
+
 ########################################################################
 # Run the tests
 
@@ -601,6 +748,7 @@ test_list = [ None,
               textual_merges_galore,
               add_with_history,
               delete_file_and_dir,
+              simple_property_merges,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

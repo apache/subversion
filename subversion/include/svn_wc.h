@@ -1362,6 +1362,22 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
 
 
 
+/* The outcome of a merge carried out (or tried as a dry-run) by
+   svn_wc_merge */
+typedef enum svn_wc_merge_outcome_t
+{
+   /* The working copy is (or would be) unchanged.  The changes to be
+      merged were already present in the working copy */
+   svn_wc_merge_unchanged,
+
+   /* The working copy has been (or would be) changed. */
+   svn_wc_merge_merged,
+
+   /* The working copy has been (or would be) changed, but there was (or
+      would be) a conflict */
+   svn_wc_merge_conflict
+} svn_wc_merge_outcome_t;
+
 /* Given paths to three fulltexts, merge the differences between LEFT
    and RIGHT into MERGE_TARGET.  (It may help to know that LEFT,
    RIGHT, and MERGE_TARGET correspond to "OLDER", "YOURS", and "MINE",
@@ -1379,8 +1395,13 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
    MERGE_TARGET must be under version control; if it is not, return
    SVN_ERR_NO_SUCH_ENTRY.
 
-   If no conflict results from the merge, return without error.  If
-   there is a conflict, then
+   DRY_RUN determines whether the working copy is modified.  When it
+   is FALSE the merge will cause MERGE_TARGET to be modified, when it
+   is TRUE the merge will be carried out to determine the result but
+   MERGE_TARGET will not be modified.
+
+   The outcome of the merge is returned in *MERGE_OUTCOME. If there is
+   a conflict and DRY_RUN is FALSE, then
 
      * Put conflict markers around the conflicting regions in
        MERGE_TARGET, labeled with LEFT_LABEL, RIGHT_LABEL, and
@@ -1395,16 +1416,15 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
      * Mark the entry for MERGE_TARGET as "conflicted", and track the
        abovementioned backup files in the entry as well.
 
-     * Return the error SVN_ERR_WC_CONFLICT.
-
    Binary case:
 
-    If all three files are binary files, then no merging is attempted.
-    Instead, a variant of the conflict procedure is carried out: the
+    If MERGE_TARGET is a binary file, then no merging is attempted,
+    the merge is deemed to be a conflict.  If DRY_RUN is FALSE the
     working MERGE_TARGET is untouched, and copies of LEFT and RIGHT
     are created next to it using LEFT_LABEL and RIGHT_LABEL.
     MERGE_TARGET's entry is marked as "conflicted", and begins
-    tracking the two backup files.  SVN_ERR_WC_CONFLICT is returned.
+    tracking the two backup files.  If DRY_RUN is TRUE no files are
+    changed.  The outcome of the merge is returned in *MERGE_OUTCOME.
 
 */
 svn_error_t *svn_wc_merge (const char *left,
@@ -1414,6 +1434,8 @@ svn_error_t *svn_wc_merge (const char *left,
                            const char *left_label,
                            const char *right_label,
                            const char *target_label,
+                           svn_boolean_t dry_run,
+                           enum svn_wc_merge_outcome_t *merge_outcome,
                            apr_pool_t *pool);
 
 
@@ -1422,18 +1444,25 @@ svn_error_t *svn_wc_merge (const char *left,
    svn_prop_t objects.  ADM_ACCESS is an access baton for the directory
    containing PATH.
 
+   If BASE_MERGE is FALSE only the working properties will be changed,
+   if it is TRUE both the base and working properties will be changed.
+
    If STATE is non-null, set *STATE to the state of the properties
    after the merge.
 
-   If conflicts are found when merging, they are described in a
-   temporary .prej file (or appended to an already-existing .prej
-   file), and the entry is marked "conflicted".
+   If conflicts are found when merging working properties, they are
+   described in a temporary .prej file (or appended to an already-existing
+   .prej file), and the entry is marked "conflicted".  Base properties
+   are changed unconditionally, if BASE_MERGE is TRUE, they never result
+   in a conflict.
 */
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                          const char *path,
                          svn_wc_adm_access_t *adm_access,
                          const apr_array_header_t *propchanges,
+                         svn_boolean_t base_merge,
+                         svn_boolean_t dry_run,
                          apr_pool_t *pool);
 
 

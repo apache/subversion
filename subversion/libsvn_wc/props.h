@@ -93,10 +93,14 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
    If we are attempting to merge changes to a directory, simply pass
    ADM_ACCESS and NULL for NAME.
 
+   If BASE_MERGE is FALSE only the working properties will be changed,
+   if it is TRUE both the base and working properties will be changed.
+
    If conflicts are found when merging, they are placed into a
    temporary .prej file within SVN. Log entries are then written to
    move this file into PATH, or to append the conflicts to the file's
-   already-existing .prej file in ADM_ACCESS.
+   already-existing .prej file in ADM_ACCESS. Base properties are modifed
+   unconditionally, if BASE_MERGE is TRUE, they do not generate conficts.
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.
@@ -112,6 +116,8 @@ svn_error_t *svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                        svn_wc_adm_access_t *adm_access,
                                        const char *name,
                                        const apr_array_header_t *propchanges,
+                                       svn_boolean_t base_merge,
+                                       svn_boolean_t dry_run,
                                        apr_pool_t *pool,
                                        svn_stringbuf_t **entry_accum);
 
