@@ -87,7 +87,7 @@ sub safe_read_from_pipe
 # Use safe_read_from_pipe to start a child process safely and exit the
 # script if the child failed for whatever reason.
 sub read_from_process
-  {
+{
   unless (@_)
     {
       croak "$0: read_from_process passed no arguments.\n";
