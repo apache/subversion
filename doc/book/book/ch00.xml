@@ -634,7 +634,7 @@
       </varlistentry>
 
       <varlistentry>
-        <term>Optimizations and bugfixes</term>
+        <term>Optimizations and bug fixes</term>
         <listitem>
           <para>The <command>svn checkout</command>, <command>svn
             update</command>, <command>svn status</command>, and
