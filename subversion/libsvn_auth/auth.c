@@ -253,7 +253,7 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
   provider_t *provider;
   svn_boolean_t save_succeeded = FALSE;
 
-  if (! state->last_creds)
+  if (! (state && state->last_creds))
     return SVN_NO_ERROR;
 
   table = state->table;
