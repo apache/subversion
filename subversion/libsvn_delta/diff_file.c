@@ -631,7 +631,6 @@ typedef struct svn_diff3__file_output_baton_t
   const char *path[3];
 
   apr_off_t   current_line[3];
-  svn_boolean_t last_had_lf;
 
   char       *buffer[3];
   char       *endp[3];
@@ -690,8 +689,6 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
           return svn_error_create(rv, NULL,
             "svn_diff3_file_output: error writing file.");
         }
-
-      baton->last_had_lf = eol[-1] == '\n';
     }
 
   baton->curp[idx] = eol;
@@ -792,9 +789,6 @@ svn_diff3__file_output_conflict(void *baton,
                              &svn_diff3__file_output_vtable);
     }
 
-  if (!file_baton->last_had_lf)
-    apr_file_putc('\n', file_baton->output_file);
- 
   rv = apr_file_puts(file_baton->conflict_modified, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
@@ -809,9 +803,6 @@ svn_diff3__file_output_conflict(void *baton,
 
   if (file_baton->display_original_in_conflict)
     {
-      if (!file_baton->last_had_lf)
-        apr_file_putc('\n', file_baton->output_file);
- 
       rv = apr_file_puts(file_baton->conflict_original, file_baton->output_file);
       if (rv != APR_SUCCESS)
         {
@@ -825,9 +816,6 @@ svn_diff3__file_output_conflict(void *baton,
               original_start, original_length));
     }
 
-  if (!file_baton->last_had_lf)
-    apr_file_putc('\n', file_baton->output_file);
- 
   rv = apr_file_puts(file_baton->conflict_seperator, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
@@ -840,9 +828,6 @@ svn_diff3__file_output_conflict(void *baton,
   SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
             latest_start, latest_length));
 
-  if (!file_baton->last_had_lf)
-    apr_file_putc('\n', file_baton->output_file);
- 
   rv = apr_file_puts(file_baton->conflict_latest, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
@@ -925,8 +910,6 @@ svn_diff3_file_output(apr_file_t *output_file,
       baton.endp[idx] = baton.buffer[idx] + finfo.size;
       *baton.endp[idx] = '\n';
     }
-
-  baton.last_had_lf = TRUE;
 
   SVN_ERR(svn_diff_output(diff, &baton,
                           &svn_diff3__file_output_vtable));
