@@ -802,6 +802,7 @@ static svn_error_t *io_handle_close (void *baton)
     PerlIO_close (io->f);
     SvREFCNT_dec (io->obj);
     apr_pool_destroy (io->pool);
+    return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
