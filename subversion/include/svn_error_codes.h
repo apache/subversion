@@ -96,6 +96,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_UNSUPPORTED_FEATURE,
               "Trying to use an unsupported feature")
 
+  SVN_ERRDEF (SVN_ERR_UNKNOWN_NODE_KIND,
+              "Unknown svn_node_kind")
+
+  SVN_ERRDEF (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT,
+              "MD5 checksum is missing")
+
   SVN_ERRDEF (SVN_ERR_XML_ATTRIB_NOT_FOUND,
               "No such XML tag attribute")
 
@@ -104,9 +110,6 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_XML_UNKNOWN_ENCODING,
               "Unrecognized binary data encoding; can't decode")
-
-  SVN_ERRDEF (SVN_ERR_UNKNOWN_NODE_KIND,
-              "Unknown svn_node_kind")
 
   SVN_ERRDEF (SVN_ERR_WC_OBSTRUCTED_UPDATE,
               "Obstructed update; unversioned item in the way")

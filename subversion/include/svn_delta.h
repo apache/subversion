@@ -168,7 +168,11 @@ svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
 
 /* Free the delta window WINDOW.  */
 void svn_txdelta_free_window (svn_txdelta_window_t *window);
-     
+
+/* Return the MD5 digest for the complete fulltext deltified by
+   STREAM, or NULL if STREAM has not yet returned its final NULL
+   window.  The digest is allocated in the same memory as STREAM.  */
+const unsigned char *svn_txdelta_md5_digest (svn_txdelta_stream_t *stream);
 
 /* Set *STREAM to a pointer to a delta stream that will turn the byte
    string from SOURCE into the byte stream from TARGET.

@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include <apr_general.h>        /* for APR_INLINE */
+#include <apr_md5.h>            /* for, um...MD5 stuff */
 
 #include "svn_delta.h"
 #include "svn_io.h"
@@ -37,6 +38,13 @@ struct svn_txdelta_stream_t {
   apr_off_t pos;                /* Offset of next read in source file. */
   char *buf;                    /* Buffer for vdelta data. */
   apr_size_t saved_source_len;  /* Amount of source data saved in buf. */
+
+  apr_md5_ctx_t context;        /* APR's MD5 context container. */
+
+  /* Calculated digest from MD5 operations.
+     NOTE:  This is only valid after this stream has returned the NULL
+     (final) window.  */
+  unsigned char digest[MD5_DIGESTSIZE]; 
 };
 
 
@@ -157,6 +165,9 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->pos = 0;
   (*stream)->buf = apr_palloc (subpool, 3 * svn_txdelta__window_size);
   (*stream)->saved_source_len = 0;
+
+  /* Initialize MD5 digest calculation. */
+  apr_md5_init (&((*stream)->context));
 }
 
 
@@ -196,6 +207,14 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
 {
   if (!stream->more)
     {
+      apr_status_t apr_err;
+
+      apr_err = apr_md5_final (stream->digest, &(stream->context));
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_create 
+          (apr_err, 0, NULL, stream->pool,
+           "svn_txdelta_next_window: MD5 finalization failed");
+
       *window = NULL;
       return SVN_NO_ERROR;
     }
@@ -216,6 +235,17 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
                              stream->buf + stream->saved_source_len,
                              &new_source_len);
       total_source_len = stream->saved_source_len + new_source_len;
+
+      /* Update the MD5 accumulator with the freshly-read data in
+         stream.
+
+         ### todo: Currently, apr_md5_update() always returns
+         APR_SUCCESS.  As such, we are proposing to the APR folks that
+         its interface change to be a void function.  In the meantime,
+         we'll simply ignore the return value. */
+      apr_md5_update (&(stream->context), 
+                      stream->buf + stream->saved_source_len,
+                      new_source_len);
 
       /* Read the target stream. */
       if (err == SVN_NO_ERROR)
@@ -260,6 +290,18 @@ svn_txdelta_free_window (svn_txdelta_window_t *window)
 {
   if (window)
     svn_pool_destroy (window->pool);
+}
+
+
+const unsigned char *
+svn_txdelta_md5_digest (svn_txdelta_stream_t *stream)
+{
+  /* If there are more windows for this stream, the digest has not yet
+     been calculated.  */
+  if (stream->more)
+    return NULL;
+
+  return stream->digest;
 }
 
 
