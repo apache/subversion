@@ -153,11 +153,20 @@ changelog:
             subversion doc www expat-lite notes tools \
             `find . -type f -maxdepth 1`
 
+doc: doc-info doc-txt doc-html
+
+doc-info: doc/svn-design.info
+doc-dvi: doc/svn-design.dvi
+doc-txt: doc/svn-design.txt
+doc-html: doc/svn-design.html
+doc-ps: doc/svn-design.ps
+doc-pdf: doc/svn-design.pdf
+
 #
 # Implicit rules for creating outputs from input files
 #
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .la-a .la
+.SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
@@ -170,18 +179,17 @@ changelog:
 
 
 .texi.info:
-	@cd $(srcdir) && rm -f $@ $@-[0-9] $@-[0-9][0-9]
-	cd $(srcdir) \
-	  && $(MAKEINFO) `echo $< | sed 's,.*/,,'`
+	rm -f $@ $@-[0-9] $@-[0-9][0-9]
+	$(MAKEINFO) -I $(top_srcdir)/doc -o $@ $< 
 
 .texi.dvi:
-	MAKEINFO='$(MAKEINFO) -I $(srcdir)' $(TEXI2DVI) $<
+	$(TEXI2DVI) -I $(top_srcdir)/doc $<
 
 .texi.txt:
-	$(MAKEINFO) --no-headers $< > $@
+	$(MAKEINFO) -I $(top_srcdir)/doc --no-headers -o $@ $<
 
 .texi.html:
-	$(MAKEINFO) --no-headers --html $< > $@
+	$(MAKEINFO) -I $(top_srcdir)/doc --no-headers --html -o $@ $<
 
 .dvi.ps:
 	$(DVIPS) $< -o $@
