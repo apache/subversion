@@ -282,13 +282,14 @@ const char *svn_repos_post_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
 /* Reporting the state of a working copy, for updates. */
 
 
-/** Construct and return a @a report_baton that will be paired with some
+/**
+ * Construct and return a @a report_baton that will be paired with some
  * @c svn_ra_reporter_t table.  The table and baton are used to build a
  * transaction in the system;  when the report is finished,
  * @c svn_repos_dir_delta is called on the transaction, driving
  * @a editor/@a edit_baton. 
  *
- * Specifically, the report will create a transaction made by @a username, 
+ * Specifically, the report will create a transaction
  * relative to @a fs_base in the filesystem.  @a target is a single path 
  * component, used to limit the scope of the report to a single entry of 
  * @a fs_base, or "" if all of @a fs_base itself is the main subject of
@@ -315,11 +316,17 @@ const char *svn_repos_post_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
  *
+ * Locks that are reported by the caller and that are not valid in the
+ * repository will be deleted during the following edit.
+ *
  * The @a authz_read_func and @a authz_read_baton are passed along to
  * @c svn_repos_dir_delta(); see that function for how they are used.
  *
  * All allocation for the context and collected state will occur in
  * @a pool.
+ *
+ * @note @a username isn't used and should be removed if this function is
+ * revised.
  */
 svn_error_t *
 svn_repos_begin_report (void **report_baton,
@@ -338,8 +345,9 @@ svn_repos_begin_report (void **report_baton,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
-
-/** Given a @a report_baton constructed by @c svn_repos_begin_report(), this
+/** @since New in 1.2.
+ *
+ * Given a @a report_baton constructed by @c svn_repos_begin_report(), this
  * routine will build @a revision:@a path into the current transaction.
  * This routine is called multiple times to create a transaction that
  * is a "mirror" of a working copy.
@@ -352,7 +360,21 @@ svn_repos_begin_report (void **report_baton,
  * all children and props of the freshly-linked directory.  This is
  * for 'low confidence' client reporting.
  * 
+ * If the caller has a lock token for @a path, then @a lock_token should
+ * be set to that token.  Else, @a lock_token should be NULL.
+ *
  * All temporary allocations are done in @a pool.
+ */
+svn_error_t *svn_repos_set_path2 (void *report_baton,
+                                  const char *path,
+                                  svn_revnum_t revision,
+                                  svn_boolean_t start_empty,
+                                  const char *lock_token,
+                                  apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_repos_set_path2, but with @a lock_token set to @c NULL.
  */
 svn_error_t *svn_repos_set_path (void *report_baton,
                                  const char *path,
@@ -360,8 +382,10 @@ svn_error_t *svn_repos_set_path (void *report_baton,
                                  svn_boolean_t start_empty,
                                  apr_pool_t *pool);
 
-
-/** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
+/**
+ * @since New in 1.2.
+ *
+ * Given a @a report_baton constructed by @c svn_repos_begin_report(), 
  * this routine will build @a revision:@a link_path into the current 
  * transaction at @a path.  Note that while @a path is relative to the 
  * anchor/target used in the creation of the @a report_baton, @a link_path 
@@ -371,7 +395,22 @@ svn_error_t *svn_repos_set_path (void *report_baton,
  * all children and props of the freshly-linked directory.  This is
  * for 'low confidence' client reporting.
  *
+ * If the caller has a lock token for @a link_path, then @a lock_token
+ * should be set to that token.  Else, @a lock_token should be NULL.
+ *
  * All temporary allocations are done in @a pool.
+ */
+svn_error_t *svn_repos_link_path2 (void *report_baton,
+                                   const char *path,
+                                   const char *link_path,
+                                   svn_revnum_t revision,
+                                   svn_boolean_t start_empty,
+                                   const char *lock_token,
+                                   apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_repos_link_path2, but with @a lock_token set to @c NULL.
  */
 svn_error_t *svn_repos_link_path (void *report_baton,
                                   const char *path,
