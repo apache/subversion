@@ -1004,7 +1004,13 @@ main (int argc, const char * const *argv)
       case svn_cl__targets_opt:
 	{
  	  svn_stringbuf_t *buffer, *buffer_utf8;
+
+          /* We need to convert to UTF-8 now, even before we divide
+             the targets into an array, because otherwise we wouldn't
+             know what delimiter to use for svn_cstring_split().  */
+
           err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
+
           if (! err)
             err = svn_string_from_file (&buffer, utf8_opt_arg, pool);
           if (! err)
