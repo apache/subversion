@@ -15,3 +15,10 @@ Candidate changes:
     don't explicitly link to.
     Votes:
       +1: maxb
+
+  * r10390:
+    Fix blame breakage on Win32.
+    Justification:
+      blame is totally broken with more than 2 revisions on win32.
+    Votes:
+      +1: lundblad
