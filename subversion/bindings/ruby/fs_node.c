@@ -202,7 +202,8 @@ dir_delta (VALUE self,
            VALUE tgtPath,
            VALUE aEditor,
            VALUE text_deltas,
-           VALUE recurse)
+           VALUE recurse,
+           VALUE use_copyfrom_args)
 {
   svn_ruby_fs_node *node;
   svn_fs_root_t *src_root, *tgt_root;
@@ -260,6 +261,7 @@ dir_delta (VALUE self,
                              tgt_root, StringValuePtr (tgtPath),
                              editor, edit_baton,
                              RTEST (text_deltas), RTEST (recurse),
+                             RTEST (use_copyfrom_args),
                              pool);
   apr_pool_destroy (pool);
 
@@ -337,7 +339,7 @@ svn_ruby_init_fs_node (void)
   rb_define_method (cSvnFsNode, "proplist", proplist, 0);
   cSvnFsDir = rb_define_class_under (svn_ruby_mSvn, "FsDir", cSvnFsNode);
   rb_define_method (cSvnFsDir, "entries", dir_entries, 0);
-  rb_define_method (cSvnFsDir, "delta", dir_delta, 7);
+  rb_define_method (cSvnFsDir, "delta", dir_delta, 8);
   cSvnFsFile = rb_define_class_under (svn_ruby_mSvn, "FsFile", cSvnFsNode);
   rb_define_method (cSvnFsFile, "length", file_length, 0);
   rb_define_method (cSvnFsFile, "contents", file_contents, 0);
