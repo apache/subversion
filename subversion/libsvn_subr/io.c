@@ -1129,11 +1129,38 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
 }
 
 
+/*
+ Mac OS X has a bug where if you're readding the contents of a
+ directory via readdir in a loop, and you remove one of the entries in
+ the directory and the directory has 338 or more files in it you will
+ skip over some of the entries in the directory.  Needless to say,
+ this causes problems if you are using this kind of loop inside a
+ function that is recursively deleting a directory, because when you
+ get around to removing the directory it will still have something in
+ it.
+
+ This works around the problem by inserting a rewinddir after we
+ remove each item in the directory, which makes the problem go away.
+*/
+#if defined(__APPLE__) && defined(__MACH__)
+#define MACOSX_REWINDDIR_HACK(dir, path)                                   \
+  do                                                                       \
+    {                                                                      \
+      apr_status_t apr_err  = apr_dir_rewind (dir);                        \
+      if (apr_err)                                                         \
+        return svn_error_wrap_apr (apr_err, "Can't rewind directory '%s'", \
+                                   path);                                  \
+    }                                                                      \
+  while (0)
+#else
+#define MACOSX_REWINDDIR_HACK(dir, path) do {} while (0)
+#endif
+
+
 /* Neither windows nor unix allows us to delete a non-empty
    directory.  
 
    This is a function to perform the equivalent of 'rm -rf'. */
-
 svn_error_t *
 svn_io_remove_dir (const char *path, apr_pool_t *pool)
 {
@@ -1178,10 +1205,12 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
                                              subpool));
           
           fullpath = svn_path_join (path, entry_utf8, pool);
-          
+
           if (this_entry.filetype == APR_DIR)
             {
               SVN_ERR (svn_io_remove_dir (fullpath, subpool));
+
+              MACOSX_REWINDDIR_HACK (this_dir, path);
             }
           else if (this_entry.filetype == APR_REG)
             {
@@ -1191,6 +1220,8 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
               if (err)
                 return svn_error_createf (err->apr_err, err,
                                           "Can't remove '%s'", fullpath);
+
+              MACOSX_REWINDDIR_HACK (this_dir, path);
             }
         }
     }
