@@ -527,8 +527,9 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c(?r)bb", path,
                                rev, (props != NULL), (stream != NULL)));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rl?c", &rev, &proplist,
-                                       &expected_checksum));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?c)rl",
+                                       &expected_checksum,
+                                       &rev, &proplist));
 
   if (fetched_rev)
     *fetched_rev = rev;
@@ -564,7 +565,6 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
     {
       apr_md5_final(digest, &md5_context);
       hex_digest = svn_md5_digest_to_cstring(digest, pool);
-      
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
