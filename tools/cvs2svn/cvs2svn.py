@@ -45,9 +45,9 @@ verbose = 1
 class CollectData(rcsparse.Sink):
   def __init__(self, cvsroot, log_fname_base):
     self.cvsroot = cvsroot
-    self.revs = open(log_fname_base + '.revs', 'w')
-    self.tags = open(log_fname_base + '.tags', 'w')
-    self.resync = open(log_fname_base + '.resync', 'w')
+    self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
+    self.tags = open(log_fname_base + TAGS_SUFFIX, 'w')
+    self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
 
   def set_fname(self, fname):
     "Prepare to receive data for a new file."
