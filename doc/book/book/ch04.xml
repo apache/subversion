@@ -198,7 +198,7 @@ Committed revision 341.
 </screen>
 
       <para>And now the easier method of creating a branch, which we
-        should have told you about in first place: <command>svn
+        should have told you about in the first place: <command>svn
         copy</command> is able to operate on two URLs.</para>
 
 <screen>
@@ -537,7 +537,7 @@ M  integer.c
         decide that the merge was a bad idea altogether, simply give up
         and <command>svn revert</command> the local change.</para>
 
-      <para>But assuming the you've reviewed the merged change, you can
+      <para>But assuming that you've reviewed the merged change, you can
         <command>svn commit</command> the change as usual.  At that
         point, the change has been merged into your repository branch.
         In version control terminology, this act of copying changes
@@ -676,7 +676,7 @@ U   my-calc-branch/integer.c
         merge all of your branch changes back into the trunk for
         others to enjoy.  </para>
 
-      <para>So how do we use the <command>svn merge</command> in this
+      <para>So how do we use <command>svn merge</command> in this
         scenario?  Remember that this command compares two trees, and
         applies the differences to a working copy.  So to receive the
         changes, you need to have a working copy of the trunk.  We'll
@@ -743,7 +743,7 @@ $ svn commit -m "Merged all my-calc-branch changes into the trunk."
       It never should have been committed.  You can use <command>svn
       merge</command> to "undo" the change in your working copy, and
       then commit the local modification to the repository.  All you
-      need to do is do specify a <emphasis>reverse</emphasis>
+      need to do is to specify a <emphasis>reverse</emphasis>
       difference:</para>
 
 <screen>
@@ -1043,7 +1043,7 @@ Committed revision 351.
       <para>Time to make a snapshot.  Copying one URL to another won't
         work here. In this case, you want to make a snapshot of your
         exact working copy arrangement and store it in the repository.
-        Luckily, the <command>svn copy</command> actually has four
+        Luckily, <command>svn copy</command> actually has four
         different uses (which you can read about in Chapter 8),
         including the ability to copy a working-copy tree to the
         repository:</para>
