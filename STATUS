@@ -109,7 +109,7 @@ section for approved changes.)
      Clean up structure definitions.
      Justification: Negligible risk, API cleanliness and stability.
      Votes:
-      +1: ghudson
+      +1: ghudson, kfogel
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
