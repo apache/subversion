@@ -63,40 +63,47 @@ enum {
 };
 
 
-/* A generalized Subversion XML parser */
+/*---------------------------------------------------------------*/
+
+/*** Generalized Subversion XML Parsing ***/
+
+/* A generalized Subversion XML parser object */
 typedef struct svn_xml_parser_t
 {
-  XML_Parser parser;
+  XML_Parser parser;         /* the expat parser */
   svn_error_t *error;        /* if non-NULL, an error happened while parsing */
-  apr_pool_t *pool;          /* where to put error */
+  apr_pool_t *pool;          /* where this object is allocated, so we
+                                can free it easily */
 
 } svn_xml_parser_t;
 
 
-
-/*** Setting up a parser. ***/
-
-#if 0                    /* todo: TEMPORARY */
-svn_xml_parser_t *
-svn_xml_make_parser (void *userData,
-                     XML_StartElementHandler  start_handler,
-                     XML_EndElementHandler    end_handler,
-                     XML_CharacterDataHandler data_handler,
-                     apr_pool_t *pool);
-
-#else
-XML_Parser
-svn_xml_make_parser (void *userData,
-                     XML_StartElementHandler  start_handler,
-                     XML_EndElementHandler    end_handler,
-                     XML_CharacterDataHandler data_handler);
-#endif
+/* Create a general Subversion XML parser */
+svn_xml_parser_t *svn_xml_make_parser (void *userData,
+                                       XML_StartElementHandler  start_handler,
+                                       XML_EndElementHandler    end_handler,
+                                       XML_CharacterDataHandler data_handler,
+                                       apr_pool_t *pool);
 
 
+/* Free a general Subversion XML parser */
+void svn_xml_free_parser (svn_xml_parser_t *svn_parser);
+
+
+/* Push LEN bytes of xml data in BUF at SVN_PARSER.  If this is the
+   final push, IS_FINAL must be set.  */
 svn_error_t *svn_xml_parse (svn_xml_parser_t *parser,
                             const char *buf,
                             apr_ssize_t len,
                             svn_boolean_t is_final);
+
+
+
+/* The way to officially bail out of xml parsing:
+   Store ERROR in SVN_PARSER and set all expat callbacks to NULL. */
+static void signal_expat_bailout (svn_error_t *error,
+                                  svn_xml_parser_t *svn_parser);
+
 
 
 
