@@ -394,7 +394,7 @@ svn_utf_cstring_from_utf8 (const char **dest,
 
 
 svn_error_t *
-svn_utf_cstring_ftom_utf8_ex (const char **dest,
+svn_utf_cstring_from_utf8_ex (const char **dest,
                               const char *src,
                               const char *topage,
                               const char *convset_key,
