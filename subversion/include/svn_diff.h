@@ -171,42 +171,41 @@ typedef struct svn_diff_output_fns_t
 
   /* If doing a two-way diff, then an *identical* data range was found
      between the "original" and "modified" datasources.  Specifically,
-     the match is from ORIGINAL_START to ORIGINAL_END in the original
-     data, and from MODIFIED_START to MODIFIED_END in the modified
-     data.
+     the match starts at ORIGINAL_START and goes for ORIGINAL_LENGTH
+     tokens in the original data, and at MODIFIED_START for MODIFIED_LENGTH
+     tokens in the modified data.
 
      If doing a three-way diff, then all three datasources have
-     matching data ranges.  The range LATEST_START to LATEST_END in
-     the "latest" datasource is identical to the range ORIGINAL_START
-     to ORIGINAL_END in the original data, and is also identical to
-     the range MODIFIED_START to MODIFIED_END in the modified
-     data.  */
+     matching data ranges.  The range LATEST_START, LATEST_LENGTH in
+     the "latest" datasource is identical to the range ORIGINAL_START,
+     ORIGINAL_LENGTH in the original data, and is also identical to
+     the range MODIFIED_START, MODIFIED_LENGTH in the modified data.  */
   svn_error_t *(*output_common) (void *output_baton,
                                 apr_off_t original_start,
-                                apr_off_t original_end,
+                                apr_off_t original_length,
                                 apr_off_t modified_start,
-                                apr_off_t modified_end,
+                                apr_off_t modified_length,
                                 apr_off_t latest_start,
-                                apr_off_t latest_end);
+                                apr_off_t latest_length);
 
   /* If doing a two-way diff, then an *conflicting* data range was found
      between the "original" and "modified" datasources.  Specifically,
-     the conflict is from ORIGINAL_START to ORIGINAL_END in the original
-     data, and from MODIFIED_START to MODIFIED_END in the modified
-     data.
+     the conflict starts at ORIGINAL_START and foes for ORIGINAL_LENGTH
+     tokens in the original data, and at MODIFIED_START for MODIFIED_LENGHT
+     tokens in the modified data.
 
      If doing a three-way diff, then all three datasources have
-     conflicting data ranges.  The range LATEST_START to LATEST_END in
-     the "latest" datasource conflicts with the range ORIGINAL_START
-     to ORIGINAL_END in the original data, and also conflicts with the
-     range MODIFIED_START to MODIFIED_END in the modified data.  */
+     conflicting data ranges.  The range LATEST_START, LATEST_LENGTH in
+     the "latest" datasource conflicts with the range ORIGINAL_START,
+     ORIGINAL_LENGTH in the original data, and also conflicts with the
+     range MODIFIED_START, MODIFIED_LENGTH in the modified data.  */
   svn_error_t *(*output_conflict) (void *output_baton,
                                    apr_off_t original_start,
-                                   apr_off_t original_end,
+                                   apr_off_t original_length,
                                    apr_off_t modified_start,
-                                   apr_off_t modified_end,
+                                   apr_off_t modified_length,
                                    apr_off_t latest_start,
-                                   apr_off_t latest_end);
+                                   apr_off_t latest_length);
 
   /* ------ The following callbacks are used by three-way diffs only --- */
 
@@ -215,33 +214,33 @@ typedef struct svn_diff_output_fns_t
      "modified" datasource. */
   svn_error_t *(*output_diff_modified) (void *output_baton,
                                         apr_off_t original_start,
-                                        apr_off_t original_end,
+                                        apr_off_t original_length,
                                         apr_off_t modified_start,
-                                        apr_off_t modified_end,
+                                        apr_off_t modified_length,
                                         apr_off_t latest_start,
-                                        apr_off_t latest_end);
+                                        apr_off_t latest_length);
   
   /* An identical data range was discovered between the "original" and
      "modified" datasources, but this conflicts with a range in the
      "latest" datasource. */
   svn_error_t *(*output_diff_latest) (void *output_baton,
                                       apr_off_t original_start,
-                                      apr_off_t original_end,
+                                      apr_off_t original_length,
                                       apr_off_t modified_start,
-                                      apr_off_t modified_end,
+                                      apr_off_t modified_length,
                                       apr_off_t latest_start,
-                                      apr_off_t latest_end);
+                                      apr_off_t latest_length);
 
   /* An identical data range was discovered between the "modified" and
      "latest" datasources, but this conflicts with a range in the
      "original" datasource. */
   svn_error_t *(*output_diff_common) (void *output_baton,
                                       apr_off_t original_start,
-                                      apr_off_t original_end,
+                                      apr_off_t original_length,
                                       apr_off_t modified_start,
-                                      apr_off_t modified_end,
+                                      apr_off_t modified_length,
                                       apr_off_t latest_start,
-                                      apr_off_t latest_end);
+                                      apr_off_t latest_length);
 } svn_diff_output_fns_t;
 
 
