@@ -29,67 +29,52 @@
 # determine if two lines match -- insuring that whitespace doesn't
 # matter.
 
-# Useful regexp for checkout/update:  r"^(..)\s+(.+)"  ==> '_U /foo/bar'
-# Useful regexp for commit/import:    r"^(.+)\s+(.+)"  ==> "Changing /foo/bar'
-# Useful regexp for status:           r"^(..)\s+(\d+)\s+\(.+\)\s+(.+)"
-#                                        'MM     13      ( 24)   /foo/bar'
 #
 #####################################################################
 
 import re  # the regexp library
 
-# Helper for compare_line_lists()
-def compare_lines(line1, line2, re_machine):
-  """Use precompiled regexp in RE_MACHINE to test if LINE1 and LINE2 are
-  the same.  (See docstring for compare_line_lists())"""
 
-  match1 = re_machine.search(line1)
-  match2 = re_machine.search(line2)
 
-  if match1 is None or match2 is None:
-    return 1  # failure: at least one line didn't match regexp
-  if len(match1.groups()) != len(match2.groups()):
-    return 1  # failure: the lines didn't have the same no. of group matches
+# General helper for compare_sets()
 
-  for i in range(1, len(match1.groups()) + 1):
-    if match1.group(i) != match2.group(i):
-      return 1 # failure:  a pair of match groups is different
+# Useful regexp for checkout/update:  r"^(..)\s+(.+)"  ==> '_U /foo/bar'
+# Useful regexp for commit/import:    r"^(\w+)\s+(.+)" ==> "Changing /foo/bar'
+# Useful regexp for status:           r"^(..)\s+(\d+)\s+\(.+\)\s+(.+)"
+#                                        'MM     13      ( 24)   /foo/bar'
+def line_matches_regexp(line, regexp):
+  "Return 0 if LINE matches REGEXP, or 1 if not."
 
-  # if we get here, then all groups matched.
-  return 0  # success
+  match = re.search(regexp, line)
+  if match is None:
+    return 1
+  else:
+    return 0
 
 
 
 # Main exported func
-def compare_line_lists(expected_lines, actual_lines, regexp):
-  """Compare two lists of lines (ignoring orderings), and return 0 if
-   they are the same or 1 if they are different.
+def compare_sets(expected_objects, actual_objects, comparison_func):
+  """Compare two lists of objects using a COMPARISON_FUNC.  Return 0
+   if the sets are the same or 1 if they are different.  The order of
+   objects in each set does not matter.
 
-   Specifically, matches will be made between each line in
-   EXPECTED_LINES and those in ACTUAL_LINES using REGEXP.  If a line
-   has no match, or if one of the lists has 'leftover' lines at the
-   end, then the comparison will return 1.
+   COMPARISON_FUNC should take two objects as input, and return 0 if
+   they are same or 1 if they are different."""
 
-   REGEXP should contain some non-zero number of match groups
-   (presumably separated by arbitrary whitespace (\s+)).  A 'match'
-   between lines will compare the first pair of match groups, then the
-   second, and so on.  If all pairs match, then the lines themselves
-   are said to match."""
+  elist = expected_objects[:]     # make copies so we can change them
+  alist = actual_objects[:]
 
-  remachine = re.compile(regexp)
-  elist = expected_lines[:]     # make copies so we can change them
-  alist = actual_lines[:]
-
-  for eline in elist:
-    for aline in alist:  # alist will shrink each time this loop starts
-      if not compare_lines(eline, aline, remachine):
-        alist.remove(aline) # safe to delete aline, because...
-        break # we're killing this aline loop, starting over with new eline.
+  for eobj in elist:
+    for aobj in alist:  # alist will shrink each time this loop starts
+      if not comparison_func(aobj, eobj):
+        alist.remove(aobj) # safe to delete aobj, because...
+        break # we're killing this aobj loop, starting over with new eobj.
     else:
-      return 1  # failure:  we examined all alines, found no match for eline.
+      return 1  # failure:  we examined all alines, found no match for eobj.
 
-  # if we get here, then every eline had an aline match.
-  # but what if alist has *extra* lines?
+  # if we get here, then every eobj had an aobj match.
+  # but what if alist has *extra* objects?
   if len(alist) > 0:
     return 1  # failure: alist had extra junk
   else:

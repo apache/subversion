@@ -26,10 +26,6 @@ import string         # for strip()
 XML_DIR = '../../xml'
 ANCESTOR_PATH = 'anni'
 
-# Regular expressions that will be used to verify output.
-CO_REGEXP = r"^(..)\s+(.+)"
-CI_REGEXP = r"^(\w+)\s+(.+)"
-
 # The paths within our greek tree:
 greek_paths = ['iota', 'A', 'A/mu', 'A/B', 'A/B/lambda', 'A/B/E',
                'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/C', 'A/D',
@@ -53,7 +49,10 @@ def xml_checkout(wc_dir, xml_path, expected_lines):
                                   '-r 1', ANCESTOR_PATH)
 
   # Verify actual output against expected output.
-  return svn_output.compare_line_lists(expected_lines, output, CO_REGEXP)
+  return svn_output.compare_sets(expected_lines, output,
+                                 svn_output.line_matches_regexp)
+
+  # TODO:  someday inspect the entries file too?? 
 
 
 
@@ -75,8 +74,10 @@ def xml_commit(wc_dir, xml_path, revision, expected_lines):
     return 1
 
   # Now verify the actual vs. expected output.
-  return svn_output.compare_line_lists(expected_lines, output, CI_REGEXP)
+  return svn_output.compare_sets(expected_lines, output,
+                                 svn_output.line_matches_regexp)
 
+  # TODO:  someday inspect the entries file too?? 
 
 
 ######################################################################
@@ -94,7 +95,7 @@ def xml_test_1():
   # Generate the expected output lines from a checkout.
   expected_output = []
   for path in greek_paths:
-    line = 'A   ' + wc_dir + '/' + path
+    line = 'A\s+' + wc_dir + '/' + path
     expected_output.append(line)
 
   return xml_checkout(wc_dir, XML_DIR + '/co1-inline.xml', expected_output)
@@ -107,10 +108,10 @@ def xml_test_2():
   wc_dir = 'wc-t2'
   wc_dir2 = 'wc-t2-copy'
 
-  # Generate the expected output lines from a checkout.
+  # Generate the expected output lines from a checkout (as regexps)
   expected_output = []
   for path in greek_paths:
-    line = 'A   ' + wc_dir + '/' + path
+    line = 'A\s+'  + wc_dir + '/' + path
     expected_output.append(line)
 
   # Checkout from co1-inline.xml and verify the results.
@@ -146,10 +147,10 @@ def xml_test_2():
            ### TODO:  verify that the output was "" (nothing)
 
   # Commit to xml file (bumping wc to rev. 2), and verify the output.
-  commit_expected_output = ['Deleting  ' + wc_dir + '/A/D/H/omega',
-                            'Adding    ' + wc_dir + '/newfile1',
-                            'Changing  ' + wc_dir + '/A/mu',
-                            'Changing  ' + wc_dir + '/A/D/G/pi']
+  commit_expected_output = ['Deleting\s+' + wc_dir + '/A/D/H/omega',
+                            'Adding\s+' + wc_dir + '/newfile1',
+                            'Changing\s+' + wc_dir + '/A/mu',
+                            'Changing\s+' + wc_dir + '/A/D/G/pi']
 
   result = xml_commit(wc_dir, 'xmltest2-commit.xml', 2, commit_expected_output)
   if result:
