@@ -280,7 +280,9 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
         goto cleanup;
       
       /* ... and merge it with our return hash.  */
-      SVN_ERR (fold_change (changes, change));
+      err = fold_change (changes, change);
+      if (err)
+        goto cleanup;
 
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */
