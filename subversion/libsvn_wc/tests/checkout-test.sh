@@ -7,7 +7,14 @@ if [ ! -x ./checkout-test ]; then
     exit 1
 fi
 
-# First get rid of any remnant of the last run.
-rm -rf this
+# First get rid of any remnants of the last run.
+for num in 1 2; do
+   rm -rf ${num}/this
+done
 
-./checkout-test checkout-1.delta this/is/a/test/dir
+# Check out all the deltas.
+for num in 1 2; do
+   ./checkout-test checkout-${num}.delta ${num}/this/is/a/test/dir
+done
+
+# That's it.  Right now, we test by inspecting them by hand.
