@@ -699,6 +699,45 @@ server, "set x = 0", and step through the code as desired.
 
 
 
+Tracking down memory leaks
+==========================
+
+Our use of APR pools makes it unusual for us to have memory leaks in
+the strictest sense; all the memory we allocate will be cleaned up
+eventually.  But sometimes an operation takes more memory than it
+should; for instance, a checkout of a large source tree should not use
+much more memory than a checkout of a small source tree.  When that
+happens, it generally means we're allocating memory from a pool whose
+lifetime is too long.
+
+If you have a favorite memory leak tracking tool, you can configure
+with --enable-pool-debug (which will make every pool allocation use
+its own malloc()), arrange to exit in the middle of the operation, and
+go to it.  If not, here's another way:
+
+  * Configure with --enable-pool-debug=verbose-alloc.  Make sure to
+    rebuild all of APR and Subversion so that every allocation gets
+    file-and-line information.
+
+  * Run the operation, piping stderr to a file.  Hopefully you have
+    lots of disk space.
+
+  * In the file, you'll see lots of lines which look like:
+
+    POOL DEBUG: [5383/1024] PCALLOC (      2763/      2763/      5419) 0x08102D48 "subversion/clients/cmdline/main.c:612" <subversion/libsvn_subr/auth.c:122> (118/118/0)
+
+    What you care about most is the tenth field (the one in quotes),
+    which gives you the file and line number where the pool for this
+    allocation was created.  Go to that file and line and determine
+    the lifetime of the pool.  In the example above, main.c:612
+    indicates that this allocation was made in the top-level pool of
+    the svn client.  If this were an allocation which was repeated
+    many times during the course of an operation, that would indicate
+    a source of a memory leak.  The eleventh field (the one in
+    brackets) gives the file and line number of the allocation itself.
+
+
+
 Writing log messages
 ====================
 
