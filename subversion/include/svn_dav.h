@@ -44,6 +44,10 @@ extern "C" {
    ### and things. also the custom prop names. etc.
 */
 
+/* The svn-specific object that is placed within a <D:error> response.  */
+#define SVN_DAV_ERROR_NAMESPACE "svn:"
+#define SVN_DAV_ERROR_TAG       "error"
+
 
 #ifdef __cplusplus
 }

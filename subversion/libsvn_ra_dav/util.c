@@ -311,7 +311,8 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
  error:
   ne_xml_destroy(success_parser);
   ne_xml_destroy(error_parser);
-  return err;
+  return svn_error_createf(err->apr_err, err->src_err, err, NULL,
+                           "%s request failed on %s", method, url );
 }
 
 
