@@ -147,6 +147,7 @@ main (int argc, char *argv[])
     err = svn_wc_crawl_local_mods (rootdir,
                                    condensed_targets,
                                    my_editor, my_edit_baton,
+                                   NULL, NULL,
                                    globalpool);
   }
 

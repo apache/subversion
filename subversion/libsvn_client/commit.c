@@ -567,10 +567,22 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
     {
       /* Crawl local mods and report changes to EDITOR.  When
          close_edit() is called, revisions will be bumped. */
-      err = svn_wc_crawl_local_mods (base_dir,
-                                     condensed_targets,
-                                     editor, edit_baton,
-                                     pool);
+
+      if (xml_dst && xml_dst->data)
+        /* committing to XML */
+        err = svn_wc_crawl_local_mods (base_dir,
+                                       condensed_targets,
+                                       editor, edit_baton,
+                                       NULL, NULL,
+                                       pool);
+      else 
+        /* committing to RA layer */
+        err = svn_wc_crawl_local_mods (base_dir,
+                                       condensed_targets,
+                                       editor, edit_baton,
+                                       &(ra_lib->get_latest_revnum), session,
+                                       pool);
+
       if (err)
         {
           /* ignoring the return value of this.  we're *already* about

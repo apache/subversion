@@ -729,15 +729,19 @@ verify_tree_deletion (svn_stringbuf_t *dir,
 
 
 /* Forward declaration for co-dependent recursion. */
-static svn_error_t *crawl_dir (svn_stringbuf_t *path,
-                               void *dir_baton,
-                               const svn_delta_edit_fns_t *editor,
-                               void *edit_baton,
-                               svn_boolean_t adds_only,
-                               struct stack_object **stack,
-                               apr_hash_t *affected_targets,
-                               apr_hash_t *locks,
-                               apr_pool_t *top_pool);
+static svn_error_t *
+crawl_dir (svn_stringbuf_t *path,
+           void *dir_baton,
+           const svn_delta_edit_fns_t *editor,
+           void *edit_baton,
+           const svn_ra_get_latest_revnum_func_t *revnum_fn,
+           void *rev_baton,
+           svn_revnum_t *youngest_rev,
+           svn_boolean_t adds_only,
+           struct stack_object **stack,
+           apr_hash_t *affected_targets,
+           apr_hash_t *locks,
+           apr_pool_t *top_pool);
 
 
 /* Report modifications to file or directory NAME in STACK->path
@@ -753,7 +757,10 @@ static svn_error_t *crawl_dir (svn_stringbuf_t *path,
    files and directories schedule for addition.
 
    Perform all temporary allocation in STACK->pool, and any allocation
-   that must outlive the reporting process in TOP_POOL. */
+   that must outlive the reporting process in TOP_POOL. 
+
+   Temporary: use REVNUM_FN/REV_BATON/YOUNGEST_REV to determine if a
+   dir is up-to-date when it has a propchange.  */
 static svn_error_t *
 report_single_mod (const char *name,
                    svn_wc_entry_t *entry,
@@ -762,6 +769,9 @@ report_single_mod (const char *name,
                    apr_hash_t *locks,
                    const svn_delta_edit_fns_t *editor,
                    void *edit_baton,
+                   const svn_ra_get_latest_revnum_func_t *revnum_fn,
+                   void *rev_baton,
+                   svn_revnum_t *youngest_rev,
                    void **dir_baton,
                    svn_boolean_t adds_only,
                    apr_pool_t *top_pool)
@@ -1030,6 +1040,9 @@ report_single_mod (const char *name,
                           new_dir_baton, 
                           editor, 
                           edit_baton, 
+                          revnum_fn,
+                          rev_baton,
+                          youngest_rev,
                           adds_only,
                           stack,
                           affected_targets, 
@@ -1062,12 +1075,18 @@ report_single_mod (const char *name,
    STACK should begin either as NULL, or pointing at the parent of
    PATH.  Stackframes are automatically pushed/popped as the crawl
    proceeds.  When this function returns, the top of stack will be
-   exactly where it was. */
+   exactly where it was.
+
+   Temporary: use REVNUM_FN/REV_BATON/YOUNGEST_REV to determine if a
+   dir is up-to-date when it has a propchange. */
 static svn_error_t *
 crawl_dir (svn_stringbuf_t *path,
            void *dir_baton,
            const svn_delta_edit_fns_t *editor,
            void *edit_baton,
+           const svn_ra_get_latest_revnum_func_t *revnum_fn,
+           void *rev_baton,
+           svn_revnum_t *youngest_rev,
            svn_boolean_t adds_only,
            struct stack_object **stack,
            apr_hash_t *affected_targets,
@@ -1118,9 +1137,32 @@ crawl_dir (svn_stringbuf_t *path,
                                   *stack, editor, edit_baton,
                                   locks, top_pool));
         
-      /* Send propchanges to editor. */
+      /* Temporary:  we don't allow the committing of prop-changes on
+         an out-of-date directory, due to the Greg Hudson Scenarios.
+         In the ideal world, this would be enforced server-side;  for
+         now, we simply add an extra network turnaround and have the
+         -client- enforce the rule instead. */
+      if (revnum_fn)
+        {
+          /* If not already cached, ask the repo for youngest rev. */
+          if (! SVN_IS_VALID_REVNUM (*youngest_rev))
+            SVN_ERR ((*revnum_fn) (rev_baton, youngest_rev));
+          
+          /* Is the propchanged-dir out of date? */
+          if (this_dir_entry->revision != *youngest_rev)
+            return 
+              svn_error_createf 
+              (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL, (*stack)->pool,
+               "Directory '%s' is out-of-date;  cannot commit its propchange.",
+               path->data);
+        }
+
+      /* It's possible that revnum function is NULL.  That's OK;
+         commit propchange anyway.  (In the case of XML, it's OK;
+         there's no repository to talk to.) */
       SVN_ERR (do_prop_deltas (path, this_dir_entry, editor, dir_baton, 
                                (*stack)->pool));
+
     }
 
   /* Loop over each entry */
@@ -1157,6 +1199,9 @@ crawl_dir (svn_stringbuf_t *path,
                                   locks,
                                   editor,
                                   edit_baton,
+                                  revnum_fn,
+                                  rev_baton,
+                                  youngest_rev,
                                   &dir_baton,
                                   adds_only,
                                   top_pool));
@@ -1192,12 +1237,16 @@ crawl_dir (svn_stringbuf_t *path,
       - assumes that CONDENSED_TARGETS has been sorted (critical!)
       - takes an initialized LOCKED_DIRS hash for storing locked wc dirs.
             
+   Temporary:  take a REVNUM_FN/REV_BATON so that we check that
+   directories are up-to-date when they have propchanges.
 */
 static svn_error_t *
 svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
                           apr_array_header_t *condensed_targets,
                           const svn_delta_edit_fns_t *editor,
                           void *edit_baton,
+                          const svn_ra_get_latest_revnum_func_t *revnum_fn,
+                          void *rev_baton,                          
                           apr_hash_t *locked_dirs,
                           apr_pool_t *pool)
 {
@@ -1212,6 +1261,11 @@ svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
      postfix-textdeltas. */
   apr_hash_t *affected_targets = apr_hash_make (pool);
 
+  /* A cache of the youngest revision in the repository, in case we
+     discover any directory propchanges.  An invalid value means that
+     this crawl hasn't yet discovered the info.  */
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+
   /* No targets at all?  This means we are committing the entries in a
      single directory. */
   if (condensed_targets->nelts == 0)
@@ -1225,6 +1279,9 @@ svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
                        NULL,
                        editor, 
                        edit_baton,
+                       revnum_fn,
+                       rev_baton,
+                       &youngest_rev,
                        FALSE,
                        &stack, 
                        affected_targets, 
@@ -1374,6 +1431,9 @@ svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
                                        locked_dirs,
                                        editor,
                                        edit_baton,
+                                       revnum_fn,
+                                       rev_baton,
+                                       &youngest_rev,
                                        &dir_baton,
                                        FALSE,
                                        pool);
@@ -1755,6 +1815,8 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                          apr_array_header_t *condensed_targets,
                          const svn_delta_edit_fns_t *editor,
                          void *edit_baton,
+                         const svn_ra_get_latest_revnum_func_t *revnum_fn,
+                         void *rev_baton,
                          apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
@@ -1781,6 +1843,7 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
   err = svn_wc__crawl_local_mods (parent_dir,
                                   condensed_targets,
                                   editor, edit_baton,
+                                  revnum_fn, rev_baton,
                                   locked_dirs,
                                   pool);
 
