@@ -34,6 +34,7 @@ my $gSvnadminCmd = '/usr/local/bin/svnadmin';
 my $gReposPath = '/usr/www/repositories/svn';
 my $gActionURL = './tweak-log.cgi';
 my $gTempfilePrefix = '/tmp/tweak-cgi';
+my $gHistoryFile = './TWEAKLOG';
 ###############################################################################
 
 my %gCGIValues = &doCGI( );
@@ -226,11 +227,37 @@ sub doCommitLog
     print LOGFILE $log;
     close LOGFILE;
 
+    # Tell our history file what we're about to do.
+    if ($gHistoryFile)
+    {
+        if (not (open (HISTORY, ">> $gHistoryFile")))
+        {
+            &doError ("Unable to open history file.");
+            return;
+        }
+        print HISTORY "====================================================\n";
+        print HISTORY "REVISION $rev WAS:\n";
+        print HISTORY "----------------------------------------------------\n";
+        print HISTORY $orig_log;
+        print HISTORY "\n";
+    }
+
     # Now, make the mods
     `$gSvnadminCmd setlog $gReposPath $rev $tempfile`;
     
     # ...and remove the tempfile.  It is, after all, temporary.
     unlink $tempfile;
+
+    # Now, tell the history file what we did.
+    if ($gHistoryFile)
+    {
+        print HISTORY "----------------------------------------------------\n";
+        print HISTORY "REVISION $rev IS:\n";
+        print HISTORY "----------------------------------------------------\n";
+        print HISTORY $log;
+        print HISTORY "\n";
+        close HISTORY;
+    }
 
     # Now, re-read that logfile
     $log = `$gSvnlookCmd $gReposPath rev $rev log`;
