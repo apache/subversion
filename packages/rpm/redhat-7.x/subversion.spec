@@ -105,6 +105,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13711
+- Take out "static build" feature that never actually worked as intended.
+
 * Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13709
 - Fix http tests to work with new locking feature which now requires
   authentication.
@@ -386,11 +389,7 @@ mv "${vsn_file}.tmp" "$vsn_file"
 # be installed.
 rm -rf apr apr-util neon
 
-# Configure static.
 %configure \
-	--without-berkeley-db \
-	--disable-shared \
-	--enable-all-static \
 	--with-swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
@@ -398,21 +397,6 @@ rm -rf apr apr-util neon
 	--with-apr-util=%{apache_dir}/bin/apu-config
 
 %build
-# Make svnadmin static.
-make subversion/svnadmin/svnadmin
-
-# Move static svnadmin to safe place.
-cp subversion/svnadmin/svnadmin svnadmin.static
-
-# Configure shared.
-%configure \
-	--with-swig \
-	--with-python=/usr/bin/python2.2 \
-	--with-apxs=%{apache_dir}/bin/apxs \
-	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config
-
-# Make everything shared.
 make clean
 make
 
@@ -488,22 +472,12 @@ cd ../../../../..
 rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
 %endif
 
-# Copy svnadmin.static to destination
-cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
-
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
-
-%preun
-# Save current copy of svnadmin.static
-echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
-echo "Erase this program only after you make sure you won't need to dump/reload"
-echo "any of your repositories to upgrade to a new version of the database."
-cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
 
 %post server
 # Load subversion server into apache configuration.
@@ -550,7 +524,6 @@ rm -rf $RPM_BUILD_ROOT
 %doc subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
-/usr/bin/svnadmin-%{version}-%{release}.static
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
