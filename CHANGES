@@ -1,4 +1,4 @@
-Version 0.29.0 (released ?? Sep 2003, revision ????)
+Version 0.29.0 (released 05 Sep 2003, revision 6976)
 http://svn.collab.net/repos/svn/tags/0.29.0
 
  User-visible changes:
@@ -6,7 +6,7 @@ http://svn.collab.net/repos/svn/tags/0.29.0
  * 'svn status' now recurses into externals (r6913, #1428)
  * new 'svnadmin verify' command to verify repository data (r6851, #1074)
  * SSL changes:  (r6958, #1371)
-     - dropped support for PEM-encoded client certs, only accept PCKS12 now.
+     - dropped support for PEM-encoded client certs, only accept PKCS12 now.
      - 'ssl-authority-files' is now a list of CA files
      - no more 'ssl-client-cert-type' and 'ssl-client-key-file' variables.
  * new svndumpfilter option: '--preserve-revprops' to keep props on empty revs
@@ -23,7 +23,7 @@ http://svn.collab.net/repos/svn/tags/0.29.0
  * tree re-org:  non-core utilities split into 'tools' and 'contrib' areas.
  * some gen_make.py/gen-base.py improvements
  * configure.in CFLAGS bugfix (r6963)
- * stop caling deprecated APIs in APR, in preparation for upcoming APR-1.0.
+ * stop callng deprecated APIs in APR, in preparation for upcoming APR-1.0.
 
 
 Version 0.28.2 (released 29 Aug 2003, revision 6946)
