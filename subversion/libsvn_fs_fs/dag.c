@@ -29,7 +29,6 @@
 #include "err.h"
 #include "fs.h"
 #include "key-gen.h"
-#include "node-rev.h"
 #include "id.h"
 #include "revs-txns.h"
 #include "fs_fs.h"
@@ -746,8 +745,33 @@ svn_fs__dag_remove_node (svn_fs_t *fs,
                          const char *txn_id,
                          apr_pool_t *pool)
 {
-  abort ();
-  
+  dag_node_t *node;
+  svn_fs__node_revision_t *noderev;
+
+  /* Fetch the node. */
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, pool));
+
+  /* If immutable, do nothing and return immediately. */
+  if (! svn_fs__dag_check_mutable (node, txn_id))
+    return svn_error_createf (SVN_ERR_FS_NOT_MUTABLE, NULL,
+                              "Attempted removal of immutable node");
+
+  /* Get a fresh node-revision. */
+  SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, id, pool));
+
+  /* Delete any mutable property representation. */
+  if (noderev->prop_rep)
+    SVN_ERR (svn_fs__fs_delete_rep_if_mutable (fs, id, noderev->prop_rep,
+                                               txn_id, pool));
+
+  /* Delete any mutable data representation. */
+  if (noderev->data_rep)
+    SVN_ERR (svn_fs__fs_delete_rep_if_mutable (fs, id, noderev->data_rep,
+                                               txn_id, pool));
+
+  /* Delete the node revision itself. */
+  SVN_ERR (svn_fs__fs_delete_node_revision (fs, id, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -933,28 +957,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
                             const char *txn_id, 
                             apr_pool_t *pool)
 {
-  svn_fs__node_revision_t *noderev;
-  
-  /* Make sure our node is a file. */
-  if (file->kind != svn_node_file)
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, NULL,
-       "Attempted to set textual contents of a *non*-file node");
-  
-  /* Make sure our node is mutable. */
-  if (! svn_fs__dag_check_mutable (file, txn_id))
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to set textual contents of an immutable node");
-
-  /* Get the node revision. */
-  SVN_ERR (get_node_revision (&noderev, file, pool));
-
-  /* If this node has no EDIT-DATA-KEY, this is a no-op. */
-  if (! noderev->edit_key)
-    return SVN_NO_ERROR;
-
-  abort ();
+  /* A big no-op for FSFS. */
   
   return SVN_NO_ERROR;
 }
@@ -1041,7 +1044,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev->created_path =
         svn_path_join (svn_fs__dag_get_created_path (to_node), entry,
                        pool);
-      to_noderev->copyfrom_path = svn_fs__dag_get_created_path (from_node);
+      to_noderev->copyfrom_path = apr_pstrdup (pool, from_path);
       to_noderev->copyfrom_rev = from_rev;
 
       /* Set the copyroot equal to our own id. */
@@ -1058,37 +1061,6 @@ svn_fs__dag_copy (dag_node_t *to_node,
       
   /* Set the entry in to_node to the new id. */
   SVN_ERR (svn_fs__dag_set_entry (to_node, entry, id, txn_id, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/*** Deltification ***/
-
-svn_error_t *
-svn_fs__dag_deltify (dag_node_t *target,
-                     dag_node_t *source,
-                     svn_boolean_t props_only,
-                     apr_pool_t *pool)
-{
-  abort ();
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-/*** Committing ***/
-
-svn_error_t *
-svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
-                        svn_fs_t *fs,
-                        const char *txn_id,
-                        apr_pool_t *pool)
-{
-  abort ();
 
   return SVN_NO_ERROR;
 }
