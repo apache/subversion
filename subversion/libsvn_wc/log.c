@@ -1092,26 +1092,32 @@ log_do_committed (struct log_runner *loggy,
   if (wc_root)
     return SVN_NO_ERROR;
 
-  /* Make sure our entry exists in the parent (if the parent is even a
-     SVN working copy directory). */
-  svn_path_split (svn_wc_adm_access_path (loggy->adm_access), &pdir,
-                      &base_name, pool);
-  SVN_ERR (svn_wc_adm_retrieve (&adm_access, loggy->adm_access, pdir, pool));
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
-  if (apr_hash_get (entries, base_name, APR_HASH_KEY_STRING))
-    {
-      svn_wc_adm_access_t *parent_access;
-      SVN_ERR (svn_wc_adm_retrieve (&parent_access, loggy->adm_access, pdir,
-                                    pool));
-      if ((err = svn_wc__entry_modify (parent_access, base_name, entry,
-                                       (SVN_WC__ENTRY_MODIFY_SCHEDULE 
-                                        | SVN_WC__ENTRY_MODIFY_COPIED
-                                        | SVN_WC__ENTRY_MODIFY_DELETED
-                                        | SVN_WC__ENTRY_MODIFY_FORCE),
-                                       TRUE, pool)))
-        return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                                  "error merge_syncing '%s'", name);
-    }
+  /* Make sure our entry exists in the parent. */
+  {
+    svn_wc_adm_access_t *paccess;
+    
+    svn_path_split (svn_wc_adm_access_path (loggy->adm_access), &pdir,
+                    &base_name, pool);
+    
+    err = svn_wc_adm_retrieve (&paccess, loggy->adm_access, pdir, pool);
+    if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+      SVN_ERR (svn_wc_adm_open (&paccess, NULL, pdir, TRUE, FALSE, pool));
+    else if (err)
+      return err;
+    
+    SVN_ERR (svn_wc_entries_read (&entries, paccess, FALSE, pool));
+    if (apr_hash_get (entries, base_name, APR_HASH_KEY_STRING))
+      {
+        if ((err = svn_wc__entry_modify (paccess, base_name, entry,
+                                         (SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                                          | SVN_WC__ENTRY_MODIFY_COPIED
+                                          | SVN_WC__ENTRY_MODIFY_DELETED
+                                          | SVN_WC__ENTRY_MODIFY_FORCE),
+                                         TRUE, pool)))
+          return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
+                                    "error merge_syncing '%s'", name);
+      }
+  }
 
   return SVN_NO_ERROR;
 }

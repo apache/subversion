@@ -412,8 +412,11 @@ harvest_committables (apr_hash_t *committables,
 
   /* For directories, recursively handle each of their entries (except
      when the directory is being deleted, unless the deletion is part
-     of a replacement ... how confusing). */
-  if ((entries) 
+     of a replacement ... how confusing).  Oh, and don't recurse at
+     all if this is a nonrecursive commit.  ### We'll probably make
+     the whole 'nonrecursive' concept go away soon and be replaced
+     with the more sophisticated Depth0|Depth1|DepthInfinity. */
+  if (entries && (! nonrecursive)
       && ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
           || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
@@ -447,18 +450,6 @@ harvest_committables (apr_hash_t *committables,
 
           this_entry = val;
           name_uri = svn_path_uri_encode (name, loop_pool);
-
-          /* Skip subdirectory entries when we're not recursing.
-
-             ### it occurs to me that if someone specified two
-             targets, `some/dir' and `some/dir/subdir' for the commit,
-             *and* specified that they wanted a non-recursive commit,
-             that these would be "compressed" to a single target of
-             `some/dir', which would (because of the non-recursive
-             feature) result in `some/dir/subdir' not getting
-             committed.  we probably ought to do something about that.  */
-          if ((this_entry->kind == svn_node_dir) && nonrecursive)
-            continue;
 
           full_path = svn_path_join (path, name, loop_pool);
           if (this_cf_url)
