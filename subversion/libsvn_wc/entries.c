@@ -97,7 +97,7 @@ svn_wc__entries_init (svn_string_t *path,
   svn_xml_append_tag (accum,
                       pool,
                       svn_xml_open_tag,
-                      SVN_WC__ENTRIES_START,
+                      SVN_WC__ENTRIES_TOPLEVEL,
                       "xmlns",
                       svn_string_create (SVN_XML_NAMESPACE, pool),
                       NULL);
@@ -118,7 +118,7 @@ svn_wc__entries_init (svn_string_t *path,
   svn_xml_append_tag (accum,
                       pool,
                       svn_xml_close_tag,
-                      SVN_WC__ENTRIES_END,
+                      SVN_WC__ENTRIES_TOPLEVEL,
                       NULL);
 
   apr_err = apr_full_write (f, accum->data, accum->len, NULL);
@@ -447,10 +447,8 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           apr_status_t apr_err;
           svn_string_t *dup;
 
-          if (strcmp (tagname, SVN_WC__ENTRIES_START) == 0)
+          if (strcmp (tagname, SVN_WC__ENTRIES_TOPLEVEL) == 0)
             tag_type = svn_xml_open_tag;
-          else if (strcmp (tagname, SVN_WC__ENTRIES_END) == 0)
-            tag_type = svn_xml_close_tag;
 
           dup = svn_xml_make_tag_hash (baton->pool,
                                        tag_type,
@@ -478,7 +476,7 @@ handle_end_tag (void *userData, const char *tagname)
   svn_wc__entry_baton_t *baton = (svn_wc__entry_baton_t *) userData;
   svn_error_t *err;
 
-  if ((strcmp (tagname, SVN_WC__ENTRIES_END)) == 0)
+  if ((strcmp (tagname, SVN_WC__ENTRIES_TOPLEVEL)) == 0)
     {
       if (baton->outfile)
         {

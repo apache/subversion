@@ -282,10 +282,8 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 
 /*** Handling the `entries' file. ***/
 
-#define SVN_WC__ENTRIES_START   "wc-entries"
-#define SVN_WC__ENTRIES_ENTRY   "entry"
-#define SVN_WC__ENTRIES_END     "wc-entries"
-
+#define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
+#define SVN_WC__ENTRIES_ENTRY          "entry"
 #define SVN_WC__ENTRIES_ATTR_NAME      "name"
 #define SVN_WC__ENTRIES_ATTR_VERSION   "version"
 #define SVN_WC__ENTRIES_ATTR_KIND      "kind"
