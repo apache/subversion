@@ -89,12 +89,12 @@ svn_config_read (svn_config_t **cfgp, const char *file,
      Subversion-specific and Windows-specific.  Even if we eventually
      want to have APR offer a generic config-reading interface, it
      makes sense to test it here first and migrate it later. */
-#ifdef SVN_WIN32
+#ifdef WIN32
   if (0 == strncmp (file, SVN_REGISTRY_PREFIX, SVN_REGISTRY_PREFIX_LEN))
     err = svn_config__parse_registry (cfg, file + SVN_REGISTRY_PREFIX_LEN,
                                       must_exist);
   else
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
     err = svn_config__parse_file (cfg, file, must_exist);
 
   if (err != SVN_NO_ERROR)
@@ -110,11 +110,11 @@ svn_config_read (svn_config_t **cfgp, const char *file,
 /* Read various configuration sources into *CFGP, in this order, with
  * later reads overriding the results of earlier ones:
  *
- *    1. SYS_REGISTRY_PATH   (only on SVN_WIN32, but ignored if NULL)
+ *    1. SYS_REGISTRY_PATH   (only on Win32, but ignored if NULL)
  *
  *    2. SYS_FILE_PATH       (everywhere, but ignored if NULL)
  *
- *    3. USR_REGISTRY_PATH   (only on SVN_WIN32, but ignored if NULL)
+ *    3. USR_REGISTRY_PATH   (only on Win32, but ignored if NULL)
  *
  *    4. USR_FILE_PATH       (everywhere, but ignored if NULL)
  *
@@ -133,13 +133,13 @@ read_all (svn_config_t **cfgp,
 
   /*** Read system-wide configurations first... ***/
 
-#ifdef SVN_WIN32
+#ifdef WIN32
   if (sys_registry_path)
     {
       SVN_ERR (svn_config_read (cfgp, sys_registry_path, FALSE, pool));
       red_config = TRUE;
     }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   if (sys_file_path)
     {
@@ -154,7 +154,7 @@ read_all (svn_config_t **cfgp,
 
   /*** ...followed by per-user configurations. ***/
 
-#ifdef SVN_WIN32
+#ifdef WIN32
   if (usr_registry_path)
     {
       if (red_config)
@@ -165,7 +165,7 @@ read_all (svn_config_t **cfgp,
           red_config = TRUE;
         }
     }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   if (usr_file_path)
     {
@@ -198,12 +198,12 @@ get_category_config (svn_config_t **cfg,
 
   if (! config_dir)
     {
-#ifdef SVN_WIN32
+#ifdef WIN32
       sys_reg_path = apr_pstrcat (pool, SVN_REGISTRY_SYS_CONFIG_PATH,
                                   category, NULL);
       usr_reg_path = apr_pstrcat (pool, SVN_REGISTRY_USR_CONFIG_PATH,
                                   category, NULL);
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
       SVN_ERR (svn_config__sys_config_path (&sys_cfg_path, category, pool));
     }

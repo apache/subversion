@@ -40,10 +40,7 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 
-#include "svn_private_config.h" /* For SVN_WIN32 */
-
 
-
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();
    essentially the same semantics as those two, with the obvious
    interpretation for RESOLVE_SYMLINKS. */
@@ -266,14 +263,14 @@ svn_io_temp_dir (const char **dir,
             }
         }
     }
-#ifdef SVN_WIN32
+#ifdef WIN32
   /* Next, on Win32, try the C:\TEMP directory. */
   if (test_tempdir("C:\\TEMP", pool))
     {
       temp_dir = "C:\\TEMP";
       goto end;
     }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 			    
   /* Next, try a set of hard-coded paths. */
   for (i = 0; i < (sizeof(try_dirs) / sizeof(const char *)); i++)
@@ -356,7 +353,7 @@ svn_io_copy_file (const char *src,
 
   /* ### FIXME: apr_file_copy with perms may fail on Win32.  We need a
      platform-specific implementation to get the permissions right. */
-#ifndef SVN_WIN32
+#ifndef WIN32
   if (copy_perms)
     {
       apr_file_t *s;
@@ -395,7 +392,7 @@ svn_io_copy_file (const char *src,
              "svn_io_copy_file: setting perms on '%s'", dst_tmp);
         }
     }
-#endif /* ! SVN_WIN32 */
+#endif /* ! WIN32 */
 
   return svn_io_file_rename (dst_tmp, dst, pool);
 }
@@ -846,7 +843,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
                           const char *path, 
                           apr_pool_t *pool)
 {
-#if defined(APR_HAS_USER) && !defined(SVN_WIN32)
+#if defined(APR_HAS_USER) && !defined(WIN32)
   apr_finfo_t file_info;
   apr_status_t apr_err;
   apr_uid_t uid;
@@ -874,7 +871,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   else
     *executable = (file_info.protection & APR_WEXECUTE);
 
-#else  /* defined(SVN_WIN32) || !defined(APR_HAS_USER) */
+#else  /* defined(WIN32) || !defined(APR_HAS_USER) */
   *executable = FALSE;
 #endif
 
@@ -1052,7 +1049,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   const char *path_apr;
 
-#ifdef SVN_WIN32
+#ifdef WIN32
   /* ### On Unix a read-only file can still be removed, because
      removal is really an edit of the parent directory, not of the
      file itself.  Windows apparently has different semantics, and so
@@ -1067,13 +1064,13 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
      But see http://subversion.tigris.org/issues/show_bug.cgi?id=1294
      for a more thorough discussion of long term solutions to this. */
   SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
   apr_err = apr_file_remove (path_apr, pool);
 
-#ifdef SVN_WIN32
+#ifdef WIN32
   /*
     Windows is 'aided' by a number of types of applications that
     follow other applications around and open up files they have
@@ -1100,7 +1097,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
       apr_err = apr_file_remove (path_apr, pool);
     }
   }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   if (apr_err)
     return svn_error_createf
@@ -1858,7 +1855,7 @@ svn_io_file_rename (const char *from_path, const char *to_path,
 
   status = apr_file_rename (from_path_apr, to_path_apr, pool);
 
-#ifdef SVN_WIN32
+#ifdef WIN32
   /*
     Windows is 'aided' by a number of types of applications that
     follow other applications around and open up files they have
@@ -1885,7 +1882,7 @@ svn_io_file_rename (const char *from_path, const char *to_path,
       status = apr_file_rename (from_path_apr, to_path_apr, pool);
     }
   }
-#endif /* SVN_WIN32 */
+#endif /* WIN32 */
 
   if (status)
     return svn_error_createf (status, NULL,
