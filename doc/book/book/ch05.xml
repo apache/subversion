@@ -172,7 +172,7 @@
         repository is storing data; they only see revision and
         transaction trees through the repository API.</para>
 
-      <para>Here is a table that gives an comparative overview of
+      <para>Here is a table that gives a comparative overview of
         Berkeley DB and FSFS repositories.  The next sections go into
         detail.</para>
 
@@ -424,7 +424,7 @@
           inability to be <quote>wedged</quote> when something goes
           wrong.  If a process using a Berkeley DB database runs into
           a permissions problem or suddenly crashes, the database is
-          left unusable until a administrator recovers it.  If the
+          left unusable until an administrator recovers it.  If the
           same scenarios happen to a process using an FSFS repository,
           the repository isn't affected at all.  At worst, some
           transaction data is left behind.</para>
