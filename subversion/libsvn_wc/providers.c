@@ -231,22 +231,22 @@ simple_save_creds (svn_boolean_t *saved,
 }
 
 
+static const svn_auth_provider_t simple_provider = {
+  SVN_AUTH_CRED_SIMPLE,
+  simple_first_creds,
+  NULL,
+  simple_save_creds
+};
+
+
 /* Public API */
 void
 svn_wc_get_simple_provider (const svn_auth_provider_t **provider,
                             void **provider_baton,
                             apr_pool_t *pool)
 {
-  provider_baton_t *pb = apr_pcalloc (pool, sizeof (*pb));
-  svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
-
-  prov->cred_kind = SVN_AUTH_CRED_SIMPLE;
-  prov->first_credentials = simple_first_creds;
-  prov->next_credentials = NULL; /* no retry. */
-  prov->save_credentials = simple_save_creds;
-
-  *provider = prov;
-  *provider_baton = pb;
+  *provider = &simple_provider;
+  *provider_baton = apr_pcalloc (pool, sizeof (**provider));;
 }
 
 
@@ -304,20 +304,20 @@ username_save_creds (svn_boolean_t *saved,
 }
 
 
+static const svn_auth_provider_t username_provider = {
+  SVN_AUTH_CRED_USERNAME,
+  username_first_creds,
+  NULL,
+  username_save_creds
+};
+
+
 /* Public API */
 void
 svn_wc_get_username_provider (const svn_auth_provider_t **provider,
                               void **provider_baton,
                               apr_pool_t *pool)
 {
-  provider_baton_t *pb = apr_pcalloc (pool, sizeof (*pb));
-  svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
-
-  prov->cred_kind = SVN_AUTH_CRED_USERNAME;
-  prov->first_credentials = username_first_creds;
-  prov->next_credentials = NULL; /* no retry. */
-  prov->save_credentials = username_save_creds;
-
-  *provider = prov;
-  *provider_baton = pb;
+  *provider = &username_provider;
+  *provider_baton = apr_pcalloc (pool, sizeof (**provider));;
 }
