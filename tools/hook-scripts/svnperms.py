@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # $HeadURL$
 # $LastChangedDate$
@@ -236,6 +236,10 @@ Options:
     -h         Show this message
 """
 
+class MissingArgumentsException(Exception):
+    "Thrown when required arguments are missing."
+    pass
+
 def parse_options():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "f:s:r:t:R:A:h", ["help"])
@@ -267,11 +271,12 @@ def parse_options():
             sys.exit(0)
     missingopts = []
     if not obj.repository:
-        raise Error, "you must provide a repository"
+        missingopts.append("repository")
     if not (obj.transaction or obj.revision):
-        raise Error, "you must provide a transaction or a revision"
+        missingopts.append("either transaction or a revision")
     if missingopts:
-        raise Error, "missing required options: "+" ".join(missingopts)
+        raise MissingArgumentsException, \
+              "missing required option(s): " + ", ".join(missingopts)
     obj.repository = os.path.abspath(obj.repository)
     if obj.filename is None:
         obj.filename = os.path.join(obj.repository, "conf", "svnperms.conf")
@@ -292,6 +297,10 @@ def main():
         check_perms(opts.filename, opts.section,
                     opts.repository, opts.transaction, opts.revision,
                     opts.author)
+    except MissingArgumentsException, e:
+        sys.stderr.write("%s\n" % str(e))
+        sys.stderr.write(USAGE)
+        sys.exit(1)
     except Error, e:
         sys.stderr.write("error: %s\n" % str(e))
         sys.exit(1)
