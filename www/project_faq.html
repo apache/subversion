@@ -48,6 +48,8 @@
 <p>
 <strong>Troubleshooting:</strong>
 </p>
+<li><a href="#diff3-diff">Why do I get exitcode 2 from diff3 on 
+    Windows?</a></li>
 <li><a href="#wedged-repos">What the heck!  Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
@@ -589,6 +591,25 @@ understood it <em>before</em> actually hacking the code, right? :)
 <p>
 
 <![CDATA[-----------------------------------------------------------]]>
+
+<h3>I get exitcode 2 from diff3 on Windows <a name="diff3-diff"></a></h3>
+
+<p>
+This happens when you diff utilities are not installed on the C: drive.
+<br>
+For example:
+<br>
+your diff utilities are in D:/cygwin/bin. The work around is:
+</p>
+<pre>
+mkdir -p C:/cygwin/bin
+cp D:/cygwin/bin/diff*.exe C:/cygwin/bin
+</pre>
+<p>
+Despite the Registry and/or the config file showing the D: drive,
+when diff3.exe tries to launch diff.exe the drive letter is ignored,
+and C: (the system drive) is used.
+</p>
 
 <h3>What the heck! Every time I try to access my repository, the
 process just hangs. Is my repository <a name="wedged-repos">corrupt?</a></h3>
