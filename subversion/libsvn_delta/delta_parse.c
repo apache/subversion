@@ -168,8 +168,6 @@ XML_validation_error (apr_pool_t *pool,
 static void
 maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
 {
-  svn_delta__stackframe_t *p = dest_frame->previous;
-
   if ((dest_frame->tag != svn_delta__XML_dir) 
       && (dest_frame->tag != svn_delta__XML_file))
     {
@@ -185,6 +183,7 @@ maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
     }
   else
     {
+      svn_delta__stackframe_t *p = dest_frame->previous;
       svn_string_t *derived_ancestor_path = NULL;
       svn_string_t *this_name = NULL;
 
