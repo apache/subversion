@@ -73,6 +73,48 @@
 #include "svn_error.h"
 
 
+/* Structure containing the "status" of a working copy dirent.  
+
+   Note that this overlaps somewhat with the private declaration of an
+   "entry" in wc.h; so there's a bit of redundancy going on.  But so
+   far, it hasn't made sense to completely contain one structure in
+   another.  I mean, entry structs don't want "modified_p" or
+   "repos_ver" fields, and status structs don't want full xml
+   attribute hashes.  :) 
+*/
+typedef struct svn_wc__status_t 
+{
+  svn_vernum_t local_ver;        /* working copy version number */
+  svn_vernum_t repos_ver;        /* repository version number */
+  
+  /* MUTUALLY EXCLUSIVE states. One of
+     these will always be set. */
+  enum                           
+  {
+    svn_wc_status_none = 1,
+    svn_wc_status_added,
+    svn_wc_status_deleted,
+    svn_wc_status_modified
+    
+  }  flag;
+
+  /* For the future: we can place information in here about ancestry
+     "sets". */
+
+} svn_wc__status_t;
+
+
+/* Given a PATH to a working copy file or dir, return a STATUS
+   structure describing it.  All fields will be filled in _except_ for
+   the field containing the current repository version; this will be
+   filled in by svn_client_status(), the primary caller of this
+   routine. */
+svn_error_t *
+svn_wc_get_status (svn_wc__status_t **status,
+                   svn_string_t *path,
+                   apr_pool_t *pool);
+
+
 
 /* Where you see an argument like
  * 

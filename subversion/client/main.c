@@ -63,11 +63,52 @@
 
 /*** Code. ***/
 
-enum command { checkout_command = 1,
-               update_command,
-               add_command,
-               delete_command,
-               commit_command };
+enum command 
+{ checkout_command = 1,
+  update_command,
+  add_command,
+  delete_command,
+  commit_command,
+  status_command
+};
+
+
+/* Simple helper for `status' command */
+static void
+print_status (svn_wc__status_t *status, svn_string_t *name)
+{
+  char statuschar;
+
+  switch (status->flag)
+    {
+    case svn_wc_status_none:
+      statuschar = '-';
+      break;
+    case svn_wc_status_added:
+      statuschar = 'A';
+      break;
+    case svn_wc_status_deleted:
+      statuschar = 'D';
+      break;
+    case svn_wc_status_modified:
+      statuschar = 'M';
+      break;
+    default:
+      statuschar = '?';
+      break;
+    }
+
+  if (status->local_ver == SVN_INVALID_VERNUM)
+    printf ("none    (r%6.0ld)  %c  %s\n",
+            status->repos_ver, statuschar, name->data);
+  else if (status->repos_ver == SVN_INVALID_VERNUM)
+    printf ("%-6.0ld  (r  none)  %c  %s\n",
+            status->local_ver,  statuschar, name->data);
+  else
+    printf ("%-6.0ld  (r%6.0ld)  %c  %s\n",
+            status->local_ver, status->repos_ver, statuschar, name->data);
+}
+
 
 
 static void
@@ -148,7 +189,7 @@ parse_options (int argc,
                svn_vernum_t *version,  /* ancestral or new */
                svn_string_t **ancestor_path,
                svn_boolean_t *force,
-               apr_pool_t *pool)
+ apr_pool_t *pool)
 {
   char *s = argv[0];  /* svn progname */
   int i;
@@ -181,6 +222,11 @@ parse_options (int argc,
           *command = commit_command;
           goto do_command_opts;
         }
+      else if (strcmp (argv[i], "status") == 0)
+        {
+          *command = status_command;
+          goto do_command_opts;
+        }
       else
         {
           fprintf (stderr, "%s: unknown or untimely argument \"%s\"\n",
@@ -201,6 +247,7 @@ parse_options (int argc,
       exit (1);
     }
   if ((! *xml_file) && ((*command != add_command)
+                        && (*command != status_command)
                         && (*command != delete_command)))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
@@ -220,7 +267,8 @@ parse_options (int argc,
     }
   if (((*command == checkout_command) 
        || (*command == update_command)
-       || (*command == commit_command))
+       || (*command == commit_command)
+       || (*command == status_command))
       && (*target == NULL))
     *target = svn_string_create (".", pool);
 }
@@ -263,13 +311,21 @@ main (int argc, char **argv)
     case commit_command:
       err = svn_client_commit (target, xml_file, version, pool);
       break;
+    case status_command:
+      {
+        svn_wc__status_t *status;
+        err = svn_client_status (&status, target, pool);
+        if (! err) 
+          print_status (status, target);
+        break;
+      }
     default:
       fprintf (stderr, "no command given");
       exit (1);
     }
 
   if (err)
-    svn_handle_error (err, stdout, 1);
+    svn_handle_error (err, stdout, 0);
 
   apr_destroy_pool (pool);
 

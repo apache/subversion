@@ -376,14 +376,6 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_DELETE    "delete"
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
-/* How an entries file's owner dir is named in the entries file. */
-#define SVN_WC__ENTRIES_THIS_DIR       ""
-
-/* Initialize contents of `entries' for a new adm area. */
-svn_error_t *svn_wc__entries_init (svn_string_t *path,
-                                   svn_string_t *ancestor_path,
-                                   apr_pool_t *pool);
-
 
 /* A data structure representing an entry from the `entries' file. */
 typedef struct svn_wc__entry_t
@@ -406,11 +398,19 @@ typedef struct svn_wc__entry_t
                                   (Required) */
 } svn_wc__entry_t;
 
-
-/* Bitmasks, see svn_wc__entry_merge_sync(). */
+/* Bitmasks stored in the `flags' field above.  */
 #define SVN_WC__ENTRY_CLEAR     1     /* special flag, means clear flags */
 #define SVN_WC__ENTRY_ADD       2     /* file added */
 #define SVN_WC__ENTRY_DELETE    4     /* file deleted */
+
+/* How an entries file's owner dir is named in the entries file. */
+#define SVN_WC__ENTRIES_THIS_DIR       ""
+
+
+/* Initialize contents of `entries' for a new adm area. */
+svn_error_t *svn_wc__entries_init (svn_string_t *path,
+                                   svn_string_t *ancestor_path,
+                                   apr_pool_t *pool);
 
 
 /* Parse the `entries' file for PATH and return a hash ENTRIES, whose
