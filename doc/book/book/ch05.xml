@@ -1613,6 +1613,20 @@ close LASTDUMPED;
         revision&mdash;using this file format.</para>
 
     </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-5-sect-3.5">
+      <title>Repository Backup</title>
+
+      <para>###TODO: Write this.  Talk about
+        <command>hot-backup.py</command>, and use of <command>svnadmin
+        dump --incremental</command> +
+        <literal>post-revprop-change</literal> hooks (since the
+        versioned props might differ from what was incrementally
+        dumped).  Also, discuss pros and cons of keeping full repo
+        backups vs. per-commit ones.</para>
+
+    </sect2>
   </sect1>
 
   <!-- ******************************************************************* -->
