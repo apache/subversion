@@ -474,6 +474,10 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* possibly run the request again, with a re-fetched Version Resource */
   if (err == NULL && allow_404 && code == 404)
     {
+      /* free the LOCN if it got assigned. */
+      if (locn)
+        free(locn);
+
       /* re-fetch, forcing a query to the server */
       SVN_ERR( get_version_url(cc, rsrc, TRUE, pool) );
 
@@ -484,6 +488,10 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* special-case when conflicts occur */
   if (err)
     {
+      /* free the LOCN if it got assigned. */
+      if (locn)
+        free(locn);
+      
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
@@ -494,11 +502,9 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
 
   /* we got the header, right? */
   if (locn == NULL)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              "The CHECKOUT response did not contain a "
-                              "Location: header.");
-    }
+    return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                            "The CHECKOUT response did not contain a "
+                            "Location: header.");
 
   /* The location is an absolute URI. We want just the path portion. */
   /* ### what to do with the rest? what if it points somewhere other
@@ -1090,6 +1096,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       if (err)
         {
           apr_file_close(pb->tmpfile);
+          ne_request_destroy(req);
           return err;
         }
       

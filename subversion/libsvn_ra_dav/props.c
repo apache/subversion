@@ -632,23 +632,22 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
                                       const char *url,
                                       apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_size_t len;
   svn_stringbuf_t *path_s;
+  const char *parsed_path;
   ne_uri parsed_url;
   const char *lopped_path = "";
 
   /* Split the url into it's component pieces (schema, host, path,
      etc).  We want the path part. */
   ne_uri_parse (url, &parsed_url);
-
   path_s = svn_stringbuf_create (parsed_url.path, pool);
 
   /* Try to get the starting_props from the public url.  If the
      resource no longer exists in HEAD, we'll get a failure.  That's
      fine: just keep removing components and trying to get the
      starting_props from parent directories. */
-  
   while (! svn_path_is_empty (path_s->data))
     {
       err = svn_ra_dav__get_starting_props(rsrc, sess, path_s->data,
@@ -657,36 +656,39 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
         break;   /* found an existing parent! */
       
       if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
-        return err;  /* found a _real_ error */
+        goto error;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
       lopped_path = svn_path_join(svn_path_basename (path_s->data, pool),
-                                  lopped_path,
-                                  pool);
+                                  lopped_path, pool);
       len = path_s->len;
       svn_path_remove_component(path_s);
+
+      /* if we detect an infinite loop, get out. */
       if (path_s->len == len)          
-        /* whoa, infinite loop, get out. */
-        return svn_error_quick_wrap(err,
-                                    "The path was not part of a repository");
-      
+        {
+          err = svn_error_quick_wrap(err, 
+                                     "The path was not part of a repository");
+          goto error;
+        }
       svn_error_clear (err);
     }
 
+  /* error out if entire URL was bogus (not a single part of it exists
+     in the repository!)  */
   if (svn_path_is_empty (path_s->data))
     {
-      /* entire URL was bogus;  not a single part of it exists in
-         the repository!  */
-      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "No part of path '%s' was found in "
-                              "repository HEAD.", parsed_url.path);
-      ne_uri_free(&parsed_url);
-      return err;
+      err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               "No part of path '%s' was found in "
+                               "repository HEAD.", parsed_path);
+      goto error;
     }
-  ne_uri_free(&parsed_url);
-  
+
   *missing_path = lopped_path;
-  return SVN_NO_ERROR;
+
+ error:
+  ne_uri_free(&parsed_url);
+  return err;
 }
 
 
