@@ -125,6 +125,18 @@ maintenance.  However, until we get all the bugs worked out, the above
 will sometimes be necessary.
 </p>
 
+<h2>When I run `<tt>configure</tt>', I get errors about
+<tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.
+What's wrong?</h2>
+
+<p>
+You probably have old copies of
+<tt>/usr/local/bin/apr-config</tt> and
+<tt>/usr/local/bin/apu-config</tt> on your system.  Remove them, make
+sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
+building with are completely up-to-date, and try again.
+</p>
+
 <h2>I have other problems or questions about Subversion.  Where can I get
 more information?</h2>
 
