@@ -34,7 +34,6 @@ svn_cl__update (apr_getopt_t *os,
                 svn_cl__opt_state_t *opt_state,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_array_header_t *targets;
   int i;
 
