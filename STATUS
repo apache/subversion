@@ -38,16 +38,6 @@ Candidate changes:
     Votes:
       +1: bliss, sussman
 
-  * r11233, r11260
-    Fix eol-style conversion for propedit.
-    Justification:
-      Editing props with newlines (svn:ignore, svn:log...) is annoying without
-      this.
-    Note:
-      This also fixes --encoding with propedit.
-    Votes:
-      +1: lundblad, brane, bliss
-
   * r11262, r11274
     Fix issue #2012.  Allow URI-encoded drive letter and separator (: or |).
     Justification:
