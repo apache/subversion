@@ -108,7 +108,7 @@ Committed revision 3.
         specific revision numbers by Subversion:</para>
 
       <note>
-        <para>Each directory in your working copy contains an
+        <para>Each directory in your working copy contains a
         <filename>.svn</filename> administrative area.  For every file
         in a directory, Subversion keeps a copy of each file in the
         administrative area.  This copy is an unmodified (no keyword

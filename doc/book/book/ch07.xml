@@ -1589,7 +1589,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
                 that are native to the operating system on which
                 Subversion was run.  In other words, if a user on a
                 Windows machine checks out a working copy that
-                contains a file with a
+                contains a file with an
                 <literal>svn:eol-style</literal> property set to
                 <literal>native</literal>, that file will contain
                 <literal>CRLF</literal> EOL markers.  A unix user

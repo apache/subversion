@@ -1107,7 +1107,7 @@ Removed real.c because code now in double.c.
       <para>One option is to use <command>svn merge</command> to apply
         revision 808 <quote>in reverse</quote>.  (We've already
         discussed how to undo changes, see <xref
-        linkend="svn-ch-4-sect-4.2"/>.)  This would have the affect of
+        linkend="svn-ch-4-sect-4.2"/>.)  This would have the effect of
         re-adding <filename>real.c</filename> as a local modification.
         The file would be scheduled for addition, and after a commit,
         the file would again exist in <literal>HEAD</literal>.</para>

@@ -780,7 +780,7 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         tunneling binary (the one located at
         <filename>/opt/alternate/ssh</filename>) with specific
         options.  In this case, accessing a
-        <literal>svn+joessh://</literal> URL would invoke the
+        <literal>svn+ssh://</literal> URL would invoke the
         particular SSH binary with <option>-p 29934</option> as
         arguments&mdash;useful if you want the tunnel program to
         connect to a non-standard port.</para>
