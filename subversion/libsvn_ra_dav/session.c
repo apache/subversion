@@ -124,7 +124,11 @@ svn_ra_open (svn_ra_session_t **p_ras,
       uri.port = 80;
     }
 
-  http_session_server(sess, uri.host, uri.port);
+  if (http_session_server(sess, uri.host, uri.port))
+    {
+      return svn_error_createf(SVN_ERR_RA_HOSTNAME_LOOKUP, 0, NULL, pool,
+                               "Hostname not found: %s", uri.host);
+    }
 
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;

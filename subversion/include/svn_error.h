@@ -161,6 +161,9 @@ typedef enum svn_errno_t {
   /* the repository access layer could not initialize the socket layer */
   SVN_ERR_SOCK_INIT,
 
+  /* the repository access layer could not lookup the hostname */
+  SVN_ERR_RA_HOSTNAME_LOOKUP,
+
   /* an unsuitable container-pool was passed to svn_make_pool() */
   SVN_ERR_BAD_CONTAINING_POOL
 
