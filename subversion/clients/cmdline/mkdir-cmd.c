@@ -60,11 +60,12 @@ svn_cl__mkdir (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
-  for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
+  for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
       svn_client_commit_info_t *commit_info = NULL;
 
+      svn_pool_clear (subpool);
       SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
                                            NULL, ctx->config, subpool));
       SVN_ERR (svn_cl__cleanup_log_msg

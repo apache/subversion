@@ -135,13 +135,14 @@ svn_cl__propget (apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create (pool);
 
-      for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
+      for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
           apr_hash_t *props;
           apr_hash_index_t *hi;
           svn_boolean_t print_filenames = FALSE;
-          
+
+          svn_pool_clear (subpool);
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
                                        &(opt_state->start_revision),
                                        opt_state->recursive, ctx, subpool));

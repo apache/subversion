@@ -174,12 +174,14 @@ svn_cl__propset (apr_getopt_t *os,
             }
         }
 
-      for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
+      for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+
+          svn_pool_clear (subpool);
           SVN_ERR (svn_client_propset (pname_utf8, propval, target,
                                        opt_state->recursive, subpool));
-          
+
           if (! opt_state->quiet) 
             {
               const char *target_native;

@@ -95,13 +95,14 @@ svn_cl__proplist (apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create (pool);
 
-      for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
+      for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
           apr_array_header_t *props;
           int j;
           svn_error_t *err;
 
+          svn_pool_clear (subpool);
           err = svn_client_proplist (&props, target,
                                      &(opt_state->start_revision),
                                      opt_state->recursive, ctx, subpool);
