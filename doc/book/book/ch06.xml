@@ -1381,7 +1381,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
           line.</para>
 
         <para>This sensitivity to foreign EOL markers can become
-          frustraing for folks who share a file across different
+          frustrating for folks who share a file across different
           operating systems.  For example, consider a source code
           file, and developers that edit this file on both Windows and
           Unix systems.  If all the developers always use tools which
@@ -1404,7 +1404,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
           Or, he can simply commit the file&mdash;new EOL markers and
           all.</para>
 
-        <para>The result of scenarios like there include wasted time
+        <para>The result of scenarios like these include wasted time
           and unnecessary modifications to committed files.  Wasted
           time is painful enough.  But when commits change every line
           in a file, this complicates the job of determining which of
@@ -1627,7 +1627,7 @@ Fetching external item into calc/third-party/skins
       house its custom modifications to the third-party data in some
       disjointed fashion, such as using patch files or full-fledged
       alternate versions of files and directories.  But these quickly
-      become maintainance headaches, requiring some mechanism by which
+      become maintenance headaches, requiring some mechanism by which
       to apply your custom changes to the third-party data, and
       necessitating regeneration of those changes with each successive
       version of the third-party data that you track.</para>

@@ -18,10 +18,10 @@
       <command>svn</command></title>
     
     <para>To use the command line client, you type
-      <command>svn</command>, the subcommand you wish to use,
+      <command>svn</command>, the subcommand you wish to use
       <footnote><para>Yes, yes, you don't need a subcommand to use the
       <option>--version</option> switch, but we'll get to that in just
-      a minute.</para> </footnote> and any switches or targets that
+      a minute.</para> </footnote>, and any switches or targets that
       you wish to operate on&mdash;there is no specific order that the
       subcommand and the switches must appear in.  For example, all of
       the following are valid ways to use <command>svn
@@ -180,7 +180,7 @@ $ svn status -v myfile
             insufficient credentials, prevents prompting for credentials
             (e.g. username or password).  This is useful if you're
             running Subversion inside of an automated script and it's
-            more appropriate to have Subversion fail then to prompt
+            more appropriate to have Subversion fail than to prompt
             for more information.</para>
           </listitem>
         </varlistentry>
@@ -197,7 +197,7 @@ $ svn status -v myfile
         </varlistentry>
 
         <varlistentry>
-        <term><option>--password</option><replaceable>PASS</replaceable></term>
+          <term><option>--password</option><replaceable>PASS</replaceable></term>
           <listitem>
             <para>Indicates that you are providing your password for
               authentication on the command line&mdash;otherwise, if
@@ -322,7 +322,7 @@ $ svn log -r 1729:{2/17/02}
             <listitem>
               <para>Prints the client version info.  This information
                 not only includes the version number of the client,
-                but als a listing of all repository access modules
+                but also a listing of all repository access modules
                 that the client can use to access a Subversion
                 repository.</para>
             </listitem>
@@ -662,7 +662,7 @@ $ svn cleanup /path/to/working-copy
               commit by using either the <option>--file</option> or
               <option>--message</option> switch,
               <command>svn</command> will launch your editor for you
-              to compose acommit message.  See the
+              to compose a commit message.  See the
               <literal>editor-cmd</literal> section in <xref
               linkend="svn-ch-6-sect-1.3.2"/>.</para>
           </refsect1>
@@ -845,7 +845,7 @@ Committed revision 7.
             <title>Examples</title>
 
             <para>Copy an item within your working copy (just
-              schedules the copy--nothing goes into the repository
+              schedules the copy&mdash;nothing goes into the repository
               until you commit):</para>
 
             <screen>
@@ -865,7 +865,7 @@ Committed revision 8.
             </screen>
 
             <para>Copy an item from the repository to your working
-              copy (Just schedules the copy--nothing goes into the
+              copy (Just schedules the copy&mdash;nothing goes into the
               repository until you commit):</para>
 
             <tip>
