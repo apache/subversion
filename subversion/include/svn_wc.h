@@ -1306,7 +1306,7 @@ svn_error_t *svn_wc_add (const char *path,
                          apr_pool_t *pool);
 
 
-/* Add a file to a working copy at @a dst_path, obtaining the file's
+/** Add a file to a working copy at @a dst_path, obtaining the file's
  * contents from @a new_text_path and its properties from @a new_props,
  * which normally come from the repository file represented by the
  * copyfrom args, see below.  The new file will be scheduled for

@@ -44,7 +44,7 @@ extern "C" {
 
 /* Wrappers around APR pools, so we get debugging. */
 
-/* The recommended maximum amount of memory (4MB) to keep in an APR
+/** The recommended maximum amount of memory (4MB) to keep in an APR
  * allocator on the free list, conveniently defined here to share
  * between all our applications.
  */
