@@ -1,5 +1,5 @@
 /*
- * init_cmdline.h : Initialzation for command-line programs.
+ * init_cmdline.h : Initialization for command-line programs.
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
