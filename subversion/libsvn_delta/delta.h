@@ -36,6 +36,11 @@ extern "C" {
 
 /* Private interface for text deltas. */
 
+/* The standard size of one svndiff window. */
+
+#define SVN_DELTA_WINDOW_SIZE 102400
+
+
 /* Context/baton for building an operation sequence. */
 
 typedef struct svn_txdelta__ops_baton_t {
