@@ -2,6 +2,92 @@ package SVN::Delta;
 use strict;
 use SVN::Base qw(Delta svn_delta_);
 
+=head1 NAME
+
+SVN::Delta - Subversion delta functions
+
+=head1 SYNOPSIS
+
+    require SVN::Core;
+    require SVN::Repos;
+    require SVN::Delta;
+
+    # driving an editor
+    my $editor = SVN::Delta::Editor->
+        new(SVN::Repos::get_commit_editor($repos, "file://$repospath",
+       	                                  '/', 'root', 'FOO', \&committed));
+
+    my $rootbaton = $editor->open_root(0);
+
+    my $fbaton = $editor->add_file ('filea', $rootbaton,
+	 		            undef, -1);
+
+    my $ret = $editor->apply_textdelta ($fbaton, undef);
+    SVN::TxDelta::send_string("FILEA CONTENT", @$ret);
+
+    # implement an editor in perl
+    SVN::Repos::dir_delta($root1, $path, undef,
+			  $root2, $path,
+			  SVN::Delta::Editor->new(_debug=>1),
+			  1, 1, 0, 1
+
+=head1 DESCRIPTION
+
+SVN::Delta wraps delta related function in subversion. The most
+important one is SVN::Delta::Editor, the interface for describing tree
+deltas.
+
+=head1 SVN::Delta::Editor
+
+=head2 Driving Editors
+
+If you want to drive a native editor (such as commit_editor obtained
+by SVN::Repos::get_commit_editor), create a SVN::Delta::Editor object
+with the native editor/baton pair. The object will then be ready to
+use and its method calls will be relayed to the native editor.
+
+=head2 Implementing Editors
+
+If you want to implement an editor, subclass SVN::Delta::Editor and
+implement the editors callbacks. see the METHODS section below.
+
+=head2 CONSTRUCTOR - new (...)
+
+=over
+
+=item new ($editor, $editor_baton)
+
+Link to the native editor
+
+=back
+
+You can also pass a hash array to new:
+
+=over
+
+=item _debug
+
+Turn on debug.
+
+=item _editor
+
+An arrayref of the editor/baton pair to link with.
+
+=back
+
+=head2 METHODS
+
+Please consult the svn_delta.h section in the Subversion API. Member
+functions of svn_delta_editor_t could be called as methods of
+SVN::Delta::Editor objects, with the edit_baton omitted. The pool is
+also optional.
+
+If you are subclassing, the methods take exactly the same arguments as
+the member functions (note tht void ** are returned data though as
+throughout the perl bindings), with the edit_baton omitted.
+
+=cut
+
 package SVN::TxDelta;
 use SVN::Base qw(Delta svn_txdelta_);
 
@@ -61,5 +147,30 @@ sub AUTOLOAD {
 
     return $#ret == 0 ? $ret[0] : [@ret];
 }
+
+=head1 BUGS
+
+Functions returning editor/baton pair should really be typemapped to a
+SVN::Delta::Editor object.
+
+=head1 AUTHORS
+
+Chia-liang Kao E<lt>clkao@clkao.orgE<gt>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2003 CollabNet.  All rights reserved.
+
+This software is licensed as described in the file COPYING, which you
+should have received as part of this distribution.  The terms are also
+available at http://subversion.tigris.org/license-1.html.  If newer
+versions of this license are posted there, you may use a newer version
+instead, at your option.
+
+This software consists of voluntary contributions made by many
+individuals.  For exact contribution history, see the revision history
+and logs, available at http://subversion.tigris.org/.
+
+=cut
 
 1;
