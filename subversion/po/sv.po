@@ -46,7 +46,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-03-22 21:09+0100\n"
-"PO-Revision-Date: 2005-03-22 21:58+0100\n"
+"PO-Revision-Date: 2005-03-31 23:05+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -82,9 +82,7 @@ msgstr ""
 msgid ""
 "Destination directory exists; please remove the directory or use --force to "
 "overwrite"
-msgstr ""
-"Destinationskatalogen finns; ta bort den eller använd --force för att skriva "
-"över"
+msgstr "Destinationskatalogen finns; ta bort den eller använd --force för att skriva över den"
 
 #: clients/cmdline/help-cmd.c:46
 #, c-format
@@ -101,11 +99,11 @@ msgid ""
 msgstr ""
 "användning: svn <underkommando> [flaggor] [argument]\n"
 "Subversion kommandoradsklient, version %s.\n"
-"Skriv \"svn help <subcommand>\" för att få hjälp med specifika underkommandon.\n"
+"Skriv \"svn help <underkommando>\" för att få hjälp med specifika underkommandon.\n"
 "\n"
-"De flesta kommandona tar fil och/eller katalogargument och går ned i kataloger\n"
-"rekursivt. Om inga argument ges till sådana kommandon, använder de aktuell\n"
-"katalog rekursivt.\n"
+"De flesta underkommandona tar fil- och/eller katalogargument och går ned i\n"
+"kataloger rekursivt. Om inga argument ges till sådana kommandon, används\n"
+"aktuell katalog rekursivt.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -129,7 +127,7 @@ msgstr "URL till arkiv måste anges vid import"
 
 #: clients/cmdline/import-cmd.c:86
 msgid "Too many arguments to import command"
-msgstr "För många argument för import-kommandot"
+msgstr "För många argument till import-kommandot"
 
 #: clients/cmdline/import-cmd.c:101
 #, c-format
@@ -293,11 +291,11 @@ msgstr ""
 "\n"
 
 #: clients/cmdline/info-cmd.c:287
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "%s:  (Not a valid URL)\n"
 "\n"
-msgstr "%s:  (Inte en giltig URL)\n\n"
+msgstr "%s:  (Inte en giltig URL)\n"
 
 #: clients/cmdline/lock-cmd.c:53
 msgid "Lock comment contains a zero byte"
@@ -305,7 +303,7 @@ msgstr "Låskommentaren innehåller en noll-byte"
 
 #: clients/cmdline/lock-cmd.c:136
 msgid "Your lock comment was left in a temporary file:"
-msgstr "Din låskommentar lämnades i en temporär fil:"
+msgstr "Din låskommentar lämnades kvar i en temporär fil:"
 
 #: clients/cmdline/log-cmd.c:162
 msgid "(no author)"
@@ -560,7 +558,6 @@ msgstr ""
 "användning: add PATH...\n"
 
 #: clients/cmdline/main.c:188
-#, fuzzy
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -571,10 +568,11 @@ msgid ""
 msgstr ""
 "Visa innehållet i angivna filer eller URL:er\n"
 "med revisions- och författarinformation i filen.\n"
-"användning: blame TARGET...\n"
+"användning: blame MÅL[@REV]...\n"
+"\n"
+"Om REV anges, bestämmer den i vilken revision målet först letas upp.\n"
 
 #: clients/cmdline/main.c:197
-#, fuzzy
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET[@REV]...\n"
@@ -583,10 +581,11 @@ msgid ""
 "  looked up.\n"
 msgstr ""
 "Visa innehållet i angivna filer eller URL:er.\n"
-"användning: cat TARGET...\n"
+"användning: cat MÅL[@rEV]...\n"
+"\n"
+"Om REV anges, bestämmer den i vilken revision målet först letas upp.\n"
 
 #: clients/cmdline/main.c:205
-#, fuzzy
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
@@ -599,13 +598,14 @@ msgid ""
 "  out into a sub-directory of PATH, with the name of the sub-directory\n"
 "  being the basename of the URL.\n"
 msgstr ""
-"Checka ut en arbetskopia från en databas.\n"
-"användning: checkout URL... [PATH]\n"
+"Checka ut en arbetskopia från ett arkiv.\n"
+"användning: checkout URL[@REV]... [SÖKVÄG]\n"
 "\n"
-"  Anmärkning: Om PATH inte anges, kommer basnamnet för URL att användas som\n"
-"  destination. Om flera URL:er anges, kommer varje URL att checkas ut\n"
-"  i en underkatalog till PATH med basnamnet för URL:en som namn på\n"
-"  underkatalogen.\n"
+"  Om REV anges, bestämmer den i vilken revision URL:en först letas upp.\n"
+"\n"
+"  Om PATH inte anges, kommer basnamnet för URL att användas som destination.\n"
+"  Om flera URL:er anges, kommer varje URL att checkas ut i en underkatalog\n"
+"  till PATH med basnamnet för URL:en som namn på underkatalogen.\n"
 
 #: clients/cmdline/main.c:219
 msgid ""
