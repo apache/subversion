@@ -1,4 +1,5 @@
-%define apache_version 2.0.46-0.1
+%define apache_version 2.0.46-0.2
+%define apr_version 0.9.4
 %define neon_version 0.23.9
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -19,7 +20,8 @@ SOURCE2: httpd.davcheck.conf
 Patch0: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: httpd-apr >= %{apache_version}
+Requires: apr >= %{apr_version}
+Requires: apr-util >= %{apr_version}
 Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
@@ -32,8 +34,8 @@ BuildPreReq: doxygen
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
 BuildPreReq: httpd >= %{apache_version}
-BuildPreReq: httpd-apr-devel >= %{apache_version}
-BuildPreReq: httpd-devel >= %{apache_version}
+BuildPreReq: apr-devel >= %{apr_version}
+BuildPreReq: apr-util-devel >= %{apr_version}
 BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
@@ -71,7 +73,8 @@ for developers interacting with the subversion package.
 %package server
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
-Requires: httpd-apr >= %{apache_version}
+Requires: apr >= %{apr_version}
+Requires: apr-util >= %{apr_version}
 Requires: subversion = %{version}-%{release}
 BuildPreReq: httpd-devel >= %{apache_version}
 %description server
@@ -94,6 +97,12 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 28 2003 David Summers <david@summersoft.fay.ar.us> 0.24.2-6365
+- RedHat decided to break out apr and apr-util separately from apache
+  (httpd package).
+- This also now builds on RedHat 9.0 because the new apr/apu-config correctly
+  picks up the openssl include files.
+
 * Tue Jun 24 2003 David Summers <david@summersoft.fay.ar.us> 0.24.2-6334
 - Now requires apache 2.0.46.
 
