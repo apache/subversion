@@ -15,7 +15,7 @@ import getopt
 sys.path.insert(0, os.path.join('build', 'generator'))
 
 # for getversion
-sys.path.insert(0, 'build')
+sys.path.insert(1, 'build')
 
 
 gen_modules = {
