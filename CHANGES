@@ -72,7 +72,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
 
    - Server:
     * mod_dav_svn autoversioning feature now complete (see release notes)
-    * 'svnadmin create' now creates fsfs repositories by default (r13624)
+    * 'svnadmin create' now creates FSFS repositories by default (r13624)
     * new pre/post-revprop hook argument to describe propchange (r12162)
     * mod_authz_svn groups can now contain other groups (issue #2085)
     * 'svnadmin recover' now creates default svnserve passwd file (r11589)
