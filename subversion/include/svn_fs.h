@@ -824,7 +824,12 @@ svn_error_t *svn_fs_file_length (apr_off_t *length_p,
 /* Set *CONTENTS to a readable generic stream will yield the contents
    of the file PATH in ROOT.  Allocate the stream in POOL.  You can
    only use *CONTENTS for as long as the underlying filesystem is
-   open.  */
+   open.  If PATH is not a file, return SVN_ERR_FS_NOT_FILE.
+
+   If ROOT is the root of a transaction, it is possible that the
+   contents of the file PATH will change between calls to
+   svn_fs_file_contents().  In that case, the result of reading from
+   *CONTENTS is undefined.  */
 svn_error_t *svn_fs_file_contents (svn_stream_t **contents,
                                    svn_fs_root_t *root,
                                    const char *path,
