@@ -84,10 +84,12 @@ static void usage(const char *progname)
   exit(1);
 }
 
+#if APR_HAS_FORK
 static void sigchld_handler(int signo)
 {
   /* Nothing to do; we just need to interrupt the accept(). */
 }
+#endif
 
 /* In tunnel or inetd mode, we don't want hook scripts corrupting the
  * data stream by sending data to stdout, so we need to redirect
@@ -245,7 +247,9 @@ int main(int argc, const char *const *argv)
   if (!listen_once && handling_mode != connection_mode_single)
     apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
+#if APR_HAS_FORK
   apr_signal(SIGCHLD, sigchld_handler);
+#endif
 
   if (handling_mode != connection_mode_thread)
     connection_pool = svn_pool_create(pool);
