@@ -567,7 +567,7 @@ test_canonicalize (const char **msg,
     { "/../../",              "/../.." },
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
-    { "http://hst/",          "http://hst/" },
+    { "http://hst/",          "http://hst" },
     { NULL, NULL }
   };
   int i;

@@ -1001,11 +1001,12 @@ svn_path_split_if_file(const char *path,
 const char *
 svn_path_canonicalize (const char *path, apr_pool_t *pool)
 {
-  char *canon, *dst, *start_path;
+  char *canon, *dst;
   const char *src;
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
   svn_boolean_t absolute_path = FALSE;
+  svn_boolean_t uri;
 
   dst = canon = apr_pcalloc (pool, strlen (path) + 1);
 
@@ -1013,6 +1014,7 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   src = skip_uri_schema (path);
   if (src)
     {
+      uri = TRUE;
       memcpy (canon, path, src - path);
       dst += (src - path);
 
@@ -1021,7 +1023,10 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
         *(dst++) = *(src++);
     }
   else
-    src = path;
+    {
+      uri = FALSE;
+      src = path;
+    }
 
   /* If this is an absolute path, then just copy over the initial
      separator character. */
@@ -1031,10 +1036,6 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
       absolute_path = TRUE;
     }
 
-  /* Let start_path remember the point beyond which we cannot
-     backtrack. */
-  start_path = dst;
-  
   while (*src)
     {
       /* Parse each segment, find the closing '/' */
@@ -1065,7 +1066,7 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
     }
 
   /* Remove the trailing slash. */
-  if (canon_segments > 0 && *(dst - 1) == '/')
+  if ((canon_segments > 0 || uri) && *(dst - 1) == '/')
     dst--;
   
   *dst = '\0';
