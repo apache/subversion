@@ -16,26 +16,15 @@
 #
 ######################################################################
 
-### hide these names?
-import string
-import svn.fs
-import svn.core
-import svn.delta
-from types import StringType, IntType, FloatType, LongType
+from libsvn.repos import *
+from core import _unprefix_names
+_unprefix_names(locals(), 'svn_repos_')
+_unprefix_names(locals(), 'SVN_REPOS_')
+del _unprefix_names
 
-import libsvn.repos
 
-# copy the wrapper functions out of the extension module, dropping the
-# 'svn_repos_' prefix.
-for name in dir(libsvn.repos):
-  if name[:10] == 'svn_repos_':
-    vars()[name[10:]] = getattr(libsvn.repos, name)
-
-  # XXX: For compatibility reasons, also include the prefixed name
-  vars()[name] = getattr(libsvn.repos, name)
-
-# we don't want these symbols exported
-del name, libsvn
+# Names that are not to be exported - del-ed at end
+import svn.core, svn.fs, svn.delta
 
 
 class ChangedPath:
@@ -104,7 +93,7 @@ class ChangeCollector(svn.delta.Editor):
         self.notify_cb(change)
     
   def _make_base_path(self, parent_path, path):
-    idx = string.rfind(path, '/')
+    idx = path.rfind('/')
     if parent_path:
       parent_path = parent_path + '/'
     if idx == -1:
@@ -249,7 +238,7 @@ class RevisionChangeCollector(ChangeCollector):
     ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
 
   def _make_base_path(self, parent_path, path):
-    idx = string.rfind(path, '/')
+    idx = path.rfind('/')
     if idx == -1:
       return parent_path + '/' + path
     return parent_path + path[idx:]
@@ -257,7 +246,11 @@ class RevisionChangeCollector(ChangeCollector):
 
 # enable True/False in older vsns of Python
 try:
-  _unused = True
+  True
 except NameError:
   True = 1
   False = 0
+
+
+# Do not export these names
+del svn

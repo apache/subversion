@@ -16,16 +16,8 @@
 #
 ######################################################################
 
-import libsvn.wc
-
-# copy the wrapper functions out of the extension module, dropping the
-# 'svn_wc_' prefix.
-for name in dir(libsvn.wc):
-  if name[:7] == 'svn_wc_':
-    vars()[name[7:]] = getattr(libsvn.wc, name)
-
-  # XXX: For compatibility reasons, also include the prefixed name
-  vars()[name] = getattr(libsvn.wc, name)
-
-# we don't want these symbols exported
-del name, libsvn
+from libsvn.wc import *
+from core import _unprefix_names
+_unprefix_names(locals(), 'svn_wc_')
+_unprefix_names(locals(), 'SVN_WC_')
+del _unprefix_names
