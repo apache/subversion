@@ -28,7 +28,7 @@ import sys, os, shutil, string
 # Global Settings
 
 # Path to svnlook utility
-svnlook = "@prefix@/bin/svnlook"
+svnlook = "@SVN_BINDIR@/svnlook"
 
 # Path to db_archive program
 db_archive = "/usr/local/BerkeleyDB.4.0/bin/db_archive"
