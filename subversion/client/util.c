@@ -36,6 +36,7 @@
 #include "cl.h"
 
 
+#define DEFAULT_ARRAY_SIZE 5
 
 /* Hmm. This should probably find its way into libsvn_subr -Fitz */
 /* Create a SVN string from the char* and add it to the array */
@@ -92,7 +93,7 @@ svn_cl__parse_num_args (apr_getopt_t *os,
 {
   int i;
   
-  opt_state->args = apr_array_make (pool, 0, sizeof (svn_string_t *));
+  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_string_t *));
 
   /* loop for num_args and add each arg to the args array */
   for (i = 0; i < num_args; i++)
@@ -117,7 +118,7 @@ svn_cl__parse_all_args (apr_getopt_t *os,
                         const char *subcommand,
                         apr_pool_t *pool)
 {
-  opt_state->args = apr_array_make (pool, 0, sizeof (svn_string_t *));
+  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_string_t *));
 
   if (os->ind >= os->argc)
     {
@@ -140,7 +141,7 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
                               apr_pool_t *pool)
 {
   apr_array_header_t *targets =
-    apr_array_make (pool, 0, sizeof (svn_string_t *));
+    apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (svn_string_t *));
 
   for (; os->ind < os->argc; os->ind++)
     {
