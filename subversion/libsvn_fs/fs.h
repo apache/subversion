@@ -82,14 +82,22 @@ struct svn_fs_t {
   /* A btree mapping node id's onto node representations.  */
   DB *nodes;
 
-  /* A callback function for printing warning messages, and a baton to
-     pass through to it.  */
-  svn_fs_warning_callback_t *warning;
-  void *warning_baton;
+  /* A btree mapping transaction id's onto a TRANSACTION skel, and
+     the ID's of the nodes that are part of that transaction.  */
+  DB *transactions;
 
   /* A cache of nodes we've read in, mapping svn_fs_id_t arrays onto
      pointers to nodes.  */
   apr_hash_t *node_cache;
+
+  /* A table of all currently open transactions.  Each value is a
+     pointer to an svn_fs_txn_t object, T; every key is T->id.  */
+  apr_hash_t *open_txns;
+
+  /* A callback function for printing warning messages, and a baton to
+     pass through to it.  */
+  svn_fs_warning_callback_t *warning;
+  void *warning_baton;
 
   /* A kludge for handling errors noticed by APR pool cleanup functions.
 
@@ -135,6 +143,34 @@ struct svn_fs_proplist_t {
 
 
 
+/* Transactions.  */
+
+/* The private structure underlying the public svn_fs_txn_t typedef.  */
+
+struct svn_fs_txn_t {
+
+  /* This transaction's private pool, a subpool of fs->pool.
+
+     Freeing this must completely clean up the transaction object,
+     write back any buffered data, and release any database or system
+     resources it holds.  (But don't confused the transaction object
+     with the transaction it represents: freeing this does *not* abort
+     the transaction.)  */
+  apr_pool_t *pool;
+
+  /* The filesystem to which this transaction belongs.  */
+  svn_fs_t *fs;
+
+  /* The ID of this transaction --- a null-terminated string.
+     This is the key into the `transactions' table.  */
+  char *id;
+
+  /* The root directory for this transaction, or zero if the user
+     hasn't called svn_fs_replace_root yet.  */
+  svn_fs_id_t *root;
+};
+
+
 /* Nodes.  */
 
 
@@ -170,7 +206,11 @@ struct svn_fs_node_t {
      node from the filesystem's node cache.  */
   apr_pool_t *pool;
 
-  /* The node version ID of this node.  */
+  /* The node version ID of this node.
+
+     If this node is part of a transaction, the immediate ancestor of
+     this node is the one we're merging against.  If this node has no
+     immediate ancestor, then it's new in this transaction.  */
   svn_fs_id_t *id;
 
   /* What kind of node this is, more specifically.  */
@@ -179,6 +219,9 @@ struct svn_fs_node_t {
   /* The node's property list.  */
   svn_fs_proplist_t *proplist;
 
+  /* On mutable nodes, this points to transaction the node belongs to.
+     On immutable nodes, this is zero.  */
+  svn_fs_txn_t *txn;
 };
 
 

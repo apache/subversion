@@ -398,16 +398,24 @@ For each active transaction, we store a transaction header skel of the form:
    ("transaction" ROOT)
 
 where ROOT is the node version ID of the transaction's root directory.
-If you start traversing directories from that node version, you see
-the tree as modified by that transaction.
+If you start traversing directories from this node version, you see
+the tree as modified by this transaction.  If we haven't yet created a
+root directory for this transaction, ROOT is the empty string.
 
-The database contains a table called "transactions", which is a hash
+The database contains a table called "transactions", which is a btree
 table indexed by transaction ID, mapping each one onto a transaction
 header, and a list of all the nodes that are part of that transaction.
 The header and the nodes are stored as duplicate entries under the
 same key: the first value stored is the transaction header skel, and
 each subsequent value is an atom skel whose contents are the node
-version ID of some node in the transaction.
+version ID of some node in the transaction.  The nodes appear in no
+particular order.
+
+Transaction ID's are decimal numbers, with no particular property
+beyond being unique within the repository.  The keys of the
+"transactions" table are the shorted ASCII decimal representation of
+the transaction ID.  The entries of the "transactions" table are
+sorted by the ID's numeric value.
 
 If the transaction succeeds, the transaction's root directory becomes
 the new version's root directory, after any necessary merging.  If the
@@ -419,4 +427,3 @@ it from the "transactions" table.
 Non-Historical Properties
 
 [[Yes, do tell.]]
-

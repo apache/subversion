@@ -1,4 +1,4 @@
-/* dbt.c --- DBT-frobbing functions
+/* node.h : interface to node functions, private to libsvn_fs
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -46,73 +46,17 @@
  * individuals on behalf of Collab.Net.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "apr_pools.h"
-#include "db.h"
-#include "dbt.h"
+#ifndef SVN_LIBSVN_FS_TXN_H
+#define SVN_LIBSVN_FS_TXN_H
+
+/* Create a new `transactions' table for the new filesystem FS.
+   FS->env must already be open; this sets FS->nodes.  */
+svn_error_t *svn_fs__create_transactions (svn_fs_t *fs);
 
 
-DBT *
-svn_fs__clear_dbt (DBT *dbt)
-{
-  memset (dbt, 0, sizeof (*dbt));
-
-  return dbt;
-}
+/* Open the existing `transactions' table for the filesystem FS.
+   FS->env must already be open; this sets FS->nodes.  */
+svn_error_t *svn_fs__open_transactions (svn_fs_t *fs);
 
 
-DBT *
-svn_fs__set_dbt (DBT *dbt, void *data, u_int32_t size)
-{
-  svn_fs__clear_dbt (dbt);
-
-  dbt->data = data;
-  dbt->size = size;
-
-  return dbt;
-}
-
-
-DBT *
-svn_fs__result_dbt (DBT *dbt)
-{
-  svn_fs__clear_dbt (dbt);
-  dbt->flags |= DB_DBT_MALLOC;
-
-  return dbt;
-}
-
-
-/* An APR pool cleanup function that simply applies `free' to its
-   argument.  */
-static apr_status_t
-apr_free_cleanup (void *arg)
-{
-  free (arg);
-
-  return 0;
-}
-
-
-DBT *
-svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool)
-{
-  if (dbt->data)
-    apr_register_cleanup (pool, dbt->data, apr_free_cleanup, apr_null_cleanup);
-
-  return dbt;
-}
-
-
-int
-svn_fs__compare_dbt (const DBT *a, const DBT *b)
-{
-  int common_size = a->size > b->size ? b->size : a->size;
-  int cmp = memcmp (a->data, b->data, common_size);
-
-  if (cmp)
-    return cmp;
-  else
-    return a->size - b->size;
-}
+#endif /* SVN_LIBSVN_FS_TXN_H */

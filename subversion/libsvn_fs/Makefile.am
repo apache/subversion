@@ -13,6 +13,7 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 		       node.c			\
 		       proplist.c		\
 		       skel.c			\
+		       txn.c			\
 		       version.c
 
 CFLAGS = @CFLAGS@ -pthread
