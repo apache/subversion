@@ -183,6 +183,9 @@ import_dir (const svn_delta_editor_t *editor,
     {
       const char *this_path, *this_edit_path, *abs_path;
 
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
       if ((finfo.filetype == APR_DIR)
           && (finfo.name[0] == '.')
           && (finfo.name[1] == '\0'
