@@ -195,8 +195,9 @@ The documentation for the function `vc-state' describes the possible values."
    ;; positives, if the clauses preceding them didn't screen those
    ;; out.  Making a pattern more selective could break something.
 
-   ;; nil                 The given file is not under version control.
-   ((looking-at "\\?") nil)
+   ;; nil                 The given file is not under version control,
+   ;;                     or does not exist.
+   ((looking-at "\\?\\|^$") nil)
 
    ;; 'needs-patch        The file has not been edited by the
    ;;                     user, but there is a more recent version
