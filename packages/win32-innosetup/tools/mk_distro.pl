@@ -98,36 +98,16 @@ sub MakeSetup
 {
     my $SetupOut=&PathSetupOut;
     my $PathISExe=&PathISExe;
-    my $DirOrig=getcwd;
     my $RetVal=0;
 
-    #chdir $SetupOut;
-    #system 
     chdir '..';
-    #system ("$PathISExe svn.iss");
+
     if (! $g_AutoRun)
       {
-        print "Compiling the setup...\n";
+        print "Compiling the setup (take a nap, this will take some time)...\n";;
       }
-    
+
     $RetVal=`$PathISExe svn.iss`;
-
-    chdir $SetupOut;
-    if ($RetVal == 0)
-      {
-        if (! $g_AutoRun)
-          {
-            print "Compressing with 7-zip (take a nap, this will take some time)...\n";
-          }
-        $RetVal=`mk7zsfx.bat`;
-      }
-    else
-      { 
-        die "ERROR using ISCC.exe"
-      }
-    
-    chdir $DirOrig;
-
 }
 
 #-------------------------------------------------------------------------------
@@ -162,3 +142,4 @@ sub PathSetupOut
 
     return $SetupOut;
 }
+
