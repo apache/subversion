@@ -491,11 +491,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
  
   { "revert", svn_cl__revert, {0},
-    "Restore pristine working copy file (undo all local edits).\n"
+    "Restore pristine working copy file (undo most local edits).\n"
     "usage: revert PATH...\n"
     "\n"
     "  Note:  this subcommand does not require network access, and resolves\n"
-    "  any conflicted states.\n",
+    "  any conflicted states.  However, it does not restore removed "
+    "directories.\n",
     {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
 
   { "status", svn_cl__status, {"stat", "st"},
