@@ -27,8 +27,8 @@ jobject
 hashtable__create(JNIEnv *env, jboolean *hasException);
 
 void
-jni_hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
-		   jobject value, jboolean *hasException);
+hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
+               jobject value, jboolean *hasException);
 
 #endif
 
