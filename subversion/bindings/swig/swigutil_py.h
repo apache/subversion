@@ -104,6 +104,12 @@ void svn_swig_py_notify_func(void *baton,
                              svn_wc_notify_state_t prop_state,
                              svn_revnum_t revision);
 
+/* thunked commit log fetcher */
+svn_error_t *svn_swig_py_get_commit_log_func (const char **log_msg,
+                                              apr_array_header_t *commit_items,
+                                              void *baton,
+                                              apr_pool_t *pool);
+
 /* thunked log receiver function.  */
 svn_error_t * svn_swig_py_thunk_log_receiver(void *py_receiver,
                                              apr_hash_t *changed_paths,
