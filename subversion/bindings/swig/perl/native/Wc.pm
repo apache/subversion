@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 
 package SVN::Wc;
 use SVN::Base qw(Wc svn_wc_);

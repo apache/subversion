@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 
 package SVN::Ra;
 use SVN::Base qw(Ra svn_ra_);

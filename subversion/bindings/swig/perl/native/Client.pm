@@ -1,4 +1,6 @@
 use strict;
+use warnings;
+
 use SVN::Core;
 use SVN::Wc;
 
