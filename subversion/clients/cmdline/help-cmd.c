@@ -78,10 +78,10 @@ svn_cl__help (apr_getopt_t *os,
                                opt_state ? opt_state->version : FALSE,
                                opt_state ? opt_state->quiet : FALSE,
                                ra_desc_all->data,
-                               _(svn_cl__help_header),
+                               gettext (svn_cl__help_header),
                                svn_cl__cmd_table,
                                svn_cl__options,
-                               _(svn_cl__help_footer),
+                               gettext (svn_cl__help_footer),
                                pool));
 
   return SVN_NO_ERROR;
