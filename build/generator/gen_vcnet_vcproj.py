@@ -62,16 +62,13 @@ class Generator(gen_win.WinGeneratorBase):
                            libs=libs,
                            ))
 
-    ### this is very different from msvc_dsp. also note that we remove dups.
-    sources = { }
-    for obj in self.graph.get_sources(gen_base.DT_LINK, target_ob):
-      for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-        rsrc = string.replace(string.replace(src, target_ob.path + os.sep, ''),
-                              os.sep, '\\')
-        sources[rsrc] = None
+    sources = [ ]
+    for src in self.get_win_sources(target_ob):
+      rsrc = string.replace(string.replace(src, target_ob.path + os.sep, ''),
+                            os.sep, '\\')
+      sources.append(rsrc)
 
     # sort for output stability, to watch for regressions
-    sources = sources.keys()
     sources.sort()
 
     data = {
