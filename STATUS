@@ -116,7 +116,10 @@ Candidate changes:
       The change as-is adds an API, which is bad.  To backport, simply
       replicate the tiny new svn_path_is_canonical() functionality as a
       private function in mod_dav_svn/util.c (like dav_svn__is_canonical).
+      See <http://svn.haxx.se/dev/archive-2005-01/0643.shtml for why lundblad
+      dislikes this change.
     Votes:
       +1: cmpilato
+      -0: lundblad.
 
 Approved changes (further review is welcome, but not required):
