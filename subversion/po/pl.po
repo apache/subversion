@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-02 14:28+0200\n"
-"PO-Revision-Date: 2005-04-02 14:24+0200\n"
+"PO-Revision-Date: 2005-04-02 15:28+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -7134,22 +7134,22 @@ msgstr "Wymagany dokładnie jeden parametr - plik"
 #: svnadmin/main.c:1028 svnlook/main.c:1774
 #, c-format
 msgid "UUID Token: %s\n"
-msgstr ""
+msgstr "UUID żetonu: %s\n"
 
 #: svnadmin/main.c:1029 svnlook/main.c:1775
-#, fuzzy, c-format
+#, c-format
 msgid "Owner: %s\n"
-msgstr "Nazwa: %s\n"
+msgstr "Właściciel: %s\n"
 
 #: svnadmin/main.c:1030 svnlook/main.c:1776
-#, fuzzy, c-format
+#, c-format
 msgid "Created: %s\n"
-msgstr "Nazwa: %s\n"
+msgstr "Utworzone: %s\n"
 
 #: svnadmin/main.c:1031 svnlook/main.c:1777
 #, c-format
 msgid "Expires: %s\n"
-msgstr ""
+msgstr "Wygasa: %s\n"
 
 #: svnadmin/main.c:1033
 #, c-format
@@ -7158,6 +7158,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Komentarz (%i linie):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1034
 #, c-format
@@ -7166,6 +7169,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Komentarz (%i linia):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1101
 #, fuzzy, c-format
@@ -7638,6 +7644,8 @@ msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 msgstr ""
+"Komentarz (%i linie):\n"
+"%s\n"
 
 #: svnlook/main.c:1781
 #, c-format
@@ -7645,6 +7653,8 @@ msgid ""
 "Comment (%i line):\n"
 "%s\n"
 msgstr ""
+"Komentarz (%i linia):\n"
+"%s\n"
 
 #: svnlook/main.c:1827
 msgid "Missing propname argument"
@@ -7818,7 +7828,7 @@ msgstr "Nie udało się utworzyć gniazda: %s\n"
 
 #: svnversion/main.c:108
 msgid "Finished"
-msgstr ""
+msgstr "Zakończone"
 
 #: svnversion/main.c:123
 #, fuzzy
