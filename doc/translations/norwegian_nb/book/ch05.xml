@@ -3428,7 +3428,7 @@ $
         tilsyn n&#229;r det er konfigurert s&#229;nn som du vil ha det.
         Det er imidlertid enkelte ganger en administrator m&#229; tr&#229; til med 
         manuell assistanse.
-        Verkt&#248;yet <command>svnadmin </command> gir nyttig funksjonalitet 
+        Verkt&#248;yet <command>svnadmin</command> gir nyttig funksjonalitet 
         for &#229; hjelpe deg med &#229; utf&#248;re oppgaver som</para>
 
       <itemizedlist>
@@ -3567,9 +3567,9 @@ $ svnadmin setlog mittdepot nylogg.txt -r 388
           it.</para>
         @ENGLISH }}} -->
         <para>Men husk at ved &#229; omg&#229; p&#229;hakningsskriptene unng&#229;r du ogs&#229; 
-          ting som meldinger via email om forandringer i egenskaper, 
-          backupsystemer som f&#248;lger med p&#229; egenskapsforandringer og s&#229; 
-          videre.
+          utf&#248;ring av ting som meldinger via email om forandringer i 
+          egenskaper, backupsystemer som f&#248;lger med p&#229; 
+          egenskapsforandringer og s&#229; videre.
           Med andre ord, v&#230;r meget forsiktig med hva du forandrer og 
           hvordan du forandrer det.</para>
       </warning>
@@ -3600,8 +3600,9 @@ $ svnadmin setlog mittdepot nylogg.txt -r 388
         Men enkelte ganger kan det skje en feil p&#229; en m&#229;te som gj&#248;r at 
         oppryddingen av transaksjonen aldri skjer.
         Dette kan skje av flere grunner:
-        Kanskje klientoperasjonen ble uelegang avsluttet av brukeren, 
-        eller en nettverksfeil kan ha skjedd midt i en operasjon, osv.
+        Kanskje ble klientoperasjonen uelegant avsluttet av brukeren, 
+        eller en nettverksfeil kan ha skjedd midt i en operasjon og s&#229; 
+        videre.
         Uansett grunnen, disse d&#248;de transaksjonene er bare skrot i 
         depotet og tar opp ressurser.</para>
 
@@ -3612,7 +3613,8 @@ $ svnadmin setlog mittdepot nylogg.txt -r 388
       @ENGLISH }}} -->
       <para>Du kan bruke <command>svnadmin</command>s 
         <literal>lstxns</literal>-kommando for &#229; liste navnene p&#229; 
-        utest&#229;ende transaksjoner for &#248;yeblikket.</para>
+        utest&#229;ende transaksjoner som ligger i depotet for 
+        &#248;yeblikket.</para>
 
       <!-- @ENGLISH {{{
       <screen>
@@ -3653,8 +3655,9 @@ $
         Hvis den er det, kan transaksjonens navn leveres til 
         <command>svnadmin rmtxns</command> som vil utf&#248;re fjerning av 
         transaksjonen.
-        <literal>rmtxns</literal>-delkommandoen kan faktisk f&#229; dataene 
-        direkte fra det som <literal>lstxns</literal> genererer!</para>
+        <literal>rmtxns</literal>-delkommandoen kan faktisk motta 
+        dataene direkte fra det som <literal>lstxns</literal> 
+        genererer!</para>
 
       <!-- @ENGLISH {{{
       <screen>
@@ -3743,7 +3746,7 @@ done
       @ENGLISH }}} -->
       <para>Du kan kj&#248;re det foreg&#229;ende skriptet ved &#229; bruke 
         <command>/sti/til/txn-info.sh /sti/til/depot</command>.
-        Utdataene er hovedsaklig slere biter av utdataene fra 
+        Utdataene er hovedsaklig flere biter av utdataene fra 
         <command>svnlook info</command> som er satt sammen (se <xref 
         linkend="svn-ch-5-sect-3.1.1"/>), og vil se ut som noe i denne 
         retningen:</para>
@@ -3799,14 +3802,14 @@ $
         ago is still active?</para>
       @ENGLISH }}} -->
       <para>Vanligvis, hvis du ser en d&#248;d transaksjon som ikke har noen 
-        loggmelding sammen med den, er dette et resultat av en 
+        loggmelding vedlagt, er dette et resultat av en 
         oppdateringsoperasjon (eller noe i likhet med en oppdatering) 
         som har feilet.
         Disse operasjonene bruker Subversiontransaksjoner under panseret 
         for &#229; <!-- &#164; -->simulere tilstanden til en arbeidskopi.
-        Siden de aldri er ment &#229; bli lagt inn, krever ikke Subversion en 
-        loggmelding for disse transaksjonene.
-        Transaksjoner som har loggmeldinger vedlagt er omtent helt 
+        Siden de aldri er ment &#229; bli lagt inn i depotet, krever ikke 
+        Subversion en loggmelding for disse transaksjonene.
+        Transaksjoner som har loggmeldinger vedlagt er omtrent helt 
         sikkert mislykkede innlegginger av en eller annen type.
         I tillegg kan tidspunktet til en transaksjon bidra med 
         interessant informasjon &#8212; for eksempel, hvor sannsynlig er det 
@@ -3823,14 +3826,14 @@ $
         (via email, for example) to verify that the transaction is, in
         fact, in a zombie state.</para>
       @ENGLISH }}} -->
-      <para>Kort sagt, er det ikke n&#248;dvendig &#229; foreta ukloke 
-        beslutninger om fjerning av transaksjoner.
+      <para>Kort sagt er det ikke n&#248;dvendig &#229; foreta ukloke beslutninger 
+        ang&#229;ende fjerning av transaksjoner.
         Forskjellige kilder til informasjon &#8212; inkludert Apaches feil- og 
         tilgangslogg, loggene med gjennomf&#248;rte Subversioninnlegginger og 
         s&#229; videre &#8212; kan bli tatt med i beslutningsprosessen.
         Til sist kan administratoren rett og slett kommunisere med 
         eieren av en tilsynelatende d&#248;d transaksjon (via email, for 
-        eksempel) for &#229; fastsl&#229; at transaksjonen faktisk er i en 
+        eksempel) for &#229; fastsl&#229; om transaksjonen faktisk er i en 
         zombietilstand.</para>
 
     </sect2>
