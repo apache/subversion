@@ -1339,10 +1339,12 @@ svn_wc_cleanup (const char *path,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t cleanup;
-  int is_wc;
+  int wc_format_version;
 
-  SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-  if (! is_wc)
+  SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+
+  /* a "version" of 0 means a non-wc directory */
+  if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_NOT_DIRECTORY, NULL,
        "svn_wc_cleanup: %s is not a working copy directory", path);

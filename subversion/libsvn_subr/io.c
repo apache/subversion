@@ -19,16 +19,14 @@
 
 
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
-#include <errno.h>
+
 #include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
 #include <apr_general.h>
 #include <apr_strings.h>
-#include <apr_thread_proc.h>
 #include <apr_portable.h>
 #include <apr_md5.h>
 
@@ -1695,28 +1693,34 @@ svn_io_read_version_file (int *version,
                           apr_pool_t *pool)
 {
   apr_file_t *format_file;
-  svn_stream_t *format_stream;
-  svn_stringbuf_t *version_str;
+  char buf[80];
+  apr_size_t len;
   apr_status_t apr_err;
 
-  /* Read a line from PATH */
-  SVN_ERR (svn_io_file_open (&format_file, path, APR_READ | APR_BUFFERED, 
+  /* Read a chunk of data from PATH */
+  SVN_ERR (svn_io_file_open (&format_file, path, APR_READ,
                              APR_OS_DEFAULT, pool));
-  format_stream = svn_stream_from_aprfile (format_file, pool);
-  SVN_ERR (svn_stream_readline (format_stream, &version_str, pool));
+  len = sizeof(buf);
+  apr_err = apr_file_read (format_file, buf, &len);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, "reading `%s'", path);
 
   /* If there was no data in PATH, return an error. */
-  if (! version_str)
+  if (len == 0)
     return svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                               "reading `%s'", path);
 
   /* Check that the first line contains only digits. */
   {
-    char *c;
+    int i;
 
-    for (c = version_str->data; *c; c++)
+    for (i = 0; i < len; ++i)
       {
-        if (! apr_isdigit (*c))
+        char c = buf[i];
+
+        if (i > 0 && (c == '\r' || c == '\n'))
+          break;
+        if (! apr_isdigit (c))
           return svn_error_createf
             (SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
              "first line of '%s' contains non-digit", path);
@@ -1724,7 +1728,7 @@ svn_io_read_version_file (int *version,
   }
 
   /* Convert to integer. */
-  *version = atoi (version_str->data);
+  *version = atoi (buf);
 
   /* And finally, close the file. */
   apr_err = apr_file_close (format_file);
