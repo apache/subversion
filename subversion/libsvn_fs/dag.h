@@ -90,7 +90,16 @@ int svn_fs__dag_is_copy (dag_node_t *node);
 
 /* Set *PROPLIST_P to a PROPLIST skel representing the entire property
    list of NODE, as part of TRAIL.  This guarantees that *PROPLIST_P
-   is well-formed.  Allocate the skel in TRAIL->pool.  */
+   is well-formed.
+
+   The caller must not change the returned skel --- it's shared with
+   dag.c's internal cache of node contents.
+
+   The returned skel is allocated in *either* TRAIL->pool or the pool
+   NODE was allocated in, at this function's discretion; the caller
+   must finish using it while both of those remain live.  If the
+   caller needs the property list to live longer, it can use
+   svn_fs__copy_skel to make its own copy.  */
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail);
@@ -170,6 +179,23 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
                                dag_node_t *parent,
                                const char *name,
                                trail_t *trail);
+
+
+/* Set *ENTRIES_P to the directory entry list skel of NODE, as part of
+   TRAIL.  The returned skel has the form (ENTRY ...), as described in
+   `structure'.
+
+   The caller must not modify the returned skel --- it's shared with
+   dag.c's internal cache of node contents.
+
+   The returned skel is allocated in *either* TRAIL->pool or the pool
+   NODE was allocated in, at this function's discretion; the caller
+   must finish using it while both of those remain live.  If the
+   caller needs the directory enttry list to live longer, it can use
+   svn_fs__copy_skel to make its own copy.  */
+svn_error_t *svn_fs__dag_dir_entries (skel_t **entries_p,
+                                      dag_node_t *node,
+                                      trail_t *trail);
 
 
 /* Make a new mutable clone of the node named NAME in PARENT, and
