@@ -279,6 +279,7 @@ svn_fs_fs__hotcopy (const char *src_path,
 {
   const char *src_subdir, *dst_subdir;
   svn_revnum_t youngest, rev;
+  apr_pool_t *iterpool;
 
   /* Copy the current file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_CURRENT, pool));
@@ -294,11 +295,15 @@ svn_fs_fs__hotcopy (const char *src_path,
   dst_subdir = svn_path_join (dst_path, PATH_REVS_DIR, pool);
 
   SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
-  
+
+  iterpool = svn_pool_create (pool);
   for (rev = 0; rev <= youngest; rev++)
-    SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
-                                   apr_psprintf (pool, "%ld", rev),
-                                   pool));
+    {
+      SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
+                                     apr_psprintf (iterpool, "%ld", rev),
+                                     iterpool));
+      svn_pool_clear (iterpool);
+    }
 
   /* Copy the necessary revprop files. */
   src_subdir = svn_path_join (src_path, PATH_REVPROPS_DIR, pool);
@@ -307,9 +312,14 @@ svn_fs_fs__hotcopy (const char *src_path,
   SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
 
   for (rev = 0; rev <= youngest; rev++)
-    SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
-                                   apr_psprintf (pool, "%ld", rev),
-                                   pool));
+    {
+      svn_pool_clear (iterpool);
+      SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
+                                     apr_psprintf (pool, "%ld", rev),
+                                     pool));
+    }
+
+  apr_pool_destroy (iterpool);
 
   /* Make an empty transactions directory for now.  Eventually some
      method of copying in progress transactions will need to be
