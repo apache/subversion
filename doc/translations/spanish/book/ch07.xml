@@ -123,30 +123,34 @@
         usuario, el programa <command>svn</command> no intentan
         crear un área de configuración global de sistema.</para>
 
-      <para>The configuration area currently contains three
-        files&mdash;two configuration files (<filename>config</filename> and
-        <filename>servers</filename>), and a <filename>README.txt</filename> 
-        file which describes the INI format.  At the time of their
-        creation, the files contain default values for each of the
-        supported Subversion options, mostly commented out and grouped
-        with textual descriptions about how the values for the key
-        affect Subversion's behavior.  To change a certain behavior,
-        you need only to load the appropriate configuration file into
-        a text editor, and modify the desired option's value.  If at
-        any time you wish to have the default configuration settings
-        restored, you can simply remove (or rename) your configuration
-        directory and then run some innocuous <command>svn</command>
-        command, such as <command>svn --version</command>.  A new
-        configuration directory with the default contents will be
-        created.</para>
+      <para>El área de configuración actualmente contiene tres
+        ficheros&mdash;dos ficheros de configuración
+        (<filename>config</filename> y <filename>servers</filename>),
+        y un fichero <filename>README.txt</filename> que describe el
+        formato INI.  En el momento de su creación, los ficheros
+        contienen los valores por defecto para cada una de las
+        opciones soportadas por Subversion, en su mayoría con
+        comentarios y agrupadas con descripciones textuales
+        que indican cómo los valores de cada opción afectan al
+        comportamiento de Subversion. Para cambiar un comportamiento
+        dado, sólo necesita cargar el fichero de configuración
+        adecuado en su editor de texto, y modificar el valor de la
+        opción deseada. Si en algún momento desea recuperar los
+        valores de configuración por defecto, puede simplemente
+        borrar (o renombrar) su directorio de configuración y
+        entonces ejecutar algún comando <command>svn</command>
+        inocuo, como <command>svn --version</command>.  Entonces se
+        creará un nuevo directorio de configuración con el contenido
+        por defecto.</para>
 
-      <para>The per-user configuration area also contains a cache of
-        authentication data.  The <filename>auth</filename> directory
-        holds a set of subdirectories that contain pieces of cached
-        information used by Subversion's various supported
-        authentication methods.  This directory is created in such a
-        way that only the user herself has permission to read its
-        contents.</para>
+      <para>El área de configuración de cada usuario también contiene
+        una cache de datos de autenticación. El directorio
+        <filename>auth</filename> agrupa un conjunto de
+        subdirectorios que contienen trozos de información guardada
+        <!-- TODO revisar traducción de cached != guardada -->
+        usada por los varios métodos de autenticación soportados
+        por Subversion. Este directorio es creado de tal manera que
+        sólo su usuario tiene permiso para leer su contenido.</para>
 
     </sect2>
 
