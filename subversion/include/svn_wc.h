@@ -2,7 +2,7 @@
  * svn_wc.h :  public interface for the Subversion Working Copy Library
  *
  * ====================================================================
- * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -760,10 +760,13 @@ typedef svn_error_t *(*svn_wc_diff_cmd_t)(svn_stringbuf_t *path1,
 /* Return an EDITOR/EDIT_BATON for diffing a working copy against the
  * repository.
  *
- * ANCHOR and TARGET have the same meaning as svn_wc_get_update_editor.
+ * ANCHOR/TARGET represent the base of the hierarchy to be compared.
  *
  * DIFF_CMD/DIFF_CMD_BATON are the function/baton to be called when two
  * files are to be compared.
+ *
+ * RECURSE determines whether to descend into subdirectories when TARGET
+ * is a directory.
  */
 svn_error_t *svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
                                      svn_stringbuf_t *target,
@@ -774,6 +777,23 @@ svn_error_t *svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
                                      void **edit_baton,
                                      apr_pool_t *pool);
 
+
+/* Compare working copy against the text-base.
+ *
+ * ANCHOR/TARGET represent the base of the hierarchy to be compared.
+ *
+ * DIFF_CMD/DIFF_CMD_BATON are the function/baton to be called when two
+ * files are to be compared.
+ *
+ * RECURSE determines whether to descend into subdirectories when TARGET
+ * is a directory.
+ */
+svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
+                          svn_stringbuf_t *target,
+                          svn_wc_diff_cmd_t diff_cmd,
+                          void *diff_cmd_baton,
+                          svn_boolean_t recurse,
+                          apr_pool_t *pool);
 
 /* Given a PATH to a wc file, return a PRISTINE_PATH which points to a
    pristine version of the file.  This is needed so clients can do

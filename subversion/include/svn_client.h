@@ -2,7 +2,7 @@
  * svn_client.h :  public interface for libsvn_client
  *
  * ====================================================================
- * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -417,20 +417,6 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                 svn_log_message_receiver_t receiver,
                 void *receiver_baton,
                 apr_pool_t *pool);
-
-
-/* Given a PATH to a working copy file, return a path to a temporary
-   copy of the PRISTINE version of the file.  The client can then
-   compare this to the working copy of the file and execute any kind
-   of diff it wishes. 
-   
-   TODO:  Someday this function will need to return a "cleanup"
-   routine to remove the pristine file, in case the pristine file is
-   fetched and dumped somewhere by the RA layer. */
-svn_error_t *
-svn_client_file_diff (svn_stringbuf_t *path,
-                      svn_stringbuf_t **pristine_copy_path,
-                      apr_pool_t *pool);
 
 
 /* Given a TARGET which is either a path in the working copy or an URL,

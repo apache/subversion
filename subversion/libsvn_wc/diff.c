@@ -3,7 +3,7 @@
  *           repository.
  *
  * ====================================================================
- * Copyright (c) 2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2001-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -128,6 +128,34 @@ struct file_baton {
 
   apr_pool_t *pool;
 };
+
+
+/* Create a new edit baton. TARGET/ANCHOR are working copy paths that
+ * describe the root of the comparison. DIFF_CMD/DIFF_CMD_BATON define the
+ * callback to compare files. RECURSE defines whether to descend into
+ * subdirectories.
+ */
+static struct edit_baton *
+make_editor_baton (svn_stringbuf_t *anchor,
+                   svn_stringbuf_t *target,
+                   svn_wc_diff_cmd_t diff_cmd,
+                   void *diff_cmd_baton,
+                   svn_boolean_t recurse,
+                   apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  struct edit_baton *eb = apr_palloc (subpool, sizeof (*eb));
+
+  eb->anchor = anchor;
+  eb->target = target;
+  eb->diff_cmd = diff_cmd;
+  eb->diff_cmd_baton = diff_cmd_baton;
+  eb->recurse = recurse;
+  eb->pool = subpool;
+
+  return eb;;
+}
+
 
 /* Create a new directory baton. NAME is the directory name sans
  * path. ADDED is set if this directory is being added rather than
@@ -749,17 +777,10 @@ close_edit (void *edit_baton)
   return SVN_NO_ERROR;
 }
 
-/* Create a diff editor and baton.
- *
- * ANCHOR/TARGET represent the base of the hierarchy to be compared.
- *
- * DIFF_CMD/DIFF_CMD_BATON represent the callback and calback argument that
- * implement the file comparison function
- *
- * RECURSE is set if the diff is to be recursive.
- *
- * EDITOR/EDIT_BATON return the newly created editor and baton/
- */
+/* Public Interface */
+
+
+/* Create a diff editor and baton. */
 svn_error_t *
 svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
                         svn_stringbuf_t *target,
@@ -770,16 +791,12 @@ svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
                         void **edit_baton,
                         apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (subpool);
-  struct edit_baton *eb = apr_palloc (subpool, sizeof (*eb));
+  struct edit_baton *eb;
+  svn_delta_edit_fns_t *tree_editor;
 
-  eb->anchor = anchor;
-  eb->target = target;
-  eb->diff_cmd = diff_cmd;
-  eb->diff_cmd_baton = diff_cmd_baton;
-  eb->recurse = recurse;
-  eb->pool = subpool;
+  eb = make_editor_baton (anchor, target, diff_cmd, diff_cmd_baton, recurse,
+                          pool);
+  tree_editor = svn_delta_default_editor (eb->pool);
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
@@ -795,6 +812,28 @@ svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
 
   *edit_baton = eb;
   *editor = tree_editor;
+
+  return SVN_NO_ERROR;
+}
+
+/* Compare working copy against the text-base. */
+svn_error_t *
+svn_wc_diff (svn_stringbuf_t *anchor,
+             svn_stringbuf_t *target,
+             svn_wc_diff_cmd_t diff_cmd,
+             void *diff_cmd_baton,
+             svn_boolean_t recurse,
+             apr_pool_t *pool)
+{
+  struct edit_baton *eb;
+  struct dir_baton *b;
+
+  eb = make_editor_baton (anchor, target, diff_cmd, diff_cmd_baton, recurse,
+                          pool);
+
+  b = make_dir_baton (target, NULL, eb, FALSE, eb->pool);
+
+  SVN_ERR (directory_elements_diff (b, FALSE));
 
   return SVN_NO_ERROR;
 }

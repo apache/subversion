@@ -2,7 +2,7 @@
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
- * Copyright (c) 2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -586,6 +586,10 @@ close_file (void *file_baton)
 static svn_error_t *
 close_edit (void *edit_baton)
 {
+  struct edit_baton *eb = edit_baton;
+
+  svn_pool_destroy (eb->pool);
+
   return SVN_NO_ERROR;
 }
 
