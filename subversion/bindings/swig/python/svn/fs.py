@@ -77,28 +77,30 @@ class FileDiff:
         return 1
     return 0
 
+  def _dump_contents(self, file, root, path, pool):
+    fp = open(file, 'w+')
+    if path is not None:
+      stream = file_contents(root, path, pool)
+      while 1:
+        chunk = core.svn_stream_read(stream, core.SVN_STREAM_CHUNK_SIZE)
+        if not chunk:
+          break
+        fp.write(chunk)
+    fp.close()
+    
+    
   def get_files(self):
     if self.tempfile1:
       # no need to do more. we ran this already.
       return self.tempfile1, self.tempfile2
 
+    # Make tempfiles, and dump the file contents into those tempfiles.
     self.tempfile1 = tempfile.mktemp()
-    contents = ''
-    if self.path1 is not None:
-      len = file_length(self.root1, self.path1, self.pool)
-      stream = file_contents(self.root1, self.path1, self.pool)
-      contents = core.svn_stream_read(stream, len)
-    open(self.tempfile1, 'w+').write(contents)
-
     self.tempfile2 = tempfile.mktemp()
-    contents = ''
-    if self.path2 is not None:
-      len = file_length(self.root2, self.path2, self.pool)
-      stream = file_contents(self.root2, self.path2, self.pool)
-      contents = core.svn_stream_read(stream, len)
-    open(self.tempfile2, 'w+').write(contents)
 
-    # get rid of anything we put into our subpool
+    self._dump_contents(self.tempfile1, self.root1, self.path1, self.pool)
+    core.svn_pool_clear(self.pool)
+    self._dump_contents(self.tempfile2, self.root2, self.path2, self.pool)
     core.svn_pool_clear(self.pool)
 
     return self.tempfile1, self.tempfile2
