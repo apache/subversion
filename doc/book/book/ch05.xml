@@ -715,6 +715,15 @@ $ svnlook tree path/to/repos --show-ids
           </varlistentry>
 
           <varlistentry>
+            <term><literal>history</literal></term>
+            <listitem>
+              <para>Display interesting points in the history of a
+                versioned path (places where modifications or copies
+                occurred).</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
             <term><literal>info</literal></term>
             <listitem>
               <para>Print the tree's author, datestamp, log message
