@@ -120,14 +120,8 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree):
   mytree = svn_tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-
-  # TEMPORARILY COMMENTED OUT!  UNTIL CMPILATO FIXES THE PRINTED
-  # OUTPUT OF 'SVN CO', WE DON'T WANT EVERY SINGLE TEST TO FAIL AS IT
-  # ATTEMPTS TO BOOTSTRAP.  SO WE'RE TEMPORARILY IGNORING THE OUTPUT
-  # OF 'CO'.
-  
-  # if svn_tree.compare_trees (mytree, output_tree):
-  #  return 1
+  if svn_tree.compare_trees (mytree, output_tree):
+    return 1
 
   # Create a tree by scanning the working copy
   mytree = svn_tree.build_tree_from_wc (wc_dir_name)
