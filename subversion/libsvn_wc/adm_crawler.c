@@ -955,6 +955,62 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
   return SVN_NO_ERROR;
 }
 
+
+/* 
+
+   Ben's notes (temporary):  re:  how to make svn_wc_crawl_local_mods
+   take *multiple* start-path arguments in an apr_array_header_t.
+
+   Assumption:  no start-path is contained within another.
+
+   Consider this diagram:
+
+           P
+         /  \
+        Q
+      /   \
+     C     B
+    / \   / \
+   A
+  / \
+
+   Pretend we receive an array with two start-paths to traverse:  `A'
+   and `B'.  (Obviously, there's no intersection between these two
+   sub-trees.) 
+
+   We can't simply call process_subdirectory (A), followed by
+   process_subdirecotry (B).  Why?  Because do_dir_replaces() crawls
+   up the tree trying to create dir_batons, and when it reaches `A' or
+   `B', it calls replace_root().  We can't call replace_root() more
+   than once during the entire commit!
+
+   Here's the solution:
+
+   1.  Look at our array of start-paths, and find the *nearest* common
+   ancestor dir of them.  (In our case, `Q'.)
+
+   2.  Place Q on the *bottom* of our stack, sans dir_baton.
+
+   3.  Before the first crawl, push stackframes containing each path
+   going from `Q' down to `A'.  Again, no dir_batons.
+
+   4.  Start the first crawl at `A'.  do_dir_replaces() will
+   automatically walk all the way up to `Q' and call replace_root().
+
+   5.  When the first crawl is done, remove all the stackframes until
+   there's only the lone `Q' frame left.  (This frame now contains the
+   root_baton!)
+
+   6.  For each subsequent crawl, repeats steps 3, 4, 5.  Each
+   subsequent crawl shares the same stack, the same affected_targets
+   hash, and the same locks hash.  (If any crawl fails, then *all*
+   locks are cleaned up.)
+
+   7.  When all crawls are done, do as we're already doing:  check the
+   oldest stackframe (`Q') and see if it has a root_baton.  If so,
+   call close_edit().  If not, then no commit was ever made.
+
+ */
 
 
 /* 
