@@ -14,7 +14,20 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 [
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
-  APR_FIND_APU($srcdir/apr-util, $abs_builddir)
+  APR_FIND_APU(apr-util, $abs_builddir)
+
+  if test $apu_found = "no" \
+     && test "$abs_srcdir" != "$abs_builddir" \
+     && test -d "$abs_srcdir/apr-util"; then
+    dnl HACKS to get builddir != srcdir to work, should APR_FIND_APU do this?
+    echo "using apr-util in Subversion source dir"
+    apu_found="reconfig"
+    apu_config=$abs_builddir/apr-util/apu-config
+    apu_srcdir=apr-util
+    dnl HACK to get apr-util to configure bundled xml/expat
+    test -d $abs_builddir/apr-util/xml/expat \
+         || $MKDIR $abs_builddir/apr-util/xml/expat
+  fi
 
   if test $apu_found = "no"; then
     AC_MSG_WARN([APRUTIL not found])
