@@ -109,38 +109,65 @@ svn_error_init_pool (apr_pool_t *top_pool)
                            top_pool);
 }
 
+static void
+svn_pool__attach_error_pool(apr_pool_t *p)
+{
+  apr_pool_t *error_pool;
+  apr_status_t apr_err;
+  apr_pool_t *parent_pool;
+
+  if (p->parent == NULL)
+    parent_pool = p;
+  else
+    parent_pool = p->parent;
+
+  /* Fetch the error pool from the parent (possibly the new one). */
+  apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, parent_pool);
+  if (error_pool == NULL)
+    abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
+
+  /* Set the error pool on the newly-created pool. */
+  apr_err = apr_set_userdata (error_pool,
+                              SVN_ERROR_POOL,
+                              apr_null_cleanup,
+                              p);
+  if (apr_err)
+    abort_on_pool_failure (apr_err);
+}
+
+
 apr_pool_t *
 svn_pool_create (apr_pool_t *parent_pool)
 {
   apr_pool_t *ret_pool;
-  apr_status_t apr_err;
-  apr_pool_t *error_pool;
 
   ret_pool = apr_make_sub_pool (parent_pool, abort_on_pool_failure);
 
   /* If there is no parent, then initialize ret_pool as the "top". */
   if (parent_pool == NULL)
     {
-      parent_pool = ret_pool;
-      apr_err = svn_error_init_pool (parent_pool);
+      apr_status_t apr_err;
+
+      apr_err = svn_error_init_pool (ret_pool);
       if (apr_err)
-        (*abort_on_pool_failure) (apr_err);
+        abort_on_pool_failure (apr_err);
     }
 
-  /* Fetch the error pool from the parent (possibly the new one). */
-  apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, parent_pool);
-  if (error_pool == NULL)
-    (*abort_on_pool_failure) (SVN_ERR_BAD_CONTAINING_POOL);
-
-  /* Set the error pool on the newly-created pool. */
-  apr_err = apr_set_userdata (error_pool,
-                              SVN_ERROR_POOL,
-                              apr_null_cleanup,
-                              ret_pool);
-  if (apr_err)
-    (*abort_on_pool_failure) (apr_err);
-
+  svn_pool__attach_error_pool (ret_pool);
+  
   return ret_pool;
+}
+
+
+
+void 
+svn_pool_clear(apr_pool_t *p)
+{
+  apr_clear_pool (p);
+  /* Clearing the pool, invalidates all userdata attached to the pool,
+	 so reattach the error pool. */
+  
+  svn_pool__attach_error_pool (p);
 }
 
 

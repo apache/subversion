@@ -39,7 +39,7 @@ fail (void)
 static svn_string_t *
 get_empty_string (void)
 {
-  apr_clear_pool (pool);
+  svn_pool_clear (pool);
 
   return svn_string_ncreate (0, 0, pool);
 }
