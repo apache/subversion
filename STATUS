@@ -28,10 +28,3 @@ Candidate changes:
       r10487 really doesn't need a vote, but I included it for completness.
     Votes:
       +1: breser, kfogel
-
-  * r10561:
-    Make swig-wrapped svn_fs_create and svn_fs_open usable.
-    Votes:
-      +1: maxb, breser, clkao
-      +0: kfogel
-
