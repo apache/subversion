@@ -291,7 +291,7 @@ apr_transfer_file_contents (const char *src,
   read_err = 0;
   while (!APR_STATUS_IS_EOF(read_err))
     {
-      apr_ssize_t bytes_this_time = sizeof (buf);
+      apr_size_t bytes_this_time = sizeof (buf);
 
       /* Read 'em. */
       read_err = apr_read (s, buf, &bytes_this_time);

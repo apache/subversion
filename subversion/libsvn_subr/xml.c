@@ -151,7 +151,7 @@ svn_xml_free_parser (svn_xml_parser_t *svn_parser)
 svn_error_t *
 svn_xml_parse (svn_xml_parser_t *svn_parser,
                const char *buf,
-               apr_ssize_t len,
+               apr_size_t len,
                svn_boolean_t is_final)
 {
   svn_error_t *err;
