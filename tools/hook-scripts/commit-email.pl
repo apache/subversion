@@ -151,7 +151,7 @@ close (INPUT);
 # collapse the list of changed directories
 my @commonpieces = ();
 my $commondir = '';
-if ($rootchanged == 0)
+if (($rootchanged == 0) and (scalar @commonpieces > 1))
 {
     my $firstline = shift (@dirschanged);
     push (@commonpieces, split ('/', $firstline));
