@@ -54,20 +54,31 @@
 
 #include <httpd.h>
 #include <http_protocol.h>
+#include <http_log.h>
 #include <mod_dav.h>
 
+#include <apr_strings.h>
+
+#include "svn_types.h"
 #include "dav_svn.h"
 
 
 struct dav_resource_private {
-  /* ### fill this in */
-  int unused_for_now;
+  apr_pool_t *pool;
+
+  /* Path from the SVN repository root to this resource. */
+  const char *path;
 };
 
 struct dav_stream {
-  /* ### fill this in */
-  int unused_for_now;
+  const dav_resource *res;
+  int pos;
 };
+
+typedef struct {
+  dav_resource res;
+  dav_resource_private priv;
+} dav_resource_combined;
 
 
 static dav_resource * dav_svn_get_resource(request_rec *r,
@@ -76,8 +87,54 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
                                            const char *target,
                                            int is_label)
 {
-  /* ### fill this in */
-  return NULL;
+  dav_resource_combined *comb;
+  apr_size_t len;
+  char *uri;
+  const char *relative;
+
+  comb = apr_pcalloc(r->pool, sizeof(*comb));
+  comb->res.info = &comb->priv;
+  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->priv.pool = r->pool;
+
+  comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
+  comb->res.exists = TRUE;
+
+  /* make a copy so that we can do some work on it */
+  uri = apr_pstrdup(r->pool, r->uri);
+
+  /* remove duplicate slashes */
+  ap_no2slash(uri);
+
+  /* make sure the URI does not have a trailing "/" */
+  len = strlen(uri);
+  if (len > 1 && uri[len - 1] == '/')
+    uri[len - 1] = '\0';
+
+  comb->res.uri = uri;
+
+  /* The URL space defined by the SVN provider is always a virtual
+     space. Construct the path relative to the configured Location
+     (root_dir). So... the relative location is simply the URL used,
+     skipping the root_dir. */
+  relative = ap_stripprefix(uri, root_dir);
+
+  /* It is possible that some yin-yang used a trailing slash in their
+     Location directive (which was then removed as part of the
+     "prefix".  Back up a step if we don't have a leading slash. */
+  if (*relative != '/')
+      --relative;
+
+  /* "relative" is part of the "uri" string, so it has the proper
+     lifetime to store here. */
+  comb->priv.path = relative;
+
+#if 0
+  DBG1("uri: %s", uri);
+  DBG2("root_dir=\"%s\"  path=\"%s\"", root_dir, relative);
+#endif
+
+  return &comb->res;
 }
 
 static dav_resource * dav_svn_get_parent_resource(const dav_resource *resource)
@@ -104,7 +161,10 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                        dav_stream_mode mode,
                                        dav_stream **stream)
 {
-  /* ### fill this in */
+  *stream = apr_pcalloc(resource->info->pool, sizeof(*stream));
+
+  (*stream)->res = resource;
+
   return NULL;
 }
 
@@ -117,8 +177,17 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
 static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
                                        apr_size_t *bufsize)
 {
-  /* ### fill this in */
-  *bufsize = 0;
+  if (stream->pos) {
+    /* EOF */
+    *bufsize = 0;
+    return NULL;
+  }
+
+  if (*bufsize > 10)
+    *bufsize = 10;
+  memcpy(buf, "123456789\n", *bufsize);
+  stream->pos = 1;
+
   return NULL;
 }
 
@@ -136,6 +205,12 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
   return NULL;
 }
 
+static const char * dav_svn_getetag(const dav_resource *resource)
+{
+  /* ### fix this */
+  return "svn-etag";
+}
+
 static dav_error * dav_svn_set_headers(request_rec *r,
                                        const dav_resource *resource)
 {
@@ -148,8 +223,12 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 #endif
 
   /* ### note that these use r->filename rather than <resource> */
+#if 0
   ap_set_last_modified(r);
-  ap_set_etag(r);
+#endif
+
+  /* generate our etag and place it into the output */
+  apr_table_set(r->headers_out, "ETag", dav_svn_getetag(resource));
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
@@ -199,12 +278,6 @@ static dav_error * dav_svn_walk(dav_walker_ctx *wctx, int depth)
 {
   /* ### fill this in */
   return NULL;
-}
-
-static const char * dav_svn_getetag(const dav_resource *resource)
-{
-  /* ### fix this */
-  return "svn-etag";
 }
 
 
