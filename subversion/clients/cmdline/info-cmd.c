@@ -244,6 +244,13 @@ svn_cl__info (apr_getopt_t *os,
       const svn_wc_entry_t *entry;
 
       svn_pool_clear (subpool);
+
+      /* Make sure the user hasn't passed a URL by mistake. */
+      if (svn_path_is_url (target))
+        return svn_error_create
+          (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+           _("'svn info' only works on working copy paths, not URLs"));
+
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, FALSE,
                                        opt_state->recursive ? -1 : 0,
