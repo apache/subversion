@@ -317,6 +317,7 @@ enum {
   ELEM_updated_set,
   ELEM_vcc,
   ELEM_version_name,
+  ELEM_error,
 
   /* SVN elements */
   ELEM_add_directory,
@@ -338,7 +339,9 @@ enum {
   ELEM_prop,
   ELEM_name_version_name,
   ELEM_name_creationdate,
-  ELEM_name_creator_displayname
+  ELEM_name_creator_displayname,
+  ELEM_svn_error,
+  ELEM_human_readable,
 };
 
 /* ### docco */
