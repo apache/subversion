@@ -9,13 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10371:
-    Mark python and perl bindings modules "undefined-lib-symbols = yes".
-    This is because they require symbols from libperl/libpython, which we
-    don't explicitly link to.
-    Fixes the python bindings on OS X.
-    DE-NOMINATED: I've found a better solution. Working on it. -- maxb
-
   * r10385:
     Make svnserve CRAM-MD5 work for usernames containing spaces.
     Justification:
@@ -83,3 +76,13 @@ Candidate changes:
     Votes:
       +1: ghudson (r10353 only)
       +1: lundblad
+
+  * r10400, r10401
+    Perl bindings build fixes.
+    r10400: Add cygwin to the list of platforms requiring explicit linking of
+      apr.
+    r10401: Transfer some libsvn_swig_perl dependencies incorrectly listed as
+      nonlibs to libs.
+    Votes:
+      +1: maxb
+
