@@ -87,7 +87,7 @@
               (e.g. a property called <quote>color</quote>), and
               others are wholly created and controlled by the WebDAV
               server (e.g. a property that contains the last
-              modification time of a file.)  The former kind are
+              modification time of a file).  The former kind are
               called <quote>dead</quote> properties, and the latter
               kind are called <quote>live</quote> properties.</para>
           </listitem>

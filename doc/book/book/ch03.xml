@@ -92,7 +92,7 @@ Committed revision 3.
       </screen>
 
       <para>If at any point in the future you want to refer to that
-        revision (We'll see how and why we might want to do that later
+        revision (we'll see how and why we might want to do that later
         in this chapter), you can refer to it as
         <quote>3</quote>.</para>
 
@@ -148,7 +148,7 @@ Committed revision 3.
           <listitem>
             <para>The revision just <emphasis>before</emphasis> the last
               revision in which an item changed.  (Technically,
-              COMMITTED - 1).</para>
+              COMMITTED - 1.)</para>
           </listitem>
         </varlistentry>
         
@@ -320,8 +320,8 @@ Checked out revision 3678.
     </screen>
     
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>
-      model instead of <quote>lock-modify-unlock,</quote> (see <xref
-      linkend="svn-ch-2"/>) you're now ready to start making changes
+      model instead of <quote>lock-modify-unlock</quote> (see <xref
+      linkend="svn-ch-2"/>), you're now ready to start making changes
       to the files and directories that you've checked out (known
       collectively as your <firstterm>working
       copy</firstterm>).</para>
@@ -329,7 +329,7 @@ Checked out revision 3678.
     <para>In other words, your <quote>working copy</quote> is now just
       like any other collection of files and/or directories on your
       system<footnote><para>Well, except for the fact that every
-      directory within your <quote>working copy</quote>also contains a
+      directory within your <quote>working copy</quote> also contains a
       <filename>.svn</filename> subdirectory.  But that's getting a
       little ahead of ourselves.</para></footnote>.  You can edit and
       change them, move them around, you can even delete the entire
@@ -660,7 +660,7 @@ Updated to revision 2.
               addition.  When <filename>bar</filename> is added to the
               repository on the next commit, its copy-history is
               recorded (as having originally come from
-              <filename>foo</filename>.)</para>
+              <filename>foo</filename>).</para>
           </listitem>
         </varlistentry>
 
@@ -905,7 +905,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
         </variablelist>
 
         <para>The second column tells the status of a file or
-          directory's properties (See <xref
+          directory's properties (see <xref
           linkend="svn-ch-6-sect-2"></xref> for more information on
           properties).  If an <computeroutput>M</computeroutput>
           appears in the second column, then the properties have been
@@ -1009,7 +1009,7 @@ A                0         ?     ?        ./stuff/things/bloo.h
           useful information&mdash;you'll need to update and get the
           server changes on <filename>README</filename> before you
           commit, or the repository will reject your commit for being
-          out-of-date.  (More on this subject later).</para>
+          out-of-date.  (More on this subject later.)</para>
 
       </sect3>
 
@@ -1237,7 +1237,7 @@ C  ./bar.c
         <listitem>
           <para>Subversion prints a <computeroutput>C</computeroutput> during
             the update, and remembers that the file is
-            <quote>conflicted.</quote></para>
+            <quote>conflicted</quote>.</para>
         </listitem>
 
         <listitem>
@@ -1253,7 +1253,7 @@ C  ./bar.c
           <variablelist>
             
             <varlistentry>
-              <term><filename>filename.*.mine</filename></term>
+              <term><filename>filename.mine</filename></term>
               <listitem>
                 <para> This is your file as it existed in your working
                   copy before you updated your working copy&mdash;that
@@ -1263,7 +1263,7 @@ C  ./bar.c
             </varlistentry>
             
             <varlistentry>
-              <term><filename>filename.*.rOLDREV</filename></term>
+              <term><filename>filename.rOLDREV</filename></term>
               <listitem>
                 <para>This is the file that was the BASE revision
                   before you updated your working copy.  That is, the
@@ -1273,7 +1273,7 @@ C  ./bar.c
             </varlistentry>
 
             <varlistentry>
-              <term><filename>filename.*.rNEWREV</filename></term>
+              <term><filename>filename.rNEWREV</filename></term>
               <listitem>
                 <para>This is the file that your Subversion client
                   just received from the server when you updated your
@@ -1284,12 +1284,10 @@ C  ./bar.c
 
           </variablelist>
           
-          <para>Here <literal>*</literal> represents some random
-            digits that Subversion chooses,
-            <literal>OLDREV</literal> is the revision number of the
-            file in your <filename>.svn</filename> directory, and
-            <literal>NEWREV</literal> is the revision number of the
-            repository HEAD.
+          <para>Here <literal>OLDREV</literal> is the revision number
+            of the file in your <filename>.svn</filename> directory
+            and <literal>NEWREV</literal> is the revision number of
+            the repository HEAD.
           </para>
         </listitem>
         
@@ -1306,11 +1304,10 @@ $ svn update
 C  sandwich.txt
 Updated to revision 2.
 $ ls -1
-sandwich.txt                       
-sandwich.txt.r2        
-sandwich.txt.r1
+sandwich.txt
 sandwich.txt.mine
-$
+sandwich.txt.r1
+sandwich.txt.r2
       </screen>
       <!-- ###TODO What happens if the revnum is gt 99999?-->
       
@@ -1764,7 +1761,7 @@ $
         <para>At first glance, this seems like an error, but you need
           to remember that while revisions are repository-wide,
           <command>svn log</command> operates on a path in the
-          repository (If you supply no path, Subversion defaults to
+          repository (if you supply no path, Subversion defaults to
           <literal>"."</literal>).  As a result, if you're operating
           in a subdirectory of your working copy and attempt to log a
           revision where nothing beneath your current directory
@@ -2016,9 +2013,9 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
         information within <filename>.svn</filename>), it tries to do
         so as safely as possible.  Before changing anything, it writes
         its intentions to a logfile, executes the commands in the
-        logfile, then removes the logfile (This is similar in design
+        logfile, then removes the logfile (this is similar in design
         to a journaled filesystem).  If a Subversion operation is
-        interrupted (If you hit Control-C, or if the machine crashes,
+        interrupted (if you hit Control-C, or if the machine crashes,
         for example), the logfiles remain on disk.  By re-executing
         the logfiles, Subversion can complete the previously started
         operation, and your working copy can get itself back into a

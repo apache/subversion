@@ -61,7 +61,7 @@ $ svn status -v myfile
             you want to use an external diff program, use
             <option>--diff-cmd</option>.  You can pass switches to the
             diff program with the <option>--extensions</option>
-            switch (More on that later in this section).</para>
+            switch (more on that later in this section).</para>
           </listitem>
         </varlistentry>
       
@@ -135,7 +135,7 @@ $ svn status -v myfile
               you from doing in normal usage, but you can pass the
               force switch to tell Subversion <quote>I know what I'm
               doing as well as the possible repercussions of doing it,
-              so let me at 'em.</quote>. This switch is the
+              so let me at 'em</quote>. This switch is the
               programmatic equivalent of doing your own electrical
               work with the power on&mdash;if you don't know what
               you're doing, you're likely to get a nasty shock.</para>
@@ -948,7 +948,7 @@ Committed revision 8.
           </screen>
 
           <para>Copy an item from the repository to your working
-            copy (Just schedules the copy&mdash;nothing goes into the
+            copy (just schedules the copy&mdash;nothing goes into the
             repository until you commit):</para>
 
           <tip>
@@ -1187,7 +1187,7 @@ D         over-there
         <refsect1>
           <title>Examples</title>
 
-          <para>Compare BASE and your working copy (One of the most
+          <para>Compare BASE and your working copy (one of the most
             popular uses of <command>svn diff</command>):</para>
 
           <screen>
@@ -2071,7 +2071,7 @@ Committed revision 26.
             working copy or in the repository.</para>
 
           <tip>
-            <para>This command is equivalent to a <command>svn
+            <para>This command is equivalent to an <command>svn
               copy</command> followed by <command>svn
               delete</command>.</para>
           </tip>
@@ -2912,7 +2912,7 @@ $ svn status
           </variablelist>
 
           <para>The fifth column is populated only if the item is
-            switched relative to its parent (See <xref
+            switched relative to its parent (see <xref
             linkend="svn-ch-4-sect-5"/>).</para>
 
           <variablelist>
@@ -3015,7 +3015,7 @@ A  +   wc/qax.c
 
           <para>If you want to find out what files in your working
             copy are out-of-date, pass the
-            <option>--show-updates</option> switch (This will
+            <option>--show-updates</option> switch (this will
             <emphasis>not</emphasis> make any changes to your
             working copy).  Here you can see that
             <filename>wc/foo.c</filename> has changed in the
@@ -3251,7 +3251,7 @@ Updated to revision 32.
 
           <para>You can also update your working copy to an older
             revision (Subversion doesn't have the concept of
-            <quote>sticky</quote> files like CVS does.  See <xref
+            <quote>sticky</quote> files like CVS does; see <xref
             linkend="svn-ap-a"/>):</para>
 
           <screen>
@@ -3609,7 +3609,7 @@ $ svnadmin load /usr/local/svn/restored &lt; repos-backup
             in which PATH was modified.  Use the COPIES flag to allow
             this operation to cross copy history while searching for
             revisions.  PATH must exist in the HEAD of the
-            repository).</para>
+            repository.</para>
         </refsect1>
 
         <refsect1>
