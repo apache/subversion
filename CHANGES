@@ -1,3 +1,27 @@
+Version 0.13.2 [Pre-Alpha] (released 28 June 2002, revision 2376)
+
+ User-visible changes:
+ * fixed various buggy commandline outputs
+ * allow global/local config-files on win32
+ * prevent overwrites with 'svn cp URL URL'
+ * improvements to svn_load_dirs.pl
+ * mod_dav_svn can generate xml output for directory GETs
+ * new svnadmin(1) man page
+
+ Developer-visible changes:
+ * finished notification callback system, no more buggy output
+ * fs-changes:
+     - revisions table nothing but an index to txns table
+     - branch work-in-progress:  new 'changes' table to store changed paths
+ * more work on svn_time_* funcs and formats (moving towards ISO8601)
+ * property reversion bugs fixed, dumper bug fixed
+ * add version number to svndiff database storage
+ * new regression tests for 'svn merge'
+ * fix 'svn diff -rX:Y' server bug
+ * fix bugs in python test system
+ * bring win32 build up-to-date, get most python tests working on win32
+ 
+
 Version 0.13.1 [Pre-Alpha] (released 20 June 2002, revision 2291)
 
  User-visible changes:

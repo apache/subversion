@@ -53,7 +53,10 @@ class TestHarness:
     'Run a single test.'
 
     def quote(arg):
-      return '"' + arg + '"'
+      if sys.platform == 'win32':
+        return '"' + arg + '"'
+      else:
+        return arg
 
     progdir, progbase = os.path.split(prog)
     # Using write here because we don't want even a trailing space
