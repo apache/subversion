@@ -35,6 +35,7 @@ svn_cl__update (apr_getopt_t *os,
                 apr_pool_t *pool)
 {
   apr_array_header_t *targets;
+  apr_array_header_t *condensed_targets;
   int i;
 
   targets = svn_cl__args_to_target_array (os, pool);
@@ -42,9 +43,14 @@ svn_cl__update (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
 
-  for (i = 0; i < targets->nelts; i++)
+  /* Remove redundancies from the target list while preserving order. */
+  SVN_ERR (svn_path_remove_redundancies (&condensed_targets,
+                                         targets,
+                                         pool));
+
+  for (i = 0; i < condensed_targets->nelts; i++)
     {
-      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      svn_string_t *target = ((svn_string_t **) (condensed_targets->elts))[i];
       const svn_delta_edit_fns_t *trace_editor;
       void *trace_edit_baton;
       svn_string_t *parent_dir, *entry;

@@ -181,6 +181,18 @@ svn_path_condense_targets (svn_string_t **pbasename,
                            const apr_array_header_t *targets,
                            apr_pool_t *pool);
 
+
+/* Copy a list of TARGETS, one at a time, into PCONDENSED_TARGETS,
+   omitting any targets that are found earlier in the list, or whose
+   ancestor is found earlier in the list.  Ordering of targets in the
+   original list is preserved in the condensed list of targets.  Use
+   POOL for any allocations.  */
+svn_error_t *
+svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
+                              const apr_array_header_t *targets,
+                              apr_pool_t *pool);
+
+
 /* Decompose PATH into an array of svn_string_t components, allocated
    in POOL.  STYLE indicates the dir separator to split the string on.
    If PATH is absolute, the first component will be a lone dir
