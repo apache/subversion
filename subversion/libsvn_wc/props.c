@@ -538,9 +538,10 @@ svn_wc__do_property_merge (svn_string_t *path,
                 /* This is the very first prop conflict found on this
                    node. */
                 svn_string_t *tmparea;
+                svn_string_t *tmpname;
 
                 /* Open a unique .prej file in the tmp/props/ area */
-                tmparea = svn_wc__adm_path (svn_string_create ("", pool),
+                tmparea = svn_wc__adm_path (path,
                                             TRUE, 
                                             pool,
                                             PROPS,
@@ -553,6 +554,22 @@ svn_wc__do_property_merge (svn_string_t *path,
                                                ".prej",
                                                pool);
                 if (err) return err;
+
+                /* reject_tmp_path is an absolute path at this point,
+                   but that's no good for us.  We need to convert this
+                   path to a *relative* path to use in the logfile. */
+                tmpname = svn_path_last_component (reject_tmp_path,
+                                                   svn_path_local_style,
+                                                   pool);
+                
+                reject_tmp_path = 
+                  svn_wc__adm_path (svn_string_create ("", pool),
+                                    TRUE, 
+                                    pool,
+                                    PROPS,
+                                    tmpname->data,
+                                    NULL);
+
               }
 
             /* Append the conflict to the open tmp/PROPS/---.prej file */
