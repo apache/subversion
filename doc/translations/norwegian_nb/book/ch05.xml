@@ -2564,6 +2564,7 @@ Available subcommands:
       <sect3 id="svn-ch-5-sect-3.1.3">
         <title>svndumpfilter</title>
 
+        <!-- @ENGLISH {{{
         <para>Since Subversion stores everything in an opaque database
           system, attempting manual tweaks is unwise, if not quite
           difficult.  And once data has been stored in your
@@ -2583,7 +2584,28 @@ Available subcommands:
           administrators need a more manageable and malleable
           representation of the data in their repositories&mdash;the
           Subversion repository dump format.</para>
+        @ENGLISH }}} -->
+        <para>Siden Subversion lagrer alt i et skjult databasesystem, er 
+          det &#229; pr&#248;ve p&#229; manuelle forandringer ikke spesielt lurt, for 
+          ikke &#229; si vanskelig.
+          Og n&#229;r dataene er lagret i depotet, har ikke Subversion noen 
+          enkel m&#229;te &#229; fjerne disse dataene.<footnote>
+          <para>Og det er for&#248;vrig en innebygget 
+            <emphasis>funksjonalitet</emphasis> og ikke en 
+            feil.</para></footnote>
+          Men det er ikke til &#229; komme forbi at det er noen ganger du vil 
+          manipulere historien til depotet ditt.
+          Det kan v&#230;re at du vil fjerne alle spor etter en fil som ble 
+          lagt til ved en ulykke (og som av en eller annen grunn ikke 
+          skal v&#230;re der).
+          Eller du har kanskje flere prosjekter som deler et enkelt 
+          depot, og du bestemmer deg for &#229; dele dem opp i sine egne 
+          depot.
+          For &#229; utf&#248;re oppgaver som dette, trenger administratorer en 
+          mer h&#229;ndterlig og formbar representasjon av dataene i deres 
+          egne depot &#8212; dumpformatet for Subversiondepot.</para>
 
+        <!-- @ENGLISH {{{
         <para>The Subversion repository dump format is a
           human-readable representation of the changes that you've
           made to your versioned data over time.  You use the
@@ -2597,7 +2619,21 @@ Available subcommands:
           years' worth of repository activity encapsulated in what is
           likely to be a very large dump file, it could take you a
           long, long time to manually inspect and modify it.</para>
+        @ENGLISH }}} -->
+        <para>Dumpformatet for Subversiondepot er en representasjon av 
+          forandringene som du har gjort i dine versjonerte data over 
+          tid, i et menneskelig lesbart format.
+          Du bruker kommandoen <command>svnadmin dump</command> for &#229; 
+          generere dumpdataene, og <command>svnadmin load</command> for 
+          &#229; legge disse dataene inn i et nytt depot (se <xref 
+          linkend="svn-ch-5-sect-3.5"/></para>).
+          Den fine tingen med det menneskelesbare dumpformatet er at du 
+          kan inspisere og modifisere det hvis du er forsiktig.
+          Selvf&#248;lgelig, bakdelen er at hvis du har to &#229;r med 
+          depotaktivitet pakket inn i en stor dumpfil, vil det ta deg 
+          lang, lang tid &#229; manuelt inspisere og modifisere den.
 
+        <!-- @ENGLISH {{{
         <para>While it won't be the most commonly used tool at the
           administrator's disposal, <command>svndumpfilter</command>
           provides a very particular brand of useful
@@ -2608,10 +2644,28 @@ Available subcommands:
           dump data through this filter.  The result will be a
           modified stream of dump data that contains only the
           versioned paths you (explicitly or implicitly) requested.</para>
+        @ENGLISH }}} -->
+        <para>Selv om det ikke vil v&#230;re det vanligste verkt&#248;yet til bruk 
+          for depotadministratoren, git <command>svndumpfilter</command> 
+          en veldig spesiell type nyttig funksjonalitet &#8212; muligheten til 
+          &#229; raskt og enkelt modifisere disse dumpdataene bet &#229; fungere 
+          som et stibasert filter.
+          Du gir programmet ganske enkelt en liste over stier som du vil 
+          beholde, eller en liste med stier som du vil fjerne, og sender 
+          deretter dumpdataene fra depotet via et r&#248;r gjennom dette 
+          filteret.
+          Resultatet er en modifisert str&#248;m av dumpdata som kun 
+          inneholder de versjonerte stiene som du (eksplisitt eller 
+          implisitt) ba om.</para>
 
+        <!-- @ENGLISH {{{
         <para>The syntax of <command>svndumpfilter</command> is as
           follows:</para>
+        @ENGLISH }}} -->
+        <para>Syntaksen for <command>svndumpfilter</command> er som 
+          f&#248;lger:</para>
 
+        <!-- &#164; -->
         <screen>
 $ svndumpfilter help
 general usage: svndumpfilter SUBCOMMAND [ARGS &amp; OPTIONS ...]
@@ -2623,28 +2677,42 @@ Available subcommands:
    help (?, h)
 </screen>
 
+        <!-- @ENGLISH {{{
         <para>There are only two interesting subcommands.  They allow
           you to make the choice between explicit or implicit
           inclusion of paths in the stream:</para>
+        @ENGLISH }}} -->
+        <para>Her er det bare to interessante delkommandoer.
+          De gir deg valget mellom eksplisitt eller implisitt 
+          inkludering av stier i str&#248;mmen:</para>
 
         <variablelist>
           <varlistentry>
             <term><literal>exclude</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Filter out a set of paths from the dump data
                 stream.</para>
+              @ENGLISH }}} -->
+              <para>Filtrer bort et sett med stier fra 
+                dumpdatastr&#248;mmen.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>include</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Allow only the requested set of paths to pass
                 through the dump data stream.</para>
+              @ENGLISH }}} -->
+              <para>Tillat bare de angitte stiene &#229; slippe gjennom 
+                dumpdatastr&#248;mmen.</para>
             </listitem>
           </varlistentry>
         </variablelist>
 
+        <!-- @ENGLISH {{{
         <para>Let's look a realistic example of how you might use this
           program.  We discuss elsewhere (see <xref
           linkend="svn-ch-5-sect-6.1"/>) the process of deciding how to
@@ -2656,11 +2724,32 @@ Available subcommands:
           A common change is the decision to move multiple projects
           which are sharing a single repository into separate
           repositories for each project.</para>
+        @ENGLISH }}} -->
+        <para>La oss se p&#229; et realistisk eksempel p&#229; hvordan du vil 
+          bruke dette programmet.
+          Vi diskuterer en annen plass (se <xref 
+          linkend="svn-ch-5-sect-6.1"/>) prosessen med &#229; bestemme deg 
+          for hvordan dataene i depotene dine skal legges opp &#8212; om du 
+          vil bruke ett depot for hvert prosjekt eller kombinere dem, 
+          hvordan du arrangerer ting innenfor depotet og s&#229; videre.
+          Men noen ganger etter at nye revisjoner begynner &#229; komme inn, 
+          tenker du p&#229; nytt over layouten og vil gj&#248;re noen 
+          forandringer.
+          En vanlig forandring er &#229; bestemme seg for &#229; flytte flere 
+          prosjekter som deler et enkelt depot inn i separate depot for 
+          hvert prosjekt.</para>
 
+        <!-- @ENGLISH {{{
         <para>Our imaginary repository contains three projects:
           <literal>calc</literal>, <literal>calendar</literal>, and
           <literal>spreadsheet</literal>.  They have been living
           side-by-side in a layout like this:</para>
+        @ENGLISH }}} -->
+        <para>V&#229;rt hypotetiske depot inneholder tre prosjekter:
+          <!-- &#164; F&#229;r se om disse navnene blir fornorsket p&#229; et eller 
+          annen tidspunkt. --><literal>calc</literal>, 
+          <literal>calendar</literal> og <literal>spreadsheet</literal>.
+        De har levd ved siden av hverandre som f&#248;lger:</para>
 
         <screen>
 /
@@ -2678,9 +2767,14 @@ Available subcommands:
       tags/
 </screen>
 
+        <!-- @ENGLISH {{{
         <para>To get these three projects into their own repositories,
           we first dump the whole repository:</para>
+        @ENGLISH }}} -->
+        <para>For &#229; f&#229; disse tre prosjektene inn i deres egne depot, 
+          dumper vi f&#248;rst hele depotet:</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnadmin dump /path/to/repos &gt; repos-dumpfile
 * Dumped revision 0.
@@ -2690,11 +2784,27 @@ $ svnadmin dump /path/to/repos &gt; repos-dumpfile
 &hellip;
 $
 </screen>
+        @ENGLISH }}} -->
+        <screen>
+$ svnadmin dump /path/to/repos &gt; repos-dumpfile
+* Dumped revision 0.
+* Dumped revision 1.
+* Dumped revision 2.
+* Dumped revision 3.
+&#8230;
+$
+</screen>
 
+        <!-- @ENGLISH {{{
         <para>Next, run that dump file through the filter, each time
           including only one of our top-level directories, and
           resulting in three new dump files:</para>
+        @ENGLISH }}} -->
+        <para>S&#229; kj&#248;rer vi denne dumpfilen gjennom filteret og for hver 
+          gang inkluderer vi bare en av katalogene p&#229; toppniv&#229;, noe som 
+          resulterer i tre nye dumpfiler:</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ cat repos-dumpfile | svndumpfilter include calc &gt; calc-dumpfile
 &hellip;
@@ -2704,7 +2814,18 @@ $ cat repos-dumpfile | svndumpfilter include spreadsheet &gt; ss-dumpfile
 &hellip;
 $
 </screen>
+        @ENGLISH }}} -->
+        <screen>
+$ cat repos-dumpfile | svndumpfilter include calc &gt; calc-dumpfile
+&#8230;
+$ cat repos-dumpfile | svndumpfilter include calendar &gt; cal-dumpfile
+&#8230;
+$ cat repos-dumpfile | svndumpfilter include spreadsheet &gt; ss-dumpfile
+&#8230;
+$
+</screen>
 
+        <!-- @ENGLISH {{{
         <para>At this point, you have to make a decision.  Each of
           your dump files will create a valid repository,
           but will preserve the paths exactly as they were in the
@@ -2721,6 +2842,24 @@ $
           you'll want to remove the section of dump data that creates
           the <filename>calc</filename> directory.  It will look
           something like:</para>
+        @ENGLISH }}} -->
+        <para>P&#229; dette punktet m&#229; du ta en avgj&#248;relse.
+          Hver av dumpfilene fine vil lage et gyldig depot, men vil 
+          gjenskape stiene n&#248;yaktig som de var i det opprinnelige 
+          depotet.
+          Dette betyr at selv om du vil ha et depot kun for 
+          <literal>calc</literal>-prosjektet, vil dette depotet fortsatt 
+          ha en toppkatalog kalt <filename>calc</filename>.
+          Hvis du vil at katalogene <filename>trunk</filename>, 
+          <filename>tags</filename> og branches<filename> skal v&#230;re i 
+          roten av depotet, vil du kanskje &#248;nske &#229; redigere dumpfilene 
+          og forandre </filename>Node-path<literal> og 
+          </literal>Copyfrom-path<literal> i headerne s&#229; de ikke lengre 
+          inneholder denne </literal>calc/<filename>-komponenten i 
+          stien.
+          I tillegg &#248;nsker du &#229; fjerne seksjonen i dumpdataene som 
+          oppretter </filename>calc<filename>-katalogen.
+          Det vil se ut omtrent som dette:</filename></para>
 
         <screen>
 Node-path: calc
@@ -2731,18 +2870,31 @@ Content-length: 0
 </screen>
 
         <warning>
+          <!-- @ENGLISH {{{
           <para>If you do plan on manually editing the dump file to
             remove a top-level directory, make sure that your editor is
             not set to automatically convert end-lines to the native
             format (e.g. \r\n to \n) as the content will then not agree
             with the metadata and this will render the dump file
             useless.</para>
+          @ENGLISH }}} -->
+          <para>Hvis du planlegger &#229; redigere dumpfilen manuelt for &#229; 
+            fjerne en toppkatalog, v&#230;r sikker p&#229; at tekstbehandleren din 
+            ikke er satt til &#229; automatisk konvertere linjeslutt til det 
+            lokale formatet (det vil si \r\n til \n).
+            Dette vil f&#248;re til at innholdet ikke vil samsvare med 
+            metadataene og dumpfilen vil dermed bli ubrukelig.</para>
         </warning>
 
+        <!-- @ENGLISH {{{
         <para>All that remains now is to create your three new
           repositories, and load each dump file into the right
           repository:</para>
+        @ENGLISH }}} -->
+        <para>Alt som gjenst&#229;r n&#229; er &#229; opprette dine tre nye depot og 
+          laste hver dumpfil inn i det riktige depotet:</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnadmin create calc; svnadmin load calc &lt; calc-dumpfile
 &lt;&lt;&lt; Started new transaction, based on original revision 1
@@ -2759,6 +2911,25 @@ $ svnadmin create spreadsheet; svnadmin load spreadsheet &lt; ss-dumpfile
      * adding path : Makefile ... done.
      * adding path : ss.c ... done.
 &hellip;
+$
+</screen>
+        @ENGLISH }}} -->
+        <screen>
+$ svnadmin create calc; svnadmin load calc &lt; calc-dumpfile
+&lt;&lt;&lt; Started new transaction, based on original revision 1
+     * adding path : Makefile ... done.
+     * adding path : button.c ... done.
+&#8230;
+$ svnadmin create calendar; svnadmin load calendar &lt; cal-dumpfile
+&lt;&lt;&lt; Started new transaction, based on original revision 1
+     * adding path : Makefile ... done.
+     * adding path : cal.c ... done.
+&#8230;
+$ svnadmin create spreadsheet; svnadmin load spreadsheet &lt; ss-dumpfile
+&lt;&lt;&lt; Started new transaction, based on original revision 1
+     * adding path : Makefile ... done.
+     * adding path : ss.c ... done.
+&#8230;
 $
 </screen>
 
