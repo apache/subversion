@@ -39,8 +39,6 @@
 
 
 
-
-
 hash_table_t *
 make_hash_entry ()
 {
