@@ -46,6 +46,7 @@
 #include "rev-table.h"
 #include "nodes-table.h"
 #include "node-rev.h"
+#include "key-gen.h"
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
@@ -340,6 +341,10 @@ typedef struct parent_path_t
      root directory, which (obviously) has no name in its parent.  */
   char *entry;
 
+  /* The copy id for this path component should that component be
+     cloned for mutability.  */
+  const char *copy_id;
+
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
   
@@ -347,11 +352,12 @@ typedef struct parent_path_t
 
 
 /* Allocate a new parent_path_t node from POOL, referring to NODE,
-   ENTRY, and PARENT.  */
+   ENTRY, PARENT, and COPY_ID.  */
 static parent_path_t *
 make_parent_path (dag_node_t *node,
                   char *entry,
                   parent_path_t *parent,
+                  const char *copy_id,
                   apr_pool_t *pool)
 {
   parent_path_t *parent_path = apr_pcalloc (pool, sizeof (*parent_path));
@@ -359,6 +365,7 @@ make_parent_path (dag_node_t *node,
   parent_path->node = node;
   parent_path->entry = entry;
   parent_path->parent = parent;
+  parent_path->copy_id = copy_id;
 
   return parent_path;
 }
@@ -449,6 +456,8 @@ open_path (parent_path_t **parent_path_p,
 {
   svn_fs_t *fs = root->fs;
   apr_pool_t *pool = trail->pool;
+  const svn_fs_id_t *id;
+  const char *copy_id;
 
   /* The directory we're currently looking at.  */
   dag_node_t *here;
@@ -459,11 +468,17 @@ open_path (parent_path_t **parent_path_p,
   /* The portion of PATH we haven't traversed yet.  */
   const char *rest = path;
 
+  /* Make a parent_path item for the root node, using its own current
+     copy id.  */
   SVN_ERR (root_node (&here, root, trail));
-  parent_path = make_parent_path (here, 0, 0, pool);
+  id = svn_fs__dag_get_id (here);
+  copy_id = svn_fs__id_copy_id (id);
+  parent_path = make_parent_path (here, 0, 0, copy_id, pool);
       
   /* Whenever we are at the top of this loop:
      - HERE is our current directory,
+     - ID is the node revision ID of HERE,
+     - COPY_ID is the copy ID to be used for HERE if it is made mutable,
      - REST is the path we're going to find in HERE, and 
      - PARENT_PATH includes HERE and all its parents.  */
   for (;;)
@@ -485,36 +500,62 @@ open_path (parent_path_t **parent_path_p,
         }
       else
         {
+          const svn_fs_id_t *this_id;
+          const char *this_copy_id;
+
           /* If we found a directory entry, follow it.  */
-          svn_error_t *svn_err = svn_fs__dag_open (&child, here,
-                                                   entry, trail);
-          
+          svn_error_t *err = svn_fs__dag_open (&child, here, entry, trail);
+
           /* "file not found" requires special handling.  */
-          if (svn_err && svn_err->apr_err == SVN_ERR_FS_NOT_FOUND)
+          if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
               /* If this was the last path component, and the caller
                  said it was optional, then don't return an error;
-                 just put a zero node pointer in the path.  */
+                 just put a NULL node pointer in the path.  */
               
-              svn_error_clear_all (svn_err);
+              svn_error_clear_all (err);
               
               if ((flags & open_path_last_optional)
                   && (! next || *next == '\0'))
                 {
-                  parent_path = make_parent_path (0, entry,
-                                                  parent_path, pool);
+                  parent_path = make_parent_path (NULL, entry, parent_path, 
+                                                  NULL, pool);
                   break;
                 }
               else
-                /* Build a better error message than svn_fs__dag_open
-                   can provide, giving the root and full path name.  */
-                return not_found (root, path);
+                {
+                  /* Build a better error message than svn_fs__dag_open
+                     can provide, giving the root and full path name.  */
+                  return not_found (root, path);
+                }
             }
           
           /* Other errors we return normally.  */
-          SVN_ERR (svn_err);
-          
-          parent_path = make_parent_path (child, entry, parent_path, pool);
+          SVN_ERR (err);
+
+          /* Get the ID and copy ID for CHILD.  */
+          this_id = svn_fs__dag_get_id (child);
+          this_copy_id = svn_fs__id_copy_id (id);
+
+          /* Compare the copy IDs of CHILD and its parent.
+
+             If they are the same, then CHILD should use the current
+             value of COPY_ID should it need to be made mutable.
+
+             If CHILD's copy ID is younger than that of its parent, then
+             CHILD was the target of a copy operation, and COPY_ID
+             should be changed to reflect CHILD's current copy ID.
+
+             If CHILD's copy ID is older than that of its parent,
+             then CHILD is an un-edited sub-item of a copy operation
+             that occured on PARENT, and should use the value of
+             COPY_ID should it need to be made mutable.  */
+          if (svn_fs__key_compare (copy_id, this_copy_id) > 0)
+            copy_id = this_copy_id;
+
+          /* Now, make a parent_path item for CHILD. */
+          parent_path = make_parent_path (child, entry, parent_path, 
+                                          copy_id, pool);
         }
       
       /* Are we finished traversing the path?  */
@@ -547,7 +588,6 @@ make_path_mutable (svn_fs_root_t *root,
 {
   dag_node_t *clone;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
-  const char *copy_id = NULL; /* ### this will get passed in */
 
   /* Is the node mutable already?  */
   if (svn_fs__dag_check_mutable (parent_path->node, txn_id))
@@ -564,7 +604,8 @@ make_path_mutable (svn_fs_root_t *root,
       /* Now make this node mutable.  */
       SVN_ERR (svn_fs__dag_clone_child (&clone,
                                         parent_path->parent->node,
-                                        parent_path->entry, copy_id, txn_id,
+                                        parent_path->entry, 
+                                        parent_path->copy_id, txn_id,
                                         trail));
     }
   else
@@ -1074,13 +1115,13 @@ path_append (const char *dir, const char *entry, apr_pool_t *pool)
 
 
 /* Wrapper function */
-static int
-id_is_ancestor (svn_fs_t *fs, 
-                const svn_fs_id_t *id1, 
-                const svn_fs_id_t *id2,
-                trail_t *trail)
+static svn_error_t *
+id_check_ancestor (int *is_ancestor,
+                   svn_fs_t *fs, 
+                   const svn_fs_id_t *id1, 
+                   const svn_fs_id_t *id2,
+                   trail_t *trail)
 {
-  int is_ancestor;
   dag_node_t *node1, *node2;
 
   /* Get the nodes. */
@@ -1089,10 +1130,7 @@ id_is_ancestor (svn_fs_t *fs,
   
   /* Do the test.  If the test fails, we'll just go with "not an
      ancestor" for now.  ### better come back and check this out.  */
-  if (svn_fs__dag_is_ancestor (&is_ancestor, node1, node2, trail))
-    is_ancestor = 0;
-  
-  return is_ancestor;
+  return svn_fs__dag_is_ancestor (is_ancestor, node1, node2, trail);
 }
 
 /* Merge changes between ANCESTOR and SOURCE into TARGET, as part of
@@ -1315,13 +1353,64 @@ merge (svn_stringbuf_t *conflict_p,
           /* If source entry has changed since ancestor entry... */
           if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
-              /* ... and if target entry has not changed,
-                 - OR - if target descends from ancestor, and source
-                 descends from target... */
-              if ( (svn_fs__id_eq (a_entry->id, t_entry->id))
-                   || ( (id_is_ancestor (fs, a_entry->id, t_entry->id, trail)) 
-                        && (id_is_ancestor (fs, t_entry->id, 
-                                            s_entry->id, trail))) )
+              int a_ancestorof_t = 0, t_ancestorof_s = 0;
+              int s_ancestorof_t = 0;
+              int a_is_t = 0;
+              int logic_case = 0;
+
+              /*** The id_check_ancestor calls are rather expensive,
+                   so reproduce the logic below up here so we only ask
+                   the questions that need to be asked.  This would be
+                   a heckuva lot easier if id_check_ancestor could
+                   return an int instead of an svn_error_t *, but
+                   that's just life, I suppose.  
+
+                   This could very well be the ugliest code in
+                   Subversion. */
+
+              a_is_t = svn_fs__id_eq (a_entry->id, t_entry->id);
+              if (a_is_t)
+                {
+                  /* This is Case 1.  */
+                  logic_case = 1;
+                }
+              else
+                {
+                  SVN_ERR (id_check_ancestor (&a_ancestorof_t, fs, a_entry->id,
+                                              t_entry->id, trail));
+                  if (a_ancestorof_t)
+                    {
+                      /* this is an &&, so we need both ancestor checks. */
+                      SVN_ERR (id_check_ancestor (&t_ancestorof_s, fs, 
+                                                  t_entry->id, s_entry->id, 
+                                                  trail));
+                      if (t_ancestorof_s)
+                        {
+                          /* This is Case 1.  */
+                          logic_case = 1;
+                        }
+                    }
+                }
+
+              /* if we didn't choose Case 1, try for Case 2. */
+              if (! logic_case)
+                {
+                  SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, 
+                                              s_entry->id, t_entry->id, 
+                                              trail));
+                  if (! s_ancestorof_t)
+                    {
+                      /* This is Case 2. */
+                      logic_case = 2;
+                    }
+                }
+
+              /*** Now, actually use our findings to do real work. ***/
+
+              /* ... and if target entry has not changed, - OR - if
+                 target descends from ancestor, and source descends
+                 from target... (Case 1) */
+              if (logic_case == 1)
                 {
                   /* ### kff todo: what about svn_fs__dag_link()
                      instead of svn_fs__dag_set_entry()?  The cycle
@@ -1344,8 +1433,9 @@ merge (svn_stringbuf_t *conflict_p,
                             txn_id, trail));
                 }
               /* or if target entry is different from both and
-                 unrelated to source, and all three entries are dirs... */
-              else if (! id_is_ancestor (fs, s_entry->id, t_entry->id, trail))
+                 unrelated to source, and all three entries are
+                 dirs... (Case 2) */
+              else if (logic_case == 2)
                 {
                   dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
                   const char *new_tpath;
@@ -1362,9 +1452,10 @@ merge (svn_stringbuf_t *conflict_p,
                       || (! svn_fs__dag_is_directory (a_ent_node)))
                     {
                       /* Not all of these entries is a directory. Conflict. */
-                      svn_stringbuf_set (conflict_p, path_append (target_path,
-                                                                  a_entry->name,
-                                                                  trail->pool));
+                      svn_stringbuf_set (conflict_p, 
+                                         path_append (target_path,
+                                                      a_entry->name,
+                                                      trail->pool));
                       return svn_error_createf
                         (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
                          "conflict at \"%s\"", conflict_p->data);
@@ -1466,10 +1557,23 @@ merge (svn_stringbuf_t *conflict_p,
       const void *key;
       void *val;
       apr_ssize_t klen;
-          
+      int s_ancestorof_t = 0;
+
       apr_hash_this (hi, &key, &klen, &val);
       s_entry = val;
       t_entry = apr_hash_get (t_entries, key, klen);
+
+      /* The id_check_ancestor calls are rather expensive, so
+         reproduce the logic below up here so we only ask the
+         questions that need to be asked.  This would be a
+         heckuva lot easier if id_check_ancestor could return
+         an int instead of an svn_error_t *, but that's just
+         life, I suppose.  */
+      if (t_entry)
+        {
+          SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, s_entry->id,
+                                      t_entry->id, trail));
+        }
 
       /* E does not exist in target */
       if (! t_entry)
@@ -1484,7 +1588,7 @@ merge (svn_stringbuf_t *conflict_p,
                    (target, s_entry->name, s_entry->id, txn_id, trail));
         }
       /* E exists in target but is different from E in source */
-      else if (! id_is_ancestor (fs, s_entry->id, t_entry->id, trail))
+      else if (! s_ancestorof_t)
         {
           svn_stringbuf_set (conflict_p, path_append (target_path,
                                                       t_entry->name,
@@ -2811,18 +2915,16 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
   struct revisions_changed_args *args = baton;
   apr_array_header_t *array;
   apr_pool_t *subpool = svn_pool_create(args->pool);
+  svn_revnum_t prev_rev;
+  int i;
 
   /* Allocate an array for holding revision numbers. */
   array = apr_array_make (subpool, 4, sizeof (svn_revnum_t));
 
-#if 0 /* ### come back to this */
-  int i;
-  svn_revnum_t prev_rev;
-
   /* Check the ID for each path */
   for (i = 0; i < args->ids->nelts; i++)
     {
-      svn_fs_id_t *tmp_id = APR_ARRAY_IDX (args->ids, i, svn_fs_id_t *);
+      const svn_fs_id_t *tmp_id = APR_ARRAY_IDX (args->ids, i, svn_fs_id_t *);
 
       /* Loop, from ID, through its predecessors, until it ceases to
          exist.  */
@@ -2836,12 +2938,12 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 
           /* Now get the revision from the dag. */
           SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
-
           (*((svn_revnum_t *) apr_array_push (array))) = revision;
-
-          svn_fs__precede_id (tmp_id);
+          
+          /* Now, set TMP_ID to this node's predecessor ID. */
+          SVN_ERR (svn_fs__dag_get_predecessor_id (&tmp_id, node, trail));
         }
-      while (tmp_id->digits[0] != -1);
+      while (tmp_id);
     }
 
   /* Now sort the array */
@@ -2854,13 +2956,14 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
   for (i = 0; i < array->nelts; i++)
     {
       if (APR_ARRAY_IDX (array, i, svn_revnum_t) != prev_rev)
-        (*((svn_revnum_t *) apr_array_push (*(args->revs)))) =
+        {
+          (*((svn_revnum_t *) apr_array_push (*(args->revs)))) =
             APR_ARRAY_IDX (array, i, svn_revnum_t);
+        }
       prev_rev = APR_ARRAY_IDX (array, i, svn_revnum_t);
     }
 
   svn_pool_destroy (subpool);
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }

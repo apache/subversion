@@ -196,7 +196,11 @@ int
 svn_fs_check_related (const svn_fs_id_t *id1,
                       const svn_fs_id_t *id2)
 {
-  return (id1->node_id == id2->node_id);
+  if (id1 == id2)
+    return 1;
+  if (id1->node_id == id2->node_id)
+    return 1;
+  return (! strcmp (id1->node_id, id2->node_id));
 }
 
 

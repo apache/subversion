@@ -3,6 +3,16 @@ THOTZ: (by cmpilato, on conversion to the new NodeRevId system)
               *** do not merge me into the main trunk **
 =============================================================================
 
+There is a single use of svn_fs_id_distance() in merge that needs
+examination.  svn_fs_id_distance is being used as a relatedness check,
+but (and this is a general issue in the filesystem code)
+svn_fs_id_distance *used* to claim that copied things were unrelated
+to their sources, and this is no longer the case.  All users of
+svn_fs_id_distance need to be examined to see if this changed concept
+of relatedness effects their particular use of svn_fs_id_distance.
+
+--
+
 Deltification is currently the only process in place that asks the
 question, "Where is my next successor?"  Currently the question is
 answered by doing a little node revision id mathematics; that's no
@@ -40,35 +50,7 @@ This from Bill Tutt:
 
 --
 
-svn_fs__new_node_id: needs a txn_id, but not a copy id.  If something
-was copied, it has a successor id.  node id is chosen as the next
-available node id in the `nodes' table.
-
-svn_fs__new_node_id is called only by svn_fs__create_node, which is
-called by make_entry and svn_fs__dag_copy.  The svn_fs__dag_copy case
-will, however, become a use of svn_fs__new_successor_id.
-
---
-
-svn_fs__new_successor_id: needs a txn_id and an optional copy id.
-node id is inherited.  Careful though:  successor allocation is a bit
-tricky due to passive migration of copied subtree items.  That is, if
-I copy /dir1 to /dir2, dir2 gets a new copy id, but its children are
-generally untouched.  However, the next change made to one of dir2's
-children will earn the copy ID granted to dir2.  I suppose that
-open_path or make_path_mutable will need to track where it finds a
-directory whose copy id is different than that of its children (and
-verify that this difference isn't because the children were copied
-again or something) and hand the copy ID to DAG functions that will
-modify the children.  Actually, now that I think about it,
-make_path_mutable is the key here...  Of course, we still have to pass
-the stupid txn id into every function that tests mutability of nodes. 
-:-(
-
-svn_fs__new_successor_id is called by svn_fs__create_successor and by
-merge, but the merge case will go away.  svn_fs__create_successor is
-called by svn_fs__dag_clone_root and svn_fs__dag_clone_child, as
-expected.
+Need to examine the copy_id choosing algorithm in open_path().
 
 --
 
@@ -87,9 +69,11 @@ Algorithm looks like this:
        break;
      NODE-REV-ID = node revision's predecessor id
 
+Let this serve as a reminder to re-implement txn_body_revisions_changed.
+
 --
 
-Hm...consider svn_fs__walk_predecessors (fs, id, func *, baton, trail)
+Consider svn_fs__walk_predecessors (fs, id, func *, baton, trail)
 which walks the predecessor list of ID, calling FUNC with BATON before
 each traversal.  FUNC can return some custom error to the walker which
 can be detected as a non-fatal sentinel (so you only walk back as far
@@ -109,9 +93,3 @@ current transaction ID as a mutability test, just like the node
 revisions will.  *That* should eliminate the stabilization walk, since
 the minute the txn is committed, all those reps become effectively
 immutable.
-
---
-
-Still need to do `copy_id' inheritence walk in open_path or
-make_path_mutable or something...
-

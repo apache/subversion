@@ -102,6 +102,14 @@ svn_error_t *svn_fs__dag_get_revision (svn_revnum_t *rev,
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 
 
+/* Set *ID_P to the node revision ID of NODE's immediate predecessor,
+   or NULL if NODE has no predecessor, as part of TRAIL.  The returned
+   ID will be allocated in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_get_predecessor_id (const svn_fs_id_t **id_p,
+                                             dag_node_t *node,
+                                             trail_t *trail);
+
+
 /* Return non-zero IFF NODE is currently mutable under Subversion
    transaction TXN_ID.  */
 int svn_fs__dag_check_mutable (dag_node_t *node,

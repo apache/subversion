@@ -1955,6 +1955,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "theta", "This is another file 'theta'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/theta", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in ANCESTOR, but has been deleted from B.  Can't
        occur, by assumption that E doesn't exist in ANCESTOR. */
@@ -2015,6 +2016,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/D/H/omega", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/H", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* E exists in both ANCESTOR and B ... */
     {
@@ -2050,6 +2052,7 @@ merging_commit (const char **msg,
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/zeta", pool));
       SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/H", pool));
+      SVN_ERR (svn_fs_abort_txn (txn));
 
       /* (1) and refers to the same node revision.  Omit E from the
          merged tree.  This is already tested in Merge-Test 3
@@ -2157,6 +2160,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/mu", "This is the file 'mu'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/mu", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in both ANCESTOR and B, but refers to different
        revisions of the same node.  Conflict. */
@@ -2165,6 +2169,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/mu", "A change to file 'mu'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/mu", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same
        node revision.  Replace E with A's node revision.  */
@@ -2279,6 +2284,7 @@ merging_commit (const char **msg,
              (txn_root, "A/B/lambda", "A different change to 'lambda'.\n", 
               pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/B/lambda", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1b) E exists in both ANCESTOR and B, but refers to different
        revisions of the same directory node.  Merge A/E and B/E,
@@ -2335,6 +2341,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/D/G/xi", "This is a different file 'xi'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/G/xi", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same node
        revision.  Replace E with A's node revision.  */
@@ -2414,6 +2421,7 @@ merging_commit (const char **msg,
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "iota", "New contents for 'iota'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, "/iota", pool));
+  SVN_ERR (svn_fs_abort_txn (txn));
 
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
@@ -4518,23 +4526,6 @@ large_file_integrity (const char **msg,
 }
 
 
-struct get_node_revision_args
-{
-  svn_fs_t *fs;
-  svn_fs_id_t *id;
-  svn_fs__node_revision_t *noderev;
-};
-
-
-static svn_error_t *
-txn_body_get_node_revision (void *baton, trail_t *trail)
-{
-  struct get_node_revision_args *args = baton;
-  return svn_fs__get_node_revision (&(args->noderev), args->fs, 
-                                    args->id, trail);
-}
-
-
 static svn_error_t *
 check_root_revision (const char **msg,
                      svn_boolean_t msg_only,
@@ -4544,7 +4535,6 @@ check_root_revision (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev, test_rev;
-  struct get_node_revision_args args;
   int i;
 
   *msg = "make sure the root node's stored revision is accurate";
@@ -4555,9 +4545,6 @@ check_root_revision (const char **msg,
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-root-revision", pool));
 
-  /* Initialize this once for all time. */
-  args.fs = fs;
-
   /* Create and commit the greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
@@ -4567,9 +4554,7 @@ check_root_revision (const char **msg,
 
   /* Root node's revision should be the same as YOUNGEST_REV. */
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
-  SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, &args, pool));
-  test_rev = args.noderev->revision;
+  SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
   if (test_rev != youngest_rev)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -4591,10 +4576,7 @@ check_root_revision (const char **msg,
 
       /* Root node's revision should be the same as YOUNGEST_REV. */
       SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
-      SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, 
-                                  &args, pool));
-      test_rev = args.noderev->revision;
+      SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
       if (test_rev != youngest_rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
