@@ -192,14 +192,14 @@ $ svn update --revision PREV foo.c
         Subversion accepts:</para>
 
       <screen>
-$ svn co --revision {2/17/02}
-$ svn co --revision {"17 Feb"}
-$ svn co --revision {"17 Feb 2002"}
-$ svn co --revision {"17 Feb 2002 15:30"}
-$ svn co --revision {"17 Feb 2002 15:30:12 GMT"}
-$ svn co --revision {"10 days ago"} 
-$ svn co --revision {"last week"} 
-$ svn co --revision {"yesterday"} 
+$ svn checkout --revision {2/17/02}
+$ svn checkout --revision {"17 Feb"}
+$ svn checkout --revision {"17 Feb 2002"}
+$ svn checkout --revision {"17 Feb 2002 15:30"}
+$ svn checkout --revision {"17 Feb 2002 15:30:12 GMT"}
+$ svn checkout --revision {"10 days ago"} 
+$ svn checkout --revision {"last week"} 
+$ svn checkout --revision {"yesterday"} 
 &hellip;
       </screen>
       
@@ -270,7 +270,7 @@ $svn log -r {11/20/02}:4040
     
 
     <screen>
-$ svn co http://svn.collab.net/repos/svn/trunk
+$ svn checkout http://svn.collab.net/repos/svn/trunk
 A  trunk/subversion.dsw
 A  trunk/svn_check.dsp
 A  trunk/COMMITTERS
@@ -296,7 +296,7 @@ Checked out revision 2499.
       URL:</para>
     
     <screen>
-$ svn co http://svn.collab.net/repos/svn/trunk/doc/book/tools
+$ svn checkout http://svn.collab.net/repos/svn/trunk/doc/book/tools
 A  tools/readme-dblite.html
 A  tools/fo-stylesheet.xsl
 A  tools/svnbook.el
@@ -346,7 +346,7 @@ Checked out revision 3678.
       copy into the new directory that you name.  For example:</para>
     
     <screen>
-$ svn co http://svn.collab.net/repos/svn/trunk subv
+$ svn checkout http://svn.collab.net/repos/svn/trunk subv
 A  subv/subversion.dsw
 A  subv/svn_check.dsp
 A  subv/COMMITTERS
@@ -1259,7 +1259,7 @@ $
         until the three temporary files are removed.</para>
 
       <screen>
-$ svn ci --message "Add a few more things"
+$ svn commit --message "Add a few more things"
 subversion/libsvn_client/commit.c:654: (apr_err=155015, src_err=0)
 svn: A conflict in the working copy obstructs the current operation
 svn: Commit failed (details follow):
@@ -1480,7 +1480,7 @@ Committed revision 3.
         <option>--file</option> switch:</para>
 
       <screen>
-svn ci --file logmsg 
+svn commit --file logmsg 
 Sending        sandwich
 Transmitting file data .
 Committed revision 4.

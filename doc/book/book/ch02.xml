@@ -373,9 +373,9 @@ Makefile  integer.c  button.c  .svn/
           absent or <literal>localhost</literal>:</para>
  
         <screen>
-$ svn co file:///path/to/repos
+$ svn checkout file:///path/to/repos
 &hellip;
-$ svn co file://localhost/path/to/repos
+$ svn checkout file://localhost/path/to/repos
 &hellip;
 </screen>
 
@@ -389,9 +389,9 @@ $ svn co file://localhost/path/to/repos
           resides:</para>
 
         <screen>
-$ svn co file:///X:/path/to/repos
+$ svn checkout file:///X:/path/to/repos
 &hellip;
-$ svn co file:///X|/path/to/repos
+$ svn checkout file:///X|/path/to/repos
 &hellip;
 </screen>
  
