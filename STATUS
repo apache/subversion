@@ -103,3 +103,14 @@ Candidate changes:
         http://wagner.elixus.org/~clkao/svnperl-1.0.x_1.diff
     Votes:
        +1: clkao
+
+  * r10841
+    Fix crash bug in "svn st -u" on out-of-sync working copies
+    Justification:
+      Crashes bad.
+    Notes:
+      (ghudson, lundblad, jpieper voted for this on 1.1.x, maybe they
+       want to vote for it here)
+    Votes:
+      +1: breser
+
