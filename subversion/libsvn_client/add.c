@@ -91,7 +91,6 @@ auto_props_enumerator (const char *name,
   auto_props_baton_t *autoprops = baton;
   char *property;
   char *last_token;
-  int len;
 
   /* nothing to do here without a value */
   if (strlen (value) == 0)
@@ -107,27 +106,27 @@ auto_props_enumerator (const char *name,
   property = apr_strtok (property, ";", &last_token);
   while (property)
     {
-      char *this_value;
+      int len;
+      const char *this_value;
+      char *equal_sign = strchr (property, '=');
 
-      this_value = strchr (property, '=');
-      if (this_value)
+      if (equal_sign)
         {
-          *this_value = '\0';
-          this_value++;
-          trim_string (&this_value);
+          *equal_sign = '\0';
+          equal_sign++;
+          trim_string (&equal_sign);
+          this_value = equal_sign;
         }
       else
         {
-          this_value = (char *)"";
+          this_value = "";
         }
       trim_string (&property);
       len = strlen (property);
       if (len > 0)
         {
-          svn_string_t *propval = apr_pcalloc (autoprops->pool,
-                                               sizeof (*propval));
-          propval->data = this_value;
-          propval->len = strlen (this_value);
+          svn_string_t *propval = svn_string_create (this_value,
+                                                     autoprops->pool);
 
           apr_hash_set (autoprops->properties, property, len, propval);
           if (strcmp (property, SVN_PROP_MIME_TYPE) == 0)
