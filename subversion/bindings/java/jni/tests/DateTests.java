@@ -33,7 +33,7 @@ public class DateTests extends TestCase
 	}
 
     /**
-     * Test case to make sure dateAprToJ returns
+     * Test case to make sure the function returns
      * a valid date instance
      *
      * @see NativeWrapper.dateCreate
