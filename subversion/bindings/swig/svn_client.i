@@ -258,9 +258,9 @@
 %types(svn_dirent_t *);
 
 /* -----------------------------------------------------------------------
-  thunk the various authentication prompt functions and store
-  the inputed SV in _global_callback for use in the later argout
-  typemap
+  thunk the various authentication prompt functions.
+  PERL NOTE: store the inputed SV in _global_callback for use in the
+             later argout typemap
 */
 %typemap(perl5, in) (svn_auth_simple_prompt_func_t prompt_func,
                      void *prompt_baton) {
@@ -268,12 +268,22 @@
     _global_callback = $input;
     $2 = (void *) _global_callback;
 }
+%typemap(python, in) (svn_auth_simple_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_simple_prompt_func;
+    $2 = $input;
+}
 
 %typemap(perl5, in) (svn_auth_username_prompt_func_t prompt_func,
                      void *prompt_baton) {
     $1 = svn_swig_pl_thunk_username_prompt;
     _global_callback = $input;
     $2 = (void *) _global_callback;
+}
+%typemap(python, in) (svn_auth_username_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_username_prompt_func;
+    $2 = $input;
 }
 
 %typemap(perl5, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,

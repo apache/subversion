@@ -166,7 +166,7 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
                                             svn_revnum_t revision,
                                             apr_pool_t *pool);
 
-/* thunked log receiver function.  */
+/* thunked log receiver function */
 svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       apr_hash_t *changed_paths,
                                       svn_revnum_t rev,
@@ -174,6 +174,21 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       const char *date,
                                       const char *msg,
                                       apr_pool_t *pool);
+
+/* auth provider callbacks */
+svn_error_t *
+svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
+                                     void *baton,
+                                     const char *realm,
+                                     const char *username,
+                                     svn_boolean_t may_save,
+                                     apr_pool_t *pool);
+svn_error_t *
+svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
+                                       void *baton,
+                                       const char *realm,
+                                       svn_boolean_t may_save,
+                                       apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
