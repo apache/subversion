@@ -17,9 +17,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_general.h>
+#include <apr_lib.h>
 
 #include "svn_error.h"
 
@@ -90,6 +92,7 @@ main (int argc, char *argv[])
   int i;
   int got_error = 0;
   apr_pool_t *pool;
+  int ran_a_test = 0;
 
   /* How many tests are there? */
   int array_size = get_array_size();
@@ -115,16 +118,27 @@ main (int argc, char *argv[])
     {
       for (i = 1; i < argc; i++)
         {
-          test_num = atoi (argv[i]);
-          if (do_test_num (prog_name, test_num, pool))
-            got_error = 1;
+          if (apr_isdigit (argv[i][0]))
+            {
+              ran_a_test = 1;
+              test_num = atoi (argv[i]);
+              if (do_test_num (prog_name, test_num, pool))
+                got_error = 1;
 
-          /* Clear the per-function pool */
-          svn_pool_clear (pool);
+              /* Clear the per-function pool */
+              svn_pool_clear (pool);
+            }
+          else
+            {
+              /* (probably) a source directory pathname */
+              printf ("notice: ignoring argument %d\n", i);
+            }
         }
     }
-  else            /* just run all tests */
+
+  if (!ran_a_test)
     {
+      /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
           if (do_test_num (prog_name, i, pool))
