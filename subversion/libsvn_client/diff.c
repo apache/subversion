@@ -138,7 +138,7 @@ merge_cmd (const char *older,
      convert the diff editor to the "new" interface first, before we
      can do the composition.  */
 
-  /* ### <REMOVE ME> */
+  /* ### <REMOVE ME> 
   const char *act = "NONE";
   switch (action)
     {
@@ -158,7 +158,7 @@ merge_cmd (const char *older,
   printf ("Older = %s, revision %d\n", older, (int) older_rev);
   printf ("Yours = %s, revision %d\n", yours, (int) yours_rev);
   printf ("Mine  = %s\n", mine);
-  /* ### </REMOVE ME> */
+  ### </REMOVE ME> */
 
   switch (action)
     {
@@ -215,7 +215,7 @@ merge_cmd (const char *older,
    Case 4 is not as stupid as it looks, for example it may occur if
    the user specifies two dates that resolve to the same revision.  */
 static svn_error_t *
-diff_or_merge (const svn_delta_editor_t *after_editor, /* ### still unused */
+diff_or_merge (const svn_delta_editor_t *after_editor,
                void *after_edit_baton,
                const apr_array_header_t *options,
                svn_client_auth_baton_t *auth_baton,
@@ -333,8 +333,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor, /* ### still unused */
   else   /* ### todo: there may be uncovered cases remaining */
     {
       /* Pure repository comparison. */
-      const svn_delta_editor_t *new_diff_editor;
-      void *new_diff_edit_baton;
+      const svn_delta_editor_t  *composed_editor, *new_diff_editor;
+      void *composed_edit_baton, *new_diff_edit_baton;
 
       /* Open a second session used to request individual file
          contents. Although a session can be used for multiple requests, it
@@ -352,6 +352,7 @@ diff_or_merge (const svn_delta_editor_t *after_editor, /* ### still unused */
                                             FALSE, FALSE, TRUE,
                                             auth_baton, pool));
 
+      /* Get the true diff editor. */
       SVN_ERR (svn_client__get_diff_editor (target,
                                             cmd,
                                             cmd_baton,
@@ -362,10 +363,22 @@ diff_or_merge (const svn_delta_editor_t *after_editor, /* ### still unused */
                                             &new_diff_edit_baton,
                                             pool));
 
-      /* Make the repos-diff-editor look "old" style.  
-         ### Remove this wrapping someday.*/
+      /* If we were given some kind of "after" trace editor, compose it. */
+      if (after_editor)
+        {
+          svn_delta_compose_editors (&composed_editor, &composed_edit_baton,
+                                     new_diff_editor, new_diff_edit_baton,
+                                     after_editor, after_edit_baton, pool);
+        }
+      else
+        {
+          composed_editor = new_diff_editor;
+          composed_edit_baton = new_diff_edit_baton;
+        }
+
+      /* ### Make composed editor look "old" style.  Remove someday. */
       svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
-                             new_diff_editor, new_diff_edit_baton, pool);
+                             composed_editor, composed_edit_baton, pool);
 
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
