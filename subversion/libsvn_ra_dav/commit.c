@@ -411,11 +411,9 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 
   if (rv != NE_OK)
     {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               cc->ras->pool,
-                               "The CHECKOUT request failed (neon #%d) (%s)",
-                               rv, url_str->data);
+      const char *msg = apr_psprintf(cc->ras->pool, "CHECKOUT of %s",
+                                     url_str->data);
+      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, cc->ras->pool);
     }
 
   if (code != 201)
@@ -554,12 +552,18 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   ne_request_destroy(req);
   ne_buffer_destroy(body);
 
-  if (rv != NE_OK || code != 207)
+  if (rv != NE_OK)
+    {
+      const char *msg = apr_psprintf(ras->pool, "PROPPATCH of %s",
+                                     url_str->data);
+      return svn_ra_dav__convert_error(ras->sess, msg, rv, ras->pool);
+    }
+  if (code != 207)
     {
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                ras->pool,
-                               "The PROPPATCH request failed (neon: %d) (%s)",
-                               rv, url_str->data);
+                               "The PROPPATCH request failed for %s",
+                               url_str->data);
     }
 
   return NULL;
@@ -706,9 +710,9 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
 
       if (status != NE_OK)
         {
-          return 
-            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
-                              "COPY request failed for '%s'", name->data);
+          const char *msg = apr_psprintf(pool, "COPY of %s", name->data);
+          return svn_ra_dav__convert_error(parent->cc->ras->sess,
+                                           msg, status, pool);
         }
     }
 
@@ -845,9 +849,9 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
 
       if (status != NE_OK)
         {
-          return 
-            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
-                              "COPY request failed for '%s'", name->data);
+          const char *msg = apr_psprintf(pool, "COPY of %s", name->data);
+          return svn_ra_dav__convert_error(parent->cc->ras->sess,
+                                           msg, status, pool);
         }
     }
 
@@ -959,11 +963,9 @@ static svn_error_t * commit_stream_close(void *baton)
 
   if (rv != NE_OK)
     {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               cc->ras->pool,
-                               "The PUT request failed (neon: %d) (%s)",
-                               rv, url_str->data);
+      const char *msg = apr_psprintf(cc->ras->pool, "PUT of %s",
+                                     url_str->data);
+      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, cc->ras->pool);
     }
 
   /* if it didn't returned 201 (Created) or 204 (No Content), then puke */
@@ -1111,13 +1113,11 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
   if (rv != NE_OK)
     {
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               pool,
-                               "The log message's PROPPATCH request failed "
-                               "(neon: %d) (%s)",
-                               rv, baseline_rsrc.wr_url);
+      const char *msg = apr_psprintf(cc->ras->pool,
+                                     "applying log message to %s",
+                                     baseline_rsrc.wr_url);
+      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, cc->ras->pool);
     }
-
 
   return SVN_NO_ERROR;
 }
