@@ -65,6 +65,7 @@ Source: {#= path_svnclient}\libdb40.dll; DestDir: {app}; Components: main
 Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Components: main; Flags: ignoreversion
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}; Components: main
 Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc; Components: main
+Source: missing_msvcp60dll.html; DestDir: {app}\doc; Components: main; Check: VCRuntimeNotFound
 
 ; SSL stuff
 Source: {#= path_ssl}\libeay32.dll; DestDir: {app}; Components: main; Flags: ignoreversion
@@ -85,11 +86,6 @@ Source: {#= path_brkdb_lib}\libdb4*.lib; DestDir: {app}\lib\berkeley; Components
 ; Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Components: main; Flags: ignoreversion
 
-;; shfolder.dll stuff ----------------------------------------------------------
-;Source: in\helpers\isxdl.dll; DestDir: {tmp}; Flags: dontcopy
-;Source: shfolder-svn.txt; DestDir: {tmp}; Flags: dontcopy
-;Source: download_shfolderdll.html; DestDir: {tmp}; Flags: dontcopy
-
 ; Internet Shortcuts ----------------------------------------------------------
 Source: svn.url; DestDir: {app}
 
@@ -105,12 +101,13 @@ Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Compone
 Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; IconFilename: {app}\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
 Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
 Name: {group}\Read Me; Filename: {app}\Readme.txt
+Name: {group}\Download and install msvcp60.dll; Filename: {app}\doc\missing_msvcp60dll.html; Check: VCRuntimeNotFound
 
 [UninstallDelete]
 Type: files; Name: {app}\svn.url
 
 [_ISTool]
-EnableISX=false
+EnableISX=true
 
 [Types]
 Name: full; Description: Full installation
@@ -140,7 +137,7 @@ Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}"""
 [UninstallRun]
 Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}"""
 
-;[Code]
-;#include "isx_globals.pas"
-;#include "isx_main.pas"
+[Code]
+#include "isx_main.pas"
+
 
