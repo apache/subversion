@@ -1,11 +1,11 @@
      Oh Most High and Fragrant Emacs, please be in -*- text -*- mode!
 
 This is the library described in the section "The working copy
-management library" of svn-design.texi.
-
-It performs local operations in the working copy, tweaking
-administrative files and versioned data, generally in response to a
-received delta.  It communicates with the server through libsvn_cl.
+management library" of svn-design.texi.  It performs local operations
+in the working copy, tweaking administrative files and versioned data.
+It does not communicate directly with a repository; instead, other
+libraries that do talk to the repository call into this library to
+make queries and changes in the working copy.
 
 
 The Problem We're Solving.
