@@ -74,11 +74,21 @@ svn_error_t *svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
                                    trail_t *trail);
 
 
+/* Callback type for svn_fs__bdb_walk_copies_reverse().  COPY_ID and
+   COPY are the key and associated data of the current `copies' table
+   row.  Implementers of this callback may set *DONE to non-zero to
+   stop the walk in a non-fatal way.  */
 typedef svn_error_t *(*svn_fs__bdb_copy_cb_func_t) (void *baton,
                                                     const char *copy_id,
                                                     svn_fs__copy_t *copy,
+                                                    int *done,
                                                     apr_pool_t *pool);
 
+/* Walk the `copies' table of FS in reverse, starting with the key
+   END_ID, and ending with START_ID, and calling CALLBACK with BATON.
+   Do all of this as part of TRAIL.  If END_ID is NULL, the walk will
+   begin at the last row of the copies table.  Only rows with
+   interesting copy information will be passed to the callback.  */
 svn_error_t *
 svn_fs__bdb_walk_copies_reverse (svn_fs__bdb_copy_cb_func_t callback,
                                  void *baton,

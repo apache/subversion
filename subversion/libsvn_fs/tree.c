@@ -3492,6 +3492,7 @@ static svn_error_t *
 copies_cb_func (void *baton,
                 const char *copy_id,
                 svn_fs__copy_t *copy,
+                int *done,
                 apr_pool_t *subpool)
 {
   struct copies_cb_baton *cb = baton;
@@ -3666,6 +3667,7 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 {
   struct revisions_changed_args *args = baton;
   struct revisions_changed_baton b;
+  const char *node_cr_path, *node_cp_id;
   dag_node_t *node;
   svn_revnum_t *rev 
     = apr_palloc (apr_hash_pool_get (args->revs), sizeof (*rev));
@@ -3680,9 +3682,13 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
   /* Get the NODE for ARGS->id.  */
   SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
 
+  /* Get the NODE's created path and copy ID. */
+  node_cr_path = svn_fs__dag_get_created_path (node);
+  node_cp_id = svn_fs__id_copy_id (svn_fs__dag_get_id (node));
+
   /* Reset the SUCCESSOR_PATH and SUCCESSOR_ID members of the callback
      baton to point to our new node. */
-  b.successor_path = svn_fs__dag_get_created_path (node);
+  b.successor_path = node_cr_path;
   b.successor_id = args->id;
 
   /* If we are coming at this thing from a different path than it was
@@ -3695,10 +3701,11 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
       if (! b.cross_copy_history) 
         return SVN_NO_ERROR;
       
-      /* ### todo: call find_relevant_copies() here after we figure
-             out the youngest COPY_ID older than our root's revision
-             (or is that the oldest COPY_ID younger than that
-             revision ... I forget). */
+      /* Derive the copies that have taken place since the last time
+         our path was modified. */
+      SVN_ERR (find_relevant_copies (b.revs, args->fs,
+                                     node_cr_path, node_cp_id,
+                                     args->path, NULL, trail));
     }
 
   /* Add NODE's created rev to the array in the baton. */

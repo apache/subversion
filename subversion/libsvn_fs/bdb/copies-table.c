@@ -16,6 +16,7 @@
  */
 
 #include <string.h>
+#include <assert.h>
 
 #include "svn_pools.h"
 #include "bdb_compat.h"
@@ -201,26 +202,40 @@ svn_fs__bdb_walk_copies_reverse (svn_fs__bdb_copy_cb_func_t callback,
   apr_size_t const next_id_key_len = strlen (svn_fs__next_key_key);
   apr_pool_t *subpool = svn_pool_create (trail->pool);
   svn_fs__copy_t *copy;
-  const char *cur_id = end_id;
+  const char *cur_id;
   DBC *cursor;
   DBT key, value;
   int db_err, db_c_err;
   int track_key = 0;
+  int done = 0;
 
   /* Create a database cursor to list the copy names. */
   SVN_ERR (BDB_WRAP (fs, "reading copy list (opening cursor)",
                      fs->copies->cursor (fs->copies, trail->db_txn, 
                                          &cursor, 0)));
 
-  /* Position our cursor at the END_ID. */
-  svn_fs__str_to_dbt (&key, (char *)end_id);
+  /* If an END_ID was specified, we seek right to it.  Else, we just
+     get the last row. */
+  if (end_id)
+    {
+      /* END_ID must be > START_ID. */
+      assert (svn_fs__key_compare (start_id, end_id) > 0);
+      svn_fs__str_to_dbt (&key, (char *)end_id);
+      db_err = cursor->c_get (cursor, &key, 
+                              svn_fs__result_dbt (&value), DB_SET);
+      cur_id = end_id;
+    }
+  else
+    {
+      db_err = cursor->c_get (cursor, svn_fs__result_dbt (&key),
+                              svn_fs__result_dbt (&value), DB_LAST);
+      track_key = 1;
+      cur_id = apr_pstrmemdup (trail->pool, key.data, key.size);
+    }
 
   /* Read backwards through the copies table, stopping on errors or
      when we reach our START_ID. */
-  for (db_err = cursor->c_get (cursor, 
-                               &key, 
-                               svn_fs__result_dbt (&value), 
-                               DB_SET);
+  for (/* noinit */;
        (db_err == 0) && (strcmp (cur_id, start_id) != 0);
        db_err = cursor->c_get (cursor,
                                svn_fs__result_dbt (&key),
@@ -266,11 +281,15 @@ svn_fs__bdb_walk_copies_reverse (svn_fs__bdb_copy_cb_func_t callback,
         }
 
       /* Call our callback function with this COPY. */
-      if ((err = callback (baton, copy_id, copy, subpool)))
+      if ((err = callback (baton, copy_id, copy, &done, subpool)))
         {
           cursor->c_close (cursor);
           return err;
         }
+
+      /* If the callback tells us to stop, we do. */
+      if (done)
+        break;
     }
 
   /* Check for errors, but close the cursor first. */
