@@ -605,25 +605,19 @@ erase_from_wc (const char *path,
 
 svn_error_t *
 svn_wc_delete (const char *path,
+               svn_wc_adm_access_t *adm_access,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
   svn_boolean_t was_schedule_add;
-  const char *parent_path;
-  svn_wc_adm_access_t *adm_access;
 
   SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
   if (!entry)
     return erase_unversioned_from_wc (path, pool);
     
   was_schedule_add = entry->schedule == svn_wc_schedule_add;
-
-  parent_path = svn_path_remove_component_nts (path, pool);
-  if (svn_path_is_empty_nts (parent_path))
-    parent_path = ".";
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE, pool));
 
   if (entry->kind == svn_node_dir)
     {
@@ -662,8 +656,6 @@ svn_wc_delete (const char *path,
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, entry,
                                      SVN_WC__ENTRY_MODIFY_SCHEDULE, pool));
     }
-
-  SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Report the deletion to the caller. */
   if (notify_func != NULL)

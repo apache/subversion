@@ -1199,11 +1199,6 @@ svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
                         adm_subdir (), pool);
   SVN_ERR (svn_io_remove_dir (path, pool));
 
-  /* Note: we don't handle access batons for subdirectories.  Yes we could
-     do the ones in the same set as ADM_ACCESS, but what about other
-     sets?  See the header file doc string. */
-  svn_wc__adm_forced_lock_removal (adm_access);
-
   return SVN_NO_ERROR;
 }
 

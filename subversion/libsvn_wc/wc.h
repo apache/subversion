@@ -140,10 +140,6 @@ svn_error_t *svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
                                            const char *path, apr_pool_t *pool);
 
 
-/* Tell ADM_ACCESS that we are removing its physical lock, so that it can
-   update its state information. */
-void svn_wc__adm_forced_lock_removal(svn_wc_adm_access_t *adm_access);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -125,11 +125,17 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 }
 
 
-/* Remove the physical lock in the admin directory for ADM_ACCESS */
+/* Remove the physical lock in the admin directory for PATH. It is
+   acceptable for the administrative area to have disappeared, such as when
+   the directory is removed from the working copy.  It is an error for the
+   lock to have disappeared if the administrative area still exists. */
 static svn_error_t *
 remove_lock (const char *path, apr_pool_t *pool)
 {
-  return svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOCK, NULL);
+  if (svn_wc__adm_path_exists (path, FALSE, pool, NULL))
+    SVN_ERR (svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOCK, NULL));
+
+  return SVN_NO_ERROR;
 }
 
 /* An APR pool cleanup handler.  This handles access batons that have not
@@ -501,13 +507,6 @@ apr_pool_t *
 svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access)
 {
   return adm_access->pool;
-}
-
-
-void
-svn_wc__adm_forced_lock_removal (svn_wc_adm_access_t *adm_access)
-{
-  adm_access->lock_exists = FALSE;
 }
 
 

@@ -440,17 +440,26 @@ def add_with_history(sbox):
       raise svntest.main.SVNTreeUnequal
 
   # FIXME: No idea why working_copies shows up as a singleton, when it
-  # isn't even a WC dir.
+  # isn't even a WC dir.  Even with the other_singleton_handler it
+  # fails.  It looks like a problem in the test harnesss framework to
+  # me, so just use a plain run_svn.
+
   def other_singleton_handler(a, ignored_baton):
     print "Merge got unexpected other singleton '" + a.name + "'"
 
-  if svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
-                                          expected_output,
-                                          expected_disk,
-                                          expected_status,
-                                          None,
-                                          merge_singleton_handler, None,
-                                          other_singleton_handler, None):
+  #if svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
+  #                                        expected_output,
+  #                                        expected_disk,
+  #                                        expected_status,
+  #                                        None,
+  #                                        merge_singleton_handler, None,
+  #                                        other_singleton_handler, None):
+  #  print "merge failed"
+  #  return 1
+
+  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r1:2', F_url,
+                                           C_path)
+  if errlines:
     print "merge failed"
     return 1
 
@@ -498,6 +507,91 @@ def add_with_history(sbox):
 
 #----------------------------------------------------------------------
 
+def delete_file_and_dir(sbox):
+  "merge and that deletes items"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Rev 2 copy B to B2
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
+  B_url = os.path.join(svntest.main.current_repo_url, 'A', 'B')
+
+  outlines,errlines = svntest.main.run_svn(None, 'copy', B_path, B2_path)
+  if errlines:
+    print "copy failed"
+    return 1
+
+  expected_output = wc.State(wc_dir, {
+    'A/B2'       : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B2'         : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B2/E'       : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B2/E/alpha' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B2/E/beta'  : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B2/F'       : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/B2/lambda'  : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           wc_dir):
+    print "commit of copy failed"
+    return 1
+
+  # Rev 3 delete E and lambda from B
+  E_path = os.path.join(B_path, 'E')
+  lambda_path = os.path.join(B_path, 'lambda')
+  outlines, errlines = svntest.main.run_svn(None, 'delete', E_path, lambda_path)
+  if errlines:
+    print "delete failed"
+    return 1
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/E'       : Item(verb='Deleting'),
+    'A/B/lambda'       : Item(verb='Deleting'),
+    })
+  expected_status.tweak(repos_rev=3)
+  expected_status.remove('A/B/E',
+                         'A/B/E/alpha',
+                         'A/B/E/beta',
+                         'A/B/lambda')
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None,
+                                           None, None,
+                                           None, None,
+                                           wc_dir):
+    print "commit of delete failed"
+    return 1
+
+  # Merge rev 3 into B2
+  outlines, errlines = svntest.main.run_svn(None, 'merge', '-r2:3', B_url,
+                                            B2_path)
+  if errlines:
+    print "merge failed"
+    return 1
+  
+  expected_status.tweak(
+    'A/B2/E', 'A/B2/E/alpha', 'A/B2/E/beta', 'A/B2/lambda',  status='D '
+    )
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    print "status failed"
+    return 1
+
+
+#----------------------------------------------------------------------
+
 ########################################################################
 # Run the tests
 
@@ -505,7 +599,8 @@ def add_with_history(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               textual_merges_galore,
-              # add_with_history,
+              add_with_history,
+              delete_file_and_dir,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

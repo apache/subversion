@@ -91,6 +91,7 @@ svn_client__can_delete (const char *path,
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
+                   svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force, 
                    svn_client_auth_baton_t *auth_baton,
                    svn_client_get_commit_log_t log_msg_func,
@@ -99,6 +100,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
+  svn_wc_adm_access_t *adm_access;
+
   if (svn_path_is_url (path))
     {
       /* This is a remote removal.  */
@@ -188,8 +191,24 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_client__can_delete (path, pool));
     }
 
+  if (! optional_adm_access)
+    {
+      const char *parent_path;
+  
+      parent_path = svn_path_remove_component_nts (path, pool);
+      if (svn_path_is_empty_nts (parent_path))
+        parent_path = ".";
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE,
+                                pool));
+    }
+  else
+    adm_access = optional_adm_access;
+
   /* Mark the entry for commit deletion and perform wc deletion */
-  SVN_ERR (svn_wc_delete (path, notify_func, notify_baton, pool));
+  SVN_ERR (svn_wc_delete (path, adm_access, notify_func, notify_baton, pool));
+
+  if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
