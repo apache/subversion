@@ -47,7 +47,7 @@
 
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
-                apr_array_header_t *targets,
+                const apr_array_header_t *targets,
                 svn_revnum_t start,
                 svn_revnum_t end,
                 svn_boolean_t discover_changed_paths,

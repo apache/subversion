@@ -382,7 +382,7 @@ typedef struct svn_ra_plugin_t
    * See also the documentation for `svn_log_message_receiver_t'.
    */
   svn_error_t *(*get_log) (void *session_baton,
-                           apr_array_header_t *paths,
+                           const apr_array_header_t *paths,
                            svn_revnum_t start,
                            svn_revnum_t end,
                            svn_boolean_t discover_changed_paths,
