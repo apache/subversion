@@ -136,7 +136,7 @@ static void help(apr_pool_t *pool)
 
   svn_error_clear (svn_cmdline_fputs("Usage: svnserve [options]\n"
                                      "\n"
-                                     "Valid options:",
+                                     "Valid options:\n",
                                      stdout, pool));
   for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
     {
