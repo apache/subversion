@@ -282,10 +282,15 @@ get_entry_attributes (const char **atts,
       
   /* Handle kind specially. */
   found_kind = svn_xml_get_attr_value (SVN_WC__ENTRIES_ATTR_KIND, atts);
+  *kind = 0;  /* set to a known invalid default */
   if (found_kind)
-    *kind = (enum svn_node_kind) atoi (found_kind);
-  else
-    *kind = SVN_INVALID_VERNUM;
+    {
+      if (strcmp (found_kind, "file") == 0)
+        *kind = svn_file_kind;
+      else if (strcmp (found_kind, "dir") == 0)
+        *kind = svn_dir_kind;
+      /* someday there will be symlink kind, etc, here */
+    }
 
   /* Now loop through the other requested attributes, setting by reference. */
   for (hi = apr_hash_first (desired_attrs); hi; hi = apr_hash_next (hi))
@@ -315,21 +320,35 @@ write_entry (apr_file_t *outfile,
   svn_string_t *verstr
     = svn_string_create (apr_psprintf (pool, "%ld", (long int) version), pool);
   
-  svn_string_t *kindstr 
-    = svn_string_create (apr_psprintf (pool, "%d", (int) kind), pool);
+  svn_string_t *kindstr;
+
+  switch (kind)
+    {
+    case svn_file_kind:
+      kindstr = svn_string_create ("file", pool);
+      break;
+    case svn_dir_kind:
+      kindstr = svn_string_create ("dir", pool);
+      break;
+    default:
+      kindstr = NULL;  /* tolerate unknown kind, for forward compatibility */
+    }
   
-  apr_hash_set (attributes,
-                SVN_WC__ENTRIES_ATTR_VERSION,
-                strlen (SVN_WC__ENTRIES_ATTR_VERSION),
-                verstr);
-  apr_hash_set (attributes,
-                SVN_WC__ENTRIES_ATTR_KIND,
-                strlen (SVN_WC__ENTRIES_ATTR_KIND),
-                kindstr);
   apr_hash_set (attributes,
                 SVN_WC__ENTRIES_ATTR_NAME,
                 strlen (SVN_WC__ENTRIES_ATTR_NAME),
                 entryname);
+
+  apr_hash_set (attributes,
+                SVN_WC__ENTRIES_ATTR_VERSION,
+                strlen (SVN_WC__ENTRIES_ATTR_VERSION),
+                verstr);
+
+  if (kind)
+    apr_hash_set (attributes,
+                  SVN_WC__ENTRIES_ATTR_KIND,
+                  strlen (SVN_WC__ENTRIES_ATTR_KIND),
+                  kindstr);
   
   return svn_xml_write_tag_hash (outfile,
                                  pool,
