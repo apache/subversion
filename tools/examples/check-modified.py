@@ -12,6 +12,8 @@ import svn.util
 import svn.client
 import svn.wc
 
+FORCE_COMPARISON = 0
+
 def usage():
   print "Usage: " + sys.argv[0] + " FILE_OR_DIR1 FILE_OR_DIR2\n"
   sys.exit(0)
@@ -31,7 +33,8 @@ def run(files):
     try:
       entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
 
-      if svn.wc.svn_wc_text_modified_p(fullpath, False, adm_baton, pool):
+      if svn.wc.svn_wc_text_modified_p(fullpath, FORCE_COMPARISON,
+                                       adm_baton, pool):
         print "M      %s" % f
       else:
         print "       %s" % f
