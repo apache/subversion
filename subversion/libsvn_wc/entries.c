@@ -1071,6 +1071,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   apr_status_t apr_err;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
@@ -1092,7 +1093,8 @@ svn_wc__entries_write (apr_hash_t *entries,
    * tags such as SVN_WC__LOG_MV to move entries files so any existing file
    * is not "valuable".
    */
-  SVN_ERR (svn_wc__open_adm_file (&outfile, svn_wc_adm_access_path (adm_access),
+  SVN_ERR (svn_wc__open_adm_file (&outfile, 
+                                  svn_wc_adm_access_path (adm_access),
                                   SVN_WC__ADM_ENTRIES,
                                   (APR_WRITE | APR_CREATE),
                                   pool));
@@ -1123,9 +1125,11 @@ svn_wc__entries_write (apr_hash_t *entries,
         continue;
 
       /* Append the entry to BIGSTR */
-      write_entry (&bigstr, this_entry, key, this_dir, pool);
+      write_entry (&bigstr, this_entry, key, this_dir, subpool);
+      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
   svn_xml_make_close_tag (&bigstr, pool, SVN_WC__ENTRIES_TOPLEVEL);
 
   apr_err = apr_file_write_full (outfile, bigstr->data, bigstr->len, NULL);

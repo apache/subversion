@@ -951,19 +951,23 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
 
+          /* Clear the subpool here because there are some 'continue'
+             statements in this loop. */
+          svn_pool_clear (subpool);
+
           if (item->kind == svn_node_dir)
             adm_access_path = item->path;
           else
-            svn_path_split (item->path, &adm_access_path, NULL, pool);
+            svn_path_split (item->path, &adm_access_path, NULL, subpool);
 
           bump_err = svn_wc_adm_retrieve (&adm_access, base_dir_access,
-                                          adm_access_path, pool);
+                                          adm_access_path, subpool);
           if (bump_err)
             {
               if (bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
                 {
                   if (have_processed_parent (commit_items, i,
-                                             item->path, pool))
+                                             item->path, subpool))
                     {
                       /* This happens when the item is a directory that is
                          deleted, and it has been processed as a child of an
@@ -982,7 +986,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                          something is way bogus. */
                       SVN_ERR (svn_wc_mark_missing_deleted (item->path,
                                                             base_dir_access,
-                                                            pool));
+                                                            subpool));
                       svn_error_clear (bump_err);
                       bump_err = SVN_NO_ERROR;
                       continue;                      
@@ -991,11 +995,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
               goto cleanup;              
             }
           if ((bump_err = svn_wc_entry (&entry, item->path, adm_access, TRUE,
-                                        pool)))
+                                        subpool)))
             goto cleanup;
 
           if (! entry
-              && have_processed_parent (commit_items, i, item->path, pool))
+              && have_processed_parent (commit_items, i, item->path, subpool))
             /* This happens when the item is a file that is deleted, and it
                has been processed as a child of an earlier item. */
             continue;
@@ -1013,15 +1017,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                     item->wcprop_changes,
                                                     subpool)))
             break;
-
-          /* Clear the per-iteration subpool. */
-          svn_pool_clear (subpool);
         }
 
-      /* Destroy the subpool (unless an error occurred, since we'll
-         need to keep the error around for a little while longer). */
-      if (! bump_err)
-        svn_pool_destroy (subpool);
+      /* Destroy the subpool. */
+      svn_pool_destroy (subpool);
     }
 
   /* Sleep to ensure timestamp integrity. */

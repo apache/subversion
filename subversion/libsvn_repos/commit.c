@@ -325,7 +325,7 @@ apply_textdelta (void *file_baton,
                                  fb->path,
                                  base_checksum,
                                  NULL,
-                                 fb->pool);
+                                 pool);
 }
 
 
@@ -399,7 +399,7 @@ add_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->pool = pool;
+  new_fb->pool = pool; /* unused? */
   new_fb->path = full_path;
 
   *file_baton = new_fb;
@@ -420,10 +420,12 @@ open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_revnum_t cr_rev;
+  apr_pool_t *subpool = svn_pool_create (pool);
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Get this node's creation revision (doubles as an existence check). */
-  SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, pool));
+  SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, 
+                                    subpool));
   
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
@@ -433,10 +435,14 @@ open_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->pool = pool;
+  new_fb->pool = pool; /* unused? */
   new_fb->path = full_path;
-  
+
   *file_baton = new_fb;
+
+  /* Destory the work subpool. */
+  svn_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
 

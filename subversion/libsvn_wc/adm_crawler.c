@@ -160,7 +160,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
     {
       const svn_string_t *val;
       SVN_ERR (svn_wc_prop_get (&val, SVN_PROP_EXTERNALS, full_path, adm_access,
-                                pool));
+                                subpool));
       if (val)
         {
           apr_pool_t *dup_pool = traversal_info->pool;
@@ -184,6 +184,10 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       const svn_wc_entry_t *current_entry; 
       svn_node_kind_t *dirent_kind;
       svn_boolean_t missing = FALSE;
+
+      /* Clear the iteration subpool here because the loop has a bunch
+         of 'continue' jump statements. */
+      svn_pool_clear (iterpool);
 
       /* Get the next entry */
       apr_hash_this (hi, &key, &klen, &val);
@@ -372,9 +376,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                      traversal_info,
                                      iterpool));
         } /* end directory case */
-
-      svn_pool_clear (iterpool);
-
     } /* end main entries loop */
 
   /* We're done examining this dir's entries, so free everything. */

@@ -832,7 +832,6 @@ svn_client__condense_commit_items (const char **base_url,
 
 struct file_mod_t
 {
-  apr_pool_t *subpool;
   svn_client_commit_item_t *item;
   void *file_baton;
 };
@@ -875,8 +874,16 @@ do_item_commit (void **dir_baton,
   *dir_baton = NULL;
   if (item->copyfrom_url)
     copyfrom_url = item->copyfrom_url;
-  if (kind == svn_node_file)
-    file_pool = svn_pool_create (apr_hash_pool_get (file_mods));
+
+  /* If this is a file with textual mods, we'll be keeping its baton
+     around until the end of the commit.  So just lump its memory into
+     a single, big, all-the-file-batons-in-here pool.  Otherwise, we
+     can just use POOL, and trust our caller to clean that mess up. */
+  if ((kind == svn_node_file) 
+      && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
+    file_pool = apr_hash_pool_get (file_mods);
+  else
+    file_pool = pool;
 
   /* Call the cancellation function. */
   if (ctx->cancel_func)
@@ -1056,8 +1063,7 @@ do_item_commit (void **dir_baton,
   if ((kind == svn_node_file) 
       && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
     {
-      struct file_mod_t *mod = apr_palloc (apr_hash_pool_get (file_mods),
-                                           sizeof (*mod));
+      struct file_mod_t *mod = apr_palloc (file_pool, sizeof (*mod));
 
       if (! file_baton)
         {
@@ -1068,18 +1074,15 @@ do_item_commit (void **dir_baton,
         }
 
       /* Add this file mod to the FILE_MODS hash. */
-      mod->subpool = file_pool;
       mod->item = item;
       mod->file_baton = file_baton;
       apr_hash_set (file_mods, item->url, APR_HASH_KEY_STRING, (void *)mod);
     }
-
-  /* Close any outstanding file batons that didn't get caught by the
-     "has local mods" conditional above. */
   else if (file_baton)
     {
+      /* Close any outstanding file batons that didn't get caught by
+         the "has local mods" conditional above. */
       SVN_ERR (editor->close_file (file_baton, NULL, file_pool));
-      svn_pool_destroy (file_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1121,6 +1124,7 @@ svn_client__do_commit (const char *base_url,
 {
   apr_hash_t *file_mods = apr_hash_make (pool);
   apr_hash_t *items_hash = apr_hash_make (pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_index_t *hi;
   int i;
   struct path_driver_cb_baton cb_baton;
@@ -1203,20 +1207,22 @@ svn_client__do_commit (const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      dir_path = svn_path_dirname (item->path, mod->subpool);
+      dir_path = svn_path_dirname (item->path, subpool);
       SVN_ERR (svn_wc_adm_retrieve (&item_access, adm_access, dir_path,
-                                    mod->subpool));
+                                    subpool));
       SVN_ERR (svn_wc_transmit_text_deltas (item->path, item_access, fulltext,
                                             editor, file_baton, 
-                                            &tempfile, mod->subpool));
+                                            &tempfile, subpool));
       if (tempfile && *tempfiles)
         {
           tempfile = apr_pstrdup (apr_hash_pool_get (*tempfiles), tempfile);
           apr_hash_set (*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
-      
-      svn_pool_destroy (mod->subpool);
+
+      svn_pool_clear (subpool);
     }
+
+  svn_pool_destroy (subpool);
 
   /* Close the edit. */
   SVN_ERR (editor->close_edit (edit_baton, pool));
