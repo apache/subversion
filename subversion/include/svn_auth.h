@@ -270,6 +270,9 @@ typedef svn_error_t *
  * describes exactly why the cert could not be automatically validated.
  * (See the #define error flag values below.)
  *
+ * Note that these values are stored in the on disk auth cache by the
+ * SSL server certificate auth provider, so the meaning of these bits
+ * must not be changed without careful consideration.
  */
 #define SVN_AUTH_SSL_NOTYETVALID (1<<0)
 #define SVN_AUTH_SSL_EXPIRED     (1<<1)
