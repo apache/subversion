@@ -215,6 +215,10 @@ SVN_ERROR_START
               SVN_ERR_IO_CATEGORY_START + 5,
               "Read error in pipe")
 
+  SVN_ERRDEF (SVN_ERR_IO_WRITE_ERROR,
+              SVN_ERR_IO_CATEGORY_START + 6,
+              "Write error")
+
   /* stream errors */
 
   SVN_ERRDEF (SVN_ERR_STREAM_UNEXPECTED_EOF,
