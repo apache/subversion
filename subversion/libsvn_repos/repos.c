@@ -1120,11 +1120,6 @@ svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
                                     only_unused,
                                     pool));
 
-  if (logfiles == NULL)
-    {
-      return SVN_NO_ERROR;
-    }
-
   /* Loop, printing log files. */
   for (i = 0; i < (*logfiles)->nelts; i++)
     {
