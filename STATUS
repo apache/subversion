@@ -24,3 +24,9 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r10604
+    Cleanup some qsort-related stuff.
+    Justification:
+      Removes *4* redundant functions, but adds a new API.
+    Votes:
+      +1: cmpilato
