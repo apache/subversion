@@ -626,10 +626,12 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
    APR_EOL_STR
    "   - Option values may be expanded within a value by enclosing the"
    APR_EOL_STR
-   "     option name in parentheses, preceded by a percent sign:"
+   "     option name in parentheses, preceded by a percent sign and"
+   APR_EOL_STR
+   "     followed by an 's':"
    APR_EOL_STR
    APR_EOL_STR
-   "       %(name)"
+   "       %(name)s"
    APR_EOL_STR
    APR_EOL_STR
    "     The expansion is performed recursively and on demand, during"
@@ -638,7 +640,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
    APR_EOL_STR
    "     section, then in the special [DEFAULT] section. If the name"
    APR_EOL_STR
-   "     is not found, the whole %(name) placeholder is left"
+   "     is not found, the whole '%(name)s' placeholder is left"
    APR_EOL_STR
    "     unchanged."
    APR_EOL_STR
@@ -649,6 +651,13 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
    APR_EOL_STR
    "     will take the modifications into account."
    APR_EOL_STR
+   APR_EOL_STR
+   "The syntax of the configuration files is a subset of the one used by"
+   APR_EOL_STR
+   "Python's ConfigParser module; see"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   http://www.python.org/doc/current/lib/module-ConfigParser.html"
    APR_EOL_STR
    APR_EOL_STR
    "Configuration data in the Windows registry"
