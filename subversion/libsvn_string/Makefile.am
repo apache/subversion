@@ -1,13 +1,22 @@
 ## Makefile.in is generated from this by automake.
 
-## SUBDIRS = tests
+## The `LTLIBRARIES' primary variable is specifically used for
+## indicating shared libraries to build using `libtool'.
 
-lib_LTLIBRARIES = libsvn_string.so
 
-## libsvn_string_la_SOURCES = svn_string.c
-libsvn_string_so_SOURCES = svn_string.c
+# List of libraries to build and install in `libdir'
+lib_LTLIBRARIES = libsvn_string.la
 
-CFLAGS = -shared -fPIC 
+## Sources needed to build each library (names canonicalized)
+libsvn_string_la_SOURCES = svn_string.c
+
+
+## Build flags ---------
+
+## These should be variables, no?  (from autoconf?)
 INCLUDES = -I../include -I../../apr/include
-LIBADD = -L../../apr
+
+
+## Build *this* directory first, *then* the test subdirectory!
+SUBDIRS = . tests
 
