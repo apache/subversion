@@ -9,16 +9,15 @@ svnserve \- Server for the 'svn' repository access method
 \fBsvnserve\fP [\fIoptions\fP]
 .SH DESCRIPTION
 \fBsvnserve\fP allows access to Subversion repositories using the svn
-network protocol.  By default, \fBsvnserve\fP serves a single
-connection using the stdin/stdout file descriptors, as is appropriate
-for a daemon running out of inetd, but this mode of operation can be
-altered by options.  \fBsvnserve\FP accepts the following options:
+network protocol.  It can both run as a standalone server process, or
+it can run out of inetd.  You must choose a mode of operation when you
+start \fBsvnserve\fP.  The following options are recognized:
 .PP
 .TP 5
 \fB\-d\fP, \fB\-\-daemon\fP
 Causes \fBsvnserve\fP to run in daemon mode.  \fBsvnserve\fP
-backgrounds itself and accepts and serves connections on the svn port
-(3690, by default).
+backgrounds itself and accepts and serves TCP/IP connections on the
+svn port (3690, by default).
 .PP
 .TP 5
 \fB\-\-listen-port\fP=\fIport\fP
@@ -28,6 +27,17 @@ Causes \fBsvnserve\fP to listen on \fIport\fP when run in daemon mode.
 \fB\-\-listen-host\fP=\fIhost\fP
 Causes \fBsvnserve\fP to listen on the interface specified by \fIhost\fP,
 which may be either a hostname or an IP address.
+.PP
+.TP 5
+\fB\-\-foreground\fP
+When used together with \fB\-d\fP, this option causes \fBsvnserve\fP
+to stay in the foreground.  This option is mainly useful for
+debugging.
+.PP
+.TP 5
+\fB\-i\fP, \fB\-\-inetd\fP
+Causes \fBsvnserve\fP to use the stdin/stdout file descriptors, as is
+appropriate for a daemon running out of inetd.
 .PP
 .TP 5
 \fB\-h\fP, \fB\-\-help\fP
@@ -42,7 +52,7 @@ to this root, and will not be allowed to escape this root.
 .TP 5
 \fB\-t\fP, \fB\-\-tunnel\fP
 Causes \fBsvnserve\fP to run in tunnel mode, which is just like the
-default mode of operation (serve one connection over stdin/stdout)
+inetd mode of operation (serve one connection over stdin/stdout)
 except that the connection is considered to be pre-authenticated with
 the username of the current uid.  This flag is selected by the client
 when running over a tunnel agent.
