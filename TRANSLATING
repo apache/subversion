@@ -137,6 +137,11 @@ systems with GNU gettext run
 
     make locale-gnu-po-update
 
+To only update a particular language, you may use
+
+    make locale-gnu-po-update PO=ll
+
+where ll is the name of the po file without the extension (i.e. PO=sv).
 
 
 Maintenance on branches
