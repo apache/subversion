@@ -25,7 +25,7 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-
+XFail = svntest.testcase.XFail
  
 ######################################################################
 # Tests
@@ -741,6 +741,154 @@ def simple_property_merges(sbox):
     return 1
 
 #----------------------------------------------------------------------
+def merge_one_file(sbox):
+  "merge one file, receive a specific error"
+
+  # When subversion.tigris.org comes back up, we can file an issue for
+  # this.  In the meantime, here's Sander's original report:
+  #
+  # -----------------------------------------------------------------
+  # From: "Sander Striker" <striker@apache.org>
+  # Subject: Buglet in svn merge?
+  # To: <dev@subversion.tigris.org>
+  # Date: Mon, 27 Jan 2003 12:00:57 +0100
+  # 
+  # Hi,
+  # 
+  # To do what I did in rev 4605 I first tried (from the top
+  # of my working copy):
+  # 
+  # $ svn merge -r 4603:4602 subversion/libsvn_delta/diff_file.c
+  # subversion/libsvn_ra_dav/util.c:350: (apr_err=175002)
+  # svn: RA layer request failed
+  # svn: REPORT request failed on \
+  #      /repos/svn/trunk/subversion/libsvn_delta/diff_file.c
+  # subversion/libsvn_ra_dav/util.c:335: (apr_err=175002)
+  # svn: The REPORT request returned invalid XML in the response: \
+  #      XML parse error at line 1: xmlParseStartTag: invalid element name
+  # .. (/repos/svn/trunk/subversion/libsvn_delta/diff_file.c)
+  # 
+  # That clearly didn't work...
+  # 
+  # $ svn diff -r 4603:4602 subversion/libsvn_delta/diff_file.c | patch -p0
+  # 
+  # did the trick however.
+  # -----------------------------------------------------------------
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  rho_relative_path = os.path.join('A', 'D', 'G', 'rho')
+  
+  # Change rho for revision 2
+  rho_path = os.path.join(wc_dir, rho_relative_path)
+  rho_url = os.path.join(svntest.main.current_repo_url, rho_relative_path)
+  svntest.main.file_append(rho_path, '\nA new line in rho.\n')
+
+  expected_output = wc.State(wc_dir, { 'A/D/G/rho' : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/D/G/rho', wc_rev=2)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            expected_status,
+                                            None,
+                                            None, None, None, None,
+                                            wc_dir):
+    return 1
+  
+  # Run merge directly, as it's expected to fail right now anyway --
+  # this test is just to make sure that it fails for the right
+  # reasons.
+  out, err = svntest.main.run_svn(1, 'merge', '-r', '1:2', rho_url)
+
+  if err:
+    for line in err:
+      if re.match(".*invalid XML", line):
+        ### print "Unexpected XML error:\n   " + line
+        return 1
+      
+  # Note that fixing the invalid XML error reported by Sander revealed
+  # a *new* invalid XML error, one which is much harder to debug.  So
+  # this test will have to be XFail for now.
+  #
+  # Since subversion.tigris.org is down right now, I'll describe it
+  # here:
+  #
+  #    $ cd subversion/tests/clients/cmdline/working_copies/merge_tests-5
+  #    $ svn merge -r1:2 http://localhost/repositories/merge_tests-5/A/D/G/rho
+  #    subversion/libsvn_ra_dav/util.c:350: (apr_err=175002)
+  #    svn: RA layer request failed
+  #    svn: REPORT request failed on /repositories/merge_tests-5/A/D/G/rho
+  #    subversion/libsvn_ra_dav/util.c:335: (apr_err=175002)
+  #    svn: The REPORT request returned invalid XML in the response: \
+  #    Unknown XML element `error (in DAV:)'. \
+  #    (/repositories/merge_tests-5/A/D/G/rho)
+  #    $
+  #
+  # For debugging, I suggest starting httpd -X, then ^C, then set a
+  # breakpoint in ap_process_request().  Here's the code from
+  # httpd-2.0.44/modules/http/http_request.c, minus a few comments
+  # that would only be distracting here:
+  # 
+  #    void ap_process_request(request_rec *r)
+  #    {
+  #        int access_status;
+  #    
+  #        /* (Long-ish comment ommitted) */
+  #        access_status = ap_run_quick_handler(r, 0);
+  #        if (access_status == DECLINED) {
+  #            access_status = ap_process_request_internal(r);
+  #            if (access_status == OK) {
+  #                access_status = ap_invoke_handler(r);
+  #            }
+  #        }
+  #    
+  #        if (access_status == DONE) {
+  #            /* e.g., something not in storage like TRACE */
+  #            access_status = OK;
+  #        }
+  #    
+  #        if (access_status == OK) {
+  #            ap_finalize_request_protocol(r);
+  #        }
+  #        else {
+  #            ap_die(access_status, r);
+  #        }
+  #
+  #      ...
+  #   }
+  #
+  # Step through from the top.  Every time access_status is set or
+  # compared, print out its value before and after the assignment or
+  # comparision.  I mean *every time*, even if you think it couldn't
+  # possibly have been affected :-).  You'll see some pretty weird
+  # stuff -- looks like there's a stack smasher somewhere that's
+  # affecting this variable.  But even that doesn't fully explain what
+  # Ben and I were seeing.  Will have to take a look again with fresh
+  # eyes.
+  #
+  # Anyway, the result is that access_status has the wrong value
+  # coming out, so the client receives a 200 OK response when it
+  # should have received an error.  Thus svn_ra_dav__parsed_request()
+  # in libsvn_ra_dav/util.c thinks it got a successful response, but
+  # when it goes to parse that response, the response body XML is that
+  # of an error.  The success-expecting parser is not prepared for
+  # that, and that's why we see that "Unknown XML element" error from
+  # the client.
+
+  # ### When we're no longer getting invalid XML errors, this will no
+  # longer be an XFail test.  Even though the merge command should
+  # still return an error, it will be a specific error that we can
+  # test for.
+  if not err:
+    return 1
+  else:
+    return 0
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -752,6 +900,7 @@ test_list = [ None,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
+              XFail(merge_one_file),
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
