@@ -357,8 +357,12 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
                       "</D:activity-set></D:checkout>", cc->activity_url);
   ne_set_request_body_buffer(req, body, strlen(body));
 
+  /* 
+   * We have different const qualifiers here. locn is const char *,
+   * but the prototype is void * (as opposed to const void *).
+   */
   ne_add_response_header_handler(req, "location",
-                                 ne_duplicate_header, &locn);
+                                 ne_duplicate_header, (void *)&locn);
 
   /* run the request and get the resulting status code. */
   rv = ne_request_dispatch(req);

@@ -17,6 +17,7 @@
 #include <apr_pools.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
+#include <apr_general.h>
 
 #include <ne_socket.h>
 #include <ne_request.h>
