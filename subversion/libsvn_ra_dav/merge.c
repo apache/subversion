@@ -47,14 +47,16 @@ static const svn_ra_dav__xml_elm_t merge_elements[] =
   { "DAV:", "response", ELEM_response, 0 },
   { "DAV:", "propstat", ELEM_propstat, 0 },
   { "DAV:", "status", ELEM_status, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "responsedescription", ELEM_responsedescription, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "responsedescription", ELEM_responsedescription,
+    SVN_RA_DAV__XML_CDATA },
   { "DAV:", "prop", ELEM_prop, 0 },
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
   { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "creator-displayname", ELEM_creator_displayname, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname,
+    SVN_RA_DAV__XML_CDATA },
 
   { NULL }
 };
@@ -297,13 +299,15 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
       if (child == ELEM_response)
         return SVN_RA_DAV__XML_VALID;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     case ELEM_ignored_set:
       if (child == ELEM_href)
         return SVN_RA_DAV__XML_VALID;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     case ELEM_response:
       if (child == ELEM_href
@@ -314,7 +318,8 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
         /* ### I think we want this... to save a message for the user */
         return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     case ELEM_propstat:
       if (child == ELEM_prop || child == ELEM_status)
@@ -323,7 +328,8 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
         /* ### I think we want this... to save a message for the user */
         return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     case ELEM_prop:
       if (child == ELEM_checked_in
@@ -340,13 +346,15 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
       if (child == ELEM_href)
         return SVN_RA_DAV__XML_VALID;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     case ELEM_resourcetype:
       if (child == ELEM_collection || child == ELEM_baseline)
         return SVN_RA_DAV__XML_VALID;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
+                                           was in there */
 
     default:
       return SVN_RA_DAV__XML_DECLINE;

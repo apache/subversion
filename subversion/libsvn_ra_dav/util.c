@@ -98,7 +98,8 @@ static int shim_startelm(void *userdata, int parent_state, const char *nspace,
                          const char *name, const char **attrs)
 {
   neon_shim_baton_t *baton = userdata;
-  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace, name);
+  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
+                                                  name);
   int rc;
 
   if (!elem)
@@ -147,7 +148,8 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
                        const char *name)
 {
   const neon_shim_baton_t *baton = userdata;
-  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace, name);
+  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
+                                                  name);
   int rc;
 
   if (!elem)
@@ -286,7 +288,8 @@ static int validate_error_elements(void *userdata,
           || child == ELEM_human_readable)
         return SVN_RA_DAV__XML_VALID;
       else
-        return SVN_RA_DAV__XML_DECLINE;  /* ignore if something else was in there */
+        return SVN_RA_DAV__XML_DECLINE;  /* ignore if something else
+                                            was in there */
 
     default:
       return SVN_RA_DAV__XML_DECLINE;
@@ -463,7 +466,8 @@ svn_ra_dav__parsed_request(ne_session *sess,
   /* create a parser to read the normal response body */
   success_parser = ne_xml_create();
   svn_ra_dav__xml_push_handler(success_parser, elements,
-                      validate_cb, startelm_cb, endelm_cb, baton, pool);
+                               validate_cb, startelm_cb, endelm_cb,
+                               baton, pool);
 
   /* if our caller is interested in having access to this parser, call
      the SET_PARSER callback with BATON. */
@@ -472,8 +476,9 @@ svn_ra_dav__parsed_request(ne_session *sess,
 
   /* create a parser to read the <D:error> response body */
   error_parser = ne_xml_create();
-  svn_ra_dav__xml_push_handler(error_parser, error_elements, validate_error_elements,
-                      start_err_element, end_err_element, &err, pool); 
+  svn_ra_dav__xml_push_handler(error_parser, error_elements,
+                               validate_error_elements, start_err_element,
+                               end_err_element, &err, pool); 
 
   /* Register the "main" accepter and body-reader with the request --
      the one to use when the HTTP status is 2XX */
@@ -612,8 +617,9 @@ svn_ra_dav__request_dispatch(int *code,
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = ne_xml_create();
-  svn_ra_dav__xml_push_handler(error_parser, error_elements, validate_error_elements,
-                      start_err_element, end_err_element, &err, pool);
+  svn_ra_dav__xml_push_handler(error_parser, error_elements,
+                               validate_error_elements, start_err_element,
+                               end_err_element, &err, pool);
   ne_add_response_body_reader(request, ra_dav_error_accepter,
                               ne_xml_parse_v, error_parser);
 

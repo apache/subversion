@@ -104,7 +104,8 @@ reset_log_item (struct log_baton *lb)
  * This implements the `svn_ra_dav__xml_validate_cb' prototype.
  */
 static int
-log_validate(void *userdata, svn_ra_dav__xml_elmid parent, svn_ra_dav__xml_elmid child)
+log_validate(void *userdata, svn_ra_dav__xml_elmid parent,
+             svn_ra_dav__xml_elmid child)
 {
   /* ### todo */
   return SVN_RA_DAV__XML_VALID;
@@ -228,7 +229,8 @@ log_end_element(void *userdata,
         if (err)
           {
             lb->err = err;         /* ### Wrap an existing error, if any? */
-            return SVN_RA_DAV__XML_INVALID; /* ### Any other way to express an err? */
+            return SVN_RA_DAV__XML_INVALID; /* ### Any other way to express
+                                                   an err? */
           }
       }
       break;
@@ -330,10 +332,14 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
       { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
       { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
       { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "added-path", ELEM_added_path, SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path, SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path, SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path, SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "added-path", ELEM_added_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
+        SVN_RA_DAV__XML_CDATA },
       { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         SVN_RA_DAV__XML_CDATA },

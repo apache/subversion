@@ -130,9 +130,11 @@ static const svn_ra_dav__xml_elm_t propfind_elements[] =
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "version-controlled-configuration", ELEM_vcc, 0 },
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "getcontentlength", ELEM_get_content_length, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "getcontentlength", ELEM_get_content_length,
+    SVN_RA_DAV__XML_CDATA },
   { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "creator-displayname", ELEM_creator_displayname, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname,
+    SVN_RA_DAV__XML_CDATA },
 
   /* SVN elements */
   { SVN_DAV_PROP_NS_DAV, "baseline-relative-path", ELEM_baseline_relpath,
@@ -251,7 +253,8 @@ static int validate_element(void *userdata,
       if ((child == ELEM_collection) || (child == ELEM_baseline))
         return SVN_RA_DAV__XML_VALID;
       else
-        return SVN_RA_DAV__XML_DECLINE; /* not concerned with other types (### now) */
+        return SVN_RA_DAV__XML_DECLINE; /* not concerned with other types
+                                           (### now) */
 
     default:
       return SVN_RA_DAV__XML_DECLINE;

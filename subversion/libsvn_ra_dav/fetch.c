@@ -197,11 +197,13 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
   { SVN_DAV_PROP_NS_DAV, "repository-uuid",
     ELEM_repository_uuid, SVN_RA_DAV__XML_CDATA },
 
-  { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum, SVN_RA_DAV__XML_CDATA },
+  { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum,
+    SVN_RA_DAV__XML_CDATA },
 
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
   { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_DAV__XML_CDATA },
-  { "DAV:", "creator-displayname", ELEM_creator_displayname, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname,
+     SVN_RA_DAV__XML_CDATA },
 
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
   { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
