@@ -10,21 +10,12 @@ short-term tasks to it, if that's helpful.
 ------------------------------------------------------------------------
 
 Ben & Karl todo:
-   - make sure textual merging & conflict resolution all works
+   - (working) make sure textual merging & conflict resolution all works
      correctly, just as it does with properties.
 
-   - once it works, add textual tests to svn-test2.sh
-
-   - come up with a design for `svn_ra.h'
+   - (working) once it works, add textual tests to svn-test2.sh
 
    - clean up the interface in libsvn_client.  make it more canonical.
-
-   - adm_crawler.c:  take an array of paths to traverse, not a single
-     path.  if any error happens at any point, abort everything.
-
-   - ? should the update interface also have the same API as above?
-     It's not not necessary, since updates aren't atomic like commits.
-     But it might be nice for consistency...
 
    - make a new mini-crawler (lots of shared code with adm_crawler.c)
      which reports "version differences" to an editor.  this will be
@@ -56,6 +47,12 @@ Karl todo:
 
 Ben and Karl (longer term):
    - xml dtd, for both xml deltas and wc formats
+
+   - for milestone 3: TREE DELTAS.  Quake before them.  This problem
+     has many aspects to it, *including* {the need for commands to
+     take lists of paths, canconicalizing these lists, testing paths
+     if they exist and/or what their entries say about them, etc.}
+     Just a tip of the iceberg.
 
 Greg:
    - mod_dav_svn:
