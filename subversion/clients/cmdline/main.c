@@ -59,6 +59,7 @@
 const apr_getopt_option_t svn_cl__options[] =
   {
     {"force",         svn_cl__force_opt, 0, "force operation to run"},
+    {"force-log",     svn_cl__force_log_opt, 0, "force validity of log message source"},
     {"help",          'h', 0, "show help on a subcommand"},
     {NULL,            '?', 0, "show help on a subcommand"},
     {"message",       'm', 1, "specify commit message ARG"},
@@ -173,7 +174,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: commit [PATH [PATH ... ]]\n\n"
     "  Be sure to use one of -m or -F to send a log message.\n",
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
-     svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__force_log_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
@@ -184,7 +185,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> URL:  immediately commit a copy of WC to URL\n"
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
-    {'m', 'F', 'r', 'q', SVN_CL__AUTH_OPTIONS, 
+    {'m', 'F', 'r', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__force_log_opt,
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
@@ -199,8 +200,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  behaviour.\n\n"
     "  If run on URLs, the items are deleted from the repository via an\n"
     "  immediate commit.\n",
-    {svn_cl__force_opt, 'm', 'F', 'q', svn_cl__targets_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
+    {svn_cl__force_opt, svn_cl__force_log_opt, 'm', 'F', 'q', 
+     svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
@@ -252,7 +254,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Recursively commit a copy of PATH to URL.\n"
     "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
     "  as necessary in the repository.\n",
-    {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS,
+    {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__force_log_opt,
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
  
   { "info", svn_cl__info, {0},
@@ -317,7 +319,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  immediate commit.\n\n"
     "  In both cases, all the intermediate directories must already exist.\n",
     {'m', 'F', 'q', SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt,
-     svn_cl__encoding_opt} },
+     svn_cl__encoding_opt, svn_cl__force_log_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
@@ -327,7 +329,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
     {'m', 'F', 'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__force_log_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
@@ -712,6 +714,9 @@ main (int argc, const char * const *argv)
       case svn_cl__force_opt:
         opt_state.force = TRUE;
         break;
+      case svn_cl__force_log_opt:
+        opt_state.force_log = TRUE;
+        break;
       case svn_cl__dry_run_opt:
         opt_state.dry_run = TRUE;
         break;
@@ -901,12 +906,12 @@ main (int argc, const char * const *argv)
     {
       /* If the log message file is under revision control, that's
          probably not what the user intended. */
-      if (log_under_version_control && (! opt_state.force))
+      if (log_under_version_control && (! opt_state.force_log))
         {
           svn_handle_error
             (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                                "Log message file is a versioned file; "
-                               "use `--force' to override."),
+                               "use `--force-log' to override."),
              stderr, FALSE);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -914,12 +919,12 @@ main (int argc, const char * const *argv)
 
       /* If the log message is just a pathname, then the user probably did
          not intend that. */
-      if (log_is_pathname && !opt_state.force)
+      if (log_is_pathname && !opt_state.force_log)
         {
           svn_handle_error
             (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                                "The log message is a pathname "
-                               "(was -F intended?); use `--force' "
+                               "(was -F intended?); use `--force-log' "
                                "to override."),
              stderr, FALSE);
           svn_pool_destroy (pool);

@@ -46,6 +46,7 @@ extern "C" {
 typedef enum {
   svn_cl__ancestor_path_opt = SVN_OPT_FIRST_LONGOPT_ID,
   svn_cl__force_opt,
+  svn_cl__force_log_opt,
   svn_cl__encoding_opt,
   svn_cl__version_opt,
   svn_cl__auth_username_opt,
@@ -90,6 +91,7 @@ typedef struct svn_cl__opt_state_t
   const char *message;           /* log message */
   const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
+  svn_boolean_t force_log;       /* force validity of a suspect log msg file */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
   svn_boolean_t quiet;           /* sssh...avoid unnecessary output */
   svn_boolean_t non_interactive; /* do no interactive prompting */

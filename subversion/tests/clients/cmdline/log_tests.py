@@ -359,7 +359,7 @@ def versioned_log_message(sbox):
 
   # force it.  should not produce any errors.
   stdout_lines, stderr_lines = \
-    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force')
+    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force-log')
 
   if (len(stderr_lines) != 0):
     os.chdir (was_cwd)
@@ -378,7 +378,7 @@ def versioned_log_message(sbox):
 
   # force it...  should succeed.
   stdout_lines, stderr_lines = \
-    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force', mu_path)
+    svntest.main.run_svn (None, 'ci', '-F', log_path, '--force-log', mu_path)
 
   if (len(stderr_lines) != 0):
     os.chdir (was_cwd)
