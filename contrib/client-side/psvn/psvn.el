@@ -392,13 +392,6 @@ for  example: '(\"revert\" \"file1\"\)"
                   (message "svn info finished"))
                  ((eq svn-process-cmd 'parse-info)
                   (svn-status-parse-info-result))
-                 ;;                ((eq svn-process-cmd 'diff)
-                 ;;                 (svn-status-show-process-buffer-internal t)
-                 ;;                 (save-excursion
-                 ;;                   (set-buffer "*svn-process*")
-                 ;;                   (diff-mode)
-                 ;;                   (font-lock-fontify-buffer))
-                 ;;                 (message "svn diff finished"))
                  ((eq svn-process-cmd 'blame)
                   (svn-status-show-process-buffer-internal t)
                   (message "svn blame finished"))
@@ -426,24 +419,28 @@ for  example: '(\"revert\" \"file1\"\)"
                   (svn-status-update)
                   (message "svn rm finished"))
                  ((eq svn-process-cmd 'cleanup)
-                  ;;(svn-status-show-process-buffer-internal t)
                   (message "svn cleanup finished"))
                  ((eq svn-process-cmd 'proplist)
                   (svn-status-show-process-buffer-internal t)
                   (message "svn proplist finished"))
                  ((eq svn-process-cmd 'proplist-parse)
                   (svn-status-property-parse-property-names))
-                 ;;              ((eq svn-process-cmd 'propget-parse)
-                 ;;               t)
                  ((eq svn-process-cmd 'propset)
                   (svn-status-update))
                  ((eq svn-process-cmd 'propdel)
                   (svn-status-update))))
           ((string= event "killed\n")
            (message "svn process killed"))
+          ((string-match "exited abnormally" event)
+           (while (accept-process-output process 0 100))
+           ;; find last error message and show it.
+           (goto-char (point-max))
+           (message "svn failed: %s" 
+                    (if (re-search-backward "^svn: \\(.*\\)" nil t)
+                        (match-string 1)
+                      event)))
           (t
            (message "svn process had unknown event: %s" event))
-          ;;(message (format "SVN Error: :%s:" event))
           (svn-status-show-process-buffer-internal t))))
 
 (defun svn-parse-rev-num (str)
@@ -1860,8 +1857,8 @@ When called with a prefix argument, it is possible to enter a new property."
   (svn-status-property-set-property
    (svn-status-marked-files) "svn:eol-style"
    (completing-read "Set svn:eol-style for the marked files: "
-                    '("native" "CRLF" "LF" "CR") nil t)))
-
+                    (mapcar 'list '("native" "CRLF" "LF" "CR"))
+                    nil t)))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-prop-edit-mode:
