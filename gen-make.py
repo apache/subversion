@@ -63,15 +63,8 @@ def main(fname, oname=None):
     else:
       install[install_type] = [ tpath ]
 
-    pats = string.split(parser.get(target, 'sources'))
-    sources = [ ]
-    for pat in pats:
-      files = glob.glob(os.path.join(path, pat))
-      if not files:
-        print 'ERROR:', pat, 'not found.'
-        errors = 1
-        continue
-      sources.extend(files)
+    sources, s_errors = _collect_paths(parser.get(target, 'sources'), path)
+    errors = errors or s_errors
 
     objects = [ ]
     for src in sources:
@@ -150,15 +143,7 @@ def main(fname, oname=None):
                     % (string.upper(area), file, area, os.path.basename(file)))
       ofile.write('\n')
 
-  includes = [ ]
-  pats = string.split(parser.get('includes', 'paths'))
-  for pat in pats:
-    files = glob.glob(pat)
-    if not files:
-      print 'ERROR:', pat, 'not found.'
-      errors = 1
-      continue
-    includes.extend(files)
+  includes, i_errors = _collect_paths(parser.get('includes', 'paths'))
 
   ofile.write('install-include: %s\n'
               '\t$(mkinstalldirs) $(includedir)\n'
@@ -168,7 +153,7 @@ def main(fname, oname=None):
                 % (file, os.path.basename(file)))
   ofile.write('\n')
 
-  if errors:
+  if errors or i_errors:
     sys.exit(1)
 
 _predef_sections = ['external', 'includes']
@@ -206,6 +191,20 @@ def _sort_deps(targets, deps):
     return cmp(order[a], order[b])
   targets.sort(sortfunc)
   return targets
+
+def _collect_paths(pats, path=None):
+  errors = 0
+  result = [ ]
+  for pat in string.split(pats):
+    if path:
+      pat = os.path.join(path, pat)
+    files = glob.glob(pat)
+    if not files:
+      print 'ERROR:', pat, 'not found.'
+      errors = 1
+      continue
+    result.extend(files)
+  return result, errors
 
 if __name__ == '__main__':
   main(sys.argv[1])
