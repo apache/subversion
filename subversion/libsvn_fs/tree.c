@@ -1111,16 +1111,18 @@ path_append (const char *dir, const char *entry, apr_pool_t *pool)
  *
  * If there are differences between ANCESTOR and SOURCE that conflict
  * with changes between ANCESTOR and TARGET, this function returns an
- * SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name of the
+ * SVN_ERR_FS_CONFLICT error, and updates CONFLICT_P to the name of the
  * conflicting node in TARGET, with TARGET_PATH prepended as a path.
  *
- * If there are no conflicting differences, *CONFLICT_P is set to
- * null. 
+ * If there are no conflicting differences, CONFLICT_P is updated to
+ * the empty string.
+ *
+ * CONFLICT_P must point to a valid svn_stringbuf_t.
  *
  * Do any necessary temporary allocation in TRAIL->pool.
  */
 static svn_error_t *
-merge (const char **conflict_p,
+merge (svn_stringbuf_t *conflict_p,
        const char *target_path,
        dag_node_t *target,
        dag_node_t *source,
@@ -1159,7 +1161,7 @@ merge (const char **conflict_p,
          target_path, id_str->data);
     }
 
-  *conflict_p = NULL;
+  svn_stringbuf_setempty (conflict_p);
 
   /* Base cases:
    * Either no change made in source, or same change as made in target.
@@ -1249,7 +1251,7 @@ merge (const char **conflict_p,
       || (! svn_fs__dag_is_directory (target))
       || (! svn_fs__dag_is_directory (ancestor)))
     {
-      *conflict_p = apr_pstrdup (trail->pool, target_path);
+      svn_stringbuf_set (conflict_p, target_path);
       return svn_error_createf (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
                                 "conflict at \"%s\"", target_path);
     }
@@ -1275,9 +1277,9 @@ merge (const char **conflict_p,
        atoms are `equal' is enough. */
     if (! (tgt_nr->prop_key == anc_nr->prop_key))
       {
-        *conflict_p = apr_pstrdup (trail->pool, target_path);
+        svn_stringbuf_set (conflict_p, target_path);
         return svn_error_createf (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                                  "conflict at \"%s\"", *conflict_p);
+                                  "conflict at \"%s\"", target_path);
       }
   }
 
@@ -1365,12 +1367,12 @@ merge (const char **conflict_p,
                       || (! svn_fs__dag_is_directory (a_ent_node)))
                     {
                       /* Not all of these entries is a directory. Conflict. */
-                      *conflict_p = path_append (target_path,
-                                                 a_entry->name,
-                                                 trail->pool);
+                      svn_stringbuf_set (conflict_p, path_append (target_path,
+                                                                  a_entry->name,
+                                                                  trail->pool));
                       return svn_error_createf
                         (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                         "conflict at \"%s\"", *conflict_p);
+                         "conflict at \"%s\"", conflict_p->data);
                     }
 
                   /* ... just recurse. */
@@ -1472,11 +1474,12 @@ merge (const char **conflict_p,
              conflicts with E's having been removed from target. */
           if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
-              *conflict_p = path_append (target_path, a_entry->name,
-                                         trail->pool);
+              svn_stringbuf_set (conflict_p, path_append (target_path,
+                                                          a_entry->name,
+                                                          trail->pool));
               return svn_error_createf
                 (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                 "conflict at \"%s\"", *conflict_p);
+                 "conflict at \"%s\"", conflict_p->data);
             }
 
           /* Else if E did not change between ancestor and source,
@@ -1518,11 +1521,12 @@ merge (const char **conflict_p,
                  the ancestor that we conflict here.
 
                  ### TODO: see issue #418 about this inelegance. */
-              *conflict_p = path_append (target_path, t_entry->name,
-                                         trail->pool);
+              svn_stringbuf_set (conflict_p, path_append (target_path,
+                                                          t_entry->name,
+                                                          trail->pool));
               return svn_error_createf
                 (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-                 "conflict at \"%s\"", *conflict_p);
+                 "conflict at \"%s\"", conflict_p->data);
             }
         }
       /* E exists in neither target nor source */
@@ -1571,10 +1575,12 @@ merge (const char **conflict_p,
       /* E exists in target but is different from E in source */
       else if (! svn_fs__id_is_ancestor (s_entry->id, t_entry->id))
         {
-          *conflict_p = path_append (target_path, t_entry->name, trail->pool);
+          svn_stringbuf_set (conflict_p, path_append (target_path,
+                                                      t_entry->name,
+                                                      trail->pool));
           return svn_error_createf
             (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-             "conflict at \"%s\"", *conflict_p);
+             "conflict at \"%s\"", conflict_p->data);
 
           /* The remaining case would be: E exists in target and is
            * same as in source.  This implies a twin add, so target
@@ -1608,10 +1614,11 @@ struct merge_args
      ancestor for the merge. */
   svn_fs_txn_t *txn;
 
-  /* If a conflict results, this is set to the path in the txn that
-     conflicted, allocated in the pool of the trail in which the
-     conflict was encountered. */
-  const char *conflict;
+  /* If a conflict results, this is updated to the path in the txn that
+     conflicted.  It must point to a valid svn_stringbuf_t before calling
+     svn_fs__retry_txn, as this determines the pool used to allocate any
+     required memory. */
+  svn_stringbuf_t *conflict;
 };
 
 
@@ -1662,7 +1669,7 @@ txn_body_merge (void *baton, trail_t *trail)
     {
       const svn_fs_id_t *ancestor_id, *target_id;
 
-      SVN_ERR (merge (&(args->conflict),
+      SVN_ERR (merge (args->conflict,
                       "",
                       txn_root_node,
                       source_node,
@@ -1855,11 +1862,12 @@ svn_fs_commit_txn (const char **conflict_p,
       merge_args.ancestor_node = NULL;
       merge_args.source_node = youngish_root_node;
       merge_args.txn = txn;
+      merge_args.conflict = svn_stringbuf_create ("", pool);
       err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
       if (err)
         {
           if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
-            *conflict_p = merge_args.conflict;
+            *conflict_p = merge_args.conflict->data;
           return err;
         }
       
@@ -1965,11 +1973,12 @@ svn_fs_merge (const char **conflict_p,
   merge_args.source_node = source;
   merge_args.ancestor_node = ancestor;
   merge_args.txn = txn;
+  merge_args.conflict = svn_stringbuf_create ("", pool);
   err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
   if (err)
     {
       if ((err->apr_err == SVN_ERR_FS_CONFLICT) && conflict_p)
-        *conflict_p = merge_args.conflict;
+        *conflict_p = merge_args.conflict->data;
       return err;
     }
 
