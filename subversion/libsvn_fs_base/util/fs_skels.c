@@ -838,9 +838,9 @@ svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
                                 skel->children->next->next->len);
 
   /* OWNER */
-  lock->path = apr_pstrmemdup (pool,
-                               skel->children->next->next->next->data,
-                               skel->children->next->next->next->len);
+  lock->owner = apr_pstrmemdup (pool,
+                                skel->children->next->next->next->data,
+                                skel->children->next->next->next->len);
 
   /* CREATION-DATE */
   timestr = apr_pstrmemdup (pool,
