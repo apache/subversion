@@ -64,6 +64,10 @@ def _usage_exit():
   print
   print "  Windows-specific options:"
   print
+  print "  --with-berkeley-db=DIR"
+  print "           look for Berkley DB headers and libs in"
+  print "           DIR"
+  print
   print "  --with-httpd=DIR"
   print "           the httpd sources and binaries required"
   print "           for building mod_dav_svn are in DIR"
@@ -90,7 +94,8 @@ def _usage_exit():
 if __name__ == '__main__':
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
-                               ['with-httpd=',
+                               ['with-berkeley-db=',
+                                'with-httpd=',
                                 'with-openssl=',
                                 'with-zlib=',
                                 'enable-pool-debug',

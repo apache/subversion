@@ -40,6 +40,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       os.unlink(src)
 
   def parse_options(self, options):
+    self.bdb_path = None
     self.httpd_path = None
     self.zlib_path = None
     self.openssl_path = None
@@ -51,7 +52,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.instrument_purify_quantify = None
 
     for opt, val in options:
-      if opt == '--with-httpd':
+      if opt == '--with-berkeley-db':
+        self.bdb_path = os.path.abspath(val)
+      elif opt == '--with-httpd':
         self.httpd_path = os.path.abspath(val)
         del self.skip_sections['mod_dav_svn']
         del self.skip_sections['mod_authz_svn']
@@ -91,23 +94,29 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.parse_options(options)
 
     #Find db-4.0.x or db-4.1.x
+    self.dblibname = None
+
     #We translate all slashes to windows format later on
-    db41 = self.search_for("libdb41.lib", ["db4-win32/lib"])
-    if db41:
-      sys.stderr.write("Found libdb41.lib in %s\n" % db41)
-      self.dblibname = "libdb41"
-      self.dblibpath = db41
-    else:
-      db40 = self.search_for("libdb40.lib", ["db4-win32/lib"])
-      if db40:
-        sys.stderr.write("Found libdb40.lib in %s\n" % db40)
-        self.dblibname = "libdb40"
-        self.dblibpath = db40
-      else:
-        sys.stderr.write("DB not found; assuming db-4.0.X in db4-win32 "
-                         "by default\n")
-        self.dblibname = "libdb40"
-        self.dblibpath = os.path.join("db4-win32","lib")
+    search = [("libdb41", "db4-win32/lib"),
+              ("libdb40", "db4-win32/lib")]
+
+    if self.bdb_path:
+      search = [("libdb41", self.bdb_path + "/lib"),
+                ("libdb40", self.bdb_path + "/lib")] + search
+
+    for libname, path in search:
+      libpath = self.search_for(libname + ".lib", [path])
+      if libpath:
+        sys.stderr.write("Found %s.lib in %s\n" % (libname, libpath))
+        self.dblibname = libname
+        self.dblibpath = libpath
+
+    if not self.dblibname:
+      sys.stderr.write("DB not found; assuming db-4.0.X in db4-win32 "
+                       "by default\n")
+      self.dblibname = "libdb40"
+      self.dblibpath = os.path.join("db4-win32","lib")
+
     self.dbincpath = string.replace(self.dblibpath, "lib", "include")
     self.dbbindll = "%s//%s.dll" % (string.replace(self.dblibpath,
                                                    "lib", "bin"),
@@ -191,7 +200,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     result = [ ]
     for item in list:
-      result.append(rootpath + '\\' + item)
+      ### On Unix, os.path.isabs won't do the right thing if "item"
+      ### contains backslashes or drive letters
+      if os.path.isabs(item):
+        result.append(item)
+      else:
+        result.append(rootpath + '\\' + item)
     return result
 
   def make_windirs(self, list):
