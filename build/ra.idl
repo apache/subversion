@@ -1,0 +1,154 @@
+[types]
+string   = char *
+revision = svn_revnum_t
+time     = apr_time_t
+hash     = apr_hash_t *
+boolean  = svn_boolean_t
+blob     = svn_string_t *
+integer  = int
+
+
+[callbacks]
+names = open_tmp_file
+        append_stream
+        get_authenticator
+        get_committed_rev
+        get_wc_prop
+        set_wc_prop
+
+[get_authenticator]
+in = (integer)method
+out = (integer)authenticator
+      (integer)baton
+
+[open_tmp_file]
+out = (integer)baton
+
+[append_stream]
+in = (integer)baton
+     blob
+
+[get_committed_rev]
+in = (string)relpath
+out = (revision)rev
+
+[get_wc_prop]
+in = (string)relpath
+     (string)name
+out = (blob)value
+
+[set_wc_prop]
+in = (string)path
+     (string)name
+     (blob)value
+
+
+[methods]
+names = open
+        close
+        get_latest_revnum
+        get_dated_revision
+        get_file
+        get_dir
+        get_log
+
+[open]
+in = (string)repos_URL
+
+[close]
+
+[get_latest_revnum]
+out = (revision)latest_revnum
+
+[get_dated_revision]
+in = (time)tm
+out = revision
+
+#svn_error_t *(*get_commit_editor) (void *session_baton,
+#                                   const svn_delta_editor_t **editor,
+#                                   void **edit_baton,
+#                                   svn_revnum_t *new_rev,
+#                                   const char **committed_date,
+#                                   const char **committed_author,
+#                                   const char *log_msg);
+
+[get_file]
+in = (integer)baton
+     (string)path
+     revision
+     (integer)stream
+out = (revision)fetched_rev
+      (hash)props
+
+[get_dir]
+in = (integer)baton
+     (string)path
+     revision
+out = (hash)dirents
+      (revision)fetched_rev
+      (hash)props
+
+#svn_error_t *(*do_checkout) (void *session_baton,
+#                             svn_revnum_t revision,
+#                             svn_boolean_t recurse,
+#                             const svn_delta_editor_t *editor,
+#                             void *edit_baton);
+#
+#svn_error_t *(*do_update) (void *session_baton,
+#                           const svn_ra_reporter_t **reporter,
+#                           void **report_baton,
+#                           svn_revnum_t revision_to_update_to,
+#                           const char *update_target,
+#                           svn_boolean_t recurse,
+#                           const svn_delta_edit_fns_t *update_editor,
+#                           void *update_baton);
+#
+#svn_error_t *(*do_switch) (void *session_baton,
+#                           const svn_ra_reporter_t **reporter,
+#                           void **report_baton,
+#                           svn_revnum_t revision_to_update_to,
+#                           const char *update_target,
+#                           svn_boolean_t recurse,
+#                           const char *switch_url,
+#                           const svn_delta_edit_fns_t *update_editor,
+#                           void *update_baton);
+#
+#svn_error_t *(*do_status) (void *session_baton,
+#                           const svn_ra_reporter_t **reporter,
+#                           void **report_baton,
+#                           const char *status_target,
+#                           svn_boolean_t recurse,
+#                           const svn_delta_edit_fns_t *status_editor,
+#                           void *status_baton);
+#
+#svn_error_t *(*do_diff) (void *session_baton,
+#                         const svn_ra_reporter_t **reporter,
+#                         void **report_baton,
+#                         svn_revnum_t revision,
+#                         const char *diff_target,
+#                         svn_boolean_t recurse,
+#                         const char *versus_url,
+#                         const svn_delta_edit_fns_t *diff_editor,
+#                         void *diff_baton);
+
+[get_log]
+in = (integer)baton
+     (string[])paths
+     (revision)start
+     (revision)end
+     (boolean)discover_changed_paths
+     (boolean)strict_node_history
+callbacks = add_message
+
+[add_message]
+in = (hash)changed_paths
+     revision
+     (string)author
+     (string)date
+     (string)message
+
+[check_path]
+in = (integer)baton
+     (string)path
+     revision
+out = kind
