@@ -52,7 +52,7 @@
 #include <sys\stat.h>
 
 /*** Constants ***/
-#define BUFSIZE 1024
+#define BUFSIZE 4000
 
 /*** Global variables ***/
 static char g_AuExBatFile[17] = "C:\\Autoexec.bat";
