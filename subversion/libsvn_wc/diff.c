@@ -744,18 +744,14 @@ close_file (void *file_baton)
   else
     {
       svn_stringbuf_t *translated;
-      svn_error_t *err2;
       
       SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
       
-      err2 = diff_cmd (temp_file_path, translated, b->path,
+      err = diff_cmd (temp_file_path, translated, b->path,
                        b->edit_baton->diff_cmd_baton);
       
       if (translated != b->path)
         SVN_ERR (svn_io_remove_file (translated->data, b->pool));
-      
-      if (err2)
-        return err2;
     }
 
 #if 0
@@ -766,6 +762,7 @@ close_file (void *file_baton)
   /* Remove the temporary file, after this normal error handling can
      resume */
   apr_file_remove (temp_file_path->data, b->pool);
+
   if (err != SVN_NO_ERROR)
     return err;
 
