@@ -149,6 +149,50 @@ svn_ra_local__get_file_revs (void *session_baton,
                                   handler, handler_baton, pool);
 }
 
+static svn_error_t *
+get_username (svn_ra_local__session_baton_t *session,
+              apr_pool_t *pool)
+{
+  svn_auth_iterstate_t *iterstate;
+
+  /* If we've already found the username don't ask for it again */
+  if (session->username)
+    return SVN_NO_ERROR;
+
+  /* Get a username somehow, so we have some svn:author property to
+     attach to a commit. */
+  if (! session->callbacks->auth_baton)
+    {
+      session->username = "";
+    }
+  else
+    {
+      void *creds;
+      svn_auth_cred_username_t *username_creds;
+      SVN_ERR (svn_auth_first_credentials (&creds, &iterstate,
+                                           SVN_AUTH_CRED_USERNAME,
+                                           session->uuid, /* realmstring */
+                                           session->callbacks->auth_baton,
+                                           pool));
+
+      /* No point in calling next_creds(), since that assumes that the
+         first_creds() somehow failed to authenticate.  But there's no
+         challenge going on, so we use whatever creds we get back on
+         the first try. */
+      username_creds = creds;
+      if (username_creds && username_creds->username)
+        {
+          session->username = apr_pstrdup (pool, username_creds->username);
+          svn_error_clear (svn_auth_save_credentials (iterstate, pool));
+        }
+      else
+        session->username = "";
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /*----------------------------------------------------------------*/
 
 /** The RA plugin routines **/
@@ -163,7 +207,6 @@ svn_ra_local__open (void **session_baton,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *session;
-  svn_auth_iterstate_t *iterstate;
   
   /* Allocate and stash the session_baton args we have already. */
   session = apr_pcalloc (pool, sizeof(*session));
@@ -194,35 +237,8 @@ svn_ra_local__open (void **session_baton,
   session->callbacks = callbacks;
   session->callback_baton = callback_baton;
 
-  /* Get a username somehow, so we have some svn:author property to
-     attach to a commit. */
-  if (! callbacks->auth_baton)
-    {
-      session->username = "";
-    }
-  else
-    {
-      void *creds;
-      svn_auth_cred_username_t *username_creds;
-      SVN_ERR (svn_auth_first_credentials (&creds, &iterstate, 
-                                           SVN_AUTH_CRED_USERNAME,
-                                           session->uuid, /* realmstring */
-                                           callbacks->auth_baton,
-                                           pool));
-
-      /* No point in calling next_creds(), since that assumes that the
-         first_creds() somehow failed to authenticate.  But there's no
-         challenge going on, so we use whatever creds we get back on
-         the first try. */
-      username_creds = creds;
-      if (username_creds && username_creds->username)
-        {
-          session->username = apr_pstrdup (pool, username_creds->username);
-          svn_error_clear (svn_auth_save_credentials (iterstate, pool));
-        }
-      else
-        session->username = "";
-    }
+  /* Be sure username is NULL so we know to look it up / ask for it */
+  session->username = NULL;
 
   *session_baton = session;
   return SVN_NO_ERROR;
@@ -269,6 +285,8 @@ svn_ra_local__change_rev_prop (void *session_baton,
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
+
+  SVN_ERR (get_username (baton, pool));
 
   SVN_ERR (svn_repos_fs_change_rev_prop (baton->repos, rev, baton->username,
                                          name, value, pool));
@@ -393,6 +411,8 @@ svn_ra_local__get_commit_editor (void *session_baton,
   db->callback = callback;
   db->callback_baton = callback_baton;
 
+  SVN_ERR (get_username (sess, pool));
+
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
                                         sess->repos_url, sess->fs_path,
@@ -449,6 +469,8 @@ make_reporter (void *session_baton,
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
+  SVN_ERR (get_username (sbaton, pool));
+  
   /* Build a reporter baton. */
   SVN_ERR (svn_repos_begin_report (&rbaton,
                                    revision,
