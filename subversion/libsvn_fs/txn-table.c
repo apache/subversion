@@ -11,6 +11,7 @@
  * ====================================================================
  */
 
+#include <string.h>
 #include "db.h"
 #include "fs.h"
 #include "err.h"

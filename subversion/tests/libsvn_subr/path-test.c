@@ -12,8 +12,9 @@
  * ====================================================================
  */
 
-#include <svn_path.h>
 #include <stdio.h>
+#include <string.h>
+#include <svn_path.h>
 #include <apr_general.h>
 #include "svn_test.h"
 

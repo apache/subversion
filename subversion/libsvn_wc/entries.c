@@ -14,6 +14,7 @@
 
 
 
+#include <string.h>
 #include <apr_strings.h>
 #include <assert.h>
 #include "wc.h"

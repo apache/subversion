@@ -15,6 +15,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 
 #include <apr_pools.h>
 #include <apr_file_io.h>

@@ -16,7 +16,7 @@
 #include <assert.h>
 #include <apr_pools.h>
 #include "svn_delta.h"
-
+#include <string.h>
 
 
 static svn_error_t *
