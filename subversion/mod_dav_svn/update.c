@@ -179,7 +179,8 @@ static void replace_helper(svn_boolean_t is_dir,
 
 static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
-  if (baton->seen_prop_change)
+  if (baton->seen_prop_change 
+      && (! baton->added))
     send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
 
   if (baton->added)
