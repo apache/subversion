@@ -155,14 +155,18 @@ def am_nodes(ctx):
       prkind = drkind = " "
       if nd.proprep:
         try:
-          rep = ctx.reps_db[nd.proprep]
-          prkind = reptype[skel.Rep(rep).kind]
+          rep = skel.Rep(ctx.reps_db[nd.proprep])
+          prkind = reptype[rep.kind]
+          if ctx.bad_reps.has_key(nd.proprep):
+            prkind += " *** BAD ***"
         except KeyError:
           prkind = "*** MISSING ***"
       if nd.datarep:
         try:
-          rep = ctx.reps_db[nd.datarep]
-          drkind = reptype[skel.Rep(rep).kind]
+          rep = skel.Rep(ctx.reps_db[nd.datarep])
+          drkind = reptype[rep.kind]
+          if ctx.bad_reps.has_key(nd.datarep):
+            drkind += " *** BAD ***"
         except KeyError:
           drkind = "*** MISSING ***"
       stringdata = "%s: %s %s pred %s count %s prop %s %s data %s %s edit %s" \
@@ -183,6 +187,7 @@ def get_string(ctx, id):
 
 def am_reps(ctx):
   "representations"
+  ctx.bad_reps = {}
   cur = ctx.reps_db.cursor()
   try:
     print "next-key: %s" % ctx.txns_db['next-key']
@@ -196,6 +201,7 @@ def am_reps(ctx):
           note = ""
           if not ctx.strings_db.has_key(rep.str):
             note = " *MISS*"
+            ctx.bad_reps[rec[0]] = None
           print lead+("fulltext str %s%s" % (rep.str, note))
           if ctx.verbose:
             print textwrap.fill(get_string(ctx, rep.str), initial_indent="  ",
@@ -207,8 +213,10 @@ def am_reps(ctx):
             noterep = notestr = ""
             if not ctx.reps_db.has_key(window.vs_rep):
               noterep = " *MISS*"
+              ctx.bad_reps[rec[0]] = None
             if not ctx.strings_db.has_key(window.str):
               notestr = " *MISS*"
+              ctx.bad_reps[rec[0]] = None
             print "\toff %s len %s vs-rep %s%s str %s%s" % (window.offset,
                 window.size, window.vs_rep, noterep, window.str, notestr)
         else:
