@@ -4,6 +4,90 @@ Please direct all comments and suggestions to
 C. Michael Pilato <cmpilato@collab.net>.
 
 --
+ We have four use cases for 'svn cp' now.
+
+    A. svn cp wc_path1 wc_path2
+
+       This duplicates a path in the working copy, and schedules it
+       for addition with history.  (This is partially implemented in
+       0.6 already.)  
+
+    B. svn cp URL [-r rev]  wc_path
+
+       This "checks out" URL (in REV) into the working copy at
+       wc_path, integrates it, and schedules it for addition with
+       history.
+
+    C. svn cp wc_path URL
+
+       This immediately commits wc_path to URL on the server;  the
+       commit will be an addition with history.  The commit will not
+       change the working copy at all.
+
+    D. svn cp URL1 [-r rev] URL2
+
+       This causes a server-side copy to happen immediately;  no
+       working copy is required.
+
+
+[Note: we're using the phrase "tag" to mean "branch or tag"; they're
+the same thing, and for now we're assuming that per-installation
+administrative policy and/or ACLs will bother to differentiate.  The
+svn filesystem certainly doesn't.]
+
+So how do I create a tag?  Assume that the repository has a layout
+like this:
+
+   /project1/trunk/
+   /project1/tags/
+
+In the simplest case, if I want to tag the HEAD of trunk, I don't even
+need a working copy.  I use case (D) above:
+
+   svn cp http://foo.com/repos/project1/trunk \
+          http://foo.com/repos/project1/tags/milestone-6
+
+Voila, no working copy needed.  A "cheap" (constant-time) directory
+copy is made on the server.
+
+In a more complex case, suppose the state of my tree (mixed revisions
+and all) is exactly what I want the tag to look like.  In that case, I
+use case (C):
+
+   cd top/of/my/wc
+   svn cp . http://foo.com/repos/project1/tags/milestone-6
+
+I should mention that as a rule, cases (A) and (C) always notice mixed
+revisions when committing.
+
+
+Second, we have a new command:  'svn switch URL [-r rev]'
+
+This command performs an update on your working copy, making it
+reflect a new URL.  This is how you "move" your working copy to a
+branch or tag. 
+
+Really, 'svn up' is just a special case of 'svn switch', where the URL
+is assumed to be the one you already have.
+
+There's nothing magical about this command -- it will be fairly easy
+to write, we hope;  instead of calling svn_repos_dir_delta() on two
+identical paths, the paths will be different now.  The good news is
+that _dir_delta doesn't care one bit.  It examines node-rev-ids
+anyway, and notices relationships between them.  If, when updating
+your working copy from a trunk to a branch, it discovers that 80% of
+your files are already correct, then it won't send them.  (However, if
+you ask to switch your working copy to a completely unrelated URL,
+then dir_delta probably *will* do something as extreme as removing and
+re-checking out a new working copy.)  
+
+Also -- if the user has local mods that conflict with the switch, one
+may very well get an 'obstructed update' error.  An update is an
+update, after all.  Let the user beware; if she wants to switch her WC
+to a branch cleanly, she should make sure her WC is clean to begin
+with.  :-)
+
+------------------------------------------------------------------------
 
 Here is how I plan to handle the four basic cases for `svn copy/move',
 as determined by the type of paths supplied as the SRC and DST
