@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-# Usage: scramble-tree.py <dir> [SEED]
+# scramble-tree.py:  (See scramble-tree.py --help.)
 #
 # Makes multiple random file changes to a directory tree, for testing.
 #
