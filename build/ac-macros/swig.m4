@@ -181,6 +181,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       ])
       SWIG_PY_LIBS="$ac_cv_python_libs"
 
+      dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
       dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
       dnl thus the egrep patterns have a + in them.
       SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
@@ -188,19 +189,19 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
                      [svn_cv_pycfmt_apr_int64_t], [
         if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-          AC_EGREP_CPP([MaTcHtHiS \"lld\" +EnDeNd],
+          AC_EGREP_CPP([MaTcHtHiS +\"lld\" +EnDeNd],
                        [#include <apr.h>
                         MaTcHtHiS APR_INT64_T_FMT EnDeNd],
                        [svn_cv_pycfmt_apr_int64_t="L"])
         fi
         if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-          AC_EGREP_CPP([MaTcHtHiS \"ld\" +EnDeNd],r
+          AC_EGREP_CPP([MaTcHtHiS +\"ld\" +EnDeNd],r
                        [#include <apr.h>
                         MaTcHtHiS APR_INT64_T_FMT EnDeNd],
                        [svn_cv_pycfmt_apr_int64_t="l"])
         fi
         if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-          AC_EGREP_CPP([MaTcHtHiS \"d\" +EnDeNd],
+          AC_EGREP_CPP([MaTcHtHiS +\"d\" +EnDeNd],
                        [#include <apr.h>
                         MaTcHtHiS APR_INT64_T_FMT EnDeNd],
                        [svn_cv_pycfmt_apr_int64_t="i"])
