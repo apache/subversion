@@ -28,9 +28,7 @@
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
-#include "revision.h"
-#include "node.h"
-#include "txn.h"
+#include "nodes-table.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -52,7 +50,7 @@ check_already_open (svn_fs_t *fs)
 /* A default warning handling function.  */
 
 static void
-default_warning_func (void *baton, char *fmt, ...)
+default_warning_func (void *baton, const char *fmt, ...)
 {
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
@@ -174,13 +172,9 @@ svn_fs_new (apr_pool_t *parent_pool)
   {
     apr_pool_t *pool = svn_pool_create (parent_pool);
 
-    new = NEW (pool, svn_fs_t);    
-    memset (new, 0, sizeof (*new));
+    new = apr_pcalloc (pool, sizeof (svn_fs_t));
     new->pool = pool;
   }
-
-  new->node_cache = apr_make_hash (new->pool);
-  new->open_txns = apr_make_hash (new->pool);
 
   new->warning = default_warning_func;
 
@@ -270,13 +264,8 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the databases in the environment.  */
-  svn_err = svn_fs__create_revisions (fs);
-  if (svn_err) goto error;
-  svn_err = svn_fs__create_nodes (fs);
-  if (svn_err) goto error;
-  svn_err = svn_fs__create_transactions (fs);
-  if (svn_err) goto error;
-  svn_err = svn_fs__create_root (fs);
+  svn_err = DB_WRAP (fs, "creating `nodes' table",
+		     svn_fs__open_nodes_table (&fs->nodes, fs->env, 1));
   if (svn_err) goto error;
 
   fs->env_path = apr_pstrdup (fs->pool, path);
@@ -313,12 +302,8 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Open the various databases.  */
-  svn_err = svn_fs__open_revisions (fs);
-  if (svn_err) goto error;
-  svn_err = svn_fs__open_nodes (fs);
-  if (svn_err) goto error;
-  svn_err = svn_fs__open_transactions (fs);
-  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "opening `nodes' table",
+		     svn_fs__open_nodes_table (&fs->nodes, fs->env, 0));
 
   return 0;
   
