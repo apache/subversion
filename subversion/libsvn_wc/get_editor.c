@@ -400,51 +400,27 @@ svn_wc_apply_delta (void *delta_src,
                     svn_vernum_t version,
                     apr_pool_t *pool)
 {
+  const svn_delta_walk_t *walker;
+  void *walk_baton;
+  void *dir_baton;
   svn_error_t *err;
-  struct w_baton w_baton;
-  svn_string_t *telescoping_path;
 
-  if (dest)
-    {
-      err = svn_wc__ensure_directory (dest, pool);
-
-      if (err)
-        return err;
-      else
-        {
-          /* kff todo: actually, we can't always err out if dest turns out
-             to be a working copy; instead, we just need to note it
-             somewhere and be careful.  Right now, though, punt. */
-
-          int is_working_copy = 0;
-          
-          svn_wc__working_copy_p (&is_working_copy, dest, pool);
-          if (is_working_copy)
-            return svn_create_error (SVN_ERR_OBSTRUCTED_UPDATE,
-                                     0, dest->data, NULL, pool);
-        }
-    }
-
-  /* Else nothing in the way, so continue. */
-
-  /* Set up the batons... */
-  memset (&w_baton, 0, sizeof (w_baton));
-  w_baton.dest_dir   = dest;      /* Remember, DEST might be null. */
-  w_baton.repository = repos;
-  w_baton.pool       = pool;
-  w_baton.version    = version;
-  telescoping_path = svn_string_create ("", pool);
+  /* get the change-walker information */
+  err = svn_wc_get_change_walker(dest, repos, version,
+                                 &walker, &walk_baton, &dir_baton, pool);
+  if (err)
+    return err;
 
   /* ... and walk! */
-  err = svn_xml_parse (read_fn, delta_src,
-                       &change_walker, &w_baton, telescoping_path, pool);
-
-  return err;
+  return svn_xml_parse (read_fn, delta_src,
+                        walker, walk_baton, dir_baton, pool);
 }
 
 
 svn_error_t *
 svn_wc_get_change_walker (svn_string_t *dest,
+                          svn_string_t *repos,
+                          svn_vernum_t version,
                           const svn_delta_walk_t **walker,
                           void **walk_baton,
                           void **dir_baton,
@@ -478,7 +454,9 @@ svn_wc_get_change_walker (svn_string_t *dest,
 
   w_baton = apr_pcalloc(pool, sizeof(*w_baton));
   w_baton->dest_dir   = dest;   /* Remember, DEST might be null. */
+  w_baton->repository = repos;
   w_baton->pool       = pool;
+  w_baton->version    = version;
   *walk_baton = w_baton;
 
   *dir_baton = svn_string_create ("", pool);
