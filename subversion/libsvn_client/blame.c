@@ -308,7 +308,7 @@ svn_client_blame (const char *target,
   struct blame *walk;
   apr_file_t *file;
   svn_stream_t *stream;
-  apr_pool_t *subpool, *diffpool;
+  apr_pool_t *iterpool;
   struct rev *rev;
   apr_status_t apr_err;
   svn_node_kind_t kind;
@@ -321,50 +321,49 @@ svn_client_blame (const char *target,
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
        "svn_client_blame: caller failed to supply revisions");
 
-  subpool = svn_pool_create (pool);
-  diffpool = svn_pool_create (pool);
+  iterpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_client_url_from_path (&url, target, subpool));
+  SVN_ERR (svn_client_url_from_path (&url, target, pool));
   if (! url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                               "'%s' has no URL", target);
 
 
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, subpool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, subpool));
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
 
-  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", subpool));
+  SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
 
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir,
                                         NULL, NULL, FALSE, FALSE,
-                                        ctx, subpool));
+                                        ctx, pool));
 
   SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, session,
-                                            start, target, subpool));
+                                            start, target, pool));
   SVN_ERR (svn_client__get_revision_number (&end_revnum, ra_lib, session,
-                                            end, target, subpool));
+                                            end, target, pool));
 
   if (end_revnum < start_revnum)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
        "svn_client_blame: start revision must preceed end revision");
 
-  SVN_ERR (ra_lib->check_path (session, "", end_revnum, &kind, subpool));
+  SVN_ERR (ra_lib->check_path (session, "", end_revnum, &kind, pool));
 
   if (kind == svn_node_dir)
     return svn_error_createf (SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                               "URL \"%s\" refers to directory", url);
 
-  condensed_targets = apr_array_make (subpool, 1, sizeof (const char *));
+  condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
   (*((const char **)apr_array_push (condensed_targets))) = "";
 
-  SVN_ERR (ra_lib->get_repos_root (session, &reposURL, subpool));
+  SVN_ERR (ra_lib->get_repos_root (session, &reposURL, pool));
 
   lmb.path = url + strlen (reposURL);
   lmb.cancel_func = ctx->cancel_func;
   lmb.cancel_baton = ctx->cancel_baton;
   lmb.eldest = NULL;
-  lmb.pool = subpool;
+  lmb.pool = pool;
 
   SVN_ERR (ra_lib->get_log (session,
                             condensed_targets,
@@ -374,26 +373,26 @@ svn_client_blame (const char *target,
                             strict_node_history,
                             log_message_receiver,
                             &lmb,
-                            subpool));
+                            pool));
 
   if (! lmb.eldest)
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, reposURL, auth_dir,
                                         NULL, NULL, FALSE, FALSE,
-                                        ctx, subpool));
+                                        ctx, pool));
 
   db.avail = NULL;
-  db.pool = subpool;
+  db.pool = pool;
 
   for (rev = lmb.eldest; rev; rev = rev->next)
     {
       const char *tmp;
       SVN_ERR (svn_io_open_unique_file (&file, &tmp, "", ".tmp",
-                                        FALSE, subpool));
-      stream = svn_stream_from_aprfile (file, pool);
+                                        FALSE, pool));
+      stream = svn_stream_from_aprfile (file, iterpool);
       SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
-                                 stream, NULL, NULL, subpool));
+                                 stream, NULL, NULL, iterpool));
       SVN_ERR (svn_stream_close (stream));
       apr_err = apr_file_close (file);
       if (apr_err != APR_SUCCESS)
@@ -403,10 +402,10 @@ svn_client_blame (const char *target,
         {
           svn_diff_t *diff;
           db.rev = rev;
-          apr_pool_clear (diffpool);
-          SVN_ERR (svn_diff_file_diff (&diff, last, tmp, diffpool));
+          apr_pool_clear (iterpool);
+          SVN_ERR (svn_diff_file_diff (&diff, last, tmp, iterpool));
           SVN_ERR (svn_diff_output (diff, &db, &output_fns));
-          apr_err = apr_file_remove (last, diffpool);
+          apr_err = apr_file_remove (last, iterpool);
           if (apr_err != APR_SUCCESS)
             return svn_error_createf (apr_err, NULL, "error removing %s", 
                                       last);
@@ -416,25 +415,25 @@ svn_client_blame (const char *target,
 
       last = tmp;
     }
-  apr_pool_destroy (diffpool);
 
-  apr_err = apr_file_open (&file, last, APR_READ, APR_OS_DEFAULT, subpool);
+  apr_err = apr_file_open (&file, last, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, NULL, "error opening %s", last);
 
-  stream = svn_stream_from_aprfile (file, subpool);
+  stream = svn_stream_from_aprfile (file, pool);
   for (walk = db.blame; walk; walk = walk->next)
     {
       int i;
       for (i = walk->start; !walk->next || i < walk->next->start; i++)
         {
           svn_stringbuf_t *sb;
-          SVN_ERR (svn_stream_readline (stream, &sb, subpool));
+          apr_pool_clear (iterpool);
+          SVN_ERR (svn_stream_readline (stream, &sb, iterpool));
           if (! sb)
             break;
           SVN_ERR (receiver (receiver_baton, i, walk->rev->revision,
                              walk->rev->author, walk->rev->date,
-                             sb->len ? sb->data : "", subpool));
+                             sb->len ? sb->data : "", iterpool));
         }
     }
 
@@ -442,10 +441,10 @@ svn_client_blame (const char *target,
   apr_err = apr_file_close (file);
   if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, NULL, "error closing %s", last);
-  apr_err = apr_file_remove (last, diffpool);
+  apr_err = apr_file_remove (last, pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, NULL, "error removing %s", last);
 
-  apr_pool_destroy (subpool);
+  apr_pool_destroy (iterpool);
   return SVN_NO_ERROR;
 }
