@@ -9,12 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10368
-    Don't segfault when following history and we find an empty revision.
-    Justificaton: Don't ever segfault.
-    Votes:
-      +1: breser, sussman, cmpilato (sussman and cmpilato via IRC)
-
   * r10371:
     Mark python and perl bindings modules "undefined-lib-symbols = yes".
     This is because they require symbols from libperl/libpython, which we
