@@ -129,27 +129,13 @@ read_all (svn_config_t **cfgp,
 {
   svn_boolean_t red_config = FALSE;  /* "red" is the past tense of "read" */
 
+  /*** Read system-wide configurations first... ***/
+
 #ifdef SVN_WIN32
   if (sys_registry_path)
     {
       SVN_ERR (svn_config_read (cfgp, sys_registry_path, FALSE, pool));
       red_config = TRUE;
-    }
-#endif /* SVN_WIN32 */
-
-#ifdef SVN_WIN32
-  /* ### Shouldn't we swap 2. and 3.? Move this block after the
-     "if (sys_file_path)" block, so that all global config is grokked
-     before all user config?  --xbc */
-  if (usr_registry_path)
-    {
-      if (red_config)
-        SVN_ERR (svn_config_merge (*cfgp, usr_registry_path, FALSE));
-      else
-        {
-          SVN_ERR (svn_config_read (cfgp, usr_registry_path, FALSE, pool));
-          red_config = TRUE;
-        }
     }
 #endif /* SVN_WIN32 */
 
@@ -163,6 +149,21 @@ read_all (svn_config_t **cfgp,
           red_config = TRUE;
         }
     }
+
+  /*** ...followed by per-user configurations. ***/
+
+#ifdef SVN_WIN32
+  if (usr_registry_path)
+    {
+      if (red_config)
+        SVN_ERR (svn_config_merge (*cfgp, usr_registry_path, FALSE));
+      else
+        {
+          SVN_ERR (svn_config_read (cfgp, usr_registry_path, FALSE, pool));
+          red_config = TRUE;
+        }
+    }
+#endif /* SVN_WIN32 */
 
   if (usr_file_path)
     {
