@@ -150,6 +150,7 @@ svn_cl__cmd_proc_t
   svn_cl__mkdir,
   svn_cl__move,
   svn_cl__propdel,
+  svn_cl__propedit,
   svn_cl__propget,
   svn_cl__proplist,
   svn_cl__propset,
