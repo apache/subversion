@@ -1137,14 +1137,25 @@ struct rep_read_baton
   /* The plaintext state, if there is a plaintext. */
   struct rep_state *src_state;
 
+  /* The index of the current delta chunk, if we are reading a delta. */
   int chunk_index;
+
+  /* The buffer where we store undeltified data. */
   char *buf;
   apr_size_t buf_pos;
   apr_size_t buf_len;
   
-  /* MD5 checksum.  Initialized when the baton is created, updated as
-     we read data, and finalized when the stream is closed. */
+  /* An MD5 context for summing the data read in order to verify it. */
   struct apr_md5_ctx_t md5_context;
+  svn_boolean_t checksum_finalized;
+
+  /* The stored checksum of the representation we are reading, its
+     length, and the amount we've read so far.  Some of this
+     information is redundant with rs_list and src_state, but it's
+     convenient for the checksumming code to have it here. */
+  unsigned char checksum[APR_MD5_DIGESTSIZE];
+  svn_filesize_t len;
+  svn_filesize_t off;
 
   /* Used for temporary allocations during the read. */
   apr_pool_t *pool;
@@ -1166,11 +1177,14 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   struct rep_read_baton *b;
 
   b = apr_pcalloc (pool, sizeof (*b));
-  apr_md5_init (&(b->md5_context));
-
   b->fs = fs;
   b->chunk_index = 0;
   b->buf = NULL;
+  apr_md5_init (&(b->md5_context));
+  b->checksum_finalized = FALSE;
+  memcpy (b->checksum, rep->checksum, sizeof (b->checksum));
+  b->len = rep->expanded_size;
+  b->off = 0;
   b->pool = svn_pool_create (pool);
   b->filehandle_pool = svn_pool_create (pool);
   
@@ -1266,14 +1280,12 @@ rep_read_contents_close (void *baton)
   return SVN_NO_ERROR;
 }
 
-/* BATON is of type `rep_read_baton', return the next *LEN bytes of
-   the representation and store them in *BUF. */
+/* Return the next *LEN bytes of the rep and store them in *BUF. */
 static svn_error_t *
-rep_read_contents (void *baton,
-                   char *buf,
-                   apr_size_t *len)
+get_contents (struct rep_read_baton *rb,
+              char *buf,
+              apr_size_t *len)
 {
-  struct rep_read_baton *rb = baton;
   apr_size_t copy_len, remaining = *len;
   char *sbuf, *cur = buf;
   struct rep_state *rs;
@@ -1366,6 +1378,45 @@ rep_read_contents (void *baton,
 
   *len = cur - buf;
 
+  return SVN_NO_ERROR;
+}
+
+/* BATON is of type `rep_read_baton'; read the next *LEN bytes of the
+   representation and store them in *BUF.  Sum as we read and verify
+   the MD5 sum at the end. */
+static svn_error_t *
+rep_read_contents (void *baton,
+                   char *buf,
+                   apr_size_t *len)
+{
+  struct rep_read_baton *rb = baton;
+
+  /* Get the next block of data. */
+  SVN_ERR (get_contents (rb, buf, len));
+
+  /* Perform checksumming.  We want to check the checksum as soon as
+     the last byte of data is read, in case the caller never performs
+     a short read, but we don't want to finalize the MD5 context
+     twice. */
+  if (!rb->checksum_finalized)
+    {
+      apr_md5_update (&rb->md5_context, buf, *len);
+      rb->off += *len;
+      if (rb->off == rb->len)
+        {
+          unsigned char checksum[APR_MD5_DIGESTSIZE];
+
+          rb->checksum_finalized = TRUE;
+          apr_md5_final (checksum, &rb->md5_context);
+          if (! svn_md5_digests_match (checksum, rb->checksum))
+            return svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
+               "Checksum mismatch while reading representation:\n"
+               "   expected:  %s\n"
+               "     actual:  %s\n",
+               svn_md5_digest_to_cstring (rb->checksum, rb->pool),
+               svn_md5_digest_to_cstring (checksum, rb->pool));
+        }
+    }
   return SVN_NO_ERROR;
 }
 
