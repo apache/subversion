@@ -51,7 +51,7 @@ int
 main (int argc, char *argv[])
 {
   apr_pool_t *globalpool;
-  svn_delta_edit_fns_t *editor;
+  const svn_delta_edit_fns_t *editor;
   svn_error_t *err;
   apr_file_t *source_baton = NULL;
   apr_status_t status;

@@ -192,7 +192,7 @@ do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
 static svn_error_t *
 do_dir_replaces (void **newest_baton,
                  struct stack_object *stack,
-                 svn_delta_edit_fns_t *editor,
+                 const svn_delta_edit_fns_t *editor,
                  void *edit_baton,
                  apr_hash_t *locks,
                  apr_pool_t *top_pool,
@@ -285,7 +285,7 @@ do_dir_replaces (void **newest_baton,
    (FILENAME is presumed to be a full path ending with a filename. ) */
 static svn_error_t *
 do_apply_textdelta (svn_string_t *filename,
-                    svn_delta_edit_fns_t *editor,
+                    const svn_delta_edit_fns_t *editor,
                     void *file_baton,
                     apr_pool_t *pool)
 {
@@ -375,7 +375,7 @@ non-empty, contains a mapping of full file paths to still-open
 file_batons.  After sending each text-delta, close each file_baton. */
 static svn_error_t *
 do_postfix_text_deltas (apr_hash_t *filehash,
-                        svn_delta_edit_fns_t *editor,
+                        const svn_delta_edit_fns_t *editor,
                         apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -423,7 +423,8 @@ do_postfix_text_deltas (apr_hash_t *filehash,
 
 static svn_error_t *
 process_subdirectory (svn_string_t *path, void *dir_baton,
-                      svn_delta_edit_fns_t *editor, void *edit_baton,
+                      const svn_delta_edit_fns_t *editor,
+                      void *edit_baton,
                       struct stack_object **stack,
                       apr_hash_t *filehash,
                       apr_hash_t *locks,
@@ -769,8 +770,9 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
    marked entries. */
 
 svn_error_t *
-svn_wc_crawl_local_mods (svn_string_t *root_directory,
-                         svn_delta_edit_fns_t *edit_fns,
+svn_wc_crawl_local_mods (apr_hash_t **targets,
+                         svn_string_t *root_directory,
+                         const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
                          apr_pool_t *pool)
 {
@@ -806,6 +808,8 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
       err = edit_fns->close_edit (edit_baton);
       if (err) return err;
     }
+
+  *targets = filehash;
 
   return SVN_NO_ERROR;
 }

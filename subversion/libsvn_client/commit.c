@@ -79,6 +79,7 @@ svn_client_commit (svn_string_t *path,
   apr_file_t *dst = NULL; /* old habits die hard */
   svn_delta_edit_fns_t *editor;
   void *edit_baton;
+  apr_hash_t *targets = NULL;
 
   /* Step 1: look for local mods and send 'em out. */
   apr_err = apr_open (&dst, xml_dst->data,
@@ -99,7 +100,8 @@ svn_client_commit (svn_string_t *path,
 
   if (! path)
     path = svn_string_create (".", pool);
-  err = svn_wc_crawl_local_mods (path,
+  err = svn_wc_crawl_local_mods (&targets,
+                                 path,
                                  editor,
                                  edit_baton,
                                  pool);
@@ -112,7 +114,7 @@ svn_client_commit (svn_string_t *path,
                               "error closing %s", xml_dst->data);
   
   /* Step 2: tell the working copy the commit succeeded. */
-  err = svn_wc_close_commit (path, version, pool);
+  err = svn_wc_close_commit (path, version, targets, pool);
   if (err)
     return err;
 

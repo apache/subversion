@@ -26,8 +26,9 @@ main (int argc, char *argv[])
   apr_status_t status;
   apr_pool_t *globalpool;
   apr_file_t *stdout_handle;
+  apr_hash_t *targets = NULL;
 
-  svn_delta_edit_fns_t *my_editor;
+  const svn_delta_edit_fns_t *my_editor;
   void *my_edit_baton;
 
   svn_string_t *rootdir;
@@ -87,7 +88,7 @@ main (int argc, char *argv[])
     }
 
   /* Call the commit-crawler with the editor. */
-  err = svn_wc_crawl_local_mods (rootdir, my_editor, my_edit_baton,
+  err = svn_wc_crawl_local_mods (&targets, rootdir, my_editor, my_edit_baton,
                                  globalpool);
   if (err)
     {
