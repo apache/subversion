@@ -1,22 +1,22 @@
-Version 0.20.0 (released 20 Mar 2003, revision 5403)
+Version 0.20.0 (released 20 Mar 2003, revision 5410, branches/release-0.20)
 
  User-visible changes:
  * new compatibility rule: require only that each interim release be
                            compatible with the one before it (see HACKING)
  * ra_svn is still new so above rule doesn't yet apply
    (i.e. 0.20 over ra_svn is NOT compatible with previous releases)
- * merge inferred target path (see book chapters 4 & 8)
+ * merge infers the target path (see book chapters 4 & 8)
  * merge continues in presence of missing target file
- * merge add notifications no longer duplicated
+ * merge's add notifications are no longer duplicated
  * commands can be safely interrupted (Ctrl-C)
  * --encoding global default in ~/.subversion/config
  * new option --editor-cmd
- * begin multi-release transition to escape property values over DAV
+ * begin multi-release transition to escape binary properties over DAV
  * misc performance improvements
 
  Developer-visible changes:
- * vtable functions take pool argument
- * svn-config include path fixed
+ * RA vtable functions take pool argument
+ * svn-config --includes path fixed
  * uuid at creation now complete
  * start having test failures throw exceptions rather than return errors
  * test suite option --cleanup with --verbose being default mode
