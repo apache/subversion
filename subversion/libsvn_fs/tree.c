@@ -2459,8 +2459,11 @@ typedef struct txdelta_baton_t
   
   /* Derived from the file info */
   dag_node_t *node;
+
   svn_stream_t *source_stream;
   svn_stream_t *target_stream;
+  svn_stream_t *string_stream;
+  svn_stringbuf_t *target_string;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -2477,6 +2480,20 @@ txn_body_finalize_edits (void *baton, trail_t *trail)
 }
 
 
+/* Helper function of generic type `svn_write_fn_t'.  Implements a
+   writable stream which appends to an svn_stringbuf_t. */
+static svn_error_t *
+write_to_string (void *baton, const char *data, apr_size_t *len)
+{
+  txdelta_baton_t *tb = (txdelta_baton_t *) baton;
+  
+  svn_stringbuf_appendbytes (tb->target_string, data, *len);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The main window handler returned by svn_fs_apply_textdelta. */
 static svn_error_t *
 window_consumer (svn_txdelta_window_t *window, void *baton)
@@ -2487,6 +2504,17 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
      In theory, the interpreter will then write more data to
      cb->target_string. */
   SVN_ERR (tb->interpreter (window, tb->interpreter_baton));
+
+  /* Check to see if we need to purge the portion of the contents that
+     have been written thus far. */
+  if ((! window) || (tb->target_string->len > SVN_FS_WRITE_BUFFER_SIZE))
+    {
+      apr_size_t len = tb->target_string->len;
+      svn_stream_write (tb->target_stream,
+                        tb->target_string->data,
+                        &len);
+      svn_stringbuf_set (tb->target_string, "");
+    }
 
   /* Is the window NULL?  If so, we're done, and we need to tell the
      dag subsystem that we're finished with our edits. */
@@ -2527,13 +2555,20 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
                                         tb->pool,
                                         trail));
 
+  /* Make a writable "string" stream which writes data to
+     tb->target_string. */
+  tb->target_string = svn_stringbuf_create ("", tb->pool);
+  tb->string_stream = svn_stream_create (tb, tb->pool);
+  svn_stream_set_write (tb->string_stream, write_to_string);
+
   /* Finally, create a custom window handler that uses our two
      streams. */
   svn_txdelta_apply (tb->source_stream,
-                     tb->target_stream,
+                     tb->string_stream,
                      tb->pool,
                      &(tb->interpreter),
                      &(tb->interpreter_baton));
+
 
   return SVN_NO_ERROR;
 
