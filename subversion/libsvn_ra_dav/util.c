@@ -383,8 +383,16 @@ svn_ra_dav__parsed_request(ne_session *sess,
   if ((code != expected_code) 
       || (rv != NE_OK))
     {
-      msg = apr_psprintf(pool, "%s of '%s'", method, url);
-      err = svn_ra_dav__convert_error(sess, msg, rv);
+      if (code == 404)
+      {
+        msg = apr_psprintf(pool, "'%s' path not found", url);
+        err = svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL, msg);
+      }
+      else
+      {
+        msg = apr_psprintf(pool, "%s of '%s'", method, url);
+        err = svn_ra_dav__convert_error(sess, msg, rv);
+      }
       goto error;
     }
 

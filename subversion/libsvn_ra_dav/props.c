@@ -654,7 +654,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
       if (! err)
         break;   /* found an existing parent! */
       
-      if (err->apr_err != SVN_ERR_RA_DAV_REQUEST_FAILED)
+      if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
         return err;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
