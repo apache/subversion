@@ -1831,6 +1831,9 @@ typedef struct svn_info_t
   /* The author of the last_changed_rev. */
   const char *last_changed_author;
 
+  /* An exclusive lock, if present.  Could be either local or remote. */
+  svn_lock_t *lock;
+
   /* Whether or not to ignore the next 10 wc-specific fields. */
   svn_boolean_t has_wc_info;
 
