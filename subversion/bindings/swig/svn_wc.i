@@ -100,30 +100,6 @@
     return $jnicall;
   }
 
-/* -----------------------------------------------------------------------
-   handle svn_cancel_func_t/baton pairs
-*/
-
-%typemap(python,in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
-
-  $1 = svn_swig_py_cancel_func;
-  $2 = $input; /* our function is the baton. */
-}
-
-%typemap(java,in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
-
-  $1 = svn_swig_java_cancel_func;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_cancel_func_t "jobject"
-%typemap(jtype) svn_cancel_func_t "org.tigris.subversion.Canceller"
-%typemap(jstype) svn_cancel_func_t "org.tigris.subversion.Canceller"
-%typemap(javain) svn_cancel_func_t "$javainput"
-%typemap(javaout) svn_cancel_func_t {
-    return $jnicall;
-  }
-
 /* ----------------------------------------------------------------------- */
 
 %include svn_wc.h

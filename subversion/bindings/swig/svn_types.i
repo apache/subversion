@@ -276,11 +276,24 @@
     $2 = (void *)$input;
 }
 %typemap(perl5, in) (svn_log_message_receiver_t receiver, 
-                      void *receiver_baton) {
+                     void *receiver_baton) {
     $1 = svn_swig_pl_thunk_log_receiver;
     $2 = (void *)$input;
 }
 
+%typemap(java, in) (svn_log_message_receiver_t receiver,
+                    void *receiver_baton) {
+  $1 = svn_swig_java_log_message_receiver;
+  $2 = (void*)$input; /* our function is the baton. */
+}
+
+%typemap(jni) svn_log_message_receiver_t "jobject"
+%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
+%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
+%typemap(javain) svn_log_message_receiver_t "$javainput"
+%typemap(javaout) svn_log_message_receiver_t {
+    return $jnicall;
+  }
 
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
@@ -293,6 +306,28 @@
     $2 = (void *)$input;
     svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
 };
+
+/* -----------------------------------------------------------------------
+   Callback: svn_cancel_func_t
+*/
+
+%typemap(python, in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
+  $1 = svn_swig_py_cancel_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+%typemap(java, in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
+  $1 = svn_swig_java_cancel_func;
+  $2 = (void*)$input; /* our function is the baton. */
+}
+
+%typemap(jni) svn_cancel_func_t "jobject"
+%typemap(jtype) svn_cancel_func_t "org.tigris.subversion.Canceller"
+%typemap(jstype) svn_cancel_func_t "org.tigris.subversion.Canceller"
+%typemap(javain) svn_cancel_func_t "$javainput"
+%typemap(javaout) svn_cancel_func_t {
+    return $jnicall;
+  }
 
 /* -----------------------------------------------------------------------
    svn_stream interpolability with io handle
@@ -311,6 +346,14 @@
     $result = svn_swig_pl_from_stream (*$1);
     argvi++;
 }
+
+%typemap(java, in) svn_stream_t *out %{
+    $1 = svn_swig_java_outputstream_to_stream(jenv, $input, _global_pool);
+%}
+%typemap(java, jni) svn_stream_t * "jobject";
+%typemap(java, jtype) svn_stream_t * "java.io.OutputStream";
+%typemap(java, jstype) svn_stream_t * "java.io.OutputStream";
+%typemap(java, javain) svn_stream_t * "$javainput";
 
 /* -----------------------------------------------------------------------
    Wrap the digest output for functions populating digests.

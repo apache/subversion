@@ -197,25 +197,6 @@
 %typemap(java, javain) svn_client_prompt_t "$javainput"
 
 /* -----------------------------------------------------------------------
-   handle svn_log_message_receiver_t/baton pairs
-*/
-
-%typemap(java,in) (svn_log_message_receiver_t receiver,
-                void *receiver_baton) {
-
-  $1 = svn_swig_java_log_message_receiver;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_log_message_receiver_t "jobject"
-%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(javain) svn_log_message_receiver_t "$javainput"
-%typemap(javaout) svn_log_message_receiver_t {
-    return $jnicall;
-  }
-
-/* -----------------------------------------------------------------------
    handle svn_client_blame_receiver_t/baton pairs
 */
 
@@ -239,18 +220,6 @@
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
 }
-
-/* -----------------------------------------------------------------------
-   handle the prompt_baton
-*/
-
-%typemap(jni) svn_log_message_receiver_t "jobject"
-%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(javain) svn_log_message_receiver_t "$javainput"
-%typemap(javaout) svn_log_message_receiver_t {
-    return $jnicall;
-  }
 
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
@@ -436,16 +405,6 @@
 
 
 
-
-/* ----------------------------------------------------------------------- */
-
-%typemap(java, in) svn_stream_t *out %{
-    $1 = svn_swig_java_outputstream_to_stream(jenv, $input, _global_pool);
-%}
-%typemap(java, jni) svn_stream_t * "jobject";
-%typemap(java, jtype) svn_stream_t * "java.io.OutputStream";
-%typemap(java, jstype) svn_stream_t * "java.io.OutputStream";
-%typemap(java, javain) svn_stream_t * "$javainput";
 
 /* ----------------------------------------------------------------------- */
 
