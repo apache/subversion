@@ -119,6 +119,43 @@ svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node)
 }
 
 
+/* Helper function */
+static skel_t *
+find_dir_entry (dag_node_t *node, const char *name)
+{
+  /* The node "header" is the first element of a node-revision skel,
+     itself a list. */
+  skel_t *header = node->contents->children;
+
+  if (header)
+    {
+      /* Make sure we're looking at a directory node here */
+      if (svn_fs__matches_atom (header->children, "dir"))
+        {
+          /* The entry list is the 2nd element of the node-revision
+             skel. */
+          skel_t *entry_list = node->contents->children->next;
+
+          /* The entries are the children of the entry list,
+             naturally. */
+          skel_t *entry = entry_list->children;
+
+          /* Loop through all the entries in this node-revision... */
+          while (entry)
+            {
+              /* ...returning true if we find one whose name matches
+                 the entry name passed into this function. */
+              if (svn_fs__matches_atom (entry->children, name))
+                return entry;
+
+              entry = entry->next;
+            }
+        }
+    }
+  return (skel_t *)NULL;
+}
+        
+
 /* Helper for next three funcs */
 static int
 node_is_kind_p (dag_node_t *node, const char *kindstr)
@@ -184,38 +221,6 @@ int svn_fs__dag_is_mutable (dag_node_t *node)
   return FALSE;
 }
 
-
-skel_t *
-svn_fs__dag_find_dir_entry (dag_node_t *node, const char *name )
-{
-  /* The node "header" is the first element of a node-revision skel,
-     itself a list. */
-  skel_t *header = node->contents->children;
-
-  if (header)
-    {
-      /* Make sure we're looking at a directory node here */
-      if (svn_fs__matches_atom (header->children, "dir"))
-        {
-          /* The entries are the 2nd, 3rd, etc. elements of the
-             node-revision skel. */
-          skel_t *entry = node->contents->children->next;
- 
-          /* Loop through all the entries in this node-revision... */
-          while (entry)
-            {
-              /* ...returning true if we find one whose name matches
-                 the entry name passed into this function. */
-              if (svn_fs__matches_atom (entry->children, name))
-                return entry;
-
-              entry = entry->next;
-            }
-        }
-    }
-  return (skel_t *)NULL;
-}
-        
 
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
@@ -345,15 +350,13 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 }
 
 
-/* Create a new mutable file named NAME in PARENT, as part of TRAIL.
-   Set *CHILD_P to a reference to the new node, allocated in
-   TRAIL->pool.  The new file's contents are the empty string, and it
-   has no properties.  PARENT must be mutable.  NAME must be a single
-   path component; it cannot be a slash-separated directory path.  */
-svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
-                                    dag_node_t *parent,
-                                    const char *name,
-                                    trail_t *trail)
+/* Helper for the next two functions. */
+static svn_error_t *
+make_entry (dag_node_t **child_p,
+            dag_node_t *parent,
+            const char *name,
+            svn_boolean_t is_dir,
+            trail_t *trail)
 {
   svn_fs_id_t *new_node_id;
 
@@ -372,8 +375,11 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
     id_str = svn_fs_unparse_id (parent->id, trail->pool);
     
     /* Create a new skel for our new node, the format of which is
-       (HEADER KIND-SPECIFIC), where HEADER is (file PROPLIST
-       (mutable PARENT-ID)), and KIND-SPECIFIC is an empty atom. */
+       (HEADER KIND-SPECIFIC).  If we are making a directory, the
+       HEADER is (dir PROPLIST (mutable PARENT-ID)).  If not, then
+       this is a file, whose HEADER is (file PROPLIST (mutable
+       PARENT-ID)).  KIND-SPECIFIC is an empty atom for files, an
+       empty list for directories. */
     
     /* Step 1: create the FLAG skel. */
     flag_skel = svn_fs__make_empty_list (trail->pool);
@@ -388,17 +394,33 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
     svn_fs__prepend (flag_skel, header_skel);
     svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
                      header_skel);
-    svn_fs__prepend (svn_fs__str_atom ((char *) "file", trail->pool),
-                     header_skel);
-    /* Now we have a HEADER skel: (file () FLAG) */
+    if (is_dir)
+      {
+        svn_fs__prepend (svn_fs__str_atom ((char *) "dir", trail->pool),
+                         header_skel);
+      }
+    else
+      {
+        svn_fs__prepend (svn_fs__str_atom ((char *) "file", trail->pool),
+                         header_skel);
+      }
+    /* Now we have a HEADER skel: (file-or-dir () FLAG) */
     
     /* Step 3: assemble the NODE-REVISION skel. */
     noderev_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (svn_fs__str_atom ((char *) "", trail->pool),
-                     noderev_skel);
+    if (is_dir)
+      {
+        svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
+                         noderev_skel);
+      }
+    else
+      {
+        svn_fs__prepend (svn_fs__str_atom ((char *) "", trail->pool),
+                         noderev_skel);
+      }
     svn_fs__prepend (header_skel, noderev_skel);
-    /* All done, skel-wise.  We have a NODE-REVISION skel:
-       (HEADER DATA), where DATA is empty. */
+    /* All done, skel-wise.  We have a NODE-REVISION skel as described
+       far above. */
     
     /* Time to actually create our new node */
     SVN_ERR (svn_fs__create_node (&new_node_id, parent->fs,
@@ -407,7 +429,7 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
 
   /* Verify that this parent node does not already have an entry named
      NAME. */
-  if (! svn_fs__dag_find_dir_entry (parent, name))
+  if (! find_dir_entry (parent, name))
     {
       skel_t *pnoderev_skel;
       skel_t *entry_skel;
@@ -444,6 +466,26 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
                                           trail));
     }
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
+                                    dag_node_t *parent,
+                                    const char *name,
+                                    trail_t *trail)
+{
+  /* Call our little helper function */
+  return make_entry (child_p, parent, name, FALSE, trail);
+}
+
+
+svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
+                                   dag_node_t *parent,
+                                   const char *name,
+                                   trail_t *trail)
+{
+  /* Call our little helper function */
+  return make_entry (child_p, parent, name, TRUE, trail);
 }
 
 

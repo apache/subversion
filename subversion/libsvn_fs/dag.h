@@ -76,10 +76,6 @@ const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 /* Return true iff NODE is mutable.  */
 int svn_fs__dag_is_mutable (dag_node_t *node);
 
-/* Return the list skel of the entry named NAME in node NODE iff NODE
-   is a directory and contains such an entry, else return NULL. */
-skel_t * svn_fs__dag_find_dir_entry (dag_node_t *node, const char *name );
-
 /* Return true iff NODE is a file/directory/copy.  */
 int svn_fs__dag_is_file (dag_node_t *node);
 int svn_fs__dag_is_directory (dag_node_t *node);
