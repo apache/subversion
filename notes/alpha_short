@@ -8,13 +8,9 @@ comments and minor annotations about who is actually doing them.  For
 more verbose descriptions of these issues, look in alpha-checklist,
 though.
 
-* Greg Stein is putting the finishing touches on M2.  He has
-  checkouts, commits, and updates working over DAV. Only "import" is
-  left.
+* Network layer needs to support props (Greg Stein is working on).
 
-* Client test suite improvements (Ben, Sam TH, and others are doing,
-  have got the new Python test suite up, just a matter of writing lots
-  of tests).
+* More tests in the Python suite.
 
 * new 'libsvn_repos':  utils built on *top* of libsvn_fs
 
@@ -23,7 +19,8 @@ though.
 
 * Many filesystem improvements
 
-   * strings table                    /* part of implementing above */
+   * strings table
+   * deltification
 
 * cvs2svn (Thom and Greg)
 
@@ -39,7 +36,6 @@ POST-M3 ITEMS
 
 * Many filesystem improvements
 
-   * deltified storage                /* necessary */
    * real file streaming              /* may be done with above */
    * dir_delta use 'copyfrom' args    /* Mike, is this done? */
    * keep node-rev-id strings short   /* Karl will do, solution is known */
