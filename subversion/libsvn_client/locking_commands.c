@@ -164,8 +164,6 @@ store_locks_callback (void *baton,
  * If there is no common parent, either because the targets are a
  * mixture of URLs and local paths, or because they simply do not
  * share a common parent, then return SVN_ERR_UNSUPPORTED_FEATURE.
- * (The value of *COMMON_PARENT and other return parameters is
- * undefined in this case.)
  *
  * DO_LOCK is TRUE for locking TARGETS, and FALSE for unlocking them.
  * FORCE is TRUE for breaking or stealing locks, and FALSE otherwise.
