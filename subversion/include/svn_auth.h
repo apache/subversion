@@ -26,6 +26,7 @@
 
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "svn_client.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -233,6 +234,19 @@ void svn_auth_get_simple_wc_provider (const svn_auth_provider_t **provider,
                                       svn_wc_adm_access_t *wc_dir_access,
                                       apr_pool_t *pool);
 
+/** Set @a *provider and @ *provider_baton to an authentication
+    provider of type @c svn_auth_cred_simple_t that gets information
+    by prompting the user with @a prompt_func and @a prompt_baton. If
+    either @a default_username or @a default_password is non-NULL, the
+    argument will be returned when @c svn_auth_first_credentials is
+    called. */
+void svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
+                                          void **provider_baton,
+                                          svn_client_prompt_t prompt_func,
+                                          void *prompt_baton,
+                                          const char *default_username,
+                                          const char *default_password,
+                                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
