@@ -1,0 +1,1810 @@
+head	1.23;
+access;
+symbols
+	libshout-2_0:1.23
+	libshout-2_0b3:1.23
+	libshout-2_0b2:1.22
+	libshout_2_0b1:1.22
+	libogg2-zerocopy:1.8.0.2
+	start:1.1.1.1
+	xiph:1.1.1;
+locks; strict;
+comment	@ * @;
+
+
+1.23
+date	2003.07.07.01.49.27;	author brendan;	state Exp;
+branches;
+next	1.22;
+
+1.22
+date	2003.06.18.15.52.25;	author karl;	state Exp;
+branches;
+next	1.21;
+
+1.21
+date	2003.06.18.11.13.11;	author karl;	state Exp;
+branches;
+next	1.20;
+
+1.20
+date	2003.06.09.22.30.09;	author brendan;	state Exp;
+branches;
+next	1.19;
+
+1.19
+date	2003.06.05.17.09.12;	author brendan;	state Exp;
+branches;
+next	1.18;
+
+1.18
+date	2003.03.15.02.10.18;	author msmith;	state Exp;
+branches;
+next	1.17;
+
+1.17
+date	2003.03.09.22.56.46;	author karl;	state Exp;
+branches;
+next	1.16;
+
+1.16
+date	2003.03.08.16.05.38;	author karl;	state Exp;
+branches;
+next	1.15;
+
+1.15
+date	2003.03.08.05.27.17;	author msmith;	state Exp;
+branches;
+next	1.14;
+
+1.14
+date	2003.03.08.04.57.02;	author msmith;	state Exp;
+branches;
+next	1.13;
+
+1.13
+date	2003.03.06.01.55.20;	author brendan;	state Exp;
+branches;
+next	1.12;
+
+1.12
+date	2003.01.17.09.01.04;	author msmith;	state Exp;
+branches;
+next	1.11;
+
+1.11
+date	2003.01.16.05.48.31;	author brendan;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2003.01.15.23.46.56;	author brendan;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2002.12.31.06.28.39;	author msmith;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2002.08.16.14.22.44;	author msmith;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2002.08.05.14.48.03;	author msmith;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2002.05.03.15.04.56;	author msmith;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2002.04.05.09.28.25;	author msmith;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.02.11.09.11.18;	author msmith;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2001.10.20.07.40.09;	author jack;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2001.10.20.04.41.54;	author jack;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2001.09.10.02.28.47;	author jack;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2001.09.10.02.28.47;	author jack;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.23
+log
+@httpp goes through the rinse cycle
+@
+text
+@/* Httpp.c
+**
+** http parsing engine
+*/
+
+#ifdef HAVE_CONFIG_H
+ #include <config.h>
+#endif
+
+#include <stdio.h>
+
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#ifdef HAVE_STRINGS_H
+#include <strings.h>
+#endif
+
+#include <avl/avl.h>
+#include "httpp.h"
+
+#ifdef _WIN32
+#define strcasecmp stricmp
+#endif
+
+#define MAX_HEADERS 32
+
+/* internal functions */
+
+/* misc */
+static char *_lowercase(char *str);
+
+/* for avl trees */
+static int _compare_vars(void *compare_arg, void *a, void *b);
+static int _free_vars(void *key);
+
+http_parser_t *httpp_create_parser(void)
+{
+    return (http_parser_t *)malloc(sizeof(http_parser_t));
+}
+
+void httpp_initialize(http_parser_t *parser, http_varlist_t *defaults)
+{
+    http_varlist_t *list;
+
+    parser->req_type = httpp_req_none;
+    parser->uri = NULL;
+    parser->vars = avl_tree_new(_compare_vars, NULL);
+    parser->queryvars = avl_tree_new(_compare_vars, NULL);
+
+    /* now insert the default variables */
+    list = defaults;
+    while (list != NULL) {
+        httpp_setvar(parser, list->var.name, list->var.value);
+        list = list->next;
+    }
+}
+
+static int split_headers(char *data, unsigned long len, char **line)
+{
+    /* first we count how many lines there are 
+    ** and set up the line[] array     
+    */
+    int lines = 0;
+    unsigned long i;
+    line[lines] = data;
+    for (i = 0; i < len && lines < MAX_HEADERS; i++) {
+        if (data[i] == '\r')
+            data[i] = '\0';
+        if (data[i] == '\n') {
+            lines++;
+            data[i] = '\0';
+            if (i + 1 < len) {
+                if (data[i + 1] == '\n' || data[i + 1] == '\r')
+                    break;
+                line[lines] = &data[i + 1];
+            }
+        }
+    }
+
+    i++;
+    while (data[i] == '\n') i++;
+
+    return lines;
+}
+
+static void parse_headers(http_parser_t *parser, char **line, int lines)
+{
+    int i,l;
+    int whitespace, where, slen;
+    char *name = NULL;
+    char *value = NULL;
+
+    /* parse the name: value lines. */
+    for (l = 1; l < lines; l++) {
+        where = 0;
+        whitespace = 0;
+        name = line[l];
+        value = NULL;
+        slen = strlen(line[l]);
+        for (i = 0; i < slen; i++) {
+            if (line[l][i] == ':') {
+                whitespace = 1;
+                line[l][i] = '\0';
+            } else {
+                if (whitespace) {
+                    whitespace = 0;
+                    while (i < slen && line[l][i] == ' ')
+                        i++;
+
+                    if (i < slen)
+                        value = &line[l][i];
+                    
+                    break;
+                }
+            }
+        }
+        
+        if (name != NULL && value != NULL) {
+            httpp_setvar(parser, _lowercase(name), value);
+            name = NULL; 
+            value = NULL;
+        }
+    }
+}
+
+int httpp_parse_response(http_parser_t *parser, char *http_data, unsigned long len, char *uri)
+{
+    char *data;
+    char *line[MAX_HEADERS];
+    int lines, slen,i, whitespace=0, where=0,code;
+    char *version=NULL, *resp_code=NULL, *message=NULL;
+    
+    if(http_data == NULL)
+        return 0;
+
+    /* make a local copy of the data, including 0 terminator */
+    data = (char *)malloc(len+1);
+    if (data == NULL) return 0;
+    memcpy(data, http_data, len);
+    data[len] = 0;
+
+    lines = split_headers(data, len, line);
+
+    /* In this case, the first line contains:
+     * VERSION RESPONSE_CODE MESSAGE, such as HTTP/1.0 200 OK
+     */
+    slen = strlen(line[0]);
+    version = line[0];
+    for(i=0; i < slen; i++) {
+        if(line[0][i] == ' ') {
+            line[0][i] = 0;
+            whitespace = 1;
+        } else if(whitespace) {
+            whitespace = 0;
+            where++;
+            if(where == 1)
+                resp_code = &line[0][i];
+            else {
+                message = &line[0][i];
+                break;
+            }
+        }
+    }
+
+    if(version == NULL || resp_code == NULL || message == NULL) {
+        free(data);
+        return 0;
+    }
+
+    httpp_setvar(parser, HTTPP_VAR_ERROR_CODE, resp_code);
+    code = atoi(resp_code);
+    if(code < 200 || code >= 300) {
+        httpp_setvar(parser, HTTPP_VAR_ERROR_MESSAGE, message);
+    }
+
+    httpp_setvar(parser, HTTPP_VAR_URI, uri);
+    httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "NONE");
+
+    parse_headers(parser, line, lines);
+
+    free(data);
+
+    return 1;
+}
+
+static int hex(char c)
+{
+    if(c >= '0' && c <= '9')
+        return c - '0';
+    else if(c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    else if(c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    else
+        return -1;
+}
+
+static char *url_escape(char *src)
+{
+    int len = strlen(src);
+    unsigned char *decoded;
+    int i;
+    char *dst;
+    int done = 0;
+
+    decoded = calloc(1, len + 1);
+
+    dst = decoded;
+
+    for(i=0; i < len; i++) {
+        switch(src[i]) {
+        case '%':
+            if(i+2 >= len) {
+                free(decoded);
+                return NULL;
+            }
+            if(hex(src[i+1]) == -1 || hex(src[i+2]) == -1 ) {
+                free(decoded);
+                return NULL;
+            }
+
+            *dst++ = hex(src[i+1]) * 16  + hex(src[i+2]);
+            i+= 2;
+            break;
+        case '#':
+            done = 1;
+            break;
+        case 0:
+            free(decoded);
+            return NULL;
+            break;
+        default:
+            *dst++ = src[i];
+            break;
+        }
+        if(done)
+            break;
+    }
+
+    *dst = 0; /* null terminator */
+
+    return decoded;
+}
+
+/** TODO: This is almost certainly buggy in some cases */
+static void parse_query(http_parser_t *parser, char *query)
+{
+    int len;
+    int i=0;
+    char *key = query;
+    char *val=NULL;
+
+    if(!query || !*query)
+        return;
+
+    len = strlen(query);
+
+    while(i<len) {
+        switch(query[i]) {
+        case '&':
+            query[i] = 0;
+            if(val && key)
+                httpp_set_query_param(parser, key, val);
+            key = query+i+1;
+            break;
+        case '=':
+            query[i] = 0;
+            val = query+i+1;
+            break;
+        }
+        i++;
+    }
+
+    if(val && key) {
+        httpp_set_query_param(parser, key, val);
+    }
+}
+
+/* The old shoutcast procotol. Don't look at this, it's really nasty */
+int httpp_parse_icy(http_parser_t *parser, char *http_data, unsigned long len)
+{
+    char *data;
+    char *line[MAX_HEADERS];
+    int lines;
+
+    if(http_data == NULL)
+        return 0;
+
+    data = malloc(len + 1);
+    memcpy(data, http_data, len);
+    data[len] = 0;
+
+    lines = split_headers(data, len, line);
+
+    /* Now, this protocol looks like:
+     * sourcepassword\n
+     * headers: as normal\n"
+     * \n
+     */
+
+    parser->req_type = httpp_req_source;
+    httpp_setvar(parser, HTTPP_VAR_URI, "/");
+    httpp_setvar(parser, HTTPP_VAR_ICYPASSWORD, line[0]);
+    httpp_setvar(parser, HTTPP_VAR_PROTOCOL, "ICY");
+    httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "SOURCE");
+    /* This protocol is evil */
+    httpp_setvar(parser, HTTPP_VAR_VERSION, "666");
+
+    parse_headers(parser, line, lines);
+
+    free(data);
+    
+    return 1;
+}
+
+int httpp_parse(http_parser_t *parser, char *http_data, unsigned long len)
+{
+    char *data, *tmp;
+    char *line[MAX_HEADERS]; /* limited to 32 lines, should be more than enough */
+    int i;
+    int lines;
+    char *req_type = NULL;
+    char *uri = NULL;
+    char *version = NULL;
+    int whitespace, where, slen;
+
+    if (http_data == NULL)
+        return 0;
+
+    /* make a local copy of the data, including 0 terminator */
+    data = (char *)malloc(len+1);
+    if (data == NULL) return 0;
+    memcpy(data, http_data, len);
+    data[len] = 0;
+
+    lines = split_headers(data, len, line);
+
+    /* parse the first line special
+    ** the format is:
+    ** REQ_TYPE URI VERSION
+    ** eg:
+    ** GET /index.html HTTP/1.0
+    */
+    where = 0;
+    whitespace = 0;
+    slen = strlen(line[0]);
+    req_type = line[0];
+    for (i = 0; i < slen; i++) {
+        if (line[0][i] == ' ') {
+            whitespace = 1;
+            line[0][i] = '\0';
+        } else {
+            /* we're just past the whitespace boundry */
+            if (whitespace) {
+                whitespace = 0;
+                where++;
+                switch (where) {
+                case 1:
+                    uri = &line[0][i];
+                    break;
+                case 2:
+                    version = &line[0][i];
+                    break;
+                }
+            }
+        }
+    }
+
+    if (strcasecmp("GET", req_type) == 0) {
+        parser->req_type = httpp_req_get;
+    } else if (strcasecmp("POST", req_type) == 0) {
+        parser->req_type = httpp_req_post;
+    } else if (strcasecmp("HEAD", req_type) == 0) {
+        parser->req_type = httpp_req_head;
+    } else if (strcasecmp("SOURCE", req_type) == 0) {
+        parser->req_type = httpp_req_source;
+    } else if (strcasecmp("PLAY", req_type) == 0) {
+        parser->req_type = httpp_req_play;
+    } else if (strcasecmp("STATS", req_type) == 0) {
+        parser->req_type = httpp_req_stats;
+    } else {
+        parser->req_type = httpp_req_unknown;
+    }
+
+    if (uri != NULL && strlen(uri) > 0) {
+        char *query;
+        if((query = strchr(uri, '?')) != NULL) {
+            *query = 0;
+            query++;
+            parse_query(parser, query);
+        }
+
+        parser->uri = strdup(uri);
+    } else {
+        free(data);
+        return 0;
+    }
+
+    if ((version != NULL) && ((tmp = strchr(version, '/')) != NULL)) {
+        tmp[0] = '\0';
+        if ((strlen(version) > 0) && (strlen(&tmp[1]) > 0)) {
+            httpp_setvar(parser, HTTPP_VAR_PROTOCOL, version);
+            httpp_setvar(parser, HTTPP_VAR_VERSION, &tmp[1]);
+        } else {
+            free(data);
+            return 0;
+        }
+    } else {
+        free(data);
+        return 0;
+    }
+
+    if (parser->req_type != httpp_req_none && parser->req_type != httpp_req_unknown) {
+        switch (parser->req_type) {
+        case httpp_req_get:
+            httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "GET");
+            break;
+        case httpp_req_post:
+            httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "POST");
+            break;
+        case httpp_req_head:
+            httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "HEAD");
+            break;
+        case httpp_req_source:
+            httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "SOURCE");
+            break;
+        case httpp_req_play:
+            httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "PLAY");
+            break;
+        case httpp_req_stats:
+            httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "STATS");
+            break;
+        default:
+            break;
+        }
+    } else {
+        free(data);
+        return 0;
+    }
+
+    if (parser->uri != NULL) {
+        httpp_setvar(parser, HTTPP_VAR_URI, parser->uri);
+    } else {
+        free(data);
+        return 0;
+    }
+
+    parse_headers(parser, line, lines);
+
+    free(data);
+
+    return 1;
+}
+
+void httpp_setvar(http_parser_t *parser, char *name, char *value)
+{
+    http_var_t *var;
+
+    if (name == NULL || value == NULL)
+        return;
+
+    var = (http_var_t *)malloc(sizeof(http_var_t));
+    if (var == NULL) return;
+
+    var->name = strdup(name);
+    var->value = strdup(value);
+
+    if (httpp_getvar(parser, name) == NULL) {
+        avl_insert(parser->vars, (void *)var);
+    } else {
+        avl_delete(parser->vars, (void *)var, _free_vars);
+        avl_insert(parser->vars, (void *)var);
+    }
+}
+
+char *httpp_getvar(http_parser_t *parser, char *name)
+{
+    http_var_t var;
+    http_var_t *found;
+    void *fp;
+
+    fp = &found;
+    var.name = name;
+    var.value = NULL;
+
+    if (avl_get_by_key(parser->vars, &var, fp) == 0)
+        return found->value;
+    else
+        return NULL;
+}
+
+void httpp_set_query_param(http_parser_t *parser, char *name, char *value)
+{
+    http_var_t *var;
+
+    if (name == NULL || value == NULL)
+        return;
+
+    var = (http_var_t *)malloc(sizeof(http_var_t));
+    if (var == NULL) return;
+
+    var->name = strdup(name);
+    var->value = url_escape(value);
+
+    if (httpp_get_query_param(parser, name) == NULL) {
+        avl_insert(parser->queryvars, (void *)var);
+    } else {
+        avl_delete(parser->queryvars, (void *)var, _free_vars);
+        avl_insert(parser->queryvars, (void *)var);
+    }
+}
+
+char *httpp_get_query_param(http_parser_t *parser, char *name)
+{
+    http_var_t var;
+    http_var_t *found;
+    void *fp;
+
+    fp = &found;
+    var.name = name;
+    var.value = NULL;
+
+    if (avl_get_by_key(parser->queryvars, (void *)&var, fp) == 0)
+        return found->value;
+    else
+        return NULL;
+}
+
+void httpp_clear(http_parser_t *parser)
+{
+    parser->req_type = httpp_req_none;
+    if (parser->uri)
+        free(parser->uri);
+    parser->uri = NULL;
+    avl_tree_free(parser->vars, _free_vars);
+    avl_tree_free(parser->queryvars, _free_vars);
+    parser->vars = NULL;
+}
+
+void httpp_destroy(http_parser_t *parser)
+{
+    httpp_clear(parser);
+    free(parser);
+}
+
+static char *_lowercase(char *str)
+{
+    char *p = str;
+    for (; *p != '\0'; p++)
+        *p = tolower(*p);
+
+    return str;
+}
+
+static int _compare_vars(void *compare_arg, void *a, void *b)
+{
+    http_var_t *vara, *varb;
+
+    vara = (http_var_t *)a;
+    varb = (http_var_t *)b;
+
+    return strcmp(vara->name, varb->name);
+}
+
+static int _free_vars(void *key)
+{
+    http_var_t *var;
+
+    var = (http_var_t *)key;
+
+    if (var->name)
+        free(var->name);
+    if (var->value)
+        free(var->value);
+    free(var);
+
+    return 1;
+}
+
+@
+
+
+1.22
+log
+@ermmm, let's use the right operator.
+@
+text
+@d34 2
+a35 2
+int _compare_vars(void *compare_arg, void *a, void *b);
+int _free_vars(void *key);
+d556 1
+a556 1
+int _compare_vars(void *compare_arg, void *a, void *b)
+d566 1
+a566 1
+int _free_vars(void *key)
+@
+
+
+1.21
+log
+@minor cleanup, removes compiler warning, makes it static, and doesn't
+re-evaluate string length each time.
+@
+text
+@d550 1
+a550 1
+    for (; *p |= '\0'; p++)
+@
+
+
+1.20
+log
+@gcc 3.3 warns: dereferencing type-punned pointer will break strict-aliasing rules
+@
+text
+@d31 1
+a31 1
+char *_lowercase(char *str);
+d547 1
+a547 1
+char *_lowercase(char *str)
+d549 3
+a551 3
+    long i;
+    for (i = 0; i < strlen(str); i++)
+        str[i] = tolower(str[i]);
+@
+
+
+1.19
+log
+@Karl's patch for freebsd, minus the sys/select.h test which breaks on OS X.
+Also enables IPV6 in libshout!
+@
+text
+@d481 1
+d483 1
+d487 1
+a487 1
+    if (avl_get_by_key(parser->vars, (void *)&var, (void **)&found) == 0)
+d518 1
+d520 1
+d524 1
+a524 1
+    if (avl_get_by_key(parser->queryvars, (void *)&var, (void **)&found) == 0)
+@
+
+
+1.18
+log
+@Brendan was getting pissed off about inconsistent indentation styles.
+Convert all tabs to 4 spaces. All code must now use 4 space indents.
+@
+text
+@d15 3
+@
+
+
+1.17
+log
+@reduce include file namespace clutter for libshout and the associated
+smaller libs.
+@
+text
+@d36 1
+a36 1
+	return (http_parser_t *)malloc(sizeof(http_parser_t));
+d41 1
+a41 1
+	http_varlist_t *list;
+d43 11
+a53 11
+	parser->req_type = httpp_req_none;
+	parser->uri = NULL;
+	parser->vars = avl_tree_new(_compare_vars, NULL);
+	parser->queryvars = avl_tree_new(_compare_vars, NULL);
+
+	/* now insert the default variables */
+	list = defaults;
+	while (list != NULL) {
+		httpp_setvar(parser, list->var.name, list->var.value);
+		list = list->next;
+	}
+d58 4
+a61 4
+	/* first we count how many lines there are 
+	** and set up the line[] array	 
+	*/
+	int lines = 0;
+d63 11
+a73 11
+	line[lines] = data;
+	for (i = 0; i < len && lines < MAX_HEADERS; i++) {
+		if (data[i] == '\r')
+			data[i] = '\0';
+		if (data[i] == '\n') {
+			lines++;
+			data[i] = '\0';
+			if (i + 1 < len) {
+				if (data[i + 1] == '\n' || data[i + 1] == '\r')
+					break;
+				line[lines] = &data[i + 1];
+d75 2
+a76 2
+		}
+	}
+d78 2
+a79 2
+	i++;
+	while (data[i] == '\n') i++;
+d87 35
+a121 35
+	int whitespace, where, slen;
+	char *name = NULL;
+	char *value = NULL;
+
+	/* parse the name: value lines. */
+	for (l = 1; l < lines; l++) {
+		where = 0;
+		whitespace = 0;
+		name = line[l];
+		value = NULL;
+		slen = strlen(line[l]);
+		for (i = 0; i < slen; i++) {
+			if (line[l][i] == ':') {
+				whitespace = 1;
+				line[l][i] = '\0';
+			} else {
+				if (whitespace) {
+					whitespace = 0;
+					while (i < slen && line[l][i] == ' ')
+						i++;
+
+					if (i < slen)
+						value = &line[l][i];
+					
+					break;
+				}
+			}
+		}
+		
+		if (name != NULL && value != NULL) {
+			httpp_setvar(parser, _lowercase(name), value);
+			name = NULL; 
+			value = NULL;
+		}
+	}
+d126 4
+a129 4
+	char *data;
+	char *line[MAX_HEADERS];
+	int lines, slen,i, whitespace=0, where=0,code;
+	char *version=NULL, *resp_code=NULL, *message=NULL;
+d131 2
+a132 2
+	if(http_data == NULL)
+		return 0;
+d134 5
+a138 39
+	/* make a local copy of the data, including 0 terminator */
+	data = (char *)malloc(len+1);
+	if (data == NULL) return 0;
+	memcpy(data, http_data, len);
+	data[len] = 0;
+
+	lines = split_headers(data, len, line);
+
+	/* In this case, the first line contains:
+	 * VERSION RESPONSE_CODE MESSAGE, such as HTTP/1.0 200 OK
+	 */
+	slen = strlen(line[0]);
+	version = line[0];
+	for(i=0; i < slen; i++) {
+		if(line[0][i] == ' ') {
+			line[0][i] = 0;
+			whitespace = 1;
+		} else if(whitespace) {
+			whitespace = 0;
+			where++;
+			if(where == 1)
+				resp_code = &line[0][i];
+			else {
+				message = &line[0][i];
+				break;
+			}
+		}
+	}
+
+	if(version == NULL || resp_code == NULL || message == NULL) {
+		free(data);
+		return 0;
+	}
+
+	httpp_setvar(parser, HTTPP_VAR_ERROR_CODE, resp_code);
+	code = atoi(resp_code);
+	if(code < 200 || code >= 300) {
+		httpp_setvar(parser, HTTPP_VAR_ERROR_MESSAGE, message);
+	}
+d140 1
+a140 2
+	httpp_setvar(parser, HTTPP_VAR_URI, uri);
+	httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "NONE");
+d142 20
+a161 1
+	parse_headers(parser, line, lines);
+d163 4
+a166 1
+	free(data);
+d168 14
+a181 1
+	return 1;
+d186 8
+a193 8
+	if(c >= '0' && c <= '9')
+		return c - '0';
+	else if(c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	else if(c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	else
+		return -1;
+d198 39
+a236 39
+	int len = strlen(src);
+	unsigned char *decoded;
+	int i;
+	char *dst;
+	int done = 0;
+
+	decoded = calloc(1, len + 1);
+
+	dst = decoded;
+
+	for(i=0; i < len; i++) {
+		switch(src[i]) {
+		case '%':
+			if(i+2 >= len) {
+				free(decoded);
+				return NULL;
+			}
+			if(hex(src[i+1]) == -1 || hex(src[i+2]) == -1 ) {
+				free(decoded);
+				return NULL;
+			}
+
+			*dst++ = hex(src[i+1]) * 16  + hex(src[i+2]);
+			i+= 2;
+			break;
+		case '#':
+			done = 1;
+			break;
+		case 0:
+			free(decoded);
+			return NULL;
+			break;
+		default:
+			*dst++ = src[i];
+			break;
+		}
+		if(done)
+			break;
+	}
+d238 1
+a238 1
+	*dst = 0; /* null terminator */
+d240 1
+a240 1
+	return decoded;
+d246 29
+a274 29
+	int len;
+	int i=0;
+	char *key = query;
+	char *val=NULL;
+
+	if(!query || !*query)
+		return;
+
+	len = strlen(query);
+
+	while(i<len) {
+		switch(query[i]) {
+		case '&':
+			query[i] = 0;
+			if(val && key)
+				httpp_set_query_param(parser, key, val);
+			key = query+i+1;
+			break;
+		case '=':
+			query[i] = 0;
+			val = query+i+1;
+			break;
+		}
+		i++;
+	}
+
+	if(val && key) {
+		httpp_set_query_param(parser, key, val);
+	}
+d291 1
+a291 1
+	lines = split_headers(data, len, line);
+d316 80
+a395 74
+	char *data, *tmp;
+	char *line[MAX_HEADERS]; /* limited to 32 lines, should be more than enough */
+	int i;
+	int lines;
+	char *req_type = NULL;
+	char *uri = NULL;
+	char *version = NULL;
+	int whitespace, where, slen;
+
+	if (http_data == NULL)
+		return 0;
+
+	/* make a local copy of the data, including 0 terminator */
+	data = (char *)malloc(len+1);
+	if (data == NULL) return 0;
+	memcpy(data, http_data, len);
+	data[len] = 0;
+
+	lines = split_headers(data, len, line);
+
+	/* parse the first line special
+	** the format is:
+	** REQ_TYPE URI VERSION
+	** eg:
+	** GET /index.html HTTP/1.0
+	*/
+	where = 0;
+	whitespace = 0;
+	slen = strlen(line[0]);
+	req_type = line[0];
+	for (i = 0; i < slen; i++) {
+		if (line[0][i] == ' ') {
+			whitespace = 1;
+			line[0][i] = '\0';
+		} else {
+			/* we're just past the whitespace boundry */
+			if (whitespace) {
+				whitespace = 0;
+				where++;
+				switch (where) {
+				case 1:
+					uri = &line[0][i];
+					break;
+				case 2:
+					version = &line[0][i];
+					break;
+				}
+			}
+		}
+	}
+
+	if (strcasecmp("GET", req_type) == 0) {
+		parser->req_type = httpp_req_get;
+	} else if (strcasecmp("POST", req_type) == 0) {
+		parser->req_type = httpp_req_post;
+	} else if (strcasecmp("HEAD", req_type) == 0) {
+		parser->req_type = httpp_req_head;
+	} else if (strcasecmp("SOURCE", req_type) == 0) {
+		parser->req_type = httpp_req_source;
+	} else if (strcasecmp("PLAY", req_type) == 0) {
+		parser->req_type = httpp_req_play;
+	} else if (strcasecmp("STATS", req_type) == 0) {
+		parser->req_type = httpp_req_stats;
+	} else {
+		parser->req_type = httpp_req_unknown;
+	}
+
+	if (uri != NULL && strlen(uri) > 0) {
+		char *query;
+		if((query = strchr(uri, '?')) != NULL) {
+			*query = 0;
+			query++;
+			parse_query(parser, query);
+		}
+d397 10
+a406 2
+		parser->uri = strdup(uri);
+	} else {
+d411 27
+a437 48
+	if ((version != NULL) && ((tmp = strchr(version, '/')) != NULL)) {
+		tmp[0] = '\0';
+		if ((strlen(version) > 0) && (strlen(&tmp[1]) > 0)) {
+			httpp_setvar(parser, HTTPP_VAR_PROTOCOL, version);
+			httpp_setvar(parser, HTTPP_VAR_VERSION, &tmp[1]);
+		} else {
+			free(data);
+			return 0;
+		}
+	} else {
+		free(data);
+		return 0;
+	}
+
+	if (parser->req_type != httpp_req_none && parser->req_type != httpp_req_unknown) {
+		switch (parser->req_type) {
+		case httpp_req_get:
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "GET");
+			break;
+		case httpp_req_post:
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "POST");
+			break;
+		case httpp_req_head:
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "HEAD");
+			break;
+		case httpp_req_source:
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "SOURCE");
+			break;
+		case httpp_req_play:
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "PLAY");
+			break;
+		case httpp_req_stats:
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "STATS");
+			break;
+		default:
+			break;
+		}
+	} else {
+		free(data);
+		return 0;
+	}
+
+	if (parser->uri != NULL) {
+		httpp_setvar(parser, HTTPP_VAR_URI, parser->uri);
+	} else {
+		free(data);
+		return 0;
+	}
+d439 6
+a444 1
+	parse_headers(parser, line, lines);
+d446 3
+a448 1
+	free(data);
+d450 1
+a450 1
+	return 1;
+d455 1
+a455 1
+	http_var_t *var;
+d457 2
+a458 2
+	if (name == NULL || value == NULL)
+		return;
+d460 2
+a461 2
+	var = (http_var_t *)malloc(sizeof(http_var_t));
+	if (var == NULL) return;
+d463 9
+a471 9
+	var->name = strdup(name);
+	var->value = strdup(value);
+
+	if (httpp_getvar(parser, name) == NULL) {
+		avl_insert(parser->vars, (void *)var);
+	} else {
+		avl_delete(parser->vars, (void *)var, _free_vars);
+		avl_insert(parser->vars, (void *)var);
+	}
+d476 2
+a477 2
+	http_var_t var;
+	http_var_t *found;
+d479 2
+a480 2
+	var.name = name;
+	var.value = NULL;
+d482 4
+a485 4
+	if (avl_get_by_key(parser->vars, (void *)&var, (void **)&found) == 0)
+		return found->value;
+	else
+		return NULL;
+d490 1
+a490 1
+	http_var_t *var;
+d492 2
+a493 2
+	if (name == NULL || value == NULL)
+		return;
+d495 2
+a496 2
+	var = (http_var_t *)malloc(sizeof(http_var_t));
+	if (var == NULL) return;
+d498 9
+a506 9
+	var->name = strdup(name);
+	var->value = url_escape(value);
+
+	if (httpp_get_query_param(parser, name) == NULL) {
+		avl_insert(parser->queryvars, (void *)var);
+	} else {
+		avl_delete(parser->queryvars, (void *)var, _free_vars);
+		avl_insert(parser->queryvars, (void *)var);
+	}
+d511 2
+a512 2
+	http_var_t var;
+	http_var_t *found;
+d514 2
+a515 2
+	var.name = name;
+	var.value = NULL;
+d517 4
+a520 4
+	if (avl_get_by_key(parser->queryvars, (void *)&var, (void **)&found) == 0)
+		return found->value;
+	else
+		return NULL;
+d525 7
+a531 7
+	parser->req_type = httpp_req_none;
+	if (parser->uri)
+		free(parser->uri);
+	parser->uri = NULL;
+	avl_tree_free(parser->vars, _free_vars);
+	avl_tree_free(parser->queryvars, _free_vars);
+	parser->vars = NULL;
+d536 2
+a537 2
+	httpp_clear(parser);
+	free(parser);
+d542 3
+a544 3
+	long i;
+	for (i = 0; i < strlen(str); i++)
+		str[i] = tolower(str[i]);
+d546 1
+a546 1
+	return str;
+d551 1
+a551 1
+	http_var_t *vara, *varb;
+d553 2
+a554 2
+	vara = (http_var_t *)a;
+	varb = (http_var_t *)b;
+d556 1
+a556 1
+	return strcmp(vara->name, varb->name);
+d561 1
+a561 1
+	http_var_t *var;
+d563 1
+a563 1
+	var = (http_var_t *)key;
+d565 5
+a569 5
+	if (var->name)
+		free(var->name);
+	if (var->value)
+		free(var->value);
+	free(var);
+d571 1
+a571 1
+	return 1;
+@
+
+
+1.16
+log
+@include the automake config.h file if the application defines one
+@
+text
+@d16 1
+a16 1
+#include "avl.h"
+@
+
+
+1.15
+log
+@Set another parameter in the icy protocol parse that logging expects
+@
+text
+@d6 4
+@
+
+
+1.14
+log
+@Added support for shoutcast login protocol (ewww...)
+@
+text
+@d299 1
+@
+
+
+1.13
+log
+@Use gnu archive ACX_PTHREAD macro to figure out how to compile thread support.
+Also make it possible to build libshout without threads, albeit without locking
+in the resolver or avl trees.
+New option --disable-pthread too.
+@
+text
+@d273 36
+d387 4
+a390 2
+	} else
+		parser->uri = NULL;
+@
+
+
+1.12
+log
+@Fix some warnings, fix cflags.
+@
+text
+@a11 1
+#include "thread.h"
+@
+
+
+1.11
+log
+@Indentation again, don't mind me
+@
+text
+@d58 2
+a59 1
+	int i, lines = 0;
+@
+
+
+1.10
+log
+@Make indentation consistent before doing other work
+@
+text
+@d472 1
+a472 1
+    var.value = NULL;
+@
+
+
+1.9
+log
+@mp3 metadata complete. Still untested.
+@
+text
+@d43 1
+a43 1
+    parser->queryvars = avl_tree_new(_compare_vars, NULL);
+d122 4
+a125 4
+    char *data;
+    char *line[MAX_HEADERS];
+    int lines, slen,i, whitespace=0, where=0,code;
+    char *version=NULL, *resp_code=NULL, *message=NULL;
+d127 2
+a128 2
+    if(http_data == NULL)
+        return 0;
+d134 1
+a134 1
+    data[len] = 0;
+d136 1
+a136 1
+    lines = split_headers(data, len, line);
+d138 20
+a157 22
+    /* In this case, the first line contains:
+     * VERSION RESPONSE_CODE MESSAGE, such as
+     * HTTP/1.0 200 OK
+     */
+    slen = strlen(line[0]);
+    version = line[0];
+    for(i=0; i < slen; i++) {
+        if(line[0][i] == ' ') {
+            line[0][i] = 0;
+            whitespace = 1;
+        }
+        else if(whitespace) {
+            whitespace = 0;
+            where++;
+            if(where == 1)
+                resp_code = &line[0][i];
+            else {
+                message = &line[0][i];
+                break;
+            }
+        }
+    }
+d159 4
+a162 10
+    if(version == NULL || resp_code == NULL || message == NULL) {
+        free(data);
+        return 0;
+    }
+
+    httpp_setvar(parser, HTTPP_VAR_ERROR_CODE, resp_code);
+    code = atoi(resp_code);
+    if(code < 200 || code >= 300) {
+        httpp_setvar(parser, HTTPP_VAR_ERROR_MESSAGE, message);
+    }
+d164 7
+a170 1
+    httpp_setvar(parser, HTTPP_VAR_URI, uri);
+d173 1
+a173 1
+    parse_headers(parser, line, lines);
+d182 8
+a189 8
+    if(c >= '0' && c <= '9')
+        return c - '0';
+    else if(c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    else if(c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    else
+        return -1;
+d194 39
+a232 39
+    int len = strlen(src);
+    unsigned char *decoded;
+    int i;
+    char *dst;
+    int done = 0;
+
+    decoded = calloc(1, len + 1);
+
+    dst = decoded;
+
+    for(i=0; i < len; i++) {
+        switch(src[i]) {
+            case '%':
+                if(i+2 >= len) {
+                    free(decoded);
+                    return NULL;
+                }
+                if(hex(src[i+1]) == -1 || hex(src[i+2]) == -1 ) {
+                    free(decoded);
+                    return NULL;
+                }
+
+                *dst++ = hex(src[i+1]) * 16  + hex(src[i+2]);
+                i+= 2;
+                break;
+            case '#':
+                done = 1;
+                break;
+            case 0:
+                free(decoded);
+                return NULL;
+                break;
+            default:
+                *dst++ = src[i];
+                break;
+        }
+        if(done)
+            break;
+    }
+d234 1
+a234 1
+    *dst = 0; /* null terminator */
+d236 1
+a236 1
+    return decoded;
+d242 29
+a270 30
+    int len;
+    int i=0;
+    char *key = query;
+    char *val=NULL;
+
+    if(!query || !*query)
+        return;
+
+    len = strlen(query);
+
+    while(i<len) {
+        switch(query[i]) {
+            case '&':
+                query[i] = 0;
+                if(val && key) {
+                    httpp_set_query_param(parser, key, val);
+                }
+                key = query+i+1;
+                break;
+            case '=':
+                query[i] = 0;
+                val = query+i+1;
+                break;
+        }
+        i++;
+    }
+
+    if(val && key) {
+        httpp_set_query_param(parser, key, val);
+    }
+d282 1
+a282 1
+    int whitespace, where, slen;
+d291 1
+a291 1
+    data[len] = 0;
+d293 1
+a293 1
+    lines = split_headers(data, len, line);
+d342 7
+a348 8
+	if (uri != NULL && strlen(uri) > 0) 
+    {
+        char *query;
+        if((query = strchr(uri, '?')) != NULL) {
+            *query = 0;
+            query++;
+            parse_query(parser, query);
+        }
+d351 1
+a351 2
+    }
+	else
+d396 1
+a396 1
+    if (parser->uri != NULL) {
+d403 1
+a403 1
+    parse_headers(parser, line, lines);
+d437 1
+a437 1
+    var.value = NULL;
+d493 2
+a494 2
+    httpp_clear(parser);
+    free(parser);
+@
+
+
+1.8
+log
+@bugfixes for httpp_parse_response
+@
+text
+@d43 1
+d182 94
+d345 9
+a353 1
+	if (uri != NULL && strlen(uri) > 0)
+d355 1
+d442 1
+a442 1
+        var.value = NULL;
+d450 35
+d492 1
+@
+
+
+1.7
+log
+@Cleaned up version of Ciaran Anscomb's relaying patch.
+@
+text
+@d165 1
+a168 2
+        free(data);
+        return 0;
+d172 1
+a172 1
+	httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "RELAY");
+@
+
+
+1.6
+log
+@Memory leaks. Lots of little ones.
+@
+text
+@d52 1
+a52 1
+int httpp_parse(http_parser_t *parser, char *http_data, unsigned long len)
+a53 21
+	char *data, *tmp;
+	char *line[MAX_HEADERS]; /* limited to 32 lines, should be more than enough */
+	int i, l, retlen;
+	int lines;
+	char *req_type = NULL;
+	char *uri = NULL;
+	char *version = NULL;
+	char *name = NULL;
+	char *value = NULL;
+	int whitespace, where;
+	int slen;
+
+	if (http_data == NULL)
+		return 0;
+
+	/* make a local copy of the data, including 0 terminator */
+	data = (char *)malloc(len+1);
+	if (data == NULL) return 0;
+	memcpy(data, http_data, len);
+    data[len] = 0;
+
+d57 1
+a57 1
+	lines = 0;
+d75 128
+a202 1
+	retlen = i;
+d298 1
+a298 1
+        if (parser->uri != NULL) {
+d305 1
+a305 31
+	/* parse the name: value lines. */
+	for (l = 1; l < lines; l++) {
+		where = 0;
+		whitespace = 0;
+		name = line[l];
+		value = NULL;
+		slen = strlen(line[l]);
+		for (i = 0; i < slen; i++) {
+			if (line[l][i] == ':') {
+				whitespace = 1;
+				line[l][i] = '\0';
+			} else {
+				if (whitespace) {
+					whitespace = 0;
+					while (i < slen && line[l][i] == ' ')
+						i++;
+
+					if (i < slen)
+						value = &line[l][i];
+					
+					break;
+				}
+			}
+		}
+		
+		if (name != NULL && value != NULL) {
+			httpp_setvar(parser, _lowercase(name), value);
+			name = NULL; 
+			value = NULL;
+		}
+	}
+d309 1
+a309 1
+	return retlen;
+@
+
+
+1.5
+log
+@Buffer overflows.
+
+Requires a change to the format plugin interface - jack: if you want this
+done differently, feel free to change it (or ask me to).
+@
+text
+@d271 1
+a271 1
+void httpp_destroy(http_parser_t *parser)
+d279 6
+@
+
+
+1.4
+log
+@Bunch of fixes:
+
+ - connections are now matched to format plugins based on content-type headers,
+   and are rejected if there isn't a format handler for that content-type, or
+   there is no content-type at all.
+ - format_vorbis now handles pages with granulepos of -1 in the headers
+   correctly (this happens if the headers are fairly large, because of
+   many comments, for example).
+ - various #include fixes.
+ - buffer overflow in httpp.c fixed.
+@
+text
+@d6 2
+d20 2
+d55 1
+a55 1
+	char *line[32]; /* limited to 32 lines, should be more than enough */
+d80 1
+a80 1
+	for (i = 0; i < len; i++) {
+@
+
+
+1.3
+log
+@Thanks to Akos Maroy <darkeye@@tyrell.hu> for this.  These variables need to
+be uppercase always in order to comply with the HTTP specification.
+While not a problem internal to icecast, they were slipping into the log
+files and breaking some less-than-robust parsers.
+@
+text
+@d65 2
+a66 2
+	/* make a local copy of the data */
+	data = (char *)malloc(len);
+d69 1
+d81 3
+a83 3
+			if (i + 1 < len)
+				if (data[i + 1] == '\n' || data[i + 1] == '\r') {
+					data[i] = '\0';
+a84 3
+				}
+			data[i] = '\0';
+			if (i < len - 1)
+d86 1
+@
+
+
+1.2
+log
+@Win32 compatibility courtesy of Oddsock.
+@
+text
+@d150 1
+a150 1
+			httpp_setvar(parser, HTTPP_VAR_PROTOCOL, _lowercase(version));
+d164 1
+a164 1
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "get");
+d167 1
+a167 1
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "post");
+d170 1
+a170 1
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "head");
+d173 1
+a173 1
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "source");
+d176 1
+a176 1
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "play");
+d179 1
+a179 1
+			httpp_setvar(parser, HTTPP_VAR_REQ_TYPE, "stats");
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d14 4
+d54 5
+a58 4
+	char *req_type;
+	char *uri;
+	char *version;
+	char *name, *value;
+@
+
+
+1.1.1.1
+log
+@move to cvs
+@
+text
+@@
