@@ -33,6 +33,7 @@ Candidate changes:
     Justification:  Allows malformed data into the repository.
     Votes:
       +1: kfogel, sussman
+      -1: julianfoad ("repairs" line endings: mail thread "Issue #1756 ...")
     Old votes (for r8839 alone):
       +1: cmpilato, jszakmeister
       -1: kfogel (doc string bug, fixed in r8932)
@@ -62,4 +63,4 @@ Candidate changes:
     Justification: Avoids any problems with downstream packagers having to
     work to comply with our license.
     Votes:
-      +1: kfogel, sussman, philip
+      +1: kfogel, sussman, philip, julianfoad
