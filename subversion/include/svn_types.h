@@ -157,12 +157,20 @@ typedef int svn_boolean_t;
  * committed in REVISION.  Whether it is null or not is determined by
  * the calling context.
  *
+ * ### Note: the only reason CHANGED_PATHS is not qualified with
+ * `const' is that we usually want to loop over it, and
+ * apr_hash_first() doesn't take a const hash, for various reasons.
+ * I'm not sure that those "various reasons" are actually ever
+ * relevant anymore, and if they're not, it might be nice to change
+ * apr_hash_first() so read-only uses of hashes can be protected via
+ * the type system.
+ *
  * On the final call for a given set of log messages, LAST_CALL is
  * set.
  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
      (void *baton,
-      const apr_hash_t *changed_paths,
+      apr_hash_t *changed_paths,
       svn_revnum_t revision,
       const char *author,
       const char *date,  /* use svn_time_from_string() if need apr_time_t */

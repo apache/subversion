@@ -1410,6 +1410,13 @@ struct log_baton
   const char *date;
   const char *msg;
 
+  /* Keys are the paths changed in this commit, allocated in SUBPOOL;
+     the table itself is also allocated in SUBPOOL.  If this table is
+     NULL, no changed paths were indicated -- which doesn't mean no
+     paths were changed, just means that this log invocation didn't
+     ask for them to be reported. */
+  apr_hash_t *changed_paths;
+
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
   svn_log_message_receiver_t receiver;
@@ -1427,10 +1434,11 @@ struct log_baton
 static void
 reset_log_item (struct log_baton *lb)
 {
-  lb->revision = SVN_INVALID_REVNUM;
-  lb->author   = NULL;
-  lb->date     = NULL;
-  lb->msg      = NULL;
+  lb->revision      = SVN_INVALID_REVNUM;
+  lb->author        = NULL;
+  lb->date          = NULL;
+  lb->msg           = NULL;
+  lb->changed_paths = NULL;
 
   svn_pool_clear (lb->subpool);
 }
@@ -1488,6 +1496,15 @@ log_end_element(void *userdata,
     lb->author = apr_pstrdup (lb->subpool, cdata);
   else if (strcmp(elm->name, "date") == 0)
     lb->date = apr_pstrdup (lb->subpool, cdata);
+  else if (strcmp(elm->name, "changed-path") == 0)
+    {
+      char *path = apr_pstrdup (lb->subpool, cdata);
+
+      if (lb->changed_paths == NULL)
+        lb->changed_paths = apr_hash_make(lb->subpool);
+
+      apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, (void *) 1);
+    }
   else if (strcmp(elm->name, "comment") == 0)
     lb->msg = apr_pstrdup (lb->subpool, cdata);
   else if (strcmp(elm->name, "log-item") == 0)
@@ -1499,7 +1516,7 @@ log_end_element(void *userdata,
          change to mod_dav_svn too. */
     
       svn_error_t *err = (*(lb->receiver))(lb->receiver_baton,
-                                           NULL,
+                                           lb->changed_paths,
                                            lb->revision,
                                            lb->author,
                                            lb->date,
@@ -1565,6 +1582,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
       { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
       { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
       { SVN_XML_NAMESPACE, "date", ELEM_log_date, NE_XML_CDATA },
+      { SVN_XML_NAMESPACE, "changed-path", ELEM_log_date, NE_XML_CDATA },
       { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         NE_XML_CDATA },
