@@ -23,7 +23,7 @@ import marshal
 # Make sure this Python is recent enough.
 import sys
 if sys.hexversion < 0x2000000:
-  sys.stderr.write('Python 2.0 or higher is required; see www.python.org.')
+  sys.stderr.write('Python 2.0 or higher is required; see www.python.org.\n')
   sys.exit(1)
 
 # Don't settle for less.
@@ -288,7 +288,7 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
   # way of specifying an in-repository prefix path, not interpolation.
 
   if branch_name and tag_name:
-    sys.stderr.write('make_path() miscalled, both branch and tag given')
+    sys.stderr.write('make_path() miscalled: both branch and tag given.\n')
     sys.exit(1)
 
   if branch_name:
@@ -423,7 +423,8 @@ class RepositoryMirror:
     if revision == -1:
       revision = self.youngest
 
-    if debugging: print "PROBING path: '%s' in %d" % (path, revision)
+    if debugging:
+      print "PROBING path: '%s' in %d" % (path, revision)
 
     parent_key = self.revs_db[str(revision)]
     parent = marshal.loads(self.nodes_db[parent_key])
@@ -433,7 +434,7 @@ class RepositoryMirror:
     for component in components:
 
       if debugging:
-        for n in range(i): print "  ",
+        print "  " * i
         print "'%s' key: %s, val:" % (previous_component, parent_key), parent
 
       if not parent.has_key(component):
@@ -450,7 +451,7 @@ class RepositoryMirror:
       i = i + 1
   
     if debugging:
-      for n in range(i): print "  ",
+      print "  " * i
       print "parent_key: %s, val:" % parent_key, parent
 
     # It's not actually a parent at this point, it's the leaf node.
@@ -508,8 +509,10 @@ class RepositoryMirror:
     for component in components[:-1]:
       # parent is always mutable at the top of the loop
 
-      if path_so_far: path_so_far = path_so_far + '/' + component
-      else:           path_so_far = component
+      if path_so_far:
+        path_so_far = path_so_far + '/' + component
+      else:
+        path_so_far = component
 
       # Ensure that the parent has an entry for this component.
       if not parent.has_key(component):
@@ -551,7 +554,7 @@ class RepositoryMirror:
       # The contract for copying over existing nodes is to do nothing
       # and return:
       if copyfrom_path:
-        return (OP_NOOP, old_names)
+        return OP_NOOP, old_names
 
     leaf_key = gen_key()
     parent[last_component] = leaf_key
@@ -561,7 +564,7 @@ class RepositoryMirror:
                 self.mutable_flag   : 1 }
     s = marshal.dumps(new_val)
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
-    return (op, old_names)
+    return op, old_names
 
   def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
@@ -630,20 +633,24 @@ class RepositoryMirror:
         real_entries = 0
         for key in dir.keys():
           if not key[0] == '/': real_entries = real_entries + 1
-        if real_entries > 1: return None
-        else:                return 1
+        if real_entries > 1:
+          return None
+        else:
+          return 1
       else:
         return 1
 
     for component in components[:-1]:
       # parent is always mutable at the top of the loop
 
-      if path_so_far: path_so_far = path_so_far + '/' + component
-      else:           path_so_far = component
+      if path_so_far:
+        path_so_far = path_so_far + '/' + component
+      else:
+        path_so_far = component
 
       # If we can't reach the dest, then we don't need to do anything.
       if not parent.has_key(component):
-        return (None, ())
+        return None, ()
 
       # Otherwise continue downward, dropping breadcrumbs.
       this_entry_key = parent[component]
@@ -656,7 +663,7 @@ class RepositoryMirror:
     last_component = components[-1]
     old_names = ()
     if not parent.has_key(last_component):
-      return (None, ())
+      return None, ()
     else:
       child = marshal.loads(self.nodes_db[parent[last_component]])
       old_names = child[self.symbolic_names]
@@ -703,7 +710,7 @@ class RepositoryMirror:
     self.revs_db[str(self.youngest)] = new_key
 
     if pruned_count > len(components):
-      sys.stderr.write("Error: deleting '%s' tried to prune %d components."
+      sys.stderr.write("Error: deleting '%s' tried to prune %d components.\n"
                        % (path, pruned_count))
       exit(1)
 
@@ -712,9 +719,9 @@ class RepositoryMirror:
         # We never prune away the root directory, so back up one component.
         pruned_count = pruned_count - 1
       retpath = string.join(components[:0 - pruned_count], '/')
-      return (retpath, old_names)
+      return retpath, old_names
     else:
-      return (path, old_names)
+      return path, old_names
 
     ### We've no place to put tags + branches.  Suspect we just
     ### shouldn't be taking them as arguments, which the doc string
@@ -827,8 +834,10 @@ class Dumper:
   def probe_path(self, path):
     """Return true if PATH exists in the youngest tree of the svn
     repository, else return None.  PATH does not start with '/'."""
-    if self.repos_mirror.probe_path(path) == None: return None
-    else:                                          return 1
+    if self.repos_mirror.probe_path(path) == None:
+      return None
+    else:
+      return 1
 
   def copy_path(self, svn_src_path, svn_src_rev, svn_dst_path):
     op, ign = self.repos_mirror.change_path(svn_dst_path,
@@ -962,7 +971,7 @@ class Dumper:
       self.dumpfile.write('Node-path: %s\n'
                           'Node-action: delete\n'
                           '\n' % deleted_path)
-    return (deleted_path, closed_names)
+    return deleted_path, closed_names
 
   def close(self):
     self.repos_mirror.close()
@@ -1062,7 +1071,8 @@ class SymbolicNameTracker:
     else:
       components = [symbolic_name]
     
-    if debugging: print "PROBING SYMBOLIC NAME:\n", components
+    if debugging:
+      print "PROBING SYMBOLIC NAME:\n", components
 
     parent_key = self.root_key
     parent = marshal.loads(self.db[parent_key])
@@ -1070,7 +1080,7 @@ class SymbolicNameTracker:
     i = 1
     for component in components:
       if debugging:
-        for n in range(i): print "  ",
+        print "  " * i
         print "'%s' key: %s, val:" % (last_component, parent_key), parent
 
       if not parent.has_key(component):
@@ -1086,7 +1096,7 @@ class SymbolicNameTracker:
       i = i + 1
   
     if debugging:
-      for n in range(i): print "  ",
+      print "  " * i
       print "parent_key: %s, val:" % parent_key, parent
 
     # It's not actually a parent at this point, it's the leaf node.
@@ -1131,11 +1141,13 @@ class SymbolicNameTracker:
           done = 1
           break
         elif this_rev > rev:
-          if i > 0: i = i - 1
+          if i > 0:
+            i = i - 1
           rev_counts.insert(i, (rev, 1))
           done = 1
           break
-      if not done: rev_counts.append((rev, 1))
+      if not done:
+        rev_counts.append((rev, 1))
       entry_val[revlist_key] = rev_counts
 
     self.db[item_key] = marshal.dumps(entry_val)
@@ -1147,7 +1159,10 @@ class SymbolicNameTracker:
     """Record SVN_PATH at SVN_REV as the earliest point from which the
     symbolic names in TAGS and BRANCHES could be copied.  SVN_PATH
     does not start with '/'."""
-    if not (tags or branches): return  # early out
+    if not (tags or branches):
+      # early out
+      return
+
     for name in tags + branches:
       components = [name] + string.split(svn_path, '/')
       # print "KFF enrooting ('%s') " % name, components
@@ -1174,7 +1189,10 @@ class SymbolicNameTracker:
     """Record that as of SVN_REV, SVN_PATH could no longer be the
     source from which any of symbolic names in NAMES could be copied.
     SVN_PATH does not start with '/'."""
-    if not names: return  # early_out
+    if not names:
+      # early_out
+      return
+
     for name in names:
       components = [name] + string.split(svn_path, '/')
       parent_key = self.root_key
@@ -1214,8 +1232,10 @@ class SymbolicNameTracker:
     false, return OPENINGS."""
 
     # First look for easy outs.
-    if not openings: return []
-    if not closings: return openings
+    if not openings:
+      return []
+    if not closings:
+      return openings
       
     # No easy out, so wish for lexical closures and calculate the scores :-). 
     scores = []
@@ -1283,10 +1303,14 @@ class SymbolicNameTracker:
 
       for ent in val.keys():
         if not ent[0] == '/':
-          if src_path: next_src = src_path + '/' + ent
-          else:        next_src = ent
-          if dst_path: next_dst = dst_path + '/' + ent
-          else:        next_dst = ent
+          if src_path:
+            next_src = src_path + '/' + ent
+          else:
+            next_src = ent
+          if dst_path:
+            next_dst = dst_path + '/' + ent
+          else:
+            next_dst = ent
           copy_descend(dumper, ctx, branch, val, ent, parent_rev,
                        next_src, next_dst)
 
@@ -1314,7 +1338,7 @@ class SymbolicNameTracker:
     parent = marshal.loads(self.db[parent_key])
 
     if not parent.has_key(branch):
-      sys.stderr.write("No origin records for branch '%s'." % branch)
+      sys.stderr.write("No origin records for branch '%s'.\n" % branch)
       sys.exit(1)
 
     # Now move down into the branch.  By the way, this has nothing to
