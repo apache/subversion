@@ -167,7 +167,7 @@ import_file (const svn_delta_editor_t *editor,
              apr_pool_t *pool)
 {
   void *file_baton;
-  const char *mimetype;
+  const char *mimetype = NULL;
   unsigned char digest[APR_MD5_DIGESTSIZE];
   const char *text_checksum;
   apr_hash_t* properties;
