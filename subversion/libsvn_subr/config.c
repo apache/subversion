@@ -120,7 +120,7 @@ svn_config_read_all (svn_config_t **cfgp, apr_pool_t *pool)
 
 #ifdef SVN_WIN32
   svn_config_read (cfgp, SVN_REGISTRY_SYS_CONFIG_PATH, FALSE, pool);
-  svn_config_merge (cfgp, SVN_REGISTRY_USR_CONFIG_PATH, FALSE, pool);
+  svn_config_merge (*cfgp, SVN_REGISTRY_USR_CONFIG_PATH, FALSE);
 #else  /* ! SVN_WIN32 */
   svn_config_read (cfgp, SVN_CONFIG__SYS_FILE, FALSE, pool);
 #endif  /* SVN_WIN32 */
