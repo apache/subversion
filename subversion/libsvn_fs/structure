@@ -689,7 +689,7 @@ Transactions:
 
             TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
          UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
-          COMMITTED-TXN ::= ("committed" REV ROOT-ID PROPLIST) ;
+          COMMITTED-TXN ::= ("committed" ROOT-ID REV PROPLIST COPIES) ;
                 ROOT-ID ::= NODE-REV-ID ;
                 BASE-ID ::= NODE-REV-ID ;
                  COPIES ::= (CPY ...) ;
