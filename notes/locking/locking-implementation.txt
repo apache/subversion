@@ -46,23 +46,12 @@ II. Client Implementation
 
             1. Using a lock to Commit
 
-               When driving the RA layer's commit editor, the client
-               pushes tokens by doing an editor->change_file_prop() of
-               svn:wc:entry:lock-token.  (Exactly the reverse of the
-               way the client -recieves- entryprops.)  The RA editor
-               parses the entryprop, then marshalls the token however
-               it wishes over the network:
-
-                  - for ra_svn, a new command in the editor command set.
-                  - for ra_dav, a new standard header in the PUT request.
-
-               When the commit is finished, if the user didn't specify
-               the --keep-locks option, the client will issue unlock
-               commans for the files it has locked.  (### Is it
-               cleaner to have a new ra->get_commit_editor2() with a
-               flag for this and tlet the server take care of it. It
-               will avoid a lot of network round-trips in ra_svn,
-               since the server already got the tokens.)
+               A new RA layer get_commit_editor2() function will be created.
+               It takes a has of path -> lock token from the working
+               copy.  This will be used by the server to check that
+               the WC locks match the current locks on the paths.  A
+               flag keep_locks will also be added, specifying whether
+               the committables should be unlocked after a successful commit.
 
             2. Releasing a lock
 
