@@ -85,6 +85,10 @@
 
         For this, start up Apache after having configured according to
         the directions in subversion/tests/clients/cmdline/README.
+
+        Make sure, that if you maintain a development installation of
+        apache, that you check the config file and update it for the
+        new release area where you're testing the tar-ball.
      
      g) make svncheck
 

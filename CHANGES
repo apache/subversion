@@ -1,4 +1,29 @@
-Version 0.25.0 (released 09 July 2003, revision 6394, branches/release-0.25.0)
+Version 0.26.0 (released 24 July 2003, revision 6550, branches/release-0.26.0)
+
+User-visible changes:
+
+  * fixed - --parent-dir option to svnadmin load (r6436)
+  * fixed - 'svnlook diff' now properly displays diffs  (r6408, #1241)
+  * fixed - 'svn cat' no longer expands values from the wrong revision.
+  * fixed 'svn merge':
+     . (r6447,#1402) -r FOO:PREV works correctly
+     . (r6452,#1379) no longer prints confusing no-op lines
+     . (r6500/6503,#1399) warn user when a tree-delta chunk can't be applied
+  * turn compression off to work around to mod_deflate timeouts (r6509)
+
+Developer-visible changes:
+  * cvs2svn.py:  lots of bugfixing related to branch/tag support
+  * diff code refactored to allow use by other tools (r6407)
+  * make 'svn export' set commit-timestamps (not ready yet) (r6420)
+  * fixed - memory leaks in libsvn_ra_dav commits (r6422)
+  * fixed - cvs2svn.py handles branch files rooted in dead revs (r6482,#1417)
+  * fixed - new lines now detected in svn:author property (r6497,#1401)
+  * fixed - svn_load_dirs works w/ absolute paths (r6507, Debian bug #187331)
+  * changed - build infrastructure now supports Perl SWIG bindings (r6441)
+  * removed - PORTING document no longer necessary (r6472)
+
+
+Version 0.25.0 (released 11 July 2003, revision 6394, branches/release-0.25.0)
 
 User-visible changes:
  * command line options:
