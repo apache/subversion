@@ -9,7 +9,7 @@ short-term tasks to it, if that's helpful.
 
 ------------------------------------------------------------------------
 
-General Problems:
+General Problems (someone grab these):
 
    - updates (right now) don't bump the revision of every entry as
      they should;  instead we're only bumping the changed entries.
@@ -26,43 +26,19 @@ Ben & Karl todo:
 
 Ben todo:
 
-   - From Bill Tutt:
-     > > * ${SVN_PROG} delete-force ${TEST_DIR_1}\A\D\H\omega
-     > > 
-     > > Registers the delete in $(TEST_DIR_1)/SVN/entries with a filename of
-     > > "A\D\H\omega" and an ancestor of: "anni/A\D\H\omega"
-     > > Doesn't touch ANYTHING in $(TEST_DIR_1)/A/D/H/SVN/entries
-     >
-     > Okay; working on, thanks for noticing this!  (Time to get that path
-     > library fleshed out. :-) ).
-     
-     That wasn't the problem. A\D\H\omega was indeed deleted when I passed in
-     the -force option.
-     The problem was that the "omega" entry still existed in
-     A\D\H\SVN\entries after the delete was finished.
-     (Well, that and a deleted marker showed up in
-     $(TEST_DIR_1)/SVN/entries.)
-     I haven't run into any actual problems because of the silly paths we're
-     currently generating.
-
-   - From Bill Tutt:
-     Well, the scenario I'm talking about is the "add, delete"
-     sequence for a file without an intervening commit.
-     It sounds like your suggesting keeping the else, and moving the
-     bugfix into someplace in the delete handling logic.
-       i.e.:
-       * When deleting a file in the WC state:
-         If the file has already been marked as an add, hard delete
-         the meta-data for the entry, since the user never wanted
-         to commit the data in the first place.
-
-    I think that makes sense, I'll leave fixing up the delete stuff in
-    someone else's more capable hands.
+   - filesystem work -- oh gawd, the humanity!
 
    - make a new mini-crawler (lots of shared code with adm_crawler.c)
      which reports "version differences" to an editor.  this will be
      used to communicate the working copy's state to the repository
      *before* receiving an update.
+         |
+         +-- Specifically: we need to define a new vtable with just
+             replace_dir() and replace_file().  This vtable is part of
+             the RA interface, and designed for nothing other than
+             reporting WC revisions.  (We will NOT use an editor for
+             reporting WC state!)
+
 
 Mike Pilato wc todo:
 
@@ -182,6 +158,41 @@ Changes to svn_delta_edit_fns_t:
    discussed on the list; see the "STATUS" lines for more.
 
    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   Change #1:  New editor creation/finishing methods
+   STATUS: Being done by Karl.
+   The Way It Works Now:
+      When created, an {editor, edit_baton} are returned to the editor's
+      driver.  The first call is always replace_root(), and when
+      finished, the driver calls close_edit().
+   
+   Proposed Change:
+      When created, an editor and root_dir_baton are returned.  It is
+      already presumed that a change is going to be made below root_dir.
+      When the edit is finished, we call close_dir(root_dir_baton).  
+   
+      Thus replace_root() and close_edit() no longer exist in the editor
+      interface.
+   
+   Rationale:
+      This decision came out a heated debate about whether to allow
+      multiple calls to replace_root().  It was decided that this was a
+      bad idea;  it's possible that two different calls to replace_root()
+      might involve a file moving from one disjoint subtree to another
+      one;  thus the whole point of "not calculating the nearest parent
+      dir of all replace_root() calls" was lost.  Since we're going to
+      have to calculate this parent anyway, then, we may as well clarify
+      the interface.
+   
+      As the interface stands now, it's not particularly clear that
+      replace_root() is meant to be called only once.  Our proposed
+      change clears this up;  the directory you intend to replace is used
+      to *generate* the editor, which hands back a root_dir_baton instead
+      of an abstract "edit" baton.  Simliarly, when you're done, you just
+      close_dir() on this root_dir_baton.  We already have replace_dir()
+      and close_dir() -- why make special cases for the root directory?
+   
+   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
    Change #2:  Modify prototypes of replace_*() and add_*()
    STATUS: discussing on list
    The Way It Works Now:
