@@ -1262,6 +1262,7 @@ pre-commit.tmpl
         <command>start-commit</command> eller 
         <command>post-commit</command>) til p&#229;hakningen.</para>
 
+      <!-- @ENGLISH {{{
       <para>On Unix platforms, this means supplying a script or
         program (which could be a shell script, a Python program, a
         compiled C binary, or any number of other things) named
@@ -1279,14 +1280,37 @@ pre-commit.tmpl
         <filename>.exe</filename> or <filename>.com</filename> for
         programs, and <filename>.bat</filename> for batch
         files.</para>
+      @ENGLISH }}} -->
+      <para>P&#229; Unix-plattformer betyr dette &#229; legge inn et skript eller 
+        program (som kan v&#230;re et <!-- &#164; -->shellskript, et 
+        Pythonprogram, et kompilert C-program, eller hva som helst 
+        annet) som heter akkurat det samme som p&#229;hakningen.
+        Selvf&#248;lgelig, malfilene er der for mer enn bare 
+        informasjonsverdien &#8212; den letteste m&#229;ten &#229; installere en 
+        p&#229;hakning p&#229; Unixplattformer er &#229; bare kopiere den riktige 
+        malfilen til en ny fil som mangler 
+        <literal>.tmpl</literal>-etternavnet, finpusse p&#229; innholdet, og 
+        forsikre deg om at skriptet er kj&#248;rbart.
+        Men Windows bruker filetternavn til &#229; avgj&#248;re hvorvidt et 
+        program er kj&#248;rbart eller ikke, s&#229; da m&#229; du legge inn et program 
+        der hovednavnet er navnet p&#229; p&#229;hakningen, og der etternavnet er 
+        en av de spesielle etternavnene som Windows kjenner igjen som 
+        kj&#248;rbare, for eksempel <filename>.exe</filename> eller 
+        <filename>.com</filename> for programmer, og 
+        <filename>.bat</filename> for batchfiler.</para>
 
+      <!-- @ENGLISH {{{
       <para>Currently there are five hooks implemented by the
         Subversion repository:</para>
+      @ENGLISH }}} -->
+      <para>Forel&#248;pig er det fem p&#229;hakninger som er lagt inn i 
+        Subversiondepotet:</para>
 
       <variablelist>
         <varlistentry>
           <term><filename>start-commit</filename></term>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>This is run before the commit transaction is even
               created.  It is typically used to decide if the user has
               commit privileges at all.  The repository passes two
@@ -1296,12 +1320,27 @@ pre-commit.tmpl
               stopped before the transaction is even created.  If the
               hook program writes data to stderr, it will be
               marshalled back to the client.</para>
+            @ENGLISH }}} -->
+            <para>Denne blir kj&#248;rt allerede f&#248;r innleggingstransaksjonen 
+              er opprettet.
+              Det blir vanligvis brukt til &#229; avgj&#248;re om brukeren har 
+              innleggingsprivilegier i det hele tatt.
+              Depotet leverer to argumenter til dette programmet:
+              Stien til depotet, og brukernavnet som fors&#248;ker seg p&#229; 
+              innleggingen.
+              Hvis programmet returnerer en verdi som ikke er null, blir 
+              denne innleggingen stoppet allerede f&#248;r transaksjonen blir 
+              laget.
+              Hvis p&#229;hakningen skriver data til <!-- &#164; Det h&#248;res bedre 
+              ut enn &#171;standard feil&#187;. -->stderr, vil det bli <!-- &#164; 
+              marshalled -->sendt tilbake til klienten.</para>
           </listitem>
         </varlistentry>
             
         <varlistentry>
           <term><filename>pre-commit</filename></term>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>This is run when the transaction is complete, but
               before it is committed.  Typically, this hook is used to
               protect against commits that are disallowed due to
@@ -1315,7 +1354,24 @@ pre-commit.tmpl
               aborted and the transaction is removed.  If the hook
               program writes data to stderr, it will be marshalled
               back to the client.</para>
+            @ENGLISH }}} -->
+            <para>Dette blir kj&#248;rt n&#229;r transaksjonen er komplett, men 
+              f&#248;r den er lagt inn.
+              Vanligvis blir denne p&#229;hakningen brukt til &#229; beskytte mot 
+              innlegginger som er forbudt p&#229; grunn av innhold eller 
+              beliggenhet (for eksempel kan <!-- &#164; site -->tjeneren 
+              kreve at alle innlegginger til en spesiell gren inneholder 
+              et billettnummer fra feildatabasen, eller at den 
+              innkommende loggmeldingen ikke er tom).
+              Depotet leverer to argumenter til dette programmet:
+              Stien til depotet, og navnet p&#229; transaksjonen som legges 
+              inn.
+              Hvis programmet returnerer en verdi som ikke er null, 
+              avbrytes innleggingen og transaksjonen blir fjernet.
+              Hvis programmet skriver data til stderr, vil dette bli 
+              <!-- marshalled -->sendt tilbake til klienten.</para>
 
+            <!-- @ENGLISH {{{
             <para>The Subversion distribution includes some access
               control scripts (located in the
               <filename>tools/hook-scripts</filename> directory of the
@@ -1328,12 +1384,27 @@ pre-commit.tmpl
               linkend="svn-ch-6-sect-4.4.2"/>).  In a future version
               of Subversion, we plan to implement access control lists
               (ACLs) directly in the filesystem.</para>
+            @ENGLISH }}} -->
+            <para>Subversiondistribusjonen inneholder noen 
+              aksesskontrollskript (i 
+              <filename>tools/hook-scripts</filename>-katalogen i 
+              kildekodefiltreet til Subversion) som kan bli kalt fra 
+              <command>pre-commit</command> for &#229; kunne legge inn 
+              finjustert kontroll for skriveaksess.
+              En annen mulighet er &#229; bruke Apache-modulen 
+              <command>mod_authz_svn</command>, som gir b&#229;de lese- og 
+              skrivekontroll i individuelle kataloger (se <xref 
+              linkend="svn-ch-6-sect-4.4.2"/>).
+              I en fremtidig versjon av Subversion planlegger vi &#229; legge 
+              inn lister for aksesskontroll (ACL) direkte inn i 
+              filsystemet.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><filename>post-commit</filename></term>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>This is run after the transaction is committed, and
               a new revision is created.  Most people use this hook to
               send out descriptive emails about the commit or to make
@@ -1341,7 +1412,18 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and the new revision number that was created.  The exit
               code of the program is ignored.</para>
+            @ENGLISH }}} -->
+            <para>Dette blir kj&#248;rt etter at transaksjonen er lagt inn, 
+              og en ny revisjon er opprettet.
+              De fleste vil bruke denne p&#229;hakningen til &#229; sende ut 
+              beskrivende emailer om innleggingen eller for &#229; ta backup 
+              av depotet.
+              Depotet gir to argumenter til dette programmet:
+              Stien til depotet, og det nye revisjonsnummeret som ble 
+              opprettet.
+              Returverdien fra programmet blir ignorert.</para>
                 
+            <!-- @ENGLISH {{{
             <para>The Subversion distribution includes a
               <command>commit-email.pl</command> script (located in
               the <filename>tools/hook-scripts/</filename> directory
@@ -1352,7 +1434,20 @@ pre-commit.tmpl
               commit, the author and date of the commit, as well as a
               GNU diff-style display of the changes made to the
               various versioned files as part of the commit.</para>
+            @ENGLISH }}} -->
+            <para>Subversiondistribusjonen inneholder et 
+              <command>commit-email.pl</command>-skript (i 
+              <filename>tools/hook-scripts/</filename>-katalogen i 
+              Subversiontreet) som kan bli brukt til &#229; sende email med 
+              (og/eller legge til en loggfil) en beskrivelse av en 
+              mottatt innlegging.
+              Denne mailen inneholder en liste over de stiene som ble 
+              forandret, loggmeldingen som er vedlagt innleggingen, 
+              forfatteren og datoen til innleggingen, sammen med en GNU 
+              diff-visning av forandringene som ble gjort til diverse 
+              filer som del av innleggingen.</para>
 
+            <!-- @ENGLISH {{{
             <para>Another useful tool provided by Subversion is the
               <command>hot-backup.py</command> script (located in the
               <filename>tools/backup/</filename> directory of the
@@ -1361,6 +1456,16 @@ pre-commit.tmpl
               supported by the Berkeley DB database back-end), and can
               be used to make a per-commit snapshot of your repository
               for archival or emergency recovery purposes.</para>
+            @ENGLISH }}} -->
+            <para>Et annet nyttig verkt&#248;y som f&#248;lger med Subversion er 
+              skriptet <command>hot-backup.py</command> (i 
+              <filename>tools/backup/</filename>-katalogen i 
+              kildekodetreet til Subversion).
+              Dette skriptet utf&#248;rer varme backuper av Subversiondepotet 
+              (en funksjonalitet st&#248;ttet av den bakenforliggende 
+              Berkeley DB-databasen), og kan bli brukt til &#229; foreta en 
+              &#248;yeblikkslagring av depotet mellom hver innlegging for 
+              arkiverings- eller sikkerhetsform&#229;l.</para>
           </listitem>
         </varlistentry>
 
