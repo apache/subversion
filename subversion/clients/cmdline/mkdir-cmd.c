@@ -44,7 +44,6 @@ svn_cl__mkdir (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   int i;
-  svn_client_commit_info_t *commit_info = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -62,8 +61,10 @@ svn_cl__mkdir (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
+      svn_client_commit_info_t *commit_info = NULL;
 
-      commit_info = NULL;
+      SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
+                                           NULL, ctx->config, pool));
       SVN_ERR (svn_cl__cleanup_log_msg
                (ctx->log_msg_baton, svn_client_mkdir (&commit_info, target, 
                                                       ctx, pool)));

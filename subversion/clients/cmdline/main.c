@@ -913,14 +913,9 @@ main (int argc, const char * const *argv)
     svn_config_set (cfg, SVN_CONFIG_SECTION_HELPERS,
                     SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
 
+  /* Set the log message callback function.  Note that individual
+     subcommands will populate the ctx.log_msg_baton */
   ctx.log_msg_func = svn_cl__get_log_message;
-  if ((err = svn_cl__make_log_msg_baton (&(ctx.log_msg_baton), &opt_state, 
-                                         NULL, ctx.config, pool)))
-    {
-      svn_handle_error (err, stderr, 0);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
 
   if (!opt_state.encoding || !*opt_state.encoding)
     {

@@ -61,7 +61,6 @@ svn_cl__delete (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   int i;
-  svn_client_commit_info_t *commit_info = NULL;
   apr_pool_t *subpool;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -82,8 +81,11 @@ svn_cl__delete (apr_getopt_t *os,
     {
       svn_error_t *err;
       const char *target = ((const char **) (targets->elts))[i];
+      svn_client_commit_info_t *commit_info = NULL;
 
-      commit_info = NULL;
+      SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
+                                           NULL, ctx->config, pool));
+
       err = svn_client_delete
         (&commit_info, target, NULL, opt_state->force, 
          ctx, subpool);
