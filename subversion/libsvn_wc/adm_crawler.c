@@ -525,7 +525,8 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
 
       SVN_ERR (svn_wc_translated_file (&tmp_wfile, entrypath, pool));
       tmp_text_base = svn_wc__text_base_path (entrypath, TRUE, pool);
-      SVN_ERR (svn_io_copy_file (tmp_wfile->data, tmp_text_base->data, pool));
+      SVN_ERR (svn_io_copy_file (tmp_wfile->data, tmp_text_base->data, FALSE,
+                                 pool));
       if (tmp_wfile != entrypath)
         SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
 
@@ -571,7 +572,8 @@ do_prop_deltas (svn_stringbuf_t *path,
 
   /* Copy the local prop file to the administrative temp area */
   SVN_ERR (svn_wc__prop_path (&tmp_prop_path, path, 1, pool));
-  SVN_ERR (svn_io_copy_file (prop_path->data, tmp_prop_path->data, pool));
+  SVN_ERR (svn_io_copy_file (prop_path->data, tmp_prop_path->data, FALSE,
+                             pool));
 
   /* Load all properties into hashes */
   SVN_ERR (svn_wc__load_prop_file (tmp_prop_path->data, localprops, pool));
@@ -1768,7 +1770,7 @@ restore_file (svn_stringbuf_t *file_path,
   tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
 
   SVN_ERR (svn_io_copy_file (text_base_path->data, tmp_text_base_path->data,
-                             pool));
+                             FALSE, pool));
 
   SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
                                   file_path->data, pool));

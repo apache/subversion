@@ -420,7 +420,7 @@ svn_wc_copy_and_translate (const char *src,
                            apr_pool_t *pool)
 {
 #ifndef SVN_TRANSLATE
-  return svn_io_copy_file (src, dst, pool);
+  return svn_io_copy_file (src, dst, FALSE, pool);
 #else /* ! SVN_TRANSLATE */
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
@@ -437,7 +437,7 @@ svn_wc_copy_and_translate (const char *src,
   apr_size_t src_format_len = 0;
 
   if (! (eol_str || keywords))
-    return svn_io_copy_file (src, dst, pool);
+    return svn_io_copy_file (src, dst, FALSE, pool);
 
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ | APR_BUFFERED,

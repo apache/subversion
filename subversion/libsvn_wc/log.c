@@ -194,7 +194,8 @@ replace_text_base (svn_stringbuf_t *path,
                (&same, tmp_wfile, filepath, pool));
 
       if (! same)
-        SVN_ERR (svn_io_copy_file (tmp_wfile->data, filepath->data, pool));
+        SVN_ERR (svn_io_copy_file (tmp_wfile->data, filepath->data, FALSE,
+                                   pool));
 
       SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
 
@@ -384,6 +385,22 @@ log_do_file_xfer (struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+/* Make file NAME in log's CWD readonly */
+static svn_error_t *
+log_do_file_readonly (struct log_runner *loggy,
+                      const char *name,
+                      enum svn_wc__xfer_action action,
+                      const XML_Char **atts)
+{
+  svn_stringbuf_t *full_path;
+
+  full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
+  svn_path_add_component_nts (full_path, name);
+
+  SVN_ERR (svn_io_set_file_read_only (full_path->data, loggy->pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Remove file NAME in log's CWD. */
 static svn_error_t *
@@ -871,6 +888,9 @@ log_do_committed (struct log_runner *loggy,
                                           "error renaming %s to %s",
                                           tmp_prop_path->data,
                                           prop_base_path->data);
+
+              SVN_ERR (svn_io_set_file_read_only (prop_base_path->data,
+                                                  loggy->pool));
             }
           
 
@@ -1007,6 +1027,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_APPEND) == 0) {
     err = log_do_file_xfer (loggy, name, svn_wc__xfer_append, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_READONLY) == 0) {
+    err = log_do_file_readonly (loggy, name, svn_wc__xfer_append, atts);
   }
   else
     {

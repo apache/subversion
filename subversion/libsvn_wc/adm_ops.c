@@ -906,7 +906,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
       SVN_ERR (svn_io_check_path (pthing, &kind, pool));
       if (kind == svn_node_file)
         {
-          if ((err = svn_io_copy_file (pthing->data, thing->data, pool)))
+          if ((err = svn_io_copy_file (pthing->data, thing->data, FALSE, pool)))
             return revert_error (err, fullpath, "restoring props", pool);
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;

@@ -178,157 +178,16 @@ svn_io_open_unique_file (apr_file_t **f,
 
 /*** Copying and appending files. ***/
 
-#ifndef apr_transfer_file_contents
-/**
- * copy or append one file to another
- * [This is a helper routine for apr_copy_file() and apr_append_file().]
- * @param from_path The full path to the source file (using / on all systems)
- * @param to_path The full path to the dest file (using / on all systems)
- * @flags the flags with which to open the dest file
- * @param pool The pool to use.
- * @tip The source file will be copied until EOF is reached, not until
- *      its size at the time of opening is reached.
- * @tip The dest file will be created if it does not exist.
- */
-apr_status_t apr_transfer_file_contents (const char *src,
-                                         const char *dst,
-                                         apr_int32_t flags,
-                                         apr_pool_t *pool);
-
-apr_status_t
-apr_transfer_file_contents (const char *src,
-                            const char *dst,
-                            apr_int32_t flags,
-                            apr_pool_t *pool)
-{
-  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
-  apr_status_t apr_err;
-  apr_status_t read_err, write_err;
-  apr_finfo_t finfo;
-  apr_fileperms_t perms;
-  char buf[BUFSIZ];
-
-  /* Open source file. */
-  apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return apr_err;
-  
-  /* Get its perms. */
-  apr_err = apr_file_info_get (&finfo, APR_FINFO_PROT, s);
-  if (apr_err)
-    {
-      apr_file_close (s);  /* toss any error */
-      return apr_err;
-    }
-  else
-    perms = finfo.protection;
-
-  /* Open dest file. */
-  apr_err = apr_file_open (&d, dst, flags, perms, pool);
-  if (apr_err)
-    {
-      apr_file_close (s);  /* toss */
-      return apr_err;
-    }
-  
-  /* Copy bytes till the cows come home. */
-  read_err = 0;
-  while (!APR_STATUS_IS_EOF(read_err))
-    {
-      apr_size_t bytes_this_time = sizeof (buf);
-
-      /* Read 'em. */
-      read_err = apr_file_read (s, buf, &bytes_this_time);
-      if (read_err && !APR_STATUS_IS_EOF(read_err))
-        {
-          apr_file_close (s);  /* toss */
-          apr_file_close (d);  /* toss */
-          return read_err;
-        }
-
-      /* Write 'em. */
-      write_err = apr_file_write_full (d, buf, bytes_this_time, NULL);
-      if (write_err)
-        {
-          apr_file_close (s);  /* toss */
-          apr_file_close (d);
-          return write_err;
-        }
-
-      if (read_err && APR_STATUS_IS_EOF(read_err))
-        {
-          apr_err = apr_file_close (s);
-          if (apr_err)
-            {
-              apr_file_close (d);
-              return apr_err;
-            }
-          
-          apr_err = apr_file_close (d);
-          if (apr_err)
-            return apr_err;
-        }
-    }
-
-  return 0;
-}
-#endif /* apr_transfer_file_contents */
-
-
-#ifndef apr_copy_file
-/**
- * copy one file to another
- * @param from_path The full path to the source file (using / on all systems)
- * @param to_path The full path to the dest file (using / on all systems)
- * @param pool The pool to use.
- * @tip If a file exists at the new location, then it will be
- *      overwritten, else it will be created.
- * @tip The source file will be copied until EOF is reached, not until
- *      its size at the time of opening is reached.
- */
-apr_status_t
-apr_copy_file (const char *src, const char *dst, apr_pool_t *pool);
-
-apr_status_t
-apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
-{
-  return apr_transfer_file_contents (src, dst,
-                                     (APR_WRITE | APR_CREATE | APR_TRUNCATE),
-                                     pool);
-}
-#endif /* apr_copy_file */
-
-
-#ifndef apr_append_file
-/**
- * append src file's onto dest file
- * @param from_path The full path to the source file (using / on all systems)
- * @param to_path The full path to the dest file (using / on all systems)
- * @param pool The pool to use.
- * @tip If a file exists at the new location, then it will be appended
- *      to, else it will be created.
- * @tip The source file will be copied until EOF is reached, not until
- *      its size at the time of opening is reached.
- */
-apr_status_t
-apr_append_file (const char *src, const char *dst, apr_pool_t *pool);
-
-apr_status_t
-apr_append_file (const char *src, const char *dst, apr_pool_t *pool)
-{
-  return apr_transfer_file_contents (src, dst,
-                                     (APR_WRITE | APR_APPEND | APR_CREATE),
-                                     pool);
-}
-#endif /* apr_append_file */
-
-
 svn_error_t *
-svn_io_copy_file (const char *src, const char *dst, apr_pool_t *pool)
+svn_io_copy_file (const char *src,
+                  const char *dst,
+                  svn_boolean_t copy_perms,
+                  apr_pool_t *pool)
 {
   apr_status_t apr_err;
+  apr_int32_t options = copy_perms ? APR_FILE_SOURCE_PERMS : APR_OS_DEFAULT;
 
-  apr_err = apr_copy_file (src, dst, pool);
+  apr_err = apr_file_copy (src, dst, options, pool);
   if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool, "svn_io_copy_file: copying %s to %s", src, dst);
@@ -342,7 +201,7 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 {
   apr_status_t apr_err;
 
-  apr_err = apr_append_file (src->data, dst->data, pool);
+  apr_err = apr_file_append (src->data, dst->data, APR_OS_DEFAULT, pool);
   if (apr_err)
     {
       const char *msg
@@ -358,6 +217,7 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
                                           svn_stringbuf_t *dst_parent,
                                           svn_stringbuf_t *dst_basename,
+                                          svn_boolean_t copy_perms,
                                           apr_pool_t *pool)
 {
   enum svn_node_kind kind;
@@ -393,6 +253,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
                               "'%s' already exists.", dst_path->data);
   
   /* Create the new directory. */
+  /* ### TODO: copy permissions? */
   status = apr_dir_make (dst_path->data, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
@@ -427,7 +288,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
           /* Telescope and de-telescope the dst_target in here */
           svn_path_add_component_nts (dst_target, entryname);
           SVN_ERR (svn_io_copy_file (src_target->data, dst_target->data,
-                                     subpool));
+                                     copy_perms, subpool));
           svn_path_remove_component (dst_target);
         }          
 
@@ -437,6 +298,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
                                               dst_target,
                                               svn_stringbuf_create (entryname,
                                                                     subpool),
+                                              copy_perms,
                                               subpool));
 
       /* ### someday deal with other node kinds? */
@@ -478,6 +340,39 @@ svn_io_file_affected_time (apr_time_t *apr_time,
 
   return SVN_NO_ERROR;
 }
+
+
+/*** Permissions and modes. ***/
+
+svn_error_t *
+svn_io_set_file_read_only (const char *path, apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_fileattrs_t attributes;
+
+#ifdef SVN__APR_FILE_ATTRS_GET
+  /* This is what I would do if the get function was available in APR. If
+     the attribute removing stuff gets in to APR and we don't do this, then
+     setting read-only will remove executable. Since we don't ever set
+     executable at present that is not a big problem */
+  status = apr_file_attrs_get (path, &attributes, pool);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return svn_error_createf (status, 0, NULL, pool,
+                             "failed to get attributes for file '%s'", path);
+#else
+  attributes = 0;
+#endif
+
+  attributes |= APR_FILE_ATTR_READONLY;
+  status = apr_file_attrs_set (path, attributes, pool);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return svn_error_createf (status, 0, NULL, pool,
+                             "failed to set file '%s' read-only", path);
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 

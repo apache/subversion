@@ -506,6 +506,12 @@ def basic_revert(sbox):
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.")):
     print "Revert failed to restore original text."
     return 1
+
+  # Finally, check that reverted file is not readonly
+  os.remove(beta_path)
+  svntest.main.run_svn(None, 'revert', beta_path)
+  if not (open(beta_path, 'rw+')):
+    return 1
     
 
 #----------------------------------------------------------------------
