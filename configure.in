@@ -410,8 +410,10 @@ AC_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
 if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
         [Defined if libsvn_client should link against libsvn_ra_dav])
-  svn_ra_lib_deps="\$(RA_DAV_DEPS)"
-  svn_ra_lib_link="\$(RA_DAV_LINK)"
+  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SVN, 1,
+        [Defined if libsvn_client should link against libsvn_ra_svn])
+  svn_ra_lib_deps="\$(RA_DAV_DEPS) \$(RA_SVN_DEPS)"
+  svn_ra_lib_link="\$(RA_DAV_LINK) \$(RA_SVN_LINK)"
 
   if test "$enable_ra_pipe" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_PIPE, 1,

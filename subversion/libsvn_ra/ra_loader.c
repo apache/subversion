@@ -62,6 +62,13 @@ static const struct ra_lib_defn {
   },
 
   {
+    "svn",
+#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
+    svn_ra_svn_init
+#endif
+  },
+
+  {
     "local",
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
     svn_ra_local_init

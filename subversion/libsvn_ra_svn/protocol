@@ -1,0 +1,341 @@
+Syntactic structure
+-------------------
+
+The Subversion protocol is specified in terms of the following
+syntactic elements, specified using ABNF [RFC 2234]:
+
+  item   = word / number / string / list
+  word   = ALPHA *(ALPHA / DIGIT / "-") space
+  number = 1*DIGIT space
+  string = number ":" *OCTET space
+         ; number gives the byte count of the *OCTET portion
+  list   = "(" space *item ")" space
+  space  = 1*(SP / LF)
+
+Here is an example item showing each of the syntactic elements:
+
+  ( word 22 6:string ( sublist ) )
+
+All items end with mandatory whitespace.  (In the above example, a
+newline provides the terminating whitespace for the outer list.)  It
+is possible to parse an item without knowing its type in advance.
+
+Lists are not constrained to contain items of the same type.  Lists
+can be used for tuples, optional tuples, or arrays.  A tuple is a list
+expected containing a fixed number of items, generally of differing
+types.  An optional value is a list containing either zero or a fixed
+number of items.  An array is a list containing zero or more items of
+the same type.
+
+Words are used for enumerated protocol values, while strings are used
+for text or binary data of interest to the Subversion client or
+server.  Words are case-sensitive.
+
+For convenience, this specification will define prototypes for data
+items using a syntax like:
+
+  example: ( literal [ rev:number ] ( data:string ... ) )
+
+A simple word such as "literal", with no colon, denotes a literal
+word.  A choice of words may be given in braces with "|" separating
+the choices.  "name:type" specifies a parameter with the given type.
+A type is "word", "number", "string", "list", or the name of another
+prototype.  Brackets denote an optional tuple.  Parentheses denote a
+tuple, unless the parentheses contain ellipses, in which case the
+parentheses denote an array containing zero or more elements matching
+the prototype preceding the ellipses.
+
+For extensibility, implementations must treat a list as matching a
+prototype's tuple even if the list contains extra elements.  The extra
+elements must be ignored.
+
+In some cases, a prototype may need to match two different kinds of
+data items.  This case will be written using "|" to separate the
+alternatives; for example:
+
+  example: ( first-kind rev:number )
+         | second-kind
+
+Connection establishment and protocol setup
+-------------------------------------------
+
+By default, the client connects to the server on port XXX.
+
+Upon receiving a connection, the server sends a greeting, using an
+item matching the prototype:
+
+  greeting: ( minver:number maxver:number
+              ( mech:word ... ) ( cap:word ... ) )
+
+minver and maxver give the minimum and maximum Subversion protocol
+versions supported by the server.  The mech values give a list of SASL
+[RFC 2222] mechanisms supported by the server.  The cap values give a
+list of server capabilities; no capabilities are currently defined.
+
+If the client does not support a protocol version within the specified
+range, or does not support any of the specified SASL mechanisms, it
+closes the connection.  Otherwise, the client responds to the greeting
+with an item matching the prototype:
+
+  response: ( version:number mech:word [ mecharg:string ] ( cap:word ... ) )
+
+version gives the protocol version selected by the client, mech gives
+the SASL authentication mechanism, and mecharg gives the initial
+response for the authentication exchange.  mecharg must be omitted if
+the selected mechanism does not begin with an initial client response.
+(Calling this an "initial response" is confusing, but technically
+correct; SASL talks in terms of server challenges and client
+responses, even when the mechanism begins with information from the
+client or ends with information from the server.)  The cap values give
+a list of client capabilities; no capabilities are currently defined.
+
+Upon receiving the client's response to the greeting, the server sends
+a series of challenges.  Each challenge is a tuple matching the
+prototype:
+
+  challenge: ( step ( token:string ) )
+           | ( failure ( message:string ) )
+           | ( success [ token:string ] )
+
+If the first word of the challenge is "step", then the token is
+interpreted by the authentication mechanism, and the response token
+transmitted to the server as a string.  The server then proceeds with
+another challenge.  If the client wishes to abort the authentication
+exchange, it may do so by closing the connection.
+
+If the first word of the challenge is "success", the authentication is
+successful.  If a token is provided, it should be interpreted by the
+authentication mechanism, but there is no response.
+
+If the first word of the challenge is "failure", the authentication
+exchange is unsuccessful.  After sending a failure notification, the
+server must close the connection, as no further action is possible.
+
+RFC 2222 requires that a protocol profile define a service name for
+the sake of the GSSAPI mechanism.  The service name for this protocol
+is "svn".
+
+Upon receiving a success notification from the server, the security
+layer (if any) goes into effect, starting with the next message from
+the client.  The client passes its URL to the server in a tuple
+matching the prototype:
+
+  url: ( client-url:string )
+
+The server decomposes the client url into repository path and root fs
+path, and sends back either a successful command response with no
+parameters or an error response as appropriate.  (See section 3.)  The
+client may now begin sending commands from the main command set.
+
+3. Commands
+
+Commands and command responses match the prototypes:
+
+  command: ( command-name:word params:list )
+  command-response: ( success params:list )
+                  | ( failure ( err:error ... ) )
+  error: ( apr-err:number message:string file:string line:number )
+
+The interpretation of parameters in a command and its response depend
+on the command.
+
+Initially, the client initiates commands from the main command set,
+and the server responds.  Some commands in the main command set can
+temporarily change the set of commands which may be issued, or change
+the flow of control so that the server issues commands and the client
+responds.
+
+Here are some miscellaneous prototypes used by the command sets:
+
+  proplist:  ( ( name:string value:string ) ... )
+  node-kind: none|file|dir|unknown
+
+3.1. Command Sets
+
+There are three command sets: the main command set, the editor command
+set, and the report command set.  Initially, the protocol begins in
+the main command set with the client sending commands; some commands
+can change the command set and possibly the direction of control.
+
+3.1.1. Main Command Set
+
+The main command set corresponds to the svn_ra interfaces.
+
+  get-latest-rev
+    params:   ( )
+    response: ( rev:number )
+
+  get-dated-rev
+    params:   ( date:string )
+    response: ( rev:number )
+
+  change-rev-prop
+    params:   ( rev:number name:string value:string )
+    response: ( )
+
+  rev-proplist
+    params:   ( rev:number )
+    response: ( props:proplist )
+
+  rev-prop
+    params:   ( rev:number name:string )
+    response: ( [ value:string ] )
+
+  commit
+    params:   ( logmsg:string )
+    response: ( )
+    Upon receiving response, client switches to editor command set.
+    Upon completion of edit, server sends commit-info.
+    commit-info: ( new-rev:number date:string author:string )
+
+  get-file
+    params:   ( path:string [ rev:number ] )
+    response: ( rev:number props:proplist )
+    After sending response, server sends file contents as a series of
+     strings, terminated by the empty string.
+
+  get-dir
+    params:   ( path:string [ rev:number ] )
+    response: ( rev:number props:proplist ( entry:dirent ... ) )]
+    dirent:   ( name:string kind:node-kind size:number [ has-props ]
+                created-rev:number [ created-date:string ]
+                [ last-author:string ] )
+
+  checkout
+    params:   ( [ rev:number ] [ recurse ] )
+    response: ( )
+    After sending response, server switches to editor command set.
+
+  update
+    params:   ( [ rev:number ] target:string [ recurse ] )
+    response: ( )
+    Upon receiving response, client switches to report command set.
+    Upon completion of report, server switches to editor command set.
+
+  switch
+    params:   ( [ rev:number ] target:string [ recurse ] url:string )
+    response: ( )
+    Upon receiving response, client switches to report command set.
+    Upon completion of report, server switches to editor command set.
+
+  status
+    params:   ( target:string [ recurse ] )
+    response: ( )
+    Upon receiving response, client switches to report command set.
+    Upon completion of report, server switches to editor command set.
+
+  diff
+    params:   ( [ rev:number ] target:string [ recurse ] url:string )
+    response: ( )
+    Upon receiving response, client switches to report command set.
+    Upon completion of report, server switches to editor command set.
+
+  log
+    params:   ( ( target-path:string ... ) [ start-rev:number ]
+                [ end-rev:number ] [ changed-paths ] [ strict-node ] )
+    response: ( )
+    After sending response, server sends log entries
+    log-entry: ( ( change:changed-path-entry ... ) rev:number
+                 [ author:string ] [ date:string ] [ message:string ] )
+    changed-path-entry: ( path:string A|D|R|M [ copy-path:string ]
+                          [ copy-rev:number ] )
+
+3.1.2. Editor Command Set
+
+  target-rev
+    params:   ( rev:number )
+    response: ( )
+
+  open-root
+    params:   ( [ rev:number ] )
+    response: ( dir-token: string )
+
+  delete-entry
+    params:   ( path:string rev:number dir-token:string )
+    response: ( )
+
+  add-dir
+    params:   ( path:string dir-token:string
+                [ copy-path:string copy-rev:number ] )
+    response: ( dir-token: string )
+
+  open-dir
+    params:   ( path:string dir-token:string rev:number )
+    response: ( dir-token: string )
+
+  change-dir-prop
+    params:   ( dir-token:string name:string value:string )
+    response: ( )
+
+  close-dir
+    params:   ( dir-token:string )
+    response: ( )
+
+  add-file
+    params:   ( path:string dir-token:string
+                [ copy-path:string copy-rev:number ] )
+    response: ( file-token:string )
+
+  open-file
+    params:   ( path:string dir-token:string rev:number )
+    response: ( file-token:string )
+
+  apply-textdelta:
+    params:   ( file-token:string )
+    response: ( )
+    Upon receiving response, client sends svndiff data as strings,
+     terminated by an empty string.
+
+  change-file-prop:
+    params:   ( file-token:string name:string value:string )
+    response: ( )
+
+  close-file:
+    params:   ( file-token:string )
+    response: ( )
+
+  close-edit:
+    params:   ( )
+    response: ( )
+
+  abort-edit:
+    params:   ( )
+    response: ( )
+
+3.1.3. Report Command Set
+
+  set-path:
+    params: ( path:string rev:number )
+    response: ( )
+
+  delete-path:
+    params: ( path:string )
+    response: ( )
+
+  link-path:
+    params: ( path:string url:string rev:number )
+    response: ( )
+
+  finish-report:
+    params: ( )
+    response: ( )
+
+  abort-report
+    params: ( )
+    response: ( )
+
+4. Extensibility
+
+This protocol may be extended in three ways, in decreasing order of
+desirability:
+
+  * Items may be added to any tuple.  An old implementation will
+    ignore the extra items.
+
+  * Named extensions may be expressed at connection initiation time
+    by the clent or server.
+
+  * The protocol version may be bumped.  Clients and servers can then
+    choose to any range of protocol versions.
+
+It is quite possible that the protocol version will never change.
