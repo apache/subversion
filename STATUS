@@ -26,7 +26,7 @@ Candidate changes:
     Note: r10388 is wrong if it goes into 1.1, but I don't want to change it
       before I know if this is accepted...
     Votes:
-      +1 lundblad
+      +1 lundblad, sussman
 
   * r10440
     Fix pool usage for SVN::Ra in the Perl bindings.
@@ -92,7 +92,7 @@ Candidate changes:
     Justification:
       One-liner that is good for pathnames with non-ASCII chars.
     Votes:
-      +1: lundblad
+      +1: lundblad, sussman
 
   * r10473
     Fix OS X build.
@@ -105,7 +105,7 @@ Candidate changes:
     Justification:
       Crashes are unnice.
     Votes:
-      +1: lundblad
+      +1: lundblad, sussman
 
   * r10480
     Fix handling of non-canonical copyfrom data in FSFS.
@@ -114,7 +114,7 @@ Candidate changes:
      the bud than have to worry about them for years.  And it's a
      small fix.
     Votes:
-      +1: ghudson, cmpilato
+      +1: ghudson, cmpilato, sussman
 
   * r10418, r10426, r10468, r10483
     New po file for Japanese, ja.po, reviewed by some Japanese users.
