@@ -565,7 +565,6 @@ svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
 
 
 /* TODO write test for this, then refactor. */
-/* Read the contents of FILENAME into *RESULT. */
 svn_error_t *
 svn_string_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
 {
