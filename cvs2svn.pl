@@ -44,6 +44,11 @@ sub CvsTime::initialize {
     }	
 }
 
+sub CvsTime::time_t {
+    my ($self) = @_;
+    return $self->{TIME_T};
+}
+
 sub CvsTime::compare_to {
     my ($self, $peer) = @_;
     $self->check;
@@ -52,12 +57,15 @@ sub CvsTime::compare_to {
 }
 
 sub CvsTime::self_test {
-    my $time0 = new CvsTime(STRING => '1998.10.31.12.15.54');
+    my $time0 = CvsTime->new(STRING => '1998.10.31.12.15.54');
     my $time1 = $time0->new(STRING => '98.10.31.12.16.54');
 
-    die if (eval { new CvsTime(STRING => '1998.10.31.12.15') })
+    my $time2 = CvsTime->new(TIME_T => $time0->time_t);
+    die unless $time2->compare_to($time0) == 0;
+
+    die if (eval { CvsTime->new(STRING => '1998.10.31.12.15') })
 	or $@ !~ /^malformed/;
-    die if (eval { new CvsTime(STRING => '1998.10.31.12.15.54.32') })
+    die if (eval { CvsTime->new(STRING => '1998.10.31.12.15.54.32') })
 	or $@ !~ /^malformed/;
 
     die unless $time0->compare_to($time1) < 0;
@@ -94,90 +102,82 @@ sub CvsRevID::initialize {
 }
 
 sub CvsRevID::self_test {
-    my $id0 = new CvsRevID(STRING => '1.4.2.3');
+    my $id0 = CvsRevID->new(STRING => '1.4.2.3');
 
-    die if (eval { new CvsRevID(STRING => '1..2') })
+    die if (eval { CvsRevID->new(STRING => '1..2') })
 	or $@ !~ /^malformed/;
+}
+
+#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+package CvsName;		# abstract superclass for named things in CVS
+use Carp;
+
+@CvsName::ISA = ('CheckedClass');
+
+sub CvsName::type_info {
+    return {
+	required_args => {
+	    NAME => 'SCALAR',
+	},
+	members => {
+	    REVS => 'ARRAY',
+	},
+    };
+}
+
+sub CvsName::name {
+    my ($self) = @_;
+    return $self->{NAME};
+}
+
+sub CvsName::add_rev {
+    my ($self, $rev) = @_;
+    croak "CvsName::add_rev: $rev is not a CvsFileRev\n"
+	unless $rev->isa('CvsFileRev');
+    push @{$self->{REVS}}, $rev;
+    $self->check;
+}
+
+sub CvsName::self_test {
+    my $cn0 = CvsName->new(NAME => 'foo');
+    die unless $cn0->name eq 'foo';
+
+    $cn0->add_rev(bless { }, 'CvsFileRev');
+    $cn0->add_rev(bless { }, 'CvsFileRev');
+    die unless @{$cn0->{REVS}} == 2;
+
+    die if (eval { $cn0->add_rev(bless { }, 'Foo') })
+	or $@ !~ /^CvsName::add_rev: Foo=HASH\(.*\) is not a CvsFileRev/;
 }
 
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 package CvsAuthor;
 use Carp;
 
-@CvsAuthor::ISA = ('CheckedClass');
-
-sub CvsAuthor::type_info {
-    return {
-	required_args => {
-	    NAME => 'SCALAR',
-	},
-	members => {
-	    REVS => 'ARRAY',
-	},
-    };
-}
-
-sub CvsAuthor::name {
-    my ($self) = @_;
-    return $self->{NAME};
-}
-
-sub CvsAuthor::checked_in_rev {
-    my ($self, $rev) = @_;
-    croak "A CvsAuthor can't check in $rev" unless $rev->isa('CvsFileRev');
-    push @{$self->{REVS}}, $rev;
-    $self->check;
-}
+@CvsAuthor::ISA = ('CvsName');
 
 sub CvsAuthor::self_test {
-    my $auth0 = new CvsAuthor(NAME => 'jrandom');
-
-    die unless $auth0->name eq 'jrandom';
-
-    $auth0->checked_in_rev(bless { }, 'CvsFileRev');
-
-    die if (eval { $auth0->checked_in_rev(bless { }, 'Foo') } )
-	or $@ !~ /^A CvsAuthor can\'t check in Foo/;
+    my $author = CvsAuthor->new(NAME => 'jrandom');
 }
 
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 package CvsTag;
 use Carp;
 
-@CvsTag::ISA = ('CheckedClass');
-
-sub CvsTag::type_info {
-    return {
-	required_args => {
-	    NAME => 'SCALAR',
-	},
-	members => {
-	    REVS => 'ARRAY',
-	},
-    };
-}
-
-sub CvsTag::name {
-    my ($self) = @_;
-    return $self->{NAME};
-}
-
-sub CvsTag::tagged_rev {
-    my ($self, $rev) = @_;
-    croak "A CvsTag can't tag a $rev" unless $rev->isa('CvsFileRev');
-    push @{$self->{REVS}}, $rev;
-    $self->check;
-}
+@CvsTag::ISA = ('CvsName');
 
 sub CvsTag::self_test {
-    my $tag0 = new CvsTag(NAME => 'beta2.3');
+    my $tag = CvsTag->new(NAME => 'beta3_2');
+}
 
-    $tag0->tagged_rev(bless { }, 'CvsFileRev');
-    $tag0->tagged_rev(bless { }, 'CvsFileRev');
-    die unless @{$tag0->{REVS}} == 2;
+#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+package CvsLog;
+use Carp;
 
-    die if (eval { $tag0->tagged_rev(bless { }, 'Foo') })
-	or $@ !~ /^A CvsTag can\'t tag a Foo/;
+@CvsLog::ISA = ('CvsName');
+
+sub CvsLog::self_test {
+    my $log = CvsLog->new(NAME => 'I checked it in.');
 }
 
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
@@ -193,14 +193,34 @@ sub CvsFileRev::type_info {
 	    FILE        => 'CvsFile',
 	    AUTHOR      => 'CvsAuthor',
 	    TIME        => 'CvsTime',
+	    LOG         => 'CvsLog',
 	},
 	optional_args => {
 	    PREDECESSOR => 'CvsFileRev', # undefined for initial rev.
 	    TAGS        => 'ARRAY',
-	    LOG         => 'SCALAR',
 	    STATE       => 'SCALAR',
 	},
     };
+}
+
+sub CvsFileRev::get_file {
+    my ($self) = @_;
+    return $self->{FILE};
+}
+
+sub CvsFileRev::get_author {
+    my ($self) = @_;
+    return $self->{AUTHOR};
+}
+
+sub CvsFileRev::get_time {
+    my ($self) = @_;
+    return $self->{TIME};
+}
+
+sub CvsFileRev::get_log {
+    my ($self) = @_;
+    return $self->{LOG};
 }
 
 sub CvsFileRev::add_tag {
@@ -211,14 +231,23 @@ sub CvsFileRev::add_tag {
 }
 
 sub CvsFileRev::self_test {
-    my $fr0 = new CvsFileRev(
-			     REV    => (bless { }, 'CvsRevID'),
-			     FILE   => (bless { }, 'CvsFile'),
-			     AUTHOR => (bless { }, 'CvsAuthor'),
-			     TIME   => (bless { }, 'CvsTime'),
-			     LOG    => 'I checked it in.',
-			     );
+    my $file0 = bless { }, 'CvsFile';
+    my $author0 = bless { }, 'CvsAuthor';
+    my $time0 = bless { }, 'CvsTime';
+    my $log0 = bless { }, 'CvsLog';
+    my $fr0 = CvsFileRev->new(
+			      REV    => (bless { }, 'CvsRevID'),
+			      FILE   => $file0,,
+			      AUTHOR => $author0,
+			      TIME   => $time0,
+			      LOG    => $log0,
+			      );
     $fr0->add_tag(bless { }, 'CvsTag');
+
+    die unless $fr0->get_author == $author0;
+    die unless $fr0->get_time == $time0;
+    die unless $fr0->get_file == $file0;
+    die unless $fr0->get_log == $log0;
 
     die if (eval { $fr0->add_tag(bless { }, 'Foo') })
 	or $@ !~ /^Foo=HASH\(0x[0-9a-f]+\) is not a CvsTag/;
@@ -246,9 +275,28 @@ sub CvsDirEntry::name {
     return $self->{NAME};
 }
 
+sub CvsDirEntry::path {
+    my ($self) = @_;
+    return $self->{NAME} unless $self->{PARENT_DIR};
+    return $self->{PARENT_DIR}->path . "/" . $self->{NAME};
+			       
+}
+
+sub CvsDirEntry::set_parent {
+    my ($self, $parent) = @_;
+    $self->{PARENT_DIR} = $parent;
+    $self->check;
+}
+
 sub CvsDirEntry::self_test {
     my $de0 = CvsDirEntry->new(NAME => 'slug');
     die unless $de0->name eq 'slug';
+    die unless $de0->path eq 'slug';
+
+    my $de1 = CvsDirEntry->new(NAME => 'grub');
+    $de1->set_parent(bless $de0, 'CvsDir');
+    die unless $de1->name eq 'grub';
+    die unless $de1->path eq 'slug/grub';
 }
 
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
@@ -274,9 +322,15 @@ sub CvsFile::count_files {
     return 1;
 }
 
-sub CvsFile::count_revs {
+sub CvsFile::count_filerevs {
     my ($self) = @_;
-    return 0 + @{$self->{REVS}};
+    return 0 + $self->filerevs;
+}
+
+sub CvsFile::filerevs {
+    my ($self) = @_;
+    return my @empty = () unless $self->{REVS};
+    return @{$self->{REVS}};
 }
 
 sub CvsFile::add_filerev {
@@ -287,12 +341,24 @@ sub CvsFile::add_filerev {
 }
 
 sub CvsFile::self_test {
-    my $f0 = CvsFile->new(
-			  NAME => 'hello.c'
-			  );
-    $f0->add_filerev(bless { }, 'CvsFileRev');
-    $f0->add_filerev(bless { }, 'CvsFileRev');
-    die unless @{$f0->{REVS}} == 2;
+    my $f0 = CvsFile->new(NAME => 'hello.c');
+    my $f1 = CvsFile->new(NAME => 'Makefile');
+
+    my $rev0 = bless { }, 'CvsFileRev';
+    my $rev1 = bless { }, 'CvsFileRev';
+    $f0->add_filerev($rev0);
+    $f0->add_filerev($rev1);
+
+    die unless $f0->count_dirs == 0;
+    die unless $f0->count_files == 1;
+    die unless $f0->count_filerevs == 2;
+
+    die unless $f1->count_dirs == 0;
+    die unless $f1->count_files == 1;
+    die unless $f1->count_filerevs == 0;
+
+    die unless ($f0->filerevs)[0] == $rev0;
+    die unless ($f0->filerevs)[1] == $rev1;
 
     die if (eval { $f0->add_filerev(bless { }, 'Foo') })
 	or $@ !~ /^Foo=HASH\(.*\) is not a CvsFileRev/;
@@ -331,13 +397,28 @@ sub CvsDir::count_files {
     return $count;
 }
 
-sub CvsDir::count_revs {
+sub CvsDir::count_filerevs {
     my ($self) = @_;
     my $count = 0;
     for (values %{$self->{ENTRIES}}) {
-	$count += $_->count_revs;
+	$count += $_->count_filerevs;
     }
     return $count;
+}
+
+sub CvsDir::has_entry {
+    my ($self, $entryname) = @_;
+    $self->check;
+    return $self->{ENTRIES}->{$entryname};
+}
+
+sub CvsDir::filerevs {
+    my ($self) = @_;
+    my @revs = ();
+    for (values %{$self->{ENTRIES}}) {
+	push @revs, $_->filerevs;
+    }
+    return @revs;
 }
 
 sub CvsDir::add_entry {
@@ -351,11 +432,36 @@ sub CvsDir::add_entry {
 }
 
 sub CvsDir::self_test {
-    my $d0 = new CvsDir(NAME => 'src');
+    my $d0 = CvsDir->new(NAME => 'src');
+    my $d1 = CvsDir->new(NAME => 'lib');
 
-    $d0->add_entry(CvsFile->new(NAME => 'a_file'));
-    $d0->add_entry(CvsDir->new(NAME => 'a_dir'));
+    my $a_file = CvsFile->new(NAME => 'a_file');
+    my $a_rev = CvsFileRev->new(
+				REV    => (bless { }, 'CvsRevID'),
+				FILE   => $a_file,
+				AUTHOR => (bless { }, 'CvsAuthor'),
+				TIME   => (bless { }, 'CvsTime'),
+				LOG    => (bless { }, 'CvsLog'),
+				);
+    $a_file->add_filerev($a_rev);
+
+    $d0->add_entry($a_file);
+    $d0->add_entry($d1);
     die unless keys %{$d0->{ENTRIES}} == 2;
+
+    die unless $d0->has_entry('a_file') == $a_file;
+    die if $d0->has_entry('another_file');
+
+    die unless $d0->count_dirs == 2;
+    die unless $d0->count_files == 1;
+    die unless $d0->count_filerevs == 1;
+
+    die unless $d1->count_dirs == 1;
+    die unless $d1->count_files == 0;
+    die unless $d1->count_filerevs == 0;
+
+    die unless $d0->filerevs == 1;
+    die unless ($d0->filerevs)[0] == $a_rev;
 
     die if (eval { $d0->add_entry(bless { }, 'Foo') })
 	or $@ !~ /Foo=HASH\(.*\) is not a CvsDirEntry/;
@@ -374,13 +480,13 @@ use Carp;
 sub CvsRepository::type_info {
     return {
 	required_args => {
-	    PATH             => 'SCALAR',
+	    PATH        => 'SCALAR',
 	},
 	members => {
-	    ROOT             => 'CvsDir',
-	    ALL_AUTHORS      => 'HASH',
-	    ALL_TAGS         => 'HASH',
-	    ALL_REVS_BY_TIME => 'ARRAY',
+	    ROOT        => 'CvsDir',
+	    ALL_AUTHORS => 'HASH',
+	    ALL_TAGS    => 'HASH',
+	    ALL_LOGS    => 'HASH',
 	},
     };
 }
@@ -395,9 +501,29 @@ sub CvsRepository::count_files {
     return $self->{ROOT}->count_files;
 }
 
-sub CvsRepository::count_revs {
+sub CvsRepository::count_filerevs {
     my ($self) = @_;
-    return $self->{ROOT}->count_revs;
+    return $self->{ROOT}->count_filerevs;
+}
+
+sub CvsRepository::count_authors {
+    my ($self) = @_;
+    return 0 + keys %{$self->{ALL_AUTHORS}};
+}
+
+sub CvsRepository::count_tags {
+    my ($self) = @_;
+    return 0 + keys %{$self->{ALL_TAGS}};
+}
+
+sub CvsRepository::count_logs {
+    my ($self) = @_;
+    return 0 + keys %{$self->{ALL_LOGS}};
+}
+
+sub CvsRepository::filerevs {
+    my ($self) = @_;
+    return $self->{ROOT}->filerevs;
 }
 
 sub CvsRepository::set_root {
@@ -422,8 +548,32 @@ sub CvsRepository::find_tag($) {
     return $$tag;
 }
 
+sub CvsRepository::find_log($) {
+    my ($self, $log_name) = @_;
+    my $log = \$self->{ALL_LOGS}->{$log_name};
+    $$log = CvsLog->new(NAME => $log_name) unless $$log;
+    $self->check;
+    return $$log;
+}
+
 sub CvsRepository::self_test {
     my $rep0 = CvsRepository->new(PATH => "/tmp/cvs");
+    my $d0 = CvsDir->new(NAME => 'src');
+    my $f0 = CvsFile->new(NAME => 'hello.c');
+    my $r0 = CvsFileRev->new(
+			     REV    => (bless { }, 'CvsRevID'),
+			     FILE   => $f0,
+			     AUTHOR => $rep0->find_author('jrandom'),
+			     TIME   => (bless { }, 'CvsTime'),
+			     LOG    => $rep0->find_log('I checked it in.'),
+			     );
+    $f0->add_filerev($r0);
+    $d0->add_entry($f0);
+    $rep0->set_root($d0);
+
+    die unless $rep0->count_dirs == 1;
+    die unless $rep0->count_files == 1;
+    die unless $rep0->count_filerevs == 1;
 
     # test find_author
 
@@ -437,6 +587,8 @@ sub CvsRepository::self_test {
     die if $author2 == $author0;
     die unless $author2->name eq 'kfred';
 
+    die unless $rep0->count_authors == 2;
+
     # test find_tag
 
     my $tag0 = $rep0->find_tag('alpha3.1r6');
@@ -448,6 +600,27 @@ sub CvsRepository::self_test {
     my $tag2 = $rep0->find_tag('Beta2.4');
     die if $tag2 == $tag0;
     die unless $tag2->name eq 'Beta2.4';
+
+    die unless $rep0->count_tags == 2;
+
+    # test find_log
+
+    my $log0 = $rep0->find_log('I checked it in.');
+    die unless $log0->isa('CvsLog');
+    die unless $log0->name eq 'I checked it in.';
+
+    my $log1 = $rep0->find_log('I checked it in.');
+    die unless $log1 == $log0;
+    my $log2 = $rep0->find_log('It is fixed.');
+    die if $log2 == $log0;
+    die unless $log2->name eq 'It is fixed.';
+
+    die unless $rep0->count_logs == 2;
+
+    # test filerevs
+
+    die unless $rep0->filerevs == 1;
+    die unless ($rep0->filerevs)[0] == $r0;
 }
 
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
@@ -489,19 +662,26 @@ sub CvsFileReader::read {
 	my $cvs_author = $cvs_repo->find_author($rcs->author($rcs_rev));
 	my $cvs_revid = CvsRevID->new(STRING => $rcs_rev);
 	my $cvs_time = CvsTime->new(TIME_T => $rcs_dates{$rcs_rev});
+	my $comment = $rcs_comments{$rcs_rev};
+	$comment = '' unless defined $comment;
+	my $cvs_log = $cvs_repo->find_log($comment);
 	my $cvs_state = $rcs->state($rcs_rev);
+	# print "$file $rcs_rev\n";
 	my $cvs_file_rev = CvsFileRev->new(
 					   REV    => $cvs_revid,
 					   FILE   => $cvs_file,
 					   AUTHOR => $cvs_author,
 					   TIME   => $cvs_time,
-					   LOG    => $rcs_comments{$rcs_rev},
+					   LOG    => $cvs_log,
 					   STATE  => $cvs_state,
 					   );
+	$cvs_author->add_rev($cvs_file_rev);
+	$cvs_log->add_rev($cvs_file_rev);
 	for ($rcs->symbol($rcs_rev)) {
 	    next unless $_ ne '';
 	    my $tag = $cvs_repo->find_tag($_);
 	    $cvs_file_rev->add_tag($tag);
+	    $tag->add_rev($cvs_file_rev);
 	}
 	$cvs_file->add_filerev($cvs_file_rev);
     }
@@ -526,6 +706,9 @@ sub CvsDirReader::type_info {
 	    PATH       => 'SCALAR',
 	    REPOSITORY => 'CvsRepository',
 	},
+	members => {
+	    PARENT_DIR => 'CvsDir',
+	}
     };
 }
 
@@ -534,12 +717,14 @@ sub CvsDirReader::read {
     my ($cvs_repo) = $self->{REPOSITORY};
     my ($dir_name) = $self->{PATH} =~ /([^\/]*)$/;
     my $cvs_dir = CvsDir->new(NAME => $dir_name);
-    $self->_read_path($cvs_dir, $cvs_repo, $self->{PATH});
+    # print "reading $self->{PATH}...\n";
+    $self->_read_path($cvs_dir, $cvs_repo, $self->{PATH}, 0);
     return $cvs_dir;
 }
 
 sub CvsDirReader::_read_path {
-    my ($self, $cvs_dir, $cvs_repo, $dir_path) = @_;
+    my ($self, $cvs_dir, $cvs_repo, $dir_path, $in_attic) = @_;
+    my $attic_path;
     local(*D);
     opendir D, "$dir_path" or do { warn "$dir_path: $!\n"; return; };
     my $entry;
@@ -555,7 +740,7 @@ sub CvsDirReader::_read_path {
 
 		# Append Attic entries to current dir.
 
-		$self->_read_path($cvs_dir, $cvs_repo, $entry_path);
+		$attic_path = $entry_path;
 	    } else {
 		my $subdir_reader = CvsDirReader->new(
 					PATH       => $entry_path,
@@ -563,24 +748,31 @@ sub CvsDirReader::_read_path {
 						      );
 		my $subdir = $subdir_reader->read;
 		$cvs_dir->add_entry($subdir) if $subdir;
+		$subdir->set_parent($cvs_dir);
 	    }
 	} elsif (-f $entry_path and $entry =~ /,v$/) {
 
 	    # This is an RCS file.
 
-	    confess "cvs_repo" unless ref($cvs_repo) eq 'CvsRepository';
+	    # Skip if this is an attic file that matches a non-attic file.
+	    next if $in_attic and $cvs_dir->has_entry(substr($entry, 0, -2));
+
 	    my $file_reader = CvsFileReader->new(
 						 PATH       => $entry_path,
 						 REPOSITORY => $cvs_repo,
 						 );
 	    my $file = $file_reader->read;
 	    $cvs_dir->add_entry($file) if $file;
+	    $file->set_parent($cvs_dir);
 
 	} else {
 	    warn "$entry_path: ignored\n" unless $entry_path =~ m|/CVSROOT/|;
 	}
     }
     closedir D;
+    if ($attic_path) {
+	$self->_read_path($cvs_dir, $cvs_repo, $attic_path, 1);
+    }
 }
 
 sub CvsDirReader::self_test {
@@ -618,6 +810,163 @@ sub CvsLocalRepositoryReader::self_test {
 }
 
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+package Commit;
+use Carp;
+
+@Commit::ISA = ('CheckedClass');
+
+sub Commit::type_info {
+    return {
+	required_args => {
+	    DURATION => 'SCALAR',
+	},
+	members => {
+	    REVS     => 'ARRAY',
+	    EARLIEST => 'SCALAR',
+	    LATEST   => 'SCALAR',
+	},
+    };
+}
+
+sub Commit::filerevs {
+    my ($self) = @_;
+    return $self->{REVS};
+}
+
+sub Commit::accepts_filerev {
+    my ($self, $rev) = @_;
+    croak "Commit::accepts_filerev: $rev is not a CvsFileRev"
+	unless $rev->isa('CvsFileRev');
+    return 1 unless $self->{REVS} and @{$self->{REVS}};
+    my $rev0 = $self->{REVS}[0];
+    my $dur = $self->{DURATION};
+    my $earliest = $self->{EARLIEST};
+    my $latest = $self->{LATEST};
+    my $rev_file = $rev->get_file;
+
+    # This is the heuristic that determines whether a filerev
+    # can be merged into a commit.
+    #
+    # The rules are:
+    #	Author must match.
+    #	Log message must match (and be nonempty).
+    #	Time must be within DURATION seconds of another rev in the commit.
+    #	File must not already be in commit.
+
+    return 0 unless $rev->get_author == $rev0->get_author;
+    return 0 unless $rev->get_log->name =~ /\s*/;
+    return 0 unless $rev->get_log == $rev0->get_log;
+    return 0 if $rev->get_time->time_t < $earliest - $dur;
+    return 0 if $rev->get_time->time_t > $latest + $dur;
+    return 0 if grep { $_->get_file == $rev_file } @{$self->{REVS}};
+    return 1;
+}
+
+sub Commit::add_filerev {
+    my ($self, $rev) = @_;
+    croak "Commit::add_filerev: $rev is not a CvsFileRev"
+	unless $rev->isa('CvsFileRev');
+    my $t = $rev->get_time->time_t;
+    $self->{EARLIEST} = $t if !$self->{EARLIEST} or $t < $self->{EARLIEST};
+    $self->{LATEST}   = $t if !$self->{LATEST} or $t > $self->{LATEST};
+    push @{$self->{REVS}}, $rev;
+    $self->check;
+}
+
+sub Commit::self_test {
+    my $file0 = CvsFile->new(NAME => 'hello.c');
+    my $file1 = CvsFile->new(NAME => 'Makefile');
+    my $auth0 = CvsAuthor->new(NAME => 'jrandom');
+    my $auth1 = CvsAuthor->new(NAME => 'kfred');
+    my $log0 = CvsLog->new(NAME => 'I checked it in.');
+    my $log1 = CvsLog->new(NAME => 'I fixed it.');
+    my $rev0 = CvsFileRev->new(
+			       REV    => CvsRevID->new(STRING => '1.1'),
+			       FILE   => $file0,
+			       AUTHOR => $auth0,
+			       TIME   => CvsTime->new(TIME_T => 1000000),
+			       LOG    => $log0,
+			       );
+
+    my $c = Commit->new(DURATION => 5);
+    die unless $c->accepts_filerev($rev0);
+    $c->add_filerev($rev0);
+
+    # Should succeed.
+
+    my $rev1 = CvsFileRev->new(
+			       REV    => CvsRevID->new(STRING => '1.2'),
+			       FILE   => $file1,
+			       AUTHOR => $auth0,
+			       TIME   => CvsTime->new(TIME_T => 1000001),
+			       LOG    => $log0,
+			       );
+    die unless $c->accepts_filerev($rev1);
+    $c->add_filerev($rev1);
+
+    # Should fail.  Different author.
+
+    my $rev2 = CvsFileRev->new(
+			       REV    => CvsRevID->new(STRING => '1.2'),
+			       FILE   => (bless { }, 'CvsFile'),
+			       AUTHOR => $auth1,
+			       TIME   => CvsTime->new(TIME_T => 1000001),
+			       LOG    => $log0,
+			       );
+    die if $c->accepts_filerev($rev2);
+
+    # Should fail.  Different log message.
+
+    my $rev3 = CvsFileRev->new(
+			       REV    => CvsRevID->new(STRING => '1.2'),
+			       FILE   => (bless { }, 'CvsFile'),
+			       AUTHOR => $auth0,
+			       TIME   => CvsTime->new(TIME_T => 1000001),
+			       LOG    => $log1,
+			       );
+    die if $c->accepts_filerev($rev3);
+
+    # Should fail.  Too early.
+
+    my $rev4 = CvsFileRev->new(
+			       REV    => CvsRevID->new(STRING => '1.2'),
+			       FILE   => (bless { }, 'CvsFile'),
+			       AUTHOR => $auth0,
+			       TIME   => CvsTime->new(TIME_T => 999990),
+			       LOG    => $log0,
+			       );
+    die if $c->accepts_filerev($rev4);
+
+    # Should fail.  Too late.
+
+    my $rev5 = CvsFileRev->new(
+			       REV    => CvsRevID->new(STRING => '1.2'),
+			       FILE   => (bless { }, 'CvsFile'),
+			       AUTHOR => $auth0,
+			       TIME   => CvsTime->new(TIME_T => 999990),
+			       LOG    => $log0,
+			       );
+    die if $c->accepts_filerev($rev5);
+
+    # Should fail.  Same file.
+
+    my $rev6 = CvsFileRev->new(
+			       REV    => CvsRevID->new(STRING => '1.2'),
+			       FILE   => $file1,
+			       AUTHOR => $auth0,
+			       TIME   => CvsTime->new(TIME_T => 1000000),
+			       LOG    => $log0,
+			       );
+    die if $c->accepts_filerev($rev6);
+
+    die if (eval { $c->accepts_filerev(bless { }, 'Foo') })
+	or $@ !~ /Commit::accepts_filerev: Foo=HASH\(.*\) is not a CvsFileRev/;
+
+    die if (eval { $c->add_filerev(bless { }, 'Foo') })
+	or $@ !~ /Commit::add_filerev: Foo=HASH\(.*\) is not a CvsFileRev/;
+}
+
+#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 package SelfTest;
 
 sub run {
@@ -635,6 +984,7 @@ sub run {
     };
     for (&$classes) {
 	if (eval "\$${_}::{self_test}") {
+	    # print "self test $_\n";
 	    unless (eval "$_->self_test; 1") {
 		die "$@$_ self test FAILED\n";
 	    }
@@ -745,7 +1095,7 @@ sub CheckedClass::check_new {
     my $info = $self->merged_type_info();
     for (@{$info->{required_args}}) {
 	croak "required arg \"$_\" missing in $classname constructor"
-	    unless defined $self->{$_};
+	    unless exists $self->{$_};
     }
     while (my ($arg, $val) = each %$self) {
 	my $expected_type = $info->{arg_types}->{$arg};
@@ -801,10 +1151,14 @@ sub CheckedClass::merged_type_info {
 	$member_types{$arg} = $type;
     }
     while (my ($arg, $type) = each %{$ti->{optional_args}}) {
+	croak "$class member $arg multiply defined"
+	    if exists $member_types{$arg};
 	$arg_types{$arg} = $type;
 	$member_types{$arg} = $type;
     }
     while (my ($arg, $type) = each %{$ti->{members}}) {
+	croak "$class member $arg multiply defined"
+	    if exists $member_types{$arg};
 	$member_types{$arg} = $type;
     }
 
@@ -871,17 +1225,55 @@ sub is_local {			# Is this a local cvs root?
     return $cvsroot =~ /^[^:]/;
 }
 
+sub get_vm_size {		# This only works on Linux.
+    my $size;
+    local *M;
+    open(M, "</proc/$$/status") or return 0;
+    while (<M>) {
+	do { $size = $1; last; } if /^VmSize\:\s*(\d+) kB/;
+    }
+    close M;
+    return $size;
+}
 sub print_stats {
     my ($repo) = @_;
     my $dir_count = $repo->count_dirs;
     my $file_count = $repo->count_files;
-    my $rev_count = $repo->count_revs;
-    print "$dir_count directories, $file_count files, $rev_count revisions\n";
+    my $rev_count = $repo->count_filerevs;
+    my $author_count = $repo->count_authors;
+    my $tag_count = $repo->count_tags;
+    my $log_count = $repo->count_logs;
+
+    print "$dir_count directories, ";
+    print "$file_count files, ";
+    print "$rev_count file revisions\n";
+    print "$author_count unique authors, ";
+    print "$tag_count unique tags, ";
+    print "$log_count unique log messages\n";
+}
+
+sub build_commit_list {
+    my ($cvs_repo, $commit_duration) = @_;
+    my @revs = sort {
+	$a->get_time->compare_to($b->get_time)
+    } $cvs_repo->filerevs;
+
+    my @commit_list;
+    my $commit;
+    for my $rev (@revs) {
+	unless ($commit and $commit->accepts_filerev($rev)) {
+	    $commit = Commit->new(DURATION => $commit_duration);
+	    push @commit_list, $commit;
+	} 
+	$commit->add_filerev($rev);
+    }
+    return @commit_list;
 }
 
 # The main program begins here.
 
 $0 =~ s|.*/||;
+$| = 1;
 
 my $cvsroot = $ENV{CVSROOT};
 if (@ARGV > 1 and $ARGV[0] eq '-d') {
@@ -900,6 +1292,8 @@ die "$0: No CVSROOT specified.  Please use the `-d' option.\n"
 
 # XXX Need to handle the various cvs connection methods better.
 
+system("date");
+my $mem_before = &get_vm_size;
 my $cvs_repo;
 if (&is_local($cvsroot)) {
     my $repo_reader = CvsLocalRepositoryReader->new(PATH => $cvsroot);
@@ -907,5 +1301,21 @@ if (&is_local($cvsroot)) {
 } else {
     die "$0: remote CVS repository not implemented\n";
 }
-
 &print_stats($cvs_repo);
+
+my @commits = &build_commit_list($cvs_repo, 3);
+
+for (@commits) {
+    print "commit\n";
+    for (@{$_->{REVS}}) {
+	my $path = $_->get_file->path;
+	$path =~ s|^[^/]*/||;
+	print "\t$path $_->{REV}->{STRING}\n";
+    }
+    print "\n";
+}
+
+my $mem_after = &get_vm_size;
+
+print "used ", $mem_after - $mem_before, " Kbytes\n";
+system("date");
