@@ -59,17 +59,57 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 /* Return an access baton in ADM_ACCESS for the working copy administrative
    area associated with the directory PATH.  If WRITE_LOCK is set the baton
    will include a write lock, otherwise the baton can only be used for read
-   access. POOL will be used to allocate the baton and any subsequently
-   cached items. */
+   access.
+
+   If PARENT_ACCESS is an open access baton PATH must refer to a
+   subdirectory of the PARENT_ACCESS directory, and then ADM_ACCESS will be
+   a child of PARENT_ACCESS.  svn_wc_adm_close can be used to close
+   ADM_ACCESS. If ADM_ACCESS has not been closed when PARENT_ACCESS is
+   closed, it wil be closed automatically at that stage.
+
+   If PARENT_ACCESS is an open access baton, and PATH refers to a
+   subdirectory that has already been opened as a child of PARENT_ACCESS
+   then the error SVN_ERR_WC_LOCKED will be returned.
+
+   PARENT_ACCESS can be NULL, in which case ADM_ACCESS is not a child of
+   any other baton and must be explicitly closed.
+
+   If TREE_LOCK is TRUE then the working copy directory hierarchy under
+   PATH will be locked. At each level batons for the subdirectories will be
+   children of the parent directory's baton.  This is an all-or-nothing
+   option, if it is not possible to lock the entire tree then an error will
+   be returned, there will be no locks and ADM_ACCESS will not be valid.
+
+   POOL will be used to allocate memory for the baton and any subsequently
+   cached items.  If ADM_ACCESS has not been closed when the pool is
+   cleared, it will be closed automatically at the point but any physical
+   lock will remain in the working copy.  */
 svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
+                              svn_wc_adm_access_t *parent_access,
                               const char *path,
                               svn_boolean_t write_lock,
+                              svn_boolean_t tree_lock,
                               apr_pool_t *pool);
 
-/* Give up the access baton ADM_ACCESS, and its lock if any */
+/* Return an access baton in ADM_ACCESS associated with PATH. PATH must be
+   a subdirectory of the PARENT_ACCESS directory, and must have been
+   previously opened with PARENT_ACCESS as a parent.
+
+   POOL is used only for local processing it is not used for the batons.
+
+   ### I can't think of a good name for this function. */
+svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
+                                  svn_wc_adm_access_t *parent_access,
+                                  const char *path,
+                                  apr_pool_t *pool);
+
+/* Give up the access baton ADM_ACCESS, and its lock if any. It will also
+   close any child batons, for which this is a parent baton, that have not
+   yet been explicitly closed.  Any physical locks will be removed from the
+   working copy. */
 svn_error_t *svn_wc_adm_close (svn_wc_adm_access_t *adm_access);
 
-/* Ensure ADM_ACCESS has a write lock, and that it still exists. Returns
+/* Ensure ADM_ACCESS has a write lock, and that it is still valid. Returns
    SVN_ERR_WC_NOT_LOCKED if this is not the case. */
 svn_error_t *svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access);
 

@@ -232,7 +232,7 @@ relegate_external (const char *path, apr_pool_t *pool)
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE, pool));
   err = svn_wc_remove_from_revision_control (adm_access,
                                              SVN_WC_ENTRY_THIS_DIR,
                                              TRUE,
@@ -378,7 +378,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       svn_error_t *err;
       svn_wc_adm_access_t *adm_access;
 
-      SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, ib->pool));
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE,
+                                ib->pool));
 
       /* We don't use relegate_external() here, because we know that
          nothing else in this externals description (at least) is

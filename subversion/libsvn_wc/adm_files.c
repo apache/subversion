@@ -1107,7 +1107,7 @@ init_adm (const char *path,
   /* Lock it immediately.  Theoretically, no compliant wc library
      would ever consider this an adm area until a README file were
      present... but locking it is still appropriately paranoid. */
-  SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE, pool));
 
 
   /** Make subdirectories. ***/

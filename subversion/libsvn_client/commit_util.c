@@ -60,8 +60,15 @@ lock_dir (apr_hash_t *locked_dirs,
 
   if (! apr_hash_get (locked_dirs, dir, APR_HASH_KEY_STRING))
     {
-      svn_wc_adm_access_t *adm_access;
-      SVN_ERR (svn_wc_adm_open (&adm_access, dir, TRUE, hash_pool));
+      /* Short lived, don't use hash pool */
+      const char *parent_dir = svn_path_remove_component_nts (dir, pool);
+      svn_wc_adm_access_t *adm_access, *parent_access;
+
+      /* Get parent, NULL is OK */
+      parent_access = apr_hash_get (locked_dirs, parent_dir,
+                                    APR_HASH_KEY_STRING);
+      SVN_ERR (svn_wc_adm_open (&adm_access, parent_access, dir, TRUE, FALSE,
+                                hash_pool));
       apr_hash_set (locked_dirs, apr_pstrdup (hash_pool, dir), 
                     APR_HASH_KEY_STRING, adm_access);
     }
@@ -139,6 +146,7 @@ harvest_committables (apr_hash_t *committables,
                       svn_boolean_t adds_only,
                       svn_boolean_t copy_mode,
                       svn_boolean_t nonrecursive,
+                      svn_boolean_t lock_subdirs,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);  /* ### why? */
@@ -293,6 +301,8 @@ harvest_committables (apr_hash_t *committables,
     {
       /* If the commit item is a directory, lock it, else lock its parent. */
       if (entry->kind == svn_node_dir)
+        /* ### Need to lock parent here as well? We will need to modify the
+           ### parents entry file if this is not the root */
         SVN_ERR (lock_dir (locked_dirs, path, pool));
       else
         SVN_ERR (lock_dir (locked_dirs, p_path, pool));
@@ -301,46 +311,50 @@ harvest_committables (apr_hash_t *committables,
       add_committable (committables, path, entry->kind, url,
                        cf_url ? entry->copyfrom_rev : entry->revision, 
                        cf_url, state_flags);
+
+      /* We need to lock all directories to enable post-commit
+         processing of the working copy */
+      lock_subdirs = TRUE;
     }
 
-  /* For directories, recursively handle each of their entries (except
-     when the directory is being deleted, unless the deletion is part
-     of a replacement ... how confusing). */
-  if ((entries) 
-      && ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
-          || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
+  if (entries) 
     {
       apr_hash_index_t *hi;
       svn_wc_entry_t *this_entry;
       apr_pool_t *loop_pool = svn_pool_create (subpool);
 
       /* Loop over all other entries in this directory, skipping the
-         "this dir" entry. */
+         "this dir" entry.
+
+         ### May need to do this twice, if we need to do sub-directories,
+         ### before files. Subdirectories may require us to lock the
+         ### parent, files only lock this dir, and doing them in the wrong
+         ### order may break the parent-child lock relationship. */
       for (hi = apr_hash_first (subpool, entries);
            hi;
            hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_ssize_t klen;
           void *val;
           const char *name;
           const char *used_url = NULL;
 
+          /* ### Why do we need to alloc these? */
           const char *full_path = apr_pstrdup (loop_pool, path);
           const char *this_url = apr_pstrdup (loop_pool, url);
           const char *this_cf_url
             = cf_url ? apr_pstrdup (loop_pool, cf_url) : NULL;
 
           /* Get the next entry */
-          apr_hash_this (hi, &key, &klen, &val);
-          name = (const char *) key;
+          apr_hash_this (hi, &key, NULL, &val);
+          name = key;
           
           /* Skip "this dir" */
           if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
             continue;
 
           /* Name is an entry name; value is an entry structure. */
-          this_entry = (svn_wc_entry_t *) val;
+          this_entry = val;
 
           /* Skip subdirectory entries when we're not recursing.
 
@@ -357,6 +371,16 @@ harvest_committables (apr_hash_t *committables,
           full_path = svn_path_join (full_path, name, loop_pool);
           if (this_cf_url)
             this_cf_url = svn_path_join (this_cf_url, name, loop_pool);
+
+          if (lock_subdirs && this_entry->kind == svn_node_dir)
+            SVN_ERR (lock_dir (locked_dirs, full_path, pool));
+
+          /* For directories, recursively handle each of their entries
+             (except when the directory is being deleted, unless the
+             deletion is part of a replacement ... how confusing). */
+          if ((state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+              && ! (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+            continue;
 
           /* We'll use the entry's URL if it has one and if we aren't
              in copy_mode, else, we'll just extend the parent's URL
@@ -377,6 +401,7 @@ harvest_committables (apr_hash_t *committables,
                     adds_only,
                     copy_mode,
                     FALSE,
+                    lock_subdirs,
                     subpool));
 
           svn_pool_clear (loop_pool);
@@ -493,7 +518,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
       /* Handle our TARGET. */
       SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
                                      url, NULL, entry, NULL, FALSE, FALSE, 
-                                     nonrecursive, pool));
+                                     nonrecursive, FALSE, pool));
 
       i++;
     }
@@ -527,7 +552,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   /* Handle our TARGET. */
   SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
                                  new_url, entry->url, entry, NULL,
-                                 FALSE, TRUE, FALSE, pool));
+                                 FALSE, TRUE, FALSE, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

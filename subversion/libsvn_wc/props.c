@@ -393,7 +393,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
       return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
     }
 
-  SVN_ERR (svn_wc_adm_open (&adm_access, parent, TRUE, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, FALSE, pool));
   SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_CREATE), /* not excl */
                                   pool));

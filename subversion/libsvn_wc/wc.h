@@ -142,11 +142,11 @@ struct svn_wc_adm_access_t
    /* PATH to directory which contains the administrative area */
    const char *path;
 
-   enum svn_wc_adm_access_type {
+   enum svn_wc__adm_access_type {
 
-      /* SVN_WC_ADM_ACCESS_UNLOCKED indicates no lock is held allowing
+      /* SVN_WC__ADM_ACCESS_UNLOCKED indicates no lock is held allowing
          read-only access without cacheing. */
-      svn_wc_adm_access_unlocked,
+      svn_wc__adm_access_unlocked,
 
 #if 0 /* How cacheing might work one day */
 
@@ -158,14 +158,18 @@ struct svn_wc_adm_access_t
          ### area (consider running svn_wc_status on some other user's
          ### working copy). */
 
-      /* SVN_WC_ADM_ACCESS_READ_LOCK indicates that read-only access and
+      /* SVN_WC__ADM_ACCESS_READ_LOCK indicates that read-only access and
          cacheing are allowed. */
-      svn_wc_adm_access_read_lock,
+      svn_wc__adm_access_read_lock,
 #endif
 
-      /* SVN_WC_ADM_ACCESS_WRITE_LOCK indicates that read-write access and
+      /* SVN_WC__ADM_ACCESS_WRITE_LOCK indicates that read-write access and
          cacheing are allowed. */
-      svn_wc_adm_access_write_lock
+      svn_wc__adm_access_write_lock,
+
+      /* SVN_WC__ADM_ACCESS_CLOSED indicates that the baton has been
+         closed. */
+      svn_wc__adm_access_closed
 
    } type;
 
@@ -183,6 +187,13 @@ struct svn_wc_adm_access_t
       ENTRIES will be NULL. */
    apr_hash_t *entries;
 #endif
+
+   /* PARENT access baton, may be NULL. */
+   svn_wc_adm_access_t *parent;
+
+   /* CHILDREN is a hash of svn_wc_adm_access_t* keyed on char*
+      representing the path to sub-directories that are also locked. */
+   apr_hash_t *children;
 
    /* POOL is used to allocate cached items, they need to persist for the
       lifetime of this access baton */

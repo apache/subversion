@@ -354,8 +354,8 @@ svn_wc_process_committed (const char *path,
           this_path = svn_path_join (path, name, subpool);
 
           if (current_entry->kind == svn_node_dir)
-             SVN_ERR (svn_wc_adm_open (&child_access, this_path, TRUE,
-                                       subpool));
+             SVN_ERR (svn_wc_adm_retrieve (&child_access, adm_access, this_path,
+                                           subpool));
           else
              child_access = adm_access;
           
@@ -365,9 +365,6 @@ svn_wc_process_committed (const char *path,
                    (this_path, child_access,
                     (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
                     new_revnum, rev_date, rev_author, subpool));
-
-          if (current_entry->kind == svn_node_dir)
-             SVN_ERR (svn_wc_adm_close (child_access));
 
           svn_pool_clear (subpool);
         }
@@ -630,7 +627,8 @@ svn_wc_delete (const char *path,
              ### function, at which stage this open will fail and can be
              ### removed. */
           svn_wc_adm_access_t *adm_access;
-          SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE,
+                                    pool));
 
           SVN_ERR (svn_wc_remove_from_revision_control
                    (adm_access, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
@@ -1201,7 +1199,8 @@ svn_wc_revert (const char *path,
       if (entry->kind == svn_node_file)
         {
           was_deleted = entry->deleted;
-          SVN_ERR (svn_wc_adm_open (&adm_access, parent, TRUE, pool));
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, FALSE,
+                                    pool));
         }
       else if (entry->kind == svn_node_dir)
         {
@@ -1211,7 +1210,8 @@ svn_wc_revert (const char *path,
           parents_entry = apr_hash_get (entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
             was_deleted = parents_entry->deleted;
-          SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, TRUE, 
+                                    pool));
         }
 
       /* Remove the item from revision control. */
@@ -1507,8 +1507,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
               const char *entrypath = svn_path_join (adm_access->path,
                                                      current_entry_name,
                                                      subpool);
-              SVN_ERR (svn_wc_adm_open (&entry_access, entrypath, TRUE,
-                                        subpool));
+              SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access,
+                                            entrypath, pool));
               err = svn_wc_remove_from_revision_control (entry_access,
                                                          SVN_WC_ENTRY_THIS_DIR,
                                                          destroy_wf, subpool);
@@ -1519,7 +1519,6 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                 }
               else if (err)
                 return err;
-              SVN_ERR (svn_wc_adm_close (entry_access));
             }
         }
 

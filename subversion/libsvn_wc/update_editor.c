@@ -492,7 +492,7 @@ delete_entry (const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
-  SVN_ERR (svn_wc_adm_open (&adm_access, pb->path, TRUE, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pb->path, TRUE, TRUE, pool));
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   pb->path,
                                   SVN_WC__ADM_LOG,
@@ -758,7 +758,8 @@ close_directory (void *dir_baton)
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
       /* Lock down the administrative area */
-      SVN_ERR (svn_wc_adm_open (&adm_access, db->path, TRUE, db->pool));
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, db->path, TRUE, FALSE,
+                                db->pool));
       
       /* Open log file */
       SVN_ERR (svn_wc__open_adm_file (&log_fp,
@@ -1192,7 +1193,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   /* Lock the parent directory while we change things.  If for some
      reason the parent isn't under version control, this function will
      bomb out.  */
-  SVN_ERR (svn_wc_adm_open (&adm_access, parent_dir, TRUE, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_dir, TRUE, FALSE, pool));
 
   /*
      When this function is called on file F, we assume the following

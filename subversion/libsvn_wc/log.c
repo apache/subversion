@@ -601,7 +601,8 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
   if (entry->kind == svn_node_dir)
     {
       svn_wc_adm_access_t *adm_access;
-      SVN_ERR (svn_wc_adm_open (&adm_access, full_path, TRUE, loggy->pool));
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, loggy->adm_access, full_path,
+                                    loggy->pool));
       err = svn_wc_remove_from_revision_control (adm_access,
                                                  SVN_WC_ENTRY_THIS_DIR,
                                                  TRUE, loggy->pool);
@@ -795,15 +796,13 @@ log_do_committed (struct log_runner *loggy,
             {
               pdir = svn_path_join (loggy->adm_access->path, key, pool);
               base_name = SVN_WC_ENTRY_THIS_DIR;
-              SVN_ERR (svn_wc_adm_open (&entry_access, pdir, TRUE, pool));
+              SVN_ERR (svn_wc_adm_retrieve (&entry_access, loggy->adm_access,
+                                            pdir, pool));
             }
 
           if (base_name)
             SVN_ERR (svn_wc_remove_from_revision_control 
                      (entry_access, base_name, FALSE, pool));
-
-          if (cur_entry->kind == svn_node_dir)
-            SVN_ERR (svn_wc_adm_close (entry_access));
         }
     }
 
