@@ -226,7 +226,8 @@ svn_repos_get_logs (svn_repos_t *repos,
                             this_rev,
                             author ? author->data : "",
                             date ? date->data : "",
-                            message ? message->data : ""));
+                            message ? message->data : "",
+                            subpool));
       
       svn_pool_clear (subpool);
     }

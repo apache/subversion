@@ -40,9 +40,6 @@ struct log_receiver_baton
 
   /* where to deliver the output */
   ap_filter_t *output;
-
-  /* For temporary allocations. */
-  apr_pool_t *pool;
 };
 
 
@@ -56,13 +53,15 @@ static void send_xml(struct log_receiver_baton *lrb, const char *fmt, ...)
 }
 
 
-/* This implements `svn_log_message_receiver_t'. */
+/* This implements `svn_log_message_receiver_t'.
+   BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t * log_receiver(void *baton,
                                   apr_hash_t *changed_paths,
                                   svn_revnum_t rev,
                                   const char *author,
                                   const char *date,
-                                  const char *msg)
+                                  const char *msg,
+                                  apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
 
@@ -75,16 +74,16 @@ static svn_error_t * log_receiver(void *baton,
            "<S:date>%s</S:date>" DEBUG_CR
            "<D:comment>%s</D:comment>" DEBUG_CR,
            rev,
-           apr_xml_quote_string(lrb->pool, author, 0),
-           apr_xml_quote_string(lrb->pool, date, 0),
-           apr_xml_quote_string(lrb->pool, msg, 0));
+           apr_xml_quote_string(pool, author, 0),
+           apr_xml_quote_string(pool, date, 0),
+           apr_xml_quote_string(pool, msg, 0));
 
   if (changed_paths)
     {
       apr_hash_index_t *hi;
       char *path;
 
-      for (hi = apr_hash_first(lrb->pool, changed_paths);
+      for (hi = apr_hash_first(pool, changed_paths);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
@@ -98,20 +97,17 @@ static svn_error_t * log_receiver(void *baton,
              `changed-path'?  Should use it if so. */
           if (action == 'A')
             send_xml(lrb, "<S:added-path>%s</S:added-path>" DEBUG_CR,
-                     apr_xml_quote_string(lrb->pool, path, 0));
+                     apr_xml_quote_string(pool, path, 0));
           else if (action == 'D')
             send_xml(lrb, "<S:deleted-path>%s</S:deleted-path>" DEBUG_CR,
-                     apr_xml_quote_string(lrb->pool, path, 0));
+                     apr_xml_quote_string(pool, path, 0));
           else
             send_xml(lrb, "<S:changed-path>%s</S:changed-path>" DEBUG_CR,
-                     apr_xml_quote_string(lrb->pool, path, 0));
+                     apr_xml_quote_string(pool, path, 0));
         }
     }
 
   send_xml(lrb, "</S:log-item>" DEBUG_CR);
-
-  /* Clear out anything we may have placed in here. */
-  svn_pool_clear(lrb->pool);
 
   return SVN_NO_ERROR;
 }
