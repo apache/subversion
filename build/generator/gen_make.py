@@ -60,6 +60,10 @@ class Generator(gen_base.GeneratorBase):
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
+      object_srcs = [ ]
+      headers = [ ]
+      header_classes = [ ]
+      header_class_filenames = [ ]
       deps = [ ]
       libs = [ ]
 
@@ -78,9 +82,16 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(source, gen_base.ObjectFile):
           # link in the object file
           objects.append(source.filename)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, source, gen_base.SourceFile):
+            object_srcs.append(
+              build_path_join('$(abs_srcdir)', dep.filename))
         elif isinstance(source, gen_base.HeaderFile):
-          # skip the header files.
-          pass
+          # link in the header file
+          # N.B. that filename_win contains the '_'-escaped class name
+          headers.append(source.filename_win)
+          header_classes.append(source.classname)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, source, gen_base.ObjectFile):
+            header_class_filenames.append(dep.filename)
         else:
           ### we don't know what this is, so we don't know what to do with it
           raise UnknownDependency
@@ -95,23 +106,47 @@ class Generator(gen_base.GeneratorBase):
 
       if isinstance(target_ob, gen_base.TargetJava):
         self.ofile.write(
-          '%s_DEPS = %s %s\n'
+          '%s_HEADERS = %s\n'
+          '%s_OBJECTS = %s\n'
+          '%s_DEPS = $(%s_HEADERS) $(%s_OBJECTS) %s %s\n'
           '%s: $(%s_DEPS)\n'
-          '\t%s -d %s -classpath %s:$(%s_CLASSPATH) '
-          % (targ_varname, target_ob.add_deps, string.join(objects + deps),
+          % (targ_varname, string.join(headers),
 
-             target_ob.name, targ_varname,
-             target_ob.link_cmd, target_ob.output_dir, target_ob.classes,
-             targ_varname))
-        for dep in target_ob.deps:
-          if isinstance(dep, gen_base.SourceFile):
-            self.ofile.write('%s ' % build_path_join('$(abs_srcdir)',
-                                                     dep.filename))
-          elif isinstance(dep, gen_base.HeaderFile):
-            self.ofile.write('%s ' % dep.classname)
-          else:
-            print type(dep)
-            raise UnknownDependency
+             targ_varname, string.join(objects),
+
+             targ_varname, targ_varname, targ_varname, target_ob.add_deps, 
+             string.join(deps),
+
+             target_ob.name, targ_varname))
+
+        # Build the headers from the header_classes with one 'javah' call
+        if headers:
+          self.ofile.write(
+            '%s_CLASS_FILENAMES = %s\n'
+            '%s_CLASSES = %s\n'
+            '$(%s_HEADERS): $(%s_CLASS_FILENAMES)\n'
+            '\t%s -d %s -classpath %s:$(%s_CLASSPATH) $(%s_CLASSES)\n'
+            % (targ_varname, string.join(header_class_filenames),
+
+               targ_varname, string.join(header_classes),
+
+               targ_varname, targ_varname,
+
+               target_ob.link_cmd, target_ob.output_dir, target_ob.classes, 
+               targ_varname, targ_varname))
+
+        # Build the objects from the object_srcs with one 'javac' call
+        if object_srcs:
+          self.ofile.write(
+            '%s_SRC = %s\n'
+            '$(%s_OBJECTS): $(%s_SRC)\n'
+            '\t%s -d %s -classpath %s:$(%s_CLASSPATH) $(%s_SRC)\n'
+            % (targ_varname, string.join(object_srcs),
+
+               targ_varname, targ_varname,
+
+               target_ob.link_cmd, target_ob.output_dir, target_ob.classes, 
+               targ_varname, targ_varname))
 
         # Once the bytecodes have been compiled up, we produce the
         # JAR.
