@@ -701,6 +701,12 @@ svn_error_t * svn_wc__wcprop_set (svn_stringbuf_t *name,
    SVN_ERR_WC_NOT_DIRECTORY. */
 svn_error_t *svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool);
 
+
+/* Strip SVN_PROP_ENTRY_PREFIX off the front of NAME.  Modifies NAME
+   in-place.  If NAME is not an 'entry' property, then NAME is
+   untouched. */
+void svn_wc__strip_entry_prefix (svn_stringbuf_t *name);
+
 
 /* 
  * local variables:

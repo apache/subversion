@@ -550,8 +550,6 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         svn_boolean_t recurse,
                         apr_pool_t *pool);
 
-
-
 
 /*** Updates. ***/
 
@@ -678,8 +676,29 @@ svn_error_t *svn_wc_prop_set (svn_stringbuf_t *name,
                               svn_stringbuf_t *path,
                               apr_pool_t *pool);
 
-/* Return true iff NAME is a 'wc' property name. */
+
+/* Return true iff NAME is a 'normal' property name.  'Normal' is
+   defined as a user-visible and user-tweakable property that shows up
+   when you fetch a proplist.
+
+   The function currently parses the namespace like so:
+
+     'svn:wc:'  ==>  a wcprop, stored/accessed seperately via different API.
+
+     'svn:entry:' ==> an "entry" prop, shunted into the 'entries' file.
+
+   If these patterns aren't found, then the property is assumed to be
+   Normal.  */
+svn_boolean_t svn_wc_is_normal_prop (svn_stringbuf_t *name);
+
+
+
+/* Return true iff NAME is a 'wc' property name.  (see above) */
 svn_boolean_t svn_wc_is_wc_prop (svn_stringbuf_t *name);
+
+/* Return true iff NAME is a 'entry' property name.  (see above) */
+svn_boolean_t svn_wc_is_entry_prop (svn_stringbuf_t *name);
+
 
 
 

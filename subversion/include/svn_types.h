@@ -139,9 +139,22 @@ enum svn_recurse_kind
 
    The client will try to protect WC props by warning users against
    changing them.  The client will also send them back to the RA layer
-   when committing.  (gstein:  does the client need to send them when
-   "reporting" wc state before an update, too?)  */
+   when committing.  */
 #define SVN_PROP_WC_PREFIX     SVN_PROP_PREFIX "wc:"
+
+
+/* Another type of non-user-visible property.  "Entry properties" are
+   stored as fields with the adminstrative 'entries' file.  
+
+  [ 'entry props' aren't normal user properties.  Really, they're not
+     properties at all; they're untweakable metadata that are being
+     communicated via the editor's prop-mechanism.  They have the same
+     importance as arguments to editor calls, but are too specific to
+     the update-editor; therefore they're not part of the editor API,
+     and thus -only- the update-editor looks for them. ]
+*/
+#define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"
+
 
 /* When custom, user-defined properties are passed over the wire, they will
    have this prefix added to their name */

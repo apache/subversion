@@ -476,7 +476,7 @@ change_dir_prop (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
 
-  if (! svn_wc_is_wc_prop (name))    
+  if (svn_wc_is_normal_prop (name))    
     db->prop_changed = 1;
 
   return SVN_NO_ERROR;
@@ -594,7 +594,7 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
 
-  if (! svn_wc_is_wc_prop (name))    
+  if (svn_wc_is_normal_prop (name))    
     fb->prop_changed = 1;
 
   return SVN_NO_ERROR;

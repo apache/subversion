@@ -968,6 +968,25 @@ svn_wc_prop_set (svn_stringbuf_t *name,
 
 
 svn_boolean_t
+svn_wc_is_normal_prop (svn_stringbuf_t *name)
+{
+  size_t wc_prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
+  size_t entry_prefix_len = sizeof (SVN_PROP_ENTRY_PREFIX) - 1;
+
+  /* quick answer */
+  if ((name->len < wc_prefix_len) && (name->len < entry_prefix_len))
+    return TRUE;
+
+  if ((strncmp (name->data, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
+      || (strncmp (name->data, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0))
+    return FALSE;
+  else
+    return TRUE;
+}
+
+
+
+svn_boolean_t
 svn_wc_is_wc_prop (svn_stringbuf_t *name)
 {
   size_t prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
@@ -978,6 +997,33 @@ svn_wc_is_wc_prop (svn_stringbuf_t *name)
   else
     return TRUE;
 }
+
+
+svn_boolean_t
+svn_wc_is_entry_prop (svn_stringbuf_t *name)
+{
+  size_t prefix_len = sizeof (SVN_PROP_ENTRY_PREFIX) - 1;
+
+  if ((name->len < prefix_len)
+      || (strncmp (name->data, SVN_PROP_ENTRY_PREFIX, prefix_len) != 0))
+    return FALSE;
+  else
+    return TRUE;
+}
+
+
+void
+svn_wc__strip_entry_prefix (svn_stringbuf_t *name)
+{
+  size_t prefix_len = sizeof (SVN_PROP_ENTRY_PREFIX) - 1;
+
+  if (! svn_wc_is_entry_prop (name))
+    return;
+
+  name->data += prefix_len;
+  name->len -= prefix_len;
+}
+
 
 
 

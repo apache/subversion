@@ -165,15 +165,23 @@ Phase 1:  gathering the values of the keywords.
                   - user props.  these are visible and meant to be
                     tweaked by users.  (dav calls these 'dead' props).
 
-                  - ra props.  this is metadata that the working copy
-                    secretly caches on behalf of particular ra layers.
-                    invisible to users.  (renamed from "wcprops")
+                  - wcprops.  this is metadata that the working copy
+                    secretly caches on behalf of particular ra layers,
+                    or any program that uses the alternate API in
+                    libsvn_wc to get/set them.  called 'wcprops'
+                    because they never exist in the repository.
 
                   - entry props.  this is metadata that needs to be
                     stored, but is too specific to the update-use-case
                     to be included as general arguments to Editor
                     calls.  this metadata ends up in the entries file,
-                    also invisible to users.
+                    also invisible to users.  
+
+     It's important to note that only the update-editor understands
+     these three types of props (by examining svn: namespaces).  A
+     typical 'generic' editor just assumes all properties that move
+     through are typical user-props.  Our various commit editors are
+     like this.
 
    - the update editor parses for these different types of props, and
      routes their storage appropriately.
@@ -247,6 +255,28 @@ The text-base still reflects exactly what is in the repository.
        compare translated copies of them.
  
 
+----------------------
+
+Bruce's system
 
 
+Go back to first proposal. No more flip-flopping of repository line styles.
 
+EOL-style property is one of:  'native' or 'none'.
+
+For checkout/update, client automatically translates all working files
+to client's "preferred" OS style.  
+
+For commit, de-translate back to EOL-property IFF a translation was
+done on checkout/update.  For *initial* add/commit of file, this is
+never done;  file is literally committed.
+
+
+--------------------------
+
+dos->unix: tr -d '\015'
+dos->mac:  tr -d '\012'
+unix->dos: tr '\012' '\015\012'
+unix->mac: tr '\012' '\015'
+mac->unix: tr '\015' '\012'
+mac->dos:  tr '\015' '\015\012'
