@@ -2045,28 +2045,23 @@ close_edit (void *edit_baton)
 
   else  /* must be an update or switch */
     {
-      /* bump all the working revisions, starting at the top of the tree */
-      svn_wc_entry_t *entry;
-      svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->anchor, eb->pool);
+      svn_stringbuf_t *full_path = NULL, *url = NULL;
+      
+      full_path = svn_stringbuf_dup (eb->anchor, eb->pool);
       if (eb->target)
         svn_path_add_component (full_path, eb->target);
-      SVN_ERR (svn_wc_entry (&entry, full_path, eb->pool));
-      if (entry && (entry->kind == svn_node_dir))
-        SVN_ERR (svn_wc__ensure_uniform_revision (full_path,
-                                                  eb->target_revision,
-                                                  eb->recurse,
-                                                  eb->pool));
+      
       if (eb->is_switch)
-        {
-          /* rewrite all the urls as well, starting at the top of the tree */
-          if (entry && (entry->kind == svn_node_dir))
-            {
-              svn_stringbuf_t *url = svn_stringbuf_dup (eb->switch_url,
-                                                        eb->pool);
-              SVN_ERR (svn_wc__recursively_rewrite_urls (full_path,
-                                                         url, eb->pool));
-            }
-        }
+        url = svn_stringbuf_dup (eb->switch_url, eb->pool);
+
+      /* Make sure our update target now has the new working revision.
+         Also, if this was an 'svn switch', then rewrite the target's
+         url.  All of this tweaking might happen recursively! */
+      SVN_ERR (svn_wc__do_update_cleanup (full_path,
+                                          eb->recurse,
+                                          url,
+                                          eb->target_revision,
+                                          eb->pool));
     }
 
   /* The edit is over, free its pool. */
