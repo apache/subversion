@@ -138,6 +138,9 @@ typedef struct svn_txdelta_window_t {
 
   /* The number of instructions in this window.  */
   int num_ops;
+
+  /* The allocated size of the ops array.  */
+  int ops_size;
   
   /* The instructions for this window.  */
   svn_txdelta_op_t *ops;
@@ -325,6 +328,20 @@ typedef struct svn_delta_edit_fns_t
      this structure, and the delta producer invokes them.  So the
      caller (producer) is pushing tree delta data at the callee
      (consumer).
+
+     At the start of traversal, the consumer provides two batons:
+
+     - EDIT_BATON, a baton global to the entire delta edit.  The
+       producer should pass this value as the EDIT_BATON argument to
+       every callback.
+
+     - DIR_BATON, a baton representing the root directory.  Each
+       callback function that adds, deletes, or changes objects in
+       some directory takes a directory baton argument representing
+       the directory in which the change takes place.  Given the
+       initial root baton, the producer can use `add_directory' or
+       `replace_directory', which return batons for subdirectories,
+       as explained below.
 
      At the start of traversal, the consumer provides EDIT_BATON, a
      baton global to the entire delta edit.  The producer should pass
