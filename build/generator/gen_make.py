@@ -38,6 +38,7 @@ class Generator(gen_base.GeneratorBase):
     # defined before their use in dependency lines.
     self.write_symbols(install_sources)
 
+    # write rules to build each installable item
     for target_ob in install_sources:
 
       if isinstance(target_ob, gen_base.TargetScript):
@@ -141,7 +142,7 @@ class Generator(gen_base.GeneratorBase):
              targ_varname, string.join(gen_base.unique(libs)))
           )
 
-    # for each install group, write a rule to install its outputs
+    # for each install group, write a rule to build its outputs
     for itype, i_targets in install_deps:
 
       # perl bindings do their own thing, "swig-pl" target is
@@ -156,6 +157,7 @@ class Generator(gen_base.GeneratorBase):
           outputs.append(t.filename)
       self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
 
+    # write a list of files to remove during "make clean"
     cfiles = [ ]
     for target in install_sources:
       # .la files are handled by the standard 'clean' rule; clean all the
@@ -170,6 +172,7 @@ class Generator(gen_base.GeneratorBase):
     cfiles.sort()
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
+    # for each install group, write a rule to install its outputs
     for area, inst_targets in install_deps:
 
       # perl bindings do their own thing, "install-swig-pl" target is
@@ -180,6 +183,7 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
+      # reflect inter-library dependencies in the library install targets
       install_deps = {}
       for target in inst_targets:
         for target_dep in self.graph.get_sources(gen_base.DT_LINK, target.name,
@@ -256,12 +260,15 @@ class Generator(gen_base.GeneratorBase):
             self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
                              % (dirname, upper_var, fname,
                                 build_path_join('$(%sdir)' % area_var, fname)))
+        # certain areas require hooks for extra install rules defined
+        # in Makefile.in
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' or \
            area[:7] == 'javahl-':
           self.ofile.write('\t$(INSTALL_EXTRA_%s)\n' % upper_var)
         self.ofile.write('\n')
 
+    # write the install-include rule
     includedir = build_path_join('$(includedir)',
                                  'subversion-%s' % self.cfg.version)
     self.ofile.write('install-include: %s\n'
@@ -273,6 +280,7 @@ class Generator(gen_base.GeneratorBase):
                           build_path_join(includedir,
                                           build_path_basename(file))))
 
+    # write shortcut targets for manually building specific items
     self.ofile.write('\n# handy shortcut targets\n')
     for target in install_sources:
       if not isinstance(target, gen_base.TargetScript) and \
@@ -281,19 +289,21 @@ class Generator(gen_base.GeneratorBase):
         self.ofile.write('%s: %s\n' % (target.name, target.filename))
     self.ofile.write('\n')
 
-    # get target directories
+    # write a list of directories in which things are built
+    #   get target directories
     target_dirs = self.graph.get_sources(gen_base.DT_LIST, 
                                          gen_base.LT_TARGET_DIRS)
 
-    # get all the test scripts' directories
+    #   get all the test scripts' directories
     script_dirs = map(build_path_dirname, self.scripts + self.bdb_scripts)
 
-    # remove duplicate directories between targets and tests
+    #   remove duplicate directories between targets and tests
     build_dirs = gen_base.unique(target_dirs + script_dirs + self.swig_dirs)
 
     self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs))
 
-    # pull lists of test files from dependency graph
+    # write lists of test files
+    # deps = all, progs = not including those marked "testing = skip"
     test_progs = self.graph.get_sources(gen_base.DT_LIST,
                                         gen_base.LT_TEST_PROGS)
 
@@ -315,9 +325,11 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
                      string.join(test_progs + self.scripts))
 
+    # write list of all manpages
     manpages = self.graph.get_sources(gen_base.DT_LIST, gen_base.LT_MANPAGES)
     self.ofile.write('MANPAGES = %s\n\n' % string.join(manpages))
 
+    # write dependencies and build rules for generated .c files
     swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
     swig_c_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
 
@@ -331,6 +343,9 @@ class Generator(gen_base.GeneratorBase):
       cmd = cmd % string.upper(gen_base.lang_abbrev[objname.target.lang])
       self.ofile.write('%s: %s\n\t%s %s\n\n' % (objname, deps, cmd, source))
 
+    # write dependencies and build rules (when not using suffix rules)
+    # for all other generated files which will not be installed
+    # (or will be installed, but not by the main generated build)
     obj_deps = self.graph.get_deps(gen_base.DT_OBJECT)
     obj_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
 
