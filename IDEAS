@@ -160,7 +160,7 @@ Some ideas for the future.
 
 * Server side project policy enforcement
 
-  From: Branko =?iso-8859-2?Q?=C8ibej?= <brane@xbc.nu>
+  From: Branko Cibej <brane@xbc.nu>
   Date: Mon, 23 Oct 2000 18:37:49 +0200
   
   I'd be quite happy if we could "promise" that someday it'll be possible
@@ -408,7 +408,7 @@ right now) could remove the entry in SVN/conflicts, too.
 * Interoperate with CVS servers
 
 Create libsvn_ra_cvs (client mode only, maybe just :pserver: and :ext:,
-ans possibly :fork: for accessing local repositories).
+and possibly :fork: for accessing local repositories).
 
 This will let a Subversion client pull modules directly out of CVS
 repositories. Could be very interesting in combination with
@@ -451,3 +451,23 @@ start at the end of the file and find any window in logarithmic time.
 That procedure always emits balanced trees.  Use 100 instead of ten,
 and your tree has 1/100th the number of nodes as your file has
 windows, and is very shallow.
+
+* Removing obsolete versions to archive
+
+A project repository can grow huge over several years. Would be nice
+to have a way to move obsolete data to archive or offline
+storage. Some possibilities:
+
+  - Move just the file text offline (e.g., support "offline" file
+    nodes in addition to full-text and delta storage), but keep
+    history and filesystem metadata intact. We can do this with the
+    current filesystem design.
+
+  - Remove whole branches or parts of branches (this could mean whole
+    nodes) from the filesystem. The current filesystem design does not
+    support this; right now we could do that by copying part of the
+    repository (via xml export?) to a new database and removing the
+    old one, but that would change node numbers and filesystem
+    revision numbers, which we probably don't want.
+
+  Brane Cibej <brane@xbc.nu>
