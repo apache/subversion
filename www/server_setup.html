@@ -122,37 +122,11 @@ and moved into the master documentation, of course.</i>
     You can see all of mod_dav_svn's complaints in the Apache logfile.
     Look in /usr/local/apache2/logs/error_log.
 
---------------------------------------------------------------------
-
-ADDENDUM 1:     Setting up the Repository Itself
-
-
-If the repository you defined in step 8 doesn't already exist, you
-will need to create it:
-
-    % svnadmin create /absolute/path/to/repository
-
-This creates an empty repository.  Then you can import something into
-it, either locally, or over dav:
-
-    % svn import file:///absolute/path/to/repository /some/local/dir
-    % svn import http://foo.com/repos/path /some/local/dir 
-
-The above examples import the contents of /some/local/dir right into
-the root of the repository.  If you want to put these contents into a
-new repository directory, use *three* args to import.  (Try 'svn help
-import').
-
-Also, watch out for 'ownership' pitfalls.  Notice who has the rights to
-modify the .db files in the repository.  Make sure that Apache has the
-right to do this, or you'll get all sorts of Apache errors.  Often
-people create an 'svn' user who owns the repository, and folks put a
-line into httpd.conf that tells Apache to run as that special user.
 
 
 --------------------------------------------------------------------
 
-ADDENDUM 2:     Debugging Apache
+ADDENDUM:     Debugging Apache
 
 'mod_dav_svn.so' contains the main Subversion server logic;  it runs
 as a module within mod_dav, which runs as a module within httpd.
