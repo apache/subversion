@@ -214,13 +214,6 @@ svn_error_t * svn_client__can_delete (const char *path,
 
 /*** Export ***/
 
-/* Recursively walk over working copy DIR, removing all administrative
-   areas.  Use CTX for cancellation checks. */
-svn_error_t * svn_client__remove_admin_dirs (const char *dir,
-                                             svn_client_ctx_t *ctx,
-                                             apr_pool_t *pool);
-
-
 /* Set *EDITOR and *EDIT_BATON to an editor (allocated in POOL) that
    simply dumps data to disk, with no working copy administrative dirs
    or bookkeeping.  Create the directory ROOT_PATH, and dump the
