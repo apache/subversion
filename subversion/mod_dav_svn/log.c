@@ -98,7 +98,8 @@ static svn_error_t * log_receiver(void *baton,
   if (msg)
     SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
                                "<D:comment>%s</D:comment>" DEBUG_CR,
-                               apr_xml_quote_string(pool, msg, 0)) );
+                               apr_xml_quote_string
+                               (pool, svn_xml_fuzzy_escape (msg, pool), 0)) );
 
 
   if (changed_paths)

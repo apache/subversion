@@ -117,6 +117,28 @@ void svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
                                   const char *string,
                                   apr_pool_t *pool);
 
+/**
+ * @since New in 1.2.
+ *
+ * Return UTF-8 string @a string if it contains no characters that are
+ * unrepresentable in XML.  Else, return a copy of @a string,
+ * allocated in @a pool, with each unrepresentable character replaced
+ * by "?\uuu", where "uuu" is the three-digit unsigned decimal value
+ * of that character.
+ *
+ * Neither the input nor the output need be valid XML; however, the
+ * output can always be safely XML-escaped.
+ *
+ * @note The current implementation treats all Unicode characters as
+ * representable, except for most ASCII control characters (the
+ * exceptions being CR, LF, and TAB, which are valid in XML).  There
+ * may be other UTF-8 characters that are invalid in XML; see
+ * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=90591
+ * and its thread for details.
+ */
+const char *svn_xml_fuzzy_escape (const char *string,
+                                  apr_pool_t *pool);
+
 
 /*---------------------------------------------------------------*/
 

@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_xml.h"
 #include "svn_error.h"
+#include "svn_ctype.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include "xmlparse.h"
@@ -265,6 +266,58 @@ svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
   xml_escape_attr (outstr, string, (apr_size_t) strlen (string), pool);
 }
 
+
+const char *
+svn_xml_fuzzy_escape (const char *string, apr_pool_t *pool)
+{
+  const char *end = string + strlen (string);
+  const char *p = string, *q;
+  svn_stringbuf_t *outstr;
+  char escaped_char[6];   /* ? \ u u u \0 */
+
+  for (q = p; q < end; q++)
+    {
+      if (svn_ctype_iscntrl (*q)
+          && ! ((*q == '\n') || (*q == '\r') || (*q == '\t')))
+        break;
+    }
+
+  /* Return original string if no unsafe characters found. */
+  if (q == end)
+    return string;
+
+  outstr = svn_stringbuf_create ("", pool);
+  while (1)
+    {
+      q = p;
+
+      /* Traverse till either unsafe character or eos. */
+      while ((q < end)
+             && ((! svn_ctype_iscntrl (*q))
+                 || (*q == '\n') || (*q == '\r') || (*q == '\t')))
+        q++;
+
+      /* copy chunk before marker */
+      svn_stringbuf_appendbytes (outstr, p, q - p);
+
+      if (q == end)
+        break;
+
+      /* Append an escaped version of the unsafe character.
+         
+         ### This format was chosen for consistency with
+         ### svn_utf__cstring_from_utf8_fuzzy().  The two functions
+         ### should probably share code, even though they escape
+         ### different characters.
+      */
+      sprintf (escaped_char, "?\\%03u", (unsigned char) *q);
+      svn_stringbuf_appendcstr (outstr, escaped_char);
+
+      p = q + 1;
+    }
+
+  return outstr->data;
+}
 
 
 /*** Map from the Expat callback types to the SVN XML types. ***/

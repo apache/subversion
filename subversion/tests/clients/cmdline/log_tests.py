@@ -516,6 +516,79 @@ def log_through_copyfrom_history(sbox):
   svntest.actions.run_and_verify_svn (None, [], SVNAnyOutput,
                                       'log', '-r', '2', mu2_URL)
   
+#----------------------------------------------------------------------
+def escape_control_chars(sbox):
+  "mod_dav_svn must escape invalid XML control chars"
+
+  dump_str = """SVN-fs-dump-format-version: 2
+
+UUID: ffcae364-69ee-0310-a980-ca5f10462af2
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2005-01-24T10:09:21.759592Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 128
+Content-length: 128
+
+K 7
+svn:log
+V 100
+This msg contains a Ctrl-T (\x14) and a Ctrl-I (\t).
+The former might be escaped, but the latter never.
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2005-01-24T10:09:22.012524Z
+PROPS-END
+"""
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+  svntest.main.set_repos_paths(sbox.repo_dir)
+
+  URL = svntest.main.current_repo_url
+
+  # load dumpfile with control character into repos to get
+  # a log with control char content
+  output, errput = \
+    svntest.main.run_command_stdin(
+    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
+    None, 1, dump_str)
+
+  # run log
+  output, errput = svntest.actions.run_and_verify_svn ("", None, [], 'log', URL)
+
+  # Verify the output contains either the expected fuzzy escape
+  # sequence, or the literal control char.
+  match_unescaped_ctrl_re = "This msg contains a Ctrl-T \(.\) " \
+                            "and a Ctrl-I \(\t\)\."
+  match_escaped_ctrl_re = "^This msg contains a Ctrl-T \(\?\\\\020\) " \
+                          "and a Ctrl-I \(\t\)\."
+  matched = False
+  for line in output:
+    if re.match (match_unescaped_ctrl_re, line) \
+       or re.match (match_escaped_ctrl_re, line):
+      matched = True
+
+  if not matched:
+    raise svntest.Failure ("log message not transmitted properly:" +
+                           str(output) + "\n" + "error: " + str(errput))
+
+
 ########################################################################
 # Run the tests
 
@@ -530,6 +603,7 @@ test_list = [ None,
               log_with_path_args,
               url_missing_in_head,
               log_through_copyfrom_history,
+              escape_control_chars,
              ]
 
 if __name__ == '__main__':
