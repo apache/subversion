@@ -76,7 +76,7 @@ canonicalize (svn_string_t *path, int style)
 }
 
 
-static void
+static svn_string_t *
 add_component_internal (svn_string_t *path,
                         const char *component,
                         size_t len,
@@ -84,19 +84,26 @@ add_component_internal (svn_string_t *path,
                         apr_pool_t *pool)
 {
   /* kff todo: `style' ignored presently. */
-
+  svn_string_t *result = svn_string_dup (path, pool);
   char dirsep = SVN_PATH_REPOS_SEPARATOR;
 
+  canonicalize (result, style);
+
+  /* First tack on the separator. */
   if (! svn_string_isempty (path))
     svn_string_appendbytes (path, &dirsep, sizeof (dirsep), pool);
 
+  /* Then tack on the new component itself. */
   svn_string_appendbytes (path, component, len, pool);
+
+  canonicalize (result, style);
+
+  return result;
 }
 
 
-/* Like svn_path_path_add_component(), but COMPONENT is a null-terminated
-   c-string ("nts"). */
-void
+/* See ../include/svn_path.h for details. */
+svn_string_t *
 svn_path_add_component_nts (svn_string_t *path, 
                             char *component,
                             int style,
@@ -105,36 +112,41 @@ svn_path_add_component_nts (svn_string_t *path,
   /* kff todo: does not call canonicalize().  It doesn't really need
      to, given who its callers are, but it's kind of inconsistent.
      Hmmm. */
-  add_component_internal (path, component, strlen (component), style, pool);
+  return add_component_internal (path, component,
+                                 strlen (component), style, pool); 
 }
 
 
-/* Extend PATH with new COMPONENT, destructively. */
-void
+/* See ../include/svn_path.h for details. */
+svn_string_t *
 svn_path_add_component (svn_string_t *path, 
                         svn_string_t *component,
                         int style,
                         apr_pool_t *pool)
 {
-  canonicalize (component, style);
-  add_component_internal (path, component->data, component->len, style, pool);
+  return add_component_internal (path, component->data,
+                                 component->len, style, pool); 
 }
 
 
-/* Remove PATH's deepest COMPONENT, destructively. */
-void
-svn_path_remove_component (svn_string_t *path, int style)
+/* See ../include/svn_path.h for details. */
+svn_string_t *
+svn_path_remove_component (svn_string_t *path, int style, apr_pool_t *pool)
 {
   /* kff todo: `style' ignored presently. */
 
-  canonicalize (path, style);
+  svn_string_t *result = svn_string_dup (path, pool);
 
-  if (! svn_string_chop_back_to_char (path, SVN_PATH_REPOS_SEPARATOR))
-    svn_string_setempty (path);
+  canonicalize (result, style);
+  if (! svn_string_chop_back_to_char (result, SVN_PATH_REPOS_SEPARATOR))
+    svn_string_setempty (result);
+  canonicalize (result, style);
+
+  return result;
 }
 
 
-/* Duplicate and return PATH's last component, w/o separator. */
+/* See ../include/svn_path.h for details. */
 svn_string_t *
 svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
 {
@@ -142,6 +154,12 @@ svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
 
   apr_off_t i;
 
+  /* kff todo: canonicalizing the source path is lame.  This function
+     forces its argument into canonical form, for local convenience.
+     But it shouldn't have any effect on its argument!  This can be
+     fixed without involving too much allocation, by skipping
+     backwards past separators & building the returned component more
+     carefully. */
   canonicalize (path, style);
 
   i = svn_string_find_char_backward (path, SVN_PATH_REPOS_SEPARATOR);
@@ -156,6 +174,7 @@ svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
 }
 
 
+/* See ../include/svn_path.h for details. */
 int
 svn_path_isempty (svn_string_t *path, int style)
 {

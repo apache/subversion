@@ -55,6 +55,17 @@
 #include "svn_string.h"
 
 
+/*** 
+ * Notes:
+ * 
+ * In this library, no returned path ever ends with a separator,
+ * no matter whether the path is a file or directory.
+ *
+ * todo: really needs a test suite!
+ *
+ ***/
+
+
 
 /* kff todo: hey, it looks like APR may handle some parts of path
    portability for us, and we just get to use `/' everywhere.  Check
@@ -74,21 +85,23 @@
 #define SVN_PATH_URL_STYLE 3
 
 
-/* Add a COMPONENT (a null-terminated C-string) to PATH. */
-void svn_path_add_component_nts (svn_string_t *path, 
-                                 char *component,
-                                 int style,
-                                 apr_pool_t *pool);
+/* Return a new path, the concatenation of PATH with COMPONENT.
+   (COMPONENT is a null-terminated C-string.) */
+svn_string_t *svn_path_add_component_nts (svn_string_t *path, 
+                                          char *component,
+                                          int style,
+                                          apr_pool_t *pool);
 
-/* Add COMPONENT to PATH. */
-void svn_path_add_component (svn_string_t *path,
-                             svn_string_t *component,
-                             int style,
-                             apr_pool_t *pool);
+/* Return a new path, the concatenation of PATH with COMPONENT. */
+svn_string_t *svn_path_add_component (svn_string_t *path,
+                                      svn_string_t *component,
+                                      int style,
+                                      apr_pool_t *pool);
 
-/* Remove one component off the end of PATH. */
-void svn_path_remove_component (svn_string_t *path, int style);
-
+/* Return a new path, like PATH but with its last component removed. */
+svn_string_t *svn_path_remove_component (svn_string_t *path, 
+                                         int style,
+                                         apr_pool_t *pool);
 
 /* Duplicate and return PATH's last component, w/o separator. */
 svn_string_t *svn_path_last_component (svn_string_t *path,

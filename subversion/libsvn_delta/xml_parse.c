@@ -190,7 +190,6 @@ maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
   else
     {
       svn_delta__stackframe_t *p = dest_frame->previous;
-      svn_string_t *derived_ancestor_path = NULL;
       svn_string_t *this_name = NULL;
 
       while (p)
@@ -200,7 +199,7 @@ maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
           if ((! this_name) && p->name)
             this_name = p->name;
 
-          if ((p->ancestor_path) && (! dest_frame->ancestor_path))
+          if (p->ancestor_path && (! dest_frame->ancestor_path))
             {
               /* Why are we setting derived_ancestry_path according to
                * the nearest previous ancestor_path, instead of
@@ -226,25 +225,27 @@ maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
                * under that change.
                */
 
-              derived_ancestor_path = svn_string_dup (p->ancestor_path, pool);
-              svn_path_add_component (derived_ancestor_path, this_name, 
-
-                                      SVN_PATH_REPOS_STYLE, pool);
-              dest_frame->ancestor_path = derived_ancestor_path;
+              dest_frame->ancestor_path
+                = svn_path_add_component (p->ancestor_path, this_name,
+                                          SVN_PATH_REPOS_STYLE, pool);
             }
 
           /* If ancestor_version not set, and see it here, then set it. */
           if ((dest_frame->ancestor_version < 0) && (p->ancestor_version >= 0))
             dest_frame->ancestor_version = p->ancestor_version;
 
+          /* If we have all the ancestry information we need, then
+             stop the search. */
+          if ((dest_frame->ancestor_version >= 0) && dest_frame->ancestor_path)
+            break;
+
+          /* Else, keep searching. */
           p = p->previous;
         }
 
-      /* We don't check that an ancestor was actually found.  It's not
-         this function's job to determine if an ancestor is necessary,
-         only to find and set one if available. */
-      if (! dest_frame->ancestor_path)
-        dest_frame->ancestor_path = derived_ancestor_path;
+      /* That's it.  We don't check that ancestry was actually found.
+         It's not this function's job to determine if an ancestor is
+         necessary, only to find and set one if available. */
     }
 }
 
