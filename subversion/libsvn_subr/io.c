@@ -393,11 +393,29 @@ translate_write (apr_file_t *file,
   return SVN_NO_ERROR;
 }
 
-/* Parse BUF (whose length is LEN) for Subversion keywords.  */
+/* Parse BUF (whose length is LEN) for Subversion keywords, return
+   TRUE if a keyword was found, FALSE otherwise.  
+
+   BUF can contain:
+
+   - an unexpanded keyword: If the corresponding keyword value
+     argument is NULL, do nothing, else perform the translation.
+     Regardless, return TRUE to indicate that a keyword substitution
+     was handled.
+
+   - an expanded keyword: If the corresponding keyword value argument
+     is NULL, unexpand the keyword, else replace the old expansion
+     with a new one that reflects the keyword value.  Return TRUE to
+     indicate that a keyword substitution was handled.
+
+   - something that isn't keywordy at all: Return FALSE.  
+
+   REVISION, DATE, AUTHOR, and URL are the keyword value arguments
+   spoken of above.  
+*/
 static svn_boolean_t
 translate_keyword (const char *buf,
                    apr_size_t len,
-                   svn_boolean_t expand,
                    const char *revision,
                    const char *date,
                    const char *author,
@@ -419,23 +437,24 @@ svn_io_copy_and_translate (const char *src,
                            const char *url,
                            apr_pool_t *pool)
 {
-  /* For now, just do a copy and return. */
-  return svn_io_copy_file (svn_stringbuf_create (src, pool), 
+  return svn_io_copy_file (svn_stringbuf_create (src, pool),
                            svn_stringbuf_create (dst, pool),
                            pool);
-
 #if 0
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
   svn_error_t *err = SVN_NO_ERROR;
-  apr_status_t read_err, write_err;
+  apr_status_t read_err;
   char c;
   apr_size_t len;
-  char       src_format[3] = { 0 };
   char       newline_buf[3] = { 0 };
   apr_size_t newline_off = 0;
   char       keyword_buf[SVN_KEYWORD_MAX_LEN] = { 0 };
   apr_size_t keyword_off = 0;
+
+#ifdef HANDLING_NEWLINES
+  char       src_format[3] = { 0 };
+#endif /* HANDLING_NEWLINES */
 
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
@@ -507,19 +526,64 @@ svn_io_copy_and_translate (const char *src,
             }
         }
 
-      /* Handle the byte.  Is it a part of a known newline string?
-         Part of a keyword?  */
+      /* Handle the byte. */
       switch (c)
         {
         case '$':
-          /* If we are currently in the middle of tracking a possible
-             keyword expansion, then this is its terminator.  Else,
-             this is the beginning of a new possible keyword. */
-          if (keyword_off)
+          /* A-ha!  A keyword delimiter!  */
+
+#ifdef HANDLING_NEWLINES
+          /* If we are currently collecting up a possible newline
+             string, this puts an end to that collection.  Flush the
+             newline buffer (translating as necessary) and move
+             along. */
+          if (newline_off)
             {
-              keyword_buf[keyword_off++] = c;
-              
-          
+              /* ### todo: Translate the newline here. */
+              newline_off = 0;
+            }
+#endif /* HANDLING_NEWLINES */
+
+          /* Put this character into the keyword buffer. */
+          keyword_buf[keyword_off++] = c;
+
+          /* If this `$' is the beginning of a possible keyword, we're
+             done with it for now.  */
+          if (keyword_off == 1)
+            break;
+
+          /* Else, it must be the end of one!  Attempt to translate
+             the buffer. */
+          keyword_buf[keyword_off++] = c;
+
+          /* ### todo: Obviously, we aren't *always* expanding
+             keywords...sometimes we are unexpanding them. */
+          if (translate_keyword (keyword_buf,
+                                 keyword_off,
+                                 revision,
+                                 date,
+                                 author,
+                                 url))
+            {
+              /* We successfully found and translated a keyword.  We
+                 can write out this buffer now. */
+              if ((err = translate_write (d, dst, keyword_buf, 
+                                          keyword_off, pool)))
+                goto cleanup;
+              keyword_off = 0;
+            }
+          else
+            {
+              /* No keyword was found here.  We'll let our
+                 "terminating `$'" become a "beginning `$'" now.  That
+                 means, write out all the keyword buffer (except for
+                 this `$') and reset it to hold only this `$'.  */
+              if ((err = translate_write (d, dst, keyword_buf, 
+                                          keyword_off - 1, pool)))
+                goto cleanup;
+              keyword_buf[0] = c;
+              keyword_off = 1;
+            }
           break;
 
         case '\n':
@@ -527,32 +591,57 @@ svn_io_copy_and_translate (const char *src,
           /* Newline character.  If we currently bagging up a keyword
              string, this pretty much puts an end to that.  Flush the
              keyword buffer, then handle the newline. */
-          if (((len = keyword_off)) && 
-              ((err = translate_write (d, dst, keyword_buf, len, pool))))
-            goto cleanup;
+          if ((len = keyword_off))
+            {
+              if ((err = translate_write (d, dst, keyword_buf, len, pool)))
+                goto cleanup;
+              keyword_off = 0;
+            }
 
-#if HANDLING_NEWLINES
+#ifdef HANDLING_NEWLINES
           if (eol_str)
             {
               /* Handle this as a translatable newline */
               break;
             }
-#endif
+#else /* HANDLING_NEWLINES */
           /* Write out this character. */
           if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
             goto cleanup;
+#endif /* HANDLING_NEWLINES */
+
           break;
 
         default:
-          /* Nothing special about this character.  Well, except that:
+          /* If we're currently bagging up a keyword string, we'll
+             add this character to the keyword buffer.  */
+          if (keyword_off)
+            {
+              keyword_buf[keyword_off++] = c;
+              
+              /* If we've reached the end of this buffer without
+                 finding a terminating '$', we just flush the buffer
+                 and continue on. */
+              if (keyword_off >= SVN_KEYWORD_MAX_LEN)
+                {
+                  if ((err = translate_write (d, dst, keyword_buf, len, pool)))
+                    goto cleanup;
+                  keyword_off = 0;
+                }
+              break;
+            }
 
-             - if we're currently bagging up a keyword string, we'll
-               add this character to the keyword buffer.  
-
-             - if we're in a potential newline separator, this
-               character terminates that search, so we need to flush
-               our 
-          */
+#ifdef HANDLING_NEWLINES
+          /* If we're in a potential newline separator, this character
+             terminates that search, so we need to flush our newline
+             buffer (translating as necessary) and then output this
+             character.  */
+          if (newline_off)
+            {
+              /* ### todo:  I mean it--do the work! */
+              break;
+            }
+#endif /* HANDLING_NEWLINES */
 
           /* Write out this character. */
           if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
