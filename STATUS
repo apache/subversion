@@ -99,13 +99,6 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r10478
-    Fix crashes and small leaks in mod_dav_svn.
-    Justification:
-      Crashes are unnice.
-    Votes:
-      +1: lundblad, sussman, breser
-
   * r10480
     Fix handling of non-canonical copyfrom data in FSFS.
     Justification: Without this fix, FSFS repositories will be ever so
