@@ -28,7 +28,7 @@ versions files.
 
 To begin, recall that the Subversion repository is an array of trees.
 Each tree represents the application of a new atomic commit, and is
-called a @dfn{revision}.  This is very different than a CVS repository,
+called a @dfn{revision}.  This is very different from a CVS repository,
 which stores file histories in a collection of RCS files (and doesn't
 track tree-structure.)
 
@@ -43,7 +43,7 @@ contents.
 Nevertheless, the contents of @samp{foo.c:4} is still well-defined.  The
 file @file{foo.c} in revision 4 has a specific text and properties.
 
-Suppose, now, the we extend this concept to directories.  If we have a
+Suppose, now, that we extend this concept to directories.  If we have a
 directory @file{DIR}, define @dfn{DIR:N} to be "the directory DIR in the
 fourth revision."  The contents are defined to be a particular set of
 directory entries (@dfn{dirents}) and properties.
@@ -109,7 +109,7 @@ sends a bogus (or at least unnecessary) deletion command.
 This problem is solved through tricky administrative tracking in the
 client.
 
-After deleting @file{foo} and committing, the file is @emph{not} is not
+After deleting @file{foo} and committing, the file is @emph{not}
 totally forgotten by the @file{.svn} directory.  While the file is no
 longer considered to be under revision control, it is still secretly
 remembered as having been `deleted'.

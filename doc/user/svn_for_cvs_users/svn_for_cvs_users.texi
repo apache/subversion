@@ -377,7 +377,7 @@ suspected, the filesystem doesn't grow 652 new inodes each time this
 happens!  Instead, each new tree is mostly made of pointers to
 existing nodes; new nodes are created only for changed items.
 
-This technique demonstrates how the filesystem to is able to make
+This technique demonstrates how the filesystem is able to make
 "cheap copies" of things.  Remember that nodes are never, ever deleted
 in the filesystem; at most, they're simply unlinked from the head tree
 (and they continue to stay linked to older trees.)  These cheap copies

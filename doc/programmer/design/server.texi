@@ -688,7 +688,7 @@ For the initial release of Subversion,
 
 
 This library no longer exists in the current Subversion design; all
-functionality that it would have provided will come out Apache and
+functionality that it would have provided will come from Apache and
 mod_DAV_SVN.
 
 Only a small part of the spec has been left behind -- mainly to provide
@@ -710,7 +710,7 @@ Subversion has two levels of security, both abstracted.
 
 First of all, the Subversion filesystem does @emph{not} authenticate
 users -- it never asks a client user to prove his/her identity.
-Instead, authentication is soley the responsibility of the network
+Instead, authentication is solely the responsibility of the network
 layer.  Every Subversion user @emph{must} have an account in an external
 database that is understood by some network layer.  (@xref{Network
 Layer}.)
@@ -785,7 +785,7 @@ jimb : Jim Blandy :   jim/unix/localhost,  \
 @end example
 
 @item
-  @b{Define Roles} A @dfn{role} is a set of performable actions.  Here
+  @b{Define Roles.}  A @dfn{role} is a set of performable actions.  Here
 are some examples of roles:
 
 @example

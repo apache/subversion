@@ -332,7 +332,7 @@ arbitrary text string, expressed as a Unicode UTF-8 string, canonically
 decomposed and ordered.  A property value is an arbitrary string of
 bytes.  Property values may be of any size, but Subversion may not
 handle very large property values efficiently.  No two properties in a
-given a property list may have the same name.  Although the word `list'
+given property list may have the same name.  Although the word `list'
 usually denotes an ordered sequence, there is no fixed order to the
 properties in a property list; the term `property list' is historical.
 
