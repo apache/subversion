@@ -187,7 +187,7 @@
           http://svn.collab.net/repos/svn/branches/X.Y.x   \
           http://svn.collab.net/repos/svn/tags/X.Y.Z
 
-    Note: Please always mag a tag, even for release candidates.
+    Note: Please always make a tag, even for release candidates.
 
 13. Switch your working copy to the tag.
 
