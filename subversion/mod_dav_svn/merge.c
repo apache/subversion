@@ -19,6 +19,7 @@
 #include <httpd.h>
 #include <util_filter.h>
 
+#include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 

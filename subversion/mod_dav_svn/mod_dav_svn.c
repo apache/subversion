@@ -23,6 +23,8 @@
 #include <apr_strings.h>
 
 #include "svn_private_config.h"
+#include "svn_pools.h"
+
 #include "dav_svn.h"
 
 

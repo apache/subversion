@@ -12,9 +12,11 @@
  * ====================================================================
  */
 
-#include <svn_path.h>
 #include <stdio.h>
 #include <apr_general.h>
+
+#include "svn_pools.h"
+#include "svn_path.h"
 
 int main(int argc, char **argv)
 {
