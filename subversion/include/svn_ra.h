@@ -228,7 +228,17 @@ typedef struct svn_ra_callbacks_t
                                      void *callback_baton,
                                      apr_pool_t *pool);
 
-  /* Fetch working copy properties. */
+  /*** The following items may be set to NULL to disallow the RA layer
+       to perform the respective operations of the vtable functions.
+       Perhaps WC props are not defined or are in invalid for this
+       session, or perhaps the commit operation this RA session will
+       perform is a server-side only one that shouldn't do post-commit
+       processing on a working copy path.  ***/
+
+  /* Fetch working copy properties.
+     ### we might have a problem if the RA layer ever wants a property
+     ### that corresponds to a different revision of the file than
+     ### what is in the WC. we'll cross that bridge one day... */
   svn_ra_get_wc_prop_func_t get_wc_prop;
 
   /* Set working copy properties. */
