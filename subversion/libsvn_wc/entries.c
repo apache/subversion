@@ -1039,10 +1039,17 @@ svn_wc__entries_write (apr_hash_t *entries,
                               "No default entry in directory `%s'", 
                               svn_wc_adm_access_path (adm_access));
 
-  /* Open entries file for writing. */
+  /* Open entries file for writing.  It's important we don't use APR_EXCL
+   * here.  Consider what happens if a log file is interrupted, it may
+   * leave a .svn/tmp/entries file behind.  Then when cleanup reruns the
+   * log file, and it attempts to modify the entries file, APR_EXCL would
+   * cause an error that prevents cleanup running.  We don't use log file
+   * tags such as SVN_WC__LOG_MV to move entries files so any existing file
+   * is not "valuable".
+   */
   SVN_ERR (svn_wc__open_adm_file (&outfile, svn_wc_adm_access_path (adm_access),
                                   SVN_WC__ADM_ENTRIES,
-                                  (APR_WRITE | APR_CREATE | APR_EXCL),
+                                  (APR_WRITE | APR_CREATE),
                                   pool));
 
   svn_xml_make_header (&bigstr, pool);
