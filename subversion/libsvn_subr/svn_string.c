@@ -20,8 +20,10 @@
 
 
 
+#include <stdio.h>
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_lib.h>     /* for apr_isspace() */
+#include <apr_md5.h>
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 
@@ -599,3 +601,19 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
 
   return FALSE;
 }
+
+
+const char *
+svn_cstring_from_md5_digest (unsigned char digest[], apr_pool_t *pool)
+{
+  char *str = apr_palloc (pool, MD5_DIGESTSIZE * 3);
+  int i;
+  
+  for (i = 0; i < MD5_DIGESTSIZE; i++)
+    sprintf (str + (i * 3), "%.2x ", digest[i]);
+
+  str[(i * 3) - 1] = '\0';
+  return str;
+}
+
+

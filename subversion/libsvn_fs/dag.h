@@ -406,6 +406,16 @@ svn_error_t *svn_fs__dag_file_length (apr_size_t *length,
                                       dag_node_t *file,
                                       trail_t *trail);
 
+/* Put the recorded MD5 checksum of FILE into DIGEST, as part of
+ * TRAIL.  DIGEST must point to MD5_DIGESTSIZE bytes of storage.
+ *
+ * If no stored checksum is available, do not calculate the checksum,
+ * just put all 0's into DIGEST.
+ */
+svn_error_t *
+svn_fs__dag_file_checksum (unsigned char digest[],
+                           dag_node_t *file,
+                           trail_t *trail);
 
 /* Create a new mutable file named NAME in PARENT, as part of TRAIL.
    Set *CHILD_P to a reference to the new node, allocated in

@@ -52,23 +52,6 @@ static const char empty_digest[] = {
 };
 
 
-/* Return a string showing the octal representation of DIGEST, which
- * must be MD5_DIGESTSIZE bytes long.
- */
-static const char *
-digest_to_cstring (unsigned char digest[], apr_pool_t *pool)
-{
-  char *str = apr_palloc (pool, MD5_DIGESTSIZE * 3);
-  int i;
-  
-  for (i = 0; i < MD5_DIGESTSIZE; i++)
-    sprintf (str + (i * 3), "%.2x ", digest[i]);
-
-  str[(i * 3) - 1] = '\0';
-  return str;
-}
-
-
 /* Compare digests D1 and D2, each MD5_DIGESTSIZE bytes long.  If
  * neither is all zeros, and they do not match, then return false.
  * Else return true.
@@ -722,6 +705,21 @@ svn_fs__rep_contents_size (apr_size_t *size_p,
 
 
 svn_error_t *
+svn_fs__rep_contents_checksum (unsigned char digest[],
+                               svn_fs_t *fs,
+                               const char *rep_key,
+                               trail_t *trail)
+{
+  svn_fs__representation_t *rep;
+
+  SVN_ERR (svn_fs__bdb_read_rep (&rep, fs, rep_key, trail));
+  memcpy (digest, rep->checksum, MD5_DIGESTSIZE);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__rep_contents (svn_string_t *str,
                       svn_fs_t *fs,
                       const char *rep_key,
@@ -759,8 +757,8 @@ svn_fs__rep_contents (svn_string_t *str,
          "svn_fs__rep_contents: checksum mismatch on rep \"%s\":\n"
          "   expected:  %s\n"
          "     actual:  %s\n", rep_key,
-         digest_to_cstring (rep->checksum, trail->pool),
-         digest_to_cstring (checksum, trail->pool));
+         svn_cstring_from_md5_digest (rep->checksum, trail->pool),
+         svn_cstring_from_md5_digest (checksum, trail->pool));
   }
 
   return SVN_NO_ERROR;
@@ -843,8 +841,8 @@ txn_body_read_rep (void *baton, trail_t *trail)
                    "txn_body_read_rep: checksum mismatch on rep \"%s\":\n"
                    "   expected:  %s\n"
                    "     actual:  %s\n", args->rb->rep_key,
-                   digest_to_cstring (rep->checksum, trail->pool),
-                   digest_to_cstring (checksum, trail->pool));
+                   svn_cstring_from_md5_digest (rep->checksum, trail->pool),
+                   svn_cstring_from_md5_digest (checksum, trail->pool));
             }
         }
     }
@@ -1607,8 +1605,8 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
        "svn_fs__rep_undeltify: checksum mismatch on rep \"%s\":\n"
        "   expected:  %s\n"
        "     actual:  %s\n", rep_key,
-       digest_to_cstring (rep->checksum, trail->pool),
-       digest_to_cstring (digest, trail->pool));
+       svn_cstring_from_md5_digest (rep->checksum, trail->pool),
+       svn_cstring_from_md5_digest (digest, trail->pool));
 
   /* Now `target_baton.key' has the key of the new string.  We
      should hook it into the representation.  So we make a new rep,
