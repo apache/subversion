@@ -167,7 +167,7 @@ svn_wc__adm_path_exists (const char *path,
 svn_error_t *
 svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                         const char *thing,
-                        int type,
+                        enum svn_node_kind type,
                         apr_fileperms_t perms,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
@@ -179,7 +179,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
 
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
-  path = extend_with_adm_name (svn_wc_adm_access_path(adm_access),
+  path = extend_with_adm_name (svn_wc_adm_access_path (adm_access),
                                NULL, tmp, pool, thing, NULL);
 
   if (type == svn_node_file)
