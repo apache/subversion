@@ -47,7 +47,12 @@ svn_cl__add (apr_getopt_t *os,
         svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
         err = svn_client_add (target, pool);
         if (err)
-          return err;
+          {
+            if (err->apr_err == SVN_ERR_WC_ENTRY_EXISTS)
+              svn_handle_warning(err, err->message);
+            else
+              return err;
+          }
       }
   else
     {
