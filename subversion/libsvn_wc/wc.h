@@ -133,12 +133,14 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_README              "README"
 #define SVN_WC__ADM_REPOSITORY          "repository"
 #define SVN_WC__ADM_ENTRIES             "entries"
-#define SVN_WC__ADM_PROPERTIES          "properties"
+#define SVN_WC__ADM_DIR_PROPS           "dir-props"
+#define SVN_WC__ADM_PROPS               "props"
 #define SVN_WC__ADM_LOCK                "lock"
 #define SVN_WC__ADM_TMP                 "tmp"
 #define SVN_WC__ADM_TEXT_BASE           "text-base"
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
-#define SVN_WC__ADM_DPROP_BASE          "dprop-base"
+#define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
+#define SVN_WC__ADM_DPROP_BASE          "dprop-base"/* Isn't this bogus now? */
 #define SVN_WC__ADM_LOG                 "log"
 
 /* Return a string containing the admin subdir name. */

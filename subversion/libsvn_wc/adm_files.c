@@ -930,8 +930,8 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* SVN_WC__ADM_PROPERTIES */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPERTIES,
+  /* SVN_WC__ADM_DIR_PROPS */
+  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROPS,
                                 svn_file_kind, 0, pool);
   if (err)
     return err;
