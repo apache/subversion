@@ -2131,17 +2131,24 @@ create_txn_dir (const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
       unique_path = apr_psprintf (subpool, "%s-%u" PATH_EXT_TXN, prefix, i);
       err = svn_io_dir_make (unique_path, APR_OS_DEFAULT, subpool);
       if (! err)
-        break;
+        {
+          /* We succeeded.  Return the basename minus the ".txn" extension. */
+          name = svn_path_basename (unique_path, subpool);
+          *id_p = apr_pstrndup (pool, name,
+                                strlen (name) - strlen (PATH_EXT_TXN));
+          svn_pool_destroy (subpool);
+          return SVN_NO_ERROR;
+        }
       if (! APR_STATUS_IS_EEXIST (err->apr_err))
         return err;
       svn_error_clear (err);
     }
 
-  /* We succeeded.  Return the basename minus the ".txn" extension. */
-  name = svn_path_basename (unique_path, subpool);
-  *id_p = apr_pstrndup (pool, name, strlen (name) - strlen (PATH_EXT_TXN));
-  svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
+  return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+                            NULL,
+                            "Unable to create transaction directory "
+                            "in '%s' for revision %ld",
+                            fs->path, rev);
 }
 
 svn_error_t *
