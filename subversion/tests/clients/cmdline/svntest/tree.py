@@ -381,9 +381,9 @@ def default_singleton_handler(a, baton):
 # Main tree comparison routine!  
 
 def compare_trees(a, b,
-                  singleton_handler_a = default_singleton_handler,
+                  singleton_handler_a = None,
                   a_baton = None,
-                  singleton_handler_b = default_singleton_handler,
+                  singleton_handler_b = None,
                   b_baton = None):
   """Compare SVNTreeNodes A and B, expressing differences using FUNC_A
   and FUNC_B.  FUNC_A and FUNC_B are functions of two arguments (a
@@ -397,6 +397,13 @@ def compare_trees(a, b,
   exists in both, call compare_trees on the two entries; otherwise, if
   the entry exists only in A, invoke FUNC_A on it, and likewise for
   B with FUNC_B."""
+
+  # Setup singleton handlers
+  if (singleton_handler_a is None):
+    singleton_handler_a = default_singleton_handler
+  if (singleton_handler_b is None):
+    singleton_handler_b = default_singleton_handler
+
   try:
     # A and B are both files.
     if ((a.children is None) and (b.children is None)):

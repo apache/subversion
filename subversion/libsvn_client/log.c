@@ -72,10 +72,6 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
        "svn_client_update: %s is not under revision control", basename->data);
-  if (entry->existence == svn_wc_existence_deleted)
-    return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_client_update: entry '%s' has been deleted", basename->data);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool,

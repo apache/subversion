@@ -403,7 +403,6 @@ main (int argc, const char * const *argv)
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
-  svn_cl__init_feedback_vtable (pool);
   memset (&opt_state, 0, sizeof (opt_state));
   opt_state.start_revision = SVN_INVALID_REVNUM; /* default to youngest */
   opt_state.end_revision = 1;                    /* default to oldest */
@@ -550,6 +549,10 @@ main (int argc, const char * const *argv)
      actually run is svn_cl__help(). */
   if (opt_state.help)
     subcommand = svn_cl__get_canonical_command ("help");
+
+  /* If we didn't request silence, initialize the feedback vtable. */
+  if (! opt_state.quiet)
+    svn_cl__init_feedback_vtable (pool);
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */

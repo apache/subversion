@@ -189,7 +189,6 @@ free_dir_baton (struct dir_baton *dir_baton)
                 dir_baton->edit_baton->target_revision,
                 svn_node_dir,
                 svn_wc_schedule_normal,
-                svn_wc_existence_normal,
                 FALSE, FALSE,
                 0,
                 0,
@@ -452,59 +451,43 @@ open_root (void *edit_baton,
 static svn_error_t *
 delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 {
-  svn_error_t *err;
   struct dir_baton *parent_dir_baton = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
   svn_stringbuf_t *log_item
     = svn_stringbuf_create ("", parent_dir_baton->pool);
 
-  err = svn_wc__lock (parent_dir_baton->path, 0, parent_dir_baton->pool);
-  if (err)
-    return err;
-
-    err = svn_wc__open_adm_file (&log_fp,
-                                 parent_dir_baton->path,
-                                 SVN_WC__ADM_LOG,
-                                 (APR_WRITE | APR_CREATE), /* not excl */
-                                 parent_dir_baton->pool);
-    if (err)
-      return err;
-
-    svn_xml_make_open_tag (&log_item,
-                           parent_dir_baton->pool,
-                           svn_xml_self_closing,
-                           SVN_WC__LOG_DELETE_ENTRY,
-                           SVN_WC__LOG_ATTR_NAME,
-                           name,
-                           NULL);
-
-    apr_err = apr_file_write_full (log_fp,
-                                   log_item->data, log_item->len, NULL);
-    if (apr_err)
-      {
-        apr_file_close (log_fp);
-        return svn_error_createf (apr_err, 0, NULL, parent_dir_baton->pool,
-                                  "delete error writing %s's log file",
-                                  parent_dir_baton->path->data);
-      }
-
-    err = svn_wc__close_adm_file (log_fp,
+  SVN_ERR (svn_wc__lock (parent_dir_baton->path, 0, parent_dir_baton->pool));
+  SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   parent_dir_baton->path,
                                   SVN_WC__ADM_LOG,
-                                  1, /* sync */
-                                  parent_dir_baton->pool);
-    if (err)
-      return err;
+                                  (APR_WRITE | APR_CREATE), /* not excl */
+                                  parent_dir_baton->pool));
+  svn_xml_make_open_tag (&log_item,
+                         parent_dir_baton->pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_DELETE_ENTRY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         name,
+                         NULL);
+
+  apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
+  if (apr_err)
+    {
+      apr_file_close (log_fp);
+      return svn_error_createf (apr_err, 0, NULL, parent_dir_baton->pool,
+                                "delete error writing %s's log file",
+                                parent_dir_baton->path->data);
+    }
+
+  SVN_ERR (svn_wc__close_adm_file (log_fp,
+                                   parent_dir_baton->path,
+                                   SVN_WC__ADM_LOG,
+                                   1, /* sync */
+                                   parent_dir_baton->pool));
     
-    err = svn_wc__run_log (parent_dir_baton->path, parent_dir_baton->pool);
-    if (err)
-      return err;
-
-    err = svn_wc__unlock (parent_dir_baton->path, parent_dir_baton->pool);
-    if (err)
-      return err;
-
+  SVN_ERR (svn_wc__run_log (parent_dir_baton->path, parent_dir_baton->pool));
+  SVN_ERR (svn_wc__unlock (parent_dir_baton->path, parent_dir_baton->pool));
   return SVN_NO_ERROR;
 }
 
@@ -594,7 +577,6 @@ add_directory (svn_stringbuf_t *name,
                               SVN_INVALID_REVNUM,
                               svn_node_dir,
                               svn_wc_schedule_normal,
-                              svn_wc_existence_normal,
                               FALSE, FALSE,
                               0,
                               0,
