@@ -123,7 +123,7 @@ typedef struct svn_diff_fns_t
  */
 svn_error_t *svn_diff (svn_diff_t **diff,
                        void *diff_baton,
-                       svn_diff_fns_t *diff_fns,
+                       const svn_diff_fns_t *diff_fns,
                        apr_pool_t *pool);
 
 /* Given a vtable of DIFF_FNS/DIFF_BATON for reading datasources,
@@ -133,7 +133,7 @@ svn_error_t *svn_diff (svn_diff_t **diff,
  */
 svn_error_t *svn_diff3 (svn_diff_t **diff,
                         void *diff_baton,
-                        svn_diff_fns_t *diff_fns,
+                        const svn_diff_fns_t *diff_fns,
                         apr_pool_t *pool);
 
 
@@ -249,7 +249,7 @@ typedef struct svn_diff_output_fns_t
 svn_error_t *
 svn_diff_output (svn_diff_t *diff,
                  void *output_baton,
-                 svn_diff_output_fns_t *output_fns);
+                 const svn_diff_output_fns_t *output_fns);
 
 
 

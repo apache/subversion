@@ -101,7 +101,7 @@ static
 svn_diff__position_t *
 svn_diff__tree_insert_token(svn_diff__tree_t *tree,
                             void *diff_baton,
-                            svn_diff_fns_t *vtable,
+                            const svn_diff_fns_t *vtable,
                             void *token,
                             apr_off_t offset,
                             int idx)
@@ -353,7 +353,7 @@ svn_error_t *
 svn_diff__get_tokens(svn_diff__position_t **position_list,
                      svn_diff__tree_t *tree,
                      void *diff_baton,
-                     svn_diff_fns_t *vtable,
+                     const svn_diff_fns_t *vtable,
                      svn_diff_datasource_e datasource,
                      int position_idx)
 {
@@ -554,7 +554,7 @@ svn_diff__lcs(svn_diff__tree_t *tree,
 svn_error_t *
 svn_diff(svn_diff_t **diff,
          void *diff_baton,
-         svn_diff_fns_t *vtable,
+         const svn_diff_fns_t *vtable,
          apr_pool_t *pool)
 {
   svn_diff__tree_t *tree;
@@ -701,7 +701,7 @@ svn_diff(svn_diff_t **diff,
 svn_error_t *
 svn_diff3(svn_diff_t **diff,
           void *diff_baton,
-          svn_diff_fns_t *vtable,
+          const svn_diff_fns_t *vtable,
           apr_pool_t *pool)
 {
   apr_pool_t *subpool;
@@ -1064,7 +1064,7 @@ svn_diff_contains_diffs(svn_diff_t *diff)
 svn_error_t *
 svn_diff_output(svn_diff_t *diff,
                 void *output_baton,
-                svn_diff_output_fns_t *vtable)
+                const svn_diff_output_fns_t *vtable)
 {
   svn_error_t *(*output_fn)(void *,
                             apr_off_t, apr_off_t,
