@@ -1272,10 +1272,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
            || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
     {
       if (entry)
-        value = (svn_stringbuf_t *)
-          apr_hash_get (entry->attributes, 
-                        SVN_WC_ENTRY_ATTR_URL,
-                        strlen(SVN_WC_ENTRY_ATTR_URL));
+        value = entry->url;
       
       if (! value)
         keywords->url = svn_string_create ("", pool);
