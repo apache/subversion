@@ -86,6 +86,7 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
          This URL form refers to the root path of the repository.
       */
       comb->priv.node_id = svn_fs_parse_id(path, strlen(path), comb->res.pool);
+      comb->priv.node_id_str = path;
       comb->priv.repos_path = "/";
     }
   else if (slash == path)
@@ -99,7 +100,10 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
     }
   else
     {
-      comb->priv.node_id = svn_fs_parse_id(path, slash - path, comb->res.pool);
+      apr_size_t len = slash - path;
+
+      comb->priv.node_id = svn_fs_parse_id(path, len, comb->res.pool);
+      comb->priv.node_id_str = apr_pstrndup(comb->res.pool, path, len);
       comb->priv.repos_path = slash;
     }
 
@@ -529,8 +533,33 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
     {
       /* we are accessing the Version Resource by ID */
 
-      /* ### what to do. open the "ID root" and validate the resource. */
-      comb->res.exists = TRUE;
+      serr = svn_fs_id_root(&comb->priv.root.root, comb->priv.repos->fs,
+                            comb->res.pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not open the Subversion FS.");
+        }
+
+      serr = svn_fs_is_dir(&comb->res.collection,
+                           comb->priv.root.root,
+                           comb->priv.node_id_str,
+                           comb->res.pool);
+      if (serr != NULL)
+        {
+          if (serr->apr_err != SVN_ERR_FS_NOT_FOUND)
+            {
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "Could not determine whether the "
+                                         "resource is a file or dir.");
+            }
+
+          /* exists == FALSE */
+        }
+      else
+        {
+          comb->res.exists = TRUE;
+        }
 
       /* ### revise the URI to the "canonical" URI? necessary? */
     }
@@ -1059,7 +1088,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
     {
       serr = svn_fs_file_contents(&(*stream)->rstream,
                                   resource->info->root.root,
-                                  resource->info->repos_path,
+                                  DAV_SVN_REPOS_PATH(resource),
                                   resource->pool);
       if (serr != NULL)
         {
@@ -1069,6 +1098,11 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
     }
   else if (mode == DAV_MODE_WRITE_TRUNC)
     {
+      /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
+         we cannot write into an "id root". Partly because the FS may not
+         let us, but mostly that we have an id root only to deal with Version
+         Resources, and those are read only. */
+
       serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
                                     &(*stream)->delta_baton,
                                     resource->info->root.root,
@@ -1212,7 +1246,7 @@ const char * dav_svn_getetag(const dav_resource *resource)
   /* ### what kind of etag to return for collections, activities, etc? */
 
   serr = svn_fs_node_id(&id, resource->info->root.root,
-                        resource->info->repos_path, resource->pool);
+                        DAV_SVN_REPOS_PATH(resource), resource->pool);
   if (serr != NULL) {
     /* ### what to do? */
     return "";
@@ -1252,7 +1286,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   /* set up the Content-Length header */
   serr = svn_fs_file_length(&length,
                             resource->info->root.root,
-                            resource->info->repos_path,
+                            DAV_SVN_REPOS_PATH(resource),
                             resource->pool);
   if (serr != NULL)
     {
@@ -1281,7 +1315,10 @@ static dav_error * dav_svn_create_collection(dav_resource *resource)
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
 
-  /* ### is the root opened yet? */
+  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
+     we cannot write into an "id root". Partly because the FS may not
+     let us, but mostly that we have an id root only to deal with Version
+     Resources, and those are read only. */
 
   if ((serr = svn_fs_make_dir(resource->info->root.root,
                               resource->info->repos_path,
@@ -1349,7 +1386,10 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
      this does imply we are not enforcing the "checkout the parent, then
      delete from within" semantic. */
 
-  /* ### is the root opened yet? */
+  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
+     we cannot write into an "id root". Partly because the FS may not
+     let us, but mostly that we have an id root only to deal with Version
+     Resources, and those are read only. */
 
   if ((serr = svn_fs_delete_tree(resource->info->root.root,
                                  resource->info->repos_path,

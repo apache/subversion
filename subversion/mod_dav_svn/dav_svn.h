@@ -156,6 +156,7 @@ struct dav_resource_private {
      the VERSION refers to a Baseline (.baselined==1), then node_id and
      repos_path will be NULL. */
   const svn_fs_id_t *node_id;
+  const char *node_id_str;
 
   /* for PRIVATE resources: the private resource type */
   enum dav_svn_private_restype restype;
@@ -163,6 +164,10 @@ struct dav_resource_private {
   /* ### hack to deal with the Content-Type header on a PUT */
   int is_svndiff;
 };
+
+#define DAV_SVN_REPOS_PATH(res) ((res)->info->node_id_str != NULL \
+                                 ? (res)->info->node_id_str \
+                                 : (res)->info->repos_path)
 
 
 void dav_svn_gather_propsets(apr_array_header_t *uris);
