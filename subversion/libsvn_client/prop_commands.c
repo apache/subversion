@@ -205,8 +205,11 @@ svn_client_revprop_set (const char *propname,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
 
-  if (strcmp (propname, SVN_PROP_REVISION_AUTHOR) == 0
-      && strchr (propval->data, '\n') != NULL && !force)
+  if ((strcmp (propname, SVN_PROP_REVISION_AUTHOR) == 0)
+      && propval 
+      && propval->data 
+      && strchr (propval->data, '\n') != NULL 
+      && (! force))
     return svn_error_create (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
                              NULL, "Value will not be set unless forced");
 
