@@ -1061,10 +1061,10 @@ static svn_error_t *
 txn_body_check_id (void *baton, trail_t *trail)
 {
   struct check_id_args *args = baton;
-  skel_t *rep;
+  skel_t *noderev;
   svn_error_t *err;
 
-  err = svn_fs__get_rep (&rep, args->fs, args->id, trail);
+  err = svn_fs__get_node_revision (&noderev, args->fs, args->id, trail);
 
   if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
     args->present = FALSE;
