@@ -468,7 +468,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
             return svn_error_quick_wrap(err, "could not finish directory");
 
           if (fc.subdirs->nelts == 0)
-            goto traversal_complete;
+            return SVN_NO_ERROR;
         }
 
       /* add a placeholder. this will be used to signal a close_directory
@@ -482,14 +482,23 @@ svn_ra_checkout (svn_ra_session_t *ras,
       if (err)
         return svn_error_quick_wrap(err, "could not fetch directory entries");
 
-      /* we fetched information about the directory successfully. time to
-         create the local directory. */
-      name = my_basename(url, ras->pool);
-      err = (*editor->add_directory) (name, parent_baton,
-                                      ancestor_path, ancestor_version,
-                                      &this_baton);
-      if (err)
-        return svn_error_quick_wrap(err, "could not add directory");
+      if (strlen(url) > strlen(ras->root.path))
+        {
+          /* We're not in the root, add a directory */
+          name = my_basename(url, ras->pool);
+          
+          printf ("add_dir for [%s]\n", name->data);
+          err = (*editor->add_directory) (name, parent_baton,
+                                          ancestor_path, ancestor_version,
+                                          &this_baton);
+          if (err)
+            return svn_error_quick_wrap(err, "could not add directory");
+        }
+      else 
+        {
+          /* We are operating in the root of the repository */
+          this_baton = dir_baton;
+        }
 
       /* for each new directory added (including our marker), set its
          parent_baton */
@@ -514,10 +523,8 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
     } while (recurse && fc.subdirs->nelts > 0);
 
- traversal_complete:
-  ;
-
-  return (*editor->close_directory)(dir_baton);
+  /* ### should never reach??? */
+  return SVN_NO_ERROR;
 }
 
 /* -------------------------------------------------------------------------
