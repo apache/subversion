@@ -92,7 +92,7 @@ svn_cl__add (int argc, const char **argv,
   else
     {
       fputs ("svn add: object-to-add required\n", stderr);
-      err = svn_cl__help (3, get_help, pool, p_opt_state);
+      err = svn_cl__help (3, get_help, p_opt_state, pool);
     }
   return err;
 }
