@@ -146,6 +146,7 @@ typedef struct svn_ra_plugin_t
      specified in open(), using EDITOR and EDIT_BATON to create a
      working copy. */
   svn_error_t *(*do_checkout) (void *session_baton,
+                               svn_revnum_t revision,
                                const svn_delta_edit_fns_t *editor,
                                void *edit_baton);
 

@@ -226,10 +226,7 @@ get_commit_editor (void *session_baton,
 }
 
 
-/* ben sez: todo: change svn_ra.h so that this routine takes a revnum
-   to check out (or SVN_INVALID_REVNUM to get the youngest rev). 
-
-   todo: the fs_path inside session_baton is currently in
+/* todo: the fs_path inside session_baton is currently in
    svn_path_url_style.  To be *formally* correct, this routine needs
    to dup that path and convert it to svn_path_repos_style.  That's
    the style that svn_ra_local__checkout expects in its starting path.
@@ -237,6 +234,7 @@ get_commit_editor (void *session_baton,
    moment. */
 static svn_error_t *
 do_checkout (void *session_baton,
+             svn_revnum_t revision,
              const svn_delta_edit_fns_t *editor,
              void *edit_baton)
 {
@@ -244,7 +242,10 @@ do_checkout (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
   
-  SVN_ERR (get_latest_revnum (session_baton, &revnum_to_fetch));
+  if (! SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR (get_latest_revnum (session_baton, &revnum_to_fetch));
+  else
+    revnum_to_fetch = revision;
 
   SVN_ERR (svn_ra_local__checkout (baton->fs,
                                    revnum_to_fetch,

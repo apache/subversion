@@ -63,7 +63,7 @@ main (int argc, char **argv)
   anc_path = url;
 
   /* ### how can we know this before we start fetching crap? */
-  revision = 1;
+  revision = -1;
 
   err = svn_wc_get_checkout_editor(svn_string_create(dir, pool),
                                    anc_path, revision,
@@ -73,7 +73,7 @@ main (int argc, char **argv)
 
   /* ### what is this path? */
   root_path = svn_string_create("", pool);
-  err = (*plugin->do_checkout)(session_baton, editor, edit_baton);
+  err = (*plugin->do_checkout)(session_baton, revision, editor, edit_baton);
   if (err)
     goto error;
 

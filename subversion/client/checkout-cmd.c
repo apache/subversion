@@ -100,7 +100,6 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
       if (err)
         return err;
       
-      
       err = svn_client_checkout (NULL, NULL,
                                  trace_editor, trace_edit_baton,
                                  repos_url,
