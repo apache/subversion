@@ -48,6 +48,14 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r11862, r11921 (part of issue #1997)
+    Fix encoding bug in svnserve -h.
+    Justification:
+      Encoding bugs look ugly.
+    Votes:
+      +1: lundblad
+      +0: nori
+
   * r11936
     Fixes a 'working copy not locked' error.
     Justification:
