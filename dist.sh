@@ -156,6 +156,16 @@ you probably want to use the "svn log" command -- and if it
 does not do what you need, please send in a patch!
 EOF
 
+### Give this release a unique name, to help us interpret bug reports
+sed -e \
+ "s/#define *SVN_VER_TAG *\"dev build\"/#define SVN_VER_TAG \"r${VERSION}\"/" \
+  < ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h              \
+  > ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h.tmp
+
+mv ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h.tmp \
+   ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h
+
+
 ### Make the tarball.
 echo "Rolling ${DISTNAME}.tar.gz ..."
 (cd ${DIST_SANDBOX} && tar zcpf ${DISTNAME}.tar.gz ${DISTNAME})
