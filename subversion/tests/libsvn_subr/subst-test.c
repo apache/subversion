@@ -175,8 +175,9 @@ verify_substitution (const char *fname,
   svn_stringbuf_t *contents;
   int idx = 0;
   int i;
-
   const char *expect[(sizeof (lines) / sizeof (*lines))];
+  const char *rev_str
+    = (SVN_IS_VALID_REVNUM (rev)) ? apr_psprintf (pool, "%ld", rev) : NULL;
 
   for (i = 0; i < (sizeof (expect) / sizeof (*expect)); i++)
     expect[i] = lines[i];
@@ -184,8 +185,6 @@ verify_substitution (const char *fname,
   /* Certain lines contain keywords; expect their expansions. */
   if (SVN_IS_VALID_REVNUM (rev))
     {
-      const char *rev_str = apr_psprintf (pool, "%ld", rev);
-
       expect[3 - 1] =
         apr_pstrcat (pool, "Line 3: ",
                      "Valid $LastChangedRevision: ",
@@ -296,8 +295,6 @@ verify_substitution (const char *fname,
   /* Handle line 48 specially, as it contains two valid keywords. */
   if ((SVN_IS_VALID_REVNUM (rev)) && author)
     {
-      const char *rev_str = apr_psprintf (pool, "%ld", rev);
-
       expect[48 - 1] =
         apr_pstrcat (pool, "Line 48: ",
                      "Two keywords back to back: "
@@ -307,8 +304,6 @@ verify_substitution (const char *fname,
     }
   else if ((SVN_IS_VALID_REVNUM (rev)) && (! author))
     {
-      const char *rev_str = apr_psprintf (pool, "%ld", rev);
-
       expect[48 - 1] =
         apr_pstrcat (pool, "Line 48: ",
                      "Two keywords back to back: "
@@ -324,7 +319,6 @@ verify_substitution (const char *fname,
                      NULL);
     }
   /* Else neither rev nor author, so line 48 remains unchanged. */
-
 
   /** Ready to verify. **/
 
