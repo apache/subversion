@@ -46,7 +46,7 @@
 static svn_error_t *
 send_file_contents (svn_stringbuf_t *path,
                     void *file_baton,
-                    const svn_delta_edit_fns_t *editor,
+                    const svn_delta_editor_t *editor,
                     apr_pool_t *pool)
 {
   svn_stream_t *contents;
@@ -80,132 +80,146 @@ send_file_contents (svn_stringbuf_t *path,
 }
 
 
-/* Import file PATH as NAME in the repository directory indicated by
- * DIR_BATON in EDITOR.
+/* Import file PATH as EDIT_PATH in the repository directory indicated
+ * by DIR_BATON in EDITOR.  
  *
- * Use POOL for any temporary allocation.
- */
+ * Use POOL for any temporary allocation.  */
 static svn_error_t *
-import_file (apr_hash_t *committed_targets,
-             const svn_delta_edit_fns_t *editor,
+import_file (apr_hash_t *files,
+             const svn_delta_editor_t *editor,
              void *dir_baton,
-             svn_stringbuf_t *path,
-             svn_stringbuf_t *name,
+             const svn_stringbuf_t *path,
+             const char *edit_path,
              apr_pool_t *pool)
 {
   void *file_baton;
   const char *mimetype;
-  svn_stringbuf_t *full_path 
-    = svn_stringbuf_dup (path, apr_hash_pool_get (committed_targets));
+  apr_pool_t *hash_pool = apr_hash_pool_get (files);
+  svn_stringbuf_t *filepath = svn_stringbuf_dup (path, hash_pool);
 
-  SVN_ERR (editor->add_file (name, dir_baton, NULL, SVN_INVALID_REVNUM, 
-                             &file_baton));          
-  SVN_ERR (svn_io_detect_mimetype (&mimetype, full_path->data, pool));
+  /* Add the file, using the pool from the FILES hash. */
+  SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
+                             hash_pool, &file_baton));          
+
+  /* If the file has a discernable mimetype, add that as a property to
+     the file. */
+  SVN_ERR (svn_io_detect_mimetype (&mimetype, path->data, pool));
   if (mimetype)
-    SVN_ERR (editor->change_file_prop 
-             (file_baton,
-              svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
-              svn_stringbuf_create (mimetype, pool)));
-
-  apr_hash_set (committed_targets, full_path->data, full_path->len,
-                (void *)file_baton);
+    SVN_ERR (editor->change_file_prop (file_baton, SVN_PROP_MIME_TYPE,
+                                       svn_string_create (mimetype, pool), 
+                                       pool));
+  
+  /* Finally, add the file's path and baton to the FILES hash. */
+  apr_hash_set (files, filepath->data, filepath->len, (void *)file_baton);
 
   return SVN_NO_ERROR;
 }
              
 
 /* Import directory PATH into the repository directory indicated by
- * DIR_BATON in EDITOR.  Don't call EDITOR->close_directory(DIR_BATON),
- * that's left for the caller.
+ * DIR_BATON in EDITOR.  ROOT_PATH is the path imported as the root
+ * directory, so all edits are relative to that.
  *
- * Use POOL for any temporary allocation.
- */
+ * Use POOL for any temporary allocation.  */
 static svn_error_t *
-import_dir (apr_hash_t *committed_targets,
-            const svn_delta_edit_fns_t *editor, 
+import_dir (apr_hash_t *files,
+            const svn_delta_editor_t *editor, 
             void *dir_baton,
-            svn_stringbuf_t *path,
+            const svn_stringbuf_t *path,
+            const svn_stringbuf_t *edit_path,
             apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);  /* iteration pool */
   apr_dir_t *dir;
-  apr_finfo_t this_entry;
+  apr_finfo_t finfo;
   apr_status_t apr_err;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
+  svn_stringbuf_t *this_path, *this_edit_path;
 
-  apr_err = apr_dir_open (&dir, path->data, pool);
-  if (apr_err)
+  if ((apr_err = apr_dir_open (&dir, path->data, pool)))
     return svn_error_createf (apr_err, 0, NULL, pool, 
                               "unable to open directory %s", path->data);
 
-  for (apr_err = apr_dir_read (&this_entry, flags, dir);
+  this_path = svn_stringbuf_dup (path, pool);
+  this_edit_path = svn_stringbuf_dup (edit_path, pool);
+
+  for (apr_err = apr_dir_read (&finfo, flags, dir);
        APR_STATUS_IS_SUCCESS (apr_err);
-       svn_pool_clear (subpool), apr_err = apr_dir_read (&this_entry,
-                                                         flags, dir))
+       svn_pool_clear (subpool), apr_err = apr_dir_read (&finfo, flags, dir))
     {
-      svn_stringbuf_t *new_path = svn_stringbuf_dup (path, subpool);
-      svn_stringbuf_t *name = svn_stringbuf_create (this_entry.name, subpool);
+      svn_stringbuf_t *name;
 
-      svn_path_add_component (new_path, name);
-
-      if (this_entry.filetype == APR_DIR)
+      if (finfo.filetype == APR_DIR)
         {
-          void *this_dir_baton;
-
           /* Skip entries for this dir and its parent.  
-             ### kff todo: APR actually promises that they'll come
-             first, so this guard could be moved outside the loop. */
-          if ((strcmp (this_entry.name, ".") == 0)
-              || (strcmp (this_entry.name, "..") == 0))
+             ### kff todo: APR actually promises that they'll come first,
+             so this guard could be moved outside the loop. */
+          if (! (strcmp (finfo.name, ".") && strcmp (finfo.name, "..")))
             continue;
 
-          /* If someone's trying to import a tree with SVN/ subdirs,
-             that's probably not what they wanted to do.  Someday we
-             can take an option to make the SVN/ subdirs be silently
-             ignored, but for now, seems safest to error. */
-          if (strcmp (this_entry.name, SVN_WC_ADM_DIR_NAME) == 0)
+          /* If someone's trying to import a directory named the same
+             as our administrative directories, that's probably not
+             what they wanted to do.  Someday we can take an option to
+             make these subdirs be silently ignored, but for now,
+             seems safest to error. */
+          if (strcmp (finfo.name, SVN_WC_ADM_DIR_NAME) == 0)
             return svn_error_createf
               (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, subpool,
                "cannot import directory named \"%s\" (in `%s')",
-               this_entry.name, path->data);
+               finfo.name, path->data);
+        }
 
-          /* Get descent baton from the editor. */
-          SVN_ERR (editor->add_directory (name,
-                                          dir_baton,
-                                          NULL,
-                                          SVN_INVALID_REVNUM, 
+      /* Make a stringbuf version of the entry name, and append it as
+         a path component to THIS_PATH and THIS_EDIT_PATH. */
+      name = svn_stringbuf_create (finfo.name, subpool);
+      svn_path_add_component (this_path, name);
+      svn_path_add_component (this_edit_path, name);
+
+      if (finfo.filetype == APR_DIR)
+        {
+          void *this_dir_baton;
+
+          /* Add the new subdirectory, getting a descent baton from
+             the editor. */
+          SVN_ERR (editor->add_directory (this_edit_path->data, dir_baton, 
+                                          NULL, SVN_INVALID_REVNUM, subpool,
                                           &this_dir_baton));
 
           /* Recurse. */
-          SVN_ERR (import_dir (committed_targets,
-                               editor, this_dir_baton, new_path, subpool));
+          SVN_ERR (import_dir (files, editor, this_dir_baton, 
+                               this_path, this_edit_path, subpool));
+
+          /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton));
         }
-      else if (this_entry.filetype == APR_REG)
+      else if (finfo.filetype == APR_REG)
         {
-          SVN_ERR (import_file (committed_targets,
-                                editor, dir_baton, new_path, name, subpool));
+          /* Import a file. */
+          SVN_ERR (import_file (files, editor, dir_baton, 
+                                this_path, this_edit_path->data, subpool));
         }
       else
         {
           /* It's not a file or dir, so we can't import it (yet).
              No need to error, just ignore the thing. */
         }
+      
+      /* Hack THIS_PATH and THIS_EDIT_PATH back to their original sizes. */
+      svn_stringbuf_chop (this_path, 
+                          (path->len ? name->len + 1 : name->len));
+      svn_stringbuf_chop (this_edit_path, 
+                          (edit_path->len ? name->len + 1 : name->len));
     }
 
   /* Check that the loop exited cleanly. */
   if (! (APR_STATUS_IS_ENOENT (apr_err)))
-    {
-      return svn_error_createf
-        (apr_err, 0, NULL, subpool, "error during import of `%s'", path->data);
-    }
-  else  /* Yes, it exited cleanly, so close the dir. */
-    {
-      apr_err = apr_dir_close (dir);
-      if (! (APR_STATUS_IS_SUCCESS (apr_err)))
-        return svn_error_createf
-          (apr_err, 0, NULL, subpool, "error closing dir `%s'", path->data);
-    }
+    return svn_error_createf
+      (apr_err, 0, NULL, subpool, "error during import of `%s'", path->data);
+
+  /* Yes, it exited cleanly, so close the dir. */
+  else if ((apr_err = apr_dir_close (dir)))
+    return svn_error_createf
+      (apr_err, 0, NULL, subpool, "error closing dir `%s'", path->data);
       
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -235,44 +249,33 @@ import_dir (apr_hash_t *committed_targets,
  * not necessarily the root.)
  */
 static svn_error_t *
-import (svn_stringbuf_t *path,
-        svn_stringbuf_t *new_entry,
-        const svn_delta_edit_fns_t *editor,
+import (const svn_stringbuf_t *path,
+        const svn_stringbuf_t *new_entry,
+        const svn_delta_editor_t *editor,
         void *edit_baton,
         apr_pool_t *pool)
 {
   void *root_baton;
   enum svn_node_kind kind;
-  apr_hash_t *committed_targets = apr_hash_make (pool);
+  apr_hash_t *files = apr_hash_make (pool);
   apr_pool_t *subpool = svn_pool_create (pool); /* for post-fix textdeltas */
   apr_hash_index_t *hi;
-
-  /* Basic sanity check. */
-  if (new_entry && (strcmp (new_entry->data, "") == 0))
-    return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
-       "new entry name may not be the empty string when importing");
-
-  /* The repository doesn't know about the reserved. */
-  if (new_entry && strcmp (new_entry->data, SVN_WC_ADM_DIR_NAME) == 0)
-    return svn_error_createf
-      (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, pool,
-       "the name \"%s\" is reserved and cannot be imported",
-       SVN_WC_ADM_DIR_NAME);
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
      SVN_YOUNGEST_REVNUM defined for these purposes? */
-  SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, &root_baton));
+  SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, 
+                              pool, &root_baton));
 
   /* Import a file or a directory tree. */
   SVN_ERR (svn_io_check_path (path->data, &kind, pool));
 
   /* Note that there is no need to check whether PATH's basename is
-     "SVN".  It would be strange but not illegal to import the
-     contents of a directory named SVN/, because the directory's own
-     name is not part of those contents.  Of course, if something
-     underneath it is also named "SVN", then we'll error. */
+     the same name that we reserve for our admistritave
+     subdirectories.  It would be strange, but not illegal to import
+     the contents of a directory of that name, because the directory's
+     own name is not part of those contents.  Of course, if something
+     underneath it also has our reserved name, then we'll error. */
 
   if (kind == svn_node_file)
     {
@@ -281,8 +284,8 @@ import (svn_stringbuf_t *path,
           (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
            "new entry name required when importing a file");
 
-      SVN_ERR (import_file (committed_targets,
-                            editor, root_baton, path, new_entry, pool));
+      SVN_ERR (import_file (files, editor, root_baton, 
+                            path, new_entry->data, pool));
     }
   else if (kind == svn_node_dir)
     {
@@ -290,14 +293,14 @@ import (svn_stringbuf_t *path,
 
       /* Grab a new baton, making two we'll have to close. */
       if (new_entry)
-        SVN_ERR (editor->add_directory (new_entry, root_baton,
+        SVN_ERR (editor->add_directory (new_entry->data, root_baton,
                                         NULL, SVN_INVALID_REVNUM,
-                                        &new_dir_baton));
-
-      SVN_ERR (import_dir (committed_targets, editor,
-                           new_dir_baton ? new_dir_baton : root_baton,
-                           path,
-                           pool));
+                                        pool, &new_dir_baton));
+      
+      SVN_ERR (import_dir 
+               (files, editor, new_dir_baton ? new_dir_baton : root_baton, 
+                path, new_entry ? new_entry : svn_stringbuf_create ("", pool), 
+                pool));
 
       /* Close one baton or two. */
       if (new_dir_baton)
@@ -313,9 +316,7 @@ import (svn_stringbuf_t *path,
   SVN_ERR (editor->close_directory (root_baton));
 
   /* Do post-fix textdeltas here! */
-  for (hi = apr_hash_first (pool, committed_targets); 
-       hi; 
-       hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, files); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_ssize_t keylen;
@@ -420,8 +421,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   svn_stringbuf_t *log_msg;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  const svn_delta_edit_fns_t *wrap_editor;
-  void *wrap_baton;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
@@ -435,6 +434,13 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   if (new_entry && (strcmp (new_entry->data, "") == 0))
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0, NULL, pool,
                              "empty string is an invalid entry name");
+
+  /* The repository doesn't know about the reserved. */
+  if (new_entry && strcmp (new_entry->data, SVN_WC_ADM_DIR_NAME) == 0)
+    return svn_error_createf
+      (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, pool,
+       "the name \"%s\" is reserved and cannot be imported",
+       SVN_WC_ADM_DIR_NAME);
 
   /* Create a new commit item and add it to the array. */
   if (log_msg_func)
@@ -474,16 +480,11 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                          editor, edit_baton, 
                          after_editor, after_edit_baton, pool);
 
-  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&wrap_editor, &wrap_baton, 
-                         editor, edit_baton, pool);
-  
   /* If an error occured during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import (path, new_entry, wrap_editor, wrap_baton, pool)))
+  if ((err = import (path, new_entry, editor, edit_baton, pool)))
     {
-      wrap_editor->abort_edit (wrap_baton);
+      editor->abort_edit (edit_baton);
       return err;
     }
 
