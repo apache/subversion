@@ -51,11 +51,11 @@ int
 main (int argc, char *argv[])
 {
   apr_pool_t *globalpool;
-  svn_delta_edit_fns_t *my_editor;
+  svn_delta_edit_fns_t *editor;
   svn_error_t *err;
   apr_file_t *source_baton = NULL;
   apr_status_t status;
-  struct edit_baton *my_edit_baton;
+  void *edit_baton;
 
   svn_vernum_t base_version;
   svn_string_t *base_path;
@@ -90,13 +90,13 @@ main (int argc, char *argv[])
   base_path = svn_string_create ("/root", globalpool);
   
   /* Grab the "test" editor and baton */
-  err = svn_test_get_editor (&my_editor, &my_edit_baton,
+  err = svn_test_get_editor (&editor, &edit_baton,
                              base_path, base_version, globalpool);
   
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (my_read_func, source_baton, 
-                                  my_editor,
-                                  my_edit_baton,
+                                  editor,
+                                  edit_baton,
                                   base_path,
                                   base_version,
                                   globalpool);
