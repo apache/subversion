@@ -57,8 +57,8 @@ def guarantee_greek_repository(path):
 
     # check for any errors from the import
     if len(errput):
-      print "Errors during initial 'svn import':"
-      print errput
+      display_lines("Errors during initial 'svn import':"
+                    'STDERR', None, errput)
       sys.exit(1)
 
     # verify the printed output of 'svn import'.
@@ -82,11 +82,8 @@ def guarantee_greek_repository(path):
     expected_output_tree = tree.build_generic_tree(output_list)
 
     if tree.compare_trees(output_tree, expected_output_tree):
-      print "ERROR:  output of import command is unexpected."
-      print "EXPECTED OUTPUT TREE:"
-      tree.dump_tree(expected_output_tree)
-      print "ACTUAL OUTPUT TREE:"
-      tree.dump_tree(output_tree)
+      display_trees("ERROR:  output of import command is unexpected.",
+                    'OUTPUT TREE', expected_output_tree, output_tree)
       sys.exit(1)
 
   # Now that the pristine repos exists, copy it to PATH.
@@ -444,11 +441,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
     
   # Verify actual output against expected output.
   if tree.compare_trees (expected_tree, output_tree):
-    print "Output of commit is unexpected."
-    print "EXPECTED OUTPUT TREE:"
-    tree.dump_tree(expected_tree)
-    print "ACTUAL OUTPUT TREE:"
-    tree.dump_tree(output_tree)
+    display_trees("Output of commit is unexpected."
+                  "OUTPUT TREE", expected_tree, output_tree)
     return 1
     
   # Verify via 'status' command too, if possible.
@@ -484,19 +478,13 @@ def run_and_verify_status(wc_dir_name, output_tree,
     if tree.compare_trees (mytree, output_tree,
                            singleton_handler_a, a_baton,
                            singleton_handler_b, b_baton):
-      print "EXPECTED OUTPUT TREE:"
-      tree.dump_tree(output_tree)
-      print "ACTUAL OUTPUT TREE:"
-      tree.dump_tree(mytree)
+      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
       return 1
   else:
     if tree.compare_trees (mytree, output_tree):
-      print "EXPECTED OUTPUT TREE:"
-      tree.dump_tree(output_tree)
-      print "ACTUAL OUTPUT TREE:"
-      tree.dump_tree(mytree)
+      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
       return 1
-    
+
   return 0
 
 
@@ -530,6 +518,46 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
     if tree.compare_trees (mytree, output_tree):
       return 1
     
+  return 0
+
+
+######################################################################
+# Displaying expected and actual output
+
+def display_trees(message, label, expected, actual):
+  'Print two trees, expected and actual.'
+  if message is not None:
+    print message
+  if expected is not None:
+    print 'EXPECTED', label + ':'
+    tree.dump_tree(expected)
+  if actual is not None:
+    print 'ACTUAL', label + ':'
+    tree.dump_tree(expected)
+
+
+def display_lines(message, label, expected, actual):
+  'Print two sets of output lines, expected and actual.'
+  if message is not None:
+    print message
+  if expected is not None:
+    print 'EXPECTED', label + ':'
+    map(sys.stdout.write, expected)
+  if actual is not None:
+    print 'ACTUAL', label + ':'
+    map(sys.stdout.write, actual)
+
+def compare_and_display_lines(message, label, expected, actual):
+  'Compare two sets of output lines, and print them if they differ.'
+  # This catches the None vs. [] cases
+  if expected is None: exp = []
+  else: exp = expected
+  if actual is None: act = []
+  else: act = actual
+
+  if exp != act:
+    display_lines(message, label, expected, actual)
+    return 1
   return 0
 
 

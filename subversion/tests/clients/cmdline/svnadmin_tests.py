@@ -302,38 +302,33 @@ def dump_copied_dir(sbox):
   svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
 
-  output_lines, errput_lines = svntest.main.run_svnadmin("dump", repo_dir)
-
-  if errput_lines != ["* Dumped revision 0.\n",
-                      "* Dumped revision 1.\n",
-                      "* Dumped revision 2.\n"]:
-    print errput_lines
-    return 1
-  return 0
+  output, errput = svntest.main.run_svnadmin("dump", repo_dir)
+  return svntest.actions.compare_and_display_lines(
+    "Output of 'svnadmin dump' is unexpected.",
+    'STDERR', ["* Dumped revision 0.\n",
+               "* Dumped revision 1.\n",
+               "* Dumped revision 2.\n"], errput)
 
 #----------------------------------------------------------------------
 
 def dump_move_dir_modify_child(sbox):
-  "test 'svnadmin dump' after on modified child of copied directory"
-  
+  "test 'svnadmin dump' on modified child of copied directory"
   if sbox.build(): return 1
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
   B_path = os.path.join(wc_dir, 'A', 'B')
-  b_path = os.path.join(wc_dir, 'A', 'b')
-  svntest.main.run_svn(None, 'cp', B_path, b_path)
-  svntest.main.file_append(os.path.join(b_path, 'lambda'), 'hello')
+  Q_path = os.path.join(wc_dir, 'A', 'Q')
+  svntest.main.run_svn(None, 'cp', B_path, Q_path)
+  svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
 
-  output_lines, errput_lines = svntest.main.run_svnadmin("dump", repo_dir)
-
-  if errput_lines != ["* Dumped revision 0.\n",
-                      "* Dumped revision 1.\n",
-                      "* Dumped revision 2.\n"]:
-    print errput_lines
-    return 1
-  return 0
+  output, errput = svntest.main.run_svnadmin("dump", repo_dir)
+  return svntest.actions.compare_and_display_lines(
+    "Output of 'svnadmin dump' is unexpected.",
+    'STDERR', ["* Dumped revision 0.\n",
+               "* Dumped revision 1.\n",
+               "* Dumped revision 2.\n"], errput)
 
 
 ########################################################################
