@@ -105,6 +105,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13709
+- Fix http tests to work with new locking feature which now requires
+  authentication.
+
 * Tue Mar 15 2005 David Summers <david@summersoft.fay.ar.us> r13417
 - Supplementary: Take out documentation patch altogether.
 
@@ -445,6 +449,10 @@ killall httpd || true
 sleep 1
 cp -f /usr/local/apache2/bin/httpd .
 sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-7.x/httpd.davcheck.conf > httpd.conf
+cat > passwd <<EOF
+jrandom:xCGl35kV9oWCY
+jconstant:xCGl35kV9oWCY
+EOF
 ./httpd -f `pwd`/httpd.conf
 sleep 1
 make check BASE_URL='http://localhost:15835'

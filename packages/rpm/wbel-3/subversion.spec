@@ -101,6 +101,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13709
+- Fix http tests to work with new locking feature which now requires
+  authentication.
+
 * Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13417
 - Supplementary: Take out documentation patch altogether.
 - Turn testing back on, it was accidentally turned off.
@@ -351,7 +355,7 @@ sh autogen.sh
 
 
 # Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/redhat-8+/install.patch
+patch -p1 < packages/rpm/wbel-3/install.patch
 
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
@@ -435,7 +439,11 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-8+/httpd.davcheck.conf > httpd.conf
+sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/wbel-3/httpd.davcheck.conf > httpd.conf
+cat > passwd <<EOF
+jrandom:xCGl35kV9oWCY
+jconstant:xCGl35kV9oWCY
+EOF
 /usr/sbin/httpd -f `pwd`/httpd.conf
 sleep 1
 make check BASE_URL='http://localhost:15835'
@@ -450,7 +458,7 @@ make install DESTDIR="$RPM_BUILD_ROOT"
 
 # Add subversion.conf configuration file into httpd/conf.d directory.
 mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
-cp packages/rpm/redhat-8+/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
+cp packages/rpm/wbel-3/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
