@@ -127,12 +127,12 @@ msgstr "Parametr podający repozytorium jest wymagany"
 
 #: clients/cmdline/import-cmd.c:92
 msgid "Too many arguments to import command"
-msgstr ""
+msgstr "Za dużo argumentów dla polecenia import"
 
 #: clients/cmdline/import-cmd.c:107
 #, c-format
 msgid "Invalid URL '%s'"
-msgstr ""
+msgstr "Niewłaściwy URL '%s'"
 
 #: clients/cmdline/info-cmd.c:59
 #, c-format
@@ -160,9 +160,9 @@ msgid "Repository UUID: %s\n"
 msgstr "UUID repozytorium: %s\n"
 
 #: clients/cmdline/info-cmd.c:80
-#, fuzzy, c-format
+#, c-format
 msgid "Revision: %ld\n"
-msgstr "Repozytorium: %s\n"
+msgstr "Wersja: %ld\n"
 
 #: clients/cmdline/info-cmd.c:85
 msgid "Node Kind: file\n"
@@ -212,9 +212,9 @@ msgid "Last Changed Author: %s\n"
 msgstr "Autor ostatniej zmiany: %s\n"
 
 #: clients/cmdline/info-cmd.c:148
-#, fuzzy, c-format
+#, c-format
 msgid "Last Changed Rev: %ld\n"
-msgstr "Autor ostatniej zmiany: %s\n"
+msgstr "Ostatnia zmiana w wersji: %ld\n"
 
 #: clients/cmdline/info-cmd.c:153
 msgid "Last Changed Date"
@@ -279,7 +279,7 @@ msgstr "(brak daty)"
 #: clients/cmdline/log-cmd.c:273
 #, fuzzy, c-format
 msgid "Changed paths:%s"
-msgstr "Autor ostatniej zmiany: %s\n"
+msgstr "Zmodyfikowane ścieżki: %s\n"
 
 #: clients/cmdline/log-cmd.c:290
 #, c-format
