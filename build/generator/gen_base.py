@@ -44,7 +44,7 @@ class GeneratorBase:
     # Version comes from a header file since it is used in the code.
     try:
       vsn_parser = getversion.Parser()
-      vsn_parser.search('SVN_VER_LIBRARY', 'libver')
+      vsn_parser.search('SVN_VER_MAJOR', 'libver')
       self.cfg.version = vsn_parser.parse(verfname).libver
     except:
       raise GenError('Unable to extract version.')

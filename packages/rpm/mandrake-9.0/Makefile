@@ -160,7 +160,7 @@ NAME := subversion
 SVN_VERSION_MAJOR := $(shell grep 'define SVN_VER_MAJOR' < $(VERSION_FILE) | (read one two three; echo $$three) )
 SVN_VERSION_MINOR := $(shell grep 'define SVN_VER_MINOR' < $(VERSION_FILE) | (read one two three; echo $$three) )
 SVN_VERSION_MINOR := $(if $(TRUNK),$(shell sh increment-revision $(SVN_VERSION_MINOR)),$(SVN_VERSION_MINOR))
-SVN_VERSION_MICRO := $(shell grep 'define SVN_VER_MICRO' < $(VERSION_FILE) | (read one two three; echo $$three) )
+SVN_VERSION_MICRO := $(shell grep 'define SVN_VER_PATCH' < $(VERSION_FILE) | (read one two three; echo $$three) )
 VERSION := $(PRE)$(SVN_VERSION_MAJOR).$(SVN_VERSION_MINOR).$(SVN_VERSION_MICRO)
 
 # The relase depends on whether this is a blessed copy or not

@@ -63,14 +63,14 @@ extern "C" {
  *
  * Modify for every released patch.
  */
-#define SVN_VER_MICRO      0
+#define SVN_VER_PATCH      0
 
-/** Library version number.
- *
- * Modify whenever there's an incompatible change in the library ABI.
- * ### this is semantically equivalent to SVN_VER_MAJOR. fix...
- */
-#define SVN_VER_LIBRARY    1
+
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
+#define SVN_VER_MICRO      SVN_VER_PATCH
+
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
+#define SVN_VER_LIBRARY    SVN_VER_MAJOR
 
 
 /** Version tag: a string describing the version.
@@ -120,7 +120,7 @@ extern "C" {
 /** Version number */
 #define SVN_VER_NUM        APR_STRINGIFY(SVN_VER_MAJOR) \
                            "." APR_STRINGIFY(SVN_VER_MINOR) \
-                           "." APR_STRINGIFY(SVN_VER_MICRO)
+                           "." APR_STRINGIFY(SVN_VER_PATCH)
 
 /** Version number with tag (contains no whitespace) */
 #define SVN_VER_NUMBER     SVN_VER_NUM SVN_VER_NUMTAG
@@ -143,7 +143,7 @@ typedef struct svn_version_t
 {
   int major;                    /**< Major version number */
   int minor;                    /**< Minor version number */
-  int micro;                    /**< Patch number */
+  int patch;                    /**< Patch number */
 
   /**
    * The verison tag (#SVN_VER_NUMTAG).\ Must always point to a
@@ -161,7 +161,7 @@ typedef struct svn_version_t
     { \
       SVN_VER_MAJOR, \
       SVN_VER_MINOR, \
-      SVN_VER_MICRO, \
+      SVN_VER_PATCH, \
       SVN_VER_NUMTAG \
     } \
 
