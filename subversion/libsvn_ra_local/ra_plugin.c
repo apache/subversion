@@ -732,7 +732,6 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,
-  NULL,
   svn_ra_local__get_log,
   svn_ra_local__do_check_path
 };

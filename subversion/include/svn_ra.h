@@ -454,33 +454,6 @@ typedef struct svn_ra_plugin_t
                              void *status_baton);
 
 
-  /* Ask the network layer to perform a merge of the differences
-     between START_PATH:START_REVISION and END_PATH:END_REVISION into
-     the working copy.  Return a *REPORTER object (and *REPORT_BATON)
-     that the caller can use to describe the working copy target.
-     START_PATH and END_PATH are relative to the *SESSION_BATON's URL.
-
-     When the callers has finished describing his working copy via the
-     *REPORTER interface, use SETUP_EDITOR/SETUP_EDIT_BATON and
-     FINISH_EDITOR/FINISH_EDIT_BATON to actually perform the merge.
-
-     MERGE_TARGET, also relative to the *SESSION_BATON's URL,
-     describes the filesystem path associated with the working copy
-     target. */
-  svn_error_t *(*do_merge) (void *session_baton,
-                            const svn_ra_reporter_t **reporter,
-                            void **report_baton,
-                            const char *start_path,
-                            svn_revnum_t start_revision,
-                            const char *end_path,
-                            svn_revnum_t end_revision,
-                            const char *merge_target,
-                            const svn_delta_edit_fns_t *setup_editor,
-                            void *setup_edit_baton,
-                            const svn_delta_edit_fns_t *finish_editor,
-                            void *finish_edit_baton);
-
-
   /* Invoke RECEIVER with RECEIVER_BATON on each log message from
      START to END.  START may be greater or less than END; this just
      controls whether the log messages are processed in descending or
