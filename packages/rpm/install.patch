@@ -1,12 +1,13 @@
---- subversion-M5/build-outputs.mk	2001/10/28 20:08:47	1.1
-+++ subversion-M5/build-outputs.mk	2001/10/28 20:10:19
-@@ -208,7 +208,8 @@
+--- subversion-0.11.1/build-outputs.mk	2002/04/13 04:43:13	1.1
++++ subversion-0.11.1/build-outputs.mk	2002/04/13 04:45:31
+@@ -227,7 +227,9 @@
  	cd subversion/svnadmin ; $(INSTALL_FS_BIN) svnadmin $(fs_bindir)/svnadmin
  
- install-mods-shared: subversion/mod_dav_svn/libmod_dav_svn.la
--	cd subversion/mod_dav_svn ; $(INSTALL_MOD_SHARED) -n dav_svn libmod_dav_svn.la
-+	cd subversion/mod_dav_svn ; ($(INSTALL_MOD_SHARED) -n dav_svn libmod_dav_svn.la || true); mkdir -p $(libexecdir); cp ./.libs/libmod_dav_svn.so $(libexecdir)/libmod_dav_svn.so; cp ./libmod_dav_svn.la $(libexecdir)
-+#$(INSTALL_MOD_SHARED) -n dav_svn libmod_dav_svn.la
+ install-mods-shared: subversion/mod_dav_svn/mod_dav_svn.la
+-	cd subversion/mod_dav_svn ; $(INSTALL_MOD_SHARED) -n dav_svn mod_dav_svn.la
++	cd subversion/mod_dav_svn ; mkdir -p $(libexecdir); cp ./.libs/mod_dav_svn.so $(libexecdir)/mod_dav_svn.so; cp ./mod_dav_svn.la $(libexecdir)
++#$(INSTALL_MOD_SHARED) -n dav_svn mod_dav_svn.la
++
  
- install-mods-static: subversion/libsvn_delta/libsvn_delta.la-a subversion/libsvn_fs/libsvn_fs.la-a subversion/libsvn_subr/libsvn_subr.la-a subversion/mod_dav_svn/libmod_dav_svn.la-a subversion/libsvn_repos/libsvn_repos.la-a subversion/mod_dav_svn/static/config.m4 subversion/mod_dav_svn/static/Makefile.in
+ install-mods-static: subversion/libsvn_delta/libsvn_delta.la-a subversion/mod_dav_svn/mod_dav_svn.la-a subversion/libsvn_fs/libsvn_fs.la-a subversion/libsvn_subr/libsvn_subr.la-a subversion/libsvn_repos/libsvn_repos.la-a subversion/mod_dav_svn/static/config.m4 subversion/mod_dav_svn/static/Makefile.in
  	$(MKDIR) $(APACHE_TARGET)/.libs
