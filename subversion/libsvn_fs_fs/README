@@ -120,6 +120,7 @@ Workplan
   10. Extend the tool from (2) to write out node-rev contents with
       base deltas, possibly using the code from (3) to determine the
       base contents to diff against.
+      (Status: Done.)
 
   11. Extend the read code from (3) to handle delta bases using the
       delta combiner.
@@ -134,6 +135,7 @@ Known design issues
 -------------------
 
 Issue #1: Push/pull between svn_fs_apply_text[delta] and svn_txdelta
+(Status: Resolved.)
 
 When building a transaction, we will most likely want to streamily
 generate a delta against the appropriate base and write it into the
