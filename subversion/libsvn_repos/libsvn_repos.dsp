@@ -95,10 +95,6 @@ SOURCE=.\hooks.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\lock.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\log.c
 # End Source File
 # Begin Source File
@@ -108,6 +104,10 @@ SOURCE=.\node_tree.c
 # Begin Source File
 
 SOURCE=.\reporter.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\repos.c
 # End Source File
 # Begin Source File
 

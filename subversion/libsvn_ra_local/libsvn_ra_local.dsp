@@ -101,6 +101,10 @@ SOURCE=.\ra_plugin.c
 
 SOURCE=.\split_url.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\update_editor.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
