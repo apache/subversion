@@ -27,17 +27,28 @@
 #include "client.h"
 
 
+
+/* A logic table that maps repository URL types to the name of the
+   specific RA library that handles it.  Add new RA implentations
+   here. */
+static const char *svn_client__ra_library_table [][2] =
+{
+  {"http",  "dav"   },  /* libsvn_ra_dav */
+  {"file",  "local" }   /* libsvn_ra_local */
+};
+
+
+
 /* -------------------------------------------------------------- */
 
-/*** Public Interfaces ***/
 
 
 /* Return a loaded RA library which can handle URL, alloc'd from
    POOL. */
 svn_error_t *
-svn_client_get_ra_library (const svn_client__ra_library_t **library,
-                           const char *URL,
-                           apr_pool_t *pool)
+svn_client__get_ra_library (const svn_client__ra_library_t **library,
+                            const char *URL,
+                            apr_pool_t *pool)
 {
   const char *library_name, *initfunc_name;
   svn_client__ra_library_t *the_library; 
