@@ -753,6 +753,11 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 11,
               "Bad property name")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_UNRELATED_RESOURCES,
+              SVN_ERR_CLIENT_CATEGORY_START + 12,
+              "Two versioned resources are unrelated.")
+
+
   /* misc errors */
 
   SVN_ERRDEF (SVN_ERR_BASE,

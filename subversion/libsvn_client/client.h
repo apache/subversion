@@ -78,15 +78,75 @@ svn_client__compare_revisions (svn_opt_revision_t *revision1,
 
 
 /* Return true if the revision number for REVISION can be determined
- * from just the working copy, or false if it can be determined from
- * just the repository.
- *
- * Note: No other kinds of revisions should be possible; but if one
- * day there are, this will return true for those kinds.
+   from just the working copy, or false if it can be determined from
+   just the repository.
+ 
+   NOTE: No other kinds of revisions should be possible; but if one
+   day there are, this will return true for those kinds.
  */ 
-svn_boolean_t
+svn_boolean_t 
 svn_client__revision_is_local (const svn_opt_revision_t *revision);
 
+
+/* Given the CHANGED_PATHS and REVISION from an instance of a
+   svn_log_message_receiver_t function, determine at which location
+   PATH may be expected in the next log message, and set *PREV_PATH_P
+   to that value.  KIND is the node kind of PATH.  Perform all
+   allocations in POOL.
+
+   This is useful for tracking the various changes in location a
+   particular resource has undergone when performing an RA->get_logs()
+   operation on that resource.  */
+svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
+                                        apr_hash_t *changed_paths,
+                                        const char *path,
+                                        svn_node_kind_t kind,
+                                        svn_revnum_t revision,
+                                        apr_pool_t *pool);
+
+
+/** Set @a *start_url and @a *start_revision (and maybe @a *end_url
+ * and @a *end_revision) to the revisions and repository URLs of one
+ * (or two) points of interest along a particular versioned resource's
+ * line of history.  @a path as it exists in "peg revision" @a
+ * revision identifies that line of history, and @a start and @a end
+ * specify the point(s) of interest (typically the revisions referred
+ * to as the "operative range" for a given operation) along that history.
+ *
+ * @a end may be of kind svn_opt_revision_unspecified (in which case
+ * @a end_url and @a end_revision are not touched by the function);
+ * @a start and @a revision may not.
+ *
+ * A NOTE ABOUT FUTURE REPORTING:
+ *
+ * If either @a start or @end are greater than @a revision, then do a
+ * sanity check (since we cannot search future history yet): verify
+ * that @a path in the future revision(s) is the "same object" as the
+ * one pegged by @a revision.  In other words, all three objects must
+ * be connected by a single line of history which exactly passes
+ * through @a path at @a revision.  If this sanity check fails, return
+ * SVN_ERR_CLIENT_UNRELATED_RESOURCES.
+ *
+ * @a ctx is the client context baton.
+ *
+ * @a ra_lib and @a ra_session are required; they represent an
+ * already-open RA session to @a path's url.
+ *
+ * Use @a pool for all allocations.
+ */
+svn_error_t *
+svn_client__repos_locations (const char **start_url,
+                             svn_opt_revision_t **start_revision,
+                             const char **end_url,
+                             svn_opt_revision_t **end_revision,
+                             const char *path,
+                             const svn_opt_revision_t *revision,
+                             const svn_opt_revision_t *start,
+                             const svn_opt_revision_t *end,
+                             svn_ra_plugin_t *ra_lib,
+                             void *ra_session,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
 
 
 
