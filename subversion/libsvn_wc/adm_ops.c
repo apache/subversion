@@ -89,6 +89,32 @@ svn_wc_close_commit (svn_string_t *path,
 
 
 
+svn_error_t *
+svn_wc_bump_target (void *baton,
+                    svn_string_t *target,
+                    svn_revnum_t new_revnum)
+{
+  apr_hash_t *entries;
+  struct svn_wc_bump_baton *bumper = (struct svn_wc_bump_baton *) baton;
+  apr_pool_t *pool = bumper->pool;
+
+  /* Construct the -full- path */
+  svn_string_t *path = svn_string_dup (bumper->prefix_path, pool);
+  svn_path_add_component (path, target, svn_path_local_style);
+
+  /* Write a log file in the adm dir of path. */
+
+  /* TODO */
+
+  /* Run the log file we just created. */
+
+  /* TODO */
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* kff todo: not all of these really belong in wc_adm.  Some may get
    broken out into other files later.  They're just here to satisfy

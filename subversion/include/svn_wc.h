@@ -273,6 +273,32 @@ svn_error_t *svn_wc_add_file (svn_string_t *file,
 
 /*** Commits. ***/
 
+/* Publically declared, so libsvn_client can pass it off to the RA
+   layer with svn_wc_bump_target(). */
+struct svn_wc_bump_baton
+{
+  /* The "prefix" path that must be prepended to each target that
+     comes in here.  It's the original path that the user specified to
+     the `svn commit' command. */
+  svn_string_t *prefix_path;
+  
+  /* Pool to use for all logging, running of logs, etc. */
+  apr_pool_t *pool;
+}
+
+/* This is the "new" callback that the RA layer uses to bump each
+   committed target, one-at-a-time.  It's a function of type
+   svn_ra_close_commit_func_t.  
+
+   Eventually, the "track" editor's close_edit() routine needs to call
+   this too, for those times when it's specifically comingled with the
+   XML-output editor.  (svn_wc_close_commit and its helpers will then
+   be deprecated!) */
+
+svn_error_t *svn_wc_bump_target (void *baton,
+                                 svn_string_t *target,
+                                 svn_revnum_t new_revnum);
+
 /* Update working copy PATH with NEW_REVISION after a commit has succeeded.
  * TARGETS is a hash of files/dirs that actually got committed --
  * these are the only ones who we can write log items for, and whose
