@@ -13,7 +13,7 @@ Blanket commit access:
        sussman   Ben Collins-Sussman <sussman@collab.net>
         kfogel   Karl Fogel <kfogel@collab.net>
         gstein   Greg Stein <gstein@lyra.org>
-         brane   Branko Cibej <brane@xbc.nu>
+         brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
@@ -34,46 +34,54 @@ Blanket commit access:
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julianfoad@btopenworld.com>
-         bliss   Tobias Ringstrom <tobias@ringstrom.mine.nu>
+         bliss   Tobias Ringström <tobias@ringstrom.mine.nu>
        jpieper   Josh Pieper <jpieper@andrew.cmu.edu>
   jszakmeister   John Szakmeister <john@szakmeister.net>
-      dionisos   Erik Huelsmann <e.huelsmann@gmx.net>
+      dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
            djh   D.J. Heap <dj@shadyvale.net>
           maxb   Max Bowsher <maxb@ukf.net>
+      lundblad   Peter N. Lundblad <peter@famlundblad.se>
 
 Commit access for specific areas:
 
-          xela   Alexander Mueller <alex@littleblue.de>      (Java bindings)
+          xela   Alexander Müller <alex@littleblue.de>       (Java bindings)
        yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
          david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
       rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
       kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
            nsd   Nick Duffek <nick@duffek.com>               (doc)
-       fmatias   F�liciano Matias <feliciano.matias@free.fr> (French docs)
+       fmatias   Féliciano Matias <feliciano.matias@free.fr> (French docs)
       dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (Russian docs)
-        xsteve   Stefan Reich�r <reichoer@web.de>            (psvn)
+        xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
       josander   Jostein Andersen <jostein@josander.net>     (various)
       ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
-        mmacek   Marko Macek <Marko.Macek@gmx.net>           (cvs2svn branch)
+        mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
           mass   David Waite <mass@akuma.org>                (certs branch)
-      jespersm   Jesper Steen M�ller <jesper@selskabet.org>  (bindings)
+      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
         knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
         mprice   Michael Price <mprice@atl.lmco.com>         (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
-       patrick   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
+       pmayweg   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
-      lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
+      lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
+       niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (.po files)
+       luebbe    Lübbe Onken <l.onken@rac.de>                (.po files)
 
 Committers who have asked to be listed as dormant:
 
         bdenny   Brian Denny <brian@briandenny.net>
+
+## Local Variables:
+## coding:utf-8
+## End:
+## vim:encoding=utf8
