@@ -327,11 +327,14 @@ typedef struct svn_ra_plugin_t
    * Set @a *value to the value of unversioned property @a name attached to
    * revision @a rev.  If @a rev has no property by that name, set @a *value 
    * to @c NULL.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*rev_prop) (void *session_baton,
                             svn_revnum_t rev,
                             const char *name,
-                            svn_string_t **value);
+                            svn_string_t **value,
+                            apr_pool_t *pool);
                                    
   /** Set @a *editor and @a *edit_baton to an editor for committing changes
    * to the repository, using @a log_msg as the log message.
