@@ -204,6 +204,55 @@ def checkout(sbox):
   if err_lines:
     return 1
 
+  # Probe the working copy a bit, see if it's as expected.
+  exdir_D_path    = os.path.join(wc_dir, "A/B/exdir_D")
+  exdir_D_pi_path = os.path.join(exdir_D_path, "pi")
+  exdir_H_path       = os.path.join(wc_dir, "A/B/exdir_H")
+  exdir_H_omega_path = os.path.join(exdir_H_path, "omega")
+  x_path     = os.path.join(wc_dir, "A/D/x")
+  y_path     = os.path.join(x_path, "y")
+  z_path     = os.path.join(y_path, "z")
+  blah_path  = os.path.join(z_path, "blah")
+  alpha_path = os.path.join(blah_path, "alpha")
+  beta_path  = os.path.join(blah_path, "beta")
+
+  if (not os.path.exists(exdir_D_path)):
+    print "Probing for", exdir_D_path, "failed."
+    return 1
+  if (not os.path.exists(exdir_D_pi_path)):
+    print "Probing for", exdir_D_pi_path, "failed."
+    return 1
+  if (not os.path.exists(exdir_H_path)):
+    print "Probing for", exdir_H_path, "failed."
+    return 1
+  if (not os.path.exists(exdir_H_omega_path)):
+    print "Probing for", exdir_H_omega_path, "failed."
+    return 1
+  if (not os.path.exists(x_path)):
+    print "Probing for", x_path, "failed."
+    return 1
+  if (not os.path.exists(y_path)):
+    print "Probing for", y_path, "failed."
+    return 1
+  if (not os.path.exists(z_path)):
+    print "Probing for", z_path, "failed."
+    return 1
+  if (not os.path.exists(z_path)):
+    print "Probing for", z_path, "failed."
+    return 1
+  if (not os.path.exists(alpha_path)):
+    print "Probing for", alpha_path, "failed."
+    return 1
+  if (not os.path.exists(beta_path)):
+    print "Probing for", beta_path, "failed."
+    return 1
+
+  fp = open(exdir_H_omega_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.")):
+    print "Unexpected contents for rev 1 of", exdir_H_omega_path
+    return 1
+
   return 0
 
 #----------------------------------------------------------------------
