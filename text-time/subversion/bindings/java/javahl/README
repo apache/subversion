@@ -1,0 +1,31 @@
+This Software should compile and run under win32 and linux. The 
+integration into the subversion build system has been done by
+Justin Erenkrantz for non win32 systems. The intergration for win32
+system will be provided later.
+
+It will produce libsvnjavahl.so or libsvnjavahl.dll (the native
+library for Unix or win32, respectively) and svnjavahl.jar (platform
+independent archive of Java bytecode).
+
+For build non win32 platforms, add "--enable-javahl" to the configure 
+parameters. "--with-jdk" can be provided to specify the path to a jdk.
+"--with-junit" can be provided to specify the path to a junit.jar. 
+JUnit version 3.8.1 has been tested. 
+
+The following make target are provided:
+
+javahl                build javahl
+install-javahl        install javahl
+check-javahl          run javahl tests. JUnit and installation is needed.
+
+MacOS X:
+After building libsvnjavahl.dynlib it has to be renamed to libsvnjavahl.jnilib.
+
+Windows:
+
+You need the bin directory of the JDK (>= 1.2) in your path and the include
+and the include\win32 directory have to be in the include path of your visual
+studio.
+
+To build use the project/target "__JAVAHL__" of the main subversion workspace.
+The private project/workspace is not used anymore.

@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
+"http://style.tigris.org/tigris_transitional.dtd">
+<html>
+<head>
+<title>Subversion Inconveniences</title>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/tigris.css"/>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<link rel="stylesheet" type="text/css" media="print"
+      href="http://subversion.tigris.org/branding/css/print.css"/>
+<script type="text/javascript"
+        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+</head>
+
+<body>
+<div class="app">
+
+<h2>Subversion Inconveniences</h2>
+
+<p>
+These are some of the problems most likely to annoy new users:
+</p>
+
+<ol>
+   <li><b>Repository deadlocks</b><br/>
+   <p>If an svn client is directly accessing a repository via a
+      file:/// url and is interrupted, or crashes, (or if httpd
+      crashes), the repository is likely to be left in a 'wedged'
+      state.  You'll need to run 
+      '<tt>svnadmin&nbsp;recover&nbsp;/path/to/repos</tt>' to
+      unwedge the repository.  Make sure you shut down httpd before
+      doing this.</p>
+   <p>See
+        <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=739"
+        >Issue&nbsp;#739</a>
+      and 
+        <a href="http://subversion.tigris.org/faq.html#wedged-repos"
+        >http://subversion.tigris.org/faq.html#wedged-repos</a>
+      for more details.</p>
+   </li>
+
+   <li><b>Charset conversion failure mode too extreme</b><br/>
+   <p>If Subversion cannot convert log data to your local charset
+      encoding, it will (currently) just show "[unconvertible data]"
+      for the entire unconverted log message.  This is lossier than
+      necessary.  There are even some revisions in the Subversion
+      repository itself that exhibit this behavior when the client
+      locale is ISO-8859-1 (Latin-1).</p>
+   <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=807"
+      >Issue #807</a> for more details.</p>
+   </li>
+</ol>
+
+</div>
+</body>
+</html>
