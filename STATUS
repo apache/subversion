@@ -115,3 +115,11 @@ Candidate changes:
     Votes:
       +1: lundblad, bliss, sussman
 
+  * r11296
+    Fix 'svn export -rBASE' when the working copy has added files or
+    directories that have been committed yet.
+    Justification:
+      It's an irritating bug with a simple fix.
+    Votes:
+      +1: jszakmeister
+
