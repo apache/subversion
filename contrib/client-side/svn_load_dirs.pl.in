@@ -218,8 +218,8 @@ if (@ARGV and defined $opt_import_tag_location)
         $load_tags{$load_dir} = $load_tag;
       }
 
-    exit 0 unless &get_yes_or_no("Please examine identified tags.  Are they " .
-                                 "acceptable? (Y/N) ");
+    exit 0 unless &get_answer("Please examine identified tags.  Are they " .
+                              "acceptable? (Y/n) ", 'ny', 1);
     print "\n";
   }
 
@@ -421,8 +421,8 @@ my $native_eol = &determine_native_eol;
         {
           print "  $dir\n";
         }
-      exit 0 unless &get_yes_or_no("You must add them now to load the " .
-                                   "directories.  Continue (Y/N)? ");
+      exit 0 unless &get_answer("You must add them now to load the " .
+                                "directories.  Continue (Y/n)? ", 'ny', 1);
 
       my $message = "Create directories to load project into.\n\n";
 
@@ -674,6 +674,24 @@ while (defined (my $load_dir = &get_next_load_dir))
                       "performed.\n";
                   }
 
+                # Sort the added and deleted files and directories by
+                # the lowercase versions of their basenames instead of
+                # their complete path, which makes finding files that
+                # were moved into different directories easier to
+                # match up.
+                @add_files = map { $_->[0] }
+                             sort { $a->[1] cmp $b->[1] }
+                             map { [$_->[0], lc($_->[1])] }
+                             map { [$_, m#([^/]+)$#] }
+                             @add_files;
+                @del_files = map { $_->[0] }
+                             sort { $a->[1] cmp $b->[1] }
+                             map { [$_->[0], lc($_->[1])] }
+                             map { [$_, m#([^/]+)$#] }
+                             @del_files;
+
+              RELIST:
+
                 for (my $i=0; $i<$max; ++$i)
                   {
                     my $add_filename = '';
@@ -708,12 +726,13 @@ while (defined (my $load_dir = &get_next_load_dir))
 
                     printf $printf_format, $i;
                     print  " ", $del_filename,
-                           " " x ($filename_width - length($del_filename)),
+                           "_" x ($filename_width - length($del_filename)),
                            " ", $add_filename, "\n";
 
                     if (($i+1) % 22 == 0)
                       {
-                        unless (&get_yes_or_no("Continue printing (Y/N)? "))
+                        unless (&get_answer("Continue printing (Y/n)? ",
+                                            'ny', 1))
                           {
                             last;
                           }
@@ -728,16 +747,23 @@ while (defined (my $load_dir = &get_next_load_dir))
                 my $del_index;
                 my $got_line = 0;
                 do {
-                  print "Enter two indexes for each column to rename or F ",
-                        "when you are finished: ";
+                  print "Enter two indexes for each column to rename, ",
+                        "(R)elist, or (F)inish: ";
                   $line = <STDIN>;
                   $line = '' unless defined $line;
+                  if ($line =~ /^R$/i )
+                    {
+                      goto RELIST;
+                    }
+                  
                   if ($line =~ /^F$/i)
                     {
                       $got_line = 1;
                     }
                   elsif ($line =~ /^(\d+)\s+(\d+)$/)
                     {
+                      print "\n";
+
                       $del_index = $1;
                       $add_index = $2;
                       if ($del_index >= @del_files)
@@ -1643,28 +1669,36 @@ sub digest_hash_file
   $ctx->digest;
 }
 
-# Read standard input until a line contains either an upper or
-# lowercase y or n.
-sub get_yes_or_no
+# Read standard input until a line contains the required input or an
+# empty line to signify the default answer.
+sub get_answer
 {
-  unless (@_ == 1)
+  unless (@_ == 3)
     {
-      croak "$0: get_yes_or_no $INCORRECT_NUMBER_OF_ARGS";
+      croak "$0: get_answer $INCORRECT_NUMBER_OF_ARGS";
     }
 
   my $message = shift;
+  my $answers = shift;
+  my $def_ans = shift;
 
-  # Assume a positive answer if no user input is being accepted.
-  return 1 if $opt_no_user_input;
+  return $def_ans if $opt_no_user_input;
 
-  my $line;
+  my $char;
   do
     {
       print $message;
-      $line = <STDIN>;
-      $line = '' unless defined $line;
-    } until $line =~ /[yn]/i;
-  $line =~ /y/i;
+      $char = '';
+      my $line = <STDIN>;
+      if (defined $line and length $line)
+        {
+          $char = substr($line, 0, 1);
+          $char = '' if $char eq "\n";
+        }
+    } until $char eq '' or $answers =~ /$char/ig;
+
+  return $def_ans if $char eq '';
+  return pos($answers) - 1;
 }
 
 # Determine the native end of line on this system by writing a \n in
