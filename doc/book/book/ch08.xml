@@ -1,3 +1,5 @@
+<?xml version="1.0"?>
+<!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd">
 <!-- This is currently being roughed out.  Suggestions and comments
 are more than welcome, but patches are probably a bit premature at
 this point. -->
@@ -25,10 +27,10 @@ this point. -->
       <footnote><para>Yes, yes, you don't need a subcommand to use the
       <option>--version</option> switch, but we'll get to that in just
       a minute.</para> </footnote> and any switches or targets that
-      you wish to operate on.  You should note that there is no
-      specific order that the subcommand and the switches must appear
-      in.  For example, all of the following are valid ways to use
-      <command>svn status</command>:</para>
+      you wish to operate on&mdash;there is no specific order that the
+      subcommand and the switches must appear in.  For example, all of
+      the following are valid ways to use <command>svn
+      status</command>:</para>
 
     <screen>
 $ svn -v status
@@ -89,14 +91,14 @@ $ svn status -v myfile
           <term><option>--extensions</option><replaceable>"ARGS"</replaceable></term>
           <listitem>
             <para>Specifies an argument or arguments that Subversion
-              should pass to GNU diff when providing diffs.  Note
-              that if you wish to pass multiple arguments, you must
-              enclose all of them in quotes.  For example,
-              <command>svn diff -x "-b -E"</command>.  Note also
-              that Subversion will display unified diffs by default,
-              so if you want default diff output, you can pass the
-              <option>--normal</option> switch to diff
-              (e.g. <command>svn diff -x "--normal"</command>.
+              should pass to GNU diff when providing diffs. If you
+              wish to pass multiple arguments, you must enclose all of
+              them in quotes (for example, <command>svn diff -x "-b
+              -E"</command>).  In addition, Subversion will display
+              unified diffs by default, so if you want default diff
+              output, you can pass the <option>--normal</option>
+              switch to diff (e.g. <command>svn diff -x
+              "--normal"</command>.
               </para>
           </listitem>
         </varlistentry>
@@ -170,9 +172,8 @@ rev 27: ...
 ------------------------------------------------------------------------
             </screen>
 
-            <para>Note the double dashed lines that you get in your
-            output. You can avoid this clutter by using the
-            incremental switch:</para>
+            <para>You can avoid the clutter of the double dashed lines
+              in your output by using the incremental switch:</para>
 
 
             <screen>
@@ -190,7 +191,7 @@ rev 19: ...
 rev 27: ...
               </screen>
 
-            <para>Note that the incremental switch does provides
+            <para>The <option>--incremental</option> switch provides
               similar output control when using the
               <option>--xml</option> switch.</para>
             
@@ -258,8 +259,10 @@ rev 27: ...
           <term><option>--non-recursive</option> (<option>-N</option>)</term>
           <listitem>
             <para>Stops a subcommand from recursing into
-              subdirectories.  Note that some subcommands do not
-              recurse by default, while others do.</para>
+              subdirectories.  Most subcommands recurse by default,
+              but some subcommands&mdash;usually those that have the
+              potential to remove or undo your local
+              modifications&mdash;do not.</para>
           </listitem>
         </varlistentry>
 
@@ -406,7 +409,6 @@ $ svn log -r 1729:{2/17/02}
       <sect2 id="svn-ch-8-sect-1.2">
         <title><command>svn subcommands</command></title>
 
-        <!-- ###TODO Look for 'Note:' and maybe turn them into warnings -->
         <refentry>
           <refnamediv>
             <refname>svn add</refname>
@@ -792,8 +794,8 @@ Transmitting file data .
 Committed revision 5.
             </screen>
 
-            <para>Note that if you want to use a file that's under
-              version control for your commit message with
+            <para>If you want to use a file that's under version
+              control for your commit message with
               <option>--file</option>, you need to pass the
               <option>--force</option> switch:</para>
 
@@ -952,9 +954,11 @@ $ svn copy file:///tmp/repos/test/far-away file:///tmp/repos/test/over-there -m 
 Committed revision 9.
             </screen>
 
-            <para>(Note: This is the easiest way to 'tag' a revision
-              in your repository&mdash;just svn copy that revision
-              (usually HEAD) into your tags directory).</para>
+            <tip>
+              <para>This is the easiest way to 'tag' a revision in
+                your repository&mdash;just svn copy that revision
+                (usually HEAD) into your tags directory.</para>
+            </tip>
 
             <screen>
 $ svn copy file:///tmp/repos/test/trunk file:///tmp/repos/test/tags/0.6.32-prerelease -m "tag tree"
@@ -1200,7 +1204,7 @@ Index: COMMITTERS
             </screen>
 
             <para>Compare revision 3000 to revision 3500 using range
-              notation (note that you only pass the one URL in this
+              notation (you only pass the one URL in this
               case):</para>
 
             <screen>
@@ -2076,10 +2080,12 @@ Committed revision 27.
             propchange in working copy, and the second creates an
             unversioned, remote propchange on a repository revision.</para>
 
-            <para>Note: Subversion has a number of
-              <quote>special</quote> properties that affect its
-              behavior.  See <xref linkend="svn-ch-6-sect-2.3"/> for
-              more on these properties.</para>
+            <tip>
+              <para>Subversion has a number of <quote>special</quote>
+                properties that affect its behavior.  See <xref
+                linkend="svn-ch-6-sect-2.3"/> for more on these
+                properties.</para>
+            </tip>
 
           </refsect1>
           <refsect1>
@@ -2563,7 +2569,7 @@ $ svn status
             <title>Description</title>
 
             <para>Remove <quote>conflicted</quote> state on working
-              copy files or directories. Note: this routine does not
+              copy files or directories. This routine does not
               semantically resolve conflict markers; it merely removes
               conflict-related artifact files and allows PATH to be
               committed again.  See <xref
@@ -3575,9 +3581,14 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
           <title>Description</title>
 
           <para>Set the log-message on revision REVISION to the
-            contents of FILE.  (Note that revision properties are not
-            under version control, so this command will permanently
-            overwrite the previous log message.)</para>
+            contents of FILE.</para>
+
+          <warning>
+            <para>Revision properties are not under version control,
+              so this command will permanently overwrite the previous
+              log message.)</para>
+          </warning>
+
         </refsect1>
 
         <refsect1>
