@@ -381,11 +381,11 @@ sync_entry (svn_wc__entry_t *entry, apr_pool_t *pool)
   /* Flags. */
   apr_hash_set (entry->attributes,
                 SVN_WC__ENTRIES_ATTR_ADD, APR_HASH_KEY_STRING,
-                ((entry->flags && SVN_WC__ENTRY_ADD) ?
+                ((entry->flags & SVN_WC__ENTRY_ADD) ?
                  svn_string_create ("true", pool) : NULL));
   apr_hash_set (entry->attributes,
                 SVN_WC__ENTRIES_ATTR_DELETE, APR_HASH_KEY_STRING,
-                ((entry->flags && SVN_WC__ENTRY_DELETE) ?
+                ((entry->flags & SVN_WC__ENTRY_DELETE) ?
                  svn_string_create ("true", pool) : NULL));
   
   /* Timestamp. */
