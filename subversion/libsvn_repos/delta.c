@@ -663,6 +663,9 @@ compare_files (svn_boolean_t *changed_p,
 {
   svn_filesize_t size1, size2;
   unsigned char digest1[APR_MD5_DIGESTSIZE], digest2[APR_MD5_DIGESTSIZE];
+  svn_stream_t *stream1, *stream2;
+  char buf1[SVN_STREAM_CHUNK_SIZE], buf2[SVN_STREAM_CHUNK_SIZE];
+  apr_size_t len1, len2;
 
   /* If the filesystem claims the things haven't changed, then they
      haven't changed. */
@@ -686,8 +689,7 @@ compare_files (svn_boolean_t *changed_p,
     }
 
   /* Same sizes, huh?  Well, if their checksums differ, we know they
-     differ.  (We use the extra braces here so we don't put these
-     buffers onto the stack unless we need to.)  */
+     differ. */
   SVN_ERR (svn_fs_file_md5_checksum (digest1, root1, path1, pool));
   SVN_ERR (svn_fs_file_md5_checksum (digest2, root2, path2, pool));
   if (! svn_md5_digests_match (digest1, digest2))
@@ -697,31 +699,23 @@ compare_files (svn_boolean_t *changed_p,
     }
 
   /* Same sizes, same checksums.  Chances are reallllly good that they
-     don't differ, but to be absolute sure, we need to compare bytes.
-     (We'll use the extra braces here so we don't put these huge
-     buffers onto the stack unless we need to.)  */
-  {
-    svn_stream_t *stream1, *stream2;
-    char buf1[SVN_STREAM_CHUNK_SIZE], buf2[SVN_STREAM_CHUNK_SIZE];
-    apr_size_t len1, len2;
+     don't differ, but to be absolute sure, we need to compare bytes. */
+  SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
+  SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
 
-    SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
-    SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
-
-    do
-      {
-        len1 = len2 = SVN_STREAM_CHUNK_SIZE;
-        SVN_ERR (svn_stream_read (stream1, buf1, &len1));
-        SVN_ERR (svn_stream_read (stream2, buf2, &len2));
-        
-        if (len1 != len2 || memcmp (buf1, buf2, len1))
-          {
-            *changed_p = TRUE;
-            return SVN_NO_ERROR;
-          }
-      }
-    while (len1 > 0);
-  }
+  do
+    {
+      len1 = len2 = SVN_STREAM_CHUNK_SIZE;
+      SVN_ERR (svn_stream_read (stream1, buf1, &len1));
+      SVN_ERR (svn_stream_read (stream2, buf2, &len2));
+      
+      if (len1 != len2 || memcmp (buf1, buf2, len1))
+        {
+          *changed_p = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+  while (len1 > 0);
 
   return SVN_NO_ERROR;
 }
