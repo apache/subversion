@@ -792,7 +792,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   const char *oldrev_str, *newrev_str;
   svn_revnum_t rev1, rev2;
   apr_hash_t *props1, *props2;
-  apr_array_header_t *propchanges;
+  apr_array_header_t *propchanges, *wc_props, *entry_props, *regular_props;
   void *ra_baton, *session1, *session2;
   svn_ra_plugin_t *ra_lib;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
@@ -862,25 +862,18 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   /* Deduce property diffs, and merge those too. */
   SVN_ERR (svn_wc_get_local_propchanges (&propchanges,
                                          props1, props2, pool));
+  SVN_ERR (svn_categorize_props (propchanges,
+                                 &entry_props, &wc_props, &regular_props,
+                                 pool));
   SVN_ERR (svn_wc_merge_prop_diffs (&prop_state, target_wcpath, adm_access,
-                                    propchanges, FALSE, dry_run, pool));
+                                    regular_props, FALSE, dry_run, pool));
 
   if (notify_func)
     {
 
       /* First check that regular props changed. */
-      if (propchanges->nelts > 0)
-        {
-          apr_array_header_t *entry_props, *wc_props, *regular_props;
-          SVN_ERR (svn_categorize_props (propchanges,
-                                         &entry_props, 
-                                         &wc_props, 
-                                         &regular_props,
-                                         pool));
-
-          if (regular_props->nelts == 0)
-            prop_state = svn_wc_notify_state_unchanged;
-        }
+      if (regular_props->nelts == 0)
+	prop_state = svn_wc_notify_state_unchanged;
 
       /* ### todo: Detect the actual text state, and pass that below.  */
 
