@@ -38,7 +38,7 @@ struct svn_fs_t {
   DB_ENV *env;
 
   /* The filesystem's various tables.  See `structure' for details.  */
-  DB *nodes, *clones, *revisions, *transactions;
+  DB *nodes, *revisions, *transactions;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */

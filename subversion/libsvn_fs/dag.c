@@ -246,7 +246,7 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
   /* The property list is the 2nd item in the header skel. */
   skel_t *props = header->children->next;
 
-  /* Return a copy dup'd in TRAIL's pool, to fufill this routine's
+  /* Return a copy dup'd in TRAIL's pool, to fulfill this routine's
      promise about lifetimes.  This is instead of doing fancier
      cache-y things. */
   *proplist_p = svn_fs__copy_skel (props, trail->pool);
@@ -347,6 +347,29 @@ svn_fs__dag_revision_root (dag_node_t **node_p,
 }
 
 
+svn_error_t *
+svn_fs__dag_txn_root (dag_node_t **node_p,
+                      svn_fs_t *fs,
+                      const char *txn,
+                      trail_t *trail)
+{
+  svn_fs_id_t *root_id, *ignored;
+  skel_t *root_contents;
+  dag_node_t *root_node;
+  
+  SVN_ERR (svn_fs__get_txn (&root_id, &ignored, fs, txn, trail));
+  SVN_ERR (svn_fs__get_node_revision (&root_contents, fs, root_id, trail));
+  
+  root_node = apr_pcalloc (trail->pool, sizeof (*root_node));
+  root_node->fs = fs;
+  root_node->id = root_id;
+  root_node->contents = root_contents;
+  root_node->pool = trail->pool;
+  
+  *node_p = root_node;
+  return SVN_NO_ERROR;
+}
+ 
 
 svn_error_t *
 svn_fs__dag_clone_child (dag_node_t **child_p,
@@ -801,7 +824,7 @@ dag_node_t *svn_fs__dag_dup (dag_node_t *node,
   new_node->id = svn_fs_copy_id (node->id, trail->pool);
 
   /* Copy the contents skel over. */
-  new_node->contents = svn_fs_copy_skel (node->contents, trail->pool);
+  new_node->contents = svn_fs__copy_skel (node->contents, trail->pool);
 
   /* Finally, update our pool reference. */
   new_node->pool = trail->pool;

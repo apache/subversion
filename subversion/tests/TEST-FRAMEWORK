@@ -21,12 +21,12 @@ However, we're not using this facility -- it's too inflexible.  It
 doesn't give us good control of results reporting.  (Specifically, we
 can't stop it from spamming the terminal.)
 
-Instead, our Makefile.am's contain a SVN_TEST_PROGRAMS variable (a
-list of programs to run), and a home-made `check' target.
+Instead, our Makefile.am's contain a SVN_TESTS variable (a list of
+programs to run), and a home-made `check' target.
 
-A `make check` will run each program in SVN_TEST_PROGRAMS and only
-print a description *if a test fails*.  All test results are logged to
-a file called `tests.log'.
+A `make check` will run each program in SVN_TESTS and only print a
+description *if a test fails*.  All test results are logged to a file
+called `tests.log'.
 
 
 Definition of an SVN "test program"
