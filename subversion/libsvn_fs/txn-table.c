@@ -36,6 +36,7 @@ svn_fs__open_transactions_table (DB **transactions_p,
                       0666));
 
   /* Create the `next-id' table entry.  */
+  if (create)
   {
     DBT key, value;
 
