@@ -209,7 +209,7 @@ commitmode:
 	$(MAKE) convfiles CONV_PARAM=
 
 convfiles:
-	for _prc in $(BOOKFILES); do \
+	@for _prc in $(BOOKFILES); do \
 		echo -n "$$_prc: convert..."; \
 		dest=book/$$_prc; \
 		swp=book/.$$_prc.swp; \
