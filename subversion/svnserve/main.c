@@ -54,7 +54,7 @@ enum run_mode {
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
-  run_mode_listen_once,
+  run_mode_listen_once
 };
 
 #if APR_HAS_FORK
