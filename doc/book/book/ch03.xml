@@ -199,21 +199,22 @@ $ svn update --revision PREV foo.c
         a range of changes in the repository using both dates and
         revisions together!</para>
       
-      <para>Subversion accepts an incredible number of date
-        formats&mdash;just remember to use quotes around any date
-        that contains spaces.  Here are just a few of the formats
-        that Subversion accepts:</para>
+      <para>Here are examples of the date formats that Subversion
+        accepts.  Remember to use quotes around any date that contains
+        spaces.</para>
 
       <screen>
 $ svn checkout --revision {2002-02-17}
-$ svn checkout --revision {2/17/02}
-$ svn checkout --revision {"17 Feb"}
-$ svn checkout --revision {"17 Feb 2002"}
-$ svn checkout --revision {"17 Feb 2002 15:30"}
-$ svn checkout --revision {"17 Feb 2002 15:30:12 GMT"}
-$ svn checkout --revision {"10 days ago"} 
-$ svn checkout --revision {"last week"} 
-$ svn checkout --revision {"yesterday"} 
+$ svn checkout --revision {15:30}
+$ svn checkout --revision {15:30:00.200000}
+$ svn checkout --revision {"2002-02-17 15:30"}
+$ svn checkout --revision {"2002-02-17 15:30 +0230"}
+$ svn checkout --revision {2002-02-17T15:30}
+$ svn checkout --revision {2002-02-17T15:30Z}
+$ svn checkout --revision {2002-02-17T15:30-04:00}
+$ svn checkout --revision {20020217T1530}
+$ svn checkout --revision {20020217T1530Z}
+$ svn checkout --revision {20020217T1530-0500}
 &hellip;
       </screen>
       
@@ -222,7 +223,7 @@ $ svn checkout --revision {"yesterday"}
         date:</para>
         
       <screen>
-$ svn log --revision {11/28/2002}
+$ svn log --revision {2002-11-28}
 ------------------------------------------------------------------------
 r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
 &hellip;
@@ -233,21 +234,21 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
         
         <para>If you specify a single date as a revision without
           specifying a time of day (for example
-          <literal>11/27/02</literal>, you may think that Subversion
+          <literal>2002-11-27</literal>), you may think that Subversion
           should give you the last revision that took place on the
           27th of November.  Instead, you'll get back a revision from
           the 26th, or even earlier.  Remember that Subversion will
           find the <emphasis>most recent revision of the
           repository</emphasis> as of the date you give.  If you give
           a date without a timestamp, like
-          <literal>11/27/02</literal>, Subversion assumes a time of
+          <literal>2002-11-27</literal>, Subversion assumes a time of
           00:00:00, so looking for the most recent revision won't
           return anything on the day of the 27th.</para>
 
         <para>If you want to include the 27th in your search, you can
-          either specify the 27th with the time (<literal>"27 Nov 2002
+          either specify the 27th with the time (<literal>"2002-11-27
           23:59"</literal>), or just specify the next day
-          (<literal>"28 Nov 2002"</literal>).</para>
+          (<literal>2002-11-28</literal>).</para>
         
       </sidebar>
       
@@ -262,7 +263,7 @@ $ svn log --revision {2002-11-20}:{2002-11-29}
       <para>As we pointed out, you can also mix dates and revisions:</para>
       
       <screen>
-$ svn log -r {11/20/02}:4040
+$ svn log --revision {2002-11-20}:4040
       </screen>
         
     </sect2>
