@@ -254,13 +254,19 @@ typedef int vdelta_t;           /* todo: for now */
 
 
 
-/* Change content is delta(s) against ancestors.  This is one kind of delta. */
+/* A property diff */
 typedef struct svn_pdelta_t {
-  int todo;
+  enum {
+    set = 1,
+    delete
+  } kind;
+  svn_string_t *name;
+  svn_string_t *value;
+  struct svn_pdelta_t *next;
 } svn_pdelta_t;
 
 
-/* Change content is delta(s) against ancestors.  This is one kind of delta. */
+/* A binary diff */
 typedef struct svn_vdelta_t {
   int todo;
 } svn_vdelta_t;
@@ -278,7 +284,7 @@ typedef struct svn_ancestor_t
 /* A change is an action and some content.  This is the content. */
 typedef struct svn_edit_content_t
 {
-  typedef enum { 
+  enum { 
     file_type = 1,
     directory_type
   } kind;                           /* what kind of object is this? */
@@ -291,7 +297,7 @@ typedef struct svn_edit_content_t
 /* A tree delta is a list of changes.  This is a change. */
 typedef struct svn_edit_t
 {
-  typedef enum { 
+  enum { 
     svn_delta_action_delete = 1,  /* Delete the file or directory. */
     svn_delta_action_new,         /* Create a new file or directory. */
     svn_delta_action_replace,     /* Replace an existing file or dir */
