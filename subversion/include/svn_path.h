@@ -50,7 +50,8 @@ void svn_path_local_style (svn_stringbuf_t *path);
 /* Join a base path (BASE) with a component (COMPONENT), allocated in POOL.
 
    If either BASE or COMPONENT is the empty string, then the other argument
-   will be copied and returned.
+   will be copied and returned.  If one of BASE or COMPONENT is "." the other
+   is returned; if both are "." a single "." is returned.
 
    If the COMPONENT is an absolute path, then it is copied and returned.
    Exactly one slash character ('/') is used to joined the components,

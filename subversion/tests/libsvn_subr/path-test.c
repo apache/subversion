@@ -29,21 +29,26 @@ test_path_is_child (const char **msg,
                     apr_pool_t *pool)
 {
   int i, j;
+#define NUM_TEST_PATHS 7
 
-  static const char * const paths[] = { 
+  static const char * const paths[NUM_TEST_PATHS] = { 
     "/foo/bar",
     "/foo/baz",
     "/foo/bar/baz",
     "/flu/blar/blaz",
-    "/foo/bar/baz/bing/boom"
+    "/foo/bar/baz/bing/boom",
+    ".",
+    "foo"
     };
   
-  static const char * const remainders[][5] = {
-    { 0, 0, "baz", 0, "baz/bing/boom" },
-    { 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, "bing/boom" },
-    { 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0 }
+  static const char * const remainders[NUM_TEST_PATHS][NUM_TEST_PATHS] = {
+    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, "bing/boom", 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, "foo" },
+    { 0, 0, 0, 0, 0, 0, 0 }
   };
   
   *msg = "test svn_path_is_child";
@@ -51,9 +56,9 @@ test_path_is_child (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < NUM_TEST_PATHS; i++)
     {
-      for (j = 0; j < 5; j++)
+      for (j = 0; j < NUM_TEST_PATHS; j++)
         {
           const char *remainder;
 
@@ -70,6 +75,7 @@ test_path_is_child (const char **msg,
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
     }
+#undef NUM_TEST_PATHS
   return SVN_NO_ERROR;
 }
 
@@ -245,6 +251,11 @@ test_join (const char **msg,
     { "", "/def", "/def" },
     { "/", "", "/" },
     { "", "/", "/" },
+    { ".", "abc", "abc" },
+    { "abc", ".", "abc" },
+    { ".", ".", "." },
+    { "", ".", "." },
+    { ".", "", "." }
   };
 
   *msg = "test svn_path_join(_many)";
@@ -308,6 +319,16 @@ test_join (const char **msg,
   TEST_MANY((pool, "abc", "def", "/", NULL), "/");
   TEST_MANY((pool, "/", "/", "ghi", NULL), "/ghi");
   TEST_MANY((pool, "/", "/", "/", NULL), "/");
+  TEST_MANY((pool, ".", "abc", "def", NULL), "abc/def");
+  TEST_MANY((pool, ".", ".", "abc", NULL), "abc");
+  TEST_MANY((pool, ".", "abc", ".", NULL), "abc");
+  TEST_MANY((pool, "abc", ".", ".", NULL), "abc");
+  TEST_MANY((pool, ".", ".", ".", NULL), ".");
+  TEST_MANY((pool, ".", "", "", NULL), ".");
+  TEST_MANY((pool, "", ".", "", NULL), ".");
+  TEST_MANY((pool, "", "", ".", NULL), ".");
+  TEST_MANY((pool, ".", "", ".", NULL), ".");
+  TEST_MANY((pool, ".", "", "abc", NULL), "abc");
 
   /* ### probably need quite a few more tests... */
 
