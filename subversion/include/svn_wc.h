@@ -76,12 +76,20 @@
 
 /*** Detecting modification. ***/
 
-/* Set *MODIFIED_P to non-zero if FILENAME is modified w.r.t. its base
-   revision, else set MODIFIED_P to zero.
+/* Set *MODIFIED_P to non-zero if FILENAME's text is modified
+   w.r.t. the base revision, else set MODIFIED_P to zero.
    FILENAME is a path to the file, not just a basename. */
-svn_error_t *svn_wc_file_modified_p (svn_boolean_t *modified_p,
+svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
                                      svn_string_t *filename,
                                      apr_pool_t *pool);
+
+
+/* Set *MODIFIED_P to non-zero if PATH's properties are modified
+   w.r.t. the base revision, else set MODIFIED_P to zero. */
+svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
+                                      svn_string_t *path,
+                                      apr_pool_t *pool);
+
 
 
 

@@ -86,9 +86,9 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
 
 
 
-/*** svn_wc_file_modified_p ***/
+/*** svn_wc_text_modified_p ***/
 
-/* svn_wc_file_modified_p answers the question:
+/* svn_wc_text_modified_p answers the question:
 
    "Are the contents of F different than the contents of SVN/text-base/F?"
 
@@ -307,7 +307,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 
 
 svn_error_t *
-svn_wc_file_modified_p (svn_boolean_t *modified_p,
+svn_wc_text_modified_p (svn_boolean_t *modified_p,
                         svn_string_t *filename,
                         apr_pool_t *pool)
 {
@@ -390,6 +390,16 @@ svn_wc_file_modified_p (svn_boolean_t *modified_p,
 }
 
 
+svn_error_t *
+svn_wc_props_modified_p (svn_boolean_t *modified_p,
+                         svn_string_t *path,
+                         apr_pool_t *pool)
+{
+  /* kff todo: Ben, here's a skeleton. */
+
+  *modified_p = FALSE;
+  return SVN_NO_ERROR;
+}
 
 
 

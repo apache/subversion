@@ -93,7 +93,7 @@ assemble_status (svn_wc_status_t *status,
             {
               svn_boolean_t modified_p;
               
-              err = svn_wc_file_modified_p (&modified_p, path, pool);
+              err = svn_wc_text_modified_p (&modified_p, path, pool);
               if (err) return err;
               
               if (modified_p)
