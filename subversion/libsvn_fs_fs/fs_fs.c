@@ -3635,7 +3635,7 @@ write_final_current (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Get a write lock in FS, creating in in POOL. */
+/* Get a write lock in FS, creating it in POOL. */
 static svn_error_t *
 get_write_lock (svn_fs_t *fs,
                 apr_pool_t *pool)
@@ -3760,7 +3760,9 @@ struct commit_baton {
   svn_fs_txn_t *txn;
 };
 
-/* The work-horse for svn_fs_fs__commit, called with the FS write lock. */
+/* The work-horse for svn_fs_fs__commit, called with the FS write lock.
+   This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type.  BATON is a 'struct commit_baton *'. */
 static svn_error_t *
 commit_body (void *baton, apr_pool_t *pool)
 {

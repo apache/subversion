@@ -482,8 +482,12 @@ struct expire_lock_baton {
   svn_lock_t *lock;
 };
 
-/* Remove the lock ELB->lock, stored in ELB->digest_path.
-   Assumes that the write lock is held. */
+/* Remove the lock BATON->lock, stored in BATON->digest_path.
+   BATON is a 'struct expire_lock_baton *'.
+
+   This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type, and assumes that the write lock is held.
+*/
 static svn_error_t *
 expire_lock (void *baton, apr_pool_t *pool)
 {
@@ -679,6 +683,7 @@ svn_fs_fs__allow_locked_operation (const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Baton used for lock_body below. */
 struct lock_baton {
   svn_lock_t **lock_p;
   svn_fs_t *fs;
@@ -691,6 +696,10 @@ struct lock_baton {
   apr_pool_t *pool;
 };
 
+
+/* This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type, and assumes that the write lock is held.
+   BATON is a 'struct lock_baton *'. */
 static svn_error_t *
 lock_body (void *baton, apr_pool_t *pool)
 {
@@ -798,6 +807,7 @@ lock_body (void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Baton used for unlock_body below. */
 struct unlock_baton {
   svn_fs_t *fs;
   const char *path;
@@ -805,6 +815,9 @@ struct unlock_baton {
   svn_boolean_t break_lock;
 };
 
+/* This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type, and assumes that the write lock is held.
+   BATON is a 'struct unlock_baton *'. */
 static svn_error_t *
 unlock_body (void *baton, apr_pool_t *pool)
 {
