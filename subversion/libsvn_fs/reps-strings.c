@@ -108,41 +108,60 @@ svn_fs__get_mutable_rep (const char **new_key,
 {
   skel_t *rep;
 
-  /* Read the rep associated with KEY */
-  SVN_ERR (svn_fs__read_rep (&rep, fs, key, trail));
-
-  /* If REP is not mutable, we have to make a copy of it that is.
-     This means making a deep copy of the string to which it refers
-     as well! */
-  if (! svn_fs__rep_is_mutable (rep))
+  if (key && (key[0] != '\0'))
     {
-      if (rep_is_fulltext (rep))
+      SVN_ERR (svn_fs__read_rep (&rep, fs, key, trail));
+  
+      /* If REP is not mutable, we have to make a mutable copy.  It is
+         a deep copy -- the underlying string is copied too, and the
+         new rep refers to the new string.  */
+      if (! svn_fs__rep_is_mutable (rep))
         {
-          const char *string_key, *new_string_key;
-
-          /* Step 1:  Copy the string to which the rep refers. */
-          string_key = svn_fs__string_key_from_rep (rep, trail->pool);
-          SVN_ERR (svn_fs__string_copy (fs, &new_string_key,
-                                        string_key, trail));
-          
-          /* Step 2:  Make this rep mutable. */
-          rep_set_mutable_flag (rep, trail->pool);
-                   
-          /* Step 3:  Change the string key to which this rep points. */
-          rep->children->next->data = new_string_key;
-          rep->children->next->len = strlen (new_string_key);
-
-          /* Step 4: Write the mutable version of this rep to the
-             database, returning the newly created key to the
-             caller. */
-          SVN_ERR (svn_fs__write_new_rep (new_key, fs, rep, trail));
+          if (rep_is_fulltext (rep))
+            {
+              const char *string_key, *new_string_key;
+              
+              /* Step 1:  Copy the string to which the rep refers. */
+              string_key = svn_fs__string_key_from_rep (rep, trail->pool);
+              SVN_ERR (svn_fs__string_copy (fs, &new_string_key,
+                                            string_key, trail));
+              
+              /* Step 2:  Make this rep mutable. */
+              rep_set_mutable_flag (rep, trail->pool);
+              
+              /* Step 3:  Change the string key to which this rep points. */
+              rep->children->next->data = new_string_key;
+              rep->children->next->len = strlen (new_string_key);
+              
+              /* Step 4: Write the mutable version of this rep to the
+                 database, returning the newly created key to the
+                 caller. */
+              SVN_ERR (svn_fs__write_new_rep (new_key, fs, rep, trail));
+            }
+          else
+            abort (); /* Huh?  We only know about fulltext right now. */
         }
       else
-        abort (); /* Huh?  We only know about fulltext right now. */
+        *new_key = key;
     }
-  else
-    *new_key = key;
+  else    /* no key, so make a new, empty, mutable, fulltext rep */
+    {
+      const char *new_string_key = NULL;
+      skel_t *header = svn_fs__make_empty_list (trail->pool);
+      rep = svn_fs__make_empty_list (trail->pool);
 
+      svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), header);
+      svn_fs__prepend (svn_fs__str_atom ("fulltext", trail->pool), header);
+
+      /* Create a new, empty string. */
+      SVN_ERR (svn_fs__string_append (fs, &new_string_key, 0, NULL, trail));
+      
+      svn_fs__prepend (svn_fs__str_atom (new_string_key, trail->pool), rep);
+      svn_fs__prepend (header, rep);
+      
+      SVN_ERR (svn_fs__write_new_rep (new_key, fs, rep, trail));
+    }
+      
   return SVN_NO_ERROR;
 }
 

@@ -439,7 +439,7 @@ test_strings (const char **msg, apr_pool_t *pool)
   svn_fs_t *fs;
   svn_stringbuf_t *string;
 
-  *msg = "Test all the strings table functions!";
+  *msg = "Test many strings table functions together.";
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -529,6 +529,28 @@ test_strings (const char **msg, apr_pool_t *pool)
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
 
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+write_null_string (const char **msg, apr_pool_t *pool)
+{
+  struct string_args args;
+  svn_fs_t *fs;
+
+  *msg = "Write a null string.";
+
+  /* Create a new fs and repos */
+  SVN_ERR (svn_test__create_fs_and_repos
+           (&fs, "test-repo-test-strings", pool));
+
+  args.fs = fs;
+  args.key = NULL;
+  args.text = NULL;
+  args.len = 0;
+  SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_string_append, &args, pool));
 
   return SVN_NO_ERROR;
 }
@@ -655,6 +677,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   read_rep,
   delete_rep,
   test_strings,
+  write_null_string,
   abort_string,
   copy_string,
   0

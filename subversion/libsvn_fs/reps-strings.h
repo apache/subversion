@@ -43,9 +43,19 @@ int svn_fs__rep_is_mutable (skel_t *rep);
 
 
 /* Get a key to a mutable version of the representation pointed to by
-   KEY in FS, and store it in *NEW_KEY.  If KEY is already mutable,
-   *NEW_KEY is set to KEY, else *NEW_KEY is set to a new rep key
-   allocated in TRAIL->pool.  */
+   KEY in FS, and store it in *NEW_KEY.  
+
+   If KEY is already a mutable representation, *NEW_KEY is set to
+   KEY, else *NEW_KEY is set to a new rep key allocated in
+   TRAIL->pool.  In the latter case, if KEY referred to an immutable
+   representation, then *NEW_KEY refers to a mutable copy of it (a
+   deep copy, including the underlying string), but if KEY is the
+   empty string or null, *NEW_KEY refers to a new, empty mutable
+   representation.
+
+   If KEY is neither null nor empty, but does not refer to any
+   representation, the error SVN_ERR_FS_NO_SUCH_REPRESENTATION is
+   returned.  */
 svn_error_t *svn_fs__get_mutable_rep (const char **new_key,
                                       const char *key,
                                       svn_fs_t *fs, 
