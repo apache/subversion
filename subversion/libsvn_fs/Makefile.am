@@ -13,6 +13,7 @@ libsvn_fs_la_SOURCES =				\
                         dbt.h                   \
 			err.c			\
                         err.h                   \
+                        editor.c                \
 			fs.c			\
                         fs.h                    \
 			id.c			\
@@ -44,6 +45,7 @@ libsvn_fs_la_SOURCES =				\
 #		       revision.c               \
 #                      revision.h
 
+# Do we need to add @SVN_LIBSVN_DELTA_LIBS@ below?
 libsvn_fs_la_LIBADD = -ldb
 
 
