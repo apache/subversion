@@ -456,97 +456,6 @@ log_do_rm (struct log_runner *loggy, const char *name)
 }
 
 
-/* Determine if an in-progress update of NAME in directory LOGGY->path
-   resulted in a conflict, by looking for any conflict files named in
-   ATTS.  If there is a conflict, record it in NAME's entry. */
-static svn_error_t *
-log_do_detect_conflict (struct log_runner *loggy,
-                        const char *name,
-                        const XML_Char **atts)                        
-{
-  svn_error_t *err;
-  svn_stringbuf_t *full_path;
-  enum svn_node_kind kind;
-  const char *old_file, *new_file, *wrk_file;
-  svn_boolean_t found_a_conflict_file = FALSE;
-
-  full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
-
-
-  old_file = svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_CONFLICT_OLD, atts);
-  if (old_file)
-    {
-      svn_path_add_component_nts (full_path, old_file);
-      SVN_ERR (svn_io_check_path (full_path, &kind, loggy->pool));
-      if (kind == svn_node_file)
-        found_a_conflict_file = TRUE;
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "log_do_detect_conflict: alleged conflict file `%s' not found ",
-             full_path->data);
-        }
-
-      svn_path_remove_component (full_path);
-    }
-
-  new_file = svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_CONFLICT_NEW, atts);
-  if (new_file)
-    {
-      svn_path_add_component_nts (full_path, new_file);
-      SVN_ERR (svn_io_check_path (full_path, &kind, loggy->pool));
-      if (kind == svn_node_file)
-        found_a_conflict_file = TRUE;
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "log_do_detect_conflict: alleged conflict file `%s' not found ",
-             full_path->data);
-        }
-      
-      svn_path_remove_component (full_path);
-    }
-
-  wrk_file = svn_xml_get_attr_value (SVN_WC_ENTRY_ATTR_CONFLICT_WRK, atts);
-  if (wrk_file)
-    {
-      svn_path_add_component_nts (full_path, wrk_file);
-      SVN_ERR (svn_io_check_path (full_path, &kind, loggy->pool));
-      if (kind == svn_node_file)
-        found_a_conflict_file = TRUE;
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "log_do_detect_conflict: alleged conflict file `%s' not found ",
-             full_path->data);
-        }
-    }
-
-  if (found_a_conflict_file)
-    {
-      apr_hash_t *atthash = svn_xml_make_att_hash (atts, loggy->pool);
-      
-      err = svn_wc__entry_modify
-        (loggy->path,
-         svn_stringbuf_create (name, loggy->pool),
-         (SVN_WC__ENTRY_MODIFY_CONFLICTED | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
-         SVN_INVALID_REVNUM,
-         svn_node_none,
-         svn_wc_schedule_normal,
-         TRUE, FALSE,           /* mark entry Conflicted */
-         0,
-         0,
-         NULL,
-         atthash, /* contains SVN_WC_ATTR_CONFLICT_* files */
-         loggy->pool,
-         NULL);
-    }
-  
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -1087,9 +996,6 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_MERGE) == 0) {
     err = log_do_merge (loggy, name, atts);
-  }
-  else if (strcmp (eltname, SVN_WC__LOG_DETECT_CONFLICT) == 0) {
-    err = log_do_detect_conflict (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_MV) == 0) {
     err = log_do_file_xfer (loggy, name, svn_wc__xfer_mv, atts);

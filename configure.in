@@ -216,41 +216,18 @@ else
   fi
 fi
 
-
-dnl Find a version of GNU patch
-AC_MSG_CHECKING([for GNU patch])
-SVN_CLIENT_PATCH="`${abs_srcdir}/ac-helpers/gnu-patch.sh`"
-if test "$SVN_CLIENT_PATCH" = "";  then
+dnl Find a diff program
+AC_PATH_PROG(SVN_CLIENT_DIFF, diff, none)
+if test "$SVN_CLIENT_DIFF" = "none";  then
   AC_MSG_ERROR([not found
 
-Cannot find a GNU patch program in your PATH.
-Please make sure you have GNU patch (version 2.5 or later) installed.  
-You can get it from ftp://ftp.gnu.org/pub/gnu/patch.
-])
-fi
-AC_MSG_RESULT([$SVN_CLIENT_PATCH])
-AC_DEFINE_UNQUOTED(SVN_CLIENT_PATCH, "$SVN_CLIENT_PATCH", 
-	[Define to be the full path to your GNU patch program])
-
-dnl Find a (non-broken) version of GNU diff
-AC_MSG_CHECKING([for non-broken GNU diff])
-SVN_CLIENT_DIFF="`${abs_srcdir}/ac-helpers/gnu-diff.sh $SVN_CLIENT_PATCH`"
-if test "$SVN_CLIENT_DIFF" = "";  then
-  AC_MSG_ERROR([not found
-
-Cannot find an unbroken GNU diff program in your PATH.
-Please make sure you have GNU diff (version 2.7 or later) installed.  
+Cannot find a diff program in your PATH.
+If necessary, you can install the GNU diff program.
 You can get it from ftp://ftp.gnu.org/pub/gnu/diffutils.
-
-(Note that FreeBSD uses a *hacked* version of GNU diff that is unable
-to handle certain types of text files.  If you are using FreeBSD, please 
-install the textproc/diffutils package to get the appropriate version of 
-diff.)
 ])
 fi
-AC_MSG_RESULT([$SVN_CLIENT_DIFF])
 AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
-	[Define to be the full path to your GNU diff program])
+	[Define to be the full path to a diff program])
 
 dnl Find GNU diff3
 AC_PATH_PROG(SVN_CLIENT_DIFF3, diff3, none)

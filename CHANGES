@@ -1,12 +1,11 @@
-Version 0.11
+Version 0.10.1
 
  User-visible changes:
  * conflicts now create conflict-markers in files, and 3 fulltext backups.
  * New --targets command line option for some commands.
   
-
  Developer-visible changes:
- 
+ * no more dependency on 'patch'; only on GNU diff3 and some version of 'diff'
 
 Version 0.10
 
