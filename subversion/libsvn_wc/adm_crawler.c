@@ -507,9 +507,6 @@ svn_wc_transmit_text_deltas (const char *path,
 {
   const char *tmpf, *tmp_base;
   apr_status_t status;
-  svn_txdelta_window_handler_t handler;
-  void *wh_baton;
-  svn_txdelta_stream_t *txdelta_stream;
   apr_file_t *localfile = NULL;
   apr_file_t *basefile = NULL;
   const char *base_digest_hex = NULL;
@@ -613,49 +610,23 @@ svn_wc_transmit_text_deltas (const char *path,
      so we'll have to run over the bytes again... */
   SVN_ERR (svn_io_file_checksum (digest, tmp_base, pool));
 
-  /* Tell the editor that we're about to apply a textdelta to the
-     file baton; the editor returns to us a window consumer routine
-     and baton.  If there is no handler provided, just close the file
-     and get outta here.  */
+  SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
+                               APR_READ, APR_OS_DEFAULT, pool),
+             "svn_wc_transmit_text_deltas: error opening local file");
 
-  /* ### todo#510: convert to new apply_text interface. */
-  SVN_ERR (editor->apply_textdelta
+  SVN_ERR (editor->apply_text
            (file_baton,
             base_digest_hex, svn_md5_digest_to_cstring (digest, pool),
-            pool, &handler, &wh_baton));
-
-  /* ### If no handler, then we sure did waste a bunch of effort
-     above, copying files and computing checksums and whatnot.
-     Perhaps it would be better for the result_checksum to be passed
-     to the handler at the same time as the null windows?  What an
-     ugly interface.  But more efficient... Hmmm. */
-  if (! handler)
-    {
-      SVN_ERR (svn_io_remove_file (tmp_base, pool));
-      return editor->close_file (file_baton, pool);
-    }
+            basefile ? svn_stream_from_aprfile (basefile, pool) : NULL,
+            svn_stream_from_aprfile (localfile, pool),
+            editor,
+            pool));
 
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up. */
   if (tempfile)
     *tempfile = tmp_base;
 
-  /* Open a filehandle for tmp text-base. */
-  SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
-                               APR_READ, APR_OS_DEFAULT, pool),
-             "svn_wc_transmit_text_deltas: error opening local file");
-
-  /* Create a text-delta stream object that pulls data out of the two
-     files. */
-  svn_txdelta (&txdelta_stream,
-               svn_stream_from_aprfile (basefile, pool),
-               svn_stream_from_aprfile (localfile, pool),
-               pool);
-  
-  /* Pull windows from the delta stream and feed to the consumer. */
-  SVN_ERR (svn_txdelta_send_txstream (txdelta_stream, handler, 
-                                      wh_baton, pool));
-    
   /* Close the two files */
   if ((status = apr_file_close (localfile)))
     return svn_error_create (status, NULL,
