@@ -264,12 +264,13 @@ sub ParseCommandLine
   {
     my %cmd_opts;
     my $usage = "
-usage: stress.pl [-c] [-i num] [-n num] [-s secs] [-x num] [-D num] [-F num]
-                 [-N num] [-P num] [-R path] [-S path] [-U url] [-W]
+usage: stress.pl [-c] [-h] [-i num] [-n num] [-s secs] [-x num] [-D num] 
+                 [-F num] [-N num] [-P num] [-R path] [-S path] [-U url] [-W]
+
 where
   -c cause repository creation
   -d don't make the status calls
-  -h show this help information
+  -h show this help information (other options will be ignored)
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
   -n the number of sets of changes to commit
   -p add svn:eol-style and svn:keywords properties to the files
