@@ -10,7 +10,7 @@ these scenarios before.)
 @menu
 * Removing items::              How to remove items from your working copy.
 * Committing removals::         How to remove items from the repository.
-* Update removals::             When 'update' tries to remove items.
+* Removals in updates::         When 'update' tries to remove things.
 @end menu
 
 
@@ -27,30 +27,38 @@ Also, please notice that there two different ways to interpret the
 phrase "remove an item".  In the simplest case, the item is removed from
 revision control (i.e. no longer tracked by the client), but not from
 your working copy.  In the more severe case, the item is removed
-@emph{both} from revision control and disk.
+both from revision control and disk.
 
 Normally, @code{svn rm} only removes an item from revision control.
 However, the @code{-f} flag (@code{--force}) can be given, which will
-forcibly delete the item from disk.
+forcibly delete the item(s) from disk.  As a rule, no item containing
+local modifications will be removed, nor will extant items that are
+@emph{not} under revision control.  (You can remove such items by hand.)
 
-@itemize
+@table @b
 @item To remove a file:  @code{svn rm foo.c}
 
 This will schedule @file{foo.c} to be deleted from the repository.
 The file is still tracked in the administrative directory until the user
-commits;  afterwards, the client will no longer track the file.
+commits;  afterwards, the working copy will no longer track the file.
+
+If foo.c is locally modified, this command will return an error.
+(You'll have to @code{svn revert} your change.)
 
 @item To recursively remove a directory: @code{svn rm dirname}
 
 This will recursively schedule every item below directory @file{dirname}
 to be deleted from the repository.
 
+If any locally modified items live below the directory, this command
+will return an error.
+
 @item To undo a deletion before committing:  @code{svn undel item}
 
 This subcommand will "unmark" a file or directory that is scheduled for
 removal.
 
-@end itemize
+@end table
 
 When an item has been scheduled for removal, but not yet committed, the
 client more-or-less treats the item as if it were gone.  Although the
@@ -60,6 +68,8 @@ item of the same name -- which is not normally possible.  In this case,
 the @code{svn status} output will describe the item as @dfn{replaced}
 (with an @code{R} flag).
 
+(todo:  perhaps we should show some examples here...)
+
 This scenario is made even more complicated when the item in question is
 a directory.  If a directory is recursively marked for deletion, and
 then a directory of the same name is added with @code{svn add}, the user
@@ -67,13 +77,6 @@ can continue to add (or replace) items in the newly added directory.
 The @code{svn status} command would then show the parent directory as
 "replaced", and items inside the directory as a mixture of items that
 are scheduled to be "deleted", "added", and "replaced".
-
-(cmpilato, is the above paragraph correct?)
-
-(perhaps we should show some examples here!)
-
-(gee, maybe we should have an @code{svn replace} command, which is a
-shorthand for a delete and add?)
 
 
 @c ------------------------------------------------------------------
@@ -83,14 +86,39 @@ shorthand for a delete and add?)
 
 When the user runs @code{svn commit}, and items are scheduled for
 removal, the items are first removed from the repository.  If there are
-conflicts, then as usual an error message will return that explains that
-the working copy is out-of-date.
+server-side conflicts, then (as usual) an error message will explain
+that the working copy is out-of-date.
 
 After the items are removed from the repository, all tracking
-information about the items are removed from the w
+information about the items is removed from the working copy.  In the
+case of a file, it's information is removed from @file{SVN/}.  In the
+case of a directory, the entire @file{SVN/} administrative area is
+removed, as well as all the administrative areas of its subdirectories.
+
+It's important to note that a commit will never remove any real working
+files or directories; this is only happens with a @code{svn rm -f}
+command, or possibly during a @code{svn update}.
 
 
+@c ------------------------------------------------------------------
+@node Removals in updates
+@section Removals in updates
 
+When an update tries to remove a file or directory, the item is not only
+removed from local revision control, but the item itself is deleted.  In
+the case of a directory removal, this is equivalent to a Unix @code{rm
+-rf} command.
 
+There are two exceptions, for safety's sake:
 
+@itemize @bullet
+@item
+items that are @emph{not} under revision control will be preserved.
+@item
+items that are locally modified result in a conflict (C)
+@end itemize
+
+Thus it's possible that after an update which recursively removes a
+directory, there may be stray path "trails" leading down to individual
+files that were deliberately saved.
 

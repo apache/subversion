@@ -79,7 +79,7 @@
 Copyright @copyright{} 2001 Collab.Net, Inc. @*
 See @xref{License} for details. @*
 First version: June 2001.  @*
-Last updated:  $Date: 2001-06-04 22:00:53 $
+Last updated:  $Date: 2001-06-05 20:57:05 $
 
 @end titlepage
 @c -----------------------------------------------------------------
@@ -102,13 +102,11 @@ This manual describes the behavior of the Subversion command-line client.
 @c  chapter document and @include it below.  We'll rearrange all the
 @c  information some other day.
 @menu
-* Removals::                     How file and directory removals work.
-@c * Model::                     The versioning model used by Subversion.
-@c * Architecture::              How Subversion's components work together.
+* Model::                     The versioning model used by Subversion.
+* Removals::                  How file and directory removals work.
 @end menu
 
+@include model.texi
 @include removals.texi
-@c @include model.texi
-@c @include architecture.texi
 
 @bye
