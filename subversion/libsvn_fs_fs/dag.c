@@ -24,6 +24,7 @@
 #include "svn_fs.h"
 #include "svn_props.h"
 #include "svn_pools.h"
+#include "svn_md5.h"
 
 #include "dag.h"
 #include "err.h"
@@ -939,8 +940,21 @@ svn_fs_fs__dag_finalize_edits (dag_node_t *file,
                                const char *txn_id, 
                                apr_pool_t *pool)
 {
-  /* A big no-op for FSFS. */
-  
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  const char *hex;
+
+  if (checksum)
+    {
+      SVN_ERR (svn_fs_fs__dag_file_checksum (digest, file, pool));
+      hex = svn_md5_digest_to_cstring (digest, pool);
+      if (strcmp (checksum, hex) != 0)
+        return svn_error_createf (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                                  _("Checksum mismatch, file '%s':\n"
+                                    "   expected:  %s\n"
+                                    "     actual:  %s\n"),
+                                  file->created_path, checksum, hex);
+    }
+
   return SVN_NO_ERROR;
 }
 
