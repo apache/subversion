@@ -35,12 +35,18 @@ class JNIByteArray;
 class Prompter;
 class BlameCallback;
 class CommitMessage;
+class LockCallback;
 #include <svn_client.h>
 #include "SVNBase.h"
 
 class SVNClient :public SVNBase
 {
 public:
+    jobjectArray info2(const char *path, Revision &revision, 
+        Revision &pegRevision, bool recurse);
+	void unlock(Targets &targets, LockCallback &callback, bool force);
+	jobjectArray lock(Targets &targets, const char *comment, 
+                 LockCallback &callback, bool force);
 	jobjectArray revProperties(jobject jthis, const char *path, 
                                 Revision &revision);
     void cancelOperation();
@@ -88,7 +94,8 @@ public:
                   const char *message, bool force);
     void copy(const char *srcPath, const char *destPath,
                   const char *message, Revision &revision);
-    jlong commit(Targets &targets, const char *message, bool recurse);
+    jlong commit(Targets &targets, const char *message, bool recurse, 
+                  bool noUnlock);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,
         bool ignoreExternals);
     void add(const char *path, bool recurse, bool force);
@@ -134,6 +141,7 @@ public:
     jlong getCppAddr();
     SVNClient();
     virtual ~SVNClient();
+    static jobject createJavaLock(const svn_lock_t *lock);
 private:
     static svn_error_t * checkCancel(void *cancelBaton);
     void propertySet(const char *path, const char *name,
@@ -171,6 +179,17 @@ private:
                                             apr_pool_t * pool);
     static void statusReceiver(void *baton,
                                    const char *path, svn_wc_status_t *status);
+    static svn_error_t *lockCallback(void *baton,
+                                     const char *path,
+                                     svn_boolean_t do_lock,
+                                     const svn_lock_t *lock,
+                                     svn_error_t *ra_err);
+    static svn_error_t *infoReceiver(void *baton, 
+                                     const char *path,
+                                     const svn_info_t *info,
+                                     apr_pool_t *pool);
+    static jobject createJavaInfo2(const char *path, const svn_info_t *info);
+
 };
 // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
 #endif

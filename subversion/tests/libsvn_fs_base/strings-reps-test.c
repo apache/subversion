@@ -89,6 +89,7 @@ txn_body_delete_rep (void *baton, trail_t *trail)
 static svn_error_t *
 write_new_rep (const char **msg, 
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   struct rep_args args;
@@ -102,7 +103,8 @@ write_new_rep (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-write-new-rep", pool));
+           (&fs, "test-repo-write-new-rep",
+            "bdb", pool));
 
   /* Set up transaction baton */
   args.fs = fs;
@@ -124,6 +126,7 @@ write_new_rep (const char **msg,
 static svn_error_t *
 write_rep (const char **msg, 
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -139,7 +142,8 @@ write_rep (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-write-rep", pool));
+           (&fs, "test-repo-write-rep",
+            "bdb", pool));
 
   /* Set up transaction baton */
   new_args.fs = fs;
@@ -171,6 +175,7 @@ write_rep (const char **msg,
 static svn_error_t *
 read_rep (const char **msg, 
           svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -215,7 +220,8 @@ read_rep (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-read-rep", pool));
+           (&fs, "test-repo-read-rep",
+            "bdb", pool));
 
   /* Set up transaction baton */
   new_args.fs = fs;
@@ -282,6 +288,7 @@ read_rep (const char **msg,
 static svn_error_t *
 delete_rep (const char **msg, 
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -298,7 +305,8 @@ delete_rep (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-delete-rep", pool));
+           (&fs, "test-repo-delete-rep",
+            "bdb", pool));
 
   /* Set up transaction baton */
   new_args.fs = fs;
@@ -518,6 +526,7 @@ static const char *bigstring3 =
 static svn_error_t *
 test_strings (const char **msg, 
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   struct string_args args;
@@ -531,7 +540,8 @@ test_strings (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-test-strings", pool));
+           (&fs, "test-repo-test-strings",
+            "bdb", pool));
 
   /* The plan (after each step below, verify the size and contents of
      the string):
@@ -622,6 +632,7 @@ test_strings (const char **msg,
 static svn_error_t *
 write_null_string (const char **msg, 
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   struct string_args args;
@@ -634,7 +645,8 @@ write_null_string (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-test-strings", pool));
+           (&fs, "test-repo-test-strings",
+            "bdb", pool));
 
   args.fs = fs;
   args.key = NULL;
@@ -650,6 +662,7 @@ write_null_string (const char **msg,
 static svn_error_t *
 abort_string (const char **msg, 
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   struct string_args args, args2;
@@ -662,7 +675,8 @@ abort_string (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-abort-string", pool));
+           (&fs, "test-repo-abort-string",
+            "bdb", pool));
 
   /* The plan:
 
@@ -715,6 +729,7 @@ abort_string (const char **msg,
 static svn_error_t *
 copy_string (const char **msg, 
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   struct string_args args;
@@ -728,7 +743,8 @@ copy_string (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs
-           (&fs, "test-repo-copy-string", pool));
+           (&fs, "test-repo-copy-string",
+            "bdb", pool));
 
   /*  Write a new string (string1). */
   args.fs = fs;

@@ -51,11 +51,19 @@ paths adjusted appropriately:
    <Location /repositories>
      DAV svn
      SVNParentPath /home/jrandom/projects/svn/subversion/tests/clients/cmdline/repositories
+     AuthType Basic
+     AuthName "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require valid-user
    </Location>
      
    <Location /local_tmp/repos>
      DAV svn
      SVNPath /home/jrandom/projects/svn/subversion/tests/clients/cmdline/local_tmp/repos
+     AuthType Basic
+     AuthName "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require valid-user
    </Location>
 
 Httpd should be running on port 80.  You may also need to ensure that
@@ -66,7 +74,18 @@ set the User and Group directives in httpd.conf, something like this:
    User jrandom
    Group users
 
-Now you can run a test script over ra_dav:
+You need to run the tests over ra_dav with authentication enabled, so
+just drop the following 2-line snippet into the
+/usr/local/apache2/conf/users file:
+
+----------------------------
+jrandom:xCGl35kV9oWCY
+jconstant:xCGl35kV9oWCY
+----------------------------
+
+Now, (re)start Apache and run the tests over ra_dav.
+
+You can run a test script over ra_dav:
 
    $ ./basic_tests.py --url http://localhost
    $ ./basic_tests.py --url http://localhost 3
@@ -88,23 +107,6 @@ BASE_URL=URL can also be used when running individual tests:
 
    $ ./basic_tests.py BASE_URL=http://localhost
    $ ./basic_tests.py BASE_URL=http://localhost 3
-
-
-You can run the tests over ra_dav with authentication enabled.  First you
-need to enable authentication: modify the /repositories Location directive
-to include
-
-   AuthType Basic
-   AuthName "Subversion Repository"
-   AuthUserFile /usr/local/apache2/conf/users
-   Require valid-user
-
-Next create the auth file using the command 
-
-   $ htpasswd -c /usr/local/apache2/conf/users jrandom
-
-and enter the password "rayjandom" when prompted.  Now, (re)start Apache
-and run the tests over ra_dav.
 
 
 Running over ra_svn

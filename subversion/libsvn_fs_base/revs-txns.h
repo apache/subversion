@@ -179,7 +179,8 @@ svn_error_t *svn_fs_base__change_rev_prop (svn_fs_t *fs, svn_revnum_t rev,
                                            apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                                     svn_revnum_t rev, apr_pool_t *pool);
+                                     svn_revnum_t rev, apr_uint32_t flags,
+                                     apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__open_txn (svn_fs_txn_t **txn, svn_fs_t *fs,
                                     const char *name, apr_pool_t *pool);
@@ -198,6 +199,11 @@ svn_error_t *svn_fs_base__txn_prop (svn_string_t **value_p, svn_fs_txn_t *txn,
 svn_error_t *svn_fs_base__txn_proplist (apr_hash_t **table_p,
                                         svn_fs_txn_t *txn,
                                         apr_pool_t *pool);
+
+/* Helper func:  variant of __txn_proplist that uses an existing trail. */
+svn_error_t *svn_fs_base__txn_proplist_in_trail (apr_hash_t **table_p,
+                                                 const char *txn_id,
+                                                 trail_t *trail);
 
 svn_error_t *svn_fs_base__change_txn_prop (svn_fs_txn_t *txn, const char *name,
                                            const svn_string_t *value,

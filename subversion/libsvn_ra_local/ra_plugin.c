@@ -62,11 +62,12 @@ reporter_set_path (void *reporter_baton,
                    const char *path,
                    svn_revnum_t revision,
                    svn_boolean_t start_empty,
+                   const char *lock_token,
                    apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_set_path (rbaton->report_baton, path,
-                             revision, start_empty, pool);
+  return svn_repos_set_path2 (rbaton->report_baton, path,
+                              revision, start_empty, lock_token, pool);
 }
 
 
@@ -86,6 +87,7 @@ reporter_link_path (void *reporter_baton,
                     const char *url,
                     svn_revnum_t revision,
                     svn_boolean_t start_empty,
+                    const char *lock_token,
                     apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
@@ -103,8 +105,8 @@ reporter_link_path (void *reporter_baton,
                                 "'%s'"), url, rbaton->session->repos_url);
   fs_path = url + repos_url_len;
 
-  return svn_repos_link_path (rbaton->report_baton, path,
-                              fs_path, revision, start_empty, pool);
+  return svn_repos_link_path2 (rbaton->report_baton, path, fs_path, revision,
+                              start_empty, lock_token, pool);
 }
 
 
@@ -126,7 +128,7 @@ reporter_abort_report (void *reporter_baton,
 }
 
 
-static const svn_ra_reporter_t ra_local_reporter = 
+static const svn_ra_reporter2_t ra_local_reporter = 
 {
   reporter_set_path,
   reporter_delete_path,
@@ -154,45 +156,74 @@ svn_ra_local__get_file_revs (svn_ra_session_t *session,
                                   NULL, handler, handler_baton, pool);
 }
 
+/* Pool cleanup handler: Ensure that the access descriptor of the filesystem
+   DATA is set to NULL. */
+static apr_status_t
+cleanup_access (void *data)
+{
+  svn_fs_t *fs = data;
+
+  /* ### What could go wrong here? Currently, it always succeeds. */
+  svn_error_clear (svn_fs_set_access (fs, NULL));
+
+  return APR_SUCCESS;
+}
+
 static svn_error_t *
 get_username (svn_ra_session_t *session,
               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
   svn_auth_iterstate_t *iterstate;
+  svn_fs_access_t *access_ctx;
 
-  /* If we've already found the username don't ask for it again */
-  if (baton->username)
-    return SVN_NO_ERROR;
-
-  /* Get a username somehow, so we have some svn:author property to
-     attach to a commit. */
-  if (! baton->callbacks->auth_baton)
+  /* If we've already found the username don't ask for it again. */
+  if (! baton->username)
     {
-      baton->username = "";
-    }
-  else
-    {
-      void *creds;
-      svn_auth_cred_username_t *username_creds;
-      SVN_ERR (svn_auth_first_credentials (&creds, &iterstate,
-                                           SVN_AUTH_CRED_USERNAME,
-                                           baton->uuid, /* realmstring */
-                                           baton->callbacks->auth_baton,
-                                           pool));
-
-      /* No point in calling next_creds(), since that assumes that the
-         first_creds() somehow failed to authenticate.  But there's no
-         challenge going on, so we use whatever creds we get back on
-         the first try. */
-      username_creds = creds;
-      if (username_creds && username_creds->username)
+      /* Get a username somehow, so we have some svn:author property to
+         attach to a commit. */
+      if (baton->callbacks->auth_baton)
         {
-          baton->username = apr_pstrdup (pool, username_creds->username);
-          svn_error_clear (svn_auth_save_credentials (iterstate, pool));
+          void *creds;
+          svn_auth_cred_username_t *username_creds;
+          SVN_ERR (svn_auth_first_credentials (&creds, &iterstate,
+                                               SVN_AUTH_CRED_USERNAME,
+                                               baton->uuid, /* realmstring */
+                                               baton->callbacks->auth_baton,
+                                               pool));
+          
+          /* No point in calling next_creds(), since that assumes that the
+             first_creds() somehow failed to authenticate.  But there's no
+             challenge going on, so we use whatever creds we get back on
+             the first try. */
+          username_creds = creds;
+          if (username_creds && username_creds->username)
+            {
+              baton->username = apr_pstrdup (session->pool,
+                                             username_creds->username);
+              svn_error_clear (svn_auth_save_credentials (iterstate, pool));
+            }
+          else
+            baton->username = "";
         }
       else
         baton->username = "";
+    }
+
+  /* If we have a real username, attach it to the filesystem so that it can
+     be used to validate locks.  Even if there already is a user context
+     associated, it may contain irrelevant lock tokens, so always create a new.
+  */
+  if (*baton->username)
+    {
+      SVN_ERR (svn_fs_create_access (&access_ctx, baton->username,
+                                     pool));
+      SVN_ERR (svn_fs_set_access (baton->fs, access_ctx));
+
+      /* Make sure this context is disassociated when the pool gets
+         destroyed. */
+      apr_pool_cleanup_register (pool, baton->fs, cleanup_access,
+                                 apr_pool_cleanup_null);
     }
 
   return SVN_NO_ERROR;
@@ -366,13 +397,17 @@ svn_ra_local__rev_prop (svn_ra_session_t *session,
 struct deltify_etc_baton
 {
   svn_fs_t *fs;                    /* the fs to deltify in */
+  svn_repos_t *repos;              /* repos for unlocking */
+  const char *fs_path;             /* fs-path part of split session URL */
+  apr_hash_t *lock_tokens;         /* tokens to unlock, if any */
   apr_pool_t *pool;                /* pool for scratch work */
   svn_commit_callback_t callback;  /* the original callback */
   void *callback_baton;            /* the original callback's baton */
 };
 
 /* This implements 'svn_commit_callback_t'.  Its invokes the original
-   (wrapped) callback, but also does deltification on the new revision.
+   (wrapped) callback, but also does deltification on the new revision and
+   possibly unlocks committed paths.
    BATON is 'struct deltify_etc_baton *'. */
 static svn_error_t * 
 deltify_etc (svn_revnum_t new_revision,
@@ -382,11 +417,39 @@ deltify_etc (svn_revnum_t new_revision,
 {
   struct deltify_etc_baton *db = baton;
   svn_error_t *err1, *err2;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
   err1 = (*db->callback) (new_revision, date, author, db->callback_baton);
+
+  /* Maybe unlock the paths. */
+  if (db->lock_tokens)
+    {
+      iterpool = svn_pool_create (db->pool);
+      for (hi = apr_hash_first (db->pool, db->lock_tokens); hi;
+           hi = apr_hash_next (hi))
+        {
+          const void *rel_path;
+          void *val;
+          const char *abs_path, *token;
+
+          svn_pool_clear (iterpool);
+          apr_hash_this (hi, &rel_path, NULL, &val);
+          token = val;
+          abs_path = svn_path_join (db->fs_path, rel_path, iterpool);
+          /* We may get errors here if the lock was broken or stolen after
+             the commit succeeded.  This is fine and should be ignored.
+             ### What about the other errors? Collecting them all could mean
+             ### a lot of errors for the user. Should we just collect the first
+             ### error and continue? */
+          svn_error_clear (svn_repos_fs_unlock (db->repos, abs_path, token,
+                                                FALSE, iterpool));
+        }
+      svn_pool_destroy (iterpool);
+    }
 
   /* But, deltification shouldn't be stopped just because someone's
      random callback failed, so proceed unconditionally on to
@@ -412,18 +475,50 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
                                  const char *log_msg,
                                  svn_commit_callback_t callback,
                                  void *callback_baton,
+                                 apr_hash_t *lock_tokens,
+                                 svn_boolean_t keep_locks,
                                  apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess_baton = session->priv;
   struct deltify_etc_baton *db = apr_palloc (pool, sizeof(*db));
+  apr_hash_index_t *hi;
+  svn_fs_access_t *fs_access;
 
   db->fs = sess_baton->fs;
+  db->repos = sess_baton->repos;
+  db->fs_path = sess_baton->fs_path;
+  if (! keep_locks)
+    db->lock_tokens = lock_tokens;
+  else
+    db->lock_tokens = NULL;
   db->pool = pool;
   db->callback = callback;
   db->callback_baton = callback_baton;
 
   SVN_ERR (get_username (session, pool));
 
+  /* If there are lock tokens to add, do so. */
+  if (lock_tokens)
+    {
+      SVN_ERR (svn_fs_get_access (&fs_access, sess_baton->fs));
+
+      /* If there is no access context, the filesystem will scream if a
+         lock is needed. */      
+      if (fs_access)
+        {
+          for (hi = apr_hash_first (pool, lock_tokens); hi;
+               hi = apr_hash_next (hi))
+            {
+              void *val;
+              const char *token;
+
+              apr_hash_this (hi, NULL, NULL, &val);
+              token = val;
+              SVN_ERR (svn_fs_access_add_lock_token (fs_access, token));
+            }
+        }
+    }
+              
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_commit_editor
            (editor, edit_baton, sess_baton->repos,
@@ -436,10 +531,9 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
 }
 
 
-
 static svn_error_t *
 make_reporter (svn_ra_session_t *session,
-               const svn_ra_reporter_t **reporter,
+               const svn_ra_reporter2_t **reporter,
                void **report_baton,
                svn_revnum_t revision,
                const char *target,
@@ -513,7 +607,7 @@ make_reporter (svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_update (svn_ra_session_t *session,
-                         const svn_ra_reporter_t **reporter,
+                         const svn_ra_reporter2_t **reporter,
                          void **report_baton,
                          svn_revnum_t update_revision,
                          const char *update_target,
@@ -539,7 +633,7 @@ svn_ra_local__do_update (svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_switch (svn_ra_session_t *session,
-                         const svn_ra_reporter_t **reporter,
+                         const svn_ra_reporter2_t **reporter,
                          void **report_baton,
                          svn_revnum_t update_revision,
                          const char *update_target,
@@ -566,7 +660,7 @@ svn_ra_local__do_switch (svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_status (svn_ra_session_t *session,
-                         const svn_ra_reporter_t **reporter,
+                         const svn_ra_reporter2_t **reporter,
                          void **report_baton,
                          const char *status_target,
                          svn_revnum_t revision,
@@ -592,7 +686,7 @@ svn_ra_local__do_status (svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__do_diff (svn_ra_session_t *session,
-                       const svn_ra_reporter_t **reporter,
+                       const svn_ra_reporter2_t **reporter,
                        void **report_baton,
                        svn_revnum_t update_revision,
                        const char *update_target,
@@ -956,6 +1050,162 @@ svn_ra_local__get_locations (svn_ra_session_t *session,
 }
 
 
+
+static svn_error_t *
+svn_ra_local__lock (svn_ra_session_t *session,
+                    apr_hash_t *path_revs,
+                    const char *comment,
+                    svn_boolean_t force,
+                    svn_ra_lock_callback_t lock_func, 
+                    void *lock_baton,
+                    apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create (pool);
+
+  /* A username is absolutely required to lock a path. */
+  SVN_ERR (get_username (session, pool));
+
+  for (hi = apr_hash_first (pool, path_revs); hi; hi = apr_hash_next (hi))
+    {
+      svn_lock_t *lock;
+      const void *key;
+      const char *path;
+      void *val;
+      svn_revnum_t *revnum;
+      const char *abs_path;
+      svn_error_t *err, *callback_err = NULL;
+ 
+      svn_pool_clear (iterpool);
+      apr_hash_this (hi, &key, NULL, &val);
+      path = key;
+      revnum = val;
+
+      abs_path = svn_path_join (sess->fs_path, path, iterpool);
+
+      /* This wrapper will call pre- and post-lock hooks. */
+      err = svn_repos_fs_lock (&lock, sess->repos, abs_path, comment, force,
+                               0 /* no timeout */, *revnum, iterpool);
+
+      if (err && !svn_error_is_lock_error (err))
+        return err;
+
+      if (lock_func)
+        callback_err = lock_func (lock_baton, path, TRUE, lock, err, iterpool);
+
+      svn_error_clear (err);
+
+      if (callback_err)
+        return callback_err;
+    }
+
+  svn_pool_destroy (iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+svn_ra_local__unlock (svn_ra_session_t *session,
+                      apr_hash_t *path_tokens,
+                      svn_boolean_t force,
+                      svn_ra_lock_callback_t lock_func, 
+                      void *lock_baton,
+                      apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create (pool);
+
+  /* A username is absolutely required to unlock a path. */
+  SVN_ERR (get_username (session, pool));
+
+  for (hi = apr_hash_first (pool, path_tokens); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *path;
+      void *val;
+      const char *abs_path, *token;
+      svn_error_t *err, *callback_err = NULL;
+ 
+      svn_pool_clear (iterpool);
+      apr_hash_this (hi, &key, NULL, &val);
+      path = key;
+      /* Since we can't store NULL values in a hash, we turn "" to
+         NULL here. */
+      if (strcmp (val, "") != 0)
+        token = val;
+      else
+        token = NULL;
+
+      abs_path = svn_path_join (sess->fs_path, path, iterpool);
+
+      /* This wrapper will call pre- and post-unlock hooks. */
+      err = svn_repos_fs_unlock (sess->repos, abs_path, token, force,
+                                 iterpool);
+
+      if (err && !svn_error_is_unlock_error (err))
+        return err;
+
+      if (lock_func)
+        callback_err = lock_func (lock_baton, path, FALSE, NULL, err, iterpool);
+
+      svn_error_clear (err);
+
+      if (callback_err)
+        return callback_err;
+    }
+
+  svn_pool_destroy (iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+svn_ra_local__get_lock (svn_ra_session_t *session,
+                        svn_lock_t **lock,
+                        const char *path,
+                        apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path;
+
+  /* Get the absolute path. */
+  abs_path = svn_path_join (sess->fs_path, path, pool);
+
+  SVN_ERR (svn_fs_get_lock (lock, sess->fs, abs_path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+svn_ra_local__get_locks (svn_ra_session_t *session,
+                         apr_hash_t **locks,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path;
+
+  /* Get the absolute path. */
+  abs_path = svn_path_join (sess->fs_path, path, pool);
+
+  /* Kinda silly to call the repos wrapper, since we have no authz
+     func to give it.  But heck, why not. */
+  SVN_ERR (svn_repos_fs_get_locks (locks, sess->repos, abs_path,
+                                   NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -991,6 +1241,10 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_repos_root,
   svn_ra_local__get_locations,
   svn_ra_local__get_file_revs,
+  svn_ra_local__lock,
+  svn_ra_local__unlock,
+  svn_ra_local__get_lock,
+  svn_ra_local__get_locks,
 };
 
 

@@ -370,6 +370,8 @@ static int req_check_access(request_rec *r,
     case M_CHECKOUT:
     case M_MERGE:
     case M_MKACTIVITY:
+    case M_LOCK:
+    case M_UNLOCK:
         authz_svn_type |= AUTHZ_SVN_WRITE;
         break;
 

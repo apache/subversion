@@ -94,6 +94,11 @@ public class PropertyData
     public static final String REV_ORIGINAL_DATE = "svn:original-date";
 
     /**
+     * flag property if a lock is needed to modify this node
+     */
+    public static final String NEEDS_LOCK = "svn:needs-lock";
+    
+    /**
      * this constructor is only used by the JNI code
      * @param cl    the client object, which created this object
      * @param p     the path of the item owning this property

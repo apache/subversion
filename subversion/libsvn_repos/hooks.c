@@ -408,6 +408,161 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
 }
 
 
+
+svn_error_t  *
+svn_repos__hooks_pre_lock (svn_repos_t *repos,
+                           const char *path,
+                           const char *username,
+                           apr_pool_t *pool)
+{
+  const char *hook = svn_repos_pre_lock_hook (repos, pool);
+  svn_boolean_t broken_link;
+
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = path;
+      args[3] = username;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("pre-lock", hook, args, TRUE, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Return a string which is the concatenation of STRINGS.  The
+   separator between elements is SEPARATOR. */
+/* TODO Shouldn't this find its way into libsvn_subr? */
+static svn_string_t *
+array_join (apr_array_header_t *strings,
+            const char *separator,
+            apr_pool_t *pool)
+{
+  const char *new_str = "";
+  int i;
+  
+  for (i = 0; i < strings->nelts; i++)
+    {
+      const char *string = ((const char **) (strings->elts))[i];
+      /* TODO This is rather inefficient. */ 
+      new_str = apr_pstrcat (pool, new_str, string, separator, NULL);
+    }
+  return svn_string_create (new_str, pool);
+}
+
+
+svn_error_t  *
+svn_repos__hooks_post_lock (svn_repos_t *repos,
+                            apr_array_header_t *paths,
+                            const char *username,
+                            apr_pool_t *pool)
+{
+  const char *hook = svn_repos_post_lock_hook (repos, pool);
+  svn_boolean_t broken_link;
+  
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+      apr_file_t *stdin_handle = NULL;
+      svn_string_t *paths_str = array_join (paths, "\n", pool);
+
+      SVN_ERR (create_temp_file (&stdin_handle, paths_str, pool));
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = username;
+      args[3] = NULL;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("post-lock", hook, args, FALSE, 
+                             stdin_handle, pool));
+
+      SVN_ERR (svn_io_file_close (stdin_handle, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t  *
+svn_repos__hooks_pre_unlock (svn_repos_t *repos,
+                             const char *path,
+                             const char *username,
+                             apr_pool_t *pool)
+{
+  const char *hook = svn_repos_pre_unlock_hook (repos, pool);
+  svn_boolean_t broken_link;
+
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = path;
+      args[3] = username ? username : "";
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("pre-unlock", hook, args, TRUE, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t  *
+svn_repos__hooks_post_unlock (svn_repos_t *repos,
+                              apr_array_header_t *paths,
+                              const char *username,
+                              apr_pool_t *pool)
+{
+  const char *hook = svn_repos_post_unlock_hook (repos, pool);
+  svn_boolean_t broken_link;
+  
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+      apr_file_t *stdin_handle = NULL;
+      svn_string_t *paths_str = array_join (paths, "\n", pool);
+
+      SVN_ERR (create_temp_file (&stdin_handle, paths_str, pool));
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = username ? username : "";
+      args[3] = NULL;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("post-unlock", hook, args, FALSE, 
+                             stdin_handle, pool));
+
+      SVN_ERR (svn_io_file_close (stdin_handle, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* 
  * vim:ts=4:sw=4:expandtab:tw=80:fo=tcroq 

@@ -520,3 +520,26 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_verify
 
     cl->verify(path, messageOut, revisionStart, revisionEnd);
 }
+/*
+ * Class:     org_tigris_subversion_javahl_SVNAdmin
+ * Method:    lslocks
+ * Signature: (Ljava/lang/String;)[Lorg/tigris/subversion/javahl/Lock;
+ */
+JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_lslocks
+  (JNIEnv *env, jobject jthis, jstring jpath)
+{
+    JNIEntry(SVNAdmin, lstxns);
+    SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return NULL;
+    }
+
+    JNIStringHolder path(jpath);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    return cl->lslocks(path);
+}

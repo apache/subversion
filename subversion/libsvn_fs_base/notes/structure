@@ -571,6 +571,60 @@ The `copies' table is a btree, with no particular sort order.
 
 
 
+Locks
+
+When a caller locks a file -- reserving an exclusive right to modify
+or delete it -- an lock object is created in a `locks' table.
+
+The `locks' table is a btree whose key is a UUID string (also known as
+a "lock-token"), and whose value is a skel representing a lock.  The
+fields in the skel mirror those of an svn_lock__t (see svn_types.h):
+
+    ("lock" PATH UUID OWNER COMMENT XML-P CREATION-DATE EXPIRATION-DATE)
+
+where:
+
+   * PATH is the absolute filesystem path reserved by the lock.
+
+   * UUID is the universally unique identifier of the lock, also known
+     as the lock-token.  This is the same as the row's key.
+
+   * OWNER is the authenticated username that "owns" the lock.
+
+   * COMMENT is a string describing the lock.  It may be empty, or it
+     might describe the rationale for locking.
+
+   * XML-P is a boolean (either 0 or 1) indicating whether the COMMENT
+     field is wrapped in an XML tag.  (This is something only used by
+     the DAV layer, for webdav interoperabliity.)
+
+   * CREATION-DATE is a string representation of the date/time when
+     the lock was created.  (see svn_time_to_cstring())
+
+   * EXPIRATION-DATE is a string representation of the date/time when
+     the lock will cease to be valid.  (see svn_time_to_cstring())
+
+In addition to creating a lock in the `locks' table, a new row is
+created in a `locks-nodes' table.  The `lock-nodes' table is a btree
+whose key is an absolute path in the filesystem.  The value of each
+key is a lock-token (which is a key into the `locks' table.)
+
+To test if a path is locked, simply check if the path is a key in the
+`locks-nodes' table.  To see if a certain directory has any locked
+children below, we ask BerkeleyDB to do a "greater or equal match" on
+the directory path, and see if any results come back.  If they do,
+then at least one of the directory's children is locked, and thus the
+directory cannot be deleted without further investigation.
+
+Locks are epheremal things, not historied in any way.  They are
+potentially created and deleted quite often.  When a lock is
+destroyed, the appropriate row is removed from the `locks' table.
+Additionally, the locked-path is removed from the `lock-nodes' table.
+
+
+
+
+
 Merge rules
 
 The Subversion filesystem must provide the following characteristics:
@@ -730,6 +784,8 @@ Berkeley DB tables
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
                 "uuids" : recno(UUID)
+                "locks" : btree(TOKEN -> LOCK)
+          "lock-tokens" : btree(PATH -> TOKEN)
 
 Syntactic elements
 ------------------
@@ -741,6 +797,7 @@ Table keys:
                     CPY ::= number-36 ;
                     STR ::= number-36 ;
                     REP ::= number-36 ;
+                  TOKEN ::= uuid ;
 
 Property lists:
 
@@ -841,7 +898,25 @@ Node revision IDs:
 
 UUIDs:
                    UUID ::= uuid ;
-                   
+
+
+Locks:
+
+                   LOCK ::= ("lock" PATH TOKEN OWNER 
+                                    COMMENT XML-P CR-DATE [X-DATE]);
+                   PATH ::= atom ;
+                  OWNER ::= atom ;
+                COMMENT ::= atom ;
+                  XML-P ::= "0" | "1" ;
+                CR-DATE ::= atom ;
+                 X-DATE ::= atom ;
+
+Lock tokens:
+
+               (the value is just a lock-token, which is a uuid)
+
+
+        
 Lexical elements
 ----------------
 

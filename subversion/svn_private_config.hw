@@ -54,6 +54,12 @@
 /* Defined to be the path to the installed binaries */
 #define SVN_BINDIR "/usr/local/bin"
 
+
+
+/* The default FS back-end type */
+#define DEFAULT_FS_TYPE "bdb"
+
+
 /* Define to the Python/C API format character suitable for apr_int64_t */
 #if defined(_WIN64)
 #define SVN_APR_INT64_T_PYCFMT "l"

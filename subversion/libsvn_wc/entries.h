@@ -62,6 +62,10 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR    "last-author"
 #define SVN_WC__ENTRY_ATTR_UUID          "uuid"
 #define SVN_WC__ENTRY_ATTR_INCOMPLETE    "incomplete"
+#define SVN_WC__ENTRY_ATTR_LOCK_TOKEN    "lock-token"
+#define SVN_WC__ENTRY_ATTR_LOCK_OWNER    "lock-owner"
+#define SVN_WC__ENTRY_ATTR_LOCK_COMMENT  "lock-comment"
+#define SVN_WC__ENTRY_ATTR_LOCK_CRT_DATE "lock-creation-date"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -128,6 +132,10 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_UUID          0x00040000
 #define SVN_WC__ENTRY_MODIFY_INCOMPLETE    0x00080000
 #define SVN_WC__ENTRY_MODIFY_ABSENT        0x00100000
+#define SVN_WC__ENTRY_MODIFY_LOCK_TOKEN    0x00200000
+#define SVN_WC__ENTRY_MODIFY_LOCK_OWNER    0x00400000
+#define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT  0x00800000
+#define SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE 0x01000000
 
 
 /* ...or perhaps this to mean all of those above... */

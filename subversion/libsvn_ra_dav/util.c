@@ -850,6 +850,29 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras)
 }
 
 
+
+void
+svn_ra_dav__add_error_handler(ne_request *request,
+                              ne_xml_parser *parser,
+                              svn_error_t **err,
+                              apr_pool_t *pool)
+{
+  shim_xml_push_handler(parser,
+                        error_elements,
+                        validate_error_elements,
+                        start_err_element,
+                        end_err_element,
+                        err,
+                        pool);
+  
+  ne_add_response_body_reader(request,
+                              ra_dav_error_accepter,
+                              ne_xml_parse_v,
+                              parser);  
+}
+
+
+
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
                              ne_request *request,

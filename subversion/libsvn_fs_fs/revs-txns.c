@@ -168,6 +168,7 @@ svn_error_t *
 svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
+                      apr_uint32_t flags,
                       apr_pool_t *pool)
 {
   svn_string_t date;
@@ -186,7 +187,18 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
   SVN_ERR (svn_fs_fs__change_txn_prop (*txn_p, SVN_PROP_REVISION_DATE, 
                                        &date, pool));
   
-
+  /* Set temporary txn props that represent the requested 'flags'
+     behaviors. */
+  if (flags & SVN_FS_TXN_CHECK_OOD)
+    SVN_ERR (svn_fs_fs__change_txn_prop 
+             (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
+              svn_string_create ("true", pool), pool));
+  
+  if (flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__change_txn_prop 
+             (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
+              svn_string_create ("true", pool), pool));
+             
   return SVN_NO_ERROR;
 }
 

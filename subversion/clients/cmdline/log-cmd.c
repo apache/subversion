@@ -41,38 +41,6 @@
 
 /*** Code. ***/
 
-/* Helper for log_message_receiver(). 
- *
- * Return the number of lines in MSG, allowing any kind of newline
- * termination (CR, CRLF, or LFCR), even inconsistent.  The minimum
- * number of lines in MSG is 1 -- even the empty string is considered
- * to have one line, due to the way we print log messages.
- */
-static int
-num_lines (const char *msg)
-{
-  int count = 1;
-  const char *p;
-
-  for (p = msg; *p; p++)
-    {
-      if (*p == '\n')
-        {
-          count++;
-          if (*(p + 1) == '\r')
-            p++;
-        }
-      else if (*p == '\r')
-        {
-          count++;
-          if (*(p + 1) == '\n')
-            p++;
-        }
-    }
-
-  return count;
-}
-
 /* Baton for log_message_receiver() and log_message_receiver_xml(). */
 struct log_receiver_baton
 {
@@ -213,7 +181,7 @@ log_message_receiver (void *baton,
 
   if (! lb->omit_log_message)
     {
-      lines = num_lines (msg);
+      lines = svn_cstring_count_newlines (msg) + 1;
       /*### FIXME: how do we translate this without ngettext?! */
       SVN_ERR (svn_cmdline_printf (pool,
                                    " | %d line%s", lines,

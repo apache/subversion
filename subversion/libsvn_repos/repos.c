@@ -106,6 +106,33 @@ svn_repos_pre_commit_hook (svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
+svn_repos_pre_lock_hook (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_PRE_LOCK, pool);
+}
+
+
+const char *
+svn_repos_pre_unlock_hook (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_PRE_UNLOCK, pool);
+}
+
+const char *
+svn_repos_post_lock_hook (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_POST_LOCK, pool);
+}
+
+
+const char *
+svn_repos_post_unlock_hook (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_POST_UNLOCK, pool);
+}
+
+
+const char *
 svn_repos_post_commit_hook (svn_repos_t *repos, apr_pool_t *pool)
 {
   return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_POST_COMMIT, pool);
@@ -622,6 +649,280 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
   }  /* end pre-revprop-change hook */
 
 
+  /* Pre-lock hook. */
+  {
+    this_path = apr_psprintf (pool, "%s%s",
+                              svn_repos_pre_lock_hook (repos, pool),
+                              SVN_REPOS__HOOK_DESC_EXT);
+
+    contents =
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# PRE-LOCK HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The pre-lock hook is invoked before an exclusive lock is"
+      APR_EOL_STR
+      "# created.  Subversion runs this hook by invoking a program "
+      APR_EOL_STR
+      "# (script, executable, binary, etc.) named "
+      "'" 
+      SVN_REPOS__HOOK_PRE_LOCK "' (for which"
+      APR_EOL_STR
+      "# this file is a template), with the following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] PATH         (the path in the repository about to be locked)"
+      APR_EOL_STR
+      "#   [3] USER         (the user creating the lock)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The default working directory for the invocation is undefined, so"
+      APR_EOL_STR
+      "# the program should set one explicitly if it cares."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# If the hook program exits with success, the lock is created; but"
+      APR_EOL_STR
+      "# if it exits with failure (non-zero), the lock action is aborted"
+      APR_EOL_STR
+      "# and STDERR is returned to the client."
+      APR_EOL_STR
+      APR_EOL_STR
+      "# On a Unix system, the normal procedure is to have "
+      "'"
+      SVN_REPOS__HOOK_PRE_LOCK
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Note that"
+      " '" SVN_REPOS__HOOK_PRE_LOCK "' "
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
+      "# '" SVN_REPOS__HOOK_PRE_LOCK ".bat' or "
+      "'" SVN_REPOS__HOOK_PRE_LOCK ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "PATH=\"$2\""
+      APR_EOL_STR
+      "USER=\"$3\""
+      APR_EOL_STR
+      APR_EOL_STR
+      "# If a lock exists and is owned by a different person, don't allow it"
+      APR_EOL_STR
+      "# to be broken."
+      APR_EOL_STR
+      APR_EOL_STR
+      "# (Maybe this script could send email to the to the lock owner?)"
+      APR_EOL_STR
+      "SVNLOOK=/usr/local/bin/svnlook"
+      APR_EOL_STR
+      "GREP=/bin/grep"
+      APR_EOL_STR
+      "SED=/bin/sed"
+      APR_EOL_STR
+      APR_EOL_STR
+      "LOCK_OWNER=`$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
+      APR_EOL_STR
+      "            $GREP '^Owner:' | $SED 's/Owner: //'`"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# If we get no result from svnlook, there's no lock, allow the lock to"
+      APR_EOL_STR
+      "# happen:"
+      APR_EOL_STR
+      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
+      APR_EOL_STR
+      "  exit 0"
+      APR_EOL_STR
+      "fi"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# If the person locking matches the lock's owner, allow the lock to"
+      APR_EOL_STR
+      "# happen:"
+      APR_EOL_STR
+      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
+      APR_EOL_STR
+      "  exit 0"
+      APR_EOL_STR
+      "fi"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# Otherwise, we've got an owner mismatch, so return failure:"
+      APR_EOL_STR
+      "echo \"Error: $PATH already locked by ${LOCK_OWNER}.\" 1>&2"
+      APR_EOL_STR
+      "exit 1"
+      APR_EOL_STR;
+    
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+               "Creating pre-lock hook");
+  }  /* end pre-lock hook */
+
+
+  /* Pre-unlock hook. */
+  {
+    this_path = apr_psprintf (pool, "%s%s",
+                              svn_repos_pre_unlock_hook (repos, pool),
+                              SVN_REPOS__HOOK_DESC_EXT);
+
+    contents =
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# PRE-UNLOCK HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The pre-unlock hook is invoked before an exclusive lock is"
+      APR_EOL_STR
+      "# destroyed.  Subversion runs this hook by invoking a program "
+      APR_EOL_STR
+      "# (script, executable, binary, etc.) named "
+      "'" 
+      SVN_REPOS__HOOK_PRE_UNLOCK "' (for which"
+      APR_EOL_STR
+      "# this file is a template), with the following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] PATH         (the path in the repository about to be unlocked)"
+      APR_EOL_STR
+      "#   [3] USER         (the user destroying the lock)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The default working directory for the invocation is undefined, so"
+      APR_EOL_STR
+      "# the program should set one explicitly if it cares."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# If the hook program exits with success, the lock is destroyed; but"
+      APR_EOL_STR
+      "# if it exits with failure (non-zero), the unlock action is aborted"
+      APR_EOL_STR
+      "# and STDERR is returned to the client."
+      APR_EOL_STR
+      APR_EOL_STR
+      "# On a Unix system, the normal procedure is to have "
+      "'"
+      SVN_REPOS__HOOK_PRE_UNLOCK
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Note that"
+      " '" SVN_REPOS__HOOK_PRE_UNLOCK "' "
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
+      "# '" SVN_REPOS__HOOK_PRE_UNLOCK ".bat' or "
+      "'" SVN_REPOS__HOOK_PRE_UNLOCK ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "PATH=\"$2\""
+      APR_EOL_STR
+      "USER=\"$3\""
+      APR_EOL_STR
+      APR_EOL_STR
+      "# If a lock is owned by a different person, don't allow it be broken."
+      APR_EOL_STR
+      "# (Maybe this script could send email to the to the lock owner?)"
+      APR_EOL_STR
+      APR_EOL_STR
+      "SVNLOOK=" SVN_BINDIR "/svnlook"
+      APR_EOL_STR
+      "GREP=/bin/grep"
+      APR_EOL_STR
+      "SED=/bin/sed"
+      APR_EOL_STR
+      APR_EOL_STR
+      "LOCK_OWNER=`$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
+      APR_EOL_STR
+      "            $GREP '^Owner: ' | $SED 's/Owner: //'`"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# If we get no result from svnlook, there's no lock, return success:"
+      APR_EOL_STR
+      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
+      APR_EOL_STR
+      "  exit 0"
+      APR_EOL_STR
+      "fi"
+      APR_EOL_STR
+      "# If the person unlocking matches the lock's owner, return success:"
+      APR_EOL_STR
+      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
+      APR_EOL_STR
+      "  exit 0"
+      APR_EOL_STR
+      "fi"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# Otherwise, we've got an owner mismatch, so return failure:"
+      APR_EOL_STR
+      "echo \"Error: $PATH locked by ${LOCK_OWNER}.\" 1>&2"
+      APR_EOL_STR
+      "exit 1"
+      APR_EOL_STR;
+    
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+               "Creating pre-unlock hook");
+  }  /* end pre-unlock hook */
+
+
+
   /* Post-commit hook. */
   {
     this_path = apr_psprintf (pool, "%s%s",
@@ -720,6 +1021,218 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                _("Creating post-commit hook"));
   } /* end post-commit hook */
+
+
+  /* Post-lock hook. */
+  {
+    this_path = apr_psprintf (pool, "%s%s",
+                              svn_repos_post_lock_hook (repos, pool),
+                              SVN_REPOS__HOOK_DESC_EXT);
+
+    contents =
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# POST-LOCK HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The post-lock hook is run after a path is locked.  Subversion runs"
+      APR_EOL_STR
+      "# this hook by invoking a program (script, executable, binary, etc.)"
+      APR_EOL_STR
+      "# named '"
+      SVN_REPOS__HOOK_POST_LOCK 
+      "' (for which this file is a template) with the "
+      APR_EOL_STR
+      "# following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] USER         (the user who created the lock)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The paths that were just locked are passed to the hook via STDIN (As"
+      APR_EOL_STR
+      "# of Subversion 1.2, only one path is passed per invocation, but the"
+      APR_EOL_STR
+      "# plan is to pass all locked paths at once in Subversion 1.3 and"
+      APR_EOL_STR
+      "# later)."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The default working directory for the invocation is undefined, so"
+      APR_EOL_STR
+      "# the program should set one explicitly if it cares."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Because the lock has already been created and cannot be undone,"
+      APR_EOL_STR
+      "# the exit code of the hook program is ignored.  The hook program"
+      APR_EOL_STR
+      "# can use the 'svnlook' utility to help it examine the"
+      APR_EOL_STR
+      "# newly-created lock."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Unix system, the normal procedure is to have "
+      "'"
+      SVN_REPOS__HOOK_POST_LOCK
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Note that"
+      " '" SVN_REPOS__HOOK_POST_LOCK "' "
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
+      "# '" SVN_REPOS__HOOK_POST_LOCK ".bat' or "
+      "'" SVN_REPOS__HOOK_POST_LOCK ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "# "
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "USER=\"$2\""
+      APR_EOL_STR
+      "read PATHS"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# Send email to interested parties, let them know a lock was created:"
+      APR_EOL_STR
+      "lock-email.py \"$REPOS\" \"$USER\" lock-watchers@example.org $PATHS"
+      APR_EOL_STR;
+
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+               "Creating post-lock hook");
+  } /* end post-lock hook */
+
+
+  /* Post-unlock hook. */
+  {
+    this_path = apr_psprintf (pool, "%s%s",
+                              svn_repos_post_unlock_hook (repos, pool),
+                              SVN_REPOS__HOOK_DESC_EXT);
+
+    contents =
+      "#!/bin/sh"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# POST-UNLOCK HOOK"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The post-unlock hook runs after a path is unlocked.  Subversion runs"
+      APR_EOL_STR
+      "# this hook by invoking a program (script, executable, binary, etc.)"
+      APR_EOL_STR
+      "# named '"
+      SVN_REPOS__HOOK_POST_UNLOCK 
+      "' (for which this file is a template) with the "
+      APR_EOL_STR
+      "# following ordered arguments:"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "#   [1] REPOS-PATH   (the path to this repository)"
+      APR_EOL_STR
+      "#   [2] USER         (the user who destroyed the lock)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The paths that were just unlocked are passed to the hook via STDIN"
+      APR_EOL_STR
+      "# (As of Subversion 1.2, only one path is passed per invocation, but"
+      APR_EOL_STR
+      "# the plan is to pass all locked paths at once in Subversion 1.3 and"
+      APR_EOL_STR
+      "# later)."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The default working directory for the invocation is undefined, so"
+      APR_EOL_STR
+      "# the program should set one explicitly if it cares."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Because the lock has already been destroyed and cannot be undone,"
+      APR_EOL_STR
+      "# the exit code of the hook program is ignored."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Unix system, the normal procedure is to have "
+      "'"
+      SVN_REPOS__HOOK_POST_UNLOCK
+      "'" 
+      APR_EOL_STR
+      "# invoke other programs to do the real work, though it may do the"
+      APR_EOL_STR
+      "# work itself too."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# Note that"
+      " '" SVN_REPOS__HOOK_POST_UNLOCK "' "
+      "must be executable by the user(s) who will"
+      APR_EOL_STR
+      "# invoke it (typically the user httpd runs as), and that user must"
+      APR_EOL_STR
+      "# have filesystem-level permission to access the repository."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# On a Windows system, you should name the hook program"
+      APR_EOL_STR
+      "# '" SVN_REPOS__HOOK_POST_UNLOCK ".bat' or "
+      "'" SVN_REPOS__HOOK_POST_UNLOCK ".exe',"
+      APR_EOL_STR
+      "# but the basic idea is the same."
+      APR_EOL_STR
+      "# "
+      APR_EOL_STR
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      APR_EOL_STR
+      APR_EOL_STR
+      "REPOS=\"$1\""
+      APR_EOL_STR
+      "USER=\"$2\""
+      APR_EOL_STR
+      "read PATHS"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# Send email to interested parties, let them know a lock was removed:"
+      APR_EOL_STR
+      "unlock-email.py \"$REPOS\" \"$USER\" lock-watchers@example.org $PATHS"
+      APR_EOL_STR;
+
+    SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
+               "Creating post-unlock hook");
+  } /* end post-unlock hook */
 
 
   /* Post-revprop-change hook. */
@@ -1077,7 +1590,8 @@ check_repos_path (const char *path,
 }
 
 
-/* Verify that the repository's 'format' file is a suitable version. */
+/* Verify that REPOS's's format is suitable; possibly upgrade it. 
+   Use POOL for temporary allocation. */
 static svn_error_t *
 check_repos_format (svn_repos_t *repos,
                      apr_pool_t *pool)
@@ -1088,11 +1602,22 @@ check_repos_format (svn_repos_t *repos,
   format_path = svn_path_join (repos->path, SVN_REPOS__FORMAT, pool);
   SVN_ERR (svn_io_read_version_file (&format, format_path, pool));
 
-  if (format != SVN_REPOS__FORMAT_NUMBER)
-    return svn_error_createf 
-      (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
-       _("Expected format '%d' of repository; found format '%d'"), 
-       SVN_REPOS__FORMAT_NUMBER, format);
+  if (format == 3 && SVN_REPOS__FORMAT_NUMBER == 4)
+    {
+      /* Silently upgrade repository format 3 to 4, since libsvn_repos
+         will automatically do the right things for that. */
+      format = 4;
+      SVN_ERR (svn_io_write_version_file
+               (svn_path_join (repos->path, SVN_REPOS__FORMAT, pool),
+                format, pool));
+    }
+  else if (format != SVN_REPOS__FORMAT_NUMBER)
+    {
+      return svn_error_createf 
+        (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
+         _("Expected format '%d' of repository; found format '%d'"), 
+         SVN_REPOS__FORMAT_NUMBER, format);
+    }
 
   repos->format = format;
 

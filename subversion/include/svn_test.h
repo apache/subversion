@@ -35,9 +35,19 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** Baton for any arguments that need to be passed from main() to svn
+    test functions  */
+typedef struct svn_test_opts_t
+{
+  /* Description of the fs backend that should be used for testing. */
+  const char *fs_type;
+  /* Add future "arguments" here. */
+} svn_test_opts_t;
+
 /** Prototype for test driver functions. */
 typedef svn_error_t* (*svn_test_driver_t) (const char **msg, 
                                            svn_boolean_t msg_only,
+                                           svn_test_opts_t *opts,
                                            apr_pool_t *pool);
 
 /** Test modes. */

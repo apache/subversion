@@ -740,7 +740,7 @@ def simple_property_merges(sbox):
 
   # Cannot use run_and_verify_merge with a file target
   svntest.actions.run_and_verify_svn(None,
-                                     [' U ' + alpha_path + '\n'], [],
+                                     [' U   ' + alpha_path + '\n'], [],
                                      'merge',
                                      '-r', '3:4', alpha_url, alpha_path)
   
@@ -1010,7 +1010,7 @@ def merge_one_file(sbox):
   # appears to be impossible to get the expected_foo trees working
   # right.  I think something is still assuming a directory target.
   svntest.actions.run_and_verify_svn(None,
-                                     ['U  ' + rho_path + '\n'], [],
+                                     ['U    ' + rho_path + '\n'], [],
                                      'merge', '-r', '1:2',
                                      rho_url, rho_path)
   expected_status.tweak(wc_rev=1)
@@ -1035,7 +1035,7 @@ def merge_one_file(sbox):
     os.chdir(G_path)
     # Cannot use run_and_verify_merge with a file target
     svntest.actions.run_and_verify_svn(None,
-                                       ['U  rho\n'], [],
+                                       ['U    rho\n'], [],
                                        'merge', '-r', '1:2', rho_url)
 
     # Inspect rho, make sure it's right.
@@ -1099,7 +1099,7 @@ def merge_with_implicit_target (sbox):
     os.chdir(os.path.join(other_wc, 'A'))
 
     # merge using URL for sourcepath
-    svntest.actions.run_and_verify_svn(None, ['U  mu\n'], [],
+    svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
                                        'merge', '-r', '2:1', mu_url)
 
     # sanity-check resulting file
@@ -1108,7 +1108,7 @@ def merge_with_implicit_target (sbox):
 
     # merge using filename for sourcepath
     # Cannot use run_and_verify_merge with a file target
-    svntest.actions.run_and_verify_svn(None, ['G  mu\n'], [],
+    svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
                                        'merge', '-r', '1:2', 'mu')
 
     # sanity-check resulting file
@@ -1175,7 +1175,7 @@ def merge_with_prev (sbox):
 
     # Try to revert the last change to mu via svn merge
     # Cannot use run_and_verify_merge with a file target
-    svntest.actions.run_and_verify_svn(None, ['U  mu\n'], [],
+    svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
                                        'merge', '-r', 'HEAD:PREV', 'mu')
 
     # sanity-check resulting file
@@ -1931,7 +1931,7 @@ def merge_binary_with_common_ancestry(sbox):
     os.chdir(K_path)
     theta_J_url = svntest.main.current_repo_url + '/J/theta'
     theta_L_url = svntest.main.current_repo_url + '/L/theta'
-    svntest.actions.run_and_verify_svn(None, ['U  theta\n'], [],
+    svntest.actions.run_and_verify_svn(None, ['U    theta\n'], [],
                                        'merge', theta_J_url, theta_L_url)
   finally:
     os.chdir(saved_cwd)
@@ -2392,7 +2392,7 @@ def merge_dir_branches(sbox):
   # We can't use run_and_verify_merge because it doesn't support this
   # syntax of the merge command.  
   # XXX: Change this if run_and_verify_merge ever gets fixed
-  expected_output = ["A  " + foo_path + "\n"]
+  expected_output = ["A    " + foo_path + "\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', C_url, F_url, wc_dir)
 

@@ -20,6 +20,7 @@
  */
 
 #include "SVNAdmin.h"
+#include "SVNClient.h"
 #include "JNIUtil.h"
 #include "svn_repos.h"
 #include "svn_config.h"
@@ -655,4 +656,77 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
         JNIUtil::handleSVNError(err);
         return;
     }
+}
+
+jobjectArray SVNAdmin::lslocks(const char *path)
+{
+    Pool requestPool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
+    path = svn_path_internal_style(path, requestPool.pool());
+    svn_repos_t *repos;
+    svn_fs_t *fs;
+    apr_hash_t *locks;
+    apr_hash_index_t *hi;
+
+    svn_error_t *err = svn_repos_open (&repos, path, requestPool.pool());
+    if(err != SVN_NO_ERROR)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+    fs = svn_repos_fs (repos);
+    /* Fetch all locks on or below the root directory. */
+    err = svn_repos_fs_get_locks (&locks, repos, "/", NULL, NULL, 
+        requestPool.pool());
+    if(err != SVN_NO_ERROR)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+
+    int count = apr_hash_count (locks);
+
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(clazz);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    
+    int i = 0;
+    for (hi = apr_hash_first (requestPool.pool(), locks); hi; 
+            hi = apr_hash_next (hi),i++)
+    {
+        const void *key;
+        void *val;
+        apr_hash_this (hi, &key, NULL, &val);
+        svn_lock_t *lock = (svn_lock_t *)val;
+        jobject jLock = SVNClient::createJavaLock(lock);
+        env->SetObjectArrayElement(ret, i, jLock);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        env->DeleteLocalRef(jLock);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+  
+    return ret;
 }

@@ -41,6 +41,24 @@ svn_error_t *svn_fs_base__txn_root (svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                                     apr_pool_t *pool);
 
 
+
+
+/* Helper func: in the context of TRAIL, return the KIND of PATH in
+   head revision.   If PATH doesn't exist, set *KIND to svn_node_none.*/
+svn_error_t *svn_fs_base__get_path_kind (svn_node_kind_t *kind,
+                                         const char *path,
+                                         trail_t *trail,
+                                         apr_pool_t *pool);
+
+/* Helper func: in the context of TRAIL, set *REV to the created-rev
+   of PATH in head revision.  If PATH doesn't exist, set *REV to
+   SVN_INVALID_REVNUM. */
+svn_error_t *svn_fs_base__get_path_created_rev (svn_revnum_t *rev,
+                                                const char *path,
+                                                trail_t *trail,
+                                                apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

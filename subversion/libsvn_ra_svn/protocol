@@ -187,6 +187,8 @@ Here are some miscellaneous prototypes used by the command sets:
   propdelta: ( ( name: string [ value:string ] ) ... )
   node-kind: none|file|dir|unknown
   bool:      true|false
+  lockdesc:  ( path:string token:string owner:string [ comment:string ]
+               created:string [ expires:string ] )
 
 3.1. Command Sets
 
@@ -229,7 +231,8 @@ second place for auth-request point as noted below.
     response: ( [ value:string ] )
 
   commit
-    params:   ( logmsg:string )
+    params:   ( logmsg:string ? ( ( lock-path:string lock-token:string ) ... )
+                keep-locks:bool )
     response: ( )
     Upon receiving response, client switches to editor command set.
     Upon successful completion of edit, server sends auth-request.
@@ -325,6 +328,23 @@ second place for auth-request point as noted below.
     the terminator.
     response: ( )
 
+  lock
+    params:    ( path:string [ comment:string ] force:bool [
+                 current-rev:number ] )
+    response:  ( lock:lockdesc )
+
+  unlock
+    params:    ( path:string [ token:string ] force:bool )
+    response:  ( )
+
+  get-lock
+    params:    ( path:string )
+    response:  ( [ lock:lockdesc ] )
+
+  get-locks
+    params:    ( path:string )
+    response   ( ( lock:lockdesc ... ) )
+
 3.1.2. Editor Command Set
 
 If edit pipelining is negotiated (see section 2.1), than an edit
@@ -406,13 +426,14 @@ by the command which invoked the report (following an abort-edit
 call).  Errors resulting from an abort-report call are ignored.
 
   set-path:
-    params: ( path:string rev:number start-empty:bool )
+    params: ( path:string rev:number start-empty:bool ? [ lock-token:string ] )
 
   delete-path:
     params: ( path:string )
 
   link-path:
-    params: ( path:string url:string rev:number start-empty:bool )
+    params: ( path:string url:string rev:number start-empty:bool 
+              ? [ lock-token:string ] )
 
   finish-report:
     params: ( )

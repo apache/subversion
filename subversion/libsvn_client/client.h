@@ -468,25 +468,38 @@ svn_client__get_diff_editor (const char *target,
        multi-repository support actually exists, the single key here
        will actually be some arbitrary thing to be ignored.  
 
+     - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
+
+     - if the candidate is a directory scheduled for deletion, crawl
+       the directories children recursively for any lock tokens and
+       add them to the LOCK_TOKENS array.
+
    At the successful return of this function, COMMITTABLES will be an
    apr_hash_t * hash of apr_array_header_t * arrays (of
    svn_client_commit_item_t * structures), keyed on const char *
-   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t *
-   hash of svn_wc_adm_access_t * keyed on const char * working copy path
-   directory names which were locked in the process of this crawl.
-   These will need to be unlocked again post-commit.
+   canonical repository URLs.  LOCK_TOKENS will point to a hash table
+   with const char * lock tokens, keyed on const char * URLs.  Also,
+   LOCKED_DIRS will be an apr_hash_t * hash of svn_wc_adm_access_t *
+   keyed
+   on const char * working copy path directory names which were locked
+   in the process of this crawl.  These will need to be unlocked again post-commit.
 
    If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications. 
+   found in TARGETS will not be crawled for modifications.
+
+   If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
+   commit candidates.
 
    If CTX->CANCEL_FUNC is non-null, it will be called with 
    CTX->CANCEL_BATON while harvesting to determine if the client has 
    cancelled the operation.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
+                                  apr_hash_t **lock_tokens,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_boolean_t just_locked,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 

@@ -178,6 +178,37 @@ print_info (const char *target,
                                                            pool)));
     }      
 
+  if (info->lock)
+    {
+      if (info->lock->token)
+        SVN_ERR (svn_cmdline_printf (pool, _("Lock Token: %s\n"),
+                                     info->lock->token));
+
+      if (info->lock->owner)
+        SVN_ERR (svn_cmdline_printf (pool, _("Lock Owner: %s\n"),
+                                     info->lock->owner));
+
+      if (info->lock->creation_date)
+        SVN_ERR (svn_cl__info_print_time (info->lock->creation_date,
+                                          _("Lock Created"), pool));
+
+      if (info->lock->expiration_date)
+        SVN_ERR (svn_cl__info_print_time (info->lock->expiration_date,
+                                          _("Lock Expires"), pool));
+      
+      if (info->lock->comment)
+        {
+          int comment_lines;
+          /* NOTE: The stdio will handle newline translation. */
+          comment_lines = svn_cstring_count_newlines (info->lock->comment) + 1;
+          SVN_ERR (svn_cmdline_printf (pool,
+                                       _("Lock Comment (%i %s):\n%s\n"),
+                                       comment_lines, 
+                                       (comment_lines > 1) ? "lines" : "line",
+                                       info->lock->comment));
+        }
+    }
+
   /* Print extra newline separator. */
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
 

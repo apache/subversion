@@ -557,13 +557,14 @@ def build_generic_tree(nodelist):
 
 # Parse co/up output into a tree.
 #
-#   Tree nodes will contain no contents, and only one 'status' att.
+#   Tree nodes will contain no contents, a 'status' att, and a
+#   'writelocked' att.
 
 def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
   
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])\s+(.+)')
+  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])([B ])\s+(.+)')
   # There may be other verbs we need to match, in addition to
   # "Restored".  If so, add them as alternatives in the first match
   # group below.
@@ -572,7 +573,7 @@ def build_tree_from_checkout(lines):
   for line in lines:
     match = rm1.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(2), None, {},
+      new_branch = create_from_path(match.group(3), None, {},
                                     {'status' : match.group(1)})
       root.add_child(new_branch)
     else:
@@ -613,8 +614,9 @@ def build_tree_from_commit(lines):
 #
 #   Tree nodes will contain no contents, and these atts:
 #
-#          'status', 'wc_rev', 'repos_rev'
-#             ... and possibly 'locked', 'copied', IFF columns non-empty.
+#          'status', 'wc_rev', 'repos_rev',
+#             ... and possibly 'locked', 'copied', 'writelocked',
+#             IFF columns non-empty.
 # 
 
 def build_tree_from_status(lines):
@@ -630,7 +632,7 @@ def build_tree_from_status(lines):
     repos_rev = '?'
     
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile ('^([!MACDRUG_ ][MACDRUG_ ])(.)(.)(.)  .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
+  rm = re.compile ('^([!MACDRUG_ ][MACDRUG_ ])(.)(.)(.)([KOBT ]) .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
@@ -641,9 +643,9 @@ def build_tree_from_status(lines):
     
     match = rm.search(line)
     if match and match.groups():
-      if match.group(6) != '-': # ignore items that only exist on repos
+      if match.group(7) != '-': # ignore items that only exist on repos
         atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(5),
+                   'wc_rev' : match.group(6),
                    'repos_rev' : repos_rev}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
@@ -651,7 +653,9 @@ def build_tree_from_status(lines):
           atthash['copied'] = match.group(3)
         if match.group(4) != ' ':
           atthash['switched'] = match.group(4)
-        new_branch = create_from_path(match.group(7), None, {}, atthash)
+        if match.group(5) != ' ':
+          atthash['writelocked'] = match.group(5)
+        new_branch = create_from_path(match.group(8), None, {}, atthash)
 
       root.add_child(new_branch)
 

@@ -36,6 +36,7 @@
 class SVNAdmin : public SVNBase
 {
 public:
+	jobjectArray lslocks(const char *path);
     void verify(const char *path, Outputer &messageOut,
                     Revision &revisionStart, Revision &revisionEnd);
     void setLog(const char *path, Revision &revision,

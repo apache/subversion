@@ -224,14 +224,15 @@ svn_wc__do_update_cleanup (const char *path,
 
 
 svn_error_t *
-svn_wc_process_committed (const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
-                          apr_pool_t *pool)
+svn_wc_process_committed2 (const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_boolean_t recurse,
+                           svn_revnum_t new_revnum,
+                           const char *rev_date,
+                           const char *rev_author,
+                           apr_array_header_t *wcprop_changes,
+                           svn_boolean_t remove_lock,
+                           apr_pool_t *pool)
 {
   const char *base_name;
   svn_stringbuf_t *logtags;
@@ -348,6 +349,12 @@ svn_wc_process_committed (const char *path,
                            hex_digest,
                            NULL);
 
+  if (remove_lock)
+    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
+                           SVN_WC__LOG_DELETE_LOCK,
+                           SVN_WC__LOG_ATTR_NAME, base_name,
+                           NULL);
+
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp.)  */
@@ -448,8 +455,20 @@ svn_wc_process_committed (const char *path,
   return SVN_NO_ERROR;
 }
 
-
-
+svn_error_t *
+svn_wc_process_committed (const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          apr_pool_t *pool)
+{
+  return svn_wc_process_committed2 (path, adm_access, recurse, new_revnum,
+                                    rev_date, rev_author, wcprop_changes,
+                                    FALSE, pool);
+}
 
 /* Remove FILE if it exists and is a file.  If it does not exist, do
    nothing.  If it is not a file, error. */
@@ -2180,4 +2199,73 @@ svn_wc_resolved_conflict2 (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
+                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
 
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"), path);
+
+  newentry.lock_token = lock->token;
+  newentry.lock_owner = lock->owner;
+  newentry.lock_comment = lock->comment;
+  newentry.lock_crt_date = lock->creation_date;
+
+  SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
+                                 SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE,
+                                 TRUE, pool));
+
+  { /* if svn:needs-lock is present, then make the file read-write. */
+    const svn_string_t *needs_lock;
+    
+    SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, 
+                              path, adm_access, pool));
+    if (needs_lock)
+      SVN_ERR (svn_io_set_file_read_write_carefully (path, TRUE, 
+                                                     FALSE, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_wc_remove_lock(const char *path,
+                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"), path);
+
+  newentry.lock_token = newentry.lock_owner = newentry.lock_comment = NULL;
+  newentry.lock_crt_date = 0;
+  SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
+                                 SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE,
+                                 TRUE, pool));
+
+  { /* if svn:needs-lock is present, then make the file read-only. */
+    const svn_string_t *needs_lock;
+    
+    SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, 
+                              path, adm_access, pool));
+    if (needs_lock)
+      SVN_ERR (svn_io_set_file_read_write_carefully (path, FALSE, 
+                                                     FALSE, pool));
+  }
+
+  return SVN_NO_ERROR;
+}

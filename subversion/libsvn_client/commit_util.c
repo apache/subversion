@@ -153,6 +153,29 @@ look_up_committable (apr_hash_t *committables,
   return NULL;
 }
 
+/* This implements the svn_wc_entry_callbacks_t->found_entry interface. */
+static svn_error_t *
+add_lock_token (const char *path, const svn_wc_entry_t *entry,
+                void *walk_baton, apr_pool_t *pool)
+{
+  apr_hash_t *lock_tokens = walk_baton;
+  apr_pool_t *token_pool = apr_hash_pool_get (lock_tokens);
+
+  /* I want every lock-token I can get my dirty hands on!
+     If this entry is switched, so what.  We will send an irrelevant lock
+     token. */
+  if (entry->url && entry->lock_token)
+    apr_hash_set (lock_tokens, apr_pstrdup (token_pool, entry->url),
+                  APR_HASH_KEY_STRING,
+                  apr_pstrdup (token_pool, entry->lock_token));
+
+  return SVN_NO_ERROR;
+}
+
+/* Entry walker callback table to add lock tokens in an hierarchy. */
+static svn_wc_entry_callbacks_t add_tokens_callbacks = {
+  add_lock_token
+};
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
@@ -160,7 +183,9 @@ look_up_committable (apr_hash_t *committables,
    recognized.  COPYFROM_URL is the default copyfrom-url for children
    of copied directories.  NONRECURSIVE indicates that this function
    will not recurse into subdirectories of PATH when PATH is itself a
-   directory.
+   directory.  Lock tokens of candidates will be added to LOCK_TOKENS, if
+   non-NULL.  JUST_LOCKED indicates whether to treat non-modified items with
+   lock tokens as commit candidates.
 
    If in COPY_MODE, the entry is treated as if it is destined to be
    added with history as URL.
@@ -169,6 +194,7 @@ look_up_committable (apr_hash_t *committables,
    if the user has cancelled the operation.  */
 static svn_error_t *
 harvest_committables (apr_hash_t *committables,
+                      apr_hash_t *lock_tokens,
                       const char *path,
                       svn_wc_adm_access_t *adm_access,
                       const char *url,
@@ -178,6 +204,7 @@ harvest_committables (apr_hash_t *committables,
                       svn_boolean_t adds_only,
                       svn_boolean_t copy_mode,
                       svn_boolean_t nonrecursive,
+                      svn_boolean_t just_locked,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -191,6 +218,8 @@ harvest_committables (apr_hash_t *committables,
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
   svn_boolean_t is_special;
+  apr_pool_t *token_pool = (lock_tokens ? apr_hash_pool_get (lock_tokens)
+                            : NULL);
 
   /* Early out if the item is already marked as committable. */
   if (look_up_committable (committables, path, pool))
@@ -424,6 +453,13 @@ harvest_committables (apr_hash_t *committables,
   if (prop_mod)
     state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
 
+  /* If the entry has a lock token and it is already a commit candidate,
+     or the caller wants unmodified locked items to be treated as
+     such, note this fact. */
+  if (entry->lock_token
+      && (state_flags || just_locked))
+    state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
+
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
@@ -431,6 +467,10 @@ harvest_committables (apr_hash_t *committables,
       add_committable (committables, path, entry->kind, url,
                        cf_url ? cf_rev : entry->revision, 
                        cf_url, state_flags);
+      if (lock_tokens && entry->lock_token)
+        apr_hash_set (lock_tokens, apr_pstrdup (token_pool, url),
+                      APR_HASH_KEY_STRING,
+                      apr_pstrdup (token_pool, entry->lock_token));
     }
 
   /* For directories, recursively handle each of their entries (except
@@ -529,19 +569,27 @@ harvest_committables (apr_hash_t *committables,
             dir_access = adm_access;
 
           SVN_ERR (harvest_committables 
-                   (committables, full_path, dir_access,
+                   (committables, lock_tokens, full_path, dir_access,
                     used_url ? used_url : this_entry->url,
                     this_cf_url,
                     this_entry,
                     entry,
                     adds_only,
                     copy_mode,
-                    FALSE,
+                    FALSE, just_locked,
                     ctx,
                     loop_pool));
         }
 
       svn_pool_destroy (loop_pool);
+    }
+
+  /* Fetch lock tokens for descendants of deleted directries. */
+  if (lock_tokens && entry->kind == svn_node_dir
+      && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+    {
+      SVN_ERR (svn_wc_walk_entries (path, adm_access, &add_tokens_callbacks,
+                                    lock_tokens, FALSE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -550,9 +598,11 @@ harvest_committables (apr_hash_t *committables,
 
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
+                                  apr_hash_t **lock_tokens,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_boolean_t just_locked,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
@@ -586,6 +636,9 @@ svn_client__harvest_committables (apr_hash_t **committables,
 
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
+
+  /* And the LOCK_TOKENS dito. */
+  *lock_tokens = apr_hash_make (pool);
 
   do
     {
@@ -678,9 +731,10 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                        ? target
                                        : svn_path_dirname (target, subpool)),
                                     subpool));
-      SVN_ERR (harvest_committables (*committables, target, dir_access,
+      SVN_ERR (harvest_committables (*committables, *lock_tokens, target, dir_access,
                                      entry->url, NULL, entry, NULL, FALSE, 
-                                     FALSE, nonrecursive, ctx, subpool));
+                                     FALSE, nonrecursive, just_locked, ctx,
+                                     subpool));
 
       i++;
     }
@@ -744,9 +798,9 @@ svn_client__get_copy_committables (apr_hash_t **committables,
        svn_path_local_style (target, pool));
       
   /* Handle our TARGET. */
-  SVN_ERR (harvest_committables (*committables, target, adm_access,
-                                 new_url, entry->url, entry, NULL,
-                                 FALSE, TRUE, FALSE, ctx, pool));
+  SVN_ERR (harvest_committables (*committables, NULL, target,
+                                 adm_access, new_url, entry->url, entry, NULL,
+                                 FALSE, TRUE, FALSE, FALSE, ctx, pool));
 
   return SVN_NO_ERROR;
 }

@@ -135,6 +135,10 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
  */
 void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 
+/** @since New in 1.2.
+ *
+ * Create a new error that is a deep copy of err and return it. */
+svn_error_t *svn_error_dup (svn_error_t *err);
 
 /** Free the memory used by @a error, as well as all ancestors and
  * descendants of @a error. 
@@ -217,6 +221,21 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
   } while (0)
 
 /** @} */
+
+/* 
+ * @since New in 1.2.  
+ *
+ * Return TRUE if @a err is an error specifically related to locking a
+ * path in the repository, FALSE otherwise. */
+svn_boolean_t svn_error_is_lock_error (svn_error_t *err);
+
+/* 
+ * @since New in 1.2.  
+ *
+ * Return TRUE if @a err is an error specifically related to unlocking
+ * a path in the repository, FALSE otherwise. */
+svn_boolean_t svn_error_is_unlock_error (svn_error_t *err);
+
 
 #ifdef __cplusplus
 }

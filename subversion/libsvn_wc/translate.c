@@ -256,3 +256,27 @@ svn_wc__maybe_set_executable (svn_boolean_t *did_set,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc__maybe_set_read_only (svn_boolean_t *did_set,
+                             const char *path,
+                             svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *pool)
+{
+  const svn_string_t *needs_lock;
+  SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, path, 
+                            adm_access, pool));
+
+  if (needs_lock != NULL)
+    {
+      SVN_ERR (svn_io_set_file_read_write_carefully (path, FALSE, 
+                                                     FALSE, pool));
+      if (did_set)
+        *did_set = TRUE;
+    }
+  else if (did_set)
+    *did_set = FALSE;
+
+  return SVN_NO_ERROR;
+}

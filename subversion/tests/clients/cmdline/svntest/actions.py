@@ -630,7 +630,10 @@ def run_and_verify_status(wc_dir_name, output_tree,
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
 
-  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', wc_dir_name)
+  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', 
+                                 '--username', main.wc_author,
+                                 '--password', main.wc_passwd,
+                                 wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
 

@@ -1425,7 +1425,7 @@ do_merge (const char *initial_URL1,
 {
   svn_revnum_t start_revnum, end_revnum;
   svn_ra_session_t *ra_session, *ra_session2;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1517,7 +1517,8 @@ do_merge (const char *initial_URL1,
                            URL2,
                            diff_editor, diff_edit_baton, pool));
 
-  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, NULL,
+                               pool));
   
   SVN_ERR (reporter->finish_report (report_baton, pool));
   
@@ -1796,7 +1797,7 @@ diff_repos_repos (const apr_array_header_t *options,
   svn_node_kind_t kind1, kind2;
   svn_revnum_t rev1, rev2;
   svn_ra_session_t *ra_session1, *ra_session2;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1921,7 +1922,7 @@ diff_repos_repos (const apr_array_header_t *options,
                            diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR (reporter->set_path (report_baton, "", rev1, FALSE, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", rev1, FALSE, NULL, pool));
   SVN_ERR (reporter->finish_report (report_baton, pool));
 
   return SVN_NO_ERROR;
@@ -1958,7 +1959,7 @@ diff_repos_wc (const apr_array_header_t *options,
   const svn_wc_entry_t *entry;
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;

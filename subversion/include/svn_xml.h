@@ -62,7 +62,7 @@ enum svn_xml_open_tag_style {
  * simply running a string of bytes through the Subversion XML escape
  * routines will produce legitimate XML.  It should only be necessary
  * for data which might contain bytes that cannot be safely encoded
- * into XML (upper ASCII and control characters, for example). 
+ * into XML (certain control characters, for example).
  */
 svn_boolean_t svn_xml_is_xml_safe (const char *data, 
                                    apr_size_t len);

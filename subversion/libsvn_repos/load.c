@@ -884,7 +884,7 @@ new_revision_record (void **revision_baton,
   if (rb->rev > 0)
     {
       /* Create a new fs txn. */
-      SVN_ERR (svn_fs_begin_txn (&(rb->txn), pb->fs, head_rev, pool));
+      SVN_ERR (svn_fs_begin_txn2 (&(rb->txn), pb->fs, head_rev, 0, pool));
       SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
       
       SVN_ERR (svn_stream_printf (pb->outstream, pool,

@@ -54,7 +54,7 @@ static void
 notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 {
   struct notify_baton *nb = baton;
-  char statchar_buf[3] = "  ";
+  char statchar_buf[5] = "    ";
   const char *path_local;
   svn_error_t *err;
 
@@ -80,13 +80,13 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_delete:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf (pool, "D  %s\n", path_local)))
+      if ((err = svn_cmdline_printf (pool, "D    %s\n", path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_update_add:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf (pool, "A  %s\n", path_local)))
+      if ((err = svn_cmdline_printf (pool, "A    %s\n", path_local)))
         goto print_error;
       break;
 
@@ -169,6 +169,9 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
               statchar_buf[1] = 'G';
             else if (n->prop_state == svn_wc_notify_state_changed)
               statchar_buf[1] = 'U';
+
+            if (n->lock_state == svn_wc_notify_lock_state_unlocked)
+              statchar_buf[2] = 'B';
 
             if (! ((n->content_state == svn_wc_notify_state_unchanged
                     || n->content_state == svn_wc_notify_state_unknown)
@@ -345,6 +348,23 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       fflush (stdout);
       break;
 
+    case svn_wc_notify_locked:
+      if ((err = svn_cmdline_printf (pool, _("'%s' locked by user '%s'.\n"),
+                                     n->path, n->lock->owner)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_unlocked:
+      if ((err = svn_cmdline_printf (pool, _("'%s' unlocked.\n"),
+                                     n->path)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_failed_lock:
+    case svn_wc_notify_failed_unlock:
+      svn_handle_error (n->err, stderr, FALSE);
+      break;
+
     default:
       break;
     }
@@ -359,8 +379,8 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     {
       nb->had_print_error = TRUE;
       svn_handle_error (err, stderr, FALSE);
-      svn_error_clear (err);
     }
+  svn_error_clear (err);
 }
 
 

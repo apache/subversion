@@ -1297,4 +1297,57 @@ public class BasicTests extends SVNTests
         assertEquals("wrong version info","1",
                 client.getVersionInfo(thisTest.getWCPath(), null, false));        
     }
+
+    public void testBasicLocking() throws Throwable
+    {
+        // build the first working copy
+        OneTest thisTest = new OneTest();
+
+        client.propertySet(thisTest.getWCPath()+"/A/mu",
+                           PropertyData.NEEDS_LOCK, "*", false);
+
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                CommitItemStateFlags.PropMods);
+        assertEquals("bad revision number on commit", 2,
+                     client.commit(new String[] {thisTest.getWCPath()},
+                                   "message", true));
+        File f = new File(thisTest.getWCPath()+"/A/mu");
+        assertEquals("file should be read only now", false, f.canWrite());
+        Lock[] lock = client.lock(new String[] {thisTest.getWCPath()+"/A/mu"},
+                                "comment", null, false);
+        assertEquals("file should be read write now", true, f.canWrite());
+        assertEquals("lock owner", "jrandom", lock[0].getOwner());
+        assertEquals("lock path", "/A/mu", lock[0].getPath());
+        assertEquals("lock comment", "comment", lock[0].getComment());
+        client.unlock(new String[]{thisTest.getWCPath()+"/A/mu"}, null,
+                      false);
+        assertEquals("file should be read only now", false, f.canWrite());
+        lock = client.lock(new String[]{thisTest.getWCPath()+"/A/mu"},
+                           "comment", null, false);
+        assertEquals("file should be read write now", true, f.canWrite());
+        assertEquals("lock owner", "jrandom", lock[0].getOwner());
+        assertEquals("lock path", "/A/mu", lock[0].getPath());
+        assertEquals("lock comment", "comment", lock[0].getComment());
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                    0);
+        assertEquals("rev number from commit",-1, client.commit(
+                new String[]{thisTest.getWCPath()},"message", true));
+        assertEquals("file should be read write now", true, f.canWrite());
+    }
+
+    public void testBasicInfo2() throws Throwable
+    {
+        // build the first working copy
+        OneTest thisTest = new OneTest();
+
+        Info2[] infos = client.info2(thisTest.getWCPath(), null, null, false);
+        assertEquals("this should return 1 info object", 1, infos.length);
+        infos = client.info2(thisTest.getWCPath(), null, null, true);
+        assertEquals("this should return 21 info objects", 21, infos.length);
+        infos = client.info2(thisTest.getWCPath(), new Revision.Number(1),
+                             new Revision.Number(1), true);
+        assertEquals("this should return 21 info objects", 21, infos.length);
+    }
 }

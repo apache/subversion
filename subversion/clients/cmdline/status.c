@@ -52,18 +52,18 @@ generate_status_code (enum svn_wc_status_kind status)
 }
 
 /* Print STATUS and PATH in a format determined by DETAILED and
-   SHOW_LAST_COMMITTED
-   ### NOTE: This function can't fail, so we just ignore any print errors. */
+   SHOW_LAST_COMMITTED. */
 static svn_error_t *
 print_status (const char *path,
               svn_boolean_t detailed,
               svn_boolean_t show_last_committed,
+              svn_boolean_t repos_locks,
               svn_wc_status_t *status,
               apr_pool_t *pool)
 {
   if (detailed)
     {
-      char ood_status;
+      char ood_status, lock_status;
       const char *working_rev;
 
       if (! status->entry)
@@ -80,6 +80,29 @@ print_status (const char *path,
         ood_status = '*';
       else
         ood_status = ' ';
+
+      if (repos_locks)
+        {
+          if (status->repos_lock)
+            {
+              if (status->entry && status->entry->lock_token)
+                {
+                  if (strcmp (status->repos_lock->token, status->entry->lock_token)
+                      == 0)
+                    lock_status = 'K';
+                  else
+                    lock_status = 'T';
+                }
+              else
+                lock_status = 'O';
+            }
+          else if (status->entry && status->entry->lock_token)
+            lock_status = 'B';
+          else
+            lock_status = ' ';
+        }
+      else
+        lock_status = (status->entry && status->entry->lock_token) ? 'K' : ' ';
 
       if (show_last_committed)
         {
@@ -102,12 +125,13 @@ print_status (const char *path,
 
           SVN_ERR
             (svn_cmdline_printf (pool,
-                                 "%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
+                                 "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n",
                                  generate_status_code(status->text_status),
                                  generate_status_code (status->prop_status),
                                  status->locked ? 'L' : ' ',
                                  status->copied ? '+' : ' ',
                                  status->switched ? 'S' : ' ',
+                                 lock_status,
                                  ood_status,
                                  working_rev,
                                  commit_rev,
@@ -116,24 +140,27 @@ print_status (const char *path,
         }
       else
         SVN_ERR
-          (svn_cmdline_printf (pool, "%c%c%c%c%c  %c   %6s   %s\n",
+          (svn_cmdline_printf (pool, "%c%c%c%c%c%c %c   %6s   %s\n",
                                generate_status_code (status->text_status),
                                generate_status_code (status->prop_status),
                                status->locked ? 'L' : ' ',
                                status->copied ? '+' : ' ',
                                status->switched ? 'S' : ' ',
+                               lock_status,
                                ood_status,
                                working_rev,
                                path));
     }
   else
     SVN_ERR
-      (svn_cmdline_printf (pool, "%c%c%c%c%c  %s\n",
+      (svn_cmdline_printf (pool, "%c%c%c%c%c%c %s\n",
                            generate_status_code (status->text_status),
                            generate_status_code (status->prop_status),
                            status->locked ? 'L' : ' ',
                            status->copied ? '+' : ' ',
                            status->switched ? 'S' : ' ',
+                           ((status->entry && status->entry->lock_token)
+                            ? 'K' : ' '),
                            path));
 
   return SVN_NO_ERROR;
@@ -146,6 +173,7 @@ svn_cl__print_status (const char *path,
                       svn_boolean_t detailed,
                       svn_boolean_t show_last_committed,
                       svn_boolean_t skip_unrecognized,
+                      svn_boolean_t repos_locks,
                       apr_pool_t *pool)
 {
   if (! status 
@@ -155,5 +183,6 @@ svn_cl__print_status (const char *path,
     return SVN_NO_ERROR;
 
   return print_status (svn_path_local_style (path, pool),
-                       detailed, show_last_committed, status, pool);
+                       detailed, show_last_committed, repos_locks, status,
+                       pool);
 }

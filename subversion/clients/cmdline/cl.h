@@ -66,6 +66,7 @@ typedef enum {
   svn_cl__no_autoprops_opt,
   svn_cl__no_diff_deleted,
   svn_cl__no_ignore_opt,
+  svn_cl__no_unlock_opt,
   svn_cl__non_interactive_opt,
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
@@ -98,6 +99,9 @@ typedef struct svn_cl__opt_state_t
      commandline.  For example, 'svn up' (with no options) will *not*
      set either of these flags, but will be recursive anyway */
   svn_boolean_t recursive, nonrecursive;
+
+  /* Was --no-unlock specified? */
+  svn_boolean_t no_unlock;
 
   const char *message;           /* log message */
   const char *ancestor_path;     /* ### todo: who sets this? */
@@ -162,6 +166,7 @@ svn_opt_subcommand_t
   svn_cl__help,
   svn_cl__import,
   svn_cl__info,
+  svn_cl__lock,
   svn_cl__log,
   svn_cl__ls,
   svn_cl__merge,
@@ -176,6 +181,7 @@ svn_opt_subcommand_t
   svn_cl__resolved,
   svn_cl__status,
   svn_cl__switch,
+  svn_cl__unlock,
   svn_cl__update,
   svn_cl__version;
 
@@ -237,13 +243,17 @@ svn_error_t *svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
    the last-committed-revision and last-committed-author.
 
    If SKIP_UNRECOGNIZED is TRUE, this function will not print out
-   unversioned items found in the working copy. */
+   unversioned items found in the working copy.
+
+   When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
+   as broken WC locks. */
 svn_error_t *svn_cl__print_status (const char *path,
-                           svn_wc_status_t *status,
-                           svn_boolean_t detailed,
-                           svn_boolean_t show_last_committed,
-                           svn_boolean_t skip_unrecognized,
-                           apr_pool_t *pool);
+                                   svn_wc_status_t *status,
+                                   svn_boolean_t detailed,
+                                   svn_boolean_t show_last_committed,
+                                   svn_boolean_t skip_unrecognized,
+                                   svn_boolean_t repos_locks,
+                                   apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values
    (svn_string_t *).  The names are assumed to be in UTF-8 format;

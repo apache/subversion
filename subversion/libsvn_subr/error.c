@@ -225,6 +225,35 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
   apr_pool_destroy (oldpool);
 }
 
+svn_error_t *
+svn_error_dup (svn_error_t *err)
+{
+  apr_pool_t *pool;
+  svn_error_t *new_err = NULL, *tmp_err;
+
+  if (apr_pool_create (&pool, NULL))
+    abort ();
+
+  for (; err; err = err->child)
+    {
+      if (! new_err)
+        {
+          new_err = apr_palloc (pool, sizeof (*new_err));
+          tmp_err = new_err;
+        }
+      else
+        {
+          tmp_err->child = apr_palloc (pool, sizeof (*tmp_err->child));
+          tmp_err = tmp_err->child;
+        }
+      *tmp_err = *err;
+      tmp_err->pool = pool;
+      if (tmp_err->message)
+        tmp_err->message = apr_pstrdup (pool, tmp_err->message);
+    }
+
+  return new_err;
+}
 
 void
 svn_error_clear (svn_error_t *err)
@@ -392,4 +421,26 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
       }
 
   return apr_strerror (statcode, buf, bufsize);
+}
+
+svn_boolean_t
+svn_error_is_lock_error (svn_error_t *err)
+{
+  if (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||
+      err->apr_err == SVN_ERR_FS_OUT_OF_DATE)
+    return TRUE;
+  return FALSE;
+}
+
+svn_boolean_t
+svn_error_is_unlock_error (svn_error_t *err)
+{
+  if (err->apr_err == SVN_ERR_FS_PATH_NOT_LOCKED ||
+      err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||
+      err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH ||
+      err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||
+      err->apr_err == SVN_ERR_RA_NOT_LOCKED ||
+      err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+    return TRUE;
+  return FALSE;
 }

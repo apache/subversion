@@ -265,6 +265,8 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_TEXT_MODS   0x04
 #define SVN_CLIENT_COMMIT_ITEM_PROP_MODS   0x08
 #define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
+/** @since New in 1.2. */
+#define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @} */
 
 /** The commit candidate structure. */
@@ -387,7 +389,7 @@ typedef struct svn_client_ctx_t
   void *cancel_baton;
 
   /** @cinew New in 1.2.
-      notification function, defaulting to a function that forwads
+      notification function, defaulting to a function that forwards
       to @c notify_func. */
   svn_wc_notify_func2_t notify_func2;
   /** notification baton for the above. */
@@ -728,7 +730,9 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 apr_pool_t *pool);
 
 
-/** Commit file or directory @a path into repository, authenticating with
+/** @since New in 1.2.
+ *
+ * Commit files or directories into repository, authenticating with
  * the authentication baton cached in @a ctx, and using 
  * @a ctx->log_msg_func/@a ctx->log_msg_baton to obtain the log message. 
  * Set @a *commit_info to the results of the commit, allocated in @a pool.
@@ -738,20 +742,34 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  * that.  If @a targets has zero elements, then do nothing and return
  * immediately without error.
  *
- * If @a notify_func is non-null, then call @a ctx->notify_func with 
+ * If @a ctx->notify_func is non-null, then call @a ctx->notify_func with 
  * @a ctx->notify_baton as the commit progresses, with any of the following 
  * actions: @c svn_wc_notify_commit_modified, @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_deleted, @c svn_wc_notify_commit_replaced,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * Use @a nonrecursive to indicate that subdirectories of directory
- * @a targets should be ignored.
+ * If @a nonrecursive is true, subdicrectories of directories in @a targets
+ * will be ignored.
  *
- * Use @a pool for any temporary allocation.
+ * Unlock paths in the repository, unless @a keep_locks is true.
+ *
+ * Use @a pool for any temporary allocations.
  *
  * If no error is returned and @a (*commit_info)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
+ */
+svn_error_t *
+svn_client_commit2 (svn_client_commit_info_t **commit_info,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t nonrecursive,
+                    svn_boolean_t keep_locks,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_client_commit2, but with @a keep_locks set to true.
  */
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
@@ -1427,8 +1445,8 @@ svn_client_revprop_set (const char *propname,
  * path, or from the repository head if @a target is a URL.  Else get
  * the properties as of @a revision.  The actual node revision
  * selected is determined by the path as it exists in @a peg_revision.
- * If @a peg_revision is @c svn_opt_revision_unspecified, then it
- * defaults to @c svn_opt_revision_head for URLs or @c
+ * If @a peg_revision->kind is @c svn_opt_revision_unspecified, then
+ * it defaults to @c svn_opt_revision_head for URLs or @c
  * svn_opt_revision_working for WC targets.  Use the authentication
  * baton in @a ctx for authentication if contacting the repository.
  *
@@ -1743,6 +1761,77 @@ svn_client_cat (svn_stream_t *out,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
+
+/** Locking commands
+ *
+ * @defgroup svn_client_locking_funcs
+ * @{
+ */
+
+/** @since New in 1.2.
+ *
+ * Lock @a targets in the repository.  @a targets is an array of
+ * <tt>const char *</tt> paths - either all working copy paths or URLs.  All
+ * @a targets must be in the same repository.
+ *
+ * If a target is already locked in the repository, no lock will be
+ * acquired unless @a force is TRUE, in which case the locks are stolen.
+ * @a comment, if non-null, is an xml-escapable description stored with each
+ * lock in the repository.  Each acquired lock will be stored in the working
+ * copy if the targets are WC paths.
+ *
+ * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
+ * whether it was locked.  An action of @c svn_wc_notify_state_locked
+ * means that the path was locked.  If the path was not locked because
+ * it was out-of-date or there was already a lock in the repository,
+ * the notification function will be called with @c
+ * svn_wc_notify_failed_lock, and the error passed in the notification
+ * structure. 
+ *
+ * Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_client_lock (const apr_array_header_t *targets,
+                 const char *comment,
+                 svn_boolean_t force,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/** @since New in 1.2.
+ *
+ * Unlock @a targets in the repository.  @a targets is an array of
+ * <tt>const char *</tt> paths - either all working copy paths or all URLs.
+ * All @a targets must be in the same reposotiry.
+ *
+ * If the targets are WC paths, and @a force is false, the working
+ * copy must contain a locks for each target.
+ * If this is not the case, or the working copy lock doesn't match the
+ * lock token in the repository, an error will be signaled.
+ *
+ * If the targets are URLs, the locks may be broken even if @a force
+ * is false, but only if the lock owner is the same as the
+ * authenticated user.
+ *
+ * If @a force is true, the locks will be broken in the repository.  In
+ * both cases, the locks, if any, will be removed from the working
+ * copy if the targets are WC paths.
+ *
+ * The notification functions in @a ctx will be called for each
+ * target.  If the target was successfully unlocked, @c
+ * svn_wc_notify_unlocked will be used.  Else, if the error is
+ * directly related to unlocking the path (see @c
+ * svn_error_is_unlock_error), @c svn_wc_notify_failed_unlock will be
+ * used and the error will be passed in the notification structure.
+
+ * Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_client_unlock (const apr_array_header_t *targets,
+                   svn_boolean_t force,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/** @} */
 
 /** @since New in 1.2.
  *
@@ -1776,6 +1865,9 @@ typedef struct svn_info_t
   
   /* The author of the last_changed_rev. */
   const char *last_changed_author;
+
+  /* An exclusive lock, if present.  Could be either local or remote. */
+  svn_lock_t *lock;
 
   /* Whether or not to ignore the next 10 wc-specific fields. */
   svn_boolean_t has_wc_info;
