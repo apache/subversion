@@ -13,6 +13,7 @@ import fileinput
 import string
 import getopt
 import statcache
+import stat
 
 from svn import fs, util, delta, repos
 
@@ -430,11 +431,11 @@ class Commit:
 
       # figure out the real file path for "co"
       try:
-        statcache.stat(f)
+        f_st = statcache.stat(f)
       except os.error:
         dirname, fname = os.path.split(f)
         f = os.path.join(dirname, 'Attic', fname)
-        statcache.stat(f)
+        f_st = statcache.stat(f)
 
       pipe = os.popen('co -q -p%s \'%s\'' % (r, f), 'r', 102400)
 
@@ -444,6 +445,8 @@ class Commit:
       ### in HUGE files...
       if created_file:
         delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
+        if f_st[0] & stat.S_IXUSR:
+          fs.change_node_prop(root, repos_path, "svn:executable", "", f_pool);
       else:
         # open an SVN stream onto the pipe
         stream2 = util.svn_stream_from_stdio(pipe, f_pool)

@@ -7,9 +7,10 @@ if len(sys.argv) > 1:
     __import__(sys.argv[1])
 else:
     tests = [ 
-              'test1', 
+              'test1',
               'space-fname',
               'twoquick',
+              'attr-exec',
             ]
     for test in tests:
 	print "Running test", test
