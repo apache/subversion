@@ -98,10 +98,15 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
       SVN_ERR (svn_wc_delete (src_path,
                               notify_func, notify_baton, pool));
 
-      apr_err = apr_file_remove (src_path->data, pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool, 
-                                  "error deleting %s", src_path->data);
+      if (src_kind == svn_node_file)
+        {
+          apr_err = apr_file_remove (src_path->data, pool);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool, 
+                                      "error deleting %s", src_path->data);
+        }
+      /* else do nothing;  we don't want to blow away a directory,
+         because 'svn revert' wouldn't be able to undo such a thing. */      
     }
 
   return SVN_NO_ERROR;
