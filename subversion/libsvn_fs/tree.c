@@ -4142,9 +4142,6 @@ txn_body_history_prev (void *baton, trail_t *trail)
           if (! pred_id)
             return SVN_NO_ERROR;
 
-          /* Remember the copy ID of our current node. */
-          end_copy_id = svn_fs__id_copy_id (node_id);
-
           /* Replace NODE and friends with the information from its
              predecessor. */
           SVN_ERR (svn_fs__dag_get_node (&node, fs, pred_id, trail));
@@ -4154,11 +4151,9 @@ txn_body_history_prev (void *baton, trail_t *trail)
         }
     }
 
-  /* Calculate a possibly relevant copy ID if we don't have one
-     already. */
-  if (! end_copy_id)
-    SVN_ERR (examine_copy_inheritance (&end_copy_id, &copy, fs, 
-                                       parent_path, trail));
+  /* Calculate a possibly relevant copy ID. */
+  SVN_ERR (examine_copy_inheritance (&end_copy_id, &copy, fs, 
+                                     parent_path, trail));
 
   /* Initialize some state variables. */
   src_path = NULL;
