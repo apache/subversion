@@ -304,32 +304,37 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
   return commit_err;
 }
 
-/* Remove line-starting PREFIX and everything after it from BUFFER. */
-static svn_stringbuf_t *
-truncate_buffer_at_prefix (svn_stringbuf_t *buffer,
-                           const char *prefix,
-                           apr_pool_t *pool)
+
+/* Remove line-starting PREFIX and everything after it from BUFFER.
+   If NEW_LEN is non-NULL, return the new length of BUFFER in
+   *NEW_LEN.  */
+static void
+truncate_buffer_at_prefix (apr_size_t *new_len,
+                           const char *buffer,
+                           const char *prefix)
 {
   char *substring;
 
   /* Find PREFIX in BUFFER. */
-  substring = strstr (buffer->data, prefix);
+  substring = strstr (buffer, prefix);
+  if (new_len)
+    *new_len = strlen (buffer);
 
-  /* No PREFIX?  Get outta town. */
-  if (! substring)
-    return buffer;
-
-  /* We found PREFIX.  Is it really a PREFIX?  Well, if it's the first
-     thing in the file, or if the character before it is a
-     line-terminator character, it sure is. */
-  if ((substring == buffer->data) 
-      || (*(substring - 1) == '\r')
-      || (*(substring - 1) == '\n'))
+  if (substring)
     {
-      *substring = '\0';
-      buffer->len = substring - buffer->data;
+      /* We found PREFIX.  Is it really a PREFIX?  Well, if it's the first
+         thing in the file, or if the character before it is a
+         line-terminator character, it sure is. */
+      if ((substring == buffer)
+          || (*(substring - 1) == '\r')
+          || (*(substring - 1) == '\n'))
+        {
+          *substring = '\0';
+          if (new_len)
+            *new_len = substring - buffer;
+        }
     }
-  return buffer;
+  return;
 }
 
 
@@ -348,6 +353,10 @@ svn_cl__get_log_message (const char **log_msg,
 
   if (lmb->message)
     {
+      /* Trim incoming messages the EOF marker text and the junk that
+         follows it.  */
+      truncate_buffer_at_prefix (NULL, lmb->message, EDITOR_EOF_PREFIX);
+
       /* If a special --message-encoding was given on the commandline,
          convert the log message from that locale to UTF8: */
       if (lmb->message_encoding)
@@ -438,7 +447,8 @@ svn_cl__get_log_message (const char **log_msg,
 
       /* Strip the prefix from the buffer. */
       if (message)
-        message = truncate_buffer_at_prefix (message, EDITOR_EOF_PREFIX, pool);
+        truncate_buffer_at_prefix (&message->len, message->data, 
+                                   EDITOR_EOF_PREFIX);
 
       if (message)
         {
