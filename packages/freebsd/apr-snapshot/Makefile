@@ -6,10 +6,10 @@
 #
 
 PORTNAME=	apr-snapshot
-PORTVERSION=	20020219232325
+PORTVERSION=	20020309172416
 CATEGORIES=	devel
 MASTER_SITES=	http://www.apache.org/dist/apr/not-released/
-DISTFILES=	apr_20020219232325.tar.gz apr-util_20020219232336.tar.gz
+DISTFILES=	apr_20020309172416.tar.gz apr-util_20020309172426.tar.gz
 
 MAINTAINER=	rooneg@electricjellyfish.net
 
