@@ -1504,7 +1504,13 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                      id_copy_id, trail));
           if (svn_fs__id_eq (copy->dst_noderev_id, id))
             {
-              *rev_p = copy->src_revision;
+              /* We need to translate the COPY's transaction ID into a
+                 revision.  So we lookup the transaction, and pull the
+                 revision from it.  It's really not that complicated.  */
+              svn_fs__transaction_t *txn;
+              SVN_ERR (svn_fs__get_txn (&txn, svn_fs__dag_get_fs (node),
+                                        copy->src_txn_id, trail));
+              *rev_p = txn->revision;
               *path_p = copy->src_path;
             }
         }

@@ -541,12 +541,12 @@ form.
 The Berkeley DB `copies' table records all filesystem copies.  Every
 key in this table is copy ID, and every value is a skel of the form:
 
-   ("copy" SRC-PATH SRC-REV DST-NODE-ID)
+   ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
 
 where:
 
-   * SRC-PATH and SRC-REV are the canonicalized absolute path and
-     revision, respectively, of the source of the copy.
+   * SRC-PATH and SRC-TXN are the canonicalized absolute path and
+     transaction ID, respectively, of the source of the copy.
 
    * DST-NODE-ID represents the new node revision created as a result
      of the copy.
@@ -757,9 +757,9 @@ Changes:
 
 Copies:
 
-                   COPY ::= ("copy" SRC-PATH SRC-REV DST-NODE-ID)
+                   COPY ::= ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
                SRC-PATH ::= atom ;
-                SRC-REV ::= number ;
+                SRC-REV ::= TXN ;
             DST-NODE-ID ::= NODE-REV-ID ;
 
 
