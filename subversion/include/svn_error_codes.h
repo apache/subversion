@@ -133,10 +133,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_LOCKED,
               "Attempted to lock an already-locked dir")
 
-  SVN_ERRDEF (SVN_ERR_WC_IS_NOT_DIRECTORY,
+  SVN_ERRDEF (SVN_ERR_WC_NOT_DIRECTORY,
               "Path is not a working copy directory")
 
-  SVN_ERRDEF (SVN_ERR_WC_IS_NOT_FILE,
+  SVN_ERRDEF (SVN_ERR_WC_NOT_FILE,
               "Path is not a working copy file")
 
   SVN_ERRDEF (SVN_ERR_WC_BAD_ADM_LOG,

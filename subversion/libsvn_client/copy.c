@@ -397,19 +397,14 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                          editor, edit_baton,
                          after_editor, after_edit_baton, pool);
 
+  /* Check out the new tree.  The parent dir will get no entry, so
+     it will be as if the new tree isn't really there yet. */
   SVN_ERR (ra_lib->do_checkout (sess, src_rev, 1, editor, edit_baton));
 
-#if 0
-  /* some notes for myself */
-
-  do these things in order, or write a routine that does them:
-    recursively_remove_all_wcprops ():
-    svn_wc_add_directory ():
-    // ---> which just calls add_to_revision_control(), which needs to
-    // be renamed and take copyfrom args directly instead of deriving
-    // it from src_url (or get abstracted, blah blah);
-
-#endif /* 0 */
+  /* Switch the tree over to the new ancestry, incidentally adding an
+     entry in parent.  See long comment in svn_wc_add()'s doc string
+     about whether svn_wc_add() is appropriate for this. */
+  SVN_ERR (svn_wc_add (dst_path, src_url, src_rev, pool));
 
   return SVN_NO_ERROR;
 }
