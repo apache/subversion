@@ -13,7 +13,7 @@ LIBTOOL = @LIBTOOL@ --silent
 ## copy files into Apache for static-linking
 if IS_STATIC_APACHE
 
-APLIB = libsvn_fs
+APLIB = libsvn_repos
 
 ## create a .la file with no shared library names (eg. force static lib usage)
 $(APLIB).la-a: $(APLIB).la
