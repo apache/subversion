@@ -111,6 +111,6 @@ svn_cl__commit (apr_getopt_t *os,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */

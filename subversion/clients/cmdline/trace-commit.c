@@ -296,6 +296,6 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */
