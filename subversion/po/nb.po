@@ -443,7 +443,7 @@ msgid ""
 "them for addition to repository.  They will be added in next commit.\n"
 "usage: add PATH...\n"
 msgstr ""
-"Legg filer og mapper under versjonskontroll og forbered de for å bli lagt \n"
+"Legg filer og mapper under versjonskontroll og forbered dem på å bli lagt \n"
 "til i kodelageret. De blir lagt til ved neste innsending.\n"
 "bruk: add PATH...\n"
 
@@ -2160,7 +2160,7 @@ msgstr "RA-laget kunne ikke igangsette sokkel-lag"
 
 #: include/svn_error_codes.h:575
 msgid "RA layer failed to create HTTP request"
-msgstr "RA-lag kunne ikke skape HTTP-forespørsel"
+msgstr "RA-lag kunne ikke utføre HTTP-forespørsel"
 
 #: include/svn_error_codes.h:579
 msgid "RA layer request failed"
@@ -2378,7 +2378,7 @@ msgstr "Mangler MD5-kontrollsum"
 
 #: include/svn_error_codes.h:821
 msgid "Directory needs to be empty but is not"
-msgstr "Katalogen må være tom, men er det ikke"
+msgstr "Katalogen må være tom, men den er ikke det"
 
 #: include/svn_error_codes.h:825
 msgid "Error calling external program"
@@ -4657,7 +4657,7 @@ msgid ""
 msgstr ""
 "bruk: svnadmin verify REPOS_PATH\n"
 "\n"
-"Konrollerer data lagret i kodelageret.\n"
+"Kontrollerer data lagret i kodelageret.\n"
 
 #: svnadmin/main.c:451 svnadmin/main.c:506
 msgid "First revision cannot be higher than second"
