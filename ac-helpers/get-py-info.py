@@ -29,4 +29,9 @@ if sys.argv[1] == '--includes':
     print "-I%s -I%s" % (inc, plat)
   sys.exit(0)
 
+if sys.argv[1] == '--compile':
+  cc, opt, ccshared = sysconfig.get_config_vars('CC', 'OPT', 'CCSHARED')
+  print cc, opt, ccshared
+  sys.exit(0)
+
 usage()
