@@ -1560,10 +1560,6 @@ def commit_nonrecursive(sbox):
   if err:
     raise svntest.Failure
 
-  # print "KFF:", wc_dir, file1_path, dir1_path, file2_path, \
-  #      file3_path, dir2_path, file4_path
-  # sys.exit(0)
-
   # Commit.  We should see all 6 items (2 dirs, 4 files) get sent.
   expected_output = svntest.wc.State(
     wc_dir,
