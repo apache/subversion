@@ -193,7 +193,7 @@ svn_wc__do_update_cleanup (const char *path,
           SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
                                         base_url, new_revision,
                                         svn_wc_adm_access_pool (dir_access)));
-          SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
+          SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
         }
       else
         SVN_ERR (recursively_tweak_entries (dir_access, base_url,
