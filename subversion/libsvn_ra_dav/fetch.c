@@ -1,4 +1,3 @@
-es
 /*
  * fetch.c :  routines for fetching updates and checkouts
  *
