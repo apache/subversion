@@ -12,6 +12,33 @@
 
 
 
+;; Later on, there will be auto-detection of svn files, modeline
+;; status, and a whole library of routines to interface with the
+;; command-line client.  For now, there's this, at Ben's request.
+(defun svn-revert ()
+  "Revert the current buffer and its file to its svn base revision."
+  (interactive)
+  (let ((obuf (current-buffer))
+        (fname (buffer-file-name))
+        (outbuf (get-buffer-create "*svn output*")))
+    (set-buffer outbuf)
+    (delete-region (point-min) (point-max))
+    (call-process "svn" nil outbuf nil "status" fname)
+    (goto-char (point-min))
+    (search-forward fname)
+    (beginning-of-line)
+    (if (looking-at "^?")
+        (error "\"%s\" is not a Subversion-controlled file" fname))
+    (call-process "svn" nil outbuf nil "revert" fname)
+    (set-buffer obuf)
+    ;; todo: make a backup~ file?
+    (save-excursion
+      (revert-buffer nil t)
+      (save-buffer))
+    (message "Reverted \"%s\"." fname)))
+
+
+
 ;; Helper for referring to issue numbers in a user-friendly way.
 (defun svn-bug-url (n)
   "Insert the url for Subversion issue number N.  Interactively, prompt for N."
