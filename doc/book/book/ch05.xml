@@ -332,7 +332,7 @@ pre-commit.tmpl
         <filename>.exe</filename> or <filename>.com</filename> for
         programs, and <filename>.bat</filename> for batch
         files.</para>
-          
+
       <para>Currently there are five true hooks implemented by the
         Subversion repository:</para>
 
@@ -484,7 +484,9 @@ pre-commit.tmpl
     <sect2 id="svn-ch-5-sect-2.2">
       <title>Berkeley DB Configuration</title>
 
-      <para>The Berkeley DB environment has it own set of default
+      <para>A Berkeley DB environment is an encapsulation of one or
+        more databases, log files, region files and configuration
+        files.  The Berkeley DB environment has it own set of default
         configuration values for things like the number of locks
         allowed to be taken out at any given time, or the size
         cutoff for Berkeley's journaling log file, etc.
@@ -1129,7 +1131,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
           tree, the script
           <filename>tools/backup/hot-backup.py</filename> illustrates
           the safe way to perform a backup of a Berkeley DB database
-          environment while it's being actively accessed:  use the
+          environment while it's being actively accessed: use the
           <command>svnadmin hotcopy</command> command.</para>
             
         <para>Generally speaking, only the truly paranoid would need
@@ -1386,7 +1388,7 @@ $
         transactions and checkpoints and pre-write journaling to
         ensure that only the most catastrophic of events
         <footnote>
-          <para>e.g.: hard drive + huge electromagnet = disaster.</para>
+          <para>E.g.: hard drive + huge electromagnet = disaster.</para>
         </footnote>
         can permanently destroy a database environment.  A
         sufficiently paranoid repository administrator will be making
