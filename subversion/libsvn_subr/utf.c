@@ -160,7 +160,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
                                        destbuf, 
                                        &destlen);
 
-      /* Now, updated the *DEST->len to track the amount of output data
+      /* Now, update the *DEST->len to track the amount of output data
          churned out so far from this loop. */
       (*dest)->len += ((buflen - (*dest)->len) - destlen);
 
@@ -172,7 +172,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
        this file, leading to infinite recursion. */
     return svn_error_create (apr_err, NULL, "Can't recode string");
   
-  /* Else, exited do to success.  Trim the result buffer down to the
+  /* Else, exited due to success.  Trim the result buffer down to the
      right length. */
   (*dest)->data[(*dest)->len] = '\0';
 

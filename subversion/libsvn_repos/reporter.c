@@ -206,7 +206,7 @@ relevant (path_info_t *pi, const char *prefix, apr_size_t plen)
    At all times, B->lookahead is presumed to be the next pathinfo not
    yet returned as an immediate child, or NULL if we have reached the
    end of the report.  Because we use a lookahead element, we can't
-   rely on he usual nested pool lifetimes, so allocate each pathinfo
+   rely on the usual nested pool lifetimes, so allocate each pathinfo
    in a subpool of the report baton's pool.  The caller should delete
    (*INFO)->pool when it is done with the information. */
 static svn_error_t *

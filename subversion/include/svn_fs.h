@@ -958,7 +958,7 @@ typedef struct svn_fs_dirent_t
 } svn_fs_dirent_t;
 
 
-/** Set @a *table_p to a newly allocated APR hash table containing the
+/** Set @a *entries_p to a newly allocated APR hash table containing the
  * entries of the directory at @a path in @a root.  The keys of the table
  * are entry names, as byte strings, excluding the final null
  * character; the table's values are pointers to @c svn_fs_dirent_t
