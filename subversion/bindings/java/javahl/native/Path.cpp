@@ -26,17 +26,17 @@
 
 Path::Path (const char * path)
 {
-init (path);
+    init (path);
 }
 
 Path::Path (const std::string & path) 
 {
-init (path.c_str ());
+    init (path.c_str ());
 }
 
 Path::Path (const Path & path) 
 {
-init (path.c_str ());
+    init (path.c_str ());
 }
 
 void
@@ -57,18 +57,18 @@ Path::init (const char * path)
 const std::string &
 Path::path () const
 {
-return m_path;
+    return m_path;
 }
 
 const char * 
 Path::c_str() const
 {
-return m_path.c_str ();
+    return m_path.c_str ();
 }
 
 Path& 
 Path::operator=(const Path & path)
 {
-init (path.c_str ());
-return *this;
+    init (path.c_str ());
+    return *this;
 }
