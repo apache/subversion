@@ -32,7 +32,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 typedef struct {

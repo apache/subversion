@@ -24,7 +24,7 @@
 #include <apr_md5.h>
 #include <mod_dav.h>
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_dav.h"

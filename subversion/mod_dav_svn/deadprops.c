@@ -23,7 +23,7 @@
 
 #include <apr_hash.h>
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_dav.h"
