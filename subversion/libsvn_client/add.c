@@ -81,29 +81,32 @@ auto_props_enumerator (const char *name,
   if (apr_fnmatch (name, autoprops->filename, 0) == APR_FNM_NOMATCH)
     return TRUE;
   
-  /* parse the value */
+  /* parse the value (we dup it first to effectively lose the
+     'const', and to avoid messing up the original value) */
   property = apr_pstrdup (autoprops->pool, value);
   property = apr_strtok (property, ";", &last_token);
   while (property)
     {
-      char *value;
+      char *this_value;
 
-      value = strchr (property, '=');
-      if (value)
+      this_value = strchr (property, '=');
+      if (this_value)
         {
-          *value = 0;
-          value++;
-          apr_collapse_spaces (value, value);
+          *this_value = 0;
+          this_value++;
+          apr_collapse_spaces (this_value, this_value);
         }
       else
-        value = "";
+        {
+          this_value = (char *)"";
+        }
       apr_collapse_spaces (property, property);
       len = strlen (property);
       if (len > 0)
         {
-          apr_hash_set (autoprops->properties, property, len, value );
+          apr_hash_set (autoprops->properties, property, len, this_value);
           if (strcmp (property, SVN_PROP_MIME_TYPE) == 0)
-            autoprops->mimetype = value;
+            autoprops->mimetype = this_value;
           else if (strcmp (property, SVN_PROP_EXECUTABLE) == 0)
             autoprops->have_executable = TRUE;
         }
