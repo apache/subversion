@@ -119,7 +119,7 @@ svn_string_t *svn_string_createv (apr_pool_t *pool,
 /* Return true if a bytestring is empty (has length zero). */
 svn_boolean_t svn_string_isempty (const svn_string_t *str);
 
-/* Return a duplicate of ORIGNAL_STRING. */
+/* Return a duplicate of ORIGINAL_STRING. */
 svn_string_t *svn_string_dup (const svn_string_t *original_string,
                               apr_pool_t *pool);
 
@@ -200,7 +200,7 @@ void svn_stringbuf_appendstr (svn_stringbuf_t *targetstr,
 void svn_stringbuf_appendcstr (svn_stringbuf_t *targetstr,
                                const char *cstr);
 
-/* Return a duplicate of ORIGNAL_STRING. */
+/* Return a duplicate of ORIGINAL_STRING. */
 svn_stringbuf_t *svn_stringbuf_dup (const svn_stringbuf_t *original_string,
                                     apr_pool_t *pool);
 
