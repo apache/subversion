@@ -99,15 +99,15 @@ SOURCE=.\io.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\keysort.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\path.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\quoprint.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\sorts.c
 # End Source File
 # Begin Source File
 
