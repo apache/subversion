@@ -224,6 +224,8 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
     {
       const char *args[6];
 
+      /* ### somehow pass the new value as stdin to hook? */
+
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
@@ -263,6 +265,8 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
   if ((hook = check_hook_cmd (hook, pool)))
     {
       const char *args[6];
+
+      /* ### somehow pass the old value as stdin to hook? */
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
