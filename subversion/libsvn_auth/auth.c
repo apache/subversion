@@ -23,6 +23,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_auth.h"
+#include "svn_sorts.h"
 
 /* The good way to think of this machinery is as a set of tables.
 
@@ -100,7 +101,7 @@ svn_auth_open (svn_auth_baton_t **auth_baton,
 
 void
 svn_auth_register_provider (svn_auth_baton_t *auth_baton,
-                            int order,
+                            svn_boolean_t prepend,
                             const svn_auth_provider_t *vtable,
                             void *provider_baton,
                             apr_pool_t *pool)
@@ -136,7 +137,11 @@ svn_auth_register_provider (svn_auth_baton_t *auth_baton,
       apr_hash_set (auth_baton->tables, vtable->cred_kind, APR_HASH_KEY_STRING,
                     table);
     }  
-  *(provider_t **)apr_array_push (table->providers) = provider;
+
+  if (prepend)
+    *(provider_t **)apr_array_prepend (table->providers) = provider;
+  else
+    *(provider_t **)apr_array_push (table->providers) = provider;
   
   /* ### hmmm, we never used the passed in pool.  maybe we don't need it? */
 }

@@ -157,11 +157,13 @@ svn_error_t * svn_auth_open(svn_auth_baton_t **auth_baton,
 /** Register an authentication provider.
  *
  * Register an authentication provider (defined by @a vtable and @a
- * provider_baton) with @a auth_baton, in the order specified by
- * @a order.  Use @a pool for any temporary allocation.
+ * provider_baton) with @a auth_baton.  If @a prepend is true, the
+ * provider will be registered before all other registered providers.
+ * Otherwise, it will be registered after all other registered
+ * providers. Use @a pool for any temporary allocation.
  */
 void svn_auth_register_provider(svn_auth_baton_t *auth_baton,
-                                int order,
+                                svn_boolean_t prepend,
                                 const svn_auth_provider_t *vtable,
                                 void *provider_baton,
                                 apr_pool_t *pool);
