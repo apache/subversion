@@ -129,6 +129,42 @@ svn_client_delete (svn_string_t *path,
                    apr_pool_t *pool);
 
 
+/* Import a tree, using optional pre- and post-commit hook editors
+ * (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
+ * AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.
+ * 
+ * URL is the repository directory where the new tree should be added.
+ * The last path component of is the name of the new directory this
+ * import should create; if it already exists in the youngest
+ * revision, return error.
+ * 
+ * If XML_DST is NULL, then the commit will write to a repository, and
+ * the REVISION argument is ignored.
+ * 
+ * If XML_DST is non-NULL, it is a file in which to store the xml
+ * result of the commit.  In this case, only the last component of URL
+ * is used.
+ * 
+ * Use POOL for all allocation.
+ * 
+ * ### kff todo: This import is similar to cvs import, in that it does
+ * not change the source tree into a working copy.  However, this
+ * behavior confuses most people, and I think eventually svn _should_
+ * turn the tree into a working copy, or at least should offer the
+ * option. However, doing so is a bit involved, and we don't need it
+ * right now.
+ */
+svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
+                                void *before_edit_baton,
+                                const svn_delta_edit_fns_t *after_editor,
+                                void *after_edit_baton,                   
+                                svn_string_t *url,
+                                svn_string_t *log_msg,
+                                svn_string_t *xml_dst,
+                                svn_revnum_t revision,
+                                apr_pool_t *pool);
+
+
 /* Perform an commit, providing pre- and post-commit hook editors and
    batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
    AFTER_EDIT_BATON).  Store LOG_MSG as the log for the commit.

@@ -33,18 +33,19 @@
 
 
 
-/*** Public Interface. ***/
+/* Shared internals of import and commit. */
 
-svn_error_t *
-svn_client_commit (const svn_delta_edit_fns_t *before_editor,
-                   void *before_edit_baton,
-                   const svn_delta_edit_fns_t *after_editor,
-                   void *after_edit_baton,                   
-                   svn_string_t *path,
-                   svn_string_t *log_msg,
-                   svn_string_t *xml_dst,
-                   svn_revnum_t revision,
-                   apr_pool_t *pool)
+static svn_error_t *
+send_to_repos (svn_boolean_t is_import,
+               const svn_delta_edit_fns_t *before_editor,
+               void *before_edit_baton,
+               const svn_delta_edit_fns_t *after_editor,
+               void *after_edit_baton,                   
+               svn_string_t *path,     /* If IS_IMPORT, this is full url */
+               svn_string_t *log_msg,
+               svn_string_t *xml_dst,
+               svn_revnum_t revision,
+               apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *dst = NULL; /* old habits die hard */
@@ -97,45 +98,59 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                                      track_editor, track_edit_baton, pool);
         }        
     }
-  else /* We're committing to an RA layer */
+  else   /* Else we're committing to an RA layer. */
     {
-      svn_wc_entry_t *entry;
-      const char *URL;
-
-      /* Construct full URL from PATH. */
-      SVN_ERR (svn_wc_entry (&entry, path, pool));
-      URL = entry->ancestor->data;
-
-      /* Make sure our log message at least exists, even if empty. */
-      if (! log_msg)
-        log_msg = svn_string_create ("", pool);
-
-      /* Get the RA vtable that matches URL. */
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
-      /* Open an RA session to URL */
-      SVN_ERR (ra_lib->open (&session, svn_string_create (URL, pool), pool));
+      if (is_import)   /* an import, not a regular commit */
+        {
+          /* ### kff todo fooo working here */
+          abort ();
+        }
+      else   /* regular commit, not import */
+        {
+          svn_wc_entry_t *entry;
+          const char *URL;
+          
+          /* Construct full URL from PATH. */
+          SVN_ERR (svn_wc_entry (&entry, path, pool));
+          URL = entry->ancestor->data;
+          
+          /* Make sure our log message at least exists, even if empty. */
+          if (! log_msg)
+            log_msg = svn_string_create ("", pool);
+          
+          /* Get the RA vtable that matches URL. */
+          SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+          SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+          
+          /* Open an RA session to URL */
+          SVN_ERR (ra_lib->open (&session,
+                                 svn_string_create (URL, pool),
+                                 pool));
+          
+          /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
+          SVN_ERR (ra_lib->get_commit_editor 
+                   (session,
+                    &editor, &edit_baton,
+                    log_msg,
+                    svn_wc_set_revision, /* revision bumping routine */
+                    NULL,                /* todo: func that sets WC props */
+                    &ccb));              /* baton for both funcs */
+        }
       
-      /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
-      SVN_ERR (ra_lib->get_commit_editor 
-               (session,
-                &editor, &edit_baton,
-                log_msg,
-                svn_wc_set_revision, /* revision bumping routine */
-                NULL,                /* todo: func that sets WC props */
-                &ccb));              /* baton for both funcs */
     }
+
 
   /* Wrap the resulting editor with BEFORE and AFTER editors. */
   svn_delta_wrap_editor (&editor, &edit_baton,
                          before_editor, before_edit_baton,
                          editor, edit_baton, 
                          after_editor, after_edit_baton, pool);
-
+  
   /* Crawl local mods and report changes to EDITOR.  When close_edit()
      is called, revisions will be bumped. */
-  SVN_ERR (svn_wc_crawl_local_mods (&targets, path, editor, edit_baton, pool));
+  SVN_ERR (svn_wc_crawl_local_mods (&targets, path, editor,
+                                    edit_baton, pool));
+
 
   if (xml_dst && xml_dst->data)
     {
@@ -145,11 +160,56 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "error closing %s", xml_dst->data);      
     }
-  else
-    /* We were committing to RA, so close the session. */
+  else  /* We were committing to RA, so close the session. */
     SVN_ERR (ra_lib->close (session));
-    
-  /* THE END. */
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/*** Public Interfaces. ***/
+
+svn_error_t *
+svn_client_import (const svn_delta_edit_fns_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_edit_fns_t *after_editor,
+                   void *after_edit_baton,                   
+                   svn_string_t *url,
+                   svn_string_t *log_msg,
+                   svn_string_t *xml_dst,
+                   svn_revnum_t revision,
+                   apr_pool_t *pool)
+{
+  SVN_ERR (send_to_repos (TRUE,  /* is import, not commit */
+                          before_editor, before_edit_baton,
+                          after_editor, after_edit_baton,                   
+                          url, log_msg, xml_dst,
+                          revision,
+                          pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_commit (const svn_delta_edit_fns_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_edit_fns_t *after_editor,
+                   void *after_edit_baton,                   
+                   svn_string_t *path,
+                   svn_string_t *log_msg,
+                   svn_string_t *xml_dst,
+                   svn_revnum_t revision,
+                   apr_pool_t *pool)
+{
+  SVN_ERR (send_to_repos (FALSE,  /* is not import, is commit */
+                          before_editor, before_edit_baton,
+                          after_editor, after_edit_baton,                   
+                          path, log_msg, xml_dst,
+                          revision,
+                          pool));
 
   return SVN_NO_ERROR;
 }
