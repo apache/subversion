@@ -209,8 +209,8 @@ called `tests.log'.
 If you write a new C executable that contains subtests, be sure to add
 a build "target" under the TESTING TARGETS section of build.conf.
 
-If you write a new python-script, be sure to add to to the
-[test-scripts] section.
+If you write a new python-script, be sure to add to the [test-scripts]
+section.
 
 
 Testing Over DAV

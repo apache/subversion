@@ -189,10 +189,10 @@ assemble_status (svn_wc_status_t **status,
         final_prop_status = svn_wc_status_conflicted;
     }
    
-  /* 2. Possibly overwrite the the text_status variable with
-        "scheduled" states from the entry (A, D, R).  As a group,
-        these states are of medium precedence.  They also override any
-        C or M that may be in the prop_status field at this point.*/
+  /* 2. Possibly overwrite the text_status variable with "scheduled"
+        states from the entry (A, D, R).  As a group, these states are
+        of medium precedence.  They also override any C or M that may
+        be in the prop_status field at this point.*/
 
   if (entry->schedule == svn_wc_schedule_add)
     {

@@ -72,8 +72,8 @@ Here is when they are run:
    post-commit:   After the txn is committed, and we have a new rev.
 
 Note that they must be executable by the user who will invoke them
-(commonly the user httpd runs as), and that that same user needs to be
-able to access the repository.
+(commonly the user httpd runs as), and that same user needs to be able
+to access the repository.
 
 Typically, `start-commit' is used to check that the user has commit
 privileges at all.  Then the `pre-commit' hook is used to protect

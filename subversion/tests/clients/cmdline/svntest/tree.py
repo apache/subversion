@@ -421,8 +421,8 @@ def compare_trees(a, b,
       # For each child of A, check and see if it's in B.  If so, run
       # compare_trees on the two children and add b's child to
       # accounted_for.  If not, run FUNC_A on the child.  Next, for each
-      # child of B, check and and see if it's in accounted_for.  If it
-      # is, do nothing. If not, run FUNC_B on it.
+      # child of B, check and see if it's in accounted_for.  If it is,
+      # do nothing. If not, run FUNC_B on it.
       for a_child in a.children:
         b_child = get_child(b, a_child.name)
         if b_child:

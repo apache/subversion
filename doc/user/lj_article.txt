@@ -97,7 +97,7 @@ offered Karl a full-time job to write a CVS replacement.  Karl
 gathered a team together and work began in May.
 
 The team settled on a few simple goals: it was decided that Subversion
-would be designed as as functional replacement for CVS.  It would do
+would be designed as a functional replacement for CVS.  It would do
 everything that CVS does -- preserving the same development model
 while fixing the flaws in CVS's (lack-of) design.  Existing CVS users
 would be the target audience: any CVS user should be able to start

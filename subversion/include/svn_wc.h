@@ -110,7 +110,7 @@ typedef enum svn_wc_notify_state_t
  * If MIME_TYPE is non-null, it indicates the mime-type of PATH.  It
  * is always NULL for directories.
  *
- * REVISION is SVN_INVALID_REVNUM, except when when ACTION is
+ * REVISION is SVN_INVALID_REVNUM, except when ACTION is
  * svn_wc_notify_update_completed, in which case REVISION is the
  * target revision of the update if available, else it is still
  * SVN_INVALID_REVNUM.
@@ -1414,10 +1414,9 @@ svn_boolean_t svn_wc_keywords_differ (const svn_wc_keywords_t *a,
    new values.  If EXPAND is TRUE, expand contracted keywords and
    re-expand expanded keywords.  If EXPAND is FALSE, contract expanded
    keywords and ignore contracted ones.  NULL for any of the keyword
-   values (KEYWORDS->revision, e.g.) indicates that that keyword
-   should be ignored (not contracted or expanded).  If the
-   KEYWORDS structure itself is NULL, keyword substition will be
-   altogether ignored.
+   values (KEYWORDS->revision, e.g.) indicates that keyword should be
+   ignored (not contracted or expanded).  If the KEYWORDS structure
+   itself is NULL, keyword substition will be altogether ignored.
 
    Detect only keywords that are no longer than SVN_IO_MAX_KEYWORD_LEN
    bytes, including the delimiters and the keyword itself.

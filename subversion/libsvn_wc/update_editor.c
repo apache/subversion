@@ -2030,9 +2030,8 @@ svn_wc_edited_externals (apr_hash_t **externals_old,
    when we wish to update a directory that has been removed from the
    repository and replaced with a file of the same name.  If we root
    our edit at the initial directory, there is no editor mechanism for
-   for deleting that directory and replacing it with a file (this
-   would be like having an editor now anchored on a file, which is
-   disallowed).
+   deleting that directory and replacing it with a file (this would be
+   like having an editor now anchored on a file, which is disallowed).
 
    All that remains is to have a function with the knowledge required
    to properly decide where to root our editor, and what to act upon

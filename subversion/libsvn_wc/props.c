@@ -218,7 +218,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
 /*** Reading/writing property hashes from disk ***/
 
 /* The real functionality here is part of libsvn_subr, in hashdump.c.
-   But these are convenience routines for use in in libsvn_wc. */
+   But these are convenience routines for use in libsvn_wc. */
 
 
 
@@ -1307,8 +1307,8 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   
   /* Easy-answer attempt #1:  */
   
-  /* Check if the the local and prop-base file have *definitely*
-     different filesizes. */
+  /* Check if the local and prop-base file have *definitely* different
+     filesizes. */
   SVN_ERR (svn_io_filesizes_different_p (&different_filesizes,
                                          prop_path,
                                          prop_base_path,

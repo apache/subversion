@@ -300,8 +300,8 @@ every commit.
 @end table
 
 Note that the hooks must be executable by the user who will invoke them
-(commonly the user httpd runs as), and that that same user needs to be
-able to access the repository.
+(commonly the user httpd runs as), and that same user needs to be able
+to access the repository.
 
 The @file{pre-commit} and @file{post-commit} hooks need to know things
 about the change about to be committed (or that has just been

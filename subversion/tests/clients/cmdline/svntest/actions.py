@@ -129,7 +129,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                             a_baton = None,
                             singleton_handler_b = None,
                             b_baton = None):
-  """Checkout the the URL into a new directory WC_DIR_NAME.
+  """Checkout the URL into a new directory WC_DIR_NAME.
 
   The subcommand output will be verified against OUTPUT_TREE,
   and the working copy itself will be verified against DISK_TREE.

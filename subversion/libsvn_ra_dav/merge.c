@@ -125,7 +125,7 @@ static svn_boolean_t okay_to_bump_path (const char *path,
   if (apr_hash_get (valid_targets, path, APR_HASH_KEY_STRING))
     return TRUE;
 
-  /* Otherwise, this path is bumpable IFF one of its parents in in the
+  /* Otherwise, this path is bumpable IFF one of its parents is in the
      hash and marked with a 'recursion' flag. */
   parent_path = svn_stringbuf_create (path, pool);
   

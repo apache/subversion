@@ -883,7 +883,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 }
 
 
-/* Print the diff between revision 0 and our our root. */
+/* Print the diff between revision 0 and our root. */
 static svn_error_t *
 do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
 {

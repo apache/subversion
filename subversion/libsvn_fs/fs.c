@@ -442,7 +442,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       "# of 32 Kbytes to 128 Kbytes.  Decrease the log file size from\n"
       "# 10 Mbytes to 1 Mbyte.  This will help reduce the amount of disk\n"
       "# space required for hot backups.  The size of the log file must be\n"
-      "# at least four times the size of the the in-memory log buffer.\n"
+      "# at least four times the size of the in-memory log buffer.\n"
       "set_lg_bsize  131072\n"
       "set_lg_max   1048576\n";
 
@@ -606,9 +606,9 @@ svn_fs_berkeley_recover (const char *path,
      else, that all that's needed to run recovery.
    
      Note that we specify a private environment, as we're about to
-     create a region, and we don't want to to leave it around.  If
-     we leave the region around, the application that should create
-     it will simply join it instead, and will then be running with
+     create a region, and we don't want to leave it around.  If we
+     leave the region around, the application that should create it
+     will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
   db_err = env->open (env, path_native, (DB_RECOVER | DB_CREATE
                                          | DB_INIT_LOCK | DB_INIT_LOG
