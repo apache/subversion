@@ -73,50 +73,6 @@ svn_fs__create_successor (svn_fs_id_t **new_id_p,
 
 /* Stable nodes and deltification.  */
 
-/* ### kff todo: tempting to generalize this string-writing stuff and
-   put it into reps-strings.h or something.  But not sure it's
-   actually worth it yet, will see what other string-writing occasions
-   arise.  This way of wrapping svn_fs__string_append() is so simple
-   that generalizing it may be pointless.  */
-
-/* Baton for svn_write_fn_t write_string(). */
-struct write_string_baton
-{
-  /* The fs where lives the string we're writing. */
-  svn_fs_t *fs;
-
-  /* The key of the string we're writing to.  Typically this is
-     initialized to NULL, so svn_fs__string_append() can fill in a
-     value. */
-  const char *key;
-
-  /* The trail we're writing in. */
-  trail_t *trail;
-};
-
-
-/* Function of type `svn_write_fn_t', for writing to a string;
-   BATON is `struct write_string_baton *'.
-
-   On the first call, BATON->key is null.  A new string key in
-   BATON->fs is chosen and stored in BATON->key; each call appends
-   *LEN bytes from DATA onto the string.  *LEN is never changed; if
-   the write fails to write all *LEN bytes, an error is returned.  */
-static svn_error_t *
-write_string (void *baton, const char *data, apr_size_t *len)
-{
-  struct write_string_baton *wb = baton;
-
-  SVN_ERR (svn_fs__string_append (wb->fs,
-                                  &(wb->key),
-                                  *len,
-                                  data,
-                                  wb->trail));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* In FS, change TARGET's representation to be a delta against SOURCE,
    as part of TRAIL.  If TARGET or SOURCE does not exist, do nothing
    and return success.  */
@@ -135,26 +91,6 @@ deltify (svn_fs_id_t *target_id,
     *target_dkey,         /* target data rep key      */
     *source_pkey,         /* source property rep key  */
     *source_dkey;         /* source data rep key      */
-
-  svn_stream_t
-    *source_stream,       /* stream to read the source */
-    *target_stream;       /* stream to read the target */
-  svn_txdelta_stream_t
-    *txdelta_stream;      /* stream to read delta windows  */
-
-  /* stream to write new (deltified) target data */
-  svn_stream_t *new_target_stream;
-  struct write_string_baton new_target_baton;
-
-  /* window handler for writing to above stream */
-  svn_txdelta_window_handler_t new_target_handler;
-
-  /* baton for aforementioned window handler */
-  void *new_target_handler_baton;
-
-  /* yes, we do windows */
-  svn_txdelta_window_t *window;
-
 
   /* Turn those IDs into skels, so we can get the rep keys. */
   SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
@@ -215,43 +151,8 @@ deltify (svn_fs_id_t *target_id,
       source_dkey = NULL;
   }
 
-  new_target_baton.fs = fs;
-  new_target_baton.trail = trail;
-  new_target_baton.key = NULL;
-  new_target_stream = svn_stream_create (&new_target_baton, trail->pool);
-  svn_stream_set_write (new_target_stream, write_string);
-
-  /* We're just doing data deltification for now, no props. */
- 
-  /* Right now, we just write the delta as a single svndiff string.
-     See the section "Random access to delta-encoded files" in the
-     top-level IDEAS file for leads on other things we could do here,
-     though... */
-
-  source_stream = svn_fs__rep_contents_read_stream (fs, source_dkey, 0,
-                                                    trail, trail->pool);
-
-  target_stream = svn_fs__rep_contents_read_stream (fs, target_dkey, 0,
-                                                    trail, trail->pool);
-
-  svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
-
-  svn_txdelta_to_svndiff (new_target_stream,
-                          trail->pool,
-                          &new_target_handler,
-                          &new_target_handler_baton);
-
-  do
-    {
-      SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
-      SVN_ERR (new_target_handler (window, new_target_handler_baton));
-      if (window)
-        svn_txdelta_free_window (window);
-      
-    } while (window);
-  
-  /* todo: Now `new_target_baton.key' has the key of the new string.
-     We should hook it into the representation. */
+  SVN_ERR (svn_fs__rep_deltify (fs, target_pkey, source_pkey, trail));
+  SVN_ERR (svn_fs__rep_deltify (fs, target_dkey, source_dkey, trail));
 
   return SVN_NO_ERROR;
 }

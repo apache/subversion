@@ -636,6 +636,119 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
 
 
 
+/*** Deltified storage. ***/
+
+/* Baton for svn_write_fn_t write_string(). */
+struct write_string_baton
+{
+  /* The fs where lives the string we're writing. */
+  svn_fs_t *fs;
+
+  /* The key of the string we're writing to.  Typically this is
+     initialized to NULL, so svn_fs__string_append() can fill in a
+     value. */
+  const char *key;
+
+  /* The trail we're writing in. */
+  trail_t *trail;
+};
+
+
+/* Function of type `svn_write_fn_t', for writing to a string;
+   BATON is `struct write_string_baton *'.
+
+   On the first call, BATON->key is null.  A new string key in
+   BATON->fs is chosen and stored in BATON->key; each call appends
+   *LEN bytes from DATA onto the string.  *LEN is never changed; if
+   the write fails to write all *LEN bytes, an error is returned.  */
+static svn_error_t *
+write_string (void *baton, const char *data, apr_size_t *len)
+{
+  struct write_string_baton *wb = baton;
+
+#if 0  /* Want to see some svndiff data? */
+  printf ("*** Window data: ");
+  fwrite (data, sizeof (*data), *len, stdout);
+  printf ("\n");
+#endif /* 0 */
+
+  SVN_ERR (svn_fs__string_append (wb->fs,
+                                  &(wb->key),
+                                  *len,
+                                  data,
+                                  wb->trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__rep_deltify (svn_fs_t *fs,
+                     const char *target,
+                     const char *source,
+                     trail_t *trail)
+{
+  svn_stream_t
+    *source_stream,       /* stream to read the source */
+    *target_stream;       /* stream to read the target */
+  svn_txdelta_stream_t
+    *txdelta_stream;      /* stream to read delta windows  */
+  
+  /* stream to write new (deltified) target data */
+  svn_stream_t *new_target_stream;
+  struct write_string_baton new_target_baton;
+  
+  /* window handler for writing to above stream */
+  svn_txdelta_window_handler_t new_target_handler;
+  
+  /* baton for aforementioned window handler */
+  void *new_target_handler_baton;
+  
+  /* yes, we do windows */
+  svn_txdelta_window_t *window;
+  
+  new_target_baton.fs = fs;
+  new_target_baton.trail = trail;
+  new_target_baton.key = NULL;
+  new_target_stream = svn_stream_create (&new_target_baton, trail->pool);
+  svn_stream_set_write (new_target_stream, write_string);
+
+  /* Right now, we just write the delta as a single svndiff string.
+     See the section "Random access to delta-encoded files" in the
+     top-level IDEAS file for leads on other things we could do here,
+     though. */
+
+  source_stream = svn_fs__rep_contents_read_stream (fs, source, 0,
+                                                    trail, trail->pool);
+
+  target_stream = svn_fs__rep_contents_read_stream (fs, target, 0,
+                                                    trail, trail->pool);
+
+  svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
+
+  svn_txdelta_to_svndiff (new_target_stream,
+                          trail->pool,
+                          &new_target_handler,
+                          &new_target_handler_baton);
+
+  do
+    {
+      SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream));
+      SVN_ERR (new_target_handler (window, new_target_handler_baton));
+      if (window)
+        svn_txdelta_free_window (window);
+      
+    } while (window);
+  
+  /* todo: Now `new_target_baton.key' has the key of the new string.
+     We should hook it into the representation. */
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
