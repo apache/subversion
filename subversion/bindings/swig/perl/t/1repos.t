@@ -2,12 +2,11 @@
 
 use Test::More qw(no_plan);
 use strict;
-BEGIN {
-use_ok 'SVN::Core';
-use_ok 'SVN::Repos';
-use_ok 'SVN::Fs';
-use_ok 'SVN::Delta';
-}
+
+require SVN::Core;
+require SVN::Repos;
+require SVN::Fs;
+require SVN::Delta;
 
 my $repospath = "/tmp/svn-$$";
 
@@ -37,21 +36,18 @@ my $fbaton = $editor->add_file ('trunk/filea', $dirbaton,
 
 my $ret = $editor->apply_textdelta ($fbaton, undef, $pool);
 
-#SVN::_Delta::svn_txdelta_send_stream(#\*STDIN,
-#				     IO::File->new("/tmp/r1", 'r'),#\
-#				     @$ret, undef, $pool);
-
 SVN::_Delta::svn_txdelta_send_string("FILEA CONTENT",
-				     @$ret, $pool);
+                                    @$ret, $pool);
+
+#SVN::TxDelta::send_string("FILEA CONTENT", @$ret, $pool);
 
 $editor->close_edit($pool);
 
 cmp_ok($fs->youngest_rev, '==', 1);
 {
-$editor = new SVN::Delta::Editor
-    SVN::Repos::get_commit_editor($repos, "file://$repospath",
-				  '/', 'root', 'FOO', \&committed);
-
+$editor = SVN::Delta::Editor->
+    new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
+				       '/', 'root', 'FOO', \&committed));
 my $rootbaton = $editor->open_root(1, $pool);
 
 my $dirbaton = $editor->add_directory ('tags', $rootbaton, undef, 1, $pool);
@@ -63,9 +59,9 @@ $editor->close_edit($pool);
 cmp_ok($fs->youngest_rev, '==', 2);
 
 {
-$editor = new SVN::Delta::Editor
-    SVN::Repos::get_commit_editor($repos, "file://$repospath",
-				  '/', 'root', 'FOO', \&committed);
+$editor = SVN::Delta::Editor->
+    new (SVN::Repos::get_commit_editor($repos, "file://$repospath",
+				       '/', 'root', 'FOO', \&committed));
 
 my $rootbaton = $editor->open_root(2, $pool);
 $editor->delete_entry('tags', 2, $rootbaton, $pool);
