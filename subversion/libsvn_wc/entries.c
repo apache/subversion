@@ -1133,14 +1133,16 @@ svn_wc__entry_remove (apr_hash_t *entries,
    to a single entry.
 
    Given an entryname NAME in ENTRIES, examine the caller's requested
-   change in *SCHEDULE.  Compare against existing state, and possibly
-   modify *SCHEDULE and *MODIFY_FLAGS so that when merged, it will
-   reflect the caller's original intent. */
+   change in *SCHEDULE.  Compare against existing state and EXISTENCE
+   (the intended forthcoming modification to EXISTENCE, if any) and
+   possibly modify *SCHEDULE and *MODIFY_FLAGS so that when merged, it
+   will reflect the caller's original intent. */
 static svn_error_t *
 fold_state_changes (apr_hash_t *entries,
                     svn_stringbuf_t *name,
                     apr_uint16_t *modify_flags,
                     enum svn_wc_schedule_t *schedule,
+                    enum svn_wc_existence_t existence,
                     apr_pool_t *pool)
 {
   svn_wc_entry_t *entry, *this_dir_entry;
@@ -1158,19 +1160,10 @@ fold_state_changes (apr_hash_t *entries,
   if (! (*modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE))
     return SVN_NO_ERROR;
 
-  /* The only operation valid on an item not already in revision
-     control is addition. */
-  if ((! entry) || (entry->existence == svn_wc_existence_deleted))
-    {
-      if (*schedule == svn_wc_schedule_add)
-        return SVN_NO_ERROR;
-      else
-        return 
-          svn_error_createf 
-          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-           "fold_state_changes: '%s' is not a versioned resource",
-           name->data);
-    }
+  /* If we're not about to modify the existence, we'll use the
+     existence of the current entry (if one it exists -- ha!) */
+  if ((! *modify_flags & SVN_WC__ENTRY_MODIFY_EXISTENCE) && (entry))
+    existence = entry->existence;
 
   /* If we're not merging in changes, only the _add, _delete, _replace
      and _normal schedules are allowed. */
@@ -1194,11 +1187,25 @@ fold_state_changes (apr_hash_t *entries,
         }
     }
 
+  /* The only operation valid on an item not already in revision
+     control is addition. */
+  if ((! entry) || (existence == svn_wc_existence_deleted))
+    {
+      if (*schedule == svn_wc_schedule_add)
+        return SVN_NO_ERROR;
+      else
+        return 
+          svn_error_createf 
+          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+           "fold_state_changes: '%s' is not a versioned resource",
+           name->data);
+    }
+
   /* At this point, we know the following things:
 
      1. There is already an entry for this item in the entries file
-        whose existence is either _normal or _added, which for our
-        purposes mean the same thing.
+        whose existence is either _normal or _added (or about to
+        become such), which for our purposes mean the same thing.
 
      2. We have been asked to merge in a state change, not to
         explicitly set the state.  */
@@ -1256,12 +1263,14 @@ fold_state_changes (apr_hash_t *entries,
 
         case svn_wc_schedule_add:
           /* You can't add something that's already been added to
-             revision control. */
-          return 
-            svn_error_createf 
-            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-             "fold_state_changes: Entry '%s' already under revision control",
-             name->data);
+             revision control, unless it has subsequently been
+             deleted. */
+          if (entry->existence != svn_wc_existence_deleted)
+            return 
+              svn_error_createf 
+              (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
+               "fold_state_changes: Entry '%s' already under revision control",
+               name->data);
         }
       break;
 
@@ -1421,7 +1430,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
       
       /* Now, go interpret the changes. */
       SVN_ERR (fold_state_changes (entries, name, &modify_flags,
-                                   &schedule, pool));
+                                   &schedule, existence, pool));
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
