@@ -221,7 +221,7 @@ dump_node (struct edit_baton *eb,
 {
   svn_stringbuf_t *propstring;
   apr_hash_t *prophash;
-  apr_off_t textlen;
+  apr_off_t textlen = 0, proplen = 0;
   apr_size_t content_length = 0, len;
   svn_boolean_t must_dump_text = FALSE, must_dump_props = FALSE;
   const char *compare_path = path;
@@ -304,7 +304,6 @@ dump_node (struct edit_baton *eb,
           must_dump_text = FALSE;
           must_dump_props = FALSE;
         }
-
     }
   else if (action == svn_node_action_delete)
     {
@@ -372,22 +371,7 @@ dump_node (struct edit_baton *eb,
         }
     }
 
-  if ((must_dump_text) && (must_dump_props))
-    {
-      SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_NODE_NOTICE ": all\n"));
-    }
-  else if ((must_dump_text) && (! must_dump_props))
-    {
-      SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_NODE_NOTICE ": text\n"));
-    }
-  else if ((! must_dump_text) && (must_dump_props))
-    {
-      SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_NODE_NOTICE ": props\n"));
-    }
-  else
+  if ((! must_dump_text) && (! must_dump_props))
     {
       /* If we're not supposed to dump text or props, so be it, we can
          just go home.  However, if either one needs to be dumped,
@@ -400,38 +384,47 @@ dump_node (struct edit_baton *eb,
 
   /*** Start prepping content to dump... ***/
 
-  /* If the node either has no props, or we're not supposed to dump
-     props, then the prophash will be empty, and the propstring will
-     be nothing but "PROPS-END".  */
+  /* If we are supposed to dump properties, write out a property
+     length header and generate a stringbuf that contains those
+     property values here. */
   if (must_dump_props)
-    SVN_ERR (svn_fs_node_proplist (&prophash, eb->fs_root, path, pool));
-  else
-    prophash = apr_hash_make (pool);
+    {
+      SVN_ERR (svn_fs_node_proplist (&prophash, eb->fs_root, path, pool));
+      write_hash_to_stringbuf (prophash, svn_unpack_bytestring, 
+                               &propstring, pool);
+      proplen = propstring->len;
+      content_length += proplen;
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH 
+                                  ": %" APR_SIZE_T_FMT "\n", proplen));
+    }
 
-  write_hash_to_stringbuf (prophash, svn_unpack_bytestring, 
-                           &propstring, pool);
-  content_length += propstring->len;
-
-
-  /* Add the length of file's text, too, if we're supposed to dump it. */
+  /* If we are supposed to dump text, write out a text length header here. */
   if (must_dump_text && (kind == svn_node_file))
     {
       SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));
       content_length += textlen;
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
+                                  ": %" APR_SIZE_T_FMT "\n", textlen));
+      /* ### someday write a node-content-checksum here.  */
     }
 
-  /* ### someday write a node-content-checksum here.  */
-
-  /* 'Content-length:' is the last header before we dump the content. */
+  /* 'Content-length:' is the last header before we dump the content,
+     and is the summation of the text and prop contents lengths.  We
+     write this only for the benefit of non-Subversion RFC-822
+     parsers. */
   SVN_ERR (svn_stream_printf (eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
                               ": %" APR_SIZE_T_FMT "\n\n", content_length));
 
-  /* Dump property content unconditionally;  at a minimum, we need a
-     solitary 'PROPS-END' divider. */
-  len = propstring->len;
-  SVN_ERR (svn_stream_write (eb->stream, propstring->data, &len));
-  
+  /* Dump property content if we're supposed to do so. */
+  if (must_dump_props)
+    {
+      len = propstring->len;
+      SVN_ERR (svn_stream_write (eb->stream, propstring->data, &len));
+    }
+
   /* Dump text content */
   /*    (this stream "pull and push" code was stolen from
         libsvn_ra_local/ra_plugin.c:get_file().  */
@@ -770,6 +763,13 @@ write_revision_record (svn_stream_t *stream,
   SVN_ERR (svn_stream_printf (stream, pool,
                               SVN_REPOS_DUMPFILE_REVISION_NUMBER 
                               ": %" SVN_REVNUM_T_FMT "\n", rev));
+  SVN_ERR (svn_stream_printf (stream, pool,
+                              SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                              ": %" APR_SIZE_T_FMT "\n",
+                              encoded_prophash->len));
+
+  /* Write out a regular Content-length header for the benefit of
+     non-Subversion RFC-822 parsers. */
   SVN_ERR (svn_stream_printf (stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH
                               ": %" APR_SIZE_T_FMT "\n\n",
