@@ -388,7 +388,7 @@ struct svn_fs_access_t
 
    If no username is attached to the FS, return SVN_ERR_FS_NO_USER.
 
-   If the FS username dosen't match LOCK's owner, return
+   If the FS username doesn't match LOCK's owner, return
    SVN_ERR_FS_LOCK_OWNER_MISMATCH.
 
    If FS hasn't been supplied with a matching lock-token for LOCK,

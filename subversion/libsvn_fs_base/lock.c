@@ -42,7 +42,7 @@ generate_new_lock (svn_lock_t **lock_p,
 {
   apr_uuid_t uuid;
   char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);
-  svn_lock_t *lock = apr_pcalloc (pool, sizeof(*lock));
+  svn_lock_t *lock = apr_pcalloc (pool, sizeof (*lock));
   
   lock->path = apr_pstrdup (pool, path);
   lock->owner = apr_pstrdup (pool, owner);
