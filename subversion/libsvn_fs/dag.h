@@ -21,21 +21,24 @@
 
 /* The interface in this file provides all the essential filesystem
    operations, but exposes the filesystem's DAG structure.  This makes
-   it simpler to implement than the public interface, since the client
-   has to understand and cope with shared structure directly as it
-   appears in the database.  However, it's still a self-consistent set
-   of invariants to maintain, making it (hopefully) a useful interface
-   boundary.
+   it simpler to implement than the public interface, since a client
+   of this interface has to understand and cope with shared structure
+   directly as it appears in the database.  However, it's still a
+   self-consistent set of invariants to maintain, making it
+   (hopefully) a useful interface boundary.
 
-   In other words, both svn_fs_node_t's and dag_node_t's represent
-   nodes in the filesystem, but:
-   - the dag_node_t interface exposes the internal DAG structure 
-     of the filesystem, while svn_fs_node_t's are looking at a tree,
-   - dag_node_t's must be explicitly cloned, whereas svn_fs_node_t's 
-     get implicitly cloned as necessry
-   - callers of the dag_node_t interface use Berkeley DB transactions
+   In other words:
+
+   - The dag_node_t interface exposes the internal DAG structure of
+     the filesystem, while the svn_fs.h interface does any cloning
+     necessary to make the filesystem look like a tree.
+
+   - dag_node_t's must be explicitly cloned, whereas the svn_fs.h
+     operations make clones implicitly.
+
+   - Callers of the dag_node_t interface use Berkeley DB transactions
      to ensure consistency between operations, while callers of the
-     svn_fs_node_t interface use Subversion transactions.  */
+     svn_fs.h interface use Subversion transactions.  */
 
 
 /* Initializing a filesystem.  */
@@ -96,14 +99,12 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
 				       trail_t *trail);
 
 
-/* Make a new mutable clone of the node named NAME in PARENT, as part
-   of TRAIL.  Set *CHILD_P to a reference to the new node, allocated
-   in TRAIL->pool.  PARENT must be mutable.  NAME must be a single path
-   component; it cannot be a slash-separated directory path.
-
-   This function does not record the new clone in the `clones' table.
-   It's the caller's responsibility to do whatever clone tracking is
-   necessary.  */
+/* Make a new mutable clone of the node named NAME in PARENT, and
+   adjust PARENT's directory entry to point to it, as part of TRAIL,
+   unless NAME in PARENT already refers to a mutable node.  In either
+   case, set *CHILD_P to a reference to the new node, allocated in
+   TRAIL->pool.  PARENT must be mutable.  NAME must be a single path
+   component; it cannot be a slash-separated directory path.  */
 svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
 				      dag_node_t *parent,
 				      const char *name,
@@ -132,9 +133,11 @@ svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
 				   trail_t *trail);
 
 
-/* Make sure the root directory of SVN_TXN in FS has been cloned as
-   part of TRAIL, and set *ROOT_P to a reference to the root directory
-   clone.  Allocate *ROOT_P in TRAIL->pool.  */
+/* Clone the root directory of SVN_TXN in FS, and update the
+   `transactions' table entry to point to it, unless this has been
+   done already.  In either case, set *ROOT_P to a reference to the
+   root directory clone.  Do all this as part of TRAIL, and allocate
+   *ROOT_P in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
 				     svn_fs_t *fs,
 				     const char *svn_txn,
