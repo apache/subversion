@@ -543,22 +543,14 @@ send_to_repos (svn_client_commit_info_t **commit_info,
       /* (Notice that in the case of import, we do NOT want the RA
          layer to attempt to store auth info in the wc.) */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, base_path,
-                                            !is_import, !is_import,
+                                            !is_import, !is_import, is_import,
                                             auth_baton, pool));
 
       
       /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
       SVN_ERR (ra_lib->get_commit_editor
                (session, &editor, &edit_baton, &committed_rev, 
-                &committed_date, &committed_author, log_msg,
-                /* wc prop fetching routine */
-                is_import ? NULL : svn_wc_get_wc_prop,
-                /* wc prop setting routine */
-                is_import ? NULL : svn_wc_set_wc_prop,
-                /* revision bumping routine */
-                is_import ? NULL : svn_wc_process_committed,
-                /* baton for the three funcs */
-                &ccb));
+                &committed_date, &committed_author, log_msg));
     }
 
   /* Wrap the resulting editor with BEFORE and AFTER editors. */

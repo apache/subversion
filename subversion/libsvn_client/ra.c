@@ -19,6 +19,7 @@
 
 
 #include <apr_pools.h>
+#include <assert.h>
 
 #include "svn_error.h"
 #include "svn_string.h"
@@ -26,7 +27,6 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
-
 #include "client.h"
 
 
@@ -68,11 +68,11 @@ open_tmp_file (apr_file_t **fp,
 
 
 static svn_error_t *
-get_wc_prop(void *baton,
-            const char *relpath,
-            const char *name,
-            const svn_string_t **value,
-            apr_pool_t *pool)
+get_wc_prop (void *baton,
+             const char *relpath,
+             const char *name,
+             const svn_string_t **value,
+             apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
   struct svn_wc_close_commit_baton ccb;
@@ -88,7 +88,51 @@ get_wc_prop(void *baton,
      ### stuff as parameters */
   ccb.prefix_path = cb->base_dir;
 
-  return svn_wc_get_wc_prop(&ccb, relpath, name, value, pool);
+  return svn_wc_get_wc_prop (&ccb, relpath, name, value, pool);
+}
+
+static svn_error_t *
+set_wc_prop (void *baton,
+             const char *relpath,
+             const char *name,
+             const svn_string_t *value,
+             apr_pool_t *pool)
+{
+  svn_client__callback_baton_t *cb = baton;
+  struct svn_wc_close_commit_baton ccb;
+
+  /* if we don't have a base directory, that's a problem. */
+  assert (cb->base_dir);
+
+  /* ### this should go away, and svn_wc_set_wc_prop should just take this
+     ### stuff as parameters */
+  ccb.prefix_path = cb->base_dir;
+
+  return svn_wc_set_wc_prop (&ccb, relpath, name, value, pool);
+}
+
+
+static svn_error_t *
+close_commit (void *baton,
+              svn_stringbuf_t *relpath,
+              svn_boolean_t recurse,
+              svn_revnum_t new_rev,
+              const char *rev_date,
+              const char *rev_author,
+              apr_pool_t *pool)
+{
+  svn_client__callback_baton_t *cb = baton;
+  struct svn_wc_close_commit_baton ccb;
+
+  /* if we don't have a base directory, that's a problem. */
+  assert (cb->base_dir);
+
+  /* ### this should go away, and svn_wc_process_committed should just
+     take this ### stuff as parameters */
+  ccb.prefix_path = cb->base_dir;
+
+  return svn_wc_process_committed (&ccb, relpath, recurse, new_rev,
+                                   rev_date, rev_author, pool);
 }
 
 
@@ -98,6 +142,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            svn_stringbuf_t *base_dir,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
+                                           svn_boolean_t read_only_wc,
                                            void *auth_baton,
                                            apr_pool_t *pool)
 {
@@ -107,6 +152,8 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_wc_prop = get_wc_prop;
+  cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
+  cbtable->close_commit = read_only_wc ? NULL : close_commit;
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;

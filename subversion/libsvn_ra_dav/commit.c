@@ -1097,11 +1097,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  svn_stringbuf_t *log_msg,
-  svn_ra_get_wc_prop_func_t get_func,
-  svn_ra_set_wc_prop_func_t set_func,
-  svn_ra_close_commit_func_t close_func,
-  void *close_baton)
+  svn_stringbuf_t *log_msg)
 {
   svn_ra_session_t *ras = session_baton;
 
@@ -1120,11 +1116,11 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
   cc->ras = ras;
   cc->resources = apr_hash_make(ras->pool);
-  cc->get_func = get_func;
   cc->valid_targets = apr_hash_make(ras->pool);
-  cc->set_func = set_func;
-  cc->close_func = close_func;
-  cc->close_baton = close_baton;
+  cc->get_func = ras->callbacks->get_wc_prop;
+  cc->set_func = ras->callbacks->set_wc_prop;
+  cc->close_func = ras->callbacks->close_commit;
+  cc->close_baton = ras->callback_baton;
   cc->log_msg = log_msg;
   cc->new_rev = new_rev;
   cc->committed_date = committed_date;

@@ -74,11 +74,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  svn_stringbuf_t *log_msg,
-  svn_ra_get_wc_prop_func_t get_func,
-  svn_ra_set_wc_prop_func_t set_func,
-  svn_ra_close_commit_func_t close_func,
-  void *close_baton);
+  svn_stringbuf_t *log_msg);
 
 svn_error_t * svn_ra_dav__get_file(
   void *session_baton,
