@@ -1112,7 +1112,7 @@ check_id (svn_fs_t *fs, const svn_fs_id_t *id, svn_boolean_t *present,
 
   args.id = id;
   args.fs = fs;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_check_id, &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_check_id, &args, 1, pool));
 
   if (args.present)
     *present = TRUE;

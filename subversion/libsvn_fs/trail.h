@@ -32,7 +32,7 @@ extern "C" {
    one."
 
    Well, there isn't a function that returns a trail.  All trails come
-   from svn_fs__retry_txn.  Here's how to use that:
+   from svn_fs__retry.  Here's how to use that:
 
    When using Berkeley DB transactions to protect the integrity of a
    database, there are several things you need to keep in mind:
@@ -62,7 +62,7 @@ extern "C" {
      need to clear your cache once the transaction completes, either
      successfully or unsuccessfully.
 
-   The `svn_fs__retry_txn' function and its friends help you manage
+   The `svn_fs__retry' function and its friends help you manage
    all of that, in one nice package.
    
    To use it, write your code in a function like this:
@@ -85,10 +85,10 @@ extern "C" {
          ...
        }
 
-   Now, call svn_fs__retry_txn, passing a pointer to your function as
+   Now, call svn_fs__retry, passing a pointer to your function as
    an argument:
 
-       err = svn_fs__retry_txn (fs, txn_body_do_my_thing, baton, pool);
+       err = svn_fs__retry (fs, txn_body_do_my_thing, baton, pool);
 
    This will simply invoke your function `txn_body_do_my_thing',
    passing BATON through unchanged, and providing a fresh TRAIL
@@ -96,18 +96,18 @@ extern "C" {
    subpool of POOL --- you should use.
 
    If your function returns a Subversion error wrapping a Berkeley DB
-   DB_LOCK_DEADLOCK error, `svn_fs__retry_txn' will abort the trail's
+   DB_LOCK_DEADLOCK error, `svn_fs__retry' will abort the trail's
    Berkeley DB transaction for you (thus undoing any database changes
    you've made), free the trail's subpool (thus undoing any allocation
    you may have done), and try the whole thing again with a new trail,
    containing a new Berkeley DB transaction and pool.
 
    If your function returns any other kind of Subversion error,
-   `svn_fs__retry_txn' will abort the trail's Berkeley DB transaction,
+   `svn_fs__retry' will abort the trail's Berkeley DB transaction,
    free the subpool, and return your error to its caller.
 
    If, heavens forbid, your function actually succeeds, returning
-   SVN_NO_ERROR, `svn_fs__retry_txn' commits the trail's Berkeley DB
+   SVN_NO_ERROR, `svn_fs__retry' commits the trail's Berkeley DB
    transaction, thus making your DB changes permanent, leaves the
    trail's pool alone, so all the objects it contains are still
    around, and returns SVN_NO_ERROR.
@@ -116,7 +116,7 @@ extern "C" {
    be reverted if the transaction doesn't complete successfully, you
    can call `svn_fs__record_undo' as you make your changes to register
    functions that will undo them.  On failure (either due to deadlock
-   or a real error), `svn_fs__retry_txn' will invoke your undo
+   or a real error), `svn_fs__retry' will invoke your undo
    functions, youngest first, to restore your data structures to the
    state they were in when you started the transaction.
 
@@ -124,7 +124,7 @@ extern "C" {
    stale once the transaction is complete, you can call
    `svn_fs__record_completion' to register functions that will clear
    your caches.  When the trail completes, successfully or
-   unsuccessfully, `svn_fs__retry_txn' will invoke your completion
+   unsuccessfully, `svn_fs__retry' will invoke your completion
    functions, youngest first, to remove whatever cached information
    you like.  */
 
@@ -153,11 +153,12 @@ struct trail_t
 typedef struct trail_t trail_t;
 
 
-/* Try a Berkeley DB transaction repeatedly until it doesn't deadlock.
+/* Try an operation repeatedly until it doesn't deadlock.
 
    That is:
-   - Begin a new Berkeley DB transaction, DB_TXN, in the filesystem FS.
    - Allocate a subpool of POOL, TXN_POOL.
+   - If USE_TXN is set, begin a new Berkeley DB transaction, DB_TXN,
+     in the filesystem FS.  Otherwise, leave DB_TXN NULL.
    - Start a new trail, TRAIL, pointing to DB_TXN and TXN_POOL.
    - Apply TXN_BODY to BATON and TRAIL.  TXN_BODY should try to do
      some series of DB operations which needs to be atomic, using
@@ -169,7 +170,7 @@ typedef struct trail_t trail_t;
      run any completion functions, and return SVN_NO_ERROR.  Do *not*
      free TXN_POOL.
    - If E is a Berkeley DB error indicating that a deadlock occurred,
-     run all undo and completion functions, abort the DB transaction,
+     run all undo and completion functions, abort any DB transaction,
      and free TXN_POOL.  Then retry the whole thing from the top.
    - If E is any other kind of error, run all undo and completion
      functions, free TXN_POOL, and return E.
@@ -178,11 +179,12 @@ typedef struct trail_t trail_t;
    ensure that whatever transactions a filesystem function starts, it
    either aborts or commits before it returns.  If we don't somehow
    complete all our transactions, later operations could deadlock.  */
-svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
-                                svn_error_t *(*txn_body) (void *baton,
-                                                          trail_t *trail),
-                                void *baton,
-                                apr_pool_t *pool);
+svn_error_t *svn_fs__retry (svn_fs_t *fs,
+                            svn_error_t *(*txn_body) (void *baton,
+                                                      trail_t *trail),
+                            void *baton,
+                            int use_txn,
+                            apr_pool_t *pool);
 
 
 /* Record a change which should be undone if TRAIL is aborted, either
@@ -201,7 +203,7 @@ svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
 
    When you make a such a change, call this function with a FUNC and
    BATON that, if invoked, will undo the change.  If TRAIL fails to
-   complete (deadlock, error, etc.), svn_fs__retry_txn will invoke the
+   complete (deadlock, error, etc.), svn_fs__retry will invoke the
    FUNC/BATON pairs that were registered via this function.
 
    Younger undo and completion functions get invoked before older
