@@ -8,20 +8,25 @@ my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_config = $ENV{APR_CONFIG} || '/usr/local/lib/apache2/apr-config';
 $apr_config = 'apr-config' unless -e $apr_config;
+my $apu_config = $ENV{APU_CONFIG} || '/usr/local/lib/apache2/apu-config';
+$apu_config = 'apu-config' unless -e $apu_config;
 
 my $apr_shlib_path_var = `$apr_config --shlib-path-var`;
 my $apr_cflags = `$apr_config --includes`;
+my $apu_cflags = `$apu_config --includes`;
 my $apr_ldflags = `$apr_config --cflags --link-ld --libs`
    if $^O eq 'darwin';
 
 chomp $apr_shlib_path_var;
 chomp $apr_cflags;
+chomp $apu_cflags;
 chomp $apr_ldflags;
 
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
-    CCFLAGS  => join(' ', $apr_cflags, `perl -MExtUtils::Embed -e ccopts`,
-		     ' -I.. -I../../../include -g'),
+    CCFLAGS  => join(' ', $apr_cflags, $apu_cflags, 
+                     `perl -MExtUtils::Embed -e ccopts`,
+                     ' -I.. -I../../../include -g'),
     OBJECT => q/$(O_FILES)/,
     dynamic_lib => {
 	OTHERLDFLAGS => join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
