@@ -1189,7 +1189,7 @@ report_single_mod (const char *name,
                  we only *might* need to send contents.  Do a real
                  local-mod check on it. */
               SVN_ERR (svn_wc_text_modified_p (&(tb->text_modified_p),
-                                               full_path, (*stack)->pool));
+                                               full_path, 1, (*stack)->pool));
             }
 
           /* History or not, decide if there are props to send. */
@@ -1215,8 +1215,8 @@ report_single_mod (const char *name,
       svn_boolean_t text_modified_p, prop_modified_p;
           
       /* Is text modified? */
-      SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 
-                                       (*stack)->pool));
+      SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
+                                       1, (*stack)->pool));
           
       /* Only check for local propchanges if we're looking at a file. 
          Our caller, crawl_dir(), is looking for propchanges on each
@@ -2086,7 +2086,7 @@ crawl_as_copy (svn_stringbuf_t *parent,
       tb->entry = entry;
       tb->editor_baton = file_baton;
       SVN_ERR (svn_wc_text_modified_p (&(tb->text_modified_p), 
-                                       fullpath, pool));
+                                       fullpath, 1, pool));
       apr_hash_set (affected_targets, fullpath->data, fullpath->len, tb);
     }
   else if (entry->kind == svn_node_dir)

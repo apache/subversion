@@ -207,7 +207,7 @@ close_file (void *file_baton)
           if (! text_conflict)
             {
               err = svn_wc_text_modified_p 
-                (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
+                (&merged, fb->path, 1, fb->parent_dir_baton->edit_baton->pool);
               if (err) return err;
             }
 
