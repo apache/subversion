@@ -541,22 +541,53 @@ unlock_dirs (apr_hash_t *locked_dirs,
 
 
 static svn_error_t *
+remove_tmpfiles (apr_hash_t *tempfiles,
+                 apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  /* Split if there's nothing to be done. */
+  if (! tempfiles)
+    return SVN_NO_ERROR;
+
+  /* Clean up any tempfiles. */
+  for (hi = apr_hash_first (pool, tempfiles); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+      svn_node_kind_t kind;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      SVN_ERR (svn_io_check_path ((const char *)key, &kind, pool));
+      if (kind == svn_node_file)
+        SVN_ERR (svn_io_remove_file ((const char *)key, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
 reconcile_errors (svn_error_t *commit_err,
                   svn_error_t *unlock_err,
                   svn_error_t *bump_err,
+                  svn_error_t *cleanup_err,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
 
   /* Early release (for good behavior). */
-  if (! (commit_err || unlock_err || bump_err))
+  if (! (commit_err || unlock_err || bump_err || cleanup_err))
     return SVN_NO_ERROR;
 
   /* If there was a commit error, start off our error chain with
      that. */
   if (commit_err)
     {
-      commit_err = svn_error_quick_wrap (commit_err, "Commit failed:");
+      commit_err = svn_error_quick_wrap 
+        (commit_err, "Commit failed (details follow):");
       err = commit_err;
     }
 
@@ -571,9 +602,7 @@ reconcile_errors (svn_error_t *commit_err,
     {
       /* Wrap the error with some headers. */
       unlock_err = svn_error_quick_wrap 
-        (unlock_err, "-------------------------------------------------");
-      unlock_err = svn_error_quick_wrap 
-        (unlock_err, "Error unlocking locked dirs:");
+        (unlock_err, "Error unlocking locked dirs (details follow):");
 
       /* Append this error to the chain. */
       svn_error_compose (err, unlock_err);
@@ -584,12 +613,21 @@ reconcile_errors (svn_error_t *commit_err,
     {
       /* Wrap the error with some headers. */
       bump_err = svn_error_quick_wrap 
-        (bump_err, "-------------------------------------------------");
-      bump_err = svn_error_quick_wrap 
-        (bump_err, "Error bumping revisions post-commit:");
+        (bump_err, "Error bumping revisions post-commit (details follow):");
 
       /* Append this error to the chain. */
       svn_error_compose (err, bump_err);
+    }
+
+  /* If there was a cleanup error... */
+  if (cleanup_err)
+    {
+      /* Wrap the error with some headers. */
+      cleanup_err = svn_error_quick_wrap 
+        (cleanup_err, "Error in post-commit clean-up (details follow):");
+
+      /* Append this error to the chain. */
+      svn_error_compose (err, cleanup_err);
     }
 
   return err;
@@ -622,11 +660,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_ra_plugin_t *ra_lib;
   svn_stringbuf_t *base_dir, *base_url;
   apr_array_header_t *rel_targets;
-  apr_hash_t *committables, *locked_dirs;
+  apr_hash_t *committables, *locked_dirs, *tempfiles = NULL;
   apr_array_header_t *commit_items;
   apr_status_t apr_err = 0;
   apr_file_t *xml_hnd = NULL;
-  svn_error_t *cmt_err = NULL, *unlock_err = NULL, *bump_err = NULL;
+  svn_error_t *cmt_err = NULL, *unlock_err = NULL;
+  svn_error_t *bump_err = NULL, *cleanup_err = NULL;
   svn_boolean_t use_xml = (xml_dst && xml_dst->data) ? TRUE : FALSE;
   svn_boolean_t commit_in_progress = FALSE;
   svn_stringbuf_t *display_dir = svn_stringbuf_create (".", pool);
@@ -767,7 +806,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
                                    notify_func, notify_baton, display_dir,
-                                   pool);
+                                   &tempfiles, pool);
 
   /* Make a note that our commit is finished. */
   commit_in_progress = FALSE;
@@ -805,34 +844,43 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if (use_xml)
     {
       if ((apr_err = apr_file_close (xml_hnd)))
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "error closing %s", xml_dst->data);
-      
+        {
+          cleanup_err = svn_error_createf (apr_err, 0, NULL, pool,
+                                           "error closing %s", xml_dst->data);
+          goto cleanup;
+        }
+
       /* Use REVISION for COMMITTED_REV. */
       committed_rev = revision;
     }
   else  
     {
       /* We were committing to RA, so close the session. */
-      SVN_ERR (ra_lib->close (session));
+      if ((cleanup_err = ra_lib->close (session)))
+        goto cleanup;
     }
 
   /* Sleep for one second to ensure timestamp integrity. */
   apr_sleep (APR_USEC_PER_SEC * 1);
 
  cleanup:
+  /* Abort the commit if it is still in progress. */
   if (commit_in_progress)
     editor->abort_edit (edit_baton); /* ignore return value */
 
+  /* Unlock any remaining locked dirs. */
   if (locked_dirs)
     unlock_err = unlock_dirs (locked_dirs, pool);
+
+  /* Remove any outstanding temporary text-base files. */
+  cleanup_err = remove_tmpfiles (tempfiles, pool);
 
   /* Fill in the commit_info structure */
   *commit_info = svn_client__make_commit_info (committed_rev, 
                                                committed_author, 
                                                committed_date, pool);
 
-  return reconcile_errors (cmt_err, unlock_err, bump_err, pool);
+  return reconcile_errors (cmt_err, unlock_err, bump_err, cleanup_err, pool);
 }
 
 
