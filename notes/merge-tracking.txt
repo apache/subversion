@@ -1,0 +1,120 @@
+
+                       Merge-Tracking in Subversion
+                       ============================
+
+These notes try to break apart the various sub-problems of
+"merge-tracking".  People can mean a whole lot of different things
+when they utter that phrase, so this is an attempt to describe various
+aspects.
+
+This is NOT a design document.  It offers no solutions or proposals.
+It's just a place to enumerate potential problems that need solving.
+
+[At the moment, implementing locking is higher priority;  but I wanted
+to document these problems here so we don't forget them.]
+
+
+A.  Solve the "repeated merge" problem at the level of whole changesets.
+
+    * Track which changesets have been applied where, so users can
+      repeatedly merge branchA to branchB without having to remember
+      the last range of revisions ported.
+
+    * Track any "changeset cherry-picking" done by users, so we don't
+      accidentally re-merge changesets that are already applied.
+
+    * This is the problem that svk and arch claim to have already
+      solved, what they're calling "star-merge".  Need to investigate
+      how they're doing it, might be a good precedent to imitate.
+
+B.  Make 'hunks' of contextually-merged text sensitive to ancestry.
+
+      This is like a high-resolution version of problem #1.  Rather
+      than tracking whole changesets, we track the lineage of specific
+      lines of code within a file.  The basic idea is that when
+      re-merging a particular hunk of code, the contextual-merging
+      process is aware that certain lines of code already represent
+      the merging of particular lines of development.  Jack Repenning
+      has a great example of this from Clearcase, which we can draw in
+      this space.  See diagram at the bottom for an explanation.
+
+C.  'svn merge' needs to track renames better.  
+
+     Edit foo.c on branchA.  Rename foo.c to bar.c on branchB.
+
+     1. Try merging the branchA edit into a working copy of branchB:
+        'svn merge' will skip the file, because it can't find it.
+
+     2. Conversely, try merging branchB rename to branchA: 'svn merge'
+        will delete the 'newer' version of foo.c and add bar.c, which
+        has the older text.
+
+     Problem #2 stems from the fact that we don't have true renames,
+     just copies and deletes.  That's not fixable without an fs schema
+     change and (probably) a libsvn_wc rewrite.
+
+     It's not clear what it would take to solve problem #1.
+
+
+---------------------------------------------
+Here's an example of problem B above, demonstrating how individual
+lines of code can be "merge tracked".  
+
+In this diagram, we're drawing the lineage of a single file, with time
+flowing downwards.  The file begins life with three lines of text,
+"1\n2\n\3\n".  The file then splits into two lines of development.
+
+                                 
+                          
+                    1     
+                    2     
+                    3     
+                  /   \   
+                 /     \  
+                /       \ 
+            one           1   
+            two           2.5 
+            three         3   
+             |     \      |
+             |      \     |   
+             |       \    |            
+             |        \   |            
+             |         \ one           
+             |           two-point-five
+             |           three        
+             |            |
+             |            |
+             |            |
+            one          one
+            Two          two-point-five
+            three        newline       
+               \         three  
+                \         |   
+                 \        |
+                  \       |
+                   \      |
+                    \     |
+                     \    |
+                      \   |
+                       \  |
+                         one
+                         Two-point-five
+                         newline       
+                         three  
+                              
+
+It's the second merge that's important here.  
+
+In a system like Subversion, the second merge of the left branch to
+the right will fail miserably: the whole file's contents will be
+placed within conflict markers.  That's because it's trying to dumbly
+apply a patch that changes "1\2\3" to "one\Two\Three", and the target
+file has no matching lines at all.
+
+A smarter system (like Clearcase) would remember that the previous
+merge had happened, and specifically remember that the lines "one" and
+"three" are the results of that previous merge.  It would only mark
+the single "two-point-five" line as something which needs human
+attention.
+
+
