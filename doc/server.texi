@@ -145,11 +145,13 @@ not, @xref{Model}.
 @subsection Definitions
 
 For completeness, we can now offer a precise, technical description of
-these terms.  Here is the schema used by svn_fs:
+these terms.  
+
+@subsubsection Schema  @c -----------------
 
 @c This is taken from jimb's very first Subversion spec!
 @c Is there some standardized notation for describing schemas like this?
-@c <jimb> -----------------------------
+@c <jimb>
 
 @quotation
 
@@ -191,7 +193,72 @@ of non-negative integers containing 0.
 A @dfn{repository} consists of node table and a history.
 
 @end quotation
+
+@subsubsection Lineage @c -----------------
+
+We say that a node @var{n} is a @dfn{direct child} of a directory
+@var{d} iff @var{d} contains a directory entry whose node number is
+@var{n}.
+
+A node @var{n} is a @dfn{child} of a directory @var{d} iff @var{n} is
+a direct child of @var{d}, or if there exists some sequence of
+directories (@var{e1}, ... @var{eM}) such that 
+
+@itemize @bullet
+@item
+   @var{e1} is a direct child of @var{d}
+@item
+   @var{n} is a direct child of @var{eM}
+@item
+   for any natural numbers 1 <= (J, K) <= M, where K = J + 1, @var{eK}
+is a direct child of @var{eJ}.
+@end itemize
+
+Given these definitions of ``direct child'' and ``child,'' the obvious
+definitions of ``direct parent'' and ``parent'' hold.
+
+@subsubsection Restrictions @c ---------------
+
+Now that we've explained the form of the data, we make some restrictions
+on that form.
+
+In these restrictions, let @var{r} be any repository.  When we refer,
+implicitly or explicitly, to a node table without further clarification,
+we mean @var{r}'s node table.  Thus, if we refer to ``a valid node
+number'' without specifying the node table in which it is valid, we mean
+``a valid node number in @var{r}'s node table''.  Similarly for
+@var{r}'s history.
+
+@b{Every version has a root directory.}  Every version's node number is
+a valid node number, and the node it refers to is always a directory.
+We call this the version's @dfn{root directory}.
+
+@b{Version 0 always contains an empty root directory.}  This baseline
+makes it easy to build delta objects when checking out projects from the
+repository.
+
+@b{Directories contain only valid links.}
+Every directory entry's @var{node} is a valid node number.
+
+@b{Directory entries can be identified by name.}
+For any directory @var{d}, every directory entry in @var{d} has a
+distinct name.
+
+@b{There are no cycles of directories.}  No node is its own child.
+
+@b{Directories can have more than one parent.}  The UNIX file system
+does not allow more than one hard link to a directory, but Subversion
+does allow the analogous situation.  Thus, the directories in a
+Subversion repository form a directed acyclic graph (@dfn{DAG}), not a
+tree.  However, it would be distracting and unhelpful to replace the
+familiar term ``directory tree'' with the unfamiliar term ``directory
+DAG'', so we still call it a ``directory tree'' here.
+
+@b{There are no dead nodes.}  Every node is a child of some version's
+root directory.
+
 @c  </jimb> ----------------------
+
 
 
 @subsection Basic Read Operations
@@ -235,7 +302,7 @@ repository's filesystem:
 
 @subsection Basic Writing
 
-If a server needs to modify the repository's filesystem in any way (even
+If a server needs to modify a repository's filesystem in any way (even
 if just modifying properties), it must do three things:
 
 @enumerate
@@ -428,20 +495,10 @@ Each plug-in can potentially implement a new set of server "methods"
 
 When starting up, svn_main will read a configuration file @dfn{svn.conf}
 (much like Apache's @emph{httpd.conf}) which, among other things, will
-specify a list of available plug-ins and their actual locations on
-disk.  If and when a client requests a particular method, svn_main then
-knows which plug-in to "auto-load" as necessary.
-
-A plug-in needs access to the svn_main internals, and therefore uses
-svn_main's private header files.  Additionally, we define:
-
-@c Hand-waving this API for now, not critical to define just yet:
-
-@table @code
-@item register_method (name)
-  register a new method in svn_main's list of available methods
-@end table
-
+specify a list of available plug-ins, the new methods they provide, and
+their actual locations on disk.  If and when a client requests a
+particular method, svn_main then knows which plug-in to "auto-load" as
+necessary.
 
 Here are some ideas for future plug-ins:
 
