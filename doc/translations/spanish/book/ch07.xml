@@ -22,23 +22,24 @@
       acaba en <quote>operaciones comunes de control de
       versiones</quote>.</para>
 
-    <para>This chapter highlights some of Subversion's features that
-      aren't quite so regularly used.  In it, we will discuss
-      Subversion's property (or <quote>metadata</quote>) support, and
-      how to modify Subversion's default behaviors by tweaking its
-      run-time configuration area.  We will describe how you can use
-      externals definitions to instruct Subversion to pull data from
-      multiple repositories.  We'll cover in detail some of the
-      additional client- and server-side tools that are part of the
-      Subversion distribution.</para>
+    <para>Este capítulo recalca algunas características de Subversion
+      que no son usadas muy a menudo. En él, discutiremos el soporte
+      de propiedades (o <quote>metadatos</quote>) de Subversion,
+      y cómo modificar el comportamiento por defecto de Subversion
+      alterando su área de configuración dedicada a parámetros de
+      ejecución. Describiremos cómo puede usar definiciones externas
+      para ordenar a Subversion que obtenga datos de múltiples
+      repositorios. Cubriremos con detalle algunas herramientas
+      adicionales, tanto del lado del cliente como del servidor,
+      que son parte de la distribución de Subversion.</para>
 
-    <para>Before reading this chapter, you should be familiar with the
-      basic file and directory versioning capabilities of Subversion.
-      If you haven't already read about those, or if you need a
-      refresher, we recommend that you check out <xref
-      linkend="svn-ch-2" /> and <xref linkend="svn-ch-3" />.  Once
-      you've mastered the basics and consumed this chapter, you'll be
-      a Subversion power-user!
+    <para>Antes de leer este capítulo, debe estar familiarizado
+      con las capacidades básicas de versionado de ficheros
+      y directorios de Subversion. Si todavía no ha leído sobre
+      éstas, o si necesita refrescar su memoria, recomendamos que
+      vea <xref linkend="svn-ch-2" /> y <xref linkend="svn-ch-3"
+      />. Una vez haya dominado lo básico y consumido este capítulo,
+      ¡será un usuario avanzado de Subversion!
     </para>
 
   </simplesect>
