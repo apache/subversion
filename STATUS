@@ -4,10 +4,18 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.0.2:
+Status of 1.0.3:
 ================
 
 Candidate changes:
+
+  * r8708
+    Use warnings pragma on perl hook-scripts.
+    Justification: Perl correctness issue.
+    Votes:
+       +1: sussman
+       -1: breser (Doesn't error out properly on older versions and 
+                   needs more discussion).
 
   * r8867, r8868, r8902
     Trivial performance fix for mod_authz_svn; cache the access file per
@@ -45,18 +53,3 @@ Candidate changes:
     Justification: The old ones weren't portable and caused problems on Win32.
     Votes:
       +1: breser
-
-
-
-Status of 1.0.3:
-================
-
-  * r8708
-    Use warnings pragma on perl hook-scripts.
-    Justification: Perl correctness issue.
-    Votes:
-       +1: sussman
-       -1: breser (Doesn't error out properly on older versions and 
-                   needs more discussion).
-
-
