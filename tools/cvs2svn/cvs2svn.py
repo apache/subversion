@@ -41,7 +41,10 @@ vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
-HEAD_MIRROR_DB = 'cvs2svn-head-mirror.db'  # Mirror the head tree
+
+# Skeleton version of an svn filesystem.
+SVN_REVISIONS_DB = 'cvs2svn-revisions.db'
+NODES_DB = 'cvs2svn-nodes.db'
 
 # Tag and branch roots live here when their start revision is known
 # but not yet their end revision.
@@ -167,6 +170,7 @@ class CollectData(rcsparse.Sink):
       op = OP_CHANGE
 
     # store the rev_data as a list in case we have to jigger the timestamp
+    # print "KFF: revision %s of '%s'" % (revision, self.fname)
     self.rev_data[revision] = [int(timestamp), author, op, None]
 
     # record the previous revision for sanity checking later
@@ -224,6 +228,10 @@ class CollectData(rcsparse.Sink):
         return
 
   def set_revision_info(self, revision, log, text):
+    # kff fooo
+    # if revision == "1.1" and self.rev_data.has_key("1.1.1.1"):
+    #   return
+    # print "KFF: writing %s of '%s'" % (revision, self.fname)
     timestamp, author, op, old_ts = self.rev_data[revision]
     digest = sha.new(log + '\0' + author).hexdigest()
     if old_ts:
@@ -337,140 +345,289 @@ def gen_key():
   return key
 
 
-class TreeMirror:
+class RepositoryMirror:
   def __init__(self):
-    'Open a db file to mirror the head tree.'
-    self.db_file = HEAD_MIRROR_DB
-    self.db = anydbm.open(self.db_file, 'n')
-    self.root_key = gen_key()
-    self.db[self.root_key] = marshal.dumps({}) # Init as a dir with no entries
+    self.revs_db_file = SVN_REVISIONS_DB
+    self.revs_db = anydbm.open(self.revs_db_file, 'n')
+    self.nodes_db_file = NODES_DB
+    self.nodes_db = anydbm.open(self.nodes_db_file, 'n')
 
-  def ensure_path(self, path, output_intermediate_dir=None):
-    """Add PATH to the tree.  PATH may not have a leading slash.
-    Return None if PATH already existed, else return 1.
-    If OUTPUT_INTERMEDIATE_DIR is not None, then invoke it once on
+    # A key that could never be a real directory entry.
+    self.mutable_flag = "/mutable/"
+    # This could represent a new mutable directory or file.
+    self.empty_mutable_thang = { self.mutable_flag : 1 }
+
+    # Init a root directory with no entries at revision 0.
+    self.youngest = 0
+    self.revs_db[str(self.youngest)] = gen_key()
+    self.nodes_db[self.revs_db[str(self.youngest)]] = marshal.dumps({})
+
+  def new_revision(self):
+    """Stabilize the current revision, then start the next one.
+    (Increments youngest.)"""
+    self.stabilize_youngest()
+    self.revs_db[str(self.youngest + 1)] \
+                                      = self.revs_db[str(self.youngest)]
+    self.youngest = self.youngest + 1
+
+  def _stabilize_directory(self, key):
+    """Close the directory whose node key is KEY."""
+    dir = marshal.loads(self.nodes_db[key])
+    if dir.has_key(self.mutable_flag):
+      del dir[self.mutable_flag]
+      for entry in dir.keys():
+        self._stabilize_directory(dir[entry])
+      self.nodes_db[key] = marshal.dumps(dir)
+
+  def stabilize_youngest(self):
+    """Stabilize the current revision by removing mutable flags."""
+    root_key = self.revs_db[str(self.youngest)]
+    self._stabilize_directory(root_key)
+
+  def probe_path(self, path, revision=-1):
+    # For debugging -- print information about the repository mirror's
+    # path down to some file, in REVISION (or youngest if -1).
+    components = string.split(path, '/')
+    if revision == -1:
+      revision = self.youngest
+    print "PROBING path: '%s' in %d" % (path, revision)
+
+    parent_dir_key = self.revs_db[str(revision)]
+    parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
+    last_component = "/"
+
+    i = 1
+    for component in components:
+      for n in range(i):
+        print "  ",
+      print "'%s' key: %s, val:" % (last_component, parent_dir_key), parent_dir
+
+      if not parent_dir.has_key(component):
+        print "  PROBE ABANDONED: '%s' does not contain '%s'" \
+              % (last_component, component)
+        return
+
+      this_entry_key = parent_dir[component]
+      this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
+      parent_dir_key = this_entry_key
+      parent_dir = this_entry_val
+      last_component = component
+      i = i + 1
+  
+    for n in range(i):
+      print "  ",
+    print "parent_dir_key: %s, val:" % parent_dir_key, parent_dir
+
+
+  def change_path(self, path, intermediate_dir_func=None):
+    """Record a change to PATH.  PATH may not have a leading slash.
+    Return None if PATH already existed, or 1 if created it.
+
+    If INTERMEDIATE_DIR_FUNC is not None, then invoke it once on
     each full path to each missing intermediate directory in PATH, in
     order from shortest to longest."""
 
     components = string.split(path, '/')
     path_so_far = None
 
-    parent_dir_key = self.root_key
-    parent_dir = marshal.loads(self.db[parent_dir_key])
+    parent_dir_key = self.revs_db[str(self.youngest)]
+    parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
+    if not parent_dir.has_key(self.mutable_flag):
+      parent_dir_key = gen_key()
+      parent_dir[self.mutable_flag] = 1
+      self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
+      self.revs_db[str(self.youngest)] = parent_dir_key
 
     for component in components[:-1]:
+      # parent_dir is always mutable at the top of the loop
+
       if path_so_far:
         path_so_far = path_so_far + '/' + component
       else:
         path_so_far = component
 
+      # Ensure that the parent has an entry for this component.
       if not parent_dir.has_key(component):
-        child_key = gen_key()
-        parent_dir[component] = child_key
-        self.db[parent_dir_key] = marshal.dumps(parent_dir)
-        self.db[child_key] = marshal.dumps({})
-        if output_intermediate_dir:
-          output_intermediate_dir(path_so_far)
-      else:
-        child_key = parent_dir[component]
+        new_child_key = gen_key()
+        parent_dir[component] = new_child_key
+        self.nodes_db[new_child_key] = marshal.dumps(self.empty_mutable_thang)
+        self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
+        if intermediate_dir_func:
+          intermediate_dir_func(path_so_far)
 
-      parent_dir_key = child_key
-      parent_dir = marshal.loads(self.db[parent_dir_key])
+      # One way or another, parent dir now has an entry for component,
+      # so grab it, see if it's mutable, and DTRT if it's not.  (Note
+      # it's important to reread the entry value from the db, even
+      # though we might have just written it -- if we tweak existing
+      # data structures, we could modify self.empty_mutable_thang,
+      # which must not happen.)
+      this_entry_key = parent_dir[component]
+      this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
+      if not this_entry_val.has_key(self.mutable_flag):
+        this_entry_val[self.mutable_flag] = 1
+        this_entry_key = gen_key()
+        parent_dir[component] = this_entry_key
+        self.nodes_db[this_entry_key] = marshal.dumps(this_entry_val)
+        self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
 
-    # Now add the last node, probably the versioned file.
-    basename = components[-1]
-    if parent_dir.has_key(basename):
-      return None
-    else:
-      leaf_key = gen_key()
-      parent_dir[basename] = leaf_key
-      self.db[parent_dir_key] = marshal.dumps(parent_dir)
-      self.db[leaf_key] = marshal.dumps({})
-      return 1
+      parent_dir_key = this_entry_key
+      parent_dir = this_entry_val
 
-  def _delete_tree(self, key):
-    "Delete KEY and everything underneath it."
-    directory = marshal.loads(self.db[key])
-    for entry in directory.keys():
-      self._delete_tree(directory[entry])
-    del self.db[key]
+    # Now change the last node, the versioned file.  Just like at the
+    # top of the above loop, parent_dir is already mutable.
+    retval = 1
+    last_component = components[-1]
+    if parent_dir.has_key(last_component):
+      child = marshal.loads(self.nodes_db[parent_dir[last_component]])
+      if child.has_key(self.mutable_flag):
+        sys.stderr.write("'%s' has already been changed in revision %d;\n" \
+                         "can't change it again in the same revision."     \
+                         % (path, self.youngest))
+        sys.exit(1)
+      retval = None  # Path already exists, so we'll return None.
+
+    leaf_key = gen_key()
+    parent_dir[last_component] = leaf_key
+    self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
+    self.nodes_db[leaf_key] = marshal.dumps(self.empty_mutable_thang)
+
+    return retval
 
   def delete_path(self, path, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
     Return the deleted path, or None if PATH does not exist.
 
-    If PRUNE is not None, then the deleted path may differ from PATH,
-    because this will delete the highest possible directory.  In other
+    If PRUNE is not None, then delete the highest possible directory,
+    which means the returned path may differ from PATH.  In other
     words, if PATH was the last entry in its parent, then delete
     PATH's parent, unless it too is the last entry in *its* parent, in
     which case delete that parent, and and so on up the chain, until a
-    directory is encountered that has an entry not in the parent stack
-    of the original target.
+    directory is encountered that has an entry which is not a member
+    of the parent stack of the original target.
 
     PRUNE is like the -P option to 'cvs checkout'."""
+
     components = string.split(path, '/')
     path_so_far = None
 
-    # This is only used with PRUNE.  If not None, it is a list of
-    #
-    #   (PATH, PARENT_DIR_DICTIONARY, PARENT_DIR_DB_KEY)
-    #
-    # where PATH is the actual path we deleted, and the next two
-    # elements represent PATH's parent dir.
-    highest_empty = None
+    # Start out assuming that we will delete it.  The for-loop may
+    # change this to None, if it turns out we can't even reach the
+    # path (i.e., it is already deleted).
+    retval = path
 
-    parent_dir_key = self.root_key
-    parent_dir = marshal.loads(self.db[parent_dir_key])
+    parent_dir_key = self.revs_db[str(self.youngest)]
+    parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
 
-    # Find the target of the delete.
+    # As we walk down to find the dest, we remember each parent
+    # directory's name and db key, in reverse order: push each new key
+    # onto the front of the list, so that by the time we reach the
+    # destination node, the zeroth item in the list is the parent of
+    # that destination.
+    #
+    # Then if we actually do the deletion, we walk the list from left
+    # to right, replacing as appropriate.
+    #
+    # The root directory has name None.
+    parent_chain = [ ]
+    parent_chain.insert(0, (None, parent_dir_key))
+
+    def is_prunable(dir):
+      """Return true if DIR (a dictionary representing a directory)
+      has only one entry, false otherwise.  This is more complex than
+      just checking len(DIR) > 1, since DIR might have a mutable flag.""" 
+      num_items = len(dir)
+      if num_items > 2:
+        return None
+      if num_items == 2:
+        if dir.has_key(self.mutable_flag): return 1
+        else:                              return None
+      else:
+        return 1
+
     for component in components[:-1]:
+      # parent_dir is always mutable at the top of the loop
 
       if path_so_far:
         path_so_far = path_so_far + '/' + component
       else:
         path_so_far = component
 
-      if prune:
-        # In with the out...
-        last_parent_dir_key = parent_dir_key
-        last_parent_dir = parent_dir
-
-      # ... and old with the new:
-      if parent_dir.has_key(component):
-        parent_dir_key = parent_dir[component]
-        parent_dir = marshal.loads(self.db[parent_dir_key])
-      else:
+      # If we can't reach the dest, then we don't need to do anything.
+      if not parent_dir.has_key(component):
         return None
 
-      if prune and (len(parent_dir) == 1):
-        highest_empty = (path_so_far, last_parent_dir, last_parent_dir_key)
-      else:
-        highest_empty = None
+      # Otherwise continue downward, dropping breadcrumbs.
+      this_entry_key = parent_dir[component]
+      this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
+      parent_dir_key = this_entry_key
+      parent_dir = this_entry_val
+      parent_chain.insert(0, (component, parent_dir_key))
 
-    # Confirm that the parent dir actually contains the ultimate
-    # target.  It's possible that the target has been removed before;
-    # if it has, all bets are off, so do nothing and return.  (We
-    # don't prune, because if the highest_empty subtree were pruneable
-    # at all, it should have been done before now.)
-    #
-    # See run-tests.py:prune_with_care() for the scenario.
-    if not parent_dir.has_key(components[-1:][0]):
+    # If the target is not present in its parent, then we're done.
+    last_component = components[-1]
+    if not parent_dir.has_key(last_component):
       return None
 
-    # Remove subtree, if any, then remove this entry from its parent.
-    if highest_empty:
-      path = highest_empty[0]
-      basename = os.path.basename(path)
-      parent_dir = highest_empty[1]
-      parent_dir_key = highest_empty[2]
+    # The target is present, so remove it and bubble up, making a new
+    # mutable path and/or pruning as necessary.
+    pruned_count = 0
+    prev_entry_name = last_component
+    new_key = None
+    for parent_item in parent_chain:
+      parent_key = parent_item[1]
+      parent_val = marshal.loads(self.nodes_db[parent_key])
+      if prune:
+        if (new_key == None) and is_prunable(parent_val):
+          pruned_count = pruned_count + 1
+          pass
+          # Do nothing more.  All the action takes place when we hit a
+          # non-prunable parent.
+        else:
+          # We hit a non-prunable, so bubble up the new gospel.
+          parent_val[self.mutable_flag] = 1
+          if new_key == None:
+            del parent_val[prev_entry_name]
+          else:
+            parent_val[prev_entry_name] = new_key
+          new_key = gen_key()
+      else:
+        parent_val[self.mutable_flag] = 1
+        if new_key:
+          parent_val[prev_entry_name] = new_key
+        else:
+          del parent_val[prev_entry_name]
+        new_key = gen_key()
+
+      prev_entry_name = parent_item[0]
+      if new_key:
+        self.nodes_db[new_key] = marshal.dumps(parent_val)
+
+    if new_key == None:
+      new_key = gen_key()
+      self.nodes_db[new_key] = marshal.dumps(self.empty_mutable_thang)
+
+    # Install the new root entry.
+    self.revs_db[str(self.youngest)] = new_key
+
+    if pruned_count > len(components):
+      sys.stdout.write("Error: deleting '%s' tried to prune %d components."
+                       % (path, pruned_count))
+      exit(1)
+
+    if pruned_count:
+      if pruned_count == len(components):
+        # We never prune away the root directory, so back up one component.
+        pruned_count = pruned_count - 1
+      retpath = string.join(components[:0 - pruned_count], '/')
+      return retpath
     else:
-      basename = components[-1]
-      
-    self._delete_tree(parent_dir[basename])
-    del parent_dir[basename]
-    self.db[parent_dir_key] = marshal.dumps(parent_dir)
-    
-    return path
+      return path
+
+  def close(self):
+    # Just stabilize the last revision.  This may or may not affect
+    # anything, but if we end up using the mirror for anything after
+    # this, it's nice to know the '/mutable/' entries are gone.
+    self.stabilize_youngest()
 
 
 class Dump:
@@ -479,7 +636,7 @@ class Dump:
     self.dumpfile_path = dumpfile_path
     self.revision = revision
     self.dumpfile = open(dumpfile_path, 'wb')
-    self.head_mirror = TreeMirror()
+    self.repos_mirror = RepositoryMirror()
 
     # Initialize the dumpfile with the standard headers:
     #
@@ -555,6 +712,7 @@ class Dump:
     self.dumpfile.write('\n')
 
     self.revision = self.revision + 1
+    self.repos_mirror.new_revision()
     return self.revision
 
   def add_dir(self, path):
@@ -600,7 +758,7 @@ class Dump:
     # to determine if this path exists in head yet.  But that wouldn't
     # be perfectly reliable, both because of 'cvs commit -r', and also
     # the possibility of file resurrection.
-    if self.head_mirror.ensure_path(svn_path, self.add_dir):
+    if self.repos_mirror.change_path(svn_path, self.add_dir):
       action = 'add'
     else:
       action = 'change'
@@ -662,7 +820,7 @@ class Dump:
     return the path actually deleted; else return None.  (The path
     deleted can differ from SVN_PATH because of pruning, but only if
     PRUNE is true.)"""
-    deleted_path = self.head_mirror.delete_path(svn_path, prune)
+    deleted_path = self.repos_mirror.delete_path(svn_path, prune)
     if deleted_path:
       print '    (deleted %s)' % deleted_path
       self.dumpfile.write('Node-path: %s\n'
@@ -671,6 +829,7 @@ class Dump:
     return deleted_path
 
   def close(self):
+    self.repos_mirror.close()
     self.dumpfile.close()
 
 
@@ -727,7 +886,7 @@ class SymbolicNameTracker:
         sys.exit(1)
       else:
         # TODO: working here, among other places
-        # print "KFF: %2d ==> %s" % (svn_rev, key)
+        # print "KFF: key: %2d ==> %s" % (svn_rev, key)
         pass
 
 
