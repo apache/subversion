@@ -317,6 +317,23 @@ log_message_receiver (void *baton,
                             rev->revision, rev->path);
 }
 
+static apr_status_t
+cleanup_tempfile (void *f)
+{
+  apr_file_t *file = f;
+  apr_status_t apr_err;
+  const char *fname;
+
+  /* the file may or may not have been closed; try it */
+  apr_file_close (file);
+
+  apr_err = apr_file_name_get (&fname, file);
+  if (apr_err == APR_SUCCESS)
+    apr_err = apr_file_remove (fname, apr_file_pool_get (file));
+
+  return apr_err;
+}
+
 svn_error_t *
 svn_client_blame (const char *target,
                   const svn_opt_revision_t *start,
@@ -336,7 +353,7 @@ svn_client_blame (const char *target,
   struct blame *walk;
   apr_file_t *file;
   svn_stream_t *stream;
-  apr_pool_t *iterpool;
+  apr_pool_t *iterpool, *lastpool;
   struct rev *rev;
   apr_status_t apr_err;
   svn_node_kind_t kind;
@@ -349,6 +366,7 @@ svn_client_blame (const char *target,
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   iterpool = svn_pool_create (pool);
+  lastpool = svn_pool_create (pool);
 
   SVN_ERR (svn_client_url_from_path (&url, target, pool));
   if (! url)
@@ -460,22 +478,30 @@ svn_client_blame (const char *target,
 
   /* Walk the revision list in chronological order, downloading
      each fulltext, diffing it with its predecessor, and accumulating
-     the blame information into db.blame. */
+     the blame information into db.blame.  Use two iteration pools
+     rather than one, because the diff routines need to look at a
+     sliding window of revisions.  Two pools gives us a ring buffer
+     of sorts. */
   for (rev = lmb.eldest; rev; rev = rev->next)
     {
+      apr_pool_t *currpool = iterpool;
       const char *tmp;
       const char *temp_dir;
       
-      apr_pool_clear (iterpool);
-      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
+      apr_pool_clear (currpool);
+      SVN_ERR (svn_io_temp_dir (&temp_dir, currpool));
       SVN_ERR (svn_io_open_unique_file (&file, &tmp,
-                 svn_path_join (temp_dir, "tmp", pool), ".tmp",
-                 FALSE, pool));
-      stream = svn_stream_from_aprfile (file, iterpool);
+                 svn_path_join (temp_dir, "tmp", currpool), ".tmp",
+                                        FALSE, currpool));
+
+      apr_pool_cleanup_register (currpool, file, cleanup_tempfile,
+                                 apr_pool_cleanup_null);
+
+      stream = svn_stream_from_aprfile (file, currpool);
       SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
-                                 stream, NULL, NULL, iterpool));
+                                 stream, NULL, NULL, currpool));
       SVN_ERR (svn_stream_close (stream));
-      SVN_ERR (svn_io_file_close (file, iterpool));
+      SVN_ERR (svn_io_file_close (file, currpool));
 
       if (ctx->notify_func)
         ctx->notify_func (ctx->notify_baton,
@@ -487,25 +513,29 @@ svn_client_blame (const char *target,
                           svn_wc_notify_state_inapplicable,
                           rev->revision);
 
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
       if (last)
         {
           svn_diff_t *diff;
           db.rev = rev;
-          SVN_ERR (svn_diff_file_diff (&diff, last, tmp, iterpool));
+          SVN_ERR (svn_diff_file_diff (&diff, last, tmp, currpool));
           SVN_ERR (svn_diff_output (diff, &db, &output_fns));
-          apr_err = apr_file_remove (last, iterpool);
-          if (apr_err != APR_SUCCESS)
-            return svn_error_wrap_apr (apr_err, "Can't remove '%s'", last);
         }
 
       last = tmp;
+      iterpool = lastpool;
+      lastpool = currpool;
     }
 
-  apr_err = apr_file_open (&file, last, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&file, last, APR_READ, APR_OS_DEFAULT, lastpool);
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr (apr_err, "Can't open '%s'", last);
+  apr_pool_cleanup_register (lastpool, file, cleanup_tempfile,
+                             apr_pool_cleanup_null);
 
-  stream = svn_stream_from_aprfile (file, pool);
+  stream = svn_stream_from_aprfile (file, lastpool);
   for (walk = db.blame; walk; walk = walk->next)
     {
       apr_off_t line_no;
@@ -517,6 +547,8 @@ svn_client_blame (const char *target,
           svn_stringbuf_t *sb;
           apr_pool_clear (iterpool);
           SVN_ERR (svn_stream_readline (stream, &sb, "\n", &eof, iterpool));
+          if (ctx->cancel_func)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
           if (!eof || sb->len)
             SVN_ERR (receiver (receiver_baton, line_no, walk->rev->revision,
                                walk->rev->author, walk->rev->date,
@@ -526,12 +558,9 @@ svn_client_blame (const char *target,
     }
 
   SVN_ERR (svn_stream_close (stream));
-  SVN_ERR (svn_io_file_close (file, pool));
+  SVN_ERR (svn_io_file_close (file, lastpool));
 
-  apr_err = apr_file_remove (last, pool);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Can't remove '%s'", last);
-
+  apr_pool_destroy (lastpool);
   apr_pool_destroy (iterpool);
   return SVN_NO_ERROR;
 }
