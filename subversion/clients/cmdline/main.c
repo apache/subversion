@@ -120,6 +120,11 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "pset",       TRUE, NULL, NULL },
   { "ps",         TRUE, NULL, NULL },
 
+  { "propdel",    FALSE, svn_cl__propdel, 
+    "Remove property PROPNAME on files and directories.\n"
+    "usage: propdel PROPNAME [TARGETS]\n"},
+  { "pdel",       TRUE, NULL, NULL },
+
   { "status",     FALSE, svn_cl__status,
     "Print the status of working copy files and directories.\n"
     "usage: status [TARGETS]\n" },
