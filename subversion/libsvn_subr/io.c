@@ -27,6 +27,7 @@
 #include <apr_file_info.h>
 #include <apr_strings.h>
 #include <apr_thread_proc.h>
+#include <apr_portable.h>
 #include "svn_types.h"
 #include "svn_path.h"
 #include "svn_string.h"
@@ -959,6 +960,57 @@ svn_io_detect_mimetype (const char **mimetype,
     }
   
   return SVN_NO_ERROR;
+}
+
+
+
+/* FIXME: Dirty, ugly, abominable, but works. Beauty comes second for now. */
+#include "svn_private_config.h"
+#ifdef SVN_WIN32
+#include <io.h>
+
+static apr_status_t
+close_file_descriptor (void *baton)
+{
+  int fd = (int) baton;
+  _close (fd);
+  /* Ignore errors from close, because we can't do anything about them. */
+  return APR_SUCCESS;
+}
+#endif
+
+apr_status_t
+svn_io_fd_from_file (int *fd_p, apr_file_t *file)
+{
+  apr_os_file_t fd;
+  apr_status_t status = apr_os_file_get (&fd, file);
+
+  if (status == APR_SUCCESS)
+    {
+#ifndef SVN_WIN32
+      *fd_p = fd;
+#else
+      *fd_p = _open_osfhandle ((long) fd, _O_RDWR);
+
+      /* We must close the file descriptor when the apr_file_t is
+         closed, otherwise we'll run out of them. What happens if the
+         underlyig file handle is closed first is anyone's guess, so
+         the pool cleanup just ignores errors from the close. I hope
+         the RTL frees the FD slot before closing the handle ... */
+      if (*fd_p < 0)
+        status = APR_EBADF;
+      else
+        {
+          /* FIXME: This bit of code assumes that the first element of
+             an apr_file_t on Win32 is a pool. It also assumes an int
+             will fit into a void*. Please, let's get rid of this ASAP! */
+          apr_pool_t *cntxt = *(apr_pool_t**) file;
+          apr_pool_cleanup_register (cntxt, (void*) *fd_p,
+                                     close_file_descriptor, NULL);
+        }
+#endif
+    }
+  return status;
 }
 
 

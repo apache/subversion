@@ -35,6 +35,7 @@
 
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_io.h"
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_xml.h"
@@ -1131,7 +1132,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
-  apr_os_file_t fdesc;
+  int fdesc;
   svn_error_t *err;
   apr_off_t offset = 0;
 
@@ -1163,7 +1164,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
                               "Couldn't rewind tmpfile.");
     }
   /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
-  status = apr_os_file_get(&fdesc, rb->tmpfile);
+  status = svn_io_fd_from_file(&fdesc, rb->tmpfile);
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
