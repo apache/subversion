@@ -116,8 +116,8 @@ def test_misc(sbox):
       test = "/" + test
     if not path == test:
       print "Unexpected result from tree with --full-paths:"
-      print "  entry            : %s" % entry.rstrip('\n')
-      print "  with --full-paths: %s" % treelistfull[n].rstrip('\n')
+      print "  entry            : %s" % entry.rstrip()
+      print "  with --full-paths: %s" % treelistfull[n].rstrip()
       raise svntest.Failure
     n = n + 1
 
@@ -130,11 +130,14 @@ def test_misc(sbox):
   for entry in treelist:
     if not treelistfull[n].endswith(entry.lstrip()):
       print "Unexpected result from tree with --full-paths:"
-      print "  entry            : %s" % entry.rstrip('\n')
+      print "  entry            : %s" % entry.rstrip()
       print "  with --full-paths: %s" % treelistfull[n].rstrip()
       raise svntest.Failure
     n = n + 1
 
+  treelist = run_svnlook('tree', repo_dir, '/')
+  if treelist[0] != '/\n':
+    raise svntest.Failure
 
   expect('propget svn:log', [ 'log msg' ],
       run_svnlook('propget', '--revprop', repo_dir, 'svn:log'))

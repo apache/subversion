@@ -1043,7 +1043,7 @@ print_tree (svn_fs_root_t *root,
   SVN_ERR (svn_cmdline_printf (pool, "%s%s",
                                full_paths ? path : svn_path_basename (path,
                                                                       pool),
-                               is_dir ? "/" : ""));
+                               is_dir && strcmp (path, "/") ? "/" : ""));
 
   if (show_ids)
     {
@@ -2208,6 +2208,7 @@ main (int argc, const char * const *argv)
         }
       else
         svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
+      svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }
