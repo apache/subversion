@@ -1662,7 +1662,7 @@ messages.  The gettext package uses the xgettext tool to extract strings
 from the sources for translation.  It does so by extracting the arguments
 of the _() and N_() macros.  The former is used in context where function
 calls are allowed (typically anything except static initializers).  The latter
-is used whenever _() can't.  Strings marked with N_() need to be passed to
+is used whenever _() isn't.  Strings marked with N_() need to be passed to
 gettext translation routines whenever referenced in the code.  For an example
 look at how the header and footer are handled in
 subversion/clients/cmdline/help-cmd.c.
