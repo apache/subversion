@@ -32,28 +32,78 @@
 #include "svn_config.h"
 
 
-/* A tiny callback function of type 'svn_client_prompt_t'.  For a much
-   better example, see svn_cl__prompt_user() in the official svn
-   cmdline client. */
-svn_error_t *
-my_prompt_callback (const char **info,
-                    const char *prompt,
-                    svn_boolean_t hide,
-                    void *baton,
-                    apr_pool_t *pool)
+/* Display a prmopt and read a one-line response into the provided buffer,
+   removing a trailing newline if present. */
+static svn_error_t *
+prompt_and_read_line(const char *prompt,
+                     char *buffer,
+                     size_t max)
 {
-  char *answer;
-  char answerbuf[100];
   int len;
+  printf("%s: ", prompt);
+  if (fgets(buffer, max, stdin) == NULL)
+    return svn_error_create(0, NULL, "error reading stdin");
+  len = strlen(buffer);
+  if (len > 0 && buffer[len-1] == '\n')
+    buffer[len-1] = 0;
+  return SVN_NO_ERROR;
+}
 
-  printf ("%s: ", prompt);
-  answer = fgets (answerbuf, 100, stdin);
+/* A tiny callback function of type 'svn_auth_simple_prompt_func_t'. For
+   a much better example, see svn_cl__auth_simple_prompt in the official
+   svn cmdline client. */
+static svn_error_t *
+my_simple_prompt_callback (svn_auth_cred_simple_t **cred,
+                           void *baton,
+                           const char *realm,
+                           const char *username,
+                           apr_pool_t *pool)
+{
+  svn_auth_cred_simple_t *ret = apr_pcalloc (pool, sizeof (*ret));
+  char answerbuf[100];
 
-  len = strlen(answer);
-  if (answer[len-1] == '\n')
-    answer[len-1] = '\0';
+  if (realm)
+    {
+      printf ("Authentication realm: %s\n", realm);
+    }
 
-  *info = apr_pstrdup (pool, answer);
+  if (username)
+    ret->username = apr_pstrdup (pool, username);
+  else
+    {
+      SVN_ERR (prompt_and_read_line("Username", answerbuf, sizeof(answerbuf)));
+      ret->username = apr_pstrdup (pool, answerbuf);
+    }
+
+  SVN_ERR (prompt_and_read_line("Password", answerbuf, sizeof(answerbuf)));
+  ret->password = apr_pstrdup (pool, answerbuf);
+
+  *cred = ret;
+  return SVN_NO_ERROR;
+}
+
+
+/* A tiny callback function of type 'svn_auth_username_prompt_func_t'. For
+   a much better example, see svn_cl__auth_username_prompt in the official
+   svn cmdline client. */
+static svn_error_t *
+my_username_prompt_callback (svn_auth_cred_username_t **cred,
+                           void *baton,
+                           const char *realm,
+                           apr_pool_t *pool)
+{
+  svn_auth_cred_username_t *ret = apr_pcalloc (pool, sizeof (*ret));
+  char answerbuf[100];
+
+  if (realm)
+    {
+      printf ("Authentication realm: %s\n", realm);
+    }
+
+  SVN_ERR (prompt_and_read_line("Username", answerbuf, sizeof(answerbuf)));
+  ret->username = apr_pstrdup (pool, answerbuf);
+
+  *cred = ret;
   return SVN_NO_ERROR;
 }
 
@@ -87,7 +137,7 @@ main (int argc, const char **argv)
   pool = svn_pool_create (NULL);
 
   /* Make sure the ~/.subversion run-time config files exist */  
-  err = svn_config_ensure (pool);
+  err = svn_config_ensure (NULL, pool);
   if (err)
     {
       /* For functions deeper in the stack, we usually use the
@@ -99,12 +149,8 @@ main (int argc, const char **argv)
 
   /* All clients need to fill out a client_ctx object. */
   {
-    /* A function (& context) which can prompt the user for information. */
-    ctx.prompt_func = my_prompt_callback; 
-    ctx.prompt_baton = NULL;
-    
     /* Load the run-time config file into a hash */
-    if ((err = svn_config_get_config (&(ctx.config), pool)))
+    if ((err = svn_config_get_config (&(ctx.config), NULL, pool)))
       {
         svn_handle_error (err, stderr, 0);
         return EXIT_FAILURE;
@@ -135,12 +181,14 @@ main (int argc, const char **argv)
         = apr_array_make (pool, 4, sizeof (svn_auth_provider_object_t *));
 
       svn_client_get_simple_prompt_provider (&provider,
-                                             my_prompt_callback, NULL, 
+                                             my_simple_prompt_callback,
+                                             NULL, /* baton */
                                              2, /* retry limit */ pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       svn_client_get_username_prompt_provider (&provider,
-                                               my_prompt_callback, NULL, 
+                                               my_username_prompt_callback,
+                                               NULL, /* baton */
                                                2, /* retry limit */ pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
