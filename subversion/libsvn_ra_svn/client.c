@@ -123,7 +123,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
                              hostname);
 
   apr_pool_cleanup_register(pool, *sock, cleanup_socket,
-			    apr_pool_cleanup_null);
+                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
