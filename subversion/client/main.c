@@ -263,6 +263,53 @@ svn_cl__help (svn_cl__opt_state_t *opt_state,
 
 
 
+/* Read the contents of FILENAME into *RESULT. */
+static svn_error_t *
+read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
+{
+  /* Right now, there are two places in Subversion where we'd need to
+     read a value from a file: when setting a property, and for log
+     messages (like "cvs commit -f<filename>").  Since properties are
+     implemented using prop-sized memory chunks anyway, it's no loss
+     to just read the file into a string.  Someday, we may streamify
+     properties, at which point it would be desirable to let the
+     callee read streamily from the file. */
+
+  svn_string_t *res;
+  svn_error_t *err;
+  apr_status_t apr_err;
+  char buf[BUFSIZ];
+  apr_size_t len = BUFSIZ;
+  apr_file_t *f = NULL;
+
+  res = svn_string_create ("", pool);
+
+  apr_err = apr_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "read_from_file: failed to open '%s'",
+                              filename);
+      
+  do {
+    err = svn_io_file_reader (f, buf, &len, pool);
+    if (err)
+      return err;
+    
+    svn_string_appendbytes (res, buf, len);
+  } while (len != 0);
+
+  apr_err = apr_close (f);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "read_from_file: failed to close '%s'",
+                              filename);
+  
+  *result = res;
+  return SVN_NO_ERROR;
+}
+
+
+
 /*** Main. ***/
 
 int
@@ -337,8 +384,9 @@ main (int argc, char **argv)
         opt_state.ancestor_path = svn_string_create (optarg, pool);
         break;
       case svn_cl__valfile_opt:
-        /* todo: just read in the value directly here? */
-        opt_state.valfile = svn_string_create (optarg, pool);
+        err = read_from_file (&(opt_state.value), optarg, pool);
+        if (err)
+          svn_handle_error (err, stdout, TRUE);
         break;
       case svn_cl__force_opt:
         opt_state.force = TRUE;
