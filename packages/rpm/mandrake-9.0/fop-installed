@@ -1,0 +1,11 @@
+if [ "$1" == "" ] ; then
+  FOP=`which fop.sh 2>/dev/null`;
+  if [ "$FOP" != "" ] ; then
+    echo 1
+    exit
+  fi
+elif [ -f "$1/fop.sh" ] ; then
+  echo 1
+  exit
+fi
+echo 0
