@@ -482,6 +482,26 @@ open_path (parent_path_t **parent_path_p,
 }
 
 
+/* Open the node identified by PATH in ROOT, as part of TRAIL.  Set
+   *DAG_NODE_P to the node we find, allocated in TRAIL->pool.  Return
+   an error if this node doesn't exist. */
+static svn_error_t *
+get_dag (dag_node_t **dag_node_p,
+         svn_fs_root_t *root,
+         const char *path,
+         trail_t *trail)
+{
+  parent_path_t *parent_path;
+
+  /* Call open_path with no flags, as we want this to return an error
+     if the node for which we are searching doesn't exist. */
+  SVN_ERR (open_path (&parent_path, root, path, 0, trail));
+  *dag_node_p = parent_path->node;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Make the node referred to by PARENT_PATH mutable, if it isn't
    already, as part of TRAIL.  ROOT must be the root from which
    PARENT_PATH descends.  Clone any parent directories as needed.
@@ -531,6 +551,45 @@ make_path_mutable (svn_fs_root_t *root,
 
 
 /* Generic node operations.  */
+
+
+struct node_id_args {
+  svn_fs_id_t **id_p;
+  svn_fs_root_t *root;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_node_id (void *baton, trail_t *trail)
+{
+  struct node_id_args *args = baton;
+  dag_node_t *node;
+
+  SVN_ERR (get_dag (&node, args->root, args->path, trail));
+  *args->id_p = svn_fs_copy_id (svn_fs__dag_get_id (node), trail->pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_node_id (svn_fs_id_t **id_p,
+                svn_fs_root_t *root,
+                const char *path,
+                apr_pool_t *pool)
+{
+  svn_fs_id_t *id;
+  struct node_id_args args;
+
+  args.id_p = &id;
+  args.root = root;
+  args.path = path;
+
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_id, &args, pool));
+  *id_p = id;
+  return SVN_NO_ERROR;
+}
 
 
 struct node_prop_args
