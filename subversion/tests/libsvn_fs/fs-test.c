@@ -5704,7 +5704,7 @@ create_within_copy (const char **msg,
         s = svn_fs_unparse_id (id, spool);
         if (strcmp (s->data, node->unparsed_id) != 0)
           return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                    "%s id: expected %s got: %s",
+                                    "`%s' id: expected `%s'; got `%s'",
                                     node->path, node->unparsed_id, s->data);
         ++node;
       }

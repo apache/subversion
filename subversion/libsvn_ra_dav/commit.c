@@ -146,7 +146,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a request (%s %s)",
+                               "Could not create a request (%s '%s')",
                                method, url);
     }
 

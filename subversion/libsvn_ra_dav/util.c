@@ -369,7 +369,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   if (code != 200
       || rv != NE_OK)
     {
-      msg = apr_psprintf(pool, "%s of %s", method, url);
+      msg = apr_psprintf(pool, "%s of '%s'", method, url);
       err = svn_ra_dav__convert_error(ras->sess, msg, rv);
       goto error;
     }
@@ -394,7 +394,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   ne_xml_destroy(success_parser);
   ne_xml_destroy(error_parser);
   return svn_error_createf(err->apr_err, err,
-                           "%s request failed on %s", method, url );
+                           "%s request failed on '%s'", method, url );
 }
 
 

@@ -1144,7 +1144,7 @@ start_handler (void *userData, const char *eltname, const char **atts)
       signal_error
         (loggy, svn_error_createf 
          (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-          "log entry missing name attribute (entry %s for dir %s)",
+          "log entry missing name attribute (entry '%s' for dir '%s')",
           eltname, svn_wc_adm_access_path (loggy->adm_access)));
       return;
     }
@@ -1194,7 +1194,7 @@ start_handler (void *userData, const char *eltname, const char **atts)
       signal_error
         (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
                                    NULL,
-                                   "unrecognized logfile element in %s: `%s'",
+                                   "unrecognized logfile element in `%s': `%s'",
                                    svn_wc_adm_access_path (loggy->adm_access),
                                    eltname));
       return;
