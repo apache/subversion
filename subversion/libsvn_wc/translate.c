@@ -871,8 +871,9 @@ svn_wc__eol_value_from_string (const char **value, const char *eol)
 }
 
 
-/* Return time T as string in the form "YYYY-MM-DD HH:MM:SS",
-   allocated in POOL. */
+/* Return time T as a string in the form "YYYY-MM-DD HH:MM:SSZ",
+   allocated in POOL.  The "Z" at the end is a literal 'Z', to
+   indicate UTC. */
 static const char *
 time_to_keyword_time (apr_time_t t, apr_pool_t *pool)
 {
@@ -894,7 +895,7 @@ time_to_keyword_time (apr_time_t t, apr_pool_t *pool)
   /* It would be nice to use apr_strftime(), but APR doesn't give a
      way to convert back, so we wouldn't be able to share the format
      string between the writer and reader. */
-  t_cstr = apr_psprintf (pool, "%04d-%02d-%02d %02d:%02d:%02d",
+  t_cstr = apr_psprintf (pool, "%04d-%02d-%02d %02d:%02d:%02dZ",
                          exploded_time.tm_year + 1900,
                          exploded_time.tm_mon + 1,
                          exploded_time.tm_mday,
