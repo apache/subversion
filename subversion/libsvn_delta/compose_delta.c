@@ -691,9 +691,6 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
       range_index_t *range_index = create_range_index(subpool);
       svn_txdelta__ops_baton_t build_baton = { 0 };
       svn_txdelta_window_t *composite = NULL;
-
-      /* FIXME: const char *new_data_A = window_A->new_data->data; */
-      const char *new_data_B = window_B->new_data->data;
       apr_size_t target_offset = 0;
       int i;
 
@@ -708,11 +705,13 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
             {
               /* Delta ops that don't depend on the source can be copied
                  to the composite unchanged. */
+              const char *const new_data =
+                (op->action_code == svn_txdelta_new
+                 ? window_B->new_data->data + op->offset
+                 : NULL);
               svn_txdelta__insert_op(&build_baton, op->action_code,
                                      op->offset, op->length,
-                                     new_data_B, pool);
-              if (op->action_code == svn_txdelta_new)
-                new_data_B += op->length;
+                                     new_data + op->offset, pool);
             }
           else
             {
