@@ -1891,7 +1891,7 @@ svn_fs_commit_txn (const char **conflict_p,
 
           /* Final step: after a successful commit of the transaction,
              deltify the new revision. */
-          if ((! (err2 = svn_fs_revision_root (&root, fs, *new_rev, pool))))
+          if (! ((err2 = svn_fs_revision_root (&root, fs, *new_rev - 1, pool))))
             err2 = svn_fs_deltify (root, "/", TRUE, pool);
           
           return (err2 
