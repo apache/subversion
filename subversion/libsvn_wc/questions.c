@@ -622,81 +622,82 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      svn_wc_entry_t *entry,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *rej_file, *prej_file;
-  svn_stringbuf_t *rej_path, *prej_path;
+  svn_stringbuf_t *old_file, *new_file, *wrk_file;  /* textual conflicts */
+  svn_stringbuf_t *prej_file;                       /* prop conflicts */
+  svn_stringbuf_t *path;
+  enum svn_node_kind kind;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  /* Note:  it's assumed that ENTRY is a particular entry inside
-     DIR_PATH's entries file. */
-  
+  *text_conflicted_p = FALSE;
+  *prop_conflicted_p = FALSE;
+
+  /* ### If the entry is not marked as conflicted, we don't even check
+     for conflict files.  For now this means we won't detect it if
+     there's an inconsistency between entry->conflicted and real-world
+     conflict state, but since the entry->conflicted flag is about to
+     go away anyway, that's fine. */
+
   if (entry->conflicted)
     {
-      /* Get up to two reject files */
-      rej_file = apr_hash_get (entry->attributes,
-                               SVN_WC_ENTRY_ATTR_REJFILE,
+      /* Look for any text conflict, exercising only as much effort as
+         necessary to obtain a definitive answer.  This only applies to
+         files, but we don't have to explicitly check that entry is a
+         file, since these attributes would never be set on a directory
+         anyway.  */
+      old_file = apr_hash_get (entry->attributes,
+                               SVN_WC_ENTRY_ATTR_CONFLICT_OLD,
                                APR_HASH_KEY_STRING);
+      if (old_file)
+        {
+          path = svn_stringbuf_dup (dir_path, subpool);
+          svn_path_add_component (path, old_file);
+          SVN_ERR (svn_io_check_path (path, &kind, subpool));
+          if (kind == svn_node_file)
+            *text_conflicted_p = TRUE;
+        }
+      else
+        {
+          new_file = apr_hash_get (entry->attributes,
+                                   SVN_WC_ENTRY_ATTR_CONFLICT_NEW,
+                                   APR_HASH_KEY_STRING);
+          if (new_file)
+            {
+              path = svn_stringbuf_dup (dir_path, subpool);
+              svn_path_add_component (path, new_file);
+              SVN_ERR (svn_io_check_path (path, &kind, subpool));
+              if (kind == svn_node_file)
+                *text_conflicted_p = TRUE;
+            }
+          else
+            {
+              wrk_file = apr_hash_get (entry->attributes,
+                                       SVN_WC_ENTRY_ATTR_CONFLICT_WRK,
+                                       APR_HASH_KEY_STRING);
+              if (wrk_file)
+                {
+                  path = svn_stringbuf_dup (dir_path, subpool);
+                  svn_path_add_component (path, wrk_file);
+                  SVN_ERR (svn_io_check_path (path, &kind, subpool));
+                  if (kind == svn_node_file)
+                    *text_conflicted_p = TRUE;
+                }
+            }
+        }
 
+      /* What about prop conflicts? */
       prej_file = apr_hash_get (entry->attributes,
                                 SVN_WC_ENTRY_ATTR_PREJFILE,
                                 APR_HASH_KEY_STRING);
-      
-      if ((! rej_file) && (! prej_file))
+      if (prej_file)
         {
-          /* freaky, why is the entry marked as conflicted, but there
-             are no reject files?  assume there's no more conflict.
-             but maybe this should be an error someday.  :) */
-          *text_conflicted_p = FALSE;
-          *prop_conflicted_p = FALSE;
-        }
-
-      else
-        {
-          enum svn_node_kind kind;
-
-          if (rej_file)
-            {
-              rej_path = svn_stringbuf_dup (dir_path, subpool);
-              svn_path_add_component (rej_path, rej_file);
-
-              SVN_ERR (svn_io_check_path (rej_path, &kind, subpool));
-              if (kind == svn_node_file)
-                /* The textual conflict file is still there. */
-                *text_conflicted_p = TRUE;
-              else
-                /* The textual conflict file has been removed. */
-                *text_conflicted_p = FALSE;  
-            }
-          else
-            /* There's no mention of a .rej file at all */
-            *text_conflicted_p = FALSE;
-
-          if (prej_file)
-            {
-              prej_path = svn_stringbuf_dup (dir_path, subpool);
-              svn_path_add_component (prej_path, prej_file);
-
-              SVN_ERR (svn_io_check_path (prej_path, &kind, subpool));
-
-              if (kind == svn_node_file)
-                /* The property conflict file is still there. */
-                *prop_conflicted_p = TRUE;
-              else
-                /* The property conflict file has been removed. */
-                *prop_conflicted_p = FALSE;
-            }
-          else
-            /* There's no mention of a .prej file at all. */
-            *prop_conflicted_p = FALSE;
+          path = svn_stringbuf_dup (dir_path, subpool);
+          svn_path_add_component (path, prej_file);
+          SVN_ERR (svn_io_check_path (path, &kind, subpool));
+          if (kind == svn_node_file)
+            *prop_conflicted_p = TRUE;
         }
     }
-  else
-    {
-      /* The entry isn't marked with `conflict="true"' in the first
-         place.  */
-      *text_conflicted_p = FALSE;
-      *prop_conflicted_p = FALSE;
-    }
-
+  
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }

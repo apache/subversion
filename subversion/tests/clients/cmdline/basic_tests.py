@@ -261,11 +261,11 @@ def basic_merge(sbox):
   my_greek_tree[2][1] = 'This is the new line 1 in the backup copy of mu'
   for x in range(2,11):
     my_greek_tree[2][1] = my_greek_tree[2][1] + '\nThis is line ' + `x` + ' in mu'
-  my_greek_tree[2][1] = my_greek_tree[2][1] + ' Appended to line 10 of mu'  
+  my_greek_tree[2][1] = my_greek_tree[2][1] + ' Appended to line 10 of mu\n'  
   my_greek_tree[14][1] = 'This is the new line 1 in the backup copy of rho'
   for x in range(2,11):
     my_greek_tree[14][1] = my_greek_tree[14][1] + '\nThis is line ' + `x` + ' in rho'
-  my_greek_tree[14][1] = my_greek_tree[14][1] + ' Appended to line 10 of rho'
+  my_greek_tree[14][1] = my_greek_tree[14][1] + ' Appended to line 10 of rho\n'
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Create expected status tree for the update.
@@ -274,7 +274,7 @@ def basic_merge(sbox):
     if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
       item[3]['status'] = 'M '
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  
+
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_backup,
                                                expected_output_tree,
@@ -354,8 +354,26 @@ def basic_conflict(sbox):
   
   # Create expected disk tree for the update.
   my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree[2][1] = my_greek_tree[2][1] + '\nConflicting appended text for mu'
-  my_greek_tree[14][1] = my_greek_tree[14][1] + '\nConflicting appended text for rho'
+  my_greek_tree[2][1] =  """<<<<<<< .mine
+This is the file 'mu'.
+Conflicting appended text for mu
+||||||| .r1
+This is the file 'mu'.
+=======
+This is the file 'mu'.
+Original appended text for mu
+>>>>>>> .r2
+"""
+  my_greek_tree[14][1] = """<<<<<<< .mine
+This is the file 'rho'.
+Conflicting appended text for rho
+||||||| .r1
+This is the file 'rho'.
+=======
+This is the file 'rho'.
+Original appended text for rho
+>>>>>>> .r2
+"""
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Create expected status tree for the update.
@@ -366,8 +384,9 @@ def basic_conflict(sbox):
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # "Extra" files that we expect to result from the conflicts.
-  # These are expressed as regexps.
-  extra_files = ['mu.*\.rej', 'rho.*\.rej', '\.#mu.*', '\.#rho.*']
+  # These are expressed as list of regexps.  What a cool system!  :-)
+  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
+                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
   
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().

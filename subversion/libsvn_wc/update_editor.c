@@ -1063,183 +1063,6 @@ change_file_prop (void *file_baton,
 }
 
 
-/* Helper function for close_file.
-
-   Create (or append to) *ENTRY_ACCUM an XML log message for log
-   command TAGNAME, with attributes NAME, DEST, EOL_STR, REPAIR,
-   KEYWORDS, and EXPAND. */
-static void
-make_translation_open_tag (svn_stringbuf_t **entry_accum,
-                           apr_pool_t *pool,
-                           enum svn_xml_open_tag_style style,
-                           const char *tagname,
-                           const svn_stringbuf_t *name,
-                           const svn_stringbuf_t *dest,
-                           const char *eol_str,
-                           svn_boolean_t repair,
-                           svn_wc_keywords_t *keywords,
-                           svn_boolean_t expand)
-{
-  apr_hash_t *hash = apr_hash_make (pool);
-
-  /* Operative file. */
-  apr_hash_set (hash, SVN_WC__LOG_ATTR_NAME, APR_HASH_KEY_STRING, name);
-
-  /* Destination of copy. */
-  apr_hash_set (hash, SVN_WC__LOG_ATTR_DEST, APR_HASH_KEY_STRING, dest);
-
-  /* EOL string. */
-  if (eol_str)
-    apr_hash_set (hash, SVN_WC__LOG_ATTR_EOL_STR, APR_HASH_KEY_STRING, 
-                  svn_stringbuf_create (eol_str, pool));
-
-  /* Repair inconsitent EOLs? */
-  if (repair)
-    apr_hash_set (hash, SVN_WC__LOG_ATTR_REPAIR, APR_HASH_KEY_STRING, 
-                  svn_stringbuf_create ("true", pool));
-
-  /* Keyword substitution values. */
-  if (keywords)
-    {
-      if (keywords->revision)
-        apr_hash_set (hash, SVN_WC__LOG_ATTR_REVISION,
-                      APR_HASH_KEY_STRING, 
-                      svn_stringbuf_create_from_string (keywords->revision,
-                                                        pool));
-      if (keywords->date)
-        apr_hash_set (hash, SVN_WC__LOG_ATTR_DATE,
-                      APR_HASH_KEY_STRING,
-                      svn_stringbuf_create_from_string (keywords->date,
-                                                        pool));
-      if (keywords->author)
-        apr_hash_set (hash, SVN_WC__LOG_ATTR_AUTHOR,
-                      APR_HASH_KEY_STRING,
-                      svn_stringbuf_create_from_string (keywords->author,
-                                                        pool));
-      if (keywords->url)
-        apr_hash_set (hash, SVN_WC__LOG_ATTR_URL,
-                      APR_HASH_KEY_STRING,
-                      svn_stringbuf_create_from_string (keywords->url,
-                                                        pool));
-    }
-
-  /* Expanding keywords? (else, contracting) */
-  if (expand)
-    apr_hash_set (hash, SVN_WC__LOG_ATTR_EXPAND, APR_HASH_KEY_STRING, 
-                  svn_stringbuf_create ("true", pool));
-  
-  svn_xml_make_open_tag_hash (entry_accum, pool, style, tagname, hash);
-  return;
-}
-
-
-static void
-make_patch_open_tag (svn_stringbuf_t **entry_accum,
-                     const svn_stringbuf_t *path,
-                     const svn_stringbuf_t *reject_file,
-                     const svn_stringbuf_t *patch_file,
-                     apr_pool_t *pool)
-{
-  svn_stringbuf_t *dir, *bname;
-  svn_stringbuf_t *backup_prefix = svn_stringbuf_create ("-B", pool);
-
-  svn_path_split (path, &dir, &bname, pool);
-  if (dir)
-    {
-      /* Append '.#' to the dir, then append that whole thing to the
-         BACKUP_PREFIX. */
-      svn_path_add_component_nts (dir, ".#");
-      svn_stringbuf_appendstr (backup_prefix, dir);
-    }
-  else
-    {
-      /* There is no directory after the split (meaning our target is
-         just a basename), so just pass the prefix. */
-      svn_stringbuf_appendcstr (backup_prefix, ".#");
-    }
-
-  /* kff todo: these options will have to be portablized too.  Even if
-     we know we're doing a plaintext patch, not all patch programs
-     support these args. */
-  svn_xml_make_open_tag (entry_accum, 
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_RUN_CMD,
-                         SVN_WC__LOG_ATTR_NAME,
-                         svn_stringbuf_create (SVN_CLIENT_PATCH, pool),
-                         /* reject file */
-                         SVN_WC__LOG_ATTR_ARG_1,
-                         svn_stringbuf_create ("-r", pool),
-                         SVN_WC__LOG_ATTR_ARG_2,
-                         reject_file,
-                         /* backup prefix */
-                         SVN_WC__LOG_ATTR_ARG_3, 
-                         backup_prefix, 
-                         /* force */
-                         SVN_WC__LOG_ATTR_ARG_4,
-                         svn_stringbuf_create ("-f", pool), 
-                         /* silent */
-                         SVN_WC__LOG_ATTR_ARG_4,
-                         svn_stringbuf_create ("--silent", pool),
-                         /* target file */
-                         SVN_WC__LOG_ATTR_ARG_5,
-                         svn_stringbuf_create ("--", pool),
-                         SVN_WC__LOG_ATTR_ARG_6,
-                         path,
-                         /* patch file */
-                         SVN_WC__LOG_ATTR_INFILE,
-                         patch_file,
-                         NULL);
-  return;
-}
-
-
-/* Another helper for close_file, which is now the size of a small
-   planet.  Look through array of 'svn:entry' PROPS.  If any property
-   matches a keyword (and is already set in KEYWORDS) then make
-   KEYWORDS field point to this new value. */
-static void
-latest_keyword_data (const apr_array_header_t *props,
-                     svn_wc_keywords_t *keywords,
-                     apr_pool_t *pool)
-{
-  int i;
-
-  if (! (props && keywords))
-    return;
-
-  /* foreach prop... */
-  for (i = 0; i < props->nelts; i++)
-    {
-      svn_stringbuf_t *propname;
-      const svn_prop_t *prop;
-
-      prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
-      
-      /* strip the 'svn:entry:' prefix from the property name. */
-      propname = svn_stringbuf_create (prop->name, pool);
-      svn_wc__strip_entry_prefix (propname);
-     
-      if (keywords->revision
-          && (! strcmp (propname->data, SVN_ENTRY_ATTR_COMMITTED_REV)))
-        {
-          keywords->revision = prop->value;
-        }
-
-      if (keywords->date
-          && (! strcmp (propname->data, SVN_ENTRY_ATTR_COMMITTED_DATE)))
-        {
-          keywords->date = prop->value;
-        }
-
-      if (keywords->author
-          && (! strcmp (propname->data, SVN_ENTRY_ATTR_LAST_AUTHOR)))
-        {
-          keywords->author = prop->value;
-        }
-    }
-}
-
 
 
 /* This is the small planet.  It has the complex responsibility of
@@ -1259,13 +1082,9 @@ svn_wc_install_file (const char *file_path,
   apr_status_t apr_err;
   char *revision_str = NULL;
   svn_stringbuf_t *file_path_str, *parent_dir, *basename;
-  svn_stringbuf_t *entry_accum, *txtb, *tmp_txtb, *tmp_loc;
-  svn_stringbuf_t *tmp_txtb_full_path, *txtb_full_path;
+  svn_stringbuf_t *log_accum, *txtb, *tmp_txtb;
   svn_boolean_t has_binary_prop, is_locally_modified;
   apr_hash_t *prop_conflicts;
-  enum svn_wc__eol_style eol_style;
-  const char *eol_str;
-  svn_wc_keywords_t *keywords = NULL;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
 
@@ -1297,26 +1116,6 @@ svn_wc_install_file (const char *file_path,
       inspection whether or not it has already been done; thus, those
       that have already been done are no-ops, and when we reach the
       end of the log file, we remove it.
-
-      Because we must preserve local changes, the actual order of
-      operations to update F is this:
-
-         1. receive svndiff data D
-         2. svnpatch .svn/text-base/F.svn-base < D >
-            .svn/tmp/text-base/F.svn-base
-         3. gdiff -c .svn/text-base/F.svn-base .svn/tmp/text-base/F.svn-base
-            > .svn/tmp/F.blah.tmp
-         4. cp .svn/tmp/text-base/F.svn-base .svn/text-base/F.svn-base
-         5. gpatch F < .svn/tmp/F.tmpfile
-              ==> possibly producing F.blah.rej
-
-       Of course, newline-translation makes this a hair more complex.
-       If we need to use 'native' newline style, then in step 3 above
-       we generate the patch file by running gdiff on two *translated*
-       copies of the old and new text-base.  This ensures that the
-       patch file is in native EOL style as well, so it can be cleanly
-       applied to F.
-
   */
 
   /* Open a log file.  This is safe because the adm area is locked
@@ -1329,8 +1128,33 @@ svn_wc_install_file (const char *file_path,
 
   /* Accumulate log commands in this buffer until we're ready to close
      and run the log.  */
-  entry_accum = svn_stringbuf_create ("", pool);
+  log_accum = svn_stringbuf_create ("", pool);
+  
 
+  /* Log commands can only operate on paths that are below the
+     parent_dir.  Thus if NEW_TEXT_PATH is somewhere *outside* of
+     FILE_PATH's parent directory, we can't write a log command to do
+     a move from one location to another.  So the solution, then, is
+     to simply move NEW_TEXT_PATH to .svn/tmp/text-base/ immediately
+     -- that's where the rest of this code wants it to be anyway. */
+  if (new_text_path)
+    {
+      svn_stringbuf_t *final_location =
+        svn_wc__text_base_path (file_path_str, 1, pool);
+      
+      /* Only do the 'move' if NEW_TEXT_PATH isn't -already-
+         pointing to parent_dir/.svn/tmp/text-base/basename.  */
+      if (strcmp (final_location->data, new_text_path))
+        {
+          apr_err = apr_file_rename (new_text_path, final_location->data,
+                                     pool);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool,
+                                      "svn_wc_install_file: "
+                                      "can't move %s to %s",
+                                      new_text_path, final_location->data);
+        }
+    }
   
   /* Sort the property list into three arrays, based on kind. */
   if (props)
@@ -1387,13 +1211,10 @@ svn_wc_install_file (const char *file_path,
       
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
-         props. It also returns any conflicts to us in a hash, which
-         we'll need to know before attempting any textual merging.
-         (The textual merging process cares about conflicts on the
-         eol-style and keywords properties.) */
+         props.  */
       SVN_ERR (svn_wc__merge_prop_diffs (parent_dir->data, basename->data,
                                          propchanges, pool,
-                                         &entry_accum, &prop_conflicts));
+                                         &log_accum, &prop_conflicts));
     }
   
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -1431,7 +1252,7 @@ svn_wc_install_file (const char *file_path,
           
           /* append a command to the log which will write the
              property as a entry attribute on the file. */
-          svn_xml_make_open_tag (&entry_accum,
+          svn_xml_make_open_tag (&log_accum,
                                  pool,
                                  svn_xml_self_closing,
                                  SVN_WC__LOG_MODIFY_ENTRY,
@@ -1448,8 +1269,8 @@ svn_wc_install_file (const char *file_path,
 
                   Text file                Binary File
                --------------------------------------------
-    Local Mods |  run diff/patch   |  rename working file; | 
-               |                   |  copy new file out.   |
+    Local Mods |  merge using      |  rename working file; | 
+               |    diff3          |  copy new file out.   |
                --------------------------------------------
     No Mods    |        Just overwrite working file.       |
                |                                           |
@@ -1469,502 +1290,99 @@ svn_wc_install_file (const char *file_path,
       SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
                                        file_path_str, pool));
 
-      /* Decide which value of eol-style to use.  This is complex... */
-      {
-        /* Did we get a new eol-style passed into this routine? */
-        int i;
-        svn_stringbuf_t *fresh_eol_style = NULL;
-        
-        /* Rats, here's one case where it would be *nice* to have a
-           hash instead of an array.  */
-        if (regular_props)
-          for (i = 0; i < regular_props->nelts; i++)
-            {
-              const svn_prop_t *prop;
-              prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
-              if (strcmp (prop->name, SVN_PROP_EOL_STYLE) == 0)
-                fresh_eol_style = 
-                  svn_stringbuf_create_from_string (prop->value, pool);
-            }
-        
-        /* If not, use whatever style is currently in our working props. */ 
-        if (! fresh_eol_style)
-          SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
-                                          file_path, pool));      
-
-        else  /* got a fresh eol-style passed in */
-          {            
-            /* Check to see if the new property conflicted. */
-            const svn_prop_t *conflict = apr_hash_get (prop_conflicts,
-                                                       SVN_PROP_EOL_STYLE,
-                                                       APR_HASH_KEY_STRING);
-
-            if (conflict)
-              /* Use our current locally-modified style. */
-              SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
-                                              file_path, pool));      
-            else
-              {
-                /* Go ahead and use the new style that was passed in. */
-                svn_wc__eol_style_from_value (&eol_style, &eol_str, 
-                                              fresh_eol_style->data);
-
-                /* We're not writing out the latest value of the
-                   property, because text_modified_p should still be
-                   using the old value.  */
-              }
-          }
-
-        /* Guess what?  We can't pass a literal "\n" or "\r\n" to our
-           xml-producing routines.  That's because expat will parse
-           them back as plain old spaces.  Thus we must use the same
-           string values that we see attached to the 'svn:eol-style'
-           property: {CR, LF, CRLF, native}.  The log-running code
-           will change these back into real eol strings. */
-
-        /* Encode eol_str. */
-        svn_wc__eol_value_from_string (&eol_str, eol_str);
-
-      }
-
-      /* Decide which value of 'svn:keywords' to use.  Same complex logic... */
-      {
-        /* Did we get a new keywords value passed into this routine? */
-        int i;
-        svn_stringbuf_t *fresh_keywords_value = NULL;
-
-        /* Rats, here's one case where it would be *nice* to have a
-           hash instead of an array.  */
-        if (regular_props)
-          for (i = 0; i < regular_props->nelts; i++)
-            {
-              const svn_prop_t *prop;
-              prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
-              if (strcmp (prop->name, SVN_PROP_KEYWORDS) == 0)
-                fresh_keywords_value = 
-                  svn_stringbuf_create_from_string (prop->value, pool);
-            }
-
-        /* If not, use whatever value is currently in our working props. */
-        if (! fresh_keywords_value)
-          SVN_ERR (svn_wc__get_keywords (&keywords,
-                                         file_path, NULL, pool));
-        
-        else  /* got a fresh keywords value passed in */
-          {            
-            /* Check to see if the new property conflicted. */
-            const svn_prop_t *conflict = apr_hash_get (prop_conflicts,
-                                                       SVN_PROP_KEYWORDS,
-                                                       APR_HASH_KEY_STRING);
-
-            if (conflict)
-              /* Use our current locally-modified value. */
-              SVN_ERR (svn_wc__get_keywords (&keywords,
-                                             file_path, NULL, pool));
-            else
-              {
-                /* Go ahead and use the new style passed in.
-                   NOTICE: we're passing an explicit value to parse
-                   here, because the 'latest' value isn't yet in the
-                   props. */
-                if (fresh_keywords_value)
-                  SVN_ERR (svn_wc__get_keywords (&keywords,
-                                                 file_path,
-                                                 fresh_keywords_value->data,
-                                                 pool));
-                else
-                  keywords = NULL;
-
-                /* We're not writing out the latest value of the
-                   property, because text_modified_p should still be
-                   using the old value.  */
-              }
-          }
-
-        /* Now, guess what.  We now have a grip on the correct *set*
-           of keywords to expand.  But the latest *values* of the
-           keywords aren't yet in the entries file.  This routine
-           might overwrite any values in KEYWORDS by examining fresh
-           data cached in the newly received entry_props. */
-        latest_keyword_data (entry_props, keywords, pool);
-
-        /* The latest URL value won't be in the entry_props.  At this
-           point, it's in the file baton itself. */        
-        if (keywords && keywords->url)
-          {
-            if (new_URL)        /* odd switched URL passed in? */
-              keywords->url = svn_string_create (new_URL, pool);
-            else 
-              {
-                /* This file's entry may not exist on disk yet, but we
-                   know that it's going to have a standard 'derived'
-                   url based on its parent's url... once we eventually
-                   run the log.  So we have to figure it out manually. */
-                svn_wc_entry_t *parent_entry;
-                svn_stringbuf_t *url;
-                SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
-                if (parent_entry)
-                  {
-                    url = parent_entry->url;
-                    svn_path_add_component (url, basename);
-                    keywords->url = svn_string_create_from_buf (url, pool);
-                  }
-              }
-          }
-      }
-
-      
-      /* Before doing any logic, we *know* that the first thing the
-         logfile should do is overwrite the old text-base file with the
-         new one waiting at the NEW_TEXT_PATH location.
-
-         However, log commands can only operate on paths that are
-         below the parent_dir.  Thus if NEW_TEXT_PATH is somewhere
-         *outside* of FILE_PATH's parent directory, we can't write a
-         log command to do a move from one location to another.  So
-         the solution, then, is to simply move NEW_TEXT_PATH to
-         .svn/tmp/text-base/ immediately -- that's where the rest of
-         this code wants it to be anyway. */
-      {
-        svn_stringbuf_t *final_location =
-          svn_wc__text_base_path (file_path_str, 1, pool);
-
-        /* Only do the 'move' if NEW_TEXT_PATH isn't -already-
-           pointing to parent_dir/.svn/tmp/text-base/basename.  */
-        if (strcmp (final_location->data, new_text_path))
-          {
-            apr_err = apr_file_rename (new_text_path, final_location->data,
-                                       pool);
-            if (apr_err)
-              return svn_error_createf (apr_err, 0, NULL, pool,
-                                        "svn_wc_install_file: "
-                                        "can't move %s to %s",
-                                        new_text_path, final_location->data);
-          }
-      }
-
       txtb     = svn_wc__text_base_path (basename, 0, pool);
       tmp_txtb = svn_wc__text_base_path (basename, 1, pool);
-
-      /* Great, so from here on out, we assume that the NEW_TEXT_PATH
-         can be found at TMP_TXTB.  Write a log command to move the
-         new text-base (TMP_TXTB) on top of the old text-base (TXTB).
-         Of course, this won't actually happen till we run the
-         log... which means we can still do diffs on TMP_TXTB for a
-         little while.  */
-      svn_xml_make_open_tag (&entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MV,
-                             SVN_WC__LOG_ATTR_NAME,
-                             tmp_txtb,
-                             SVN_WC__LOG_ATTR_DEST,
-                             txtb,
-                             NULL);
 
       if (! is_locally_modified)
         {
           /* If there are no local mods, who cares whether it's a text
-             or binary file!  Just overwrite any working file with the
-             new text-base.  If newline conversion or keyword
-             substitution is activated, this will happen as well
-             during the copy. */
-          make_translation_open_tag (&entry_accum,
-                                     pool,
-                                     svn_xml_self_closing,
-                                     SVN_WC__LOG_CP,
-                                     txtb,
-                                     basename,
-                                     eol_str,
-                                     FALSE, /* repair */
-                                     keywords,
-                                     TRUE); /* expand */
+             or binary file!  Just write a log command to overwrite
+             any working file with the new text-base.  If newline
+             conversion or keyword substitution is activated, this
+             will happen as well during the copy. */
+          svn_xml_make_open_tag (&log_accum,
+                                 pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_CP_AND_TRANSLATE,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 tmp_txtb,
+                                 SVN_WC__LOG_ATTR_DEST,
+                                 basename,
+                                 NULL);
         }
   
-      else   /* working file is locally modified... */    
+      else   /* working file is locally modified... */
         {
           if (! has_binary_prop)  /* and is of type text... */
             {
               enum svn_node_kind wfile_kind = svn_node_unknown;
-              svn_stringbuf_t *received_diff_filename;
-              apr_file_t *reject_file = NULL;
-              svn_stringbuf_t *reject_filename = NULL;
               
               SVN_ERR (svn_io_check_path (file_path_str, &wfile_kind, pool));
-              if (wfile_kind == svn_node_none)
+              if (wfile_kind == svn_node_none) /* working file is missing?! */
                 {
-                  /* If the working file is missing, then just copy
-                     the new text-base to the working file, and be done.*/
-                  make_translation_open_tag (&entry_accum,
-                                             pool,
-                                             svn_xml_self_closing,
-                                             SVN_WC__LOG_CP,
-                                             txtb,
-                                             basename,
-                                             eol_str,
-                                             FALSE, /* repair */
-                                             keywords,
-                                             TRUE); /* expand */
-                }
-              else  /* working file exists, with local mods.*/
-                {                  
-                  /* Now we need to use diff/patch to contextually
-                     merge the textual changes into the working file.
-                     Put on seat belts. */
-
-                  /* Run the external `diff' command immediately and
-                     create a temporary patch.  Note that we -always-
-                     create the patchfile by diffing two LF versions
-                     of our old and new textbases.   */
-                  const char *diff_args[2];                  
-                  apr_file_t *received_diff_file;
-                  apr_file_t *tr_txtb_fp, *tr_tmp_txtb_fp;
-                  svn_stringbuf_t *tr_txtb, *tr_tmp_txtb;
-                  
-                  /* Reserve a filename for the patchfile we'll create. */
-                  tmp_loc
-                    = svn_wc__adm_path (parent_dir, 1, pool, 
-                                        basename->data, NULL);
-                  SVN_ERR (svn_io_open_unique_file (&received_diff_file,
-                                                    &received_diff_filename,
-                                                    tmp_loc->data,
-                                                    SVN_WC__DIFF_EXT,
-                                                    FALSE,
-                                                    pool));
-                  
-                  /* Reserve filenames for temporary LF-converted textbases. */
-                  tmp_txtb_full_path
-                    = svn_wc__text_base_path (file_path_str, 1, pool);
-                  txtb_full_path
-                    = svn_wc__text_base_path (file_path_str, 0, pool);
-                  
-                  SVN_ERR (svn_io_open_unique_file (&tr_txtb_fp,
-                                                    &tr_txtb,
-                                                    tmp_loc->data,
-                                                    SVN_WC__BASE_EXT,
-                                                    FALSE, pool));
-                  SVN_ERR (svn_io_open_unique_file (&tr_tmp_txtb_fp,
-                                                    &tr_tmp_txtb,
-                                                    tmp_loc->data,
-                                                    SVN_WC__BASE_EXT,
-                                                    FALSE, pool));
-
-                  /* Copy *LF-translated* text-base files to these
-                     reserved locations. */
-                  SVN_ERR (svn_wc_copy_and_translate (txtb_full_path->data,
-                                                      tr_txtb->data,
-                                                      SVN_WC__DEFAULT_EOL_MARKER,
-                                                      TRUE, /* repair */
-                                                      keywords,
-                                                      FALSE,
-                                                      pool));
-                  
-                  SVN_ERR (svn_wc_copy_and_translate (tmp_txtb_full_path->data,
-                                                      tr_tmp_txtb->data,
-                                                      SVN_WC__DEFAULT_EOL_MARKER,
-                                                      TRUE, /* repair */ 
-                                                      keywords,
-                                                      FALSE,
-                                                      pool));
-
-                  /* Build the diff command. */
-                  diff_args[0] = "-c";
-                  diff_args[1] = "--";
-
-                  SVN_ERR(svn_io_run_diff
-                    (".", diff_args, 2, NULL,
-                     tr_txtb->data, tr_tmp_txtb->data, 
-                     NULL, received_diff_file, NULL, pool));
-
-                  /* Write log commands to remove the two tmp text-bases. */
-                  
-                  /* (gack, we need the paths to be relative to log's
-                     working directory)  */ 
-                  tr_txtb = svn_stringbuf_ncreate 
-                    (tr_txtb->data + parent_dir->len + 1,
-                     tr_txtb->len - parent_dir->len - 1,
-                     pool);
-
-                  tr_tmp_txtb = svn_stringbuf_ncreate 
-                    (tr_tmp_txtb->data + parent_dir->len + 1,
-                     tr_tmp_txtb->len - parent_dir->len - 1,
-                     pool);
-                  
-                  svn_xml_make_open_tag (&entry_accum,
+                  /* Just copy the new text-base to the file. */
+                  svn_xml_make_open_tag (&log_accum,
                                          pool,
                                          svn_xml_self_closing,
-                                         SVN_WC__LOG_RM,
+                                         SVN_WC__LOG_CP_AND_TRANSLATE,
                                          SVN_WC__LOG_ATTR_NAME,
-                                         tr_txtb,
-                                         NULL);
-
-                  svn_xml_make_open_tag (&entry_accum,
-                                         pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_RM,
-                                         SVN_WC__LOG_ATTR_NAME,
-                                         tr_tmp_txtb,
-                                         NULL);
-
-                  /* Great, swell.  When we get here, we are
-                     guaranteed to have a patchfile between the old
-                     and new textbases, in LF format.  What we -do-
-                     with that patchfile depends on the eol-style property. */
-                  
-                  /* Get the reject file ready. */
-                  /* kff todo: code dup with above, abstract it? */
-                  SVN_ERR (svn_io_open_unique_file (&reject_file,
-                                                    &reject_filename,
-                                                    file_path_str->data,
-                                                    SVN_WC__TEXT_REJ_EXT,
-                                                    FALSE,
-                                                    pool));
-                  apr_err = apr_file_close (reject_file);
-                  if (apr_err)
-                    return svn_error_createf (apr_err, 0, NULL, pool,
-                                              "close_file: error closing %s",
-                                              reject_filename->data);
-
-                  /* Paths need to be relative to the working dir that uses
-                     this log file, so we chop the prefix.
-                     
-                     kff todo: maybe this should be abstracted into
-                     svn_path_whatever, but it's so simple I'm inclined not
-                     to.  On the other hand, the +1/-1's are for slashes, and
-                     technically only svn_path should know such dirty details.
-                     On the third hand, whatever the separator char is, it's
-                     still likely to be one char, so the code would work even
-                     if it weren't slash.
-                     
-                     Sometimes I think I think too much.  I think. */ 
-                  reject_filename = svn_stringbuf_ncreate
-                    (reject_filename->data + parent_dir->len + 1,
-                     reject_filename->len - parent_dir->len - 1,
-                     pool);
-                  
-                  received_diff_filename = svn_stringbuf_ncreate
-                    (received_diff_filename->data
-                     + parent_dir->len + 1,
-                     received_diff_filename->len
-                     - parent_dir->len - 1,
-                     pool);
-
-                  if ((eol_style == svn_wc__eol_style_none) && (! keywords))
-                    {
-                      /* If the eol property is turned off, and we're
-                         not doing keyword translation, then just
-                         apply the LF patchfile directly to the
-                         working file.  No big deal. */
-                      make_patch_open_tag (&entry_accum,
-                                           basename,
-                                           reject_filename,
-                                           received_diff_filename,
-                                           pool);
-                    }
-                  else  /* keyword expansion or EOL translation is
-                           active */
-                    {
-                      apr_file_t *tmp_fp;
-                      svn_stringbuf_t *tmp_working;
-
-                      /* Reserve a temporary working file. */
-                      SVN_ERR (svn_io_open_unique_file (&tmp_fp,
-                                                        &tmp_working,
-                                                        tmp_loc->data,
-                                                        SVN_WC__TMP_EXT,
-                                                        FALSE,
-                                                        pool));
-                      
-                      /* Make the temporary working file name relative to 
-                         the parent directory. */
-                      tmp_working = svn_stringbuf_ncreate
-                        (tmp_working->data + parent_dir->len + 1,
-                         tmp_working->len - parent_dir->len - 1,
-                         pool);
-
-                      /* Copy the working file to tmp-working with
-                         LF's, and any keywords contracted. */
-
-                      /* note: pass the repair flag.  if the
-                         locally-modified working file has mixed EOL
-                         style, we *should* be doing a non-reversible
-                         normalization, because the eol prop is set,
-                         and an update is a 'checkpoint' just like a
-                         commit. */
-                      make_translation_open_tag (&entry_accum,
-                                                 pool,
-                                                 svn_xml_self_closing,
-                                                 SVN_WC__LOG_CP,
-                                                 basename,
-                                                 tmp_working,
-                                                 "LF",
-                                                 TRUE, /* repair */
-                                                 keywords,
-                                                 FALSE); /* expand */
-
-                      /* Now patch the tmp-working file. */
-                      make_patch_open_tag (&entry_accum,
-                                           tmp_working,
-                                           reject_filename,
-                                           received_diff_filename,
-                                           pool);
-
-                      /* We already know that the latest eol-style
-                         must be either 'native' or 'fixed', and is
-                         already defined in eol_str.  Therefore, copy
-                         the merged tmp_working back to working with
-                         this style.  Also, re-expand keywords. */
-                      make_translation_open_tag (&entry_accum,
-                                                 pool,
-                                                 svn_xml_self_closing,
-                                                 SVN_WC__LOG_CP,
-                                                 tmp_working,
-                                                 basename,
-                                                 eol_str,
-                                                 FALSE, /* repair */
-                                                 keywords,
-                                                 TRUE); /* expand */
-                      
-                      /* Remove tmp_working. */
-                      svn_xml_make_open_tag (&entry_accum,
-                                             pool,
-                                             svn_xml_self_closing,
-                                             SVN_WC__LOG_RM,
-                                             SVN_WC__LOG_ATTR_NAME,
-                                             tmp_working, NULL);
-                      
-                    } /* end:  eol-style is native or fixed */
-                  
-                  /* Remove the patchfile. */
-                  svn_xml_make_open_tag (&entry_accum,
-                                         pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_RM,
-                                         SVN_WC__LOG_ATTR_NAME,
-                                         received_diff_filename,
-                                         NULL);
-
-                  /* Remove the reject file that patch will have used,
-                     IFF the reject file is empty (zero bytes) --
-                     implying that there was no conflict.  If the
-                     reject file is nonzero, then mark the entry as
-                     conflicted!  Yes, this is a complex log
-                     command. :-) */
-                  svn_xml_make_open_tag (&entry_accum,
-                                         pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_DETECT_CONFLICT,
-                                         SVN_WC__LOG_ATTR_NAME,
+                                         tmp_txtb,
+                                         SVN_WC__LOG_ATTR_DEST,
                                          basename,
-                                         SVN_WC_ENTRY_ATTR_REJFILE,
-                                         reject_filename,
-                                         NULL);                  
+                                         NULL);
+                }
+              else  /* working file exists, and has local mods.*/
+                {                  
+                  /* Now we need to use diff3 to contextually merge
+                     the textual changes into the working file. */
+                  const char *oldrev_str, *newrev_str;
+                  svn_wc_entry_t *e;
+                  svn_stringbuf_t *oldrev_strbuf, *newrev_strbuf, *mine_strbuf;
+
+                  /* Create strings representing the revisions of the
+                     old and new text-bases. */
+                  SVN_ERR (svn_wc_entry (&e, file_path_str, pool));
+                  assert (e != NULL);
+                  oldrev_str = apr_psprintf (pool, ".r%ld", e->revision);
+                  newrev_str = apr_psprintf (pool, ".r%ld", new_revision);
+                  /* !?@*!#*!* bloody stringbufs */
+                  oldrev_strbuf = svn_stringbuf_create (oldrev_str, pool);
+                  newrev_strbuf = svn_stringbuf_create (newrev_str, pool);
+                  mine_strbuf = svn_stringbuf_create (".mine", pool);
+
+                  /* Merge the changes from the old-textbase (TXTB) to
+                     new-textbase (TMP_TXTB) into the file we're
+                     updating (BASENAME).  Either the merge will
+                     happen smoothly, or a conflict will result.
+                     Luckily, this routine will take care of all eol
+                     and keyword translation, and diff3 will insert
+                     conflict markers for us. */
+                  svn_xml_make_open_tag (&log_accum,
+                                         pool,
+                                         svn_xml_self_closing,
+                                         SVN_WC__LOG_MERGE,
+                                         SVN_WC__LOG_ATTR_NAME, basename,
+                                         SVN_WC__LOG_ATTR_ARG_1, txtb,
+                                         SVN_WC__LOG_ATTR_ARG_2, tmp_txtb,
+                                         SVN_WC__LOG_ATTR_ARG_3, oldrev_strbuf,
+                                         SVN_WC__LOG_ATTR_ARG_4, newrev_strbuf,
+                                         SVN_WC__LOG_ATTR_ARG_5, mine_strbuf,
+                                         NULL);
+
+                  /* If a conflict happens, then the entry will be
+                     marked "Conflicted" and will track 3 new
+                     temporary fulltext files that resulted. */
 
                 } /* end: working file exists */
             } /* end:  file is type text */
 
           else  /* file is marked as binary */
             {
+              /* ### interesting... apparently binary files aren't
+                 being eol- or keyword- translated at all.  I seem to
+                 remember that we wanted to allow this, should the
+                 user want to shoot himself in the foot. */
+
               apr_file_t *renamed_fp;
               svn_stringbuf_t *renamed_path, *renamed_basename;
               
@@ -1986,7 +1404,7 @@ svn_wc_install_file (const char *file_path,
                                                          pool),
                                       pool);
 
-              svn_xml_make_open_tag (&entry_accum,
+              svn_xml_make_open_tag (&log_accum,
                                      pool,
                                      svn_xml_self_closing,
                                      SVN_WC__LOG_CP,
@@ -1996,34 +1414,24 @@ svn_wc_install_file (const char *file_path,
                                      renamed_basename,
                                      NULL);
               
-              /* Copy the new file out into working area. */
-              svn_xml_make_open_tag (&entry_accum,
+              /* Copy the new text-base file out into working area. */
+              svn_xml_make_open_tag (&log_accum,
                                      pool,
                                      svn_xml_self_closing,
                                      SVN_WC__LOG_CP,
                                      SVN_WC__LOG_ATTR_NAME,
-                                     txtb,
+                                     tmp_txtb,
                                      SVN_WC__LOG_ATTR_DEST,
                                      basename,
                                      NULL);
             }
         }
-
-      /* Make text-base readonly */
-      svn_xml_make_open_tag (&entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_READONLY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             txtb,
-                             NULL);
-
     }  /* End  of "textual" merging process */
   
 
   /* Write log entry which will bump the revision number:  */
   revision_str = apr_psprintf (pool, "%ld", new_revision);
-  svn_xml_make_open_tag (&entry_accum,
+  svn_xml_make_open_tag (&log_accum,
                          pool,
                          svn_xml_self_closing,
                          SVN_WC__LOG_MODIFY_ENTRY,
@@ -2045,7 +1453,7 @@ svn_wc_install_file (const char *file_path,
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */
       if (! is_locally_modified)
-        svn_xml_make_open_tag (&entry_accum,
+        svn_xml_make_open_tag (&log_accum,
                                pool,
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
@@ -2070,7 +1478,7 @@ svn_wc_install_file (const char *file_path,
       /* Log entry which sets a new property timestamp, but only if
          there are no local changes to the props. */
       if (! prop_modified)
-        svn_xml_make_open_tag (&entry_accum,
+        svn_xml_make_open_tag (&log_accum,
                                pool,
                                svn_xml_self_closing,
                                SVN_WC__LOG_MODIFY_ENTRY,
@@ -2087,7 +1495,7 @@ svn_wc_install_file (const char *file_path,
   /* Possibly install a *non*-inherited URL in the entry. */
   if (new_URL)
     {
-      svn_xml_make_open_tag (&entry_accum,
+      svn_xml_make_open_tag (&log_accum,
                              pool,
                              svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
@@ -2098,9 +1506,33 @@ svn_wc_install_file (const char *file_path,
                              NULL);
     }
 
+  if (new_text_path)
+    {
+      /* Now write a log command to overwrite the old text-base file with
+         the new one. */ 
+      svn_xml_make_open_tag (&log_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_txtb,
+                             SVN_WC__LOG_ATTR_DEST,
+                             txtb,
+                             NULL);
+      
+      /* Make text-base readonly */
+      svn_xml_make_open_tag (&log_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_READONLY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             txtb,
+                             NULL);
+    }
+
   /* Write our accumulation of log entries into a log file */
-  apr_err = apr_file_write_full (log_fp, entry_accum->data, 
-                                 entry_accum->len, NULL);
+  apr_err = apr_file_write_full (log_fp, log_accum->data, 
+                                 log_accum->len, NULL);
   if (apr_err)
     {
       apr_file_close (log_fp);
@@ -2115,7 +1547,8 @@ svn_wc_install_file (const char *file_path,
   SVN_ERR (svn_wc__run_log (parent_dir, pool));
 
   /* Now that the file's text, props, and entries are fully installed,
-     we dump any "wc" props. */
+     we dump any "wc" props.  ### This should be done *loggily*, see
+     issue #628.  */
   if (wc_props)
     {
       int i;

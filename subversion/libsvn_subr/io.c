@@ -1023,22 +1023,25 @@ svn_io_run_diff3 (const char *dir,
 {
   const char *args[13];
 
-  /* Labels fall back to defaults if not specified. */
+  /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
-    mine_label = mine;
+    mine_label = ".working";
   if (older_label == NULL)
-    older_label = older;
+    older_label = ".old";
   if (yours_label == NULL)
-    yours_label = yours;
-
+    yours_label = ".new";
+  
   /* Set up diff3 command line. */
   args[0] = SVN_CLIENT_DIFF3;
-  args[1] = "-E";
+  args[1] = "-A";               /* this can be "-E" if we want 2-part
+                                   conflict markers instead of 3-part
+                                   ones.  see issue #647 */
   args[2] = "-m";
   args[3] = "-L";
   args[4] = mine_label;
   args[5] = "-L";
-  args[6] = older_label;
+  args[6] = older_label;        /* note:  this label is ignored if
+                                   using 2-part markers. */
   args[7] = "-L";
   args[8] = yours_label;
   args[9] = mine;
@@ -1046,6 +1049,7 @@ svn_io_run_diff3 (const char *dir,
   args[11] = yours;
   args[12] = NULL;
 
+  /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR (svn_io_run_cmd (dir, SVN_CLIENT_DIFF3, args, 
                            exitcode, NULL, 
                            FALSE, /* clean environment */
@@ -1055,9 +1059,10 @@ svn_io_run_diff3 (const char *dir,
   /* According to the diff3 docs, a '0' means the merge was clean, and
      '1' means conflict markers were found.  Anything else is real
      error. */
-  if ((*exitcode != 0) || (*exitcode != 1))
+  if ((*exitcode != 0) && (*exitcode != 1))
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, pool, 
-                              "Error running %s.", SVN_CLIENT_DIFF3);
+                              "Error running %s:  exitcode was %d",
+                              SVN_CLIENT_DIFF3, *exitcode);
 
   return SVN_NO_ERROR;
 }

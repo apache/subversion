@@ -365,7 +365,8 @@ svn_error_t *svn_io_run_diff (const char *dir,
 
    MINE, OLDER, and YOURS are paths, relative to DIR, to three files
    that already exist.  MERGED is an open file handle, and is left
-   open after the merge result is written to it.
+   open after the merge result is written to it. (MERGED should *not*
+   be the same file as MINE, or nondeterministic things may happen!)
 
    MINE_LABEL, OLDER_LABEL, YOURS_LABEL are label parameters for
    diff3's -L option.  Any of them may be NULL, in which case the
