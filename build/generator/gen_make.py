@@ -204,12 +204,9 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
       deps = string.join(map(str, sources))
-      source = os.path.join('$(top_srcdir)', str(sources[0]))
-      if objname.lang_abbrev == 'java':
-        source = os.path.split(source)[1]
       self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
                        % (objname, deps, string.upper(objname.lang_abbrev),
-                          source))
+                          os.path.join('$(top_srcdir)', str(sources[0]))))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
       deps = string.join(map(str, sources))

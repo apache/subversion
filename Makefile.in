@@ -34,6 +34,15 @@ DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR)
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
+### these should go away; gen-make should place this into BUILD_DIRS
+SWIG_DIRS = subversion/bindings/swig/python     \
+            subversion/bindings/swig/java       \
+            subversion/bindings/swig/java/org   \
+            subversion/bindings/swig/java/org/tigris \
+            subversion/bindings/swig/java/org/tigris/subversion \
+            subversion/bindings/swig/java/org/tigris/subversion/swig \
+            subversion/bindings/swig/perl
+
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
 NEON_LIBS = @NEON_LIBS@
@@ -277,7 +286,7 @@ check-clean:
                tests.log
 
 mkdir-init:
-	@list='$(BUILD_DIRS) $(DOC_DIRS)';                  \
+	@list='$(BUILD_DIRS) $(DOC_DIRS) $(SWIG_DIRS)'; \
         for i in $$list doc; do                         \
             echo "mkdir $$i" ;                          \
             $(MKDIR) $$i ;                              \
