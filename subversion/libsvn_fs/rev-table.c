@@ -357,6 +357,41 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
 }
 
 
+svn_error_t *
+svn_fs__set_rev_prop (svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      const svn_string_t *name,
+                      const svn_string_t *value,
+                      trail_t *trail)
+{
+  skel_t *skel;
+  skel_t *proplist;
+
+  SVN_ERR (svn_fs__get_rev (&skel, fs, rev, trail));
+
+  /* PROPLIST is the third element of revision skel.  */
+  proplist = skel->children->next->next;
+
+  /* Call the generic property setting function. */
+  SVN_ERR (svn_fs__set_prop (proplist, name, value, trail->pool));
+  {
+    int db_err;
+    DBT query, result;
+    db_recno_t recno = rev + 1;
+
+    /* Update the filesystem revision with the new skel that reflects
+       our property edits. */
+    db_err = fs->revisions->put 
+      (fs->revisions, trail->db_txn,
+       svn_fs__set_dbt (&query, &recno, sizeof (recno)),
+       svn_fs__skel_to_dbt (&result, skel, trail->pool), 0);
+    SVN_ERR (DB_WRAP (fs, "updating filesystem revision", db_err));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 struct change_rev_prop_args {
   svn_fs_t *fs;
   svn_revnum_t rev;
@@ -370,30 +405,8 @@ txn_body_change_rev_prop (void *baton, trail_t *trail)
 {
   struct change_rev_prop_args *args = baton;
 
-  svn_fs_t *fs = args->fs;
-  skel_t *skel;
-  skel_t *proplist;
-
-  SVN_ERR (svn_fs__get_rev (&skel, fs, args->rev, trail));
-
-  /* PROPLIST is the third element of revision skel.  */
-  proplist = skel->children->next->next;
-
-  /* Call the generic property setting function. */
-  SVN_ERR (svn_fs__set_prop (proplist, args->name, args->value, trail->pool));
-  {
-    int db_err;
-    DBT key, value;
-    db_recno_t recno = args->rev + 1;
-
-    /* Update the filesystem revision with the new skel that reflects
-       our property edits. */
-    db_err = fs->revisions->put 
-      (fs->revisions, trail->db_txn,
-       svn_fs__set_dbt (&key, &recno, sizeof (recno)),
-       svn_fs__skel_to_dbt (&value, skel, trail->pool), 0);
-    SVN_ERR (DB_WRAP (fs, "updating filesystem revision", db_err));
-  }
+  SVN_ERR (svn_fs__set_rev_prop (args->fs, args->rev,
+                                 args->name, args->value, trail));
 
   return SVN_NO_ERROR;
 }

@@ -83,8 +83,11 @@ typedef int svn_boolean_t;
 #define SVN_PROP_PREFIX "svn:"
 
 
-/* The fs revision property that stores the commit-log. */
+/* The fs revision property that stores a commit's log message. */
 #define SVN_PROP_REVISION_LOG  SVN_PROP_PREFIX "log"
+
+/* The fs revision property that stores a commit's date. */
+#define SVN_PROP_REVISION_DATE  SVN_PROP_PREFIX "date"
 
 
 /* The propname *prefix* that makes a propname a "WC property". 

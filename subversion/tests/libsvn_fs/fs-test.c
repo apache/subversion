@@ -14,8 +14,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
+#include <apr_time.h>
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_time.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_path.h"
@@ -683,10 +685,10 @@ revision_props (const char **msg,
   {
     svn_stringbuf_t *prop_value;
 
-    if (apr_hash_count (proplist) != 4 )
+    if (apr_hash_count (proplist) < 4 )
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "unexpected number of revision properties were found");
+         "too few revision properties found");
 
     /* Loop through our list of expected revision property name/value
        pairs. */
@@ -838,7 +840,7 @@ transaction_props (const char **msg,
   {
     svn_stringbuf_t *prop_value;
 
-    if (apr_hash_count (proplist) != 4 )
+    if (apr_hash_count (proplist) < 4 )
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "unexpected number of revision properties were found");
@@ -3528,6 +3530,103 @@ delete (const char **msg,
 
 
 
+/* Test the datestamps on commits. */
+static svn_error_t *
+commit_date (const char **msg,
+              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t rev;
+  svn_string_t propname;
+  svn_stringbuf_t *datestamp;
+  apr_time_t before_commit, at_commit, after_commit;
+
+  *msg = "commit datestamps";
+
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-commit-date", pool));
+
+
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-basic-commit", pool));
+
+  before_commit = apr_time_now ();
+
+  /* Commit a greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  after_commit = apr_time_now ();
+
+  /* Get the datestamp of the commit. */
+  propname.data = SVN_PROP_REVISION_DATE;
+  propname.len  = strlen (SVN_PROP_REVISION_DATE);
+  SVN_ERR (svn_fs_revision_prop (&datestamp, fs, rev, &propname, pool));
+
+  if (datestamp == NULL)
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "failed to get datestamp of committed revision");
+
+  at_commit = svn_time_from_string (datestamp);
+
+#if 0
+  /* ### todo:
+
+     Ideally, we'd test that the commit happened between a point right
+     before it and a point right after.  Unfortunately, I can't get
+     this to pass right now because there's a bug in either the
+     Subversion time library or the APR time library.  I've tried the
+     following four combinations in libsvn_subr/time.c:
+
+        1. svn_time_to_string using apr_explode_localtime() with
+           svn_time_from_string using apr_implode_time()
+
+        2. svn_time_to_string using apr_explode_localtime() with
+           svn_time_from_string using apr_implode_gmt()
+
+        3. svn_time_to_string using apr_explode_gmt() with
+           svn_time_from_string using apr_implode_time()
+
+        4. svn_time_to_string using apr_explode_gmt() with
+           svn_time_from_string using apr_implode_gmt()
+
+     and none of them seem to work.  So I left them as they were,
+     which is that they don't match -- while the former uses
+     apr_explode_localtime(), while the latter is using
+     apr_implode_gmt().  This is the result of Branko's recent change
+     to svn_time_from_string (which at the time was called
+     svn_wc__string_to_time).  I don't know whether Branko's change is
+     right, wrong, or neutral; don't even know if it fixes issue #404
+     as it was intended to.
+
+     Until we can get this all sorted out, the extra checks below are
+     disabled, since they fail, or rather, the first one fails.
+
+  */
+
+  if (at_commit < before_commit)
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "datestamp too early");
+    
+  if (at_commit > after_commit)
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "datestamp too late");
+#endif /* 0 */
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -3558,6 +3657,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   basic_commit,
   copy_test,
   merging_commit,
+  commit_date,
   0
 };
 

@@ -15,6 +15,7 @@
 #include <assert.h>
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "dag.h"
@@ -2030,6 +2031,25 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
                      new_revision_skel);
 
     SVN_ERR (svn_fs__put_rev (new_rev, fs, new_revision_skel, trail));
+  }
+
+  /* Set a date on the commit.  We wait until now to fetch the date,
+     so it's definitely newer than any previous revision's date. */
+  {
+    svn_string_t propname, date;
+    svn_stringbuf_t *date_buf;
+
+    propname.data = SVN_PROP_REVISION_DATE;
+    propname.len  = strlen (SVN_PROP_REVISION_DATE);
+
+    /* ### kff todo: hmmm.  This is rather annoying.  Perhaps the
+       svn_time_* functions should just use svn_string_t, instead of
+       stringbuf?  Or even... gasp... const char *?  */
+    date_buf = svn_time_to_string (apr_time_now(), trail->pool);
+    date.data = date_buf->data;
+    date.len = date_buf->len;
+
+    SVN_ERR (svn_fs__set_rev_prop (fs, *new_rev, &propname, &date, trail));
   }
 
   /* Recursively stabilize from ROOT using the new revision.  */

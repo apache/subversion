@@ -1,5 +1,5 @@
 /*
- * local_changes.c:  preserving local mods across updates.
+ * time.c:  time/date utilities
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -17,16 +17,11 @@
 #include <apr_pools.h>
 #include <apr_time.h>
 #include <apr_strings.h>
-#include "svn_wc.h"
-#include "wc.h"
-
+#include "svn_time.h"
 
 
 
-/*** Timestamp generation and comparison. ***/
-
-/** kff todo: these are quite general and could go into
-    libsvn_subr or a libsvn_time. **/
+/*** Code. ***/
 
 /* Our timestamp strings look like this:
  * 
@@ -47,7 +42,7 @@ static const char *timestamp_format =
 
 
 svn_stringbuf_t *
-svn_wc__time_to_string (apr_time_t t, apr_pool_t *pool)
+svn_time_to_string (apr_time_t t, apr_pool_t *pool)
 {
   char *t_cstr;
   apr_exploded_time_t exploded_time;
@@ -95,8 +90,26 @@ find_matching_string (char *str, const char strings[][4])
 }
 
 
+/* ### todo:
+
+   Recently Branko changed svn_time_from_string (or rather, he changed
+   svn_wc__string_to_time, but the function's name has changed since
+   then) to use apr_implode_gmt.  So now that function is using GMT,
+   but its inverse above, svn_time_to_string, is using localtime.
+
+   I'm not sure what the right thing to do is; see issue #404.
+
+   Note, however, that repositories want to record commit dates in
+   GMT.  Maybe we should just make Subversion's string representation
+   for times always use GMT -- that's good for repositories, and for
+   working copies it doesn't really matter since humans don't have to
+   read the timestamps in SVN/entries files much (and when they do,
+   they can easily do the conversion).
+*/
+
+
 apr_time_t
-svn_wc__string_to_time (svn_stringbuf_t *tstr)
+svn_time_from_string (svn_stringbuf_t *tstr)
 {
   apr_exploded_time_t exploded_time;
   char wday[4], month[4];
@@ -131,5 +144,4 @@ svn_wc__string_to_time (svn_stringbuf_t *tstr)
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
- */
+ * end: */
