@@ -176,7 +176,8 @@ A @dfn{directory entry} is a triple @code{(@var{name}, @var{props},
 @var{node})}, where @var{name} is a text string, @var{props} is a
 property list, and @var{node} is a node number.
 
-A @dfn{directory} is an unordered list of directory entries.
+A @dfn{directory} is an unordered list of directory entries, and a
+property list.
 
 A @dfn{version} is a node number and a property list.
 
