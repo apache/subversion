@@ -60,7 +60,6 @@ hash_read (apr_hash_t *hash,
   svn_stringbuf_t *stringbuf;
   svn_boolean_t eof;
   char buf[SVN_KEYLINE_MAXLEN];
-  apr_size_t num_read;
   char c;
   int first_time = 1;
 
@@ -222,7 +221,6 @@ static svn_error_t * read_header_block (apr_hash_t **headers,
     {
       char header_str[1024];
       const char *name, *value;
-      svn_boolean_t eof;
       apr_size_t i = 0, header_len;
       apr_size_t limit;
       char *local_name, *local_value;
@@ -301,7 +299,7 @@ open_and_seek_revision (apr_file_t **file,
    descriptor in STRING.  The resulting revision, offset, size, and
    expanded size are stored in *REVISION_P, *OFFSET_P, *SIZE_P, and
    *EXPANDED_SIZE_P respectively. */
-svn_error_t *
+static svn_error_t *
 read_rep_offsets (svn_fs__representation_t **rep_p,
                   char *string,
                   apr_pool_t *pool)
@@ -447,6 +445,13 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
       noderev->created_path = apr_pstrdup (pool, value);
     }
 
+  /* Get the predecessor ID. */
+  value = apr_hash_get (headers, SVN_FS_FS__PRED, APR_HASH_KEY_STRING);
+  if (value)
+    {
+      noderev->predecessor_id = svn_fs_parse_id (value, strlen (value), pool);
+    }
+  
   /* Get the copyroot. */
   value = apr_hash_get (headers, SVN_FS_FS__COPYROOT, APR_HASH_KEY_STRING);
   if (value == NULL)
@@ -532,14 +537,12 @@ struct rep_args_t
 /* Read the next line from file FILE and parse it as a text
    representation entry.  Return the parsed entry in REP_ARGS_P.
    Perform all allocations in POOL. */
-svn_error_t *
+static svn_error_t *
 read_rep_line (struct rep_args_t **rep_args_p,
                apr_file_t *file,
                apr_pool_t *pool)
 {
   char buffer[80];
-  char *str, *last_str;
-  svn_boolean_t delta_base = FALSE;
   apr_size_t limit;
   struct rep_args_t *rep_args;
   
@@ -813,7 +816,7 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
 {
   struct rep_read_baton *b;
   struct rep_args_t *rep_args;
-  svn_stream_t *empty_stream, *wstream, *target_stream;
+  svn_stream_t *empty_stream;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
 
@@ -962,7 +965,7 @@ rep_read_contents (void *baton,
    If REV equals SVN_INVALID_REVNUM, then this representation is
    asssumed to be empty, and an empty stream is returned.
 */
-svn_error_t *
+static svn_error_t *
 get_representation_at_offset (svn_stream_t **contents_p,
                               svn_fs_t *fs,
                               svn_fs__representation_t *rep,
@@ -1006,7 +1009,6 @@ svn_fs__fs_rep_contents_dir (apr_hash_t **entries_p,
   svn_stream_t *rep;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  struct rep_args_t *rep_args;
 
   entries = apr_hash_make (pool);
 
@@ -1042,7 +1044,7 @@ svn_fs__fs_rep_contents_dir (apr_hash_t **entries_p,
         }
       else if (strcmp (str, SVN_FS_FS__DIR) == 0)
         {
-          dirent->kind == svn_node_dir;
+          dirent->kind = svn_node_dir;
         }
       else
         {
@@ -1260,7 +1262,7 @@ fold_change (apr_hash_t *changes,
 /* Read the next line in the changes record from file FILE and store
    the resulting change in *CHANGE_P.  If there is no next record,
    store NULL there.  Perform all allocations from POOL. */
-svn_error_t *
+static svn_error_t *
 read_change (svn_fs__change_t **change_p,
              apr_file_t *file,
              apr_pool_t *pool)

@@ -572,7 +572,6 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
                         apr_pool_t *pool)
 {
   const svn_fs_id_t *base_root_id, *root_id;
-  svn_fs__node_revision_t *noderev;
   
   /* Get the node ID's of the root directories of the transaction and
      its base revision.  */
@@ -742,10 +741,7 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
                              const char *txn_id,
                              apr_pool_t *pool)
 {
-  svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   svn_fs__node_revision_t *noderev;
-  const char *mutable_rep_key;
-  svn_stream_t *ws;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -775,9 +771,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
                             const char *txn_id, 
                             apr_pool_t *pool)
 {
-  svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   svn_fs__node_revision_t *noderev;
-  const char *old_data_key;
   
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -866,10 +860,6 @@ svn_fs__dag_copy (dag_node_t *to_node,
   if (preserve_history)
     {
       svn_fs__node_revision_t *from_noderev, *to_noderev;
-      const char *copy_id;
-      svn_fs_t *fs = svn_fs__dag_get_fs (from_node);
-      const svn_fs_id_t *src_id = svn_fs__dag_get_id (from_node);
-      const char *from_txn_id = NULL;
 
       /* Make a copy of the original node revision. */
       SVN_ERR (get_node_revision (&from_noderev, from_node, pool));
@@ -1050,3 +1040,49 @@ svn_fs__dag_is_parent (svn_boolean_t *is_parent,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs__dag_get_copyroot (const svn_fs_id_t **id,
+                          dag_node_t *node,
+                          apr_pool_t *pool)
+{
+  svn_fs__node_revision_t *noderev;
+  
+  /* Go get a fresh node-revision for FILE. */
+  SVN_ERR (get_node_revision (&noderev, node, pool));
+
+  *id = noderev->copyroot;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__dag_get_copyfrom_rev (svn_revnum_t *rev,
+                              dag_node_t *node,
+                              apr_pool_t *pool)
+{
+  svn_fs__node_revision_t *noderev;
+  
+  /* Go get a fresh node-revision for FILE. */
+  SVN_ERR (get_node_revision (&noderev, node, pool));
+
+  *rev = noderev->copyfrom_rev;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__dag_get_copyfrom_path (const char **path,
+                               dag_node_t *node,
+                               apr_pool_t *pool)
+{
+  svn_fs__node_revision_t *noderev;
+  
+  /* Go get a fresh node-revision for FILE. */
+  SVN_ERR (get_node_revision (&noderev, node, pool));
+
+  *path = noderev->copyfrom_path;
+  
+  return SVN_NO_ERROR;
+}
+

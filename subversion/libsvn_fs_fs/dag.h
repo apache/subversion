@@ -509,6 +509,24 @@ svn_error_t *svn_fs__dag_is_parent (svn_boolean_t *is_ancestor,
                                     dag_node_t *node2,
                                     apr_pool_t *pool);
 
+/* Set *NODE_ID to the node-id of the coyproot of node NODE, or NULL
+   if no copyroot exists.  Get any temporary allocations from POOL. */
+svn_error_t *svn_fs__dag_get_copyroot (const svn_fs_id_t **node_id,
+                                       dag_node_t *node,
+                                       apr_pool_t *pool);
+
+/* Set *REV to the copyfrom revision associated with NODE.  Get any
+   temporary allocations from POOL. */
+svn_error_t *svn_fs__dag_get_copyfrom_rev (svn_revnum_t *rev,
+                                           dag_node_t *node,
+                                           apr_pool_t *pool);
+
+/* Set *PATH to the copyfrom path associated with NODE.  Get any
+   temporary allocations from POOL. */
+svn_error_t *svn_fs__dag_get_copyfrom_path (const char **path,
+                                            dag_node_t *node,
+                                            apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
