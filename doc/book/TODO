@@ -105,7 +105,9 @@ To be fixed by sussman:
 
   - svn merge --dry-run   (different than 'svn diff')
 
-  - ch06:  document the [tunnels] section of ~/.subversion/config
+  - ch06: document the [tunnels] section of ~/.subversion/config.
+    also document the log-encoding and use-commit-times variables in
+    the [miscellany] section
 
   - document mod_authz_svn!  and don't forget to mention it in the
     'svnserve vs. apache' comparison section of ch05.

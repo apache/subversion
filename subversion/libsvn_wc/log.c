@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "svn_path.h"
+#include "svn_time.h"
 
 #include "wc.h"
 #include "log.h"
@@ -376,9 +377,7 @@ log_do_file_xfer (struct log_runner *loggy,
 /* Make file NAME in log's CWD readonly */
 static svn_error_t *
 log_do_file_readonly (struct log_runner *loggy,
-                      const char *name,
-                      enum svn_wc__xfer_action action,
-                      const char **atts)
+                      const char *name)
 {
   const char *full_path
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
@@ -388,6 +387,33 @@ log_do_file_readonly (struct log_runner *loggy,
 
   return SVN_NO_ERROR;
 }
+
+
+/* Set file NAME in log's CWD to timestamp value in ATTS. */
+static svn_error_t *
+log_do_file_timestamp (struct log_runner *loggy,
+                       const char *name,                       
+                       const char **atts)
+{
+  apr_time_t timestamp;
+  const char *full_path
+    = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
+                     loggy->pool);
+
+  const char *timestamp_string
+    = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_TIMESTAMP, atts);
+  if (! timestamp_string)
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
+                              "missing timestamp attribute in '%s'",
+                              svn_wc_adm_access_path (loggy->adm_access));
+  
+  SVN_ERR (svn_time_from_cstring (&timestamp, timestamp_string, loggy->pool));
+
+  SVN_ERR (svn_io_set_file_affected_time (timestamp, full_path, loggy->pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Remove file NAME in log's CWD. */
 static svn_error_t *
@@ -1139,7 +1165,10 @@ start_handler (void *userData, const char *eltname, const char **atts)
     err = log_do_file_xfer (loggy, name, svn_wc__xfer_append, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_READONLY) == 0) {
-    err = log_do_file_readonly (loggy, name, svn_wc__xfer_append, atts);
+    err = log_do_file_readonly (loggy, name);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
+    err = log_do_file_timestamp (loggy, name, atts);
   }
   else
     {

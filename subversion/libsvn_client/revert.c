@@ -29,6 +29,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_config.h"
 #include "client.h"
 
 
@@ -43,6 +44,7 @@ svn_client_revert (const char *path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t wc_root;
+  svn_boolean_t use_commit_times;
   svn_error_t *err;
 
   /* We need to open the parent of PATH, if PATH is not a wc root, but we
@@ -79,7 +81,25 @@ svn_client_revert (const char *path,
         }
     }
 
-  err = svn_wc_revert (path, adm_access, recursive,
+  /* Look for run-time config variables that affect behavior. */
+  {
+    const char *commit_time_str;
+
+    svn_config_t *cfg = ctx->config
+      ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                      APR_HASH_KEY_STRING)
+      : NULL;
+
+    svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
+                    SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
+    if (commit_time_str)
+      use_commit_times = (strcasecmp (commit_time_str, "yes") == 0)
+                          ? TRUE : FALSE;
+    else
+      use_commit_times = FALSE;
+  }
+
+  err = svn_wc_revert (path, adm_access, recursive, use_commit_times,
                        ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func, ctx->notify_baton,
                        pool);

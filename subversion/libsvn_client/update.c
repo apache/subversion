@@ -56,6 +56,7 @@ svn_client__update_internal (const char *path,
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   svn_wc_adm_access_t *adm_access;
+  svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
@@ -86,22 +87,37 @@ svn_client__update_internal (const char *path,
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
-  /* Get the external diff3, if any. */
+  /* Look for run-time config variables that affect behavior. */
   {
+    const char *commit_time_str;
+
     svn_config_t *cfg = ctx->config
       ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
                       APR_HASH_KEY_STRING)
       : NULL;
-    
+
+    /* Get the external diff3, if any. */    
     svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                     SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
+    /* See if the user wants last-commit timestamps instead of current ones. */
+    svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
+                    SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
+    if (commit_time_str)
+      use_commit_times = (strcasecmp (commit_time_str, "yes") == 0)
+                          ? TRUE : FALSE;
+    else
+      use_commit_times = FALSE;
   }
+
+
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR (svn_wc_get_update_editor (adm_access,
                                      target,
                                      revnum,
+                                     use_commit_times,
                                      recurse,
                                      ctx->notify_func, ctx->notify_baton,
                                      ctx->cancel_func, ctx->cancel_baton,

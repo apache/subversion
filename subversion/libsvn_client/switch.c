@@ -68,7 +68,9 @@ svn_client_switch (const char *path,
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
   const char *diff3_cmd;
-  svn_boolean_t timestamp_sleep = FALSE;
+  svn_boolean_t timestamp_sleep = FALSE;  
+  svn_boolean_t use_commit_times;
+  const char *commit_time_str;
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
@@ -80,6 +82,15 @@ svn_client_switch (const char *path,
   /* Get the external diff3, if any. */
   svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                   SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
+  /* See if the user wants last-commit timestamps instead of current ones. */
+  svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
+                  SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
+  if (commit_time_str)
+    use_commit_times = (strcasecmp (commit_time_str, "yes") == 0)
+                        ? TRUE : FALSE;
+  else
+    use_commit_times = FALSE;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path);
@@ -156,7 +167,8 @@ svn_client_switch (const char *path,
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR (svn_wc_get_switch_editor (adm_access, target,
-                                     revnum, switch_url, recurse,
+                                     revnum, switch_url,
+                                     use_commit_times, recurse,
                                      ctx->notify_func, ctx->notify_baton,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      diff3_cmd,
