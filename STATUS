@@ -15,7 +15,7 @@ Candidate changes:
     Votes:
       +1: kfogel
 
-  * r12278
+  * r12278 (Issue #2159)
     Better log region max size in default DB_CONFIG.
     Justification: Trivial change, helps some sites avoid problems.
     Votes:
