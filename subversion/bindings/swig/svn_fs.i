@@ -72,7 +72,7 @@
 %typemap(ignore) apr_array_header_t ** (apr_array_header_t *temp) {
     $1 = &temp;
 }
-%typemap(python, argout) apr_array_header_t ** {
+%typemap(python, argout, fragment="t_output_helper") apr_array_header_t ** {
     $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
 }
 
@@ -87,7 +87,7 @@
 */
 
 %typemap(ignore) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
-%typemap(python,argout) apr_hash_t **entries_p {
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));

@@ -37,7 +37,7 @@ class build_swig(build_ext.build_ext):
 
   def swig_sources(self, sources):
     swig = self.find_swig()
-    swig_cmd = [swig, "-c", "-python"]
+    swig_cmd = [swig, "-c", "-python", "-noproxy"]
     for dir in self.include_dirs:
       swig_cmd.append("-I" + dir)
 
@@ -100,14 +100,14 @@ core.setup(name="Subversion",
                             ),
              core.Extension("_util",
                             ["../util.i"],
-                            libraries=['svn_subr-1', 'swigpy', 'apr'],
+                            libraries=['svn_subr-1', 'swigpy', 'apr-0'],
                             library_dirs=LIB_DIRS,
                             ),
 
              ### will 'auth' be its own, or bundled elsewhere?
              #core.Extension("_auth",
              #               ["../svn_auth.i"],
-             #               libraries=['svn_subr-1', 'swigpy', 'apr'],
+             #               libraries=['svn_subr-1', 'swigpy', 'apr-0'],
              #               library_dirs=LIB_DIRS,
              #               ),
              ],

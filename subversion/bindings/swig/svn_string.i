@@ -29,7 +29,7 @@ typedef struct svn_string_t svn_string_t;
    generic OUT param typemap for svn_string(buf)_t. we can share these
    because we only refer to the ->data and ->len values.
 */
-%typemap(python,argout) RET_STRING {
+%typemap(python,argout,fragment="t_output_helper") RET_STRING {
     PyObject *s;
     if (*$1 == NULL) {
         Py_INCREF(Py_None);
@@ -116,7 +116,7 @@ typedef struct svn_string_t svn_string_t;
 %typemap(ignore) const char **OUTPUT (const char *temp) {
     $1 = (char **)&temp;
 }
-%typemap(python,argout) const char **OUTPUT {
+%typemap(python,argout,fragment="t_output_helper") const char **OUTPUT {
     PyObject *s;
     if (*$1 == NULL) {
         Py_INCREF(Py_None);

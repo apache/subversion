@@ -70,7 +70,7 @@
 %typemap(ignore) apr_array_header_t ** (apr_array_header_t *temp) {
     $1 = &temp;
 }
-%typemap(python,argout) apr_array_header_t ** {
+%typemap(python,argout,fragment="t_output_helper") apr_array_header_t ** {
     svn_client_proplist_item_t **ppitem;
     int i;
     int nelts = (*$1)->nelts;
@@ -103,7 +103,7 @@
    handle the "statushash" OUTPUT param for svn_client_status()
 */
 %typemap(ignore) apr_hash_t **statushash = apr_hash_t **OUTPUT;
-%typemap(python,argout) apr_hash_t **statushash {
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **statushash {
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
