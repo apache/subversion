@@ -11,7 +11,9 @@ Meta-note:  we have defined M3 := "test suite and self-hosted".
 
 * finish M2: get commit/import/update working over DAV (Greg)
 
-* hunt down many memory bugs.
+* hunt down many memory bugs. (Chicago office)
+
+* write test-suite (Chicago office)
 
 * mulitple command-line targets.  (Chicago office)
 
@@ -38,7 +40,7 @@ Meta-note:  we have defined M3 := "test suite and self-hosted".
                          revert, rollback, unadd, undel.  (Chicago office)
 
 * autodetection of text/binary file types, and default boolean values
-  for keyword substitution and newline translation. (who will do?)
+  for keyword substitution and newline translation. (Karl)
 
 * change #6:  invert text-delta interface (Greg)
 
