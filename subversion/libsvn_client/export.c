@@ -194,7 +194,7 @@ svn_client_export (const char *from,
 {
   if (svn_path_is_url (from))
     {
-#if 1 /* new export-editor */
+#if 0 /* new export-editor */
       const char *URL;
       svn_revnum_t revnum;
       void *ra_baton, *session;
