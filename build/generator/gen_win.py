@@ -126,8 +126,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     ### generating the Windows build files on a Unix box prior to
     ### release. this copy already occurs in svn_config.dsp. (is that
     ### broken or something?)
-#    self.copyfile(os.path.join("subversion","libsvn_subr","getdate.c"),
-#                  os.path.join("subversion","libsvn_subr","getdate.cw"))
+    # No, but if getdate.c doesn't exist, it won't get pulled into the
+    # libsvn_subr.dsp (or .vcproj or whatever), so it won't get built.
+    getdate_c = os.path.join('subversion', 'libsvn_subr', 'getdate.c')
+    if not os.path.exists(getdate_c):
+      getdate_cw = getdate_c + 'w'
+      print 'Creating', getdate_c
+      print '    from', getdate_cw
+      self.copyfile(getdate_c, getdate_cw)
     gen_base.GeneratorBase.__init__(self, fname, verfname)
 
     #Make the project files directory if it doesn't exist
