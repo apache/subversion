@@ -21,8 +21,8 @@
 #ifndef SVN_INIT_CMDLINE_H
 #define SVN_INIT_CMDLINE_H
 
-#include <locale.h>             /* for setlocale() */
 #include <stdlib.h>             /* for atexit() */
+#include <locale.h>             /* for setlocale() */
 
 #define APR_WANT_STDIO
 #include <apr_want.h>           /* for stdio stuff */
