@@ -18,6 +18,7 @@ Available subcommands:
    help (?, h)
    import
    info
+   list (ls)
    log
    merge
    mkdir

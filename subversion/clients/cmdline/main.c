@@ -236,6 +236,12 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    Print information about PATHs.\n",
     {svn_cl__targets_opt, 'R'} },
  
+  { "list", svn_cl__ls, {"ls"},
+    "List directory entries of a URL.\n"
+    "usage: svn list [-r REV] [URL1 [URL2] ...]\n\n"
+    "    If URL is a file, just file entry will be displayed.\n",
+    {'r'} },
+  
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: svn log [URL] [PATH1 [PATH2] ...] \n"
@@ -255,12 +261,6 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     {'r', 'D', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__strict_opt, svn_cl__xml_opt} },
 
-  { "list", svn_cl__ls, {"ls"},
-    "List directory entries of a URL.\n"
-    "usage: svn list [-r REV] [URL1 [URL2] ...]\n\n"
-    "    If URL is a file, just file entry will be displayed.\n",
-    {'r'} },
-  
   { "merge", svn_cl__merge, {0},
     "apply the differences between two paths to a working copy path.\n"
     "usage:  svn merge PATH1[@N] PATH2[@M] [WCPATH]\n"
