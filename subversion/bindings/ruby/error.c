@@ -30,7 +30,7 @@ static VALUE error_list[SVN_RUBY_ERR_END - SVN_RUBY_ERR_START + 1];
 /* To protect exception from GC. */
 static VALUE error_hash;
 
-extern VALUE ruby_errinfo;
+EXTERN VALUE ruby_errinfo;
 
 svn_error_t *
 svn_ruby_error (const char *msg, apr_pool_t *pool)
@@ -119,6 +119,7 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_WC_IS_NOT_FILE, "WcIsNotFile");
   define_error (SVN_ERR_WC_BAD_ADM_LOG, "WcBadAdmLog");
   define_error (SVN_ERR_WC_PATH_NOT_FOUND, "WcPathNotFound");
+  define_error (SVN_ERR_WC_UNEXPECTED_KIND, "WcUnexpectedKind");
   define_error (SVN_ERR_WC_ENTRY_NOT_FOUND, "WcEntryNotFound");
   define_error (SVN_ERR_WC_ENTRY_EXISTS, "WcEntryExists");
   define_error (SVN_ERR_WC_ENTRY_MISSING_REVISION, "WcEntryMissingRevision");
