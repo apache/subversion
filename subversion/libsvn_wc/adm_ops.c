@@ -122,29 +122,41 @@ svn_wc_close_commit (svn_string_t *root_dir,
    the public header file that they exist. */
 
 svn_error_t *
-svn_wc_rename (svn_string_t *src, svn_string_t *dst)
+svn_wc_rename (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
+  /* kff todo */
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc_copy (svn_string_t *src, svn_string_t *dst)
+svn_wc_copy (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
+  /* kff todo */
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc_add (apr_array_header_t *paths)
+svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
 {
+  /* kff todo */
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc_delete (apr_array_header_t *paths)
+svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 {
+  svn_string_t *dir, *basename;
+  svn_error_t *err;
+
+  svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
+
+  err = svn_wc__entry_merge (dir, basename, 0, svn_file_kind, pool, NULL);
+  if (err)
+    return err;
+
   return SVN_NO_ERROR;
 }
 
@@ -154,6 +166,7 @@ svn_wc_get_path_prop (svn_string_t **value,
                       svn_string_t *propname,
                       svn_string_t *path)
 {
+  /* kff todo */
   return SVN_NO_ERROR;
 }
 
@@ -163,6 +176,7 @@ svn_wc_get_dirent_prop (svn_string_t **value,
                         svn_string_t *propname,
                         svn_string_t *path)
 {
+  /* kff todo */
   return SVN_NO_ERROR;
 }
 
