@@ -85,11 +85,11 @@
     <para>S&#229; hvorfor er dette interessant?
       S&#229; langt h&#248;res dette ut som definisjonen av en typisk filtjener.
       Og det stemmer, depotet <emphasis>er</emphasis> en slags 
-      filtjener, men den er ikke det du vanligvis kommer ut for.
+      filtjener, men ikke den typen du vanligvis kommer ut for.
       Det som gj&#248;r Subversiondepotet spesielt er at <emphasis>det husker 
       hver eneste forandring</emphasis> noensinne skrevet til det: Hver 
       forandring til hver eneste fil, og til og med forandringer i selve 
-      katalogtreet, som opprettelser, slettinger og omm&#248;bleringer p&#229; 
+      katalogtreet, som opprettelser, slettinger og omm&#248;bleringer i 
       filer og kataloger.</para>
 
     <!-- @ENGLISH {{{
@@ -105,7 +105,6 @@
       systems that are designed to record and track changes to data
       over time.
     </para>
-  </sect1>
     @ENGLISH }}} -->
     <para>N&#229;r en klient leser data fra depotet, ser den vanligvis bare 
       den siste versjonen av filsystemtreet.
@@ -114,11 +113,12 @@
       For eksempel, en klient kan sp&#248;rre historiske sp&#248;rsm&#229;l som:
       <quote>Hva inneholdt denne katalogen forrige onsdag?</quote> eller 
       <quote>Hvem var den siste personen som forandret denne filen, og 
-      hvilke forandringer gjorde de?</quote>
+      hvilke forandringer gjorde vedkommende?</quote>
       Dette er typen sp&#248;rsm&#229;l som er hjertet av ethvert 
       <firstterm>versjonskontrollsystem</firstterm>:
       Systemer som er designet for &#229; lagre og f&#248;lge forandringer i data 
-      over tid.</para></sect1>
+      over tid.</para>
+  </sect1>
 
   <sect1 id="svn-ch-2-sect-2">
     <!-- @ENGLISH {{{
@@ -233,7 +233,8 @@
         den.
         Hvis hun pr&#248;ver &#229; l&#229;se filen, vil ikke depotet tillate dette.
         Alt hun kan gj&#248;re er &#229; lese filen, og vente p&#229; at Harry gj&#248;r seg 
-        ferdig med sine forandringer og slippe l&#229;sen han har satt opp.
+        ferdig med sine forandringer og s&#229; slipper l&#229;sen han har satt 
+        opp.
         Etter at Harry l&#229;ser opp filen, er hans tur over, og n&#229; kan 
         Sally ta sin runde med l&#229;sing og redigering.
         <xref linkend="svn-ch-2-dia-3"/> demonstrerer denne enkle 
@@ -268,8 +269,8 @@
             The situation ends up causing a lot of unnecessary delay
             and wasted time.</para></listitem>
         @ENGLISH }}} -->
-        <listitem><para>
-            <emphasis>L&#229;sing kan medf&#248;re administrative 
+        <listitem>
+          <para><emphasis>L&#229;sing kan medf&#248;re administrative 
             problemer.</emphasis>
 
             Noen ganger hender det at Harry l&#229;ser en fil og glemmer den.
@@ -277,8 +278,9 @@
             filen, har hun hendene bundet.
             Og s&#229; drar Harry p&#229; ferie.
             N&#229; m&#229; Sally f&#229; en administrator til &#229; fjerne Harrys l&#229;s.
-            Situasjonen ender opp med &#229; for&#229;rsake mange forsinkelser og 
-            bortkastet tid.</para></listitem>
+            Situasjonen ender opp med mange forsinkelser og mye 
+            bortkastet tid.</para>
+        </listitem>
         
         <!-- @ENGLISH {{{
         <listitem><para>
@@ -292,18 +294,19 @@
             There's no need for them to take turns in this
             situation.</para></listitem>
         @ENGLISH }}} -->
-        <listitem><para>
-            <emphasis>L&#229;sing kan for&#229;rsake un&#248;dvendig 
+        <listitem>
+          <para><emphasis>L&#229;sing kan for&#229;rsake un&#248;dvendig 
             serialisering.</emphasis>
 
             Hva hvis Harry redigerer begynnelsen av en tekstfil, og 
-            Sally vil rett og slett bare redigere slutten av den samme 
+            Sally rett og slett bare vil redigere slutten av den samme 
             filen?
             Disse forandringene overlapper ikke i det hele tatt.
             De kan enkelt redigere filen samtidig, og ingen stor skade 
             vil skje, s&#229;fremt forandringene ble flettet fint sammen.
             Det er ingen vits i at de m&#229; vente p&#229; tur i denne 
-            situasjonen.</para></listitem>
+            situasjonen.</para>
+        </listitem>
     
         <!-- @ENGLISH {{{
         <listitem><para>
@@ -321,8 +324,8 @@
             discussing their incompatible changes early
             on.</para></listitem>
         @ENGLISH }}} -->
-        <listitem><para>
-            <emphasis>L&#229;sing kan skape en falsk f&#248;lelse av 
+        <listitem>
+          <para><emphasis>L&#229;sing kan skape en falsk f&#248;lelse av 
             trygghet.</emphasis>
 
             Tenk deg at Harry l&#229;ser og redigerer fil A, mens Sally 
@@ -335,7 +338,8 @@
             Det er lett for Harry og Sally &#229; tenke seg at ved &#229; l&#229;se 
             filer, starter hver av dem en trygg, isolert oppgave, og de 
             bryr seg dermed ikke med &#229; diskutere deres inkompatible 
-            forandringer p&#229; et tidligere tidspunkt.</para></listitem>
+            forandringer p&#229; et tidligere tidspunkt.</para>
+        </listitem>
       </itemizedlist>
 
       </sect2>
@@ -392,8 +396,8 @@
         show this process.</para>
       @ENGLISH }}} -->
       <para>Her er et eksempel.
-        Si at Harry og Sally hver for seg lager arbeidskopier av det 
-        samme prosjektet, kopiert fra depotet.
+        La oss si at Harry og Sally hver for seg lager arbeidskopier av 
+        det samme prosjektet, kopiert fra depotet.
         De arbeider samtidig, og gj&#248;r forandringer til den samme filen A 
         innenfor sine kopier.
         Sally lagrer sine forandringer til depotet f&#248;rst.
@@ -401,7 +405,7 @@
         depotet ham om at hans fil A er <firstterm>utdatert</firstterm>.
         Med andre ord, filen A i depotet har p&#229; en eller annen m&#229;te 
         forandret seg siden han kopierte den sist.
-        S&#229; Harry ber klienten hans om &#229; <firstterm>flette</firstterm> 
+        S&#229; Harry ber klienten sin om &#229; <firstterm>flette</firstterm> 
         alle nye forandringer fra depotet inn i hans arbeidskopi av fil 
         A.
         Sjansene for at Sallys forandringer ikke overlapper med hans 
@@ -490,12 +494,12 @@
       <para>Til sist koker det hele ned til en kritisk faktor:
         Brukerkommunikasjon.
         N&#229;r brukerne kommuniserer d&#229;rlig, &#248;ker antallet av b&#229;de <!-- &#164; 
-        -->syntaktiske og <!-- &#164; -->semantiske konflikter.
+        -->programmessige og <!-- &#164; -->spr&#229;kmessige konflikter.
         Ingen systemer kan tvinge brukerne til &#229; kommunisere perfekt, og 
-        ingen systemer kan oppdage <!-- &#164; -->semantiske konflikter.
-        S&#229; det er ikke mye poeng i &#229; bli lurt av et falskt l&#248;fte om at 
+        ingen systemer kan oppdage <!-- &#164; -->spr&#229;kmessige konflikter.
+        S&#229;, det er ikke mye poeng i &#229; bli lurt av et falskt l&#248;fte om at 
         et l&#229;sesystem p&#229; en eller annen m&#229;te vil forhindre konflikter;
-        i praksis ser l&#229;sing ut til &#229; vanskeliggj&#248;re mer enn noenting 
+        i praksis ser l&#229;sing ut til &#229; hemme produktiviteten mer enn noe 
         annet.</para>
       
     </sect2>
@@ -530,7 +534,7 @@
         them.</para>
       @ENGLISH }}} -->
       <para>Du har allerede lest om arbeidskopier; n&#229; skal vi 
-        demonstrere hvordan Subversion-klienten lager og bruker 
+        demonstrere hvordan Subversionklienten lager og bruker 
         dem.</para>
       
       <!-- @ENGLISH {{{
@@ -546,7 +550,7 @@
       <para>En arbeidskopi i Subversion er et vanlig katalogtre p&#229; ditt 
         lokale system, og inneholder en samling filer.
         Du kan redigere disse filene s&#229;nn som du vil, og hvis det er 
-        kildekode, kan du kompilere programmet fra dem p&#229; den vanlige 
+        kildekode, kan du kompilere programmet fra den p&#229; den vanlige 
         m&#229;ten.
         Arbeidskopien din er ditt eget private arbeidsomr&#229;de:
         Subversion vil aldri legge inn andre folks forandringer, heller 
@@ -565,9 +569,9 @@
       @ENGLISH }}} -->
       <para>Etter at du har gjort noen forandringer i filene i 
         arbeidskopien og sjekket at de virker skikkelig, gir Subversion 
-        deg kommandoer til &#229; <quote>publisere</quote> dine forandringer 
-        til de andre personene som arbeider med deg p&#229; prosjektet ditt 
-        (ved &#229; skrive til depotet).
+        deg kommandoer s&#229; du kan <quote>publisere</quote> forandringene 
+        dine til de andre som arbeider med deg p&#229; prosjektet ditt (ved &#229; 
+        skrive til depotet).
         Hvis andre personer publiserer deres egne forandringer, gir 
         Subversion deg kommandoer for &#229; flette disse forandringene inn i 
         din arbeidskopi (ved &#229; lese fra depotet).</para>
@@ -590,8 +594,8 @@
         <filename>.svn</filename>, ogs&#229; kjent som arbeidskopiens 
         <firstterm>administrative katalog</firstterm>.
         Filene i hver administrative katalog hjelper Subversion til &#229; se 
-        hvilke som inneholder upubliserte forandringer, og hvilke filer 
-        som er utdatert i forhold til andres arbeid.</para>
+        hvilke filer som inneholder upubliserte forandringer, og hvilke 
+        filer som er utdaterte i forhold til andres arbeid.</para>
       
       <!-- @ENGLISH {{{
       <para>A typical Subversion repository often holds the files (or
@@ -637,11 +641,12 @@
         if you check out <filename>/calc</filename>, you will get a
         working copy like this:</para>
       @ENGLISH }}} -->
-      <para>For &#229; f&#229; en arbeidskopi, m&#229; du f&#248;rst <firstterm>hente 
-        ut</firstterm> et del av et katalogtre fra depotet.
-        (Uttrykket <quote>hente ut</quote> kan h&#248;res ut som det har noe 
-        &#229; gj&#248;re med l&#229;sing eller reservering av ressurser, men det har 
-        ikke det;
+      <para>For &#229; f&#229; deg en arbeidskopi, m&#229; du f&#248;rst <firstterm>hente 
+        ut</firstterm> (<foreignphrase>check out</foreignphrase>) et del 
+        av et katalogtre fra depotet.
+        (Det engelske uttrykket <quote>check out</quote> kan h&#248;res ut 
+        som det har noe &#229; gj&#248;re med l&#229;sing eller reservering av 
+        ressurser, men det har ikke det;
         det lager bare en privat kopi av prosjektet for deg.)
         For eksempel, hvis du henter ut <filename>/calc</filename>, vil 
         du f&#229; en arbeidskopi som dette:</para>
@@ -667,7 +672,7 @@ Makefile  integer.c  button.c  .svn/
         earlier.</para>
       @ENGLISH }}} -->
       <para>Listen med bokstaven A indikerer at Subversion legger til et 
-        antall elementer til arbeidskopien din.
+        antall elementer i arbeidskopien din.
         Du har n&#229; en personlig kopi av depotets 
         <filename>/calc</filename>-katalog, med en ekstra komponent &#8212; 
         <filename>.svn</filename> &#8212; som inneholder den ekstra 
@@ -687,9 +692,9 @@ Makefile  integer.c  button.c  .svn/
           always a URL.  Table 2-1 describes how different URL
           schemas map to the available access methods.</para>
         @ENGLISH }}} -->
-        <para>Subversiondepot kan bli aksessert gjennom ved hjelp av 
-          mange forskjellige metoder &#8212; p&#229; en lokal disk, eller gjennom 
-          diverse nettverksprotokoller.
+        <para>Subversiondepot kan bli aksessert ved hjelp av mange 
+          forskjellige metoder &#8212; p&#229; en lokal disk, eller gjennom diverse 
+          nettverksprotokoller.
           Beliggenheten til et depot er imidlertid alltid en URL.
           Tabell 2-1 viser hvordan forskjellige URL-skjemaer st&#229;r i 
           forhold til de forskjellige aksessmetodene.</para>
@@ -802,11 +807,11 @@ $ svn checkout file://localhost/sti/til/depot
           <literal>X</literal> is the drive on which the repository
           resides:</para>
         @ENGLISH }}} -->
-        <para>I tillegg trenger brukere av 
-          <literal>file:</literal>-skjemaet p&#229; Windows-plattformer &#229; 
-          bruke en uoffisiell <quote>standard</quote> syntaks for &#229; f&#229; 
-          tilgang til depot som er p&#229; den samme maskinen, men p&#229; en 
-          annen disk enn klientens arbeidsdisk for &#248;yeblikket.
+        <para>I tillegg m&#229; brukere av <literal>file:</literal>-skjemaet 
+          p&#229; Windows-plattformer bruke en uoffisiell 
+          <quote>standard</quote> syntaks for &#229; f&#229; tilgang til depot som 
+          er p&#229; den samme maskinen, men p&#229; en annen disk enn klientens 
+          arbeidsdisk for &#248;yeblikket.
           En av de to f&#248;lgende syntaksene for URL-stier vil virke n&#229;r 
           <literal>X</literal> er disken som depotet ligger p&#229;:</para>
 
@@ -838,7 +843,7 @@ C:\&gt; svn checkout "file:///X|/path/to/repos"
           (non-URL) form of a path on Windows uses backslashes.</para>
         @ENGLISH }}} -->
         <para>Legg merke til at en URL bruker ordin&#230;re skr&#229;streker selv 
-          om den i den lokale (ikke-URL) formen av en sti p&#229; Windows 
+          om det i den lokale (ikke-URL) formen for en sti p&#229; Windows 
           brukes omvendte skr&#229;streker.</para>
 
       </sidebar>
@@ -859,10 +864,11 @@ C:\&gt; svn checkout "file:///X|/path/to/repos"
         modifiseringsdato og originale innhold, kan Subversion se at du 
         har forandret filen.
         Men Subversion gj&#248;r ikke dine forandringer offentlige f&#248;r du 
-        eksplisitt forteller den &#229; gj&#248;re det.
-        Prosessen &#229; publisere dine forandringer er vanligvis omtalt som 
-        &#229; <firstterm>legge inn</firstterm> (eller <firstterm>sjekke 
-        inn</firstterm>) forandringer til depotet.</para>
+        eksplisitt ber den om &#229; gj&#248;re det.
+        Prosessen n&#229;r du publiserer dine forandringer blir vanligvis 
+        omtalt som &#229; <firstterm>legge inn</firstterm> (eller 
+        <firstterm>sende/sjekke inn</firstterm>) forandringer til 
+        depotet.</para>
 
       <!-- @ENGLISH {{{
       <para>To publish your changes to others, you can use
@@ -914,12 +920,12 @@ Committed revision 57.
         well as any others that have been committed since she checked
         it out.</para>
       @ENGLISH }}} -->
-      <para>For &#229; f&#229; hennes prosjekt oppdatert, kan Sally be Subversion 
-        om &#229; <firstterm>oppdatere</firstterm> hennes arbeidskopi, ved &#229; 
+      <para>For &#229; f&#229; sitt prosjekt oppdatert, kan Sally be Subversion om 
+        &#229; <firstterm>oppdatere</firstterm> hennes arbeidskopi, ved &#229; 
         bruke Subversionkommandoen <command>update</command>.
         Dette vil legge inn dine forandringer inn i hennes arbeidskopi, 
-        s&#229; vel som andres som har v&#230;rt lagt inn i depotet siden hun 
-        hentet det ut.</para>
+        s&#229; vel som alle andre forandringer som er blitt lagt inn i 
+        depotet siden hun sist hentet det ut.</para>
 
 <screen>
 $ pwd
@@ -986,9 +992,10 @@ U button.c
         transaksjon:
         Enten blir alle forandringene lagt inn, eller s&#229; blir ingen lagt 
         inn.
-        Subversion pr&#248;ver &#229; beholde denne atomiteten stilt opp mot 
-        programkr&#230;sj, systemkr&#230;sj, nettverksproblemer og andre brukeres 
-        aktiviteter.</para>
+        Subversion pr&#248;ver &#229; beholde denne atomiteten stilt opp mot <!-- 
+        &#164; &#171;kr&#230;sj&#187; er vel et koselig ord &#229; bruke, eller har det en 
+        useri&#248;s schwong over seg? -->programkr&#230;sj, systemkr&#230;sj, 
+        nettverksproblemer og andre brukeres aktiviteter.</para>
 
       <!-- @ENGLISH {{{
       <para>Each time the repository accepts a commit, this creates a
@@ -999,7 +1006,7 @@ U button.c
         repository is numbered zero, and consists of nothing but an
         empty root directory.</para>
       @ENGLISH }}} -->
-      <para>Hver gang depotet aksepterer en innlegging, lager dette en 
+      <para>Hver gang depotet aksepterer en innlegging, opprettes det en 
         ny tilstand i filsystemtreet, kalt en 
         <firstterm>revisjon</firstterm>.
         Hver revisjon blir tildelt et unikt naturlig tall, ett st&#248;rre 
@@ -1018,7 +1025,7 @@ U button.c
       <para><xref linkend="svn-ch-2-dia-7"/> illustrerer en fin m&#229;te &#229; 
         visualisere depotet p&#229;.
         Tenk deg en rekke av revisjonsnumre som starter p&#229; 0 og strekker 
-        seg fra venstre til h&#248;yre.
+        seg fra venstre mot h&#248;yre.
         Hvert revisjonsnummer har et filsystemtre hengende under seg, og 
         hvert tre er et <quote>&#248;yeblikksbilde</quote> av hvordan depotet 
         s&#229; ut etter en innlegging.</para>
@@ -1057,15 +1064,15 @@ U button.c
           Subversions revisjonsnumre for <emphasis>hele tr&#230;r</emphasis>, 
           ikke individuelle filer.
           Hvert revisjonsnummer velger et helt tre, en spesifikk 
-          tilstand til depotet etter noen la inn en forandring.
+          tilstand til depotet etter at noen la inn en forandring.
           En annen m&#229;te &#229; tenke seg det er at revisjon N representerer 
           tilstanden til depotfilsystemet etter den Nte innleggingen.
           N&#229;r en Subversionbruker snakker om <quote>revisjon 5 av 
-          <filename>foo.c</filename></quote>, mener de egentlig 
+          <filename>foo.c</filename></quote>, mener han egentlig 
           <quote><filename>foo.c</filename> som den fremst&#229;r i revisjon 
           5.</quote>
-          Legg merke til at vanligvis vil revisjonene N og M av en fil 
-          <emphasis>ikke</emphasis> v&#230;re forskjellig!
+          Legg merke til at vanligvis vil innholdet av en fil for 
+          revisjonene N og M <emphasis>ikke</emphasis> v&#230;re forskjellig!
           Fordi CVS bruker egne revisjonsnumre for hver fil, vil kanskje 
           CVS-brukere ta en kikk p&#229; <xref linkend="svn-ap-a"/> for flere 
           detaljer.</para>
@@ -1102,7 +1109,7 @@ calc/Makefile:4
         4 i depotet.
         Men tenk deg s&#229; at du gj&#248;r en forandring i 
         <filename>button.c</filename>, og legger inn denne forandringen.
-        Forutsatt at ingen andre innlegginger har skjedd, vil din 
+        Forutsatt at ingen andre innlegginger har forekommet, vil din 
         innlegging opprette revisjon 5 i depotet, og arbeidskopien din 
         vil se ut som dette:</para>
 
@@ -1118,7 +1125,7 @@ calc/Makefile:4
         use <command>svn update</command> to bring your working copy
         up to date, then it will look like this:</para>
       @ENGLISH }}} -->
-      <para>S&#229; sier vi at p&#229; dette tidspunktet legger Sally inn en 
+      <para>S&#229; sier vi at Sally p&#229; dette tidspunktet legger inn en 
         forandring til <filename>integer.c</filename>, som lager 
         revisjon 6.
         Hvis du bruker <command>svn update</command> for &#229; oppdatere 
@@ -1147,7 +1154,7 @@ calc/Makefile:6
         I dette eksempelet er teksten i <filename>Makefile</filename> 
         identisk i revisjon 4, 5 og 6, men Subversion vil merke kopien 
         av <filename>Makefile</filename> med revisjon 6 for &#229; indikere 
-        at den gjelder fortsatt.
+        at den fortsatt gjelder.
         S&#229;, etter at du gj&#248;r en ren oppdatering fra toppen av 
         arbeidskopien din, vil den vanligvis samsvare med en eksakt 
         revisjon i depotet.</para>
@@ -1177,17 +1184,20 @@ calc/Makefile:6
             (this is called the file's <firstterm>working
              revision</firstterm>), and</para></listitem>
         @ENGLISH }}} -->
-        <listitem><para>Hvilken revisjon arbeidsfilen din er basert p&#229; 
-            (dette kalles filens 
-            <firstterm>arbeidsrevisjon</firstterm>), 
-            og</para></listitem>
+        <listitem>
+          <para>Hvilken revisjon arbeidsfilen din er basert p&#229; (dette 
+            kalles filens <firstterm>arbeidsrevisjon</firstterm>), 
+            og</para>
+        </listitem>
         
         <!-- @ENGLISH {{{
         <listitem><para>a timestamp recording when the local copy was
             last updated by the repository.</para></listitem>
         @ENGLISH }}} -->
-        <listitem><para>et tidsmerke fra n&#229;r den lokale kopien sist ble 
-            oppdatert av depotet.</para></listitem>
+        <listitem>
+          <para>et tidsmerke fra da den lokale kopien sist ble oppdatert 
+            av depotet.</para>
+        </listitem>
       </itemizedlist>
 
       <!-- @ENGLISH {{{
@@ -1216,10 +1226,10 @@ calc/Makefile:6
           <listitem>
             <para>Filen er uforandret i arbeidskopien, og ingen 
               forandringer til denne filen er blitt lagt inn i depotet 
-              siden siden arbeidskopien ble lagt inn.
+              siden arbeidskopien ble lagt inn.
               En <command>svn commit</command> p&#229; filen vil ikke gj&#248;re 
-              noe, og en <command>svn update</command> p&#229; filen vil 
-              heller ikke gj&#248;re noe.</para>
+              noe som helst, og en <command>svn update</command> p&#229; 
+              filen vil heller ikke gj&#248;re noe.</para>
           </listitem>
         </varlistentry>
         
@@ -1376,7 +1386,7 @@ calc/Makefile:6
       <para>Forutsatt at prosjektet ditt er komplekst nok, vil du 
         oppdage at det noen ganger er fint &#229; kunne 
         <quote>tilbakedatere</quote> deler av arbeidskopien til en 
-        tidligere revisjon; du vil l&#230;re hvordan du gj&#248;r det i kapittel 
+        tidligere revisjon; du vil l&#230;re hvordan du gj&#248;r dette i kapittel 
         3.
         Kanskje vil du pr&#248;ve en tidligere versjon av en delmodul, lagret 
         i en underkatalog, eller kanskje du vil utforske et antall 
@@ -1402,7 +1412,7 @@ calc/Makefile:6
         eller katalog som ikke er fullstendig oppdatert.
         Hvis en nyere versjon av elementet eksisterer i depotet, vil 
         fors&#248;ket ditt p&#229; &#229; slette bli avsl&#229;tt, for &#229; forhindre deg &#229; 
-        &#248;delegge ved en ulykke forandringer som du enda ikke har 
+        feilaktig &#248;delegge forandringer som du enda ikke har 
         sett.</para>
 
       <!-- @ENGLISH {{{

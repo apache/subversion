@@ -24,6 +24,7 @@ documentation.
       book/ch01.xml
       book/ch02.xml
       book/ch03.xml
+      book/ch04.xml
       book/foreword.xml
       book/images/ch01dia1.png
       book/images/ch02dia1.png
@@ -37,7 +38,7 @@ documentation.
 
     2.1.2. In progress
 
-      book/ch04.xml (73%) -- sunny256
+      book/ch05.xml (0%) -- sunny256
 
     2.1.3. Needs update
 
@@ -50,7 +51,6 @@ documentation.
       book/appb.xml
       book/appc.xml
       book/appd.xml
-      book/ch05.xml
       book/ch06.xml
       book/ch07.xml
       book/ch08.xml
