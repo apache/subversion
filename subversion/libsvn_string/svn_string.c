@@ -345,6 +345,10 @@ svn_string_strip_whitespace (svn_string_t *str)
 
 
 
+svn_boolean_t
+svn_string_contains (
+
+
 /* Utility: print bytestring to stdout, assuming that the string
    contains ASCII.  */
 
