@@ -179,14 +179,19 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   svn_error_t *serr;
 
   /*
-  ** None of SVN provider properties are defined if the resource does not
-  ** exist. Just bail for this case.
+  ** Almost none of the SVN provider properties are defined if the
+  ** resource does not exist.  We do need to return the one VCC
+  ** property and baseline-relative-path on lock-null resources,
+  ** however, so that svn clients can run 'svn unlock' and 'svn info'
+  ** on these things.
   **
   ** Even though we state that the SVN properties are not defined, the
   ** client cannot store dead values -- we deny that thru the is_writable
   ** hook function.
   */
-  if (!resource->exists)
+  if ((! resource->exists)
+      && (propid != DAV_PROPID_version_controlled_configuration)
+      && (propid != SVN_PROPID_baseline_relative_path))
     return DAV_PROP_INSERT_NOTSUPP;
 
   /* ### we may want to respond to DAV_PROPID_resourcetype for PRIVATE

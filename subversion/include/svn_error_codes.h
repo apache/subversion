@@ -377,6 +377,7 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 23,
               "Invalid schedule")  
 
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
@@ -884,6 +885,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN,
               SVN_ERR_CLIENT_CATEGORY_START + 13,
               "Path has no lock token")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_CLIENT_LOCK_NOT_ALLOWED,
+              SVN_ERR_WC_CATEGORY_START + 14,
+              "Lock not allowed")  
+
 
   /* misc errors */
 

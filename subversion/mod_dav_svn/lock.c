@@ -732,6 +732,8 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                                   resource->info->repos->repos,
                                   info->lock_steal,
                                   info->working_revnum,
+                                  resource->info->repos->is_svn_client ?
+                                                         0 : 1,
                                   resource->pool);
 
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
@@ -899,6 +901,8 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                                   resource->info->repos->repos,
                                   TRUE, /* forcibly steal existing lock */
                                   SVN_INVALID_REVNUM,
+                                  resource->info->repos->is_svn_client ?
+                                                         0 : 1,
                                   resource->pool);
 
   if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)

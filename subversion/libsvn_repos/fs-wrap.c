@@ -416,6 +416,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
                    svn_boolean_t force,
                    long int timeout,
                    svn_revnum_t current_rev,
+                   svn_boolean_t allow_nonexistent,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -435,7 +436,22 @@ svn_repos_fs_lock (svn_lock_t **lock,
     return svn_error_createf 
       (SVN_ERR_FS_NO_USER, NULL,
        "Cannot lock path '%s', no authenticated username available.", path);
-  
+
+  if (! allow_nonexistent)
+    {
+      svn_revnum_t head_rev;
+      svn_fs_root_t *root;
+      svn_node_kind_t kind;
+
+      SVN_ERR (svn_fs_youngest_rev (&head_rev, repos->fs, pool));
+      SVN_ERR (svn_fs_revision_root (&root, repos->fs, head_rev, pool));
+      SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+      
+      if (kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0,
+                                  "Path '%s' does not exist in HEAD", path);
+    }
+
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
   SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
@@ -460,6 +476,7 @@ svn_repos_fs_attach_lock (svn_lock_t *lock,
                           svn_repos_t *repos,
                           svn_boolean_t force,
                           svn_revnum_t current_rev,
+                          svn_boolean_t allow_nonexistent,
                           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -468,6 +485,22 @@ svn_repos_fs_attach_lock (svn_lock_t *lock,
      used by svn_repos__hooks_post_lock. */
   apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(paths, const char *) = lock->path;
+
+  if (! allow_nonexistent)
+    {
+      svn_revnum_t head_rev;
+      svn_fs_root_t *root;
+      svn_node_kind_t kind;
+
+      SVN_ERR (svn_fs_youngest_rev (&head_rev, repos->fs, pool));
+      SVN_ERR (svn_fs_revision_root (&root, repos->fs, head_rev, pool));
+      SVN_ERR (svn_fs_check_path (&kind, root, lock->path, pool));
+      
+      if (kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0,
+                                  "Path '%s' does not exist in HEAD",
+                                  lock->path);
+    }
 
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */

@@ -373,7 +373,7 @@ svn_client_lock (apr_array_header_t **locks_p,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment has illegal characters."));      
+           _("Lock comment has illegal characters"));      
     }
 
   SVN_ERR (organize_lock_targets (&common_parent, &entry, &adm_access,
@@ -386,6 +386,12 @@ svn_client_lock (apr_array_header_t **locks_p,
     url = common_parent;
   else
     url = entry->url;
+
+  /* The server currently blocks 'svn lock nonexistentURL'.  In that
+     same vein, we don't want to allow 'svn lock schedule-add-path'. */
+  if (entry && (entry->schedule == svn_wc_schedule_add))
+    return svn_error_create (SVN_ERR_CLIENT_LOCK_NOT_ALLOWED, 0,
+                             _("Not allowed to lock a schedule-add path"));
 
   /* Open an RA session to the common parent of TARGETS. */
   SVN_ERR (svn_client__open_ra_session
