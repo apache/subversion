@@ -107,6 +107,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "do not print differences for deleted files"},
     {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
                        "notice ancestry when calculating differences"},
+    {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
+                       "ignore ancestry when calculating merges"},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
                       "use ARG as diff command"},
     {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
@@ -367,7 +369,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  the sources have identical basenames that match a file within '.':\n"
     "  in which case, the differences will be applied to that file.\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
-     svn_cl__merge_cmd_opt, svn_cl__notice_ancestry_opt, 
+     svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt, 
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
@@ -887,6 +889,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__notice_ancestry_opt:
         opt_state.notice_ancestry = TRUE;
+        break;
+      case svn_cl__ignore_ancestry_opt:
+        opt_state.ignore_ancestry = TRUE;
         break;
       case svn_cl__relocate_opt:
         opt_state.relocate = TRUE;
