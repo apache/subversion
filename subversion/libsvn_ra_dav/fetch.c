@@ -94,6 +94,10 @@ typedef struct {
 #define POP_SUBDIR(sds) (((subdir_t **)(sds)->elts)[--(sds)->nelts])
 #define PUSH_SUBDIR(sds,s) (*(subdir_t **)apr_array_push(sds) = (s))
 
+typedef svn_error_t * (*prop_setter_t)(void *baton,
+                                       svn_string_t *name,
+                                       svn_string_t *value);
+
 
 static svn_string_t *my_basename(const char *url, apr_pool_t *pool)
 {
@@ -111,11 +115,38 @@ static const char *get_vsn_url(const svn_ra_dav_resource_t *rsrc)
                       SVN_RA_DAV__PROP_CHECKED_IN, APR_HASH_KEY_STRING);
 }
 
+static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
+                                  void *baton,
+                                  prop_setter_t setter,
+                                  svn_string_t *vsn_url_name,
+                                  apr_pool_t *pool)
+{
+  const char *vsn_url;
+  svn_string_t *vsn_url_value;
+  svn_error_t *err;
+
+  /* store the version URL as a property */
+  vsn_url = get_vsn_url(rsrc);
+  if (vsn_url == NULL)
+    return NULL;
+
+  vsn_url_value = svn_string_create(vsn_url, pool);
+  err = (*setter)(baton, vsn_url_name, vsn_url_value);
+  if (err)
+    return svn_error_quick_wrap(err,
+                                "could not save the URL of the "
+                                "version resource");
+
+  return NULL;
+}
+
 static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
                                    const char *url,
                                    void *dir_baton,
                                    apr_array_header_t *subdirs,
                                    apr_array_header_t *files,
+                                   prop_setter_t setter,
+                                   svn_string_t *vsn_url_name,
                                    apr_pool_t *pool)
 {
   apr_hash_t *dirents;
@@ -141,8 +172,9 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
             {
               /* don't insert "this dir" into the set of subdirs */
 
-              /* ### it would be nice to use MSFT's "1,noroot" extension to
-                 ### the Depth header */
+              /* store the version URL for this resource */
+              SVN_ERR( store_vsn_url(r, dir_baton, setter, vsn_url_name,
+                                     pool) );
             }
           else
             {
@@ -220,7 +252,6 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   svn_string_t *name;
   void *file_baton;
   int rv;
-  const char *vsn_url;
 
   printf("fetching and saving %s\n", rsrc->url);
 
@@ -258,28 +289,8 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   /* ### fetch properties */
 
   /* store the version URL as a property */
-  vsn_url = get_vsn_url(rsrc);
-  if (vsn_url != NULL)
-    {
-      svn_string_t *vsn_url_value;
-
-      /* ### use set_wc_file_prop */
-
-      vsn_url_value = svn_string_create(vsn_url, pool);
-      err = (*editor->change_file_prop)(file_baton,
-                                        vsn_url_name, vsn_url_value);
-      if (err)
-        {
-          err = svn_error_quick_wrap(err,
-                                     "could not save the URL of the "
-                                     "version resource");
-          /* ### do we really need to bother with closing the file_baton? */
-          goto error;
-        }
-    }
-
-  /* all done! */
-  err = NULL;
+  err = store_vsn_url(rsrc, file_baton, editor->change_file_prop,
+                      vsn_url_name, pool);
 
  error:
   err2 = (*editor->close_file)(file_baton);
@@ -488,7 +499,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
           /* We're not in the root, add a directory */
           name = my_basename(url, ras->pool);
-          
+
           printf("adding directory: %s\n", name->data);
           err = (*editor->add_directory) (name, parent_baton,
                                           NULL, SVN_INVALID_REVNUM,
@@ -508,7 +519,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       subdir->parent_baton = this_baton;
       PUSH_SUBDIR(subdirs, subdir);
 
-      err = fetch_dirents(ras, url, this_baton, subdirs, files, ras->pool);
+      err = fetch_dirents(ras, url, this_baton, subdirs, files,
+                          editor->change_dir_prop, vsn_url_name, ras->pool);
       if (err)
         return svn_error_quick_wrap(err, "could not fetch directory entries");
 
