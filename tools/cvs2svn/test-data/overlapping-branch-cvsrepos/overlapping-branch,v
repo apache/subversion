@@ -1,0 +1,43 @@
+head     1.1;
+branch   1.1.1;
+access   ;
+symbols
+	vendorA:1.1.1
+	vendorB:1.1.1;
+locks    ; strict;
+comment  @# @;
+
+
+1.1
+date     2002.11.30.19.27.42;  author jrandom;  state Exp;
+branches 1.1.1.1;
+next     ;
+
+1.1.1.1
+date     2002.11.30.19.27.42;  author jrandom;  state Exp;
+branches ;
+next     ;
+
+
+desc
+@@
+
+
+
+1.1
+log
+@The content of this file is unimportant, what matters is that the
+same branch has two different symbolic names, an illegal condition
+that cvs2svn.py should detect early.
+@
+text
+@Nothing to see here.
+@
+
+
+1.1.1.1
+log
+@imported
+@
+text
+@@
