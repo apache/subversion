@@ -260,7 +260,7 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   apr_size_t len;
 
   assert(conn->read_ptr == conn->read_end);
-  writebuf_flush(conn, pool);
+  SVN_ERR (writebuf_flush(conn, pool));
   len = sizeof(conn->read_buf);
   SVN_ERR(readbuf_input(conn, conn->read_buf, &len));
   conn->read_ptr = conn->read_buf;
@@ -299,7 +299,7 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Read large chunks directly into buffer. */
   while (end - data > (apr_ssize_t)sizeof(conn->read_buf))
     {
-      writebuf_flush(conn, pool);
+      SVN_ERR (writebuf_flush(conn, pool));
       count = end - data;
       SVN_ERR(readbuf_input(conn, data, &count));
       data += count;
