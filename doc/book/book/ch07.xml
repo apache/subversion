@@ -522,6 +522,12 @@ collabnet = svn.collab.net
           </varlistentry>
         </variablelist>
 
+        <para>The <literal>tunnels</literal> section allows you to
+          define new tunnel schemes for use with
+          <command>svnserve</command> and <literal>svn://</literal>
+          client connections.  For more details, see <xref
+          linkend="svn-ch-6-sect-3.3"/>.</para>
+
         <para>The <literal>miscellany</literal> section is where
           everything that doesn't belong elsewhere winds up.
           <footnote>
