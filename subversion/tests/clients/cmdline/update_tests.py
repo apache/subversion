@@ -891,6 +891,51 @@ def update_replace_dir(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
+#----------------------------------------------------------------------
+
+def update_single_file(sbox):
+  "update with explict file target"
+  
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Make a local mod to a file which will be committed
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, '\nAppended text for mu')
+
+  # Commit.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
+    print "commit failed"
+    return 1
+
+  # At one stage 'svn up file' failed with a parent lock error
+  was_cwd = os.getcwd()
+  os.chdir(os.path.join(wc_dir, 'A'))
+  ### Can't get run_and_verify_update to work having done the chdir.
+  outlines, errlines = svntest.main.run_svn(None, 'up', '-r1', 'mu')
+  os.chdir(was_cwd)
+  if errlines:
+    print "update failed"
+    return 1
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+
 ########################################################################
 # Run the tests
 
@@ -907,6 +952,7 @@ test_list = [ None,
               update_after_add_rm_deleted,
               update_missing,
               update_replace_dir,
+              update_single_file,
              ]
 
 if __name__ == '__main__':
