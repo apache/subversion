@@ -38,7 +38,6 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
   void *trace_edit_baton;
   svn_error_t *err;
   int i;
-  svn_string_t *local_dir;
 
   /* TODO Fixme: This only works for one repo checkout at a shot.  In
      CVS, when we checkout one project and give it a destination
@@ -80,21 +79,20 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
     (args->nelts == 1) or (args->nelts > 1). -Fitz
 
    */
-
-  /* Ensure that we have a default dir to checkout into. */
-  if (! opt_state->target)
-    local_dir = svn_path_last_component (repos_url,
-                                         svn_path_local_style,
-                                         pool);
-  else
-    local_dir = opt_state->target;
-
-  /* Check out all requested URLs. */
   for (i = 0; i < opt_state->args->nelts; i++)
     {
+      svn_string_t *local_dir;
       svn_string_t *repos_url
         = ((svn_string_t **) (opt_state->args->elts))[0];
 
+      /* Ensure that we have a default dir to checkout into. */
+      if (! opt_state->target)
+        local_dir = svn_path_last_component (repos_url,
+                                             svn_path_local_style,
+                                             pool);
+      else
+        local_dir = opt_state->target;
+      
       err = svn_cl__get_trace_update_editor (&trace_editor,
                                              &trace_edit_baton,
                                              local_dir,
@@ -112,8 +110,8 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
                                  pool);
       if (err)
         return err;
+      
     }
-
   return SVN_NO_ERROR;
 }
 
