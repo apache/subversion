@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path
+import string, sys, re, os.path
 
 # Our testing module
 import svntest
@@ -324,6 +324,79 @@ def remove_props(sbox):
                                             wc_dir):
     return 1
 
+
+#----------------------------------------------------------------------
+
+# Helper for update_conflict_props() test -- a custom singleton handler.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered an an extra file on disk.  Verify that
+  it matches one of the regular expressions in the EXTRA_FILES list.
+  If it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      return 0
+
+  print "Found unexpected disk object:", node.name
+  raise svntest.tree.SVNTreeUnequal
+
+def update_conflict_props(sbox):
+  "update with conflicting props"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Add a property to a file
+  mu_path = os.path.join(wc_dir, 'A', 'mu') 
+  svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', mu_path)
+
+  # Commit the file
+  svntest.main.run_svn(None, 'ci', '-m', '"logmsg"', wc_dir)
+
+  # Update to rev 1
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
+
+  # Add a conflicting property
+  svntest.main.run_svn(None, 'propset', 'cash-sound', 'beep!', mu_path)
+
+  # Create expected output tree for an update of the wc_backup.
+  output_list = [ [mu_path,
+                   None, {}, {'status' : '_C'}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update.
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree[2][2]['cash-sound'] = 'beep!'  # A/mu
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if (item[0] == mu_path):
+      item[3]['status'] = '_C'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  extra_files = ['mu.*\.prej']
+  # Do the update and check the results in three ways... INCLUDING PROPS
+  if svntest.actions.run_and_verify_update(wc_dir,
+                                           expected_output_tree,
+                                           expected_disk_tree,
+                                           expected_status_tree,
+                                           None,
+                                           detect_conflict_files, extra_files,
+                                           None, None, 1):
+    return 1
+
+  if len(extra_files) != 0:
+    print "didn't get conflict file mu .prej"
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -335,6 +408,7 @@ test_list = [ None,
               update_props,
               downdate_props,
               remove_props,
+              update_conflict_props,
              ]
 
 if __name__ == '__main__':
