@@ -160,13 +160,28 @@ get_next_length (apr_size_t *length, DBC *cursor, DBT *query)
   return db_err;
 }
 
-svn_error_t *
-svn_fs__string_read (svn_fs_t *fs,
-                     const char *key,
-                     char *buf,
-                     apr_off_t offset,
-                     apr_size_t *len,
-                     trail_t *trail)
+
+/* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part
+ * of TRAIL.
+ * 
+ * On return, *LEN is set to the number of bytes read. This value may
+ * be less than the number requested.
+ *
+ * If OFFSET is past the end of the string, then *LEN will be set to
+ * zero. Callers which are advancing OFFSET as they read portions of
+ * the string can terminate their loop when *LEN is returned as zero
+ * (which will occur when OFFSET == length(the string)).
+ * 
+ * If string KEY does not exist, the error SVN_ERR_FS_NO_SUCH_STRING
+ * is returned.
+ */
+static svn_error_t *
+string_read (svn_fs_t *fs,
+             const char *key,
+             char *buf,
+             apr_off_t offset,
+             apr_size_t *len,
+             trail_t *trail)
 {
   int db_err;
   DBT query, result;
@@ -221,6 +236,31 @@ cursor_error:
   /* An error occurred somewhere. Close the cursor and return the error. */
   cursor->c_close (cursor);
   return DB_WRAP (fs, "reading string", db_err);
+}
+
+
+svn_error_t *
+svn_fs__string_read (svn_fs_t *fs,
+                     const char *key,
+                     char *buf,
+                     apr_off_t offset,
+                     apr_size_t *len,
+                     trail_t *trail)
+{
+  apr_size_t amt_read = 0;
+
+  while (1)
+    {
+      apr_size_t size = *len - amt_read;
+      SVN_ERR (string_read (fs, key, buf + amt_read, offset + amt_read, 
+                            &size, trail));
+      amt_read += size;
+      if ((size == 0) || (amt_read == *len))
+        break;
+    }
+  
+  *len = amt_read;
+  return SVN_NO_ERROR;
 }
 
 
