@@ -41,6 +41,7 @@ Karl M3 stack:
 
    - fs work with Mike
    - conservative mime type detection
+   - Greg's suggested rewrite (unwrite) of hook system
    - DB_RUN_RECOVERY, about which Greg writes:
 
      As much of that as you'd like to do :-) The bulk of the code
