@@ -1500,7 +1500,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  *
  * If @a current_rev is a valid revnum, then do an out-of-dateness
  * check.  If the revnum is less than the last-changed-revision of @a
- * path, return SVN_ERR_FS_OUT_OF_DATE.
+ * path (or if @a path doesn't exist in HEAD), return SVN_ERR_FS_OUT_OF_DATE.
  *
  * If @a path is non-existent, that's fine.  The path is reserved, and
  * a lock-token is returned.
@@ -1532,7 +1532,7 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  *
  * If @a current_rev is a valid revnum, then do an out-of-dateness
  * check.  If the revnum is less than the last-changed-revision of @a
- * path, return SVN_ERR_FS_OUT_OF_DATE.
+ * path (or if @a path doesn't exist in HEAD), return SVN_ERR_FS_OUT_OF_DATE.
  *
  * If this function returns successfully, the caller can assume that
  * @a lock now represents the lock attached to @a lock->path.  Path is

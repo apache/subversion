@@ -821,10 +821,8 @@ typedef struct svn_ra_plugin_t
    *
    * If @a current_rev is a valid revnum, then do an out-of-dateness
    * check.  If the revnum is less than the last-changed-revision of @a
-   * path, return SVN_ERR_RA_OUT_OF_DATE.
+   * path (or if @a path doesn't exist in HEAD), return SVN_ERR_RA_OUT_OF_DATE.
    *
-   * If @a path is non-existent, that's fine.  The path is reserved, and
-   * a lock is still returned.  
    */
   svn_error_t *(*lock) (void *session_baton,
                         svn_lock_t **lock,
