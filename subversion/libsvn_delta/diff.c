@@ -71,6 +71,8 @@ struct svn_diff__tree_t
 struct svn_diff__position_t
 {
   svn_diff__position_t *next;
+  svn_diff__position_t *prev;
+
   svn_diff__node_t     *node;
   apr_off_t             offset;
 };
@@ -201,9 +203,8 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
                      int position_idx,
                      apr_pool_t *pool)
 {
-  svn_diff__position_t *start_position;
-  svn_diff__position_t *position = NULL;
-  svn_diff__position_t **position_ref;
+  svn_diff__position_t sentinel_position;
+  svn_diff__position_t *position = &sentinel_position;
   void *token;
   apr_off_t offset;
 
@@ -211,7 +212,9 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
 
   SVN_ERR(vtable->datasource_open(diff_baton, datasource));
 
-  position_ref = &start_position;
+  sentinel_position.next = &sentinel_position;
+  sentinel_position.prev = &sentinel_position;
+
   offset = 0;
   while (1)
     {
@@ -220,20 +223,24 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
         break;
 
       offset++;
-      position = svn_diff__tree_insert_token(tree,
-                                             diff_baton, vtable,
-                                             token, offset,
-                                             position_idx,
-                                             pool);
-      *position_ref = position;
-      position_ref = &position->next;
+      position->next = svn_diff__tree_insert_token(tree,
+                                                   diff_baton, vtable,
+                                                   token, offset,
+                                                   position_idx,
+                                                   pool);
+      position->next->prev = position;
+      position = position->next;
     }
-
-  *position_ref = start_position;
 
   SVN_ERR(vtable->datasource_close(diff_baton, datasource));
 
-  *position_list = position;
+  if (position != &sentinel_position)
+    {
+      position->next = sentinel_position.next;
+      position->next->prev = position;
+    
+      *position_list = position;
+    }
 
   return NULL;
 }
@@ -249,6 +256,11 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
  * The LCS algorithm implemented here is described by Sun Wu,
  * Udi Manber and Gene Meyers in "An O(NP) Sequence Comparison Algorithm"
  *
+ * It is mixed with variation 4b of "An O(ND) Difference Algorithm
+ * and Its Variations" by Meyers.  It doesn't implement the linear space
+ * LCS recovery algorithm, but does take advantage of scanning
+ * from both the start aswell as the end of sequences being compared.
+ *
  */
 
 typedef struct svn_diff__snake_t svn_diff__snake_t;
@@ -262,10 +274,10 @@ struct svn_diff__snake_t
 
 static APR_INLINE
 void
-svn_diff__snake(apr_off_t k,
-                svn_diff__snake_t *fp,
-                int idx,
-                apr_pool_t *pool)
+svn_diff__snake_forward(apr_off_t k,
+                        svn_diff__snake_t *fp,
+                        int idx,
+                        apr_pool_t *pool)
 {
   svn_diff__position_t *start_position[2];
   svn_diff__position_t *position[2];
@@ -300,7 +312,7 @@ svn_diff__snake(apr_off_t k,
       position[1] = position[1]->next;
     }
 
-  if (position[1] != start_position[1])  // if y > fp_y
+  if (position[1] != start_position[1])
     {
       lcs = apr_palloc(pool, sizeof(*lcs));
 
@@ -322,6 +334,99 @@ svn_diff__snake(apr_off_t k,
   fp[k].y = position[1]->offset;
 }
 
+static APR_INLINE
+void
+svn_diff__snake_reverse(apr_off_t k,
+                        svn_diff__snake_t *fp,
+                        int idx,
+                        apr_pool_t *pool)
+{
+  svn_diff__position_t *start_position[2];
+  svn_diff__position_t *position[2];
+  svn_diff__lcs_t *lcs;
+  svn_diff__lcs_t *previous_lcs;
+
+  if (fp[k - 1].y < fp[k + 1].y - 1)
+    {
+      start_position[0] = fp[k - 1].position[0]->prev;
+      start_position[1] = fp[k - 1].position[1];
+
+      previous_lcs = fp[k - 1].lcs;
+    }
+  else
+    {
+      start_position[0] = fp[k + 1].position[0];
+      start_position[1] = fp[k + 1].position[1]->prev;
+
+      previous_lcs = fp[k + 1].lcs;
+    }
+
+  /* ### Optimization, skip all positions that don't have matchpoints
+   * ### anyway. Beware of the sentinel, don't skip it!
+   */
+
+  position[0] = start_position[0];
+  position[1] = start_position[1];
+
+  while (position[0]->node == position[1]->node)
+    {
+      position[0] = position[0]->prev;
+      position[1] = position[1]->prev;
+    }
+
+  if (position[1] != start_position[1])
+    {
+      lcs = apr_palloc(pool, sizeof(*lcs));
+
+      lcs->position[idx] = position[0]->next;
+      lcs->position[abs(1 - idx)] = position[1]->next;
+      lcs->length = start_position[1]->offset - position[1]->offset;
+
+      lcs->next = previous_lcs;
+      fp[k].lcs = lcs;
+    }
+  else
+    {
+      fp[k].lcs = previous_lcs;
+    }
+
+  fp[k].position[0] = position[0];
+  fp[k].position[1] = position[1];
+
+  fp[k].y = position[1]->offset;
+}
+
+static APR_INLINE
+svn_diff__lcs_t *
+svn_diff__recover_lcs(apr_off_t k,
+                      svn_diff__snake_t *fp_forward,
+                      svn_diff__snake_t *fp_reverse)
+{
+  svn_diff__lcs_t *lcs_forward;
+  svn_diff__lcs_t *lcs_reverse;
+
+  lcs_forward = fp_forward[k].lcs;
+  lcs_reverse = fp_reverse[k].lcs;
+
+  if (lcs_forward == NULL)
+    return lcs_reverse;
+
+  if (lcs_reverse->length > 0
+      && lcs_forward->position[0]->offset + lcs_forward->length
+         == lcs_reverse->position[0]->offset + lcs_reverse->length
+      && lcs_forward->position[1]->offset + lcs_forward->length
+         == lcs_reverse->position[1]->offset + lcs_reverse->length)
+    {
+      /* Don't record the same common range twice, skip the reverse */
+      lcs_reverse = lcs_reverse->next;
+    }
+
+  lcs_forward = svn_diff__lcs_reverse(lcs_forward);
+  fp_forward[k].lcs->next = lcs_reverse;
+
+  return lcs_forward;
+}
+
 static
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
@@ -331,11 +436,13 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
 {
   int idx;
   apr_off_t length[2];
-  svn_diff__snake_t *fp;
+  svn_diff__snake_t *fp_forward;
+  svn_diff__snake_t *fp_reverse;
   apr_off_t d;
   apr_off_t k;
   apr_off_t p = 0;
   svn_diff__lcs_t *lcs;
+  int check_for_overlap;
 
   svn_diff__position_t sentinel_position[2];
   svn_diff__node_t     sentinel_node[2];
@@ -346,44 +453,31 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
 
   idx = length[0] > length[1] ? 1 : 0;
 
-  fp = apr_pcalloc(pool, sizeof(*fp) * (apr_size_t)(length[0] + length[1] + 3));
-  fp += length[idx] + 1;
+  fp_forward = apr_pcalloc(pool,
+                           sizeof(*fp_forward)
+                           * (apr_size_t)(length[0] + length[1] + 3));
+  fp_forward += length[idx] + 1;
 
+  fp_reverse = apr_palloc(pool,
+                          sizeof(*fp_reverse)
+                          * (apr_size_t)(length[0] + length[1] + 3));
+  fp_reverse += length[idx] + 1;
+  
   sentinel_position[idx].next = position_list1->next;
-  position_list1->next = &sentinel_position[idx];
+  sentinel_position[idx].prev = position_list1;
+  sentinel_position[idx].next->prev = &sentinel_position[idx];
+  sentinel_position[idx].prev->next = &sentinel_position[idx];
+  
   sentinel_position[abs(1 - idx)].next = position_list2->next;
-  position_list2->next = &sentinel_position[abs(1 - idx)];
+  sentinel_position[abs(1 - idx)].prev = position_list2;
+  sentinel_position[abs(1 - idx)].next->prev = &sentinel_position[abs(1 - idx)];
+  sentinel_position[abs(1 - idx)].prev->next = &sentinel_position[abs(1 - idx)];
 
   sentinel_position[0].node = &sentinel_node[0];
   sentinel_position[1].node = &sentinel_node[1];
 
-  /* k = -1 will be the first to be used to get previous
-   * position information from, make sure it holds sane
-   * data
-   */
-  fp[-1].position[0] = sentinel_position[0].next;
-  fp[-1].position[1] = &sentinel_position[1];
-
   d = length[abs(1 - idx)] - length[idx];
-  p = 0;
-  do
-    {
-      for (k = -p; k < d; k++)
-        {
-          svn_diff__snake(k, fp, idx, pool);
-        }
-
-      for (k = d + p; k > d; k--)
-        {
-          svn_diff__snake(k, fp, idx, pool);
-        }
-
-      svn_diff__snake(d, fp, idx, pool);
-
-      p++;
-    }
-  while (fp[d].position[1] != &sentinel_position[1]);
-
+  
   /* Since EOF is always a sync point we tack on an EOF link
    * with sentinel positions
    */
@@ -393,9 +487,98 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   lcs->position[1] = apr_pcalloc(pool, sizeof(*lcs->position[1]));
   lcs->position[1]->offset = position_list2->offset + 1;
   lcs->length = 0;
-  lcs->next = fp[d].lcs;
+  lcs->next = NULL;
+  
+  /* k = -1 will be the first to be used to get previous
+   * position information from, make sure it holds sane
+   * data
+   */
+  fp_forward[-1].position[0] = sentinel_position[0].next;
+  fp_forward[-1].position[1] = &sentinel_position[1];
 
-  return svn_diff__lcs_reverse(lcs);
+  for (k = 0; k <= d; k++)
+    {
+      fp_reverse[k].y = sentinel_position[1].offset;
+      fp_reverse[k].lcs = lcs;
+    }
+
+  /* k = d + 1 will be the first to be used to get previous
+   * position information from, make sure it holds sane
+   * data.
+   */
+  fp_reverse[d + 1].position[0] = sentinel_position[0].prev;
+  fp_reverse[d + 1].position[1] = &sentinel_position[1];
+  fp_reverse[d + 1].lcs = lcs;
+
+  p = 0;
+  while (1)
+    {
+      /* Initialize the fp_reverse points now within reach */
+      fp_reverse[-p - 1].y = sentinel_position[1].offset;
+      fp_reverse[-p - 1].lcs = lcs;
+      fp_reverse[d + p + 1].y = sentinel_position[1].offset;
+      fp_reverse[d + p + 1].lcs = lcs;
+
+      /* Forward */
+      check_for_overlap = !(d & 1);
+      for (k = -p; k < d; k++)
+        {
+          svn_diff__snake_forward(k, fp_forward, idx, pool);
+
+          if (check_for_overlap
+              && fp_forward[k].y >= fp_reverse[k].y)
+            {
+              return svn_diff__recover_lcs(k, fp_forward, fp_reverse);
+            }
+
+          check_for_overlap ^= 1;
+        }
+
+      check_for_overlap = 1;
+      for (k = d + p; k >= d; k--)
+        {
+          svn_diff__snake_forward(k, fp_forward, idx, pool);
+  
+          if (check_for_overlap
+              && fp_forward[k].y >= fp_reverse[k].y)
+            {
+              return svn_diff__recover_lcs(k, fp_forward, fp_reverse);
+            }
+
+          check_for_overlap ^= 1;
+        }
+
+      /* Reverse */
+      check_for_overlap = 0;
+      for (k = d + p; k > 0; k--)
+        {
+          svn_diff__snake_reverse(k, fp_reverse, idx, pool);
+  
+          if (check_for_overlap
+              && fp_forward[k].y >= fp_reverse[k].y)
+            {
+              return svn_diff__recover_lcs(k, fp_forward, fp_reverse);
+            }
+
+          check_for_overlap ^= 1;
+        }
+
+      check_for_overlap = d & 1;
+      for (k = -p; k <= 0; k++)
+        {
+          svn_diff__snake_reverse(k, fp_reverse, idx, pool);
+  
+          if (check_for_overlap
+              && fp_forward[k].y >= fp_reverse[k].y)
+            {
+              return svn_diff__recover_lcs(k, fp_forward, fp_reverse);
+            }
+
+          check_for_overlap ^= 1;
+        }
+
+      p++;
+    }
 }
 
 svn_error_t *
