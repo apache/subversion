@@ -364,9 +364,13 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
   apr_pool_t *revpool = svn_pool_create (pool);
   apr_pool_t *nodepool = svn_pool_create (pool);
 
+  SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
+  if (linebuf == NULL)
+    return svn_error_create
+      (SVN_ERR_BAD_INPUT, 0, NULL, pool, "empty or incomplete input data");
+    
   /* The first two lines of the stream are the dumpfile-format version
      number, and a blank line. */
-  SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
   SVN_ERR (validate_format_version (linebuf->data));
 
   /* A dumpfile "record" is defined to be a header-block of
