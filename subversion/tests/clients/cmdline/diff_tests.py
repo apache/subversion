@@ -1072,7 +1072,7 @@ def diff_deleted_in_head(sbox):
   the_url = sbox.repo_url + '/A'
   diff_output = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'diff', '-r',
-                                                   '1:2', the_url)
+                                                   '1:2', the_url + "@2")
 
 
 #----------------------------------------------------------------------
@@ -1120,7 +1120,7 @@ def diff_targets(sbox):
     diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    update_path, add_path)
 
-    regex = 'svn: \'.*\' was not found in the repository'
+    regex = 'svn: Unable to find repository location for \'.*\''
     for line in err_output:
       if re.match(regex, line):
         break
@@ -1138,6 +1138,7 @@ def diff_targets(sbox):
     diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    '--old', parent_path,
                                                    'alpha', 'theta')
+    regex = 'svn: \'.*\' was not found in the repository'
     for line in err_output:
       if re.match(regex, line):
         break

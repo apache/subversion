@@ -811,6 +811,31 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               apr_pool_t *pool);
 
 
+/**
+ * @since New in 1.1.
+ *
+ * Produce diff output which describes the delta between the
+ * filesystem object @a path in peg revision @a peg_revision, as it
+ * changed between @a revision1 and @a revision2.  Print the output of
+ * the diff to @a outfile, and any errors to @a errfile.  @a path can
+ * be either a working-copy path or URL.
+ *
+ * All other options are handled identically to svn_client_diff.
+ */
+svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
+                                  const char *path,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const svn_opt_revision_t *start_revision,
+                                  const svn_opt_revision_t *end_revision,
+                                  svn_boolean_t recurse,
+                                  svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t no_diff_deleted,
+                                  apr_file_t *outfile,
+                                  apr_file_t *errfile,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
+
+
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into 
  * the working-copy path @a target_wcpath.
  *

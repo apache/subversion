@@ -30,12 +30,74 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_types.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 
 
 /*** Code. ***/
+
+/* Parse a working-copy or url PATH, looking for an "@" sign, e.g.
+
+         foo/bar/baz@13
+         http://blah/bloo@27
+         blarg/snarf@HEAD
+
+   If an "@" is found, return the two halves in *TRUEPATH and *REV,
+   allocating in POOL.
+
+   If no "@" is found, set *TRUEPATH to PATH and *REV to kind 'unspecified'.
+*/
+static svn_error_t *
+parse_path (svn_opt_revision_t *rev,
+            const char **truepath,
+            const char *path /* UTF-8! */,
+            apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_opt_revision_t start_revision, end_revision;
+
+  /* scanning from right to left, just to be friendly to any
+     screwed-up filenames that might *actually* contain @-signs.  :-) */
+  for (i = (strlen (path) - 1); i >= 0; i--)
+    {
+      /* If we hit a path separator, stop looking. */
+      if (path[i] == '/')
+        break;
+
+      if (path[i] == '@')
+        {
+          const char *native_rev;
+
+          SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
+                                              subpool));
+
+          if (svn_opt_parse_revision (&start_revision,
+                                      &end_revision,
+                                      native_rev, subpool))
+            return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Syntax error parsing revision '%s'"),
+                                      path + i + 1);
+
+          *truepath = apr_pstrndup (pool, path, i);
+          rev->kind = start_revision.kind;
+          rev->value = start_revision.value;
+
+          svn_pool_destroy (subpool);
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Didn't find an @-sign. */
+  *truepath = path;
+  rev->kind = svn_opt_revision_unspecified;
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
 
 /* An svn_opt_subcommand_t to handle the 'diff' command.
    This implements the `svn_opt_subcommand_t' interface. */
@@ -51,6 +113,7 @@ svn_cl__diff (apr_getopt_t *os,
   apr_status_t status;
   const char *old_target, *new_target;
   apr_pool_t *subpool;
+  svn_boolean_t pegged_diff = FALSE;
   int i;
 
   /* Fall back to "" to get options initialized either way. */
@@ -67,59 +130,46 @@ svn_cl__diff (apr_getopt_t *os,
     return svn_error_wrap_apr (status, _("Can't open stderr"));
 
   if (! opt_state->old_target && ! opt_state->new_target
-      && opt_state->start_revision.kind != svn_opt_revision_unspecified
-      && opt_state->end_revision.kind != svn_opt_revision_unspecified
-      && (os->argc - os->ind == 1)
-      && svn_path_is_url (os->argv[os->ind]))
+      && (os->argc - os->ind == 2)
+      && svn_path_is_url (os->argv[os->ind])
+      && svn_path_is_url (os->argv[os->ind + 1])
+      && opt_state->start_revision.kind == svn_opt_revision_unspecified
+      && opt_state->end_revision.kind == svn_opt_revision_unspecified)
     {
-      /* The 'svn diff -rN:M URL' case (matches 'svn merge'). */
-      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                             opt_state->targets,
-                                             &(opt_state->start_revision),
-                                             &(opt_state->end_revision),
-                                             FALSE, /* no @revs */ pool));
-
-      old_target = new_target = APR_ARRAY_IDX(targets, 0, const char *);
-      targets->nelts = 0;
-    }
-  else if (! opt_state->old_target && ! opt_state->new_target
-           && (os->argc - os->ind == 2)
-           && svn_path_is_url (os->argv[os->ind])
-           && svn_path_is_url (os->argv[os->ind + 1]))
-    {
-      /* The 'svn diff URL1[@N] URL2[@M]' case (matches 'svn merge'). */
+      /* The 'svn diff OLD_URL[@OLDREV] NEW_URL[@NEWREV]' case matches. */
       SVN_ERR (svn_opt_args_to_target_array (&targets, os,
                                              opt_state->targets,
                                              &(opt_state->start_revision),
                                              &(opt_state->end_revision),
                                              TRUE, /* extract @revs */ pool));
 
-      old_target = APR_ARRAY_IDX(targets, 0, const char *);
-      new_target = APR_ARRAY_IDX(targets, 1, const char *);
+      old_target = APR_ARRAY_IDX (targets, 0, const char *);
+      new_target = APR_ARRAY_IDX (targets, 1, const char *);
       targets->nelts = 0;
-
+      
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_opt_revision_head;
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         opt_state->end_revision.kind = svn_opt_revision_head;
     }
-  else
+  else if (opt_state->old_target)
     {
-      /* The 'svn diff [-rN[:M]] [--old OLD] [--new NEW] [PATH ...]' case */
-      apr_array_header_t *tmp = apr_array_make (pool, 2, sizeof (const char *));
-      apr_array_header_t *tmp2;
+      apr_array_header_t *tmp, *tmp2;
+      
+      /* The 'svn diff --old=OLD[@OLDREV] [--new=NEW[@NEWREV]]
+         [PATH...]' case matches. */
 
       SVN_ERR (svn_opt_args_to_target_array (&targets, os,
                                              opt_state->targets,
-                                             &(opt_state->start_revision),
-                                             &(opt_state->end_revision),
-                                             FALSE, /* no @revs */ pool));
+                                             NULL,
+                                             NULL,
+                                             FALSE, pool));
 
-      APR_ARRAY_PUSH (tmp, const char *) = (opt_state->old_target
-                                            ? opt_state->old_target : ".");
+      tmp = apr_array_make (pool, 2, sizeof (const char *));
+      APR_ARRAY_PUSH (tmp, const char *) = (opt_state->old_target);
       APR_ARRAY_PUSH (tmp, const char *) = (opt_state->new_target
                                             ? opt_state->new_target
-                                            :  APR_ARRAY_IDX(tmp, 0,
+                                            : APR_ARRAY_IDX (tmp, 0,
                                                              const char *));
 
       SVN_ERR (svn_opt_args_to_target_array (&tmp2, os, tmp,
@@ -127,20 +177,67 @@ svn_cl__diff (apr_getopt_t *os,
                                              &(opt_state->end_revision),
                                              TRUE, /* extract @revs */ pool));
 
-      old_target = APR_ARRAY_IDX(tmp2, 0, const char *);
-      new_target = APR_ARRAY_IDX(tmp2, 1, const char *);
+      old_target = APR_ARRAY_IDX (tmp2, 0, const char *);
+      new_target = APR_ARRAY_IDX (tmp2, 1, const char *);
 
-      /* Default to HEAD for an URL, BASE otherwise */
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        opt_state->start_revision.kind = (svn_path_is_url (old_target)
-                                          ? svn_opt_revision_head
-                                          : svn_opt_revision_base);
-
-      /* Default to HEAD for an URL, WORKING otherwise */
+        opt_state->start_revision.kind = svn_path_is_url (old_target)
+          ? svn_opt_revision_head : svn_opt_revision_base;
+      
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-        opt_state->end_revision.kind = (svn_path_is_url (new_target)
-                                        ? svn_opt_revision_head
-                                        : svn_opt_revision_working);
+        opt_state->end_revision.kind = svn_path_is_url (new_target)
+          ? svn_opt_revision_head : svn_opt_revision_working;
+    }
+  else
+    {
+      apr_array_header_t *tmp, *tmp2;
+      svn_boolean_t working_copy_present = FALSE;
+      
+      /* The 'svn diff [-r M[:N]] [TARGET[@REV]...]' case matches. */
+
+      /* Here each target is a pegged object. Find out the starting
+         and ending paths for each target. */
+      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
+                                             opt_state->targets,
+                                             NULL,
+                                             NULL,
+                                             FALSE, pool));
+
+      svn_opt_push_implicit_dot_target (targets, pool);
+
+      tmp = apr_array_make (pool, 2, sizeof (const char *));
+      APR_ARRAY_PUSH (tmp, const char *) = ".";
+      APR_ARRAY_PUSH (tmp, const char *) = ".";
+      
+      SVN_ERR (svn_opt_args_to_target_array (&tmp2, os, tmp,
+                                             &(opt_state->start_revision),
+                                             &(opt_state->end_revision),
+                                             TRUE, /* extract @revs */ pool));
+
+      old_target = APR_ARRAY_IDX (tmp2, 0, const char *);
+      new_target = APR_ARRAY_IDX (tmp2, 1, const char *);
+
+      /* Check to see if at least one of our paths is a working copy
+         path. */
+      for (i = 0; i < targets->nelts; ++i)
+        {
+          const char *path = APR_ARRAY_IDX (targets, i, const char *);
+          if (! svn_path_is_url (path))
+            working_copy_present = TRUE;
+        }
+      
+      if (opt_state->start_revision.kind == svn_opt_revision_unspecified
+          && working_copy_present)
+          opt_state->start_revision.kind = svn_opt_revision_base;
+      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+        opt_state->end_revision.kind = working_copy_present
+          ? svn_opt_revision_working : svn_opt_revision_head;
+
+      /* Determine if we need to do pegged diffs. */
+      if (opt_state->start_revision.kind != svn_opt_revision_base
+          && opt_state->start_revision.kind != svn_opt_revision_working)
+          pegged_diff = TRUE;
+
     }
 
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -148,25 +245,56 @@ svn_cl__diff (apr_getopt_t *os,
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts; ++i)
     {
-      const char *path = APR_ARRAY_IDX(targets, i, const char *);
+      const char *path = APR_ARRAY_IDX (targets, i, const char *);
       const char *target1, *target2;
 
-      svn_pool_clear (subpool);
-      target1 = svn_path_join (old_target, path, subpool);
-      target2 = svn_path_join (new_target, path, subpool);
+      if (! pegged_diff)
+        {
+          svn_pool_clear (subpool);
+          target1 = svn_path_join (old_target, path, subpool);
+          target2 = svn_path_join (new_target, path, subpool);
+          
+          SVN_ERR (svn_client_diff (options,
+                                    target1,
+                                    &(opt_state->start_revision),
+                                    target2,
+                                    &(opt_state->end_revision),
+                                    opt_state->nonrecursive ? FALSE : TRUE,
+                                    opt_state->notice_ancestry ? FALSE : TRUE,
+                                    opt_state->no_diff_deleted,
+                                    outfile,
+                                    errfile,
+                                    ((svn_cl__cmd_baton_t *)baton)->ctx,
+                                    pool));
+        }
+      else
+        {
+          const char *truepath;
+          svn_opt_revision_t peg_revision;
+          
+          /* First check for a peg revision. */
+          SVN_ERR (parse_path (&peg_revision, &truepath, path, pool));
+          
+          /* Set the default peg revision if one was not specified. */
+          if (peg_revision.kind == svn_opt_revision_unspecified)
+            peg_revision.kind = svn_path_is_url (path)
+              ? svn_opt_revision_head : svn_opt_revision_working;
 
-      SVN_ERR (svn_client_diff (options,
-                                target1,
-                                &(opt_state->start_revision),
-                                target2,
-                                &(opt_state->end_revision),
-                                opt_state->nonrecursive ? FALSE : TRUE,
-                                opt_state->notice_ancestry ? FALSE : TRUE,
-                                opt_state->no_diff_deleted,
-                                outfile,
-                                errfile,
-                                ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                pool));
+          SVN_ERR (svn_client_diff_peg (options,
+                                        truepath,
+                                        &peg_revision,
+                                        &opt_state->start_revision,
+                                        &opt_state->end_revision,
+                                        opt_state->nonrecursive
+                                        ? FALSE : TRUE,
+                                        opt_state->notice_ancestry
+                                        ? FALSE : TRUE,
+                                        opt_state->no_diff_deleted,
+                                        outfile,
+                                        errfile,
+                                        ((svn_cl__cmd_baton_t *)baton)->ctx,
+                                        pool));
+        }
     }
   svn_pool_destroy (subpool);
 
