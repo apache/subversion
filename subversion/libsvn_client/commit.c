@@ -919,7 +919,15 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
             svn_path_split_nts (item->path, &adm_access_path, NULL, pool);
           adm_access = apr_hash_get (locked_dirs, adm_access_path,
                                      APR_HASH_KEY_STRING);
-          
+         
+          if ( ! adm_access )
+            {
+              SVN_ERR (svn_wc_adm_open (&adm_access, adm_access_path, TRUE,
+                                        pool));
+              apr_hash_set (locked_dirs, apr_pstrdup(pool, adm_access_path),
+                            APR_HASH_KEY_STRING, adm_access);
+            }
+
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
               && (item->kind == svn_node_dir)
               && (item->copyfrom_url))
