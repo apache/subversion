@@ -35,7 +35,7 @@ svn_fs__open_reps_table (DB **reps_p,
                          DB_ENV *env,
                          int create)
 {
-  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
+  const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *reps;
 
   DB_ERR (svn_bdb__check_version());

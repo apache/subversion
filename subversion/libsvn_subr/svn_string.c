@@ -386,7 +386,7 @@ svn_stringbuf_appendbytes (svn_stringbuf_t *str, const char *bytes,
   /* get address 1 byte beyond end of original bytestring */
   start_address = (str->data + str->len);
 
-  memcpy (start_address, (void *) bytes, count);
+  memcpy (start_address, bytes, count);
   str->len = total_len;
 
   str->data[str->len] = '\0';  /* We don't know if this is binary

@@ -438,8 +438,8 @@ get_dir_entries (apr_hash_t **entries_p,
       /* Now we have a rep, follow through to get the entries. */
       SVN_ERR (svn_fs__rep_contents (&entries_raw, fs, 
                                      noderev->data_key, trail));
-      entries_skel = svn_fs__parse_skel ((char *) entries_raw.data, 
-                                         entries_raw.len, trail->pool);
+      entries_skel = svn_fs__parse_skel (entries_raw.data, entries_raw.len,
+                                         trail->pool);
 
       /* Were there entries?  Make a hash from them. */
       if (entries_skel)
@@ -547,8 +547,8 @@ set_entry (dag_node_t *parent,
     {
       SVN_ERR (svn_fs__rep_contents (&raw_entries, fs, 
                                      mutable_rep_key, trail));
-      entries_skel = svn_fs__parse_skel ((char *) raw_entries.data, 
-                                         raw_entries.len, trail->pool);
+      entries_skel = svn_fs__parse_skel (raw_entries.data, raw_entries.len,
+                                         trail->pool);
       if (entries_skel)
         SVN_ERR (svn_fs__parse_entries_skel (&entries, entries_skel, 
                                              trail->pool));
@@ -696,8 +696,8 @@ svn_fs__dag_get_proplist (apr_hash_t **proplist_p,
      skel, and then attempt to parse *that* into a property hash.  */
   SVN_ERR (svn_fs__rep_contents (&raw_proplist, svn_fs__dag_get_fs (node), 
                                  noderev->prop_key, trail));
-  proplist_skel = svn_fs__parse_skel ((char *) raw_proplist.data, 
-                                      raw_proplist.len, trail->pool);
+  proplist_skel = svn_fs__parse_skel (raw_proplist.data, raw_proplist.len,
+                                      trail->pool);
   if (proplist_skel)
     SVN_ERR (svn_fs__parse_proplist_skel (&proplist, proplist_skel, 
                                           trail->pool));
@@ -988,7 +988,7 @@ delete_entry (dag_node_t *parent,
      the entries list.  Parse that list into a skel, and parse *that*
      into a hash. */
   SVN_ERR (svn_fs__rep_contents (&str, fs, mutable_rep_key, trail));
-  entries_skel = svn_fs__parse_skel ((char *) str.data, str.len, trail->pool);
+  entries_skel = svn_fs__parse_skel (str.data, str.len, trail->pool);
   if (entries_skel)
     SVN_ERR (svn_fs__parse_entries_skel (&entries, entries_skel, trail->pool));
   

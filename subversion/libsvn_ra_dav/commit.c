@@ -389,7 +389,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  const char *vsn_url,
                                  svn_boolean_t allow_404,
                                  int *code,
-                                 const char **locn)
+                                 char **locn)
 {
   ne_request *req;
   const char *body;
@@ -438,7 +438,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
                                        svn_boolean_t allow_404)
 {
   int code;
-  const char *locn = NULL;
+  char *locn = NULL;
   ne_uri parse;
   svn_error_t *err;
 
@@ -485,7 +485,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   ne_uri_parse(locn, &parse);
   res->wr_url = apr_pstrdup(cc->ras->pool, parse.path);
   ne_uri_free(&parse);
-  free((void *)locn);
+  free(locn);
 
   return SVN_NO_ERROR;
 }

@@ -73,7 +73,7 @@ static skel_t *explicit_atom (const char *data, apr_size_t len,
 
 
 skel_t *
-svn_fs__parse_skel (char *data,
+svn_fs__parse_skel (const char *data,
                     apr_size_t len,
                     apr_pool_t *pool)
 {

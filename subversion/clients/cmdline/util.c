@@ -317,10 +317,10 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
    *NEW_LEN.  */
 static void
 truncate_buffer_at_prefix (apr_size_t *new_len,
-                           const char *buffer,
+                           char *buffer,
                            const char *prefix)
 {
-  char *substring = (char *) buffer;
+  char *substring = buffer;
 
   assert (buffer && prefix);
 
@@ -377,7 +377,6 @@ svn_cl__get_log_message (const char **log_msg,
     {
       svn_string_t *log_msg_string = svn_string_create ("", pool);
 
-  
       log_msg_string->data = lmb->message;
       log_msg_string->len = strlen (lmb->message);
 
@@ -388,7 +387,7 @@ svn_cl__get_log_message (const char **log_msg,
 
       /* Trim incoming messages the EOF marker text and the junk that
          follows it.  */
-      truncate_buffer_at_prefix (NULL, *log_msg, EDITOR_EOF_PREFIX);
+      truncate_buffer_at_prefix (NULL, (char*)*log_msg, EDITOR_EOF_PREFIX);
 
       return SVN_NO_ERROR;
     }
