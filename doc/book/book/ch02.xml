@@ -26,10 +26,10 @@
     <title>The Repository</title>  
     
     <para>Subversion is a centralized system for sharing information.
-      At its core is a <firstterm>repository</firstterm>, which is a
-      central store of data.  The repository stores information in the
-      form of a <firstterm>filesystem tree</firstterm>&mdash;a typical
-      hierarchy of files and directories.  Any number of
+      At its core is a repository, which is a central store of data.
+      The repository stores information in the form of a
+      <firstterm>filesystem tree</firstterm>&mdash;a typical hierarchy
+      of files and directories.  Any number of
       <firstterm>clients</firstterm> connect to the repository, and
       then read or write to these files.  By writing data, a client
       makes the information available to others; by reading data, the
@@ -172,8 +172,9 @@
       <para>Subversion, CVS, and other version control systems use a
         <firstterm>copy-modify-merge</firstterm> model as an
         alternative to locking.  In this model, each user's client
-        reads the repository and creates a personal <firstterm>working
-        copy</firstterm> of the file or project.  Users then work in
+        contacts the project repository and creates a personal
+        <firstterm>working copy</firstterm>&mdash;a local reflection
+        of the repository's files and directories.  Users then work in
         parallel, modifying their private copies.  Finally, the
         private copies are merged together into a new, final version.
         The version control system often assists with the merging, but
@@ -214,8 +215,8 @@
         choose between them.  Note that software can't automatically
         resolve conflicts; only humans are capable of understanding
         and making the necessary intelligent choices.  Once Harry has
-        manually resolved the overlapping changes (perhaps by
-        discussing the conflict with Sally!), he can safely save the
+        manually resolved the overlapping changes&mdash;perhaps after
+        a discussion with Sally&mdash;he can safely save the
         merged file back to the repository.</para>
 
       <para>The copy-modify-merge model may sound a bit chaotic, but

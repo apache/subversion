@@ -287,10 +287,10 @@ $ svn log --revision {2002-11-20}:4040
 
     <para>Most of the time, you will start using a Subversion
       repository by doing a <firstterm>checkout</firstterm> of your
-      project.  <quote>Checking out</quote> a repository creates a
-      copy of it on your local machine.  This copy contains the
-      <literal>HEAD</literal> (latest revision) of the Subversion
-      repository that you specify on the command line:</para>
+      project.  Checking out a repository creates a copy of it on your
+      local machine.  This copy contains the <literal>HEAD</literal>
+      (latest revision) of the Subversion repository that you specify
+      on the command line:</para>
     
 
     <screen>
@@ -332,19 +332,12 @@ Checked out revision 3678.
     
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>
       model instead of <quote>lock-modify-unlock</quote> (see <xref
-      linkend="svn-ch-2"/>), you're now ready to start making changes
-      to the files and directories that you've checked out (known
-      collectively as your <firstterm>working
-      copy</firstterm>).</para>
-
-    <para>In other words, your <quote>working copy</quote> is now just
-      like any other collection of files and/or directories on your
-      system<footnote><para>Well, except for the fact that every
-      directory within your <quote>working copy</quote> also contains a
-      <filename>.svn</filename> subdirectory.  But that's getting a
-      little ahead of ourselves.</para></footnote>.  You can edit and
-      change them, move them around, you can even delete the entire
-      working copy and forget about it.</para>
+      linkend="svn-ch-2"/>), you're already able to start making
+      changes to the files and directories in your working copy.  Your
+      working copy is just like any other collection of files and
+      directories on your system.  You can edit and change them, move
+      them around, you can even delete the entire working copy and
+      forget about it.</para>
 
       <note>
         <para>While your working copy is <quote>just like any other
@@ -358,17 +351,16 @@ Checked out revision 3678.
           them later in this chapter.</para>
       </note>
 
-    <para>Unless you're ready to <firstterm>commit</firstterm> a new
-      file or directory, or changes to existing ones, there's no need
-      to further notify the Subversion server that you've done
-      anything.</para>
+    <para>Unless you're ready to xcommit a new file or directory, or
+      changes to existing ones, there's no need to further notify the
+      Subversion server that you've done anything.</para>
 
     <sidebar>
       <title>What's with the <filename>.svn</filename> directory?</title>
 
       <para>Every directory in a working copy contains an
-        <firstterm>administrative area</firstterm>, a subdirectory
-        named <filename>.svn</filename>.  Usually, directory listing
+        administrative area, a subdirectory named
+        <filename>.svn</filename>.  Usually, directory listing
         commands won't show this subdirectory, but it is nevertheless
         an important directory.  Whatever you do, don't delete or
         change anything in the administrative area!  Subversion
@@ -481,11 +473,10 @@ Checked out revision 2499.
       <title>Update Your Working Copy</title>
 
       <para>When working on a project with a team, you'll want to
-        <firstterm>update</firstterm> your working copy: that is,
-        receive any changes from other developers on the
-        project. You'll use <command>svn update</command> to bring
-        your working copy into sync with the latest revision in the
-        repository.</para>
+        update your working copy to receive any changes made since
+        your last update by other developers on the project.  Use
+        <command>svn update</command> to bring your working copy into
+        sync with the latest revision in the repository.</para>
       
       <screen>
 $ svn update
@@ -1003,7 +994,7 @@ A                0         ?     ?        ./stuff/things/bloo.h
           Finally, there is the <option>--show-updates</option>
           (<option>-u</option>) switch, which contacts the repository
           and adds information about things that are
-          <firstterm>out-of-date</firstterm>:</para>
+          out-of-date:</para>
       
         <screen>
 $ svn status --show-updates --verbose
@@ -1244,21 +1235,23 @@ Updated to revision 46.
         with your own, and now you have to manually choose between
         them.</para>
            
-      <para>Whenever a conflict occurs, your Subversion client does
-      three things:</para>
+      <para>Whenever a conflict occurs, three things occur to assist
+        you in noticing and resolving that conflict:</para>
            
       <itemizedlist>
 
         <listitem>
-          <para>Subversion prints a <computeroutput>C</computeroutput> during
-            the update, and remembers that the file is
-            <quote>conflicted</quote>.</para>
+          <para>Subversion prints a <computeroutput>C</computeroutput>
+            during the update, and remembers that the file is in a
+            state of conflict.</para>
         </listitem>
 
         <listitem>
           <para>Subversion places <firstterm>conflict
-            markers</firstterm> into the file to visibly demonstrate
-            the overlapping areas.</para>
+            markers</firstterm>&mdash;special strings of text which
+            delimit the <quote>sides</quote> of the
+            conflict&mdash;into the file to visibly demonstrate the
+            overlapping areas.</para>
         </listitem>
 
         <listitem>
@@ -1414,10 +1407,12 @@ Bottom piece of bread
 </screen>
 
         <para>The strings of less-than signs, equal signs, and
-          greater-than signs are called <firstterm>conflict
-          markers</firstterm>.  The text between the first two sets of
-          markers is composed of the changes you made in the
-          conflicting area:</para>
+          greater-than signs are conflict markers, and are not part of
+          the actual data in conflict.  You generally want to ensure
+          that those are removed from the file before your next
+          commit.  The text between the first two sets of markers is
+          composed of the changes you made in the conflicting
+          area:</para>
 
         <screen>
 &lt;&lt;&lt;&lt;&lt;&lt;&lt; .mine
@@ -1427,8 +1422,8 @@ Prosciutto
 =======
 </screen>
 
-        <para>Whereas the text between the second and third sets of
-        conflict markers is the text from Sally's commit:</para>
+        <para>The text between the second and third sets of conflict
+        markers is the text from Sally's commit:</para>
 
         <screen>
 =======
@@ -1438,14 +1433,15 @@ Grilled Chicken
 </screen>
 
         <para>Usually you won't want to just delete the conflict
-        markers and Sally's changes&mdash;she's going to be awfully
-        surprised when the sandwich arrives and it's not what she
-        wanted.  So this is where you pick up the phone or walk across
-        the office and explain to Sally that you can't get sauerkraut
-        from an Italian deli.<footnote><para>And if you ask them for
-        it, they may very well ride you out of town on a
-        rail.</para></footnote>  Once you've agreed on the changes you
-        will check in, edit your file and remove the conflict markers.</para>
+          markers and Sally's changes&mdash;she's going to be awfully
+          surprised when the sandwich arrives and it's not what she
+          wanted.  So this is where you pick up the phone or walk
+          across the office and explain to Sally that you can't get
+          sauerkraut from an Italian deli.<footnote><para>And if you
+          ask them for it, they may very well ride you out of town on
+          a rail.</para></footnote> Once you've agreed on the changes
+          you will check in, edit your file and remove the conflict
+          markers.</para>
 
         <screen>
 Top piece of bread
@@ -1740,9 +1736,8 @@ $ svn log http://foo.com/svn/trunk/code/foo.c
         Because Subversion allows you to move and copy files and
         directories, it is important to be able to track path changes
         in the filesystem, so in verbose mode, <command>svn
-        log</command> will include a list of
-        <firstterm>changed-paths</firstterm> in a revision in its
-        output:</para>
+        log</command> will include a list of changed paths in a
+        revision in its output:</para>
 
       <screen>
 $ svn log -r 8 -v
