@@ -2031,7 +2031,7 @@ static int end_element(void *userdata, int state,
           {
             CHKERR( svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
                                       "'%s'", rb->encoding->data) );
-            svn_stringbuf_setempty(rb->encoding);  /* probably pointless */
+            abort(); /* Not reached. */
           }
 
         /* Set the prop. */
