@@ -212,15 +212,6 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   apr_pool_t *pool);
 
 
-/* Recursively descend from directory PATH, looping over 'entries'
-   files and discovering every path that is under version control.  As
-   each path is discovered, add it to an already-existing PATHS hash.
-   This hash contains (const char *) keys and values of '1'. */
-svn_error_t *svn_wc_get_version_controlled_paths (apr_hash_t *paths,
-                                                  svn_stringbuf_t *path,
-                                                  apr_pool_t *pool);
-
-
 
 /*** Status. ***/
 
