@@ -159,7 +159,7 @@ if [ "`grep -i svnpath $CONF`"x = "x" ]; then
 #   # Limit write permission to list of valid users.
 #   <LimitExcept GET PROPFIND OPTIONS REPORT>
 #      # Require SSL connection for password protection.
-#      # SSLRequiredSSL
+#      # SSLRequireSSL
 #
 #      AuthType Basic
 #      AuthName "Authorization Realm"
