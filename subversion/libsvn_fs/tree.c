@@ -2110,6 +2110,9 @@ typedef struct file_contents_baton_t
   /* The dag_node that will be made from the above. */
   dag_node_t *node;
     
+  /* The pool in which `file_stream' (below) is allocated. */
+  apr_pool_t *pool;
+
   /* The readable file stream that will be made from the
      dag_node. (And returned to the caller.) */
   svn_stream_t *file_stream;
@@ -2130,6 +2133,7 @@ txn_body_get_file_contents (void *baton, trail_t *trail)
   /* Then create a readable stream from the dag_node_t. */
   SVN_ERR (svn_fs__dag_get_contents (&(fb->file_stream),
                                      fb->node,
+                                     fb->pool,
                                      trail));
   return SVN_NO_ERROR;
 }     
@@ -2145,6 +2149,7 @@ svn_fs_file_contents (svn_stream_t **contents,
   file_contents_baton_t *fb = apr_pcalloc (pool, sizeof(*fb));
   fb->root = root;
   fb->path = path;
+  fb->pool = pool;
 
   /* Create the readable stream in the context of a db txn.  */
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
@@ -2232,6 +2237,7 @@ txn_body_get_mutable_source_stream (void *baton, trail_t *trail)
      stream. */
   SVN_ERR (svn_fs__dag_get_contents (&(tb->source_stream),
                                      tb->node,
+                                     tb->pool,
                                      trail));
   return SVN_NO_ERROR;
 }

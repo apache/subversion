@@ -521,26 +521,15 @@ set_entry (dag_node_t *parent,
     {
       /* The new representation inherited nothing, so fill it with a
          skel representing an empty entries list. */
-
       svn_stream_t *wstream;
-      svn_fs__rep_write_baton_t *wb;
       skel_t *empty_list;
       svn_stringbuf_t *empty;
       apr_size_t len;
       
       empty_list = svn_fs__make_empty_list (trail->pool);
       empty = svn_fs__unparse_skel (empty_list, trail->pool);
-
-      /* ### todo: baton & stream creation could all be abstracted into
-         one svn_fs__rep_write_stream() function that would have a
-         prototype just like get_baton()'s above.  Then these three
-         function calls could become one.  See similar note in
-         svn_fs__dag_get_contents().  */
-
-      wb = svn_fs__rep_write_get_baton (fs, mutable_rep_key,
-                                        trail, trail->pool);
-      wstream = svn_stream_create (wb, trail->pool);
-      svn_stream_set_write (wstream, svn_fs__rep_write_contents);
+      wstream = svn_fs__rep_write_stream (fs, mutable_rep_key,
+                                          trail, trail->pool);
       len = empty->len;
       svn_stream_write (wstream, empty->data, &len);
     }
@@ -1388,10 +1377,10 @@ svn_fs__dag_link (dag_node_t *parent,
 svn_error_t *
 svn_fs__dag_get_contents (svn_stream_t **contents,
                           dag_node_t *file,
+                          apr_pool_t *pool,
                           trail_t *trail)
 { 
   skel_t *node_rev;
-  svn_fs__rep_read_baton_t *baton;
   const char *rep_key;
 
   /* Make sure our node is a file. */
@@ -1418,26 +1407,9 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
      stream has to be trail-independent.  Here, we pass NULL to tell
      the stream that we're not providing it a trail that lives across
      reads.  This means the stream will do each read in a one-off,
-     temporary trail.  
+     temporary trail.  */
 
-     ### kff todo: see my note in the doc string of
-     svn_fs.h:svn_fs_file_contents() for further investigation...  */
-  baton = svn_fs__rep_read_get_baton (file->fs,
-                                      rep_key,
-                                      0,
-                                      NULL,
-                                      trail->pool);
-
-  /* ### todo: baton & stream creation could all be abstracted into
-     one svn_fs__rep_read_stream() function that would have a
-     prototype just like get_baton()'s above.  Then these three
-     function calls could become one.  See similar note in
-     set_entry().  */
-
-  /* Create a stream object in trail->pool, and make it use our read
-     func and baton. */
-  *contents = svn_stream_create (baton, trail->pool);
-  svn_stream_set_read (*contents, svn_fs__rep_read_contents);
+  *contents = svn_fs__rep_read_stream (file->fs, rep_key, 0, NULL, pool);
 
   /* Note that we're not registering any `close' func, because there's
      nothing to cleanup outside of our trail.  When the trail is
@@ -1532,12 +1504,9 @@ svn_fs__dag_set_contents (dag_node_t *file,
        interface.  Thanks for listening. */
 
     /* ### todo: we shouldn't even be writing string data directly
-       here, should be going *through* the representation, similarly
-       to the way svn_fs__rep_read_contents() does.  I think the same
-       may be true for all calls to svn_fs__string_*() in this
-       file...  In other words, there needs to be a write interface
-       matching the read interface offered by
-       svn_fs__rep_read_contents().  */
+       here, should be going *through* the representation.  I think
+       the same may be true for all calls to svn_fs__string_*() in
+       this file... */
 
     SVN_ERR (svn_fs__read_rep (&mutable_rep, file->fs, new_rep_key, trail));
     new_string_key = svn_fs__string_key_from_rep (mutable_rep, trail->pool);

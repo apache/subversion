@@ -224,7 +224,7 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 /** Reading. **/
 
-struct svn_fs__rep_read_baton_t
+struct rep_read_baton
 {
   /* The FS from which we're reading. */
   svn_fs_t *fs;
@@ -256,14 +256,14 @@ struct svn_fs__rep_read_baton_t
 };
 
 
-svn_fs__rep_read_baton_t *
-svn_fs__rep_read_get_baton (svn_fs_t *fs,
+static struct rep_read_baton *
+rep_read_get_baton (svn_fs_t *fs,
                             const char *rep_key,
                             apr_size_t offset,
                             trail_t *trail,
                             apr_pool_t *pool)
 {
-  struct svn_fs__rep_read_baton_t *b;
+  struct rep_read_baton *b;
 
   b = apr_pcalloc (pool, sizeof (*b));
   b->fs = fs;
@@ -311,7 +311,7 @@ rep_read_range (svn_fs_t *fs,
 
 struct read_rep_args
 {
-  svn_fs__rep_read_baton_t *rb;   /* The data source.             */
+  struct rep_read_baton *rb;   /* The data source.             */
   char *buf;                      /* Where to put what we read.   */
   apr_size_t *len;                /* How much to read / was read. */
 };
@@ -361,10 +361,10 @@ txn_body_read_rep (void *baton, trail_t *trail)
 }
 
 
-svn_error_t *
-svn_fs__rep_read_contents (void *baton, char *buf, apr_size_t *len)
+static svn_error_t *
+rep_read_contents (void *baton, char *buf, apr_size_t *len)
 {
-  svn_fs__rep_read_baton_t *rb = baton;
+  struct rep_read_baton *rb = baton;
   struct read_rep_args args;
 
   args.rb = rb;
@@ -387,7 +387,7 @@ svn_fs__rep_read_contents (void *baton, char *buf, apr_size_t *len)
 /** Writing. **/
 
 
-struct svn_fs__rep_write_baton_t
+struct rep_write_baton
 {
   /* The FS in which we're writing. */
   svn_fs_t *fs;
@@ -405,13 +405,13 @@ struct svn_fs__rep_write_baton_t
 };
 
 
-svn_fs__rep_write_baton_t *
-svn_fs__rep_write_get_baton (svn_fs_t *fs,
-                             const char *rep_key,
-                             trail_t *trail,
-                             apr_pool_t *pool)
+static struct rep_write_baton *
+rep_write_get_baton (svn_fs_t *fs,
+                     const char *rep_key,
+                     trail_t *trail,
+                     apr_pool_t *pool)
 {
-  struct svn_fs__rep_write_baton_t *b;
+  struct rep_write_baton *b;
 
   b = apr_pcalloc (pool, sizeof (*b));
   b->fs = fs;
@@ -462,7 +462,7 @@ rep_write (svn_fs_t *fs,
 
 struct write_rep_args
 {
-  svn_fs__rep_write_baton_t *wb;   /* Destination.       */
+  struct rep_write_baton *wb;   /* Destination.       */
   const char *buf;                 /* Data.              */
   apr_size_t len;                  /* How much to write. */
 };
@@ -489,10 +489,10 @@ txn_body_write_rep (void *baton, trail_t *trail)
 }
 
 
-svn_error_t *
-svn_fs__rep_write_contents (void *baton, const char *buf, apr_size_t *len)
+static svn_error_t *
+rep_write_contents (void *baton, const char *buf, apr_size_t *len)
 {
-  svn_fs__rep_write_baton_t *wb = baton;
+  struct rep_write_baton *wb = baton;
   struct write_rep_args args;
 
   /* We toss LEN's indirectness because if not all the bytes are
@@ -513,6 +513,41 @@ svn_fs__rep_write_contents (void *baton, const char *buf, apr_size_t *len)
                                 wb->pool));
   
   return SVN_NO_ERROR;
+}
+
+
+/** Public read and write stream constructors. **/
+
+svn_stream_t *
+svn_fs__rep_read_stream (svn_fs_t *fs,
+                         const char *rep_key,
+                         apr_size_t offset,
+                         trail_t *trail,
+                         apr_pool_t *pool)
+{
+  struct rep_read_baton *rb
+    = rep_read_get_baton (fs, rep_key, offset, trail, pool);
+
+  svn_stream_t *rs = svn_stream_create (rb, pool);
+  svn_stream_set_read (rs, rep_read_contents);
+
+  return rs;
+}
+
+                                       
+svn_stream_t *
+svn_fs__rep_write_stream (svn_fs_t *fs,
+                          const char *rep_key,
+                          trail_t *trail,
+                          apr_pool_t *pool)
+{
+  struct rep_write_baton *wb
+    = rep_write_get_baton (fs, rep_key, trail, pool);
+
+  svn_stream_t *ws = svn_stream_create (wb, pool);
+  svn_stream_set_write (ws, rep_write_contents);
+
+  return ws;
 }
 
 
