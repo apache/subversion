@@ -1,8 +1,13 @@
 #!/bin/sh
 
+if test "$#" != 1; then
+  echo "ERROR ($0): not enough arguments. Must supply SOURCE-DIR."
+  exit 1
+fi
+
 # Make sure checkout-test binary exists
 
-TEST_DELTA=$srcdir/../../tests/xml/co1-inline.xml
+TEST_DELTA=$1/subversion/tests/xml/co1-inline.xml
 
 if [ ! -x ./checkout-test ]; then
     echo "Error:  can't find checkout-test executable"
