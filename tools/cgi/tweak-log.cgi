@@ -92,7 +92,7 @@ sub main
 #-----------------------------------------------------------------------------#
 {
     # Print out HTTP headers.
-    print "Content-type: text/html\n\n";
+    print "Content-type: text/html; charset=UTF-8\n\n";
 
     # Figure out what action to take.
     if( $gCGIValues{'ACTION'} =~ /fetch/i )
