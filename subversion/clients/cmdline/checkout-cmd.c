@@ -106,6 +106,11 @@ svn_cl__checkout (apr_getopt_t *os,
     {
       repos_url = ((const char **) (targets->elts))[0];
       local_dir = ((const char **) (targets->elts))[1];
+      if (svn_path_is_url (local_dir) && (! opt_state->force))
+        return svn_error_create 
+          (SVN_ERR_WC_NOT_DIRECTORY, 0, 0, pool,
+           "Checkout directory appears to be a URL.  If this what you "
+           "really wanted to do, please use the --force flag.");
     }
 
   /* Validate the REPOS_URL */
