@@ -34,4 +34,9 @@ if sys.argv[1] == '--compile':
   print cc, opt, ccshared
   sys.exit(0)
 
+if sys.argv[1] == '--link':
+  ### why the hell is this a list?!
+  print sysconfig.get_config_vars('LDSHARED')[0]
+  sys.exit(0)
+
 usage()
