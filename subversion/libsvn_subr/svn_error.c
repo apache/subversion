@@ -264,8 +264,8 @@ svn_pool_create_debug (apr_pool_t *parent_pool,
 
 #ifdef SVN_POOL_DEBUG
   {
-    fprintf (stderr, "Pool 0x%08X created at %s:%d\n", 
-             (unsigned int)ret_pool, file, line);
+    fprintf (stderr, "Pool 0x%08X (parent=0x%08X) created at %s:%d\n", 
+             (unsigned int)ret_pool, (unsigned int)parent_pool, file, line);
   }
 #endif /* SVN_POOL_DEBUG */
 
