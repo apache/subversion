@@ -50,12 +50,13 @@ svn_error_t *svn_fs__dag_revision_root (dag_node_t **node_p,
 					apr_pool_t *pool);
 
 
-/* Open the root of the transaction named TXN in FS, as part of the
-   Berkeley DB transaction DB_TXN; set *NODE_P to the new node.
-   Allocate the node in POOL.  */
-svn_error_t *svn_fs__dag_txn_root (dag_node_t **node_p,
+/* Open the mutable node in the transaction named TXN whose ID is ID
+   in FS, as part of the Berkeley DB transaction DB_TXN; set *NODE_P
+   to the new node.  Allocate the node in POOL.  */
+svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
 				   svn_fs_t *fs,
 				   const char *txn,
+				   svn_fs_id_t *id,
 				   DB_TXN *db_txn,
 				   apr_pool_t *pool);
 
@@ -68,14 +69,21 @@ void svn_fs__dag_close (dag_node_t *node);
 /* Generic node operations.  */
 
 
+/* Return a new dag_node_t object referring to the same node as NODE,
+   allocated in POOL.  */
+dag_node_t *svn_fs__dag_dup (dag_node_t *node,
+			     apr_pool_t *pool);
+
+
 /* Return the ID of NODE.  The value returned is shared with NODE, and
    will be deallocated when NODE is.  */
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 
 
 /* Set *PROPLIST_P to a PROPLIST skel representing the entire property
-   list of NODE, as part of the Berkeley DB transaction DB_TXN.
-   Allocate the skel in POOL.  */
+   list of NODE, as part of the Berkeley DB transaction DB_TXN.  This
+   guarantees that *PROPLIST_P is well-formed.  Allocate the skel in
+   POOL.  */
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
 				       dag_node_t *node,
 				       DB_TXN *db_txn,
@@ -83,8 +91,9 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
 
 
 /* Set the property list of NODE to PROPLIST, as part of Berkeley DB
-   transaction DB_TXN.  The node being changed must be mutable.  Do
-   any necessary temporary allocation in POOL.  */
+   transaction DB_TXN.  The node being changed must be mutable.  This
+   verifies that PROPLIST is well-formed.  Do any necessary temporary
+   allocation in POOL.  */
 svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
 				       skel_t *proplist,
 				       DB_TXN *db_txn,
@@ -107,17 +116,24 @@ svn_error_t *svn_fs__dag_clone (dag_node_t **child_p,
 				apr_pool_t *pool);
 
 
-/* Mark the tree of mutable nodes found in FS at the Subversion
-   transaction TXN's root as immutable, as part of the Berkeley DB
-   transaction DB_TXN.  All nodes are created mutable; this call
-   indicates that the node's contents will no longer change.  The
-   filesystem might elect to store NODE in a more compact form, or to
-   store other nodes as deltas relative to NODE.  Do any necessary
-   temporary allocation in POOL.  */
-svn_error_t *svn_fs__dag_stabilize_txn (svn_fs_t *fs,
-					const char *txn,
-					DB_TXN *db_txn,
-					apr_pool_t *pool);
+/* Commit the transaction SVN_TXN in FS, as part of the Berkeley DB
+   transaction DB_TXN.  This entails:
+   - marking the tree of mutable nodes at SVN_TXN's root as immutable,
+     and marking all their contents as stable
+   - creating a new revision, with SVN_TXN's root as its root directory
+   - deleting SVN_TXN from `transactions'
+
+   Beware!  This does not make sure that SVN_TXN is based on the very
+   latest revision in FS.  If the caller doesn't take care of this,
+   you may lose people's work!
+
+   Do any necessary temporary allocation in a subpool of POOL.
+   Consume temporary space at most proportional to the maximum depth
+   of SVN_TXN's tree of mutable nodes.  */
+svn_error_t *svn_fs__dag_commit_txn (svn_fs_t *fs,
+				     const char *svn_txn,
+				     DB_TXN *db_txn,
+				     apr_pool_t *pool);
 
 
 
