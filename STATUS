@@ -24,7 +24,7 @@ Candidate changes:
     Notes:
      Not worth a resoak on its own.
     Votes:
-      +1: maxb, mbk
+      +1: maxb, mbk, ghudson
 
 
   * r10994 (fixes issue #2054)
@@ -54,7 +54,7 @@ Candidate changes:
     Notes:
       Not worth a resoak on its own.
     Votes:
-      +1: pmayweg
+      +1: pmayweg, ghudson
 
   * r10978
     Install and configure Apache modules, install Berkeley DB DLL in Apache's
