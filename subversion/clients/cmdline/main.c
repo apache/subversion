@@ -100,7 +100,7 @@ const apr_getopt_option_t svn_cl__options[] =
                       "try operation but make no changes"},
     {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
                        "do not print differences for deleted files"},
-    {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
+    {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
                        "ignore ancestry when calculating differences"},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
                       "use ARG as diff command"},
@@ -224,7 +224,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Use just 'svn diff' to display local modifications in a working copy\n",
     {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'x', 'N',
      svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
-     svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS} },
+     svn_cl__notice_ancestry_opt, SVN_CL__AUTH_OPTIONS} },
 
   { "export", svn_cl__export, {0},
     "export stuff.\n"
@@ -309,7 +309,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  the sources have identical basenames that match a file within '.':\n"
     "  in which case, the differences will be applied to that file.\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
-     svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt, 
+     svn_cl__merge_cmd_opt, svn_cl__notice_ancestry_opt, 
      SVN_CL__AUTH_OPTIONS} },
   
   { "mkdir", svn_cl__mkdir, {0},
@@ -779,8 +779,8 @@ main (int argc, const char * const *argv)
       case svn_cl__no_diff_deleted:
         opt_state.no_diff_deleted = TRUE;
         break;
-      case svn_cl__ignore_ancestry_opt:
-        opt_state.ignore_ancestry = TRUE;
+      case svn_cl__notice_ancestry_opt:
+        opt_state.notice_ancestry = TRUE;
         break;
       case svn_cl__relocate_opt:
         opt_state.relocate = TRUE;

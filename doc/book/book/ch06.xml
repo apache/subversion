@@ -1784,7 +1784,7 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
     <!-- TODO: Try to clarify some of the steps for svn-load-dirs.pl
          (Garrett sez they've been "glossed over".  Also, consider
          another section on bypassing svn-load-dirs.pl altogether and
-         running with just svn merge with 'ignore-ancestry' option. -->
+         running with just svn merge, now that it ignores ancestry. -->
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-4.2">
