@@ -325,30 +325,6 @@ svn_client_uuid_from_path (const char **uuid,
 }
 
 
-struct log_receiver_baton
-{
-  /* The kind of the path we're tracing. */
-  svn_node_kind_t kind;
-
-  /* The path at which we are trying to find our versioned resource in
-     the log output. */
-  const char *last_path;
-
-  /* Input revisions and output paths; the whole point of this little game. */
-  svn_revnum_t start_revision;
-  const char *start_path;
-  svn_revnum_t end_revision;
-  const char *end_path;
-  svn_revnum_t peg_revision;
-  const char *peg_path;
-  
-  /* Client context baton. */
-  svn_client_ctx_t *ctx;
-
-  /* A pool from which to allocate stuff stored in this baton. */
-  apr_pool_t *pool;
-};
-
 
 svn_error_t *
 svn_client__prev_log_path (const char **prev_path_p,
@@ -361,6 +337,9 @@ svn_client__prev_log_path (const char **prev_path_p,
   svn_log_changed_path_t *change;
   const char *prev_path = NULL;
 
+  /* It's impossible to find the predecessor path of a NULL path. */
+  assert(path);
+
   /* If PATH was explicitly changed in this revision, that makes
      things easy -- we keep the path (but check to see).  If so,
      we'll either use the path, or, if was copied, use its
@@ -370,8 +349,13 @@ svn_client__prev_log_path (const char **prev_path_p,
     {
       if (change->copyfrom_path)
         prev_path = apr_pstrdup (pool, change->copyfrom_path);
+      else if (change->action == 'A')
+        prev_path = NULL;
       else
         prev_path = path;
+
+      *prev_path_p = prev_path;
+      return SVN_NO_ERROR;
     }
   else if (apr_hash_count (changed_paths))
     {
@@ -425,7 +409,7 @@ svn_client__prev_log_path (const char **prev_path_p,
       if (kind == svn_node_dir)
         prev_path = apr_pstrdup (pool, path);
       else
-        return svn_error_createf (APR_EGENERAL, NULL,
+        return svn_error_createf (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                   "Missing changed-path information for "
                                   "'%s' in revision %" SVN_REVNUM_T_FMT,
                                   path, revision);
@@ -435,9 +419,35 @@ svn_client__prev_log_path (const char **prev_path_p,
   return SVN_NO_ERROR;
 }
 
+struct log_receiver_baton
+{
+  /* The kind of the path we're tracing. */
+  svn_node_kind_t kind;
 
-/* Implements svn_log_message_receiver_t; helper for 
-   svn_client__repos_locations. */
+  /* The path at which we are trying to find our versioned resource in
+     the log output. */
+  const char *last_path;
+
+  /* Input revisions and output paths; the whole point of this little game. */
+  svn_revnum_t start_revision;
+  const char *start_path;
+  svn_revnum_t end_revision;
+  const char *end_path;
+  svn_revnum_t peg_revision;
+  const char *peg_path;
+  
+  /* Client context baton. */
+  svn_client_ctx_t *ctx;
+
+  /* A pool from which to allocate stuff stored in this baton. */
+  apr_pool_t *pool;
+};
+
+
+/* Implements svn_log_message_receiver_t; helper for
+   svn_client__repos_locations.  As input, takes log_receiver_baton
+   (defined above) and attempts to "fill in" all three paths in the
+   baton over the course of many iterations. */
 static svn_error_t *
 log_receiver (void *baton,
               apr_hash_t *changed_paths,
@@ -477,7 +487,9 @@ log_receiver (void *baton,
 
   /* Squirrel away our "next place to look" path (suffer the strcmp
      hit to save on allocations). */
-  if (strcmp (prev_path, current_path) != 0)
+  if (! prev_path)
+    lrb->last_path = NULL;
+  else if (strcmp (prev_path, current_path) != 0)
     lrb->last_path = apr_pstrdup (lrb->pool, prev_path);
 
   return SVN_NO_ERROR;
