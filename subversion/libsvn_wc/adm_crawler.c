@@ -517,24 +517,16 @@ svn_wc_transmit_text_deltas (const char *path,
      someone changes the working file while we're generating the
      txdelta, b) we need to detranslate eol and keywords anyway, and
      c) after the commit, we're going to copy the tmp file to become
-     the new text base anyway.
-
-     Note that since the translation routine doesn't let you choose
-     the filename, we have to do one extra copy.  But what the heck,
-     we're about to generate an svndiff anyway. */
+     the new text base anyway. */
   SVN_ERR (svn_wc_translated_file (&tmpf, path, adm_access, FALSE, pool));
+
+  /* If the translation didn't create a new file then we need an explicit
+     copy, if it did create a new file we need to rename it. */
   tmp_base = svn_wc__text_base_path (path, TRUE, pool);
-  SVN_ERR (svn_io_copy_file (tmpf, tmp_base, FALSE, pool));
-
-  /* If the translation step above created a new file, delete it. */
-  if (tmpf != path)
-    SVN_ERR (svn_io_remove_file (tmpf, pool));
-
-  /* ### todo: If tmpf != path, then instead of svn_io_copy_file()
-     above, we could do a rename, which would be much more efficient.
-     In the case where tmpf == path, we'd still have to do a copy of
-     course, because we can't affect path.  So why aren't we at least
-     checking for the efficient case?  Beats me. */
+  if (tmpf == path)
+    SVN_ERR (svn_io_copy_file (tmpf, tmp_base, FALSE, pool));
+  else
+    SVN_ERR (svn_io_file_rename (tmpf, tmp_base, pool));
 
   /* If we're not sending fulltext, we'll be sending diffs against the
      text-base. */
