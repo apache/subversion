@@ -484,6 +484,7 @@ If ARG then pass the -u argument to `svn status'."
   (define-key svn-status-mode-map [?l] 'svn-status-show-svn-log)
   (define-key svn-status-mode-map [?i] 'svn-status-info)
   (define-key svn-status-mode-map [?=] 'svn-status-show-svn-diff)
+  (define-key svn-status-mode-map [(control ?=)] 'svn-status-show-svn-diff-for-marked-files)
   (define-key svn-status-mode-map [?~] 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map [?E] 'svn-status-ediff-with-revision)
   (setq svn-status-mode-mark-map (make-sparse-keymap))
@@ -513,8 +514,11 @@ If ARG then pass the -u argument to `svn status'."
                     ["svn commit" svn-status-commit-file t]
                     ["svn log" svn-status-show-svn-log t]
                     ["svn info" svn-status-info t]
-                    ["svn diff" svn-status-show-svn-diff t]
-                    ["svn ediff" svn-status-ediff-with-revision t]
+                    ("Diff"
+                     ["svn diff actual file" svn-status-show-svn-diff t]
+                     ["svn diff marked files" svn-status-show-svn-diff-for-marked-files t]
+                     ["svn ediff actual file" svn-status-ediff-with-revision t]
+                     )
                     ["svn cat ..." svn-status-get-specific-revision t]
                     ["svn add" svn-status-add-file t]
                     ["svn mkdir..." svn-status-make-directory t]
@@ -1000,7 +1004,16 @@ Then move to that line."
 
 (defun svn-status-show-svn-diff (arg)
   (interactive "P")
-  (let ((fl (list (svn-status-get-line-information))) ;; was: (svn-status-marked-files))
+  (svn-status-show-svn-diff-internal arg nil))
+
+(defun svn-status-show-svn-diff-for-marked-files (arg)
+  (interactive "P")
+  (svn-status-show-svn-diff-internal arg t))
+
+(defun svn-status-show-svn-diff-internal (arg &optional use-all-marked-files)
+  (let ((fl (if use-all-marked-files
+                (svn-status-marked-files)
+              (list (svn-status-get-line-information))))
         (clear-buf t)
         (revision (if arg (svn-status-read-revision-string "Diff with files for version: " "PREV") "BASE")))
     (while fl
@@ -1184,13 +1197,15 @@ Note: use C-q C-j to send a line termination character"
   (svn-status-proplist-start))
 
 (defun svn-status-property-edit-one-entry (arg)
+  "Edit a property.
+When called with a prefix argument, it is possible to enter a new property."
   (interactive "P")
   (setq svn-status-property-edit-must-match-flag (not arg))
   (svn-status-proplist-start))
 
 (defun svn-status-property-set ()
   (interactive)
-  (message "svn-status-property-set")
+  (setq svn-status-property-edit-must-match-flag nil)
   (svn-status-proplist-start))
 
 (defun svn-status-property-delete ()
@@ -1372,9 +1387,8 @@ Note: use C-q C-j to send a line termination character"
 
 (defun svn-status-property-set-keyword-list ()
   (interactive)
-  ;; Until this function is properly implemented, signal an error so
-  ;; that the user need not wonder what the command did.
-  (error "svn-status-property-set-keyword-list not yet implemented"))
+  ;;(message "Set svn:keywords for %S" (svn-status-marked-file-names))
+  (svn-status-property-edit (svn-status-marked-files) "svn:keywords"))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-prop-edit-mode:
@@ -1438,7 +1452,7 @@ Commands:
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")
   (set-buffer "*svn-status*")
-  (svn-status-show-svn-diff arg))
+  (svn-status-show-svn-diff-for-marked-files arg))
 
 (defun svn-prop-edit-svn-log ()
   (interactive)
@@ -1512,7 +1526,7 @@ Commands:
 (defun svn-log-edit-svn-diff (arg)
   (interactive "P")
   (set-buffer "*svn-status*")
-  (svn-status-show-svn-diff arg))
+  (svn-status-show-svn-diff-for-marked-files arg))
 
 (defun svn-log-edit-svn-log ()
   (interactive)
