@@ -450,7 +450,7 @@ for  example: '(\"revert\" \"file1\"\)"
 (defun svn-parse-status-result ()
   (setq svn-status-head-revision nil)
   (save-excursion
-    (let ((old-marked-files (svn-status-marked-file-names))
+    (let ((old-ui-information (svn-status-ui-information-hash-table))
           (line-string)
           (user-mark)
           (svn-marks)
@@ -462,6 +462,7 @@ for  example: '(\"revert\" \"file1\"\)"
           (author)
           (path)
           (user-elide nil)
+          (ui-status '(nil nil)) ; contains (user-mark user-elide)
           (revision-width svn-status-default-revision-width)
           (author-width svn-status-default-author-width))
       (set-buffer "*svn-process*")
@@ -494,16 +495,15 @@ for  example: '(\"revert\" \"file1\"\)"
            (t
             (error "Unknown status line format")))
           (unless path (setq path "."))
-          (setq user-mark (not (not (member path old-marked-files))))
-          (setq svn-status-info (cons (list user-mark
+          (setq ui-status (or (gethash path old-ui-information) (list user-mark user-elide)))
+          (setq svn-status-info (cons (list ui-status
                                             svn-file-mark
                                             svn-property-mark
                                             path
                                             local-rev
                                             last-change-rev
                                             author
-                                            svn-update-mark
-                                            user-elide)
+                                            svn-update-mark)
                                       svn-status-info))
           (setq revision-width
                 (max revision-width
@@ -764,7 +764,11 @@ Otherwise run `find-file'."
   (interactive)
   (svn-status (expand-file-name "../")))
 
-(defun svn-status-line-info->has-usermark (line-info) (nth 0 line-info))
+(defun svn-status-line-info->ui-status (line-info) (nth 0 line-info))
+
+(defun svn-status-line-info->has-usermark (line-info) (nth 0 (nth 0 line-info)))
+(defun svn-status-line-info->user-elide (line-info) (nth 1 (nth 0 line-info)))
+
 (defun svn-status-line-info->filemark (line-info) (nth 1 line-info))
 (defun svn-status-line-info->propmark (line-info) (nth 2 line-info))
 (defun svn-status-line-info->filename (line-info) (nth 3 line-info))
@@ -781,7 +785,6 @@ Otherwise run `find-file'."
     nil))
 (defun svn-status-line-info->author (line-info) (nth 6 line-info))
 (defun svn-status-line-info->modified-external (line-info) (nth 7 line-info))
-(defun svn-status-line-info->user-elide (line-info) (nth 8 line-info))
 
 (defun svn-status-line-info->is-visiblep (line-info)
   (not (or (svn-status-line-info->hide-because-unknown line-info)
@@ -832,7 +835,7 @@ Otherwise run `find-file'."
           (message "Elide directory %s and all its files." fname)
           (setq new-elide-mark (not (svn-status-line-info->user-elide (car st-info))))
           (setq elide-mark (if new-elide-mark 'directory nil)))
-        (setcar (nthcdr 8 (car st-info)) elide-mark))
+        (setcar (nthcdr 1 (svn-status-line-info->ui-status (car st-info))) elide-mark))
       (setq st-info (cdr st-info))))
   (svn-status-update-buffer))
 
@@ -911,6 +914,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (unknown-count 0)
         (marked-count 0)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
+        (fname-pos (point))
         (column (current-column)))
     (delete-region (point-min) (point-max))
     (insert "\n")
@@ -951,6 +955,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
     (setq svn-start-of-file-list-line-number (+ (count-lines (point-min) (point)) 1))
     (if fname
         (progn
+          (goto-char fname-pos)
           (svn-status-goto-file-name fname)
           (goto-char (+ column (point-at-bol))))
       (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column)))))
@@ -1116,7 +1121,8 @@ Then move to that line."
          (i-fname)
          (current-line svn-start-of-file-list-line-number))
     (while st-info
-      (setq current-line (1+ current-line))
+      (when (svn-status-line-info->is-visiblep (car st-info))
+        (setq current-line (1+ current-line)))
       (setq i-fname (svn-status-line-info->filename (car st-info)))
       (when (and (>= (length i-fname) (length file-name))
                  (string= file-name (substring i-fname 0 (length file-name))))
@@ -1126,7 +1132,8 @@ Then move to that line."
             (if set-mark
                 (message "marking: %s" i-fname)
               (message "unmarking: %s" i-fname))
-            (setcar (car st-info) set-mark)
+            ;;(message "ui-status: %S" (svn-status-line-info->ui-status (car st-info)))
+            (setcar (svn-status-line-info->ui-status (car st-info)) set-mark)
             (save-excursion
               (let ((buffer-read-only nil))
                 (goto-line current-line)
@@ -1141,7 +1148,7 @@ Then move to that line."
   (interactive)
   (let ((st-info svn-status-info))
     (while st-info
-      (setcar (car st-info) nil)
+      (setcar (svn-status-line-info->ui-status (car st-info)) nil)
       (setq st-info (cdr st-info)))
     (svn-status-update-buffer)))
 
@@ -1156,6 +1163,7 @@ Then move to that line."
   (svn-status-update-buffer))
 
 (defun svn-status-goto-file-name (name)
+  ;; (message "svn-status-goto-file-name: %s %d" name (point))
   (let ((start-pos (point)))
     (goto-char (point-min))
     (while (< (point) (point-max))
@@ -1192,6 +1200,17 @@ or (if no files were marked) the file under point."
 
 (defun svn-status-marked-file-names ()
   (mapcar 'svn-status-line-info->filename (svn-status-marked-files)))
+
+(defun svn-status-ui-information-hash-table ()
+  (let ((st-info svn-status-info)
+        (svn-status-ui-information (make-hash-table :test 'equal)))
+    (while st-info
+      (puthash (svn-status-line-info->filename (car st-info))
+               (svn-status-line-info->ui-status (car st-info))
+               svn-status-ui-information)
+      (setq st-info (cdr st-info)))
+    svn-status-ui-information))
+  
 
 (defun svn-status-create-arg-file (file-name prefix file-info-list postfix)
   (with-temp-file file-name
@@ -1746,7 +1765,10 @@ When called with a prefix argument, it is possible to enter a new property."
 
 (defun svn-status-property-edit-svn-ignore ()
   (interactive)
-  (let ((dir (svn-status-get-directory (svn-status-get-line-information))))
+  (let* ((line-info (svn-status-get-line-information))
+         (dir (if (svn-status-line-info->directory-p line-info)
+                  (svn-status-line-info->filename line-info)
+                (svn-status-get-directory line-info))))
     (svn-status-property-edit
      (list (svn-status-find-info-for-file-name dir)) "svn:ignore")
     (message "Edit svn:ignore on %s" dir)))
