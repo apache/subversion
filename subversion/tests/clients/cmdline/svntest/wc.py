@@ -112,8 +112,6 @@ class State:
         atts['verb'] = item.verb
       if item.wc_rev is not None:
         atts['wc_rev'] = item.wc_rev
-      if item.repos_rev is not None:
-        atts['repos_rev'] = item.repos_rev
       if item.locked is not None:
         atts['locked'] = item.locked
       if item.copied is not None:
@@ -139,7 +137,7 @@ class StateItem:
   """
 
   def __init__(self, contents=None, props=None,
-               status=None, verb=None, wc_rev=None, repos_rev=None,
+               status=None, verb=None, wc_rev=None,
                locked=None, copied=None, switched=None, writelocked=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
@@ -148,15 +146,12 @@ class StateItem:
     ### keep/make these ints one day?
     if wc_rev is not None:
       wc_rev = str(wc_rev)
-    if repos_rev is not None:
-      repos_rev = str(repos_rev)
 
     self.contents = contents
     self.props = props
     self.status = status
     self.verb = verb
     self.wc_rev = wc_rev
-    self.repos_rev = repos_rev
     self.locked = locked
     self.copied = copied
     self.switched = switched
@@ -172,6 +167,6 @@ class StateItem:
   def tweak(self, **kw):
     for name, value in kw.items():
       ### refine the revision args (for now) to ensure they are strings
-      if name == 'wc_rev' or name == 'repos_rev':
+      if name == 'wc_rev':
         value = str(value)
       setattr(self, name, value)

@@ -692,7 +692,7 @@ def dont_diff_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit the new binary file, creating revision 2.
@@ -711,7 +711,7 @@ def dont_diff_binary_file(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -757,7 +757,7 @@ def dont_diff_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -926,7 +926,7 @@ def diff_base_to_repos(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_output.add({
-    'A/D/newfile' : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/D/newfile' : Item(status='A ', wc_rev=0),
     })
   expected_output.tweak('A/mu', status='D ')
   expected_output.tweak('iota', status='M ')
@@ -974,7 +974,7 @@ def diff_base_to_repos(sbox):
   expected_status.tweak('iota', wc_rev=3)
   expected_status.remove('A/mu')
   expected_status.add({
-    'A/D/newfile' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/newfile' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -990,7 +990,7 @@ def diff_base_to_repos(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.remove('A/mu')
   expected_status.add({
-    'A/D/newfile' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/newfile' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
@@ -1718,7 +1718,7 @@ def diff_force(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'iota' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'iota' : Item(status='  ', wc_rev=2),
     })
 
   # Commit iota, creating revision 2.
@@ -1737,7 +1737,7 @@ def diff_force(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'iota' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'iota' : Item(status='  ', wc_rev=3),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,

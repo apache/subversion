@@ -96,7 +96,7 @@ def update_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit the new binary file, creating revision 2.
@@ -122,7 +122,7 @@ def update_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3),
     })
 
   # Commit original working copy again, creating revision 3.
@@ -152,7 +152,7 @@ def update_binary_file(sbox):
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
   expected_status.add({
-    'A/theta' : Item(status='C ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='C ', wc_rev=3),
     })
 
   # Extra 'singleton' files we expect to exist after the update.
@@ -227,8 +227,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
+    'A/zeta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit the new binary filea, creating revision 2.
@@ -252,8 +252,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
-    'A/zeta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3),
+    'A/zeta' : Item(status='  ', wc_rev=3),
     })
 
   # Commit original working copy again, creating revision 3.
@@ -281,8 +281,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=3),
-    'A/zeta' : Item(status='  ', wc_rev=2, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=2),
+    'A/zeta' : Item(status='  ', wc_rev=2),
     })
 
   # Do an update from revision 2 and make sure that our binary file
@@ -392,7 +392,7 @@ def update_ignores_added(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/D/gamma', wc_rev=1, status='R ')
   expected_status.add({
-    'A/B/zeta' : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/B/zeta' : Item(status='A ', wc_rev=0),
     })
   
   # Do the update and check the results in three ways.
@@ -473,7 +473,7 @@ def receive_overlapping_same_change(sbox):
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('iota', wc_rev=2, repos_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
 
   # Commit the change, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -674,7 +674,6 @@ def update_delete_modified_files(sbox):
   svntest.main.file_append(pi_path, 'appended pi text')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/B/E/alpha', 'A/D/G/pi', status='M ')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -743,8 +742,8 @@ def update_after_add_rm_deleted(sbox):
 
   # New alpha and F should be in add state A
   expected_status.add({
-    'A/B/E/alpha' : Item(status='A ', wc_rev=0, repos_rev=2),
-    'A/B/F'       : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/B/E/alpha' : Item(status='A ', wc_rev=0),
+    'A/B/F'       : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
@@ -763,8 +762,8 @@ def update_after_add_rm_deleted(sbox):
   # alpha and F to be restored in the WC when updated to rev 1
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
   expected_status.add({
-    'A/B/E/alpha' : Item(status='  ', wc_rev=1, repos_rev=2),
-    'A/B/F'       : Item(status='  ', wc_rev=1, repos_rev=2),
+    'A/B/E/alpha' : Item(status='  ', wc_rev=1),
+    'A/B/F'       : Item(status='  ', wc_rev=1),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -823,7 +822,6 @@ def update_replace_dir(sbox):
   #  'A/B/F'       : Item(verb='Deleting'),
   #  })
   #expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  #expected_status.tweak(repos_rev=3)
   #svntest.actions.run_and_verify_update(wc_dir,
   #                                      expected_output,
   #                                      expected_disk,
@@ -834,7 +832,6 @@ def update_replace_dir(sbox):
   # Update to revision 1 replaces the directory
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -874,7 +871,6 @@ def update_single_file(sbox):
     os.chdir(was_cwd)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -902,7 +898,7 @@ def prop_update_on_scheduled_delete(sbox):
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('iota', wc_rev=2, repos_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
 
   # Commit the change, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -1005,7 +1001,7 @@ def update_deleted_missing_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
-  expected_status.tweak(wc_rev=1, repos_rev=2)
+  expected_status.tweak(wc_rev=1)
 
   # Do the update, specifying the deleted paths explicitly. 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1023,7 +1019,7 @@ def update_deleted_missing_dir(sbox):
   svntest.main.safe_rmtree(H_path)
 
   # This time we're updating the whole working copy
-  expected_status.tweak(wc_rev=2, repos_rev=2)
+  expected_status.tweak(wc_rev=2)
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1160,7 +1156,7 @@ def new_dir_with_spaces(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/spacey dir'       : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/spacey dir'       : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -1356,10 +1352,10 @@ def update_schedule_add_dir(sbox):
 
   # status should now show the dir scheduled for addition-with-history
   expected_status.add({
-    'A/D/G'     : Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/G/pi'  : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/G/rho' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/G/tau' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/G'     : Item(status='A ', copied='+', wc_rev='-'),
+    'A/D/G/pi'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/G/rho' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/G/tau' : Item(status='  ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
@@ -1478,7 +1474,6 @@ def nested_in_read_only(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B' : Item(verb='Deleting'),
     })
-  expected_status.tweak(repos_rev=3)
   expected_status.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/beta', 'A/B/F')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -1501,8 +1496,9 @@ def nested_in_read_only(sbox):
     'E'          : Item(),
     'E/alpha'    : Item(),
     'E/beta'     : Item(),
+    'F'          : Item(),
     })
-  expected_status.tweak(wc_rev=1, repos_rev='?', status='  ')
+  expected_status.tweak(wc_rev=1, status='  ')
   svntest.actions.run_and_verify_status(B_path, expected_status)
 
   # Make enclosing wc read only

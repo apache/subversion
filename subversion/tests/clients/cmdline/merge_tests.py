@@ -241,7 +241,6 @@ def textual_merges_galore(sbox):
                       + ">>>>>>> .merge-right.r3\n")
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('A/B/lambda', status='M ')
   expected_status.tweak('A/D/G/pi', status='M ')
@@ -346,7 +345,6 @@ def textual_merges_galore(sbox):
                                'pi'   : Item(wc_rev=1, status='G '),
                                'tau'  : Item(wc_rev=1, status='C '),
                                })
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('pi', status='M ')
   expected_status.tweak('rho', status='M ')
   expected_status.tweak('tau', status='C ')
@@ -394,9 +392,9 @@ def add_with_history(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/Q'     : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q'     : Item(status='  ', wc_rev=2),
+    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
+    'A/B/F/foo'   : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -417,10 +415,10 @@ def add_with_history(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''       : Item(status='  ', wc_rev=1, repos_rev=2),
-    'Q'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    'foo'    : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    ''       : Item(status='  ', wc_rev=1),
+    'Q'      : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
+    'foo'    : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
@@ -437,12 +435,12 @@ def add_with_history(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/Q'     : Item(status='  ', wc_rev=2, repos_rev=3),
-    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=3),
-    'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=3),
-    'A/C/Q'       : Item(status='  ', wc_rev=3, repos_rev=3),
-    'A/C/Q/bar'   : Item(status='  ', wc_rev=3, repos_rev=3),
-    'A/C/foo'     : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/B/F/Q'     : Item(status='  ', wc_rev=2),
+    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
+    'A/B/F/foo'   : Item(status='  ', wc_rev=2),
+    'A/C/Q'       : Item(status='  ', wc_rev=3),
+    'A/C/Q/bar'   : Item(status='  ', wc_rev=3),
+    'A/C/foo'     : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -474,12 +472,12 @@ def delete_file_and_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B2'         : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B2/E'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B2/E/alpha' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B2/E/beta'  : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B2/F'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B2/lambda'  : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B2'         : Item(status='  ', wc_rev=2),
+    'A/B2/E'       : Item(status='  ', wc_rev=2),
+    'A/B2/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/B2/E/beta'  : Item(status='  ', wc_rev=2),
+    'A/B2/F'       : Item(status='  ', wc_rev=2),
+    'A/B2/lambda'  : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -499,7 +497,6 @@ def delete_file_and_dir(sbox):
     'A/B/E'       : Item(verb='Deleting'),
     'A/B/lambda'       : Item(verb='Deleting'),
     })
-  expected_status.tweak(repos_rev=3)
   expected_status.remove('A/B/E',
                          'A/B/E/alpha',
                          'A/B/E/beta',
@@ -542,7 +539,7 @@ def delete_file_and_dir(sbox):
     'F'       : Item(status='  '),
     'lambda'  : Item(status=' M'),
     })
-  expected_status.tweak(wc_rev=2, repos_rev=3)
+  expected_status.tweak(wc_rev=2)
   expected_skip = wc.State(B2_path, {
     'lambda' : Item(),
     'E'      : Item(),
@@ -602,7 +599,6 @@ def simple_property_merges(sbox):
     'A/B/E/alpha' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
@@ -633,15 +629,14 @@ def simple_property_merges(sbox):
 
   # Commit change as rev 4
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(repos_rev=4)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=4, status='  ')
   expected_status.add({
-    'A/B2'         : Item(status='  ', wc_rev=3, repos_rev=4),
-    'A/B2/E'       : Item(status='  ', wc_rev=3, repos_rev=4),
-    'A/B2/E/alpha' : Item(status='  ', wc_rev=3, repos_rev=4),
-    'A/B2/E/beta'  : Item(status='  ', wc_rev=3, repos_rev=4),
-    'A/B2/F'       : Item(status='  ', wc_rev=3, repos_rev=4),
-    'A/B2/lambda'  : Item(status='  ', wc_rev=3, repos_rev=4),
+    'A/B2'         : Item(status='  ', wc_rev=3),
+    'A/B2/E'       : Item(status='  ', wc_rev=3),
+    'A/B2/E/alpha' : Item(status='  ', wc_rev=3),
+    'A/B2/E/beta'  : Item(status='  ', wc_rev=3),
+    'A/B2/F'       : Item(status='  ', wc_rev=3),
+    'A/B2/lambda'  : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
@@ -675,7 +670,7 @@ def simple_property_merges(sbox):
     'F'       : Item(status='  '),
     'lambda'  : Item(status='  '),
     })
-  expected_status.tweak(wc_rev=4, repos_rev=4)
+  expected_status.tweak(wc_rev=4)
   expected_skip = wc.State('', { })
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
                                        expected_output,
@@ -789,11 +784,11 @@ def merge_catches_nonexistent_target(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/D/Q'         : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/Q/pi'      : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/Q/rho'     : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/Q/tau'     : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/Q/newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/Q'         : Item(status='  ', wc_rev=2),
+    'A/D/Q/pi'      : Item(status='  ', wc_rev=2),
+    'A/D/Q/rho'     : Item(status='  ', wc_rev=2),
+    'A/D/Q/tau'     : Item(status='  ', wc_rev=2),
+    'A/D/Q/newfile' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -806,7 +801,6 @@ def merge_catches_nonexistent_target(sbox):
     'A/D/Q/newfile'  : Item(verb='Sending'),
     })
   expected_status.tweak('A/D/Q/newfile', wc_rev=3)
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -823,7 +817,7 @@ def merge_catches_nonexistent_target(sbox):
       'rho'  : Item(),
       'tau'  : Item(),
       })
-    expected_status.tweak(status='  ', wc_rev=1, repos_rev=3)
+    expected_status.tweak(status='  ', wc_rev=1)
     expected_disk = wc.State('', {
       'pi'   : Item("This is the file 'pi'."),
       'rho'  : Item("This is the file 'rho'."),
@@ -886,7 +880,7 @@ def merge_tree_deleted_in_target(sbox):
     'F'       : Item(status='  '),
     'lambda'  : Item(status='M '),
     })
-  expected_status.tweak(wc_rev=4, repos_rev=4)
+  expected_status.tweak(wc_rev=4)
   expected_skip = wc.State(I_path, {
     'E'       : Item(),
     'E/alpha' : Item(),
@@ -971,7 +965,7 @@ def merge_similar_unrelated_trees(sbox):
     'A/B/beta'    : Item(status='D '),
     'iota'        : Item(status='  '),
     })
-  expected_status.tweak(wc_rev=2, repos_rev=2)
+  expected_status.tweak(wc_rev=2)
   expected_status.tweak('A/B/zeta', wc_rev='-')
   svntest.actions.run_and_verify_status(apply_path, expected_status)
 
@@ -1150,9 +1144,8 @@ def merge_with_prev (sbox):
   # but mu should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A', repos_rev=2)
   expected_status.tweak('A/mu', wc_rev=2)
-  expected_status.add({'A/zot' : Item(status='  ', wc_rev=2, repos_rev=2)})
+  expected_status.add({'A/zot' : Item(status='  ', wc_rev=2)})
   
   # Initial commit.
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -1246,7 +1239,7 @@ def merge_binary_file (sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -1264,7 +1257,7 @@ def merge_binary_file (sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -1284,7 +1277,7 @@ def merge_binary_file (sbox):
   expected_status = svntest.actions.get_virginal_state(other_wc, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='M ', wc_rev=2, repos_rev=3),
+    'A/theta' : Item(status='M ', wc_rev=2),
     })
   expected_skip = wc.State('', { })
   svntest.actions.run_and_verify_merge(other_wc, '2', '3',
@@ -1344,7 +1337,6 @@ def merge_in_new_file_and_diff(sbox):
     'beta'    : Item(status='  ', wc_rev=2),
     'newfile' : Item(status='A ', wc_rev='-', copied='+')
     })
-  expected_status.tweak(repos_rev=3)
   expected_skip = wc.State('', { })
   svntest.actions.run_and_verify_merge(branch_path, '1', 'HEAD', trunk_url,
                                        expected_output,
@@ -1387,9 +1379,9 @@ def merge_skips_obstructions(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/Q'     : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q'     : Item(status='  ', wc_rev=2),
+    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
+    'A/B/F/foo'   : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -1416,9 +1408,9 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''       : Item(status='  ', wc_rev=1, repos_rev=2),
-    'Q'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    ''       : Item(status='  ', wc_rev=1),
+    'Q'      : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, {
     'foo' : Item(),
@@ -1452,8 +1444,8 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''     : Item(status='  ', wc_rev=1, repos_rev=2),
-    'foo'  : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
+    ''     : Item(status='  ', wc_rev=1),
+    'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, {
     'Q'     : Item(),
@@ -1481,7 +1473,6 @@ def merge_skips_obstructions(sbox):
     'iota'   : Item(verb='Deleting'),
     })
   expected_status = pre_merge_status
-  expected_status.tweak(repos_rev=3)
   expected_status.remove('iota', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -1529,7 +1520,6 @@ def merge_skips_obstructions(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/lambda'  : Item(verb='Sending'),
     })
-  expected_status.tweak(repos_rev=4)
   expected_status.tweak('A/B/lambda', wc_rev=4)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -1542,7 +1532,6 @@ def merge_skips_obstructions(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/lambda'  : Item(verb='Deleting'),
     })
-  expected_status.tweak(repos_rev=5)
   expected_status.remove('A/B/lambda')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -1583,7 +1572,6 @@ def merge_skips_obstructions(sbox):
   expected_status.add({
     'A/B/lambda'  : Item(wc_rev=6, status='  '),
     })
-  expected_status.tweak(repos_rev=6)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -1630,8 +1618,8 @@ def merge_into_missing(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/Q'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/foo'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q'       : Item(status='  ', wc_rev=2),
+    'A/B/F/foo'     : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -1654,11 +1642,10 @@ def merge_into_missing(sbox):
     'A/B/F/Q/baz'   : Item(verb='Adding'),
     })
   expected_status.add({
-    'A/B/F/Q/R'     : Item(status='  ', wc_rev=3, repos_rev=3),
-    'A/B/F/Q/R/bar' : Item(status='  ', wc_rev=3, repos_rev=3),
-    'A/B/F/Q/baz'   : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/B/F/Q/R'     : Item(status='  ', wc_rev=3),
+    'A/B/F/Q/R/bar' : Item(status='  ', wc_rev=3),
+    'A/B/F/Q/baz'   : Item(status='  ', wc_rev=3),
     })
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -1677,7 +1664,6 @@ def merge_into_missing(sbox):
     'foo'   : Item(status='! ', wc_rev=2),
     ### Why no 'Q'?
     })
-  expected_status.tweak(repos_rev=3)
   expected_skip = wc.State(F_path, {
     'Q'   : Item(),
     'foo' : Item(),
@@ -1717,7 +1703,6 @@ def merge_into_missing(sbox):
     'A/B/F/foo' : Item(status='! ', wc_rev=2),
     ### Why no 'A/B/F/Q'?
     })
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -1741,9 +1726,8 @@ def dry_run_adds_file_with_prop(sbox):
     'A/B/E/zig'     : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.add({
-    'A/B/E/zig'   : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/E/zig'   : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -1807,10 +1791,9 @@ def merge_binary_with_common_ancestry(sbox):
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.add({
-    'I'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'I/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'I'       : Item(status='  ', wc_rev=2),
+    'I/theta' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1829,10 +1812,9 @@ def merge_binary_with_common_ancestry(sbox):
     'J' : Item(verb='Adding'),
     })
 
-  expected_status.tweak(repos_rev=3)
   expected_status.add({
-    'J'       : Item(status='  ', wc_rev=3, repos_rev=3),
-    'J/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'J'       : Item(status='  ', wc_rev=3),
+    'J/theta' : Item(status='  ', wc_rev=3),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1851,9 +1833,8 @@ def merge_binary_with_common_ancestry(sbox):
     'K' : Item(verb='Adding'),
     })
 
-  expected_status.tweak(repos_rev=4)
   expected_status.add({
-    'K'       : Item(status='  ', wc_rev=4, repos_rev=4),
+    'K'       : Item(status='  ', wc_rev=4),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1872,9 +1853,8 @@ def merge_binary_with_common_ancestry(sbox):
     'K/theta' : Item(verb='Adding  (bin)'),
     })
 
-  expected_status.tweak(repos_rev=5)
   expected_status.add({
-    'K/theta' : Item(status='  ', wc_rev=5, repos_rev=5),
+    'K/theta' : Item(status='  ', wc_rev=5),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1892,7 +1872,6 @@ def merge_binary_with_common_ancestry(sbox):
     'I/theta' : Item(verb='Sending'),
     })
 
-  expected_status.tweak(repos_rev=6)
   expected_status.tweak('I/theta', wc_rev=6)
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1912,10 +1891,9 @@ def merge_binary_with_common_ancestry(sbox):
     'L/theta' : Item(verb='Adding  (bin)'),
     })
 
-  expected_status.tweak(repos_rev=7)
   expected_status.add({
-    'L'       : Item(status='  ', wc_rev=7, repos_rev=7),
-    'L/theta' : Item(status='  ', wc_rev=7, repos_rev=7),
+    'L'       : Item(status='  ', wc_rev=7),
+    'L/theta' : Item(status='  ', wc_rev=7),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1997,18 +1975,17 @@ def merge_funny_chars_on_path(sbox):
     for target in targets:  
       key = 'A/B/E/%s' % target[1]
       expected_output_dic[key] = Item(verb='Adding')
-      expected_status_dic[key] = Item(status='  ', wc_rev=2, repos_rev=2)
+      expected_status_dic[key] = Item(status='  ', wc_rev=2)
       
       if target[2]:
         key = 'A/B/E/%s/%s' % (target[1], target[2])
         expected_output_dic[key] = Item(verb='Adding')
-        expected_status_dic[key] = Item(status='  ', wc_rev=2, repos_rev=2)
+        expected_status_dic[key] = Item(status='  ', wc_rev=2)
 
 
   expected_output = wc.State(wc_dir, expected_output_dic)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.add(expected_status_dic)
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -2117,9 +2094,9 @@ def merge_keyword_expansions(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wcpath, 4)
   expected_status.add({
-    't'    : Item(status='  ', wc_rev=4, repos_rev=4),
-    't/f'  : Item(status='  ', wc_rev=4, repos_rev=4),
-    'b'    : Item(status='  ', wc_rev=4, repos_rev=4),
+    't'    : Item(status='  ', wc_rev=4),
+    't/f'  : Item(status='  ', wc_rev=4),
+    'b'    : Item(status='  ', wc_rev=4),
   })
   svntest.actions.run_and_verify_status(wcpath, expected_status)
 
@@ -2131,8 +2108,8 @@ def merge_keyword_expansions(sbox):
     'f'      : Item("$Revision: 4 $"),
     })
   expected_status = wc.State(bpath, {
-    ''       : Item(status='  ', wc_rev=4, repos_rev=4),
-    'f'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=4),
+    ''       : Item(status='  ', wc_rev=4),
+    'f'      : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(bpath, { })
   svntest.actions.run_and_verify_merge(bpath, '2', 'HEAD',
@@ -2160,7 +2137,6 @@ def merge_prop_change_to_deleted_target(sbox):
     'A/B/E/alpha' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
@@ -2173,7 +2149,6 @@ def merge_prop_change_to_deleted_target(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/E/alpha'  : Item(verb='Deleting'),
     })
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak(wc_rev=2)
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -2195,6 +2170,129 @@ def merge_prop_change_to_deleted_target(sbox):
     os.chdir(saved_cwd)
 
 
+#----------------------------------------------------------------------
+# A merge that replaces a directory
+# Tests for Issue #2144
+  
+def merge_dir_replace(sbox):
+  "merge a replacement of a directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_url = svntest.main.current_repo_url + '/A/B/F'
+
+  foo_path = os.path.join(F_path, 'foo')
+
+  # Create foo in F
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/foo' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/foo'    : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+  
+  # Merge foo onto C
+  expected_output = wc.State(C_path, {
+    'foo' : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    'foo' : Item(),
+    })
+  expected_status = wc.State(C_path, {
+    ''    : Item(status='  ', wc_rev=1),
+    'foo' : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  expected_skip = wc.State(C_path, { })
+  svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+
+  # Commit merge of foo onto C
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/foo'    : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/foo'  : Item(status='  ', wc_rev=2),
+    'A/C/foo'    : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Delete foo on F
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', foo_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F/foo'   : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/C/foo'     : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Recreate foo in F
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/foo' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/foo'    : Item(status='  ', wc_rev=5),
+    'A/C/foo'     : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+  # Merge replacement of foo onto C
+  expected_output = wc.State(C_path, {
+    'foo' : Item(status='D '),
+    'foo' : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    'foo' : Item(),
+    })
+  expected_status = wc.State(C_path, {
+    ''    : Item(status='  ', wc_rev=1),
+    'foo' : Item(status='R ', wc_rev='-', copied='+'),
+    })
+  expected_skip = wc.State(C_path, { })
+  svntest.actions.run_and_verify_merge(C_path, '2', '5', F_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       0, # skip props
+                                       0) # don't do a dry-run the output differs
+
+  
 #----------------------------------------------------------------------
 def merge_file_with_space_in_its_name(sbox):
   "merge a file whose name contains a space"
@@ -2253,7 +2351,7 @@ def merge_dir_branches(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/F/foo'    : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/foo'    : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,

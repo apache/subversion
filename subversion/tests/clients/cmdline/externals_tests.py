@@ -164,7 +164,6 @@ def externals_test_setup(sbox):
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_init_dir, 5)
-  expected_status.tweak(repos_rev=6)
   expected_status.tweak('A/C', 'A/D', wc_rev=6, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_init_dir,
@@ -538,7 +537,6 @@ def update_receive_change_under_external(sbox):
     'A/D/gamma' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
-  expected_status.tweak(repos_rev=6)
   expected_status.tweak('A/D/gamma', wc_rev=6)
   svntest.actions.run_and_verify_commit(other_wc_dir,
                                         expected_output,
@@ -574,7 +572,6 @@ def update_receive_change_under_external(sbox):
     'A/D/G/rho' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
-  expected_status.tweak(repos_rev=7)
   expected_status.tweak('A/D/gamma', wc_rev=6)
   expected_status.tweak('A/D/G/rho', wc_rev=7)
   svntest.actions.run_and_verify_commit(other_wc_dir,

@@ -177,10 +177,10 @@ def basic_copy_and_move_files(sbox):
   expected_status.tweak('A/D/G/rho', 'A/mu', wc_rev=2)
 
   expected_status.add({
-    'A/D/rho' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/C/alpha2' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/mu' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/iota' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/rho' : Item(status='  ', wc_rev=2),
+    'A/C/alpha2' : Item(status='  ', wc_rev=2),
+    'A/D/H/mu' : Item(status='  ', wc_rev=2),
+    'A/B/F/iota' : Item(status='  ', wc_rev=2),
     })
 
   expected_status.remove('A/mu', 'iota')
@@ -200,7 +200,6 @@ def basic_copy_and_move_files(sbox):
     'A/C/alpha2' : Item(verb='Sending'),
     })
   expected_status.tweak('A/C/alpha2', wc_rev=3)
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
                                          expected_status,
@@ -319,10 +318,10 @@ def receive_copy_in_update(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/B/newG' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/newG/pi' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/newG/rho' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/newG/tau' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/newG' : Item(status='  ', wc_rev=2),
+    'A/B/newG/pi' : Item(status='  ', wc_rev=2),
+    'A/B/newG/rho' : Item(status='  ', wc_rev=2),
+    'A/B/newG/tau' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -356,10 +355,10 @@ def receive_copy_in_update(sbox):
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
   expected_status.add({
-    'A/B/newG' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/newG/pi' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/newG/rho' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/newG/tau' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/newG' : Item(status='  ', wc_rev=2),
+    'A/B/newG/pi' : Item(status='  ', wc_rev=2),
+    'A/B/newG/rho' : Item(status='  ', wc_rev=2),
+    'A/B/newG/tau' : Item(status='  ', wc_rev=2),
     })
 
   # Do the update and check the results in three ways.
@@ -395,7 +394,6 @@ def resurrect_deleted_dir(sbox):
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.remove('A/D/G')
   expected_status.remove('A/D/G/pi')
   expected_status.remove('A/D/G/rho')
@@ -575,7 +573,6 @@ def copy_files_with_properties(sbox):
     'A/D/G/rho' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/D/G/rho', status='  ', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
@@ -599,9 +596,9 @@ def copy_files_with_properties(sbox):
 
   # Properties are not visible in WC status 'A'
   expected_status.add({
-    'A/D/G/rho' : Item(status=' M', wc_rev='2', repos_rev='2'),
-    'A/D/G/rho_wc' : Item(status='A ', wc_rev='-', repos_rev='2', copied='+'),
-    'A/D/G/rho_url' : Item(status='A ', wc_rev='-', repos_rev='2', copied='+'),
+    'A/D/G/rho' : Item(status=' M', wc_rev='2'),
+    'A/D/G/rho_wc' : Item(status='A ', wc_rev='-', copied='+'),
+    'A/D/G/rho_url' : Item(status='A ', wc_rev='-', copied='+'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -619,12 +616,11 @@ def copy_files_with_properties(sbox):
     'A/D/G/rho_wc' : Item(verb='Adding'),
     'A/D/G/rho_url' : Item(verb='Adding'),
     })
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('A/D/G/rho', status='  ', wc_rev=3)
   expected_status.remove('A/D/G/rho_wc', 'A/D/G/rho_url')
   expected_status.add({
-    'A/D/G/rho_wc' : Item(status='  ', wc_rev=3, repos_rev=3),
-    'A/D/G/rho_url' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/G/rho_wc' : Item(status='  ', wc_rev=3),
+    'A/D/G/rho_url' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
@@ -699,9 +695,9 @@ def mv_and_revert_directory(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
   expected_status.add({
-    'A/B/F/E' : Item(status='A ', wc_rev='-', repos_rev='1', copied='+'),
-    'A/B/F/E/alpha' : Item(status='  ', wc_rev='-', repos_rev='1', copied='+'),
-    'A/B/F/E/beta' : Item(status='  ', wc_rev='-', repos_rev='1', copied='+'),
+    'A/B/F/E' : Item(status='A ', wc_rev='-', copied='+'),
+    'A/B/F/E/alpha' : Item(status='  ', wc_rev='-', copied='+'),
+    'A/B/F/E/beta' : Item(status='  ', wc_rev='-', copied='+'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -808,14 +804,14 @@ def wc_to_repos(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
   expected_status.add({
-    'A/B/E/beta'   : Item(status=' M', wc_rev=4, repos_rev=4),
-    'A/D/H/omega'  : Item(status='M ', wc_rev=4, repos_rev=4),
-    'A/B/E/beta2'  : Item(status='  ', wc_rev=4, repos_rev=4),
-    'A/D/H2'       : Item(status='  ', wc_rev=4, repos_rev=4),
-    'A/D/H2/chi'   : Item(status='  ', wc_rev=4, repos_rev=4),
-    'A/D/H2/omega' : Item(status='  ', wc_rev=4, repos_rev=4),
-    'A/D/H2/psi'   : Item(status='  ', wc_rev=4, repos_rev=4),
-    'A/D/H2/beta'  : Item(status='  ', wc_rev=4, repos_rev=4),
+    'A/B/E/beta'   : Item(status=' M', wc_rev=4),
+    'A/D/H/omega'  : Item(status='M ', wc_rev=4),
+    'A/B/E/beta2'  : Item(status='  ', wc_rev=4),
+    'A/D/H2'       : Item(status='  ', wc_rev=4),
+    'A/D/H2/chi'   : Item(status='  ', wc_rev=4),
+    'A/D/H2/omega' : Item(status='  ', wc_rev=4),
+    'A/D/H2/psi'   : Item(status='  ', wc_rev=4),
+    'A/D/H2/beta'  : Item(status='  ', wc_rev=4),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -858,10 +854,10 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ', copied='+', wc_rev='-', repos_rev=1),
-    'E' :  Item(status='A ', copied='+', wc_rev='-', repos_rev=1),
-    'E/alpha' :  Item(status='  ', copied='+', wc_rev='-', repos_rev=1),
-    'E/beta'  :  Item(status='  ', copied='+', wc_rev='-', repos_rev=1),
+    'pi' : Item(status='A ', copied='+', wc_rev='-'),
+    'E' :  Item(status='A ', copied='+', wc_rev='-'),
+    'E/alpha' :  Item(status='  ', copied='+', wc_rev='-'),
+    'E/beta'  :  Item(status='  ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
 
@@ -894,7 +890,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'C' :  Item(status='A ', copied='+', wc_rev='-', repos_rev=1),
+    'C' :  Item(status='A ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
   
@@ -921,7 +917,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ',  wc_rev='0', repos_rev=1),
+    'pi' : Item(status='A ',  wc_rev='0'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
 
@@ -982,12 +978,12 @@ def url_copy_parent_into_child(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/B/F/B'         : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/B/E'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/B/E/alpha' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/B/E/beta'  : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/B/F'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/F/B/lambda'  : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/B'         : Item(status='  ', wc_rev=2),
+    'A/B/F/B/E'       : Item(status='  ', wc_rev=2),
+    'A/B/F/B/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/B/F/B/E/beta'  : Item(status='  ', wc_rev=2),
+    'A/B/F/B/F'       : Item(status='  ', wc_rev=2),
+    'A/B/F/B/lambda'  : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1051,18 +1047,18 @@ def wc_copy_parent_into_child(sbox):
     'F/B/lambda'  : Item("This is the file 'lambda'."),
     })
   expected_status = svntest.wc.State(wc_dir, {
-    ''            : Item(status='  ', wc_rev=2, repos_rev=2),
-    'E'           : Item(status='  ', wc_rev=2, repos_rev=2),
-    'E/alpha'     : Item(status='  ', wc_rev=2, repos_rev=2),
-    'E/beta'      : Item(status='  ', wc_rev=2, repos_rev=2),
-    'F'           : Item(status='  ', wc_rev=2, repos_rev=2),
-    'lambda'      : Item(status='  ', wc_rev=2, repos_rev=2),
-    'F/B'         : Item(status='  ', wc_rev=2, repos_rev=2),
-    'F/B/E'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'F/B/E/alpha' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'F/B/E/beta'  : Item(status='  ', wc_rev=2, repos_rev=2),
-    'F/B/F'       : Item(status='  ', wc_rev=2, repos_rev=2),
-    'F/B/lambda'  : Item(status='  ', wc_rev=2, repos_rev=2),
+    ''            : Item(status='  ', wc_rev=2),
+    'E'           : Item(status='  ', wc_rev=2),
+    'E/alpha'     : Item(status='  ', wc_rev=2),
+    'E/beta'      : Item(status='  ', wc_rev=2),
+    'F'           : Item(status='  ', wc_rev=2),
+    'lambda'      : Item(status='  ', wc_rev=2),
+    'F/B'         : Item(status='  ', wc_rev=2),
+    'F/B/E'       : Item(status='  ', wc_rev=2),
+    'F/B/E/alpha' : Item(status='  ', wc_rev=2),
+    'F/B/E/beta'  : Item(status='  ', wc_rev=2),
+    'F/B/F'       : Item(status='  ', wc_rev=2),
+    'F/B/lambda'  : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1104,7 +1100,7 @@ def resurrect_deleted_file(sbox):
 
   # status should now show the file scheduled for addition-with-history
   expected_status.add({
-    'rho' : Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
+    'rho' : Item(status='A ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
@@ -1305,7 +1301,6 @@ def repos_to_wc_1634(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
-  expected_status.tweak(repos_rev=2)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
                                          expected_status,
@@ -1317,18 +1312,18 @@ def repos_to_wc_1634(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-r1', E_url, E_path)
   expected_status.add({
-    'A/B/E'       :  Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
-    'A/B/E/alpha' :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/B/E/beta'  :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/B/E'       :  Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E/alpha' :  Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E/beta'  :  Item(status='  ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/B/E'       :  Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
-    'A/B/E/alpha' :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/B/E/beta'  :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/B/E'       :  Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E/alpha' :  Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E/beta'  :  Item(status='  ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
@@ -1399,7 +1394,6 @@ def wc_to_wc_copy_deleted(sbox):
 
   # Commit to get state deleted
   expected_status.remove('A/B/E/alpha', 'A/B/lambda', 'A/B/F')
-  expected_status.tweak(repos_rev=2)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
     'A/B/lambda'  : Item(verb='Deleting'),
@@ -1421,7 +1415,6 @@ def wc_to_wc_copy_deleted(sbox):
     'A/B2/lambda'  : Item(status='D ', wc_rev='-', copied='+'),
     'A/B2/F'       : Item(status='D ', wc_rev='-', copied='+'),
     })
-  expected_status.tweak(repos_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Stuff copied from state deleted=true is now schedule=delete.
@@ -1462,7 +1455,6 @@ def wc_to_wc_copy_deleted(sbox):
     'A/B2/E'      : Item(status='  ', wc_rev=3),
     'A/B2/E/beta' : Item(status='  ', wc_rev=3),
     })
-  expected_status.tweak(repos_rev=3)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B2'         : Item(verb='Adding'),
     'A/B2/E/alpha' : Item(verb='Deleting'),

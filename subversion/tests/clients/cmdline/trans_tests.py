@@ -199,17 +199,17 @@ def keywords_from_birth(sbox):
   # Add all the files
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'url_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'url_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'id_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'id_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'embd_author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'embd_author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'embd_bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'fixed_length_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'author_rev_unexp' : Item(status='A ', wc_rev=0),
+    'author_rev_exp' : Item(status='A ', wc_rev=0),
+    'url_unexp' : Item(status='A ', wc_rev=0),
+    'url_exp' : Item(status='A ', wc_rev=0),
+    'id_unexp' : Item(status='A ', wc_rev=0),
+    'id_exp' : Item(status='A ', wc_rev=0),
+    'bogus_keywords' : Item(status='A ', wc_rev=0),
+    'embd_author_rev_unexp' : Item(status='A ', wc_rev=0),
+    'embd_author_rev_exp' : Item(status='A ', wc_rev=0),
+    'embd_bogus_keywords' : Item(status='A ', wc_rev=0),
+    'fixed_length_keywords' : Item(status='A ', wc_rev=0),
     })
 
   svntest.main.run_svn (None, 'add', author_rev_unexp_path)
@@ -590,7 +590,6 @@ def cat_keyword_expansion(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/lambda' : Item(verb='Sending'),
     })
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('A/B/lambda', wc_rev=3)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
@@ -620,7 +619,7 @@ def copy_propset_commit(sbox):
                                      mu2_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/mu2' : Item(status='A ', wc_rev='-', repos_rev=1, copied='+')
+    'A/mu2' : Item(status='A ', wc_rev='-', copied='+')
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -628,7 +627,6 @@ def copy_propset_commit(sbox):
   expected_output = wc.State(wc_dir, {
     'A/mu2' : Item(verb='Adding'),
     })
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
