@@ -25,12 +25,49 @@
 
 #include <string.h>
 
+#include <apr_getopt.h>
 #include <apr_pools.h>
 
 #include "svn_error.h"
 #include "svn_config.h"
 #include "svn_test.h"
 
+
+/* Initialize parameters for the tests. */
+extern int test_argc;
+extern const char **test_argv;
+
+static const apr_getopt_option_t opt_def[] =
+  {
+    {"srcdir", 'S', 1, "the source directory for VPATH test runs"},
+    {0, 0, 0, 0}
+  };
+static const char *srcdir = NULL;
+
+static svn_error_t *init_params (apr_pool_t *pool)
+{
+  apr_getopt_t *opt;
+  int optch;
+  const char *opt_arg;
+  apr_status_t status;
+
+  apr_getopt_init (&opt, pool, test_argc, test_argv);
+  while (!(status = apr_getopt_long (opt, opt_def, &optch, &opt_arg)))
+    {
+      switch (optch)
+        {
+        case 'S':
+          srcdir = opt_arg;
+          break;
+        }
+    }
+
+  if (!srcdir)
+    return svn_error_create(SVN_ERR_TEST_FAILED, 0,
+                            "missing required parameter '--srcdir'");
+
+  return SVN_NO_ERROR;
+}
 
 /* A quick way to create error messages.  */
 static svn_error_t *
@@ -59,13 +96,18 @@ test1 (const char **msg,
   svn_config_t *cfg;
   int i;
   char *key, *py_val, *c_val;
+  const char *cfg_file;
 
   *msg = "test svn_config";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_config_read(&cfg, "config-test.cfg", TRUE, pool));
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
+  SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
 
   /* Test values retrieved from our ConfigParser instance against
      values retrieved using svn_config. */
@@ -94,7 +136,6 @@ test1 (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-/* ### disabled for now until locating config-test.cfg is fixed
-    SVN_TEST_PASS (test1), */
+    SVN_TEST_PASS (test1),
     SVN_TEST_NULL
   };

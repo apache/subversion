@@ -86,7 +86,8 @@ class TestHarness:
                  quote(os.path.join(self.srcdir, progdir))]
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
-      cmdline = [quote(progname)]
+      cmdline = [quote(progname),
+                 quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
