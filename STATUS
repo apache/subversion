@@ -104,13 +104,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, kfogel, epg
 
-  * r11439, r11669
-    Fix slow "svn st" where the targets are files by not locking the whole
-    anchor tree.
-    Votes:
-      +1: lundblad, dionisos, ghudson
-      (r11439 nominated by): Steve King
-
   * r11665
     Make FSFS commits work with insert-only perms on db/revs.
     Justification:
