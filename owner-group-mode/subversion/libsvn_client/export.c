@@ -177,7 +177,7 @@ copy_one_versioned_file (const char *from,
       tm = entry->cmt_date;
 
       if (text_time)
-        SVN_ERR(svn_time_from_cstring (&tm, text_time->data, iterpool));
+        SVN_ERR(svn_time_from_cstring (&tm, text_time->data, pool));
     }
 
   if (keywords)
@@ -216,13 +216,13 @@ copy_one_versioned_file (const char *from,
 
   if (! special)
     {
-      SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
+      SVN_ERR (svn_io_set_file_affected_time (tm, to, pool));
 
-      SVN_ERR (svn_io_file_set_file_owner_group_mode (copy_to,
+      SVN_ERR (svn_io_file_set_file_owner_group_mode (to,
                                                       owner,
                                                       group,
                                                       mode,
-                                                      iterpool) );
+                                                      pool) );
     }
 
   return SVN_NO_ERROR;

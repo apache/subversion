@@ -2837,7 +2837,6 @@ svn_io_file_set_file_owner_group_mode (const char *path,
   apr_uid_t uid;
   apr_finfo_t finfo;
   apr_fileperms_t perms;
-  char *errorptr;
 
   /* this function should move to apr */
 #ifdef _WIN32
@@ -2846,11 +2845,11 @@ svn_io_file_set_file_owner_group_mode (const char *path,
   if (owner || group)
     {
       if (owner && owner->data)
-        if (svn_io_file_owner_id(&uid, owner, pool) != SVN_NO_ERROR)
+        if (svn_io_file_owner_id(&uid, (svn_string_t*)owner, pool) != SVN_NO_ERROR)
           uid=-1;
 
       if (group && group)
-        if (svn_io_file_group_id(&gid, group, pool) != SVN_NO_ERROR)
+        if (svn_io_file_group_id(&gid, (svn_string_t*)group, pool) != SVN_NO_ERROR)
           gid=-1;
 
       if (uid != -1 && gid != -1)

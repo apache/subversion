@@ -40,6 +40,7 @@
 #include "svn_io.h"
 #include "svn_md5.h"
 #include "svn_xml.h"
+#include "svn_time.h"
 
 #include "wc.h"
 #include "log.h"
