@@ -75,7 +75,8 @@
    an abbreviated nickname (listed in `svn.conf' and in the policy
    structure)
 
-   Returns:  the full (proper) repository pathname.
+   Returns: the full (proper) repository pathname, or the original
+   string if no match is found.
 
  */
 
@@ -83,14 +84,15 @@ svn_string_t *
 svn__svr_expand_repos_name (svn_svr_policy_t *policy,
                             svn_string_t *repos)
 {
- /* Loop through policy->repos_aliases hash.
-     If there's a match, return new bytestring containing hash value.
-     If there's no match, return original string pointer.
-  */
+  void *val;
 
-  /* NOTE:  if we need a pool, use the one inside policy.  */
+  /* Look up the alias name in our repos_aliases hash */
+  val = ap_hash_get (policy->repos_aliases, repos->data, repos->len);
 
-  return repos;
+  if (val == NULL)   /* If no expansion exists, */
+    return repos;    /*   return the original string */
+  else
+    return (svn_string_t *) val;
 }
 
 
