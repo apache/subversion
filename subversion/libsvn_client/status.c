@@ -74,6 +74,9 @@ svn_client_status (apr_hash_t **statushash,
      If the URL was bogus, or just has no RA match, that's okay.
      Leave the repository revnum fields invalid.  (Perhaps the wc came
      from xml or something.) */
+  if (err && (err->apr_err != SVN_ERR_RA_ILLEGAL_URL))
+    return err;
+
   if (! err)
     {
       apr_hash_index_t *hi;
