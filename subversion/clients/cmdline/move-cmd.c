@@ -44,6 +44,8 @@ svn_cl__move (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton = NULL;
   svn_client_commit_info_t *commit_info = NULL;
   svn_error_t *err;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
@@ -59,14 +61,16 @@ svn_cl__move (apr_getopt_t *os,
   src_path = ((const char **) (targets->elts))[0];
   dst_path = ((const char **) (targets->elts))[1];
   
+  if (! opt_state->quiet)
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool); 
+
   err = svn_client_move 
            (&commit_info, 
             src_path, &(opt_state->start_revision), dst_path,
             opt_state->force, auth_baton, 
             &svn_cl__get_log_message,
             svn_cl__make_log_msg_baton (opt_state, NULL, pool),
-            SVN_CL_NOTIFY(opt_state),
-            svn_cl__make_notify_baton (pool),
+            notify_func, notify_baton,
             pool);
   if (err)
     return svn_cl__may_need_force (err);

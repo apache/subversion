@@ -32,18 +32,22 @@
 #include "cl.h"
 
 
+/* Baton for notify and friends. */
 struct notify_baton
 {
-  apr_pool_t *pool;
+  svn_boolean_t received_some_change;
+  svn_boolean_t is_checkout;
+  svn_boolean_t suppress_final_line;
   svn_boolean_t sent_first_txdelta;
+  apr_pool_t *pool;
 };
 
 
-static void 
-notify_added (void *baton, const char *path)
-{
-  struct notify_baton *nb = (struct notify_baton *) baton;
 
+#if 0  /* left for reference, soon to toss */
+static void
+notify_added (struct notify_baton *nb, const char *path)
+{
   /* the pool (BATON) is typically the global pool; don't keep filling it */
   apr_pool_t *subpool = svn_pool_create (nb->pool);
   svn_wc_entry_t *entry;
@@ -63,7 +67,7 @@ notify_added (void *baton, const char *path)
       printf ("WARNING: apparently failed to add %s\n", path);
       goto done;
     }
-           
+
   if (entry->kind == svn_node_file)
     {
       const svn_string_t *value;
@@ -88,138 +92,44 @@ notify_added (void *baton, const char *path)
  done:
   svn_pool_destroy (subpool);
 }
-
-
-static void
-notify_commit_postfix_txdelta (void *baton,
-                               const char *path)
-{
-  struct notify_baton *nb = (struct notify_baton *) baton;
-  
-  if (! nb->sent_first_txdelta)
-    {
-      printf ("Transmitting file data ");
-      nb->sent_first_txdelta = TRUE;
-    }
-  
-  printf (".");
-  fflush (stdout);
-}
-
-
-void 
-svn_cl__notify_func (void *baton, 
-                     const char *path,
-                     svn_wc_notify_action_t action, 
-                     svn_node_kind_t kind,
-                     svn_wc_notify_state_t text_state,
-                     svn_wc_notify_state_t prop_state,
-                     svn_revnum_t revision)
-{
-  /* Note that KIND, TEXT_STATE, PROP_STATE, and REVISION are ignored
-     by this implementation. */
-
-  switch (action)
-    {
-    case svn_wc_notify_add:
-      notify_added (baton, path);
-      return;
-
-    case svn_wc_notify_delete:
-      printf ("D  %s\n", path);
-      return;
-
-    case svn_wc_notify_restore:
-      printf ("Restored %s\n", path);
-      return;
-
-    case svn_wc_notify_revert:
-      printf ("Reverted %s\n", path);
-      return;
-
-    case svn_wc_notify_resolve:
-      printf ("Resolved conflicted state of %s\n", path);
-      return;
-
-    case svn_wc_notify_update:
-      printf ("U   %s\n", path);
-      return;
-
-    case svn_wc_notify_commit_modified:
-      printf ("Sending   %s\n", path);
-      return;
-
-    case svn_wc_notify_commit_added:
-      printf ("Adding    %s\n", path);
-      return;
-
-    case svn_wc_notify_commit_deleted:
-      printf ("Deleting  %s\n", path);
-      return;
-
-    case svn_wc_notify_commit_replaced:
-      printf ("Replacing %s\n", path);
-      return;
-
-    case svn_wc_notify_commit_postfix_txdelta:
-      notify_commit_postfix_txdelta (baton, path);
-      return;
-
-    default:
-      break;
-    }
-}
-
-
-void *
-svn_cl__make_notify_baton (apr_pool_t *pool)
-{
-  struct notify_baton *nb = apr_palloc (pool, sizeof(*nb));
-
-  nb->pool = pool;
-  nb->sent_first_txdelta = 0;
-
-  return nb;
-}
-
-
-/*** Notifiers for checkout. ***/
-
-/* ### This should handle update/switch, as well as checkouts;
-   see http://subversion.tigris.org/issues/show_bug.cgi?id=662. */
-
-/* Baton for checkout/update/switche notification. */
-struct update_notify_baton
-{
-  svn_boolean_t received_some_change;
-  svn_boolean_t is_checkout;
-  svn_boolean_t suppress_final_line;
-  apr_pool_t *pool;
-};
+#endif /* 0 */
 
 
 /* This implements `svn_wc_notify_func_t'. */
 static void
-update_notify (void *baton,
-               const char *path,
-               svn_wc_notify_action_t action,
-               svn_node_kind_t kind,
-               svn_wc_notify_state_t text_state,
-               svn_wc_notify_state_t prop_state,
-               svn_revnum_t revision)
+notify (void *baton,
+        const char *path,
+        svn_wc_notify_action_t action,
+        svn_node_kind_t kind,
+        const char *mime_type,
+        svn_wc_notify_state_t content_state,
+        svn_wc_notify_state_t prop_state,
+        svn_revnum_t revision)
 {
-  struct update_notify_baton *ub = baton;
+  struct notify_baton *nb = baton;
   char statchar_buf[3] = "_ ";
 
   switch (action)
     {
     case svn_wc_notify_delete:
-      ub->received_some_change = TRUE;
+      nb->received_some_change = TRUE;
       printf ("D  %s\n", path);
       break;
 
+    case svn_wc_notify_restore:
+      printf ("Restored %s\n", path);
+      break;
+
+    case svn_wc_notify_revert:
+      printf ("Reverted %s\n", path);
+      break;
+
+    case svn_wc_notify_resolve:
+      printf ("Resolved conflicted state of %s\n", path);
+      break;
+
     case svn_wc_notify_add:
-      ub->received_some_change = TRUE;
+      nb->received_some_change = TRUE;
       if (kind == svn_node_dir)
         {
           printf ("A  %s\n", path);
@@ -233,46 +143,46 @@ update_notify (void *baton,
     case svn_wc_notify_update:
       /* note: maybe fell thru from above case */
 
-      ub->received_some_change = TRUE;
-      
+      /* ### printf ("U   %s\n", path); */
+
+      nb->received_some_change = TRUE;
+
       if ((kind == svn_node_file) && (action == svn_wc_notify_update))
         {
-          if (text_state == svn_wc_notify_state_conflicted)
+          if (content_state == svn_wc_notify_state_conflicted)
             statchar_buf[0] = 'C';
-          else if (text_state == svn_wc_notify_state_merged)
+          else if (content_state == svn_wc_notify_state_merged)
             statchar_buf[0] = 'G';
-          else if (text_state == svn_wc_notify_state_modified)
-            {
-              statchar_buf[0] = 'U';
-            }
+          else if (content_state == svn_wc_notify_state_modified)
+            statchar_buf[0] = 'U';
         }
-      
+
       if (prop_state == svn_wc_notify_state_conflicted)
         statchar_buf[1] = 'C';
       else if (prop_state == svn_wc_notify_state_merged)
         statchar_buf[1] = 'G';
       else if (prop_state == svn_wc_notify_state_modified)
         statchar_buf[1] = 'U';
-      
+
       if (! ((kind == svn_node_dir)
-             && (prop_state == svn_wc_notify_state_unknown)
-             && (prop_state == svn_wc_notify_state_unchanged)))
+             && ((prop_state == svn_wc_notify_state_unknown)
+                 || (prop_state == svn_wc_notify_state_unchanged))))
         printf ("%s %s\n", statchar_buf, path);
-      
+
       break;
 
     case svn_wc_notify_update_completed:
       {
-        if (! ub->suppress_final_line)
+        if (! nb->suppress_final_line)
           {
             if (SVN_IS_VALID_REVNUM (revision))
               {
-                if (ub->is_checkout)
+                if (nb->is_checkout)
                   printf ("Checked out revision %" SVN_REVNUM_T_FMT ".\n",
                           revision);
                 else
                   {
-                    if (ub->received_some_change)
+                    if (nb->received_some_change)
                       printf ("Updated to revision %" SVN_REVNUM_T_FMT ".\n",
                               revision);
                     else
@@ -282,7 +192,7 @@ update_notify (void *baton,
               }
             else  /* no revision */
               {
-                if (ub->is_checkout)
+                if (nb->is_checkout)
                   printf ("Checkout complete.\n");
                 else
                   printf ("Update complete\n");
@@ -292,6 +202,38 @@ update_notify (void *baton,
 
       break;
 
+    case svn_wc_notify_commit_modified:
+      printf ("Sending         %s\n", path);
+      break;
+
+    case svn_wc_notify_commit_added:
+      if (mime_type
+          && ((strlen (mime_type)) > 5)
+          && ((strncmp (mime_type, "text/", 5)) != 0))
+        printf ("Adding  (bin)  %s\n", path);
+      else
+        printf ("Adding         %s\n", path);
+      break;
+
+    case svn_wc_notify_commit_deleted:
+      printf ("Deleting        %s\n", path);
+      break;
+
+    case svn_wc_notify_commit_replaced:
+      printf ("Replacing       %s\n", path);
+      break;
+
+    case svn_wc_notify_commit_postfix_txdelta:
+      if (! nb->sent_first_txdelta)
+        {
+          printf ("Transmitting file data ");
+          nb->sent_first_txdelta = TRUE;
+        }
+
+      printf (".");
+      fflush (stdout);
+      break;
+
     default:
       break;
     }
@@ -299,27 +241,28 @@ update_notify (void *baton,
 
 
 void
-svn_cl__get_checkout_notifier (svn_wc_notify_func_t *notify_func_p,
-                               void **notify_baton_p,
-                               svn_boolean_t is_checkout,
-                               svn_boolean_t suppress_final_line,
-                               apr_pool_t *pool)
+svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
+                      void **notify_baton_p,
+                      svn_boolean_t is_checkout,
+                      svn_boolean_t suppress_final_line,
+                      apr_pool_t *pool)
 {
-  struct update_notify_baton *ub = apr_palloc (pool, sizeof (*ub));
+  struct notify_baton *nb = apr_palloc (pool, sizeof (*nb));
 
-  ub->received_some_change = FALSE;
-  ub->is_checkout = is_checkout;
-  ub->suppress_final_line = suppress_final_line;
-  ub->pool = pool;
+  nb->received_some_change = FALSE;
+  nb->sent_first_txdelta = FALSE;
+  nb->is_checkout = is_checkout;
+  nb->suppress_final_line = suppress_final_line;
+  nb->pool = pool;
 
-  *notify_func_p = update_notify;
-  *notify_baton_p = ub;
+  *notify_func_p = notify;
+  *notify_baton_p = nb;
 }
 
 
 
-/* 
+/*
  * local variables:
  * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end: 
+ * end:
  */

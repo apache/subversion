@@ -50,13 +50,16 @@ svn_cl__add (apr_getopt_t *os,
   if (targets->nelts)
     {
       apr_pool_t *subpool = svn_pool_create (pool);
+      svn_wc_notify_func_t notify_func = NULL;
+      void *notify_baton = NULL;
+      
+      if (! opt_state->quiet)
+        svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
 
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
-          err = svn_client_add (target, recursive,
-                                SVN_CL_NOTIFY(opt_state),
-                                svn_cl__make_notify_baton (subpool),
+          err = svn_client_add (target, recursive, notify_func, notify_baton,
                                 subpool);
           if (err)
             {

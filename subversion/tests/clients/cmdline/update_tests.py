@@ -523,7 +523,7 @@ def receive_overlapping_same_change(sbox):
     return 1
 
   # Expected output tree for update of other_wc.
-  output_list = [ [other_iota_path, None, {}, {'status' : 'U ' }] ]
+  output_list = [ [other_iota_path, None, {}, {'status' : 'G ' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Expected disk tree for the update.
@@ -723,10 +723,10 @@ def update_delete_modified_files(sbox):
     return 1
 
   # Commit
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'ci', '-m', 'foo',
-                                                    wc_dir)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'ci',
+                                                    '-m', 'log msg', wc_dir)
   if len(stderr_lines) != 0:
-    print "commiting deletes failed"
+    print "committing deletes failed"
     return 1
 
   # ### Update before backdating to avoid obstructed update error for G
