@@ -28,6 +28,7 @@
 #include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_md5.h"
+#include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
@@ -67,6 +68,9 @@ typedef struct {
 
   /* True iff we've already sent the open tag for the update. */
   svn_boolean_t started_update;
+
+  /* True iff client requested all data inline in the report. */
+  svn_boolean_t send_all;
 
 } update_ctx_t;
 
@@ -263,6 +267,45 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
   baton->path3 = svn_path_join(parent->path3, baton->name, pool);
 
   return baton;
+}
+
+
+struct brigade_write_baton
+{
+  apr_bucket_brigade *bb;
+  ap_filter_t *output;
+};
+
+
+/* This implements 'svn_write_fn_t'. */
+static svn_error_t * brigade_write_fn(void *baton,
+                                      const char *data,
+                                      apr_size_t *len)
+{
+  struct brigade_write_baton *wb = baton;
+  apr_status_t apr_err;
+
+  apr_err = apr_brigade_write(wb->bb, ap_filter_flush, wb->output, data, *len);
+
+  if (apr_err != APR_SUCCESS)
+    return svn_error_create(apr_err, NULL, "Error writing base64 data.");
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_stream_t * make_base64_output_stream(apr_bucket_brigade *bb,
+                                                ap_filter_t *output,
+                                                apr_pool_t *pool)
+{
+  struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
+  svn_stream_t *stream = svn_stream_create(wb, pool);
+
+  wb->bb = bb;
+  wb->output = output;
+  svn_stream_set_write(stream, brigade_write_fn);
+
+  return svn_base64_encode(stream, pool);
 }
 
 
@@ -488,44 +531,53 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
           send_xml(baton->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR, qname);
         }
     }
-  if (baton->changed_props && (! baton->added))
+
+  if ((! baton->uc->send_all) && baton->changed_props && (! baton->added))
     {
-      /* ### for now, we will simply tell the client to fetch all the
-         props */
+      /* Tell the client to fetch all the props */
       send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
     }
 
-  /* Output the 3 CR-related properties right here.
-     ### later on, compress via the 'scattered table' solution as
-     discussed with gstein.  -bmcs */
-  {
-    /* ### grrr, these DAV: property names are already #defined in
-       ra_dav.h, and statically defined in liveprops.c.  And now
-       they're hardcoded here.  Isn't there some header file that both
-       sides of the network can share?? */
-    
-    send_xml(baton->uc, "<S:prop>");
-    
-    /* ### special knowledge: svn_repos_dir_delta will never send
-     *removals* of the commit-info "entry props". */
-    if (baton->committed_rev)
-      send_xml(baton->uc, "<D:version-name>%s</D:version-name>",
-               baton->committed_rev);
-    
-    if (baton->committed_date)
-      send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
-               baton->committed_date);
-    
-    if (baton->last_author)
-      send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
-               baton->last_author);
+  send_xml(baton->uc, "<S:prop>");
 
-    if (baton->text_checksum)
+  /* Both modern and non-modern clients need the checksum... */
+  if (baton->text_checksum)
+    {
       send_xml(baton->uc, "<V:md5-checksum>%s</V:md5-checksum>", 
                baton->text_checksum);
+    }
 
-    send_xml(baton->uc, "</S:prop>\n");
-  }
+  /* ...but only non-modern clients want the 3 CR-related properties
+     sent like here, because they can't handle receiving these special
+     props inline like any other prop.
+     ### later on, compress via the 'scattered table' solution as
+     discussed with gstein.  -bmcs */
+  if (! baton->uc->send_all)
+    {
+      /* ### grrr, these DAV: property names are already #defined in
+         ra_dav.h, and statically defined in liveprops.c.  And now
+         they're hardcoded here.  Isn't there some header file that both
+         sides of the network can share?? */
+      
+      /* ### special knowledge: svn_repos_dir_delta will never send
+       *removals* of the commit-info "entry props". */
+      if (baton->committed_rev)
+        send_xml(baton->uc, "<D:version-name>%s</D:version-name>",
+                 baton->committed_rev);
+      
+      if (baton->committed_date)
+        send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
+                 baton->committed_date);
+      
+      if (baton->last_author)
+        send_xml(baton->uc,
+                 "<D:creator-displayname>%s</D:creator-displayname>",
+                 baton->last_author);
+
+    }
+
+  /* Close unconditionally, because we sent checksum unconditionally. */
+  send_xml(baton->uc, "</S:prop>\n");
     
   if (baton->added)
     send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
@@ -533,23 +585,43 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     send_xml(baton->uc, "</S:open-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
 }
 
+
+/* Send the opening tag of the update-report if it hasn't been sent
+   already.
+
+   Note: because send_xml does not return an error, this function
+   never returns error either.  However, its prototype anticipates a
+   day when send_xml() can return error. */
+static svn_error_t * maybe_start_update_report(update_ctx_t *uc)
+{
+  if ((! uc->resource_walk) && (! uc->started_update))
+    {
+      send_xml(uc,
+               DAV_XML_HEADER DEBUG_CR
+               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
+               "xmlns:D=\"DAV:\" %s>" DEBUG_CR,
+               uc->send_all ? "send-all=\"true\"" : "");
+
+      uc->started_update = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * upd_set_target_revision(void *edit_baton,
                                              svn_revnum_t target_revision,
                                              apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
 
+  SVN_ERR( maybe_start_update_report(uc) );
+
   if (! uc->resource_walk)
     {
-      send_xml(uc,
-               DAV_XML_HEADER DEBUG_CR
-               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR
-               "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
-               target_revision);
-
-      uc->started_update = TRUE;
+      send_xml(uc, "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>"
+               DEBUG_CR, target_revision);
     }
 
   return SVN_NO_ERROR;
@@ -574,14 +646,18 @@ static svn_error_t * upd_open_root(void *edit_baton,
 
   *root_baton = b;
 
+  SVN_ERR( maybe_start_update_report(uc) );
+
   if (uc->resource_walk)
     {
       const char *qpath = apr_xml_quote_string(pool, b->path3, 1);
       send_xml(uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);
     }
   else    
-    send_xml(uc, "<S:open-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
-             DEBUG_CR, base_revision);
+    {
+      send_xml(uc, "<S:open-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
+               DEBUG_CR, base_revision);
+    }
 
   send_vsn_url(b, pool);
 
@@ -636,43 +712,96 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
   item_baton_t *b = baton;
   const char *qname;
 
-  /* For now, specially handle entry props that come through (using
-     the ones we care about, discarding the rest).  ### this should go
-     away and we should just tunnel those props on through for the
-     client to deal with. */
-#define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
-  if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
-    {
-      if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
-        b->committed_rev = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      else if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE))
-        b->committed_date = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
-        b->last_author = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      
-      return SVN_NO_ERROR;
-    }
-#undef NSLEN
-                
+  /* Resource walks say nothing about props. */
+  if (b->uc->resource_walk)
+    return SVN_NO_ERROR;
+
+  /* Else this not a resource walk, so either send props or cache them
+     to send later, depending on whether this is a modern report
+     response or not. */
+
   qname = apr_xml_quote_string (b->pool, name, 1);
+
   /* apr_xml_quote_string doesn't realloc if there is nothing to
      quote, so dup the name, but only if necessary. */
   if (qname == name)
     qname = apr_pstrdup (b->pool, name);
-  if (value)
-    {
-      if (! b->changed_props)
-        b->changed_props = apr_array_make (b->pool, 1, sizeof (name));
 
-      (*((const char **)(apr_array_push (b->changed_props)))) = qname;
-    }
-  else
-    {
-      if (! b->removed_props)
-        b->removed_props = apr_array_make (b->pool, 1, sizeof (name));
 
-      (*((const char **)(apr_array_push (b->removed_props)))) = qname;
+  if (b->uc->send_all)
+    {
+      if (value)
+        {
+          const svn_string_t *qval;
+          
+          if (svn_xml_is_xml_safe(value->data, value->len))
+            {
+              svn_stringbuf_t *tmp = NULL;
+              svn_xml_escape_cdata_string(&tmp, value, pool);
+              qval = svn_string_create (tmp->data, pool);
+              send_xml(b->uc, "<S:set-prop name=\"%s\">", qname);
+            }
+          else
+            {
+              qval = svn_base64_encode_string(value, pool);
+              send_xml(b->uc,
+                       "<S:set-prop name=\"%s\" encoding=\"base64\">" DEBUG_CR,
+                       qname);
+            }
+          
+          send_xml(b->uc, "%s", qval->data);
+          send_xml(b->uc, "</S:set-prop>" DEBUG_CR);
+        }
+      else  /* value is null, so this is a prop removal */
+        {
+          send_xml(b->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR, qname);
+        }
     }
+  else  /* don't do inline response, just cache prop names for close_helper */
+    {
+      /* For now, store certain entry props, because we'll need to send
+         them later as standard DAV ("D:") props.  ### this should go
+         away and we should just tunnel those props on through for the
+         client to deal with. */
+#define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
+      if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
+        {
+          if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
+            {
+              b->committed_rev = value ?
+                apr_pstrdup(b->pool, value->data) : NULL;
+            }
+          else if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE))
+            {
+              b->committed_date = value ?
+                apr_pstrdup(b->pool, value->data) : NULL;
+            }
+          else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
+            {
+              b->last_author = value ?
+                apr_pstrdup(b->pool, value->data) : NULL;
+            }
+      
+          return SVN_NO_ERROR;
+        }
+#undef NSLEN
+
+      if (value)
+        {
+          if (! b->changed_props)
+            b->changed_props = apr_array_make (b->pool, 1, sizeof (name));
+          
+          (*((const char **)(apr_array_push (b->changed_props)))) = qname;
+        }
+      else
+        {
+          if (! b->removed_props)
+            b->removed_props = apr_array_make (b->pool, 1, sizeof (name));
+          
+          (*((const char **)(apr_array_push (b->removed_props)))) = qname;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -710,6 +839,52 @@ static svn_error_t * upd_open_file(const char *path,
 }
 
 
+/* We have our own window handler and baton as a simple wrapper around
+   the real handler (which converts vdelta windows to base64-encoded
+   svndiff data).  The wrapper is responsible for sending the opening
+   and closing XML tags around the svndiff data. */
+struct window_handler_baton
+{
+  svn_boolean_t seen_first_window;  /* False until first window seen. */
+  update_ctx_t *uc;
+
+  /* The _real_ window handler and baton. */
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+};
+
+
+/* This implements 'svn_txdelta_window_handler_t'. */
+static svn_error_t * window_handler(svn_txdelta_window_t *window, void *baton)
+{
+  struct window_handler_baton *wb = baton;
+
+  if (! wb->seen_first_window)
+    {
+      wb->seen_first_window = TRUE;
+      send_xml(wb->uc, "<S:txdelta>");
+    }
+
+  SVN_ERR( wb->handler(window, wb->handler_baton) );
+
+  if (window == NULL)
+    send_xml(wb->uc, "</S:txdelta>");
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements 'svn_txdelta_window_handler_t'.
+   During a resource walk, the driver sends an empty window as a
+   boolean indicating that a change happened to this file, but we
+   don't want to send anything over the wire as a result. */
+static svn_error_t * dummy_window_handler(svn_txdelta_window_t *window,
+                                          void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
                                          const char *base_checksum,
                                          apr_pool_t *pool,
@@ -717,10 +892,29 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
                                          void **handler_baton)
 {
   item_baton_t *file = file_baton;
+  struct window_handler_baton *wb = apr_palloc(file->pool, sizeof(*wb));
+  svn_stream_t *base64_stream;
+
+  if (file->uc->resource_walk)
+    {
+      *handler = dummy_window_handler;
+      *handler_baton = NULL;
+      return SVN_NO_ERROR;
+    }
 
   file->base_checksum = apr_pstrdup(file->pool, base_checksum);
   file->text_changed = TRUE;
-  *handler = svn_delta_noop_window_handler;
+
+  wb->seen_first_window = FALSE;
+  wb->uc = file->uc;
+  base64_stream = make_base64_output_stream(wb->uc->bb, wb->uc->output,
+                                            file->pool);
+
+  svn_txdelta_to_svndiff(base64_stream, file->pool,
+                         &(wb->handler), &(wb->handler_baton));
+
+  *handler = window_handler;
+  *handler_baton = wb;
 
   return SVN_NO_ERROR;
 }
@@ -754,17 +948,10 @@ static svn_error_t * upd_close_edit(void *edit_baton,
                                     apr_pool_t *pool)
 {
   update_ctx_t *uc = edit_baton;
-  
-  if (! uc->started_update)
-    {
-      send_xml(uc,
-               DAV_XML_HEADER DEBUG_CR
-               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR);
-      uc->started_update = TRUE;
-    }
-  return SVN_NO_ERROR;
+
+  /* Our driver will unconditionally close the update report... So if
+     the report hasn't even been started yet, start it now. */
+  return maybe_start_update_report(uc);
 }
 
 
@@ -808,6 +995,23 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                            "is required.");
     }
   
+  /* Look to see if client wants a report with props and textdeltas
+     inline, rather than placeholder tags that tell the client to do
+     further fetches.  Modern clients prefer inline. */
+  {
+    apr_xml_attr *this_attr;
+
+    for (this_attr = doc->root->attr; this_attr; this_attr = this_attr->next)
+      {
+        if ((strcmp(this_attr->name, "send-all") == 0)
+            && (strcmp(this_attr->value, "true") == 0))
+          {
+            uc.send_all = TRUE;
+            break;
+          }
+      }
+  }
+
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
       /* Note that child->name might not match any of the cases below.
@@ -1001,7 +1205,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      repos->repos, 
                                      src_path, target,
                                      dst_path,
-                                     FALSE, /* don't send text-deltas */
+                                     uc.send_all,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
