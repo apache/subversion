@@ -2216,18 +2216,17 @@ $
   <sect1 id="svn-ch-5-sect-6">
     <title>Summary</title>
 
-    <para>In this chapter, we've provided useful information about how
-      to administer Subversion repositories.  We've introduced various
-      tools&mdash;the <command>svnadmin</command>,
-      <command>svnlook</command> programs, the Berkeley DB utilities,
-      and others&mdash;for assisting you with this task.  We've also
-      covered some of the basic Apache configuration steps necessary
-      for making your repository accessible over a network.  And
-      throughout the chapter, we've noted common administration
-      pitfalls, and suggestions for avoiding them.</para>
+    <para>By now you should have a basic understanding of how to
+      create, configure, and maintain Subversion repositories.  We've
+      introduced you to the various tools that will assist you with
+      this task.  We've covered some of the basic Apache configuration
+      steps necessary for making your repository accessible over a
+      network.  And throughout the chapter, we've noted common
+      administration pitfalls, and suggestions for avoiding
+      them.</para>
 
-      <!-- ### cmpilato : where's the hook?  why can't i come up with
-           something clever to say?  bummer... -->
+    <para>All that remains is for you to decide what exciting data to
+      store in your repository.</para>
 
   </sect1>
 </chapter>
