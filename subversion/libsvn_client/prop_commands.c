@@ -57,6 +57,28 @@ is_valid_prop_name (const char *name)
 }
 
 
+/* Check whether NAME is a revision property name.
+ * 
+ * Return TRUE if it is.
+ * Return FALSE if it is not.  
+ */ 
+static svn_boolean_t
+is_revision_prop_name (const char *name)
+{
+  int i;
+  const char *revision_props[] = 
+    {
+      SVN_PROP_REVISION_ALL_PROPS
+    };
+
+  for (i = 0; i < sizeof (revision_props) / sizeof (char *); i++)
+    {
+      if (strcmp (name, revision_props[i]) == 0)
+        return TRUE;
+    }
+  return FALSE;
+}
+
 /* A baton for propset_walk_cb. */
 struct propset_walk_baton
 {
@@ -112,6 +134,13 @@ svn_client_propset (const char *propname,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
+
+  if (is_revision_prop_name (propname))
+    {
+      return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                                "Revision property '%s' not allowed "
+                                "in this context", propname);
+    }
 
   if (svn_path_is_url (target))
     {
