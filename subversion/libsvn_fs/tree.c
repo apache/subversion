@@ -841,47 +841,50 @@ svn_fs_merge (const char **conflict_p,
 
   if (ancestor is dir, source is dir, target is dir)
     {
-      /* All three are directories.  Make three hashes, one for each
-         dir's entries, then... todo */
-
-      for (each entry E in ancestor)
+      if (ancestor is same as source is same as target)
+        the merge is done;
+      else if (ancestor is same as source, but target is different)
+        target stays the same;
+      else if (ancestor is same as target, but source is different)
+        target takes source;
+      else if (source is same as target, but ancestor is different)
+        target stays the same, since it was the same change;
+      else if (ancestor is different from source is different from target)
         {
-          if (E exists in neither source nor target)
+          for (each entry E in ancestor)
             {
-              target stays as is, it was a double delete;
+              if (E exists in neither source nor target)
+                {
+                  target stays as is, it was a double delete;
+                }
+              else if (E exists in source but not target)
+                {
+                  target takes source;
+                }
+              else if (E exists in target but not source)
+                {
+                  target stays as is;
+                }
+              else if (E exists in target and source)
+                recurse;
             }
-          else if (E exists in source but not target)
+
+          /* Now take care of all remaining entries in source. */
+          
+          for (each entry E in source but not in ancestor)
             {
-              target takes source;
-            }
-          else if (E exists in target but not source)
-            {
-              target stays as is;
-            }
-          else if (E exists in target and source)
-            {
-              if (E is the same in target and source)
-                target stays as is;
-              else (E is different in target and source)
+              if (E does not exist in target)
+                target takes E from source;
+              else if (E exists in target and is same as in source)
+                target stays as is, it was a twin add;
+              else if (E exists in target but is different from source)
                 CONFLICT;
             }
+          
+          /* All entries in ancestor and source have been accounted for.
+             Anything remaining in target is a non-conflicting add, so do
+             nothing. */
         }
-
-      /* Now take care of all remaining entries in source. */
-
-      for (each entry E in source but not in ancestor)
-        {
-          if (E does not exist in target)
-            target takes E from source;
-          else if (E exists in target and is same as in source)
-            target stays as is, it was a twin add;
-          else if (E exists in target but is different from in source)
-            CONFLICT;
-        }
-
-      /* All entries in ancestor and source have been accounted for.
-         Anything remaining in target is a non-conflicting add, so do
-         nothing. */
     }
   else if (ancestor is dir, source is file, target is file)
     {
