@@ -88,15 +88,24 @@
    routines should be called from within the server.  We define broad
    categories of hooks as necessary here, expanding as we go.
 
-   Each plugin object fills in these fields with either a well-defined
+   Each plugin object fills in the hook fields with either a well-defined
    routine of its own, or a NULL value.
 */
 
 typedef struct svn_svr_plugin_t
 {
-  /* An authorization function should return NULL (failure) or
+
+  svn_string_t *name;         /* What the plugin calls itself */
+  svn_string_t *description;  /* Plugin's documentation string 
+                                 (short self-description) */
+
+
+  /* AUTHORIZATION HOOK: 
+
+     An authorization function should return NULL (failure) or
      non-NULL (success).  If successful, it should fill in the
-     "canonical" filesystem name in the user structure.  */
+     "canonical" filesystem name in the user structure. 
+  */
 
   char (* authorization_hook) (svn_string_t *repos,
                                svn_user_t *user,
@@ -104,7 +113,9 @@ typedef struct svn_svr_plugin_t
                                unsigned long ver,
                                svn_string_t *path);
 
-  /* This hook isn't fully fleshed out yet */
+  /* CONFLICT RESOLUTION HOOK:
+     
+     This hook isn't fully fleshed out yet */
 
   (svn_delta_t *) (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
                                              svn_error_t *rationale);
@@ -131,19 +142,21 @@ typedef struct svn_svr_plugin_t
 
 typedef struct svn_svr_policies_t
 {
-  svn_proplist_t *repos_aliases;    /* an array of props (key/value):
-                                       stores aliases for repositories */
+  /* A hash which maps repositories -> aliases.
+     KEY = (svn_string_t *),  VAL = (svn_string_t *)  */
+  svn_proplist_t *repos_aliases;
 
-  ap_array_header_t *global_restrictions; /* an array of strings
-                                             describes global security
-                                             restrictions (type
-                                             svn_string_t) */
+  /* A hash which maps security commands -> command args.
+     (These commands describe global security policies.)
+     KEY = (svn_string_t *),  VAL = (svn_string_t *)  */
+  svn_proplist_t *global_restrictions;
   
-  ap_array_header_t *plugins;         /* an array of loaded plugin types,
-                                         (type svn_svr_plugin_t) */
+  /* A hash which maps DSO pathnames -> loaded plugin objects.
+     KEY = (svn_string_t *),  VAL = (svn_svr_plugin_t *)   */
+  svn_proplist_t *plugins;
 
-  ap_pool_t *pool;                   /* a memory pool, in case a
-                                        server routine ever needs one */
+  /* A convience memory pool, in case a server routine ever needs one */
+  ap_pool_t *pool;                   
   
 } svn_svr_policies_t;
 
