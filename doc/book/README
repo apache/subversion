@@ -118,7 +118,13 @@ II. COMPILING THE DOCS
 
      Of course, to run FOP at all, you also need a Java runtime
      environment.  Try java.sun.com or www.blackdown.org if you don't
-     already have that. 
+     already have that.
+
+     Sometimes building the book can use more memory than Java is
+     willing to allocate by default.  Michael Price reports that with
+     the Sun 1.4.1 JVM, he had to add "-Xms100m -Xmx200m" options to
+     the $JAVACMD in fop.sh; the options to increase heap size are
+     likely different for other JVM's.
 
    * If you want images to be included in the PDF, you'll need to use
      the JIMI image processing library.  Grab the latest release from
