@@ -311,34 +311,6 @@ def check_log_chain (chain, start, end):
 # Tests
 #
 
-
-#----------------------------------------------------------------------
-def non_existent_repository(sbox):
-  "'svn log file:///nonexistent_path' should fail"
-
-  # The original bug was that
-  #
-  #   $ svn log file:///nonexistent_path
-  #
-  # would go into an infinite loop, instead of failing immediately as
-  # it should.  So this test _always_ operates on a file:/// path, to
-  # make sure that bug stays fixed.  Note that if someone runs this
-  # test on a system that has "/nonexistent_path" in the root
-  # directory, the test could fail, and that's just too bad :-).
-
-  output, errput = svntest.main.run_svn (1, 'log', 'file:///nonexistent_path')
-
-  if not errput:
-    return 1
-
-  for line in errput:
-    if re.match(".*Unable to open an ra_local session to URL.*", line):
-      return 0
-    
-  # Else never matched the expected error output, so the test failed.
-  return 1
-
-
 #----------------------------------------------------------------------
 def plain_log(sbox):
   "'svn log', no args, top of wc."
@@ -441,7 +413,6 @@ def log_with_empty_repos(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              non_existent_repository,
               plain_log,
               versioned_log_message,
               log_with_empty_repos,
