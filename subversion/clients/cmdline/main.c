@@ -612,7 +612,7 @@ static volatile sig_atomic_t cancelled = FALSE;
 
 /* A signal handler to support cancellation. */
 static void
-sig_int (int unused)
+signal_handler (int unused)
 {
   cancelled = TRUE;
 }
@@ -622,7 +622,7 @@ svn_error_t *
 svn_cl__check_cancel (void *baton)
 {
   if (cancelled)
-    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Caught SIGINT");
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Caught signal");
   else
     return SVN_NO_ERROR;
 }
@@ -1201,10 +1201,6 @@ main (int argc, const char * const *argv)
     svn_auth_open (&ab, providers, pool);
     ctx->auth_baton = ab;
 
-    /* Set up our cancellation support. */
-    apr_signal (SIGINT, sig_int);
-    ctx->cancel_func = svn_cl__check_cancel;
-
     /* Place any default --username or --password credentials into the
        auth_baton's run-time parameter hash. */
     if (opt_state.auth_username)
@@ -1235,6 +1231,21 @@ main (int argc, const char * const *argv)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE,
                              (void *) "");
   }
+
+  /* Set up our cancellation support. */
+  ctx->cancel_func = svn_cl__check_cancel;
+  apr_signal (SIGINT, signal_handler);
+#ifdef SIGHUP
+  apr_signal (SIGTERM, signal_handler);
+#endif
+#ifdef SIGTERM
+  apr_signal (SIGTERM, signal_handler);
+#endif
+
+#ifdef SIGPIPE
+  /* Disable SIGPIPE generation for the platforms that have it. */
+  apr_signal(SIGPIPE, SIG_IGN);
+#endif
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func) (os, &command_baton, pool);

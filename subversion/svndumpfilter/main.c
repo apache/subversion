@@ -854,7 +854,8 @@ subcommand_exclude (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (parse_baton_initialize (&pb, opt_state, TRUE, pool));
 
   SVN_ERR (svn_repos_parse_dumpstream (pb->in_stream,
-                                       &filtering_vtable, pb, pool));
+                                       &filtering_vtable, pb,
+                                       NULL, NULL, pool));
 
   fprintf (stderr, "\n Dropped %d revisions, %d nodes\n",
            pb->rev_drop_count, pb->node_drop_count);
@@ -888,7 +889,8 @@ subcommand_include (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (parse_baton_initialize (&pb, opt_state, FALSE, pool));
 
   SVN_ERR (svn_repos_parse_dumpstream (pb->in_stream,
-                                       &filtering_vtable, pb, pool));
+                                       &filtering_vtable, pb,
+                                       NULL, NULL, pool));
 
   fprintf (stderr, "\n Dropped %d revisions, %d nodes\n",
            pb->rev_drop_count, pb->node_drop_count);

@@ -18,6 +18,7 @@
 
 
 #include <apr_file_io.h>
+#include <apr_signal.h>
 
 #include "svn_pools.h"
 #include "svn_cmdline.h"
@@ -34,8 +35,27 @@
 
 /*** Code. ***/
 
-/* Helper to open stdio streams */
+/* A flag to see if we've been cancelled by the client or not. */
+static volatile sig_atomic_t cancelled = FALSE;
 
+/* A signal handler to support cancellation. */
+static void
+signal_handler (int unused)
+{
+  cancelled = TRUE;
+}
+
+/* Our cancellation callback. */
+static svn_error_t *
+check_cancel (void *baton)
+{
+  if (cancelled)
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Caught signal");
+  else
+    return SVN_NO_ERROR;
+}
+
+/* Helper to open stdio streams */
 static svn_error_t *
 create_stdio_stream (svn_stream_t **stream,
                      APR_DECLARE(apr_status_t) open_fn (apr_file_t **, 
@@ -371,6 +391,7 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   for (revision = start; revision <= end; revision++)
     {
       svn_pool_clear (subpool);
+      SVN_ERR (check_cancel (NULL));
       if (! opt_state->quiet)
         printf ("Deltifying revision %" SVN_REVNUM_T_FMT "...", revision);
       SVN_ERR (svn_fs_deltify_revision (fs, revision, subpool));
@@ -444,7 +465,8 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                   apr_file_open_stderr, pool));
 
   SVN_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
-                              lower, upper, opt_state->incremental, pool));
+                              lower, upper, opt_state->incremental,
+                              check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -492,7 +514,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
                               opt_state->uuid_action, opt_state->parent_dir,
-                              pool));
+                              check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -733,7 +755,7 @@ subcommand_verify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_fs_youngest_rev (&youngest, svn_repos_fs (repos), pool));
   SVN_ERR (create_stdio_stream (&stderr_stream, apr_file_open_stderr, pool));
   SVN_ERR (svn_repos_dump_fs (repos, NULL, stderr_stream, 
-                              0, youngest, FALSE, pool));
+                              0, youngest, FALSE, check_cancel, NULL, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1010,6 +1032,20 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
     }
+
+  /* Set up our cancellation support. */
+  apr_signal (SIGINT, signal_handler);
+#ifdef SIGHUP
+  apr_signal (SIGTERM, signal_handler);
+#endif
+#ifdef SIGTERM
+  apr_signal (SIGTERM, signal_handler);
+#endif
+
+#ifdef SIGPIPE
+  /* Disable SIGPIPE generation for the platforms that have it. */
+  apr_signal(SIGPIPE, SIG_IGN);
+#endif
 
   /* Run the subcommand. */
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
