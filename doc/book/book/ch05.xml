@@ -2193,7 +2193,7 @@ $
         would want to include as part of a system-wide nightly backup.
         For most repositories, archived commit emails alone provide
         sufficient redundancy as restoration sources, at least for the
-        most recernt few commits.  But it's your data&mdash;protect it
+        most recent few commits.  But it's your data&mdash;protect it
         as much as you'd like.</para>
             
       <para>Often, the best approach to repository backups is a

@@ -77,7 +77,7 @@
           </row>
           <row>
             <entry>libsvn_ra_svn</entry>
-            <entry>A proprietary protocol Repository Access module</entry>
+            <entry>A custom protocol Repository Access module</entry>
           </row>
           <row>
             <entry>libsvn_repos</entry>
@@ -203,7 +203,7 @@
         <title>The Transaction Distraction</title>
 
         <para>The notion of a Subversion transaction, especially given
-          its close proximity the database code in libsvn_fs, can
+          its close proximity to the database code in libsvn_fs, can
           become easily confused with the transaction support provided
           by the underlying database itself.  Both types of
           transaction exist to provide atomicity and isolation.  In
@@ -622,11 +622,11 @@ The following repository access (RA) modules are available:
       </sect3>
 
       <sect3 id="svn-ch-8-sect-1.2.2">
-        <title>RA-SVN (Proprietary Protocol Repository Access)</title>
+        <title>RA-SVN (Custom Protocol Repository Access)</title>
 
         <para>In addition to the standard HTTP/WebDAV protocol,
           Subversion also provides an RA implementation that uses a
-          proprietary protocol.  The libsvn_ra_svn module implements
+          custom protocol.  The libsvn_ra_svn module implements
           its own network socket connectivity, and communicates with a
           stand-alone server&mdash;the <filename>svnserve</filename>
           program&mdash;on the machine that hosts the
@@ -1032,7 +1032,7 @@ if __name__ == '__main__':
         programming is required to compensate for complex APIs that
         SWIG needs some help generalizing.  For more information on
         SWIG itself, see the project's website at <systemitem
-        class="url">http://www.swig.org</systemitem>.</para>
+        class="url">http://www.swig.org/</systemitem>.</para>
 
     </sect2>
   </sect1>
@@ -1265,15 +1265,9 @@ if __name__ == '__main__':
 
     <para>How does all of this apply to Subversion?  The mod_dav_svn
       Apache module uses HTTP, extended by WebDAV and DeltaV, as its
-      primary network protocol.  Rather than implementing a new
-      proprietary protocol, the original Subversion designers decided
-      to simply map the versioning concepts and actions used by
-      Subversion onto the concepts exposed by RFCs 2518 and 3253.
-      <footnote>
-        <para>As it turns out, Subversion has more recently evolved a
-          proprietary protocol anyway, implemented by the libsvn_ra_svn
-          module.</para>
-      </footnote>
+      one of its network protocols.  Subversion uses mod_dav_svn to
+      map between Subversion's versioning concepts and those of RFCs
+      2518 and 3253.
     </para>
 
     <para>For a more thorough discussion of WebDAV, how it works, and
@@ -1387,6 +1381,9 @@ crawl_dir (apr_array_header_t *files,
     {
       const char *child_path;
 
+      /* Clear the per-iteration SUBPOOL.  */
+      svn_pool_clear (subpool);
+
       /* Skip entries for "this dir" ('.') and its parent ('..').  */
       if (finfo.filetype == APR_DIR)
         {
@@ -1420,10 +1417,10 @@ crawl_dir (apr_array_header_t *files,
           /* Add the path to the array.  */
           (*((const char **) apr_array_push (files))) = child_path;
         }
-
-      /* Clear the per-iteration SUBPOOL.  */
-      svn_pool_clear (subpool);
     }
+
+  /* Destroy SUBPOOL.  */
+  svn_pool_destroy (subpool);
 
   /* Check that the loop exited cleanly. */
   if (apr_err)
@@ -1433,9 +1430,6 @@ crawl_dir (apr_array_header_t *files,
   apr_err = apr_dir_close (dir);
   if (apr_err)
     return apr_err;
-
-  /* Destroy SUBPOOL.  */
-  svn_pool_destroy (subpool);
 
   return APR_SUCCESS;
 }
@@ -1474,7 +1468,7 @@ crawl_dir (apr_array_header_t *files,
     
     <para>The official source of information about the Subversion
       project is, of course, the project's website at <systemitem
-      class="url">http://subversion.tigris.org</systemitem>.  There
+      class="url">http://subversion.tigris.org/</systemitem>.  There
       you can find information about getting access to the source code
       and participating on the discussion lists.  The Subversion
       community always welcomes new members.  If you are
@@ -1536,7 +1530,7 @@ crawl_dir (apr_array_header_t *files,
       <para>After you have a working Subversion client, you are now
         poised to checkout a working copy of the Subversion source
         repository from <systemitem
-        class="url">http://svn.collab.net/repos/svn/trunk</systemitem>:
+        class="url">http://svn.collab.net/repos/svn/trunk/</systemitem>:
         <footnote>
           <para>Note that the URL checked out in the example above
             ends not with <literal>svn</literal>, but with a
