@@ -980,6 +980,58 @@ def update_binary_file_2():
                                                None, None, 1,
                                                '-r', '2')
 
+#----------------------------------------------------------------------
+
+def update_missing():
+  "update missing items (by name) in working copy"
+
+  sbox = sandbox(update_missing)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Remove some files and dirs from the working copy.
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+
+  os.remove(mu_path)
+  os.remove(rho_path)
+  shutil.rmtree(E_path)
+  shutil.rmtree(H_path)
+
+  # Create expected output tree for an update of the missing items by name
+  output_list = [[mu_path, None, {}, {'status' : 'A '}],
+                 [rho_path, None, {}, {'status' : 'A '}],
+                 [E_path, None, {}, {'status' : 'A '}],
+                 [os.path.join(E_path, 'alpha'), None, {}, {'status' : 'A '}],
+                 [os.path.join(E_path, 'beta'), None, {}, {'status' : 'A '}],
+                 [H_path, None, {}, {'status' : 'A '}],
+                 [os.path.join(H_path, 'chi'), None, {}, {'status' : 'A '}],
+                 [os.path.join(H_path, 'omega'), None, {}, {'status' : 'A '}],
+                 [os.path.join(H_path, 'psi'), None, {}, {'status' : 'A '}]]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update.
+  my_greek_tree = svntest.main.copy_greek_tree()
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Do the update and check the results in three ways.
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree,
+                                               None, None, None, None, 0,
+                                               mu_path, rho_path,
+                                               E_path, H_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -998,7 +1050,8 @@ test_list = [ None,
               basic_cleanup,
               basic_revert,
               update_binary_file,
-              update_binary_file_2
+              update_binary_file_2,
+              update_missing
              ]
 
 if __name__ == '__main__':
