@@ -47,12 +47,12 @@ run_start_commit_hook (svn_fs_t *fs,
       && (kind != svn_node_dir))
     {
       svn_error_t *err;
-      const char *args[5];
+      const char *args[4];
 
       args[0] = hook;
       args[1] = svn_fs_repository (fs);
       args[2] = user;
-      args[4] = NULL;
+      args[3] = NULL;
 
       if ((err = svn_io_run_cmd (".", hook, args, NULL, NULL, NULL, pool)))
         return svn_error_createf 
@@ -78,12 +78,12 @@ run_pre_commit_hook (svn_fs_t *fs,
       && (kind != svn_node_dir))
     {
       svn_error_t *err;
-      const char *args[5];
+      const char *args[4];
 
       args[0] = hook;
       args[1] = svn_fs_repository (fs);
       args[2] = txn_name;
-      args[4] = NULL;
+      args[3] = NULL;
 
       if ((err = svn_io_run_cmd (".", hook, args, NULL, NULL, NULL, pool)))
         {
@@ -111,12 +111,12 @@ run_post_commit_hook (svn_fs_t *fs,
       && (kind != svn_node_dir))
     {
       svn_error_t *err;
-      const char *args[5];
+      const char *args[4];
 
       args[0] = hook;
       args[1] = svn_fs_repository (fs);
       args[2] = apr_psprintf (pool, "%lu", rev);
-      args[4] = NULL;
+      args[3] = NULL;
 
       if ((err = svn_io_run_cmd (".", hook, args, NULL, NULL, NULL, pool)))
         {
