@@ -603,10 +603,6 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
    node in TARGET which couldn't be merged.  If there are no
    conflicting differences, *CONFLICT_P is set to null.
 
-   What are conflicting differences vs non-conflicting differences?
-
-   
-
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_merge (const char **conflict_p,
                            svn_fs_root_t *source_root,
