@@ -80,7 +80,7 @@
       linkend="svn-ch-2-sect-3.2"/>.</para>
 
     <para>For this chapter, we'll go back to the same example from
-      Chapter 2.  Remember that you and your collaborator, Felix, are
+      Chapter 2.  Remember that you and your collaborator, Sally, are
       sharing a repository that contains two projects,
       <filename>paint</filename> and <filename>write.</filename>
       Notice, however, that this time somebody has created two new
@@ -94,19 +94,19 @@
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
 
-    <para>As before, assume that you and Felix both have working
+    <para>As before, assume that you and Sally both have working
       copies of the <filename>/trunk/write</filename> project.</para>
 
     <para>Let's say that you've been given the task of performing a
       radical reorganization of the project.  It will take a long time
       to write, and will affect all the files in the project.  The
-      problem here is that you don't want to interfere with Felix, who
-      is in the process of fixing small bugs here and there.  He's
+      problem here is that you don't want to interfere with Sally, who
+      is in the process of fixing small bugs here and there.  She's
       depending on the fact that the latest version of the project is
       always usable.  If you start committing your changes bit-by-bit,
-      you'll surely break things for Felix.</para>
+      you'll surely break things for Sally.</para>
 
-    <para>One strategy is to crawl into a hole: you and Felix can stop
+    <para>One strategy is to crawl into a hole: you and Sally can stop
       sharing information for a week or two.  That is, start gutting
       and reorganizing all the files in your working copy, but don't
       commit or update until you're completely finished with the task.
@@ -119,7 +119,7 @@
       machines), you'll need to manually copy your changes back and
       forth, or just do all the work on a single computer.  Finally,
       when you're finished, you might find it very difficult to commit
-      your changes.  Felix (or others) may have made many other
+      your changes.  Sally (or others) may have made many other
       changes in the repository that are difficult to merge into your
       working copy -- especially all at once.</para>
 
@@ -275,8 +275,8 @@ Checked out revision 341.
 
       <para>There's nothing special about this working copy; it simply
         mirrors a different location of the repository.  When you
-        commit changes, however, Felix won't ever see them when he
-        updates.  His working copy is of
+        commit changes, however, Sally won't ever see them when she
+        updates.  Her working copy is of
         <filename>/trunk/write</filename>.</para>
 
       <para>Let's pretend that a week goes by, and the following
@@ -296,7 +296,7 @@ Checked out revision 341.
         </listitem>
 
         <listitem><para>
-          Felix makes a change to
+          Sally makes a change to
           <filename>/trunk/write/document.c</filename>, which creates
           revision 344.</para>
         </listitem>
@@ -325,12 +325,12 @@ rev 343:  user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 * document.c:  frozzled the wazjub.
 
 ------------------------------------------------------------------------
-rev 303:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+rev 303:  sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 
 * document.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
 * document.c:  adding this file to the project.
 
@@ -341,38 +341,38 @@ rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       <filename>document.c</filename> all the way back through time,
       traversing the point where it was copied.  (Remember that your
       branch was created in revision 341.)  Now look what happens when
-      Felix runs the same command on his copy of the file:</para>
+      Sally runs the same command on her copy of the file:</para>
 
 <screen>
 $ pwd
-/home/felix/write
+/home/sally/write
 
 $ svn log document.c
 ------------------------------------------------------------------------
-rev 344:  felix | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+rev 344:  sally | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 
 * document.c:  fix a bunch of spelling errors.
 
 ------------------------------------------------------------------------
-rev 303:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+rev 303:  sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 
 * document.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 
 * document.c:  adding this file to the project.
 
 ------------------------------------------------------------------------
 </screen>
 
-      <para>Felix sees his own revision 344 change, but not the change
+      <para>Sally sees her own revision 344 change, but not the change
       you made in revision 343.  As far as Subversion is concerned,
       these two commits affected different files in different
       repository locations.  However, Subversion
       <emphasis>does</emphasis> show that the two files share a common
       history.  Before the branch-copy was made in revision 341, they
-      used to be the same file.  That's why you and Felix both see
+      used to be the same file.  That's why you and Sally both see
       revisions 303 and 98.</para>
 
     </sect2>
@@ -411,7 +411,7 @@ rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
   <sect1 id="svn-ch-4-sect-3">
     <title>Copying changes between branches</title>
       
-    <para>Now you and Felix are working on parallel branches of the
+    <para>Now you and Sally are working on parallel branches of the
       project.  The good news is that you're not interfering with each
       other.  The bad news is that it's very easy to drift
       <emphasis>too</emphasis> far apart.  Remember that one of the
@@ -420,20 +420,20 @@ rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       merge your changes back into the main branch without a huge
       number of conflicts.</para>
 
-    <para>Instead, you and Felix should continue to share changes as
+    <para>Instead, you and Sally should continue to share changes as
       you work.  It's up to you to decide which changes are worth
       sharing; Subversion gives you the ability to selectively "copy"
       changes between branches.</para>
 
     <para>In the previous section, we mentioned that both you and
-      Felix made changes to <filename>document.c</filename> on
-      different branches.  If you look at Felix's log message for
-      revision 344, you can see that he fixed some spelling errors.
+      Sally made changes to <filename>document.c</filename> on
+      different branches.  If you look at Sally's log message for
+      revision 344, you can see that she fixed some spelling errors.
       No doubt, your copy of the same file still has the same spelling
       errors.  It's likely that your future changes to this file will
       be affecting the same areas that have the spelling errors, so
       you're in for some potential conflicts when you merge your
-      branches someday.  It's better, then, to receive Felix's change
+      branches someday.  It's better, then, to receive Sally's change
       now, <emphasis>before</emphasis> you start working too heavily
       in the same places.</para>
 
@@ -443,7 +443,7 @@ rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       Chapter 3).  Both commands are able to compare any two objects
       in the repository and describe the differences.  For example,
       you can ask <command>svn diff</command> to show you the exact
-      change made by Felix in revision 344:</para>
+      change made by Sally in revision 344:</para>
 
 <screen>
 $ svn diff -r343:344 http://svn.example.com/repos/trunk/write
@@ -505,7 +505,7 @@ M  document.c
 
     <para>The output of <command>svn merge</command> shows that your
       copy of <filename>document.c</filename> was patched.  It now
-      contains Felix's change &mdash; it has been "copied" from his
+      contains Sally's change &mdash; it has been "copied" from her
       branch to your working copy, and now exists as a local
       modification.  At this point, it's up to you to review the local
       modification and make sure it works correctly.</para>
@@ -551,14 +551,18 @@ done
         limited; it's only able to tweak file contents.  There's no
         way to represent changes to <emphasis>trees</emphasis>, such
         as the addition, removal, or renaming of files and
-        directories.  If Felix's change had, say, added a new
+        directories.  If Sally's change had, say, added a new
         directory, the output of <command>svn diff</command> wouldn't
         have mentioned it at all.  <command>svn diff</command> only
         outputs the limited patch-format, so there are some ideas it
-        simply can't express. <!-- ### FOOTNOTE about a better patch
-        format someday.--> The <command>svn merge</command> command,
-        however, can express tree-changes by directly applying them to
-        your working copy.</para>
+        simply can't express. 
+        <footnote> <para>In the future, the Subversion project plans
+          to use (or invent) an expanded patch format that
+          describes tree-changes.</para>
+        </footnote>
+        The <command>svn merge</command> command, however, can express
+        tree-changes by directly applying them to your working
+        copy.</para>
 
       </sidebar>
 

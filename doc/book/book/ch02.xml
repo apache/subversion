@@ -331,23 +331,23 @@ Committed revision 57.
         working copy of <filename>/write</filename>, they will see
         your changes in the latest version of the file.</para>
 
-      <para>Suppose you have a collaborator, Felix, who checked out a
+      <para>Suppose you have a collaborator, Sally, who checked out a
         working copy of <filename>/write</filename> at the same time
         you did.  When you commit your change to
-        <filename>search.c</filename>, Felix's working copy is left
+        <filename>search.c</filename>, Sally's working copy is left
         unchanged; Subversion only modifies working directories at the
         user's request.</para>
 
-      <para>To bring his project up to date, Felix can ask
-        Subversion to <firstterm>update</firstterm> his working copy,
+      <para>To bring her project up to date, Sally can ask
+        Subversion to <firstterm>update</firstterm> her working copy,
         by using the Subversion <command>update</command> command.
-        This will incorporate your changes into his working copy, as
-        well as any others that have been committed since he checked
+        This will incorporate your changes into her working copy, as
+        well as any others that have been committed since she checked
         it out.</para>
 
 <screen>
 $ pwd
-/home/felix/write
+/home/sally/write
 
 $ ls -a 
 .svn/ Makefile document.c search.c
@@ -358,7 +358,7 @@ U search.c
 
       <para>The output from the <command>svn update</command> command
         indicates that Subversion updated the contents of
-        <filename>search.c</filename>.  Note that Felix didn't need to
+        <filename>search.c</filename>.  Note that Sally didn't need to
         specify which files to update; Subversion uses the information
         in the <filename>.svn</filename> directory, and further
         information in the repository, to decide which files need to
@@ -449,7 +449,7 @@ write/Makefile:4
       search.c:5
 </screen>
 
-      <para>Suppose that, at this point, Felix commits a change to
+      <para>Suppose that, at this point, Sally commits a change to
         <filename>document.c</filename>, creating revision 6.  If you
         use <command>svn update</command> to bring your working copy
         up to date, then it will look like this:</para>
@@ -460,7 +460,7 @@ write/Makefile:6
       search.c:6
 </screen>
 
-      <para>Felix's changes to <filename>document.c</filename> will
+      <para>Sally's changes to <filename>document.c</filename> will
         appear in your working copy, and your change will still be
         present in <filename>search.c</filename>.  In this example,
         the text of <filename>Makefile</filename> is identical in
