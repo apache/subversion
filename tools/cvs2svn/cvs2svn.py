@@ -33,6 +33,7 @@ vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
+HEAD_MIRROR_FILE = 'cvs2svn-head-mirror.db'  # Mirror the head tree
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
@@ -273,9 +274,9 @@ def gen_key():
 
 
 class TreeMirror:
-  def __init__(self, parent_dir):
-    'Open a tree mirror, by means of a new db file in PARENT_DIR'
-    self.db_file = os.path.join(parent_dir, 'cvs2svn-head-mirror.db')
+  def __init__(self):
+    'Open a db file to mirror the head tree.'
+    self.db_file = HEAD_MIRROR_FILE
     self.db = anydbm.open(self.db_file, 'n')
     self.root_key = gen_key()
     self.db[self.root_key] = marshal.dumps({}) # Init as a dir with no entries
@@ -405,9 +406,7 @@ class Dump:
     self.dumpfile_path = dumpfile_path
     self.revision = revision
     self.dumpfile = open(dumpfile_path, 'wb')
-    self.tmpdir = os.tempnam('.', 'cvs2svn-tmp-')
-    os.mkdir(self.tmpdir)
-    self.head_mirror = TreeMirror(self.tmpdir)
+    self.head_mirror = TreeMirror()
 
     # Initialize the dumpfile with the standard headers:
     #
@@ -595,8 +594,6 @@ class Dump:
   def close(self):
     self.dumpfile.close()
     self.head_mirror.close()
-    ### os.removedirs() didn't work.  (What is it for, anyway?)
-    shutil.rmtree(self.tmpdir)
 
 
 def format_date(date):
