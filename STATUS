@@ -155,6 +155,9 @@ Candidate changes:
     Justification: greatly increased admin-friendliness.
     Votes:
       +1: cmpilato, dlr, sussman
+      -1: julianfoad (memory leak and inappropriate verbosity; see the dev@
+            mailing list thread "r8616: candidate for 1.0.1: Improved warnings
+            from svnlook and svnadmin")
 
   * r8581
     Detect invalid UTF8 filenames when native locale is UTF8.
