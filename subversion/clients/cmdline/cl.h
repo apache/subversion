@@ -217,6 +217,10 @@ void svn_cl__print_status_list (apr_hash_t *statushash,
    (svn_stringbuf_t *). */
 void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 
+/* Print out the property names in a hash that maps property names (char *) 
+   to property values (svn_stringbuf_t *). */
+void svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
+
 /* Returns an editor that prints out events in an update or checkout. */
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,

@@ -58,6 +58,26 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
 }
 
 
+void
+svn_cl__print_prop_names (apr_hash_t *prop_hash,
+                          apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first (pool, prop_hash); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      
+      svn_stringbuf_t *propkey;
+
+      /* Get next property */
+      apr_hash_this (hi, &key, &klen, NULL);
+      propkey = svn_stringbuf_ncreate (key, klen, pool);
+
+      printf ("  %s\n", propkey->data);
+    } 
+}
 
 
 /* 

@@ -226,7 +226,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties attached to files or directories.\n"
     "usage: proplist [TARGETS]\n",
-    {svn_cl__recursive_opt} },
+    {'v', svn_cl__recursive_opt} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set property PROPNAME to PROPVAL on files or directories.\n"
