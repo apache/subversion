@@ -1003,7 +1003,7 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   if (type != svn_diff3__file_output_skip)
     {
       len = eol - curp;
-      rv = apr_file_write(baton->output_file, curp, &len);
+      rv = apr_file_write_full(baton->output_file, curp, len, NULL);
       if (rv != APR_SUCCESS)
         {
           return svn_error_create(rv, NULL,
