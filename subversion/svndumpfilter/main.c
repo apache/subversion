@@ -181,7 +181,6 @@ struct node_baton_t
   /* Have we been instructed to change or remove props on, or change
      the text of, this node? */
   svn_boolean_t has_props;
-  svn_boolean_t remove_props;
   svn_boolean_t has_text;
 
   /* Pointers to dumpfile data. */
@@ -376,7 +375,6 @@ new_node_record (void **node_baton,
 
       nb->has_props = FALSE;
       nb->has_text  = FALSE;
-      nb->remove_props = FALSE;
       nb->header    = svn_stringbuf_create ("", pool);
       nb->props     = svn_stringbuf_create ("", pool);
       nb->body      = svn_stringbuf_create ("", pool);
@@ -454,11 +452,15 @@ set_node_property (void *node_baton,
 {
   struct node_baton_t *nb = node_baton;
 
-  if (!nb->do_skip)
-    {
-      write_prop_to_stringbuf (&(nb->props), name, value);
-      nb->has_props = TRUE;
-    }
+  if (nb->do_skip)
+    return SVN_NO_ERROR;
+
+  if (!nb->has_props)
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Delta property block detected - "
+                               "not supported by svndumpfilter"));
+
+  write_prop_to_stringbuf (&(nb->props), name, value);
 
   return SVN_NO_ERROR;
 }
@@ -469,7 +471,10 @@ remove_node_props (void *node_baton)
 {
   struct node_baton_t *nb = node_baton;
 
-  nb->remove_props = TRUE;
+  /* In this case, not actually indicating that the node *has* props,
+     rather that we know about all the props that it has, since it now
+     has none. */
+  nb->has_props = TRUE;
 
   return SVN_NO_ERROR;
 }
