@@ -73,6 +73,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   svn_wc_entry_t *entry;
   svn_stringbuf_t *URL;
   svn_stringbuf_t *anchor, *target;
+  svn_error_t *err;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path != NULL);
@@ -154,8 +155,14 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
          update_editor will be driven by svn_repos_dir_delta. */
-      SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton,
-                                       TRUE, TRUE, recurse, pool));
+      err = svn_wc_crawl_revisions (path, reporter, report_baton,
+                                    TRUE, TRUE, recurse, pool);
+      
+      /* Sleep for one second to ensure timestamp integrity. */
+      apr_sleep (APR_USEC_PER_SEC * 1);
+
+      if (err)
+        return err;
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
@@ -178,12 +185,19 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
          means that there will be a revision number in the <delta-pkg>
          tag.  Otherwise, a valid revnum will be stored in the wc,
          assuming there's no <delta-pkg> tag to override it. */
-      SVN_ERR (svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
-                                         update_editor,
-                                         update_edit_baton,
-                                         URL,
-                                         revision,
-                                         pool));
+      err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
+                                      update_editor,
+                                      update_edit_baton,
+                                      URL,
+                                      revision,
+                                      pool);
+
+      /* Sleep for one second to ensure timestamp integrity. */
+      apr_sleep (APR_USEC_PER_SEC * 1);
+
+      if (err)
+        return err;
+
       /* Close XML file. */
       apr_file_close (in);
     }

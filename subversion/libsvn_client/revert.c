@@ -39,7 +39,12 @@ svn_client_revert (svn_stringbuf_t *path,
                    svn_boolean_t recursive,
                    apr_pool_t *pool)
 {
-  return svn_wc_revert (path, recursive, pool);
+  svn_error_t *err = svn_wc_revert (path, recursive, pool);
+
+  /* Sleep for one second to ensure timestamp integrity. */
+  apr_sleep (APR_USEC_PER_SEC * 1);
+
+  return err;
 }
 
 
