@@ -46,6 +46,12 @@ class SVNExpectedStderr(SVNUnexpectedOutput):
   STDERR when output was expected."""
   pass
 
+class SVNIncorrectDatatype(SVNUnexpectedOutput):
+  """Exception raised if invalid input is passed to the 
+  run_and_verify_* API"""
+  pass
+
+
 ######################################################################
 # Used by every test, so that they can run independently of
 # one another.  The first time it's run, it executes 'svnadmin' to
@@ -138,17 +144,21 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
 
   if type(expected_stdout) is type([]):
     compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
-  if expected_stdout == SVNAnyOutput:
+  elif expected_stdout == SVNAnyOutput:
     if len(out) == 0:
       if message is not None: print message
       raise SVNExpectedStdout
-
+  elif expected_stdout is not None:
+    raise SVNIncorrectDatatype("Unexpected specification for stdout data")
+  
   if type(expected_stderr) is type([]):
     compare_and_display_lines(message, 'STDERR', expected_stderr, err)
-  if expected_stderr == SVNAnyOutput:
+  elif expected_stderr == SVNAnyOutput:
     if len(err) == 0:
       if message is not None: print message
       raise SVNExpectedStderr
+  elif expected_stderr is not None:
+    raise SVNIncorrectDatatype("Unexpected specification for stderr data")
   return out, err
 
 

@@ -1480,7 +1480,7 @@ def commit_multiple_wc(sbox):
   wc2_dir = os.path.join(wc_dir, 'A', 'wc2')
   url = svntest.main.current_repo_url
   svntest.actions.run_and_verify_svn ("Output on stderr where none expected",
-                                      SVNAnyOutput, None,
+                                      SVNAnyOutput, [],
                                       'checkout',
                                       '--username',
                                       svntest.main.wc_author,
@@ -1503,8 +1503,8 @@ def commit_multiple_wc(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
   # Commit should fail, even though one target is a "child" of the other.
-  svntest.actions.run_and_verify_svn("Output on stderr expected",
-                                     None, "Not locked",
+  svntest.actions.run_and_verify_svn("Unexpectedly not locked",
+                                     None, SVNAnyOutput,
                                      'commit', '-m', 'log',
                                      wc_dir, wc2_dir)
 
