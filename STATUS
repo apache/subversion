@@ -63,6 +63,8 @@ Candidate changes:
     copied-with-modifications.
     Justification:
       Dataloss!
+    Branch:
+      1.1.x-svndumpfilter r12655:12656
     Votes:
       +1: maxb
 
@@ -71,6 +73,10 @@ Candidate changes:
     are lost.
     Justification:
       Dataloss!
+    Branch:
+      1.1.x-svndumpfilter r12656:12657
+      Does not itself conflict, but present on branch so that does not
+      cause conflicts in the merge of later revisions.
     Votes:
       +1: maxb
 
@@ -86,6 +92,18 @@ Candidate changes:
       r12637 is purely re-ordering of entire functions with no effective
       code changes whatsoever, in order to make the diff of r12640 more
       easily reviewable.
+    Branch:
+      1.1.x-svndumpfilter r12657:12659
+      (Each merged revision committed to branch seperately)
+    Votes:
+      +1: maxb
+
+  * r12499, r12542
+    Make mailer.py work on Windows.
+    Justification:
+      Our flagship mailing hook-script should work on all platforms.
+    Branch:
+      1.1.x-mailer.py r12543:HEAD
     Votes:
       +1: maxb
 
