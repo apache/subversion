@@ -670,8 +670,8 @@ svn_wc_delete (const char *path,
          file, so we split off base_name from the parent path, then fold in
          the addition of a delete flag. */
       const char *dir, *base_name;
-      svn_path_split_nts (path, &dir, &base_name, pool);
       svn_wc_entry_t tmp_entry;
+      svn_path_split_nts (path, &dir, &base_name, pool);
       
       tmp_entry.schedule = svn_wc_schedule_delete;
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
