@@ -631,8 +631,6 @@ clean-swig-pl: $(SWIG_PL_DIR)/native/Makefile
 check-swig-rb: swig-rb
 	cd $(SWIG_RB_DIR); $(RUBY) test/run-test.rb
 
-test-swig-rb: check-swig-rb
-
 clean-swig-rb:
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \

@@ -587,8 +587,9 @@ if test "$RUBY" != "none"; then
   else
     RUBY="none"
     AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
-    AC_MSG_WARN([At least Ruby which has rb_hash_foreach is required to])
-    AC_MSG_WARN([use the Subversion Ruby bindings])
+    AC_MSG_WARN([A Ruby which has rb_hash_foreach is required to use the])
+    AC_MSG_WARN([Subversion Ruby bindings])
+    AC_MSG_WARN([Upgrade to the official 1.8.2 release, or later])
   fi
 fi
 
