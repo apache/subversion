@@ -98,7 +98,8 @@ static svn_error_t * log_receiver(void *baton,
   if (msg)
     SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
                                "<D:comment>%s</D:comment>" DEBUG_CR,
-                               apr_xml_quote_string(pool, msg, 0)) );
+                               apr_xml_quote_string
+                               (pool, svn_xml_fuzzy_escape (msg, pool), 0)) );
 
 
   if (changed_paths)
@@ -270,12 +271,9 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
              svn_fs_revisions_changed on. */
           if (child->first_cdata.first)
             {
-              if (! svn_path_is_canonical(child->first_cdata.first->text))
-                return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                  "The request's 'path' element is not canonicalized; "
-                  "there is a problem with the client.",
-                  SVN_DAV_ERROR_NAMESPACE,
-                  SVN_DAV_ERROR_TAG);
+              if ((derr = dav_svn__test_canonical
+                   (child->first_cdata.first->text, resource->pool)))
+                return derr;
               target = svn_path_join(target, child->first_cdata.first->text,
                                      resource->pool);
             }

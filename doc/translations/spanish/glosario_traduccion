@@ -188,6 +188,6 @@ namespace -> espacio de nombrado,
 hash table -> tabla hash
     Sin traducción satisfactoria por el momento.
 
-memory pool -> grupo de memoria
+memory pool -> área de memoria
     Traducción temporal hasta que se revise algún libro en castellano
     de programación que use el mismo término.

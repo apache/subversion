@@ -449,40 +449,43 @@ X    Resource is external to this working copy (comes from another
       a traves <!--TODO:over the network...a traves o sobre la red?-->
       de la red.</para>
     
-    <para>CVS users have to mark binary files with
-      <option>-kb</option> flags, to prevent data from being garbled
-      (due to keyword expansion and line-ending translations).  They
-      sometimes forget to do this.</para>
+    <para>Los usuarios de CVS tienen que marcar los ficheros binarios con
+      los parámetros <option>-kb</option>, para evitar que los datos sean
+      mutilados (debido a la traducción de la expansión de la palabra
+      clave y del final de linea<!--TODO:due to keyword expansion and
+      line-ending translations-->. A veces se olvidan de hacerlo.</para>
 
-    <para>Subversion takes the more paranoid route: first, it never
-      performs any kind of keyword or line-ending translation unless
-      you explicitly ask it do so (see <xref
-      linkend="svn-ch-7-sect-2.3.4"/> and <xref
-      linkend="svn-ch-7-sect-2.3.5"/> for more details).  By default,
-      Subversion treats all file data as literal byte strings, and
-      files are always stored in the repository in an untranslated
-      state.</para>
+    <para>Subversion toma la ruta más paranoica: primero, nunca realiza
+      ningún tipo de traducción de la palabra clave  o del fin de linea
+      a menos que usted le diga explicitamente que lo haga (vea <xref
+      linkend="svn-ch-7-sect-2.3.4"/> y <xref
+      linkend="svn-ch-7-sect-2.3.5"/> para más detalles). Por defecto,
+      Subversion trata todos los datos del ficheros como una cadena
+      literal de bytes, y los ficheros son siempre guardados en el
+      repositorio en un estado sin traducir.</para>
 
-    <para>Second, Subversion maintains an internal notion of whether a
-      file is <quote>text</quote> or <quote>binary</quote> data, but
-      this notion is <emphasis>only</emphasis> extant in the working
-      copy.  During an <command>svn update</command>, Subversion will
-      perform contextual merges on locally modified text files, but
-      will not attempt to do so for binary files.</para>
+    <para>Segundo, Subversion mantiene una noción interna de si un
+      fichero es <quote>texto</quote> o datos <quote>binarios</quote>,
+      pero esta noción es <emphasis>solamente</emphasis> existente
+      en la copia de trabajo. Durante un <command>svn update</command>,
+      Subversion realizará fusiones contextuales<!--TODO:contextual
+      merges... fusiones de texto--> en ficheros de texto modificados
+      localmente, pero no intentará hacer eso para los ficheros
+      binarios.</para>
 
-    <para>To determine whether a contextual merge is possible,
-      Subversion examines the <literal>svn:mime-type</literal>
-      property.  If the file has no <literal>svn:mime-type</literal>
-      property, or has a mime-type that is textual (e.g.
-      <literal>text/*</literal>),
-      Subversion assumes it is text.  Otherwise, Subversion assumes
-      the file is binary.  Subversion also helps users by running a
-      binary-detection algorithm in the <command>svn import</command>
-      and <command>svn add</command> commands.  These commands will
-      make a good guess and then (possibly) set a binary
-      <literal>svn:mime-type</literal> property on the file being
-      added.  (If Subversion guesses wrong, the user can always remove
-      or hand-edit the property.)</para>
+    <para>Para determinar si es posible una fusión de contexto,
+      Subversion examina la propiedad <literal>svn:mime-type</literal>.
+      Si el fichero no tiene la propiedad <literal>svn:mime-type</literal>,
+      o tiene un tipo MIME que es textual (por ejemplo
+      <literal>text/*</literal>), Subversion asume que es texto. Si no,
+      Subversion asume que el fichero es binario. Subversion también
+      ayuda a los usuarios ejecutando un algoritmo de detección de
+      binarios en los comandos <command>svn import</command> y
+      <command>svn add</command>. Estos comandos harán una buena
+      conjetura y despues (posiblemente) fije una propiedad
+      <literal>svn:mime-type</literal> binaria en el fichero que es
+      agregado. (Si Subversion supone mal, el usuario siempre puede
+      borrar o editar a mano la propiedad.)</para>
 
   </sect1>
 
@@ -491,15 +494,17 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-9">
 
-    <title>Versioned Modules</title>
+    <title>Versionado de modulos</title>
 
-    <para>Unlike CVS, a Subversion working copy is aware that it has
-      checked out a module.  That means that if somebody changes the
-      definition of a module, then a call to <command>svn update</command>
-      will update the working copy appropriately.</para>
+    <para>A diferencia de CVS, una copia de trabajo de Subversion es
+      consciente que ha descargado un modulo. Eso significa que si
+      alguien cambia la definición de un módulo, entonces una llamada
+      a <command>svn update</command> actualizará la copia de trabajo
+      apropiadamente.</para>
 
-    <para>Subversion defines modules as a list of directories within a
-      directory property:  see <xref linkend="svn-ch-7-sect-3"/>.</para>
+    <para>Subversion define los módulos como una lista de directorios
+      dentro de una propiedad del directorio: vea
+      <xref linkend="svn-ch-7-sect-3"/>.</para>
 
   </sect1>
 
@@ -508,19 +513,24 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-10">
 
-    <title>Authentication</title>
+    <title>Autentificación</title>
 
-    <para>With CVS's pserver, you are required to <quote>login</quote>
-      to the server before any read or write operation&mdash;you even
-      have to login for anonymous operations.  With a Subversion
-      repository using Apache HTTPD as the server, you don't provide
-      any authentication credentials at the outset&mdash;if an
-      operation that you perform requires authentication, the server
-      will challenge you for your credentials (whether those
-      credentials are username and password, a client certificate, or
-      even both).  So if your repository is world-readable, you will
-      not be required to authenticate at all for read
-      operations.</para>
+    <para>Con el servidor de CVS, usted está obligado<!--TODO:you are
+      required to login--> a <quote>loguearse</quote> al servidor
+      antes de cualquier operación de lectura o escritura&mdash;usted
+      incluso tiene que loguearse para operaciones anonimas. Con un
+      repositorio de Subversion usando Apache HTTPD como el servidor,
+      en principio usted no proporcionará ningún credencial de
+      autentificación<!--TODO:you don't provide any authentication
+      credentials at the outset-->&mdash;si una operación que usted
+      realiza requiere de autentificación, el servidor le desafiará
+      para sus credenciales<!--TODO:the server will challenge you for
+      your credentials--> (donde<!--TODO:wheter--> esos credenciales
+      son username y password, una certificación de cliente, o
+      incluso ambos). De este modo si su repositorio es world-readable
+      <!--TODO:como traducir esto?-->no le requerirán autentificarse
+      para las operaciones de lectura.<!--TODO:you will not be required
+      to authenticate at all for read operations--></para>
 
     <para>As with CVS, Subversion still caches your credentials on
       disk (in your <filename>~/.subversion/auth/</filename>

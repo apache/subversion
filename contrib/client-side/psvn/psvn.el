@@ -39,7 +39,7 @@
 ;; l     - svn-status-show-svn-log          run 'svn log'
 ;; i     - svn-status-info                  run 'svn info'
 ;; r     - svn-status-revert                run 'svn revert'
-;; V     - svn-status-resolved              run 'svn resolved'
+;; M-v   - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add --non-recursive'
@@ -72,6 +72,7 @@
 ;; o     - svn-status-find-file-other-window
 ;; v     - svn-status-view-file-other-window
 ;; I     - svn-status-parse-info
+;; V     - svn-status-svnversion
 ;; P l   - svn-status-property-list
 ;; P s   - svn-status-property-set
 ;; P d   - svn-status-property-delete
@@ -186,7 +187,7 @@ If this variale is nil, and the file is out of date then the longer phrase
 
 In either case the mark gets the face
 `svn-status-update-available-face', and will only be visible if
-`\[svn-status-update]' is run with a prefix argument")
+`\\[svn-status-update]' is run with a prefix argument")
 
 ;;; default arguments to pass to svn commands
 (defvar svn-status-default-log-arguments ""
@@ -443,8 +444,8 @@ is prompted for give extra arguments, which are appended to ARGLIST."
           (setq arglist (append arglist
                                 (split-string
                                  (read-from-minibuffer
-                                  (format "Run `svn %s %s' with extra arguments: "
-                                          cmdtype (mapconcat 'identity arglist " "))))))
+                                  (format "Run `svn %s' with extra arguments: "
+                                          (mapconcat 'identity arglist " "))))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run-svn %s: %S" cmdtype arglist))
@@ -793,6 +794,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "$") 'svn-status-toggle-elide)
   (define-key svn-status-mode-map (kbd ".") 'svn-status-goto-root-or-return)
   (define-key svn-status-mode-map (kbd "I") 'svn-status-parse-info)
+  (define-key svn-status-mode-map (kbd "V") 'svn-status-svnversion)
   (define-key svn-status-mode-map (kbd "?") 'svn-status-toggle-hide-unknown)
   (define-key svn-status-mode-map (kbd "_") 'svn-status-toggle-hide-unmodified)
   (define-key svn-status-mode-map (kbd "a") 'svn-status-add-file)
@@ -808,6 +810,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "i") 'svn-status-info)
   (define-key svn-status-mode-map (kbd "b") 'svn-status-blame)
   (define-key svn-status-mode-map (kbd "=") 'svn-status-show-svn-diff)
+  (define-key svn-status-mode-map (kbd "M-v") 'svn-status-resolved)
   ;; [(control ?=)] is unreachable on TTY, but you can use "*u" instead.
   ;; (Is the "u" mnemonic for something?)
   (define-key svn-status-mode-map (kbd "C-=") 'svn-status-show-svn-diff-for-marked-files)
@@ -828,7 +831,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "M") 'svn-status-mark-modified)
   (define-key svn-status-mode-mark-map (kbd "D") 'svn-status-mark-deleted)
   (define-key svn-status-mode-mark-map (kbd "*") 'svn-status-mark-changed)
-  (define-key svn-status-mode-mark-map (kbd "V") 'svn-status-resolved)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
@@ -1088,7 +1090,7 @@ repository than the working copy."
   "Return whether LINE-INFO represents a locked file.
 This is column three of the `svn status' output.
 The result will be nil or \"L\".
-\(A file becomes locked when an operation is interupted; run \[svn-status-cleanup]'
+\(A file becomes locked when an operation is interupted; run \\[svn-status-cleanup]'
 to unlock it.\)"
   (nth 8 line-info))
 (defun svn-status-line-info->historymark (line-info)
@@ -1428,11 +1430,11 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (insert (concat "Repository: " (svn-status-base-info->url) "\n")))
     (when svn-status-hide-unknown
       (insert
-       (format "%d Unknown file(s) are hidden - press ? to toggle hiding\n"
+       (format "%d Unknown file(s) are hidden - press `?' to toggle hiding\n"
                unknown-count)))
     (when svn-status-hide-unmodified
       (insert
-       (format "%d Unmodified file()s are hidden - press _ to toggle hiding\n"
+       (format "%d Unmodified file(s) are hidden - press `_' to toggle hiding\n"
                unmodified-count)))
     (when (> user-elide-count 0)
       (insert (format "%d file(s) elided\n" user-elide-count)))
@@ -1577,7 +1579,6 @@ directory itself, in all other cases find the parent directory"
     ;;The next `or' is because (file-name-directory "file") returns nil
     (or (file-name-directory (svn-status-line-info->filename line-info))
         ".")))
-
 
 (defun svn-status-set-user-mark (arg)
   "Set a user mark on the current file or directory.
@@ -2095,6 +2096,21 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (svn-run-svn t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
 
+
+(defun svn-status-svnversion ()
+  "Run svnversion on the directory that contains the file at point."
+  (interactive)
+  (svn-status-ensure-cursor-on-file)
+  (let ((simple-path (svn-status-line-info->filename (svn-status-get-line-information)))
+        (full-path (svn-status-line-info->full-path (svn-status-get-line-information)))
+        (version))
+    (unless (file-directory-p simple-path)
+      (setq simple-path (file-name-directory simple-path))
+      (setq full-path (file-name-directory full-path)))
+    (setq version (shell-command-to-string (concat "svnversion -n " full-path)))
+    (message (format "svnversion for '%s': %s" simple-path version))
+    version))
+
 ;; --------------------------------------------------------------------------------
 ;; Update the *svn-status* buffer, when a file is saved
 ;; --------------------------------------------------------------------------------
@@ -2126,7 +2142,7 @@ Recommended values are ?m or ?M.")
                      (not (eq (svn-status-line-info->filemark (car st-info)) ??)))
             (svn-status-line-info->set-filemark (car st-info)
                                                 svn-status-file-modified-after-save-flag)
-            (save-excursion
+            (save-window-excursion
               (set-buffer "*svn-status*")
               (svn-status-goto-file-name i-fname)
               (let ((buffer-read-only nil))
@@ -2329,8 +2345,16 @@ When called with a prefix argument, it is possible to enter a new property."
            (unless (string= prop-name "")
              (save-excursion
                (set-buffer "*svn-status*")
-               (message "setting property %s := %s for %S" prop-name prop-value
-                        (svn-status-marked-files)))))
+               (message "Setting property %s := %s for %S" prop-name prop-value
+                        (svn-status-marked-file-names))
+               (let ((file-names (svn-status-marked-file-names)))
+                 (when file-names
+                   (svn-run-svn nil t 'propset 
+                                (append (list "propset" prop-name prop-value) file-names))
+                   )
+                 )
+               (message "propset finished.")
+               )))
           ((eq last-command 'svn-status-property-delete)
            (setq prop-name
                  (completing-read "Delete Property - Name: " (mapcar 'list pl) nil t))
@@ -2730,7 +2754,8 @@ If ARG then show diff between some other version of the selected files."
   '(("^r.+" . font-lock-keyword-face)
   "Keywords in svn-log-view-mode."))
 
-(define-derived-mode svn-log-view-mode log-view-mode "svn-log-view"
+
+(define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"
   "Major Mode to show the output from svn log.
 Commands:
 \\{svn-log-view-mode-map}

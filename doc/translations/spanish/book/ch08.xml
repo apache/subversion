@@ -1423,77 +1423,88 @@ if __name__ == '__main__':
   <!-- *** SECTION 5:  PROGRAMMING WITH MEMORY POOLS                   *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-5">
-    <title>Programming with Memory Pools</title>
+    <title>Programando con áreas de memoria</title>
 
-    <para>Almost every developer who has used the C programming
-      language has at some point sighed at the daunting task of
-      managing memory usage.  Allocating enough memory to use, keeping
-      track of those allocations, freeing the memory when you no
-      longer need it&mdash;these tasks can be quite complex.  And of
-      course, failure to do those things properly can result in a
-      program that crashes itself, or worse, crashes the computer.
-      Fortunately, the APR library that Subversion depends on for
-      portability provides the <structname>apr_pool_t</structname>
-      type, which represents a pool from which the application may
-      allocate memory.</para>
+    <para>Casi todo desarrollador que ha usado el lenguaje de
+      programación C se ha exasperado ante la desalentadora tarea de
+      gestionar la memoria. Reservar suficiente memoria para un uso,
+      llevar la pista de estas reservas, liberar la memoria cuando
+      ya no se necesita&mdash;estas tareas pueden ser bastante
+      complejas. Y por supuesto, errar en estas operaciones puede
+      llevar a un programa que se cuelga, o peor, que cuelga todo el
+      ordenador. Afortunadamente, la librería APR, de la que depende
+      Subversion para su portabilidad, proporciona el tipo de dato
+      <structname>apr_pool_t</structname>, el cual representa un
+      área de la cual la aplicación puede reservar memoria.</para>
 
-    <para>A memory pool is an abstract representation of a chunk of
-      memory allocated for use by a program.  Rather than requesting
-      memory directly from the OS using the standard
-      <function>malloc()</function> and friends, programs that link
-      against APR can simply request that a pool of memory be created
-      (using the <function>apr_pool_create()</function> function).
-      APR will allocate a moderately sized chunk of memory from the
-      OS, and that memory will be instantly available for use by the
-      program.  Any time the program needs some of the pool memory, it
-      uses one of the APR pool API functions, like
-      <function>apr_palloc()</function>, which returns a generic
-      memory location from the pool.  The program can keep requesting
-      bits and pieces of memory from the pool, and APR will keep
-      granting the requests.  Pools will automatically grow in size to
-      accommodate programs that request more memory than the original
-      pool contained, until of course there is no more memory
-      available on the system.</para>
+    <para>Un área de memoria es una representación abstracta de
+      un bloque de memoria reservado para ser usado por un
+      programa. En lugar de pedir memoria directamente al SO
+      usando las funciones estándar <function>malloc()</function> y
+      compañía, los programas que enlazan con APR pueden simplemente
+      solicitar que se cree un área de memoria (usando la función
+      <function>apr_pool_create()</function>).  APR reservará un
+      trozo de memoria de tamaño moderado del SO, y esa memoria será
+      disponible instantáneamente para ser usada por el programa.
+      En cualquier momento que el programa necesite algo de memoria,
+      usará una de las funciones de área de memoria de la API APR,
+      como <function>apr_palloc()</function>, la cual devuelve una
+      dirección genérica de memoria que apunta dentro del área. El
+      programa puede seguir pidiendo bits y trozos de memoria del
+      área, y APR seguirá accediendo a las demandas. Las áreas
+      de memoria crecen automáticamente en tamaño para acomodarse
+      a los programas que solicitan más memoria que la contenida
+      inicialmente por el área, hasta que por supuesto, no quede
+      más memoria disponible en el sistema.</para>
 
-    <para>Now, if this were the end of the pool story, it would hardly
-      have merited special attention.  Fortunately, that's not the
-      case.  Pools can not only be created; they can also be cleared
-      and destroyed, using <function>apr_pool_clear()</function> and
-      <function>apr_pool_destroy()</function> respectively.  This
-      gives developers the flexibility to allocate several&mdash;or
-      several thousand&mdash;things from the pool, and then clean up
-      all of that memory with a single function call!  Further, pools
-      have hierarchy.  You can make <quote>subpools</quote> of any
-      previously created pool.  When you clear a pool, all of its
-      subpools are destroyed; if you destroy a pool, it and its
-      subpools are destroyed.</para>
+    <para>Ahora bien, si este fuese el final de la historia del
+      área de memoria, difícilmente se hubiese merecido atención
+      especial. Afortunadamente este no es el caso. Las áreas
+      no sólo pueden ser creadas; también pueden ser limpiadas y
+      destruídas, usando <function>apr_pool_clear()</function> y
+      <function>apr_pool_destroy()</function> respectivamente. Esto
+      proporciona a los desarrolladores la flexibilidad de
+      reservar varios&mdash;o varios miles&mdash;elementos del
+      área, ¡y entonces limpiar toda esa memoria con una simple
+      llamada! Además, las áreas de memoria tienen jerarquía.
+      Puede hacer <quote>sub áreas</quote> de cualquier área de
+      memoria previamente creada. Cuando limpia un área, todas sus
+      sub áreas son destruídas; si destruye un área, ésta y sus
+      sub áreas serán destruídas.</para>
 
-    <para>Before we go further, developers should be aware that they
-      probably will not find many calls to the APR pool functions we
-      just mentioned in the Subversion source code.  APR pools offer
-      some extensibility mechanisms, like the ability to have custom
-      <quote>user data</quote> attached to the pool, and mechanisms
-      for registering cleanup functions that get called when the pool
-      is destroyed.  Subversion makes use of these extensions in a
-      somewhat non-trivial way.  So, Subversion supplies (and most of
-      its code uses) the wrapper functions
-      <function>svn_pool_create()</function>,
-      <function>svn_pool_clear()</function>, and
+    <para>Antes de continuar, los desarrolladores deben tener
+      presente que probablemente no encontrarán muchas llamadas
+      a las funciones de áreas de memoria APR que acabamos de
+      mencionar en el código fuente de Subversion.  Las áreas
+      de memoria APR ofrecen algunos mecanismos de extensión,
+      como la posibilidad de tener <quote>datos de usuario</quote>
+      personalizados asociados al área de memoria, y mecanismos para
+      registrar funciones de limpieza que serán llamadas cuando el
+      área de memoria sea destruída.  Subversion hace uso de estas
+      extensiones de un modo no trivial. Por lo que Subversion
+      proporciona (y la mayoría del código usa) las funciones
+      de envoltorio <function>svn_pool_create()</function>,
+      <function>svn_pool_clear()</function>, y
       <function>svn_pool_destroy()</function>.</para>
 
-    <para>While pools are helpful for basic memory management, the
-      pool construct really shines in looping and recursive scenarios.
-      Since loops are often unbounded in their iterations, and
-      recursions in their depth, memory consumption in these areas of
-      the code can become unpredictable.  Fortunately, using nested
-      memory pools can be a great way to easily manage these
-      potentially hairy situations.  The following example
-      demonstrates the basic use of nested pools in a situation that
-      is fairly common&mdash;recursively crawling a directory tree,
-      doing some task to each thing in the tree.</para>
+    <para>Aunque las áreas de memoria son útiles para tareas
+      básicas de gestiónde memoria, este tipo de estructura
+      realmente brilla con los bucles y la recursividad. Dado que
+      los bucles a menudo pueden terminar en cualquier momento
+      <!-- TODO parafraseado correcto de unbounded loop. Mirar
+      si en castellano existe un término más corto que signifique
+      lo mismo-->, y las funciones recursivas volver a cualquier
+      profundidad, el consumo de memoria en este tipo de situaciones
+      puede ser impredecible. Afortunadamente, usar áreas de memoria
+      anidadas puede ser un método excelente para tratar con estas
+      situaciones peliagudas. El siguiente ejemplo demuestra el
+      uso básico de áreas de memoria anidadas en una situación que
+      es bastante común&mdash;recorrer de forma recursiva un árbol
+      de directorios realizando cierta tarea sobre cada elemento
+      del árbol.</para>
 
     <example id="svn-ch-8-sect-5-ex-1">
-      <title>Effective Pool Usage</title>
+      <title>Uso efectivo de áreas de memoria</title>
       <programlisting>
 /* Recursively crawl over DIRECTORY, adding the paths of all its file
    children to the FILES array, and doing some task to each path
@@ -1578,27 +1589,30 @@ crawl_dir (apr_array_header_t *files,
 </programlisting>
     </example>
 
-    <para>The previous example demonstrates effective pool usage in
-      <emphasis>both</emphasis> looping and recursive situations.
-      Each recursion begins by making a subpool of the pool passed to
-      the function.  This subpool is used for the looping region, and
-      cleared with each iteration.  The result is memory usage is
-      roughly proportional to the depth of the recursion, not to total
-      number of file and directories present as children of the
-      top-level directory.  When the first call to this recursive
-      function finally finishes, there is actually very little data
-      stored in the pool that was passed to it.  Now imagine the extra
-      complexity that would be present if this function had to
-      <function>alloc()</function> and <function>free()</function>
-      every single piece of data used!</para>
+    <para>El ejemplo anterior demuestra un uso efectivo de áreas
+      de memoria en situaciones con bucles y recursividad. Cada
+      recursión comienza creando una sub área de memoria del área
+      pasada a la función. Esta sub área es usada por la región con
+      bucles, y limpiada en cada iteración. Esto da como resultado
+      que el consumo de memoria sea a grandes rasgos proporcional a
+      la profundidad de la recursión, no al número total de ficheros
+      y directorios presentes como hijos del directorio de nivel
+      superior. Cuando la primera llamada a esta función recursiva
+      finalmente termina, hay realmente muy pocos datos almacenados
+      en el área de memoria que recibió como parámetro. ¡Ahora
+      imagine la complejidad adicional que estaría presente en
+      esta función si tuviese que reservar y liberar cada pieza
+      individual de datos usados!</para>
     
-    <para>Pools might not be ideal for every application, but they are
-      extremely useful in Subversion.  As a Subversion developer,
-      you'll need to grow comfortable with pools and how to wield them
-      correctly.  Memory usage bugs and bloating can be difficult to
-      diagnose and fix regardless of the API, but the pool construct
-      provided by APR has proven a tremendously convenient,
-      time-saving bit of functionality.</para>
+    <para>Quizás las áreas de memoria no sean ideales para todas las
+      aplicaciones, pero son extremadamente útiles en
+      Subversion. Como desarrollador de Subversion, tendrá que
+      acostumbrarse a las áreas de memoria y a su uso correcto. Los
+      fallos relacionados con el uso de memoria y exceso de código
+      pueden ser difíciles de diagnosticar y corregir se la API
+      que sea, pero la estructura de área de memoria proporcionada
+      por APR ha resultado ser una funcionalidad tremendamente
+      conveniente y ahorradora de tiempo.</para>
 
   </sect1>
 
@@ -1606,80 +1620,88 @@ crawl_dir (apr_array_header_t *files,
   <!-- *** SECTION 6:  CONTRIBUTING TO SUBVERSION                      *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-6">
-    <title>Contributing to Subversion</title>
+    <title>Contribuyendo a Subversion</title>
     
-    <para>The official source of information about the Subversion
-      project is, of course, the project's website at <systemitem
-      class="url">http://subversion.tigris.org/</systemitem>.  There
-      you can find information about getting access to the source code
-      and participating on the discussion lists.  The Subversion
-      community always welcomes new members.  If you are
-      interested in participating in this community by contributing
-      changes to the source code, here are some hints on how to get
-      started.</para>
+    <para>La fuente oficial de información sobre el proyecto
+      Subversion es, por supuesto, la
+      página web del proyecto en <systemitem
+      class="url">http://subversion.tigris.org/</systemitem>.
+      Ahí puede encontrar información sobre cómo obtener acceso al
+      código fuente y participar en las listas de discusión. La
+      comunidad de Subversion siempre da la bienvenida a nuevos
+      miembros. Si está interesado en participar en esta comunidad
+      contribuyendo cambios al código fuente, aquí tiene algunas
+      pistas para ponerse en marcha.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.1">
-      <title>Join the Community</title>
+      <title>Únase a la comunidad</title>
       
-      <para>The first step in community participation is to find a way
-        to stay on top of the latest happenings.  To do this most
-        effectively, you will want to subscribe to the main developer
-        discussion list (<email>dev@subversion.tigris.org</email>) and
-        commit mail list (<email>svn@subversion.tigris.org</email>).
-        By following these lists even loosely, you will have access
-        to important design discussions, be able to see actual changes
-        to Subversion source code as they occur, and be able to
-        witness peer reviews of those changes and proposed changes.
-        These email based discussion lists are the primary
-        communication media for Subversion development.  See the
-        Mailing Lists section of the website for other
-        Subversion-related lists you might be interested in.</para>
+      <para>El primer paso para participar en la comunidad es
+        encontrar un modo de estar al día de los últimos
+        eventos. Para hacer esto de la manera más efectiva,
+        querrá apuntarse a la lista principal de discusión de
+        desarrolladores (<email>dev@subversion.tigris.org</email>)
+        y la lista de cambios enviados al servidor
+        (<email>svn@subversion.tigris.org</email>).  Siguiendo estas
+        listas incluso desde lejos, tendrá acceso a importantes
+        discusiones de diseño, será capaz de ver los cambios en
+        el código de Subversion a medida que ocurren, y presenciar
+        revisiones de otras personas de esos cambios y propuestos
+        cambios. Estas listas de discusión basadas en email son
+        el medio de comunicación principal para el desarrollo de
+        Subversion. Vea la sección de listas de correo en la página
+        web para ver otras listas relacionadas con Subversion en
+        las que pueda estar interesado.</para>
 
-      <para>But how do you know what needs to be done?  It is quite
-        common for a programmer to have the greatest intentions of
-        helping out with the development, yet be unable to find a good
-        starting point.  After all, not many folks come to the
-        community having already decided on a particular itch they
-        would like to scratch.  But by watching the developer
-        discussion lists, you might see mentions of existing bugs or
-        feature requests fly by that particularly interest you.  Also,
-        a great place to look for outstanding, unclaimed tasks is the
-        Issue Tracking database on the Subversion website.  There you
-        will find the current list of known bugs and feature requests.
-        If you want to start with something small, look for issues
-        marked as <quote>bite-sized</quote>.</para>
+      <para>¿Pero cómo puede saber qué es lo que debe hacerse? Es
+        bastante habitual para un programador tener la mejor de las
+        intenciones de ayudar con el desarrollo, pero ser incapaz
+        de encontrar un buen punto de partida. Después de todo, no
+        todas las personas vienen a la comunidad habiendo decidido
+        qué detalle en particular quieren modificar.  Pero observando
+        las listas de discusión de los desarrolladores, puede llegar
+        a ver mencionados fallos existentes o peticiones relacionadas
+        con algo que le interese particularmente. También, otro buen
+        lugar para buscar tareas pendientes no asignadas es la base
+        de datos de tareas <!-- Traducción de issue tracking? -->
+        en la página web de Subversion.  Ahí encontrará una
+        lista actualizada de fallos conocidos y peticiones de
+        características. Si quiere comenzar con algo pequeño,
+        busque tareas marcadas con <quote>bite-sized</quote>.</para>
       
     </sect2>
     
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.2">
-      <title>Get the Source Code</title>
+      <title>Obtenga el código fuente</title>
       
-      <para>To edit the code, you need to have the code.  This means
-        you need to check out a working copy from the public
-        Subversion source repository.  As straightforward as that
-        might sound, the task can be slightly tricky.  Because
-        Subversion's source code is versioned using Subversion itself,
-        you actually need to <quote>bootstrap</quote> by getting a
-        working Subversion client via some other method.  The most
-        common methods include downloading the latest binary
-        distribution (if such is available for your platform), or
-        downloading the latest source tarball and building your own
-        Subversion client.  If you build from source, make sure to
-        read the <filename>INSTALL</filename> file in the top level of
-        the source tree for instructions.</para>
+      <para>Para editar código fuente, necesita tener código
+        fuente. Esto significa que debe obtener una copia local
+        del repositorio público de código fuente de Subversion.
+        A pesar de lo simple que parezca esta tarea, puede ser
+        algo complicada. Dado que el código fuente de Subversion
+        se versiona con el propio Subversion, en realidad necesita
+        <quote>arrancar</quote> obteniendo un cliente de Subversion
+        funcional por otro método. Los métodos más habituales
+        incluyen descargar la última distribución binaria (si es
+        que hay una disponible para su plataforma), o descargar el
+        último paquete de código fuente y compilar su propio cliente
+        de Subversion. Si compila el código fuente, asegúrese de leer
+        las instrucciones del fichero <filename>INSTALL</filename>
+        en el directorio raíz del código fuente.</para>
 
-      <para>After you have a working Subversion client, you are now
-        poised to checkout a working copy of the Subversion source
-        repository from <systemitem
+      <para>Una vez disponga de un cliente de Subversion funcional,
+        puede obtener una copia local del código
+        fuente de Subversion de <systemitem
         class="url">http://svn.collab.net/repos/svn/trunk/</systemitem>:
         <footnote>
-          <para>Note that the URL checked out in the example above
-            ends not with <literal>svn</literal>, but with a
-            subdirectory thereof called <literal>trunk</literal>.  See
-            our discussion of Subversion's branching and tagging model
-            for the reasoning behind this.</para>
+          <para>Tenga en cuenta que la URL obtenida en el ejemplo
+            no finaliza con un <literal>svn</literal>, si no con uno
+            de sus subdirectorios llamado <literal>trunk</literal>.
+            Vea nuestra discusión sobre el modelo de ramas y
+            etiquetado de Subversion para entender el razonamiendo
+            subyacente.</para>
         </footnote></para>
 
       <screen>

@@ -358,3 +358,25 @@ svn_error_t * dav_svn__send_xml(apr_bucket_brigade *bb, ap_filter_t *output,
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
+
+
+/* ### Much of this is duplicated from libsvn_subr/path.c */
+#define PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
+dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool)
+{
+  apr_size_t len = strlen(path);
+
+  /* Is it canonical enough to not die in the path library?  Return
+     error-free. */
+  if (! PATH_IS_PLATFORM_EMPTY(path, len)
+      && (len <= 1 || path[len-1] != '/'))
+    return NULL;
+
+  /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
+  return dav_new_error_tag
+    (pool, HTTP_BAD_REQUEST, 0, 
+     apr_psprintf(pool, 
+                  "Path '%s' is not canonicalized; "
+                  "there is a problem with the client.", path),
+     SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+}

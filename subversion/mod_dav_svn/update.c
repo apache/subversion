@@ -1090,12 +1090,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               SVN_DAV_ERROR_TAG);
 
           /* split up the 1st public URL. */
-          if (! svn_path_is_canonical(child->first_cdata.first->text))
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'src-path' element is not canonicalized; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
+          if ((derr = dav_svn__test_canonical
+               (child->first_cdata.first->text, resource->pool)))
+            return derr;
           serr = dav_svn_simple_parse_uri(&this_info, resource,
                                           child->first_cdata.first->text,
                                           resource->pool);
@@ -1122,12 +1119,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               SVN_DAV_ERROR_TAG);
 
           /* split up the 2nd public URL. */
-          if (! svn_path_is_canonical(child->first_cdata.first->text))
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'dst-path' element is not canonicalized; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
+          if ((derr = dav_svn__test_canonical
+               (child->first_cdata.first->text, resource->pool)))
+            return derr;
           serr = dav_svn_simple_parse_uri(&this_info, resource,
                                           child->first_cdata.first->text,
                                           resource->pool);
@@ -1150,12 +1144,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               SVN_DAV_ERROR_TAG);
 
           /* ### assume no white space, no child elems, etc */
-          if (! svn_path_is_canonical(child->first_cdata.first->text))
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'update-target' element is not canonicalized; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
+          if ((derr = dav_svn__test_canonical
+               (child->first_cdata.first->text, resource->pool)))
+            return derr;
           target = child->first_cdata.first->text;
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)

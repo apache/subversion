@@ -248,12 +248,9 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
           if (child->first_cdata.first)
             {
-              if (! svn_path_is_canonical(child->first_cdata.first->text))
-                return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                  "The request's 'path' element is not canonicalized; "
-                  "there is a problem with the client.",
-                  SVN_DAV_ERROR_NAMESPACE,
-                  SVN_DAV_ERROR_TAG);
+              if ((derr = dav_svn__test_canonical 
+                   (child->first_cdata.first->text, resource->pool)))
+                return derr;
               path = svn_path_join(path, 
                                    child->first_cdata.first->text,
                                    resource->pool);

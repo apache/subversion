@@ -534,6 +534,15 @@ def status_on_forward_deletion(sbox):
 
 #----------------------------------------------------------------------
 
+def get_last_changed_date(path):
+  "get the Last Changed Date for path using svn info"
+  out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', path)
+  for line in out:
+    if re.match("^Last Changed Date", line):
+      return line
+  print "Didn't find Last Changed Date for " + path
+  raise svntest.Failure
+
 # Helper for timestamp_behaviour test
 def get_prop_timestamp(path):
   "get the prop-time for path using svn info"
@@ -669,6 +678,38 @@ def timestamp_behaviour(sbox):
   prop_time_behaviour(wc_dir, A_path, 'A', expected_status, 'cleanup')
   # Check behaviour of cleanup on text-time
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
+
+  # Create a config to enable use-commit-times
+  config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
+                            'use_commit_config')
+  if not os.path.isdir(config_dir):
+    os.makedirs(config_dir)
+  fd = open(os.path.join(config_dir, 'config'), 'w')
+  fd.write('[miscellany]\n')
+  fd.write('use-commit-times = yes\n')
+  fd.close()
+  fd = open(os.path.join(config_dir, 'server'), 'w')
+  fd.write('\n')
+  fd.close()
+  svntest.main.set_config_dir(config_dir)
+
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.run_and_verify_svn("checkout failed", None, [],
+                                     'co', svntest.main.current_repo_url,
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
+                                     other_wc)
+
+  other_iota_path = os.path.join(other_wc, 'iota')
+  iota_text_timestamp = get_text_timestamp(other_iota_path)
+  iota_last_changed = get_last_changed_date(other_iota_path)
+  if (iota_text_timestamp[17] != ':' or
+      iota_text_timestamp[17:] != iota_last_changed[17:]):
+    raise svntest.Failure
+
+  ### FIXME: check the working file's timestamp as well
 
 #----------------------------------------------------------------------
 

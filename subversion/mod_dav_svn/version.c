@@ -979,12 +979,8 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
       else if (strcmp(child->name, "path") == 0)
         {
           relative_path = dav_xml_get_cdata(child, resource->pool, 0);
-          if (! svn_path_is_canonical(relative_path))
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'path' element is not canonicalized; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
+          if ((derr = dav_svn__test_canonical(relative_path, resource->pool)))
+            return derr;
         }
     }
 
