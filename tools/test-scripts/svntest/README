@@ -3,23 +3,79 @@ Using the svntest scripts                                 -*- Text -*-
 
 1) Read the INSTALL (http://svn.collab.net/repos/svm/trunk/INSTALL)
    file, especially the sections about bootstrapping from a tarball
-   and getting the latest APR, APR-UTIL and httpd-2.0 sources.
-   Check out and compile the latest Subversion.
+   and getting the latest APR-0.9, APR-UTIL-0.9 and httpd-2.0 sources.
+   Check out and compile the latest Subversion. You could easily run
+   svntest.sh against APR/APR-UTIL 1.0 and HTTPD 2.1 branches, just 
+   checkout corresponding repositories, and edit svntest-config.sh.
 
 2) Copy the svntest scripts from trunk/tools/test-scripts/svntest to
    somewhere outside the repository. Then read and modify
    svntest-config.sh to reflect your local installation. Take special
-   care about program locations and e-mail addresses.
+   care about program locations, program installation locations and
+   e-mail addresses. The svn-breakage list has to be subscribed by the 
+   same address that is put to FROM variable. Otherwise report emails
+   will disappear to the black hole of the bits.
+
+   Also notice that this test script will wipe out following paths
+   during rebuilding:
+   $INST_DIR/<proj_name>, ie. with present configuration the paths are: 
+   /home/brane/svn/inst/{apr-0.9,apr-util-0.9,httpd-2.0,svn}
 
 3) Create one or more scripts that configure Subversion in different
    ways (e.g., configure.shared, configure.static). Here's the script
    I'm using for static builds on Solaris 7:
 
-   #!/bin/sh
-   env CC='gcc' \
-       "../repo/configure" \
+    config.apr-0.9:
+    #!/bin/sh
+
+    "../apr-0.9/configure" \
+    "--prefix=/home/brane/svn/inst/apr-0.9" \
+    "--with-pic" \
+    "$@"
+
+
+    config.apr-util-0.9:
+    #!/bin/sh
+
+    "../apr-util-0.9/configure" \
+    "--prefix=/home/brane/svn/inst/apr-util-0.9" \
+    "--with-apr=/home/brane/svn/inst/apr-0.9" \
+    "--with-pic" \
+    "--with-dbm=db4" \
+    "--with-berkeley-db" \
+    "--with-expat=/usr" \
+    "$@"
+
+
+    config.httpd-2.0:
+    #!/bin/sh
+    
+    CURR_WD="`pwd`"
+    cd ../httpd-2.0
+
+    "./buildconf" \
+    "--with-apr=/home/brane/svn/apr-0.9" \
+    "--with-apr-util=/home/brane/svn/apr-util-0.9"
+
+    cd "$CURR_WD"
+
+    "../httpd-2.0/configure" \
+    "--prefix=/home/brane/svn/inst/httpd-2.0" \
+    "--with-apr=/home/brane/svn/inst/apr-0.9/bin/apr-config" \
+    "--with-apr-util=/home/brane/svn/inst/apr-util-0.9/bin/apu-config" \
+    "--enable-dav" \
+    "$@"
+    
+    
+    config.solaris.static (for subversion):
+    #!/bin/sh
+    env CC='gcc' \
+       "../svn/configure" \
        "--prefix=/home/brane/svn/inst" \
        "--with-berkeley-db=/home/brane/svn/db4" \
+       "--with-apr=/home/brane/svn/inst/apr-0.9/bin/apr-config" \
+       "--with-apr-util=/home/brane/svn/inst/apr-util-0.9/bin/apu-config" \
+       "--with-apxs=/home/brane/svn/inst/httpd-2.0/bin/apxs" \
        "--disable-shared" \
        "$@"
 
@@ -27,13 +83,58 @@ Using the svntest scripts                                 -*- Text -*-
    static build types, but you can easily change that. If you do, also
    change svntest.sh so that it tests all the different configurations.
 
-4) Make sure your environment (e.g., LD_LIBRARY_PATH) is set correctly
+4) Tailor your $HTTPD_NAME.conf (ie. httpd-2.0.conf) to suit 
+   your needs, (easiest way to get a template for http-2.0.conf is 
+   install Apache httpd at once, and after that copy installed httpd.conf, and
+   edit it). Things to change are probably: 
+   i)   Listen 127.0.0.1:42024
+   ii)  LoadModule dav_svn_module     modules/mod_dav_svn.so
+   iii) User brane
+        Group brane
+   v)   ServerName localhost:42024
+   
+   vi)  Add mod_dav_svn block:
+    
+    <IfModule mod_dav_svn.c>
+        Include conf/mod_dav_svn.conf
+    </IfModule>
+           
+   vii) mod_dav_svn_shared.conf for shared builds:
+    <Location /repositories>
+        DAV svn
+        SVNParentPath /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/repositories
+    </Location>
+    <Location /local_tmp/repos>
+        DAV svn
+        SVNPath      /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/local_tmp/repos
+    </Location>
+    
+   Don't ever thouch config files under $INST_DIR/$HTTPD_NAME/conf, they will be overwritten by
+   the script.
+   
+5) Make sure your environment (e.g., LD_LIBRARY_PATH) is set correctly
    to find Berkeley DB, etc.
 
-5) Run svntest.sh to get the latest versions of ARP, APR-UTIL and
-   Subversion, build and test all the configurations. Note that the
-   scripts do not test Apache integration (yet).
+6) If you like run test against ramdisk (subversion test data will be held on ramdisk)
+   then you should have something like that in your /etc/fstab (in Linux system):
+   tmpfs           /home/brane/svn/obj-sh/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
+   tmpfs           /home/brane/svn/obj-st/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
 
+   The minimum required size for ramdisk is appr. 450MB at the moment.  
+   You should also set RAMDISK=yes, and check mount_ramdisk and umount_ramdisk 
+   in the svntes-config.sh file if your system is not GNU/Linux.
+   See http://subversion.tigris.org/project_faq.html#ramdisk-tests for 
+   further information.
+   
+7) Run svntest.sh to get the latest versions of ARP, APR-UTIL, HTTPPD and
+   Subversion, build and test all the configurations. 
+
+8) If you like force rebuilding of some component, you could do:
+   echo "1" > $PROJ_REPO.rb, dependies are:
+   apr-util depends on apr, and httpd depends on apr and apr-util.
+   Any dependent project will be also rebuild.
+   When you run this script first time, everything will be rebuild 
+   automatically.
 
 ======================================================
 Need more detailed instructions? Use the Source, Luke!
