@@ -77,7 +77,7 @@
 typedef enum root_kind_t {
   unspecified_root = 0,
   revision_root,
-  transaction_root,
+  transaction_root
 } root_kind_t;
 
 struct svn_fs_root_t

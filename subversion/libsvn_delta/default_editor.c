@@ -163,7 +163,8 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
-  *handler = *handler_baton = NULL;
+  *handler = NULL;
+  *handler_baton = NULL;
   return SVN_NO_ERROR;
 }
 
