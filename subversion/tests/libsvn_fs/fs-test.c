@@ -1114,7 +1114,7 @@ txn_body_check_id (void *baton, trail_t *trail)
     args->present = TRUE;
   else
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
+      svn_string_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
          "error looking for node revision id \"%s\"", id_str->data);
@@ -1154,7 +1154,7 @@ check_id_present (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
 
   if (! present)
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
+      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "node revision id \"%s\" absent when should be present",
@@ -1174,7 +1174,7 @@ check_id_absent (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
 
   if (present)
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
+      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "node revision id \"%s\" present when should be absent",

@@ -3,34 +3,6 @@ THOTZ: (by cmpilato, on conversion to the new NodeRevId system)
               *** do not merge me into the main trunk **
 =============================================================================
 
-svn_fs__id_is_ancestor
-        Used by merge.  
-        ### Removed.  Will re-implement with a new name and new arguments.
-
-svn_fs__id_is_parent
-        Used by svn_fs_txn_path_is_id for id roots.
-        ### Removed.  Will re-implement with a new name and new arguments.
-
-svn_fs_check_related
-        Need to use in all places where svn_fs_id_distance is currently used.
-
-svn_fs_txn_path_is_id
-        Only exists for id roots.
-
---
-
-Greg Stein agrees that once mod_dav_svn stops using vsn-rsrc-urls that
-contain node-revision-ids, we no longer need the concept of an `id
-root' in the filesystem.  That means we can lose:
-
-      svn_fs_txn_path_is_id()
-      svn_fs__id_is_parent()
-      svn_fs_id_root()
-      svn_fs_is_id_root()
-      a chunk of open_path()
-
---
-
 Deltification is currently the only process in place that asks the
 question, "Where is my next successor?"  Currently the question is
 answered by doing a little node revision id mathematics; that's no
@@ -114,11 +86,6 @@ Algorithm looks like this:
      if ((filtering) and (my COPY_ID != my predecessor's COPY_ID))
        break;
      NODE-REV-ID = node revision's predecessor id
-
---
-
-Would like to see if svn_fs_unparse_id should return either
-svn_string_t * or const char * instead of svn_stringbuf_t *.
 
 --
 

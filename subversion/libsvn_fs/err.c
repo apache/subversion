@@ -83,8 +83,7 @@ svn_fs__check_fs (svn_fs_t *fs)
 static svn_error_t *
 corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
 {
-  svn_stringbuf_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
-
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
   return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
                             fmt, unparsed_id->data, fs->path);
 }
@@ -134,10 +133,8 @@ svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 svn_error_t *
 svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
-  svn_stringbuf_t *id_str = svn_fs_unparse_id (id, fs->pool);
-
-  return
-    svn_error_createf
+  svn_string_t *id_str = svn_fs_unparse_id (id, fs->pool);
+  return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0, 0, fs->pool,
      "reference to non-existent node `%s' in filesystem `%s'",
      id_str->data, fs->path);

@@ -674,7 +674,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
   SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, txn_id));
   if (! is_mutable)
     {
-      svn_stringbuf_t *idstr = svn_fs_unparse_id (node->id, node->pool);
+      svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
       return svn_error_createf 
         (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
          "Can't set_proplist on *immutable* node-revision %s", idstr->data);
@@ -1482,7 +1482,7 @@ make_node_immutable (dag_node_t *node,
      this node.  If there is, we have a problem. */
   if (svn_fs__dag_is_file (node) && noderev->edit_data_key)
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (node->id, trail->pool);
+      svn_string_t *id_str = svn_fs_unparse_id (node->id, trail->pool);
       return svn_error_createf 
         (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
          "make_node_immutable: node `%s' has unfinished edits", id_str->data);

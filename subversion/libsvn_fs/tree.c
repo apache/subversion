@@ -1157,7 +1157,7 @@ merge (svn_stringbuf_t *conflict_p,
   /* It's improper to call this function with ancestor == target. */
   if (svn_fs__id_eq (ancestor_id, target_id))
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
+      svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
          "Bad merge call -- target `%s' has id `%s', same as ancestor.",
@@ -1661,7 +1661,7 @@ txn_body_commit (void *baton, trail_t *trail)
      start, instead of having to transform one of them. */ 
   if (! svn_fs__id_eq (y_rev_root_id, svn_fs__dag_get_id (txn_base_root_node)))
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
+      svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_TXN_OUT_OF_DATE, 0, NULL, trail->pool,
          "txn `%s' out of date w.r.t. revision `%s'", txn_name, id_str->data);

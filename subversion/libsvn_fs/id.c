@@ -179,12 +179,12 @@ svn_fs_parse_id (const char *data,
 }
 
 
-svn_stringbuf_t *
+svn_string_t *
 svn_fs_unparse_id (const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  return svn_stringbuf_createf (pool, "%s.%s.%s", 
-                                id->node_id, id->copy_id, id->txn_id);
+  return svn_string_createf (pool, "%s.%s.%s", 
+                             id->node_id, id->copy_id, id->txn_id);
 }
 
 

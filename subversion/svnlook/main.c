@@ -561,7 +561,7 @@ print_ids_tree (svn_repos_node_t *node,
   svn_repos_node_t *tmp_node;
   int i;
   svn_fs_id_t *id;
-  svn_stringbuf_t *unparsed_id = NULL;
+  svn_string_t *unparsed_id = NULL;
   apr_pool_t *subpool;
 
   if (! node)

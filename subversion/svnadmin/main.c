@@ -66,7 +66,7 @@ print_tree (svn_fs_root_t *root,
       int is_dir;
       int i;
       svn_fs_id_t *id;
-      svn_stringbuf_t *id_str;
+      svn_string_t *id_str;
 
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;

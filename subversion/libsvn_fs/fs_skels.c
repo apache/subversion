@@ -630,7 +630,7 @@ svn_fs__unparse_revision_skel (skel_t **skel_p,
 {
   skel_t *skel;
   skel_t *proplist_skel;
-  svn_stringbuf_t *id_str;
+  svn_string_t *id_str;
 
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
@@ -685,7 +685,7 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
   else
     {
       skel_t *proplist_skel, *copies_skel;
-      svn_stringbuf_t *id_str;
+      svn_string_t *id_str;
 
       /* COPIES */
       copies_skel = svn_fs__make_empty_list (pool);
@@ -925,7 +925,7 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
                            apr_pool_t *pool)
 {
   skel_t *skel;
-  svn_stringbuf_t *tmp_str;
+  svn_string_t *tmp_str;
 
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
@@ -935,8 +935,8 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
   svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
 
   /* SRC-REV */
-  tmp_str = svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT, 
-                                   copy->src_revision);
+  tmp_str = svn_string_createf (pool, "%" SVN_REVNUM_T_FMT, 
+                                copy->src_revision);
   svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
 
   /* SRC-PATH */
@@ -971,7 +971,7 @@ svn_fs__unparse_entries_skel (skel_t **skel_p,
           void *val;
           apr_ssize_t klen;
           svn_fs_id_t *value;
-          svn_stringbuf_t *id_str;
+          svn_string_t *id_str;
           skel_t *entry_skel = svn_fs__make_empty_list (pool);
 
           apr_hash_this (hi, &key, &klen, &val);

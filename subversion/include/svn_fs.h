@@ -237,8 +237,8 @@ svn_fs_id_t *svn_fs_parse_id (const char *data,
 /* Return a Subversion string containing the unparsed form of the
    node or node revision id ID.  Allocate the string containing the
    unparsed form in POOL.  */
-svn_stringbuf_t *svn_fs_unparse_id (const svn_fs_id_t *id, 
-                                    apr_pool_t *pool);
+svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id, 
+                                 apr_pool_t *pool);
 
 
 
