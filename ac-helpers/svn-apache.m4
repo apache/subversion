@@ -12,8 +12,9 @@ AC_DEFUN(SVN_FIND_APACHE,[
 
 AC_MSG_CHECKING(for static Apache module support)
 AC_ARG_WITH(apache,
-[  --with-apache=DIR      Build static Apache module.  DIR is the path
-                         to the top-level Apache source directory.],
+AC_HELP_STRING([--with-apache=DIR],
+	       [Build static Apache module.  DIR is the path to the top-level
+		Apache source directory.]),
 [
 	if test "$withval" = "yes"; then
 		AC_MSG_ERROR(You need to specify a directory with --with-apache)

@@ -49,18 +49,21 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl  place spec.
 
   AC_ARG_WITH(berkeley-db,
-  [  --with-berkeley-db=PATH
-	   Find the Berkeley DB header and library in \`PATH/include' and
-	   \`PATH/lib'.  If PATH is of the form \`HEADER:LIB', then search
-	   for header files in HEADER, and the library in LIB.  If you omit
-	   the \`=PATH' part completely, the configure script will search
-	   for Berkeley DB in a number of standard places.
+  [  --with-berkeley-db=PATH Find the Berkeley DB header and library in
+                          `PATH/include' and `PATH/lib'.  If PATH is of the
+                          form `HEADER:LIB', then search for header files in
+                          HEADER, and the library in LIB.  If you omit the
+                          `=PATH' part completely, the configure script will
+                          search for Berkeley DB in a number of standard
+                          places.
 
-	   The Subversion server requires Berkeley DB $db_version or newer.  If
-	   you specify \`--without-berkeley-db', the server will not be
-	   built.  Otherwise, the configure script builds the server if and
-	   only if it can find a new enough version installed, or if a copy
-	   of Berkeley DB exists in the subversion tree as subdir \`db'.],
+                          The Subversion server requires Berkeley DB
+                          $db_version or newer.  If you specify
+                          `--without-berkeley-db', the server will not be
+                          built.  Otherwise, the configure script builds the
+                          server if and only if it can find a new enough
+                          version installed, or if a copy of Berkeley DB
+                          exists in the subversion tree as subdir `db'.],
   [
     if test "$withval" = "yes"; then
       status=required

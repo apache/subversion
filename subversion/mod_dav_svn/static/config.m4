@@ -10,7 +10,7 @@ dnl APACHE_MODULE(dav_svn, DAV provider for Subversion, $dav_svn_objects, , no)
 
 AC_MSG_CHECKING(whether to enable mod_dav_svn)
 AC_ARG_ENABLE(dav-svn,
-  [  --enable-dav-svn        DAV provider for Subversion],
+  AC_HELP_STRING([--enable-dav-svn], [DAV provider for Subversion]),
   [  ],
   [ enable_dav_svn=no ])
 AC_MSG_RESULT($enable_dav_svn)
