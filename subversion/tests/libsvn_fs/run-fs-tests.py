@@ -9,4 +9,8 @@ sys.path.insert(0, python_libs)
 
 # Run the tests
 import exectest
-exectest.run_tests(['key-test', 'skel-test', 'strings-reps-test', 'fs-test'])
+exectest.run_tests(['key-test',
+                    'skel-test',
+                    'changes-test',
+                    'strings-reps-test',
+                    'fs-test'])

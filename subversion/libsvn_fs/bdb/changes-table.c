@@ -111,10 +111,10 @@ svn_fs__changes_delete (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__changes_get_set (apr_array_header_t **changes_p,
-                         svn_fs_t *fs,
-                         const char *key,
-                         trail_t *trail)
+svn_fs__changes_fetch (apr_array_header_t **changes_p,
+                       svn_fs_t *fs,
+                       const char *key,
+                       trail_t *trail)
 {
   DBC *cursor;
   DBT query, result;
@@ -122,7 +122,7 @@ svn_fs__changes_get_set (apr_array_header_t **changes_p,
   svn_error_t *err = SVN_NO_ERROR;
   svn_fs__change_t *change;
   apr_array_header_t *changes = apr_array_make (trail->pool, 4, 
-                                                sizeof (*change));
+                                                sizeof (change));
 
   /* Get a cursor on the first record matching KEY, and then loop over
      the records, adding them to the return array. */

@@ -58,10 +58,10 @@ svn_error_t *svn_fs__changes_delete (svn_fs_t *fs,
 /* Return an array *CHANGES_P of svn_fs__change_t * items representing
    all the change records associated with KEY in FS, as part of TRAIL.
    Allocate the array and its items in TRAIL->pool.  */
-svn_error_t *svn_fs__changes_get_set (apr_array_header_t **changes_p,
-                                      svn_fs_t *fs,
-                                      const char *key,
-                                      trail_t *trail);
+svn_error_t *svn_fs__changes_fetch (apr_array_header_t **changes_p,
+                                    svn_fs_t *fs,
+                                    const char *key,
+                                    trail_t *trail);
 
 
 #ifdef __cplusplus
