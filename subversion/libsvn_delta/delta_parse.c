@@ -684,13 +684,25 @@ do_begin_propdelta (svn_delta_digger_t *digger)
   switch (youngest_frame->previous->tag)
     {
     case svn_XML_file:
-      location = svn_prop_file;
+      {
+        location = svn_prop_file;
+        break;
+      }
     case svn_XML_dir:
-      location = svn_prop_dir;
+      {
+        location = svn_prop_dir;
+        break;
+      }
     case svn_XML_new:
-      location = svn_prop_dirent;
+      {
+        location = svn_prop_dirent;
+        break;
+      }
     case svn_XML_replace:
-      location = svn_prop_dirent;
+      {
+        location = svn_prop_dirent;
+        break;
+      }
     default:
       return 
         svn_create_error 

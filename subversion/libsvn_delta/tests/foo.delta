@@ -5,6 +5,7 @@
         <new name="mu">
           <file ancestor="/A/mu">
             <text-delta>This is the file 'mu'.</text-delta>
+            <prop-delta><set name="fruit">apple</set></prop-delta>
           </file>
         </new>
         <new name="B">
