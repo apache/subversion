@@ -33,15 +33,6 @@ Candidate changes:
     Votes:
       +1: maxb, cmpilato
 
-  * r10652, r10673
-    Fix missing UTF-8 -> native recoding in 'svn log' output.
-    Justification:
-      Solves user experience in very common operation.
-    Backporting result:
-      Merge without conflicts (at r10652).
-    Votes:
-      +1: dionisos, cmpilato, lundblad
-
   * r10674
     Make ./configure behave nicer in the presence of old Apache.
     Justification:
