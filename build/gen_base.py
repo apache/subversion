@@ -28,18 +28,17 @@ class GeneratorBase:
   #
 
   def __init__(self, fname, verfname):
-    self.parser = ConfigParser.ConfigParser(_cfg_defaults)
-    self.parser.read(fname)
+    parser = ConfigParser.ConfigParser(_cfg_defaults)
+    parser.read(fname)
 
     self.cfg = Config()
-    self.cfg.swig_lang = string.split(self.parser.get('options',
-                                                      'swig-languages'))
+    self.cfg.swig_lang = string.split(parser.get('options', 'swig-languages'))
 
     # Version comes from a header file since it is used in the code.
     try:
-      parser = getversion.Parser()
-      parser.search('SVN_VER_LIBRARY', 'libver')
-      self.cfg.version = parser.parse(verfname).libver
+      vsn_parser = getversion.Parser()
+      vsn_parser.search('SVN_VER_LIBRARY', 'libver')
+      self.cfg.version = vsn_parser.parse(verfname).libver
     except:
       raise GenError('Unable to extract version.')
 
@@ -55,47 +54,53 @@ class GeneratorBase:
     self.graph = DependencyGraph()
 
     # PASS 1: collect the targets and some basic info
-    for target in _filter_targets(self.parser.sections()):
-      install = self.parser.get(target, 'install')
-      type = self.parser.get(target, 'type')
+    for target in _filter_targets(parser.sections()):
+      install = parser.get(target, 'install')
+      type = parser.get(target, 'type')
 
       target_class = _build_types.get(type)
       if not target_class:
         raise GenError('ERROR: unknown build type: ' + type)
 
       target_ob = target_class(target,
-                               self.parser.get(target, 'path'),
+                               parser.get(target, 'path'),
                                install,
-                               self.parser.get(target, 'custom'), ### bogus
+                               parser.get(target, 'custom'), ### bogus
                                self.cfg,
                                self._extension_map)
 
       self.targets[target] = target_ob
 
+      ### I don't feel like passing these to the constructor right now,
+      ### and I'm not sure how to really pass this stuff along. we
+      ### certainly don't want the targets looking at the parser...
+      target_ob.ldflags = parser.get(target, 'link-flags')
+      target_ob.add_deps = parser.get(target, 'add-deps')
+
       # find all the sources involved in building this target
-      target_ob.find_sources(self.parser.get(target, 'sources'))
+      target_ob.find_sources(parser.get(target, 'sources'))
 
       # the target should add all relevant dependencies
       target_ob.add_dependencies(self.graph)
 
-      self.manpages.extend(string.split(self.parser.get(target, 'manpages')))
-      self.infopages.extend(string.split(self.parser.get(target, 'infopages')))
+      self.manpages.extend(string.split(parser.get(target, 'manpages')))
+      self.infopages.extend(string.split(parser.get(target, 'infopages')))
 
       if type != 'script':
         # collect test programs
         if type == 'exe':
           if install == 'test':
             self.test_deps.append(target_ob.output)
-            if self.parser.get(target, 'testing') != 'skip':
+            if parser.get(target, 'testing') != 'skip':
               self.test_progs.append(target_ob.output)
           if install == 'fs-test':
             self.fs_test_deps.append(target_ob.output)
-            if self.parser.get(target, 'testing') != 'skip':
+            if parser.get(target, 'testing') != 'skip':
               self.fs_test_progs.append(target_ob.output)
 
         # collect all the paths where stuff might get built
         self.target_dirs[target_ob.path] = None
-        for pattern in string.split(self.parser.get(target, 'sources')):
+        for pattern in string.split(parser.get(target, 'sources')):
           if string.find(pattern, os.sep) != -1:
             self.target_dirs[os.path.join(target_ob.path,
                                           os.path.dirname(pattern))] = None
@@ -103,19 +108,19 @@ class GeneratorBase:
     # compute intra-library dependencies
     for name, target in self.targets.items():
       if isinstance(target, TargetLinked):
-        for libname in string.split(self.parser.get(name, 'libs')):
+        for libname in string.split(parser.get(name, 'libs')):
           if self.targets.has_key(libname):
             self.graph.add(DT_LINK, name, self.targets[libname])
+          else:
+            self.graph.add(DT_LINK, name, ExternalLibrary(libname))
 
     # collect various files
-    self.includes = _collect_paths(self.parser.get('options', 'includes'))
-    self.apache_files = _collect_paths(self.parser.get('static-apache',
-                                                       'paths'))
+    self.includes = _collect_paths(parser.get('options', 'includes'))
+    self.apache_files = _collect_paths(parser.get('static-apache', 'paths'))
 
     # collect all the test scripts
-    self.scripts = _collect_paths(self.parser.get('test-scripts', 'paths'))
-    self.fs_scripts = _collect_paths(self.parser.get('fs-test-scripts',
-                                                     'paths'))
+    self.scripts = _collect_paths(parser.get('test-scripts', 'paths'))
+    self.fs_scripts = _collect_paths(parser.get('fs-test-scripts', 'paths'))
 
     # get all the test scripts' directories
     script_dirs = map(os.path.dirname, self.scripts + self.fs_scripts)
@@ -270,9 +275,20 @@ class SWIGLibrary(DependencyNode):
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
 
+    self.path = os.path.dirname(fname)
+
+    self.name = lang + os.path.splitext(os.path.basename(fname))[0]
+
     ### maybe tweak to avoid these duplicate attrs
     self.output = fname
-    self.name = fname
+
+    ### stupid Target vs DependencyNode
+    self.ldflags = ''
+    self.add_deps = ''
+    self.custom = ''
+
+class ExternalLibrary(DependencyNode):
+  pass
 
 lang_abbrev = {
   'python' : 'py',
@@ -284,6 +300,7 @@ lang_abbrev = {
   }
 
 
+### we should turn these targets into DependencyNode subclasses...
 class Target:
   def __init__(self, name, path, install, custom, cfg, extmap):
     self.name = name
@@ -322,14 +339,16 @@ class Target:
       if src[-2:] == '.c':
         objname = src[:-2] + self.objext
 
-        # object depends upon source
         if self.custom == 'apache-mod':
-          graph.add(DT_OBJECT, ApacheObject(objname), src)
+          ofile = ApacheObject(objname)
         else:
-          graph.add(DT_OBJECT, objname, src)
+          ofile = ObjectFile(objname)
+
+        # object depends upon source
+        graph.add(DT_OBJECT, ofile, src)
 
         # target (a linked item) depends upon object
-        graph.add(DT_LINK, self.name, objname)
+        graph.add(DT_LINK, self.name, ofile)
       else:
         raise GenError('ERROR: unknown file extension on ' + src)
 
@@ -365,6 +384,7 @@ class Target:
     return cmp(self.name, ob)
 
 class TargetLinked(Target):
+  "The target is linked (by libtool) against other libraries."
   pass
 
 class TargetExe(TargetLinked):
@@ -445,8 +465,8 @@ class TargetSWIG(Target):
       graph.add(DT_SWIG_C, SWIGObject(cfile, lang), ifile)
 
       # the object depends upon the .c file
-      ofile = os.path.join(dir, lang, oname)
-      graph.add(DT_OBJECT, SWIGObject(ofile, lang), cfile)
+      ofile = SWIGObject(os.path.join(dir, lang, oname), lang)
+      graph.add(DT_OBJECT, ofile, cfile)
 
       # the library depends upon the object
       library = SWIGLibrary(os.path.join(dir, lang, libname), lang)
