@@ -14,24 +14,15 @@ Ben todo:
    - finish implementing properties.  it's 95% done already.  :)
 
 Karl working copy todo:
+   - use apr process api instead of system(), don't use redirection
    - write the log/lock recovery function.
    - with Ben, review locking protocol in wc adm directories for sanity.
-   - fix robustitude of trace editor in the obvious way
    - check apr_open calls, do they assume failure implies null handle?
    - fix working copy identification/allergy code
    - make sure type-changing replacements work right
 
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
-
-   - CURRENT BUGS of the evening:
-        * when do we put timestamps into entries?  always?  they're
-          being put on "added" files, but not "updated" files right
-          now.
-        kff thunks: we make sure that log items to write a working
-                    file always come before log items to update an
-                    entry, and then we set the timestamp according to
-                    the working file when we write the new entry.
 
 Greg:
    - mod_dav_svn:
