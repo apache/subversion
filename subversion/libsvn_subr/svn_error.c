@@ -36,13 +36,10 @@ static svn_error_t *
 make_error_internal (apr_status_t apr_err,
                      int src_err,
                      svn_error_t *child,
-                     apr_pool_t *pool,
-                     const char *message,
-                     va_list ap)
+                     apr_pool_t *pool)
 {
   svn_error_t *new_error;
   apr_pool_t *newpool;
-  char *permanent_msg;
 
   /* Make a new subpool of the active error pool, or else use child's pool. */
   if (pool)
@@ -64,19 +61,9 @@ make_error_internal (apr_status_t apr_err,
   /* Create the new error structure */
   new_error = (svn_error_t *) apr_pcalloc (newpool, sizeof (*new_error));
 
-  /* Copy the message to permanent storage. */
-  if (ap)
-    permanent_msg = apr_pvsprintf (newpool, message, ap);
-  else
-    {
-      permanent_msg = apr_palloc (newpool, (strlen (message) + 1));
-      strcpy (permanent_msg, message);
-    }
-
   /* Fill 'er up. */
   new_error->apr_err = apr_err;
   new_error->src_err = src_err;
-  new_error->message = permanent_msg;
   new_error->child   = child;
   new_error->pool    = newpool;  
 
@@ -259,7 +246,17 @@ svn_error_create (apr_status_t apr_err,
                   apr_pool_t *pool,
                   const char *message)
 {
-  return make_error_internal (apr_err, src_err, child, pool, message, NULL);
+  svn_error_t *err;
+  char *permanent_msg;
+
+  err = make_error_internal (apr_err, src_err, child, pool);
+  
+  permanent_msg = apr_palloc (err->pool, (strlen (message) + 1));
+  strcpy (permanent_msg, message);
+
+  err->message = permanent_msg;
+
+  return err;
 }
 
 
@@ -274,8 +271,11 @@ svn_error_createf (apr_status_t apr_err,
   svn_error_t *err;
 
   va_list ap;
+
+  err = make_error_internal (apr_err, src_err, child, pool);
+
   va_start (ap, fmt);
-  err = make_error_internal (apr_err, src_err, child, pool, fmt, ap);
+  err->message = apr_pvsprintf (err->pool, fmt, ap);
   va_end (ap);
 
   return err;
