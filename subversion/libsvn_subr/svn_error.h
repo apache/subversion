@@ -59,7 +59,7 @@
 #include <stdio.h>
 
 
-#define SVN_SUCCESS   0    /* What you return if you don't return error. */
+#define SVN_NO_ERROR   0   /* the best kind of (svn_error_t *) ! */
 
 /* 
    Theoretically, this is the header file where we can define our own

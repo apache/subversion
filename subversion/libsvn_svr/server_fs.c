@@ -162,7 +162,7 @@ svn_svr_plugin_authorize (svn_fsrequest_t *request)
         svn_string_dup (request->user->auth_username, request->policy->pool);
     }
   
-  return SVN_SUCCESS;  /* successfully authorized to perform the action! */
+  return SVN_NO_ERROR;  /* successfully authorized to perform the action! */
 }
 
 
@@ -185,7 +185,7 @@ svn_svr_policy_authorize (svn_fs_request_t *request)
   /* BIG TODO: loop through policy->global_restrictions array,
      interpreting each restriction and checking authorization */
 
-  return SVN_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 
@@ -219,7 +219,7 @@ svn_svr_authorize (svn_fsrequest_t *request);
     return (svn_quick_wrap_error
             (err, "At least one server plugin denied authorization."));
 
-  return SVN_SUCCESS;  /* successfully authorized! */
+  return SVN_NO_ERROR;  /* successfully authorized! */
 }
 
 
@@ -230,7 +230,7 @@ svn_svr_authorize (svn_fsrequest_t *request);
 
    Input:  void **, and an fsrequest structure
 
-   Returns:  svn_error_t or SVN_SUCCESS, and **returndata filled in.
+   Returns:  svn_error_t or SVN_NO_ERROR, and **returndata filled in.
 
 */
 
@@ -483,7 +483,7 @@ svn_svr_do_fs_call (void **returndata, svn_fsrequest_t *request)
 
 /* Input:  a skelta describing working copy's current tree
 
-   Returns: an svn error or SVN_SUCCESS, and 
+   Returns: an svn error or SVN_NO_ERROR, and 
 
             returndata = a skelta describing how the tree is out of date 
 
@@ -501,14 +501,14 @@ svn_svr_get_status (void **returndata,
      file to check for up-to-date-ness.  Then we'd built a new skelta
      to send back the results.  */
 
-  return SVN_SUCCESS;
+  return SVN_NO_ERROR;
 }
  
 
 
 /* Input: a skelta describing working copy's current tree.
 
-   Returns:  svn_error_t * or SVN_SUCCESS, and
+   Returns:  svn_error_t * or SVN_NO_ERROR, and
 
             returndata = a delta which, when applied, will actually
             update working copy's tree to latest version.  
@@ -526,7 +526,7 @@ svn_svr_get_update (void **returndata,
      each file.  Then we'd built a new composite delta to send back. 
   */
 
-  return SVN_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 

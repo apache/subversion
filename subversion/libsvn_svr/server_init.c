@@ -62,7 +62,7 @@
              * pathname of the shared library to load
              * name of the initialization routine in the plugin
             
-   Returns:  error structure or SVN_SUCCESS
+   Returns:  error structure or SVN_NO_ERROR
 
    ASSUMES that ap_dso_init() has already been called!
 
@@ -119,7 +119,7 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
         (error, "svn_svr_load_plugin(): plugin initialization failed.");
     }
   
-  return SVN_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 
@@ -180,7 +180,7 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
   if (latesterr)
     return latesterr;
   else
-    return SVN_SUCCESS;
+    return SVN_NO_ERROR;
 }
 
 
@@ -193,7 +193,7 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
    Input:  ptr to policy ptr, pool
     
    Returns: alloc's empty policy structure, 
-            returns svn_error_t * or SVN_SUCCESS
+            returns svn_error_t * or SVN_NO_ERROR
 
 */
 
@@ -225,7 +225,7 @@ svn_svr_init (svn_svr_policies_t **policy,
       return (svn_create_error (result, NULL, msg, NULL, pool));
     }
 
-  return SVN_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 
@@ -325,7 +325,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
   if (latest_warning)
     return latest_warning;
   else
-    return SVN_SUCCESS;
+    return SVN_NO_ERROR;
 }
 
 
@@ -345,7 +345,7 @@ svn_svr_register_plugin (svn_svr_policies_t *policy,
 
   /* Hm... how would this routine fail? :)  */
 
-  return SVN_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 

@@ -93,7 +93,7 @@ svn_plugin_internal_authorization (svn_fsrequest_t *request)
      libsvn_fs, and not call svn_svr_read(); svn_svr_read() checks for
      authorization, which would put us in an infinte loop! */
 
-  return SVN_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 
@@ -128,7 +128,7 @@ svn_plugin_security_init (svn_svr_policies_t *policy,
   if (err)
     return (svn_quick_wrap_error (err, "Can't register plugin_security."));
   else
-    return SVN_SUCCESS;
+    return SVN_NO_ERROR;
 }
 
 
