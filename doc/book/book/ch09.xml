@@ -526,6 +526,7 @@ $ svn log -r 1729:{2002-02-17}
 --config-dir DIR
 --auto-props
 --no-auto-props
+--force
 </screen>
         </refsect1>
         
@@ -558,6 +559,23 @@ A         testdir/d
 $ svn add --non-recursive otherdir
 A         otherdir
 </screen>
+
+          <para>Normally, the command <command>svn add *</command>
+            will skip over any directories that are already under
+            version control.  Sometimes, however, you may want to add
+            every unversioned object in your working copy, including
+            those hiding deeper down.  Passing the
+            <option>--force</option> option makes <command>svn
+            add</command> recurse into versioned directories:</para>
+
+          <screen>
+$ svn add * --force
+A         foo.c
+A         somedir/bar.c
+A         otherdir/docs/baz.doc
+[...]
+</screen>
+
         </refsect1>
       </refentry>
 
@@ -606,6 +624,7 @@ A         otherdir
 --no-auth-cache
 --non-interactive
 --config-dir DIR
+--verbose
 </screen>
         </refsect1>
 
@@ -5309,6 +5328,17 @@ $ svnlook youngest /tmp/repos/
               uid.  This flag is selected by the client when running
               over a tunnel agent such as
               <command>ssh</command>.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--tunnel-user=NAME</option></term>
+          <listitem>
+            <para>Used in conjuction with --tunnel switch; tells
+              svnserve to assume that NAME is the authenticated user,
+              rather than the UID of the svnserve process. Useful for
+              users wishing to share a single system account over SSH,
+              but maintaining separate commit identities.</para>
           </listitem>
         </varlistentry>
 

@@ -59,10 +59,6 @@ ch06:
 List of 1.1 features/changes (that still need to be documented)
 ============================
 
-  * www/svn_1.1_relasenotes.html really needs to be converted into a
-    new section in the book's preface, complete with <xref> links to
-    the new 1.1 features.
-
   * Need whole new section to explain "peg objects" and history
     tracing.  Lots of examples involving different subcommands.
     (Which chapter should this section go in?)

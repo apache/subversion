@@ -531,10 +531,158 @@
     </sect2>
 
   </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 7 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-7">
+    <title>New in Subversion 1.1</title>
+
+    <para>This edition of the book has been updated to cover new
+      features and behavioral changes in Subversion 1.1.  Here's a
+      brief list of pointers to major 1.1 changes.</para>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>Non-database repositories</term>
+        <listitem>
+          <para>It's now possible to create repositories that don't
+            use a BerkeleyDB database.  Instead, these new
+            repositories store data in the ordinary filesystem using a
+            custom file format.  These repositories aren't susceptible
+            to <quote>wedging</quote>, but also aren't as well-tested
+            as Berkeley DB repositories.  See <xref
+            linkend="svn-ch-5-sect-1.2.A"/>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Symbolic link versioning</term>
+        <listitem>
+          <para>Unix users can now create symbolic links and place
+          them under version control with the <command>svn
+          add</command> command.  See <xref
+          linkend="svn-ch-9-sect-1.2-re-add"/> and <xref
+          linkend="svn-ch-7-sect-2.3.7"/>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Client follows copies and renames</term>
+        <listitem>
+          <para>Branches (copies) of files and directories maintain
+            historical connections to their source, but in Subversion
+            1.0 only <command>svn log</command> ever followed that
+            copy/rename history, not other commands like <command>svn
+            diff</command>, <command>svn merge</command>, <command>svn
+            list</command>, or <command>svn cat</command>.  In
+            Subversion 1.1, all client subcommands now transparently
+            trace backwards through copies and renames when examining
+            older versions of files and directories.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Client auto-escaping of URIs and IRIs</term>
+        <listitem>
+          <para>In the 1.0 commandline client, users had to escape
+            URLs manually.  The client only accepted <quote>legally
+            correct</quote> URLs, such as
+            <literal>http://host/path%20with%20space/project/espa%F1a</literal>.
+            The 1.1 commandline client now knows how to do what
+            web-browsers have been doing for long time: it
+            auto-escapes characters like spaces and other upper-ascii
+            international characters, as long as the user places the
+            URL in quotes to protect characters from the shell:
+            <literal>"http://host/path with
+            space/project/espa&ntilde;a"</literal></para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Localized user messages</term>
+        <listitem>
+          <para>Subversion 1.1 is now using
+          <literal>gettext()</literal> to display translated error,
+          informational, and help messages to the user. There are
+          currently translations for German, Spanish, Polish, Swedish,
+          Traditional Chinese, Japanese, Brazilian Portuguese and
+          Norwegian Bokmal.  To localize your Subversion client, just
+          set your shell's LANG environment variable to a supported
+          locale value (for example, <literal>de_DE</literal>).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Shareable working copies</term>
+        <listitem>
+          <para>There have been historical problems with permissions
+          when multiple users share a working copy, which are believed
+          to be fixed now.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>store-passwords</literal> run-time variable</term>
+        <listitem>
+          <para>This is a new runtime variable which only disables
+            password caching, so that server certificates can still be
+            cached.  See <xref linkend="svn-ch-7-sect-1.3.2"/>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Optimizations and bugfixes</term>
+        <listitem>
+          <para>The <command>svn checkout</command>, <command>svn
+          update</command>, <command>svn status</command>, and
+          <command>svn blame</command> commands are faster.  More than
+          fifty small bugs have been fixed, all described in the
+          Subversion project's CHANGES file (at <systemitem
+          class="url">http://svn.collab.net/repos/svn/trunk/CHANGES
+          </systemitem>). </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>New command switches</term>
+        <listitem>
+          <itemizedlist>
+            <listitem><para><command>svn blame --verbose</command>: see
+            <xref linkend="svn-ch-9-sect-1.2-re-blame"/>.
+            </para></listitem>
+
+            <listitem><para><command>svn export --native-eol EOL</command>: see
+            <xref linkend="svn-ch-9-sect-1.2-re-export"/>.
+            </para></listitem>
+            
+            <listitem><para><command>svn add --force</command>: see
+            <xref linkend="svn-ch-9-sect-1.2-re-add"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnadmin dump --deltas</command>: see
+            <xref linkend="svn-ch-5-sect-3.5"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnadmin create --fs-type TYPE</command>: see
+            <xref linkend="svn-ch-9-sect-2.2-re-create"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnadmin recover --wait</command>: see
+            <xref linkend="svn-ch-9-sect-2.2-re-recover"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnserve --tunnel-user=NAME</command>: see
+            <xref linkend="svn-ch-9-sect-4.1"/>.
+            </para></listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+  </sect1>
 </preface>
 
-<!--
-local variables: 
-sgml-parent-document: ("book.xml" "chapter")
-end:
--->
+<!-- local variables: sgml-parent-document: ("book.xml" "chapter")
+end: -->
