@@ -116,6 +116,19 @@ import_file (const svn_delta_edit_fns_t *editor,
                              NULL, SVN_INVALID_REVNUM, 
                              &file_baton));          
   SVN_ERR (send_file_contents (path, file_baton, editor, pool));
+  
+  /* Try to detect the mime-type of this new addition. */
+  {
+    const char *mimetype;
+
+    SVN_ERR (svn_io_detect_mimetype (&mimetype, path->data, pool));
+    if (mimetype)
+      SVN_ERR (editor->change_file_prop 
+               (file_baton,
+                svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
+                svn_stringbuf_create (mimetype, pool)));
+  }
+
   SVN_ERR (editor->close_file (file_baton));
 
   return SVN_NO_ERROR;
