@@ -159,6 +159,7 @@ apr_hash_t *svn_xml_make_att_hash (const char **atts, apr_pool_t *pool);
 /* Like svn_xml_make_att_hash(), but takes a hash and preserves any
    key/value pairs already in it. */
 void svn_xml_hash_atts_preserving (const char **atts,
+
                                    apr_hash_t *ht,
                                    apr_pool_t *pool);
 
@@ -172,42 +173,50 @@ void svn_xml_hash_atts_overlaying (const char **atts,
 
 /*** Printing XML ***/
 
-/* Fully-formed XML files should start out with a header, something
- * like 
- *         <?xml version="1.0" encoding="utf-8"?>
- * 
- * If you're writing such a file, call this before you make any calls
- * to svn_xml_write_tag().
- */
-svn_error_t *svn_xml_write_header (apr_file_t *file, apr_pool_t *pool);
-
-
-/* Print an XML tag named TAGNAME into FILE.  Varargs are used to
-   specify a NULL-terminated list of alternating const char *Key
-   and svn_string_t *Val.
-
-   TAGTYPE must be one of the enumerated types in svn_xml_tag_type.
-
-   FILE is assumed to be already open for writing.
+/* Fully-formed XML documents should start out with a header,
+   something like 
+           <?xml version="1.0" encoding="utf-8"?>
+   
+   This function returns such a header.
 */
-svn_error_t *svn_xml_write_tag (apr_file_t *file,
-                                apr_pool_t *pool,
-                                enum svn_xml_tag_type tagtype,
-                                const char *tagname,
-                                ...);
+svn_string_t *svn_xml_make_header (apr_pool_t *pool);
 
 
-/* Like svn_xml_write_tag, but takes a va_list instead of being variadic. */
-svn_error_t *svn_xml_write_tag_v (apr_file_t *file,
-                                  apr_pool_t *pool,
-                                  enum svn_xml_tag_type tagtype,
-                                  const char *tagname,
-                                  va_list ap);
+/* Appends an XML tag named TAGNAME to STR.  Varargs are used to
+   specify a NULL-terminated list of alternating const char *Key and
+   svn_string_t *Val.
+
+   TAGTYPE must be one of the enumerated types in svn_xml_tag_type. */
+void svn_xml_append_tag (svn_string_t *str,
+			 apr_pool_t *pool,
+			 enum svn_xml_tag_type tagtype,
+			 const char *tagname,
+			 ...);
+
+/* Like svn_xml_append_tag, but creates a new string. */
+svn_string_t *svn_xml_make_tag (apr_pool_t *pool,
+				enum svn_xml_tag_type tagtype,
+				const char *tagname,
+				...);
 
 
-/* Like svn_xml_write_tag, but takes a hash table of attributes. 
+/* Like svn_xml_append_tag, but takes a va_list instead of being variadic. */
+void svn_xml_append_tag_v (svn_string_t *str,
+			   apr_pool_t *pool,
+			   enum svn_xml_tag_type tagtype,
+			   const char *tagname,
+			   va_list ap);
+
+
+/* Like svn_xml_append_tag_v, but creates a new string. */
+svn_string_t *svn_xml_make_tag_v (apr_pool_t *pool,
+				  enum svn_xml_tag_type tagtype,
+				  const char *tagname,
+				  va_list ap);
+
+/* Like svn_xml_append_tag, but takes a hash table of attributes. 
  *
- * You might ask, why not just provide svn_xml_write_tag_atts()?
+ * You might ask, why not just provide svn_xml_append_tag_atts()?
  *
  * The reason is that a hash table is the most natural interface to an
  * attribute list; the fact that Expat uses char **atts instead is
@@ -222,11 +231,30 @@ svn_error_t *svn_xml_write_tag_v (apr_file_t *file,
  * svn_xml_make_att_hash_overlaying().  Callers should use those to
  * convert Expat attr lists into hashes when necessary.
  */
-svn_error_t *svn_xml_write_tag_hash (apr_file_t *file,
-                                     apr_pool_t *pool,
-                                     enum svn_xml_tag_type tagtype,
-                                     const char *tagname,
-                                     apr_hash_t *attributes);
+void svn_xml_append_tag_hash (svn_string_t *str,
+			      apr_pool_t *pool,
+                              enum svn_xml_tag_type tagtype,
+                              const char *tagname,
+                              apr_hash_t *attributes);
 
+svn_string_t *svn_xml_make_tag_hash (apr_pool_t *pool,
+				     enum svn_xml_tag_type tagtype,
+				     const char *tagname,
+				     apr_hash_t *attributes);
+
+
+/* COMPATIBILITY FUNCTIONS so I don't break the tree.  Karl, nuke this
+   when you fix up libsvn_wc.  */
+svn_error_t *svn_xml_write_tag_hash (apr_file_t *file,
+				     apr_pool_t *pool,
+				     enum svn_xml_tag_type tagtype,
+				     const char *tagname,
+				     apr_hash_t *attributes);
+svn_error_t *svn_xml_write_tag (apr_file_t *file,
+				apr_pool_t *pool,
+				enum svn_xml_tag_type tagtype,
+				const char *tagname,
+				...);
+svn_error_t *svn_xml_write_header (apr_file_t *file, apr_pool_t *pool);
 
 #endif /* SVN_XML_H */

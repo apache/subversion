@@ -230,6 +230,16 @@ svn_xml_get_attr_value (const char *name, const char **atts)
 
 /*** Printing XML ***/
 
+svn_string_t *
+svn_xml_make_header (apr_pool_t *pool)
+{
+  return svn_string_create ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+                            pool);
+}
+
+
+/* COMPATIBILITY FUNCTION so I don't break the tree.  Karl, nuke this
+   when you fix up libsvn_wc.  */
 svn_error_t *
 svn_xml_write_header (apr_file_t *file, apr_pool_t *pool)
 {
@@ -240,7 +250,7 @@ svn_xml_write_header (apr_file_t *file, apr_pool_t *pool)
   if (apr_err)
     return svn_error_create (apr_err, 0, NULL, pool,
                              "svn_xml_write_header: file write error.");
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -323,9 +333,127 @@ svn_xml_hash_atts_preserving (const char **atts,
 
 
 
-/*** Writing out tags. ***/
+/*** Making XML tags. ***/
 
 
+void
+svn_xml_append_tag_hash (svn_string_t *str,
+                         apr_pool_t *pool,
+                         enum svn_xml_tag_type tagtype,
+                         const char *tagname,
+                         apr_hash_t *attributes)
+{
+  apr_hash_index_t *hi;
+
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+
+  svn_string_appendcstr (str, "<", subpool);
+
+  if (tagtype == svn_xml_close_tag)
+    svn_string_appendcstr (str, "/", subpool);
+
+  svn_string_appendcstr (str, tagname, subpool);
+
+  for (hi = apr_hash_first (attributes); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      size_t keylen;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      assert (val != NULL);
+
+      svn_string_appendcstr (str, "\n   ", subpool);
+      svn_string_appendcstr (str, (char *) key, subpool);
+      svn_string_appendcstr (str, "=\"", subpool);
+      svn_string_appendstr  (str,
+                             svn_xml_escape_string ((svn_string_t *) val,
+                                                    subpool),
+                             subpool);
+      svn_string_appendcstr (str, "\"", subpool);
+    }
+
+  if (tagtype == svn_xml_self_close_tag)
+    svn_string_appendcstr (str, "/", subpool);
+
+  svn_string_appendcstr (str, ">\n", subpool);
+
+  apr_destroy_pool (subpool);
+}
+
+
+void
+svn_xml_append_tag_v (svn_string_t *str,
+                      apr_pool_t *pool,
+                      enum svn_xml_tag_type tagtype,
+                      const char *tagname,
+                      va_list ap)
+{
+  apr_hash_t *ht = svn_xml_ap_to_hash (ap, pool);
+  svn_xml_append_tag_hash (str, pool, tagtype, tagname, ht);
+}
+
+
+
+void
+svn_xml_append_tag (svn_string_t *str,
+                    apr_pool_t *pool,
+                    enum svn_xml_tag_type tagtype,
+                    const char *tagname,
+                    ...)
+{
+  va_list ap;
+
+  va_start (ap, tagname);
+  svn_xml_append_tag_v (str, pool, tagtype, tagname, ap);
+  va_end (ap);
+}
+
+
+svn_string_t *
+svn_xml_make_tag_hash (apr_pool_t *pool,
+                       enum svn_xml_tag_type tagtype,
+                       const char *tagname,
+                       apr_hash_t *attributes)
+{
+  svn_string_t *str = svn_string_create ("", pool);
+
+  svn_xml_append_tag_hash (str, pool, tagtype, tagname, attributes);
+  return str;
+}
+
+
+svn_string_t *
+svn_xml_make_tag_v (apr_pool_t *pool,
+                    enum svn_xml_tag_type tagtype,
+                    const char *tagname,
+                    va_list ap)
+{
+  svn_string_t *str = svn_string_create ("", pool);
+
+  svn_xml_append_tag_v (str, pool, tagtype, tagname, ap);
+  return str;
+}
+
+
+svn_string_t *
+svn_xml_make_tag (apr_pool_t *pool,
+                  enum svn_xml_tag_type tagtype,
+                  const char *tagname,
+                  ...)
+{
+  va_list ap;
+  svn_string_t *str;
+
+  va_start (ap, tagname);
+  str = svn_xml_make_tag_v (pool, tagtype, tagname, ap);
+  va_end (ap);
+  return str;
+}
+
+
+/* COMPATIBILITY FUNCTION so I don't break the tree.  Karl, nuke this
+   when you fix up libsvn_wc.  */
 svn_error_t *
 svn_xml_write_tag_hash (apr_file_t *file,
                         apr_pool_t *pool,
@@ -335,66 +463,20 @@ svn_xml_write_tag_hash (apr_file_t *file,
 {
   apr_status_t status;
   apr_size_t bytes_written;
-  svn_string_t *xmlstring;
-  apr_hash_index_t *hi;
-
-  apr_pool_t *subpool = svn_pool_create (pool, NULL);
-
-  xmlstring = svn_string_create ("<", subpool);
-
-  if (tagtype == svn_xml_close_tag)
-    svn_string_appendcstr (xmlstring, "/", subpool);
-
-  svn_string_appendcstr (xmlstring, tagname, subpool);
-
-  for (hi = apr_hash_first (attributes); hi; hi = apr_hash_next (hi))
-    {
-      const char *key;
-      size_t keylen;
-      svn_string_t *val;
-      
-      apr_hash_this (hi, (const void **) &key, &keylen, (void **) &val);
-      assert (val != NULL);
-      
-      svn_string_appendcstr (xmlstring, "\n   ", subpool);
-      svn_string_appendcstr (xmlstring, key, subpool);
-      svn_string_appendcstr (xmlstring, "=\"", subpool);
-      svn_string_appendstr  (xmlstring, svn_xml_escape_string (val, subpool),
-                             subpool);
-      svn_string_appendcstr (xmlstring, "\"", subpool);
-    }
-
-  if (tagtype == svn_xml_self_close_tag)
-    svn_string_appendcstr (xmlstring, "/", subpool);
-
-  svn_string_appendcstr (xmlstring, ">\n", subpool);
+  svn_string_t *str = svn_xml_make_tag_hash (pool, tagtype, tagname,
+                                             attributes);
 
   /* Do the write */
-  status = apr_full_write (file, xmlstring->data, xmlstring->len,
-                           &bytes_written);
+  status = apr_full_write (file, str->data, str->len, &bytes_written);
   if (status)
-    return svn_error_create (status, 0, NULL, subpool,
+    return svn_error_create (status, 0, NULL, pool,
                              "svn_xml_write_tag:  file write error.");
-
-  apr_destroy_pool (subpool);
-
   return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
-svn_xml_write_tag_v (apr_file_t *file,
-                     apr_pool_t *pool,
-                     enum svn_xml_tag_type tagtype,
-                     const char *tagname,
-                     va_list ap)
-{
-  apr_hash_t *ht = svn_xml_ap_to_hash (ap, pool);
-  return svn_xml_write_tag_hash (file, pool, tagtype, tagname, ht);
-}
-
-
-
+/* COMPATIBILITY FUNCTION so I don't break the tree.  Karl, nuke this
+   when you fix up libsvn_wc.  */
 svn_error_t *
 svn_xml_write_tag (apr_file_t *file,
                    apr_pool_t *pool,
@@ -402,13 +484,14 @@ svn_xml_write_tag (apr_file_t *file,
                    const char *tagname,
                    ...)
 {
-  svn_error_t *err;
   va_list ap;
+  apr_hash_t *ht;
+  svn_error_t *err;
 
   va_start (ap, tagname);
-  err = svn_xml_write_tag_v (file, pool, tagtype, tagname, ap);
+  ht = svn_xml_ap_to_hash (ap, pool);
+  err = svn_xml_write_tag_hash (file, pool, tagtype, tagname, ht);
   va_end (ap);
-
   return err;
 }
 
