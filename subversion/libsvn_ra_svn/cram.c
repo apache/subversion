@@ -157,7 +157,7 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (item->kind != SVN_RA_SVN_STRING)  /* Very wrong; don't report failure */
     return SVN_NO_ERROR;
   resp = item->u.string;
-  sep = strchr(resp->data, ' ');
+  sep = strrchr(resp->data, ' ');
   if (!sep || resp->len - (sep + 1 - resp->data) != APR_MD5_DIGESTSIZE * 2
       || !hex_decode(cdigest, sep + 1))
     return fail(conn, pool, "Malformed client response in authentication");

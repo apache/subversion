@@ -9,13 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10385:
-    Make svnserve CRAM-MD5 work for usernames containing spaces.
-    Justification:
-      one-line fix, and it's a silly bug.
-    Votes:
-      +1: ghudson, sussman, brane
-
   * r10394:
     Make svnserve use repos UUID as default realm.
     Justification:
