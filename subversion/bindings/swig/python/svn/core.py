@@ -16,9 +16,12 @@
 #
 ######################################################################
 
-# bring all the symbols up into this module
-### in the future, we may want to limit this, rename things, etc
 from libsvn.core import *
+
+def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
+  for name, value in symbol_dict.items():
+    if name.startswith(from_prefix):
+      symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
 # some minor patchups
 svn_pool_destroy = apr_pool_destroy
@@ -111,7 +114,9 @@ def secs_from_timestr(svn_datetime, pool):
   return aprtime / 1000000
 
 
+# Names that are not to be exported - del-ed at end
 import sys
+
 # ============================================================================
 # Reusable code segment. This code is duplicated in the several locations.
 # THIS IS THE MASTER COPY.
@@ -165,5 +170,7 @@ else:
 
     return string.join(map(escape_shell_arg, argv), " ")
 # ============================================================================
-del sys # don't export
 
+
+# Do not export these names
+del sys
