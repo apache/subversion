@@ -44,6 +44,7 @@ Candidate changes:
   * r12144, r12485
     Adds type caching to the perl bindings.  Otherwise mostly
     adds a code cleanup.
+    Branch: 1.1.x-r12144
     Justificaton:
       Makes the perl bindings build with r12397 which we merged
       already.
@@ -52,3 +53,19 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
+Status of 1.1.4:
+================
+
+Candidate changes:
+
+  * r12489
+    Fix a confusing error message.  Issue #2174
+    Justification:
+      Users have no clue what to do about it not being locked and usually 
+      if it's "not locked" it's a programmer error.  User errors will be
+      probably that the dir is missing...
+    Notes: This is under 1.1.4 so we don't include it in 1.1.3 which will
+      be done to fix some small issues with 1.1.2.  Don't want to break
+      translations.
+    Votes:
+      +1: breser
