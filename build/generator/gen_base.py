@@ -560,7 +560,7 @@ class TargetSWIGRuntime(TargetSWIG):
     self.name = self.lang + '_runtime' 
     self.path = build_path_join(self.path, self.lang)
     self.filename = build_path_join(self.path, libname)
-    self.external_lib = '-lswig' + abbrev
+    self.external_lib = "$(LSWIG" + string.upper(abbrev) + ")"
 
     cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
     ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
