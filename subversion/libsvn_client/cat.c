@@ -101,6 +101,7 @@ svn_client_cat (svn_stream_t *out,
     {
       svn_subst_keywords_t kw = { 0 };
       svn_subst_eol_style_t style;
+      const char *temp_dir;
       const char *tmp_filename;
       svn_stream_t *tmp_stream;
       apr_file_t *tmp_file;
@@ -109,8 +110,10 @@ svn_client_cat (svn_stream_t *out,
       const char *eol = NULL;
 
       /* grab a temporary file to write the target to. */
-      SVN_ERR (svn_io_open_unique_file (&tmp_file, &tmp_filename, "", ".tmp", 
-                                        TRUE, pool));
+      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
+      SVN_ERR (svn_io_open_unique_file (&tmp_file, &tmp_filename,
+                 svn_path_join (temp_dir, "tmp", pool), ".tmp",
+                 TRUE, pool));
 
       tmp_stream = svn_stream_from_aprfile (tmp_file, pool);
 

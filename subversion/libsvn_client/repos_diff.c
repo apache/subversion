@@ -317,10 +317,12 @@ get_file_from_ra (struct file_baton *b)
   apr_status_t status;
   apr_file_t *file;
   svn_stream_t *fstream;
+  const char *temp_dir;
 
-  /* ### TODO: Need some apr temp file support */
+  SVN_ERR (svn_io_temp_dir (&temp_dir, b->pool));
   SVN_ERR (svn_io_open_unique_file (&file, &(b->path_start_revision),
-                                    "tmp", "", FALSE, b->pool));
+                                    svn_path_join (temp_dir, "tmp", b->pool),
+                                    "", FALSE, b->pool));
 
   /* Install a pool cleanup handler to delete the file */
   SVN_ERR (temp_file_cleanup_register (b->path_start_revision, b->pool));
@@ -364,10 +366,12 @@ create_empty_file (const char **empty_file,
 {
   apr_status_t status;
   apr_file_t *file;
+  const char *temp_dir;
 
-  /* ### TODO: Need some apr temp file support */
-  SVN_ERR (svn_io_open_unique_file (&file, empty_file, "tmp", "", FALSE,
-                                    pool));
+  SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
+  SVN_ERR (svn_io_open_unique_file (&file, empty_file, 
+                                    svn_path_join (temp_dir, "tmp", pool),
+                                    "", FALSE, pool));
 
   status = apr_file_close (file);
   if (status)

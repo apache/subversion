@@ -87,12 +87,6 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   svn_boolean_t remove_file = TRUE;
   struct svn_config_t *cfg;
 
-  /* ### TODO: This function should, if it fails to create a temporary
-     file in the requested directory, fall back to the use of a
-     temporary directory (like /tmp, or C:\TEMP, or ...) as described
-     by a not-yet-existant APR function.  See issue #929. */
-
-     
   /* Look for the Subversion specific environment variable. */
   editor = getenv ("SVN_EDITOR");
 
