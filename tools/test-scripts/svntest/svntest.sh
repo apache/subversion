@@ -5,6 +5,11 @@ EXEC_PATH="`dirname $0`"
 # Source the configuration file.
 . "$EXEC_PATH/svntest-config.sh"
 
+# Remove log files from previous runs
+$RM_F "$LOG_FILE_PREFIX.update"
+$RM_F "$LOG_FILE_PREFIX.shared"
+$RM_F "$LOG_FILE_PREFIX.static"
+
 # Update the repositories
 $EXEC_PATH/svntest-update.sh || {
     $EXEC_PATH/svntest-sendmail.sh "update" "FAIL"

@@ -7,13 +7,12 @@ EXEC_PATH="`dirname $0`"
 
 # Compute local vars
 LOG_FILE="$LOG_FILE_PREFIX.update"
-$RM_F $LOG_FILE
 
 # Update apr, apr-util, httpd-2.0
 START "update apr" "Updating APR..."
 cd $APR_REPO && $CVS -f -q -z6 update -d -P > "$TEST_ROOT/LOG_up_apr" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_log_up_apr"
+    FAIL_LOG "$TEST_ROOT/LOG_up_apr"
     FAIL
 }
 PASS
@@ -21,7 +20,7 @@ PASS
 START "update apr-util" "Updating APR-UTIL..."
 cd $APU_REPO && $CVS -f -q -z6 update -d -P > "$TEST_ROOT/LOG_up_apu" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_log_up_apu"
+    FAIL_LOG "$TEST_ROOT/LOG_up_apu"
     FAIL
 }
 PASS
@@ -29,7 +28,7 @@ PASS
 #START "update httpd-2.0" "Updating Apache..."
 #cd $HTTPD_REPO && $CVS -f -q -z6 update -d -P > "$TEST_ROOT/LOG_up_httpd" 2>&1
 #test $? = 0 || {
-#    FAIL_LOG "$TEST_ROOT/LOG_log_up_httpd"
+#    FAIL_LOG "$TEST_ROOT/LOG_up_httpd"
 #    FAIL
 #}
 #PASS
