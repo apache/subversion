@@ -64,8 +64,9 @@ compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
 }
 
 
-/* Parse a node revision ID from D.
-   Return zero if D does not contain a well-formed node revision ID.  */
+/* Parse a node revision ID from D.  The ID returned is allocated
+   using `malloc', not in an APR pool.  Return zero if D does not
+   contain a well-formed node revision ID.  */
 static svn_fs_id_t *
 parse_node_revision_dbt (const DBT *d)
 {
@@ -98,7 +99,21 @@ parse_node_revision_dbt (const DBT *d)
    arbitrary byte strings.  Two well-formed node revisions ID's compare
    according to the rules described in the `structure' file; any
    malformed key comes before any well-formed key; and two malformed
-   keys come in byte-by-byte order.  */
+   keys come in byte-by-byte order.
+
+   NOTE WELL: this function and its helpers use `malloc' to get space
+   for the parsed node revision ID's.  In general, we try to use pools
+   for everything in Subversion, but in this case it's not practical.
+   Berkeley DB doesn't provide any way to pass a baton through to the
+   btree comparison function.  Even if it did, since Berkeley DB needs
+   to invoke the comparison function at pretty arbitrary times, you'd
+   have to pass the baton to almost every Berkeley DB operation.  You
+   could stuff a pool pointer in a global variable, but then you'd
+   have to make sure the pool was up to date before every Berkeley DB
+   operation; you'd surely forget, leading to crashes...  Using malloc
+   is more maintainable.  Since the comparison function isn't allowed
+   to signal an error anyway, the need for pools isn't quite as urgent
+   as in other code, but we still need to take care.  */
 static int
 compare_nodes_keys (const DBT *ak, const DBT *bk)
 {
