@@ -1488,18 +1488,19 @@ users' default <tt>PATH</tt>s, they use svn+ssh, and I can't figure
 out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a></h3>
 
       <p>Note: this all assumes you're using OpenSSH.  There are other
-      SSH implementations out there, and presumably they will allow
+      ssh implementations out there, and presumably they will allow
       you to do something similar, but we don't yet know the details.</p>
       
       <p>You've tried fiddling with their various login files, like
-        <tt>.bash_profile</tt>, and nothing works!  That's because SSH
+        <tt>.bash_profile</tt>, and nothing works!  That's because ssh
         ignores those files when the subversion client invokes it.
-        But you can tell SSH itself to modify the environment.  Here's
-        how to do it:</p>
+        But there's no need to modify <tt>PATH</tt>; instead, you can
+        directly give ssh the full name of the <tt>svnserve</tt> command.
+        Here's how to do it:</p>
 
-      <p>For each user who needs svn+ssh access, generate a new SSH
+      <p>For each user who needs svn+ssh access, generate a new ssh
         public-key pair which they will use <em>only</em> for
-        subversion -- not for logging in normally.  Have them add this
+        subversion&mdash;not for logging in normally.  Have them add this
         key to their <tt>~/.ssh/authorized_keys</tt> file.  But they
         must insert a bit of magic at the beginning of the line before
         the word <tt>ssh-rsa</tt> or <tt>ssh-dss</tt>, like this:</p>
@@ -1515,8 +1516,11 @@ command="/opt/subversion/bin/svnserve" ssh-dss AAAAB3Nblahblahblahblah
       </pre></td></tr>
 </table>
 
+      (Obviously, replace <tt>/opt/subversion/bin/svnserve</tt> with
+      whatever is appropriate for your system.)
+      
       <p>Now whenever they use that new key for anything, ssh on the
-      remote machine will invoke svnserve, even if they try to run
+        remote machine will invoke <tt>svnserve</tt>, even if they try to run
       some other command.</p>
 
 <![CDATA[=========================================================]]>
