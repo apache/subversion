@@ -475,3 +475,29 @@ storage. Some possibilities:
     revision numbers, which we probably don't want.
 
   Brane Cibej <brane@xbc.nu>
+
+* Revise the editor interface to use paths rather than components?
+
+Either revise the interface itself to pass around complete paths [from 
+the root], or possibly have a "wrapping editor" that assembles paths
+and calls a secondary editor interface which uses the path-style
+API. The wrapping editor would have something like:
+
+    struct dir_baton {
+      svn_string_t *path;
+      void *user_dir_baton;
+      struct edit_baton *edit_baton;
+    }
+
+    change_dir_prop(void *baton, ...)
+    {
+      struct dir_baton *my_baton = baton;
+      delta_fns_t editor = my_baton->edit_baton->editor;
+
+      (*editor->change_dir_prop)(my_baton->user_dir_baton, ...);
+    }
+
+This idea is premised on the number of editors that compose the
+components into larger paths before working on them. Depending on
+whether that is "typical", switching the interface might be
+interesting.
