@@ -64,18 +64,19 @@ IV.   QUICKSTART GUIDE
       1.  Repository Access
 
       The Subversion client has an abstract interface for accessing a
-      repository.  Two "Repository Access" (RA) implementations
+      repository.  Three "Repository Access" (RA) implementations
       currently exist as libraries:
 
       libsvn_ra_dav:   accesses a networked repository using WebDAV.
       libsvn_ra_local: accesses a local repository using Berkeley DB.
+      libsvn_ra_svn:   accesses a remote repository using a custom protocol.
 
       You can see which methods are available to your 'svn' client
       like so:
 
           $ svn --version
-          Subversion Client, version 0.8.0
-          compiled Jan 26 2002, 16:43:58
+          Subversion Client, version 0.16.0
+          compiled Dec 8 2002, 16:43:58
 
           Copyright (C) 2000-2002 CollabNet.
           Subversion is open source software, see http://subversion.tigris.org/
@@ -86,6 +87,8 @@ IV.   QUICKSTART GUIDE
              - handles 'http' schema
            * ra_local : Module for accessing a repository on local disk.
              - handles 'file' schema
+           * ra_svn : Module for accessing a repository using the svn network protocol.
+             - handles 'svn' schema
 
       If you don't see ra_local, it probably means that Berkeley DB
       wasn't found when compiling your client binary.  If you don't
