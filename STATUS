@@ -31,7 +31,7 @@ Candidate changes:
       unsightly sticky bits around people's working copies and
       repositories.
     Votes:
-      +1: ghudson, maxb
+      +1: ghudson, maxb, lundblad
 
   * r10645
     Add new abbreviation 'Revision' for 'LastChangedRevision'.
