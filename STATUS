@@ -13,7 +13,7 @@ Candidate changes:
     Fix simple bug in 'svn ls "local file with space(s) in its name"'.
     Justification: Trivial change, annoying bug.
     Votes:
-      +1: maxb
+      +1: maxb, bliss
       (r12273 only) +1: kfogel
 
   * r12075
@@ -49,7 +49,7 @@ Candidate changes:
       APR's compatibility rules means that Subversion will always compile
       against any 1.x version of APR.
     Votes:
-      +1: jerenkrantz, maxb
+      +1: jerenkrantz, maxb, bliss
 
   * r12397
     Properly invoke ra_callbacks->open_tmp_file in Perl with pool.
