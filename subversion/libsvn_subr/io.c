@@ -1723,7 +1723,7 @@ do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status,
     return SVN_NO_ERROR;
 
   err = file_name_get (&name, file, pool);
-  name = (name && ! err) ? apr_psprintf (pool, "file '%s'", name) : "stream";
+  name = (! err && name) ? apr_psprintf (pool, "file '%s'", name) : "stream";
   svn_error_clear (err);
   apr_strerror (status, errbuf, sizeof(errbuf));
   err = svn_utf_cstring_to_utf8 (&errstr, errbuf, pool);
