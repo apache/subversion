@@ -1120,12 +1120,13 @@ svn_fs_commit_txn (const char **conflict_p,
       /* Try to commit. */
       commit_args.txn = txn;
       err = svn_fs__retry_txn (fs, txn_body_commit, &commit_args, pool);
-      if (err)
+      if (err && (err->apr_err == SVN_ERR_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
-             were in mid-commit.  If so, we'll need to loop again to
-             merge those changes in, then try to commit again.  Or if
-             that's not what happened, then just return the error. */
+             were in mid-merge or mid-commit?  If so, we'll need to
+             loop again to merge the new changes in, then try to
+             commit again.  Or if that's not what happened, then just
+             return the error. */
 
           svn_revnum_t youngest_rev;
           SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
