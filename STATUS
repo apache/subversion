@@ -69,7 +69,7 @@ Candidate changes:
     Justification:
       For BDB backends, this bug resulted in wedged repositories.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, sussman
 
   * r12327
     Fix race condition in dump loader computing the next revision.
