@@ -40,97 +40,59 @@ GOALS.
 HOW IT WORKS.
 =============
 
-Subversion's hooks are run according to configuration files kept in
-the repository:
+Subversion's hooks are programs that live in the repository's hooks/
+directory:
 
    $ ls some-repo
-   README   custom/   dav/   db/   conf/
-   $ ls some-repo/conf/
-   pre-commit    post-commit    read-sentinels    write-sentinels
+   README   custom/   dav/   db/   hooks/   conf/
+   $ ls some-repo/hooks/
+   start-commit          pre-commit             post-commit
+   start-commit.tmpl     pre-commit.tmpl        post-commit.tmpl
+   read-sentinels        write-sentinels
+   read-sentinels.tmpl   write-sentinels.tmpl
    $ 
 
-Each conf file specifies hook scripts to run, in a syntax (described
-below) similar to CVS's configuration files.  The `pre-commit' and
-`post-commit' hooks are programs invoked immediately before or
-immediately after a txn is committed, with the txn id or revision
-number as an argument, respectively.  The `read-sentinels' and
-`write-sentinels' are started up when a checkout/update sequence or a
-commit sequence is started, and communicate with Subversion during the
-sequence in order to interrupt or react to the operations in real
-time.  Consider them to be "hook daemons" rather than "hook programs".
+The actual hooks are `start-commit', `pre-commit' and `post-commit'.
+The template (.tmpl) files are example shell scripts to get you
+started; look there for details about how each hook works.  When a
+repository is created, the templates are created automatically -- to
+make your own hook, just copy `foo.tmpl' to `foo' and edit.
 
-Let's take the `pre-commit' and `post-commit' conf files first:
+(The `read-sentinels' and `write-sentinels' are not yet implemented
+They are intended to be more like daemons than hooks.  A sentinel is
+started up at the beginning of a user operation.  The Subversion
+server communicates with the sentinel using a protocol yet to be
+defined.  Depending on the sentinel's responses, Subversion may stop
+or otherwise modify the operation.)
 
-Pre-Commit and Post-Commit Hooks.
----------------------------------
+Here is when they are run:
 
-   Here are examples of each:
-   
-      # Pre-commit hooks: invoke a program with some arguments.  One of
-      # the arguments may be "$txn", which will be substituted with a 
-      # Subversion txn id at the time the hook is run.  Another may be
-      # $repos, which will be substituted with the absolute path to the
-      # repository in which the txn can be found.
-      #
-      # If a hook program exits with non-zero status, the txn will be
-      # discarded and no commit will take place; if it exits with zero
-      # (successful) status, the txn will be committed.
-      #
-      # All hooks here will be run, until one fails or there are no more
-      # left.
-      #
-      my-pre-commit-hook.py some_arg --repository $repos --txn-id $txn
-   
-   and 
-   
-      # Post-commit hooks: invoke a program with some arguments.  One of
-      # the arguments may be "$rev", which will be substituted with the
-      # revision number of the newly-committed tree.  Another may be
-      # $repos, which will be substituted with the absolute path to the
-      # repository in which the revision was committed.
-      #
-      # All hooks here will be run, regardless of the success or failure
-      # of any one hook.
-      #
-      my-post-commit-hook.pl some_arg --repository $repos --revision $rev
-   
-   Everything a program needs to know about the data being committed can
-   be gleaned from the program's arguments, and from the txn or revision
-   tree.
-   
-   The question is, how can the hook program examine the tree?  We don't
-   have SWIG bindings for all languages yet, and anyway hooks shouldn't
-   be limited only to languages in which the Subversion C APIs have
-   equivalents.
-   
-   The solution is a small standalone program, `svnlook'.  It is used to
-   examine a txn or revision tree in the various ways a hook program
-   might want.  The `svnlook' program produces output that is both human-
-   and machine-readable, so hook scripts can easily parse it.
-   
-      svnlook repos [txn|rev] ID  [subcommand ...]
-   
-   With no subcommand, the default output contains:
-   
-       - log message
-       - author
-       - date (in revision case)
-       - The tree, in summary form similar to `svnadmin's output.
-   
-   Subcommands are:
-   
-       - log:           log message to stdout.
-       - author:        author to stdout
-       - date:          date to stdout (only for revs, not txns)
-       - dirs-changed:  directories in which things were changed
-       - changed:       full change summary: all dirs & files changed
-       - diff:          GNU diffs of changed files, prop diffs too
-           
-   The exact format of the output is still TBD; obviously, a precise
-   specification is very important for hook implementors.
+   start-commit:  Before the committer's txn is even created.
+   pre-commit:    When the txn is finished, but before it is committed.
+   post-commit:   After the txn is committed, and we have a new rev.
 
-Read and Write Sentinels.
--------------------------
+(Note that they must be executable by the user httpd runs as.)
+
+Typically, `start-commit' is used to check that the user has commit
+privileges at all.  Then the `pre-commit' hook is used to protect
+against commits that are disallowed due to content or location (for
+example, your site might require that all commits to a certain branch
+include a ticket number from the bug tracker), and `post-commit' is
+used to mail out commit messages.
+
+The pre-commit and post-commit hooks may need to know things about the
+change about to be committed (or that has just been committed).  The
+solution is a standalone program, `svnlook', which was installed in
+the same place as the `svn' binary.  Use `svnlook' to examine a txn or
+revision tree.  It produces output that is both human- and
+machine-readable, so hook scripts can easily parse it.  Note that
+`svnlook' is read-only -- it can only inspect, not change the
+repository.
+
+Run "svnlook" with no arguments to see how it works.
+
+More On Read and Write Sentinels (just discussion, not implemented yet!)
+------------------------------------------------------------------------
 
    (Thanks to Thom Wood <thom@collab.net> for proposing this.)
 
@@ -196,29 +158,6 @@ Read and Write Sentinels.
 
 FAQ (Frequently Anticipated Questions).
 =======================================
-
-   -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- 
-
-   Q: Why is Subversion using its own conf files, instead of adding
-      directives to apache conf files?  Wouldn't it be better to do
-
-      <Location /repos>
-      DAV svn
-      SVNPath /absolute/path/to/repository
-      SVNPreCommitHook /absolute/path/to/pre-commit-script.pl
-      SVNPreCommitHook /absolute/path/to/another-pre-commit.pl
-      SVNPostCommitHook /absolute/path/to/some-post-commit-script.pl
-      SVNPostCommitHook /absolute/path/to/another-post-commit-script.pl
-      </Location>
-   
-      ...  or something like that?
-
-   A: The problem is that the hooks won't be run when (for example)
-      the ra_local access method is used.  The hooks need to be part
-      of Subversion's path-of-least-resistance, low-level repository
-      access methods, rather than specific to Apache.
-
-   -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- 
 
    Q: Why is `svnlook' a read-only interface to the repository?
 
