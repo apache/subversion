@@ -1154,7 +1154,7 @@ $
   AuthType Basic
   AuthName "Subversion repository"
   AuthUserFile /etc/svn-auth-file
-  Require vaild-user
+  Require valid-user
 &lt;/Location&gt;
 </screen>
 
