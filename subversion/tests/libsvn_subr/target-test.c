@@ -23,6 +23,7 @@ int main(int argc, char **argv)
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   svn_string_t *common_path = 0;
+  svn_string_t *common_path2 = 0;
   int i;
 
   if (argc < 2) {
@@ -56,14 +57,19 @@ int main(int argc, char **argv)
       else
         printf("NULL, "); 
     }
-  printf("\n");
 
   /* Now ensure it works without the pbasename */
-  err = svn_path_condense_targets(&common_path, NULL, targets, pool);
+  err = svn_path_condense_targets(&common_path2, NULL, targets, pool);
   if (err != SVN_NO_ERROR)
     svn_handle_error(err, stderr, 1);
 
-  printf("%s\n", common_path->data);
+  if (!svn_string_compare(common_path, common_path2))
+    {
+      printf("Common path without getting targets does not match common path "
+             "with targets\n");
+      return EXIT_FAILURE;
+    }
+
 
   return EXIT_SUCCESS;
 }
