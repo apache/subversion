@@ -30,25 +30,65 @@
 
 #include "swigutil_pl.h"
 
-const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
-					   apr_pool_t *pool)
-{
-    apr_hash_t *hash = apr_hash_make (pool);
-    HV *h = (HV *)SvRV(source);
-    char *key;
-    I32 cnt = hv_iterinit(h), retlen;
+/* element convertors for perl -> c */
+typedef void *(*pl_element_converter_t)(SV *value, void *ctx, apr_pool_t *pool);
 
+static void *convert_pl_string (SV *value, void *dummy, apr_pool_t *pool)
+{
+    void **result = apr_palloc(pool, sizeof(void *));
+    *result = SvPV_nolen (value);
+    return *result;
+}
+
+static void *convert_pl_obj (SV *value, swig_type_info *tinfo, apr_pool_t *pool)
+{
+    void **result = apr_palloc(pool, sizeof(void *));
+    if (SWIG_ConvertPtr(value, result, tinfo, 0) < 0) {
+        croak("unable to convert from swig object");
+    }
+    return *result;
+}
+
+/* perl -> c hash convertors */
+static const apr_hash_t *svn_swig_pl_to_hash(SV *source,
+                                             pl_element_converter_t cv,
+                                             void *ctx, apr_pool_t *pool)
+{
+    apr_hash_t *hash;
+    HV *h;
+    char *key;
+    I32 cnt, retlen;
+
+    if (!(source && SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVHV)) {
+	return NULL;
+    }
+
+    hash = apr_hash_make (pool);
+    h = (HV *)SvRV(source);
+    cnt = hv_iterinit(h);
     while (cnt--) {
 	SV* item = hv_iternextsv(h, &key, &retlen);
-	void **val = apr_palloc(pool, sizeof(void *));
-	if (SWIG_ConvertPtr(item, val, tinfo, 0) < 0) {
-	    croak("aahhh");
-	}
-	apr_hash_set (hash, key, APR_HASH_KEY_STRING, *val);
+	void *val = cv (item, ctx, pool);
+	apr_hash_set (hash, key, APR_HASH_KEY_STRING, val);
     }
 
     return hash;
 }
+
+const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
+					   apr_pool_t *pool)
+{
+
+    return svn_swig_pl_to_hash(source, (pl_element_converter_t)convert_pl_obj,
+                               tinfo, pool);
+}
+
+const apr_hash_t *svn_swig_pl_strings_to_hash(SV *source, apr_pool_t *pool)
+{
+
+    return svn_swig_pl_to_hash(source, convert_pl_string, NULL, pool);
+}
+
 
 const apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
 						   const char *typename,
@@ -58,10 +98,76 @@ const apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
     return svn_swig_pl_objs_to_hash (source, tinfo, pool);
 }
 
+/* perl -> c array convertors */
+static const apr_array_header_t *svn_swig_pl_to_array (SV *source,
+                                                       pl_element_converter_t cv,
+                                                       void *ctx, apr_pool_t *pool)
+{
+    int targlen;
+    apr_array_header_t *temp;
+    AV* array;
 
+    if (!(source && SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVAV)) {
+	/* raise exception here */
+	return NULL;
+    }
+    array = (AV *)SvRV (source);
+    targlen = av_len (array) + 1;
+    temp = apr_array_make (pool, targlen, sizeof(const char *));
+    temp->nelts = targlen;
 
+    while (targlen--) {
+	/* more error handling here */
+	SV **item = av_fetch (array, targlen, 0);
+        APR_ARRAY_IDX(temp, targlen, const char *) = cv (*item, ctx, pool);
+    }
+
+    return temp;
+}
+
+const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
+                                                       apr_pool_t *pool)
+{
+    return svn_swig_pl_to_array (source, convert_pl_string, NULL, pool);
+}
+
+const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
+						    swig_type_info *tinfo,
+						    apr_pool_t *pool)
+{
+    return svn_swig_pl_to_array (source,
+                                 (pl_element_converter_t)convert_pl_obj,
+                                 tinfo, pool);
+}
+
+/* element convertors for c -> perl */
 typedef SV *(*element_converter_t)(void *value, void *ctx);
 
+SV *convert_string (const char *value, void *dummy)
+{
+    SV *obj = sv_2mortal(newSVpv(value, 0));
+    return obj;
+}
+
+SV *convert_svn_string_t (svn_string_t *value, void *dummy)
+{
+    SV *obj = sv_2mortal(newSVpv(value->data, value->len));
+    return obj;
+}
+
+SV *convert_to_swig_type (void *ptr, swig_type_info *tinfo)
+{
+    SV *obj = sv_newmortal();
+    SWIG_MakePtr(obj, ptr, tinfo, 0);
+    return obj;
+}
+
+SV *convert_int(int value, void *dummy)
+{
+    return newSViv (value);
+}
+
+/* c -> perl hash convertors */
 SV *convert_hash (apr_hash_t *hash, element_converter_t converter_func,
 		  void *ctx)
 {
@@ -86,26 +192,6 @@ SV *convert_hash (apr_hash_t *hash, element_converter_t converter_func,
     return newRV_inc((SV*)hv);
 }
 
-
-SV *convert_string (const char *value, void *dummy)
-{
-    SV *obj = sv_2mortal(newSVpv(value, 0));
-    return obj;
-}
-
-SV *convert_svn_string_t (svn_string_t *value, void *dummy)
-{
-    SV *obj = sv_2mortal(newSVpv(value->data, value->len));
-    return obj;
-}
-
-SV *convert_to_swig_type (void *ptr, swig_type_info *tinfo)
-{
-    SV *obj = sv_newmortal();
-    SWIG_MakePtr(obj, ptr, tinfo, 0);
-    return obj;
-}
-
 SV *svn_swig_pl_prophash_to_hash (apr_hash_t *hash)
 {
     return convert_hash (hash, (element_converter_t)convert_svn_string_t,
@@ -117,61 +203,8 @@ SV *svn_swig_pl_convert_hash (apr_hash_t *hash, swig_type_info *tinfo)
     return convert_hash (hash, (element_converter_t)convert_to_swig_type,
 			 tinfo);
 }
-const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
-                                                       apr_pool_t *pool)
-{
-    int targlen;
-    apr_array_header_t *temp;
-    AV* array;
 
-    if (!(source && SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVAV)) {
-	/* raise exception here */
-	return NULL;
-    }
-    array = (AV *)SvRV (source);
-    targlen = av_len (array) + 1;
-    temp = apr_array_make (pool, targlen, sizeof(const char *));
-    temp->nelts = targlen;
-
-    while (targlen--) {
-	/* more error handling here */
-	SV **item = av_fetch (array, targlen, 0);
-        APR_ARRAY_IDX(temp, targlen, const char *) = SvPV_nolen (*item);
-    }
-
-    return temp;
-}
-
-const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
-						    swig_type_info *tinfo,
-						    apr_pool_t *pool)
-{
-    int targlen;
-    apr_array_header_t *temp;
-    AV* array;
-
-    if (!(source && SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVAV)) {
-	/* raise exception here */
-	return NULL;
-    }
-    array = (AV *)SvRV (source);
-    targlen = av_len (array) + 1;
-    temp = apr_array_make (pool, targlen, sizeof(const char *));
-    temp->nelts = targlen;
-
-    while (targlen--) {
-	/* more error handling here */
-	SV **item = av_fetch (array, targlen, 0);
-	void **obj = apr_palloc(pool, sizeof(void *));
-	if (SWIG_ConvertPtr(*item, (void **) obj, tinfo,0) < 0) {
-	    croak("aahhh");
-	}
-        APR_ARRAY_IDX(temp, targlen, void *) = *obj;
-    }
-
-    return temp;
-}
-
+/* c -> perl array convertors */
 SV *convert_array(const apr_array_header_t *array,
 		  element_converter_t converter_func, void *ctx)
 {
@@ -190,11 +223,6 @@ SV *convert_array(const apr_array_header_t *array,
 SV *svn_swig_pl_array_to_list(const apr_array_header_t *array)
 {
     return convert_array (array, (element_converter_t)convert_string, NULL);
-}
-
-SV *convert_int(int value, void *dummy)
-{
-    return newSViv (value);
 }
 
 SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array)

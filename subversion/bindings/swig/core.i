@@ -335,6 +335,7 @@ apr_pool_t *current_pool;
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_version.h"
+#include "svn_md5.h"
 #include "svn_diff.h"
 
 #ifdef SWIGPYTHON

@@ -191,8 +191,6 @@ typedef struct svn_string_t svn_string_t;
 %typemap(perl5,in) const apr_array_header_t *STRINGLIST {
     $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,
                                                              _global_pool);
-    if ($1 == NULL)
-        return NULL;
 }
 
 %typemap(jni) const apr_array_header_t *STRINGLIST "jobjectArray"

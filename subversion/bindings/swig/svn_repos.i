@@ -96,6 +96,20 @@
   }
 }
 
+/* -----------------------------------------------------------------------
+   handle config and fs_config in svn_repos_create
+*/
+
+%typemap(perl5, in) apr_hash_t *config {
+    $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
+					   _global_pool);
+}
+
+%typemap(perl5, in) apr_hash_t *fs_config {
+    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+}
+
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h

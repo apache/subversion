@@ -60,6 +60,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 
 %include svn_delta.h
 %{
+#include "svn_md5.h"
 #include "svn_delta.h"
 
 #ifdef SWIGPYTHON
