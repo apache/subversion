@@ -2038,8 +2038,8 @@ svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
 
 
 /** Get the run-time configured list of ignore patterns, and store
- * them in @a patterns.  Allocate @a patterns and its contents in @a
- * pool.
+ * them in @a *patterns.  Allocate @a *patterns and its contents in
+ * @a pool.
  */
 svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
                                          apr_pool_t *pool);
