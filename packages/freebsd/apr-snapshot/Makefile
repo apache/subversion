@@ -13,6 +13,8 @@ DISTFILES=	apr_20020309172416.tar.gz apr-util_20020309172426.tar.gz
 
 MAINTAINER=	rooneg@electricjellyfish.net
 
+LIB_DEPENDS=	expat:${PORTSDIR}/textproc/expat
+
 BUILD_DEPENDS=	autoconf:${PORTSDIR}/devel/autoconf \
 		libtool:${PORTSDIR}/devel/libtool
 
@@ -27,7 +29,7 @@ pre-configure:
 
 do-configure:
 	(cd ${WRKDIR}/apr/ && ./configure --prefix=${PREFIX})
-	(cd ${WRKDIR}/apr-util/ && ./configure --prefix=${PREFIX} --with-apr=../apr/)
+	(cd ${WRKDIR}/apr-util/ && ./configure --prefix=${PREFIX} --with-apr=../apr/ --with-expat=${PREFIX})
 
 do-build:
 	(cd ${WRKDIR}/apr/ && make)
