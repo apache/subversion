@@ -50,7 +50,9 @@ to take something on.
       /usr/local/lib, although this is often where libdb lives.  
 
       ...i.e. the compiler can't find "db.h" even though it's sitting
-      inside /usr/local/include/db3/ on my FreeBSD system.
+      inside /usr/local/include/db3/ on my FreeBSD system.  And
+      because it's a BSD system, how do we know *not* to use the
+      system header /usr/include/db.h?
 
      You get the idea.  :)
 
