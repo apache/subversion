@@ -1349,30 +1349,28 @@ svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
  * Allocate @a *stream_p, and do any necessary temporary allocation, in
  * @a pool.
  */
-svn_error_t *
-svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
-                              svn_fs_root_t *source_root,
-                              const char *source_path,
-                              svn_fs_root_t *target_root,
-                              const char *target_path,
-                              apr_pool_t *pool);
+svn_error_t *svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
+                                           svn_fs_root_t *source_root,
+                                           const char *source_path,
+                                           svn_fs_root_t *target_root,
+                                           const char *target_path,
+                                           apr_pool_t *pool);
 
 
 
 /* UUID manipulation. */
 
-/** Populate @a *uuid with the UUID associated with @a fs. */
-svn_error_t *
-svn_fs_get_uuid(svn_fs_t *fs,
-                const char **uuid,
-                apr_pool_t *pool);
+/** Populate @a *uuid with the UUID associated with @a fs.  Allocate
+    @a *uuid in @a pool.  */
+svn_error_t *svn_fs_get_uuid (svn_fs_t *fs,
+                              const char **uuid,
+                              apr_pool_t *pool);
 
 
-/** Associate @a *uuid with @a fs. */
-svn_error_t *
-svn_fs_set_uuid(svn_fs_t *fs,
-                const char *uuid,
-                apr_pool_t *pool);
+/** Associate @a *uuid with @a fs.  Use @a pool for any scratchwork. */
+svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
+                              const char *uuid,
+                              apr_pool_t *pool);
 
 
 /* Non-historical properties.  */
