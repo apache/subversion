@@ -173,7 +173,7 @@ typedef struct svn_wc__entry_baton_t
                               we're SETTING attributes by writing a
                               new file.  */
 
-  const char *entryname;   /* The name of the entry we're looking for. */
+  svn_string_t *entryname; /* The name of the entry we're looking for. */
   svn_vernum_t version;    /* The version we will get or set. */
 
   apr_hash_t *attributes;  /* The attribute list we want to set or
@@ -240,7 +240,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       if (((entry == NULL) && (baton->entryname == NULL))
           || ((entry != NULL)
               && (baton->entryname != NULL)
-              && ((strcmp (entry, baton->entryname)) == 0)))
+              && ((strcmp (entry, baton->entryname->data)) == 0)))
         {
           baton->found_it = 1;
 
@@ -335,8 +335,7 @@ handle_end_tag (void *userData, const char *tagname)
                                        svn_xml__self_close_tag,
                                        SVN_WC__ENTRIES_ENTRY,
                                        SVN_WC__ENTRIES_ATTR_NAME,
-                                       svn_string_create (baton->entryname,
-                                                          baton->pool),
+                                       baton->entryname,
                                        SVN_WC__ENTRIES_ATTR_VERSION,
                                        svn_string_create (verstr, baton->pool),
                                        NULL);
@@ -416,7 +415,7 @@ do_parse (svn_wc__entry_baton_t *baton)
 static svn_error_t *
 do_entry (svn_string_t *path,
           apr_pool_t *pool,
-          const char *entryname,
+          svn_string_t *entryname,
           svn_vernum_t version,
           svn_vernum_t *version_receiver,
           svn_boolean_t setting,
@@ -483,15 +482,16 @@ do_entry (svn_string_t *path,
 
 svn_error_t *
 svn_wc__entry_set (svn_string_t *path,
-                   apr_pool_t *pool,
-                   const char *entryname,
+                   svn_string_t *entryname,
                    svn_vernum_t version,
+                   int kind,
+                   apr_pool_t *pool,
                    ...)
 {
   svn_error_t *err;
   va_list ap;
 
-  va_start (ap, version);
+  va_start (ap, pool);
   err = do_entry (path, pool, entryname, version, NULL, 1, ap);
   va_end (ap);
 
@@ -502,26 +502,32 @@ svn_wc__entry_set (svn_string_t *path,
 
 svn_error_t *
 svn_wc__entry_get (svn_string_t *path,
-                   apr_pool_t *pool,
-                   const char *entryname,
+                   svn_string_t *entryname,
                    svn_vernum_t *version,
-                   ...)
+                   int *kind,
+                   apr_pool_t *pool,
+                   apr_hash_t **hash)
 {
-  svn_error_t *err;
-  va_list ap;
+  /* The internals of this routine are now FUBAR, but compilable at
+     least. :) */
 
-  va_start (ap, version);
-  err = do_entry (path, pool, entryname, 0, version, 0, ap);
-  va_end (ap);
+  /*  svn_error_t *err;
+      va_list ap;
+      
+      va_start (ap, version);
+      err = do_entry (path, pool, entryname, 0, version, 0, ap);
+      va_end (ap);
+      
+      return err; */
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
 /* Remove ENTRYNAME from PATH's `entries' file. */
 svn_error_t *svn_wc__entry_remove (svn_string_t *path,
-                                   apr_pool_t *pool,
-                                   const char *entryname)
+                                   svn_string_t *entryname,
+                                   apr_pool_t *pool)
 {
   /* kff todo: finish this. */
   return SVN_NO_ERROR;

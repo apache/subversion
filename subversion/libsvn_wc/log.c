@@ -136,7 +136,7 @@ set_entry (svn_string_t *path,
 {
   /* This operation is idempotent, so just do it without worrying
      whether it's been done before. */
-  return svn_wc__entry_set (path, pool, name, version, NULL);
+  return svn_wc__entry_set (path, name, version, svn_file_kind, pool, NULL);
 }
 
 

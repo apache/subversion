@@ -183,9 +183,10 @@ free_dir_baton (struct dir_baton *dir_baton)
 
   /* Bump this dir to the new version. */
   err = svn_wc__entry_set (dir_baton->path,
-                           dir_baton->pool,
                            NULL,
                            dir_baton->edit_baton->target_version,
+                           svn_dir_kind,
+                           dir_baton->pool,
                            NULL);                                    
   if (err)
     return err;
