@@ -32,16 +32,16 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, cmd, config_fname, repos_dir, rev, author, propname):
+def main(pool, cmd, config_fp, repos_dir, rev, author, propname):
   repos = Repository(repos_dir, rev, pool)
 
   if cmd == 'commit':
-    cfg = Config(config_fname, repos, { 'author' : author or repos.author })
+    cfg = Config(config_fp, repos, { 'author' : author or repos.author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange':
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fname, repos, { 'author' : author })
+    cfg = Config(config_fp, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname)
   else:
     raise UnknownSubcommand(cmd)
@@ -581,9 +581,9 @@ class Config:
   # set of groups.
   _predefined = ('general', 'defaults')
 
-  def __init__(self, fname, repos, global_params):
+  def __init__(self, fp, repos, global_params):
     cp = ConfigParser.ConfigParser()
-    cp.read(fname)
+    cp.readfp(fp)
 
     # record the (non-default) groups that we find
     self._groups = [ ]
@@ -712,10 +712,17 @@ except NameError:
 if __name__ == '__main__':
   def usage():
     sys.stderr.write(
-'''USAGE: %s commit     REPOS-DIR REVISION [CONFIG-FILE]
+"""USAGE: %s commit     REPOS-DIR REVISION [CONFIG-FILE]
        %s propchange REPOS-DIR REVISION AUTHOR PROPNAME [CONFIG-FILE]
-'''
-                     % (sys.argv[0], sys.argv[0]))
+
+If no CONFIG-FILE is provided, the script will first search for a mailer.conf
+file in REPOS-DIR/conf/.  Failing that, it will search the directory in which
+the script itself resides.
+
+Additionally, CONFIG-FILE may be '-' to indicate that configuration options
+will be provided via standard input.
+
+""" % (sys.argv[0], sys.argv[0]))
     sys.exit(1)
 
   if len(sys.argv) < 4:
@@ -750,11 +757,17 @@ if __name__ == '__main__':
       # okay. look for 'mailer.conf' as a sibling of this script
       config_fname = os.path.join(os.path.dirname(sys.argv[0]), 'mailer.conf')
 
-  if not os.path.exists(config_fname):
-    raise MissingConfig(config_fname)
+  # If we're supposed to read from stdin, do so.
+  if config_fname == '-':
+    config_fp = sys.stdin
+  else:
+    # Not reading stdin, so open up the real config file.
+    if not os.path.exists(config_fname):
+      raise MissingConfig(config_fname)
+    config_fp = open(config_fname)
 
   ### run some validation on these params
-  svn.core.run_app(main, cmd, config_fname, repos_dir, revision,
+  svn.core.run_app(main, cmd, config_fp, repos_dir, revision,
                    author, propname)
 
 # ------------------------------------------------------------------------
@@ -774,10 +787,10 @@ if __name__ == '__main__':
 #   - each group defines content construction:
 #     o max size of diff before trimming
 #     o max size of entire commit message before truncation
-#     o flag to disable generation of add/delete diffs
+#     o flag to disable generation of add/delete diffs  [DONE]
 #   - per-repository configuration
 #     o extra config living in repos
-#     o how to construct a ViewCVS URL for the diff
+#     o how to construct a ViewCVS URL for the diff  [DONE (as patch)]
 #     o optional, non-mail log file
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
