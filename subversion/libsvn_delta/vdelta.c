@@ -53,9 +53,6 @@
 #define VD_KEY_SIZE 4
 
 
-/* The window size. */
-apr_size_t svn_txdelta_window_size = 102400;
-
 /* Hash slot. */
 typedef struct hash_slot_t {
   struct hash_slot_t *next;

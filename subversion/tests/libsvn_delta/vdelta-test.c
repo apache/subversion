@@ -89,8 +89,6 @@ print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
   return len;
 }
 
-extern apr_size_t svn_txdelta_window_size;
-
 int
 main (int argc, char **argv)
 {
@@ -102,13 +100,6 @@ main (int argc, char **argv)
   int count = 0;
   int quiet = 0;
   apr_off_t len = 0;
-
-  if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 's')
-    {
-      char *endptr;
-      svn_txdelta_window_size = strtol (&argv[1][2], &endptr, 10);
-      --argc; ++argv;
-    }
 
   if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 'q')
     {
@@ -128,8 +119,8 @@ main (int argc, char **argv)
   else
     {
       fprintf (stderr,
-               "Usage: vdelta-test [-q] [-s<window size>] <target>\n"
-               "   or: vdelta-test [-q] [-s<window size>] <source> <target>\n");
+               "Usage: vdelta-test [-q] <target>\n"
+               "   or: vdelta-test [-q] <source> <target>\n");
       exit (1);
     }
 

@@ -4892,7 +4892,7 @@ medium_file_integrity (const char **msg,
 
   /* Being no larger than the standard delta window size affects
      deltification internally, so test that. */
-  return file_integrity_helper (svn_txdelta_window_size, pool);
+  return file_integrity_helper (SVN_STREAM_CHUNK_SIZE, pool);
 }
 
 
@@ -4908,7 +4908,7 @@ large_file_integrity (const char **msg,
 
   /* Being larger than the standard delta window size affects
      deltification internally, so test that. */
-  return file_integrity_helper (svn_txdelta_window_size + 1, pool);
+  return file_integrity_helper (SVN_STREAM_CHUNK_SIZE + 1, pool);
 }
 
 
