@@ -3034,6 +3034,157 @@ copy_test (const char **msg,
 }
 
 
+static svn_error_t *
+link_test (const char **msg,
+           apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t after_rev;
+
+  *msg = "linking, so no copy history";
+
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-link-test", pool));
+
+  /* In first txn, create and commit the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* In second txn, link the file A/D/G/pi into the subtree A/D/G as
+     pi2.  Change that file's contents to state its new name.  Along
+     the way, test that no copy history was preserved, and the ids are
+     the same. */
+
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_link (rev_root, "A/D/G/pi", 
+                        txn_root, "A/D/G/pi2",
+                        pool));
+
+  /* Check that no copy history was generated. */
+  {
+    svn_revnum_t rev;
+    const char *path;
+    
+    SVN_ERR (svn_fs_copied_from (&rev, &path, txn_root, "A/D/G/pi2", pool));
+
+    if (SVN_IS_VALID_REVNUM (rev))
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "link_test: copy rev present when should be absent on `%s'",
+         "A/D/G/pi2");
+
+    if (path)
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "link_test: copy path present when should be absent on `%s'",
+         "A/D/G/pi2");
+  }
+
+  /* Test that the node id is the same on the two files in the txn. */
+  {
+    svn_fs_id_t *orig_id, *link_id;
+
+    SVN_ERR (svn_fs_node_id (&orig_id, txn_root, "A/D/G/pi", pool));
+    SVN_ERR (svn_fs_node_id (&link_id, txn_root, "A/D/G/pi2", pool));
+
+    if (! svn_fs_id_eq (orig_id, link_id))
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "link_test: orig id not same as link id (`%s', `%s')",
+         "A/D/G/pi", "A/D/G/pi2");
+  }
+
+  /* Commit the file. */
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/G/pi2", "This is the file 'pi2'.\n", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Get a revision root on the head. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+
+  /* Check that there's _still_ no copy history. */
+  {
+    svn_revnum_t rev;
+    const char *path;
+    
+    SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, rev_root, "A/D/G/pi2", pool));
+
+    if (SVN_IS_VALID_REVNUM (rev))
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "link_test: copy rev wrongly present on committed `%s'",
+         "A/D/G/pi2");
+
+    if (path)
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "link_test: copy path wrongly present on committed `%s'",
+         "A/D/G/pi2");
+  }
+
+  /* Test that the node id has changed now, since we changed the file. */
+  {
+    svn_fs_id_t *orig_id, *link_id;
+
+    SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
+    SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
+
+    if (svn_fs_id_eq (orig_id, link_id))
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "link_test: orig id same as newly committed link id (`%s', `%s')",
+         "A/D/G/pi", "A/D/G/pi2");
+  }
+
+  /* Link the file A/D/G/pi2 to A/D/G/pi3 and commit, *without*
+     changing pi3.  */
+
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_link (rev_root, "A/D/G/pi2", 
+                        txn_root, "A/D/G/pi3",
+                        pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Test that the node id has changed now, since we changed the file. */
+  {
+    /* The node id's will be the same.  BAD.  See below:
+       
+       ### todo: this is, of course, scary, because there's a hard link
+       in the filesystem.  svn_fs_link() is dangerous, and we will have
+       to modify it to protect against hard links.  See issue #419.
+       if this clause in the test starts failing, it probably means
+       the issue has been fixed, so the test needs to be changed, not
+       Subversion. 
+    */
+    svn_fs_id_t *orig_id, *link_id;
+
+    SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
+    SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
+
+    if (svn_fs_id_eq (orig_id, link_id))
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "link_test: orig not same as unchanged committed link (`%s', `%s')",
+         "A/D/G/pi", "A/D/G/pi2");
+  }
+
+  /* Close the filesystem. */
+  SVN_ERR (svn_fs_close_fs (fs));
+  return SVN_NO_ERROR;
+}
+
+
 /* This tests deleting of mutable nodes.  We build a tree in a
  * transaction, then try to delete various items in the tree.  We
  * never commit the tree, so every entry being deleted points to a 
@@ -4628,6 +4779,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   fetch_youngest_rev,
   basic_commit,
   copy_test,
+  link_test,
   merging_commit,
   merge_re_id,
   commit_date,
