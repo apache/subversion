@@ -1541,7 +1541,7 @@ msgstr "没有提供 URL 目标"
 #: clients/cmdline/propdel-cmd.c:91 clients/cmdline/propedit-cmd.c:97
 #: clients/cmdline/proplist-cmd.c:85 clients/cmdline/propset-cmd.c:121
 msgid "Either a URL or versioned item is required"
-msgstr "必须提供 URL 或纳入版本控制的项目"
+msgstr "必须提供地址(URL)或纳入版本控制的项目"
 
 #: clients/cmdline/propdel-cmd.c:100
 #, c-format
@@ -1648,7 +1648,7 @@ msgid ""
 "Committed revision %ld.\n"
 msgstr ""
 "\n"
-"提交修订版 %ld。\n"
+"提交后的修订版为 %ld。\n"
 
 #: clients/cmdline/util.c:128
 msgid ""
@@ -1682,7 +1682,7 @@ msgstr "不能取得“%s”状态"
 #: clients/cmdline/util.c:222
 #, c-format
 msgid "system('%s') returned %d"
-msgstr "系统(“%s”) 传回 %d"
+msgstr "系统(“%s”) 返回 %d"
 
 #: clients/cmdline/util.c:287
 msgid "Can't restore working directory"
@@ -1820,7 +1820,7 @@ msgstr "项目没有修订版"
 
 #: include/svn_error_codes.h:264
 msgid "Entry has no URL"
-msgstr "项目没有 URL"
+msgstr "项目没有地址(URL)"
 
 #: include/svn_error_codes.h:268
 msgid "Entry has an invalid attribute"
@@ -2092,7 +2092,7 @@ msgstr "执行 post-commit 挂勾时发生错误"
 
 #: include/svn_error_codes.h:541
 msgid "Bad URL passed to RA layer"
-msgstr "传递至 RA 层的 URL 有问题"
+msgstr "传递至 RA 层的地址(URL)有问题"
 
 #: include/svn_error_codes.h:545
 msgid "Authorization failed"
@@ -2270,7 +2270,7 @@ msgstr "使用了有问题的修订版信息"
 
 #: include/svn_error_codes.h:742
 msgid "Attempting to commit to a URL more than once"
-msgstr "尝试对 URL 进行一次以上的提交"
+msgstr "尝试对地址(URL)进行一次以上的提交"
 
 #: include/svn_error_codes.h:746
 msgid "Operation does not apply to binary file"
@@ -2446,7 +2446,7 @@ msgstr "起始修订版必须大于结束修订版"
 #: libsvn_client/blame.c:652 libsvn_client/cat.c:65
 #, c-format
 msgid "URL '%s' refers to a directory"
-msgstr "URL“%s”指向一个目录"
+msgstr "地址(URL)“%s”指向一个目录"
 
 #: libsvn_client/blame.c:724
 #, c-format
@@ -2462,17 +2462,17 @@ msgstr "不能在“%s”定位"
 #: libsvn_client/checkout.c:97
 #, c-format
 msgid "URL '%s' doesn't exist"
-msgstr "URL“%s”不存在"
+msgstr "地址(URL)“%s”不存在"
 
 #: libsvn_client/checkout.c:101
 #, c-format
 msgid "URL '%s' refers to a file, not a directory"
-msgstr "URL“%s”指向一个文件，而非目录"
+msgstr "地址(URL)“%s”指向一个文件，而非目录"
 
 #: libsvn_client/checkout.c:155
 #, c-format
 msgid "'%s' is already a working copy for a different URL"
-msgstr "“%s”已是不同 URL 的工作拷贝"
+msgstr "“%s”已是不同地址(URL)的工作拷贝"
 
 #: libsvn_client/checkout.c:158
 msgid "; run 'svn update' to complete it."
@@ -2536,7 +2536,7 @@ msgstr "post-commit 清除时发生错误 (细节见下)："
 #: libsvn_client/commit.c:1064
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
-msgstr "“%s”是 URL，但是 URL 不可为提交的目标"
+msgstr "“%s”是一个地址(URL)，但是地址(URL)不可为作提交的目标"
 
 #: libsvn_client/commit.c:1252
 msgid "Are all the targets part of the same working copy?"
@@ -2569,7 +2569,7 @@ msgstr "并未预期“%s”是工作拷贝的根目录"
 #: libsvn_client/commit_util.c:360
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
-msgstr "提交项目“%s”有复制标志，但是没有 copyfrom URL\n"
+msgstr "提交项目“%s”有复制标志，但是没有复制的地址(copyfrom URL)\n"
 
 #: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
@@ -2589,7 +2589,7 @@ msgstr "“%s”尚未纳入版本控制"
 #: libsvn_client/commit_util.c:610
 #, c-format
 msgid "Entry for '%s' has no URL"
-msgstr "“%s”的项目没有 URL"
+msgstr "“%s”的项目没有地址(URL)"
 
 #: libsvn_client/commit_util.c:641
 #, c-format
@@ -2617,12 +2617,12 @@ msgstr ""
 #: libsvn_client/commit_util.c:781
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
-msgstr "无法提交“%s”与“%s”，因为它们都指向同一个 URL"
+msgstr "无法提交“%s”与“%s”，因为它们都指向同一个地址(URL)"
 
 #: libsvn_client/commit_util.c:925
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
-msgstr "提交项目“%s”有复制标志，但是没有 copyfrom URL"
+msgstr "提交项目“%s”有复制标志，但是没有复制地址地址(copyfrom URL)"
 
 #: libsvn_client/commit_util.c:929
 #, c-format
@@ -2642,7 +2642,7 @@ msgstr "除非强行操作，否则不会执行移动操作"
 #: libsvn_client/copy.c:324
 #, c-format
 msgid "Cannot move URL '%s' into itself"
-msgstr "无法移动 URL“%s”至本身"
+msgstr "无法移动地址(URL)“%s”至本身"
 
 #: libsvn_client/copy.c:353
 #, c-format
@@ -2734,7 +2734,7 @@ msgstr "名字：%s%s"
 #: libsvn_client/diff.c:189
 #, c-format
 msgid "URLs have no schema ('%s' and '%s')"
-msgstr "URL 中没有纲要 (“%s”与“%s”)"
+msgstr "地址(URL)中没有纲要 (“%s”与“%s”)"
 
 #: libsvn_client/diff.c:195 libsvn_client/diff.c:201
 #, c-format
@@ -2810,7 +2810,7 @@ msgstr "“%s”于档案库的修订版 %ld 找不到"
 #: libsvn_client/diff.c:1859 libsvn_client/switch.c:117
 #, c-format
 msgid "Directory '%s' has no URL"
-msgstr "目录“%s”没有 URL"
+msgstr "目录“%s”没有地址(URL)"
 
 #: libsvn_client/diff.c:2054
 msgid "At least one revision must be non-local for a pegged diff"
@@ -2821,7 +2821,7 @@ msgstr "对于 peg 差异，必须至少有一个非本地端的修订版"
 #: libsvn_client/ra.c:814
 #, c-format
 msgid "'%s' has no URL"
-msgstr "“%s”没有 URL"
+msgstr "“%s”没有地址(URL)"
 
 #: libsvn_client/export.c:86
 #, c-format
@@ -2861,7 +2861,7 @@ msgstr "未提供请求的修订版规格"
 #: libsvn_client/update.c:88
 #, c-format
 msgid "Entry '%s' has no URL"
-msgstr "项目“%s”没有 URL"
+msgstr "项目“%s”没有地址(URL)"
 
 #: libsvn_client/log.c:308
 msgid "No commits in repository."
@@ -2869,12 +2869,12 @@ msgstr "档案库中没有任何提交"
 
 #: libsvn_client/ls.c:49 libsvn_client/ls.c:126
 msgid "No get_dir() available for URL schema"
-msgstr "该 URL 纲要中并不支持 get_dir()"
+msgstr "该地址(URL)纲要中并不支持 get_dir()"
 
 #: libsvn_client/ls.c:133 libsvn_client/ls.c:140
 #, c-format
 msgid "URL '%s' non-existent in that revision"
-msgstr "URL“%s”并不存在于该修订版中"
+msgstr "地址(URL)“%s”并不存在于该修订版中"
 
 #: libsvn_client/prop_commands.c:148
 #, c-format
@@ -3248,7 +3248,7 @@ msgstr "“%s”的 RA 外挂版本不符合：遇到 %d.%d.%d%s，预期 %d.%d.
 #: libsvn_ra/ra_loader.c:225
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
-msgstr "无法辨识的 URL 纲要“%s”"
+msgstr "无法辨识的地址(URL)纲要“%s”"
 
 # as-is
 #: libsvn_ra/ra_loader.c:291
@@ -3277,7 +3277,7 @@ msgstr "应用日志信息至“%s”"
 
 #: libsvn_ra_dav/fetch.c:257
 msgid "Could not save the URL of the version resource"
-msgstr "无法储存版本资源的 URL"
+msgstr "无法储存版本资源的地址(URL)"
 
 #: libsvn_ra_dav/fetch.c:401
 #, c-format
@@ -3373,8 +3373,8 @@ msgid ""
 "Protocol error: the MERGE response for the '%s' resource did not return all "
 "of the properties that we asked for (and need to complete the commit)"
 msgstr ""
-"通讯协定错误：对“%s”的 MERGE 回应并未传回所有我们请求的属性 (这些是完成提交操"
-"作所不可或缺的)"
+"通讯协定错误：对“%s”的 MERGE 回应并未返回所有我们请求的属性 (这些是完成提交操"
+"作所不可缺少的)"
 
 #: libsvn_ra_dav/merge.c:259
 #, c-format
@@ -3390,13 +3390,13 @@ msgid ""
 "The OPTIONS response did not include the requested activity-collection-set; "
 "this often means that the URL is not WebDAV-enabled"
 msgstr ""
-"OPTIONS 回应并不包含请求的 activity-collection-set；通常这表示该 URL 并不支"
+"OPTIONS 回应并不包含请求的 activity-collection-set；通常这表示该地址(URL)并不支"
 "援 WebDAV"
 
 #: libsvn_ra_dav/props.c:583
 #, c-format
 msgid "Failed to find label '%s' for URL '%s'"
-msgstr "无法找到标记“%s”于 URL“%s”"
+msgstr "无法找到标记“%s”于地址(URL)“%s”"
 
 #: libsvn_ra_dav/props.c:612
 #, c-format
@@ -3434,24 +3434,24 @@ msgstr "至少有一个属性变更失败；档案库未改变"
 
 #: libsvn_ra_dav/session.c:429
 msgid "Invalid URL: illegal character in proxy port number"
-msgstr "无效的地址(URL)：proxy 通讯口编号中有不合法的字符"
+msgstr "无效的地址(URL)：代理(proxy)通信端口编号中有不合法的字符"
 
 #: libsvn_ra_dav/session.c:433
 msgid "Invalid URL: negative proxy port number"
-msgstr "无效的地址(URL)：负的 proxy 通讯口数值"
+msgstr "无效的地址(URL)：负的代理(proxy)通信端口数值"
 
 #: libsvn_ra_dav/session.c:436
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
-msgstr "无效的地址(URL)：proxy 通讯口数值大于最大值的 TCP 通讯口数值 65535"
+msgstr "无效的地址(URL)：代理(proxy)通信端口数值大于最大值的 TCP 通信端口数值 65535"
 
 #: libsvn_ra_dav/session.c:450
 msgid "Invalid config: illegal character in timeout value"
-msgstr "无效的配置：逾时数值中有不合法的字符"
+msgstr "无效的配置：超时数值中有不合法的字符"
 
 #: libsvn_ra_dav/session.c:454
 msgid "Invalid config: negative timeout value"
-msgstr "无效的配置：负的逾时数值"
+msgstr "无效的配置：负的超时数值"
 
 #: libsvn_ra_dav/session.c:467
 msgid "Invalid config: illegal character in debug mask value"
@@ -3459,7 +3459,7 @@ msgstr "无效的配置：除错遮罩值中有不合法的字符"
 
 #: libsvn_ra_dav/session.c:557
 msgid "Malformed URL for repository"
-msgstr "档案库的 URL 有缺陷"
+msgstr "档案库的地址(URL)有缺陷"
 
 #: libsvn_ra_dav/session.c:565
 msgid "Network socket initialization failed"
@@ -3503,7 +3503,7 @@ msgstr "无法连接到服务器"
 
 #: libsvn_ra_dav/util.c:281
 msgid "timed out waiting for server"
-msgstr "等待服务器逾时"
+msgstr "等待服务器超时"
 
 #: libsvn_ra_dav/util.c:455
 msgid "Can't calculate the request body size"
@@ -3524,7 +3524,7 @@ msgstr "%s 的结果 “%s”"
 #: libsvn_ra_dav/util.c:657
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
-msgstr "%s 请求的回应传回无效的 XML：%s (%s)"
+msgstr "%s 请求的回应返回无效的 XML：%s (%s)"
 
 #: libsvn_ra_dav/util.c:671
 #, c-format
@@ -3545,7 +3545,7 @@ msgstr ""
 
 #: libsvn_ra_local/ra_plugin.c:226
 msgid "Unable to open an ra_local session to URL"
-msgstr "无法打开 URL 的 ra_local session"
+msgstr "无法打开地址(URL)的 ra_local 会话"
 
 # as-is
 #: libsvn_ra_local/ra_plugin.c:957
@@ -3561,17 +3561,17 @@ msgstr "不支持 RA 插件 ABI 版本 (%d) for ra_local"
 #: libsvn_ra_local/split_url.c:44
 #, c-format
 msgid "Local URL '%s' does not contain 'file://' prefix"
-msgstr "本地 URL“%s”并未包含 'file://' 开头"
+msgstr "本地地址(URL)“%s”并未包含 'file://' 开头"
 
 #: libsvn_ra_local/split_url.c:55
 #, c-format
 msgid "Local URL '%s' contains only a hostname, no path"
-msgstr "本地 URL“%s”仅含主机名称，没有路径"
+msgstr "本地地址(URL)“%s”仅含主机名称，没有路径"
 
 #: libsvn_ra_local/split_url.c:66
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
-msgstr "本地 URL“%s”包含未支持的主机名称"
+msgstr "本地地址(URL)“%s”包含未支持的主机名称"
 
 #: libsvn_ra_local/split_url.c:109 libsvn_ra_local/split_url.c:116
 #, c-format
@@ -3650,7 +3650,7 @@ msgstr "无法建立 tunnel"
 #: libsvn_ra_svn/client.c:575
 #, c-format
 msgid "Illegal svn repository URL '%s'"
-msgstr "不合法的 svn 档案库 URL“%s”"
+msgstr "不合法的 svn 档案库地址(URL)“%s”"
 
 #: libsvn_ra_svn/client.c:594
 #, c-format
@@ -3664,7 +3664,7 @@ msgstr "服务器回传的档案库根路径长得太夸张"
 
 #: libsvn_ra_svn/client.c:705
 msgid "Server did not send repository root"
-msgstr "服务器没有传回档案库根路径"
+msgstr "服务器没有返回档案库根路径"
 
 #: libsvn_ra_svn/client.c:826
 msgid "Non-string as part of file contents"
@@ -3711,7 +3711,7 @@ msgstr "文字差异区段并非字串"
 
 #: libsvn_ra_svn/client.c:1284
 msgid "The get-file-revs command didn't return any revisions"
-msgstr "get-file-revs 命令没有传回任何修订版"
+msgstr "get-file-revs 命令没有返回任何修订版"
 
 # as-is
 #: libsvn_ra_svn/client.c:1296
@@ -3839,7 +3839,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"------- 提交修订版 %ld >>>\n"
+"------- 提交后的修订版 %ld >>>\n"
 "\n"
 
 # as-is
@@ -4187,12 +4187,12 @@ msgstr "剖析修订版“%s”时发生语法错误"
 #: libsvn_subr/opt.c:593
 #, c-format
 msgid "URL '%s' is not properly URI-encoded"
-msgstr "URL“%s”不是正确地以 URI 编码"
+msgstr "地址(URL)“%s”不是正确地以 URI 编码"
 
 #: libsvn_subr/opt.c:599
 #, c-format
 msgid "URL '%s' contains a '..' element"
-msgstr "URL“%s”包含 '..' 元素"
+msgstr "地址(URL)“%s”包含 '..' 元素"
 
 #: libsvn_subr/opt.c:628
 #, c-format
@@ -4319,7 +4319,7 @@ msgstr "修订版 %ld 不符合现有的修订版 %ld 于“%s”中"
 #: libsvn_wc/adm_files.c:912
 #, c-format
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
-msgstr "URL“%s”不符合现有的 URL“%s”于“%s”中"
+msgstr "地址(URL)“%s”不符合现有的地址(URL)“%s”于“%s”中"
 
 #: libsvn_wc/adm_ops.c:213
 #, c-format
@@ -4471,7 +4471,7 @@ msgstr "默认项目没有修订版编号"
 
 #: libsvn_wc/entries.c:580
 msgid "Default entry is missing URL"
-msgstr "默认项目没有 URL"
+msgstr "默认项目没有地址(URL)"
 
 #: libsvn_wc/entries.c:668
 #, c-format
@@ -4931,7 +4931,7 @@ msgstr "需有档案库参数"
 #: svnadmin/main.c:126
 #, c-format
 msgid "'%s' is an URL when it should be a path"
-msgstr "“%s”是 URL，但是应该是路径"
+msgstr "“%s”是地址(URL)，但是应该是路径"
 
 #: svnadmin/main.c:227 svndumpfilter/main.c:705 svnlook/main.c:95
 #: svnversion/main.c:201
@@ -5738,7 +5738,7 @@ msgstr ""
 "    $ svnversion . /repos/svn/trunk \n"
 "    4168\n"
 "\n"
-"  如果工作拷贝是单一版本，未经修改，未被切换，而且其 URL 符合\n"
+"  如果工作拷贝是单一版本，未经修改，未被切换，而且其地址(URL)符合\n"
 "  TRAIL_URL 参数，那么版本号码将会是单一号码。如果工作拷贝内不\n"
 "  太单纯的话，那么版本号码就会复杂地多：\n"
 "\n"
