@@ -41,10 +41,11 @@
      built with the same assumption. Just add --enable-maintainer-mode
      to the configure line above.
 
-5.  make && make install
+     All instructions below assume you configured Apache to install
+     under /usr/local/apache2/; substitute appropriately if you chose
+     some other location.
 
-    That installs Apache into /usr/local/apache2 (or wherever you told
-    it to go).
+5.  make && make clean && make depend && make install
 
 6.  Go back into your subversion working copy and run ./autogen.sh if
     you need to.  Then run
@@ -61,12 +62,16 @@
     and link it directly into Apache. Possible, but painful. Stick
     with the shared library for now; if you can't, then ask.
 
-7. make && make install
+7. make clean && make && make install
 
-   That copies the Subversion shared libraries to /usr/local/lib/. 
+   To be extra safe, you may want to `rm /usr/local/lib/libsvn*'
+   before making Subversion, to avoid accidentally linking in any
+   shared libraries leftover from a previous install of Subversion.
 
-8.  cd into /usr/local/apache2/conf, or wherever your "httpd.conf" file was
-    installed, and add these lines to the *bottom* of httpd.conf:
+   After the make install, the Subversion shared libraries are in
+   /usr/local/lib/.
+
+8.  Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
 
           <Location /svn/repos>
              DAV svn
@@ -76,9 +81,9 @@
     Make sure that the user 'nobody' (or whatever UID the httpd
     process runs as) is able to read the berkeley db files.
 
-9.  Now go ahead and fire up apache 2.0, using the 'apachectl' script,
-    wherever it was installed:
+9.  Now fire up apache 2.0:
 
+           /usr/local/apache2/bin/apachectl stop
            /usr/local/apache2/bin/apachectl start
 
     Check /usr/local/apache2/logs/error_log to make sure it started
