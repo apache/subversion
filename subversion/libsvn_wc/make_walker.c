@@ -106,30 +106,40 @@ check_existence (svn_string_t *path,
 
 
 
-/* kff todo: this will want to be somewhere else, and get decided at
-   configure time too probably.  For now let's just get checkout
-   working. */
-/* ben sez:  aha!  then this belongs in our "config.h" file! */
+/* kff todo: this little path manipulation library will want to live
+   somewhere else eventually, and handle more than just Unix-style
+   paths. */
 
 #define SVN_DIR_SEPARATOR '/'
 
+static void
+path_add_component (svn_string_t *path_so_far, 
+                    svn_string_t *component,
+                    apr_pool_t *pool)
+{
+  char dirsep = SVN_DIR_SEPARATOR;
+  svn_string_appendbytes (path_so_far, &dirsep, 1, pool);
+  svn_string_appendstr (path_so_far, component, pool);
+}
 
+
+static apr_off_t
+path_remove_component (svn_string_t *path)
+{
+  return svn_string_chop_back_to_char (path, SVN_DIR_SEPARATOR);
+}
+
+
+
 struct w_baton
 {
   svn_string_t *top_dir;
   int top_dir_done_p;
-
-  svn_string_t *path_already;
-
+  apr_pool_t *walk_pool;
 };
 
 
-struct p_baton
-{
-  svn_string_t *name;
-};
-
-
+
 static svn_error_t *
 delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 {
@@ -154,7 +164,16 @@ add_directory (svn_string_t *name,
      for the root (i.e., the -d option should probably be mandatory if
      no other name was given). */
 
-  /* fooo */
+  /* todo: it's convenient under Unix, and possibly some other OS's,
+     to just store the path as a string.  But eventually we may want
+     some more general sort of path-chain, and store it in a more
+     general p_baton. */
+  svn_string_t *path_already = (svn_string_t *) parent_baton;
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+
+  path_add_component (path_already, name, wb->walk_pool);
+  printf ("entering directory: %s\n", path_already->data);
+  *child_baton = path_already;
   return 0;
 }
 
@@ -173,6 +192,11 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 finish_directory (void *child_baton)
 {
+  svn_string_t *path = (svn_string_t *) child_baton;
+
+  printf ("leaving  directory: %s\n", path->data);
+  path_remove_component (path);
+
   return 0;
 }
 
@@ -272,7 +296,7 @@ svn_wc_apply_delta (void *delta_src,
   svn_error_t *err;
   svn_delta_walk_t walker;
   struct w_baton w_baton;
-  struct p_baton p_baton;
+  svn_string_t *telescoping_path;
 
   /* Check existence of TARGET.  If present, just error out for now -- we
      can't do real updates, only fresh checkouts.  In the future, if
@@ -303,12 +327,13 @@ svn_wc_apply_delta (void *delta_src,
 
   /* Set up the batons... */
   memset (&w_baton, 0, sizeof (w_baton));
-  memset (&p_baton, 0, sizeof (p_baton));
   w_baton.top_dir = target;   /* Remember, target might be null. */
+  w_baton.walk_pool = pool;
+  telescoping_path = svn_string_create ("", pool);
 
   /* ... and walk! */
   err = svn_delta_parse (read_fn, delta_src,
-                         &walker, &w_baton, &p_baton, pool);
+                         &walker, &w_baton, telescoping_path, pool);
 
   return err;
 }
