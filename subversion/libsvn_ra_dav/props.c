@@ -512,6 +512,10 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
       bc_relative->len = strlen(bc_relative->data);
     }
 
+  /* shortcut: no need to do more work if the data isn't needed. */
+  if (bc_url == NULL && latest_rev == NULL)
+    return SVN_NO_ERROR;
+
   /* -------------------------------------------------------------------
      STEP 2
 
