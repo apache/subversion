@@ -5,40 +5,29 @@ TODO for locking
 MUST HAVE
 ---------
 
-* svn status -u shows lock info from repos.  (lundblad)
+* notification-system rewrite;  patch is in progress.  (lundblad)
 
-* 'svn up' needs to notify when it deletes a defunct token
-       --> depends on patch-in-progress:
-           rev svn_wc_notify_func_t (on trunk) (lundblad/sussman)
+     - make 'svn up' use new system to tell user that a defunct token
+       has been deleted.
+
+     - make svn_client_(un)lock() use the new notify callback also.
 
 * fix 'svnadmin lslocks', 'svnlook lock', and 'svn info wcpath-or-URL'
   to handle the lock comment output, which can be multiple lines, in
   the same (at least similar) way that 'svn log' treats log messages,
   so they can be machine parseable. (fitz)
 
-* autoversioning:
+* lock-null support:
 
-    - finish issue 2161:  PROPFIND depth 1 should show locked,
-      nonexistent paths.  (cmpilato)
+    - finish issue 2161: PROPFIND depth 1 should show locked,
+      nonexistent paths.  This means svn_fs_get_locks() should take a
+      depth (=1) argument; change BDB locking tables implementation to
+      make this feasible. (cmpilato)
 
-    - research interoperability with popular dav clients (collabnet folks)
+    - 'svn lock/unlock/info lock-null-URL' should work over all 3 RA
+      layers, but then disable this feature for 1.2 (sussman)
 
-* decide if/how to handle locking of schedule-add paths.
-  also decide if/how 'svn lock/unlock URL' should work on nonexistent paths.
-
-   --> related bugs (?):
-
-      - 'svn lock schedule-add-path' currently fails because it's
-        sending working rev of '0', which the fs tries to check against.
-
-      - 'svn unlock http://nonexistentURL' fails, because ra_dav
-          can't PROPFIND on the imaginary path.  Yet the DAV spec says
-          a locked, nonexistent path ("lock-null") *should* respond to
-          a PROPFIND.  At a minimum, it should have lock properties
-          attached.
-
-      - 'svn unlock svn://nonexistentURL' also fails (but not file:///)
-          ("doesn't exist in HEAD" error)
+    - explicitly prevent 'svn lock schedule-add-wcpath' (sussman)
 
 * scan the whole patch for TODO items introduced on the branch. (all, please)
 
