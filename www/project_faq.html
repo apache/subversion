@@ -57,6 +57,8 @@
     original working copy)?</a></li> 
 <li><a href="#dumpload">What is this "dump/load cycle" people
     sometimes talk about when upgrading a Subversion server?</a></li> 
+<li><a href="#sspi">How do I allow clients to authenticate against a
+    Windows domain controller using SSPI Authentication?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -858,6 +860,32 @@ dump and load.  When one is required, the release announcement and the
 CHANGES file for the new version will carry prominent notices about
 it.  If you don't see such a notice, then there has been no schema
 change, and no dump/load is necessary. </p>
+
+<![CDATA[=========================================================]]>
+ 
+<h3><a name="sspi">How do I allow clients to authenticate against a
+    Windows domain controller using SSPI authentication?</a></h3>
+
+<p><a href="http://tortoisesvn.tigris.org">TortoiseSVN</a> has an excellent
+document that describes setting up a Subversion server on Windows. Go to
+<a href="http://tortoisesvn.tigris.org/doc/ch03.html"
+>http://tortoisesvn.tigris.org/doc/ch03.html</a>, then click on
+"Authentication With A Windows Domain" to see the section on SSPI
+authentication.</p>
+
+<p>An earlier version of this document left out a line:
+<pre>
+   SSPIOfferBasic On
+</pre></p>
+
+<p>Without this line, a browser will prompt for the user's credentials,
+but Subversion clients will not. (The browser understands SSPI
+authentication, but the current release of Neon - Subversion's HTTP
+library - handles only basic authentication.)  Because the client never
+asks for credentials, any action that requires authentication will fail.
+Adding this line tells <tt>mod_auth_sspi</tt> to use basic authentication with
+the client, but to use the Windows domain controller to authenticate
+the credentials.</p>
 
 <![CDATA[=========================================================]]>
 
