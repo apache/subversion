@@ -744,6 +744,7 @@ static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
     case ELEM_add_directory:
       if (child == ELEM_add_directory
           || child == ELEM_add_file
+          || child == ELEM_fetch_props
           || child == ELEM_checked_in)
         return NE_XML_VALID;
       else
@@ -758,7 +759,8 @@ static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
         return NE_XML_INVALID;
 
     case ELEM_add_file:
-      if (child == ELEM_checked_in)
+      if (child == ELEM_checked_in
+          || child == ELEM_fetch_props)
         return NE_XML_VALID;
       else
         return NE_XML_INVALID;
