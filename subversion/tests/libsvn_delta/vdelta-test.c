@@ -40,7 +40,7 @@ print_delta_window (const svn_txdelta_window_t *window,
 
 
 static void
-do_one_diff (FILE *source_file, FILE *target_file,
+do_one_diff (apr_file_t *source_file, apr_file_t *target_file,
              int *count, apr_off_t *len,
              int quiet, apr_pool_t *pool,
              const char *tag, FILE* stream)
@@ -53,8 +53,8 @@ do_one_diff (FILE *source_file, FILE *target_file,
   *count = 0;
   *len = 0;
   svn_txdelta (&delta_stream,
-               svn_stream_from_stdio (source_file, fpool),
-               svn_stream_from_stdio (target_file, fpool),
+               svn_stream_from_aprfile (source_file, fpool),
+               svn_stream_from_aprfile (target_file, fpool),
                fpool);
   do {
     svn_txdelta_next_window (&delta_window, delta_stream, wpool);
@@ -72,16 +72,35 @@ do_one_diff (FILE *source_file, FILE *target_file,
 }
 
 
+static apr_file_t *
+open_binary_read (const char *path, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_file_t *fp;
+
+  apr_err = apr_file_open (&fp, path, (APR_READ | APR_BINARY),
+                           APR_OS_DEFAULT, pool);
+
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    {
+      fprintf (stderr, "unable to open \"%s\" for reading\n", path);
+      exit (1);
+    }
+
+  return fp;
+}
+
+
 int
 main (int argc, char **argv)
 {
-  FILE *source_file_A = NULL;
-  FILE *target_file_A = NULL;
+  apr_file_t *source_file_A = NULL;
+  apr_file_t *target_file_A = NULL;
   int count_A = 0;
   apr_off_t len_A = 0;
 
-  FILE *source_file_B = NULL;
-  FILE *target_file_B = NULL;
+  apr_file_t *source_file_B = NULL;
+  apr_file_t *target_file_B = NULL;
   int count_B = 0;
   apr_off_t len_B = 0;
 
@@ -94,21 +113,24 @@ main (int argc, char **argv)
       --argc; ++argv;
     }
 
+  apr_initialize();
+  pool = svn_pool_create (NULL);
+
   if (argc == 2)
     {
-      target_file_A = fopen (argv[1], "rb");
+      target_file_A = open_binary_read (argv[1], pool);
     }
   else if (argc == 3)
     {
-      source_file_A = fopen (argv[1], "rb");
-      target_file_A = fopen (argv[2], "rb");
+      source_file_A = open_binary_read (argv[1], pool);
+      target_file_A = open_binary_read (argv[2], pool);
     }
   else if (argc == 4)
     {
-      source_file_A = fopen (argv[1], "rb");
-      target_file_A = fopen (argv[2], "rb");
-      source_file_B = fopen (argv[2], "rb");
-      target_file_B = fopen (argv[3], "rb");
+      source_file_A = open_binary_read (argv[1], pool);
+      target_file_A = open_binary_read (argv[2], pool);
+      source_file_B = open_binary_read (argv[2], pool);
+      target_file_B = open_binary_read (argv[3], pool);
     }
   else
     {
@@ -118,9 +140,6 @@ main (int argc, char **argv)
                "   or: vdelta-test [-q] <source> <intermediate> <target>\n");
       exit (1);
     }
-
-  apr_initialize();
-  pool = svn_pool_create (NULL);
 
   do_one_diff (source_file_A, target_file_A,
                &count_A, &len_A, quiet, pool, "A ", stdout);
@@ -142,18 +161,23 @@ main (int argc, char **argv)
                    &count_B, &len_B, quiet, pool, "B ", stdout);
 
       putc('\n', stdout);
-      rewind (source_file_A);
-      rewind (target_file_A);
-      rewind (source_file_B);
-      rewind (target_file_B);
+
+      {
+        apr_off_t offset = 0;
+
+        apr_file_seek (source_file_A, APR_SET, &offset);
+        apr_file_seek (target_file_A, APR_SET, &offset);
+        apr_file_seek (source_file_B, APR_SET, &offset);
+        apr_file_seek (target_file_B, APR_SET, &offset);
+      }
 
       svn_txdelta (&stream_A,
-                   svn_stream_from_stdio (source_file_A, fpool),
-                   svn_stream_from_stdio (target_file_A, fpool),
+                   svn_stream_from_aprfile (source_file_A, fpool),
+                   svn_stream_from_aprfile (target_file_A, fpool),
                    fpool);
       svn_txdelta (&stream_B,
-                   svn_stream_from_stdio (source_file_B, fpool),
-                   svn_stream_from_stdio (target_file_B, fpool),
+                   svn_stream_from_aprfile (source_file_B, fpool),
+                   svn_stream_from_aprfile (target_file_B, fpool),
                    fpool);
 
       for (count_AB = 0; count_AB < count_B; ++count_AB)
@@ -180,10 +204,10 @@ main (int argc, char **argv)
                len_AB, count_AB);
     }
 
-  if (source_file_A) fclose (source_file_A);
-  if (target_file_A) fclose (target_file_A);
-  if (source_file_B) fclose (source_file_B);
-  if (target_file_B) fclose (source_file_B);
+  if (source_file_A) apr_file_close (source_file_A);
+  if (target_file_A) apr_file_close (target_file_A);
+  if (source_file_B) apr_file_close (source_file_B);
+  if (target_file_B) apr_file_close (source_file_B);
 
   svn_pool_destroy (pool);
   apr_terminate();
