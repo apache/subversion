@@ -305,6 +305,17 @@ AH_BOTTOM(
 #endif
 )
 
+dnl Used to simulate makefile conditionals.
+GETTEXT_CODESET=\#
+NO_GETTEXT_CODESET=\#
+if test $USE_NLS = "yes"; then
+   AC_CHECK_FUNCS(bind_textdomain_codeset,
+                  [ GETTEXT_CODESET="" ],
+                  [ NO_GETTEXT_CODESET="" ])
+fi
+AC_SUBST(GETTEXT_CODESET)
+AC_SUBST(NO_GETTEXT_CODESET)
+
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
