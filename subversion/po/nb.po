@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-10 18:01+0200\n"
+"POT-Creation-Date: 2004-09-17 17:19+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1857,8 +1857,8 @@ msgstr "Rammefeil i rørprotokollen"
 msgid "Read error in pipe"
 msgstr "Lesefeil i rør"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:313
-#: libsvn_subr/cmdline.c:330
+#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:316
+#: libsvn_subr/cmdline.c:333
 msgid "Write error"
 msgstr "Feil ved skriving"
 
@@ -2485,12 +2485,12 @@ msgstr "Ingen ekstern redigerer er tilgjengelig"
 msgid "Something is wrong with the log message's contents"
 msgstr "Noe er galt i loggmeldingens innhold"
 
-#: libsvn_client/add.c:343
+#: libsvn_client/add.c:348
 #, c-format
 msgid "Error during recursive add of '%s'"
 msgstr "Feil under rekursiv tillegging av '%s'"
 
-#: libsvn_client/add.c:353
+#: libsvn_client/add.c:358
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "Kan ikke lukke katalogen '%s'"
@@ -4936,7 +4936,6 @@ msgid ""
 "this if you've been getting errors indicating that recovery\n"
 "ought to be run.  Recovery requires exclusive access and will\n"
 "exit if the repository is in use by another process.\n"
-"\n"
 msgstr ""
 "bruk: svnadmin recover DEPOTSTI\n"
 "\n"
@@ -4944,7 +4943,6 @@ msgstr ""
 "Gjør dette hvis du får feilmeldinger som indikerer at depotet må\n"
 "repareres. Gjenoppretting krever eksklusiv tilgang og vil avslutte\n"
 "hvis depotet er i bruk av en annen prosess.\n"
-"\n"
 
 #: svnadmin/main.c:353
 msgid ""
@@ -5587,10 +5585,11 @@ msgid "last changed rather than current revisions"
 msgstr "sist endrede i stedet for aktuelle revisjoner"
 
 #: svnversion/main.c:287
-msgid "exported\n"
-msgstr "eksportert\n"
+#, c-format
+msgid "exported%s"
+msgstr "eksportert%s"
 
-#: svnversion/main.c:295
+#: svnversion/main.c:296
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' er verken versjonert eller eksportert\n"
