@@ -348,9 +348,9 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
 /* Assuming FP is a filehandle already open for appending, write
    CONFLICT_DESCRIPTION to file. */
 static svn_error_t *
-svn_wc__append_prop_conflict (apr_file_t *fp,
-                              svn_string_t *conflict_description,
-                              apr_pool_t *pool)
+append_prop_conflict (apr_file_t *fp,
+                      svn_string_t *conflict_description,
+                      apr_pool_t *pool)
 {
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
@@ -556,7 +556,7 @@ svn_wc__do_property_merge (svn_string_t *path,
               }
 
             /* Append the conflict to the open tmp/PROPS/---.prej file */
-            err = svn_wc__append_prop_conflict (reject_tmp_fp,
+            err = append_prop_conflict (reject_tmp_fp,
                                                 conflict_description,
                                                 pool);
             if (err) return err;
