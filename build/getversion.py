@@ -4,11 +4,11 @@
 
 
 import re
-from xreadlines import xreadlines
 
 __all__ = ['Parser', 'Result']
 
-class Result: pass
+class Result:
+  pass
 
 class Parser:
   def __init__(self):
@@ -23,11 +23,13 @@ class Parser:
     stream = open(file, 'rt')
     result = Result()
     regex = re.compile(r'^\s*#\s*define\s+(\w+)\s+(\d+)')
-    for line in stream.xreadlines():
+    for line in stream.readlines():
       match = regex.match(line)
       if match:
-        try: name = self.patterns[match.group(1)]
-        except: continue
+        try:
+          name = self.patterns[match.group(1)]
+        except:
+          continue
         setattr(result, name, int(match.group(2)))
     return result
 
