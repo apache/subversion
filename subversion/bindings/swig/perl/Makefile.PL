@@ -1,5 +1,21 @@
 #!/usr/bin/perl
 use ExtUtils::MakeMaker;
+use Config;
+
+my $perl_path = $Config{perlpath};
+if ($^O ne 'VMS') {
+  $perl_path .= $Config{_exe} unless $perl_path =~ m/$Config{_exe}$/i;
+}
+
+my $swig_version;
+open TOPMAKE, "<../../../../Makefile";
+while (<TOPMAKE>) {
+  /^SWIG_VERSION\s*=\s*(\d+)\s*$/;
+  if (defined($1)) {
+    $swig_version = $1;
+  }
+}
+close TOPMAKE;
 
 my @modules = qw/client delta fs ra repos wc/;
 my @ldpaths = ('../.libs',
@@ -25,7 +41,7 @@ chomp $apr_ldflags;
 my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     CCFLAGS  => join(' ', $apr_cflags, $apu_cflags, 
-                     `perl -MExtUtils::Embed -e ccopts`,
+                     `$perl_path -MExtUtils::Embed -e ccopts`,
                      ' -I.. -I../../../include -g'),
     OBJECT => q/$(O_FILES)/,
     LIBS => [join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
@@ -59,23 +75,59 @@ for (@modules) {
 
 sub MY::postamble {
    package MY ;
-   return join('', "all :: modules\ntest :: modules\ninstall :: modules\n\n",
-	       "par :: all\n\t",
-	       q{perl -MPAR::Dist -e"blib_to_par(name=>'SVN',version=>'`perl -Mblib -MSVN::Core -e'print $$SVN::Core::VERSION'`')"},"\n\n",
-	       # h2i
-	       "ra_plugin.hi: ../../../include/svn_ra.h\n\tperl h2i.pl ../../../include/svn_ra.h svn_ra_plugin_t > \$@\n\n",
-	       "ra_reporter.hi: ../../../include/svn_ra.h\n\tperl h2i.pl ../../../include/svn_ra.h svn_ra_reporter_t > \$@\n\n",
-	       "delta_editor.hi: ../../../include/svn_delta.h\n\tperl h2i.pl ../../../include/svn_delta.h svn_delta_editor_t > \$@\n\n",
-	       "modules :: ",(map { " svn_$_.c"} @modules),"\n",
-	       (map {"\tmake -f Makefile.$_\n"} @modules),
-	       "\t\$(NOECHO) \$(TOUCH) \$\@",
-	       # swig
-	       "\ncore.c :: ../core.i\n",
-	       "\tswig -c -nopm -perl -I.. -I../../../include $apr_cflags -module SVN::_Core -o core.c ../core.i\n", 
-	       (map {"\nsvn_$_.c : ../svn_$_.i ra_plugin.hi ra_reporter.hi delta_editor.hi\n".
-			"\tswig -c -nopm -perl -I.. -I../../../include $apr_cflags -module SVN::_".main::perlish($_)." -o svn_$_.c ../svn_$_.i\n"}
-	       @modules),
-               "\nFULLPERLRUN=$apr_shlib_path_var=",join(':',@ldpaths),
-               " \$(FULLPERL)\n",
-	      );
+   
+   my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
+   my $module_make_commands = join ('',map {"\tmake -f Makefile.$_\n"} @modules);
+
+   my $flags;
+   if ($swig_version >= 103020) {
+     $flags = '-noruntime -noproxy';
+   } else {
+     $flags = '-c';
+   }
+   
+   my $swig_command = "swig $flags -nopm -perl " .
+                      "-I.. -I../../../include $apr_cflags";
+
+   my $swig_modules_command = join ('',
+                                    map {"\nsvn_$_.c : ../svn_$_.i ".
+                                         "ra_plugin.hi ra_reporter.hi ".
+                                         "delta_editor.hi\n" .
+                                         "\t$swig_command -module SVN::_".
+                                         main::perlish($_) .
+                                         " -o svn_$_.c ../svn_$_.i\n"}
+                                         @modules
+                                   );
+
+  my $fullperlrun = "$apr_shlib_path_var=" . join(':',@ldpaths);
+  
+   return <<"EOPOST";
+all :: modules
+test :: modules
+install :: modules
+
+par :: all
+\t$perl_path -MPAR::Dist -e"blip_to_par(name=>'SVN",version=>'`$perl_path -Mblib -MSVN::Core -e 'print $SVN::Core::VERSION'`')"
+
+ra_plugin.hi: ../../../include/svn_ra.h
+\t$perl_path h2i.pl ../../../include/svn_ra.h svn_ra_plugin_t > \$@
+
+ra_reporter.hi: ../../../include/svn_ra.h
+\t$perl_path h2i.pl ../../../include/svn_ra.h svn_ra_reporter_t > \$@
+
+delta_editor.hi: ../../../include/svn_delta.h
+\t$perl_path h2i.pl ../../../include/svn_delta.h svn_delta_editor_t > \$@
+
+modules :: $module_c_files
+$module_make_commands\t\$(NOECHO) \$(TOUCH) \$\@
+
+core.c :: ../core.i
+\t$swig_command -module SVN::_Core -o core.c ../core.i
+
+$swig_modules_command
+
+FULLPERLRUN=$fullperlrun \$(FULLPERL)
+
+EOPOST
+
 }
