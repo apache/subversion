@@ -85,8 +85,6 @@ parse_externals_description (apr_hash_t **externals_p,
     {
       const char *line = APR_ARRAY_IDX (lines, i, const char *);
       apr_array_header_t *line_parts;
-      const char *target_dir;
-      const char *url;
       struct external_item *item;
 
       if ((! line) || (line[0] == '#'))
@@ -95,23 +93,77 @@ parse_externals_description (apr_hash_t **externals_p,
       /* else proceed */
 
       line_parts = svn_cstring_split (line, " \t", TRUE, pool);
-      target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
-      url = APR_ARRAY_IDX (line_parts, 1, const char *);
+
       item = apr_palloc (pool, sizeof (*item));
-      
-      if (! url)
-        return svn_error_createf
-          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, 0, NULL, pool,
-           "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n",
-           "Invalid line: '%s'", parent_directory, line);
 
-      /* ### Eventually, parse revision numbers and even dates from
-         the description file. */
-      item->revision.kind = svn_client_revision_head;
-      item->target_dir = target_dir;
-      item->url = url;
+      if (line_parts->nelts < 2)
+        goto parse_error;
 
-      apr_hash_set (externals, target_dir, APR_HASH_KEY_STRING, item);
+      else if (line_parts->nelts == 2)
+        {
+          /* No "-r REV" given. */
+          item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
+          item->url = APR_ARRAY_IDX (line_parts, 1, const char *);
+          item->revision.kind = svn_client_revision_head;
+        }
+      else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
+        {
+          /* We're dealing with one of these two forms:
+           * 
+           *    TARGET_DIR  -rN  URL
+           *    TARGET_DIR  -r N  URL
+           * 
+           * Handle either way.
+           */
+
+          const char *r_part_1 = NULL, *r_part_2 = NULL;
+
+          item->target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
+          item->revision.kind = svn_client_revision_number;
+
+          if (line_parts->nelts == 3)
+            {
+              r_part_1 = APR_ARRAY_IDX (line_parts, 1, const char *);
+              item->url = APR_ARRAY_IDX (line_parts, 2, const char *);
+            }
+          else  /* nelts == 4 */
+            {
+              r_part_1 = APR_ARRAY_IDX (line_parts, 1, const char *);
+              r_part_2 = APR_ARRAY_IDX (line_parts, 2, const char *);
+              item->url = APR_ARRAY_IDX (line_parts, 3, const char *);
+            }
+
+          if (! r_part_1)
+            goto parse_error;
+
+          if (! r_part_2)  /* "-rN" */
+            {
+              if (strlen (r_part_1) < 3)
+                goto parse_error;
+              else
+                item->revision.value.number = SVN_STR_TO_REV (r_part_1 + 2);
+            }
+          else             /* "-r N" */
+            {
+              if (strlen (r_part_2) < 1)
+                goto parse_error;
+              else
+                item->revision.value.number = SVN_STR_TO_REV (r_part_2);
+            }
+        }
+      else    /* too many items on line */
+        goto parse_error;
+
+      if (0)
+        {
+        parse_error:
+          return svn_error_createf
+            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, 0, NULL, pool,
+             "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n",
+             "Invalid line: '%s'", parent_directory, line);
+        }
+
+      apr_hash_set (externals, item->target_dir, APR_HASH_KEY_STRING, item);
     }
 
   *externals_p = externals;

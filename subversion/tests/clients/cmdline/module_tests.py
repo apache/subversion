@@ -40,13 +40,13 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-     /A/B/     ==>  exdir_D   <schema>:///<other_repos>/A/D/G
-                    exdir_H   <schema>:///<other_repos>/A/D/H
+     /A/B/     ==>  exdir_D       <schema>:///<other_repos>/A/D/G
+                    exdir_H  -r1  <schema>:///<other_repos>/A/D/H
 
-     /A/D/     ==>  exdir_A     <schema>:///<other_repos>/A
-                    exdir_A/G   <schema>:///<other_repos>/A/D/G
-                    exdir_A/H   <schema>:///<other_repos>/A/D/H
-                    x/y/z/blah  <schema>:///<other_repos>/A/B/E
+     /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
+                    exdir_A/G        <schema>:///<other_repos>/A/D/G
+                    exdir_A/H  -r 1  <schema>:///<other_repos>/A/D/H
+                    x/y/z/blah       <schema>:///<other_repos>/A/B/E
 
   NOTE: Before calling this, use externals_test_cleanup(SBOX) to
   remove a previous incarnation of the other repository.
@@ -75,8 +75,8 @@ def externals_test_setup(sbox):
 
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
-           "exdir_D  " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-           "exdir_H  " + os.path.join(other_repo_url, "A/D/H") + "\n"
+           "exdir_D       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
+           "exdir_H  -r1  " + os.path.join(other_repo_url, "A/D/H") + "\n"
 
   tmp_f = os.tempnam(wc_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
@@ -90,10 +90,14 @@ def externals_test_setup(sbox):
   os.remove(tmp_f)
 
   externals_desc = \
-           "exdir_A     " + os.path.join(other_repo_url, "A") + "\n"     + \
-           "exdir_A/G   " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
-           "exdir_A/H   " + os.path.join(other_repo_url, "A/D/H") + "\n" + \
-           "x/y/z/blah  " + os.path.join(other_repo_url, "A/B/E") + "\n"
+           "exdir_A           " + os.path.join(other_repo_url, "A")     + \
+           "\n"                                                         + \
+           "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
+           "\n"                                                         + \
+           "exdir_A/H   -r 1  " + os.path.join(other_repo_url, "A/D/H") + \
+           "\n"                                                         + \
+           "x/y/z/blah        " + os.path.join(other_repo_url, "A/B/E") + \
+           "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
   stdout_lines, stderr_lines = svntest.main.run_svn \
