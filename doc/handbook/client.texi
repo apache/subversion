@@ -142,22 +142,22 @@ server sends changes to your working copy, a letter code is displayed
 next to each item:
 
 @table @b
-@item U  foo
+@item U  @file{foo}
 File @file{foo} was (U)pdated (received changes from the server.)
-@item A  foo
+@item A  @file{foo}
 File or directory @file{foo} was (A)dded to your working copy.
-@item D  foo
+@item D  @file{foo}
 File or directory @file{foo} was (D)eleted from your working copy.
-@item R  foo
+@item R  @file{foo}
 File or directory @file{foo} was (R)eplaced in your working copy;
 that is, @file{foo} was deleted, and a new item with the same name
 was added.  While they may have the same name, the repository
 considers them to be distinct objects with distinct histories.
-@item G  foo
+@item G  @file{foo}
 File @file{foo} received new changes, but also had changes of your own
 to begin with.  The changes did not intersect, however, so Subversion
 has mer(G)ed the repository's changes into the file without a problem.
-@item C  foo
+@item C  @file{foo}
 File @file{foo} received (C)onflicting changes from the server.  The
 changes from the server directly overlap your own changes to the file.
 No need to panic, though.  This overlap needs to be resolved by a
@@ -241,25 +241,92 @@ The @samp{svn status} command is your friend; become intimate with
 it.  You'll probably use @samp{svn status} more than any other
 command.
 
-If you run @samp{svn status} at the top of your working copy, with
-no arguments, it will detect all file and tree changes you've made:
+If you run @samp{svn status} at the top of your working copy with no
+arguments, it will detect all file and tree changes you've made.  This
+example is designed to show all the different status codes that
+@samp{svn status} can return.  The text in @samp{[]} is not printed by
+@samp{svn status}.
 
 @example
 $ svn status
-M      ./bar.c
-M      ./README
-D      ./stuff/fish.c
-A      ./stuff/things/bloo.h
+_ L    ./abc.c               [svn has a lock in its .svn directory for abc.c]
+M      ./bar.c               [the content in bar.c has local modifications]
+_M     ./baz.c               [baz.c has property but no content modifications]
+?      ./foo.o               [svn doesn't manage foo.o]
+!      ./foo.c               [svn knows foo.c but a non-svn program deleted it]
+A  +   ./moved_dir           [added with history of where it came from]
+M  +   ./moved_dir/README    [added with history and has local modifications]
+D      ./stuff/fish.c        [this file is scheduled for deletion]
+A      ./stuff/things/bloo.h [this file is scheduled for addition]
 @end example
 
-Here, the status command is saying that you have (M)odified two files,
-scheduled another for (A)ddition, and scheduled another for (D)eletion.
+In this output format @samp{svn status} prints four columns of
+characters followed by several whitespace characters followed by a file
+or directory name.  The first column tells the status of a file or
+directory and/or its contents.  The codes printed here are
+
+@table @b
+@item _      @file{file_or_dir}
+The file or directory has not been added or deleted, nor has
+@file{file_or_dir}'s contents been modified if it is a file.
+@item A      @file{file_or_dir}
+The file or directory @file{file_or_dir} has been scheduled for addition
+into the repository.
+@item M      @file{file}
+The contents of file @file{file} have been modified.
+@item D      @file{file_or_dir}
+The file or directory @file{file_or_dir} has been scheduled for deletion
+from the repository.
+@item ?      @file{file_or_dir}
+The file or directory @file{file_or_dir} indicates that this file or
+directory is not under revision control.  You can silence the question
+marks by either passing the @option{--quiet} (@option{-q}) option to
+@samp{svn status}, or by setting the @samp{svn:ignore} property on the
+parent directory, @xref{Properties}.
+@item !      @file{file_or_dir}
+The file or directory @file{file_or_dir} is under revision control but
+the working copy is missing.  This happens if the file or directory is
+removed using a non-Subversion command.  A quick @samp{svn up} or
+@samp{svn revert file_or_dir} will restore the missing file from its
+cached pristine copy.
+@end table
+
+The second column tells the status of a file's or directory's
+properties, @xref{Properties}.  If a @samp{M} appears in the second
+column, then the properties have been modified, otherwise a whitespace
+will be printed.  If only the properties of a file or directory are
+modified, then you will get @samp{_M} printed in the first and second
+columns.  The first @samp{_} is just printed to make it clear to the eye
+that the properties are modified and not the contents.
+
+The third column will only show whitespace or a @samp{L} which means
+that @command{svn} has locked item locked in the @file{.svn} working
+area.  You will see @samp{L} if you run @samp{svn status} in a directory
+you are currently running @samp{svn commit} when you are editing the log
+message.  If there are no running @command{svn}'s, then presumably
+@command{svn} was forcibly quit or died and the lock needs to be cleaned
+up by running @samp{svn cleanup}.  Locks typically appear if a
+Subversion command is interrupted before completion.
+
+The forth column will only show whitespace or a @samp{+} which means
+that the file or directory is scheduled to be added or modified with
+additional attached history.  This typically happens when you @samp{svn
+mv} or @samp{svn cp} a file or directory.  If you see @samp{A @ @ +},
+this means the item is scheduled for addition-with-history.  It could be
+a file, or the root of a copied directory.  @samp{_ @ @ +} means the
+item is part of a subtree scheduled for addition-with-history, i.e. some
+parent got copied, and it's just coming along for the ride.  @samp{M @ @
++} means the item is part of a subtree scheduled for
+addition-with-history, @emph{and} it has local mods.  When you commit,
+first some parent will be added-with-history (copied), which means this
+file will automatically exist in the copy.  Then the local mods will be
+further uploaded into the copy.
 
 If a single path is passed to the command, it will tell you about it:
 
 @example
 $ svn status stuff/fish.c
-D      ./stuff/fish.c
+D      stuff/fish.c
 @end example
 
 This command also has a @option{--verbose} (@option{-v}) mode, which will
@@ -301,23 +368,6 @@ point, you would receive changes to @file{README} and @file{trout.c}.
 Hmmm, better be careful.  You'll need to absorb those server-changes
 on @file{README} before you commit, lest the repository reject your
 commit for being out-of-date.  (More on this subject below.)
-
-We should also mention two other status codes that you might see:
-
-@example
-$ svn status
-?    ./foo.o
-!    ./foo.c
-@end example
-
-The @samp{?} indicates a file in the directory that is not under revision
-control.  You can silence the question marks by either passing the
-@option{--quiet} (@option{-q}) option to status, or by setting the
-@samp{svn:ignore} property on the parent directory
-(@xref{Properties}.   The @samp{!} indicates that the file is under
-revision control, but the working file is missing.  A quick
-@samp{svn up} or @samp{svn revert foo.c} will restore the
-missing file from its cached pristine copy.
 
 Another way to examine your changes is with the @samp{svn diff}
 command.  You can find out @emph{exactly} how you've modified things
