@@ -521,30 +521,37 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 34,
               "No user associated with filesystem")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_PATH_LOCKED,
               SVN_ERR_FS_CATEGORY_START + 35,
               "Path is locked")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_PATH_NOT_LOCKED,
               SVN_ERR_FS_CATEGORY_START + 36,
               "Path is not locked")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN,
               SVN_ERR_FS_CATEGORY_START + 37,
               "Lock token is incorrect")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
               SVN_ERR_FS_CATEGORY_START + 38,
               "Username does not match lock owner")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_LOCK,
               SVN_ERR_FS_CATEGORY_START + 39,
               "Filesystem has no such lock")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_LOCK_EXPIRED,
               SVN_ERR_FS_CATEGORY_START + 40,
               "Lock has expired")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_OUT_OF_DATE,
               SVN_ERR_FS_CATEGORY_START + 41,
               "Item is out of date")
@@ -589,6 +596,7 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 8,
               "Error running post-lock hook")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 9,
               "Error running post-unlock hook")
@@ -624,6 +632,7 @@ SVN_ERROR_START
               SVN_ERR_RA_CATEGORY_START + 6,
               "Unsupported RA plugin ABI version")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_RA_NOT_LOCKED,
               SVN_ERR_RA_CATEGORY_START + 7,
               "Path is not locked")
@@ -850,6 +859,7 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 12,
               "Two versioned resources are unrelated")
 
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN,
               SVN_ERR_CLIENT_CATEGORY_START + 13,
               "Path has no lock token")
