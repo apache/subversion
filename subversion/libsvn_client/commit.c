@@ -91,19 +91,11 @@ svn_client_commit (svn_string_t *path,
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "error opening %s", xml_dst->data);
 
-#if 0
   err = svn_delta_get_xml_editor (svn_io_file_writer,
                                   dst,
                                   &editor,
                                   &edit_baton,
                                   pool);
-#else 
-  err = svn_test_get_editor (&editor,
-                             &edit_baton,
-                             path,
-                             version,
-                             pool);
-#endif 
   if (err)
     return err;
 

@@ -142,6 +142,84 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 }
 
 
+static svn_error_t *
+remove_from_version_control (struct log_runner *loggy, svn_string_t *name)
+{
+  svn_error_t *err;
+  apr_hash_t *entries = NULL;
+  
+  /* Remove this entry from the entries file. */
+  err = svn_wc__entries_read (&entries, loggy->path, loggy->pool);
+  if (err)
+    return err;
+  svn_wc__entry_remove (entries, name);
+  err = svn_wc__entries_write (entries, loggy->path, loggy->pool);
+  if (err)
+    return err;
+  
+  /* Remove its text-base copy, if any, and conditionally remove
+     working file too. */
+  {
+    svn_string_t *file_full_path;
+    svn_string_t *text_base_path;
+    enum svn_node_kind kind;
+    
+    file_full_path = svn_string_dup (loggy->path, loggy->pool);
+    svn_path_add_component (file_full_path, name, svn_path_local_style);
+    text_base_path
+      = svn_wc__text_base_path (file_full_path, 0, loggy->pool);
+    err = svn_io_check_path (text_base_path, &kind, loggy->pool);
+    if (err && (err->apr_err == APR_ENOENT))
+      return SVN_NO_ERROR;
+    else if (err)
+      return err;
+    
+    /* Else we have a text-base copy, so use it. */
+
+    if (kind == svn_file_kind)
+      {
+        apr_status_t apr_err;
+        svn_boolean_t same;
+        
+        {
+          /* Aha!  There is a text-base file still around.  Use it
+             to check if the working file is modified; if wf is not
+             modified, we should remove it too. */
+          err = svn_wc__files_contents_same_p (&same,
+                                               file_full_path,
+                                               text_base_path,
+                                               loggy->pool);
+          if (err && (err->apr_err != APR_ENOENT))
+            return err;
+          else if (! err)
+            {
+              apr_err = apr_remove_file (file_full_path->data,
+                                         loggy->pool);
+              if (apr_err)
+                return svn_error_createf
+                  (apr_err, 0, NULL,
+                   loggy->pool,
+                   "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
+                   "error removing file %s",
+                   file_full_path->data);
+            }
+        }
+        
+        apr_err = apr_remove_file (text_base_path->data, loggy->pool);
+        if (apr_err)
+          return svn_error_createf
+            (apr_err, 0, NULL,
+             loggy->pool,
+             "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
+             "error removing file %s",
+             text_base_path->data);
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 static void
 start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
@@ -156,12 +234,13 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
       const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
 
       if (! name)
-        signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                                0,
-                                                NULL,
-                                                loggy->pool,
-                                                "missing name attr in %s",
-                                                loggy->path));
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing name attr in %s",
+                                     loggy->path));
       else
         /* Note that saved_mods is allowed to be null. */
         err = merge_text (loggy->path, name, saved_mods, loggy->pool);
@@ -169,14 +248,34 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   else if (strcmp (eltname, SVN_WC__LOG_REPLACE_TEXT_BASE) == 0)
     {
       if (! name)
-        signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                                0,
-                                                NULL,
-                                                loggy->pool,
-                                                "missing name attr in %s",
-                                                loggy->path));
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing name attr in %s",
+                                     loggy->path));
       else
         err = replace_text_base (loggy->path, name, loggy->pool);
+    }
+  else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0)
+    {
+      svn_string_t *sname; 
+
+      if (! name)
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing name attr in %s",
+                                     loggy->path));
+
+      sname = svn_string_create (name, loggy->pool);
+
+      err = remove_from_version_control (loggy, sname);
+      if (err)
+        return signal_error (loggy, err);
     }
   else if (strcmp (eltname, SVN_WC__LOG_SET_VERSION) == 0)
     {
@@ -184,19 +283,21 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_VERSION, atts);
       
       if (! name)
-        signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                                0,
-                                                NULL,
-                                                loggy->pool,
-                                                "missing name attr in %s",
-                                                loggy->path));
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing name attr in %s",
+                                     loggy->path));
       else if (! verstr)
-        signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                                0,
-                                                NULL,
-                                                loggy->pool,
-                                                "missing version attr for %s",
-                                                name));
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing version attr for %s",
+                                     name));
       else
         {
           apr_time_t timestamp = 0;
@@ -211,13 +312,13 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                             working_file,
                                             loggy->pool);
           if (err)
-            signal_error (loggy, svn_error_createf
-                          (SVN_ERR_WC_BAD_ADM_LOG,
-                           0,
-                           NULL,
-                           loggy->pool,
-                           "error discovering file affected time on %s",
-                           name));
+            return signal_error (loggy, svn_error_createf
+                                 (SVN_ERR_WC_BAD_ADM_LOG,
+                                  0,
+                                  NULL,
+                                  loggy->pool,
+                                  "error discovering file affected time on %s",
+                                  name));
           
           err = svn_wc__entry_merge_sync (loggy->path,
                                           sname,
@@ -228,13 +329,13 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                           loggy->pool,
                                           NULL);
           if (err)
-            signal_error (loggy, svn_error_createf 
-                          (SVN_ERR_WC_BAD_ADM_LOG,
-                           0,
-                           NULL,
-                           loggy->pool,
-                           "error merge_syncing entry %s",
-                           name));
+            return signal_error (loggy, svn_error_createf 
+                                 (SVN_ERR_WC_BAD_ADM_LOG,
+                                  0,
+                                  NULL,
+                                  loggy->pool,
+                                  "error merge_syncing entry %s",
+                                  name));
         }
     }
   else if (strcmp (eltname, SVN_WC__LOG_COMMITTED) == 0)
@@ -243,19 +344,21 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_VERSION, atts);
 
       if (! name)
-        signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                                0,
-                                                NULL,
-                                                loggy->pool,
-                                                "missing name attr in %s",
-                                                loggy->path));
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing name attr in %s",
+                                     loggy->path));
       else if (! verstr)
-        signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                                0,
-                                                NULL,
-                                                loggy->pool,
-                                                "missing version attr for %s",
-                                                name));
+        return signal_error
+          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                     0,
+                                     NULL,
+                                     loggy->pool,
+                                     "missing version attr for %s",
+                                     name));
       else
         {
           svn_string_t *working_file;
@@ -263,90 +366,109 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           apr_time_t timestamp = 0; /* By default, don't override old stamp. */
           enum svn_node_kind kind;
           svn_string_t *sname = svn_string_create (name, loggy->pool);
+          apr_hash_t *entries = NULL;
+          svn_wc__entry_t *entry;
 
-          working_file = svn_string_dup (loggy->path, loggy->pool);
-          svn_path_add_component (working_file,
-                                  sname,
-                                  svn_path_local_style);
-          tmp_base = svn_wc__text_base_path (working_file, 1, loggy->pool);
-          
-          err = svn_io_check_path (tmp_base, &kind, loggy->pool);
+          err = svn_wc__entries_read (&entries, loggy->path, loggy->pool);
           if (err)
-            signal_error (loggy, svn_error_createf
-                          (SVN_ERR_WC_BAD_ADM_LOG,
-                           0,
-                           NULL,
-                           loggy->pool,
-                           "error checking existence of %s",
-                           name));
+            return signal_error (loggy, err);
           
-          if (kind == svn_file_kind)
+          entry = apr_hash_get (entries, sname->data, sname->len);
+          if (entry && (entry->flags & SVN_WC__ENTRY_DELETE))
             {
-              svn_boolean_t same;
-              err = svn_wc__files_contents_same_p (&same,
-                                                   working_file,
-                                                   tmp_base,
-                                                   loggy->pool);
+              err = remove_from_version_control (loggy, sname);
               if (err)
-                signal_error (loggy, svn_error_createf 
-                              (SVN_ERR_WC_BAD_ADM_LOG,
-                               0,
-                               NULL,
-                               loggy->pool,
-                               "error comparing %s and %s",
-                               working_file->data, tmp_base->data));
-              
-              err = svn_wc__file_affected_time (&timestamp,
-                                                same ? working_file : tmp_base,
-                                                loggy->pool);
-              if (err)
-                signal_error (loggy, svn_error_createf 
-                              (SVN_ERR_WC_BAD_ADM_LOG,
-                               0,
-                               NULL,
-                               loggy->pool,
-                               "error getting file_affected_time on %s",
-                               same ? working_file->data : tmp_base->data));
-              
-              err = replace_text_base (loggy->path, name, loggy->pool);
-              if (err)
-                signal_error (loggy, svn_error_createf 
-                              (SVN_ERR_WC_BAD_ADM_LOG,
-                               0,
-                               NULL,
-                               loggy->pool,
-                               "error replacing text base for %s",
-                               name));
+                return signal_error (loggy, err);
             }
-          
-          /* Else the SVN/tmp/text-base/ file didn't exist.  Whatever; we
-             can ignore and move on. */
-          err = svn_wc__entry_merge_sync (loggy->path,
-                                          sname,
-                                          atoi (verstr),
-                                          svn_file_kind,
-                                          SVN_WC__ENTRY_CLEAR,
-                                          timestamp,
+          else   /* entry not being deleted, so mark commited-to-date */
+            {
+              working_file = svn_string_dup (loggy->path, loggy->pool);
+              svn_path_add_component (working_file,
+                                      sname,
+                                      svn_path_local_style);
+              tmp_base = svn_wc__text_base_path (working_file, 1, loggy->pool);
+              
+              err = svn_io_check_path (tmp_base, &kind, loggy->pool);
+              if (err)
+                return signal_error (loggy, svn_error_createf
+                                     (SVN_ERR_WC_BAD_ADM_LOG,
+                                      0,
+                                      NULL,
+                                      loggy->pool,
+                                      "error checking existence of %s",
+                                      name));
+              
+              if (kind == svn_file_kind)
+                {
+                  svn_boolean_t same;
+                  err = svn_wc__files_contents_same_p (&same,
+                                                       working_file,
+                                                       tmp_base,
+                                                       loggy->pool);
+                  if (err)
+                    return signal_error (loggy, svn_error_createf 
+                                         (SVN_ERR_WC_BAD_ADM_LOG,
+                                          0,
+                                          NULL,
                                           loggy->pool,
-                                          NULL);
-          if (err)
-            signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                                    0,
-                                                    NULL,
-                                                    loggy->pool,
-                                                    "error merge_syncing %s",
-                                                    name));
+                                          "error comparing %s and %s",
+                                          working_file->data, tmp_base->data));
+                  
+                  err = svn_wc__file_affected_time (&timestamp,
+                                                    same ? working_file : tmp_base,
+                                                    loggy->pool);
+                  if (err)
+                    return signal_error
+                      (loggy, svn_error_createf 
+                       (SVN_ERR_WC_BAD_ADM_LOG,
+                        0,
+                        NULL,
+                        loggy->pool,
+                        "error getting file_affected_time on %s",
+                        same ? working_file->data : tmp_base->data));
+                  
+                  err = replace_text_base (loggy->path, name, loggy->pool);
+                  if (err)
+                    return signal_error (loggy, svn_error_createf 
+                                         (SVN_ERR_WC_BAD_ADM_LOG,
+                                          0,
+                                          NULL,
+                                          loggy->pool,
+                                          "error replacing text base for %s",
+                                          name));
+                }
+              
+              /* Else the SVN/tmp/text-base/ file didn't exist.  Whatever; we
+                 can ignore and move on. */
+              err = svn_wc__entry_merge_sync (loggy->path,
+                                              sname,
+                                              atoi (verstr),
+                                              svn_file_kind,
+                                              SVN_WC__ENTRY_CLEAR,
+                                              timestamp,
+                                              loggy->pool,
+                                              NULL);
+              if (err)
+                return signal_error
+                  (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                             0,
+                                             NULL,
+                                             loggy->pool,
+                                             "error merge_syncing %s",
+                                             name));
+            }
         }
     }
   else if (strcmp (eltname, "wc-log") == 0)
     /* ignore the expat pacifier */ ;
   else
-    signal_error (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                            0,
-                                            NULL,
-                                            loggy->pool,
-                                            "unrecognized element in %s",
-                                            loggy->path));
+    return signal_error
+      (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                 0,
+                                 NULL,
+                                 loggy->pool,
+                                 "unrecognized element in %s",
+                                 loggy->path));
 
   if (err)
     svn_xml_signal_bailout (err, loggy->parser);

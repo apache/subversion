@@ -219,6 +219,25 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
 }
 
 
+/* Return true iff the youngest stack frame in the digger
+   represents the outermost </tree-delta> in the xml form. 
+   Although this function could do some minor validation, it does
+   not.  It answers one question and nothing more. */
+static svn_boolean_t
+outermost_tree_delta_close_p (svn_xml__digger_t *digger)
+{
+  if (! digger->stack)
+    return FALSE;
+  else if (! digger->stack->previous)
+    return FALSE;
+  else if ((digger->stack->tag == svn_delta__XML_treedelta)
+           && (digger->stack->previous->tag == svn_delta__XML_deltapkg))
+    return TRUE;
+  else
+    return FALSE;
+}
+
+
 /* A validation note.  
 
    The strategy for validating our XML stream is simple:
@@ -789,9 +808,9 @@ do_begin_propdelta (svn_xml__digger_t *digger)
 
   /* First, allocate a new propdelta object in our digger (if there's
      already one there, we lose the pointer to it, which is fine.) */
-  digger->current_propdelta = 
-    (svn_propdelta_t *) apr_pcalloc (digger->pool, 
-                                     sizeof(svn_propdelta_t));
+  digger->current_propdelta
+    = (svn_propdelta_t *) apr_pcalloc (digger->pool,
+                                       sizeof (*(digger->current_propdelta)));
 
   digger->current_propdelta->name  = svn_string_create ("", digger->pool);
   digger->current_propdelta->value = svn_string_create ("", digger->pool);
@@ -968,7 +987,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* -------- Create and fill in new stackframe ------------ */
 
   svn_xml__stackframe_t *new_frame
-    = apr_pcalloc (my_digger->pool, sizeof (svn_xml__stackframe_t));
+    = apr_pcalloc (my_digger->pool, sizeof (*new_frame));
 
   /* Initialize the ancestor version to a recognizably invalid value. */
   new_frame->ancestor_version = SVN_INVALID_VERNUM;
@@ -981,6 +1000,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       svn_xml_signal_bailout (err, my_digger->svn_parser);
       return;
     }
+
+  /* kff todo: wonder if we shouldn't use make_attr_hash here instead? */
 
   /* Set "name" field in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value ("name", atts);
@@ -1002,8 +1023,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (value)
     new_frame->ref_id = svn_string_create (value, my_digger->pool);
 
-  /* If this frame is a <delta-pkg>, it's the top-most frame and must
-     hold the "base" ancestry info */
+  /* If this frame is a <delta-pkg>, it's the top-most frame, which
+     holds the "base" ancestry info */
   if (new_frame->tag == svn_delta__XML_deltapkg)
     {
       new_frame->ancestor_path = my_digger->base_path;
@@ -1253,14 +1274,13 @@ xml_handle_end (void *userData, const char *name)
           svn_xml_signal_bailout (err, digger->svn_parser);
       }
 
-  /* EVENT: when we get a </tree-delta>, it might be the *final* one,
-     and therefore needs to have it's root_dir_baton closed. */
+  /* EVENT: is this the final </tree-delta>?  If so, we have to
+     close_directory(root_baton), because there won't be any </dir>
+     tag for the root of the change. */
   if (strcmp (name, "tree-delta") == 0)
     {
-      if (digger->stack->baton)
+      if (outermost_tree_delta_close_p (digger))
         {
-          /* This function sends (digger->stack->baton) as the "dir_baton"
-             argument to the editor's close_directory() callback */
           err = do_close_directory (digger);
           if (err)
             svn_xml_signal_bailout (err, digger->svn_parser);
@@ -1388,7 +1408,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   main_subpool = svn_pool_create (pool);
       
   /* Create a new digger structure and fill it out*/
-  digger = apr_pcalloc (main_subpool, sizeof (svn_xml__digger_t));
+  digger = apr_pcalloc (main_subpool, sizeof (*digger));
 
   digger->pool             = main_subpool;
   digger->stack            = NULL;
@@ -1415,7 +1435,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->svn_parser = svn_parser;
 
   /* Create a new subversion xml parser and put everything inside it. */
-  delta_parser = apr_pcalloc (main_subpool, sizeof (svn_delta_xml_parser_t));
+  delta_parser = apr_pcalloc (main_subpool, sizeof (*delta_parser));
   
   delta_parser->my_pool      = main_subpool;
   delta_parser->svn_parser   = svn_parser;

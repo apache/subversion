@@ -333,7 +333,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* Either we're done (window is NULL) or we had an error.  In either
      case, clean up the handler.  */
-  if (! fb->dir_baton->edit_baton->is_checkout)
+  if ((! fb->dir_baton->edit_baton->is_checkout) && hb->source)
     {
       err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
@@ -444,21 +444,58 @@ replace_root (void *edit_baton,
 static svn_error_t *
 delete (svn_string_t *name, void *parent_baton)
 {
+  svn_error_t *err;
   struct dir_baton *parent_dir_baton = parent_baton;
-  
-  /* kff todo: this is wrong.  It's not just a matter of removing the
-     entry, you actually have to remove the entity from disk too.  But
-     only if it's not locally modified.  If it is, remove the entry,
-     but leave the thing?  Hmmm. */
+  apr_status_t apr_err;
+  apr_file_t *log_fp = NULL;
+  svn_string_t *log_item = svn_string_create ("", parent_dir_baton->pool);
 
-  return svn_wc__entry_merge_sync (parent_dir_baton->path,
-                                   name,
-                                   SVN_INVALID_VERNUM,
-                                   svn_invalid_kind,
-                                   SVN_WC__ENTRY_DELETE,
-                                   0,
-                                   parent_dir_baton->pool,
-                                   NULL);
+  err = svn_wc__lock (parent_dir_baton->path, 0, parent_dir_baton->pool);
+  if (err)
+    return err;
+
+    err = svn_wc__open_adm_file (&log_fp,
+                                 parent_dir_baton->path,
+                                 SVN_WC__ADM_LOG,
+                                 (APR_WRITE | APR_CREATE), /* not excl */
+                                 parent_dir_baton->pool);
+    if (err)
+      return err;
+
+    svn_xml_make_open_tag (&log_item,
+                           parent_dir_baton->pool,
+                           svn_xml_self_closing,
+                           SVN_WC__LOG_DELETE_ENTRY,
+                           SVN_WC__LOG_ATTR_NAME,
+                           name,
+                           NULL);
+
+    apr_err = apr_full_write (log_fp, log_item->data, log_item->len, NULL);
+    if (apr_err)
+      {
+        apr_close (log_fp);
+        return svn_error_createf (apr_err, 0, NULL, parent_dir_baton->pool,
+                                  "delete error writing %s's log file",
+                                  parent_dir_baton->path->data);
+      }
+
+    err = svn_wc__close_adm_file (log_fp,
+                                  parent_dir_baton->path,
+                                  SVN_WC__ADM_LOG,
+                                  1, /* sync */
+                                  parent_dir_baton->pool);
+    if (err)
+      return err;
+    
+    err = svn_wc__run_log (parent_dir_baton->path, parent_dir_baton->pool);
+    if (err)
+      return err;
+
+    err = svn_wc__unlock (parent_dir_baton->path, parent_dir_baton->pool);
+    if (err)
+      return err;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -514,11 +551,19 @@ replace_directory (svn_string_t *name,
                    svn_vernum_t ancestor_version,
                    void **child_baton)
 {
-#if 0
   struct dir_baton *parent_dir_baton = parent_baton;
-#endif /* 0 */
 
-  /* kff todo */
+  /* kff todo: check that the dir exists locally, find it somewhere if
+     its not there?  Yes, all this and more...  And ancestor_path and
+     ancestor_version need to get used. */
+
+  struct dir_baton *this_dir_baton
+    = make_dir_baton (name,
+                      parent_dir_baton->edit_baton,
+                      parent_dir_baton,
+                      parent_dir_baton->pool);
+
+  *child_baton = this_dir_baton;
 
   return SVN_NO_ERROR;
 }
@@ -631,7 +676,7 @@ replace_file (svn_string_t *name,
               void **file_baton)
 {
   return add_or_replace_file
-    (name, parent_baton, ancestor_path, ancestor_version, file_baton, 1);
+    (name, parent_baton, ancestor_path, ancestor_version, file_baton, 0);
 }
 
 
@@ -649,14 +694,29 @@ apply_textdelta (void *file_baton,
   hb->source = NULL;
   if (! fb->dir_baton->edit_baton->is_checkout)
     {
+      /* 
+         kff todo: what we really need to do here is:
+         
+         1. See if there's a file or dir by this name already here.
+         2. See if it's under version control.
+         3. If both are true, open text-base.
+         4. If only 1 is true, bail, because we can't go destroying
+            user's files (or as an alternative to bailing, move it to
+            some tmp name and somehow tell the user, but communicating
+            with the user without erroring is a whole callback system
+            we haven't finished inventing yet.)
+      */
+
       err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
-      if (err)
+      if (err && (err->apr_err != APR_ENOENT))
         {
           if (hb->source)
             svn_wc__close_text_base (hb->source, fb->path, 0, subpool);
           apr_destroy_pool (subpool);
           return err;
         }
+      else if (err)
+        hb->source = NULL;  /* make sure */
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
