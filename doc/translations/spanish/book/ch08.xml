@@ -1180,26 +1180,28 @@ if __name__ == '__main__':
       </listitem>
     </itemizedlist>
 
-    <para>While there are several other bits of data stored in the
-      <filename>.svn</filename> directory, we will examine only a
-      couple of the most important items.</para>
+    <para>A pesar de que hay varios otros datos almacenados en
+      el directorio <filename>.svn</filename>, examinaremos sólo
+      un puñado de los elementos más importantes.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-3.1">
-      <title>The Entries File</title>
+      <title>El fichero de entradas</title>
 
-      <para>Perhaps the single most important file in the
-        <filename>.svn</filename> directory is the
-        <filename>entries</filename> file.  The entries file is an XML
-        document which contains the bulk of the administrative
-        information about a versioned resource in a working copy
-        directory.  It is this one file which tracks the repository
-        URLs, pristine revision, file checksums, pristine text and
-        property timestamps, scheduling and conflict state
-        information, last-known commit information (author, revision,
-        timestamp), local copy history&mdash;practically everything
-        that a Subversion client is interested in knowing about a
-        versioned (or to-be-versioned) resource!</para>
+      <para>Quizás el fichero más importante en el directorio
+        <filename>.svn</filename> es el fichero
+        <filename>entries</filename>.  El fichero de entradas es
+        un documento XML que contiene el grueso de la información
+        administrativa sobre un recurso versionado en el directorio
+        de la copia local de trabajo.  Es el fichero que lleva
+        la pista a las URLs de repositorio, revisiones prístinas,
+        sumas de control de ficheros, textos prístinos y fechas de
+        modificación de propiedades, información de planificación y
+        estado de conflicto, última información conocida de cambios
+        en el repositorio (autor, revisión, fecha de modificación),
+        historia de la copia local&mdash;¡prácticamente todo lo que
+        un cliente de Subversion puede estar interesado en saber
+        sobre un recurso versionado (o por versionar)!</para>
 
       <sidebar>
         <title>Comparing the Administrative Areas of Subversion and
