@@ -118,13 +118,9 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       apr_pool_t *pool);
 
 
-/* Copy SRC to DST.  DST will be overwritten if it exists, else it
-   will be created.  Both SRC and DST are utf8-encoded.  If COPY_PERMS
-   is true, set DST's file permissions to match those of SRC.
-
-   Copy the data atomically -- either all the data is copied, or DST's
-   contents are not touched.  But permissions may be copied
-   non-atomically, and may fail even if the data copying succeeds. */
+/* Copy SRC to DST atomically.  Overwrite DST if it exists, else
+   create it.  Both SRC and DST are utf8-encoded filenames.  If
+   COPY_PERMS is true, set DST's permissions to match those of SRC. */
 svn_error_t *svn_io_copy_file (const char *src,
                                const char *dst,
                                svn_boolean_t copy_perms,
