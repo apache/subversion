@@ -345,9 +345,9 @@ svn_fs_lock_dir (svn_fs_t *fs)
 const char *
 svn_fs_db_lockfile (svn_fs_t *fs)
 {
-  return apr_psprintf (fs->pool, "%s/%s",
-                       fs->lock_path,
-                       SVN_FS__REPOS_DB_LOCKFILE);
+  return apr_pstrcat (fs->pool,
+                      fs->lock_path, "/" SVN_FS__REPOS_DB_LOCKFILE,
+                      NULL);
 }
 
 
@@ -361,56 +361,52 @@ svn_fs_hook_dir (svn_fs_t *fs)
 const char *
 svn_fs_start_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_psprintf (fs->pool, "%s/%s",
-                       fs->hook_path,
-                       SVN_FS__REPOS_HOOK_START_COMMIT);
+  return apr_pstrcat (fs->pool,
+                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_START_COMMIT,
+                      NULL);
 }
 
 
 const char *
 svn_fs_pre_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_psprintf (fs->pool, "%s/%s",
-                       fs->hook_path,
-                       SVN_FS__REPOS_HOOK_PRE_COMMIT);
+  return apr_pstrcat (fs->pool,
+                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_PRE_COMMIT,
+                      NULL);
 }
 
 
 const char *
 svn_fs_post_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_psprintf (fs->pool, "%s/%s",
-                       fs->hook_path,
-                       SVN_FS__REPOS_HOOK_POST_COMMIT);
+  return apr_pstrcat (fs->pool,
+                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_POST_COMMIT,
+                      NULL);
 }
 
 
 const char *
 svn_fs_read_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_psprintf (fs->pool, "%s/%s",
-                       fs->hook_path,
-                       SVN_FS__REPOS_HOOK_READ_SENTINEL);
+  return apr_pstrcat (fs->pool,
+                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_READ_SENTINEL,
+                      NULL);
 }
 
 
 const char *
 svn_fs_write_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_psprintf (fs->pool, "%s/%s",
-                       fs->hook_path,
-                       SVN_FS__REPOS_HOOK_WRITE_SENTINEL);
+  return apr_pstrcat (fs->pool,
+                      fs->hook_path, "/" SVN_FS__REPOS_HOOK_WRITE_SENTINEL,
+                      NULL);
 }
 
 
 static svn_error_t *
 create_locks (svn_fs_t *fs, const char *path)
 {
-  apr_file_t *f = NULL;
-  apr_size_t written;
   apr_status_t apr_err;
-  const char *contents;
-  const char *lockfile_path;
 
   /* Create the locks directory. */
   fs->lock_path = apr_psprintf (fs->pool, "%s/%s",
@@ -421,29 +417,35 @@ create_locks (svn_fs_t *fs, const char *path)
                               "creating lock dir `%s'", fs->lock_path);
 
   /* Create the DB lockfile under that directory. */
-  lockfile_path = apr_psprintf (fs->pool, "%s", svn_fs_db_lockfile (fs));
-  
-  apr_err = apr_file_open (&f, lockfile_path,
-                           (APR_WRITE | APR_CREATE | APR_EXCL),
-                           APR_OS_DEFAULT,
-                           fs->pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                              "creating lock file `%s'", lockfile_path);
-  
-  /* ### todo: more explanation here. */
-  contents = "DB lock file.\n";
-  
-  apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                              "writing lock file `%s'", lockfile_path);
-  
-  apr_err = apr_file_close (f);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                              "closing lock file `%s'", lockfile_path);
-  
+  {
+    apr_file_t *f = NULL;
+    apr_size_t written;
+    const char *contents;
+    const char *lockfile_path;
+
+    lockfile_path = svn_fs_db_lockfile (fs);
+    apr_err = apr_file_open (&f, lockfile_path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             fs->pool);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "creating lock file `%s'", lockfile_path);
+    
+    /* ### todo: more explanation here. */
+    contents = "DB lock file.\n";
+    
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "writing lock file `%s'", lockfile_path);
+    
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "closing lock file `%s'", lockfile_path);
+  }
+
   return SVN_NO_ERROR;
 }
 
