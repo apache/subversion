@@ -330,7 +330,7 @@ def update_modified_with_translation(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   # rho has props
-  expected_status.tweak('A/D/G/rho', wc_rev=2, status='__')
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='  ')
 
   # Commit revision 2:  it has the new rho.
   if svntest.actions.run_and_verify_commit (wc_dir,
@@ -348,7 +348,7 @@ def update_modified_with_translation(sbox):
   # Commit revision 3 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/D/G/rho', wc_rev=3, status='__')
+  expected_status.tweak('A/D/G/rho', wc_rev=3, status='  ')
 
   if svntest.actions.run_and_verify_commit (wc_dir,
                                             expected_output,

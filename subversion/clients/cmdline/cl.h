@@ -220,16 +220,6 @@ svn_client_auth_baton_t *
 svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
                          apr_pool_t *pool);
 
-
-/* Fills in the first four characters of STR_STATUS with status code
-   characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED.*/
-void
-svn_cl__generate_status_codes (char *str_status,
-                               enum svn_wc_status_kind text_status,
-                               enum svn_wc_status_kind prop_status,
-                               svn_boolean_t locked,
-                               svn_boolean_t copied);
-
 
 /*** Notification functions to display results on the terminal. */
 

@@ -38,12 +38,12 @@ def get_standard_state(wc_dir):
 
   state = svntest.actions.get_virginal_state(wc_dir, 1)
 
-  state.tweak('', status='_M')
+  state.tweak('', status=' M')
   state.tweak('A/B/lambda', status='M ')
   state.tweak('A/B/E', 'A/D/H/chi', status='R ')
   state.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/C', 'A/D/gamma',
               'A/D/G/rho', status='D ')
-  state.tweak('A/D', 'A/D/G/pi', status='_M')
+  state.tweak('A/D', 'A/D/G/pi', status=' M')
   state.tweak('A/D/H/omega', status='MM')
 
   # New things
@@ -151,7 +151,7 @@ def commit_one_file(sbox):
   # Created expected status tree.
   expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak(repos_rev=2) # post-commit status
-  expected_status.tweak('A/D/H/omega', wc_rev=2, status='__')
+  expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
@@ -186,7 +186,7 @@ def commit_one_new_file(sbox):
   # Created expected status tree.
   expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak(repos_rev=2) # post-commit status
-  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='_ ')
+  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
@@ -223,7 +223,7 @@ def commit_one_new_binary_file(sbox):
   # Created expected status tree.
   expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.tweak(repos_rev=2) # post-commit status
-  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='_ ')
+  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
@@ -283,7 +283,7 @@ def commit_multiple_targets(sbox):
   expected_status.tweak('A/D/G/rho', 'A/D/H/omega', status='M ')
 
   # A/D/G should still have a local property set, too.
-  expected_status.tweak('A/D/G', status='_M')
+  expected_status.tweak('A/D/G', status=' M')
 
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 expected_output,
@@ -344,7 +344,7 @@ def commit_multiple_targets_2(sbox):
   expected_status.tweak('A/D/G/rho', status='M ')
 
   # A/D/G should still have a local property set, too.
-  expected_status.tweak('A/D/G', status='_M')
+  expected_status.tweak('A/D/G', status=' M')
 
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 expected_output,
@@ -393,8 +393,8 @@ def commit_inclusive_dir(sbox):
 
   expected_status.remove('A/D/G/rho', 'A/D/gamma')
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega',
-                        wc_rev=2, status='__')
-  expected_status.tweak('A/D/H/chi', 'A/D/H/gloo', wc_rev=2, status='_ ')
+                        wc_rev=2, status='  ')
+  expected_status.tweak('A/D/H/chi', 'A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
@@ -457,9 +457,9 @@ def commit_top_dir(sbox):
                          'A/B/E/alpha', 'A/B/E/beta')
   expected_status.tweak(repos_rev=2) # post-commit status
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega', 'Q/floo', '',
-                        wc_rev=2, status='__')
+                        wc_rev=2, status='  ')
   expected_status.tweak('A/D/H/chi', 'Q', 'A/B/E', 'A/B/E/bloo', 'A/B/lambda',
-                        'A/D/H/gloo', wc_rev=2, status='_ ')
+                        'A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
   return svntest.actions.run_and_verify_commit (wc_dir,
@@ -563,7 +563,7 @@ def nested_dir_replacements(sbox):
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D', 'A/D/H', wc_rev=2)
   expected_status.add({
-    'A/D/bloo' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/bloo' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
   expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                         'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma')
@@ -910,10 +910,10 @@ def merge_mixed_revisions(sbox):
 
   # 2. svn up A/D/H
   expected_status = svntest.wc.State(wc_dir, {
-    'A/D/H' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/H/chi' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/H/omega' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'A/D/H/psi' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'A/D/H' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/chi' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/omega' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/psi' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
   expected_disk = svntest.wc.State('', {
     'omega' : Item("This is the file 'omega'."),
@@ -1092,7 +1092,7 @@ def commit_uri_unsafe(sbox):
 
   # Items in our add list will be at rev 2
   for item in expected_output.desc.keys():
-    expected_status.add({ item : Item(wc_rev=2, repos_rev=2, status='_ ') })
+    expected_status.add({ item : Item(wc_rev=2, repos_rev=2, status='  ') })
 
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 expected_output,
@@ -1234,7 +1234,7 @@ def commit_add_file_twice(sbox):
     'A/D/H/gloo' : Item(status='A ', wc_rev=0),
     })
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='_ ')
+  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit should succeed
   if svntest.actions.run_and_verify_commit (wc_dir,
@@ -1388,7 +1388,7 @@ def commit_current_dir(sbox):
   # I can't get the status check to work as part of run_and_verify_commit.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(repos_rev=2)
-  expected_status.tweak('', wc_rev=2, status='__')
+  expected_status.tweak('', wc_rev=2, status='  ')
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
@@ -1443,7 +1443,7 @@ def failed_commit(sbox):
 test_list = [ None,
               commit_one_file,
               commit_one_new_file,
-              XFail(commit_one_new_binary_file),
+              commit_one_new_binary_file,
               commit_multiple_targets,
               commit_multiple_targets_2,
               commit_inclusive_dir,

@@ -605,7 +605,7 @@ def get_virginal_state(wc_dir, rev):
   state = main.greek_state.copy()
   state.wc_dir = wc_dir
   state.desc[''] = wc.StateItem()
-  state.tweak(contents=None, status='_ ', wc_rev=rev, repos_rev=rev)
+  state.tweak(contents=None, status='  ', wc_rev=rev, repos_rev=rev)
 
   return state
 

@@ -99,8 +99,8 @@ def status_update_with_nested_adds(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'newdir' : Item(status='_ ', wc_rev=2, repos_rev=2),
-    'newdir/newfile' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'newdir' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'newdir/newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   # Commit.

@@ -56,7 +56,7 @@ notify (void *baton,
         svn_revnum_t revision)
 {
   struct notify_baton *nb = baton;
-  char statchar_buf[3] = "_ ";
+  char statchar_buf[3] = "  ";
 
   /* the pool (BATON) is typically the global pool; don't keep filling it */
   apr_pool_t *subpool = svn_pool_create (nb->pool);
