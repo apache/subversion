@@ -175,6 +175,17 @@ svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_ra_svn_item_t **item);
 
+/** Scan data on @c conn until we find something which looks like the
+ * beginning of an svn server greeting.  As currently implemented,
+ * that just means looking for a '('; a more sophisticated
+ * implementation might look for '(' followed by whitespace followed
+ * by a digit.  This function is appropriate for beginning a client
+ * connection opened in tunnel mode, since people's dotfiles sometimes
+ * write output to stdout.
+ */
+svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                             apr_pool_t *pool);
+
 /** Parse an array of @c svn_item_t structures as a tuple, using a
  * printf-like interface.  The format string @a fmt may contain:
  *

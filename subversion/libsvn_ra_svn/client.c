@@ -418,6 +418,9 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
        * Also close the files when the pool is destroyed.  */
       apr_pool_cleanup_register(pool, proc->in, cleanup_file, cleanup_file);
       apr_pool_cleanup_register(pool, proc->out, cleanup_file, cleanup_file);
+
+      /* Guard against dotfile output to stdout on the server. */
+      svn_ra_svn_skip_leading_garbage(conn, pool);
     }
   else
     {
