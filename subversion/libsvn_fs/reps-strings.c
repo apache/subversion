@@ -59,7 +59,8 @@ make_fulltext_rep (const char *str_key,
   svn_fs__representation_t *rep = apr_palloc (pool, sizeof (*rep));
   rep->is_mutable = mutable;
   rep->kind = svn_fs__rep_kind_fulltext;
-  rep->contents.fulltext.string_key = apr_pstrdup (pool, str_key);
+  rep->contents.fulltext.string_key 
+    = str_key ? apr_pstrdup (pool, str_key) : NULL;
   return rep;
 }
 
@@ -68,28 +69,27 @@ make_fulltext_rep (const char *str_key,
    representation REP.  Allocate *KEYS in POOL. */
 static svn_error_t *
 delta_string_keys (apr_array_header_t **keys,
-                   svn_fs__representation_t *rep, 
+                   const svn_fs__representation_t *rep, 
                    apr_pool_t *pool)
 {
   const char *key;
   int i;
   apr_array_header_t *chunks;
 
-  if (! (rep->kind == svn_fs__rep_kind_delta))
+  if (rep->kind != svn_fs__rep_kind_delta)
     return svn_error_create 
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
        "delta_string_key: representation is not of type `delta'");
 
   /* Set up a convenience variable. */
   chunks = rep->contents.delta.chunks;
+
+  /* Initialize *KEYS to an empty array. */
+  *keys = apr_array_make (pool, chunks->nelts, sizeof (key));
   if (! chunks->nelts)
-    {
-      *keys = NULL;
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
   
   /* Now, push the string keys for each window into *KEYS */
-  *keys = apr_array_make (pool, chunks->nelts, sizeof (key));
   for (i = 0; i < chunks->nelts; i++)
     {
       svn_fs__rep_delta_chunk_t *chunk = 
@@ -1083,7 +1083,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
       if ((str_key == NULL) || (str_key[0] == '\0'))
         return SVN_NO_ERROR;
 
-      /* Else, clear it the string the rep has. */
+      /* Else, clear the string the rep has. */
       SVN_ERR (svn_fs__string_clear (fs, str_key, trail));
     }
   else if (rep->kind == svn_fs__rep_kind_delta)
@@ -1438,8 +1438,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
         /* Populate the window */
         chunk->string_key = ww->key;
         chunk->size = ww->text_len;
-        memcpy (&(chunk->checksum), digest, 
-                (MD5_DIGESTSIZE / sizeof (*digest)));
+        memcpy (&(chunk->checksum), digest, MD5_DIGESTSIZE);
         chunk->rep_key = source;
 
         /* Add this chunk to the array. */

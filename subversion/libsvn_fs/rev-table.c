@@ -77,7 +77,7 @@ svn_fs__get_rev (svn_fs__revision_t **revision_p,
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading filesystem revision", db_err));
 
-  /* Unparse REVISION skel.  */
+  /* Parse REVISION skel.  */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
   if (! skel)
     return svn_fs__err_corrupt_fs_revision (fs, rev);
@@ -97,7 +97,7 @@ svn_fs__get_rev (svn_fs__revision_t **revision_p,
 static svn_error_t *
 put_rev (svn_revnum_t *rev,
          svn_fs_t *fs,
-         svn_fs__revision_t *revision,
+         const svn_fs__revision_t *revision,
          trail_t *trail)
 {
   int db_err;
@@ -138,7 +138,7 @@ put_rev (svn_revnum_t *rev,
 svn_error_t *
 svn_fs__put_rev (svn_revnum_t *rev,
                  svn_fs_t *fs,
-                 svn_fs__revision_t *revision,
+                 const svn_fs__revision_t *revision,
                  trail_t *trail)
 {
   *rev = SVN_INVALID_REVNUM;
