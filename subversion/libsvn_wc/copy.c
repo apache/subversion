@@ -147,7 +147,7 @@ copy_file_administratively (const char *src_path,
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                               _("'%s' already exists and is in the way"),
-                              dst_path);
+                              svn_path_local_style (dst_path, pool));
 
   /* Even if DST_PATH doesn't exist it may still be a versioned file; it
      may be scheduled for deletion, or the user may simply have removed the
@@ -160,11 +160,11 @@ copy_file_administratively (const char *src_path,
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("'%s' is scheduled for deletion; it must"
                                     " be committed before being overwritten"),
-                                  dst_path);
+                                  svn_path_local_style (dst_path, pool));
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("There is already a versioned item '%s'"),
-                                  dst_path);
+                                  svn_path_local_style (dst_path, pool));
     }
 
   /* Sanity check:  you cannot make a copy of something that's not
@@ -175,7 +175,7 @@ copy_file_administratively (const char *src_path,
     return svn_error_createf 
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
        _("Cannot copy or move '%s': it's not under version control"),
-       src_path);
+       svn_path_local_style (src_path, pool));
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url)
       || (src_entry->copied))
@@ -183,7 +183,7 @@ copy_file_administratively (const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it's not in the repository yet; "
          "try committing first"),
-       src_path);
+       svn_path_local_style (src_path, pool));
 
   /* Now, make an actual copy of the working file.  If this is a
      special file, we can't copy it directly, but should instead
@@ -383,7 +383,8 @@ copy_dir_administratively (const char *src_path,
   if (! src_entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-       _("'%s' is not under version control"), src_path);
+       _("'%s' is not under version control"),
+       svn_path_local_style (src_path, pool));
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url)
       || (src_entry->copied))
@@ -391,7 +392,7 @@ copy_dir_administratively (const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
-       src_path);
+       svn_path_local_style (src_path, pool));
 
   /* Recursively copy the whole directory over.  This gets us all
      text-base, props, base-props, as well as entries, local mods,
@@ -465,7 +466,7 @@ svn_wc_copy (const char *src_path,
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
-       svn_wc_adm_access_path (dst_parent));
+       svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
   SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, src_path, FALSE, -1,
                                    pool));
