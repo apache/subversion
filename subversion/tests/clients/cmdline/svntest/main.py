@@ -211,9 +211,6 @@ def _run_command(command, error_expected, *varargs):
 
   start = time.time()
   infile, outfile, errfile = os.popen3(command + args)
-  stop = time.time()
-  if not quiet_mode:
-    print '<TIME = %.6f>' % (stop - start)
 
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
@@ -221,6 +218,10 @@ def _run_command(command, error_expected, *varargs):
   outfile.close()
   infile.close()
   errfile.close()
+
+  if not quiet_mode:
+    stop = time.time()
+    print '<TIME = %.6f>' % (stop - start)
 
   if (not error_expected) and (stderr_lines):
     map(sys.stdout.write, stderr_lines)
