@@ -41,9 +41,10 @@ remove_admin_dirs (const char *dir, apr_pool_t *pool)
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *dirents = apr_hash_make (subpool);
   const enum svn_node_kind *type;
-  const void *key, *val;
   apr_hash_index_t *hi;
   const char *item;
+  const void *key;
+  void *val;
 
   SVN_ERR (svn_io_get_dirents (&dirents, dir, subpool));
 
@@ -82,11 +83,12 @@ copy_versioned_files (const char *from,
   apr_hash_t *dirents = apr_hash_make (subpool);
   const enum svn_node_kind *type;
   svn_wc_entry_t *entry;
-  const void *key, *val;
   apr_hash_index_t *hi;
   apr_status_t apr_err;
   svn_error_t *err;
   const char *item;
+  const void *key;
+  void *val;
 
   err = svn_wc_entry (&entry, from, FALSE, subpool);
 
