@@ -596,6 +596,21 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 }
 
 
+/*  Given a PATH within a working copy of type KIND, follow this algorithm:
+
+      - if PATH is not under version control:
+         - Place it under version control and schedule for addition,
+           possibly adding 'copyfrom' history if ANCESTOR_PATH is non-null.
+
+      - if PATH is already under version control:
+            (This can only happen when a directory is copied, in which
+             case ANCESTOR_PATH must have been supplied as well.)
+
+         -  Schedule the directory itself for addition with copyfrom history.
+         -  Mark all its children with a 'copied' flag
+         -  Rewrite all the URLs to what they will be after a commit.
+         -  ### TODO:  remove old wcprops too, see the '###'below
+*/
 static svn_error_t *
 add_to_revision_control (svn_stringbuf_t *path,
                          enum svn_node_kind kind,
@@ -772,6 +787,8 @@ add_to_revision_control (svn_stringbuf_t *path,
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,
                               svn_wc_schedule_normal, svn_wc_existence_normal,
                               TRUE, pool));
+
+          /* ### karl:  call recursively_remove_all_wcprops() here. */
         }
     }
   
