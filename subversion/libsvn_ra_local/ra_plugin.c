@@ -310,6 +310,7 @@ do_update (void *session_baton,
   /* Build a reporter baton. */
   return svn_repos_begin_report (report_baton,
                                  revnum_to_update_to,
+                                 sbaton->username,
                                  sbaton->fs, sbaton->fs_path,
                                  update_editor, update_baton,
                                  sbaton->pool);

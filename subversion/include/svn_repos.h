@@ -87,12 +87,15 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
    working copy revision state. When the collection of state is completed,
    then the UPDATE_EDITOR will be driven to describe how to change the
    working copy into revision REVNUM of filesystem FS. The description of
-   the working copy state will be relative to FS_BASE in the filesystem.
+   the working copy state will be relative to FS_BASE in the
+   filesystem.  USERNAME will be recorded as the creator of the
+   temporary fs txn.
 
    All allocation for the context and collected state will occur in POOL. */
 svn_error_t *
 svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
+                        const char *username,
                         svn_fs_t *fs,
                         svn_stringbuf_t *fs_base,
                         const svn_delta_edit_fns_t *update_editor,
@@ -201,6 +204,8 @@ svn_repos_dated_revision (svn_revnum_t *revision,
      * fetch the last revision where <path> was modified
      
 */
+
+/* ---------------------------------------------------------------*/
 
 /*** Hook-sensitive wrappers for libsvn_fs routines. ***/
 
@@ -229,6 +234,21 @@ svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                                 const char *author,
                                                 svn_string_t *log_msg,
                                                 apr_pool_t *pool);
+
+
+/* Like svn_fs_begin_txn(), but use AUTHOR to set the corresponding
+ * property on transaction *TXN_P.  FS, REV, *TXN_P, and POOL are as
+ * in svn_fs_begin_txn().
+ *
+ * ### Someday: before a txn is created, some kind of read-hook could
+ *              be called here. */
+svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
+                                                svn_fs_t *fs,
+                                                svn_revnum_t rev,
+                                                const char *author,
+                                                apr_pool_t *pool);
+
+
 
 
 #endif /* SVN_REPOS_H */
