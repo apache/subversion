@@ -254,16 +254,25 @@ and parse it appropriately.  A representation has the form:
 
 where HEADER is
 
-   (KIND FLAG ...)
+   (KIND TXN)
 
-The KIND is "fulltext" or "delta", and currently the only FLAG is
-"mutable".  KIND-SPECIFIC varies considerably depending on the kind of
+The KIND is "fulltext" or "delta", and TXN is the txn ID for the txn
+in which this representation was created.  The TXN therefore serves as
+a kind of mutability flag: if a txn T goes to change a representation,
+but the rep's TXN is not T, then something has gone horribly wrong and
+T should leave the rep alone (and probably error).  Of course, "change
+a representation" here means changing what the rep's consumer sees.
+Switching a representation's storage strategy, for example from
+fulltext to deltified, wouldn't count as a change, since it wouldn't
+affect what the rep produces.
+
+KIND-SPECIFIC varies considerably depending on the kind of
 representation.  Here are the two forms currently recognized:
 
-   (("fulltext" ...) KEY)
+   (("fulltext" TXN) KEY)
        The data is at KEY in the `strings' table.
 
-   (("delta" ...) (OFFSET WINDOW) ...)
+   (("delta" TXN) (OFFSET WINDOW) ...)
        Each OFFSET indicates the point in the fulltext that this
        element reconstructs, and WINDOW says how to reconstruct it:
 
