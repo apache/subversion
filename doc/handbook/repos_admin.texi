@@ -1,0 +1,62 @@
+@node Repository Administration
+@chapter Repository Administration
+
+How to administer a Subversion repository.  
+
+In this section, we'll mainly focus on how to use the
+@command{svnadmin} and @{svnlook} programs to work with repositories.
+
+@menu
+* Creating a repository::
+* Examining with svnlook::
+* Hook scripts::
+* Repository maintenance::
+* Tweaking a repository::
+* Networking a repository::
+* Migrating a repository::
+@end menu
+
+
+@c ------------------------------------------------------------------
+@node Creating a repository
+@section Creating a repository
+
+Creating a repository is incredibly simple:
+
+@example
+$ svnadmin create myrepos
+@end example
+
+This creates a new repository in a subdirectory @file{myrepos}.
+
+A new repository always begins life at revision 0, which is defined to
+be nothing but the root (@file{/}) directory.
+
+As mentioned in an earlier section (### xref?), repository revisions
+can have unversioned properties attached to them.  In particular,
+every revision is created with a @code{svn:date} timestamp property.
+(Other common properties include @code{svn:author} and @code{svn:log})
+
+For a newly created repository, revision 0 has nothing but a
+@code{svn:date} property attached.
+
+Here is a quick run-down of the anatomy of a repository:
+
+### SOMEBODY DO THIS
+
+@example
+$ ls myrepos
+conf/
+dav/
+db/
+hooks/
+locks/
+@end example
+
+@c ------------------------------------------------------------------
+@node Examining with svnlook
+@section Examining with svnlook
+
+
+
+

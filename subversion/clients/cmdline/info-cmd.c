@@ -26,26 +26,18 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "cl.h"
 
 
 /*** Code. ***/
 
 static void
-svn_cl__info_print_time (apr_time_t atime, const char * desc)
+svn_cl__info_print_time (apr_time_t atime,
+                         const char *desc,
+                         apr_pool_t *pool)
 {
-  apr_time_exp_t extime;
-  apr_status_t apr_err;
-
-  /* if this returns an error, just don't print anything out */
-  apr_err = apr_time_exp_tz (&extime, atime, 0);
-  if (! apr_err)
-    printf ("%s: %04lu-%02lu-%02lu %02lu:%02lu GMT\n", desc,
-            (unsigned long)(extime.tm_year + 1900),
-            (unsigned long)(extime.tm_mon + 1),
-            (unsigned long)(extime.tm_mday),
-            (unsigned long)(extime.tm_hour),
-            (unsigned long)(extime.tm_min));
+  printf ("%s: %s\n", desc, svn_time_to_human_nts (atime,pool));
 }
 
 svn_error_t *
@@ -161,13 +153,14 @@ svn_cl__info (apr_getopt_t *os,
         printf ("Last Changed Rev: %" SVN_REVNUM_T_FMT "\n", entry->cmt_rev);
 
       if (entry->cmt_date)
-        svn_cl__info_print_time (entry->cmt_date, "Last Changed Date");
+        svn_cl__info_print_time (entry->cmt_date, "Last Changed Date", pool);
 
       if (entry->text_time)
-        svn_cl__info_print_time (entry->text_time, "Text Last Updated");
+        svn_cl__info_print_time (entry->text_time, "Text Last Updated", pool);
 
       if (entry->prop_time)
-        svn_cl__info_print_time (entry->prop_time, "Properties Last Updated");
+        svn_cl__info_print_time (entry->prop_time, "Properties Last Updated",
+                                 pool);
 
       if (entry->checksum)
         printf ("Checksum: %s\n", entry->checksum);

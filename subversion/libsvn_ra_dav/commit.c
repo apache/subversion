@@ -746,6 +746,7 @@ static svn_error_t * commit_add_dir(const char *path,
          header given to COPY is simply the wr_url that is already
          part of the child object. */
       copy_src = svn_path_join(bc_url.data, bc_relative.data, dir_pool);
+      copy_src = svn_path_uri_encode(copy_src, dir_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
@@ -933,6 +934,7 @@ static svn_error_t * commit_add_file(const char *path,
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
       copy_src = svn_path_join(bc_url.data, bc_relative.data, file_pool);
+      copy_src = svn_path_uri_encode(copy_src, file_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,

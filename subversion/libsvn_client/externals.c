@@ -159,7 +159,7 @@ parse_externals_description (apr_hash_t **externals_p,
         parse_error:
           return svn_error_createf
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, 0, NULL, pool,
-             "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n",
+             "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
              "Invalid line: '%s'", parent_directory, line);
         }
 
@@ -237,7 +237,6 @@ relegate_external (const char *path, apr_pool_t *pool)
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
-      apr_status_t apr_err;
       apr_file_t *f;
       const char *new_path;
 
@@ -264,13 +263,10 @@ relegate_external (const char *path, apr_pool_t *pool)
          in the meantime -- which would never happen in real life, so
          no big deal.
       */
-      apr_file_remove (new_path, pool);  /* toss error */
+      svn_io_remove_file (new_path, pool);  /* toss error */
 
       /* Rename. */
-      apr_err = apr_file_rename (path, new_path, pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "error renaming %s to %s", path, new_path);
+      SVN_ERR (svn_io_file_rename (path, new_path, pool));
     }
   else if (err)
     return err;

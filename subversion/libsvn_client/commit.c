@@ -63,10 +63,7 @@ send_file_contents (const char *path,
   apr_status_t apr_err;
 
   /* Get an apr file for PATH. */
-  apr_err = apr_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool, 
-                              "error opening `%s' for reading", path);
+  SVN_ERR (svn_io_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool));
   
   /* Get a readable stream of the file's contents. */
   contents = svn_stream_from_aprfile (f, pool);
@@ -174,14 +171,14 @@ import_dir (apr_hash_t *files,
   apr_finfo_t finfo;
   apr_status_t apr_err;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
+  svn_error_t *err;
 
-  if ((apr_err = apr_dir_open (&dir, path, pool)))
-    return svn_error_createf (apr_err, 0, NULL, pool, 
-                              "unable to open directory %s", path);
+  SVN_ERR (svn_io_dir_open (&dir, path, pool));
 
-  for (apr_err = apr_dir_read (&finfo, flags, dir);
-       apr_err == APR_SUCCESS;
-       svn_pool_clear (subpool), apr_err = apr_dir_read (&finfo, flags, dir))
+  for (err = svn_io_dir_read (&finfo, flags, dir, pool);
+       err == SVN_NO_ERROR;
+       svn_pool_clear (subpool),
+         err = svn_io_dir_read (&finfo, flags, dir, pool))
     {
       const char *this_path, *this_edit_path;
 
@@ -264,9 +261,10 @@ import_dir (apr_hash_t *files,
     }
 
   /* Check that the loop exited cleanly. */
-  if (! (APR_STATUS_IS_ENOENT (apr_err)))
+  if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
     return svn_error_createf
-      (apr_err, 0, NULL, subpool, "error during import of `%s'", path);
+      (err->apr_err, err->src_err, err, subpool,
+       "error during import of `%s'", path);
 
   /* Yes, it exited cleanly, so close the dir. */
   else if ((apr_err = apr_dir_close (dir)))
@@ -449,13 +447,10 @@ get_xml_editor (apr_file_t **xml_hnd,
                 const char *xml_file,
                 apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-
   /* Open the xml file for writing. */
-  if ((apr_err = apr_file_open (xml_hnd, xml_file, (APR_WRITE | APR_CREATE),
-                                APR_OS_DEFAULT, pool)))
-    return svn_error_createf (apr_err, 0, NULL, pool, 
-                              "error opening %s", xml_file);
+  SVN_ERR (svn_io_file_open (xml_hnd, xml_file,
+                             (APR_WRITE | APR_CREATE),
+                             APR_OS_DEFAULT, pool));
   
   /* ... we need an XML commit editor. */
   return svn_delta_get_xml_editor (svn_stream_from_aprfile (*xml_hnd, pool), 
@@ -884,8 +879,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     }
 
   /* Determine prefix to strip from the commit notify messages */
-  /* ### this cast is a kluge */
-  if ((cmt_err = svn_path_get_absolute ((char **) &display_dir,
+  if ((cmt_err = svn_path_get_absolute (&display_dir,
                                         display_dir, pool)))
     goto cleanup;
   display_dir = svn_path_get_longest_ancestor (display_dir, base_dir, pool);

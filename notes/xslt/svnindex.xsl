@@ -7,7 +7,7 @@
 
   <xsl:template match="svn">
     <html>
-      <header>
+      <head>
         <title>
           <xsl:if test="string-length(index/@name) != 0">
             <xsl:value-of select="index/@name"/>
@@ -16,7 +16,7 @@
           <xsl:value-of select="index/@path"/>
         </title>
         <link rel="stylesheet" type="text/css" href="/svnindex.css"/>
-      </header>
+      </head>
       <body>
         <div id="svn">
           <xsl:apply-templates/>
@@ -59,10 +59,12 @@
 
   <xsl:template match="updir">
     <div id="updir">
+      <xsl:text>[</xsl:text>
       <xsl:element name="a">
         <xsl:attribute name="href">..</xsl:attribute>
-        <xsl:text>[Parent Directory]</xsl:text>
+        <xsl:text>Parent Directory</xsl:text>
       </xsl:element>
+      <xsl:text>]</xsl:text>
     </div>
     <!-- xsl:apply-templates/ -->
   </xsl:template>
@@ -71,9 +73,10 @@
     <div id="dir">
       <xsl:element name="a">
         <xsl:attribute name="href">
-          <xsl:value-of select="@name"/>
+          <xsl:value-of select="@href"/>
         </xsl:attribute>
         <xsl:value-of select="@name"/>
+        <xsl:text>/</xsl:text>
       </xsl:element>
     </div>
     <!-- <xsl:apply-templates/ -->
@@ -83,7 +86,7 @@
     <div id="file">
       <xsl:element name="a">
         <xsl:attribute name="href">
-          <xsl:value-of select="@name"/>
+          <xsl:value-of select="@href"/>
         </xsl:attribute>
         <xsl:value-of select="@name"/>
       </xsl:element>

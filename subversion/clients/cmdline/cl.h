@@ -266,23 +266,6 @@ void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 void svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 
-/* Returns an editor that prints out events in an update or checkout.
-   The IS_CHECKOUT boolean tells the editor what kind of final
-   revision line to print;  the SUPPRESS_FINAL_LINE flag indicates
-   whether to print the final revision line at all. 
-
-   ### OBSOLETE, please do not use.  Left only for merge-cmd.c, until
-   ### svn_client_merge() changes to the new notification system.
-*/
-svn_error_t *
-svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
-                                 void **edit_baton,
-                                 const char *initial_path,
-                                 svn_boolean_t is_checkout,
-                                 svn_boolean_t suppress_final_line,
-                                 apr_pool_t *pool);
-
-
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
    directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,

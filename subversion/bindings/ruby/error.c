@@ -109,6 +109,7 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_UNSUPPORTED_FEATURE, "UnsupportedFeature");
   define_error (SVN_ERR_UNKNOWN_NODE_KIND, "UnknownNodeKind");
   define_error (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, "DeltaMd5ChecksumAbsent");
+  define_error (SVN_ERR_DIR_NOT_EMPTY, "DirNotEmpty");
   define_error (SVN_ERR_XML_ATTRIB_NOT_FOUND, "XmlAttribNotFound");
   define_error (SVN_ERR_XML_MISSING_ANCESTRY, "XmlMissingAncestry");
   define_error (SVN_ERR_XML_UNKNOWN_ENCODING, "XmlUnknownEncoding");
@@ -154,7 +155,6 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, "FsNotSinglePathComponent");
   define_error (SVN_ERR_FS_NOT_MUTABLE, "FsNotMutable");
   define_error (SVN_ERR_FS_ALREADY_EXISTS, "FsAlreadyExists");
-  define_error (SVN_ERR_FS_DIR_NOT_EMPTY, "FsDirNotEmpty");
   define_error (SVN_ERR_FS_ROOT_DIR, "FsRootDir");
   define_error (SVN_ERR_FS_NOT_TXN_ROOT, "FsNotTxnRoot");
   define_error (SVN_ERR_FS_NOT_REVISION_ROOT, "FsNotRevisionRoot");

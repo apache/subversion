@@ -188,7 +188,7 @@ char *svn_path_get_longest_ancestor (const char *path1,
 /* Convert RELATIVE path to an absolute path and return the results in
    *PABSOLUTE, allocated in POOL. */
 svn_error_t *
-svn_path_get_absolute (char **pabsolute,
+svn_path_get_absolute (const char **pabsolute,
                        const char *relative,
                        apr_pool_t *pool);
 

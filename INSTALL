@@ -139,7 +139,7 @@ I.    BUILD REQUIREMENTS
       Build.
 
 
-      5.  Neon library 0.21.2
+      5.  Neon library 0.21.3
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet. Although in theory you could have
@@ -151,10 +151,10 @@ I.    BUILD REQUIREMENTS
       want Subversion to build it. The source code is included with the
       latest Subversion tarball, and it can also be obtained from:
 
-          http://www.webdav.org/neon/neon-0.21.2.tar.gz
+          http://www.webdav.org/neon/neon-0.21.3.tar.gz
 
       Unpack the archive using tar/gunzip and rename the resulting
-      directory from "./neon-0.21.2/" to "./neon/".
+      directory from "./neon-0.21.3/" to "./neon/".
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
@@ -367,7 +367,7 @@ II.   INSTALLATION
           apache*.i386.rpm (Version 2.0.36 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
-          neon             (Version 0.21.2)
+          neon             (Version 0.21.3)
 
       After downloading, install it (as root user):
 
@@ -539,10 +539,12 @@ II.   INSTALLATION
       There is some support for building Subversion on Win32 platforms.
       The project files included in the source tree are from Microsoft
       Visual C++ 6.x; earlier versions of the compiler are not
-      supported at this time.
+      supported at this time.  You'll also need a fairly recent version
+      of the Microsoft Platform SDK; the header files that come with
+      MSVC 6.x are too old.
 
       To build the client components, you'll need a copy of neon
-      0.21.2.  See section I.5 for details on where to get one and
+      0.21.3.  See section I.5 for details on where to get one and
       what to do with it when you get it.
 
       [NOTE: The neon library supports secure connections with OpenSSL
@@ -554,6 +556,11 @@ II.   INSTALLATION
           to point to the appropriate directories.
 
           See Section I.11 for more details.
+
+      If you are installing under Win9x, NT4, or WinME, and svn.exe
+      doesn't run, try installing shfolder.dll from here:
+
+      http://download.microsoft.com/download/platformsdk/Redist/5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
 
       If you want to build the (local) server components, you'll also
       need a copy of Berkeley DB, version 4.0.14 or newer.  Details are
@@ -592,7 +599,6 @@ II.   INSTALLATION
 
       [NOTE: There have been rumours that Subversion on Win32 can be built
           using the latest cygwin. ymmv.]
-
 
 
 III.  BUILDING A SUBVERSION SERVER

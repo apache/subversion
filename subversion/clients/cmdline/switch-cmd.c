@@ -43,8 +43,6 @@ svn_cl__switch (apr_getopt_t *os,
   const char *target = NULL, *switch_url = NULL;
   svn_wc_entry_t *entry;
   svn_client_auth_baton_t *auth_baton;
-  const svn_delta_editor_t *trace_editor;
-  void *trace_edit_baton;
   const char *parent_dir, *base_tgt;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
@@ -88,13 +86,6 @@ svn_cl__switch (apr_getopt_t *os,
     SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &base_tgt, pool));
   else if (entry->kind == svn_node_dir)
     parent_dir = target;
-
-  SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
-                                            &trace_edit_baton,
-                                            parent_dir,
-                                            FALSE, /* is checkout */
-                                            FALSE,
-                                            pool));
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);

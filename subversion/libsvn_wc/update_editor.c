@@ -514,7 +514,7 @@ open_root (void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
 
-  *dir_baton = d = make_dir_baton (NULL, eb, NULL, FALSE, pool);
+  *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->is_checkout, pool);
   if (eb->is_checkout)
     SVN_ERR (prep_directory (d->path, eb->ancestor_url, eb->target_revision,
                              TRUE, pool));
@@ -730,7 +730,7 @@ change_dir_prop (void *dir_baton,
         }
       else if ((! strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE)) && value)
         {
-          entry.cmt_date = svn_time_from_nts (value->data);
+          SVN_ERR (svn_time_from_nts (&entry.cmt_date, value->data, pool));
           modify_flags = SVN_WC__ENTRY_MODIFY_CMT_DATE;
         }
       else if ((! strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR)) && value)
@@ -784,7 +784,7 @@ static svn_error_t *
 close_directory (void *dir_baton)
 {
   struct dir_baton *db = dir_baton;
-  svn_boolean_t props_merged;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_hash_t *prop_conflicts;
 
   /* If this directory has property changes stored up, now is the time
@@ -859,7 +859,7 @@ close_directory (void *dir_baton)
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
-      SVN_ERR_W (svn_wc__merge_prop_diffs (&props_merged, &prop_conflicts,
+      SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state, &prop_conflicts,
                                            db->path, NULL,
                                            db->propchanges, db->pool,
                                            &entry_accum),
@@ -937,28 +937,14 @@ close_directory (void *dir_baton)
      if it's an added directory, because notification has already
      happened in that case. */
   if ((! db->added) && (db->edit_baton->notify_func))
-    {
-      svn_wc_notify_state_t prop_state = svn_wc_notify_state_unchanged;
-      
-      if (db->prop_changed)
-        {
-          if (apr_hash_count (prop_conflicts))
-            prop_state = svn_wc_notify_state_conflicted;
-          else if (props_merged)
-            prop_state = svn_wc_notify_state_merged;
-          else
-            prop_state = svn_wc_notify_state_modified;
-        }
-      
-      (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                      db->path,
-                                      svn_wc_notify_update_update,
-                                      svn_node_dir,
-                                      NULL,
-                                      svn_wc_notify_state_unknown,
-                                      prop_state,
-                                      SVN_INVALID_REVNUM);
-    }
+    (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
+                                    db->path,
+                                    svn_wc_notify_update_update,
+                                    svn_node_dir,
+                                    NULL,
+                                    svn_wc_notify_state_unknown,
+                                    prop_state,
+                                    SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -1230,12 +1216,16 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   apr_status_t apr_err;
   char *revision_str = NULL;
   const char *parent_dir, *base_name;
-  const char *txtb, *tmp_txtb;
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
   svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
+
+  /* The code flow does not depend upon these being set to NULL, but
+     it removes a gcc 3.1 `might be used uninitialized in this
+     function' warning. */
+  const char *txtb = NULL, *tmp_txtb = NULL;
 
   /* Start by splitting FILE_PATH. */
   svn_path_split_nts (file_path, &parent_dir, &base_name, pool);
@@ -1294,13 +1284,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
          pointing to parent_dir/.svn/tmp/text-base/basename.  */
       if (strcmp (final_location, new_text_path))
         {
-          apr_err = apr_file_rename (new_text_path, final_location,
-                                     pool);
-          if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, pool,
-                                      "svn_wc_install_file: "
-                                      "can't move %s to %s",
-                                      new_text_path, final_location);
+          SVN_ERR_W (svn_io_file_rename (new_text_path, final_location,
+                                         pool),
+                     "svn_wc_install_file: move failed");
 
           new_text_path = final_location;
         }
@@ -1383,23 +1369,16 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
          write <cp> commands to the logfile to install the merged
          props.  */
       {
-        svn_boolean_t props_merged;
-        apr_hash_t *prop_conflicts;
+        apr_hash_t *ignored_conflicts;
 
-        SVN_ERR (svn_wc__merge_prop_diffs (&props_merged, &prop_conflicts,
+        /* ### There are at least two callers that are ignoring the
+           conflict report.  Ideally, the argument would be optional,
+           so we could just pass NULL.  It's mandatory right now.  */
+
+        SVN_ERR (svn_wc__merge_prop_diffs (prop_state, &ignored_conflicts,
                                            parent_dir, base_name,
                                            propchanges, pool,
                                            &log_accum));
-
-        if (prop_state)
-          {
-            if (apr_hash_count (prop_conflicts))
-              *prop_state = svn_wc_notify_state_conflicted;
-            else if (props_merged)
-              *prop_state = svn_wc_notify_state_merged;
-            else if (propchanges->nelts > 0)
-              *prop_state = svn_wc_notify_state_modified;
-          }
       }
     }
   

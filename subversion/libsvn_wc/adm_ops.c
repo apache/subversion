@@ -35,6 +35,7 @@
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_wc.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "log.h"
@@ -970,7 +971,7 @@ revert_admin_things (const char *parent_dir,
                      apr_uint32_t *modify_flags,
                      apr_pool_t *pool)
 {
-  const char *fullpath, *thing, *pthing;
+  const char *fullpath, *thing, *base_thing;
   enum svn_node_kind kind;
   svn_boolean_t modified_p;
   svn_error_t *err;
@@ -985,23 +986,33 @@ revert_admin_things (const char *parent_dir,
   SVN_ERR (svn_wc_props_modified_p (&modified_p, fullpath, pool));  
   if (modified_p)
     {
+      svn_node_kind_t working_props_kind;
+
       SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
-      SVN_ERR (svn_wc__prop_base_path (&pthing, fullpath, 0, pool));
+      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, 0, pool));
+
+      /* There may be a base props file but no working props file, if
+         the mod was that the working file was `R'eplaced by a new
+         file with no props. */
+      SVN_ERR (svn_io_check_path (thing, &working_props_kind, pool));
 
       /* If there is a pristing property file, copy it out as the
          working property file, else just remove the working property
          file. */
-      SVN_ERR (svn_io_check_path (pthing, &kind, pool));
+      SVN_ERR (svn_io_check_path (base_thing, &kind, pool));
       if (kind == svn_node_file)
         {
-          if ((err = svn_io_set_file_read_write (thing, FALSE, pool)))
+          if ((working_props_kind == svn_node_file)
+              && (err = svn_io_set_file_read_write (thing, FALSE, pool)))
             return revert_error (err, fullpath, "restoring props", pool);
-          if ((err = svn_io_copy_file (pthing, thing, FALSE, pool)))
+
+          if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
             return revert_error (err, fullpath, "restoring props", pool);
+
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;
         }
-      else
+      else if (working_props_kind == svn_node_file)
         {
           if ((err = svn_io_set_file_read_write (thing, FALSE, pool)))
             return revert_error (err, fullpath, "removing props", pool);
@@ -1011,6 +1022,27 @@ revert_admin_things (const char *parent_dir,
         }
 
       /* Modify our entry structure. */
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
+    }
+  else if (entry->schedule == svn_wc_schedule_replace)
+    {
+      /* Edge case: we're reverting a replacement, and
+         svn_wc_props_modified_p thinks there's no property mods.
+         However, because of the scheduled replacement,
+         svn_wc_props_modified_p is deliberately ignoring the
+         base-props; it's "no" answer simply means that there are no
+         working props.  It's *still* possible that the base-props
+         exist, however, from the original replaced file.  If they do,
+         then we need to restore them. */
+      SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, 0, pool));
+      SVN_ERR (svn_io_check_path (base_thing, &kind, pool));
+
+      if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
+        return revert_error (err, fullpath, "restoring props", pool);
+      
+      SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
+      entry->prop_time = tstamp;
       *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
     }
 
@@ -1028,7 +1060,7 @@ revert_admin_things (const char *parent_dir,
           svn_wc_keywords_t *keywords;
           enum svn_wc__eol_style eol_style;
           const char *eol;
-          pthing = svn_wc__text_base_path (fullpath, 0, pool);
+          base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
           SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, fullpath, pool));
           SVN_ERR (svn_wc__get_keywords (&keywords, fullpath, NULL, pool));
@@ -1037,7 +1069,7 @@ revert_admin_things (const char *parent_dir,
              sure to do any eol translations or keyword substitutions,
              as dictated by the property values.  If these properties
              are turned off, then this is just a normal copy. */
-          if ((err = svn_wc_copy_and_translate (pthing,
+          if ((err = svn_wc_copy_and_translate (base_thing,
                                                 fullpath,
                                                 eol, FALSE, /* don't repair */
                                                 keywords,
@@ -1323,7 +1355,6 @@ svn_wc_remove_from_revision_control (const char *path,
                                      svn_boolean_t destroy_wf,
                                      apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   svn_error_t *err;
   svn_boolean_t is_file;
   svn_boolean_t left_something = FALSE;
@@ -1482,8 +1513,8 @@ svn_wc_remove_from_revision_control (const char *path,
              *non*-recursive dir_remove should work.  If it doesn't,
              no big deal.  Just assume there are unversioned items in
              there and set "left_something" */
-          apr_err = apr_dir_remove (path, subpool);
-          if (apr_err)
+          err = svn_io_dir_remove_nonrecursive (path, subpool);
+          if (err)
             left_something = TRUE;
         }
     }  /* end of directory case */

@@ -51,25 +51,31 @@ class TestHarness:
 
   def _run_test(self, prog):
     'Run a single test.'
+
+    def quote(arg):
+      if sys.platform == 'win32':
+        return '"' + arg + '"'
+      else:
+        return arg
+
     progdir, progbase = os.path.split(prog)
     # Using write here because we don't want even a trailing space
     sys.stdout.write('Running all tests in ' + progbase + '...')
     print >> self.log, 'START: ' + progbase
 
     if progbase[-3:] == '.py':
-      cmdline = [self.python, os.path.join(self.srcdir, prog)]
+      progname = self.python
+      cmdline = [quote(progname),
+                 quote(os.path.join(self.srcdir, prog))]
     elif progbase[-3:] == '.sh':
-      cmdline = [self.shell, os.path.join(self.srcdir, prog),
-                 os.path.join(self.builddir, progdir),
-                 os.path.join(self.srcdir, progdir)]
+      progname = self.shell
+      cmdline = [quote(progname),
+                 quote(os.path.join(self.srcdir, prog)),
+                 quote(os.path.join(self.builddir, progdir)),
+                 quote(os.path.join(self.srcdir, progdir))]
     elif os.access(prog, os.X_OK):
-      cmdline = ['./' + progbase]
-##### BEGIN Windows-specific
-#   elif os.access(progdir + '/Debug/' + progbase, os.X_OK):
-#     cmdline = ['./Debug/' + progbase]
-#   elif os.access(progdir + '/Release/' + progbase, os.X_OK):
-#     cmdline = ['./Release/' + progbase]
-##### END Windows-specific
+      progname = './' + progbase
+      cmdline = [quote(progname)]
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
@@ -77,7 +83,7 @@ class TestHarness:
     old_cwd = os.getcwd()
     try:
       os.chdir(progdir)
-      failed = self._run_prog(cmdline)
+      failed = self._run_prog(progname, cmdline)
     except:
       os.chdir(old_cwd)
       raise
@@ -91,7 +97,7 @@ class TestHarness:
     print >> self.log, 'END: ' + progbase + '\n'
     return failed
 
-  def _run_prog(self, cmdline):
+  def _run_prog(self, progname, cmdline):
     'Execute COMMAND, redirecting standard output and error to the log file.'
     def restore_streams(stdout, stderr):
       os.dup2(stdout, 1)
@@ -107,7 +113,7 @@ class TestHarness:
     try:
       os.dup2(self.log.fileno(), 1)
       os.dup2(self.log.fileno(), 2)
-      rv = os.spawnv(os.P_WAIT, cmdline[0], cmdline)
+      rv = os.spawnv(os.P_WAIT, progname, cmdline)
     except:
       restore_streams(old_stdout, old_stderr)
       raise

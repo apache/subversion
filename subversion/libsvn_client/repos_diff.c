@@ -44,7 +44,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  const svn_diff_callbacks_t *diff_callbacks;
+  const svn_wc_diff_callbacks_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
@@ -67,6 +67,10 @@ struct edit_baton {
      cached here so that it can be reused, all empty files are the same. */
   const char *empty_file;
 
+  /* If the func is non-null, send notifications of actions. */
+  svn_wc_notify_func_t notify_func;
+  void *notify_baton;
+
   apr_pool_t *pool;
 };
 
@@ -78,6 +82,9 @@ struct dir_baton {
 
   /* The path of the directory within the repository */
   const char *path;
+
+  /* The path of the directory in the wc, relative to cwd */
+  const char *wcpath;
 
   /* The baton for the parent directory, or null if this is the root of the
      hierarchy to be compared. */
@@ -102,6 +109,9 @@ struct file_baton {
 
   /* The path of the file within the repository */
   const char *path;
+
+  /* The path of the file in the wc, relative to cwd */
+  const char *wcpath;
 
   /* The path and APR file handle to the temporary file that contains the
      first repository version.  Also, the pristine-property list of
@@ -160,6 +170,8 @@ make_dir_baton (const char *path,
   dir_baton->added = added;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup (pool, path);
+  dir_baton->wcpath = svn_path_join (parent_baton->edit_baton->target,
+                                     path, pool);
   dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   return dir_baton;
@@ -177,11 +189,13 @@ make_file_baton (const char *path,
                  apr_pool_t *pool)
 {
   struct file_baton *file_baton = apr_pcalloc (pool, sizeof (*file_baton));
+  struct edit_baton *eb = edit_baton;
 
   file_baton->edit_baton = edit_baton;
   file_baton->added = added;
   file_baton->pool = pool;
   file_baton->path = apr_pstrdup (pool, path);
+  file_baton->wcpath = svn_path_join (eb->target, path, pool);
   file_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   return file_baton;
@@ -342,7 +356,8 @@ open_root (void *edit_baton,
   dir_baton->edit_baton = eb;
   dir_baton->added = FALSE;
   dir_baton->pool = pool;
-  dir_baton->path = eb->target ? apr_pstrdup (pool, eb->target) : "";
+  dir_baton->path = "";
+  dir_baton->wcpath = eb->target ? apr_pstrdup (pool, eb->target) : "";
   dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   *root_baton = dir_baton;
@@ -359,6 +374,7 @@ delete_entry (const char *path,
               apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
 
   /* We need to know if this is a directory or a file */
@@ -380,22 +396,33 @@ delete_entry (const char *path,
         SVN_ERR (get_empty_file(b->edit_baton, &(b->path_end_revision)));
         
         SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
-                 (b->path,
+                 (b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   b->edit_baton->diff_cmd_baton));
+
         break;
       }
     case svn_node_dir:
       {
         SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
-                 (path,
+                 (svn_path_join (eb->target, path, pool),
                   pb->edit_baton->diff_cmd_baton));
         break;
       }
     default:
       break;
     }
+
+  if (pb->edit_baton->notify_func)
+    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
+                                    svn_path_join (eb->target, path, pool),
+                                    svn_wc_notify_delete,
+                                    kind,
+                                    NULL,
+                                    svn_wc_notify_state_unknown,
+                                    svn_wc_notify_state_unknown,
+                                    SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -419,8 +446,18 @@ add_directory (const char *path,
   *child_baton = b;
 
   SVN_ERR (pb->edit_baton->diff_callbacks->dir_added 
-           (path,
+           (b->wcpath,
             pb->edit_baton->diff_cmd_baton));
+
+  if (pb->edit_baton->notify_func)
+    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
+                                    b->wcpath,
+                                    svn_wc_notify_add,
+                                    svn_node_dir,
+                                    NULL,
+                                    svn_wc_notify_state_unknown,
+                                    svn_wc_notify_state_unknown,
+                                    SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -526,27 +563,17 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *b = file_baton;
-  apr_status_t status;
 
-  /* Open the file to be used as the base for second revision */
-  status = apr_file_open (&(b->file_start_revision),
-                          b->path_start_revision,
-                          APR_READ, APR_OS_DEFAULT, b->pool);
-  if (status)
-    return svn_error_createf (status, 0, NULL, b->pool,
-                              "failed to open file '%s'",
-                              b->path_start_revision);
+  SVN_ERR (svn_io_file_open (&(b->file_start_revision),
+                             b->path_start_revision,
+                             APR_READ, APR_OS_DEFAULT, b->pool));
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
   SVN_ERR (create_empty_file (&(b->path_end_revision), b->pool));
   SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
-  status = apr_file_open (&(b->file_end_revision), b->path_end_revision,
-                          APR_WRITE, APR_OS_DEFAULT, b->pool);
-  if (status)
-    return svn_error_createf (status, 0, NULL, b->pool,
-                              "failed to open file '%s'",
-                              b->path_end_revision);
+  SVN_ERR (svn_io_file_open (&(b->file_end_revision), b->path_end_revision,
+                             APR_WRITE, APR_OS_DEFAULT, b->pool));
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->file_start_revision, b->pool),
                      svn_stream_from_aprfile (b->file_end_revision, b->pool),
@@ -568,18 +595,22 @@ close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
+  svn_wc_notify_state_t
+    content_state = svn_wc_notify_state_unknown,
+    prop_state = svn_wc_notify_state_unknown;
 
   if (b->path_end_revision)
     {
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
-                 (b->path,
+                 (b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
-                 (b->path,
+                 (&content_state,
+                  b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   b->edit_baton->revision,
@@ -590,10 +621,28 @@ close_file (void *file_baton)
   if (b->propchanges->nelts > 0)
     {
       SVN_ERR (eb->diff_callbacks->props_changed
-               (b->path,
+               (&prop_state,
+                b->wcpath,
                 b->propchanges, b->pristine_props,
                 b->edit_baton->diff_cmd_baton));
     }
+
+
+  /* ### Is b->path the repos path?  Probably.  This doesn't really
+     matter while issue #748 (svn merge only happens in ".") is
+     outstanding.  But when we take a wc_path as an argument to
+     merge, then we'll need to pass around a wc path somehow. */
+
+  if (eb->notify_func)
+    (*eb->notify_func)
+      (eb->notify_baton,
+       b->wcpath,
+       b->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
+       svn_node_file,
+       NULL,
+       content_state,
+       prop_state,
+       SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -605,6 +654,7 @@ close_directory (void *dir_baton)
 {
   struct dir_baton *b = dir_baton;
   struct edit_baton *eb = b->edit_baton;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
 
   if (b->propchanges->nelts > 0)
     {
@@ -612,10 +662,21 @@ close_directory (void *dir_baton)
          that these property diffs are *against*.  We need an
          RA->get_dir() or something!  */
       SVN_ERR (eb->diff_callbacks->props_changed
-               (b->path,
+               (&prop_state,
+                b->wcpath,
                 b->propchanges, apr_hash_make(b->pool),
                 b->edit_baton->diff_cmd_baton));
     }
+
+  if (eb->notify_func)
+    (*eb->notify_func) (eb->notify_baton,
+                        b->wcpath,
+                        svn_wc_notify_update_update,
+                        svn_node_dir,
+                        NULL,
+                        svn_wc_notify_state_inapplicable,
+                        prop_state,
+                        SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -674,12 +735,14 @@ close_edit (void *edit_baton)
  */
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
-                             const svn_diff_callbacks_t *diff_callbacks,
+                             const svn_wc_diff_callbacks_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_ra_plugin_t *ra_lib,
                              void *ra_session,
                              svn_revnum_t revision,
+                             svn_wc_notify_func_t notify_func,
+                             void *notify_baton,
                              const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool)
@@ -697,6 +760,8 @@ svn_client__get_diff_editor (const char *target,
   eb->revision = revision;
   eb->empty_file = NULL;
   eb->pool = subpool;
+  eb->notify_func = notify_func;
+  eb->notify_baton = notify_baton;
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;

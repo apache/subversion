@@ -9,7 +9,10 @@ use File::Find;
 use File::Path   1.0404;
 use File::Temp   0.12   qw(tempdir);
 use Getopt::Long 2.25;
+use Text::Wrap;
 use URI          1.17;
+
+$Text::Wrap::columns = 72;
 
 my $VERSION = 0.02;
 
@@ -145,18 +148,12 @@ if (defined $opt_import_tag_location) {
     push(@load_tags, $load_tag);
   }
 
-  print "Please examine identified tags.  Are they acceptable? (y/n) ";
-  exit 0 unless &get_yes_or_no;
+  exit 0 unless &get_yes_or_no("Please examine identified tags.  Are they " .
+                               "acceptable? (Y/N) ");
 }
 
 # Check that the svn base URL works by running svn log on it.
-{
-  my @command = ('svn', 'log', $repos_base_uri);
-  my ($status, @output) = safe_read_from_pipe(@command);
-  if ($status) {
-    die join("\n", "$0: @command failed with this output:", @output), "\n";
-  }
-}
+read_from_process('svn', 'log', $repos_base_uri);
 
 my $orig_cwd = cwd;
 
@@ -195,7 +192,7 @@ if ($repos_root_uri) {
 }
 
 # Create a temporary directory for svn to work in.
-my $temp_template = '/tmp/svn_log_dirs_XXXXXXXXXX';
+my $temp_template = '/tmp/svn_load_dirs_XXXXXXXXXX';
 my $temp_dir      = tempdir($temp_template);
 
 # Create an object that when DESTROY'ed will delete the temporary
@@ -211,13 +208,7 @@ chdir($temp_dir) or
 # fixed directory name.
 my $checkout_dir_name = 'ZZZ';
 print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
-{
-  my @command = ('svn', 'co', $repos_base_uri, '-d', $checkout_dir_name);
-  my ($status, @output) = safe_read_from_pipe(@command);
-  if ($status) {
-    die join("\n", "$0: @command failed with this output:", @output), "\n";
-  }
-}
+read_from_process('svn', 'co', $repos_base_uri, '-d', $checkout_dir_name);
 
 # Change into the top level directory of the repository and record the
 # absolute path to this location because the script will come back
@@ -261,8 +252,8 @@ my $wc_top_dir_cwd = cwd;
     foreach my $dir (@dirs_to_create) {
       print "  $dir\n";
     }
-    print "You must add them now to load the directories.  Continue (y/n)? ";
-    exit 0 unless &get_yes_or_no;
+    exit 0 unless &get_yes_or_no("You must add them now to load the " .
+                                 "directories.  Continue (Y/N)? ");
 
     my $message = "Create directories to load project into.\n\n";
 
@@ -275,77 +266,318 @@ my $wc_top_dir_cwd = cwd;
         $message .= "* $dir: New directory.\n";
       }
     }
-    my @command = ('svn', 'add', @dirs_to_create);
-    my ($status, @output) = safe_read_from_pipe(@command);
-    if ($status) {
-      die join("\n", "$0: @command failed with this output:", @output), "\n";
-    }
+    $message = wrap('', '  ', $message);
 
-    @command = ('svn', 'commit', '-m', $message);
-    ($status, @output) = safe_read_from_pipe(@command);
-    if ($status) {
-      die join("\n", "$0: @command failed with this output:", @output), "\n";
-    }
+    read_from_process('svn', 'add', @dirs_to_create);
+    read_from_process('svn', 'commit', '-m', $message);
   } else {
     print "No directories need to be created for loading.\n";
   }
 }
 
+# Set up the names for the path to the import and tag directories.
+my $repos_load_abs_path;
+if ($repos_load_rel_path eq '.') {
+  $repos_load_abs_path = length($repos_base_path_segment) ?
+                         $repos_base_path_segment : "/";
+} else {
+  $repos_load_abs_path = length($repos_base_path_segment) ?
+                         "$repos_base_path_segment/$repos_load_rel_path" :
+                         $repos_load_rel_path;
+}
+
 # Now go through each source directory and copy each file from the
 # source directory to the target directory.  For new target files, add
 # them to svn.  For files that no longer exist, delete them.
-my $wc_import_dir_cwd  = "$wc_top_dir_cwd/$repos_load_rel_path";
+my $wc_import_dir_cwd    = "$wc_top_dir_cwd/$repos_load_rel_path";
+my $print_rename_message = 1;
 while (@load_dirs) {
   my $load_dir = shift @load_dirs;
   my $load_tag = shift @load_tags;
   my $wc_tag_dir_cwd;
 
   if (defined $load_tag) {
-    print "Loading $load_dir and will save in tag $load_tag.\n";
+    print "\nLoading $load_dir and will save in tag $load_tag.\n";
     $wc_tag_dir_cwd = "$wc_top_dir_cwd/$load_tag";
   } else {
-    print "Loading $load_dir.\n";
+    print "\nLoading $load_dir.\n";
   }
 
-  my @add_files;
-  my @del_files;
+  # The first hash is keyed by the old name in a rename and the second
+  # by the new name.  The last variable contains a list of old and new
+  # filenames in a rename.
+  my %rename_from_files;
+  my %rename_to_files;
+  my @renamed_filenames;
 
-  # First get a list of all the existing files and directories in the
-  # repository.  This is used to see what files should be deleted from
-  # the repository.
-  chdir($wc_import_dir_cwd) or
-    die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+  # Loop here until the user has performed all the file and directory
+  # renames.
+  my $repeat_loop;
+  do {
+    $repeat_loop = 0;
 
-  my %existing_files;
-  my $wanted = sub {
-    s#^\./##;
-    return if $_ eq '.';
-    my $file_type = &file_type($_);
-    my $file_digest;
-    if ($file_type eq 'f' or (stat($_) and -f _)) {
-      $file_digest = &digest_hash_file($_);
+    my %add_files;
+    my %del_files;
+
+    # Get the list of files and directories in the repository working
+    # copy.  This hash is called %del_files because each file or
+    # directory will be deleted from the hash using the list of files
+    # and directories in the source directory, leaving the files and
+    # directories that need to be deleted.
+    %del_files = &recusurive_ls_and_hash($wc_import_dir_cwd);
+
+    # This anonymous subroutine finds all the files and directories in
+    # the directory to load.  It notes the file type and for each file
+    # found, it deletes it from %del_files.
+    my $wanted = sub {
+      s#^\./##;
+      return if $_ eq '.';
+
+      my $source_path = $_;
+      my $dest_path   = "$wc_import_dir_cwd/$_";
+
+      my $source_type = &file_type($source_path);
+      my $dest_type   = &file_type($dest_path);
+
+      # Fail if the destination type exists but is of a different type
+      # of file than the source type.
+      if ($dest_type ne '0' and $source_type ne $dest_type) {
+        die "$0: does not handle changing source and destination type for ",
+            "$source_path.\n";
+      }
+
+      if ($source_type ne 'f' and $source_type ne 'd') {
+        die "$0: does not handle copying files of type `$source_type'.\n";
+      }
+
+      unless (defined delete $del_files{$source_path}) {
+        $add_files{$source_path}{type} = $source_type;
+      }
+    };
+
+    # Now change into the directory containing the files to load.
+    # First change to the original directory where this script was run
+    # so that if the specified directory is a relative directory path,
+    # then the script can change into it.
+    chdir($orig_cwd) or
+      die "$0: cannot chdir `$orig_cwd': $!\n";
+    chdir($load_dir) or
+      die "$0: cannot chdir `$load_dir': $!\n";
+
+    find({no_chdir   => 1,
+          preprocess => sub { sort { $b cmp $a } @_ },
+          wanted     => $wanted
+         }, '.');
+
+    # At this point %add_files contains the list of new files and
+    # directories to be created in the working copy tree and
+    # %del_files contains the files and directories that need to be
+    # deleted.  Because there may be renames that have taken place,
+    # give the user the opportunity to rename any deleted files and
+    # directories to ones being added.
+    my @add_files = sort keys %add_files;
+    my @del_files = sort keys %del_files;
+
+    # Because the source code management system may keep the original
+    # renamed file or directory in the working copy until a commit,
+    # remove them from the list of deleted files or directories.
+    &filter_renamed_files(\@del_files, \%rename_from_files);
+
+    # Now change into the working copy directory in case any renames
+    # need to be performed.
+    chdir($wc_import_dir_cwd) or
+      die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+
+    # Only do renames if there are both added and deleted files and
+    # directories.
+    if (@add_files and @del_files) {
+      my $max = @add_files > @del_files ? @add_files : @del_files;
+
+      # Print the files that have been added and deleted.  Find the
+      # deleted file with the longest name and use that for the width
+      # of the filename column.  Add one to the filename width to let
+      # the directory / character be appended to a directory name.
+      my $line_number_width = 4;
+      my $filename_width    = 0;
+      foreach my $f (@del_files) {
+        my $l = length($f);
+        $filename_width = $l if $l > $filename_width;
+      }
+      ++$filename_width;
+      my $printf_format = "%${line_number_width}d";
+
+      if ($print_rename_message) {
+        $print_rename_message = 0;
+        print "\n",
+              "The following table lists files and directories that exist\n",
+              "in either the Subversion repository and the directory to be\n",
+              "imported but not both.  You now have the opportunity to\n",
+              "match them up as renames instead of deletes and adds.  This\n",
+              "is a Good Thing as it'll make the repository take less\n",
+              "space.  The left column lists files and directories that\n",
+              "exist in the Subversion repository and do not exist in the\n",
+              "directory being imported.  The right column lists files and\n",
+              "directories that exist in the directory being imported.\n",
+              "Match up a deleted item from the left column with an added\n",
+              "item from the right column.  Note the line numbers on the\n",
+              "the left which you type into this script to have a rename\n",
+              "performed.\n";
+      }
+
+      for (my $i=0; $i<$max; ++$i) {
+        my $add_filename = '';
+        my $del_filename = '';
+        if ($i < @add_files) {
+          $add_filename = $add_files[$i];
+          if ($add_files{$add_filename}{type} eq 'd') {
+            $add_filename .= '/';
+          }
+        }
+        if ($i < @del_files) {
+          $del_filename = $del_files[$i];
+          if ($del_files{$del_filename}{type} eq 'd') {
+            $del_filename .= '/';
+          }
+        }
+
+        if ($i % 22 == 0) {
+          print "\n",
+                " " x $line_number_width,
+                " ",
+                "Deleted", " " x ($filename_width - length("Deleted")),
+                " ",
+                "Added\n";
+        }
+
+        printf $printf_format, $i;
+        print  " ", $del_filename,
+               " " x ($filename_width - length($del_filename)),
+               " ", $add_filename, "\n";
+
+        if (($i+1) % 22 == 0) {
+          last unless &get_yes_or_no("Continue printing (Y/N)? ");
+        }
+      }
+
+      # Get the feedback from the user.
+      my $line;
+      my $add_filename;
+      my $add_index;
+      my $del_filename;
+      my $del_index;
+      my $got_line = 0;
+      do {
+        print "Enter two indexes for each column to rename or F when you are ",
+              "finished: ";
+        $line = <STDIN>;
+        $line = '' unless defined $line;
+        if ($line =~ /^F$/i) {
+          $got_line = 1;
+        } elsif ($line =~ /^(\d+)\s+(\d+)$/) {
+          $del_index = $1;
+          $add_index = $2;
+          if ($del_index >= @del_files) {
+            print "Delete index $del_index is larger than maximum index of ",
+                  scalar @del_files - 1, ".\n";
+            $del_index = undef;
+          }
+          if ($add_index > @add_files) {
+            print "Add index $add_index is larger than maximum index of ",
+                  scalar @add_files - 1, ".\n";
+            $add_index = undef;
+          }
+          $got_line = defined $del_index && defined $add_index;
+
+          # Check that the file or directory to be renamed has the
+          # same file type.
+          if ($got_line) {
+            $add_filename = $add_files[$add_index];
+            $del_filename = $del_files[$del_index];
+            if ($add_files{$add_filename}{type} ne
+                $del_files{$del_filename}{type}) {
+              print "File types for $del_filename and $add_filename differ.\n";
+              $got_line = undef;
+            }
+          }
+        }
+      } until ($got_line);
+
+      if ($line !~ /^F$/i) {
+        print "Renaming $del_filename to $add_filename.\n";
+
+        $repeat_loop = 1;
+
+        # Because subversion cannot rename the same file or directory
+        # twice, which includes doing a rename of a file in a
+        # directory that was previously renamed, a commit has to be
+        # performed.  Check if the file or directory being renamed now
+        # would cause such a problem and commit if so.
+        my $do_commit_now = 0;
+        foreach my $rename_to_filename (keys %rename_to_files) {
+          if (contained_in($del_filename,
+                           $rename_to_filename,
+                           $rename_to_files{$rename_to_filename}{type})) {
+            $do_commit_now = 1;
+            last;
+          }
+        }
+
+        if ($do_commit_now) {
+          print "Now committing previously run renames.\n";
+          &commit_renames($load_dir,
+                          \@renamed_filenames,
+                          \%rename_from_files,
+                          \%rename_to_files);
+        }
+
+        push(@renamed_filenames, $del_filename, $add_filename);
+        $rename_from_files{$del_filename} = $del_files{$del_filename};
+        $rename_to_files{$add_filename}   = $del_files{$del_filename};
+
+        # Check that any required directories to do the rename exist.
+        my @add_segments = split('/', $add_filename);
+        pop(@add_segments);
+        my $add_dir = '';
+        my @add_dirs;
+        foreach my $segment (@add_segments) {
+          $add_dir = length($add_dir) ? "$add_dir/$segment" : $segment;
+          unless (-d $add_dir) {
+            push(@add_dirs, $add_dir);
+          }
+        }
+
+        if (@add_dirs) {
+          read_from_process('svn', 'mkdir', @add_dirs);
+        }
+
+        read_from_process('svn', 'mv', $del_filename, $add_filename);
+
+      }
     }
-    $existing_files{$_} = {type   => $file_type,
-                           digest => $file_digest};
-  };
-  find({no_chdir   => 1,
-        preprocess => sub { grep { $_ !~ /\.svn$/ } @_ },
-        wanted     => $wanted
-       }, '.');
+  } while ($repeat_loop);
 
-  # Now change into the directory containing the files to load.  First
-  # change to the original directory where this script was run so that
-  # if the specified directory is a relative directory path, then the
-  # script can change into it.
-  chdir($orig_cwd) or
-    die "$0: cannot chdir `$orig_cwd': $!\n";
-  chdir($load_dir) or
-    die "$0: cannot chdir `$load_dir': $!\n";
+  # If there are any renames that have not been committed, then do
+  # that now.
+  if (@renamed_filenames) {
+    &commit_renames($load_dir,
+                    \@renamed_filenames,
+                    \%rename_from_files,
+                    \%rename_to_files);
+  }
 
-  # This anonymous subroutine finds all the files and directories in
-  # the directory to load.  It notes the file type and records file
-  # hash digests.
-  $wanted = sub {
+  # At this point all renames have been performed.  Now get the final
+  # list of files and directories in the working copy directory.  The
+  # %add_files hash will contain the list of files and directories to
+  # add to the working copy and %del_files starts with all the files
+  # already in the working copy and gets files removed that are in the
+  # imported directory, which results in a list of files that should
+  # be deleted.
+  my %add_files;
+  my %del_files = &recusurive_ls_and_hash($wc_import_dir_cwd);
+
+  # This anonymous subroutine copies files from the source directory
+  # to the working copy directory.
+  my $wanted = sub {
     s#^\./##;
     return if $_ eq '.';
 
@@ -359,22 +591,22 @@ while (@load_dirs) {
     # of file than the source type.
     if ($dest_type ne '0' and $source_type ne $dest_type) {
       die "$0: does not handle changing source and destination type for ",
-          "$source_path.\n";
+        "$source_path.\n";
     }
 
     # Determine if the file is being added or is an update to an
     # already existing file using the file's digest.
-    my $existing_info = delete $existing_files{$source_path};
-    if (defined $existing_info) {
-      if (defined (my $existing_digest = $existing_info->{digest})) {
+    my $del_info = delete $del_files{$source_path};
+    if (defined $del_info) {
+      if (defined (my $del_digest = $del_info->{digest})) {
         my $new_digest = &digest_hash_file($source_path);
-        if ($new_digest ne $existing_digest) {
+        if ($new_digest ne $del_digest) {
           print "U   $source_path\n";
         }
       }
     } else {
       print "A   $source_path\n";
-      push(@add_files, $source_path);
+      $add_files{$source_path}{type} = $source_type;
     }
 
     # Now make sure the file or directory in the source directory
@@ -392,34 +624,43 @@ while (@load_dirs) {
     }
   };
 
+  # Now change into the directory containing the files to load.
+  # First change to the original directory where this script was run
+  # so that if the specified directory is a relative directory path,
+  # then the script can change into it.
+  chdir($orig_cwd) or
+    die "$0: cannot chdir `$orig_cwd': $!\n";
+  chdir($load_dir) or
+    die "$0: cannot chdir `$load_dir': $!\n";
+
   find({no_chdir   => 1,
         preprocess => sub { sort { $b cmp $a } @_ },
         wanted     => $wanted
        }, '.');
 
-  # The files and directories that are left in %existing_files are the
-  # files and directories that need to be deleted.  Because svn will
-  # return an error if a file or directory is deleted in a directory
-  # that will then be deleted, first find all directories and delete
-  # any files and directories inside those directories from this list.
-  # Work through the list repeatedly working from short to long names
-  # so that directories containing other files and directories will be
-  # deleted first.
-  my $repeat_loop;
+  # The files and directories that are in %del_files are the files and
+  # directories that need to be deleted.  Because svn will return an
+  # error if a file or directory is deleted in a directory that
+  # subsequently is deleted, first find all directories and remove
+  # from the list any files and directories inside those directories
+  # from this list.  Work through the list repeatedly working from
+  # short to long names so that directories containing other files and
+  # directories will be deleted first.
   do {
     $repeat_loop = 0;
-    my @list = sort {length($a) <=> length($b) || $a cmp $b}
-               keys %existing_files;
-    foreach my $file (@list) {
-      if ($existing_files{$file}{type} eq 'd') {
+    my @del_files = sort {length($a) <=> length($b) || $a cmp $b}
+                    keys %del_files;
+    &filter_renamed_files(\@del_files, \%rename_from_files);
+    foreach my $file (@del_files) {
+      if ($del_files{$file}{type} eq 'd') {
         my $dir        = "$file/";
         my $dir_length = length($dir);
-        foreach my $f (@list) {
+        foreach my $f (@del_files) {
           next if $file eq $f;
           if (length($f) >= $dir_length and
               substr($f, 0, $dir_length) eq $dir) {
             print "d   $f\n";
-            delete $existing_files{$f};
+            delete $del_files{$f};
             $repeat_loop = 1;
           }
         }
@@ -427,10 +668,10 @@ while (@load_dirs) {
         # If there were any deletions of files and/or directories
         # inside a directory that will be deleted, then restart the
         # entire loop again, because one or more keys have been
-        # deleted from %existing_files.  Equally important is not to
-        # stop this loop if no deletions have been done, otherwise
-        # later directories that may contain files and directories to
-        # be deleted will not be deleted.
+        # deleted from %del_files.  Equally important is not to stop
+        # this loop if no deletions have been done, otherwise later
+        # directories that may contain files and directories to be
+        # deleted will not be deleted.
         last if $repeat_loop;
       }
     }
@@ -443,8 +684,9 @@ while (@load_dirs) {
   # deleted, instead of trying to figure out which directories and
   # files are contained in other directories, just reverse sort by the
   # path length and then alphabetically.
-  @del_files = sort {length($b) <=> length($a) || $a cmp $b }
-               keys %existing_files;
+  my @del_files = sort {length($b) <=> length($a) || $a cmp $b }
+                  keys %del_files;
+  &filter_renamed_files(\@del_files, \%rename_from_files);
   foreach my $file (@del_files) {
     print "D   $file\n";
   }
@@ -453,37 +695,17 @@ while (@load_dirs) {
   chdir($wc_import_dir_cwd) or
     die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
 
-  if (@add_files) {
-    my @command = ('svn', 'add', @add_files);
-    my ($status, @output) = safe_read_from_pipe(@command);
-    if ($status) {
-      die join("\n", "$0: @command failed with this output:", @output), "\n";
-    }
+  if (keys %add_files) {
+    my @add_files = sort {length($a) <=> length($b) || $a cmp $b}
+                    keys %add_files;
+    read_from_process('svn', 'add', @add_files);
   }
   if (@del_files) {
-    my @command = ('svn', 'rm', @del_files);
-    my ($status, @output) = safe_read_from_pipe(@command);
-    if ($status) {
-      die join("\n", "$0: @command failed with this output:", @output), "\n";
-    }
+    read_from_process('svn', 'rm', @del_files);
   }
 
-  # Set up the names for the path to the import and tag directories.
-  my $repos_load_abs_path;
-  if ($repos_load_rel_path eq '.') {
-    $repos_load_abs_path = length($repos_base_path_segment) ?
-                           $repos_base_path_segment : "/";
-  } else {
-    $repos_load_abs_path = length($repos_base_path_segment) ?
-                           "$repos_base_path_segment/$repos_load_rel_path" :
-                           $repos_load_rel_path;
-  }
-  my @command = ('svn', 'commit',
-                 '-m', "Load $load_dir into $repos_load_abs_path.\n");
-  my ($status, @output) = safe_read_from_pipe(@command);
-  if ($status) {
-    die join("\n", "$0: @command failed with this output:", @output), "\n";
-  }
+  my $message = wrap('', '', "Load $load_dir into $repos_load_abs_path.\n");
+  read_from_process('svn', 'commit', '-m', $message);
 
   # Now remove any files and directories to be deleted in the repository.
   if (@del_files) {
@@ -500,13 +722,10 @@ while (@load_dirs) {
                    $repos_load_rel_path :
                    "$repos_base_url/$repos_load_rel_path";
     my $to_url   = "$repos_base_url/$load_tag";
-    @command = ('svn', 'cp',
-                '-m', "Tag $repos_load_abs_path as $repos_tag_abs_path.\n",
-                $from_url, $to_url);
-    ($status, @output) = safe_read_from_pipe(@command);
-    if ($status) {
-      die join("\n", "$0: @command failed with this output:", @output), "\n";
-    }
+
+    $message     = wrap("", "",
+                        "Tag $repos_load_abs_path as $repos_tag_abs_path.\n");
+    read_from_process('svn', 'cp', '-m', $message, $from_url, $to_url);
   }
 
   # Finally, go to the top of the svn checked out tree and do an
@@ -514,24 +733,16 @@ while (@load_dirs) {
   chdir($wc_top_dir_cwd) or
     die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
 
-  @command = qw(svn update);
-  ($status, @output) = safe_read_from_pipe(@command);
-  if ($status) {
-    die join("\n", "$0: @command failed with this output:", @output), "\n";
-  }
+  read_from_process(qw(svn update));
 
   # Now run a recursive diff between the original source directory and
   # the tag for a consistency check.
   if (defined $load_tag) {
     chdir($orig_cwd) or
       die "$0: cannot chdir `$orig_cwd': $!\n";
-    @command = ('diff',
-                '-x', '.svn',
-                '-r', $load_dir, $wc_tag_dir_cwd);
-    ($status, @output) = safe_read_from_pipe(@command);
-    if ($status) {
-      die join("\n", "$0: @command failed with this output:", @output), "\n";
-    }
+    read_from_process('diff',
+                      '-x', '.svn',
+                      '-r', $load_dir, $wc_tag_dir_cwd);
   }
 }
 
@@ -554,6 +765,7 @@ sub file_type {
   return '?';
 }
 
+# Start a child process safely without using /bin/sh.
 sub safe_read_from_pipe {
   unless (@_) {
     croak "$0: safe_read_from_pipe passed no arguments.\n";
@@ -589,7 +801,177 @@ sub safe_read_from_pipe {
   }
 }
 
+# Use safe_read_from_pipe to start a child process safely and exit the
+# script if the child failed for whatever reason.
+sub read_from_process {
+  unless (@_) {
+    croak "$0: read_from_process passed no arguments.\n";
+  }
+  my ($status, @output) = &safe_read_from_pipe(@_);
+  if ($status) {
+    print STDERR "$0: @_ failed with this output:\n", join("\n", @output),
+                 "\n",
+                 "Press return to quit and clean up svn working directory: ";
+    <STDIN>;
+    exit 1;
+  } else {
+    return @output;
+  }
+}
+
+# Get a list of all the files and directories in the specified
+# directory, the type of file and a digest hash of file types.
+sub recusurive_ls_and_hash {
+  unless (@_ == 1) {
+    croak "$0: recusurive_ls_and_hash passed incorrect number of ",
+          "arguments.\n";
+  }
+
+  # This is the directory to change into.
+  my $dir = shift;
+
+  # Get the current directory so that the script can change into the
+  # current working directory after changing into the specified
+  # directory.
+  my $return_cwd = cwd;
+
+  chdir($dir) or
+    die "$0: cannot chdir `$dir': $!\n";
+
+  my %files;
+
+  my $wanted = sub {
+    s#^\./##;
+    return if $_ eq '.';
+    my $file_type = &file_type($_);
+    my $file_digest;
+    if ($file_type eq 'f' or (stat($_) and -f _)) {
+      $file_digest = &digest_hash_file($_);
+    }
+    $files{$_} = {type   => $file_type,
+                  digest => $file_digest};
+  };
+  find({no_chdir   => 1,
+        preprocess => sub { grep { $_ !~ /\.svn$/ } @_ },
+        wanted     => $wanted
+       }, '.');
+
+  chdir($return_cwd) or
+    die "$0: cannot chdir `$return_cwd': $!\n";
+
+  %files;
+}
+
+# Given a list of files and directories which have been renamed but
+# not commtited, commit them with a proper log message.
+sub commit_renames {
+  unless (@_ == 4) {
+    croak "$0: commit_renames passed incorrect number of arguments.\n";
+  }
+
+  my $load_dir          = shift;
+  my $renamed_filenames = shift;
+  my $rename_from_files = shift;
+  my $rename_to_files   = shift;
+
+  my $number_renames    = @$renamed_filenames/2;
+
+  my $message = "To prepare to load $load_dir into $repos_load_abs_path, " .
+                "perform $number_renames rename" .
+                ($number_renames > 1 ? "s" : "") . ".\n";
+
+  # Text::Wrap::wrap appears to replace multiple consecutive \n's with
+  # one \n, so wrap the text and then append the second \n.
+  $message  = wrap("", "", $message) . "\n";
+  while (@$renamed_filenames) {
+    my $from  = "$repos_load_abs_path/" . shift @$renamed_filenames;
+    my $to    = "$repos_load_abs_path/" . shift @$renamed_filenames;
+    $message .= wrap("", "  ", "* $to: Renamed from $from.\n");
+  }
+
+  # Change to the top of the working copy so that any
+  # directories will also be updated.
+  my $cwd = cwd;
+  chdir($wc_top_dir_cwd) or
+    die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
+  read_from_process('svn', 'commit', '-m', $message);
+  read_from_process('svn', 'update');
+  chdir($cwd) or
+    die "$0: cannot chdir `$cwd': $!\n";
+
+  # Some versions of subversion have a bug where renamed files
+  # or directories are not deleted after a commit, so do that
+  # here.
+  my @del_files = sort {length($b) <=> length($a) || $a cmp $b }
+                  keys %$rename_from_files;
+  rmtree(\@del_files, 1, 0);
+
+  # Empty the list of old and new renamed names.
+  undef %$rename_from_files;
+  undef %$rename_to_files;
+}
+
+# Take a one file or directory and see if its name is equal to a
+# second or is contained in the second if the second file's file type
+# is a directory.
+sub contained_in {
+  unless (@_ == 3) {
+    croak "$0: contain_in passed incorrect number of arguments.\n";
+  }
+
+  my $contained      = shift;
+  my $container      = shift;
+  my $container_type = shift;
+
+  if ($container eq $contained) {
+    return 1;
+  }
+
+  if ($container_type eq 'd') {
+    my $dirname        = "$container/";
+    my $dirname_length = length($dirname);
+
+    if ($dirname_length <= length($contained) and
+        $dirname eq substr($contained, 0, $dirname_length)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+# Take an array reference containing a list of files and directories
+# and take a hash reference and remove from the array reference any
+# files and directories and the files the directory contains listed in
+# the hash.
+sub filter_renamed_files {
+  unless (@_ == 2) {
+    croak "$0: filter_renamed_files passed incorrect number of arguments.\n";
+  }
+
+  my $array_ref = shift;
+  my $hash_ref  = shift;
+
+  foreach my $remove_filename (keys %$hash_ref) {
+    my $remove_file_type = $hash_ref->{$remove_filename}{type};
+    for (my $i=0; $i<@$array_ref;) {
+      if (contained_in($array_ref->[$i],
+                       $remove_filename,
+                       $remove_file_type)) {
+        splice(@$array_ref, $i, 1);
+        next;
+      }
+      ++$i;
+    }
+  }
+}
+
+# Get a digest hash of the specified filename.
 sub digest_hash_file {
+  unless (@_ == 1) {
+    croak "$0: digest_hash_file passed incorrect number of arguments.\n";
+  }
+
   my $filename = shift;
 
   my $ctx = Digest::MD5->new;
@@ -604,10 +986,17 @@ sub digest_hash_file {
 # Read standard input until a line contains either a upper or
 # lowercase y or n.
 sub get_yes_or_no {
+  unless (@_ == 1) {
+    croak "$0: get_yes_or_no passed incorrect number of arguments.\n";
+  }
+
+  my $message = shift;
+
   my $line;
   do {
-    $line = <>;
-    $line ||= '';
+    print $message;
+    $line = <STDIN>;
+    $line = '' unless defined $line;
   } until $line =~ /[yn]/i;
   $line =~ /y/i;
 }

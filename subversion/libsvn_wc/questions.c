@@ -31,6 +31,7 @@
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_wc.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -182,8 +183,15 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   {
     /* Put the disk timestamp through a string conversion, so it's
        at the same resolution as entry timestamps. */
+    /* This string conversion here may be goodness, but it does
+       nothing currently _and_ it is somewhat expensive _and_ it eats
+       memory _and_ it is tested for in the regression tests. But I
+       will only comment it out because I do not possess the guts to
+       remove it altogether. */
+    /*
     const char *tstr = svn_time_to_nts (wfile_time, pool);
-    wfile_time = svn_time_from_nts (tstr);
+    SVN_ERR (svn_time_from_nts (&wfile_time, tstr, pool));
+    */
   }
   
   if (wfile_time == entrytime)
@@ -208,35 +216,29 @@ contents_identical_p (svn_boolean_t *identical_p,
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
-  status = apr_file_open (&file1_h, file1, 
-                          APR_READ, APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_open failed on `%s'", file1);
+  SVN_ERR_W (svn_io_file_open (&file1_h, file1, APR_READ, APR_OS_DEFAULT,
+                               pool),
+             "contents_identical_p: open failed on file 1");
 
-  status = apr_file_open (&file2_h, file2, APR_READ, 
-                          APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf
-      (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_open failed on `%s'", file2);
+  SVN_ERR_W (svn_io_file_open (&file2_h, file2, APR_READ, APR_OS_DEFAULT,
+                               pool),
+             "contents_identical_p: open failed on file 2");
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  while (!APR_STATUS_IS_EOF(status))
+  for (status = 0; ! APR_STATUS_IS_EOF(status); )
     {
       status = apr_file_read_full (file1_h, buf1, sizeof(buf1), &bytes_read1);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_full() failed on %s.", 
+           "contents_identical_p: full read failed on %s.", 
            file1);
 
       status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_file_read_full() failed on %s.", 
+           "contents_identical_p: full read failed on %s.", 
            file2);
       
       if ((bytes_read1 != bytes_read2)
@@ -251,13 +253,13 @@ contents_identical_p (svn_boolean_t *identical_p,
   if (status)
     return svn_error_createf 
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_close failed on %s.", file1);
+       "contents_identical_p: failed to close %s.", file1);
 
   status = apr_file_close (file2_h);
   if (status)
     return svn_error_createf 
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_file_close failed on %s.", file2);
+       "contents_identical_p: failed to close %s.", file2);
 
   return SVN_NO_ERROR;
 }

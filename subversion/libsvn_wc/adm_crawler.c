@@ -393,9 +393,8 @@ svn_wc_crawl_revisions (const char *path,
   if (entry->schedule != svn_wc_schedule_delete)
     {
       apr_finfo_t info;
-      apr_status_t apr_err;
-      apr_err = apr_stat (&info, path, APR_FINFO_MIN, pool);
-      if (APR_STATUS_IS_ENOENT(apr_err))
+      err = svn_io_stat (&info, path, APR_FINFO_MIN, pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         missing = TRUE;
     }
 
@@ -573,13 +572,9 @@ svn_wc_transmit_text_deltas (const char *path,
     }
 
   /* Open a filehandle for tmp text-base. */
-  if ((status = apr_file_open (&localfile, tmp_base, 
-                               APR_READ, APR_OS_DEFAULT, pool)))
-    {
-      return svn_error_createf (status, 0, NULL, pool,
-                                "do_apply_textdelta: error opening '%s'",
-                                tmp_base);
-    }
+  SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
+                               APR_READ, APR_OS_DEFAULT, pool),
+             "do_apply_textdelta: error opening local file");
 
   /* Create a text-delta stream object that pulls data out of the two
      files. */
@@ -607,7 +602,7 @@ svn_wc_transmit_text_deltas (const char *path,
 
 svn_error_t *
 svn_wc_transmit_prop_deltas (const char *path,
-                             svn_node_kind_t kind,
+                             svn_wc_entry_t *entry,
                              const svn_delta_editor_t *editor,
                              void *baton,
                              const char **tempfile,
@@ -623,7 +618,17 @@ svn_wc_transmit_prop_deltas (const char *path,
   SVN_ERR (svn_wc__prop_path (&props, path, 0, pool));
   
   /* Get the full path of the prop-base `pristine' file */
-  SVN_ERR (svn_wc__prop_base_path (&props_base, path, 0, pool));
+  if ((entry->schedule == svn_wc_schedule_replace)
+      || (entry->schedule == svn_wc_schedule_add))
+    {
+      /* do nothing: baseprop hash should be -empty- for comparison
+         purposes.  if they already exist on disk, they're "leftover"
+         from the old file that was replaced. */
+      props_base = NULL;
+    }
+  else
+    /* the real prop-base hash */
+    SVN_ERR (svn_wc__prop_base_path (&props_base, path, 0, pool));
 
   /* Copy the local prop file to the administrative temp area */
   SVN_ERR (svn_wc__prop_path (&props_tmp, path, 1, pool));
@@ -636,7 +641,8 @@ svn_wc_transmit_prop_deltas (const char *path,
 
   /* Load all properties into hashes */
   SVN_ERR (svn_wc__load_prop_file (props_tmp, localprops, pool));
-  SVN_ERR (svn_wc__load_prop_file (props_base, baseprops, pool));
+  if (props_base)
+    SVN_ERR (svn_wc__load_prop_file (props_base, baseprops, pool));
   
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR (svn_wc_get_local_propchanges (&propmods, localprops, 
@@ -646,7 +652,7 @@ svn_wc_transmit_prop_deltas (const char *path,
   for (i = 0; i < propmods->nelts; i++)
     {
       const svn_prop_t *p = &APR_ARRAY_IDX (propmods, i, svn_prop_t);
-      if (kind == svn_node_file)
+      if (entry->kind == svn_node_file)
         SVN_ERR (editor->change_file_prop (baton, p->name, p->value, pool));
       else
         SVN_ERR (editor->change_dir_prop (baton, p->name, p->value, pool));

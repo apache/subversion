@@ -1,0 +1,160 @@
+.TH svnadmin 1 "27 Jun 2002" "svn 0.13.0" "Subversion Command Line Tool"
+.SH NAME
+svnadmin \- Subversion repository administration tool
+.SH SYNOPSIS
+.TP
+\fBsvnadmin\fP \fIcommand\fP \fIrepos-path\fP [\fIargs\fP]
+.SH OVERVIEW
+
+\fBsvnadmin\fP is a tool to perform administrative operations on a Subversion
+repository.  A Subversion repository contains the revision history of a
+directory tree. The revision history includes file changes and log messages as
+well as move and copy operations that were applied at some time in the past to
+the tree.  \fBsvnadmin\fP operations are typically carried out by an
+administrator. The
+.BR svn (1) 
+tool handles operations for normal users of the source controlled resource.
+.SH COMMANDS
+.TP
+.BI create " repos-path"
+Create a new, empty repository at
+.IR repos-path .
+For example, a repository can be created with the command:
+
+.SP
+.in +1i
+.ft B
+.nf
+$ svnadmin create /var/svn
+.fi
+.ft P
+.in -1i
+.SP
+
+Importing a source tree into the repository created above is possible
+with the 
+.BR svn (1)
+command :
+
+.SP
+.in +1i
+.ft B
+.nf
+$ svn import file:///var/svn . new_proj
+.fi
+.ft P
+.in -1i
+.SP
+.TP
+.BI createtxn " repos-path base_rev"
+Create a new transaction based on
+.IR base_rev .
+.TP
+.BI dump " repos-path"  " \fR[\fI lower-rev \fR[\fI upper-rev \fR]]"
+Dump the contents of filesystem to stdout in a 'dumpfile'
+portable format, sending feedback to stderr.  Dump revisions
+.IR lower-rev
+through 
+.IR upper-rev . 
+If no revisions are given, all revision trees are dumped.  
+If just
+.IR lower-rev 
+is given, that one revision tree is dumped.  A 'dumpfile' is used to 
+convert between incompatible repository formats.
+.TP
+.BI load " repos-path"
+Read a 'dumpfile'-formatted stream from stdin, committing
+new revisions into the repository's filesystem.
+Send progress feedback to stdout.
+.TP
+.BI lscr " repos-path path"
+Print, one-per-line and youngest-to-eldest, the revisions in which 
+.IR path 
+was modified.  (For directories, this is, for now, almost guaranteed to be
+uninteresting.  Also, path must exist in the HEAD of the repository.
+.TP
+.BI lsrevs " repos-path"  " \fR[\fI lower-rev \fR[\fI upper-rev \fR]]"
+If no revision is given, all revision trees are printed.  If just 
+.IR lower-rev
+is given, that revision tree is printed.
+If two revisions are given, that range is printed, inclusive.
+.TP
+.BI lstxns " \fR[ \fB--long\fP ]\fI repos-path"
+Print all txn names and, if 
+.BI --long
+is specified, their metadata and trees.
+.TP
+.BI rmtxns " repos-path txn-name \fR[\fI ... \fR]\fI"
+ Delete the transaction(s) named 
+.BI txn-name.
+.TP
+.BI setlog " repos-path rev file"
+Set the log-message on revision 
+.IR rev 
+to the contents of 
+.IR file .
+Be careful with this option.  Log messages are stored as revision properties.  
+The history of revision properties is not saved.  This command will 
+.B permanently
+overwrite the previous log message.
+.TP
+.BI shell " repos-path"
+Enter interactive shell for exploring the repository.  The shell understands
+the following commands:
+.RS
+.IP help
+Print simple help text.
+.IP cd
+Change directory.
+.IP cr
+Change revision.
+.IP ls
+List entries in the current directory.
+.IP exit
+Leave the shell.
+.RE
+.TP
+.BI undeltify " repos-path rev path"
+Undeltify (ensure full text storage for) 
+.IR path 
+in
+.IR rev .
+If path represents a directory, perform a recursive undeltification of the tree
+starting at path.  Normally files are stored as a sequences of diffs
+representing past changes to the file.  Undeltification is an optimization that
+speeds some repository operations.  One might, for example, undelitfy all
+releases to speed checkout of those releases.
+.TP
+.BI youngest " repos-path"
+Print the latest revision number.
+.SH NOTES
+.PP
+When \fBsvnadmin\fP displays a directory entry it is of the form:
+.RS
+.PP
+ <NODE.COPY.TXN>   [  REV ] PROPS     SIZE    NAME
+.RE
+.PP
+Some of the information here will likely only be interesting to Subversion
+developers or those interested in learning more about the internals of
+Subversion.  The fields above are:
+.RS
+.IP NODE
+Base 36 node identifier.  Each node in the filesystem has a unique node
+identifier.  Copies of files share a node identifier and have a unique
+copy identifier.
+.IP COPY
+The copy identifier indicates that the file is the a copy.  
+.IP TXN
+The transaction identifier that created the file.
+.IP PROPS
+Has properties, or has no properties.
+.IP REV
+The revision the file belongs to.
+.IP SIZE
+Size of the file in bytes.
+.IP NAME
+Filename.
+.RE
+.SH "SEE ALSO"
+.BR svn (1)

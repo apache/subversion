@@ -22,11 +22,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   fi
 
   if test $apu_found = "reconfig"; then
-    dnl apr-util configure relies on the caller providing MKDIR
-    ac_configure_args_save=$ac_configure_args
-    ac_configure_args="$ac_configure_args MKDIR=\"$MKDIR\""
     SVN_SUBDIR_CONFIG(apr-util, --with-apr=../apr)
-    ac_configure_args=$ac_configure_args_save
     SVN_SUBDIRS="$SVN_SUBDIRS apr-util"
   fi
 

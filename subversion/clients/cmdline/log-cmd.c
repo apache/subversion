@@ -34,6 +34,7 @@
 #include "svn_pools.h"
 #include "svn_sorts.h"
 #include "svn_xml.h"
+#include "svn_time.h"
 #include "cl.h"
 
 
@@ -79,47 +80,6 @@ struct log_message_receiver_baton
 };
 
 
-/* Maximum length of a human-readable date string, including final '\0'. */
-#define SVN_LOG__DATE_MAX 38
-
-
-/* Format an svn_time_to_string()-created date for human consumption,
- * store the result in RESULT, which is at least SVN_LOG__DATE_MAX
- * bytes long.
- *
- * Why do this?  The problem is that svn_time_to_string() returns a
- * date like this:
- *
- *  "Sat 2 Mar 2002 20:41:01.695108 (day 061, dst 0, gmt_off -21600)"
- *
- * but humans only want to see:
- *
- *  "Sat 2 Mar 2002 20:41:01"
- *
- * You would think the part before the dot would be constant length,
- * but it's not, because the day-of-month can be one or two digits.
- * Also, we want to get the right result unconditionally, even when
- * handed an already-truncated date.  So, we have this function to
- * sort it all out and Do The Right Thing.
- */
-static void
-humanize_date (char *result, const char *date)
-{
-  const char *p = strchr (date, '.');
-  
-  if (p && ((p - date) < SVN_LOG__DATE_MAX))
-    {
-      strncpy (result, date, (p - date));
-      result[p - date] = '\0';
-    }
-  else  /* hmmm, not the format we expected, so use as much as can */
-    {
-      strncpy (result, date, (SVN_LOG__DATE_MAX - 1));
-      result[SVN_LOG__DATE_MAX - 1] = '\0';
-    }
-}
-
-
 /* This implements `svn_log_message_receiver_t', printing the logs in
  * a human-readable and machine-parseable format.  BATON is of type
  * `struct log_message_receiver_baton *'.
@@ -159,8 +119,8 @@ log_message_receiver (void *baton,
   /* Number of lines in the msg. */
   int lines;
 
-  /* As much date as we ever want to see. */
-  char dbuf[SVN_LOG__DATE_MAX];
+  /* Date string for humans. */
+  const char *dbuf;
 
   if (rev == 0)
     {
@@ -168,7 +128,13 @@ log_message_receiver (void *baton,
       return SVN_NO_ERROR;
     }
 
-  humanize_date (dbuf, date);
+  {
+    /* Convert date to a format for humans. */
+    apr_time_t time_temp;
+
+    SVN_ERR (svn_time_from_nts (&time_temp, date, pool));
+    dbuf = svn_time_to_human_nts(time_temp, pool);
+  }
 
 #define SEP_STRING \
   "------------------------------------------------------------------------\n"

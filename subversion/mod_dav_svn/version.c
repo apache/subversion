@@ -64,38 +64,38 @@ static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
   return NULL;
 }
 
-static void dav_svn_get_vsn_options(apr_pool_t *p, ap_text_header *phdr)
+static void dav_svn_get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
 {
   /* Note: we append pieces with care for Web Folders's 63-char limit
      on the DAV: header */
 
-  ap_text_append(p, phdr,
-                 "version-control,checkout,working-resource");
-  ap_text_append(p, phdr,
-                 "merge,baseline,activity,version-controlled-collection");
+  apr_text_append(p, phdr,
+                  "version-control,checkout,working-resource");
+  apr_text_append(p, phdr,
+                  "merge,baseline,activity,version-controlled-collection");
 
   /* ### fork-control? */
 }
 
 static dav_error *dav_svn_get_option(const dav_resource *resource,
-                                     const ap_xml_elem *elem,
-                                     ap_text_header *option)
+                                     const apr_xml_elem *elem,
+                                     apr_text_header *option)
 {
   /* ### DAV:version-history-collection-set */
 
-  if (elem->ns == AP_XML_NS_DAV_ID)
+  if (elem->ns == APR_XML_NS_DAV_ID)
     {
       if (strcmp(elem->name, "activity-collection-set") == 0)
         {
-          ap_text_append(resource->pool, option,
-                         "<D:activity-collection-set>");
-          ap_text_append(resource->pool, option,
-                         dav_svn_build_uri(resource->info->repos,
-                                           DAV_SVN_BUILD_URI_ACT_COLLECTION,
-                                           SVN_INVALID_REVNUM, NULL,
-                                           1 /* add_href */, resource->pool));
-          ap_text_append(resource->pool, option,
-                         "</D:activity-collection-set>");
+          apr_text_append(resource->pool, option,
+                          "<D:activity-collection-set>");
+          apr_text_append(resource->pool, option,
+                          dav_svn_build_uri(resource->info->repos,
+                                            DAV_SVN_BUILD_URI_ACT_COLLECTION,
+                                            SVN_INVALID_REVNUM, NULL,
+                                            1 /* add_href */, resource->pool));
+          apr_text_append(resource->pool, option,
+                          "</D:activity-collection-set>");
         }
     }
 
@@ -292,60 +292,113 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
          mutable in the txn... which means it has already passed this
          out-of-dateness check.  (Usually, this happens when looking
          at a parent directory of an already checked-out
-         resource.)  */
+         resource.)  
 
-      if (SVN_IS_VALID_REVNUM(txn_created_rev)
-          && (resource->info->root.rev != txn_created_rev))
+         Now, we come down to it.  If the created revision of the node
+         in the transaction is different from the revision parsed from
+         the version resource URL, we're in a bit of a quandry, and
+         one of a few things could be true.
+
+         - The client is trying to modify an old (out of date)
+           revision of the resource.  This is, of course,
+           unacceptable!
+
+         - The client is trying to modify a *newer* revision.  If the
+           version resource is *newer* than the transaction root, then
+           the client started a commit, a new revision was created
+           within the repository, the client fetched the new resource
+           from that new revision, changed it (or merged in a prior
+           change), and then attempted to incorporate that into the
+           commit that was initially started.  We could copy that new
+           node into our transaction and then modify it, but why
+           bother?  We can stop the commit, and everything will be
+           fine again if the user simply restarts it (because we'll
+           use that new revision as the transaction root, thus
+           incorporating the new resource, which they will then
+           modify).
+             
+         - The path/revision that client is wishing to edit and the
+           path/revision in the current transaction are actually the
+           same node, and thus this created-rev comparison didn't
+           really solidify anything after all. :-)
+      */
+
+      if (SVN_IS_VALID_REVNUM( txn_created_rev ))
         {
-          /* The node they are trying to change does not match what
-             was found in the transaction. That means they are trying
-             to modify an old (out of date) revision of the resource,
-             or they are trying to modify a *newer* revision.
+          int errorful = 0;
 
-             If the version resource is *newer* than the transaction
-             root, then the client started a commit, a new revision was
-             created within the repository, the client fetched the new
-             resource from that new revision, changed it (or merged in
-             a prior change), and then attempted to incorporate that
-             into the commit that was initially started.
+          if (resource->info->root.rev < txn_created_rev)
+            {
+              /* The item being modified is older than the one in the
+                 transaction.  The client is out of date.  */
+              errorful = 1;
+            }
+          else if (resource->info->root.rev > txn_created_rev)
+            {
+              /* The item being modified is being accessed via a newer
+                 revision than the one in the transaction.  We'll
+                 check to see if they are still the same node, and if
+                 not, return an error. */
+              const svn_fs_id_t *url_noderev_id, *txn_noderev_id;
 
-             So yes, it is possible to happen. And we could copy that new
-             node into our transaction and then modify it. But screw
-             that. We can stop the commit, and everything will be fine
-             again if the user simply restarts it (because we'll use
-             that new revision as the transaction root, thus incorporating
-             the new resource, which they will then modify).
-          */
+              if ((serr = svn_fs_node_id(&txn_noderev_id, txn_root, 
+                                         resource->info->repos_path,
+                                         resource->pool)))
+                {
+                  return dav_new_error_tag
+                    (resource->pool, HTTP_CONFLICT, serr->apr_err,
+                     "Unable to fetch the node revision id of the version "
+                     "resource within the transaction.",
+                     SVN_DAV_ERROR_NAMESPACE,
+                     SVN_DAV_ERROR_TAG);
+                }
+              if ((serr = svn_fs_node_id(&url_noderev_id,
+                                         resource->info->root.root,
+                                         resource->info->repos_path,
+                                         resource->pool)))
+                {
+                  return dav_new_error_tag
+                    (resource->pool, HTTP_CONFLICT, serr->apr_err,
+                     "Unable to fetch the node revision id of the version "
+                     "resource within the revision.",
+                     SVN_DAV_ERROR_NAMESPACE,
+                     SVN_DAV_ERROR_TAG);
+                }
+              if (svn_fs_compare_ids(url_noderev_id, txn_noderev_id) != 0)
+                {
+                  errorful = 1;
+                }
+            }
+          if (errorful)
+            {
 #if 1
-          return dav_new_error_tag
-            (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
-             "The version resource does not correspond "
-             "to the resource within the transaction. "
-             "Either the requested version resource is "
-             "out of date (needs to be updated), or the "
-             "requested version resource is newer than "
-             "the transaction root (restart the "
-             "commit).",
-             SVN_DAV_ERROR_NAMESPACE,
-             SVN_DAV_ERROR_TAG);
+              return dav_new_error_tag
+                (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
+                 "The version resource does not correspond to the resource "
+                 "within the transaction.  Either the requested version "
+                 "resource is out of date (needs to be updated), or the "
+                 "requested version resource is newer than the transaction "
+                 "root (restart the commit).",
+                 SVN_DAV_ERROR_NAMESPACE,
+                 SVN_DAV_ERROR_TAG);
 
 #else
-          /* ### some debugging code */
-          const char *msg;
-
-          msg = apr_psprintf(resource->pool, 
-                             "created-rev mismatch: r=%" SVN_REVNUM_T_FMT 
-                             ", t=%" SVN_REVNUM_T_FMT,
-                             resource->info->root.rev, txn_created_rev);
-
-          return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
-                                   SVN_ERR_FS_CONFLICT, msg,
-                                   SVN_DAV_ERROR_NAMESPACE,
-                                   SVN_DAV_ERROR_TAG);
+              /* ### some debugging code */
+              const char *msg;
+              
+              msg = apr_psprintf(resource->pool, 
+                                 "created-rev mismatch: r=%" SVN_REVNUM_T_FMT 
+                                 ", t=%" SVN_REVNUM_T_FMT,
+                                 resource->info->root.rev, txn_created_rev);
+              
+              return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
+                                       SVN_ERR_FS_CONFLICT, msg,
+                                       SVN_DAV_ERROR_NAMESPACE,
+                                       SVN_DAV_ERROR_TAG);
 #endif
+            }
         }
     }
-
   *working_resource = dav_svn_create_working_resource(resource,
                                                       parse.activity_id,
                                                       txn_name);
@@ -385,14 +438,14 @@ static dav_error *dav_svn_avail_reports(const dav_resource *resource,
   return NULL;
 }
 
-static int dav_svn_report_label_header_allowed(const ap_xml_doc *doc)
+static int dav_svn_report_label_header_allowed(const apr_xml_doc *doc)
 {
   return 0;
 }
 
 static dav_error *dav_svn_deliver_report(request_rec *r,
                                          const dav_resource *resource,
-                                         const ap_xml_doc *doc,
+                                         const apr_xml_doc *doc,
                                          ap_filter_t *output)
 {
   int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -449,7 +502,7 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
 
 static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                 int no_auto_merge, int no_checkout,
-                                ap_xml_elem *prop_elem,
+                                apr_xml_elem *prop_elem,
                                 ap_filter_t *output)
 {
   apr_pool_t *pool;

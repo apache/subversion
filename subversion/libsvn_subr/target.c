@@ -27,13 +27,14 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_io.h"
 #include "apr_file_info.h"
 
 
 /*** Code. ***/
 
 svn_error_t *
-svn_path_get_absolute(char **pabsolute,
+svn_path_get_absolute(const char **pabsolute,
                       const char *relative,
                       apr_pool_t *pool)
 {
@@ -69,12 +70,15 @@ svn_path_split_if_file(const char *path,
   /* ### This belongs in path.c! */
 
   apr_finfo_t finfo;
-  apr_status_t apr_err = apr_stat(&finfo, path, APR_FINFO_TYPE, pool);
-  if (apr_err != APR_SUCCESS)
+  svn_error_t *err;
+
+  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
+
+  if (err != SVN_NO_ERROR)
     {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL,
-                              pool, "Couldn't determine if %s was a file or "
-                              "directory.", path);
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, err,
+                               pool, "Couldn't determine if %s was a file or "
+                               "directory.", path);
     }
   else
     {
@@ -128,8 +132,7 @@ svn_path_condense_targets (const char **pbasedir,
       apr_array_header_t *abs_targets
         = apr_array_make (pool, targets->nelts, sizeof (const char *));
       
-      /* ### this cast is a kluge */
-      SVN_ERR (svn_path_get_absolute ((char **) pbasedir,
+      SVN_ERR (svn_path_get_absolute (pbasedir,
                                       ((const char **) targets->elts)[0],
                                       pool));
       
@@ -138,7 +141,7 @@ svn_path_condense_targets (const char **pbasedir,
       for (i = 1; i < targets->nelts; ++i)
         {
           const char *rel = ((const char **)targets->elts)[i];
-          char *absolute;
+          const char *absolute;
           SVN_ERR (svn_path_get_absolute (&absolute, rel, pool));
           (*((const char **)apr_array_push (abs_targets))) = absolute;
           *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
@@ -286,7 +289,7 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *rel_path = ((const char **)targets->elts)[i];
-      char *abs_path;
+      const char *abs_path;
       int j;
       svn_boolean_t keep_me;
 

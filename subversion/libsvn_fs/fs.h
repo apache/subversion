@@ -81,9 +81,16 @@ struct svn_fs_t
 /*** Filesystem Revision ***/
 typedef struct
 {
+  /* node revision id of the root node. */
+  const svn_fs_id_t *id;
+
   /* id of the transaction that was committed to create this
      revision. */
-  const char *txn_id;
+  const char *txn;
+
+  /* property list (const char * name, svn_string_t * value) 
+     may be NULL if there are no properies.  */
+  apr_hash_t *proplist; 
 
 } svn_fs__revision_t;
 
@@ -96,19 +103,19 @@ typedef struct
      still unfinished. */
   svn_revnum_t revision;
 
-  /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  */
-  apr_hash_t *proplist;
-
-  /* node revision id of the root node.  */
+  /* node revision id of the root node.  (unfinished only) */
   const svn_fs_id_t *root_id;
 
   /* node revision id of the node which is the root of the revision
      upon which this txn is base.  (unfinished only) */
   const svn_fs_id_t *base_id;
 
+  /* property list (const char * name, svn_string_t * value).
+     may be NULL if there are no properties.  (unfinished only) */
+  apr_hash_t *proplist;
+
   /* copies list (const char * copy_ids), or NULL if there have been
-     no copies in this transaction.  */
+     no copies in this transaction.  (unfinished only) */
   apr_array_header_t *copies;
 
 } svn_fs__transaction_t;
@@ -152,10 +159,6 @@ typedef enum
 /*** "Delta" Offset/Window Chunk ***/
 typedef struct 
 {
-  /* diff format version number ### at this point, "svndiff" is the
-     only format used. */
-  apr_byte_t version;
-
   /* starting offset of the data represented by this chunk */
   apr_size_t offset;
 

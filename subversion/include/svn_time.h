@@ -36,7 +36,13 @@ extern "C" {
 const char *svn_time_to_nts (apr_time_t when, apr_pool_t *pool);
 
 /* Convert TIMESTR to an apr_time_t. */
-apr_time_t svn_time_from_nts (const char *timestr);
+svn_error_t *svn_time_from_nts(apr_time_t *when, const char *data,
+                               apr_pool_t *pool);
+
+/* Convert WHEN to a const char * representation allocated in POOL,
+   suitable for human display. */
+const char *svn_time_to_human_nts (apr_time_t when, apr_pool_t *pool);
+
 
 /* Needed by getdate.y parser */
 struct getdate_time {

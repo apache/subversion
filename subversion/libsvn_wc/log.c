@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "log.h"
@@ -79,7 +80,7 @@ file_xfer_under_path (const char *path,
                       enum svn_wc__xfer_action action,
                       apr_pool_t *pool)
 {
-  apr_status_t status;
+  svn_error_t *err;
   const char *full_from_path, *full_dest_path;
 
   full_from_path = svn_path_join (path, name, pool);
@@ -144,16 +145,15 @@ file_xfer_under_path (const char *path,
       /* Remove read-only flag on destination. */
       SVN_ERR (svn_io_set_file_read_write (full_dest_path, TRUE, pool));
 
-      status = apr_file_rename (full_from_path,
-                              full_dest_path, pool);
+      err = svn_io_file_rename (full_from_path,
+                                full_dest_path, pool);
 
       /* If we got an ENOENT, that's ok;  the move has probably
          already completed in an earlier run of this log.  */
-      if (status && (! APR_STATUS_IS_ENOENT(status)))
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "file_xfer_under_path: "
-                                  "can't move %s to %s",
-                                  name, dest);
+      if (err && (! APR_STATUS_IS_ENOENT(err->apr_err)))
+        return svn_error_quick_wrap (err,
+                                     "file_xfer_under_path: "
+                                     "can't move from to dest");
   }
 
   return SVN_NO_ERROR;
@@ -306,7 +306,6 @@ log_do_run_cmd (struct log_runner *loggy,
                 const XML_Char **atts)
 {
   svn_error_t *err;
-  apr_status_t apr_err;
   const char
     *infile_name,
     *outfile_name,
@@ -340,11 +339,9 @@ log_do_run_cmd (struct log_runner *loggy,
       const char *infile_path
         = svn_path_join (loggy->path, infile_name, loggy->pool);
       
-      apr_err = apr_file_open (&infile, infile_path, APR_READ,
-                          APR_OS_DEFAULT, loggy->pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "error opening %s", infile_path);
+      SVN_ERR_W (svn_io_file_open (&infile, infile_path, APR_READ,
+                                   APR_OS_DEFAULT, loggy->pool),
+                 "error opening infile");
     }
   
   if (outfile_name)
@@ -354,12 +351,10 @@ log_do_run_cmd (struct log_runner *loggy,
       
       /* kff todo: always creates and overwrites, currently.
          Could append if file exists... ?  Consider. */
-      apr_err = apr_file_open (&outfile, outfile_path, 
-                          (APR_WRITE | APR_CREATE),
-                          APR_OS_DEFAULT, loggy->pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "error opening %s", outfile_path);
+      SVN_ERR_W (svn_io_file_open (&outfile, outfile_path,
+                                   (APR_WRITE | APR_CREATE),
+                                   APR_OS_DEFAULT, loggy->pool),
+                 "error opening outfile");
     }
   
   if (errfile_name)
@@ -369,12 +364,10 @@ log_do_run_cmd (struct log_runner *loggy,
       
       /* kff todo: always creates and overwrites, currently.
          Could append if file exists... ?  Consider. */
-      apr_err = apr_file_open (&errfile, errfile_path, 
-                          (APR_WRITE | APR_CREATE),
-                          APR_OS_DEFAULT, loggy->pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "error opening %s", errfile_path);
+       SVN_ERR_W (svn_io_file_open (&errfile, errfile_path,
+                                    (APR_WRITE | APR_CREATE),
+                                    APR_OS_DEFAULT, loggy->pool),
+                  "error opening errfile");
     }
   
   err = svn_io_run_cmd (loggy->path, name, args, NULL, NULL, FALSE,
@@ -477,13 +470,9 @@ log_do_file_readonly (struct log_runner *loggy,
 static svn_error_t *
 log_do_rm (struct log_runner *loggy, const char *name)
 {
-  apr_status_t apr_err;
   const char *full_path = svn_path_join (loggy->path, name, loggy->pool);
 
-  apr_err = apr_file_remove (full_path, loggy->pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                              "apr_file_remove couldn't remove %s", name);
+  SVN_ERR (svn_io_remove_file (full_path, loggy->pool));
 
   return SVN_NO_ERROR;
 }
@@ -498,8 +487,7 @@ log_do_modify_entry (struct log_runner *loggy,
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
-  const char *sname = apr_pstrdup (loggy->pool, name);
-  const char *tfile = apr_pstrdup (loggy->pool, loggy->path);
+  const char *tfile;
   svn_wc_entry_t *entry;
   apr_uint32_t modify_flags;
   const char *valuestr;
@@ -507,6 +495,11 @@ log_do_modify_entry (struct log_runner *loggy,
   /* Convert the attributes into an entry structure. */
   SVN_ERR (svn_wc__atts_to_entry (&entry, &modify_flags, ah, loggy->pool));
 
+  /* Make TFILE the path of the thing being modified.  */
+  tfile = svn_path_join (loggy->path,
+                         strcmp (name, SVN_WC_ENTRY_THIS_DIR) ? name : "",
+                         loggy->pool);
+      
   /* Did the log command give us any timestamps?  There are three
      possible scenarios here.  We must check both text_time
      and prop_time for each of the three scenarios.  */
@@ -521,9 +514,6 @@ log_do_modify_entry (struct log_runner *loggy,
       enum svn_node_kind tfile_kind;
       apr_time_t text_time;
 
-      if (strcmp (sname, SVN_WC_ENTRY_THIS_DIR))
-        tfile = svn_path_join (tfile, sname, loggy->pool);
-      
       err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
       if (err)
         return svn_error_createf
@@ -560,7 +550,7 @@ log_do_modify_entry (struct log_runner *loggy,
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
            "error checking path `%s'", pfile);
       
-      err = svn_io_file_affected_time (&prop_time, tfile, loggy->pool);
+      err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
@@ -570,7 +560,7 @@ log_do_modify_entry (struct log_runner *loggy,
     }
 
   /* Now write the new entry out */
-  err = svn_wc__entry_modify (loggy->path, sname, entry, modify_flags, 
+  err = svn_wc__entry_modify (loggy->path, name, entry, modify_flags, 
                               loggy->pool);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
@@ -841,9 +831,29 @@ log_do_committed (struct log_runner *loggy,
   {
     const char *wf, *tmpf, *basef;
 
-    /* ### Logic check: if is_this_dir, then full_path is the same as
-       loggy->path, I think.  In which case we don't need the inline
-       conditional below... */
+    /* Get property file pathnames (not from the `tmp' area) depending
+       on whether we're examining a file or THIS_DIR */
+    
+    /* ### Logic check: if is_this_dir, then full_path is the same
+       as loggy->path, I think.  In which case we don't need the
+       inline conditionals below... */
+    
+    SVN_ERR (svn_wc__prop_path (&wf, 
+                                is_this_dir ? loggy->path : full_path, 
+                                0, pool));
+    SVN_ERR (svn_wc__prop_base_path (&basef,
+                                     is_this_dir ? loggy->path : full_path,
+                                     0, pool));
+    
+    /* If this file was replaced in the commit, then we definitely
+       need to begin by removing any old residual prop-base file.  */
+    if (entry->schedule == svn_wc_schedule_replace)
+      {
+        svn_node_kind_t kinder;
+        SVN_ERR (svn_io_check_path (basef, &kinder, pool));
+        if (kinder == svn_node_file)
+          SVN_ERR (svn_io_remove_file (basef, pool));
+      }
 
     SVN_ERR (svn_wc__prop_path (&tmpf, is_this_dir ? loggy->path : full_path,
                                 1, pool));
@@ -853,22 +863,7 @@ log_do_committed (struct log_runner *loggy,
     if (kind == svn_node_file)
       {
         svn_boolean_t same;
-        apr_status_t status;
         const char *chosen;
-
-        /* Get property file pathnames (not from the `tmp' area) depending
-           on whether we're examining a file or THIS_DIR */
-
-        /* ### Logic check: if is_this_dir, then full_path is the same
-           as loggy->path, I think.  In which case we don't need the
-           inline conditionals below... */
-
-        SVN_ERR (svn_wc__prop_path (&wf, 
-                                    is_this_dir ? loggy->path : full_path, 
-                                    0, pool));
-        SVN_ERR (svn_wc__prop_base_path (&basef,
-                                         is_this_dir ? loggy->path : full_path,
-                                         0, pool));
         
         /* We need to decide which prop-timestamp to use, just like we
            did with text-time above. */
@@ -914,10 +909,7 @@ log_do_committed (struct log_runner *loggy,
         /* Make the tmp prop file the new pristine one.  Note that we
            have to temporarily set the file permissions for writability. */
         SVN_ERR (svn_io_set_file_read_write (basef, TRUE, pool));
-        if ((status = apr_file_rename (tmpf, basef, pool)))
-          return svn_error_createf (status, 0, NULL, pool, 
-                                    "error renaming `%s' to `%s'",
-                                    tmpf, basef);
+        SVN_ERR (svn_io_file_rename (tmpf, basef, pool));
         SVN_ERR (svn_io_set_file_read_only (basef, FALSE, pool));
       }
   }   

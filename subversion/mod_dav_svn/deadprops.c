@@ -25,6 +25,7 @@
 
 #include "dav_svn.h"
 #include "svn_xml.h"
+#include "svn_pools.h"
 
 
 struct dav_db {
@@ -177,10 +178,10 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
   db = apr_pcalloc(p, sizeof(*db));
 
   db->resource = resource;
-  db->p = p;
+  db->p = svn_pool_create(p);
 
   /* ### temp hack */
-  db->work = svn_stringbuf_ncreate("", 0, p);
+  db->work = svn_stringbuf_ncreate("", 0, db->p);
 
   /* ### use RO and node's mutable status to look for an error? */
 
@@ -191,7 +192,7 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
 
 static void dav_svn_db_close(dav_db *db)
 {
-  /* nothing to do */
+  svn_pool_destroy(db->p);
 }
 
 static dav_error *dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
@@ -224,7 +225,7 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
     return NULL;
 
   /* XML-escape our properties before sending them across the wire. */
-  svn_xml_escape_string(&xmlsafe, propval, db->p);
+  svn_xml_escape_string(&xmlsafe, propval, db->resource->pool);
 
   if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
     prefix = "C:";
@@ -234,23 +235,25 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
   if (xmlsafe->len == 0)
     {
       /* empty value. add an empty elem. */
-      s = apr_psprintf(db->p, "<%s%s/>" DEBUG_CR, prefix, name->name);
-      apr_text_append(db->p, phdr, s);
+      s = apr_psprintf(db->resource->pool, "<%s%s/>" DEBUG_CR, prefix,
+                       name->name);
+      apr_text_append(db->resource->pool, phdr, s);
     }
   else
     {
       /* add <prefix:name>value</prefix:name> */
 
-      s = apr_psprintf(db->p, "<%s%s>", prefix, name->name);
-      apr_text_append(db->p, phdr, s);
+      s = apr_psprintf(db->resource->pool, "<%s%s>", prefix, name->name);
+      apr_text_append(db->resource->pool, phdr, s);
 
       /* the value is in our pool which means it has the right lifetime. */
       /* ### at least, per the current mod_dav architecture/API */
       /* ### oops. apr_text is not binary-safe */
-      apr_text_append(db->p, phdr, xmlsafe->data);
+      apr_text_append(db->resource->pool, phdr, xmlsafe->data);
       
-      s = apr_psprintf(db->p, "</%s%s>" DEBUG_CR, prefix, name->name);
-      apr_text_append(db->p, phdr, s);
+      s = apr_psprintf(db->resource->pool, "</%s%s>" DEBUG_CR, prefix,
+                       name->name);
+      apr_text_append(db->resource->pool, phdr, s);
     }
 
   return NULL;

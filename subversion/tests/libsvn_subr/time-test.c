@@ -30,7 +30,6 @@ const char *test_old_timestring =
 "Mon 13 May 2002 22:00:50.966679 (day 133, dst 1, gmt_off 010800)";
 
 
-#if 0  /* ### XXX: enable after new timestamps are in use */
 static svn_error_t *
 test_time_to_nts (const char **msg,
                   svn_boolean_t msg_only,
@@ -56,7 +55,6 @@ test_time_to_nts (const char **msg,
 
   return SVN_NO_ERROR;
 }
-#endif /* 0 */
 
 
 static svn_error_t *
@@ -71,7 +69,7 @@ test_time_from_nts (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  timestamp = svn_time_from_nts(test_timestring);
+  SVN_ERR (svn_time_from_nts (&timestamp, test_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
@@ -98,7 +96,7 @@ test_time_from_nts_old (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  timestamp = svn_time_from_nts(test_old_timestring);
+  SVN_ERR (svn_time_from_nts (&timestamp, test_old_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
@@ -128,7 +126,7 @@ test_time_invariant (const char **msg,
     return SVN_NO_ERROR;
 
   timestring = svn_time_to_nts(current_timestamp,pool);
-  timestamp = svn_time_from_nts(timestring);
+  SVN_ERR (svn_time_from_nts (&timestamp, timestring, pool));
 
   if (timestamp != current_timestamp)
     {
@@ -150,8 +148,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
-  /* ### XXX: enable after new timestamps are in use */
-  /* test_time_to_nts, */
+  test_time_to_nts,
   test_time_from_nts,
   test_time_from_nts_old,
   test_time_invariant,

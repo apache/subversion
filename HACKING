@@ -116,10 +116,10 @@ What to read
 ============
 
 Before you can contribute code, you'll need to familiarize yourself
-with the existing codebase and interfaces.
+with the existing code base and interfaces.
 
 Check out a copy of Subversion (anonymously, if you don't yet have an
-account with commit-access) -- so you can look at the codebase.
+account with commit-access) -- so you can look at the code base.
 
 Within subversion/include/ are a bunch of header files with huge doc
 comments.  If you read through these, you'll have a pretty good
@@ -160,7 +160,7 @@ full rationale behind this.  Specifically, you should make it a point to
 carefully read David Wheeler's Secure Programming (as mentioned in
 'notes/assurance.txt'). If at any point you have questions about the
 security implications of a change, you are urged to ask for review on
-the developer mailinglist.
+the developer mailing list.
 
 
 Directory layout
@@ -209,7 +209,7 @@ A rough guide to the source tree:
 
 
 
-Coding Style
+Coding style
 ============
 
 To understand how things work, read doc/svn-design.{texi,info,ps,pdf},
@@ -260,7 +260,7 @@ whichever way you like.
 Secure coding guidelines
 ========================
 
-Just like almost any other programming language, C has undesireable
+Just like almost any other programming language, C has undesirable
 features which enables an attacker to make your program fail in
 predictable ways, often to the attacker's benefit. The goal of these
 guidelines is to make you aware of the pitfalls of C as they apply to
@@ -278,7 +278,7 @@ Security boundaries
 A security boundary in the Subversion server code must be identified as
 such as this enables auditors to quickly determine the quality of the
 boundary.  Security boundaries exist where the running code has access
-to information the user does not or where the code runs with priviliges
+to information the user does not or where the code runs with privileges
 above those of the user making the request. Typical examples of such is
 code that does access control or an application with the SUID bit set.
 
@@ -334,7 +334,7 @@ subversion/include/ as examples.
 
 
 
-Using Page Breaks
+Using page breaks
 =================
 
 We're using page breaks (the Ctrl-L character, ASCII 12) for section
@@ -350,8 +350,8 @@ C-x C-p C-h in Emacs sometime.
 
 
 
-Other Conventions:
-==================
+Other conventions
+=================
 
 In addition to the GNU standards, Subversion uses these conventions:
 
@@ -391,14 +391,14 @@ In addition to the GNU standards, Subversion uses these conventions:
       make changes.  People might be unnecessarily hesitant if someone
       appears to have staked ownership on the file.
 
-   *  There are many other unspoken conventions maintained througout
+   *  There are many other unspoken conventions maintained throughout
       the code, that are only noticed when someone unintentionally
       fails to follow them.  Just try to have a sensitive eye for the
       way things are done, and when in doubt, ask.
 
 
 
-APR Status Codes:
+APR status codes
 =================
 
 Always check for APR status codes (except APR_SUCCESS) with the
@@ -407,16 +407,16 @@ required for portability to non-Unix platforms.
 
 
 
-Automated Tests:
-================
+Automated tests
+===============
 
 For a description of how to use and add tests to Subversion's
 automated test framework, please read subversion/tests/README.
 
 
 
-Writing test cases before code:
-===============================
+Writing test cases before code
+==============================
 
 From: Karl Fogel <kfogel@collab.net>
 Subject: writing test cases
@@ -484,7 +484,7 @@ breakpoints.
 
 
 
-Writing Log Entries
+Writing log entries
 ===================
 
 Certain guidelines should be adhered to when writing log messages:
@@ -599,7 +599,7 @@ that was changed:
 
 In general, there is a tension between making entries easy to find by
 searching for identifiers, and wasting time or producing unreadable
-entries by being exhaustive.  Use your best judgement --- and be
+entries by being exhaustive.  Use your best judgment --- and be
 considerate of your fellow developers.  (Also, run "svn log" to see
 how others have been writing their log entries.)
 
@@ -683,7 +683,7 @@ See the COMMITTERS file for a complete list of committers.
 
 
 
-The Configuration/Build System Under Unix
+The configuration/build system under unix
 =========================================
 
 Greg Stein wrote a custom build system for Subversion, which had been
@@ -717,7 +717,7 @@ advice about hacking it:
 
        "It works on my machine."
 
-   I suspect there may be some tweaks to make on differents OSs. I'd be
+   I suspect there may be some tweaks to make on different OSs. I'd be
    interested to hear if Ben can really build with normal BSD make. It
    should be possible.
 

@@ -65,44 +65,27 @@ How to Run the Scripts
 Directory Contents
 ==================
 
-* getopt_tests.py:       tests: command line option processing.
+   *.py                  The tests themselves.
 
-* basic_tests.py:        tests: general client subcommands.
+   svntest/              Python package, provides test suite framework
 
-* commit_tests.py:       tests: fancy commit cases and scenarios, as
-                                well as regression tests. 
+          /main.py:         Global vars, utility routines; exports
+                            run_tests(), the main test routine.
 
-* update_tests.py:       tests: fancy update cases and scenarions, as 
-                                well as regression tests.
+          /tree.py:         Infrastructure for SVNTreeNode class.
+                              - tree constructors, tree comparison routines.
+                              - routines to parse subcommand output into
+                                specific kinds of trees.
+                              - routines to parse a working copy and
+                                entries files into specific kinds of trees.
 
-* prop_tests.py:         tests: operations on properties.
+          /wc.py:           Functions for interacting with a working
+                            copy, and converting to/from trees.
 
-* schedule_tests.py:     tests: test scheduling of operations (add,
-                                delete, replace)
+          /actions.py:      Main API for driving subversion client and
+                            using trees to verify results. 
 
-* svnadmin_tests.py:     tests: 'svnadmin' tool functions
-
-* log_tests.py:          tests: 'svn log' subcommand. 
-
-* svntest/               subversion test framework, as a python package.
-
-    * main.py:               global vars, utility routines.
-                             exports run_tests(), the main test routine.
-
-    * svn_tree.py:           infrastructure for SVNTreeNode class.
-
-                             * tree constructors, tree comparison routines.
-
-                             * routines to parse subcommand output into
-                               specific kinds of trees.
-
-                             * routines to parse a working copy and
-                               entries files into specific kinds of trees.
-
-    * actions.py:            main API for driving subversion client and
-                             using trees to verify results.
-
-    * entry.py:              parse an `entries' file (### not used yet)
+          /entry.py:        Parse an `entries' file (### not used yet)
 
 
 

@@ -24,6 +24,7 @@
 #include <mod_dav.h>
 
 #include "dav_svn.h"
+#include "svn_pools.h"
 
 
 /*
@@ -99,11 +100,12 @@ static const dav_liveprop_group dav_svn_liveprop_group =
 
 static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                            int propid, dav_prop_insert what,
-                                           ap_text_header *phdr)
+                                           apr_text_header *phdr)
 {
   const char *value;
   const char *s;
-  apr_pool_t *p = resource->pool;
+  apr_pool_t *response_pool = resource->pool;
+  apr_pool_t *p = resource->info->pool;
   const dav_liveprop_spec *info;
   int global_ns;
   svn_error_t *serr;
@@ -348,20 +350,21 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
   if (what == DAV_PROP_INSERT_NAME
       || (what == DAV_PROP_INSERT_VALUE && *value == '\0')) {
-    s = apr_psprintf(p, "<lp%d:%s/>" DEBUG_CR, global_ns, info->name);
+    s = apr_psprintf(response_pool, "<lp%d:%s/>" DEBUG_CR, global_ns,
+                     info->name);
   }
   else if (what == DAV_PROP_INSERT_VALUE) {
-    s = apr_psprintf(p, "<lp%d:%s>%s</lp%d:%s>" DEBUG_CR,
+    s = apr_psprintf(response_pool, "<lp%d:%s>%s</lp%d:%s>" DEBUG_CR,
                      global_ns, info->name, value, global_ns, info->name);
   }
   else {
     /* assert: what == DAV_PROP_INSERT_SUPPORTED */
-    s = apr_psprintf(p,
+    s = apr_psprintf(response_pool,
                      "<D:supported-live-property D:name=\"%s\" "
                      "D:namespace=\"%s\"/>" DEBUG_CR,
                      info->name, dav_svn_namespace_uris[info->ns]);
   }
-  ap_text_append(p, phdr, s);
+  apr_text_append(response_pool, phdr, s);
 
   /* we inserted whatever was asked for */
   return what;
@@ -376,7 +379,7 @@ static int dav_svn_is_writable(const dav_resource *resource, int propid)
 }
 
 static dav_error * dav_svn_patch_validate(const dav_resource *resource,
-                                          const ap_xml_elem *elem,
+                                          const apr_xml_elem *elem,
                                           int operation, void **context,
                                           int *defer_to_dead)
 {
@@ -386,7 +389,7 @@ static dav_error * dav_svn_patch_validate(const dav_resource *resource,
 }
 
 static dav_error * dav_svn_patch_exec(const dav_resource *resource,
-                                      const ap_xml_elem *elem,
+                                      const apr_xml_elem *elem,
                                       int operation, void *context,
                                       dav_liveprop_rollback **rollback_ctx)
 {
@@ -444,9 +447,11 @@ int dav_svn_find_liveprop(const dav_resource *resource,
 }
 
 void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
-                                  dav_prop_insert what, ap_text_header *phdr)
+                                  dav_prop_insert what, apr_text_header *phdr)
 {
     const dav_liveprop_spec *spec;
+    apr_pool_t *pool;
+    apr_pool_t *subpool;
 
     /* don't insert any liveprops if this isn't "our" resource */
     if (resource->hooks != &dav_svn_hooks_repos)
@@ -462,10 +467,18 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
 	return;
     }
 
+    pool = resource->info->pool;
+    subpool = svn_pool_create(pool);
+    resource->info->pool = subpool;
+
     for (spec = dav_svn_props; spec->name != NULL; ++spec)
       {
         (void) dav_svn_insert_prop(resource, spec->propid, what, phdr);
+        svn_pool_clear(subpool);
       }
+
+    resource->info->pool = pool;
+    svn_pool_destroy(subpool);
 
     /* ### we know the others aren't defined as liveprops */
 }

@@ -139,22 +139,22 @@ class SVNTreeNode:
   def add_child(self, newchild):
     if self.children is None:  # if you're a file,
       self.children = []     # become an empty dir.
-    n = 0
+    child_already_exists = 0
     for a in self.children:
       if a.name == newchild.name:
-        n = 1
+        child_already_exists = 1
         break
-    if n == 0:  # append child only if we don't already have it.
+    if child_already_exists == 0:
       self.children.append(newchild)
-      newchild.path = os.path.join (self.path, newchild.name)
+      newchild.path = os.path.join (self.path, newchild.name)      
 
     # If you already have the node,
-    else:
+    else:      
       if newchild.children is None:
         # this is the 'end' of the chain, so copy any content here.
         a.contents = newchild.contents
         a.props = newchild.props
-        a.atts = attribute_merge(a.atts, newchild.atts)
+        a.atts = newchild.atts
         a.path = os.path.join (self.path, newchild.name)
       else:
         # try to add dangling children to your matching node
@@ -175,22 +175,6 @@ class SVNTreeNode:
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE" 
-
-# Some attributes 'stack' on each other if the same node is added
-# twice to a tree.  Place all such special cases in here.
-def attribute_merge(orighash, newhash):
-  "Merge the attributes in NEWHASH into ORIGHASH."
-
-  if orighash.has_key('verb') and newhash.has_key('verb'):
-    # Special case: if a commit reports a node as "deleted", then
-    # "added", it's a replacment.
-    if orighash['verb'] == "Deleting":
-      if newhash['verb'] == "Adding":
-        orighash['verb'] = "Replacing"
-
-  # Add future stackable attributes here...
-
-  return orighash
 
 
 # helper func
@@ -419,6 +403,20 @@ def compare_trees(a, b,
       raise main.SVNTypeMismatch
     # They're both directories.
     else:
+      # First, compare the directories' two hashes.
+      if (a.props != b.props) or (a.atts != b.atts):
+        print "============================================================="
+        print "Expected", b.name, "and actual", a.name, "are different!"
+        print "============================================================="
+        print "EXPECTED NODE TO BE:"
+        print "============================================================="
+        b.pprint()
+        print "============================================================="
+        print "ACTUAL NODE FOUND:"
+        print "============================================================="
+        a.pprint()
+        raise main.SVNTreeUnequal
+              
       accounted_for = []
       # For each child of A, check and see if it's in B.  If so, run
       # compare_trees on the two children and add b's child to

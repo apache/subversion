@@ -96,6 +96,7 @@ def guarantee_greek_repository(path):
   main.chmod_tree(path, 0666, 0666)
 
   if main.windows:
+    # FIXME: All this copying stuff around is a pain.
     if os.path.exists(main.current_repo_dir):
       shutil.rmtree(main.current_repo_dir)
     shutil.copytree(path, main.current_repo_dir)
@@ -227,10 +228,12 @@ def run_and_verify_update(wc_dir_name,
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
-  STATUS_OUTPUT_TREE is given, then 'svn status' output will be
-  compared.  (This is a good way to check that revision numbers were
-  bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more details.
+  STATUS_TREE is given, then 'svn status' output will be compared.
+  (This is a good way to check that revision numbers were bumped.)
+  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  tree.compare_trees - see that function's doc string for more
+  details.
+
   If CHECK_PROPS is set, then disk comparison will examine props.
   Return 0 if successful."""
 
@@ -257,6 +260,68 @@ def run_and_verify_update(wc_dir_name,
 
   mytree = tree.build_tree_from_checkout (output)
   return verify_update (mytree, wc_dir_name,
+                        output_tree, disk_tree, status_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton,
+                        check_props)
+
+
+def run_and_verify_merge(dir, rev1, rev2, url,
+                         output_tree, disk_tree, status_tree,
+                         error_re_string = None,
+                         singleton_handler_a = None,
+                         a_baton = None,
+                         singleton_handler_b = None,
+                         b_baton = None,
+                         check_props = 0):
+
+  """Run 'svn merge -rREV1:REV2 URL DIR'
+
+  If ERROR_RE_STRING, the merge must exit with error, and the error
+  message must match regular expression ERROR_RE_STRING.
+
+  Else if ERROR_RE_STRING is None, then:
+
+  The subcommand output will be verified against OUTPUT_TREE, and the
+  working copy itself will be verified against DISK_TREE.  If optional
+  STATUS_TREE is given, then 'svn status' output will be compared.
+  (This is a good way to check that revision numbers were bumped.)
+  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  tree.compare_trees - see that function's doc string for more
+  details.
+  
+  If CHECK_PROPS is set, then disk comparison will examine props.
+  Return 0 if successful."""
+
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+  if isinstance(status_tree, wc.State):
+    status_tree = status_tree.old_tree()
+
+  ### See http://subversion.tigris.org/issues/show_bug.cgi?id=748
+  ### "svn merge" only works in "." right now, unlike all the other
+  ### commands.  This means that people building expected_output trees
+  ### should pass "" as the wc_dir for now, until we can run merge on
+  ### a target deeper than ".".
+
+  # Update and make a tree of the output.
+  out, err = main.run_svn (error_re_string,
+                           'merge', '-r', rev1 + ':' + rev2, url, dir)
+
+  if (error_re_string):
+    rm = re.compile(error_re_string)
+    for line in err:
+      match = rm.search(line)
+      if match:
+        return 0
+    return 1
+  elif err:
+    return 1
+
+  mytree = tree.build_tree_from_checkout(out)
+  return verify_update (mytree, dir,
                         output_tree, disk_tree, status_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton,
@@ -494,7 +559,7 @@ def duplicate_dir(wc_name, wc_copy_name):
   existing tree at that location."""
 
   if os.path.exists(wc_copy_name):
-    shutil.rmtree(wc_copy_name)
+    main.remove_wc(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
   
 

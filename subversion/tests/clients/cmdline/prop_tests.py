@@ -348,6 +348,7 @@ def update_conflict_props(sbox):
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', props={'cash-sound' : 'beep!'})
+  expected_disk.tweak('A', props={'foo' : 'baz'})
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -378,6 +379,149 @@ def update_conflict_props(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
+#----------------------------------------------------------------------
+
+# Issue #742: we used to screw up when committing a file replacement
+# that also had properties.  It was fixed by teaching
+# svn_wc_props_modified_p and svn_wc_transmit_prop_deltas to *ignore*
+# leftover base-props when a file is scheduled for replacement.  (When
+# we svn_wc_add a file, it starts life with no working props.)
+
+def commit_replacement_props(sbox):
+  "props work when committing a replacement"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Add a property to two files
+  iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
+  svntest.main.run_svn(None, 'propset', 'boson', 'W', lambda_path)
+
+  # Commit (### someday use run_and_verify_commit for better coverage)
+  outlines, errlines = svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc_dir)
+  if errlines:
+    print "error in property commit"
+    return 1
+
+  # Schedule both files for deletion
+  svntest.main.run_svn(None, 'rm', iota_path, lambda_path)
+
+  # Now recreate the files, and schedule them for addition.
+  # Poof, the 'new' files don't have any properties at birth.
+  svntest.main.file_append (iota_path, 'iota TNG')
+  svntest.main.file_append (lambda_path, 'lambda TNG')
+  svntest.main.run_svn(None, 'add', iota_path, lambda_path)
+
+  # Sanity check:  the two files should be scheduled for (R)eplacement.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('iota', wc_rev=2, status='R ')
+  expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
+
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Now add a property to lambda.  Iota still doesn't have any.
+  svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)  
+
+  # Commit, with careful output checking.  We're actually going to
+  # scan the working copy for props after the commit.
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Replacing'),
+    'A/B/lambda' : Item(verb='Replacing'),
+    })
+
+  # Expected status tree:  lambda has one prop, iota doesn't.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak('iota', wc_rev=3)
+  expected_status.tweak('A/B/lambda', wc_rev=3, status='__')
+
+  return svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                                expected_status,
+                                                None, None, None, None, None,
+                                                wc_dir)
+
+
+#----------------------------------------------------------------------
+
+def revert_replacement_props(sbox):
+  "props work when reverting a replacement"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Add a property to two files
+  iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
+  svntest.main.run_svn(None, 'propset', 'boson', 'W', lambda_path)
+
+  # Commit rev 2. (### someday use run_and_verify_commit for better coverage)
+  outlines, errlines = svntest.main.run_svn(None, 'ci', '-m', 'logmsg', wc_dir)
+  if errlines:
+    print "error in property commit"
+    return 1
+
+  # Schedule both files for deletion
+  svntest.main.run_svn(None, 'rm', iota_path, lambda_path)
+
+  # Now recreate the files, and schedule them for addition.
+  # Poof, the 'new' files don't have any properties at birth.
+  svntest.main.file_append (iota_path, 'iota TNG')
+  svntest.main.file_append (lambda_path, 'lambda TNG')
+  svntest.main.run_svn(None, 'add', iota_path, lambda_path)
+
+  # Sanity check:  the two files should be scheduled for (R)eplacement.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('iota', wc_rev=2, status='R ')
+  expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
+
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Now add a property to lambda.  Iota still doesn't have any.
+  svntest.main.run_svn(None, 'propset', 'capacitor', 'flux', lambda_path)  
+
+  # Now revert both files.
+  svntest.main.run_svn(None, 'revert', iota_path, lambda_path)
+
+  # Do an update; even though the update is really a no-op,
+  # run_and_verify_update has the nice feature of scanning disk as
+  # well as running status.  We want to verify that we truly have a
+  # *pristine* revision 2 tree, with the original rev 2 props, and no
+  # local mods at all.
+
+  expected_output = svntest.wc.State(wc_dir, {
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('iota', status='__')
+  expected_status.tweak('A/B/lambda', status='__')
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', props={'cash-sound' : 'cha-ching!'})
+  expected_disk.tweak('A/B/lambda', props={'boson' : 'W'})
+
+  # scan disk for props too.
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
+                                               None, None, None, None, None,
+                                               1)
+
+
 ########################################################################
 # Run the tests
 
@@ -390,6 +534,8 @@ test_list = [ None,
               downdate_props,
               remove_props,
               update_conflict_props,
+              commit_replacement_props,
+              revert_replacement_props,
              ]
 
 if __name__ == '__main__':

@@ -838,6 +838,7 @@ do_item_commit (const char *url,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
     {
       const char *tempfile;
+      svn_wc_entry_t *tmp_entry;
 
       if (kind == svn_node_file)
         {
@@ -855,8 +856,9 @@ do_item_commit (const char *url,
             }
         }
 
+      SVN_ERR (svn_wc_entry (&tmp_entry, item->path, TRUE, pool));
       SVN_ERR (svn_wc_transmit_prop_deltas 
-               (item->path, kind, editor,
+               (item->path, tmp_entry, editor,
                 (kind == svn_node_dir) ? dir_baton : file_baton, 
                 &tempfile, pool));
       if (tempfile && tempfiles)

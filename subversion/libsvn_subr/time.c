@@ -55,6 +55,16 @@ static const char * const timestamp_format =
 static const char * const old_timestamp_format =
 "%s %d %s %d %02d:%02d:%02d.%06d (day %03d, dst %d, gmt_off %06d)";
 
+/* Our human representation of dates look like this:
+ *
+ *    "Sun, 23 Jun 2002 11:13:02 +0300"
+ *
+ * This format is used whenever time is shown to the user
+ * directly.
+ */
+static const char * const human_timestamp_format =
+"%3.3s, %.2d %3.3s %.2d %.2d:%.2d:%.2d %+.2d%.2d";
+
 
 const char *
 svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
@@ -77,9 +87,6 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
   /* It would be nice to use apr_strftime(), but APR doesn't give a
      way to convert back, so we wouldn't be able to share the format
      string between the writer and reader. */
-  /* XXX: Enable this bit of code and remove the one below when a
-     bootstrap tarball has been released with this change included.
-
   t_cstr = apr_psprintf (pool,
                          timestamp_format,
                          exploded_time.tm_year + 1900,
@@ -89,8 +96,9 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
                          exploded_time.tm_min,
                          exploded_time.tm_sec,
                          exploded_time.tm_usec);
-  */
 
+  /* ### Remove this when the old style timestamp parsing is taken
+     out. 
   t_cstr = apr_psprintf (pool,
                          old_timestamp_format,
                          apr_day_snames[exploded_time.tm_wday],
@@ -104,17 +112,18 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
                          exploded_time.tm_yday + 1,
                          exploded_time.tm_isdst,
                          exploded_time.tm_gmtoff);
+  */
 
   return t_cstr;
 }
 
 
 static int
-find_matching_string (char *str, const char strings[][4])
+find_matching_string (char *str, apr_size_t size, const char strings[][4])
 {
-  int i;
+  apr_size_t i;
 
-  for (i = 0; ; i++)
+  for (i = 0; i < size; i++)
     if (strings[i] && (strcmp (str, strings[i]) == 0))
       return i;
 
@@ -122,12 +131,12 @@ find_matching_string (char *str, const char strings[][4])
 }
 
 
-apr_time_t
-svn_time_from_nts (const char *data)
+svn_error_t *
+svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
 {
   apr_time_exp_t exploded_time;
+  apr_status_t apr_err;
   char wday[4], month[4];
-  apr_time_t when;
 
   /* First try the new timestamp format. */
   if (sscanf (data,
@@ -146,8 +155,15 @@ svn_time_from_nts (const char *data)
       exploded_time.tm_yday = 0;
       exploded_time.tm_isdst = 0;
       exploded_time.tm_gmtoff = 0;
-
-      apr_implode_gmt (&when, &exploded_time);
+      
+      apr_err = apr_implode_gmt (when, &exploded_time);
+      if(apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL, pool,
+                                    "Date conversion failed.");
+        }
+      
+      return SVN_NO_ERROR;
     }
   /* Then try the compatibility option. */
   else if (sscanf (data,
@@ -166,21 +182,47 @@ svn_time_from_nts (const char *data)
     {
       exploded_time.tm_year -= 1900;
       exploded_time.tm_yday -= 1;
-      exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
-      exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
+      /* Using hard coded limits for the arrays - they are going away
+         soon in any case. */
+      exploded_time.tm_wday = find_matching_string (wday, 7, apr_day_snames);
+      exploded_time.tm_mon = find_matching_string (month, 12, apr_month_snames);
 
-      apr_implode_gmt (&when, &exploded_time);
+      apr_err = apr_implode_gmt (when, &exploded_time);
+      if(apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL, pool,
+                                    "Date conversion failed.");
+        }
+
+      return SVN_NO_ERROR;
     }
   /* Timestamp is something we do not recognize. */
   else
     {
-      /* XXX: fix this function to return real error codes and all the
-         places that use it. */
-      /* Better zero than something random. */
-      when = 0;
+      return svn_error_createf(SVN_ERR_BAD_DATE, 0, NULL, pool,
+                               "Date parsing failed.");
     }
+}
 
-  return when;
+
+const char *
+svn_time_to_human_nts (apr_time_t t, apr_pool_t *pool)
+{
+  apr_time_exp_t exploded_time;
+
+  apr_time_exp_lt (&exploded_time, t);
+
+  return apr_psprintf (pool,
+                       human_timestamp_format,
+                       apr_day_snames[exploded_time.tm_wday],
+                       exploded_time.tm_mday,
+                       apr_month_snames[exploded_time.tm_mon],
+                       exploded_time.tm_year + 1900,
+                       exploded_time.tm_hour,
+                       exploded_time.tm_min,
+                       exploded_time.tm_sec,
+                       exploded_time.tm_gmtoff / (60 * 60),
+                       (exploded_time.tm_gmtoff / 60) % 60);
 }
 
 

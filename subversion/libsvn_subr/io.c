@@ -1439,6 +1439,139 @@ svn_io_detect_mimetype (const char **mimetype,
 }
 
 
+svn_error_t *
+svn_io_file_open (apr_file_t **new_file, const char *fname,
+                  apr_int32_t flag, apr_fileperms_t perm,
+                  apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_file_open (new_file, fname, flag, perm, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "can't open `%s'", fname);
+  else
+    return SVN_NO_ERROR;  
+}
+
+
+svn_error_t *
+svn_io_stat (apr_finfo_t *finfo, const char *fname,
+             apr_int32_t wanted, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_stat (finfo, fname, wanted, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "couldn't stat '%s'...", fname);
+  else
+    return SVN_NO_ERROR;  
+}
+
+
+svn_error_t *
+svn_io_file_rename (const char *from_path, const char *to_path,
+                    apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_file_rename (from_path, to_path, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "can't move '%s' to '%s'", from_path, to_path);
+  else
+    return SVN_NO_ERROR;  
+}
+
+
+svn_error_t *
+svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_make (path, perm, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "can't create directory '%s'", path);
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_open (new_dir, dirname, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "unable to open directory '%s'", dirname);
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_remove (dirname, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "unable to remove directory '%s'", dirname);
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_dir_read (apr_finfo_t *finfo,
+                 apr_int32_t wanted,
+                 apr_dir_t *thedir,
+                 apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_read (finfo, wanted, thedir);
+
+  if (status)
+    return svn_error_create (status, 0, NULL, pool,
+                             "error reading directory");
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_file_printf (apr_file_t *fptr, const char *format, ...)
+{
+  apr_status_t status;
+  va_list ap;
+  const char *buf;
+
+  va_start (ap, format);
+  buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
+  va_end(ap);
+
+  status = apr_file_puts(buf, fptr);
+  if (status)
+    return svn_error_create (status, 0, NULL, apr_file_pool_get (fptr),
+                             "unable to print to file");
+  else
+    return SVN_NO_ERROR;
+}
+ 
+
+
 
 /* FIXME: Dirty, ugly, abominable, but works. Beauty comes second for now. */
 #include "svn_private_config.h"
@@ -1490,40 +1623,80 @@ svn_io_fd_from_file (int *fd_p, apr_file_t *file)
 }
 
 
-apr_status_t
-apr_check_dir_empty (const char *path, 
-                     apr_pool_t *pool)
+/**
+ * Determine if a directory is empty or not.
+ * @param Return APR_SUCCESS if the dir is empty, else APR_ENOTEMPTY if not.
+ * @param path The directory.
+ * @param pool Used for temporary allocation.
+ * @remark If path is not a directory, or some other error occurs,
+ * then return the appropriate apr status code.
+ */                        
+static apr_status_t
+apr_dir_is_empty (const char *dir, apr_pool_t *pool)
 {
-  apr_status_t apr_err, retval;
-  apr_dir_t *dir;
+  apr_status_t apr_err;
+  apr_dir_t *dir_handle;
   apr_finfo_t finfo;
+  apr_status_t retval = APR_SUCCESS;
   
-  apr_err = apr_dir_open (&dir, path, pool);
-  if (apr_err)
+  apr_err = apr_dir_open (&dir_handle, dir, pool);
+  if (apr_err != APR_SUCCESS)
     return apr_err;
       
-  /* All systems return "." and ".." as the first two files, so read
-     past them unconditionally. */
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (apr_err) return apr_err;
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (apr_err) return apr_err;
+  /* ### What is the gospel on the APR_STATUS_IS_SUCCESS macro these
+     days? :-) */
 
-  /* Now, there should be nothing left.  If there is something left,
-     return EGENERAL. */
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (APR_STATUS_IS_ENOENT (apr_err))
-    retval = APR_SUCCESS;
-  else if (! apr_err)
-    retval = APR_EGENERAL;
-  else
-    retval = apr_err;
+  for (apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir_handle);
+       apr_err == APR_SUCCESS;
+       apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir_handle))
+    {
+      /* Ignore entries for this dir and its parent, robustly.
+         (APR promises that they'll come first, so technically
+         this guard could be moved outside the loop.  But Ryan Bloom
+         says he doesn't believe it, and I believe him. */
+      if (! (finfo.name[0] == '.'
+             && (finfo.name[1] == '\0'
+                 || (finfo.name[1] == '.' && finfo.name[2] == '\0'))))
+        {
+          retval = APR_ENOTEMPTY;
+          break;
+        }
+    }
 
-  apr_err = apr_dir_close (dir);
-  if (apr_err)
+  /* Make sure we broke out of the loop for the right reason. */
+  if (! APR_STATUS_IS_ENOENT (apr_err))
+    return apr_err;
+
+  apr_err = apr_dir_close (dir_handle);
+  if (apr_err != APR_SUCCESS)
     return apr_err;
 
   return retval;
+}
+
+
+svn_error_t *
+svn_io_dir_empty (svn_boolean_t *is_empty_p,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  /* ### Need to do UTF-8 conversion here, when we apply the rest of
+     Marcus Comstedt's patch.  His patch won't cover this function, 
+     since the function didn't exist when he wrote the patch. */
+
+  status = apr_dir_is_empty (path, pool);
+
+  if (APR_STATUS_IS_SUCCESS (status))
+    *is_empty_p = TRUE;
+  else if (APR_STATUS_IS_ENOTEMPTY (status))
+    *is_empty_p = FALSE;
+  else
+    return svn_error_createf (status, 0, NULL, pool,
+                              "unable to check directory '%s'", path);
+
+  return SVN_NO_ERROR;
 }
 
 

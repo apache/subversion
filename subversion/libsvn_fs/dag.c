@@ -369,7 +369,9 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
                                 root_id, trail));
 
   /* Link it into filesystem revision 0. */
-  revision.txn_id = txn_id;
+  revision.id = root_id;
+  revision.proplist = NULL;
+  revision.txn = txn_id;
   SVN_ERR (svn_fs__put_rev (&rev, fs, &revision, trail));
   if (rev != 0)
     return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
@@ -377,7 +379,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
                               " in filesystem `%s'", fs->path);
 
   /* Promote our transaction to a "committed" transaction. */
-  SVN_ERR (svn_fs__txn_make_committed (fs, txn_id, rev, trail));
+  SVN_ERR (svn_fs__commit_txn (fs, txn_id, rev, trail));
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_nts (apr_time_now(), trail->pool);
@@ -998,7 +1000,7 @@ delete_entry (dag_node_t *parent,
       SVN_ERR (svn_fs__dag_dir_entries (&entries_here, node, trail));
       if (require_empty && entries_here && apr_hash_count (entries_here))
         return svn_error_createf
-          (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
+          (SVN_ERR_DIR_NOT_EMPTY, 0, NULL, parent->pool,
            "Attempt to delete non-empty directory `%s'.", name);
     }
 
@@ -1550,13 +1552,12 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
   /* Add new revision entry to `revisions' table, copying the
      transaction's property list.  */
   SVN_ERR (svn_fs__get_txn (&transaction, fs, txn_id, trail));
-  revision.txn_id = txn_id;
+  revision.id = root->id;
+  revision.proplist = transaction->proplist;
+  revision.txn = txn_id;
   if (new_rev)
     *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR (svn_fs__put_rev (new_rev, fs, &revision, trail));
-
-  /* Promote the unfinished transaction to a committed one. */
-  SVN_ERR (svn_fs__txn_make_committed (fs, txn_id, *new_rev, trail));
 
   /* Set a date on the commit.  We wait until now to fetch the date,
      so it's definitely newer than any previous revision's date. */
@@ -1564,6 +1565,9 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
   date.len = strlen (date.data);
   SVN_ERR (svn_fs__set_rev_prop (fs, *new_rev, SVN_PROP_REVISION_DATE, 
                                  &date, trail));
+
+  /* Promote the unfinished transaction to a committed one. */
+  SVN_ERR (svn_fs__commit_txn (fs, txn_id, *new_rev, trail));
 
   return SVN_NO_ERROR;
 }

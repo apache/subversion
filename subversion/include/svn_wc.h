@@ -73,6 +73,8 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_restore,
   svn_wc_notify_revert,
   svn_wc_notify_resolve,
+
+  /* The update actions are also used for checkouts, switches, and merges. */
   svn_wc_notify_update_delete,     /* Got a delete in an update. */
   svn_wc_notify_update_add,        /* Got an add in an update. */
   svn_wc_notify_update_update,     /* Got any other action in an update. */
@@ -80,6 +82,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_update_external,   /* About to update an external module;
                                       use for checkouts and switches too,
                                       end with svn_wc_update_completed. */
+
   svn_wc_notify_commit_modified,
   svn_wc_notify_commit_added,
   svn_wc_notify_commit_deleted,
@@ -146,6 +149,71 @@ typedef void (*svn_wc_notify_func_t) (void *baton,
                                       svn_wc_notify_state_t content_state,
                                       svn_wc_notify_state_t prop_state,
                                       svn_revnum_t revision);
+
+
+
+/* A callback vtable invoked by our diff-editors, as they receive
+   diffs from the server.  'svn diff' and 'svn merge' both implement
+   their own versions of this table. */
+typedef struct svn_wc_diff_callbacks_t
+{
+  /* A file PATH has changed.  The changes can be seen by comparing
+     TMPFILE1 and TMPFILE2, which represent REV1 and REV2 of the file,
+     respectively.
+
+     If STATE is non-null, set *STATE to the state of the file
+     contents after the operation has been performed.  (In practice,
+     this is only useful with merge, not diff; diff callbacks will
+     probably set *STATE to svn_wc_notify_state_unknown, since they do
+     not change the state and therefore do not bother to know the
+     state after the operation.) */
+  svn_error_t *(*file_changed) (svn_wc_notify_state_t *state,
+                                const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                svn_revnum_t rev1,
+                                svn_revnum_t rev2,
+                                void *diff_baton);
+
+  /* A file PATH was added.  The contents can be seen by comparing
+     TMPFILE1 and TMPFILE2. */
+  svn_error_t *(*file_added) (const char *path,
+                              const char *tmpfile1,
+                              const char *tmpfile2,
+                              void *diff_baton);
+  
+  /* A file PATH was deleted.  The [loss of] contents can be seen by
+     comparing TMPFILE1 and TMPFILE2. */
+  svn_error_t *(*file_deleted) (const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                void *diff_baton);
+  
+  /* A directory PATH was added. */
+  svn_error_t *(*dir_added) (const char *path,
+                             void *diff_baton);
+  
+  /* A directory PATH was deleted. */
+  svn_error_t *(*dir_deleted) (const char *path,
+                               void *diff_baton);
+  
+  /* A list of property changes (PROPCHANGES) was applied to PATH.
+     The array is a list of (svn_prop_t) structures. 
+     The original list of properties is provided in ORIGINAL_PROPS.
+
+     If STATE is non-null, set *STATE to the state of the properties
+     after the operation has been performed.  (In practice,
+     this is only useful with merge, not diff; diff callbacks will
+     probably set *STATE to svn_wc_notify_state_unknown, since they do
+     not change the state and therefore do not bother to know the
+     state after the operation.)  */
+  svn_error_t *(*props_changed) (svn_wc_notify_state_t *state,
+                                 const char *path,
+                                 const apr_array_header_t *propchanges,
+                                 apr_hash_t *original_props,
+                                 void *diff_baton);
+
+} svn_wc_diff_callbacks_t;
 
 
 
@@ -1033,7 +1101,7 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  */
 svn_error_t *svn_wc_get_diff_editor (const char *anchor,
                                      const char *target,
-                                     const svn_diff_callbacks_t *callbacks,
+                                     const svn_wc_diff_callbacks_t *callbacks,
                                      void *callback_baton,
                                      svn_boolean_t recurse,
                                      const svn_delta_edit_fns_t **editor,
@@ -1053,7 +1121,7 @@ svn_error_t *svn_wc_get_diff_editor (const char *anchor,
  */
 svn_error_t *svn_wc_diff (const char *anchor,
                           const char *target,
-                          const svn_diff_callbacks_t *callbacks,
+                          const svn_wc_diff_callbacks_t *callbacks,
                           void *callback_baton,
                           svn_boolean_t recurse,
                           apr_pool_t *pool);
@@ -1157,12 +1225,16 @@ svn_error_t *svn_wc_merge (const char *left,
    into the path's existing properties.  PROPCHANGES is an array of
    svn_prop_t objects.
 
+   If STATE is non-null, set *STATE to the state of the properties
+   after the merge.
+
    If conflicts are found when merging, they are described in a
    temporary .prej file (or appended to an already-existing .prej
    file), and the entry is marked "conflicted".
 */
 svn_error_t *
-svn_wc_merge_prop_diffs (const char *path,
+svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
+                         const char *path,
                          const apr_array_header_t *propchanges,
                          apr_pool_t *pool);
 
@@ -1405,7 +1477,7 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
                                           apr_pool_t *pool);
 
 
-/* Given a PATH of a given node KIND, transmit all local property
+/* Given a PATH with its accompanying ENTRY, transmit all local property
    modifications using the appropriate EDITOR method (in conjunction
    with BATON).  Use POOL for all allocations.
 
@@ -1413,13 +1485,14 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
    path to that file is returned in *TEMPFILE (so the caller can clean
    this up if it wishes to do so).  */
 svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
-                                          svn_node_kind_t kind,
+                                          svn_wc_entry_t *entry,
                                           const svn_delta_editor_t *editor,
                                           void *baton,
                                           const char **tempfile,
                                           apr_pool_t *pool);
 
 
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

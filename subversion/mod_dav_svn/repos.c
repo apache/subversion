@@ -1050,10 +1050,10 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
          ### return an error so we can easily identify the cases where
          ### we've called this function unexpectedly. */
       return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           ap_psprintf(resource->pool,
-                                       "get_parent_resource was called for "
-                                       "%s (type %d)",
-                                       resource->uri, resource->type));
+                           apr_psprintf(resource->pool,
+                                        "get_parent_resource was called for "
+                                        "%s (type %d)",
+                                        resource->uri, resource->type));
       break;
     }
 
@@ -1486,9 +1486,11 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       "                  rev     CDATA #IMPLIED>\n"
       "  <!ELEMENT updir EMPTY>\n"
       "  <!ELEMENT file  (prop)*>\n"
-      "  <!ATTLIST file  name    CDATA #REQUIRED>\n"
+      "  <!ATTLIST file  name    CDATA #REQUIRED\n"
+      "                  href    CDATA #REQUIRED>\n"
       "  <!ELEMENT dir   (prop)*>\n"
-      "  <!ATTLIST dir   name    CDATA #REQUIRED>\n"
+      "  <!ATTLIST dir   name    CDATA #REQUIRED\n"
+      "                  href    CDATA #REQUIRED>\n"
       "  <!ELEMENT prop  (#PCDATA)>\n"
       "  <!ATTLIST prop  name    CDATA #REQUIRED>\n"
       "]>\n";
@@ -1519,7 +1521,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         if (resource->info->repos_path == NULL)
           title = "unknown location";
         else
-          title = ap_escape_uri(resource->pool, resource->info->repos_path);
+          title = resource->info->repos_path;
 
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
           title = apr_psprintf(resource->pool,
@@ -1579,6 +1581,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         /* unused: const svn_fs_dirent_t *entry = elem->value; */
         const char *entry_path;
         const char *name;
+        const char *href;
         int is_dir;
 
         /* for a REGULAR resource, the root is going to be a normal root,
@@ -1590,24 +1593,36 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         (void) svn_fs_is_dir(&is_dir, resource->info->root.root,
                              entry_path, entry_pool);
 
-        name = ap_escape_uri(entry_pool, item->key);
-
+	name = item->key;
+	href = name;
+	
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
+        /* ### The xml output doesn't like to see a trailing slash on
+           ### the visible portion, so avoid that. */
         if (is_dir)
-          name = apr_pstrcat(entry_pool, name, "/", NULL);
+          href = apr_pstrcat(entry_pool, href, "/", NULL);
+
+        if (gen_html)
+          name = href;
+	
+        href = ap_escape_uri(entry_pool, href);
 
         if (gen_html)
           ap_fprintf(output, bb,
                      "  <li><a href=\"%s\">%s</a></li>\n",
-                     name, name);
+                     href, name);
         else
-          /* ### This is where the we could search for props */
-          ap_fprintf(output, bb, "    <%s name=\"%s\"></%s>\n",
-                     (is_dir ? "dir" : "file"), name,
-                     (is_dir ? "dir" : "file"));
+          {
+            const char *const tag = (is_dir ? "dir" : "file");
 
+            /* ### This is where the we could search for props */
+
+            ap_fprintf(output, bb,
+                       "    <%s name=\"%s\" href=\"%s\"></%s>\n",
+                       tag, name, href, tag);
+          }
         svn_pool_clear(entry_pool);
       }
 
@@ -1897,6 +1912,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
+  apr_pool_t *params_subpool;
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -1950,7 +1966,8 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   repos_len = ctx->repos_path->len;
 
   /* fetch this collection's children */
-  /* ### shall we worry about filling params->pool? */
+  params_subpool = svn_pool_create(params->pool);
+
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
                             ctx->info.repos_path, params->pool);
   if (serr != NULL)
@@ -1987,7 +2004,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 
       serr = svn_fs_is_file(&is_file,
                             ctx->info.root.root, ctx->info.repos_path,
-                            params->pool);
+                            params_subpool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "could not determine resource kind");
@@ -2020,7 +2037,11 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
+
+      svn_pool_clear(params_subpool);
     }
+
+  svn_pool_destroy(params_subpool);
 
   return NULL;
 }
@@ -2072,11 +2093,15 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   if (ctx.repos_path != NULL)
     ctx.info.repos_path = ctx.repos_path->data;
 
+  /* Create a pool usable by the response. */
+  ctx.info.pool = svn_pool_create(params->pool);
+
   /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
   err = dav_svn_do_walk(&ctx, depth);
   *response = ctx.wres.response;
+
   return err;
 }
 

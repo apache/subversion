@@ -84,30 +84,29 @@ II. Client Cookbook
   1. checkout
   2. basic work cycle  
        1. making changes:  editing, rm, add, revert
-       2. examining the wc:  status, info
+       2. examining the wc:  status, info, local diff
        3. sending changes:  commit
        3. receiving changes:  update, resolve (conflicts)
-  3. history:  diff/log
-  4. branches and tags:  cp/switch/merge
+  3. getting history from the repository:  network diff, log
+  4. branches and tags:  cp, switch, merge
   5. properties
-      a. general use:  pl/pg/ps/pe/pd
+      a. general use:  pl, pg, ps, pe, pd
       b. "magic" properties:  eol-style, keywords, executable
   6. modules:  svn:externals
-  7. other commands:  import/export/mkdir/cleanup
+  7. other commands:  import, export, mkdir, cleanup
 
 
 III.  Repository Administration
 
-   [run over tasks solved by 'svnadmin' and 'svnlook' features]
-
   1. Creating a repository
-  2. Repository hooks
-  3. DB maintenance
+  2. Examining a repository (svnlook, shell)
+  3. Repository hooks
+  4. Repository maintenance
        a. Berkeley DB maintenance:  db_recover, ptrs to their site
-       b. [someday SQL pointers]
-  4. Repository tweaking:  undeltify, setlog, ls/rmtxns
-  5. Networking the repository [httpd config]
-  6. Repository migration: dump/load
+       b. [someday: SQL maintenance?]
+       c. undeltify, setlog, ls/rmtxns
+  6. Networking the repository [httpd config]
+  7. Repository migration: dump, load
 
 IV. Appendices
 

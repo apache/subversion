@@ -689,7 +689,7 @@ Transactions:
 
             TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
          UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
-          COMMITTED-TXN ::= ("committed" ROOT-ID REV PROPLIST COPIES) ;
+          COMMITTED-TXN ::= ("committed" REV ROOT-ID PROPLIST) ;
                 ROOT-ID ::= NODE-REV-ID ;
                 BASE-ID ::= NODE-REV-ID ;
                  COPIES ::= (CPY ...) ;
@@ -730,8 +730,7 @@ Representations:
                FULLTEXT ::= (HEADER STRING-KEY) ;
                   DELTA ::= (HEADER (OFFSET WINDOW) ...) ;
                  WINDOW ::= (DIFF SIZE CHECKSUM REP-KEY [REP-OFFSET]) ;
-                   DIFF ::= ("svndiff" VERSION STRING-KEY) ;
-                VERSION ::= number ;
+                   DIFF ::= ("svndiff" STRING-KEY) ;
                 REP-KEY ::= atom ;
              STRING-KEY ::= atom ;
                  OFFSET ::= number ;

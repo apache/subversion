@@ -4,13 +4,8 @@
 # commit-email.pl: send a commit email for commit REVISION in
 # repository REPOS to some email addresses.
 #
-# Usage: commit-email.pl REPOS REVISION [OPTIONS] [EMAIL-ADDR ...]
-#
-# Options:
-#    -h hostname       :  Hostname to append to author for 'From:'
-#    -l logfile        :  File to which mail contents should be appended
-#    -r email_address  :  Set email Reply-To header to this email address
-#    -s subject_prefix :  Subject line prefix
+# For usage, see the usage subroutine or run the script with no
+# command line arguments.
 #    
 # ====================================================================
 # Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -28,7 +23,7 @@
 
 use strict;
 use Carp;
-use Getopt::Long;
+use Storable qw(dclone);
 
 ######################################################################
 #  CONFIGURATION SECTION
@@ -43,29 +38,91 @@ my $svnlook = "/usr/local/bin/svnlook";
 ######################################################################
 # Initial setup/command-line handling
 
-# now, we see if there are any options included in the argument list
-my $logfile = '';
-my $hostname = '';
-my $reply_to = '';
-my $subject_prefix = '';
+# This is the blank information for one project.  Copies of this are
+# made as needed for each new project using Storable::dclone.
+my $blank_settings = {email_addresses => [],
+                      hostname        => '',
+                      log_file        => '',
+                      match_regex     => '.',
+                      reply_to        => '',
+                      subject_prefix  => ''};
 
-GetOptions('hostname=s' => \$hostname,
-           'logfile=s'  => \$logfile,
-           'reply_to=s' => \$reply_to,
-           'subject=s'  => \$subject_prefix)
-    or &usage;
+# Each value in this array holds a hash reference which contains the
+# associated email information for one project.  Start with an
+# implicit rule that matches all paths.
+my @project_settings_list = (dclone($blank_settings));
 
-# check that there are enough remaining command line options
-&usage("$0: too few arguments") unless @ARGV > 2;
+# Process the command line arguments till there are none left.  The
+# first two arguments that are not used by a command line option are
+# the repository path and the revision number.
+my $repos;
+my $rev;
 
-# get the REPOS from the arguments
-my $repos = shift @ARGV;
+# Use the reference to the first project to populate.
+my $current_project = $project_settings_list[0];
 
-# get the REVISION from the arguments
-my $rev = shift @ARGV;
+while (@ARGV) {
+  my $arg = shift @ARGV;
+  if (my ($opt) = $arg =~ /^-([hlmrs])/) {
+    unless (@ARGV) {
+      die "$0: command line option `$arg' is missing a value.\n";
+    }
+    my $value = shift @ARGV;
+    SWITCH: {
+      $current_project->{hostname}       = $value, last SWITCH if $opt eq 'h';
+      $current_project->{log_file}       = $value, last SWITCH if $opt eq 'l';
+      $current_project->{reply_to}       = $value, last SWITCH if $opt eq 'r';
+      $current_project->{subject_prefix} = $value, last SWITCH if $opt eq 's';
 
-# initialize the EMAIL_ADDRS to the remaining arguments
-my @email_addrs = @ARGV;
+      # Here handle -match.
+      unless ($opt eq 'm') {
+        die "$0: internal error: should only handle -m here.\n";
+      }
+      $current_project = dclone($blank_settings);
+      $current_project->{match_regex} = $value;
+      push(@project_settings_list, $current_project);
+    }
+  } elsif ($arg =~ /^-/) {
+    die "$0: command line option `$arg' is not recognized.\n";
+  } else {
+    if (! defined $repos) {
+      $repos = $arg;
+    } elsif (! defined $rev) {
+      $rev = $arg;
+    } else {
+      push(@{$current_project->{email_addresses}}, $arg);
+    }
+  }
+}
+
+# If the revision number is undefined, then there were not enough
+# command line arguments.
+&usage("$0: too few arguments") unless defined $rev;
+
+# Check that all of the regular expressions can be compiled and
+# compile them.
+{
+  my $ok = 1;
+  for (my $i=0; $i<@project_settings_list; ++$i) {
+    my $match_regex = $project_settings_list[$i]->{match_regex};
+
+    # To help users that automatically write regular expressions that
+    # match the root directory using ^/, remove the / character
+    # because subversion paths, while they start at the root level, do
+    # not begin with a /.
+    $match_regex =~ s#^\^/#^#;
+
+    my $match_re;
+    eval { $match_re = qr/$match_regex/ };
+    if ($@) {
+      warn "$0: -match regex #$i `$match_regex' does not compile:\n$@\n";
+      $ok = 0;
+      next;
+    }
+    $project_settings_list[$i]->{match_re} = $match_re;
+  }
+  exit 1 unless $ok;
+}
 
 ######################################################################
 # Harvest data using svnlook
@@ -98,9 +155,9 @@ grep
 @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'changed');
 
 # parse the changed nodes
-my @adds = ();
-my @dels = ();
-my @mods = ();
+my @adds;
+my @dels;
+my @mods;
 foreach my $line (@svnlooklines)
 {
     my $path = '';
@@ -114,13 +171,11 @@ foreach my $line (@svnlooklines)
     }
 
     if ($code eq 'A') {
-        push (@adds, "   $path\n");
-    }
-    elsif ($code eq 'D') {
-        push (@dels, "   $path\n");
-    }
-    else {
-        push (@mods, "   $path\n");
+        push(@adds, $path);
+    } elsif ($code eq 'D') {
+        push(@dels, $path);
+    } else {
+        push(@mods, $path);
     }
 }
 
@@ -165,91 +220,129 @@ if (($rootchanged == 0) and (scalar @commonpieces > 1))
 }
 my $dirlist = join (' ', @dirschanged);
 
+# Put together the body of the log message.
+my @body;
+push(@body, "Author: $author\n");
+push(@body, "Date: $date\n");
+push(@body, "New Revision: $rev\n");
+push(@body, "\n");
+if (scalar @adds) {
+  @adds = sort @adds;
+  push(@body, "Added:\n");
+  push(@body, map { "   $_\n" } @adds);
+}
+if (scalar @dels) {
+  @dels = sort @dels;
+  push(@body, "Removed:\n");
+  push(@body, map { "   $_\n" } @dels);
+}
+if (scalar @mods) {
+  @mods = sort @mods;
+  push(@body, "Modified:\n");
+  push(@body, map { "   $_\n" } @mods);
+}
+push(@body, "Log:\n");
+push(@body, @log);
+push(@body, "\n");
+push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines);
 
-my $userlist = join (' ', @email_addrs); 
-my $subject = '';
-if ($commondir ne '')
-{
+# Go through each project and see if there are any matches for this
+# project.  If so, send the log out.
+foreach my $project (@project_settings_list) {
+  my $match_re = $project->{match_re};
+  my $match    = 0;
+  foreach my $path (@dirschanged, @adds, @dels, @mods) {
+    if ($path =~ $match_re) {
+      $match = 1;
+      last;
+    }
+  }
+
+  next unless $match;
+
+  my @email_addresses = @{$project->{email_addresses}};
+  my $userlist        = join(' ', @email_addresses);
+  my $hostname        = $project->{hostname};
+  my $log_file        = $project->{log_file};
+  my $reply_to        = $project->{reply_to};
+  my $subject_prefix  = $project->{subject_prefix};
+  my $subject;
+
+  if ($commondir ne '') {
     $subject = "rev $rev - in $commondir: $dirlist";
-}
-else
-{
+  } else {
     $subject = "rev $rev - $dirlist";
-}
-if ($subject_prefix =~ /\w/)
-{
+  }
+  if ($subject_prefix =~ /\w/) {
     $subject = "$subject_prefix $subject";
-}
-my $mail_from = $author;
-if ($hostname =~ /\w/)
-{
+  }
+  my $mail_from = $author;
+
+  if ($hostname =~ /\w/) {
     $mail_from = "$mail_from\@$hostname";
-}
+  }
 
-my @output;
-push (@output, "To: $userlist\n");
-push (@output, "From: $mail_from\n");
-push (@output, "Subject: $subject\n");
-push (@output, "Reply-to: $reply_to\n") if $reply_to;
-push (@output, "\n");
+  my @head;
+  push(@head, "To: $userlist\n");
+  push(@head, "From: $mail_from\n");
+  push(@head, "Subject: $subject\n");
+  push(@head, "Reply-to: $reply_to\n") if $reply_to;
+  push(@head, "\n");
 
-# mail body
-push (@output, "Author: $author\n");
-push (@output, "Date: $date\n");
-push (@output, "New Revision: $rev\n");
-push (@output, "\n");
-if (scalar @adds)
-{
-    @adds = sort @adds;
-    push (@output, "Added:\n");
-    push (@output, @adds);
-}
-if (scalar @dels)
-{
-    @dels = sort @dels;
-    push (@output, "Removed:\n");
-    push (@output, @dels);
-}
-if (scalar @mods)
-{
-    @mods = sort @mods;
-    push (@output, "Modified:\n");
-    push (@output, @mods);
-}
-push (@output, "Log:\n");
-push (@output, @log);
-push (@output, "\n");
-push (@output, map { "$_\n" } @difflines);
+  if ($sendmail =~ /\w/ and @email_addresses) {
+    # Open a pipe to sendmail.
+    my $command = "$sendmail $userlist";
+    if (open (SENDMAIL, "| $command")) {
+      print SENDMAIL @head, @body;
+      close SENDMAIL or
+        warn "$0: error in closing `$command' for writing: $!\n";
+    } else {
+      warn "$0: cannot open `| $command' for writing: $!\n";
+    }
+  }
 
-
-# dump output to logfile (if its name is not empty)
-if ($logfile =~ /\w/)
-{
-    open (LOGFILE, ">> $logfile") 
-        or die ("Error opening '$logfile' for append");
-    print LOGFILE @output;
-    close LOGFILE;
-}
-
-# open a pipe to 'sendmail'
-if (($sendmail =~ /\w/) and ($userlist =~ /\w/))
-{
-    open (SENDMAIL, "| $sendmail $userlist") 
-        or die ("Error opening a pipe to sendmail");
-    print SENDMAIL @output;
-    close SENDMAIL;
+  # Dump the output to logfile (if its name is not empty).
+  if ($log_file =~ /\w/) {
+    if (open(LOGFILE, ">> $log_file")) {
+      print LOGFILE @head, @body;
+      close LOGFILE or
+        warn "$0: error in closing `$log_file' for appending: $!\n";
+    } else {
+        warn "$0: cannot open `$log_file' for appending: $!\n";
+    }
+  }
 }
 
 exit 0;
 
 sub usage {
   warn "@_\n" if @_;
-  die "usage: $0 [options] REPOS REVNUM email_address1 [email_address2 ... ]]\n",
+  die "usage: $0 REPOS REVNUM [[-m regex] [options] [email_addr ...]] ...\n",
       "options are\n",
       "  -h hostname        Hostname to append to author for 'From:'\n",
       "  -l logfile         File to which mail contents should be appended\n",
+      "  -m regex           Regular expression to match committed path\n",
       "  -r email_address   Set email Reply-To header to this email address\n",
-      "  -s subject_prefix  Subject line prefix\n";
+      "  -s subject_prefix  Subject line prefix\n",
+      "\n",
+      "This script supports a single repository with multiple projects,\n",
+      "where each project receives email only for commits that modify that\n",
+      "project.  A project is identified by using the -m command line\n",
+      "with a regular expression argument.  If a commit has a path that\n",
+      "matches the regular expression, then the entire commit matches.\n",
+      "Any of the following -h, -l, -r and -s command line options and\n",
+      "following email addresses are associated with this project.  The\n",
+      "next -m resets the -h, -l, -r and -s command line options and the\n",
+      "list of email addresses.\n",
+      "\n",
+      "To support a single project and the old usage, the script\n",
+      "initializes itself with an implicit -m . rule that matches any\n",
+      "modifications to the repository.  Therefore, to use the script for\n",
+      "a single project repository, just use the other comand line options\n",
+      "and list email addresses on the command line as before.  If you do\n",
+      "not want a project that matches the entire repository, then use a -m\n",
+      "and a regular expression before any other command line options or\n",
+      "email addresses.\n";
 }
 
 sub safe_read_from_pipe {

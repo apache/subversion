@@ -56,14 +56,9 @@ def basic_checkout(sbox):
 
   # Checkout of a different URL into a working copy fails
   A_url = os.path.join(svntest.main.current_repo_url, 'A')
-  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', A_url,
+  stdout_lines, stderr_lines = svntest.main.run_svn ("Obstructed update",
+                                                     'checkout', A_url,
                                                      '-d', wc_dir)
-  obstructed_update_error = 0
-  for stderr_line in stderr_lines:
-    if re.match('.*<Obstructed update>', stderr_line):
-      obstructed_update_error = 1
-  if not obstructed_update_error:
-    return 1
 
   # Make some changes to the working copy
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -77,7 +72,8 @@ def basic_checkout(sbox):
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/mu', status='M ')
   expected_output.tweak('A/B/lambda', status='! ')
-  expected_output.tweak('A/D/G/pi',
+  expected_output.tweak('A/D/G',
+                        'A/D/G/pi',
                         'A/D/G/rho',
                         'A/D/G/tau', status='D ')
 
@@ -283,6 +279,7 @@ def basic_corruption(sbox):
   # Restore the uncorrupted text base.
   os.chmod (tb_dir_path, 0777)
   os.chmod (mu_tb_path, 0666)
+  os.remove (mu_tb_path)
   os.rename (mu_saved_tb_path, mu_tb_path)
   os.chmod (tb_dir_path, tb_dir_saved_mode)
   os.chmod (mu_tb_path, mu_tb_saved_mode)
@@ -332,6 +329,7 @@ def basic_corruption(sbox):
   # Restore the uncorrupted text base.
   os.chmod (tb_dir_path, 0777)
   os.chmod (mu_tb_path, 0666)
+  os.remove (mu_tb_path)
   os.rename (mu_saved_tb_path, mu_tb_path)
   os.chmod (tb_dir_path, tb_dir_saved_mode)
   os.chmod (mu_tb_path, mu_tb_saved_mode)
@@ -345,8 +343,8 @@ def basic_corruption(sbox):
 
 
 #----------------------------------------------------------------------
-def basic_merge(sbox):
-  "basic merge"
+def basic_merging_update(sbox):
+  "receiving text merges as part of an update"
 
   if sbox.build():
     return 1
@@ -1052,7 +1050,7 @@ test_list = [ None,
               basic_commit,
               basic_update,
               basic_corruption,
-              basic_merge,
+              basic_merging_update,
               basic_conflict,
               basic_cleanup,
               basic_revert,

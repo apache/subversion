@@ -505,7 +505,7 @@ print_diff_tree (svn_fs_root_t *root,
       apr_file_t *outhandle;
       apr_status_t apr_err;
       const char *label;
-      char *abs_path;
+      const char *abs_path;
       int exitcode;
 
       if (! is_copy)
@@ -736,28 +736,11 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
 
       if (prop_value && prop_value->data)
         {
-          /* The date stored in the repository is in a really complex
-             and precise format...and we don't care.  Let's convert
-             that to just "YYYY-MM-DD hh:mm".
-
-             ### todo: Right now, "svn dates" are not GMT, but the
-             results of svn_time_from_string are.  This sucks. */
-          apr_time_exp_t extime;
+          /* Convert the date for humans. */
           apr_time_t aprtime;
-          apr_status_t apr_err;
-              
-          aprtime = svn_time_from_nts (prop_value->data);
-          apr_err = apr_time_exp_tz (&extime, aprtime, 0);
-          if (apr_err)
-            return svn_error_create (apr_err, 0, NULL, pool,
-                                     "do_date: error exploding time");
-              
-          printf ("%04lu-%02lu-%02lu %02lu:%02lu GMT",
-                  (unsigned long)(extime.tm_year + 1900),
-                  (unsigned long)(extime.tm_mon + 1),
-                  (unsigned long)(extime.tm_mday),
-                  (unsigned long)(extime.tm_hour),
-                  (unsigned long)(extime.tm_min));
+          
+          SVN_ERR (svn_time_from_nts (&aprtime, prop_value->data, pool));
+          printf ("%s", svn_time_to_human_nts (aprtime, pool));
         }
     }
 
