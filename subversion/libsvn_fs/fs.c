@@ -341,6 +341,11 @@ allocate_env (svn_fs_t *fs)
   SVN_ERR (BDB_WRAP (fs, "allocating environment object",
                     db_env_create (&fs->env, 0)));
 
+  /* Needed on Windows in case Subversion and Berkeley DB are using
+     different C runtime libraries  */
+  SVN_ERR (BDB_WRAP (fs, "setting environment object's allocation functions",
+                     fs->env->set_alloc (fs->env, malloc, realloc, free)));
+
   /* If we detect a deadlock, select a transaction to abort at random
      from those participating in the deadlock.  */
   SVN_ERR (BDB_WRAP (fs, "setting deadlock detection policy",
