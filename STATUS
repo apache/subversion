@@ -140,4 +140,4 @@ Candidate changes:
       so the bug's existence is embarrassing.  Risk is low: it's a
       one-line fix to the logic that we've always intended.
     Votes:
-     +1: sussman, cmpilato
+     +1: sussman, cmpilato, kfogel
