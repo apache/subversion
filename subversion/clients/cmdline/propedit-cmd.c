@@ -124,7 +124,7 @@ svn_cl__propedit (apr_getopt_t *os,
           
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
-                                           &rev, ctx, opt_state->force, pool));
+                                           &rev, opt_state->force, ctx, pool));
 
           printf ("Set new value for property '%s' on revision %"
                   SVN_REVNUM_T_FMT"\n", pname, rev);

@@ -142,8 +142,8 @@ svn_client_revprop_set (const char *propname,
                         const char *URL,
                         const svn_opt_revision_t *revision,
                         svn_revnum_t *set_rev,
-                        svn_client_ctx_t *ctx,
                         svn_boolean_t force,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   void *ra_baton, *session;
