@@ -58,7 +58,7 @@ Introduction
   libxml
   ------
   Point your browser to:
-    http://www.fh-frankfurt.de/~igor/projects/libxml/index.html
+    http://www.zlatkovic.com/projects/libxml/binaries.html
   and grab the following packages:
     - libxml
     - libxslt
