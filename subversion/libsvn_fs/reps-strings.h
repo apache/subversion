@@ -61,6 +61,15 @@ svn_error_t *svn_fs__get_mutable_rep (const char **new_key,
                                       svn_fs_t *fs, 
                                       trail_t *trail);
 
+
+/* Make representation KEY in FS immutable, if it isn't already, as
+   part of TRAIL.  If there is no such rep, return the error
+   SVN_ERR_FS_NO_SUCH_REPRESENTATION.  */
+svn_error_t *svn_fs__make_rep_immutable (svn_fs_t *fs,
+                                         const char *key,
+                                         trail_t *trail);
+
+
 /* Copy into BUF *LEN bytes starting at OFFSET from the string
    represented by REP in FS, as part of TRAIL.
    

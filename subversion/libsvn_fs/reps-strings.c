@@ -167,6 +167,39 @@ svn_fs__get_mutable_rep (const char **new_key,
 
 
 svn_error_t *
+svn_fs__make_rep_immutable (svn_fs_t *fs,
+                            const char *key,
+                            trail_t *trail)
+{
+  skel_t *rep;
+  skel_t *header, *flag, *prev;
+
+  SVN_ERR (svn_fs__read_rep (&rep, fs, key, trail));
+  header = rep->children;
+
+  /* The flags start at the 2nd element of the header. */
+  for (flag = header->children->next, prev = NULL;
+       flag;
+       prev = flag, flag = flag->next)
+    {
+      if (flag->is_atom && svn_fs__matches_atom (flag, "mutable"))
+        {
+          /* We found it.  */
+          if (prev)
+            prev->next = flag->next;
+          else
+            header->children->next = NULL;
+          
+          SVN_ERR (svn_fs__write_rep (fs, key, rep, trail));
+          break;
+        }
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__rep_read_range (svn_fs_t *fs,
                         skel_t *rep,
                         char *buf,

@@ -1888,33 +1888,55 @@ svn_fs__dag_get_copy (svn_revnum_t *rev_p,
 
 /*** Committing ***/
 
-/* If NODE is mutable, make it immutable, as part of TRAIL.  Else do
-   nothing.  Callers beware: if NODE is a directory, this does _not_
-   check that all the directory's children are immutable.  */
+/* If NODE is mutable, make it immutable, as part of TRAIL; else do
+   nothing.  This immutates any mutable representations referred to by
+   NODE as well.
+
+   Callers beware: if NODE is a directory, this does _not_ check that
+   all the directory's children are immutable.  You probably meant to
+   use stabilize_node().  */
 static svn_error_t *
 make_node_immutable (dag_node_t *node, trail_t *trail)
 {
   skel_t *node_rev;
   skel_t *header;
   skel_t *flag, *prev;
-  apr_pool_t *subpool = svn_pool_create (trail->pool);
 
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  /* Copy the node_rev skel into our subpool.  todo:  One day, when
-     the entire contents of a file aren't stored in the node_rev skel,
-     we might not bother with this copy. */
-  node_rev = svn_fs__copy_skel (node_rev, subpool);
+  /* Copy the node_rev skel into our subpool. */
+  node_rev = svn_fs__copy_skel (node_rev, trail->pool);
 
-  /* The node HEADER is the first element of a node-revision skel,
-     itself a list. */
+  /* The HEADER is the first element of the node-revision skel. */
   header = node_rev->children;
   
-  /* The FLAG is the 3rd element of the header. */
-  for (flag = header->children->next->next, prev = NULL;
+  /* The PROP-KEY is the second element. */
+  {
+    const char *prop_rep_key;
+  
+    prop_rep_key = apr_pstrndup (trail->pool,
+                                 node_rev->children->next->data,
+                                 node_rev->children->next->len);
+    if (prop_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__make_rep_immutable (node->fs, prop_rep_key, trail));
+  }
+
+  /* The DATA-KEY is the third element. */
+  {
+    const char *data_rep_key;
+
+    data_rep_key = apr_pstrndup (trail->pool,
+                                 node_rev->children->next->next->data,
+                                 node_rev->children->next->next->len);
+    if (data_rep_key[0] != '\0')
+      SVN_ERR (svn_fs__make_rep_immutable (node->fs, data_rep_key, trail));
+  }
+
+  /* The FLAGs start at the 2nd element of the header. */
+  for (flag = header->children->next, prev = NULL;
        flag;
-       flag = flag->next)
+       prev = flag, flag = flag->next)
     {
       if ((! flag->is_atom)
           && svn_fs__matches_atom (flag->children, "mutable"))
@@ -1926,14 +1948,10 @@ make_node_immutable (dag_node_t *node, trail_t *trail)
             header->children->next->next = 0;
 
           SVN_ERR (set_node_revision (node, node_rev, trail));
-
-          svn_pool_destroy (subpool);
-          return SVN_NO_ERROR;
+          break;
         }
-      prev = flag;
     }
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
