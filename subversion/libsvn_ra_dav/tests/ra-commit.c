@@ -1,5 +1,5 @@
 /*
- * ra-dav-test.c :  basic test program for the RA/DAV library
+ * ra-commit.c :  basic commit program for the RA/DAV library
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -16,6 +16,7 @@
 
 #include <apr_general.h>
 #include <apr_pools.h>
+#include <apr_hash.h>
 
 #include "svn_delta.h"
 #include "svn_ra.h"
@@ -34,26 +35,24 @@ main (int argc, char **argv)
   svn_error_t *err;
   void *session_baton;
   svn_string_t *url;
-  const char *dir;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  svn_string_t *repos;
-  svn_string_t *anc_path;
-  svn_string_t *root_path;
-  svn_revnum_t revision;
+  svn_revnum_t new_revision;
   const svn_ra_plugin_t *plugin;
+  apr_hash_t *targets;
+  svn_string_t *root_dir;
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
-  if (argc != 3)
+  if (argc != 2)
     {
-      fprintf (stderr, "usage: %s REPOSITORY_URL TARGET_DIR\n", argv[0]);
+      fprintf (stderr, "usage: %s REPOSITORY_URL\n", argv[0]);
       return 1;
     }
 
+  /* ### this is temporary. the URL should come from the WC library. */
   url = svn_string_create(argv[1], pool);
-  dir = argv[2];        /* ### default to the last component of the URL */
 
   err = svn_ra_dav_init(0, pool, &plugin);
   if (err)
@@ -63,32 +62,25 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
-  /* ### hmm... */
-  repos = url;
-
-  /* ### what the heck does "ancestor path" mean for a checkout? */
-  anc_path = svn_string_create("", pool);
-
-  /* ### how can we know this before we start fetching crap? */
-  revision = 1;
-
-  err = svn_wc_get_checkout_editor(svn_string_create(dir, pool),
-                                   repos, anc_path, revision,
-                                   &editor, &edit_baton, pool);
+  err = (*plugin->get_commit_editor)(session_baton, &editor, &edit_baton,
+                                     &new_revision);
   if (err)
     goto error;
 
-  /* ### what is this path? */
-  root_path = svn_string_create("", pool);
-  err = (*plugin->do_checkout)(session_baton, editor, edit_baton, root_path);
+  /* ### god damn svn_string_t */
+  root_dir = svn_string_create(".", pool);
+
+  printf("Beginning crawl...\n");
+  err = svn_wc_crawl_local_mods(&targets, root_dir, editor, edit_baton, pool);
   if (err)
     goto error;
 
-  /* ### this should probably be inside of do_checkout */
-  err = (*editor->close_edit)(edit_baton);
+  printf("Committing new version to working copy...\n");
+  err = svn_wc_close_commit(root_dir, new_revision, targets, pool);
   if (err)
     goto error;
 
+  printf("Completed. Wrapping up...\n");
   (*plugin->close)(session_baton);
 
   apr_destroy_pool(pool);

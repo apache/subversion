@@ -54,6 +54,21 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
                                     void *edit_baton,
                                     svn_string_t *URL);
 
+/*
+** SVN_RA_DAV__LP_*: local properties for RA/DAV
+**
+** ra_dav stores properties on the client containing information needed
+** to operate against the SVN server. Some of this informations is strictly
+** necessary to store, and some is simply stored as a cached value.
+*/
+
+#define SVN_RA_DAV__LP_NAMESPACE \
+        "http://subversion.tigris.org/props/ra/dav/local/"
+
+/* store the URL where Activities can be created */
+#define SVN_RA_DAV__LP_ACTIVITY_URL     SVN_RA_DAV__LP_NAMESPACE "activity-url"
+
+
 #endif  /* RA_DAV_H */
 
 
