@@ -19,21 +19,23 @@ these scenarios before.)
 @section Removing items
 
 The @samp{svn rm} subcommand is used to mark items in your working copy
-for removal from the repository.  Notice the word "mark": as a general
-mantra, please remember that the repository is @emph{never} modified
-until you run @samp{svn commit}.
+for removal from the repository.  Note that marking them is not the same
+as actually removing them in the repository: the repository is
+@emph{never} modified until you run @samp{svn commit} (or @samp{svn
+import} for new data).
 
-Also, please notice that there two different ways to interpret the
-phrase "remove an item".  In the simplest case, the item is removed from
-revision control (i.e. no longer tracked by the client), but not from
-your working copy.  In the more severe case, the item is removed both
-from revision control and disk.  
+Also, note that there two different ways to interpret the phrase "remove
+an item".  In the less destructive case, the item is removed from
+revision control (i.e. no longer tracked by Subversion), but it is not
+removed from your working copy.  In the more destructive case, the item
+is removed both from revision control and from disk.
 
-Normally, @samp{svn rm} only removes an item from revision control.
-However, the @code{-f} flag (@code{--force}) can be given, which will
-forcibly delete the item(s) from disk.  As a rule, no item containing
-local modifications will be removed, nor will extant items that are
-@emph{not} under revision control.  (You can remove such items by hand.)
+Subversion defaults to the less destructive behavior -- @samp{svn rm} by
+itself only removes an item from revision control.  However, if the
+@code{-f} flag (@code{--force}) is given, the item(s) will also be
+removed from disk.  However, no item containing local modifications will
+be removed, nor will items that are @emph{not} under revision control
+(you can remove such items by hand).
 
 @table @b
 @item To remove a file:  @samp{svn rm foo.c}
@@ -42,8 +44,8 @@ This will schedule @file{foo.c} to be deleted from the repository.
 The file is still tracked in the administrative directory until the user
 commits;  afterwards, the working copy will no longer track the file.
 
-If foo.c is locally modified, this command will return an error.
-(You'll have to @samp{svn revert} your change.)
+If foo.c is locally modified, this command will return an error
+(you'll have to @samp{svn revert} your change).
 
 @item To recursively remove a directory: @samp{svn rm dirname}
 
@@ -66,9 +68,8 @@ When an item has been scheduled for removal, but not yet committed, the
 client more-or-less treats the item as if it were gone.  Although the
 item will still show up in the @samp{svn status} command with a @code{D}
 flag next to it, the client will now allow the user to add a @emph{new}
-item of the same name -- which is not normally possible.  In this case,
-the @samp{svn status} output will describe the item as @dfn{replaced}
-(with an @code{R} flag).
+item of the same name.  In this case, the @samp{svn status} output will
+describe the item as @dfn{replaced} (with an @code{R} flag).
 
 (todo:  perhaps we should show some examples here...)
 
@@ -83,7 +84,7 @@ are scheduled to be "deleted", "added", and "replaced".
 
 @c ------------------------------------------------------------------
 @node Committing removals
-@section Comitting removals
+@section Committing removals
 
 
 When the user runs @samp{svn commit}, and items are scheduled for
@@ -93,13 +94,13 @@ that the working copy is out-of-date.
 
 After the items are removed from the repository, all tracking
 information about the items is removed from the working copy.  In the
-case of a file, it's information is removed from @file{SVN/}.  In the
+case of a file, its information is removed from @file{SVN/}.  In the
 case of a directory, the entire @file{SVN/} administrative area is
 removed, as well as all the administrative areas of its subdirectories.
 
-It's important to note that a commit will never remove any real working
-files or directories; this is only happens with a @samp{svn rm -f}
-command, or possibly during a @samp{svn update}.
+Note that commit never removes any real working files or directories;
+that only happens with a @samp{svn rm -f} command, or possibly during a
+@samp{svn update}.
 
 
 @c ------------------------------------------------------------------
@@ -117,10 +118,11 @@ There are two exceptions, for safety's sake:
 @item
 items that are @emph{not} under revision control will be preserved.
 @item
-items that are locally modified result in a conflict (C)
+items that are locally modified result in a conflict (C), with the
+locally modified version being preserved
 @end itemize
 
 Thus it's possible that after an update which recursively removes a
 directory, there may be stray path "trails" leading down to individual
-files that were deliberately saved.
+locally-modified files that were deliberately saved.
 
