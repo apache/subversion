@@ -95,9 +95,9 @@ usage (const char *progname, int exit_code)
 {
   fprintf
     (exit_code ? stderr : stdout,
-     "usage: %s COMMAND REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
+     "usage: %s SUBCOMMAND REPOS_PATH [ARGS...]\n"
      "\n"
-     "Commands are: \n"
+     "Subcommands are: \n"
      "\n"
      "  create    REPOS_PATH\n"
      "                Create a new, empty repository at REPOS_PATH."
