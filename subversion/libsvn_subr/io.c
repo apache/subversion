@@ -62,63 +62,32 @@ svn_io_check_path (svn_string_t *path,
                    enum svn_node_kind *kind,
                    apr_pool_t *pool)
 {
-  apr_dir_t *d = NULL;
-  apr_file_t *f = NULL;
+  apr_finfo_t finfo;
   apr_status_t apr_err;
 
-  /* Try it as a dir first. */
-  apr_err = apr_opendir (&d, path->data, pool);
-  if (! apr_err)
-    {
-      *kind = svn_dir_kind;
-      apr_err = apr_closedir (d);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "svn_io_check_path: "
-                                  "problem closing dir %s",
-                                  path->data);
-      else
-        return SVN_NO_ERROR;
-    }
-  else if (apr_err && (apr_err == APR_ENOENT))
-    {
-      *kind = svn_invalid_kind;
-      return SVN_NO_ERROR;
-    }
-  else if (apr_err && (apr_err != APR_ENOTDIR))
-    {
-      return svn_error_createf (apr_err, 0, NULL, pool,
-                                "svn_io_check_path: "
-                                "opendir %s failed, but not with ENOTDIR",
-                                path->data);
-    }
-  
-  /* todo: handle symlink case, others, someday? */
+  apr_err = apr_stat (&finfo, path->data, pool);
 
-  /* Else try it as a file. */
-
-  apr_err = apr_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
-  if (! apr_err)
-    {
-      *kind = svn_file_kind;
-      apr_err = apr_close (f);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "svn_io_check_path: "
-                                  "problem closing file %s",
-                                  path->data);
-      return SVN_NO_ERROR;
-    }
-  else if (apr_err && (apr_err == APR_ENOENT))
-    {
-      *kind = svn_invalid_kind;
-      return SVN_NO_ERROR;
-    }
-  else
+  if (apr_err && (apr_err != APR_ENOENT))
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "svn_io_check_path: "
-                              "problem opening file %s",
+                              "problem checking path %s",
                               path->data);
+  else if (apr_err == APR_ENOENT)         /* which is better, this test... */
+    *kind = svn_invalid_kind;
+  else if (finfo.filetype == APR_NOFILE)  /* ... or this one? */
+    *kind = svn_invalid_kind;
+  else if (finfo.filetype == APR_REG)
+    *kind = svn_file_kind;
+  else if (finfo.filetype == APR_DIR)
+    *kind = svn_dir_kind;
+#if 0
+  else if (finfo.filetype == APR_LINK)
+    *kind = svn_symlink_kind;
+#endif /* 0, we will support symlinks but not yet */
+  else
+    *kind = svn_invalid_kind;  /* Subversion does not recognize this kind. */
+
+  return SVN_NO_ERROR;
 }
 
 
