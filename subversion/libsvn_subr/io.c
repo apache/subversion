@@ -509,11 +509,15 @@ read_handler_apr (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
   struct baton_apr *btn = baton;
   apr_status_t status;
 
-  status = apr_full_read (btn->file, buffer, *len, len);
-  if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
-    return svn_error_create (status, 0, NULL, btn->pool, "reading file");
+  if (btn->file == NULL)
+    *len = 0;
   else
-    return SVN_NO_ERROR;
+    {
+      status = apr_full_read (btn->file, buffer, *len, len);
+      if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
+        return svn_error_create (status, 0, NULL, btn->pool, "reading file");
+    }
+  return SVN_NO_ERROR;
 }
 
 
@@ -538,11 +542,13 @@ close_handler_apr (void *baton)
   struct baton_apr *btn = baton;
   apr_status_t status;
 
-  status = apr_close (btn->file);
-  if (!APR_STATUS_IS_SUCCESS(status))
-    return svn_error_create (status, 0, NULL, btn->pool, "closing file");
-  else
-    return SVN_NO_ERROR;
+  if (btn->file != NULL)
+    {
+      status = apr_close (btn->file);
+      if (!APR_STATUS_IS_SUCCESS(status))
+        return svn_error_create (status, 0, NULL, btn->pool, "closing file");
+    }
+  return SVN_NO_ERROR;
 }
 
 
@@ -578,10 +584,15 @@ read_handler_stdio (void *baton, char *buffer, apr_size_t *len,
   svn_error_t *err = SVN_NO_ERROR;
   apr_size_t count;
 
-  count = fread (buffer, 1, *len, btn->fp);
-  if (count < *len && ferror(btn->fp))
-    err = svn_error_create (0, errno, NULL, btn->pool, "reading file");
-  *len = count;
+  if (btn->fp == NULL)
+    *len = 0;
+  else
+    {
+      count = fread (buffer, 1, *len, btn->fp);
+      if (count < *len && ferror(btn->fp))
+        err = svn_error_create (0, errno, NULL, btn->pool, "reading file");
+      *len = count;
+    }
   return err;
 }
 
@@ -607,7 +618,7 @@ close_handler_stdio (void *baton)
 {
   struct baton_stdio *btn = baton;
 
-  if (fclose (btn->fp) != 0)
+  if (btn->fp != NULL && fclose (btn->fp) != 0)
     return svn_error_create (0, errno, NULL, btn->pool, "closing file");
   else
     return SVN_NO_ERROR;
