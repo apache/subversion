@@ -24,19 +24,14 @@
 #include "validate.h"
 
 
-/* Finding the length of an ID.  */
+/* Copying ID's.  */
 
-
-int
-svn_fs__id_length (const svn_fs_id_t *id)
+svn_fs_id_t *
+svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
 {
-  int len;
-
-  for (len = 0; id->digits[len] != -1; len++)
-    continue;
-
-  return len;
+  svn_fs_id_t *new_id = apr_pmemdup (pool, id, sizeof (*id));
 }
+
 
 
 /* Comparing node ID's.  */
@@ -44,13 +39,16 @@ svn_fs__id_length (const svn_fs_id_t *id)
 int
 svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
-  int i;
+  if (a == b)
+    return 1;
+  return (memcmp (a, b, sizeof (*a)) ? 0 : 1);
+}
 
-  for (i = 0; a->digits[i] == b->digits[i]; i++)
-    if (a->digits[i] == -1)
-      return 1;
 
-  return 0;
+int
+svn_fs_check_related (const svn_fs_id_t *id1, const svn_fs_id_t *id2)
+{
+  return (id1->node_id == id2->node_id);
 }
 
 
@@ -98,54 +96,6 @@ svn_fs__id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b)
     }
 }
 
-
-/* Compute the distance from the node revision A to the node revision
-   identified by the first PREFIX elements of A.  In other words, this
-   is the distance from a node revision to some branch of the node
-   revision.  */
-static int
-distance_from_prefix (const svn_fs_id_t *a, int prefix)
-{
-  int i;
-  int d = 0;
-
-  for (i = 0; a->digits[prefix + i] != -1; i += 2)
-    d += a->digits[prefix + i + 1];
-
-  return d;
-}
-
-
-int
-svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b)
-{
-  int i;
-
-  /* Are they completely unrelated?  */
-  if (a->digits[0] != b->digits[0])
-    return -1;
-
-  /* Skip any common prefix.  */
-  for (i = 0; (a->digits[i] == b->digits[i] 
-               && a->digits[i] != -1 
-               && a->digits[i+1] == b->digits[i+1]); i += 2)
-    continue;
-
-  /* If they're completely identical, then the distance is zero.  */
-  if (a->digits[i] == -1 && b->digits[i] == -1)
-    return 0;
-
-  /* Are they (branches off) different revisions of the same node?
-     Account for the distance between the two revisions.  */
-  if (a->digits[i] == b->digits[i])
-    return (distance_from_prefix (a, i+2)
-            + distance_from_prefix (b, i+2)
-            + abs (a->digits[i+1] - b->digits[i+1]));
-  else
-    /* Or two branches off the same node revision?  */
-    return (distance_from_prefix (a, i)
-            + distance_from_prefix (b, i));
-}
 
 
 int
@@ -264,137 +214,6 @@ svn_fs_unparse_id (const svn_fs_id_t *id,
     }
 
   return unparsed;
-}
-
-
-
-/* Copying ID's.  */
-
-svn_fs_id_t *
-svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  svn_fs_id_t *new_id = apr_palloc (pool, sizeof (*new_id));
-  new_id->digits = apr_pmemdup 
-    (pool, id->digits, (svn_fs__id_length (id) + 1) * sizeof (id->digits[0]));
-  return new_id;
-}
-
-
-
-/* Predecessor ID's. */
-
-void
-svn_fs__precede_id (svn_fs_id_t *id)
-{
-  int len = svn_fs__id_length (id);
-
-  id->digits[len - 1]--;
-  
-  if (id->digits[len - 1] > 0)
-    {
-      /* Decrementing the last digit still resulted in a valid node
-         revision number, so that must be the predecessor of ID. */
-      return;
-    }
-  
-  /* Else decrementing the last digit still resulted in a branch
-     number, so the predecessor is the node revision on which the
-     branch itself is based. */
-  if (len > 2)
-    id->digits[len - 2] = -1;
-  else
-    id->digits[0] = -1;
-}
-
-
-svn_fs_id_t *
-svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  svn_fs_id_t *predecessor_id;
-
-  predecessor_id = svn_fs__id_copy (id, pool);
-  svn_fs__precede_id (predecessor_id);
-
-  return predecessor_id;
-}
-
-/* --------------------------------------------------------------------- */
-
-/*** Related-ness checking */
-
-/*  Things to remember:
-
-    - If B is a copy of directory A, B's children are id-related to the
-      corresponding children of A.
- 
-    - Brand new nodes (like, resulting from adds and copies) have the
-      first component of their node id > older nodes. 
-
-    Also note:  it is acceptable for this function to call back into
-    public FS API interfaces because it does not itself use trails.  */
-svn_error_t *
-svn_fs_check_related (int *related, 
-                      svn_fs_t *fs,
-                      const svn_fs_id_t *id1,
-                      const svn_fs_id_t *id2,
-                      apr_pool_t *pool)
-{
-  const svn_fs_id_t *older, *younger;
-  svn_fs_id_t *tmp_id;
-
-  /* Default answer: not related, until proven otherwise. */
-  *related = 0;
-
-  /* Are the two IDs related via node id ancestry? */
-  if (svn_fs_id_distance (id1, id2) != -1)
-    {
-      *related = 1;
-      return SVN_NO_ERROR;
-    }
-  
-  /* Figure out which id is youngest. */
-  if (id1->digits[0] > id2->digits[0])
-    {
-      older = id2;
-      younger = id1;
-    }
-  else
-    {
-      older = id1;
-      younger = id2;
-    }
-
-  /* Copy YOUNGER so we can possible tweak it later. */
-  tmp_id = svn_fs__id_copy (younger, pool);
-
-  /* Now, we loop here from TMP_ID, through each of its predecessors,
-     until no predecessors exist, trying to find some relationship to
-     the OLDER id. */
-  do
-    {
-      svn_revnum_t rev = SVN_INVALID_REVNUM;
-      const char *cp_path = NULL;
-      svn_fs_root_t *root;
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (tmp_id, pool);
-      svn_fs_id_t *copy_id;
-
-      /* See if OLDER is a copy of another node. */
-      svn_fs_id_root (&root, fs, pool);
-      SVN_ERR (svn_fs_copied_from (&rev, &cp_path, root, id_str->data, pool));
-      if (SVN_IS_VALID_REVNUM (rev))
-        {
-          SVN_ERR (svn_fs_revision_root (&root, fs, rev, pool));
-          SVN_ERR (svn_fs_node_id (&copy_id, root, cp_path, pool));
-          svn_fs_check_related (related, fs, older, copy_id, pool);
-          if (*related)
-            return SVN_NO_ERROR;
-        }
-
-      svn_fs__precede_id (tmp_id);
-    }
-  while (tmp_id->digits[0] != -1);
-
-  return SVN_NO_ERROR;
 }
 
 

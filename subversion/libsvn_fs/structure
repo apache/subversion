@@ -449,7 +449,7 @@ where:
 
 Committed transaction, however, have values that are skels of the form:
 
-   ("transaction" REVISION)
+   ("committed" REVISION)
 
 where REVISION represents the revision that was created when the
 transaction was committed.
@@ -669,9 +669,10 @@ Transactions:
 
             TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
          UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ROOT-ID PROPLIST) ;
-          COMMITTED-TXN ::= ("transaction" REVISION) ;
+          COMMITTED-TXN ::= ("committed" REV) ;
                 ROOT-ID ::= NODE-REV-ID ;
            BASE-ROOT-ID ::= NODE-REV-ID ;
+                    REV ::= number ;
 
 
 Copies:
@@ -693,10 +694,9 @@ Node revisions:
                    FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
                     DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
 
-                 HEADER ::= (KIND PREDECESSOR-ID) ;
+                 HEADER ::= (KIND [PREDECESSOR-ID]) ;
                    KIND ::= "file" | "dir" ;
          PREDECESSOR-ID ::= NODE-REV-ID ;
-
                PROP-KEY ::= atom ;
                 REP-KEY ::= atom ;
 
