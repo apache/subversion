@@ -311,18 +311,15 @@ dump_node (struct edit_baton *eb,
   apr_file_t *delta_file = NULL;
 
   /* Write out metadata headers for this file node. */
-  if (eb->stream)
-    {
-      SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                  SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", 
-                                  (*path == '/') ? path + 1 : path));
-      if (kind == svn_node_file)
-        SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
-      else if (kind == svn_node_dir)
-        SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
-    }
+  SVN_ERR (svn_stream_printf (eb->stream, pool,
+                              SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", 
+                              (*path == '/') ? path + 1 : path));
+  if (kind == svn_node_file)
+    SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
+  else if (kind == svn_node_dir)
+    SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
@@ -337,10 +334,9 @@ dump_node (struct edit_baton *eb,
 
   if (action == svn_node_action_change)
     {
-      if (eb->stream)
-        SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": change\n"));
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": change\n"));
 
       /* either the text or props changed, or possibly both. */
       SVN_ERR (svn_fs_revision_root (&compare_root, 
@@ -360,10 +356,9 @@ dump_node (struct edit_baton *eb,
       if (! is_copy)
         {
           /* a simple delete+add, implied by a single 'replace' action. */
-          if (eb->stream)
-            SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                        SVN_REPOS_DUMPFILE_NODE_ACTION
-                                        ": replace\n")); 
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_NODE_ACTION
+                                      ": replace\n")); 
 
           /* definitely need to dump all content for a replace. */
           if (kind == svn_node_file)
@@ -376,10 +371,9 @@ dump_node (struct edit_baton *eb,
 
           /* the path & kind headers have already been printed;  just
              add a delete action, and end the current record.*/
-          if (eb->stream)
-            SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                        SVN_REPOS_DUMPFILE_NODE_ACTION
-                                        ": delete\n\n"));  
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_NODE_ACTION
+                                      ": delete\n\n"));  
 
           /* recurse:  print an additional add-with-history record. */
           SVN_ERR (dump_node (eb, path, kind, svn_node_action_add,
@@ -393,10 +387,9 @@ dump_node (struct edit_baton *eb,
     }
   else if (action == svn_node_action_delete)
     {
-      if (eb->stream)
-        SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION
-                                    ": delete\n"));  
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION
+                                  ": delete\n"));  
 
       /* we can leave this routine quietly now, don't need to dump
          any content. */
@@ -405,9 +398,8 @@ dump_node (struct edit_baton *eb,
     }
   else if (action == svn_node_action_add)
     {
-      if (eb->stream)
-        SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
       if (! is_copy)
         {
@@ -418,8 +410,7 @@ dump_node (struct edit_baton *eb,
         }
       else
         {
-          if ((cmp_rev < eb->oldest_dumped_rev)
-              && eb->feedback_stream)
+          if (cmp_rev < eb->oldest_dumped_rev)
             svn_stream_printf 
               (eb->feedback_stream, pool,
                _("WARNING: Referencing data in revision %ld" 
@@ -428,13 +419,12 @@ dump_node (struct edit_baton *eb,
                  "repository\nWARNING: will fail.\n"),
                cmp_rev, eb->oldest_dumped_rev);
 
-          if (eb->stream)
-            SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                        SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
-                                        ": %ld\n"
-                                        SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
-                                        ": %s\n",
-                                        cmp_rev, cmp_path));
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
+                                      ": %ld\n"
+                                      SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
+                                      ": %s\n",
+                                      cmp_rev, cmp_path));
 
           SVN_ERR (svn_fs_revision_root (&compare_root, 
                                          svn_fs_root_fs (eb->fs_root),
@@ -461,11 +451,8 @@ dump_node (struct edit_baton *eb,
          then our dumpstream format demands that at a *minimum*, we
          see a lone "PROPS-END" as a divider between text and props
          content within the content-block. */
-      if (eb->stream)
-        {
-          len = 2;
-          return svn_stream_write (eb->stream, "\n\n", &len); /* ### needed? */
-        }
+      len = 2;
+      return svn_stream_write (eb->stream, "\n\n", &len); /* ### needed? */
       return SVN_NO_ERROR;
     }
 
@@ -486,18 +473,16 @@ dump_node (struct edit_baton *eb,
              saying that our property contents are a delta. */
           SVN_ERR (svn_fs_node_proplist (&oldhash, compare_root, compare_path,
                                          pool));
-          if (eb->stream)
-            SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                        SVN_REPOS_DUMPFILE_PROP_DELTA 
-                                        ": true\n"));
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_PROP_DELTA 
+                                      ": true\n"));
         }
       write_hash_to_stringbuf (prophash, oldhash, &propstring, pool);
       proplen = propstring->len;
       content_length += proplen;
-      if (eb->stream)
-        SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH 
-                                    ": %" APR_SIZE_T_FMT "\n", proplen));
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH 
+                                  ": %" APR_SIZE_T_FMT "\n", proplen));
     }
 
   /* If we are supposed to dump text, write out a text length header
@@ -515,10 +500,9 @@ dump_node (struct edit_baton *eb,
              saying our text contents are a delta. */
           SVN_ERR (store_delta (&delta_file, &textlen, compare_root,
                                 compare_path, eb->fs_root, path, pool));
-          if (eb->stream)
-            SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                        SVN_REPOS_DUMPFILE_TEXT_DELTA
-                                        ": true\n"));
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                      SVN_REPOS_DUMPFILE_TEXT_DELTA
+                                      ": true\n"));
         }
       else
         {
@@ -527,14 +511,13 @@ dump_node (struct edit_baton *eb,
         }
 
       content_length += textlen;
-      if (eb->stream)
-        SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                    SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
-                                    ": %" SVN_FILESIZE_T_FMT "\n", textlen));
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                  SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
+                                  ": %" SVN_FILESIZE_T_FMT "\n", textlen));
 
       SVN_ERR (svn_fs_file_md5_checksum (md5_digest, eb->fs_root, path, pool));
       hex_digest = svn_md5_digest_to_cstring (md5_digest, pool);
-      if (hex_digest && eb->stream)
+      if (hex_digest)
         SVN_ERR (svn_stream_printf (eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM 
                                     ": %s\n", hex_digest));
@@ -544,21 +527,20 @@ dump_node (struct edit_baton *eb,
      and is the summation of the text and prop contents lengths.  We
      write this only for the benefit of non-Subversion RFC-822
      parsers. */
-  if (eb->stream)
-    SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
-                                ": %" SVN_FILESIZE_T_FMT "\n\n",
-                                content_length));
+  SVN_ERR (svn_stream_printf (eb->stream, pool,
+                              SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
+                              ": %" SVN_FILESIZE_T_FMT "\n\n",
+                              content_length));
 
   /* Dump property content if we're supposed to do so. */
-  if (must_dump_props && eb->stream)
+  if (must_dump_props)
     {
       len = propstring->len;
       SVN_ERR (svn_stream_write (eb->stream, propstring->data, &len));
     }
 
   /* Dump text content */
-  if (must_dump_text && (kind == svn_node_file) && eb->stream)
+  if (must_dump_text && (kind == svn_node_file))
     {
       svn_stream_t *contents;
 
@@ -570,11 +552,8 @@ dump_node (struct edit_baton *eb,
       SVN_ERR (svn_stream_copy (contents, eb->stream, pool));
     }
   
-  if (eb->stream)
-    {
-      len = 2;
-      SVN_ERR (svn_stream_write (eb->stream, "\n\n", &len)); /* ### needed? */
-    }
+  len = 2;
+  SVN_ERR (svn_stream_write (eb->stream, "\n\n", &len)); /* ### needed? */
   
   return SVN_NO_ERROR;
 }
@@ -870,11 +849,6 @@ write_revision_record (svn_stream_t *stream,
      them for verification purposes */
   SVN_ERR (svn_fs_revision_proplist (&props, fs, rev, pool));
 
-  /* If we have no stream, and we aren't validating anything, we might
-     as well just go home now. */
-  if (! stream)
-    return SVN_NO_ERROR;
-
   /* Run revision date properties through the time conversion to
      canonize them. */
   /* ### Remove this when it is no longer needed for sure. */
@@ -939,18 +913,21 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_revnum_t youngest;
   const char *uuid;
+  int version;
   svn_boolean_t dumping = (stream != NULL);
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
   /* Use default vals if necessary. */
-  if (! SVN_IS_VALID_REVNUM(start_rev))
+  if (! SVN_IS_VALID_REVNUM (start_rev))
     start_rev = 0;
-  if (! SVN_IS_VALID_REVNUM(end_rev))
+  if (! SVN_IS_VALID_REVNUM (end_rev))
     end_rev = youngest;
   if (! stream)
     stream = svn_stream_empty (pool);
+  if (! feedback_stream)
+    feedback_stream = svn_stream_empty (pool);
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
@@ -971,22 +948,19 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
   /* Write out the UUID. */
   SVN_ERR (svn_fs_get_uuid(fs, &uuid, pool));
 
+  /* If we're not using deltas, use the previous version, for
+     compatibility with svn 1.0.x. */
+  version = SVN_REPOS_DUMPFILE_FORMAT_VERSION;
+  if (!use_deltas)
+    version--;
+
   /* Write out "general" metadata for the dumpfile.  In this case, a
      magic header followed by a dumpfile format version. */
-  if (stream)
-    {
-      int version = SVN_REPOS_DUMPFILE_FORMAT_VERSION;
-
-      /* If we're not using deltas, use the previous version, for
-         compatibility with svn 1.0.x. */
-      if (!use_deltas)
-        version--;
-      SVN_ERR (svn_stream_printf (stream, pool, 
-                                  SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n", 
-                                  version));
-      SVN_ERR (svn_stream_printf (stream, pool, SVN_REPOS_DUMPFILE_UUID
-                                  ": %s\n\n", uuid));
-    }
+  SVN_ERR (svn_stream_printf (stream, pool, 
+                              SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n", 
+                              version));
+  SVN_ERR (svn_stream_printf (stream, pool, SVN_REPOS_DUMPFILE_UUID
+                              ": %s\n\n", uuid));
 
   /* Main loop:  we're going to dump revision i.  */
   for (i = start_rev; i <= end_rev; i++)
@@ -1067,11 +1041,9 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
     loop_end:
       /* Reuse all memory consumed by the dump of this one revision. */
       svn_pool_clear (subpool);
-      if (feedback_stream)
-        SVN_ERR (svn_stream_printf (feedback_stream, pool,
-                                    _("* %s revision %ld.\n"),
-                                    dumping ? "Dumped" : "Verified",
-                                    to_rev));
+      SVN_ERR (svn_stream_printf (feedback_stream, pool,
+                                  _("* %s revision %ld.\n"),
+                                  dumping ? "Dumped" : "Verified", to_rev));
     }
 
   svn_pool_destroy (subpool);
