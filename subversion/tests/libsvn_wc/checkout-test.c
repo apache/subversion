@@ -102,8 +102,8 @@ apply_delta (void *delta_src,
     return err;
 
   /* ... and walk! */
-  return svn_xml_parse (read_fn, delta_src,
-                        walker, walk_baton, dir_baton, pool);
+  return svn_xml_auto_parse (read_fn, delta_src,
+                             walker, walk_baton, dir_baton, pool);
 }
 
 
