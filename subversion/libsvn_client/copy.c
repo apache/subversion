@@ -89,7 +89,11 @@ wc_to_wc_copy (const char *src_path,
      error out. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind == svn_node_none)
-    svn_path_split_nts (dst_path, &parent, &base_name, pool);
+    {
+      svn_path_split_nts (dst_path, &parent, &base_name, pool);
+      if (svn_path_is_empty_nts (parent))
+        parent = ".";
+    }
   else if (dst_kind == svn_node_dir)
     svn_path_split_nts (src_path, NULL, &base_name, pool);
   else
