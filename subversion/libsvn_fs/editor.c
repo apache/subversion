@@ -284,29 +284,6 @@ add_file (svn_string_t *name,
 }
 
 
-static svn_error_t *
-txn_body_replace_file (void *rargs, trail_t *trail)
-{
-  struct add_repl_args *repl_args = rargs;
-
-  SVN_ERR (svn_fs__dag_clone_child (&(repl_args->new_node),
-                                    repl_args->parent->node,
-                                    repl_args->name->data,
-                                    trail));
-  
-  if (! svn_fs__dag_is_file (repl_args->new_node))
-    {
-      return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY,
-                                0,
-                                NULL,
-                                trail->pool,
-                                "trying to replace directory, but %s "
-                                "is not a directory",
-                                repl_args->name->data);
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -335,88 +312,6 @@ replace_file (svn_string_t *name,
   return SVN_NO_ERROR;
 }
 
-
-struct change_prop_args
-{
-  dag_node_t *node;
-  svn_string_t *name;
-  svn_string_t *value;
-};
-
-
-static svn_error_t *
-txn_body_change_prop (void *void_args, trail_t *trail)
-{
-  struct change_prop_args *args = void_args;
-  skel_t *proplist;
-  skel_t *this, *last;
-  svn_string_t *name = args->name, *value = args->value;
-  svn_boolean_t found_it;
-
-  /* todo: we should decide if change_file_prop()'s semantics require
-     an error if deleting a non-existent property. */
-
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, args->node, trail));
-
-  /* From structure:
-   *
-   *   PROPLIST ::= (PROP ...) ;
-   *      PROP ::= atom atom ;
-   * 
-   * The proplist returned by svn_fs__dag_get_proplist is guaranteed
-   * to be well-formed, so we don't bother to error check as we walk
-   * it.
-   */
-  for (this = proplist->children, last = proplist->children;
-       this != NULL;
-       last = this, this = this->next->next)
-    {
-      if ((this->len == name->len)
-          && (memcmp (this->data, name->data, name->len) == 0))
-        {
-          found_it = 1;
-          
-          if (value)  /* set a new value */
-            {
-              skel_t *value_skel = this->next;
-              value_skel->data = value->data;
-              value_skel->len = value->len;
-            }
-          else        /* make the property disappear */
-            {
-              if (last == proplist->children)
-                proplist->children = this->next->next;
-              else
-                last->next->next = this->next->next;
-            }
-          
-          break;
-        }
-    }
-
-  if (! found_it)
-    {
-      if (value)
-        {
-          skel_t *new_name_skel
-            = svn_fs__mem_atom (name->data, name->len, trail->pool);
-          skel_t *new_value_skel
-            = svn_fs__mem_atom (value->data, value->len, trail->pool);
-
-          svn_fs__prepend (new_value_skel, proplist);
-          svn_fs__prepend (new_name_skel, proplist);
-        }
-      else
-        {
-          /* todo: see comment at start of function about erroring if try
-             to delete a non-existent property */
-        }
-    }
-
-  SVN_ERR (svn_fs__dag_set_proplist (args->node, proplist, trail));
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
