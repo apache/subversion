@@ -258,6 +258,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   return 0
 
 
+# This function always passes '-q' to the status command, which
+# suppresses the printing of any unversioned or nonexistent items.
 def run_and_verify_status(wc_dir_name, output_tree,
                           singleton_handler_a = None,
                           a_baton = None,
@@ -270,6 +272,36 @@ def run_and_verify_status(wc_dir_name, output_tree,
   Return 0 on success."""
 
   output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', wc_dir_name)
+
+  mytree = tree.build_tree_from_status (output)
+
+  # Verify actual output against expected output.
+  if (singleton_handler_a or singleton_handler_b):
+    if tree.compare_trees (mytree, output_tree,
+                           singleton_handler_a, a_baton,
+                           singleton_handler_b, b_baton):
+      return 1
+  else:
+    if tree.compare_trees (mytree, output_tree):
+      return 1
+    
+  return 0
+
+
+# A variant of previous func, but doesn't pass '-q'.  This allows us
+# to verify unversioned or nonexistent items in the list.
+def run_and_verify_unquiet_status(wc_dir_name, output_tree,
+                                  singleton_handler_a = None,
+                                  a_baton = None,
+                                  singleton_handler_b = None,
+                                  b_baton = None):
+  """Run 'status' on WC_DIR_NAME and compare it with the
+  expected OUTPUT_TREE.  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will
+  be passed to tree.compare_trees - see that function's doc string for
+  more details.
+  Return 0 on success."""
+
+  output, errput = main.run_svn (None, 'status', '-v', '-u', wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
 
