@@ -1499,7 +1499,7 @@ close_edit (void *edit_baton,
   /* If we have a target, that's the thing we're sending, otherwise
      we're sending the anchor. */
 
-  if (eb->target)
+  if (*eb->target)
     {
       svn_node_kind_t kind;
       const char *full_path = svn_path_join (eb->anchor, eb->target, pool);
@@ -1551,7 +1551,7 @@ close_edit (void *edit_baton,
  cleanup:
   /* Let's make sure that we didn't harvest any traversal info for the
      anchor if we had a target. */
-  if (eb->target)
+  if (*eb->target)
     {
       apr_hash_set (eb->traversal_info->externals_old,
                     eb->anchor, APR_HASH_KEY_STRING, NULL);
