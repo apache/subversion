@@ -1403,7 +1403,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
             {
               CHKERR( rb->ras->callbacks->invalidate_wc_props
                       (rb->ras->callback_baton,
-                       "", SVN_RA_DAV__LP_VSN_URL, rb->ras->pool) );
+                       rb->target ? rb->target : "", 
+                       SVN_RA_DAV__LP_VSN_URL, rb->ras->pool) );
             }
 
           subpool = svn_pool_create(rb->ras->pool);
@@ -2349,7 +2350,7 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         update_target,
                         switch_url,
                         recurse,
-                        FALSE,
+                        TRUE,
                         TRUE,
                         wc_update,
                         wc_update_baton,
