@@ -4,9 +4,7 @@ import sys
 import re
 import string
 
-header_re = re.compile(r'^(.*): (.*)$')
-rev_re = re.compile(r'^Revision-number: (.*)')
-node_re = re.compile(r'^Node-path: (.*)')
+header_re = re.compile(r'^(.*): ?(.*)$')
 
 class NodePath:
     def __init__(self, path, headers):
