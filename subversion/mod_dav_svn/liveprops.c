@@ -162,7 +162,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                expects, and rfc2518 demands it. */
             format = dav_svn_time_format_iso8601;
           }
-        else if (propid == DAV_PROPID_getlastmodified)
+        else /* propid == DAV_PROPID_getlastmodified */
           {
             format = dav_svn_time_format_rfc1123;
           }
