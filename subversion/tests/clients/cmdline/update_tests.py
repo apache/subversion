@@ -51,18 +51,23 @@ def detect_extra_files(node, extra_files):
   #       [ [wc_dir, pattern, contents],
   #         [wc_dir, pattern, contents], ... ]
 
-  for pair in extra_files:
-    wc_dir = pair[0]
-    pattern = pair[1]
-    contents = pair[2]
+  for fdata in extra_files:
+    wc_dir = fdata[0]
+    pattern = fdata[1]
+    contents = None
+    if len(fdata) > 2:
+      contents = fdata[2]
     match_obj = re.match(pattern, node.name)
     if match_obj:
-      fp = open(os.path.join (wc_dir, node.path))
-      real_contents = fp.read()  # suck up contents of a test .png file
-      fp.close()
-      if real_contents == contents:
-        extra_files.pop(extra_files.index(pair)) # delete pattern from list
+      if contents is None:
         return
+      else:
+        fp = open(os.path.join (wc_dir, node.path))
+        real_contents = fp.read()  # suck up contents of a test .png file
+        fp.close()
+        if real_contents == contents:
+          extra_files.pop(extra_files.index(fdata)) # delete pattern from list
+          return
 
   print "Found unexpected object:", node.name
   raise svntest.main.SVNTreeUnequal
