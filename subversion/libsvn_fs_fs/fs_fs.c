@@ -1420,45 +1420,50 @@ rep_read_contents (void *baton,
               rb->buf = NULL;
             }
         }
-
-      rs = APR_ARRAY_IDX (rb->rs_list, 0, struct rep_state *);
-      if (rs->off == rs->end)
-        break;
-
-      /* Get more buffered data by evaluating a chunk. */
-      SVN_ERR (get_combined_window (&window, rb));
-      if (window->src_ops > 0)
-        {
-          if (! rb->src_state)
-            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                     "svndiff data requested "
-                                     "non-existant source.");
-          rs = rb->src_state;
-          sbuf = apr_pcalloc (rb->pool, window->sview_len);
-          if (! ((rs->start + window->sview_offset) < rs->end))
-            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                     "svndiff requested position beyond end "
-                                     "of stream.");
-          if ((rs->start + window->sview_offset) != rs->off)
-            {
-              rs->off = rs->start + window->sview_offset;
-              SVN_ERR (svn_io_file_seek (rs->file, APR_SET, &rs->off,
-                                         rb->pool));
-            }
-          SVN_ERR (svn_io_file_read_full (rs->file, sbuf, window->sview_len,
-                                          NULL, rb->pool));
-          rs->off += window->sview_len;
-        }
       else
-        sbuf = NULL;
-
-      rb->buf_len = window->tview_len;
-      rb->buf = apr_pcalloc (rb->pool, rb->buf_len);
-      svn_txdelta__apply_instructions (window, sbuf, rb->buf, &rb->buf_len);
-      if (rb->buf_len != window->tview_len)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "svndiff window length is corrupt.");
-      rb->buf_pos = 0;
+        {
+          
+          rs = APR_ARRAY_IDX (rb->rs_list, 0, struct rep_state *);
+          if (rs->off == rs->end)
+            break;
+          
+          /* Get more buffered data by evaluating a chunk. */
+          SVN_ERR (get_combined_window (&window, rb));
+          if (window->src_ops > 0)
+            {
+              if (! rb->src_state)
+                return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                         "svndiff data requested "
+                                         "non-existant source.");
+              rs = rb->src_state;
+              sbuf = apr_pcalloc (rb->pool, window->sview_len);
+              if (! ((rs->start + window->sview_offset) < rs->end))
+                return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                         "svndiff requested position beyond "
+                                         "end of stream.");
+              if ((rs->start + window->sview_offset) != rs->off)
+                {
+                  rs->off = rs->start + window->sview_offset;
+                  SVN_ERR (svn_io_file_seek (rs->file, APR_SET, &rs->off,
+                                             rb->pool));
+                }
+              SVN_ERR (svn_io_file_read_full (rs->file, sbuf,
+                                              window->sview_len,
+                                              NULL, rb->pool));
+              rs->off += window->sview_len;
+            }
+          else
+            sbuf = NULL;
+          
+          rb->buf_len = window->tview_len;
+          rb->buf = apr_pcalloc (rb->pool, rb->buf_len);
+          svn_txdelta__apply_instructions (window, sbuf, rb->buf,
+                                           &rb->buf_len);
+          if (rb->buf_len != window->tview_len)
+            return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                     "svndiff window length is corrupt.");
+          rb->buf_pos = 0;
+        }
     }
 
   *len = cur - buf;
