@@ -1,4 +1,4 @@
-### Convert texinfo files to Info, HTML, PostScript, etc. ###
+### Convert texinfo files to Info, HTML, PostScript, etc.
 
 default: html
 
