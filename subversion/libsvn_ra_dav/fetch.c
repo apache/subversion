@@ -580,7 +580,15 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
             return svn_error_quick_wrap(err, "could not finish directory");
 
           if (subdirs->nelts == 0)
-            return SVN_NO_ERROR;
+            {
+              /* Finish the edit */
+              SVN_ERR( ((*editor->close_edit) (edit_baton)) );
+
+              /* Store auth info if necessary */
+              SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
+
+              return SVN_NO_ERROR;
+            }
         }
 
       if (strlen(url) > strlen(bc_root))
@@ -639,6 +647,13 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
     } while (recurse && subdirs->nelts > 0);
 
   /* ### should never reach??? */
+
+  /* Finish the edit */
+  SVN_ERR( ((*editor->close_edit) (edit_baton)) );
+
+  /* Store auth info if necessary */
+  SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
+
   return SVN_NO_ERROR;
 }
 
