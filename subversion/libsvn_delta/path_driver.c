@@ -217,30 +217,27 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
       svn_path_split (path, &pdir, &bname, iterpool);
       if (strlen (pdir) > common_len)
         {
-          char *rel = (char *)pdir;
-          char *piece = rel + common_len + 1;
+          const char *rel = pdir;
+          const char *piece = pdir + common_len + 1;
 
           while (1)
             {
               /* Find the first separator. */
               piece = strchr (piece, '/');
 
-              /* Temporarily replace it with a NULL terminator. */
+              /* Calculate REL as the portion of PDIR up to (but not
+                 including) the location to which PIECE is pointing. */
               if (piece)
-                *piece = 0;
+                rel = apr_pstrmemdup (iterpool, pdir, piece - pdir);
 
               /* Open the subdirectory. */
               SVN_ERR (open_dir (db_stack, editor, rel, revision, pool));
               
-              /* If we temporarily replaced a '/' with a NULL,
-                 un-replace it and move our piece pointer to the
-                 character after the '/' we found.  If there was no
-                 piece found, though, we're done.  */
+              /* If we found a '/', advance our PIECE pointer to
+                 character just after that '/'.  Otherwise, we're
+                 done.  */
               if (piece)
-                {
-                  *piece = '/';
-                  piece++;    
-                }
+                piece++;    
               else
                 break;
             }

@@ -103,7 +103,6 @@ struct file_baton
 {
   struct edit_baton *edit_baton;
   const char *path; /* the -absolute- path to this file in the fs */
-  apr_pool_t *pool; /* my personal pool, in which I am allocated. */
 };
 
 
@@ -399,7 +398,6 @@ add_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->pool = pool; /* unused? */
   new_fb->path = full_path;
 
   *file_baton = new_fb;
@@ -435,7 +433,6 @@ open_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->pool = pool; /* unused? */
   new_fb->path = full_path;
 
   *file_baton = new_fb;
