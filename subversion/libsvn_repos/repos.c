@@ -1046,7 +1046,7 @@ get_repos (svn_repos_t **repos_p,
     lockfile_path = svn_repos_db_lockfile (repos, pool);
 
     err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
-    if (err != NULL && err->apr_err == EWOULDBLOCK)
+    if (err != NULL && APR_STATUS_IS_EAGAIN(err->apr_err))
       return err;
     SVN_ERR_W (err, "Error opening db lockfile");
   }
