@@ -54,6 +54,7 @@
 
 
 #include <stdarg.h>
+#include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
@@ -699,6 +700,103 @@ svn_wc__remove_adm_thing (svn_string_t *path,
   /* Restore path to its original state no matter what. */
   chop_admin_name (path, components_added);
 
+  return err;
+}
+
+
+
+/*** Writing administrative XML. ***/
+
+static svn_error_t *
+v_write_adm_entry (apr_file_t *fp,
+                   apr_pool_t *pool,
+                   const char *entry,
+                   va_list ap)
+{
+  apr_status_t apr_err;
+  const char *attr_name;
+  const char *start_entry = "<";
+  const char *end_entry = "/>\n";
+
+  /* kff todo: is it worth abstracting XML production even further?
+     The other place we have some is svn_wc__versions_init_contents,
+     right now. */
+
+  /* Open the entry. */
+  apr_err = apr_full_write (fp, start_entry, strlen (start_entry), NULL);
+  if (apr_err)
+    goto error;
+
+  /* Write out the entry title. */
+  apr_err = apr_full_write (fp, entry, strlen (entry), NULL);
+  if (apr_err)
+    goto error;
+  
+  /* Write out all attributes. */
+  while ((attr_name = va_arg (ap, const char *)) != NULL)
+    {
+      svn_string_t *attr_value  = va_arg (ap, svn_string_t *);
+      const char *begin = "\n   ";
+      const char *middle = "=\"";
+      const char *end = "\"";
+
+      assert (attr_value != NULL);
+
+      /* Indent attributes nicely. */
+      apr_err = apr_full_write (fp, begin, strlen (begin), NULL);
+      if (apr_err)
+        goto error;
+  
+      /* Attr name.  kff todo: XML escape it! */
+      apr_err = apr_full_write (fp, attr_name, strlen (attr_name), NULL);
+      if (apr_err)
+        goto error;
+  
+      /* The equal sign and open quote. */
+      apr_err = apr_full_write (fp, middle, strlen (middle), NULL);
+      if (apr_err)
+        goto error;
+
+      /* Attr value.  kff todo: XML escape it! */
+      apr_err = apr_full_write (fp, attr_value->data, attr_value->len, NULL);
+      if (apr_err)
+        goto error;
+
+      /* Close quote. */
+      apr_err = apr_full_write (fp, end, strlen (end), NULL);
+      if (apr_err)
+        goto error;
+    }
+
+  /* Write out the entry title. */
+  apr_err = apr_full_write (fp, end_entry, strlen (end_entry), NULL);
+  if (apr_err)
+    goto error;
+  
+  return SVN_NO_ERROR;
+
+ error:
+  return svn_create_error (apr_err,
+                           0,
+                           "writing adm area log entry",
+                           NULL,
+                           pool);
+}
+
+
+svn_error_t *
+svn_wc__write_adm_entry (apr_file_t *fp,
+                         apr_pool_t *pool,
+                         const char *entry,
+                         ...)
+{
+  svn_error_t *err = NULL;
+  va_list ap;
+
+  va_start (ap, entry);
+  err = v_write_adm_entry (fp, pool, entry, ap);
+  va_end (ap);
+  
   return err;
 }
 
