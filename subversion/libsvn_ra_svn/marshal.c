@@ -166,7 +166,7 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
     status = apr_file_read(conn->in_file, data, len);
   if (status && !APR_STATUS_IS_EOF(status))
     return svn_error_create(status, 0, NULL, "Read failure");
-  if (len == 0)
+  if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, 0, NULL,
                             "Connection closed unexpectedly");
   return SVN_NO_ERROR;
