@@ -41,7 +41,7 @@ Candidate changes:
       compile and install the base subversion package.  Without this
       fix, JavaHL installation crashes in that case.
     Votes:
-      +1: ghudson
+      +1: ghudson, jerenkrantz
       Nominated by: David James <james82@gmail.com>
 
   * r12006, r12136, r12146
@@ -51,8 +51,11 @@ Candidate changes:
       driven in a way that weren't able to handle, resulting in
       working copies that *look* okay, but can actually send commits
       to the wrong repository location (if able to commit at all).
+      r12006: Teach mod_dav_svn how to handle the new request.
+      r12136: Make sure there is a versioned entry before setting the property.
+      r12146: Work around for buggy 1.1.0/1.1.1 servers by disabling res. walk.
     Votes:
-      +1: cmpilato, kfogel
+      +1: cmpilato, kfogel, jerenkrantz
 
   * r12063, r12084 (Issue #2119)
     Canonicalize paths received over the wire in ra_svn and svnserve.
@@ -66,16 +69,6 @@ Candidate changes:
     Justification:
       It just looks ugly and sloppy.
     Branch: 1.1.x-r12100
-    Votes:
-      +1: breser, kfogel
-
-  * r12102
-    Fix a slight ABI/API incompatability between 1.0.x and 1.1.x
-    Justification:
-      If we treat the Apache modules as just another client then e broke our
-      compatability rules.  This fixes it and makes the Debian folks happy
-      who have an open bug on the issue.  See:
-      http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
     Votes:
       +1: breser, kfogel
 
@@ -94,8 +87,24 @@ Candidate changes:
      2 simple fixes in javahl binding only to prevent crash of jvm. Reported
      by users.
    Votes:
-      +1: pmayweg
+      +1: pmayweg, jerenkrantz
+
+ * r11871
+   Support BDB 4.3.
+   Justification:
+     System will startup with BDB 4.3, but die at run-time without this.
+   Votes:
+      +1: jerenkrantz
 
 Approved changes (further review is welcome, but not required):
 
-  (none)
+  * r12102
+    Fix a slight ABI/API incompatability between 1.0.x and 1.1.x
+    Justification:
+      If we treat the Apache modules as just another client then e broke our
+      compatability rules.  This fixes it and makes the Debian folks happy
+      who have an open bug on the issue.  See:
+      http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
+    Votes:
+      +1: breser, kfogel, jerenkrantz
+
