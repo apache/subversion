@@ -107,8 +107,8 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
   apr_status_t status;
   svn_stringbuf_t *pristine_copy_path;
   svn_boolean_t text_is_modified = FALSE;
-  const char **args = apr_palloc(pool, (options->nelts + 4)*sizeof(char*));
-  int i;
+  const char **args;
+  int i = 0;
 
   apr_file_t *outhandle = NULL;
 
@@ -135,9 +135,18 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
 
   /* Execute local diff command on these two paths, print to stdout. */
 
-  args[0] = SVN_CLIENT_DIFF;  /* the autoconfiscated system diff program */
-  for (i = 1; i <= options->nelts; i++)
+  if (options->nelts == 0)
+    args = apr_palloc(pool, 5*sizeof(char*));
+  else 
+    args = apr_palloc(pool, (options->nelts + 4)*sizeof(char*));
+
+  args[i++] = SVN_CLIENT_DIFF;  /* the autoconfiscated system diff program */
+
+  if (options->nelts == 0)
+    args[i++] = "-u";
+  else
     {
+      for (; i <= options->nelts; i++)
         args[i] = ((svn_stringbuf_t **) (options->elts))[i-1]->data;
     }
   args[i++] = pristine_copy_path->data;
