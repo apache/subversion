@@ -41,7 +41,7 @@ my %log_messages;
       # Ignore any of the lines containing only -'s.
       next if $log_line =~ /^-+$/;
 
-      if (my ($r) = $log_line =~ /^rev (\d+)/)
+      if (my ($r) = $log_line =~ /^r(\d+)/)
         {
           $current_revision                = $r;
           $log_messages{$current_revision} = "";
