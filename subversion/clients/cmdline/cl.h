@@ -45,7 +45,7 @@ extern "C" {
 typedef enum {
   svn_cl__ancestor_path_opt = SVN_OPT_FIRST_LONGOPT_ID,
   svn_cl__force_opt,
-  svn_cl__msg_encoding_opt,
+  svn_cl__encoding_opt,
   svn_cl__version_opt,
   svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
@@ -89,7 +89,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t update;          /* contact the server for the full story */
   svn_boolean_t strict;          /* do strictly what was requested */
   svn_stringbuf_t *filedata;     /* contents of file used as option data */
-  const char *filedata_encoding; /* the locale/encoding of the filedata*/
+  const char *encoding;          /* the locale/encoding of the data*/
   svn_boolean_t help;            /* print usage message */
   const char *auth_username;     /* auth username */ /* UTF-8! */
   const char *auth_password;     /* auth password */ /* UTF-8! */
@@ -190,10 +190,13 @@ svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
    repository, then return TRUE.  Else return FALSE. */
 svn_boolean_t svn_cl__prop_needs_translation (const char *propname);
 
-/* Translate the data in VALUE to UTF8 and LF line-endings.  Return
-   the translated data in *NEW_VALUE, allocated in POOL.  */
+/* Translate the data in VALUE (assumed to be in encoded in charset
+   ENCODING) to UTF8 and LF line-endings.  If ENCODING is NULL, then
+   assume that VALUE is in the system-default language encoding.
+   Return the translated data in *NEW_VALUE, allocated in POOL.  */
 svn_error_t *svn_cl__translate_string (svn_string_t **new_value,
                                        const svn_string_t *value,
+                                       const char *encoding,
                                        apr_pool_t *pool);
 
 /* Translate the data in VALUE from UTF8 and LF line-endings into

@@ -69,8 +69,8 @@ const apr_getopt_option_t svn_cl__options[] =
     {"file",          'F', 1, "read data from file ARG"},
     {"incremental",   svn_cl__incremental_opt, 0,
                       "give output suitable for concatenation"},
-    {"message-encoding", svn_cl__msg_encoding_opt, 1,
-                      "take log message in charset encoding ARG"},
+    {"encoding",      svn_cl__encoding_opt, 1,
+                      "treat value as being in charset encoding ARG"},
     {"version",       svn_cl__version_opt, 0, "print client version info"},
     {"verbose",       'v', 0, "print extra information"},
     {"show-updates",  'u', 0, "display update information"},
@@ -152,7 +152,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
-     svn_cl__msg_encoding_opt} },
+     svn_cl__encoding_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
@@ -165,7 +165,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'m', 'F', 'r', 'q',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
-     svn_cl__msg_encoding_opt} },
+     svn_cl__encoding_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
@@ -181,7 +181,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {svn_cl__force_opt, 'm', 'F', 'q', svn_cl__targets_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__msg_encoding_opt} },
+     svn_cl__encoding_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
@@ -233,7 +233,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  begin copy there.\n",
     {'m', 'F', 'q', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__msg_encoding_opt} },
+     svn_cl__encoding_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
@@ -297,7 +297,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  all the intermediate directories must already exist.\n",
     {'m', 'F', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__msg_encoding_opt} },
+     svn_cl__encoding_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
@@ -309,7 +309,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'m', 'F', 'r', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt, 
      svn_cl__non_interactive_opt, svn_cl__force_opt,
-     svn_cl__msg_encoding_opt} },
+     svn_cl__encoding_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove PROPNAME from files, dirs, or revisions.\n"
@@ -325,7 +325,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "       2. propedit PROPNAME --revprop -r REV [URL]\n\n"
     "  1. Edits versioned props in working copy.\n"
     "  2. Edits unversioned remote prop on repos revision.\n\n",
-    {'r', svn_cl__revprop_opt} },
+    {'r', svn_cl__revprop_opt, svn_cl__encoding_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
@@ -376,7 +376,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      revision flags, and an URL.  For example\n"
     "        foo            http://example.com/repos/zig\n"
     "        foo/bar -r1234 http://example.com/repos/zag\n",
-    {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt} },
+    {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
+      svn_cl__encoding_opt} },
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
@@ -702,8 +703,8 @@ main (int argc, const char * const *argv)
             return EXIT_FAILURE;
           }
         break;
-      case svn_cl__msg_encoding_opt:
-        opt_state.filedata_encoding = apr_pstrdup (pool, opt_arg);
+      case svn_cl__encoding_opt:
+        opt_state.encoding = apr_pstrdup (pool, opt_arg);
         break;
       case svn_cl__xml_opt:
         opt_state.xml = TRUE;
