@@ -104,21 +104,17 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
 {
-  void *root_baton;
+  svn_stringbuf_t *top_url, *src_rel, *dst_rel, *basename, *unused;
+  apr_array_header_t *src_pieces = NULL, *dst_pieces = NULL;
   svn_revnum_t youngest;
-  svn_stringbuf_t *basename, *unused;
-  svn_stringbuf_t *top_url, *src_rel, *dst_rel;
   void *ra_baton, *sess, *cb_baton;
   svn_ra_plugin_t *ra_lib;
   svn_ra_callbacks_t *ra_callbacks;
   svn_node_kind_t src_kind, dst_kind;
   const svn_delta_edit_fns_t *editor;
-  void *edit_baton;
-  apr_array_header_t *src_pieces = NULL, *dst_pieces = NULL;
-  svn_stringbuf_t *piece;
-  int i = 0;
+  void *edit_baton, *root_baton, *baton;
   void **batons;
-  void *baton;
+  int i = 0;
 
   /* We have to open our session to the longest path common to both
      SRC_URL and DST_URL in the repository so we can do existence
@@ -173,7 +169,6 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   /* Use YOUNGEST for copyfrom args if not provided. */
   if (! SVN_IS_VALID_REVNUM (src_rev))
     src_rev = youngest;
-
   
   /* Verify that SRC_URL exists in the repository. */
   SVN_ERR (ra_lib->check_path (&src_kind, sess,
@@ -211,6 +206,8 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
      copy. */
   if (dst_pieces && dst_pieces->nelts)
     {
+      svn_stringbuf_t *piece;
+
       /* open_directory() all the way down to DST's parent. */
       while (i < dst_pieces->nelts)
         {
@@ -245,6 +242,8 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   /* If this was a move, we need to remove the SRC_URL. */
   if (is_move)
     {
+      svn_stringbuf_t *piece;
+
       /* If SRC_PIECES is NULL, we're trying to move a directory into
          itself (or one of its chidren...we should have caught that by
          now). */
@@ -286,6 +285,60 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
                   svn_stringbuf_t *message,
                   apr_pool_t *pool)
 {
+#if 0
+  svn_stringbuf_t *anchor, *target, *src_url;
+  svn_wc_entry_t *entry = NULL;
+  void *ra_baton, *sess, *cb_baton;
+  svn_ra_plugin_t *ra_lib;
+  svn_ra_callbacks_t *ra_callbacks;
+  svn_revnum_t src_rev, youngest;
+  svn_node_kind_t src_kind, dst_kind;
+
+  /* Get SRC_PATH's entry (doubling as an existence check). */
+  SVN_ERR (svn_wc_entry (&entry, src_path, pool));
+  if (! entry)
+    return svn_error_create 
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, src_path->data);
+  if (! entry->url)
+    return svn_error_create 
+      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool, src_path->data);
+
+  /* Dup the URL and revision associated with SRC_PATH. */
+  src_url = svn_stringbuf_dup (entry->url, pool);
+  src_rev = entry->revision;
+
+  /* Split the DST_URL into an anchor and target. */
+  svn_path_split (dst_url, &anchor, &target, svn_path_url_style, pool);
+
+  /* Get the RA vtable that matches URL. */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url->data, pool));
+
+  /* Get the client callbacks for auth stuffs. */
+  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, auth_baton, 
+                                         top_url, TRUE, TRUE, pool));
+  SVN_ERR (ra_lib->open (&sess, top_url, ra_callbacks, cb_baton, pool));
+  SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest));
+
+  /* Use YOUNGEST for copyfrom args if not provided. */
+  if (! SVN_IS_VALID_REVNUM (src_rev))
+    src_rev = youngest;
+  
+  /* Check DST_PATH in the repository. */
+  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
+  if (dst_kind == svn_node_file)
+    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+                              "file `%s' already exists.", dst_path->data);
+
+  /* Verify that SRC_URL exists in the repository. */
+  SVN_ERR (ra_lib->check_path (&src_kind, sess,
+                               src_rel ? src_rel->data : NULL, src_rev));
+  if (src_kind == svn_node_none)
+    return svn_error_createf 
+      (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+       "path `%s' does not exist in revision `%ld'", src_url->data, src_rev);
+
+#endif /* 0 */
   abort();
   return SVN_NO_ERROR;
 }
