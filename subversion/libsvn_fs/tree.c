@@ -4006,7 +4006,8 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history (svn_fs_root_fs (root),
                                  svn_fs__canonicalize_abspath (path, pool),
-                                 root->rev, 0, NULL, SVN_INVALID_REVNUM, pool);
+                                 root->rev, FALSE, NULL, 
+                                 SVN_INVALID_REVNUM, pool);
   return SVN_NO_ERROR;
 }
 
@@ -4079,6 +4080,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   svn_boolean_t reported = history->is_interesting;
   const char *txn_id;
   svn_fs__copy_t *copy = NULL;
+  svn_boolean_t retry = FALSE;
 
   /* Initialize our return value. */
   *prev_history = NULL;
@@ -4126,7 +4128,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
              need now to do so) ... */
           *prev_history = assemble_history (fs, 
                                             apr_pstrdup (retpool, commit_path),
-                                            commit_rev, 1, NULL, 
+                                            commit_rev, TRUE, NULL, 
                                             SVN_INVALID_REVNUM, retpool);
           return SVN_NO_ERROR;
         }
@@ -4210,6 +4212,10 @@ txn_body_history_prev (void *baton, trail_t *trail)
                     svn_fs__id_txn_id (copy->dst_noderev_id), trail));
           src_path = svn_path_join (copy->src_path, remainder, 
                                     trail->pool);
+
+          if (copy->kind == svn_fs__copy_kind_soft)
+            retry = TRUE;
+                   
         }
       else
         {
@@ -4226,27 +4232,21 @@ txn_body_history_prev (void *baton, trail_t *trail)
      object. */
   if (src_path && SVN_IS_VALID_REVNUM (src_rev) && (src_rev >= commit_rev))
     {
-      *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
-                                        dst_rev, 1, src_path, src_rev, 
-                                        retpool);
       /* It's possible for us to find a copy location that is the same
          as the history point we've just reported.  If that happens,
          we simply need to take another trip through this history
          search. */
       if ((dst_rev == revision) && reported)
-        {
-          struct history_prev_args prev_args;
-          prev_args.prev_history_p = prev_history;
-          prev_args.history = *prev_history;
-          prev_args.cross_copies = args->cross_copies;
-          prev_args.pool = args->pool;
-          SVN_ERR (txn_body_history_prev (&prev_args, trail));
-        }
+        retry = TRUE;
+
+      *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
+                                        dst_rev, retry ? FALSE : TRUE, 
+                                        src_path, src_rev, retpool);
     }
   else
     {
       *prev_history = assemble_history (fs, apr_pstrdup (retpool, commit_path),
-                                        commit_rev, 1, NULL, 
+                                        commit_rev, TRUE, NULL, 
                                         SVN_INVALID_REVNUM, retpool);
     }
 
@@ -4277,13 +4277,21 @@ svn_error_t *svn_fs_history_prev (svn_fs_history_t **prev_history_p,
     }
   else
     {
-      /* Get a trail, and get to work. */
       struct history_prev_args args;
-      args.prev_history_p = &prev_history;
-      args.history = history;
-      args.cross_copies = cross_copies;
-      args.pool = pool;
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_history_prev, &args, pool));
+      prev_history = history;
+
+      while (1)
+        {
+          /* Get a trail, and get to work. */
+          
+          args.prev_history_p = &prev_history;
+          args.history = prev_history;
+          args.cross_copies = cross_copies;
+          args.pool = pool;
+          SVN_ERR (svn_fs__retry_txn (fs, txn_body_history_prev, &args, pool));
+          if ((! prev_history) || (prev_history->is_interesting))
+            break;
+        }
     }
 
   *prev_history_p = prev_history;
