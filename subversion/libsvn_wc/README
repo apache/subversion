@@ -74,9 +74,6 @@ exactly how to massage a working copy from one state to another.
 Structure of the Working Copy
 =============================
 
-     [Note: this obsoletes parts of client.texi.  We'll sync them up
-     after implementation.] 
-
 Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ sudirs:
 
@@ -95,14 +92,10 @@ analogous to CVS/ sudirs:
             foo.c                  /* Stores bar.c's file properties */
             bar.c
             baz.c
-       dprop-base/              /* Tentative dirent entry property storage */
-            foo.c                  /* Would store foo.c's dirent props */
-            bar.c
        tmp/                     /* Local tmp area */
             ./                     /* Adm files are written directly here. */
             text-base/             /* tmp area for base files */
             prop-base/             /* tmp area for base props */
-            dprop-base/            /* tmp area for base dirent props */
 
 `README'
 
@@ -168,6 +161,12 @@ analogous to CVS/ sudirs:
 
       2. Added dirs get the "new='true'" flag too, but they record
          their own ancestry.
+
+   Child directories of the current directory are recorded here, but
+   their ancestry information is omitted.  The idea is to make the
+   child's existence known to the current directory; all other
+   information about the child directory is stored in its own SVN/
+   subdir.
 
 `properties'
 
@@ -238,21 +237,17 @@ analogous to CVS/ sudirs:
    Probably the same routine will be used by finish_file() and in
    crash recovery.
 
-   NOTE: the above does not include the ref-counting behavior we need
-   to properly update directories.  Not going to document it further
-   until have as much code as the above written, though.
-
 `tmp'
 
    A shallow mirror of the working directory (i.e., the parent of the
    SVN/ subdirectory), giving us reproducible tmp names.
 
-   When you need a tmp file for something in the main dir, use
-   tmp/NAME, for example tmp/iota.  When you need a tmp file for
-   something in SVN/, use tmp/SVN/thing.  And when you need a *very*
-   temporary file for something in SVN (because you're reconstructing
-   it), use tmp/SVN/thing.$PID -- notice that no SVN/ file ever has a
-   .blah extension.  If it ends in .*, then it must be a tmp file.
+   When the working copy library needs a tmp file for something in the
+   SVN dir, it uses tmp/thing, for example SVn/tmp/entries, or
+   SVN/tmp/text-base/foo.c.  When it needs a *very* temporary file for
+   something in SVN (such as when local changes during an update), use
+   tmp/SVN/blah$PID.tmp.  Since no SVN/ file ever has a .blah
+   extension, if something ends in .*, then it must be a tmp file.
 
    See discussion of the `log' file for more details.
 
@@ -262,11 +257,6 @@ analogous to CVS/ sudirs:
    file, corresponding to the version indicated in `entries'.  These
    files are used for sending diffs back to the server, etc.
 
-   Child directories of the current directory appear here, but are
-   empty -- this is enough to make their existence known to the
-   current directory; all other information about the child directory
-   is of course stored in its own SVN/ subdir.
-
 `prop-base/'
 
    Pristine repos properties for those files, in hashdump format.
@@ -274,11 +264,6 @@ analogous to CVS/ sudirs:
    mixing those two, would pick one when we implement the dirent
    props.  Or may store them some other way; think this will be best
    answered after having the rest of the library working.
-
-`dprop-base/'
-
-   Same, but for dirent properties.  [maybe not implemented initially]
-
 
 
 ------------------------
