@@ -47,16 +47,19 @@ svn_client__can_delete (svn_stringbuf_t *path,
     {
       const void *key;
       void *val;
+      const char *name;
       const svn_wc_status_t *statstruct;
 
       apr_hash_this (hi, &key, NULL, &val);
+      name = key;
       statstruct = val;
 
       if (!statstruct->entry)
         {
           return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED,
                                     0, NULL, pool,
-                                    "'%s' is not under revision control", key);
+                                    "'%s' is not under revision control",
+                                    name);
         }
 
       if (statstruct->text_status != svn_wc_status_normal
@@ -66,7 +69,8 @@ svn_client__can_delete (svn_stringbuf_t *path,
         {
           return svn_error_createf (SVN_ERR_CLIENT_MODIFIED,
                                     0, NULL, pool,
-                                    "'%s' has local modifications", key);
+                                    "'%s' has local modifications",
+                                    name);
         }
     }
 
