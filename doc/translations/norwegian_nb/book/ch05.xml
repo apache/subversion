@@ -615,9 +615,10 @@
           Flere prosesser som aksesserer Subversiondepotene dine trenger 
           ikke &#229; tenke p&#229; faren ved &#229; rote til hverandres data.
           Isolasjonen som transaksjonssystemet tilbyr er slik at for 
-          enhver operasjon ser et statisk bilde av en database &#8212; ikke en 
-          database som konstant forandres av en annen prosess &#8212; og kan 
-          foreta avgj&#248;relser basert p&#229; dette bildet.
+          enhver operasjon ser Subversions depotkode et statisk bilde av 
+          en database &#8212; ikke en database som konstant forandres av en 
+          annen prosess &#8212; og kan foreta avgj&#248;relser basert p&#229; dette 
+          bildet.
           Hvis avgj&#248;relsen kommer i konflikt med det en annen prosess 
           gj&#248;r, blir hele operasjonen rullet tilbake som om den aldri 
           skjedde, og Subversion pr&#248;ver <!-- &#164; -->forsiktig operasjonen  
@@ -637,10 +638,10 @@
           <firstterm>varme backuper</firstterm> (<foreignphrase>hot 
           backups</foreignphrase>) &#8212; muligeten til &#229; ta sikkerhetskopi 
           av databasen uten &#229; ta den ned.
-          Vi vil diskuter hvordan du tar backup av depotet i <xref 
+          Vi vil diskutere hvordan du tar backup av depotet i <xref 
           linkend="svn-ch-5-sect-3.6"/>, men fordelene med &#229; kunne ta 
-          fullstendige fungerende kopier av depotene dine uten noe 
-          nedetid er innlysende.</para>
+          fullstendige fungerende kopier av depotene dine uten nedetid 
+          er innlysende.</para>
 
         <!-- @ENGLISH {{{
         <para>Berkeley DB is also a very reliable database system.
@@ -655,10 +656,10 @@
           state.  See <xref linkend="svn-ch-5-sect-3.3"/> for more
           about Berkeley DB log files.</para>
         @ENGLISH }}} -->
-        <para>Berkeley DV er ogs&#229; et veldig sikkert databasesystem.
+        <para>Berkeley DB er ogs&#229; et veldig sikkert databasesystem.
           Subversion bruker Berkeley DBs loggefasiliteter, som betyr at 
           databasen f&#248;rst skriver en beskrivelse til loggfiler p&#229; disken 
-          om hva den er i ferd med &#229; gj&#248;re, og gj&#248;r deretter selve 
+          om hva den er i ferd med &#229; gj&#248;re, og foretar deretter selve 
           modifiseringen.
           Dette er for &#229; forsikre om at i tilfelle noe g&#229;r galt, kan 
           databasesystemet hente tilbake et tidligere 
@@ -787,7 +788,7 @@
         <para>I midten av 2004 ble et nytt lagringsformat for depotet 
           laget, et som ikke bruker en database i det hele tatt.
           Et FSFS-depot lagrer et revisjonstre i en enkelt fil, og alle 
-          depotets revisjoner kan finnes dermed i en enkelt underkatalog 
+          depotets revisjoner kan dermed finnes i en enkelt underkatalog 
           full av nummererte filer.
           Transaksjoner blir opprettet i separate underkataloger.
           N&#229;r den er komplett, blir en enkelt transaksjonsfil opprettet 
@@ -814,7 +815,7 @@
           filer i andre revisjonstr&#230;r.
           Ulikt en Berkeley DB-database, er dette lagringsformatet 
           portabelt mellom forskjellige operativsystemer og er ikke 
-          sensitiv til CPU-arkitektur.
+          sensitiv ovenfor CPU-arkitektur.
           Fordi det ikke blir brukt journalfiler eller filer som bruker 
           delt hukommelse, kan depotet trygt aksesseres via et 
           nettverksfilsystem og bli utforsket i et skrivebeskyttet 
@@ -836,7 +837,7 @@
           waiting for a response.</para>
         @ENGLISH }}} -->
         <para>FSFS har ogs&#229; forskjellige karakteristikker n&#229;r det 
-          gjelder <!-- &#164; -->hastighet. N&#229;r en katalog med mange filer 
+          gjelder <!-- &#164; -->effektivitet. N&#229;r en katalog med mange filer 
           legges inn, bruker FSFS en O(N) algoritme for &#229; legge til 
           poster, mens Berkeley DB bruker en O(N^2) algoritme for &#229; 
           skrive hele katalogen en gang til.
@@ -1122,7 +1123,7 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
             dictates the version number of the repository layout.</para>
           @ENGLISH }}} -->
           <para>En fil som inneholder en enkelt heltallsverdi som 
-            dikterer versjonsnummeret til depotlayouten.</para>
+            spesifiserer versjonsnummeret til depotlayouten.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
