@@ -179,12 +179,15 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
                                const char *name,
                                trail_t *trail);
 
+
 /* Open the node identified by PATH under ROOT, as part of TRAIL. Set
-   *CHILD_P to the new node and *PARENT_P to its parent, allocated in
-   TRAIL->pool. PATH is a slash-separated directory path with. If PATH
-   is empty, *PARENT_P will be NULL and *CHILD_P will be ROOT. */
+   *CHILD_P to the new node, *PARENT_P to its parent, *NAME_P to
+   *CHILD_P's name in *PARENT_P, all allocated in TRAIL->pool. PATH is
+   a slash-separated directory path with.  If PATH is empty, *PARENT_P
+   will be NULL, *CHILD_P will be ROOT and *NAME_P will be empty. */
 svn_error_t *svn_fs__dag_open_path (dag_node_t **child_p,
                                     dag_node_t **parent_p,
+                                    const char **name_p,
                                     dag_node_t *root,
                                     const char *path,
                                     trail_t *trail);
