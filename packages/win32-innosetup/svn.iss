@@ -66,6 +66,7 @@ Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Components: main; Flags: ign
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}; Components: main
 Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc; Components: main
 Source: missing_msvcp60dll.html; DestDir: {app}\doc; Components: main; Check: VCRuntimeNotFound
+Source: missing_shfolderdll.html; DestDir: {app}\doc; Components: main; Check: ShFolderDllNotFound
 
 ; SSL stuff
 Source: {#= path_ssl}\libeay32.dll; DestDir: {app}; Components: main; Flags: ignoreversion
@@ -102,6 +103,7 @@ Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; C
 Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-doc.chm; Components: main; Comment: The standard Subversion Documentation; IconFilename: {app}\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
 Name: {group}\Read Me; Filename: {app}\Readme.txt
 Name: {group}\Download and install msvcp60.dll; Filename: {app}\doc\missing_msvcp60dll.html; Check: VCRuntimeNotFound
+Name: {group}\Download and install shfolder.dll; Filename: {app}\doc\missing_shfolderdll.html; Check: ShFolderDllNotFound
 
 [UninstallDelete]
 Type: files; Name: {app}\svn.url
