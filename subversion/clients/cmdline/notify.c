@@ -255,18 +255,19 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_modified:
+      /* xgettext: Align the %s's on this and the following 4 messages */
       printf (_("Sending        %s\n"), path_stdout);
       break;
 
     case svn_wc_notify_commit_added:
       if (mime_type && svn_mime_type_is_binary (mime_type))
-        printf ("Adding  (bin)  %s\n", path_stdout);
+        printf (_("Adding  (bin)  %s\n"), path_stdout);
       else
-        printf ("Adding         %s\n", path_stdout);
+        printf (_("Adding         %s\n"), path_stdout);
       break;
 
     case svn_wc_notify_commit_deleted:
-      printf ("Deleting       %s\n", path_stdout);
+      printf (_("Deleting       %s\n"), path_stdout);
       break;
 
     case svn_wc_notify_commit_replaced:
