@@ -9,7 +9,18 @@ AC_DEFUN(SVN_LIB_APR,
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
-  APR_FIND_APR($srcdir/apr, $abs_builddir)
+  APR_FIND_APR(apr, $abs_builddir)
+
+  if test $apr_found = "no" \
+     && test "$abs_srcdir" != "$abs_builddir" \
+     && test -d "$abs_srcdir/apr"; then
+    dnl HACKS to get builddir != srcdir to work, should APR_FIND_APR do this?
+    echo "using apr in Subversion source dir"
+    apr_found="reconfig"
+    apr_config=$abs_builddir/apr/apr-config
+    apr_la_file=$abs_builddir/apr/libapr.la
+    apr_srcdir=apr
+  fi
 
   if test $apr_found = "no"; then
     AC_MSG_WARN([APR not found])
@@ -34,7 +45,7 @@ AC_DEFUN(SVN_LIB_APR,
 
   SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES $apr_includes"
   if test "$abs_srcdir" != "$abs_builddir" && test -d "$abs_srcdir/apr" ; then
-      SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$abs_srcdir/apr/include"
+      SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$abs_srcdir/apr/include -I$abs_builddir/apr/include"
   fi
 
   if test -z "$apr_la_file" ; then
