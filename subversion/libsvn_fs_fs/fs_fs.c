@@ -360,7 +360,7 @@ svn_fs_fs__hotcopy (const char *src_path,
     {
       svn_pool_clear (iterpool);
       SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
-                                     apr_psprintf (pool, "%ld", rev),
+                                     apr_psprintf (iterpool, "%ld", rev),
                                      pool));
     }
 
