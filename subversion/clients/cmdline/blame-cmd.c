@@ -36,8 +36,11 @@ blame_receiver (void *baton,
                 apr_pool_t *pool)
 {
   svn_stream_t *out = baton;
-  return svn_stream_printf (out, pool, "%6"SVN_REVNUM_T_FMT" %10s %s\n",
-                            revision, author, line);
+  const char *rev_str = SVN_IS_VALID_REVNUM (revision) 
+                        ? apr_psprintf (pool, "%6" SVN_REVNUM_T_FMT, revision)
+                        : "     -";
+  return svn_stream_printf (out, pool, "%s %10s %s\n", rev_str, 
+                            author ? author : "         -", line);
 }
  
 

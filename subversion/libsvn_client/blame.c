@@ -210,6 +210,8 @@ output_diff_modified (void *baton,
 struct log_message_baton {
   const char *path;        /* The path to be processed */
   struct rev *eldest;      /* The eldest revision processed */
+  char action;             /* The action associated with the eldest */ 
+  svn_revnum_t copyrev;    /* The revision the eldest was copied from */
   svn_cancel_func_t cancel_func; /* cancellation callback */ 
   void *cancel_baton;            /* cancellation baton */
   apr_pool_t *pool; 
@@ -253,6 +255,8 @@ log_message_receiver (void *baton,
   change = apr_hash_get (changed_paths, lmb->path, APR_HASH_KEY_STRING);
   if (change)
     {
+      lmb->action = change->action; 
+      lmb->copyrev = change->copyfrom_rev;
       if (change->copyfrom_path)
         lmb->path = apr_pstrdup (lmb->pool, change->copyfrom_path);
 
@@ -292,6 +296,8 @@ log_message_receiver (void *baton,
                   /* Yes!  This change was copied, so we just need to
                      apply the portion of our path that is relative to
                      this change's path, to the change's copyfrom path.  */
+                  lmb->action = change->action;
+                  lmb->copyrev = change->copyfrom_rev;
                   lmb->path = svn_path_join (change->copyfrom_path, 
                                              lmb->path + len + 1,
                                              lmb->pool);
@@ -410,6 +416,38 @@ svn_client_blame (const char *target,
   db.avail = NULL;
   db.pool = pool;
 
+  /* Inspect the first revision's change metadata; if there are any
+     prior revisions, compute a new starting revision/path.  A modified
+     item certainly has a prior revision.  It is reasonable for an
+     added item to have none, but anything else is unexpected.  */
+  if (lmb.action == 'M' || SVN_IS_VALID_REVNUM (lmb.copyrev))
+    {
+      rev = apr_palloc (pool, sizeof (*rev));
+      if (SVN_IS_VALID_REVNUM (lmb.copyrev))
+        rev->revision = lmb.copyrev;
+      else
+        rev->revision = lmb.eldest->revision - 1;
+      rev->path = lmb.path;
+      rev->next = lmb.eldest;
+      lmb.eldest = rev;
+      rev = apr_palloc (pool, sizeof (*rev));
+      rev->revision = SVN_INVALID_REVNUM;
+      rev->author = NULL;
+      rev->date = NULL;
+      db.blame = blame_create (&db, rev, 0);
+    }
+  else if (lmb.action == 'A')
+    {
+      db.blame = blame_create (&db, lmb.eldest, 0);
+    }
+  else
+    return svn_error_createf (APR_EGENERAL, NULL,
+                              "Revision action '%c' for "
+                              "revision %" SVN_REVNUM_T_FMT " of '%s'"
+                              "lacks a prior revision",
+                              lmb.action, lmb.eldest->revision,
+                              lmb.eldest->path);
+
   /* Walk the revision list in chronological order, downloading
      each fulltext, diffing it with its predecessor, and accumulating
      the blame information into db.blame. */
@@ -439,8 +477,6 @@ svn_client_blame (const char *target,
           if (apr_err != APR_SUCCESS)
             return svn_error_wrap_apr (apr_err, "Can't remove '%s'", last);
         }
-      else
-        db.blame = blame_create (&db, rev, 0);
 
       last = tmp;
     }
