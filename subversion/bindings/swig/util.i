@@ -20,13 +20,6 @@
 
 %include typemaps.i
 
-/* This is default in SWIG 1.3.17 and is a really good idea */
-%typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
-  protected static long getCPtr($javaclassname obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
-  }
-%}
-
 %{
 #include "svn_opt.h"
 %}
@@ -158,7 +151,7 @@
    the second argument to svn_parse_date is unused: always pass NULL
 */
 
-%typemap(in,numinputs=0) struct getdate_time *now {
+%typemap(python,in,numinputs=0) struct getdate_time *now {
     $1 = NULL;
 }
 
