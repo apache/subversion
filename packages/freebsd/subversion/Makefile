@@ -27,19 +27,23 @@ MAN1=		svn.1
 
 WRKSRC=	${WRKDIR}/subversion-r1302
 GNU_CONFIGURE=	yes
-CONFIGURE_ARGS= --with-ssl --with-neon=${LOCALBASE}
+CONFIGURE_ARGS= --with-ssl \
+                --with-neon=${LOCALBASE} \
+                --with-apr=${LOCALBASE} \
+                --with-apr-util=${LOCALBASE}
 
 post-extract:
 	# work around libdb4's name.
 	@${PERL} -pi -e 's/ldb/ldb4/g' ${WRKSRC}/configure
 
-	# axe the neon subdir because otherwise svn complains when trying to
-	# link against our installed version.
+	# axe the neon, apr, and apr-util subdirs to keep svn's build process 
+	# from using them, since we're providing our own.
 	@${RM} -r ${WRKSRC}/neon
+	@${RM} -r ${WRKSRC}/apr
+	@${RM} -r ${WRKSRC}/apr-util
 
 post-configure:
 	# use our installed expat, rather than the expat-lite in svn's tree
-	@${PATCH} < files/build.conf.diff
 	(cd ${WRKSRC} && ./gen-make.py -s build.conf)
 
 	# make sure we don't install the swig stuff, even if it was found
