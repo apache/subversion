@@ -39,4 +39,4 @@ Candidate changes:
     doesn't make BDB vs FSFS assumptions.
     Justification: Simple doc fix
     Votes:
-      +1: ghudson
+      +1: ghudson, sussman
