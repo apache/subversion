@@ -54,6 +54,27 @@
 #define DELTA_H
 
 
+/* A vcdiff parser object.  */
+typedef struct svn_vcdiff_parser_t
+{
+  /* Once the vcdiff parser has enough data buffered to create a
+     "window", it passes this window to the caller's consumer routine.  */
+  svn_text_delta_window_handler_t *consumer_func;
+  void *consumer_baton;
+
+  /* Pool to create subpools from; each developing window will be a
+     subpool */
+  apr_pool_t *pool;
+
+  /* The current subpool which contains our current window-buffer */
+  apr_pool_t *subpool;
+
+  /* The actual vcdiff data buffer, living within subpool. */
+  svn_string_t *buffer;
+
+} svn_vcdiff_parser_t;
+
+
 /* Return a vcdiff parser object, PARSER.  If we're receiving a
    vcdiff-format byte stream, one block of bytes at a time, we can
    pass each block in succession to svn_vcdiff_parse, with PARSER as
