@@ -116,7 +116,7 @@ replace_text_base (svn_string_t *path,
   filepath = svn_string_dup (path, pool);
   svn_path_add_component_nts (filepath, name, SVN_PATH_LOCAL_STYLE, pool);
 
-  tmp_text_base = svn_wc__text_base_path (path, 1, pool);
+  tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
   err = svn_wc__file_exists_p (&exists, tmp_text_base, pool);
   if (err)
     return err;
@@ -159,8 +159,6 @@ static void
 start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
 {
   struct log_runner *loggy = (struct log_runner *) userData;
-
-  printf ("\n"); /* kff todo */
 
   /* Here is a sample log file:
    *
