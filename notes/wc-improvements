@@ -152,6 +152,12 @@ implement, some of them may not work at all.
   than full text, for adds-with-history if the copyfrom source is
   reported to the repository?
 
+- Consider implementing atomic move for wc-to-wc moves, rather than
+  using copy+delete.  This would be considerably faster for big
+  directories, would lead to better revert behaviour, and avoid
+  case-insensitivity problems (and if we ever get atomic mv in
+  libsvn_fs then the wc code would be ready for it).
+
 - Consider writing some libsvn_wc compiled C regression tests to allow
   more complete coverage.  Most of the current libsvn_wc testing is
   done via the command line client and it can be hard to get a working
