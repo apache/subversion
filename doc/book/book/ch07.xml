@@ -1529,7 +1529,7 @@ crawl_dir (apr_array_header_t *files,
         to important design discussions, be able to see actual changes
         to Subversion source code as they occur, and be able to
         witness peer reviews of those changes and proposed changes.
-        These e-mail based discussion lists are the primary
+        These email based discussion lists are the primary
         communication media for Subversion development.  See the
         Mailing Lists section of the website for other
         Subversion-related lists you might be interested in.</para>
