@@ -647,18 +647,6 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
-        else if (strlen (opt_state.filedata->data) < opt_state.filedata->len)
-          {
-            /* The data contains a zero byte, and therefore can't be
-               represented as a C string.  Punt now; it's probably not
-               a deliberate encoding, and even if it is, we still
-               can't handle it. */
-            err = svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
-                                    "Log message contains a zero byte.");
-            svn_handle_error (err, stderr, FALSE);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
         
         /* Find out if log message file is under revision control. */
         {
@@ -926,8 +914,13 @@ main (int argc, const char * const *argv)
                     SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
 
   ctx.log_msg_func = svn_cl__get_log_message;
-  ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
-                                                  ctx.config, pool);
+  if ((err = svn_cl__make_log_msg_baton (&(ctx.log_msg_baton), &opt_state, 
+                                         NULL, ctx.config, pool)))
+    {
+      svn_handle_error (err, stderr, 0);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
 
   if (!opt_state.encoding || !*opt_state.encoding)
     {
