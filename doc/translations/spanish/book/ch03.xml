@@ -463,18 +463,21 @@ Checked out revision 2499.
   <!-- ======================== SECCIÓN 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-5">
-    <title>Basic Work Cycle</title><!--TODO:Basic Work Cycle-->
+    <title>Ciclo Basico de Trabajo</title><!--TODO:Basic Work Cycle-->
 
-    <para>Subversion has numerous features, options, bells and whistles, but on
-      a day-to-day basis, odds are that you will only use a few of them. In
-      this section we'll run through the most common things that you might
-      find yourself doing with Subversion in the course of a day's work.</para>
+    <para>Subversion tiene numerosas características, opciones, campanas
+      y silbidos<!--TODO:bells and whistles-->, pero en una base cotidiana
+      <!--TODO: day-to-day basis... quizá mejor poner "uso cotidiano"?-->
+      las probabilidades son que use solamente algunas de ellas. En esta
+      sección veremos <!--TODO:we'll run--> las cosas más comunes que
+      puede encontrarse haciendo con Subversion en el transcurso de un día
+      de trabajo.</para>
     
-    <para>The typical work cycle looks like this:</para>
-
+    <para>El típico ciclo de trabajo se parece a esto:</para>
+             <!--TODO:The typical work cycle looks like this-->
     <itemizedlist>
       <listitem>
-        <para>Update your working copy</para>
+        <para>Actualizar su copia de trabajo local</para>
         <itemizedlist>
           <listitem>
             <para><command>svn update</command></para>
@@ -484,7 +487,7 @@ Checked out revision 2499.
       </listitem>
       
       <listitem>
-        <para>Make changes</para>
+        <para>Hacer cambios</para>
         <itemizedlist>
           <listitem>
             <para><command>svn add</command></para>
@@ -502,7 +505,7 @@ Checked out revision 2499.
       </listitem>
 
       <listitem>
-        <para>Examine your changes</para>
+        <para>Examinar sus cambios</para>
         <itemizedlist>
           <listitem>
             <para><command>svn status</command></para>
@@ -517,7 +520,8 @@ Checked out revision 2499.
       </listitem>
 
       <listitem>
-        <para>Merge others' changes</para>
+        <para>Fusionarlos con los cambios de otros</para>
+             <!--TODO:Merge others' change-->
         <itemizedlist>
           <listitem>
             <para><command>svn merge</command></para>
@@ -529,7 +533,7 @@ Checked out revision 2499.
       </listitem>
 
       <listitem>
-        <para>Commit your changes</para>
+        <para>Enviar sus cambios al repositorios</para>
         <itemizedlist>
           <listitem>
             <para><command>svn commit</command></para>
@@ -539,13 +543,15 @@ Checked out revision 2499.
     </itemizedlist>
 
     <sect2 id="svn-ch-3-sect-4.1">
-      <title>Update Your Working Copy</title>
+      <title>Actualizar su copia de trabajo local</title>
 
-      <para>When working on a project with a team, you'll want to
-        update your working copy to receive any changes made since
-        your last update by other developers on the project.  Use
-        <command>svn update</command> to bring your working copy into
-        sync with the latest revision in the repository.</para>
+      <para>Cuando se trabaja en un proyecto con un equipo, usted querrá
+        actualizar su copia de trabajo local para recibir cualquier cambio
+        hecho desde su última actualización por otros desarrolladores en
+        el proyecto. Use <command>svn update</command> para aportar a su
+        copia de trabajo local<!--TODO:to bring your working copy into
+        sync--> sincronización  con la última revisión en el repositorio.
+      </para>
       
       <screen>
 $ svn update
@@ -554,10 +560,11 @@ U  bar.c
 Updated to revision 2.
 </screen>
       
-      <para>In this case, someone else checked in modifications to
-        both <filename>foo.c</filename> and <filename>bar.c</filename>
-        since the last time you updated, and Subversion has updated
-        your working copy to include those changes.</para>
+      <para>En este caso, alguien <!--TODO:someone else checked in
+        modifications to both--> modificó <filename>foo.c</filename> y
+        <filename>bar.c</filename> desde la última vez que usted actualizó,
+        y Subversion ha actualizado su copia de trabajo local para incluir
+        estos cambios.</para>
       
       <para>Let's examine the output of <command>svn update</command>
         a bit more.  When the server sends changes to your working
