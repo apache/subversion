@@ -2208,6 +2208,7 @@ copy_helper (svn_fs_root_t *from_root,
     {
       svn_fs_path_change_kind_t kind;
       dag_node_t *new_node;
+      const char *from_canonpath;
 
       /* If TO_PATH already existed prior to the copy, note that this
          operation is a replacement, not an addition. */
@@ -2220,20 +2221,22 @@ copy_helper (svn_fs_root_t *from_root,
       SVN_ERR (make_path_mutable (to_root, to_parent_path->parent, 
                                   to_path, pool));
 
+      /* Canonicalize the copyfrom path. */
+      from_canonpath = svn_fs_fs__canonicalize_abspath (from_path, pool);
+
       SVN_ERR (svn_fs_fs__dag_copy (to_parent_path->parent->node,
                                     to_parent_path->entry,
                                     from_node,
                                     preserve_history,
                                     from_root->rev,
-                                    svn_fs_fs__canonicalize_abspath (from_path,
-                                                                     pool),
+                                    from_canonpath,
                                     txn_id, pool));
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR (get_dag (&new_node, to_root, to_path, pool));
       SVN_ERR (add_change (to_root->fs, txn_id, to_path,
                            svn_fs_fs__dag_get_id (new_node), kind, 0, 0,
-                           from_root->rev, from_path, pool));
+                           from_root->rev, from_canonpath, pool));
     }
   else
     {
