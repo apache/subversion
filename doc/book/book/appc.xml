@@ -77,7 +77,7 @@
         <varlistentry>
           <term>Properties</term>
           <listitem>
-            <para>This is same idea present in
+            <para>This is the same idea present in
               Subversion&mdash;metadata attached to files and
               collections.  A client can list or retrieve properties
               attached to a resource with the new
@@ -162,7 +162,7 @@
             <literal>CHECKOUT</literal>, <literal>PUT</literal>,
             <literal>CHECKIN</literal>.  After each
             <literal>CHECKIN</literal>, a new VR is created, and
-            edited VCR's contents now <quote>point to</quote> the
+            the edited VCR's contents now <quote>point to</quote> the
             latest VR.  Each VCR has also has a <quote>history</quote>
             resource which tracks and orders its various VR
             states.</para>
@@ -490,7 +490,7 @@
         Network Places.</para>
 
       <para>Most write operations work fine against an autoversioning
-        mod_dav_svn server, but there are few problems:</para>
+        mod_dav_svn server, but there are a few problems:</para>
 
       <itemizedlist>
 

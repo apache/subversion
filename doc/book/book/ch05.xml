@@ -1072,7 +1072,7 @@ Available subcommands:
           dump data, and <command>svnadmin load</command> to populate
           a new repository with it (see <xref
           linkend="svn-ch-5-sect-3.5"/>).  The great thing about the
-          human-readibility aspect of the dump format is that, if you
+          human-readability aspect of the dump format is that, if you
           aren't careless about it, you can manually inspect and
           modify it.  Of course, the downside is that if you have two
           years' worth of repository activity encapsulated in what is
@@ -1194,7 +1194,7 @@ $
           project, that repository would still have a top-level
           directory named <filename>calc</filename>.  If you want
           your <filename>trunk</filename>, <filename>tags</filename>,
-          and <filename>branches</filename> directories to live in
+          and <filename>branches</filename> directories to live in the
           root of your repository, you might wish to edit your
           dumpfiles, tweaking the <literal>Node-path</literal> and
           <literal>Copyfrom-path</literal> headers to no longer have
@@ -1466,7 +1466,7 @@ $
           <command>db_recover</command> utility.</para>
             
         <para>There are still a few Berkeley DB utilities that you
-          mind find useful.  The <command>db_dump</command> and
+          might find useful.  The <command>db_dump</command> and
           <command>db_load</command> programs write and read,
           respectively, a custom file format which describes the keys
           and values in a Berkeley DB database.  Since Berkeley
@@ -1551,7 +1551,7 @@ $ svnadmin setlog myrepos newlog.txt -r 388
         triggered, and therefore must be setup to accept changes of
         this nature.  But an administrator can get around these
         protections by passing the <option>--bypass-hooks</option>
-        option to <command>svnadmin setlog</command> command.</para>
+        option to the <command>svnadmin setlog</command> command.</para>
  
       <warning>
         <para>Remember, though, that by bypassing the hooks, you are
@@ -2087,7 +2087,7 @@ $ svnadmin load newrepos &lt; dumpfile3
 
       <para>The dump format can also be used to merge the contents of
         several different repositories into a single repository.  By
-        using the <option>--parent-dir</option> of <command>svnadmin
+        using the <option>--parent-dir</option> option of <command>svnadmin
         load</command>, you can specify a new virtual root directory
         for the load process.  That means if you have dumpfiles for
         three repositories, say <filename>calc-dumpfile</filename>,
@@ -2393,7 +2393,7 @@ $
         projects, you might want to arrange them in groups inside the
         repository, perhaps putting projects with similar goals or
         shared code in the same subdirectory, or maybe just grouping
-        them alphabetically.  Such an arrangment might look
+        them alphabetically.  Such an arrangement might look
         like:</para>
 
       <screen>

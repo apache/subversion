@@ -49,7 +49,7 @@
         <term>RapidSVN (<systemitem
           class="url">http://rapidsvn.tigris.org/</systemitem>)</term>
         <listitem><para>Cross-platform Subversion GUI, based on the
-          WxPython libaries</para></listitem>
+          WxPython libraries</para></listitem>
       </varlistentry>
 
       <varlistentry>
