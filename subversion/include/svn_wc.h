@@ -2362,7 +2362,7 @@ svn_error_t *svn_wc_prop_set2 (const char *name,
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
- * Like svn_wc_prop_set2(), but with @a force always false.
+ * Like svn_wc_prop_set2(), but with @a skip_checks always false.
  */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
