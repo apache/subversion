@@ -678,8 +678,14 @@ $ db_archive -a -h /repos/db | xargs rm
 # disk space reclaimed!
 </pre>
 
-<p>See also <code>svnadmin copy</code> or <code>hotbackup.py</code>.</p>
+<p>See also <code>svnadmin hotcopy</code> or <code>hotbackup.py</code>.</p>
 
+<p><strong>Note:</strong> If you use Berkeley DB 4.2, Subversion 0.35
+or later will create new repositories with automatic log file removal
+enabled. You can change this by passing the <code>--bdb-log-keep</code>
+option to <code>svnadmin create</code>. Refer to the section about the <a
+href="http://www.sleepycat.com/docs/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
+<code>DB_LOG_AUTOREMOVE</code></a> flag in the Berkeley DB manual.</p>
 
 <![CDATA[=========================================================]]>
 
