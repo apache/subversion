@@ -134,7 +134,8 @@ check_status 14
 ### Try to commit;  the conflict should now succeed.
 echo "Attempting to commit again, with conflicts removed."
 ${SVN_PROG} commit --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 24 ${TEST_DIR_1}
+                   --revision 24 ${TEST_DIR_1} \
+                   --message "24 slices of American cheese"
 check_status 15
 
 

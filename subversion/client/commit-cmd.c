@@ -51,14 +51,10 @@ svn_cl__commit (svn_cl__opt_state_t *opt_state,
                                              target, pool);
       if (err) return err;
       
-      /* kff todo: someday, in the very extremely near future, we'll
-         pass TARGETS on down into svn_client_commit(). */
-      
       err = svn_client_commit (NULL, NULL,
                                trace_editor, trace_edit_baton,
                                target,
-                               /* a fixed log message: change this! */
-                               svn_string_create ("fooooo msg", pool),
+                               opt_state->message,
                                opt_state->xml_file,
                                opt_state->revision,
                                pool);
