@@ -787,7 +787,7 @@ svn_wc__close_props (apr_file_t *fp,
      of parent_dir.  Examine the flags to know -which- kind of prop
      file to get -- there are three types! */
 
-  if (base || wcprops)
+  if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
                              "close_props: no such thing as 'base' wcprops!");
 
@@ -846,7 +846,7 @@ svn_wc__sync_props (svn_string_t *path,
      of parent_dir.  Examine the flags to know -which- kind of prop
      file to get -- there are three types! */
 
-  if (base || wcprops)
+  if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
                              "close_props: no such thing as 'base' wcprops!");
 
