@@ -357,7 +357,8 @@ do_apply_textdelta (svn_string_t *filename,
                          local_tmp_path->data);
 
   textbasefile = NULL; /* paranoia! */
-  if (! (tb->entry->schedule == svn_wc_schedule_add))
+  if ((! (tb->entry->schedule == svn_wc_schedule_add))
+      && (! (tb->entry->schedule == svn_wc_schedule_replace)))
     {
       err = svn_wc__open_text_base (&textbasefile, filename, APR_READ, pool);
       if (err)

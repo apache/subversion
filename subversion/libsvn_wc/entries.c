@@ -1058,7 +1058,7 @@ fold_state_changes (apr_hash_t *entries,
         return 
           svn_error_createf 
           (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-           "do_state_changes: '%s' is not a versioned resource",
+           "fold_state_changes: '%s' is not a versioned resource",
            name->data);
     }
 
@@ -1080,7 +1080,7 @@ fold_state_changes (apr_hash_t *entries,
           return 
             svn_error_createf 
             (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-             "do_state_changes: Illegal schedule in state set operation");
+             "fold_state_changes: Illegal schedule in state set operation");
         }
     }
 
@@ -1104,21 +1104,21 @@ fold_state_changes (apr_hash_t *entries,
         return 
           svn_error_createf 
           (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-           "do_state_changes: Can't add '%s' to deleted directory"
+           "fold_state_changes: Can't add '%s' to deleted directory"
            "--try undeleting its parent directory first",
            name->data);
       if (*schedule == svn_wc_schedule_replace)
         return 
           svn_error_createf 
           (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-           "do_state_changes: Can't replace '%s' in deleted directory"
+           "fold_state_changes: Can't replace '%s' in deleted directory"
            "--try undeleting its parent directory first",
            name->data);
       if (*schedule == svn_wc_schedule_undelete)
         return 
           svn_error_createf 
           (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-           "do_state_changes: Can't undelete '%s' in deleted directory"
+           "fold_state_changes: Can't undelete '%s' in deleted directory"
            "--try undeleting its parent directory first",
            name->data);
     }
@@ -1150,7 +1150,7 @@ fold_state_changes (apr_hash_t *entries,
           return 
             svn_error_createf 
             (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-             "do_state_changes: Entry '%s' already under revision control",
+             "fold_state_changes: Entry '%s' already under revision control",
              name->data);
         }
       break;
@@ -1250,7 +1250,7 @@ fold_state_changes (apr_hash_t *entries,
           return 
             svn_error_createf 
             (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-             "do_state_changes: Can't undelete '%s' marked for replacement"
+             "fold_state_changes: Can't undelete '%s' marked for replacement"
              "--try unadding this entry first",
              name->data);
         }
@@ -1260,7 +1260,7 @@ fold_state_changes (apr_hash_t *entries,
       return 
         svn_error_createf 
         (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-         "do_state_changes: Entry '%s' has illegal schedule",
+         "fold_state_changes: Entry '%s' has illegal schedule",
          name->data);
     }
   return SVN_NO_ERROR;
@@ -1326,10 +1326,8 @@ svn_wc__entry_modify (svn_string_t *path,
     fold_entry (entries, name, modify_flags, revision, kind, 
                 schedule, existence, conflicted, text_time,
                 prop_time, attributes, pool, ap);
-  
-  /* Write whole entries file */
-  err = svn_wc__entries_write (entries, path, pool);
-  if (err) return err;
+
+  SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
   return SVN_NO_ERROR;
 }
