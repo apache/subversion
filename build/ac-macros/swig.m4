@@ -74,7 +74,14 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test $where = check; then
     AC_PATH_PROG(SWIG, swig, none)
   else
-    SWIG=$where/bin/swig
+    if [ test -f "$where" ]; then
+      SWIG="$where"
+    else 
+      SWIG="$where/bin/swig"
+    fi
+    if [ test ! -f "$SWIG" ] || [ test ! -x "$SWIG" ]; then
+      AC_MSG_ERROR([Could not find swig binary at $SWIG])
+    fi  
   fi
 
   if test "$SWIG" != "none"; then
