@@ -128,7 +128,7 @@ ancestry -> ascendencia
     La traducción literal concuerda con el significado que se le
     da al mismo término en la jerga de Subversion.
 
-Harry, Sally -> Juan, Carmen
+Harry, Sally, Joe, Ira, User, (no author) -> Juan, Carmen, José, Ira, Usuario (sin autor)
     Estos nombres se traducen en todos los sitios en los que
     aparecen, incluida la salida de texto de los comandos de
     svn, como por ejemplo nombres de usuario que se ven al hacer
