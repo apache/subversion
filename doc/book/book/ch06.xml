@@ -1882,7 +1882,7 @@ jane = r
       repository to be accessed by multiple methods simultaneously?
       The answer is yes, provided you use a bit of foresight.</para>
     
-    <para>At any given time, these processes may require read and/or
+    <para>At any given time, these processes may require read and
       write access to your repository:</para>
     
     <itemizedlist>
