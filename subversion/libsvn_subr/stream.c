@@ -223,13 +223,16 @@ static svn_error_t *
 read_handler_apr (void *baton, char *buffer, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
-  apr_status_t status;
+  svn_error_t *err;
 
-  status = apr_file_read_full (btn->file, buffer, *len, len);
-  if (status && ! APR_STATUS_IS_EOF(status))
-    return svn_error_wrap_apr (status, NULL, "Can't read file");
+  err = svn_io_file_read_full (btn->file, buffer, *len, len, btn->pool);
+  if (err && APR_STATUS_IS_EOF(err->apr_err))
+    {
+      svn_error_clear (err);
+      err = SVN_NO_ERROR;
+    }
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 

@@ -349,18 +349,9 @@ svn_io_copy_file (const char *src,
       apr_file_t *s;
       apr_finfo_t finfo;
 
-      apr_err = apr_file_open (&s, src_apr, APR_READ, APR_OS_DEFAULT, pool);
-      if (apr_err)
-        return svn_error_wrap_apr (apr_err, "Can't open '%s' for perms", src);
-
-      apr_err = apr_file_info_get (&finfo, APR_FINFO_PROT, s);
-      if (apr_err)
-        {
-          apr_file_close (s);  /* toss any error */
-          return svn_error_wrap_apr
-            (apr_err, "Can't get perm info for '%s'", src);
-        }
-
+      SVN_ERR (svn_io_file_open (&s, src_apr, 
+                                 APR_READ, APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_info_get (&finfo, APR_FINFO_PROT, s, pool));
       SVN_ERR (svn_io_file_close (s, pool));
 
       apr_err = apr_file_perms_set (dst_tmp_apr, finfo.protection);
@@ -375,7 +366,7 @@ svn_io_copy_file (const char *src,
           && (apr_err != APR_ENOTIMPL))
         {
           return svn_error_wrap_apr
-            (apr_err, "Can't setting perms on '%s'", dst_tmp);
+            (apr_err, "Can't set permissions on '%s'", dst_tmp);
         }
     }
 #endif /* ! WIN32 */
@@ -559,7 +550,6 @@ svn_error_t *svn_io_file_create (const char *file,
                                  const char *contents,
                                  apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   apr_file_t *f;
   apr_size_t written;
 
@@ -567,11 +557,8 @@ svn_error_t *svn_io_file_create (const char *file,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
                              APR_OS_DEFAULT,
                              pool));
-
-  apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-  if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't write '%s'", file);
-
+  SVN_ERR (svn_io_file_write_full (f, contents, strlen (contents), 
+                                   &written, pool));
   SVN_ERR (svn_io_file_close (f, pool));
 
   return SVN_NO_ERROR;
@@ -682,8 +669,9 @@ svn_io_file_checksum (unsigned char digest[],
 {
   struct apr_md5_ctx_t context;
   apr_file_t *f = NULL;
-  apr_status_t apr_err;
+  svn_error_t *err;
   char buf[BUFSIZ];  /* What's a good size for a read chunk? */
+  apr_size_t len;
 
   /* ### The apr_md5 functions return apr_status_t, but they only
      return success, and really, what could go wrong?  So below, we
@@ -693,17 +681,18 @@ svn_io_file_checksum (unsigned char digest[],
 
   SVN_ERR (svn_io_file_open (&f, file, APR_READ, APR_OS_DEFAULT, pool));
   
-  do { 
-    apr_size_t len = BUFSIZ;
-
-    apr_err = apr_file_read (f, buf, &len);
-
-    if (apr_err && ! APR_STATUS_IS_EOF(apr_err))
-      return svn_error_wrap_apr (apr_err, "Can't read from '%s'", file);
-
-    apr_md5_update (&context, buf, len);
-
-  } while (! APR_STATUS_IS_EOF(apr_err));
+  len = sizeof (buf);
+  err = svn_io_file_read (f, buf, &len, pool);
+  while (! err)
+    { 
+      apr_md5_update (&context, buf, len);
+      len = sizeof (buf);
+      err = svn_io_file_read (f, buf, &len, pool);
+    };
+  
+  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
+    return err;
+  svn_error_clear (err);
 
   SVN_ERR (svn_io_file_close (f, pool));
 
@@ -952,7 +941,7 @@ svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
                             apr_pool_t *pool)
 {
   apr_size_t len;
-  apr_status_t apr_err;
+  svn_error_t *err;
   svn_stringbuf_t *res = svn_stringbuf_create("", pool);
   char buf[BUFSIZ];
 
@@ -961,28 +950,18 @@ svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
   /* apr_file_read will not return data and eof in the same call. So this loop
    * is safe from missing read data.  */
   len = sizeof(buf);
-  apr_err = apr_file_read (file, buf, &len);
-  while (! apr_err)
+  err = svn_io_file_read (file, buf, &len, pool);
+  while (! err)
     {
       svn_stringbuf_appendbytes(res, buf, len);
       len = sizeof(buf);
-      apr_err = apr_file_read (file, buf, &len);
+      err = svn_io_file_read (file, buf, &len, pool);
     }
 
   /* Having read all the data we *expect* EOF */
-  if (!APR_STATUS_IS_EOF(apr_err))
-    {
-      const char *fname_utf8;
-      SVN_ERR (file_name_get (&fname_utf8, file, pool));
-      
-      /* If the apr_file_t was opened with apr_file_open_std{in,out,err}, then
-       * we won't get a filename for it. We assume that since we are reading,
-       * that in this case we would only ever be using stdin. */
-      if (NULL == fname_utf8)
-        fname_utf8 = "(stdin)";
-
-      return svn_error_wrap_apr (apr_err, "Can't read from '%s'", fname_utf8);
-    }
+  if (err && !APR_STATUS_IS_EOF(err->apr_err))
+    return err;
+  svn_error_clear (err);
 
   /* Null terminate the stringbuf. */
   res->data[res->len] = 0;
@@ -1524,7 +1503,7 @@ svn_io_detect_mimetype (const char **mimetype,
 
   svn_node_kind_t kind;
   apr_file_t *fh;
-  apr_status_t apr_err;
+  svn_error_t *err;
   unsigned char block[1024];
   apr_size_t amt_read = sizeof (block);
 
@@ -1542,12 +1521,13 @@ svn_io_detect_mimetype (const char **mimetype,
   SVN_ERR (svn_io_file_open (&fh, file, APR_READ, 0, pool));
 
   /* Read a block of data from FILE. */
-  apr_err = apr_file_read (fh, block, &amt_read);
-  if (apr_err && ! APR_STATUS_IS_EOF(apr_err))
-    return svn_error_wrap_apr (apr_err, "Can't read '%s'", file);
+  err = svn_io_file_read (fh, block, &amt_read, pool);
+  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
+    return err;
+  svn_error_clear (err);
 
   /* Now close the file.  No use keeping it open any more.  */
-  apr_file_close (fh);
+  SVN_ERR (svn_io_file_close (fh, pool));
 
 
   /* Right now, this function is going to be really stupid.  It's
@@ -1625,6 +1605,7 @@ do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status,
   return svn_error_wrap_apr (status, "Can't %s %s", op, name);
 }
 
+
 svn_error_t *
 svn_io_file_close (apr_file_t *file, apr_pool_t *pool)
 {
@@ -1640,6 +1621,16 @@ svn_io_file_getc (char *ch, apr_file_t *file, apr_pool_t *pool)
   return do_io_file_wrapper_cleanup
     (file, apr_file_getc (ch, file),
      "read", pool);
+}
+
+
+svn_error_t *
+svn_io_file_info_get (apr_finfo_t *finfo, apr_int32_t wanted, 
+                      apr_file_t *file, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_info_get (finfo, wanted, file),
+     "get attribute information from", pool);
 }
 
 
@@ -1661,6 +1652,16 @@ svn_io_file_read_full (apr_file_t *file, void *buf,
   return do_io_file_wrapper_cleanup
     (file, apr_file_read_full (file, buf, nbytes, bytes_read),
      "read", pool);
+}
+
+
+svn_error_t *
+svn_io_file_seek (apr_file_t *file, apr_seek_where_t where, 
+                  apr_off_t *offset, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_seek (file, where, offset),
+     "set position pointer in", pool);
 }
 
 
@@ -2100,7 +2101,6 @@ svn_io_write_version_file (const char *path,
                            apr_pool_t *pool)
 {
   apr_file_t *format_file = NULL;
-  apr_status_t apr_err;
   const char *format_contents = apr_psprintf (pool, "%d\n", version);
 
   /* We only promise to handle non-negative integers. */
@@ -2113,10 +2113,8 @@ svn_io_write_version_file (const char *path,
                              APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
   
   /* ...dump out our version number string... */
-  apr_err = apr_file_write_full (format_file, format_contents,
-                                 strlen (format_contents), NULL);
-  if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't write to '%s'", path);
+  SVN_ERR (svn_io_file_write_full (format_file, format_contents,
+                                   strlen (format_contents), NULL, pool));
   
   /* ...and close the file. */
   SVN_ERR (svn_io_file_close (format_file, pool));
@@ -2133,15 +2131,12 @@ svn_io_read_version_file (int *version,
   apr_file_t *format_file;
   char buf[80];
   apr_size_t len;
-  apr_status_t apr_err;
 
   /* Read a chunk of data from PATH */
   SVN_ERR (svn_io_file_open (&format_file, path, APR_READ,
                              APR_OS_DEFAULT, pool));
   len = sizeof(buf);
-  apr_err = apr_file_read (format_file, buf, &len);
-  if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't read '%s'", path);
+  SVN_ERR (svn_io_file_read (format_file, buf, &len, pool));
 
   /* If there was no data in PATH, return an error. */
   if (len == 0)
@@ -2183,30 +2178,30 @@ contents_identical_p (svn_boolean_t *identical_p,
                       const char *file2,
                       apr_pool_t *pool)
 {
-  apr_status_t status;
+  svn_error_t *err1;
+  svn_error_t *err2;
   apr_size_t bytes_read1, bytes_read2;
   char buf1[BUFSIZ], buf2[BUFSIZ];
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
-  SVN_ERR_W (svn_io_file_open (&file1_h, file1, APR_READ, APR_OS_DEFAULT,
-                               pool),
-             "contents_identical_p: open failed on file 1");
-
-  SVN_ERR_W (svn_io_file_open (&file2_h, file2, APR_READ, APR_OS_DEFAULT,
-                               pool),
-             "contents_identical_p: open failed on file 2");
+  SVN_ERR (svn_io_file_open (&file1_h, file1, APR_READ, APR_OS_DEFAULT,
+                             pool));
+  SVN_ERR (svn_io_file_open (&file2_h, file2, APR_READ, APR_OS_DEFAULT,
+                               pool));
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  for (status = 0; ! APR_STATUS_IS_EOF(status); )
+  do
     {
-      status = apr_file_read_full (file1_h, buf1, sizeof(buf1), &bytes_read1);
-      if (status && !APR_STATUS_IS_EOF(status))
-        return svn_error_wrap_apr (status, "Can't read '%s'", file1);
+      err1 = svn_io_file_read_full (file1_h, buf1, 
+                                    sizeof(buf1), &bytes_read1, pool);
+      if (err1 && !APR_STATUS_IS_EOF(err1->apr_err))
+        return err1;
 
-      status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
-      if (status && !APR_STATUS_IS_EOF(status))
-        return svn_error_wrap_apr (status, "Can't read '%s'", file2);
+      err2 = svn_io_file_read_full (file2_h, buf2, 
+                                    sizeof(buf2), &bytes_read2, pool);
+      if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
+        return err2;
       
       if ((bytes_read1 != bytes_read2)
           || (memcmp (buf1, buf2, bytes_read1)))
@@ -2214,7 +2209,10 @@ contents_identical_p (svn_boolean_t *identical_p,
           *identical_p = FALSE;
           break;
         }
-    }
+    } while (! err1 && ! err2);
+
+  svn_error_clear (err1);
+  svn_error_clear (err2);
 
   SVN_ERR (svn_io_file_close (file1_h, pool));
   SVN_ERR (svn_io_file_close (file2_h, pool));

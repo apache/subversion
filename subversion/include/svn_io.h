@@ -650,6 +650,12 @@ svn_error_t *
 svn_io_file_getc (char *ch, apr_file_t *file, apr_pool_t *pool);
 
 
+/** Wrapper for @c apr_file_info_get(), which see. */
+svn_error_t *
+svn_io_file_info_get (apr_finfo_t *finfo, apr_int32_t wanted, 
+                      apr_file_t *file, apr_pool_t *pool);
+
+
 /** Wrapper for @c apr_file_read(), which see. */
 svn_error_t *
 svn_io_file_read (apr_file_t *file, void *buf, 
@@ -661,6 +667,12 @@ svn_error_t *
 svn_io_file_read_full (apr_file_t *file, void *buf, 
                        apr_size_t nbytes, apr_size_t *bytes_read,
                        apr_pool_t *pool);
+
+
+/** Wrapper for @c apr_file_seek(), which see. */
+svn_error_t *
+svn_io_file_seek (apr_file_t *file, apr_seek_where_t where, 
+                  apr_off_t *offset, apr_pool_t *pool);
 
 
 /** Wrapper for @c apr_file_write(), which see. */
