@@ -1,0 +1,41 @@
+
+This is the Subversion Server library.
+
+This library depends on the Subversion filesystem library (libsvn_fs),
+and provides an interface to any program that wishes to behave as a
+Subversion server.
+
+With this library, your program is able to:
+
+     * make filesystem calls into any Subversion repository
+
+     * define general server policy behavior and load server-side
+       plugins by writing a custom `svn.conf' file
+
+
+The public API is defined in `svn_svr.h'.
+
+
+---------------------------------
+
+How to use the library:
+
+
+    * create a svn_user_t structure.  you're responsible for making
+      sure the represented user is authenticated;  the subversion
+      filesystem just assumes so.
+
+    * call svn_svr_init ("/etc/svn.conf"), returns a policy context
+      structure.  pass this structure to all future routines.
+
+    * call any number of wrappered filesystem calls, passing in the
+      user structure and the policy structure.  if you care about
+      authorization, use the basic 'plugin_security' plugin in
+      `svn.conf', else write your own authorization plugin.
+
+
+
+---------------------------------
+
+How to write a server-side plugin.....
+

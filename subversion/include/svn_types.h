@@ -53,15 +53,15 @@
    defined tin the design doc. */
 
 
-#ifndef __SVN_TYPES__
-#define __SVN_TYPES__
+#ifndef __SVN_TYPES_H__
+#define __SVN_TYPES_H__
 
 /* a string of bytes.  "bytes is bytes" */
 typedef struct svn_string_t
 {
   char *data;                /* pointer to the bytestring */
-  unsigned long len;         /* length of bytestring */
-  unsigned long blocksize;   /* total size of buffer allocated */
+  size_t len;                /* length of bytestring */
+  size_t blocksize;          /* total size of buffer allocated */
 } svn_string_t;
 
 
@@ -77,7 +77,7 @@ typedef struct svn_prop_t
 typedef struct svn_proplist_t
 {
   svn_prop_t *list;         /* an array of props */
-  unsigned long len;        /* length of array */
+  size_t len;               /* length of array */
 } svn_proplist_t;
 
 
@@ -102,7 +102,7 @@ typedef struct svn_dirent_t
 typedef struct svn_directory_t
 {
   svn_dirent_t *list;        /* an array of dirents */
-  unsigned long len;         /* length of array */
+  size_t len;         /* length of array */
   svn_proplist_t *proplist;  /* directory's properties */
 } svn_directory_t;
 
@@ -180,7 +180,7 @@ typedef int                           svn_diff_t;
 
 
 
-#endif  /* __SVN_TYPES__ */
+#endif  /* __SVN_TYPES_H__ */
 
 
 /* --------------------------------------------------------------
