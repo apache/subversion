@@ -314,8 +314,8 @@ svn_config__user_config_path (const char *config_dir,
     apr_status_t apr_err;
     apr_uid_t uid;
     apr_gid_t gid;
-    char *username;
-    char *homedir;
+    char *username, *homedir;
+    const char *homedir_utf8;
 
     apr_err = apr_uid_current (&uid, &gid, pool);
     if (apr_err)
@@ -328,9 +328,11 @@ svn_config__user_config_path (const char *config_dir,
     apr_err = apr_uid_homepath_get (&homedir, username, pool);
     if (apr_err)
       return SVN_NO_ERROR;
-    
+
+    SVN_ERR (svn_utf_cstring_to_utf8 (&homedir_utf8, homedir, pool));
+
     *path_p = svn_path_join_many (pool,
-                                  svn_path_canonicalize (homedir, pool),
+                                  svn_path_canonicalize (homedir_utf8, pool),
                                   SVN_CONFIG__USR_DIRECTORY, fname, NULL);
     
   }
@@ -480,7 +482,6 @@ ensure_auth_dirs (const char *path,
                   apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  apr_status_t apr_err;
   const char *auth_dir, *auth_subdir;
   svn_error_t *err;
 
@@ -491,11 +492,15 @@ ensure_auth_dirs (const char *path,
     {
       svn_error_clear (err);
       /* 'chmod 700' permissions: */
-      apr_err = apr_dir_make (auth_dir,
-                              (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
-                              pool);
-      if (apr_err)
-        return;
+      err = svn_io_dir_make (auth_dir,
+                             (APR_UREAD | APR_UWRITE | APR_UEXECUTE),
+                             pool);
+      if (err)
+        {
+          /* Don't try making subdirs if we can't make the top-level dir. */
+          svn_error_clear (err);
+          return;
+        }
     }
 
   /* If a provider exists that wants to store credentials in
@@ -507,7 +512,7 @@ ensure_auth_dirs (const char *path,
   if (err || kind == svn_node_none)
     {
       svn_error_clear (err);
-      apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+      svn_error_clear (svn_io_dir_make (auth_subdir, APR_OS_DEFAULT, pool));
     }
       
   auth_subdir = svn_path_join_many (pool, auth_dir,
@@ -516,7 +521,7 @@ ensure_auth_dirs (const char *path,
   if (err || kind == svn_node_none)
     {
       svn_error_clear (err);
-      apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+      svn_error_clear (svn_io_dir_make (auth_subdir, APR_OS_DEFAULT, pool));
     }
 
   auth_subdir = svn_path_join_many (pool, auth_dir,
@@ -525,7 +530,7 @@ ensure_auth_dirs (const char *path,
   if (err || kind == svn_node_none)
     {
       svn_error_clear (err);
-      apr_err = apr_dir_make (auth_subdir, APR_OS_DEFAULT, pool);
+      svn_error_clear (svn_io_dir_make (auth_subdir, APR_OS_DEFAULT, pool));
     }
 }
 
@@ -535,7 +540,6 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
 {
   const char *path;
   svn_node_kind_t kind;
-  apr_status_t apr_err;
   svn_error_t *err;
 
   /* Ensure that the user-specific config directory exists.  */
@@ -547,9 +551,13 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_none)
     {
-      apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-      if (apr_err)
-        return SVN_NO_ERROR;
+      err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
+      if (err)
+        {
+          /* Don't throw an error, but don't continue. */
+          svn_error_clear (err);
+          return SVN_NO_ERROR;
+        }
     }
   else
     {
@@ -802,17 +810,19 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
    APR_EOL_STR
    APR_EOL_STR;
 
-      apr_err = apr_file_open (&f, path,
-                               (APR_WRITE | APR_CREATE | APR_EXCL),
-                               APR_OS_DEFAULT,
-                               pool);
+      err = svn_io_file_open (&f, path,
+                              (APR_WRITE | APR_CREATE | APR_EXCL),
+                              APR_OS_DEFAULT,
+                              pool);
 
-      if (! apr_err)
+      if (! err)
         {
           SVN_ERR (svn_io_file_write_full (f, contents, 
                                            strlen (contents), NULL, pool));
           SVN_ERR (svn_io_file_close (f, pool));
         }
+
+      svn_error_clear (err);
     }
 
   /** Ensure that the `servers' file exists. **/
@@ -979,17 +989,19 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"
         APR_EOL_STR;
 
-      apr_err = apr_file_open (&f, path,
-                               (APR_WRITE | APR_CREATE | APR_EXCL),
-                               APR_OS_DEFAULT,
-                               pool);
+      err = svn_io_file_open (&f, path,
+                              (APR_WRITE | APR_CREATE | APR_EXCL),
+                              APR_OS_DEFAULT,
+                              pool);
 
-      if (! apr_err)
+      if (! err)
         {
           SVN_ERR (svn_io_file_write_full (f, contents, 
                                            strlen (contents), NULL, pool));
           SVN_ERR (svn_io_file_close (f, pool));
         }
+
+      svn_error_clear (err);
     }
 
   /** Ensure that the `config' file exists. **/
@@ -1188,17 +1200,19 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         APR_EOL_STR;
         
-      apr_err = apr_file_open (&f, path,
-                               (APR_WRITE | APR_CREATE | APR_EXCL),
-                               APR_OS_DEFAULT,
-                               pool);
+      err = svn_io_file_open (&f, path,
+                              (APR_WRITE | APR_CREATE | APR_EXCL),
+                              APR_OS_DEFAULT,
+                              pool);
 
-      if (! apr_err)
+      if (! err)
         {
           SVN_ERR (svn_io_file_write_full (f, contents, 
                                            strlen (contents), NULL, pool));
           SVN_ERR (svn_io_file_close (f, pool));
         }
+
+      svn_error_clear (err);
     }
 
   return SVN_NO_ERROR;
