@@ -285,7 +285,7 @@ representation.  Here are the two forms currently recognized:
        Each OFFSET indicates the point in the fulltext that this
        element reconstructs, and WINDOW says how to reconstruct it:
 
-       WINDOW ::= (DIFF SIZE () REP-KEY [REP-OFFSET]) ;
+       WINDOW ::= (DIFF SIZE REP-KEY [REP-OFFSET]) ;
        DIFF   ::= ("svndiff" VERSION STRING-KEY)
 
        Notice that a WINDOW holds only metadata.  REP-KEY says what
@@ -296,10 +296,6 @@ representation.  Here are the two forms currently recognized:
        STRING-KEY says which string contains the actual svndiff data
        (there is no diff data held directly in the representations
        table, of course).
-
-       The empty list after SIZE in a WINDOW is a fossil from an
-       abandoned plan to store per-window checksums; it should be
-       ignored, and will probably go in the next schema change.
 
        Note also that REP-KEY might refer to a representation that
        itself requires undeltification.  We use a delta combiner to
@@ -326,7 +322,7 @@ Let's work through an example node revision:
 
 The entry for key "2345" in `representations' is:
 
-   (("delta" TXN CHECKSUM) (0 (("svndiff" 0 "1729") 65 () "2343")))
+   (("delta" TXN CHECKSUM) (0 (("svndiff" 0 "1729") 65 "2343")))
 
 and the entry for key "2343" in `representations' is:
 
@@ -808,7 +804,7 @@ Representations:
          REPRESENTATION ::= FULLTEXT | DELTA ;
                FULLTEXT ::= (HEADER STRING-KEY) ;
                   DELTA ::= (HEADER (OFFSET WINDOW) ...) ;
-                 WINDOW ::= (DIFF SIZE () REP-KEY [REP-OFFSET]) ;
+                 WINDOW ::= (DIFF SIZE REP-KEY [REP-OFFSET]) ;
                    DIFF ::= ("svndiff" VERSION STRING-KEY) ;
                 VERSION ::= number ;
                 REP-KEY ::= atom ;
