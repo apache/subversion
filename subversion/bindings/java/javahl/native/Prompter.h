@@ -33,12 +33,13 @@ class Prompter
 {
 private:
 	bool m_version2;
+	bool m_version3;
 	jobject m_prompter;
-	Prompter(jobject jprompter, bool v2);
-	bool prompt(const char *realm, const char *username);
+	Prompter(jobject jprompter, bool v2, bool v3);
+	bool prompt(const char *realm, const char *username, bool maySave);
 	bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
-	const char *askQuestion(const char *realm, const char *question, bool showAnswer);
-	int askTrust(const char *question, bool allow_permanent);
+	const char *askQuestion(const char *realm, const char *question, bool showAnswer, bool maySave);
+	int askTrust(const char *question, bool maySave);
 	jstring password();
 	jstring username();
 	static svn_error_t *simple_prompt(svn_auth_cred_simple_t **cred_p, void *baton, 
@@ -58,23 +59,7 @@ private:
 										void *baton, const char *realm, svn_boolean_t may_save,
 										apr_pool_t *pool);
 	std::string m_answer;
-	/*
-	static svn_error_t *firstCreds (void **credentials, void **iter_baton, 
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool);
-	static svn_error_t *nextCreds (void **credentials, void *iter_baton,
-                          apr_hash_t *parameters, apr_pool_t *pool);
-	static svn_error_t *firstCreds_server_ssl (void **credentials, void **iter_baton, 
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool);
-	static svn_error_t *firstCreds_client_ssl (void **credentials, void **iter_baton, 
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool);
-	static svn_error_t *firstCreds_client_ssl_pass (void **credentials, void **iter_baton, 
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool);
-	int m_retry;
-    std::string m_userName;
-    std::string m_passWord;
-	std::string m_realm;
-	std::string m_answer;
-	*/
+	bool m_maySave;
 public:
 	static Prompter *makeCPrompter(jobject jpromper);
 	~Prompter();
