@@ -306,6 +306,7 @@ svn_fs__get_rep (skel_t **skel_p,
                            svn_fs__id_to_dbt (&key, id, trail->pool),
                            svn_fs__result_dbt (&value),
                            0);
+  svn_fs__track_dbt (&value, trail->pool);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -313,9 +314,6 @@ svn_fs__get_rep (skel_t **skel_p,
 
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading node representation", db_err));
-
-  /* Make sure the skel's contents get freed when TRAIL->pool is destroyed.  */
-  svn_fs__track_dbt (&value, trail->pool);
 
   /* Parse and check the REPRESENTATION skel.  */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
@@ -375,6 +373,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
                           svn_fs__result_dbt (&key),
                           svn_fs__nodata_dbt (&value),
                           DB_LAST);
+  svn_fs__track_dbt (&key, trail->pool);
   if (db_err)
     {
       /* Free the cursor.  Ignore any error value --- the error above
@@ -392,7 +391,6 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
       SVN_ERR (DB_WRAP (fs, "choosing new node ID (finding last entry)",
                         db_err));
     }
-  svn_fs__track_dbt (&key, trail->pool);
 
   /* Try to parse the key as a node revision ID.  */
   id = svn_fs_parse_id (key.data, key.size, trail->pool);

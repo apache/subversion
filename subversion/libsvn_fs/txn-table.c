@@ -126,6 +126,7 @@ allocate_txn_id (char **id_p,
                                            &key,
                                            svn_fs__result_dbt (&value),
                                            0)));
+  svn_fs__track_dbt (&value, trail->pool);
 
   /* That's the value we want to return.  */
   next_id_str = apr_pstrndup (trail->pool, value.data, value.size);
@@ -207,12 +208,11 @@ svn_fs__get_txn (svn_fs_id_t **root_id_p,
                                   svn_fs__str_to_dbt (&key, (char *) svn_txn),
                                   svn_fs__result_dbt (&value),
                                   0);
+  svn_fs__track_dbt (&value, trail->pool);
 
   if (db_err == DB_NOTFOUND)
     return svn_fs__err_no_such_txn (fs, svn_txn);
   SVN_ERR (DB_WRAP (fs, "reading transaction", db_err));
-
-  svn_fs__track_dbt (&value, trail->pool);
 
   transaction = svn_fs__parse_skel (value.data, value.size, trail->pool);
   if (! transaction
