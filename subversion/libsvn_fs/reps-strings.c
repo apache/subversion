@@ -421,7 +421,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       svn_txdelta_op_t *op;
       int i;
       apr_size_t len_read = 0;
-      apr_size_t copy_amt;
+      apr_size_t copy_amt = 0;
       apr_size_t discard_amt = (wb->req_offset > wb->cur_offset) 
                                 ? (wb->req_offset - wb->cur_offset)
                                 : 0;
