@@ -160,27 +160,28 @@
 
   <sect2 id="svn-ch-4-sect-2.1">
     <title>Creando una rama</title>
-      
-      <para>Creating a branch is very simple&mdash;you make a copy of
-        the project in the repository using the <command>svn
-        copy</command> command.  Subversion is not only able to copy
-        single files, but whole directories as well.  In this case,
-        you want to make a copy of the
-        <filename>/calc/trunk</filename> directory.  Where should the
-        new copy live?  Wherever you wish&mdash;it's a matter of
-        project policy.  Let's say that your team has a policy of
-        creating branches in the <filename>/calc/branches</filename>
-        area of the repository, and you want to name your branch
-        <literal>my-calc-branch</literal>.  You'll want to create a
-        new directory,
-        <filename>/calc/branches/my-calc-branch</filename>, which
-        begins its life as a copy of
+
+      <para>Crear una rama es muy simple&mdash;realize una copia
+        del proyecto en el repositorio usando el comando
+        <command>svn copy</command>. Subversion no sólo es
+        capaz de copiar ficheros individuales, sino también
+        directorios. En este caso, desea realizar una copia del
+        directorio <filename>/calc/trunk</filename>. ¿Dónde debería
+        colocar la nueva copia? Donde desee&mdash;es una cuestión
+        de política de su proyecto. Digamos que su equipo tiene
+        la política de crear ramas en el area de repositorio
+        <filename>/calc/branches</filename>, y quiere nombrar
+        la rama <literal>my-calc-branch</literal>. Entonces
+        querrá crear un nuevo directorio
+        <filename>/calc/branches/my-calc-branch</filename>,
+        el cual comienza su vida como una copia de
         <filename>/calc/trunk</filename>. </para>
 
-      <para>There are two different ways to make a copy.  We'll
-        demonstrate the messy way first, just to make the concept
-        clear.  To begin, check out a working copy of the project's
-        root directory, <filename>/calc</filename>:</para>
+      <para>Hay dos formas diferentes de realizar una copia. Le
+        mostraremos primero el modo engorroso, para asegurarnos
+        de que queda claro el concepto. Para comenzar, obtenga
+        una copia local del directorio raíz del proyecto,
+        <filename>/calc</filename>:</para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/calc bigwc
