@@ -40,10 +40,10 @@ svn_cl__move (apr_getopt_t *os,
               void *baton,
               apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *src_path, *dst_path;
-  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   svn_client_commit_info_t *commit_info = NULL;
   svn_error_t *err;
   svn_wc_notify_func_t notify_func = NULL;
@@ -89,4 +89,3 @@ svn_cl__move (apr_getopt_t *os,
 
   return SVN_NO_ERROR;
 }
-

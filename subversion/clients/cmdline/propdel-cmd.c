@@ -40,7 +40,8 @@ svn_cl__propdel (apr_getopt_t *os,
                  void *baton,
                  apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
   int i;
@@ -64,7 +65,6 @@ svn_cl__propdel (apr_getopt_t *os,
     {
       svn_revnum_t rev;
       const char *URL, *target;
-      svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
 
       /* All property commands insist on a specific revision when
          operating on a revprop. */

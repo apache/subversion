@@ -105,6 +105,13 @@ typedef struct svn_cl__opt_state_t
 } svn_cl__opt_state_t;
 
 
+typedef struct
+{
+  svn_cl__opt_state_t *opt_state;
+  svn_client_ctx_t *ctx;
+} svn_cl__cmd_baton_t;
+
+
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,

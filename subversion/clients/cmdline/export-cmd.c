@@ -38,12 +38,12 @@ svn_cl__export (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
   const char *from, *to;
   apr_array_header_t *targets;
-  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,

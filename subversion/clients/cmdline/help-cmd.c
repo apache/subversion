@@ -55,12 +55,17 @@ svn_cl__help (apr_getopt_t *os,
               void *baton,
               apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state;
 
   void *ra_baton;
   const char *ra_desc_start
     = "The following repository access (RA) modules are available:\n\n";
   svn_stringbuf_t *ra_desc_body, *ra_desc_all;
+
+  if (baton)
+    opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  else
+    opt_state = NULL;
 
   ra_desc_all = svn_stringbuf_create (ra_desc_start, pool);
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

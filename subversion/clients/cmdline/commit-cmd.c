@@ -45,11 +45,11 @@ svn_cl__commit (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   const char *base_dir;
-  svn_client_ctx_t *ctx = svn_client_ctx_create (pool);
   svn_client_commit_info_t *commit_info = NULL;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
