@@ -70,7 +70,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_delta.h"
-#include "apr_pool.h"
+#include "apr_pools.h"
 #include "delta.h"
 
 
@@ -94,7 +94,7 @@ svn_make_vcdiff_parser (svn_delta_handler_t *handler,
                         apr_pool_t *pool)
 {
   /* Allocate a vcdiff_parser and fill out its fields */
-  svn_vcdiff_parser_t new_vcdiff_parser = 
+  svn_vcdiff_parser_t *new_vcdiff_parser = 
     (svn_vcdiff_parser_t *) apr_palloc (pool, sizeof(svn_vcdiff_parser_t));
 
   new_vcdiff_parser->consumer_func = handler;
@@ -133,7 +133,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
     (svn_delta_window_t *) apr_palloc (parser->subpool, 
                                        sizeof(svn_delta_window_t));
   
-  svn_delta_op_t new_op = 
+  svn_delta_op_t *new_op = 
     (svn_delta_op_t *) apr_palloc (parser->subpool, sizeof(svn_delta_op_t));
   
   /* Right now, we have only one kind of vcdiff operation:
@@ -186,8 +186,6 @@ svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                   apr_off_t *len)
 {
   svn_error_t *err;
-  svn_delta_window_t *window;
-  svn_delta_op_t *new_op;
 
   apr_off_t i = 0;  /* This is our offset into BUFFER */
 
@@ -208,13 +206,13 @@ svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
         {
           /* So just copy the next byte in BUFFER to PARSER->BUFFER */
           svn_string_appendbytes (parser->buffer, 
-                                  buffer[i], 1,
+                                  (buffer + i), 1,
                                   parser->subpool);
         }
       
       i++;  /* And of course, increment our buffer offset */
 
-    } while (i < *len)
+    } while (i < *len);
 
 
     /* TODO: are we supposed to set *len to the number of bytes we
