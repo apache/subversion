@@ -126,6 +126,16 @@ typedef enum svn_errno_t {
      a fresh filesystem object with svn_fs_new, and use that instead.  */
   SVN_ERR_FS_ALREADY_OPEN,
 
+  /* You tried to perform an operation on a filesystem object which
+     hasn't been opened on any actual database yet.  You need to call
+     `svn_fs_open_berkeley', `svn_fs_create_berkeley', or something
+     like that.  */
+  SVN_ERR_FS_NOT_OPEN,
+
+  /* The filesystem has been corrupted.  The filesystem library found
+     improperly formed data in the database.  */
+  SVN_ERR_FS_CORRUPT,
+
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB,
