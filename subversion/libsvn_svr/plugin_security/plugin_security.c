@@ -83,11 +83,11 @@
 */
   
 svn_error_t *
-svn_internal_authorization (svn_string_t *repos,
-                            svn_user_t *user,
-                            svr_action_t requested_action,
-                            unsigned long ver,
-                            svn_string_t *path)
+svn_plugin_internal_authorization (svn_string_t *repos,
+                                   svn_user_t *user,
+                                   svr_action_t requested_action,
+                                   unsigned long ver,
+                                   svn_string_t *path)
 {
 
   /* this routine should consult the repository's `svn_security' file
@@ -105,31 +105,34 @@ svn_internal_authorization (svn_string_t *repos,
    register itself */
 
 svn_error_t *
-plugin_security_init (svn_svr_policies_t *policy,
-                      ap_dso_handle_t *dso,
-                      ap_pool_t *pool)
+svn_plugin_security_init (svn_svr_policies_t *policy,
+                          ap_dso_handle_t *dso)
 {
   svn_error_t *err;
 
   /* First:  create an instance of this plugin */
   svn_svr_plugin_t *newplugin = 
-    (svn_svr_plugin_t *) ap_palloc (pool, sizeof(svn_svr_plugin_t));
+    (svn_svr_plugin_t *) ap_palloc (policy->pool, sizeof(svn_svr_plugin_t));
 
   /* Fill in the fields of the plugin */
-  newplugin->name = svn_string_create ("plugin_security", pool);
+  newplugin->name = svn_string_create ("plugin_security", policy->pool);
   newplugin->description = 
-    svn_string_create ("Authorizes via ACLs in each repository's `svn_security' file.", pool);
+    svn_string_create 
+    ("Authorizes via ACLs in each repository's `svn_security' file.", 
+     policy->pool);
   newplugin->my_dso = dso;
 
-  newplugin->authorization_hook = svn_internal_authorization;
+  /* Especially the hooks!! */
+  newplugin->authorization_hook = svn_plugin_internal_authorization;
   newplugin->conflict_resolve_hook = NULL;
 
-  /* Finally, register the new plugin in the server's global policy struct */
+  /* Finally, register the new plugin in the server's policy struct */
   err = svn_svr_register_plugin (policy, newplugin);
+
   if (err)
     return (svn_quick_wrap_error (err, "Can't register plugin_security."));
-
-  return SVN_SUCCESS;
+  else
+    return SVN_SUCCESS;
 }
 
 

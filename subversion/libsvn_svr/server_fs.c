@@ -119,16 +119,23 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
   int i;
   svn_error_t *err;
   svn_svr_plugin_t *current_plugin;
+  ap_hash_index_t *hash_index;
+  void *key, *val;
+  size_t keylen;
   (svn_error_t *) (* current_auth_hook) (svn_string_t *r, svn_user_t *u,
                                          svn_svr_action_t *a, unsigned long v,
                                          svr_string_t *p);
 
   /* Next:  loop through our policy's array of plugins... */
-  for (i = 0; i < (policy->plugins->nelts); i++)
+
+  for (hash_index = ap_hash_first (policy->plugins); /* get first hash entry */
+       hash_index;                                 /* NULL if out of entries */
+       hash_index = ap_hash_next (hash_index))     /* get next hash entry */
     {
       /* grab a plugin from the list of plugins */
-      current_plugin = AP_ARRAY_GET_ITEM (policy->plugins, i,
-                                          (svn_svr_plugin_t *));
+      ap_hash_this (hash_index, &key, &keylen, &val);
+
+      current_plugin = (svn_svr_plugin_t *) val;
 
       /* grab the authorization routine from this plugin */
       current_auth_hook = current_plugin->authorization_hook;
