@@ -26,11 +26,6 @@ MUST HAVE
 
 * teach mailer.py to send lock/unlock notification mails. (cmpilato)
 
-* 'svn lock URL' should work, no working copy required.  easy to
-   do, just throw away the svn_lock_t that comes back.  (kfogel)
-
-* 'svn unlock URL --force' should work with no working copy present. (kfogel)
-
 * chat with jorton about neon 0.25/svn1.2 coordination.
 
 
