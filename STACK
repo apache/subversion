@@ -9,6 +9,15 @@ short-term tasks to it, if that's helpful.
 
 ------------------------------------------------------------------------
 
+General Problems:
+
+   - updates (right now) don't bump the revision of every entry as
+     they should;  instead we're only bumping the changed entries.
+
+   - unable to update specific targets right now;  we need to
+     distinguish between specific targets and general full recursive
+     updates.
+
 Ben & Karl todo:
 
    - clean up the interface in libsvn_client.  make it more canonical.
