@@ -330,6 +330,9 @@ public class Status
         /** a directory doesn't contain a complete entries list  */
         public static final int incomplete = 12;
 
+        /** an unversioned path populated by an svn:external property */
+        public static final int external = 13;
+
         public static final String getDescription(int kind)
         {
             switch (kind)
@@ -356,6 +359,8 @@ public class Status
               return "ignored";
             case incomplete:
               return "incomplete";
+            case external:
+              return "external";
             case unversioned:
             default:
               return "unversioned";

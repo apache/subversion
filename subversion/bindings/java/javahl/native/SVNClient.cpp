@@ -1311,6 +1311,8 @@ jint SVNClient::mapStatusKind(int svnKind)
 		return org_tigris_subversion_javahl_Status_Kind_ignored;
     case svn_wc_status_obstructed:
 		return org_tigris_subversion_javahl_Status_Kind_obstructed;
+	case svn_wc_status_external:
+		return org_tigris_subversion_javahl_Status_Kind_external;
 	case svn_wc_status_incomplete:
 		return org_tigris_subversion_javahl_Status_Kind_incomplete;
 	}
