@@ -100,7 +100,7 @@ if test "$BINNAME" = ""; then
     echo "         --with-apxs or --with-apache must be used"
     echo "=================================================================="
 else
-    BUILD_APACHE_RULE=apache-mods
+    BUILD_APACHE_RULE=apache-mod
 fi
 AC_SUBST(APACHE_TARGET)
 AC_SUBST(APACHE_INCLUDES)
