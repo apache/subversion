@@ -74,7 +74,7 @@
 #include <svn_types.h>   /* publically declared types */
 #include <svn_error.h>   /* error system  */
 #include <svn_parse.h>   /* so folks can use the parser */
-#include <apr_dso.h>     /* defines ap_dso_handle_t */
+#include <apr_dso.h>     /* defines apr_dso_handle_t */
 
 
 /* 
@@ -93,7 +93,7 @@ typedef struct svn_svr_plugin_t
   svn_string_t *description;  /* Plugin's documentation string 
                                  (short self-description) */
 
-  ap_dso_handle_t *my_dso;    /* handle on the actual library loaded */
+  apr_dso_handle_t *my_dso;    /* handle on the actual library loaded */
 
   /* AUTHORIZATION HOOK: 
 
@@ -130,11 +130,11 @@ typedef struct svn_svr_policies_t
 {
   /* A hash which maps aliases -> repository paths
      KEY = bytestring data,  VAL = (svn_string_t *)  */
-  ap_hash_t *repos_aliases;
+  apr_hash_t *repos_aliases;
 
   /* A hash which maps plugin names -> loaded plugin objects.
      KEY = bytestring data,  VAL = (svn_svr_plugin_t *)   */
-  ap_hash_t *plugins;
+  apr_hash_t *plugins;
 
   /* A client callback function for reporting warnings.  The first
      argument is simply passed along from the client.  FMT is a
@@ -147,7 +147,7 @@ typedef struct svn_svr_policies_t
   void *warning_data;
 
   /* A convience memory pool, in case a server routine ever needs one */
-  ap_pool_t *pool;                   
+  apr_pool_t *pool;                   
   
 } svn_svr_policies_t;
 
@@ -190,7 +190,7 @@ typedef struct svn_fsrequest
 
 
 svn_error_t * svn_svr_init (svn_svr_policies_t **policy, 
-                            ap_pool_t *pool);
+                            apr_pool_t *pool);
 
 
 /* 
@@ -367,7 +367,7 @@ svn_error_t * svn_svr_get_dirent_prop (svn_string_t **propvalue,
 
 /* Retrieve the entire property list of a version. */
 
-svn_error_t * svn_svr_get_ver_proplist (ap_hash_t **proplist,
+svn_error_t * svn_svr_get_ver_proplist (apr_hash_t **proplist,
                                         svn_svr_policies_t *policy,
                                         svn_string_t *repos,
                                         svn_user_t *user,
@@ -376,7 +376,7 @@ svn_error_t * svn_svr_get_ver_proplist (ap_hash_t **proplist,
 
 /* Retrieve the entire property list of a node. */
 
-svn_error_t * svn_svr_get_node_proplist (ap_hash_t **proplist,
+svn_error_t * svn_svr_get_node_proplist (apr_hash_t **proplist,
                                          svn_svr_policies_t *policy,
                                          svn_string_t *repos,
                                          svn_user_t *user,
@@ -386,7 +386,7 @@ svn_error_t * svn_svr_get_node_proplist (ap_hash_t **proplist,
 
 /* Retrieve the entire property list of a directory entry. */
 
-svn_error_t * svn_svr_get_dirent_proplist (ap_hash_t **proplist,
+svn_error_t * svn_svr_get_dirent_proplist (apr_hash_t **proplist,
                                            svn_svr_policies_t *policy,
                                            svn_string_t *repos,
                                            svn_user_t *user,
@@ -399,7 +399,7 @@ svn_error_t * svn_svr_get_dirent_proplist (ap_hash_t **proplist,
 
 /* Retrieve all propnames of a version */
 
-svn_error_t * svn_svr_get_ver_propnames (ap_hash_t **propnames,
+svn_error_t * svn_svr_get_ver_propnames (apr_hash_t **propnames,
                                          svn_svr_policies_t *policy,
                                          svn_string_t *repos,
                                          svn_user_t *user,
@@ -408,7 +408,7 @@ svn_error_t * svn_svr_get_ver_propnames (ap_hash_t **propnames,
 
 /* Retrieve all propnames of a node */
 
-svn_error_t * svn_svr_get_node_propnames (ap_hash_t **propnames,
+svn_error_t * svn_svr_get_node_propnames (apr_hash_t **propnames,
                                           svn_svr_policies_t *policy,
                                           svn_string_t *repos,
                                           svn_user_t *user,
@@ -418,7 +418,7 @@ svn_error_t * svn_svr_get_node_propnames (ap_hash_t **propnames,
 
 /* Retrieve all propnames of a dirent */
 
-svn_error_t * svn_svr_get_dirent_propnames (ap_hash_t **propnames,
+svn_error_t * svn_svr_get_dirent_propnames (apr_hash_t **propnames,
                                             svn_svr_policies_t *policy,
                                             svn_string_t *repos,
                                             svn_user_t *user,

@@ -64,11 +64,11 @@
 int
 main (void)
 {
-  ap_pool_t *pool = NULL;
-  ap_hash_t *proplist, *new_proplist;
+  apr_pool_t *pool = NULL;
+  apr_hash_t *proplist, *new_proplist;
   svn_string_t *key;
-  ap_file_t *f = NULL;     /* init to NULL very important! */
-  ap_status_t err;
+  apr_file_t *f = NULL;     /* init to NULL very important! */
+  apr_status_t err;
 
   /* Our longest piece of test data. */
   char *review =
@@ -81,47 +81,47 @@ main (void)
 
   /* Set up APR */
 
-  ap_initialize ();
-  ap_create_pool (&pool, NULL);
+  apr_initialize ();
+  apr_create_pool (&pool, NULL);
 
 
   /* Build a hash in memory, and fill it with test data. */
 
-  proplist = ap_make_hash (pool);
+  proplist = apr_make_hash (pool);
 
   key = svn_string_create ("color", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("red", pool));
   
   key = svn_string_create ("wine review", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create (review, pool));
   
   key = svn_string_create ("price", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("US $6.50", pool));
 
   /* Test overwriting: same key both times, but different values. */
   key = svn_string_create ("twice-used property name", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("This is the FIRST value.", pool));
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("This is the SECOND value.", pool));
 
 
   /* Dump the hash to a file. */
-  ap_open (&f, "hashdump.out", (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
+  apr_open (&f, "hashdump.out", (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
   hash_write (proplist, svn_unpack_bytestring, f);
-  ap_close (f);
+  apr_close (f);
 
 
   /* Now create a new hash, and read the file back into it. */
 
-  new_proplist = ap_make_hash (pool);
+  new_proplist = apr_make_hash (pool);
 
-  ap_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
+  apr_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
   err = hash_read (&new_proplist, svn_pack_bytestring, f, pool);
-  ap_close (f);
+  apr_close (f);
   
   if (err)
     {
@@ -135,13 +135,13 @@ main (void)
   /* Now dump the new hash into a SECOND file; an external script will
      compare the two output files.  */
 
-  ap_open (&f, "hashdump2.out", (APR_WRITE | APR_CREATE),APR_OS_DEFAULT, pool);
+  apr_open (&f, "hashdump2.out", (APR_WRITE | APR_CREATE),APR_OS_DEFAULT, pool);
   hash_write (new_proplist, svn_unpack_bytestring, f);
-  ap_close (f);
+  apr_close (f);
 
 
   /* Clean up and exit */
-  ap_destroy_pool (pool);
+  apr_destroy_pool (pool);
   return 0;
 }
 

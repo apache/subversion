@@ -112,7 +112,7 @@
  *
  */
 
-ap_size_t 
+apr_size_t 
 svn_unpack_bytestring (char **returndata, void *value)
 {
   svn_string_t *valstring = (svn_string_t *) value;
@@ -136,9 +136,9 @@ svn_unpack_bytestring (char **returndata, void *value)
  */
 
 void *
-svn_pack_bytestring (size_t len, const char *val, ap_pool_t *pool)
+svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool)
 {
-  svn_string_t *valstring = ap_palloc (pool, sizeof(svn_string_t)); 
+  svn_string_t *valstring = apr_palloc (pool, sizeof(svn_string_t)); 
 
   valstring->len       = len;
   valstring->blocksize = len;
@@ -161,16 +161,16 @@ svn_pack_bytestring (size_t len, const char *val, ap_pool_t *pool)
  *
  */
 
-ap_status_t
-hash_write (ap_hash_t *hash, 
-            ap_size_t (*unpack_func) (char **unpacked_data, void *val),
-            ap_file_t *destfile)
+apr_status_t
+hash_write (apr_hash_t *hash, 
+            apr_size_t (*unpack_func) (char **unpacked_data, void *val),
+            apr_file_t *destfile)
 {
-  ap_hash_index_t *this;      /* current hash entry */
-  ap_status_t err;
+  apr_hash_index_t *this;      /* current hash entry */
+  apr_status_t err;
   char buf[SVN_KEYLINE_MAXLEN];
 
-  for (this = ap_hash_first (hash); this; this = ap_hash_next (this))
+  for (this = apr_hash_first (hash); this; this = apr_hash_next (this))
     {
       const void *key;
       void *val;
@@ -180,47 +180,47 @@ hash_write (ap_hash_t *hash,
       char *valstring;
 
       /* Get this key and val. */
-      ap_hash_this (this, &key, &keylen, &val);
+      apr_hash_this (this, &key, &keylen, &val);
 
       /* Output name length, then name. */
 
-      err = ap_full_write (destfile, "K ", 2, NULL);
+      err = apr_full_write (destfile, "K ", 2, NULL);
       if (err) return err;
 
       sprintf (buf, "%ld%n", (long int) keylen, &bytes_used);
-      err = ap_full_write (destfile, buf, bytes_used, NULL);
+      err = apr_full_write (destfile, buf, bytes_used, NULL);
       if (err) return err;
 
-      err = ap_full_write (destfile, "\n", 1, NULL);
+      err = apr_full_write (destfile, "\n", 1, NULL);
       if (err) return err;
 
-      err = ap_full_write (destfile, (char *) key, keylen, NULL);
+      err = apr_full_write (destfile, (char *) key, keylen, NULL);
       if (err) return err;
 
-      err = ap_full_write (destfile, "\n", 1, NULL);
+      err = apr_full_write (destfile, "\n", 1, NULL);
       if (err) return err;
 
       /* Output value length, then value. */
 
       vallen = (size_t) (*unpack_func) (&valstring, val); /* secret decoder! */
-      err = ap_full_write (destfile, "V ", 2, NULL);
+      err = apr_full_write (destfile, "V ", 2, NULL);
       if (err) return err;
 
       sprintf (buf, "%ld%n", (long int) vallen, &bytes_used);
-      err = ap_full_write (destfile, buf, bytes_used, NULL);
+      err = apr_full_write (destfile, buf, bytes_used, NULL);
       if (err) return err;
 
-      err = ap_full_write (destfile, "\n", 1, NULL);
+      err = apr_full_write (destfile, "\n", 1, NULL);
       if (err) return err;
 
-      err = ap_full_write (destfile, valstring, vallen, NULL);
+      err = apr_full_write (destfile, valstring, vallen, NULL);
       if (err) return err;
 
-      err = ap_full_write (destfile, "\n", 1, NULL);
+      err = apr_full_write (destfile, "\n", 1, NULL);
       if (err) return err;
     }
 
-  err = ap_full_write (destfile, "END\n", 4, NULL);
+  err = apr_full_write (destfile, "END\n", 4, NULL);
   if (err) return err;
 
   return SVN_NO_ERROR;
@@ -235,16 +235,16 @@ hash_write (ap_hash_t *hash,
  *
  * (This is meant for reading length lines from hashdump files.) 
  */
-static ap_status_t
-read_length_line (ap_file_t *file, char *buf, size_t *limit)
+static apr_status_t
+read_length_line (apr_file_t *file, char *buf, size_t *limit)
 {
   int i;
-  ap_status_t err;
+  apr_status_t err;
   char c;
 
   for (i = 0; i < *limit; i++)
   {
-    err = ap_getc (&c, file); 
+    err = apr_getc (&c, file); 
     if (err)
       return err;   /* Note: this status code could be APR_EOF, which
                        is totally fine.  The caller should be aware of
@@ -280,15 +280,15 @@ read_length_line (ap_file_t *file, char *buf, size_t *limit)
  *     The hash should be ready to receive key/val pairs.
  */
 
-ap_status_t
-hash_read (ap_hash_t **hash, 
-           void * (*pack_func) (size_t len, const char *val, ap_pool_t *pool),
-           ap_file_t *srcfile,
-           ap_pool_t *pool)
+apr_status_t
+hash_read (apr_hash_t **hash, 
+           void * (*pack_func) (size_t len, const char *val, apr_pool_t *pool),
+           apr_file_t *srcfile,
+           apr_pool_t *pool)
 {
-  ap_status_t err;
+  apr_status_t err;
   char buf[SVN_KEYLINE_MAXLEN];
-  ap_size_t num_read;
+  apr_size_t num_read;
   char c;
   void *package;
 
@@ -312,12 +312,12 @@ hash_read (ap_hash_t **hash,
           size_t keylen = (size_t) atoi (buf + 2);
 
           /* Now read that many bytes into a buffer */
-          void *keybuf = ap_palloc (pool, keylen);
-          err = ap_full_read (srcfile, keybuf, keylen, &num_read);
+          void *keybuf = apr_palloc (pool, keylen);
+          err = apr_full_read (srcfile, keybuf, keylen, &num_read);
           if (err) return err;
 
           /* Suck up extra newline after key data */
-          err = ap_getc (&c, srcfile);
+          err = apr_getc (&c, srcfile);
           if (err) return err;
           if (c != '\n') return SVN_ERR_MALFORMED_FILE;
 
@@ -332,12 +332,12 @@ hash_read (ap_hash_t **hash,
               int vallen = atoi (buf + 2);
 
               /* Now read that many bytes into a buffer */
-              void *valbuf = ap_palloc (pool, vallen);
-              err = ap_full_read (srcfile, valbuf, vallen, &num_read);
+              void *valbuf = apr_palloc (pool, vallen);
+              err = apr_full_read (srcfile, valbuf, vallen, &num_read);
               if (err) return err;
 
               /* Suck up extra newline after val data */
-              err = ap_getc (&c, srcfile);
+              err = apr_getc (&c, srcfile);
               if (err) return err;
               if (c != '\n') return SVN_ERR_MALFORMED_FILE;
 
@@ -345,7 +345,7 @@ hash_read (ap_hash_t **hash,
               package = (void *) (*pack_func) (vallen, valbuf, pool);
 
               /* The Grand Moment:  add a new hash entry! */
-              ap_hash_set (*hash, keybuf, keylen, package);
+              apr_hash_set (*hash, keybuf, keylen, package);
             }
           else
             {

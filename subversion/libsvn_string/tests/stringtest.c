@@ -10,18 +10,18 @@ main ()
 {
   svn_string_t *a, *b, *c;
   char *msg;
-  ap_pool_t *pglobal;
+  apr_pool_t *pglobal;
   int e, f;
 
   /* Initialize APR (Apache pools) */
-  if (ap_initialize () != APR_SUCCESS)
+  if (apr_initialize () != APR_SUCCESS)
     {
-      printf ("ap_initialize() failed.\n");
+      printf ("apr_initialize() failed.\n");
       exit (1);
     }
-  if (ap_create_pool (&pglobal, NULL) != APR_SUCCESS)
+  if (apr_create_pool (&pglobal, NULL) != APR_SUCCESS)
     {
-      printf ("ap_create_pool() failed.\n");
+      printf ("apr_create_pool() failed.\n");
       exit (1);
     }
 
@@ -51,8 +51,8 @@ main ()
       (a, svn_string_create ("helloa longish phrase xtrasome by", pglobal)))
     {
       printf ("error in string-appending comparison.");
-      ap_destroy_pool (pglobal);
-      ap_terminate();
+      apr_destroy_pool (pglobal);
+      apr_terminate();
       exit (1);
     }
 
@@ -66,8 +66,8 @@ main ()
   if (! svn_string_compare (c,b)) 
     {
       printf ("error in string-dup comparison.");
-      ap_destroy_pool (pglobal);
-      ap_terminate();
+      apr_destroy_pool (pglobal);
+      apr_terminate();
       exit (1);
     }
 
@@ -81,8 +81,8 @@ main ()
   if (! svn_string_isempty (c)) 
     {
       printf ("error in string-empty test.");
-      ap_destroy_pool (pglobal);
-      ap_terminate();
+      apr_destroy_pool (pglobal);
+      apr_terminate();
       exit (1);
     }
 
@@ -95,8 +95,8 @@ main ()
       (a, svn_string_create ("#################################", pglobal))) 
     {
       printf ("error in string-fill comparison.");
-      ap_destroy_pool (pglobal);
-      ap_terminate();
+      apr_destroy_pool (pglobal);
+      apr_terminate();
       exit (1);
     }
 
@@ -112,15 +112,15 @@ main ()
   if (! (e && f))
     {
       printf ("error in Cstring comparison.");
-      ap_destroy_pool (pglobal);
-      ap_terminate();
+      apr_destroy_pool (pglobal);
+      apr_terminate();
       exit (1);
     }
   
 
   /* Free our entire memory pool when done. */
-  ap_destroy_pool (pglobal);
-  ap_terminate();
+  apr_destroy_pool (pglobal);
+  apr_terminate();
 
   return 0;
 }

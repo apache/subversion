@@ -60,12 +60,12 @@
 
 void *
 my__realloc (char *data, const size_t oldsize, const size_t request, 
-             ap_pool_t *pool)
+             apr_pool_t *pool)
 {
   void *new_area;
 
   /* malloc new area */
-  new_area = ap_palloc (pool, request);
+  new_area = apr_palloc (pool, request);
 
   /* copy data to new area */
   memcpy (new_area, data, oldsize);
@@ -82,15 +82,15 @@ my__realloc (char *data, const size_t oldsize, const size_t request,
    requires a memory pool to allocate from.  */
 
 svn_string_t *
-svn_string_create (const char *cstring, ap_pool_t *pool)
+svn_string_create (const char *cstring, apr_pool_t *pool)
 {
   svn_string_t *new_string;
   size_t l = strlen (cstring);
 
   /* this alloc gives us memory filled with zeros, yum. */
-  new_string = (svn_string_t *) ap_palloc (pool, sizeof(svn_string_t)); 
+  new_string = (svn_string_t *) apr_palloc (pool, sizeof(svn_string_t)); 
 
-  new_string->data = (char *) ap_palloc (pool, l);
+  new_string->data = (char *) apr_palloc (pool, l);
   new_string->len = l;
   new_string->blocksize = l;
 
@@ -105,14 +105,14 @@ svn_string_create (const char *cstring, ap_pool_t *pool)
 
 svn_string_t *
 svn_string_ncreate (const char *bytes, const size_t size, 
-                    ap_pool_t *pool)
+                    apr_pool_t *pool)
 {
   svn_string_t *new_string;
 
   /* this alloc gives us memory filled with zeros, yum. */
-  new_string = (svn_string_t *) ap_palloc (pool, sizeof(svn_string_t)); 
+  new_string = (svn_string_t *) apr_palloc (pool, sizeof(svn_string_t)); 
 
-  new_string->data = (char *) ap_palloc (pool, size);
+  new_string->data = (char *) apr_palloc (pool, size);
   new_string->len = size;
   new_string->blocksize = size;
 
@@ -167,7 +167,7 @@ svn_string_isempty (const svn_string_t *str)
 
 void
 svn_string_appendbytes (svn_string_t *str, const char *bytes, 
-                        const size_t count, ap_pool_t *pool)
+                        const size_t count, apr_pool_t *pool)
 {
   size_t total_len;
   void *start_address;
@@ -198,7 +198,7 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
 
 void
 svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr,
-                      ap_pool_t *pool)
+                      apr_pool_t *pool)
 {
   svn_string_appendbytes (targetstr, appendstr->data, 
                           appendstr->len, pool);
@@ -209,7 +209,7 @@ svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr,
 /* duplicate a bytestring */
 
 svn_string_t *
-svn_string_dup (const svn_string_t *original_string, ap_pool_t *pool)
+svn_string_dup (const svn_string_t *original_string, apr_pool_t *pool)
 {
   return (svn_string_ncreate (original_string->data,
                               original_string->len, pool));
@@ -259,11 +259,11 @@ svn_string_compare_2cstring (const svn_string_t *str, const char *cstr)
 /* return an allocated C string from a bytestring */
 
 char *
-svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool)
+svn_string_2cstring (const svn_string_t *str, apr_pool_t *pool)
 {
   /* allocate memory for C string, +1 for \0 */
   size_t size = str->len + 1;
-  char *cstring = ap_palloc (pool, size);
+  char *cstring = apr_palloc (pool, size);
 
   /* copy bytes over */
   memcpy (cstring, str->data, str->len);

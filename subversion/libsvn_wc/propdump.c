@@ -197,31 +197,31 @@ size_t_into_string (char *buf, size_t num)
 
 /* kff todo: again, of general utility */
 void
-guaranteed_ap_write (ap_file_t *dest, const void *buf, ap_ssize_t n)
+guaranteed_apr_write (apr_file_t *dest, const void *buf, apr_ssize_t n)
 {
   /* kff todo: waiting for answer back from svn-core about ssize_t */
-  ap_ssize_t nwritten;
+  apr_ssize_t nwritten;
 
   nwritten = n;
   do {
-    ap_write (dest, buf, &nwritten);
+    apr_write (dest, buf, &nwritten);
   } while ((n - nwritten) > 0);
 }
 
 
 
-/* kff todo: should it return ap_status_t? */
+/* kff todo: should it return apr_status_t? */
 void
-svn_wc_proplist_write (ap_hash_t *proplist, 
+svn_wc_proplist_write (apr_hash_t *proplist, 
                        svn_string_t *destfile_name)
 {
-  ap_file_t *destfile = NULL;   /* this init to NULL is actually important */
-  ap_status_t res;
-  ap_pool_t *pool = NULL;
-  ap_hash_index_t *this;      /* current hash entry */
+  apr_file_t *destfile = NULL;   /* this init to NULL is actually important */
+  apr_status_t res;
+  apr_pool_t *pool = NULL;
+  apr_hash_index_t *this;      /* current hash entry */
   const char *dest_fname;
   
-  res = ap_create_pool (&pool, NULL);
+  res = apr_create_pool (&pool, NULL);
   if (res != APR_SUCCESS)
     {
       /* kff todo: need to copy CVS's error-handling better, or something.
@@ -241,7 +241,7 @@ svn_wc_proplist_write (ap_hash_t *proplist,
      abstracted?  We jump through these same hoops in svn_parse.c as
      well, after all... */
 
-  res = ap_open (&destfile,
+  res = apr_open (&destfile,
                  dest_fname,
                  (APR_WRITE | APR_CREATE),
                  APR_OS_DEFAULT,  /* kff todo: what's this about? */
@@ -251,7 +251,7 @@ svn_wc_proplist_write (ap_hash_t *proplist,
     {
       const char *msg;
 
-      msg = ap_pstrcat(pool,
+      msg = apr_pstrcat(pool,
                        "svn_wc_proplist_write(): "
                        "can't open for writing, file ",
                        dest_fname, NULL);
@@ -262,7 +262,7 @@ svn_wc_proplist_write (ap_hash_t *proplist,
 
   /* Else file successfully opened.  Continue. */
 
-  for (this = ap_hash_first (proplist); this; this = ap_hash_next (this))
+  for (this = apr_hash_first (proplist); this; this = apr_hash_next (this))
     {
       const void *key;
       void *val;
@@ -271,33 +271,33 @@ svn_wc_proplist_write (ap_hash_t *proplist,
       char buf[100];   /* Only holds lengths expressed in decimal digits. */
 
       /* Get this key and val. */
-      ap_hash_this (this, &key, &keylen, &val);
+      apr_hash_this (this, &key, &keylen, &val);
 
       /* Output the name's length, then the name itself. */
-      guaranteed_ap_write (destfile, "N ", 2);
+      guaranteed_apr_write (destfile, "N ", 2);
       num_len = size_t_into_string (buf, keylen);
-      guaranteed_ap_write (destfile, buf, num_len);
-      guaranteed_ap_write (destfile, "\n", 1);
-      guaranteed_ap_write (destfile, key, keylen);
-      guaranteed_ap_write (destfile, "\n", 1);
+      guaranteed_apr_write (destfile, buf, num_len);
+      guaranteed_apr_write (destfile, "\n", 1);
+      guaranteed_apr_write (destfile, key, keylen);
+      guaranteed_apr_write (destfile, "\n", 1);
 
       /* Output the value's length, then the value itself. */
-      guaranteed_ap_write (destfile, "V ", 2);
+      guaranteed_apr_write (destfile, "V ", 2);
       num_len = size_t_into_string (buf, ((svn_string_t *) val)->len);
-      guaranteed_ap_write (destfile, buf, num_len);
-      guaranteed_ap_write (destfile, "\n", 1);
-      guaranteed_ap_write (destfile,
+      guaranteed_apr_write (destfile, buf, num_len);
+      guaranteed_apr_write (destfile, "\n", 1);
+      guaranteed_apr_write (destfile,
                            ((svn_string_t *) val)->data,
                            ((svn_string_t *) val)->len);
-      guaranteed_ap_write (destfile, "\n", 1);
+      guaranteed_apr_write (destfile, "\n", 1);
     }
 
-  res = ap_close (destfile);
+  res = apr_close (destfile);
   if (res != APR_SUCCESS)
     {
       const char *msg;
 
-      msg = ap_pstrcat(pool, 
+      msg = apr_pstrcat(pool, 
                        "svn_parse(): warning: can't close file ",
                        dest_fname, NULL);
       
@@ -305,12 +305,12 @@ svn_wc_proplist_write (ap_hash_t *proplist,
       svn_handle_error (svn_create_error (res, msg, NULL, pool), stderr);
     }
   
-  ap_destroy_pool (pool);
+  apr_destroy_pool (pool);
 }
 
 
 #if 0
-ap_hash_t *
+apr_hash_t *
 svn_wc_proplist_read (svn_string_t *propfile, apr_pool_t *pool)
 {
   /* kff todo: fooo in progress */
@@ -324,8 +324,8 @@ svn_wc_proplist_read (svn_string_t *propfile, apr_pool_t *pool)
 int
 main (void)
 {
-  ap_pool_t *pool = NULL;
-  ap_hash_t *proplist;
+  apr_pool_t *pool = NULL;
+  apr_hash_t *proplist;
   svn_string_t *key;
 
   /* Our longest piece of test data. */
@@ -337,37 +337,37 @@ main (void)
     "carburator fluid.  Its confident finish is marred only by a barely\n"
     "detectable suggestion of rancid squid ink.";
 
-  ap_initialize ();
-  ap_create_pool (&pool, NULL);
+  apr_initialize ();
+  apr_create_pool (&pool, NULL);
 
-  proplist = ap_make_hash (pool);
+  proplist = apr_make_hash (pool);
   
   /* Fill it in with test data. */
 
   key = svn_string_create ("color", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("red", pool));
   
   key = svn_string_create ("wine review", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create (review, pool));
   
   key = svn_string_create ("price", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("US $6.50", pool));
 
   /* Test overwriting: same key both times, but different values. */
   key = svn_string_create ("twice-used property name", pool);
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("This is the FIRST value.", pool));
-  ap_hash_set (proplist, key->data, key->len,
+  apr_hash_set (proplist, key->data, key->len,
                svn_string_create ("This is the SECOND value.", pool));
 
   /* Dump it. */
   svn_wc_proplist_write
     (proplist, svn_string_create ("propdump.out", pool));
 
-  ap_destroy_pool (pool);
+  apr_destroy_pool (pool);
 
   return 0;
 }

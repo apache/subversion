@@ -59,9 +59,9 @@
    containing a generic string of bytes (NON-null-terminated) */
 
 svn_string_t * svn_string_create (const char *cstring, 
-                                  ap_pool_t *pool);
+                                  apr_pool_t *pool);
 svn_string_t * svn_string_ncreate (const char *bytes, const size_t size, 
-                                   ap_pool_t *pool);
+                                   apr_pool_t *pool);
 
 /* Set/get  a bytestring empty */
 
@@ -76,15 +76,15 @@ void svn_string_fillchar (svn_string_t *str, const unsigned char c);
    svn_string_t.  reallocs() if necessary. */
 
 void svn_string_appendbytes (svn_string_t *str, const char *bytes, 
-                             const size_t count, ap_pool_t *pool);
+                             const size_t count, apr_pool_t *pool);
 void svn_string_appendstr (svn_string_t *targetstr, 
                            const svn_string_t *appendstr,
-                           ap_pool_t *pool);
+                           apr_pool_t *pool);
 
 /* Duplicate a bytestring;  returns freshly malloc'd copy.  */
 
 svn_string_t * svn_string_dup (const svn_string_t *original_string,
-                               ap_pool_t *pool);
+                               apr_pool_t *pool);
 
 
 /* compare if two bytestrings' data fields are identical,
@@ -100,7 +100,7 @@ svn_boolean_t svn_string_compare_2cstring (const svn_string_t *str,
 
 /* return a traditional C string from a bytestring */
 
-char * svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool);
+char * svn_string_2cstring (const svn_string_t *str, apr_pool_t *pool);
 
 /* convenience routines */
 

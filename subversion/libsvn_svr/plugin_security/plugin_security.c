@@ -102,13 +102,13 @@ svn_plugin_internal_authorization (svn_fsrequest_t *request)
 
 svn_error_t *
 svn_plugin_security_init (svn_svr_policies_t *policy,
-                          ap_dso_handle_t *dso)
+                          apr_dso_handle_t *dso)
 {
   svn_error_t *err;
 
   /* First:  create an instance of this plugin */
   svn_svr_plugin_t *newplugin = 
-    (svn_svr_plugin_t *) ap_palloc (policy->pool, sizeof(svn_svr_plugin_t));
+    (svn_svr_plugin_t *) apr_palloc (policy->pool, sizeof(svn_svr_plugin_t));
 
   /* Fill in the fields of the plugin */
   newplugin->name = svn_string_create ("plugin_security", policy->pool);

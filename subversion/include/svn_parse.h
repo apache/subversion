@@ -124,7 +124,7 @@ typedef struct svn_parsed {
    object, allocated from POOL.  If we reach EOF, set OBJECT to 0.  */
 extern svn_error_t *svn_parse (svn_parsed_t **object_p,
                                FILE *stream,
-                               ap_pool_t *pool);
+                               apr_pool_t *pool);
    
 /* Print the external representation of OBJECT on STREAM.  The resulting
    output could be parsed by `svn_parse'.  */
