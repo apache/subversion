@@ -542,36 +542,44 @@ Non-Historical Properties
 
 
 
-Submodules
+Layers
+
+I'm having trouble keeping track of exactly who has implemented which
+promises, based on which other promises from whom.  I hope this will
+help me keep the arrangement straight, and make the code more
+reliable.  The files are arranged in order from low-level to
+high-level: each file depends only on services provided by the files
+before it.
+
+
+skel.c, id.c, dbt.c, convert-size.c
+
+		Low-level utility functions.
 
 fs.c		Creating and destroying filesystem objects.
-rep.c		Representations.  Everything for creating, reading, and
-		writing node revisions.  Maintenance of `nodes' table.
 
+err.c		Error handling.
 
-Low-level node manipulation functions.  These are only concerned with
-intra-record consistency, and basic table structure (valid keys and
-values, ordered properly).  These never worry about consistency
-between the contents of different records, checking for clones, etc.
+nodes-table.c, txn-table.c, clones-table.c, rev-table.c
 
-node-low.c      Node operations, by node ID.  Headers, properties.
-		Built on rep.c.
-file-low.c	File operations, by node ID.  Built on rep.c.
-dir-low.c       Directory operations, by node ID.  Built on rep.c.
-txn-low.c       Transactions.  Maintenance of `transactions' table.
-		Built on clone.c and dir.c.
+		Create and open particular database tables.
+		Responsible for intra-record consistency.
 
+node-rev.c      Creating, reading, and writing node revisions.
+		This will handle delta-based node revision storage,
+		Responsible for consistency of 
 
-High-level functions.  Implementations of svn_fs.h functions, with all
-their semantics.
+dag.c		Operations on the DAG filesystem.  "DAG" because the
+		interface exposes the filesystem's sharing structure.
+		Enforce inter-record consistency.
 
-clone.c		Cloning.  Maintenance of `clones' table.  Implements
-		clone-tracking `svn_fs_node_t' structures.
-txn.c		Transactions.  Merging.
-node.c		Generic node operations.
-file.c		File operations.
-dir.c           Directory operations.
-delta.c         Computing deltas.
+tree.c		Operations on the tree filesystem.  This layer is
+		built on top of dag.c, but transparently distinguishes
+		virtual copies, making the underlying DAG look like a
+		real tree.  This makes incomplete transactions behave
+		like ordinary mutable filesystems.  Most of the
+
+delta.c		Computing deltas.
 
 
 Appendix: Filesystem structure summary
