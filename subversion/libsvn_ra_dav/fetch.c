@@ -90,16 +90,26 @@ typedef svn_error_t * (*prop_setter_t)(void *baton,
                                        svn_stringbuf_t *value);
 
 typedef struct {
+  /* The baton returned by the editor's open_root/open_dir */
   void *baton;
+
+  /* Should we fetch properties for this directory when the close tag
+     is found? */
   svn_boolean_t fetch_props;
+
+  /* The version resource URL for this directory. */
   const char *vsn_url;
+
+  /* A buffer which stores the relative directory name. We also use this
+     for temporary construction relative file names. */
+  svn_stringbuf_t *pathbuf;
+
 } dir_item_t;
 
 typedef struct {
   svn_ra_session_t *ras;
 
   apr_file_t *tmpfile;
-  svn_stringbuf_t *fname;
 
   svn_boolean_t fetch_content;
   svn_boolean_t fetch_props;
@@ -1078,12 +1088,13 @@ static const char *get_attr(const char **atts, const char *which)
   return NULL;
 }
 
-static void push_dir(report_baton_t *rb, void *baton)
+static void push_dir(report_baton_t *rb, void *baton, svn_stringbuf_t *pathbuf)
 {
   dir_item_t *di = (dir_item_t *)apr_array_push(rb->dirs);
 
+  memset(di, 0, sizeof(*di));
   di->baton = baton;
-  di->vsn_url = NULL;
+  di->pathbuf = pathbuf;
 }
 
 
@@ -1097,7 +1108,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   const char *name;
   svn_stringbuf_t *cpath = NULL;
   svn_revnum_t crev = SVN_INVALID_REVNUM;
+  dir_item_t *parent_dir;
   void *new_dir_baton;
+  svn_stringbuf_t *pathbuf;
   svn_error_t *err;
 
   switch (elm->id)
@@ -1115,6 +1128,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       base = atol(att);
       if (rb->dirs->nelts == 0)
         {
+          pathbuf = svn_stringbuf_create(".", rb->ras->pool);
           err = (*rb->editor->open_root)(rb->edit_baton, base,
                                          &new_dir_baton);
         }
@@ -1124,15 +1138,20 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           /* ### verify we got it. punt on error. */
           svn_stringbuf_set(rb->namestr, name);
 
+          parent_dir = &TOP_DIR(rb);
+
+          pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
+          svn_path_add_component(pathbuf, rb->namestr, svn_path_url_style);
+
           err = (*rb->editor->open_directory)(rb->namestr,
-                                              TOP_DIR(rb).baton, base,
+                                              parent_dir->baton, base,
                                               &new_dir_baton);
         }
       if (err != NULL)
         goto error;
 
       /* push the new baton onto the directory baton stack */
-      push_dir(rb, new_dir_baton);
+      push_dir(rb, new_dir_baton, pathbuf);
 
       /* Property fetching is NOT implied in replacement. */
       TOP_DIR(rb).fetch_props = FALSE;
@@ -1154,11 +1173,16 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           crev = atol(att);
         }
 
-      CHKERR( (*rb->editor->add_directory)(rb->namestr, TOP_DIR(rb).baton,
+      parent_dir = &TOP_DIR(rb);
+
+      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
+      svn_path_add_component(pathbuf, rb->namestr, svn_path_url_style);
+
+      CHKERR( (*rb->editor->add_directory)(rb->namestr, parent_dir->baton,
                                            cpath, crev, &new_dir_baton) );
 
       /* push the new baton onto the directory baton stack */
-      push_dir(rb, new_dir_baton);
+      push_dir(rb, new_dir_baton, pathbuf);
 
       /* Property fetching is implied in addition. */
       TOP_DIR(rb).fetch_props = TRUE;
@@ -1173,11 +1197,17 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
-      CHKERR( (*rb->editor->open_file)(rb->namestr, TOP_DIR(rb).baton, base,
+      parent_dir = &TOP_DIR(rb);
+      CHKERR( (*rb->editor->open_file)(rb->namestr, parent_dir->baton, base,
                                        &rb->file_baton) );
 
       /* Property fetching is NOT implied in replacement. */
       rb->fetch_props = FALSE;
+
+      /* Add this file's name into the directory's path buffer. It will be
+         removed in end_element() */
+      svn_path_add_component(parent_dir->pathbuf, rb->namestr,
+                             svn_path_url_style);
       break;
 
     case ELEM_add_file:
@@ -1196,11 +1226,17 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           crev = atol(att);
         }
 
-      CHKERR( (*rb->editor->add_file)(rb->namestr, TOP_DIR(rb).baton,
+      parent_dir = &TOP_DIR(rb);
+      CHKERR( (*rb->editor->add_file)(rb->namestr, parent_dir->baton,
                                       cpath, crev, &rb->file_baton) );
 
       /* Property fetching is implied in addition. */
       rb->fetch_props = TRUE;
+
+      /* Add this file's name into the directory's path buffer. It will be
+         removed in end_element() */
+      svn_path_add_component(parent_dir->pathbuf, rb->namestr,
+                             svn_path_url_style);
       break;
 
     case ELEM_remove_prop:
@@ -1242,7 +1278,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
     case ELEM_fetch_file:
       /* assert: rb->href->len > 0 */
       CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
-                                NULL, /* ### need relpath */
+                                TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
                                 rb->file_baton, rb->editor,
                                 rb->ras->callbacks->get_wc_prop,
@@ -1350,7 +1386,7 @@ static int end_element(void *userdata,
 
       /* fetch file */
       CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
-                                NULL, /* ### need relpath */
+                                TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
                                 rb->file_baton, rb->editor,
                                 rb->ras->callbacks->get_wc_prop,
@@ -1367,6 +1403,9 @@ static int end_element(void *userdata,
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton) );
       rb->file_baton = NULL;
+
+      /* Yank this file out of the directory's path buffer. */
+      svn_path_remove_component(TOP_DIR(rb).pathbuf, svn_path_url_style);
       break;
 
     case NE_ELM_href:
