@@ -133,6 +133,7 @@ svn_error_t *svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
 #define SVN_FS_FS__PROPS             "props"    
 #define SVN_FS_FS__TEXT              "text"      
 #define SVN_FS_FS__CPATH             "cpath"
+#define SVN_FS_FS__PRED              "pred"
 #define SVN_FS_FS__COPYFROM          "copyfrom"
 #define SVN_FS_FS__COPYROOT          "copyroot"
 
