@@ -236,7 +236,7 @@ svn_path_split (const svn_stringbuf_t *path,
                 enum svn_path_style style,
                 apr_pool_t *pool)
 {
-  svn_stringbuf_t *n_dirpath, *n_basename;
+  svn_stringbuf_t *n_dirpath, *n_basename = NULL;
 
   assert (dirpath != basename);
 

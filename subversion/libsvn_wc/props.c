@@ -465,7 +465,7 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
       int j;
       int found_match = 0;          
       svn_stringbuf_t *conflict_description;
-      svn_prop_t *update_change, *local_change;
+      svn_prop_t *update_change, *local_change = NULL;
       
       update_change = (((svn_prop_t **)(propchanges)->elts)[i]);
       

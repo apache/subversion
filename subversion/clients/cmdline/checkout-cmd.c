@@ -122,9 +122,9 @@ svn_cl__checkout (apr_getopt_t *os,
                                  auth_baton,
                                  repos_url,
                                  local_dir,
-                                 opt_state->revision,
+                                 opt_state->start_revision,
                                  opt_state->nonrecursive ? FALSE : TRUE,
-                                 opt_state->date,
+                                 opt_state->start_date,
                                  opt_state->xml_file,
                                  pool);
       if (err)

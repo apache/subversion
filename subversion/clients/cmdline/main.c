@@ -157,12 +157,129 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 };
 
 
+/* Set OPT_STATE->start_revision and/or OPT_STATE->end_revision
+ * according to ARG, where ARG is "N", ":N", or "N:M", like so:
+ * 
+ *    - If ARG is "N" or "N:, set OPT_STATE->start_revision to N and
+ *      don't touch OPT_STATE->end_revision
+ * 
+ *    - If ARG is ":N", set OPT_STATE->end_revision to N and don't
+ *      touch OPT_STATE->start_revision
+ * 
+ *    - If ARG is "N:M", set OPT_STATE->start_revision to N and
+ *      OPT_STATE->end_revision to M.
+ * 
+ * If ARG is found to be invalid, return non-zero; else return zero.
+ */
+static int
+parse_revision (svn_cl__opt_state_t *opt_state, const char *arg)
+{
+  char *sep = strchr (arg, ':');
+
+  /* Check ARG's validity. */
+  {
+    const char *p;
+    int seen_colon = 0, seen_digit = 0;
+
+    for (p = arg; *p; p++)
+      {
+        if ((*p >= '0') && (*p <= '9'))
+          seen_digit = 1;
+        else if (! ((*p == ':') && (! seen_colon)))
+          return 1;  /* *p is neither a digit nor the sole colon */
+
+        if (*p == ':')
+          seen_colon = 1;
+      }
+
+    if (! seen_digit)
+      return 1;
+  }
+
+  if (sep)
+    {
+      if (*(sep + 1))
+        opt_state->end_revision = (svn_revnum_t) atoi (sep + 1);
+
+      if (sep != arg)
+        opt_state->start_revision = (svn_revnum_t) atoi (arg);
+    }
+  else
+    opt_state->start_revision = (svn_revnum_t) atoi (arg);
+  
+  return SVN_NO_ERROR;
+}
+
+
+/* Set OPT_STATE->start_date and/or OPT_STATE->end_date according to
+ * ARG, where ARG is "X", ":X", or "X:Y", like so:
+ * 
+ *    - If ARG is "X" or "X:, set OPT_STATE->start_date to X and don't
+ *      touch OPT_STATE->end_date
+ * 
+ *    - If ARG is ":X", set OPT_STATE->end_date to X and don't touch
+ *      OPT_STATE->start_date
+ * 
+ *    - If ARG is "X:Y", set OPT_STATE->start_date to X and
+ *      OPT_STATE->end_date to Y
+ * 
+ * If ARG is found to be invalid, return non-zero; else return zero.
+ */
+static int
+parse_date (svn_cl__opt_state_t *opt_state, const char *arg, apr_pool_t *pool)
+{
+  char *sep = strchr (arg, ':');
+
+  if (sep)
+    {
+
+      /* svn_parse_date() originates in getdate.y; while I'd love to
+         change it to const char *, that turns out to be a little more
+         complex than just changing the qualifier.  So for now, we're
+         making the copies plain char stars, to get rid of the
+         compilation warning, and have filed issue #408 so we don't
+         forget about this.  -kff  */
+      char *left_date, *right_date;
+
+      /* Dicey error check: some standard date formats contain
+         colons.  Eventually, maybe we should allow them and use some
+         other separator character for expressing ranges.  But for
+         now, I'm just going to bail if see a non-separator colon, to
+         get this up and running.  -kff */  
+      if (strchr (sep + 1, ':'))
+        return 1;
+
+      /* Okay, no syntax problems detected, parse the date. */
+
+      /* First, turn one string into two. */
+      left_date = apr_pstrdup (pool, arg);
+      *(left_date + (sep - arg)) = '\0';
+      right_date = (left_date + (sep - arg)) + 1;
+
+      /* Treat each string individually. */
+      if (*right_date)
+        apr_ansi_time_to_apr_time (&(opt_state->end_date),
+                                   svn_parse_date (right_date, NULL));
+      
+      if (*left_date)
+        apr_ansi_time_to_apr_time (&(opt_state->start_date),
+                                   svn_parse_date (left_date, NULL));
+    }
+  else
+    apr_ansi_time_to_apr_time (&(opt_state->start_date),
+                               svn_parse_date ((char *) arg, NULL));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Main. ***/
 
 int
 main (int argc, const char * const *argv)
 {
+  int ret;
   apr_status_t apr_err;
   svn_error_t *err;
   apr_pool_t *pool;
@@ -214,7 +331,8 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create (NULL);
   svn_cl__init_feedback_vtable (pool);
   memset (&opt_state, 0, sizeof (opt_state));
-  opt_state.revision = SVN_INVALID_REVNUM;
+  opt_state.start_revision = SVN_INVALID_REVNUM;
+  opt_state.end_revision = SVN_INVALID_REVNUM;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -245,16 +363,31 @@ main (int argc, const char * const *argv)
         opt_state.message = svn_stringbuf_create (opt_arg, pool);
         break;
       case 'r':
-        opt_state.revision = (svn_revnum_t) atoi (opt_arg);
+        ret = parse_revision (&opt_state, opt_arg);
+        if (ret)
+          {
+            svn_handle_error (svn_error_createf
+                              (SVN_ERR_CL_ARG_PARSING_ERROR,
+                               0, NULL, pool,
+                               "Syntax error in revision argument \"%s\"",
+                               opt_arg),
+                              stdout, 0);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case 'D':
-        /* svn_parse_date() originates in getdate.y; while I'd love to
-           change it to const char *, that turns out to be a little
-           more complex than just adding the qualifier.  So for now,
-           I'm casting to get rid of the compilation warning, and have
-           filed issue #408 so we don't forget about this.  -kff  */
-        apr_ansi_time_to_apr_time (&opt_state.date,
-                                   svn_parse_date ((char *) opt_arg, NULL));
+        ret = parse_date (&opt_state, opt_arg, pool);
+        if (ret)
+          {
+            svn_handle_error (svn_error_createf
+                              (SVN_ERR_CL_ARG_PARSING_ERROR,
+                               0, NULL, pool,
+                               "Unable to parse \"%s\"", opt_arg),
+                              stdout, 0);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case 'v':
         opt_state.verbose = TRUE;

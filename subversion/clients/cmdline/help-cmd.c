@@ -149,13 +149,13 @@ svn_cl__help (apr_getopt_t *os,
               svn_cl__opt_state_t *opt_state,
               apr_pool_t *pool)
 {
-  apr_array_header_t *targets;
+  apr_array_header_t *targets = NULL;
   int i;
 
   if (os)
     targets = svn_cl__args_to_target_array (os, pool);
 
-  if (os && targets->nelts)  /* help on subcommand(s) requested */
+  if (targets && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
         svn_stringbuf_t *this = (((svn_stringbuf_t **) (targets)->elts))[i];

@@ -122,7 +122,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
                     const enum svn_wc__timestamp_kind timestamp_kind,
                     apr_pool_t *pool)
 {
-  apr_time_t wfile_time, entrytime;
+  apr_time_t wfile_time, entrytime = 0;
   svn_stringbuf_t *dirpath, *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc_entry_t *entry;

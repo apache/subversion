@@ -139,7 +139,7 @@ svn_cl__import (apr_getopt_t *os,
                               "",   /* ### todo: pass author */
                               message,
                               opt_state->xml_file,
-                              opt_state->revision,
+                              opt_state->start_revision,
                               pool));
 
   return SVN_NO_ERROR;
