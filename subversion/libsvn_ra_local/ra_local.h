@@ -63,8 +63,8 @@ typedef struct svn_ra_local__commit_closer_t
   /* Allocation for this baton, as well as all committed_targets */
   apr_pool_t *pool;
 
-  /* A list of target paths that have been committed */
-  apr_array_header_t *target_array;
+  /* Target paths that are considered committed */
+  apr_hash_t *committed_targets;
 
   /* A function given to RA by the client;  allows RA to bump WC
      revision numbers of targets. */

@@ -635,8 +635,8 @@ typedef svn_error_t * (*svn_bump_func_t) (void *baton,
                                           svn_revnum_t new_rev);
 
 /* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
-   committed.  Each commited path is pushed onto ARRAY, allocated from
-   POOL.  ARRAY must be initialized to store (svn_stringbuf_t *) objects.
+   committed.  Store each commited path in HASH, with some undefined
+   non-null value.  HASH is initialized already.
 
    The arguments {NEW_REV, BUMP_FUNC, BUMP_BATON} are an optional set
    of args;  if specified, then close_edit() will use them to bump
@@ -647,7 +647,7 @@ svn_error_t *
 svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    void **edit_baton,
                                    apr_pool_t *pool,
-                                   apr_array_header_t *array,
+                                   apr_hash_t *committed_targets,
                                    svn_revnum_t new_rev,
                                    svn_bump_func_t bump_func,
                                    void *bump_baton);

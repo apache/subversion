@@ -97,9 +97,19 @@ typedef struct {
      revision that arrived. */
   apr_hash_t *hold;
 
+  /* We only invoke set_prop() or close_commit() on targets listed in
+     valid_targets.  Some entities (such as directories that have had
+     changes committed underneath but are not themselves targets) will
+     be mentioned in the merge response but not appear in
+     valid_targets. */
+  apr_hash_t *valid_targets;
+
+  /* Client callback for setting wcprops. */
   svn_ra_set_wc_prop_func_t set_prop;
+
+  /* Client callback for setting a new revision in the working copy. */
   svn_ra_close_commit_func_t close_commit;
-  void *close_baton;
+  void *close_baton;  /* baton for above */
 
 } merge_ctx_t;
 
@@ -119,6 +129,13 @@ static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
   if (mc->close_commit == NULL)
     return NULL;
 
+  /* Only invoke a client callback on PATH if PATH counts as a
+     committed target.  The commit-tracking editor built this list for
+     us, and took care not to include directories unless they were
+     directly committed (i.e., received a property change). */
+  if (! apr_hash_get (mc->valid_targets, path, APR_HASH_KEY_STRING))
+    return NULL;
+
   /* ### damned callbacks take svn_stringbuf_t even though they don't plan
      ### to change the values whatsoever... */
   /* set up two svn_stringbuf_t values around the path and vsn_url. */
@@ -126,16 +143,16 @@ static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
   path_str.len = strlen(path);
   path_str.blocksize = path_str.len + 1;
   path_str.pool = mc->pool;
-
+      
   vsn_url_str.data = vsn_url;
   vsn_url_str.len = strlen(vsn_url);
   vsn_url_str.blocksize = vsn_url_str.len + 1;
   vsn_url_str.pool = mc->pool;
-
-  /* store the version URL */
+      
+      /* store the version URL */
   SVN_ERR( (*mc->set_prop)(mc->close_baton, &path_str,
                            mc->vsn_url_name, &vsn_url_str) );
-
+      
   /* bump the revision and commit the file */
   return (*mc->close_commit)(mc->close_baton, &path_str, mc->rev);
 }
@@ -502,6 +519,7 @@ svn_error_t * svn_ra_dav__merge_activity(
     svn_ra_session_t *ras,
     const char *repos_url,
     const char *activity_url,
+    apr_hash_t *valid_targets,
     svn_ra_set_wc_prop_func_t set_prop,
     svn_ra_close_commit_func_t close_commit,
     void *close_baton,
@@ -518,6 +536,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.base_len = strlen(repos_url);
   mc.rev = SVN_INVALID_REVNUM;
 
+  mc.valid_targets = valid_targets;
   mc.set_prop = set_prop;
   mc.close_commit = close_commit;
   mc.close_baton = close_baton;

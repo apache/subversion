@@ -21,6 +21,9 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
+
 /*----------------------------------------------------------------*/
 
 /** Callbacks **/
@@ -36,22 +39,32 @@
 static svn_error_t *
 cleanup_commit (svn_revnum_t new_rev, void *baton)
 {
-  int i;
+  apr_hash_index_t *hi;
 
   /* Recover our hook baton: */
   svn_ra_local__commit_closer_t *closer = 
     (svn_ra_local__commit_closer_t *) baton;
 
-  /* Loop over the closer->targets array, and bump the revision number
-     for each. */
-  for (i = 0; i < closer->target_array->nelts; i++)
-    {
-      svn_stringbuf_t *target;
-      target = (((svn_stringbuf_t **)(closer->target_array)->elts)[i]);
+  if (! closer->close_func)
+    return SVN_NO_ERROR;
 
-      if (closer->close_func)
-        SVN_ERR (closer->close_func (closer->close_baton, target, new_rev));
-    }    
+  for (hi = apr_hash_first (closer->pool, closer->committed_targets);
+       hi;
+       hi = apr_hash_next (hi))
+    {
+      char *path;
+      apr_size_t ignored_len;
+      void *ignored_val;
+      svn_stringbuf_t path_str;
+
+      apr_hash_this (hi, (void *) &path, &ignored_len, &ignored_val);
+
+      /* Oh yes, the flogging ritual, how could I forget. */
+      path_str.data = path;
+      path_str.len = strlen (path);
+
+      SVN_ERR (closer->close_func (closer->close_baton, &path_str, new_rev));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -201,8 +214,7 @@ get_commit_editor (void *session_baton,
   closer->close_func = close_func;
   closer->set_func = set_func;
   closer->close_baton = close_baton;
-  closer->target_array = apr_array_make (sess_baton->pool, 1,
-                                         sizeof(svn_stringbuf_t *));
+  closer->committed_targets = apr_hash_make (sess_baton->pool);
                                          
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_editor (&commit_editor, &commit_editor_baton,
@@ -220,7 +232,7 @@ get_commit_editor (void *session_baton,
   SVN_ERR (svn_delta_get_commit_track_editor (&tracking_editor,
                                               &tracking_editor_baton,
                                               sess_baton->pool,
-                                              closer->target_array,
+                                              closer->committed_targets,
                                               SVN_INVALID_REVNUM,
                                               NULL, NULL));
 
