@@ -913,11 +913,12 @@ interpret_changes (apr_hash_t *entries,
   if ((*state & SVN_WC_ENTRY_ADDED)
       && (this_dir_entry)
       && (entry != this_dir_entry)
-      && (this_dir_entry->state & SVN_WC_ENTRY_DELETED))
+      && (this_dir_entry->state & SVN_WC_ENTRY_DELETED)
+      && (this_dir_entry->state & SVN_WC_ENTRY_ADDED))
     {
       /* If there is a default entry in this entries list, and
          this is not it, and that default entry is marked for
-         deletion, we cannot marking anything for addition in
+         deletion only, we cannot marking anything for addition in
          this directory. */
       return 
         svn_error_createf 
@@ -982,9 +983,9 @@ interpret_changes (apr_hash_t *entries,
     {
       if (current_addonly || current_neither)
         {
-          return svn_error_createf(SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool, 
-                                   "%s is already under version control",
-                                   name->data);
+          return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool, 
+                                    "%s is already under version control",
+                                    name->data);
         }
       else if (current_both)
         {
