@@ -94,6 +94,23 @@ typedef apr_int32_t time_t;
 }
 
 /* -----------------------------------------------------------------------
+   apr_array_header_t ** <const char *>
+*/
+
+%typemap(in, numinputs=0) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
+(apr_array_header_t *temp) {
+    $1 = &temp;
+}
+%typemap(python, argout, fragment="t_output_helper")
+apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
+}
+%typemap(perl5, argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    $result = svn_swig_pl_array_to_list(*$1);
+    ++argvi;
+}
+
+/* -----------------------------------------------------------------------
    Handle an apr_hash_t ** in Java
 */
 
