@@ -651,24 +651,26 @@ II.   INSTALLATION
 
           http://unxutils.sourceforge.net/
 
-      C:\Subversion> svn co http://svn.collab.net/repos/svn/trunk src
-      C:\Subversion> gunzip neon-0.24.4.tar.gz
-      C:\Subversion> cd src
-      C:\Subversion\src> tar -xvf ..\neon-0.24.4.tar
-      C:\Subversion\src> ren neon-0.24.4 neon
-      C:\Subversion\src> unzip ..\db-4.0.14-win32.zip
-      C:\Subversion\src> cd ..
-      C:\Subversion> unzip httpd_2.0.47-win32-src.zip
-      C:\Subversion> xcopy /S httpd-2.0.47\srclib\apr src\apr
-      C:\Subversion> xcopy /S httpd-2.0.47\srclib\apr-util src\apr-util
-      C:\Subversion> xcopy /S httpd-2.0.47\srclib\apr-iconv src\apr-iconv
-      C:\Subversion> msdev httpd-2.0.47\apache.dsw /MAKE ALL
-      C:\Subversion> cd src
-      C:\Subversion\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.47
-      C:\Subversion\src> msdev subversion_msvc.dsw /MAKE __ALL__
+      C:\SVN> svn co http://svn.collab.net/repos/svn/trunk src
+      C:\SVN> gunzip neon-0.24.4.tar.gz
+      C:\SVN> cd src
+      C:\SVN\src> tar -xvf ..\neon-0.24.4.tar
+      C:\SVN\src> ren neon-0.24.4 neon
+      C:\SVN\src> unzip ..\db-4.0.14-win32.zip
+      C:\SVN\src> cd ..
+      C:\SVN> unzip httpd_2.0.47-win32-src.zip
+      C:\SVN> xcopy /S httpd-2.0.47\srclib\apr src\apr
+      C:\SVN> xcopy /S httpd-2.0.47\srclib\apr-util src\apr-util
+      C:\SVN> xcopy /S httpd-2.0.47\srclib\apr-iconv src\apr-iconv
+      C:\SVN> msdev httpd-2.0.47\apache.dsw /MAKE "BuildBin - Win32 Debug"
+      C:\SVN> cd src
+      C:\SVN\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.47
+      C:\SVN\src> msdev subversion_msvc.dsw /MAKE "__ALL__ - Win32 Debug"
 
+      [NOTE: Substitute "Release" for "Debug" in the "msdev" command lines
+          above if you want binaries optimized for release.]
 
-      [NOTE: There have been rumors that Subversion on Win32 can be built
+      [ALSO NOTE: There have been rumors that Subversion on Win32 can be built
           using the latest cygwin. ymmv.]
 
 
