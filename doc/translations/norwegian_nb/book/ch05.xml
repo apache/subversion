@@ -1,8 +1,12 @@
 <chapter id="svn-ch-5">
+<!-- @ENGLISH {{{
 <title>Repository Administration</title>
+@ENGLISH }}} -->
+<title>Depotadministrasjon</title>
 
   <simplesect>
 
+    <!-- @ENGLISH {{{
     <para>The Subversion repository is the central storehouse of
       versioned data for any number of projects.  As such, it becomes
       an obvious candidate for all the love and attention an
@@ -10,7 +14,17 @@
       low-maintenance item, it is important to understand how to
       properly configure and care for it so that potential problems
       are avoided, and actual problems are safely resolved.</para>
+    @ENGLISH }}} -->
+    <para>Subversiondepotet er den sentrale lagringsplassen for 
+      versjonerte data for ethvert antall prosjekter.
+      Som s&#229;dan blir det en opplagt kandidat for all kj&#230;rlighet og 
+      oppmerksomhet en administrator kan tilby.
+      Selv om depotet vanligvis er et element som krever lite 
+      vedlikehold, er det viktig &#229; forst&#229; hvordan du kan konfigurere og 
+      passe p&#229; det s&#229; potensielle problemer blir unng&#229;tt, og aktuelle 
+      problemer l&#248;st p&#229; en trygg m&#229;te.</para>
 
+    <!-- @ENGLISH {{{
     <para>In this chapter, we'll discuss how to create and configure
       a Subversion repository.  We'll also talk about repository
       maintenance, including the use of the <command>svnlook</command>
@@ -18,7 +32,16 @@
       Subversion).  We'll address some common questions and mistakes,
       and give some suggestions on how to arrange the data in the
       repository.</para>
+    @ENGLISH }}} -->
+    <para>I dette kapittelet vil vi diskutere hvordan du kan opprette og 
+      konfigurere et Subversiondepot.
+      Vi vil ogs&#229; snakke om depotvedlikehold, includert bruken av 
+      verkt&#248;yene <command>svnlook</command> og 
+      <command>svnadmin</command> (som f&#248;lger med Subversion).
+      Vi vil adressere vanlige sp&#248;rsm&#229;l og feilgrep, og komme med noen 
+      forslag til hvordan du kan legge opp dataene i depotet.</para>
 
+    <!-- @ENGLISH {{{
     <para>If you plan to access a Subversion repository only in the
       role of a user whose data is under version control (that is, via
       a Subversion client), you can skip this chapter altogether.
@@ -31,6 +54,17 @@
           data hangs out.</para>
       </footnote>
       you should definitely pay attention to this chapter.</para>
+    @ENGLISH }}} -->
+    <para>Hvis du planlegger &#229; aksessere et Subversiondepot bare i 
+      rollen som en bruker som har data under versjonskontroll (det vil 
+      si via en Subversionklient), kan du hoppe over hele dette 
+      kapitlet.
+      Hvis du derimot er, eller vil bli, en administrator for et 
+      Subversiondepot,<footnote>
+      <para>Dette kan h&#248;res <!-- &#164; -->r&#229;flott ut, men vi snakker bare om 
+        enhver som er interessert i mystikken <!-- &#164; realm -->omkring 
+        arbeidskopien hvor alles data ligger.</para></footnote>
+      b&#248;r du s&#229; absolutt f&#248;lge med i dette kapittelet.</para>
 
   </simplesect>
 
@@ -38,8 +72,12 @@
   <!-- *** SECTION 1:  REPOSITORY BASICS                               *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-5-sect-1">
+    <!-- @ENGLISH {{{
     <title>Repository Basics</title>
+    @ENGLISH }}} -->
+    <title>Det grunnleggende ved et depot</title>
 
+    <!-- @ENGLISH {{{
     <para>Before jumping into the broader topic of repository
       administration, let's further define what a repository is.  How
       does it look?  How does it feel?  Does it take its tea hot or
@@ -50,17 +88,41 @@
       perspective&mdash;how a repository looks and acts with respect
       to non-Subversion tools.  The following section covers some of
       these basic concepts at a very high level.</para>
+    @ENGLISH }}} -->
+    <para>F&#248;r vi hopper inn i det mer generelle innen emnet 
+      depotadministrasjon, la oss definere videre hva et depot er.
+      Hvordan ser det ut?
+      Hvordan f&#248;les det?
+      Vil det ha teen sin varm eller med is, s&#248;t, og med sitron?
+      Som en administrator, blir det forventet at du m&#229; forst&#229; 
+      sammensetningen i et depot b&#229;de fra et logisk perspektiv &#8212; det &#229; 
+      styre med hvordan data er representert i depotet &#8212; og fra et 
+      fysisk skrue-og-mutter-perspektiv &#8212; hvordan et depot ser ut og 
+      oppf&#248;rer seg i sammenheng med verkt&#248;y <!-- &#164; -->som ikke h&#248;rer med til 
+      Subversion-pakken.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-1.1">
+      <!-- @ENGLISH {{{
       <title>Understanding Transactions and Revisions</title>
+      @ENGLISH }}} -->
+      <title>Forst&#229;else av transaksjoner og revisjoner</title>
         
+      <!-- @ENGLISH {{{
       <para>Conceptually speaking, a Subversion repository is a
         sequence of directory trees.  Each tree is a snapshot of how
         the files and directories versioned in your repository looked
         at some point in time.  These snapshots are created as a
         result of client operations, and are called revisions.</para>
+      @ENGLISH }}} -->
+      <para>Konseptmessig sagt, er et Subversiondepot en sekvens av 
+        tr&#230;r.
+        Hvert tre er et &#248;yeblikksbilde av hvordan filene og katalogene 
+        s&#229; ut p&#229; et spesielt tidspunkt.
+        Disse &#248;yeblikksbildene er opprettet som et resultat av 
+        klientoperasjoner og blir kalt revisjoner.</para>
 
+      <!-- @ENGLISH {{{
       <para>Every revision begins life as a transaction tree.  When
         doing a commit, a client builds a Subversion transaction that
         mirrors their local changes (plus any additional changes that
@@ -72,7 +134,21 @@
         a new revision number.  If the commit fails for some reason,
         the transaction is destroyed and the client is informed of the
         failure.</para>
+      @ENGLISH }}} -->
+      <para>Hver revisjon begynner livet som et transaksjonstre.
+        N&#229;r du gj&#248;r en innlegging, bygger en klient en 
+        Subversiontransaksjon som avspeiler deres lokale forandringer 
+        (pluss eventuelle forandringer som er blitt lagt inn i tillegg 
+        til depotet siden begynnelsen av innleggingsprosessen), og 
+        instruerer deretter depotet om &#229; lagre dette treet som det neste 
+        &#248;yeblikksbildet i sekvensen.
+        Hvis innleggingen lykkes, blir transaksjonen <!-- &#164; effectively 
+        promoted -->innlemmet i et nytt revisjonstre, og blir tildelt et 
+        nytt revisjonsnummer.
+        Hvis innleggingen av en eller annen grunn ikke lykkes, blir 
+        transaksjonen &#248;delagt og klienten informeres om feilen.</para>
             
+      <!-- @ENGLISH {{{
       <para>Updates work in a similar way.  The client builds a
         temporary transaction tree that mirrors the state of the
         working copy.  The repository then compares that transaction
@@ -82,7 +158,20 @@
         are needed to transform their working copy into a replica of
         that revision tree.  After the update completes, the temporary
         transaction is deleted.</para>
+      @ENGLISH }}} -->
+      <para>Oppdateringer fungerer p&#229; en lignende m&#229;te.
+        Klienten bygger et midlertidig transaksjonstre som avspeiler 
+        tilstanden til arbeidskopien.
+        Depotet sammenligner deretter dette transaksjonstreet med 
+        revisjonstreet i den forespurte revisjonen (vanligvis det 
+        nyeste, eller <quote>yngste</quote> treet), og sender tilbake 
+        informasjon som forteller klienten om hvilke forandringer som er 
+        n&#248;dvendig for &#229; forandre deres arbeidskopi inn i et replikat av 
+        det aktuelle revisjonstreet.
+        Etter at oppdateringen er fullf&#248;rt, blir den midlertidige 
+        transaksjonen slettet.</para>
           
+      <!-- @ENGLISH {{{
       <para>The use of transaction trees is the only way to make
         permanent changes to a repository's versioned filesystem.
         However, it's important to understand that the lifetime of a
@@ -94,7 +183,22 @@
         transaction can be accidentally left lying around in the
         repository (not really affecting anything, but still taking up
         space).</para>
+      @ENGLISH }}} -->
+      <para>Bruken av transaksjonstr&#230;r er den eneste m&#229;ten &#229; gj&#248;re 
+        permanente forandringer til et depots versjonskontrollerte 
+        filsystem.
+        Det er imidlertid viktig &#229; forst&#229; at livl&#248;pet til en transaksjon 
+        er komplett fleksible.
+        I tilfellet med oppdateringer er transaksjoner midlertidige tr&#230;r 
+        som blir &#248;yeblikkelig &#248;delagt.
+        I tilfellet med innlegginger, blir transaksjoner transformert 
+        inn i permanente revisjoner (eller fjernet hvis innleggingen 
+        feiler).
+        I tilfelle en generell feil eller programfeil oppst&#229;r, er det 
+        mulig at en transaksjon kan bli liggende igjen i depotet (uten &#229; 
+        p&#229;virke noe som helst, men tar opp diskplass).</para>
 
+     <!-- @ENGLISH {{{
      <para>In theory, someday whole workflow applications might
         revolve around more fine-grained control of transaction
         lifetime.  It is feasible to imagine a system whereby each
@@ -104,13 +208,29 @@
         by someone else, perhaps a manager or engineering QA team, who
         can choose to promote the transaction into a revision, or
         abort it.</para>
+     @ENGLISH }}} -->
+      <para>I teorien vil kanskje <!-- &#164; -->hele 
+        arbeidsflytapplikasjoner en gang gi mer n&#248;yaktig kontroll med 
+        levetiden til en transaksjon.
+        Det er mulig &#229; tenke seg et system som ved hver transaksjon 
+        beregnet p&#229; &#229; bli en revisjon blir lagt <!-- &#164; -->p&#229; vent etter 
+        at klienten er <!-- &#164; -->ferdig med &#229; beskrive sine forandringer 
+        til depotet.
+        Dette ville muliggj&#248;re at hver ny innlegging kan bli sett over 
+        av noen andre, kanskje en manager eller <!-- &#164; -->ledende 
+        utvikler, som kan velge &#229; forfremme transaksjonen til en 
+        revisjon eller avbryte den.</para>
             
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-1.2">
+      <!-- @ENGLISH {{{
       <title>Unversioned Properties</title>
+      @ENGLISH }}} -->
+      <title>Uversjonerte egenskaper</title>
 
+      <!-- @ENGLISH {{{
       <para>Transactions and revisions in the Subversion repository
         can have properties attached to them.  These properties are
         generic key-to-value mappings, and are generally used to store
@@ -118,6 +238,14 @@
         names and values of these properties are stored in the
         repository's filesystem, along with the rest of your tree
         data.</para>
+      @ENGLISH }}} -->
+      <para>Transaksjoner og revisjoner i Subversiondepotet kan ha 
+        vedlagte egenskaper.
+        Disse egenskapene er generiske <!-- &#164; 
+        --><quote>n&#248;kkel-til-verdi</quote>-mappinger, og blir vanligvis 
+        brukt til &#229; lagre informasjon om treet som de er vedlagt.
+        Navnene og verdiene til disse egenskapene er lagret i depotets 
+        filsystem, sammen med resten av dataene for treet.</para>
 
       <para>Revision and transaction properties are useful for
         associating information with a tree that is not strictly
@@ -2818,4 +2946,5 @@ $
 local variables: 
 sgml-parent-document: ("book.xml" "chapter")
 end:
+vim: set ft=svnbook :
 -->
