@@ -24,7 +24,7 @@ while (my $s = shift) {
 	next if m{^\s*/\*} .. m{\*/\s*$};
 	last if /^\s*}\s+/;
 	$lines .= $_;
-	next unless /^$/;
+	next unless /^\s*$/;
 	(($lines = ''), next) unless $lines =~ /\s*(\w+)\s*\W+(\w+)\W+\(([^)]+)/; # only care about functions
 	($rv, $func, $args) = ($1, $2, $3);
 
