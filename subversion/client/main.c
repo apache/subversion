@@ -92,8 +92,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "propget",    FALSE,  svn_cl__propget_command,  svn_cl__propget, 1,
     "Get the value of property PROPNAME on files and directories.\n"
     "usage: propget PROPNAME [TARGETS]\n" },
-  { "pget",       TRUE,   svn_cl__propget_command,  svn_cl__propget, 1, NULL },
-  { "pg",         TRUE,   svn_cl__propget_command,  svn_cl__propget, 1, NULL },
+  { "pget",       TRUE,   0,  NULL, 1, NULL },
+  { "pg",         TRUE,   0,  NULL, 1, NULL },
 
   { "propset",    FALSE,  svn_cl__propset_command,  svn_cl__propset, 2, 
     "Set property PROPNAME to PROPVAL on the named files and directories.\n"
