@@ -44,7 +44,7 @@ my $g_PathDocDest="$g_PathMiscIn\\doc";
 my %g_FilesToCpAndConv=
     (
         'COPYING', 'subversion\SubversionLicense.txt',
-        'README', 'Readme.dist',
+        'README', 'subversion\Readme.dist',
         'doc\user\lj_article.txt', 'doc\lj_article.txt',
         'doc\programmer\WritingChangeLogs.txt', 'doc\WritingChangeLogs.txt', 
     );
@@ -175,8 +175,8 @@ sub CheckForProgs
         $bMissingProgs = 1;
         push @MissingProgs, 'Microsoft HTML Help Workshop are needed for making the HTML-help file';
       }
-
-
+    $g_Prog_hhc = "\"$g_Prog_hhc\"";
+    
     if ($bMissingProgs)
       {
         my $Msg="One or more required programs needed for making the docs are missing:\n\n";
