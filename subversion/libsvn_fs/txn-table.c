@@ -20,6 +20,9 @@
 #include "trail.h"
 
 
+static const char next_id_key[] = "next-id";
+
+
 int
 svn_fs__open_transactions_table (DB **transactions_p,
 				 DB_ENV *env,
@@ -37,7 +40,7 @@ svn_fs__open_transactions_table (DB **transactions_p,
     DBT key, value;
 
     DB_ERR (txns->put (txns, 0,
-		       svn_fs__str_to_dbt (&key, (char *) "next-id"),
+		       svn_fs__str_to_dbt (&key, (char *) next_id_key),
 		       svn_fs__str_to_dbt (&value, (char *) "0"),
 		       0));
   }
@@ -95,7 +98,7 @@ allocate_txn_id (char **id_p,
   apr_size_t next_id;
   char *next_id_str;
 
-  svn_fs__str_to_dbt (&key, (char *) "next-id");
+  svn_fs__str_to_dbt (&key, (char *) next_id_key);
 
   /* Get the current value associated with the `next-id' key in the
      transactions table.  */
@@ -228,3 +231,78 @@ svn_fs__set_txn_root (svn_fs_t *fs,
 
   return 0;
 }
+
+
+svn_error_t *svn_fs__get_txn_list (char ***names_p,
+                                   svn_fs_t *fs,
+                                   apr_pool_t *pool,
+                                   trail_t *trail)
+{
+  int const next_id_key_len = strlen (next_id_key);
+
+  DBC *cursor;
+  DBT key, value;
+  db_recno_t names_count = 0;
+  db_recno_t names_size = 4;
+  int db_err, db_c_err;
+
+  /* Allocate the initial names array */
+  *names_p = apr_pcalloc (pool, names_size * sizeof (**names_p));
+
+  /* Create a database cursor to list the transaction names. */
+  SVN_ERR (DB_WRAP (fs, "reading transaction list (opening cursor)",
+                    fs->transactions->cursor (fs->transactions, trail->db_txn,
+                                              &cursor, 0)));
+
+  /* Build a null-terminated array of keys in the transactions table. */
+  for (db_err = cursor->c_get (cursor,
+                               svn_fs__result_dbt (&key),
+                               svn_fs__nodata_dbt (&value),
+                               DB_FIRST);
+       db_err == 0;
+       db_err = cursor->c_get (cursor,
+                               svn_fs__result_dbt (&key),
+                               svn_fs__nodata_dbt (&value),
+                               DB_NEXT))
+    {
+      svn_fs__track_dbt (&key, trail->pool);
+
+      /* Ignore the "next-id" key. */
+      if (key.size == next_id_key_len
+          && 0 == memcmp (key.data, next_id_key, next_id_key_len))
+        continue;
+
+      /* Make sure there's enough space in the names array. */
+      if (names_count == names_size - 1)
+        {
+          char **tmp = apr_pcalloc (pool, 2 * names_size * sizeof (*tmp));
+          memcpy (tmp, *names_p, names_size * sizeof (*tmp));
+          *names_p = tmp;
+          names_size *= 2;
+        }
+
+      (*names_p)[names_count++] = apr_pstrndup (pool, key.data, key.size);
+    }
+
+  (*names_p)[names_count] = NULL;
+
+  /* Check for errors, but close the cursor first. */
+  db_c_err = cursor->c_close(cursor);
+  if (db_err != DB_NOTFOUND)
+    {
+      SVN_ERR (DB_WRAP (fs, "reading transaction list (listing keys)",
+                        db_err));
+    }
+  SVN_ERR (DB_WRAP (fs, "reading transaction list (closing cursor)",
+                    db_c_err));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
