@@ -852,7 +852,7 @@ static svn_error_t * thunk_open_tmp_file(apr_file_t **fp,
     swig_type_info *tinfo = _SWIG_TYPE("apr_file_t *");
 
     svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"open_tmp_file",
-			        &result, "O", callback_baton);
+			        &result, "OS", callback_baton, pool, POOLINFO);
 
     if (SWIG_ConvertPtr(result, (void *)fp, tinfo,0) < 0) {
 	croak("Unable to convert from SWIG Type");
@@ -869,11 +869,10 @@ svn_error_t *thunk_get_wc_prop (void *baton,
 				apr_pool_t *pool)
 {
     SV *result;
-    swig_type_info *tinfo = _SWIG_TYPE("apr_pool_t *");
 
     svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"get_wc_prop",
 			        &result, "OssS", baton, relpath, name,
-			       	pool, tinfo);
+			       	pool, POOLINFO);
 
     /* this is svn_string_t * typemap in */
     if (!SvOK (result) || result == &PL_sv_undef) {
