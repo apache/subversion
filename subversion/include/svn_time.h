@@ -1,5 +1,9 @@
-/*  svn_time.h: time/date utilities
- *
+/**
+ * @file svn_time.h
+ * @brief Time/date utilities
+ * @{
+ */
+/*
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
@@ -14,7 +18,6 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-
 
 #ifndef SVN_TIME_H
 #define SVN_TIME_H
@@ -31,32 +34,47 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Convert WHEN to a const char * representation allocated in POOL.
-   Use svn_time_from_cstring() for the reverse conversion. */
+/** Convert a time value to a string.
+ *
+ * Convert @a when to a <tt>const char *</tt> representation allocated
+ * in @a pool.  Use svn_time_from_cstring() for the reverse
+ * conversion.
+ */
 const char *svn_time_to_cstring (apr_time_t when, apr_pool_t *pool);
 
-/* Convert TIMESTR to an apr_time_t. */
-svn_error_t *svn_time_from_cstring(apr_time_t *when, const char *data,
-                                   apr_pool_t *pool);
+/** Convert a string to a time value.
+ *
+ * Convert @a timestr to an @c apr_time_t @a when, allocated in @a
+ * pool.
+ */
+svn_error_t *svn_time_from_cstring (apr_time_t *when, const char *data,
+                                    apr_pool_t *pool);
 
-/* Convert WHEN to a const char * representation allocated in POOL,
-   suitable for human display. */
+/** Convert a time value to a display string.
+ *
+ * Convert @a when to a <tt>const char *</tt> representation allocated
+ * in @a pool, suitable for human display.
+ */
 const char *svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool);
 
 
-/* Needed by getdate.y parser */
+/** Needed by @c getdate.y parser. */
 struct getdate_time {
   time_t time;
   short timezone;
 };
 
-/* The one interface in our getdate.y parser;  convert human-readable
-   date TEXT into a standard C time_t.  The 2nd argument is unused;
-   we always pass NULL. */
+/** Parse a date to a time value.
+ *
+ * The one interface in our @c getdate.y parser; convert
+ * human-readable date @a text into a standard C @c time_t.  The 2nd
+ * argument is unused; we always pass @c NULL.
+ */
 time_t svn_parse_date (char *text, struct getdate_time *now);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+/** @} */
 
 #endif /* SVN_TIME_H */
