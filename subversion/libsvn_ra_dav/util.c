@@ -195,14 +195,64 @@ static int end_err_element(void *userdata, const struct ne_xml_elm *elm,
   return 0;
 }
 
+
+/* A body provider for ne_set_request_body_provider that pulls data
+ * from an APR file. See ne_request.h for a description of the
+ * interface.
+ */
+static ssize_t ra_dav_body_provider (void *userdata,
+                                     char *buffer,
+                                     size_t buflen)
+{
+  apr_file_t *body_file = userdata;
+  apr_status_t status;
+
+  if (buflen == 0)
+    {
+      /* This is the beginning of a new body pull. Rewind the file. */
+      apr_off_t offset = 0;
+      status = apr_file_seek(body_file, APR_SET, &offset);
+      return (status ? -1 : 0);
+    }
+  else
+    {
+      apr_size_t nbytes = buflen;
+      status = apr_file_read(body_file, buffer, &nbytes);
+      if (status)
+        return (APR_STATUS_IS_EOF(status) ? 0 : -1);
+      else
+        return nbytes;
+    }
+}
+
+
+svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
+                                                apr_file_t *body_file)
+{
+  apr_status_t status;
+  apr_finfo_t finfo;
+
+  /* ### APR bug? apr_file_info_get won't always return the correct
+         size for buffered files. */
+  status = apr_file_flush(body_file);
+  if (!status)
+    status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
+  if (status)
+    return svn_error_create(status, NULL,
+                            "Could not calculate the request body size");
+
+  ne_set_request_body_provider(req, (size_t) finfo.size,
+                               ra_dav_body_provider, body_file);
+  return SVN_NO_ERROR;
+}
+
 
 
-
 svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         const char *method,
                                         const char *url,
                                         const char *body,
-                                        int fd,
+                                        apr_file_t *body_file,
                                         const struct ne_xml_elm *elements, 
                                         ne_xml_validate_cb validate_cb,
                                         ne_xml_startelm_cb startelm_cb, 
@@ -236,7 +286,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   if (body != NULL)
     ne_set_request_body_buffer(req, body, strlen(body));
   else
-    ne_set_request_body_fd(req, fd);
+    SVN_ERR(svn_ra_dav__set_neon_body_provider(req, body_file));
 
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", "text/xml");

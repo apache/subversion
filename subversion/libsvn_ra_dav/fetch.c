@@ -1463,7 +1463,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                       svn_time_to_cstring(timestamp, ras->pool));
 
   *revision = SVN_INVALID_REVNUM;
-  err = svn_ra_dav__parsed_request(ras, "REPORT", ras->root.path, body, -1,
+  err = svn_ra_dav__parsed_request(ras, "REPORT", ras->root.path, body, NULL,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
@@ -2334,9 +2334,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
-  int fdesc;
   svn_error_t *err;
-  apr_off_t offset = 0;
 
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
@@ -2354,25 +2352,8 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
-  /* Rewind the tmpfile. */
-  status = apr_file_seek(rb->tmpfile, APR_SET, &offset);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Couldn't rewind tmpfile.");
-    }
-  /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
-  status = svn_io_fd_from_file(&fdesc, rb->tmpfile);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Couldn't get file-descriptor of tmpfile.");
-    }
-
   err = svn_ra_dav__parsed_request(rb->ras, "REPORT", rb->ras->root.path,
-                                   NULL, fdesc,
+                                   NULL, rb->tmpfile,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
                                    NULL, rb->ras->pool);
