@@ -91,16 +91,6 @@ ch02:
 
 ch04:
 
-   - explain what it means for 'diff' and 'merge' to ignore or pay
-     attention to ancestry.
-
-   - document 'svn log -v --stop-on-copy branchURL' as the easiest way to
-     discover when a branch was created.  This is a major FAQ.
-
-   - repeated merges:  we shouldn't do repeat merge of 406:HEAD, but
-     rather 405:some-specific-HEAD number.  we need to know the head
-     number so we can write a good log message.
-
 
 ch06:
 

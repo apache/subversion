@@ -805,7 +805,66 @@ $ svn status
           <command>svn merge -r9237:9238</command> would merge
           changeset #9238 into your working copy.</para>
       </sidebar>
+      
+      <sect3 id="svn-ch-4-sect-3.2.3">
+        <title>Noticing or Ignoring Ancestry</title>
 
+        <para>When conversing with a Subversion developer, you might
+          very likely hear reference to the term
+          <firstterm>ancestry</firstterm>.  This word is used to
+          describe the relationship between two objects in a
+          repository: if they're related to each other, than one
+          object is said to be an ancestor of the other.</para>
+
+        <para>For example, suppose you commit revision 100, which
+          includes a change to a file <filename>foo.c</filename>.
+          Then <filename>foo.c@99</filename> is an
+          <quote>ancestor</quote> of <filename>foo.c@100</filename>.
+          On the other hand, suppose you commit the deletion of
+          <filename>foo.c</filename> in revision 101, and then add a
+          new file by the same name in revision 102.  In this case,
+          <filename>foo.c@99</filename> and
+          <filename>foo.c@102</filename> may appear to be related
+          (they have the same path), but in fact are completely
+          different objects in the repository.  They share no history
+          or <quote>ancestry</quote>.</para>
+
+        <para>The reason for bringing this up is to point out an
+          important difference between <command>svn diff</command> and
+          <command>svn merge</command>.  The former command ignores
+          ancestry, while the latter command is quite sensitive to it.
+          For example, if you asked <command>svn diff</command> to
+          compare revisions 99 and 102 of <filename>foo.c</filename>,
+          you would see line-based diffs; the diff command is blindly
+          comparing two paths.  But if you asked <command>svn
+          merge</command> to compare the same two objects, it would
+          notice that they're unrelated and first attempt to delete
+          the old file, then add the new file;  you would see a
+          <literal>D  foo.c</literal> followed by a <literal>A
+          foo.c</literal>.</para>
+
+        <para>Most merges involve comparing trees that are ancestrally
+          related to one another, and therefore <command>svn
+          merge</command> defaults to this behavior.  Occasionally,
+          however, you may want the merge command to compare two
+          unrelated trees.  For example, you may have imported two
+          source-code trees representing different vendor releases of
+          a software project (see <xref linkend="svn-ch-7-sect-4"/>).
+          If you asked <command>svn merge</command> to compare the two
+          trees, you'd see the entire first tree being deleted,
+          followed by an add of the entire second tree!</para>
+
+        <para>In these situations, you'll want <command>svn
+          merge</command> to do a path-based comparison only, ignoring
+          any relations between files and directories.  Add the
+          <option>--ignore-ancestry</option> option to your merge
+          command, and it will behave just like <command>svn
+          diff</command>.  (And conversely, the
+          <option>--notice-ancestry</option> option will cause
+          <command>svn diff</command> to behave like the merge
+          command.)</para>
+
+      </sect3>
 
     </sect2>
 
@@ -862,6 +921,38 @@ $ svn status
         compare revisions 341 and <literal>HEAD</literal> of your
         branch directory, and apply those differences to a working
         copy of the trunk.</para>
+
+      <tip>
+        <para>A nice way of finding the revision in which a branch was
+        created (the "base" of the branch) is to use the
+        <option>--stop-on-copy</option> option to <command>svn
+        log</command>.  The log subcommand will normally show every
+        change ever made to the branch, including tracing back through
+        the copy which created the branch.  So normally, you'll see
+        history from the trunk as well.  The
+        <option>--stop-on-copy</option> will halt log output as soon
+        as <command>svn log</command> detects that its target was
+        copied or renamed.</para>
+
+        <para>So in our continuing example,</para>
+
+<screen>
+$ svn log --verbose --stop-on-copy \
+          http://svn.example.com/repos/calc/branches/my-calc-branch
+&hellip;
+------------------------------------------------------------------------
+r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+Changed paths:
+   A /calc/branches/my-calc-branch (from /calc/trunk:340)
+
+$
+</screen>
+        
+        <para>As expected, the final revision printed by this command
+        is the revision in which <filename>my-calc-branch</filename>
+        was created by copying.</para>
+      </tip>
+
 
       <para>Here's the final merging procedure, then:</para>
 
@@ -923,14 +1014,17 @@ Merged my-calc-branch changes r341:405 into the trunk.
 </screen>
       
       <para>Aha!  Since all branch-changes that happened between
-        revisions 341 and 405 were previously merged to the trunk, you
-        now know that you want to merge only the branch changes after
-        that: revisions 406 through <literal>HEAD</literal>.</para>
+        revisions 341 and 405 were previously merged to the trunk as
+        revision 406, you now know that you want to merge only the
+        branch changes after that: by comparing revisions 406 and
+        <literal>HEAD</literal>.</para>
 
 <screen>
 $ cd calc/trunk
 $ svn update
 At revision 480.
+
+# We notice that HEAD is currently 480, so we use it to do the merge:
 
 $ svn merge -r 406:480 http://svn.example.com/repos/calc/branches/my-calc-branch
 U   integer.c
