@@ -818,12 +818,18 @@ def diff_nonextant_urls(sbox):
 
   diff_output, err_output = svntest.main.run_svn(None, 'diff', non_extant_url,
                                                  extant_url)
-  if not re.match('svn: Filesystem has no item$', err_output[0]):
+  for line in err_output:
+    if re.match('svn: Filesystem has no item$', line):
+      break
+  else:
     raise svntest.Failure
 
   diff_output, err_output = svntest.main.run_svn(None, 'diff', extant_url,
                                                  non_extant_url)
-  if not re.match('svn: Filesystem has no item$', err_output[0]):
+  for line in err_output:
+    if re.match('svn: Filesystem has no item$', line):
+      break
+  else:
     raise svntest.Failure
 
 ########################################################################
