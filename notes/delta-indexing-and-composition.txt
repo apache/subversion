@@ -1,0 +1,88 @@
+Date: Fri, 27 Jul 2001 06:11:04 +0200
+From: Branko =?ISO-8859-2?Q?=C8ibej?= <brane@xbc.nu>
+Content-Type: text/plain; charset=ISO-8859-2; format=flowed
+Subject: RFC: Delta indexing and composition
+
+Here's the "more on that later" I promised.
+
+Now that I've safely postponed the delta combiner, I'd like to share my 
+ideas for improving the deltification code in the filesystem.
+
+The scheme we have in place now works (kudos to Mike and Karl here!), 
+but wastes both time and space, and  is probably a mild disaster for 
+non-sequential access to large files or old versions. The reasons for 
+this are obvious:
+
+   1. It reads/resurrects the whole text from the beginning up to the
+      end of the interesting region
+   2. It keeps applying all the deltas from the version to the fulltext
+      every time an old version is accessed, throwing away the result.
+
+My suggested solution to these two problems is based on recognizing 
+exactly what a delta window is:
+
+    A delta window defines a contiguous region of text A. It may depend
+    on a contiguous region of text B, but is independent of any other
+    delta window in the delta representation of A.
+
+Given this definition, two things become obvious:
+
+   1. To reconstruct the region defined by window N, we only have to
+      read that window.
+   2. Different windows within a delta may depend on different source texts.
+
+The first item implies that we can solve the first problem my indexing 
+the windows within a delta, and accessing them directly. But we knew 
+that already.
+
+The second item implies that every time we reconstruct a region of text, 
+we can replace its defining delta window with a single diff from the 
+fulltext, eliminating the intermediate reconstruction steps the next 
+time this region is accessed -- thus solving the second problem.
+
+
+So, here's my proposal
+
+1) Change the delta representation to index and store delta windows 
+separately
+
+        DELTA ::= (("delta" FLAG ...) (OFFSET WINDOW) ...) ;
+       WINDOW ::= DIFF SIZE CHECKSUM [REP-KEY REP-OFFSET] ;
+       OFFSET ::= number ;
+   REP-OFFSET ::= number;
+
+
+The REP-KEY and REP-OFFSET in WINDOW are optional because, if the 
+differences between two file revisions is large enough, the diff could 
+in fact be larger than a compression-only vdelta of the text region. In 
+that case it makes more sense to compress the window than to store a diff.
+
+
+2) Change the undeltifier to use the new structure
+
+The undeltifier will stay essentially the same as it is now, except that 
+it will use OFFSET and REP-OFFSET to access the necessary bits directly. 
+The place where the delta combiner will fit stays the same, too.
+
+The major addition comes after the text is reconstructed. Using some 
+suitable heuristic -- probably based on the number of jumps from the 
+representation to the fulltext, the size of the diff from the fulltext, 
+etc. -- we can decide to: a) replace the window with a single diff from 
+the fulltext, b) replace it with a compressed version of the region, or 
+c) do nothing.
+
+
+
+The disadvantage of this proposal is, of course, more space used in the 
+repository. We can reduce the increase somewhat by compressing the 
+window index, and possibly improving the svndiff encoding. But I think 
+it's a fair price to pay, because this scheme reduces the number of disk 
+accesses, total memory use and average processing time needed to 
+reconstruct a region of text.
+
+
+
+That's it. Let's see you find holes in my proposal. :-)
+
+    Brane
+
