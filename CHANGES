@@ -1,3 +1,15 @@
+Version 0.17.1 (released ?? Jan 2003, revision ???)
+
+ User-visible changes:
+ * compatibility change: make sure old clients can talk to newest servers.
+ * some changes to the Book
+
+ Developer-visible changes:
+ * dumper/loader now use checksums (#1102)
+ * miscellaneous small code cleanups
+ * bug fixes:  eol-style timestamp changes (#1086), valgrind mem bug,
+   better checksum error reporting, 
+
 Version 0.17.0 (released 20 Jan 2003, branches/0.17 @ revision 4468)
 
  User-visible changes:
