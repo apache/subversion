@@ -26,9 +26,6 @@ General Problems (someone grab these):
    - refactor client/main.c's cmdline handling and place it into
      libsvn_subr. use the new functions within svnadmin/main.c.
 
-   - switch the copyright notices from "... 2000 ..." to "2000-2001".
-     note: tools/check-license.py is handy for this
-
    - svn_string.c::svn_string_createf(): follow the comments about
      refactoring to prevent double memory usage
 
@@ -86,9 +83,6 @@ Greg:
    - cvs2svn
    - Python bindings
      - just enough for cvs2svn
-     - the rest
-   - code up a basic hook system after Karl specs what we need
-     - just enough for M3 (prolly post-commit only)
      - the rest
    - DB_RUN_RECOVERY handling
    - pool review
