@@ -280,13 +280,18 @@ validation checks of the arguments passed. Functions which themselves
 are security boundaries should audit the input received and alarm when
 invoked with improper values. 
 
+[### todo: need some examples from Subversion here...]
+
 
 String operations
 
-Use sane string functions. When operating on strings, you must always
-use the functions provided by APR. You should never use C library calls
-such as strcat or strcpy as they do not provide bounds checking, and may 
-also blow up in a number of other circumstances.
+Use only the string functions provided in apr_strings.h.  These are
+replacements for standard C library string functions, except safer
+because they do bounds-checking and dest allocation automatically.
+Although there may be circumstances where it's theoretically safe to
+use plain C string functions (such as when you already know the
+lengths of the source and dest), please use the APR functions anyway,
+so the code is less brittle and more reviewable.
 
 
 Password storage
@@ -295,6 +300,7 @@ Help users keep their passwords secret: When the client reads or writes
 password locally, it should ensure that the file is mode 0600. If the
 file is readable by other users, the client should exit with a message
 that tells the user to change the filemode due to the risk of exposure.
+
 
 
 Document everything
@@ -307,12 +313,6 @@ every possible return value, and (if not obvious) the conditions under
 which the function could return an error.  Put the parameter names in
 upper case in the doc string, even when they are not upper case in the
 actual declaration, so that they stand out to human readers.
-
-Security boundaries should be identified in a comment prefixed by the
-word SECURITY in uppercase, followed by a description of the boundary,
-including ranges of legal values for each parameter. Specifications of
-legal input could be 'digits only, a maximum of 10', 'a-zA-Z0-9, maximum
-30 characters', and so on. 
 
 For public or semi-public API functions, the doc string should go
 above the function in the .h file where it is declared; otherwise, it
