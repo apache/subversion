@@ -565,6 +565,12 @@ def inappropriate_props(sbox):
                                            iota_path)
   if not errlines:
     return 1
+  outlines,errlines = svntest.main.run_svn('Illegal target', 'propset',
+                                           'svn:externals',
+                                           'foo http://host.com/repos',
+                                           iota_path)
+  if not errlines:
+    return 1
 
   # Status unchanged
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):

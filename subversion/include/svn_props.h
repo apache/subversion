@@ -123,9 +123,6 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  */
 #define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
 
-/* The character set of a given file. */
-#define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
-
 /* --------------------------------------------------------------------- */
 /** INVISIBLE PROPERTIES  **/
 
