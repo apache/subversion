@@ -392,11 +392,20 @@ int main(int argc, const char *const *argv)
       exit(0);
     }
 
+  status = apr_sockaddr_info_get(&sa, host, APR_UNSPEC, port, 0, pool);
+  if (status)
+    {
+      fprintf (stderr, "Can't get address info: %s\n",
+               apr_strerror(status, errbuf, sizeof(errbuf)));
+      exit(1);
+    }
+
+
 #ifdef MAX_SECS_TO_LINGER
   /* ### old APR interface */
-  status = apr_socket_create(&sock, APR_INET, SOCK_STREAM, pool);
+  status = apr_socket_create(&sock, sa->family, SOCK_STREAM, pool);
 #else
-  status = apr_socket_create(&sock, APR_INET, SOCK_STREAM, APR_PROTO_TCP,
+  status = apr_socket_create(&sock, sa->family, SOCK_STREAM, APR_PROTO_TCP,
                              pool);
 #endif
   if (status)
@@ -409,14 +418,6 @@ int main(int argc, const char *const *argv)
   /* Prevents "socket in use" errors when server is killed and quickly
    * restarted. */
   apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
-
-  status = apr_sockaddr_info_get(&sa, host, APR_INET, port, 0, pool);
-  if (status)
-    {
-      fprintf (stderr, "Can't get address info: %s\n",
-               apr_strerror(status, errbuf, sizeof(errbuf)));
-      exit(1);
-    }
 
   status = apr_socket_bind(sock, sa);
   if (status)

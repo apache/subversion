@@ -381,6 +381,12 @@ davautocheck:
 svncheck: 
 	@$(MAKE) check BASE_URL=svn://localhost
 
+# First, run:
+#   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/clients/cmdline
+
+svncheck6: 
+	@$(MAKE) check BASE_URL=svn://\[::1\]
+
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
 svnsshcheck:
