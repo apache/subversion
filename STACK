@@ -9,21 +9,33 @@ short-term tasks to it, if that's helpful.
 
 ------------------------------------------------------------------------
 
+Ben & Karl todo:
+   - make sure textual merging & conflict resolution all works
+     correctly, just as it does with properties.
+
+   - once it works, add textual tests to svn-test2.sh
+
+   - come up with a design for `svn_ra.h'
+
+   - clean up the interface in libsvn_client.  make it more canonical.
+
+   - adm_crawler.c:  take an array of paths to traverse, not a single
+     path.  if any error happens at any point, abort everything.
+
+   - ? should the update interface also have the same API as above?
+     It's not not necessary, since updates aren't atomic like commits.
+     But it might be nice for consistency...
+
+   - make a new mini-crawler (lots of shared code with adm_crawler.c)
+     which reports "version differences" to an editor.  this will be
+     used to communicate the working copy's state to the repository
+     *before* receiving an update.
+
+   - trace editor:  trace commits.
+
 Ben todo:
    - update-after-editor: isn't printing `G' for prop merges.  isn't
      printing `C' for either textual or property conflicts.  fix this.
-
-   - stupid `M' bug only shows up in certain status commands!!!
-        (garg, is this reproducible?  it might be fixed now after
-         finishing commit bugfixes.)
-        
-   - look at all calls to svn_wc__get_local_propchanges.  Notice how
-     it's always the same code preceding the call?  Perhaps we should
-     therefore put this code *inside* get_local_propchanges, and
-     change the interface to said func.
-
-   - use karl's forthcoming "magic" adm/entryname routine whereever
-     possible, once it exists.
 
 Karl todo:
    - Propagate changes down into libsvn_client.  Currently, the client
@@ -42,7 +54,7 @@ Karl todo:
    - do the generic entry/adm-path grabber abstraction, as talked
      about with Ben, change everyone around to use it (chore, whoa).
 
-Ben and Karl more later:
+Ben and Karl (longer term):
    - xml dtd, for both xml deltas and wc formats
 
 Greg:
