@@ -130,6 +130,7 @@ test_commit_txn (svn_revnum_t *new_rev,
              "commit conflicted at '%s', but expected conflict at '%s')",
              conflict, expected_conflict);
         }
+      svn_error_clear (err);
     }
   else if (err)   /* commit failed, but not due to conflict */
     {
@@ -288,14 +289,16 @@ check_no_fs_error (svn_error_t *err)
 {
   if (err && (err->apr_err != SVN_ERR_FS_NOT_OPEN))
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
+      (SVN_ERR_FS_GENERAL, err,
        "checking not opened filesystem got wrong error");
   else if (! err)
     return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
+      (SVN_ERR_FS_GENERAL, err,
        "checking not opened filesytem failed to get error");
   else
-    return SVN_NO_ERROR;
+    svn_error_clear (err);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1095,9 +1098,10 @@ txn_body_check_id (void *baton, trail_t *trail)
     {
       svn_string_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
+        (SVN_ERR_FS_GENERAL, err,
          "error looking for node revision id \"%s\"", id_str->data);
     }
+  svn_error_clear (err);
 
   return SVN_NO_ERROR;
 }
@@ -1350,6 +1354,7 @@ abort_txn (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "opening non-existent txn failed to get error");
       }
+    svn_error_clear (err);
   }
 
   /* Test that txn names are not recycled, by opening a new txn.  */
@@ -2985,6 +2990,7 @@ delete_mutables (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "deleting non-empty directory failed to get error");
       }
+    svn_error_clear (err);
 
     SVN_ERR (check_entry_present (txn_root, "A/D", "G", pool));
     SVN_ERR (check_id_present (fs, G_id, pool));
@@ -3051,6 +3057,7 @@ delete_mutables (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "deleting root directory failed to get error");
       }
+    svn_error_clear (err);
 
     SVN_ERR (check_id_present (fs, root_id, pool));
   }
@@ -3074,6 +3081,7 @@ delete_mutables (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "deleting non-empty directory failed to get error");
       }
+    svn_error_clear (err);
 
     SVN_ERR (check_entry_present (txn_root, "A", "D", pool));
     SVN_ERR (check_id_present (fs, D_id, pool));
@@ -3265,6 +3273,7 @@ delete (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "delete succeeded when expected to fail");
       }
+    svn_error_clear (err);
 
     /* Try a successful delete of a non-empty dir. */
     SVN_ERR (svn_fs_delete_tree (txn_root, "A", pool));
@@ -3385,6 +3394,7 @@ delete (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "delete succeeded when expected to fail");
       }
+    svn_error_clear (err);
 
     /* Then try a successful delete. */
     SVN_ERR (svn_fs_delete_tree (txn_root, "A", pool));
@@ -3547,6 +3557,7 @@ delete (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "delete succeeded when expected to fail");
       }
+    svn_error_clear (err);
 
     /* Then try a successful delete. */
     SVN_ERR (svn_fs_delete_tree (txn_root, "A", pool));
