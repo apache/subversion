@@ -387,6 +387,8 @@ make_reporter (void *session_baton,
                                    ignore_ancestry,
                                    editor, 
                                    edit_baton,
+                                   NULL,
+                                   NULL,
                                    pool));
   
   /* Wrap the report baton given us by the repos layer with our own

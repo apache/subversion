@@ -579,6 +579,8 @@ enum {
   ELEM_error,
 
   /* SVN elements */
+  ELEM_absent_directory,
+  ELEM_absent_file,
   ELEM_add_directory,
   ELEM_add_file,
   ELEM_baseline_relpath, 

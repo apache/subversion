@@ -171,7 +171,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
   svn_wc_adm_access_t *dir_access;
 
   /* Get both the SVN Entries and the actual on-disk entries.   Also
-     notice that we're picking up 'deleted' entries too. */
+     notice that we're picking up hidden entries too. */
   full_path = svn_path_join (svn_wc_adm_access_path (adm_access), 
                              dir_path, subpool);
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path, subpool));
@@ -235,10 +235,11 @@ report_revisions (svn_wc_adm_access_t *adm_access,
 
       /*** The Big Tests: ***/
 
-      /* If the entry is 'deleted', make sure the server knows its
-         missing... unless we're reporting everything, in which case
-         it's already missing on the server.  */
-      if (current_entry->deleted && (! report_everything))
+      /* If the entry is 'deleted' or 'absent', make sure the server
+         knows it's gone... unless we're reporting everything, in
+         which case it's already missing on the server.  */
+      if ((current_entry->deleted || current_entry->absent)
+          && (! report_everything))
         {
           SVN_ERR (reporter->delete_path (report_baton, this_path, iterpool));
           continue;

@@ -136,6 +136,8 @@ extern "C" {
                                            + (18 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_AUTHN_CATEGORY_START    (APR_OS_START_USERERR \
                                            + (19 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_AUTHZ_CATEGORY_START    (APR_OS_START_USERERR \
+                                           + (20 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -346,6 +348,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_BAD_ADM_LOG_START,
               SVN_ERR_WC_CATEGORY_START + 20,
               "Problem on first log entry in a working copy")
+
+  SVN_ERRDEF (SVN_ERR_WC_FORMAT_UPGRADE,
+              SVN_ERR_WC_CATEGORY_START + 21,
+              "Unable to upgrade working administrative format")  
 
   /* fs errors */
 
@@ -630,6 +636,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_AUTHN_CREDS_NOT_SAVED,
               SVN_ERR_AUTHN_CATEGORY_START + 3,
               "All authentication providers exhausted")
+
+  /* authorization errors */
+
+  SVN_ERRDEF (SVN_ERR_AUTHZ_ROOT_UNREADABLE,
+              SVN_ERR_AUTHZ_CATEGORY_START + 0,
+              "Read access denied for root of edit")
 
   /* svndiff errors */
 

@@ -145,7 +145,7 @@ struct entries_accumulator
   svn_xml_parser_t *parser;
 
   /* Should we include 'deleted' entries in the hash? */
-  svn_boolean_t show_deleted;
+  svn_boolean_t show_hidden;
 
   /* Don't leave home without one. */
   apr_pool_t *pool;
@@ -340,6 +340,33 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
 
+  /* Is this entry absent? */
+  {
+    const char *absentstr;
+      
+    absentstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_ABSENT, 
+                               APR_HASH_KEY_STRING);
+        
+    entry->absent = FALSE;
+    if (absentstr)
+      {
+        if (! strcmp (absentstr, "true"))
+          entry->absent = TRUE;
+        else if (! strcmp (absentstr, "false"))
+          entry->absent = FALSE;
+        else if (! strcmp (absentstr, ""))
+          entry->absent = FALSE;
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_ABSENT);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_ABSENT;
+      }
+  }
+
   /* Is this entry incomplete? */
   {
     const char *incompletestr;
@@ -488,10 +515,12 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
         
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
-     have made it into SVN_WC_ENTRY_THIS_DIR.  */
-  if (entry->deleted
+     have made it into SVN_WC_ENTRY_THIS_DIR.  (Note that technically,
+     an entry can't be both absent and scheduled for addition, but we
+     don't need a sanity check for that here.) */
+  if ((entry->deleted || entry->absent)
       && (entry->schedule != svn_wc_schedule_add)
-      && (! accum->show_deleted))
+      && (! accum->show_hidden))
     ;
   else
     apr_hash_set (accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
@@ -586,12 +615,12 @@ resolve_to_defaults (apr_hash_t *entries,
 
 
 /* Fill the entries cache in ADM_ACCESS. Either the full hash cache will
-   populated, if SHOW_DELETED is TRUE, or the truncated hash cache will be
-   populated if SHOW_DELETED is FALSE.  POOL is used for local memory
+   populated, if SHOW_HIDDEN is TRUE, or the truncated hash cache will be
+   populated if SHOW_HIDDEN is FALSE.  POOL is used for local memory
    allocation, the access baton pool is used for the cache. */
 static svn_error_t *
 read_entries (svn_wc_adm_access_t *adm_access,
-              svn_boolean_t show_deleted,
+              svn_boolean_t show_hidden,
               apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -610,7 +639,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
 
   /* Set up userData for the XML parser. */
   accum.entries = entries;
-  accum.show_deleted = show_deleted;
+  accum.show_hidden = show_hidden;
   accum.pool = svn_wc_adm_access_pool (adm_access);
 
   /* Create the XML parser */
@@ -649,7 +678,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
   /* Fill in any implied fields. */
   SVN_ERR (resolve_to_defaults (entries, svn_wc_adm_access_pool (adm_access)));
 
-  svn_wc__adm_access_set_entries (adm_access, show_deleted, entries);
+  svn_wc__adm_access_set_entries (adm_access, show_hidden, entries);
 
   return SVN_NO_ERROR;
 }
@@ -672,7 +701,7 @@ svn_error_t *
 svn_wc_entry (const svn_wc_entry_t **entry,
               const char *path,
               svn_wc_adm_access_t *adm_access,
-              svn_boolean_t show_deleted,
+              svn_boolean_t show_hidden,
               apr_pool_t *pool)
 {
   const char *entry_name;
@@ -693,7 +722,7 @@ svn_wc_entry (const svn_wc_entry_t **entry,
   if (dir_access)
     {
       apr_hash_t *entries;
-      SVN_ERR (svn_wc_entries_read (&entries, dir_access, show_deleted, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, dir_access, show_hidden, pool));
       *entry = apr_hash_get (entries, entry_name, APR_HASH_KEY_STRING);
     }
   else
@@ -810,16 +839,16 @@ check_entries (apr_hash_t *entries,
 svn_error_t *
 svn_wc_entries_read (apr_hash_t **entries,
                      svn_wc_adm_access_t *adm_access,
-                     svn_boolean_t show_deleted,
+                     svn_boolean_t show_hidden,
                      apr_pool_t *pool)
 {
   apr_hash_t *new_entries;
 
-  new_entries = svn_wc__adm_access_entries (adm_access, show_deleted, pool);
+  new_entries = svn_wc__adm_access_entries (adm_access, show_hidden, pool);
   if (! new_entries)
     {
-      SVN_ERR (read_entries (adm_access, show_deleted, pool));
-      new_entries = svn_wc__adm_access_entries (adm_access, show_deleted, pool);
+      SVN_ERR (read_entries (adm_access, show_hidden, pool));
+      new_entries = svn_wc__adm_access_entries (adm_access, show_hidden, pool);
     }
 
   *entries = new_entries;
@@ -933,6 +962,10 @@ write_entry (svn_stringbuf_t **output,
   /* Deleted state */
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
                 (entry->deleted ? "true" : NULL));
+
+  /* Absent state */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_ABSENT, APR_HASH_KEY_STRING,
+                (entry->absent ? "true" : NULL));
 
   /* Incomplete state */
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
@@ -1206,6 +1239,10 @@ fold_entry (apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_DELETED)
     cur_entry->deleted = entry->deleted;
 
+  /* Absent state */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_ABSENT)
+    cur_entry->absent = entry->absent;
+
   /* Incomplete state */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_INCOMPLETE)
     cur_entry->incomplete = entry->incomplete;
@@ -1376,6 +1413,15 @@ fold_scheduling (apr_hash_t *entries,
            "fold_state_changes: Can't replace '%s' in deleted directory"
            "--try undeleting its parent directory first",
            name);
+    }
+
+  if (entry->absent && (*schedule == svn_wc_schedule_add))
+    {
+      return svn_error_createf 
+        (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
+         "fold_state_changes: '%s' is marked as absent, "
+         "so cannot be scheduled for addition",
+         name);
     }
 
   switch (entry->schedule)
@@ -1632,12 +1678,18 @@ svn_wc__tweak_entry (apr_hash_t *entries,
     }
 
   /* As long as this function is only called as a helper to
-     svn_wc__do_update_cleanup, then it's okay to totally remove any
-     'deleted' entry.  The rationale is: if the server didn't
-     overwrite the 'deleted' entry with something new during the
-     update, then it *must* have meant for the entry to be permanently
-     gone in the parent dir's revision. */
-  if (entry->deleted)
+     svn_wc__do_update_cleanup, then it's okay to remove any entry
+     under certain circumstances:
+
+     If the entry is still marked 'deleted', then the server did not
+     re-add it.  So it's really gone in this revision, thus we remove
+     the entry.
+
+     If the entry is still marked 'absent' and yet is not the same
+     revision as new_rev, then the server did not re-add it, nor
+     re-absent it, so we can remove the entry. */
+  if ((entry->deleted)
+      || (entry->absent && (entry->revision != new_rev)))
     {
       *write_required = TRUE;
       apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
@@ -1658,7 +1710,7 @@ walker_helper (const char *dirpath,
                svn_wc_adm_access_t *adm_access,
                const svn_wc_entry_callbacks_t *walk_callbacks,
                void *walk_baton,
-               svn_boolean_t show_deleted,
+               svn_boolean_t show_hidden,
                apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -1666,7 +1718,7 @@ walker_helper (const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
 
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_hidden, pool));
   
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
@@ -1704,7 +1756,7 @@ walker_helper (const char *dirpath,
                                         subpool));
           SVN_ERR (walker_helper (entrypath, entry_access,
                                   walk_callbacks, walk_baton,
-                                  show_deleted, subpool));
+                                  show_hidden, subpool));
         }
 
       svn_pool_clear (subpool);
@@ -1721,12 +1773,12 @@ svn_wc_walk_entries (const char *path,
                      svn_wc_adm_access_t *adm_access,
                      const svn_wc_entry_callbacks_t *walk_callbacks,
                      void *walk_baton,
-                     svn_boolean_t show_deleted,
+                     svn_boolean_t show_hidden,
                      apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
   
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, show_deleted, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, show_hidden, pool));
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -1737,7 +1789,7 @@ svn_wc_walk_entries (const char *path,
 
   else if (entry->kind == svn_node_dir)
     return walker_helper (path, adm_access, walk_callbacks, walk_baton,
-                          show_deleted, pool);
+                          show_hidden, pool);
 
   else
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,

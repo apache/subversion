@@ -33,6 +33,8 @@
 #include "svn_dav.h"
 
 #include "mod_dav_svn.h"
+#include <http_request.h>
+#include <http_log.h>
 
 
 typedef struct {
@@ -94,6 +96,86 @@ typedef struct {
 
 
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
+
+
+struct authz_read_baton
+{
+  /* The original request, needed to generate a subrequest. */
+  request_rec *r;
+
+  /* We need this to construct a URI based on a repository abs path. */
+  const dav_svn_repos *repos;
+};
+
+
+/* This implements 'svn_repos_authz_read_func_t'. */
+static svn_error_t *authz_read(svn_boolean_t *allowed,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               void *baton,
+                               apr_pool_t *pool)
+{
+  struct authz_read_baton *arb = baton;
+  request_rec *subreq = NULL;
+  const char *uri;
+  svn_revnum_t rev;
+  const char *revpath;
+
+  /* Our ultimate goal here is to create a Version Resource (VR) url,
+     which is a url that represents a path within a revision.  We then
+     send a subrequest to apache, so that any installed authz modules
+     can allow/disallow the path.
+
+     ### That means that we're assuming that any installed authz
+     module is *only* paying attention to revision-paths, not paths in
+     uncommitted transactions.  Someday we need to widen our horizons. */
+
+  if (svn_fs_is_txn_root(root))
+    {
+      /* This means svn_repos_dir_delta is comparing two txn trees,
+         rather than a txn and revision.  It must be updating a
+         working copy that contains 'disjoint urls'.  
+
+         Because the 2nd transaction is likely to have all sorts of
+         paths linked in from random places, we need to find the
+         original (rev,path) of each txn path.  That's what needs
+         authorization.  */
+
+      SVN_ERR (svn_fs_copied_from (&rev, &revpath,
+                                   root, path, pool));
+      if ((! SVN_IS_VALID_REVNUM(rev))
+          || (! revpath))
+        {
+          rev = svn_fs_revision_root_revision(root);
+          revpath = path;          
+        }       
+    }
+  else
+    {
+      rev = svn_fs_revision_root_revision(root);
+      revpath = path;
+    }
+
+  /* Now we have a (rev, path) pair to authorize. */
+
+  /* Build a Version Resource uri representing (rev, path). */
+  uri = dav_svn_build_uri(arb->repos, DAV_SVN_BUILD_URI_VERSION,
+                          rev, revpath, FALSE, pool);
+  
+  /* Check if GET would work against this uri. */
+  subreq = ap_sub_req_method_uri("GET", uri,
+                                 arb->r, arb->r->output_filters);
+  
+  if (subreq && (subreq->status == HTTP_OK))
+    *allowed = TRUE;
+  else
+    *allowed = FALSE;
+  
+  if (subreq)
+    ap_destroy_sub_req(subreq);
+
+  return SVN_NO_ERROR;
+}
 
 
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
@@ -221,6 +303,42 @@ static void send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
            "<D:checked-in><D:href>%s</D:href></D:checked-in>" DEBUG_CR, 
            apr_xml_quote_string (pool, href, 1));
 }
+
+static svn_error_t * absent_helper(svn_boolean_t is_dir,
+                                   const char *path,
+                                   item_baton_t *parent,
+                                   apr_pool_t *pool)
+{
+  update_ctx_t *uc = parent->uc;
+
+  if (! uc->resource_walk)
+    {
+      const char *elt = apr_psprintf(pool,
+                                     "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
+                                     DIR_OR_FILE(is_dir),
+                                     svn_path_basename(path, pool));
+      send_xml(uc, "%s", elt);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t * upd_absent_directory(const char *path,
+                                          void *parent_baton,
+                                          apr_pool_t *pool)
+{
+  return absent_helper(TRUE, path, parent_baton, pool);
+}
+
+
+static svn_error_t * upd_absent_file(const char *path,
+                                     void *parent_baton,
+                                     apr_pool_t *pool)
+{
+  return absent_helper(FALSE, path, parent_baton, pool);
+}
+
 
 static svn_error_t * add_helper(svn_boolean_t is_dir,
                                 const char *path,
@@ -667,6 +785,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
+  struct authz_read_baton arb;
+
+  /* Construct the authz read check baton. */
+  arb.r = resource->info->r;
+  arb.repos = repos;
 
   if (resource->info->restype != DAV_SVN_RESTYPE_VCC)
     {
@@ -812,11 +935,13 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->open_directory = upd_open_directory;
   editor->change_dir_prop = upd_change_xxx_prop;
   editor->close_directory = upd_close_directory;
+  editor->absent_directory = upd_absent_directory;
   editor->add_file = upd_add_file;
   editor->open_file = upd_open_file;
   editor->apply_textdelta = upd_apply_textdelta;
   editor->change_file_prop = upd_change_xxx_prop;
   editor->close_file = upd_close_file;
+  editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
 
   /* If the client never sent a <src-path> element, it's old and
@@ -878,7 +1003,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      FALSE, /* don't send text-deltas */
                                      recurse,
                                      ignore_ancestry,
-                                     editor, &uc, resource->pool)))
+                                     editor, &uc,
+                                     authz_read, &arb,
+                                     resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "The state report gatherer could not be "
@@ -1019,6 +1146,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */
                                      editor, &uc,
+                                     authz_read,
+                                     &arb,
                                      FALSE, /* no text deltas */
                                      recurse,
                                      TRUE, /* send entryprops */

@@ -52,6 +52,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_SCHEDULE      "schedule"
 #define SVN_WC__ENTRY_ATTR_COPIED        "copied"
 #define SVN_WC__ENTRY_ATTR_DELETED       "deleted"
+#define SVN_WC__ENTRY_ATTR_ABSENT        "absent"
 #define SVN_WC__ENTRY_ATTR_COPYFROM_URL  "copyfrom-url"
 #define SVN_WC__ENTRY_ATTR_COPYFROM_REV  "copyfrom-rev"
 #define SVN_WC__ENTRY_ATTR_CONFLICT_OLD  "conflict-old" /* saved old file */
@@ -128,6 +129,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CMT_AUTHOR    0x00020000
 #define SVN_WC__ENTRY_MODIFY_UUID          0x00040000
 #define SVN_WC__ENTRY_MODIFY_INCOMPLETE    0x00080000
+#define SVN_WC__ENTRY_MODIFY_ABSENT        0x00100000
 
 
 /* ...or perhaps this to mean all of those above... */

@@ -190,6 +190,10 @@ struct dav_resource_private {
   /* for PRIVATE resources: the private resource type */
   enum dav_svn_private_restype restype;
 
+  /* The request which created this resource.  We need this to
+     generate subrequests. */
+  request_rec *r;
+
   /* ### hack to deal with the Content-Type header on a PUT */
   int is_svndiff;
 

@@ -301,8 +301,10 @@ make_dir_baton (const char *path,
 /* Helper for maybe_bump_dir_info():
 
    In a single atomic action, (1) remove any 'deleted' entries from a
-   directory, (2) remove any 'missing' dir entries, and (3) remove the
-   directory's 'incomplete' flag. */
+   directory, (2) remove any 'absent' entries whose revision numbers
+   are different from the parent's new target revision, (3) remove any
+   'missing' dir entries, and (4) remove the directory's 'incomplete'
+   flag. */
 static svn_error_t *
 complete_directory (struct edit_baton *eb,
                     const char *path,
@@ -384,7 +386,16 @@ complete_directory (struct edit_baton *eb,
       name = key;
       current_entry = val;
       
-      if (current_entry->deleted)
+      /* Any entry still marked as deleted can now be removed -- if it
+         wasn't undeleted by the update, then it shouldn't stay in the
+         updated working set.  But an absent entry might have been
+         reconfirmed as absent, and the way we can tell is by looking
+         at its revision number: a revision number different from the
+         target revision of the update means the update never
+         mentioned the item, so the entry should be removed. */
+      if ((current_entry->deleted)
+          || (current_entry->absent
+              && (current_entry->revision != eb->target_revision)))
         {
           svn_wc__entry_remove (entries, name);
         }
@@ -393,6 +404,7 @@ complete_directory (struct edit_baton *eb,
           const char *child_path = svn_path_join (path, name, subpool);
           
           if ((svn_wc__adm_missing (adm_access, child_path))
+              && (! current_entry->absent)
               && (current_entry->schedule != svn_wc_schedule_add))
             {
               svn_wc__entry_remove (entries, name);
@@ -1040,14 +1052,16 @@ add_directory (const char *path,
          Note that the parent must already be either added or opened, and
          thus it's in an 'incomplete' state just like the new dir.  */      
       tmp_entry.kind = svn_node_dir;
-      /* (Note that there may already exist a 'ghost' entry in the
-         parent with the same name, in a 'deleted' state.  If so, it's
-         fine to overwrite it... but we need to make sure we get rid
-         of the 'deleted' flag when doing so: */
+      /* Note that there may already exist a 'ghost' entry in the
+         parent with the same name, in a 'deleted' or 'absent' state.
+         If so, it's fine to overwrite it... but we need to make sure
+         we get rid of the state flag when doing so: */
       tmp_entry.deleted = FALSE;
+      tmp_entry.absent = FALSE;
       SVN_ERR (svn_wc__entry_modify (adm_access, db->name, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_KIND |
-                                     SVN_WC__ENTRY_MODIFY_DELETED,
+                                     (SVN_WC__ENTRY_MODIFY_KIND    |
+                                      SVN_WC__ENTRY_MODIFY_DELETED |
+                                      SVN_WC__ENTRY_MODIFY_ABSENT),
                                      TRUE /* immediate write */, pool));
     }
 
@@ -1309,6 +1323,79 @@ close_directory (void *dir_baton,
   return SVN_NO_ERROR;
 }
 
+
+/* Common code for 'absent_file' and 'absent_directory'. */
+static svn_error_t *
+absent_file_or_dir (const char *path,
+                    svn_node_kind_t kind,
+                    void *parent_baton,
+                    apr_pool_t *pool)
+{
+  const char *name = svn_path_basename (path, pool);
+  struct dir_baton *pb = parent_baton;
+  svn_wc_adm_access_t *adm_access;
+  apr_hash_t *entries;
+  const svn_wc_entry_t *ent;
+  svn_wc_entry_t tmp_entry;
+
+  /* Extra check: an item by this name may not exist, but there may
+     still be one scheduled for addition.  That's a genuine
+     tree-conflict.  */
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
+                                pb->path, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+  ent = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
+  if (ent && (ent->schedule == svn_wc_schedule_add))
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+       "failed to mark '%s' absent:\nitem of the same name is already "
+       "scheduled for addition", path);
+  
+  /* Immediately create an entry for the new item in the parent.  Note
+     that the parent must already be either added or opened, and thus
+     it's in an 'incomplete' state just like the new item.  */
+  tmp_entry.kind = kind;
+
+  /* Note that there may already exist a 'ghost' entry in the parent
+     with the same name, in a 'deleted' state.  If so, it's fine to
+     overwrite it... but we need to make sure we get rid of the
+     'deleted' flag when doing so: */
+  tmp_entry.deleted = FALSE;
+
+  /* Post-update processing knows to leave this entry if its revision
+     is equal to the target revision of the overall update. */
+  tmp_entry.revision = pb->edit_baton->target_revision;
+
+  /* And, of course, marking as absent is the whole point. */
+  tmp_entry.absent = TRUE;
+
+  SVN_ERR (svn_wc__entry_modify (adm_access, name, &tmp_entry,
+                                 (SVN_WC__ENTRY_MODIFY_KIND    |
+                                  SVN_WC__ENTRY_MODIFY_REVISION |
+                                  SVN_WC__ENTRY_MODIFY_DELETED |
+                                  SVN_WC__ENTRY_MODIFY_ABSENT),
+                                 TRUE /* immediate write */, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+absent_file (const char *path,
+             void *parent_baton,
+             apr_pool_t *pool)
+{
+  return absent_file_or_dir (path, svn_node_file, parent_baton, pool);
+}
+
+
+static svn_error_t *
+absent_directory (const char *path,
+                  void *parent_baton,
+                  apr_pool_t *pool)
+{
+  return absent_file_or_dir (path, svn_node_dir, parent_baton, pool);
+}
 
 
 /* Common code for add_file() and open_file(). */
@@ -1923,8 +2010,8 @@ install_file (svn_wc_notify_state_t *content_state,
     }
 
   /* Write log entry which will bump the revision number.  Also, just
-     in case we're overwriting an existing phantom 'deleted' entry, be
-     sure to remove the deleted-ness. */
+     in case we're overwriting an existing phantom 'deleted' or
+     'absent' entry, be sure to remove the hiddenness. */
   revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
   svn_xml_make_open_tag (&log_accum,
                          pool,
@@ -1937,6 +2024,8 @@ install_file (svn_wc_notify_state_t *content_state,
                          SVN_WC__ENTRY_ATTR_REVISION,
                          revision_str,
                          SVN_WC__ENTRY_ATTR_DELETED,
+                         "false",
+                         SVN_WC__ENTRY_ATTR_ABSENT,
                          "false",
                          NULL);
 
@@ -2413,11 +2502,13 @@ make_editor (svn_wc_adm_access_t *adm_access,
   tree_editor->open_directory = open_directory;
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_directory = close_directory;
+  tree_editor->absent_directory = absent_directory;
   tree_editor->add_file = add_file;
   tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;
+  tree_editor->absent_file = absent_file;
   tree_editor->close_edit = close_edit;
 
   SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,

@@ -50,9 +50,12 @@ extern "C" {
  * The change from 1 to 2 was the introduction of SVN_WC__WORK_EXT.
  * For example, ".svn/props/foo" became ".svn/props/foo.svn-work".
  *
+ * The change from 2 to 3 was the introduction of the entry attribute
+ * SVN_WC__ENTRY_ATTR_ABSENT.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       2
+#define SVN_WC__VERSION       3
 
 /* A version <= to this (but > 0, of course) uses the old-style
    property file names, without the .svn-work extension. */

@@ -731,6 +731,10 @@ typedef struct svn_wc_entry_t
   /** deleted, but parent rev lags behind */
   svn_boolean_t deleted;
 
+  /** absent -- we know an entry of this name exists, but that's all
+      (usually this happens because of authz restrictions)  */
+  svn_boolean_t absent;
+
   /** for THIS_DIR entry, implies whole entries file is incomplete */
   svn_boolean_t incomplete;
 
@@ -785,10 +789,10 @@ typedef struct svn_wc_entry_t
 
 
 /** Set @a *entry to an entry for @a path, allocated in the access baton 
- * pool.  If @a show_deleted is true, return the entry even if it's in 
- * 'deleted' state.  If @a path is not under revision control, or if entry 
- * is 'deleted', not scheduled for re-addition, and @a show_deleted is
- * @c FALSE, then set @a *entry to @c NULL.
+ * pool.  If @a show_hidden is true, return the entry even if it's in 
+ * 'deleted' or 'absent' state.  If @a path is not under revision
+ * control, or if entry is hidden, not scheduled for re-addition,
+ * and @a show_hidden is @c FALSE, then set @a *entry to @c NULL.
  *
  * @a *entry should not be modified, since doing so modifies the entries 
  * cache in @a adm_access without changing the entries file on disk.
@@ -806,7 +810,7 @@ typedef struct svn_wc_entry_t
 svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
                            const char *path,
                            svn_wc_adm_access_t *adm_access,
-                           svn_boolean_t show_deleted,
+                           svn_boolean_t show_hidden,
                            apr_pool_t *pool);
 
 
@@ -815,8 +819,9 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
  * (<tt>svn_wc_entry_t *</tt>).  Allocate @a entries, and its keys and 
  * values, in @a pool.
  *  
- * Entries that are in a 'deleted' state (and not scheduled for
- * re-addition) are not returned in the hash, unless @a show_deleted is true.
+ * Entries that are in a 'deleted' or 'absent' state (and not
+ * scheduled for re-addition) are not returned in the hash, unless
+ * @a show_hidden is true.
  *
  * Important note: the @a entries hash is the entries cache in @a adm_access 
  * and so usually the hash itself, the keys and the values should be treated 
@@ -837,7 +842,7 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
  */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
                                   svn_wc_adm_access_t *adm_access,
-                                  svn_boolean_t show_deleted,
+                                  svn_boolean_t show_hidden,
                                   apr_pool_t *pool);
 
 
@@ -897,8 +902,8 @@ typedef struct svn_wc_entry_callbacks_t
  * for @a path.
  *
  * Like our other entries interfaces, entries that are in a 'deleted'
- * state (and not scheduled for re-addition) are not discovered,
- * unless @a show_deleted is true.
+ * or 'absent' state (and not scheduled for re-addition) are not
+ * discovered, unless @a show_hidden is true.
  *
  * When a new directory is entered, @c SVN_WC_ENTRY_THIS_DIR will always
  * be returned first.
@@ -914,7 +919,7 @@ svn_error_t *svn_wc_walk_entries (const char *path,
                                   const svn_wc_entry_callbacks_t 
                                                      *walk_callbacks,
                                   void *walk_baton,
-                                  svn_boolean_t show_deleted,
+                                  svn_boolean_t show_hidden,
                                   apr_pool_t *pool);
 
 
