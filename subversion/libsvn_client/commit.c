@@ -51,20 +51,24 @@ send_file_contents (svn_string_t *path,
   apr_file_t *f = NULL;
   apr_status_t apr_err;
 
+  /* Get a subpool for our allocations. */
+  apr_pool_t *subpool = svn_pool_create (pool);
+
   /* Get an apr file for PATH. */
-  apr_err = apr_file_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&f, path->data, APR_READ, APR_OS_DEFAULT, subpool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     {
       return svn_error_createf
-        (apr_err, 0, NULL, pool, "error opening `%s' for reading", path->data);
+        (apr_err, 0, NULL, subpool, 
+         "error opening `%s' for reading", path->data);
     }
   
   /* Get a readable stream of the file's contents. */
-  contents = svn_stream_from_aprfile (f, pool);
+  contents = svn_stream_from_aprfile (f, subpool);
 
   /* Create a delta stream which converts an *empty* bytestream into the
      file's contents bytestream. */
-  svn_txdelta (&delta_stream, svn_stream_empty (pool), contents, pool);
+  svn_txdelta (&delta_stream, svn_stream_empty (subpool), contents, subpool);
 
   /* Get an editor func that wants to consume the delta stream. */
   SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
@@ -83,9 +87,11 @@ send_file_contents (svn_string_t *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     {
       return svn_error_createf
-        (apr_err, 0, NULL, pool, "error closing `%s'", path->data);
+        (apr_err, 0, NULL, subpool, "error closing `%s'", path->data);
     }
-
+  
+  /* Destroy our subpool. */
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
