@@ -701,20 +701,60 @@ log_do_committed (struct log_runner *loggy,
      we are finished handling this item.  */
   if (entry->schedule == svn_wc_schedule_delete)
     {
+      svn_revnum_t new_rev = SVN_STR_TO_REV(rev);
+
       /* If we are suppose to delete "this dir", drop a 'killme' file
          into my own adminstrative dir as a signal for svn_wc__run_log() 
          to blow away the administrative area after it is finished
          processing this logfile.  */
       if (is_this_dir)
-        return svn_wc__make_adm_thing (loggy->path, SVN_WC__ADM_KILLME,
-                                       svn_node_file, APR_OS_DEFAULT,
-                                       0, pool);
+        {
+          /* Bump the revision number of this_dir anyway, so that it
+             might be higher than its parent's revnum.  If it's
+             higher, then the process that sees KILLME and destroys
+             the directory can also place a 'deleted' dir entry in the
+             parent. */
+          svn_wc_entry_t tmpentry;
+          tmpentry.revision = new_rev;
+          tmpentry.kind = svn_node_dir;
+          SVN_ERR (svn_wc__entry_modify (loggy->path, NULL, &tmpentry,
+                                         SVN_WC__ENTRY_MODIFY_REVISION, pool));
+
+          /* Drop the 'killme' file. */
+          return svn_wc__make_adm_thing (loggy->path, SVN_WC__ADM_KILLME,
+                                         svn_node_file, APR_OS_DEFAULT,
+                                         0, pool);
+        }
 
       /* Else, we're deleting a file, and we can safely remove files
          from revision control without screwing something else up. */
       else
-        return svn_wc_remove_from_revision_control (loggy->path, sname, 
-                                                    FALSE, pool);
+        {         
+          svn_wc_entry_t *parentry, *tmpentry;
+
+          SVN_ERR (svn_wc_remove_from_revision_control (loggy->path, sname, 
+                                                        FALSE, pool));
+          
+          /* If the parent entry's working rev 'lags' behind new_rev... */
+          SVN_ERR (svn_wc_entry (&parentry, loggy->path, TRUE, pool));
+          if (new_rev > parentry->revision)
+            {
+              /* ...then the parent's revision is now officially a
+                 lie;  therefore, it must remember the file as being
+                 'deleted' for a while.  Create a new, uninteresting
+                 ghost entry:  */
+              tmpentry = apr_pcalloc (pool, sizeof(*tmpentry));
+              tmpentry->kind = svn_node_file;
+              tmpentry->deleted = TRUE;
+              tmpentry->revision = new_rev;
+              SVN_ERR (svn_wc__entry_modify (loggy->path, sname, tmpentry,
+                                             SVN_WC__ENTRY_MODIFY_REVISION
+                                             | SVN_WC__ENTRY_MODIFY_DELETED,
+                                             pool));
+            }
+
+          return SVN_NO_ERROR;
+        }
     }
 
 
@@ -1143,20 +1183,45 @@ svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool)
 
   svn_xml_free_parser (parser);
 
-  /* Remove the logfile;  its commands have been executed. */
-  SVN_ERR (svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOG, NULL));
-
   /* Check for a 'killme' file in the administrative area. */
   if (svn_wc__adm_path_exists (path, 0, pool, SVN_WC__ADM_KILLME, NULL))
     {
+      svn_stringbuf_t *this_dir;
+      svn_wc_entry_t *thisdir_entry, *parent_entry, *tmpentry;
+      SVN_ERR (svn_wc_entry (&thisdir_entry, path, FALSE, pool));
+
       /* Blow away the entire administrative dir, and all those below
          it too.  Don't remove any working files, though. */
-      svn_stringbuf_t *this_dir = 
-        svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+      this_dir = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
       SVN_ERR (svn_wc_remove_from_revision_control (path, this_dir,
                                                     FALSE, pool));
+
+      /* If revnum of this_dir is greater than parent's revnum, then
+         recreate 'deleted' entry in parent. */
+      {
+        svn_stringbuf_t *parent, *bname;
+        svn_path_split (path, &parent, &bname, pool);
+        SVN_ERR (svn_wc_entry (&parent_entry, parent, FALSE, pool));
+        
+        if (thisdir_entry->revision > parent_entry->revision)
+          {
+            tmpentry = apr_pcalloc (pool, sizeof(*tmpentry));
+            tmpentry->kind = svn_node_dir;
+            tmpentry->deleted = TRUE;
+            tmpentry->revision = thisdir_entry->revision;
+            SVN_ERR (svn_wc__entry_modify (parent, bname, tmpentry,
+                                           SVN_WC__ENTRY_MODIFY_REVISION
+                                           | SVN_WC__ENTRY_MODIFY_DELETED,
+                                           pool));            
+          }
+      }
     }
-  
+  else
+    {
+      /* No 'killme'?  Remove the logfile;  its commands have been executed. */
+      SVN_ERR (svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOG, NULL));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1229,15 +1294,6 @@ svn_wc_cleanup (svn_stringbuf_t *path,
      run, so anything left here has no hope of being useful. */
   SVN_ERR (svn_wc__adm_cleanup_tmp_area (path, pool));
 
-  /* Is there a "killme" file?  Remove this directory from revision
-     control.  If so, blow away the entire administrative dir, and all
-     those below it too.  Don't remove any working files, though. */
-  if (svn_wc__adm_path_exists (path, 0, pool, SVN_WC__ADM_KILLME, NULL))
-    SVN_ERR (svn_wc_remove_from_revision_control 
-             (path, 
-              svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool), 
-              FALSE, pool));
-  
   /* Remove the lock here, making sure that the administrative
      directory still exists after running the log! */
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
