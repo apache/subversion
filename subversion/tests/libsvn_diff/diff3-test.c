@@ -22,11 +22,12 @@
 
 #include "svn_pools.h"
 #include "svn_diff.h"
+#include "svn_io.h"
 
 
 static
 svn_error_t *
-do_diff3(apr_file_t *output_file,
+do_diff3(svn_stream_t *ostream,
          const char *original, const char *modified, const char *latest,
          svn_boolean_t *has_changes,
          apr_pool_t *pool)
@@ -37,7 +38,7 @@ do_diff3(apr_file_t *output_file,
 
   *has_changes = svn_diff_contains_diffs(diff);
 
-  SVN_ERR(svn_diff_file_output_merge(output_file, diff,
+  SVN_ERR(svn_diff_file_output_merge(ostream, diff,
                                      original, modified, latest,
                                      NULL, NULL, NULL, NULL,
                                      FALSE,
@@ -50,21 +51,21 @@ do_diff3(apr_file_t *output_file,
 int main(int argc, char *argv[])
 {
   apr_pool_t *pool;
-  apr_file_t *output_file;
+  svn_stream_t *ostream;
   int rc;
 
   apr_initialize();
 
   pool = svn_pool_create(NULL);
 
-  apr_file_open_stdout(&output_file, pool);
+  svn_stream_for_stdout(&ostream, pool);
 
   if (argc == 4)
     {
       svn_boolean_t has_changes;
       svn_error_t *svn_err;
 
-      svn_err = do_diff3(output_file, argv[2], argv[1], argv[3], &has_changes, pool);
+      svn_err = do_diff3(ostream, argv[2], argv[1], argv[3], &has_changes, pool);
       if (svn_err == NULL)
         {
           rc = has_changes ? 1 : 0;
@@ -77,7 +78,8 @@ int main(int argc, char *argv[])
     }
   else
     {
-      apr_file_printf(output_file, "Usage: %s <mine> <older> <yours>\n", argv[0]);
+      svn_stream_printf(ostream, pool,
+                        "Usage: %s <mine> <older> <yours>\n", argv[0]);
       rc = 2;
     }
 

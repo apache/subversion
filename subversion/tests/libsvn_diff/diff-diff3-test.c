@@ -144,6 +144,7 @@ three_way_merge (const char *filename1,
 {
   svn_diff_t *diff;
   apr_file_t *output;
+  svn_stream_t *ostream;
   apr_status_t status;
   svn_stringbuf_t *actual;
   char *merge_name = apr_psprintf (pool, "merge-%s-%s-%s",
@@ -159,12 +160,15 @@ three_way_merge (const char *filename1,
                           pool);
   if (status)
     return svn_error_createf (status, NULL, "failed to open '%s'", merge_name);
-  SVN_ERR (svn_diff_file_output_merge (output, diff,
+
+  ostream = svn_stream_from_aprfile (output, pool);
+  SVN_ERR (svn_diff_file_output_merge (ostream, diff,
                                        filename1, filename2, filename3,
                                        NULL, NULL, NULL, NULL,
                                        FALSE,
                                        FALSE,
                                        pool));
+  SVN_ERR (svn_stream_close (ostream));
   status = apr_file_close (output);
   if (status)
     return svn_error_createf (status, NULL, "failed to close '%s'", merge_name);
@@ -202,6 +206,7 @@ two_way_diff (const char *filename1,
 {
   svn_diff_t *diff;
   apr_file_t *output;
+  svn_stream_t *ostream;
   apr_status_t status;
   svn_stringbuf_t *actual;
   char *diff_name = apr_psprintf (pool, "diff-%s-%s", filename1, filename2);
@@ -217,10 +222,13 @@ two_way_diff (const char *filename1,
                           pool);
   if (status)
     return svn_error_createf (status, NULL, "failed to open '%s'", diff_name);
-  SVN_ERR (svn_diff_file_output_unified (output, diff,
+
+  ostream = svn_stream_from_aprfile (output, pool);
+  SVN_ERR (svn_diff_file_output_unified (ostream, diff,
                                          filename1, filename2,
                                          filename1, filename2,
                                          pool));
+  SVN_ERR (svn_stream_close (ostream));
   status = apr_file_close (output);
   if (status)
     return svn_error_createf (status, NULL, "failed to close '%s'", diff_name);

@@ -532,7 +532,7 @@ svn_diff_file_diff4(svn_diff_t **diff,
 
 typedef struct svn_diff__file_output_baton_t
 {
-  apr_file_t *output_file;
+  svn_stream_t *output_stream;
 
   const char *path[2];
   apr_file_t *file[2];
@@ -705,29 +705,34 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   /* Output the hunk header.  If the hunk length is 1, the file is a one line
      file.  In this case, surpress the number of lines in the hunk (it is
      1 implicitly) 
-     ### todo: check for error from apr_file_printf() ? */
-  apr_file_printf(baton->output_file, "@@ -%" APR_OFF_T_FMT,
-                  baton->hunk_start[0]);
+   */
+  SVN_ERR(svn_stream_printf(baton->output_stream, baton->pool,
+                            "@@ -%" APR_OFF_T_FMT,
+                            baton->hunk_start[0]));
   if (baton->hunk_length[0] != 1)
     {
-      apr_file_printf(baton->output_file, ",%" APR_OFF_T_FMT,
-                      baton->hunk_length[0]);
+      SVN_ERR(svn_stream_printf(baton->output_stream, baton->pool,
+                                ",%" APR_OFF_T_FMT,
+                                baton->hunk_length[0]));
     }
 
-  apr_file_printf(baton->output_file, " +%" APR_OFF_T_FMT,
-                  baton->hunk_start[1]);
+  SVN_ERR(svn_stream_printf(baton->output_stream, baton->pool,
+                            " +%" APR_OFF_T_FMT,
+                            baton->hunk_start[1]));
   if (baton->hunk_length[1] != 1)
     {
-      apr_file_printf(baton->output_file, ",%" APR_OFF_T_FMT,
-                      baton->hunk_length[1]);
+      SVN_ERR(svn_stream_printf(baton->output_stream, baton->pool,
+                                ",%" APR_OFF_T_FMT,
+                                baton->hunk_length[1]));
     }
 
-  apr_file_printf(baton->output_file, " @@" APR_EOL_STR);
+  SVN_ERR(svn_stream_printf(baton->output_stream, baton->pool,
+                            " @@" APR_EOL_STR));
 
   /* Output the hunk content */
   hunk_len = baton->hunk->len;
-  SVN_ERR (svn_io_file_write_full(baton->output_file, baton->hunk->data,
-                                  hunk_len, NULL, baton->pool));
+  SVN_ERR (svn_stream_write(baton->output_stream, baton->hunk->data,
+                            &hunk_len));
 
   /* Prepare for the next hunk */
   baton->hunk_length[0] = 0;
@@ -836,7 +841,7 @@ static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
 };
 
 svn_error_t *
-svn_diff_file_output_unified(apr_file_t *output_file,
+svn_diff_file_output_unified(svn_stream_t *output_stream,
                              svn_diff_t *diff,
                              const char *original_path,
                              const char *modified_path,
@@ -850,7 +855,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
   if (svn_diff_contains_diffs(diff))
     {
       memset(&baton, 0, sizeof(baton));
-      baton.output_file = output_file;
+      baton.output_stream = output_stream;
       baton.pool = pool;
       baton.path[0] = original_path;
       baton.path[1] = modified_path;
@@ -874,10 +879,10 @@ svn_diff_file_output_unified(apr_file_t *output_file,
             svn_diff__file_output_unified_default_hdr(pool, modified_path);
         }
 
-      SVN_ERR( svn_io_file_printf(output_file,
-                                  "--- %s" APR_EOL_STR
-                                  "+++ %s" APR_EOL_STR,
-                                  original_header, modified_header) );
+      SVN_ERR(svn_stream_printf(output_stream, pool,
+                                "--- %s" APR_EOL_STR
+                                "+++ %s" APR_EOL_STR,
+                                original_header, modified_header));
 
       SVN_ERR(svn_diff_output(diff, &baton,
                               &svn_diff__file_output_unified_vtable));
@@ -897,7 +902,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
 
 typedef struct svn_diff3__file_output_baton_t
 {
-  apr_file_t *output_file;
+  svn_stream_t *output_stream;
 
   const char *path[3];
 
@@ -958,8 +963,7 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   if (type != svn_diff3__file_output_skip)
     {
       len = eol - curp;
-      SVN_ERR (svn_io_file_write_full(baton->output_file, curp, len, NULL,
-                                      baton->pool));
+      SVN_ERR(svn_stream_write(baton->output_stream, curp, &len));
     }
 
   baton->curp[idx] = eol;
@@ -1051,8 +1055,8 @@ svn_diff3__file_output_conflict(void *baton,
   apr_off_t latest_start, apr_off_t latest_length,
   svn_diff_t *diff)
 {
-  apr_status_t rv;
   svn_diff3__file_output_baton_t *file_baton = baton;
+  apr_size_t len;
 
   if (diff && file_baton->display_resolved_conflicts)
     {
@@ -1060,47 +1064,52 @@ svn_diff3__file_output_conflict(void *baton,
                              &svn_diff3__file_output_vtable);
     }
 
-  rv = apr_file_puts(file_baton->conflict_modified, file_baton->output_file);
-  if (rv != APR_SUCCESS)
-    return svn_error_wrap_apr(rv, "Can't write file");
-
-  apr_file_puts(APR_EOL_STR, file_baton->output_file);
+  len = strlen(file_baton->conflict_modified);
+  SVN_ERR(svn_stream_write(file_baton->output_stream,
+                           file_baton->conflict_modified,
+                           &len));
+  len = sizeof(APR_EOL_STR) - 1;
+  SVN_ERR(svn_stream_write(file_baton->output_stream,
+                           APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
             modified_start, modified_length));
 
   if (file_baton->display_original_in_conflict)
     {
-      rv = apr_file_puts(file_baton->conflict_original, file_baton->output_file);
-      if (rv != APR_SUCCESS)
-        return svn_error_wrap_apr(rv, "Can't write file");
-
-      apr_file_puts(APR_EOL_STR, file_baton->output_file);
+      len = strlen(file_baton->conflict_original);
+      SVN_ERR(svn_stream_write(file_baton->output_stream,
+                               file_baton->conflict_original, &len));
+      len = sizeof(APR_EOL_STR) - 1;
+      SVN_ERR(svn_stream_write(file_baton->output_stream,
+                               APR_EOL_STR, &len));
 
       SVN_ERR(svn_diff3__file_output_hunk(baton, 0,
               original_start, original_length));
     }
 
-  rv = apr_file_puts(file_baton->conflict_separator, file_baton->output_file);
-  if (rv != APR_SUCCESS)
-    return svn_error_wrap_apr(rv, "Can't write file");
-
-  apr_file_puts(APR_EOL_STR, file_baton->output_file);
+  len = strlen(file_baton->conflict_separator);
+  SVN_ERR(svn_stream_write(file_baton->output_stream,
+                           file_baton->conflict_separator, &len));
+  len = sizeof(APR_EOL_STR) - 1;
+  SVN_ERR(svn_stream_write(file_baton->output_stream,
+                           APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
             latest_start, latest_length));
 
-  rv = apr_file_puts(file_baton->conflict_latest, file_baton->output_file);
-  if (rv != APR_SUCCESS)
-    return svn_error_wrap_apr(rv, "Can't write file");
-
-  apr_file_puts(APR_EOL_STR, file_baton->output_file);
+  len = strlen(file_baton->conflict_latest);
+  SVN_ERR(svn_stream_write(file_baton->output_stream,
+                           file_baton->conflict_latest, &len));
+  len = sizeof(APR_EOL_STR) - 1;
+  SVN_ERR(svn_stream_write(file_baton->output_stream,
+                           APR_EOL_STR, &len));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_diff_file_output_merge(apr_file_t *output_file,
+svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_diff_t *diff,
                            const char *original_path,
                            const char *modified_path,
@@ -1122,7 +1131,7 @@ svn_diff_file_output_merge(apr_file_t *output_file,
 #endif /* APR_HAS_MMAP */
 
   memset(&baton, 0, sizeof(baton));
-  baton.output_file = output_file;
+  baton.output_stream = output_stream;
   baton.pool = pool;
   baton.path[0] = original_path;
   baton.path[1] = modified_path;

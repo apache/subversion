@@ -269,11 +269,14 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   const char *diff_cmd = NULL;
   const char **args = NULL;
   int nargs, exitcode;
-  apr_file_t *outfile = diff_cmd_baton->outfile;
-  apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
+  svn_stream_t *os;
+  apr_file_t *errfile = diff_cmd_baton->errfile;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
+
+  /* Get a stream from our output file. */
+  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool); 
 
   /* Assemble any option args. */
   nargs = diff_cmd_baton->options->nelts;
@@ -348,32 +351,33 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   if (mt1_binary || mt2_binary)
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
-                                   "%s" APR_EOL_STR, path, equal_string));
+      SVN_ERR (svn_stream_printf (os, subpool,
+                                  "Index: %s" APR_EOL_STR
+                                  "%s" APR_EOL_STR, path, equal_string));
 
-      SVN_ERR (svn_io_file_printf
-               (outfile,
+      SVN_ERR (svn_stream_printf
+               (os, subpool,
                 "Cannot display: file marked as a binary type."
                 APR_EOL_STR));
       
       if (mt1_binary && !mt2_binary)
-        SVN_ERR (svn_io_file_printf (outfile,
-                                     "svn:mime-type = %s" APR_EOL_STR,
-                                     mimetype1));
+        SVN_ERR (svn_stream_printf (os, subpool,
+                                    "svn:mime-type = %s" APR_EOL_STR,
+                                    mimetype1));
       else if (mt2_binary && !mt1_binary)
-        SVN_ERR (svn_io_file_printf (outfile,
-                                     "svn:mime-type = %s" APR_EOL_STR,
-                                     mimetype2));
+        SVN_ERR (svn_stream_printf (os, subpool,
+                                    "svn:mime-type = %s" APR_EOL_STR,
+                                    mimetype2));
       else if (mt1_binary && mt2_binary)
         {
           if (strcmp (mimetype1, mimetype2) == 0)
-            SVN_ERR (svn_io_file_printf
-                     (outfile,
+            SVN_ERR (svn_stream_printf
+                     (os, subpool,
                       "svn:mime-type = %s" APR_EOL_STR,
                       mimetype1));
           else
-            SVN_ERR (svn_io_file_printf
-                     (outfile,
+            SVN_ERR (svn_stream_printf
+                     (os, subpool,
                       "svn:mime-type = (%s, %s)" APR_EOL_STR,
                       mimetype1, mimetype2));
         }
@@ -399,12 +403,15 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   if (diff_cmd)
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
-                                   "%s" APR_EOL_STR, path, equal_string));
+      SVN_ERR (svn_stream_printf (os, subpool,
+                                  "Index: %s" APR_EOL_STR
+                                  "%s" APR_EOL_STR, path, equal_string));
+      /* Close the stream (flush) */
+      SVN_ERR (svn_stream_close (os));
 
       SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
                                 tmpfile1, tmpfile2, 
-                                &exitcode, outfile, errfile,
+                                &exitcode, diff_cmd_baton->outfile, errfile,
                                 diff_cmd, subpool));
     }
   else   /* use libsvn_diff to generate the diff  */
@@ -436,11 +443,12 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_diff_output)
         {
           /* Print out the diff header. */
-          SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
-                                       "%s" APR_EOL_STR, path, equal_string));
+          SVN_ERR (svn_stream_printf (os, subpool,
+                                      "Index: %s" APR_EOL_STR
+                                      "%s" APR_EOL_STR, path, equal_string));
 
           /* Output the actual diff */
-          SVN_ERR (svn_diff_file_output_unified (outfile, diff,
+          SVN_ERR (svn_diff_file_output_unified (os, diff,
                                                  tmpfile1, tmpfile2,
                                                  label1, label2,
                                                  subpool));

@@ -49,6 +49,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -339,7 +340,7 @@ svn_diff_file_diff4(svn_diff_t **diff,
  * will be displayed, consisting of path and last modified time.
  */
 svn_error_t *
-svn_diff_file_output_unified(apr_file_t *output_file,
+svn_diff_file_output_unified(svn_stream_t *output_stream,
                              svn_diff_t *diff,
                              const char *original_path,
                              const char *modified_path,
@@ -361,7 +362,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
  * as desired.  Note that these options are mutually exclusive.
  */
 svn_error_t *
-svn_diff_file_output_merge(apr_file_t *output_file,
+svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_diff_t *diff,
                            const char *original_path,
                            const char *modified_path,
