@@ -291,13 +291,14 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
-
-  /* Tell the parent that one less subpool depends on its own pool. */
-  SVN_ERR (decrement_dir_ref_count (fb->parent));
+  struct dir_baton *parent_baton = fb->parent;
 
   /* Destroy all memory used by this baton, including the baton
      itself! */
   apr_pool_destroy (fb->subpool);
+
+  /* Tell the parent that one less subpool depends on its own pool. */
+  SVN_ERR (decrement_dir_ref_count (parent_baton));
 
   return SVN_NO_ERROR;
 }
