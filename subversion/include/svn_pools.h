@@ -57,6 +57,7 @@ extern "C" {
  *    TTTTTTTTTT is the total allocation of that pool tree at the time
  *    0xHHHHHHHH is the address of the pool
  *    0xPPPPPPPP is the address of the pool's parent pool
+ *    FILE and LINE are the source code path/line number
  */
 /*
 #define SVN_POOL_DEBUG 
