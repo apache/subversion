@@ -163,10 +163,14 @@ make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
    elements we care about looks like:
   
         dir -> prop_delta
-            -> tree_delta -> {add/replace -> file} -> prop_delta
+            -> tree_delta -> add/replace -> file -> prop_delta
 
-   (We cannot be in an add/replace element at the end of a call, so
-   add/replace and file are treated as a unit by this function.)
+   We cannot be in an add/replace element at the end of a call, so
+   add/replace and file are treated as a unit by this function.  Note
+   that although there is no replace or dir element corresponding to
+   the root directory (the root directory's tree-delta and/or
+   prop-delta elements live directly inside the delta-pkg element), we
+   pretend that there is for the sake of regularity.
 
    This function will "unwind" arbitrarily within that little tree,
    but will only "wind" from dir to tree_delta or prop_delta or from
