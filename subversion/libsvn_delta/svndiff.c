@@ -405,6 +405,7 @@ write_handler (void *baton,
         return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
                                  "svndiff has invalid header");
       *len -= nheader;
+      buffer += nheader;
       db->header_bytes += nheader;
     }
 
