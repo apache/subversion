@@ -323,6 +323,9 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
           get its version into *VERSION,
           get its file/dir kind into *KIND,
           and return all other xml attributes in **HASH.
+
+   If any of the return-by-reference arguments is NULL, that argument
+   will simply not be used.
 */
 svn_error_t *svn_wc__entry_get (svn_string_t *path,
                                 svn_string_t *entryname, 
