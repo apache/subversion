@@ -254,6 +254,9 @@ svn_wc_process_committed (svn_stringbuf_t *path,
       SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
                                       (APR_WRITE|APR_APPEND|APR_CREATE),
                                       pool));
+
+      /* Oh, and recursing at this point isn't really sensible. */
+      recurse = FALSE;
     }
   else
     {

@@ -729,6 +729,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           svn_boolean_t recurse = FALSE;
           
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
+              && (item->entry->kind == svn_node_dir)
               && (item->entry->copyfrom_url))
             recurse = TRUE;
 
