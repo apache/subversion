@@ -279,9 +279,12 @@ def copy_repos(src_path, dst_path, head_revision):
   # require access to the BDB tools, and this doesn't.  Print a fake
   # pipe command so that the displayed CMDs can be run by hand
   create_repos(dst_path)
-  print 'CMD:', os.path.basename(svnadmin_binary) + ' dump "' + src_path + '" | ' + os.path.basename(svnadmin_binary) + ' load "' + dst_path + '"'
-  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + ' dump ' + src_path)
-  load_in, load_out, load_err = os.popen3(svnadmin_binary + ' load ' + dst_path)
+  dump_args = ' dump "' + src_path + '"'
+  load_args = ' load "' + dst_path + '"'
+  print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+        '|', os.path.basename(svnadmin_binary) + load_args
+  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
+  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
 
   while 1:
     data = dump_out.read(1024*1024)  # Arbitrary buffer size
@@ -297,31 +300,32 @@ def copy_repos(src_path, dst_path, head_revision):
   dump_err.close()
   load_out.close()
   load_err.close()
- 
-  dump_re = re.compile('\* Dumped revision (\d+)\.\n')
+
+  dump_re = re.compile(r'^\* Dumped revision (\d+)\.$')
   expect_revision = 0
   for dump_line in dump_lines:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      print 'Dump failed!  Line: ' + dump_line
+      print 'ERROR:  dump failed:', dump_line,
       return 1
     expect_revision += 1
   if expect_revision != head_revision + 1:
-    print 'Dump failed!  Did not see revision ' + str(head_revision)
+    print 'ERROR:  dump failed; did not see revision', head_revision
     return 1
 
-  load_re = re.compile('------- Committed new rev (\d+) \(loaded from original rev (\d+)\) >>>\n') 
+  load_re = re.compile(r'^------- Committed new rev (\d+)' +
+                       r' \(loaded from original rev (\d+)\) >>>$')
   expect_revision = 1
   for load_line in load_lines:
     match = load_re.match(load_line)
     if match:
       if (match.group(1) != str(expect_revision)
           or match.group(2) != str(expect_revision)):
-        print 'Load failed!  Line: ' + load_line
+        print 'ERROR:  load failed:', load_line,
         return 1
       expect_revision += 1
   if expect_revision != head_revision + 1:
-    print 'Load failed!  Did not see revision ' + str(head_revision)
+    print 'ERROR:  load failed; did not see revision', head_revision
     return 1
 
 def set_repos_paths(repo_dir):
