@@ -213,7 +213,7 @@ typedef struct svn_diff_output_fns_t
   /**
    * If doing a two-way diff, then an *conflicting* data range was found
    * between the "original" and "modified" datasources.  Specifically,
-   * the conflict starts at @a original_start and foes for @a original_length
+   * the conflict starts at @a original_start and goes for @a original_length
    * tokens in the original data, and at @a modified_start for 
    * @a modified_length tokens in the modified data.
    *
