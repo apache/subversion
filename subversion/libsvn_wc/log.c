@@ -214,7 +214,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   svn_error_t *err;
   apr_status_t apr_err;
   svn_xml_parser_t *parser;
-  struct log_runner *loggy = apr_palloc (pool, sizeof (*loggy));
+  struct log_runner *loggy = apr_pcalloc (pool, sizeof (*loggy));
   char buf[BUFSIZ];
   apr_ssize_t buf_len;
   apr_file_t *f = NULL;

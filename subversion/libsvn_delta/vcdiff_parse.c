@@ -96,7 +96,7 @@ svn_make_vcdiff_parser (svn_txdelta_window_handler_t *handler,
   /* Allocate a vcdiff_parser and fill out its fields */
   svn_vcdiff_parser_t *new_vcdiff_parser = 
     (svn_vcdiff_parser_t *)
-    apr_palloc (pool, sizeof(svn_vcdiff_parser_t));
+    apr_pcalloc (pool, sizeof(svn_vcdiff_parser_t));
 
   new_vcdiff_parser->consumer_func = handler;
   new_vcdiff_parser->consumer_baton = handler_baton;

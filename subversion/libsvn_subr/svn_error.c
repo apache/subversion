@@ -92,7 +92,7 @@ make_error_internal (apr_status_t apr_err,
   assert (newpool != NULL);
 
   /* Create the new error structure */
-  new_error = (svn_error_t *) apr_palloc (newpool, sizeof (svn_error_t));
+  new_error = (svn_error_t *) apr_pcalloc (newpool, sizeof (svn_error_t));
 
   /* Copy the message to permanent storage. */
   if (ap)
