@@ -292,8 +292,6 @@ svn_ra_local__do_update (void *session_baton,
                          const svn_delta_edit_fns_t *update_editor,
                          void *update_baton)
 {
-  svn_delta_edit_fns_t *pipe_editor;
-  struct svn_pipe_edit_baton *pipe_edit_baton;
   svn_revnum_t revnum_to_update_to;
   svn_stringbuf_t *switch_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
@@ -313,18 +311,6 @@ svn_ra_local__do_update (void *session_baton,
   else
     revnum_to_update_to = update_revision;
 
-  /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
-     'entry' properties into the stream, whenever {open_root,
-     open_file, open_dir, add_file, add_dir} are called.  */
-  SVN_ERR (svn_ra_local__get_update_pipe_editor 
-           (&pipe_editor,
-            &pipe_edit_baton,
-            update_editor,
-            update_baton,
-            sbaton,
-            svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool),
-            sbaton->pool));
-
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
@@ -338,7 +324,7 @@ svn_ra_local__do_update (void *session_baton,
                                  switch_path->data,
                                  TRUE, /* send text-deltas */
                                  recurse,
-                                 pipe_editor, pipe_edit_baton,
+                                 update_editor, update_baton,
                                  sbaton->pool);
 }
 
@@ -354,12 +340,9 @@ svn_ra_local__do_switch (void *session_baton,
                          const svn_delta_edit_fns_t *update_editor,
                          void *update_baton)
 {
-  svn_delta_edit_fns_t *pipe_editor;
-  struct svn_pipe_edit_baton *pipe_edit_baton;
   svn_revnum_t revnum_to_update_to;
   const svn_string_t *switch_repos_path, *switch_fs_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
-  svn_stringbuf_t *pipe_anchor;
 
   /* ### fix the update_target param at some point */
   const char *target;
@@ -384,40 +367,6 @@ svn_ra_local__do_switch (void *session_baton,
   else
     revnum_to_update_to = update_revision;
 
-  /* Make sure the pipe editor is anchored in the same way as the
-     update editor. */
-
-  /* Assume that we should anchor the pipe editor on the switch path
-     directly.  This is normal when switching a directory, since
-     tgt-anchor is the directory itself, and tgt-target is NULL. */
-  pipe_anchor = svn_stringbuf_create_from_string (switch_fs_path, 
-                                                  sbaton->pool);
-  if (update_target)
-    {
-      /* If the target is defined, then we must be switching a file.
-         
-         The pipe editor needs to be anchored on the target's parent
-         directory.  But here's the catch: the pipe-editor is going to
-         receive open_file(src-basename), because there's no
-         delete/add happening.  Somehow the pipe-editor needs to fetch
-         the CR from *tgt*-basename.  So we stash it in the
-         pipe-editor's own baton. ### do this.
-       */
-      svn_path_remove_component (pipe_anchor);
-    }  
-
-  /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
-     'entry' properties into the stream, whenever {open_root,
-     open_file, open_dir, add_file, add_dir} are called.  */
-  SVN_ERR (svn_ra_local__get_update_pipe_editor 
-           (&pipe_editor,
-            &pipe_edit_baton,
-            update_editor,
-            update_baton,
-            sbaton,
-            pipe_anchor,
-            sbaton->pool));
-
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
@@ -431,7 +380,7 @@ svn_ra_local__do_switch (void *session_baton,
                                  switch_fs_path->data,
                                  TRUE, /* we want text-deltas */
                                  recurse,
-                                 pipe_editor, pipe_edit_baton,
+                                 update_editor, update_baton,
                                  sbaton->pool);
 }
 

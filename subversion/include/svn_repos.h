@@ -210,6 +210,10 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
    If TEXT_DELTAS is FALSE, only a single NULL txdelta window will be
    sent to the window handler returned by EDITOR->apply_textdelta().
 
+   If ENTRY_PROPS is TRUE, each open/added entry will be accompanied
+   by propchange editor calls that relay special "entry props" (this
+   is typically used only for working copy updates).
+
    USE_COPYFROM_ARGS determines whether or not the editor's add_file
    and add_directory functions will be called with copyfrom_*
    arguments.  That is to say, if a node that needs to be added can be
@@ -237,6 +241,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      void *edit_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
+                     svn_boolean_t entry_props,
                      svn_boolean_t use_copyfrom_args,
                      apr_pool_t *pool);
 

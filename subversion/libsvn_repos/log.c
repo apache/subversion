@@ -209,7 +209,7 @@ svn_repos_get_logs (svn_repos_t *repos,
           SVN_ERR (svn_repos_dir_delta (oldroot, "", NULL, NULL,
                                         newroot, "",
                                         editor, edit_baton,
-                                        FALSE, TRUE, FALSE, subpool));
+                                        FALSE, TRUE, FALSE, FALSE, subpool));
           detect_changed (changed_paths,
                           svn_repos_node_from_baton (edit_baton),
                           svn_stringbuf_create ("/", subpool),

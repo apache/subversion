@@ -47,6 +47,7 @@ struct context {
   svn_fs_root_t *target_root;
   svn_boolean_t text_deltas;
   svn_boolean_t recurse;
+  svn_boolean_t entry_props;
   svn_boolean_t use_copyfrom_args;
   int target_is_rev;
 };
@@ -172,6 +173,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      void *edit_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
+                     svn_boolean_t entry_props,
                      svn_boolean_t use_copyfrom_args,
                      apr_pool_t *pool)
 {
@@ -239,8 +241,9 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.source_rev_diffs = src_revs;
   c.target_root = tgt_root;
   c.target_is_rev = svn_fs_is_revision_root (tgt_root);
-  c.recurse = recurse;
   c.text_deltas = text_deltas;
+  c.recurse = recurse;
+  c.entry_props = entry_props;
 
 #if SVN_REPOS_SUPPORT_COPY_FROM_ARGS
   c.use_copyfrom_args = use_copyfrom_args;
@@ -465,6 +468,41 @@ delta_proplists (struct context *c,
 
   /* Make a subpool for local allocations. */ 
   subpool = svn_pool_create (pool);
+
+  /* If we're supposed to send entry props for all non-deleted items,
+     here we go! */
+  if (target_path && c->entry_props)
+    {
+      svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+      svn_string_t *cr_str = NULL;
+      svn_string_t *committed_date = NULL;
+      svn_string_t *last_author = NULL;
+      
+      /* Get the CR and two derivative props. ### check for error returns. */
+      svn_fs_node_created_rev (&committed_rev, c->target_root, 
+                               target_path, subpool);
+      if (SVN_IS_VALID_REVNUM (committed_rev))
+        {
+          svn_fs_t *fs = svn_fs_root_fs (c->target_root);
+
+          /* Transmit the committed-rev. */
+          cr_str = svn_string_createf (subpool, "%ld", committed_rev);
+          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_REV, 
+                              cr_str, subpool));
+
+          /* Transmit the committed-date. */
+          svn_fs_revision_prop (&committed_date, fs,
+                                committed_rev, SVN_PROP_REVISION_DATE, pool);
+          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
+                              committed_date, subpool));
+
+          /* Transmit the last-author. */
+          svn_fs_revision_prop (&last_author, fs,
+                                committed_rev, SVN_PROP_REVISION_AUTHOR, pool);
+          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
+                              last_author, subpool));
+        }
+    }
 
   if (source_path && target_path)
     {
