@@ -390,12 +390,12 @@ init_contents_thing (svn_string_t *path,
     locations, and could be moved to adm_ops.c or some other place.
     But wait on that for a bit. **/
 
-/* Set up a new adm area, with appropriate ancestry. */
+/* Set up a new adm area, with appropriate ancestry. 
+   The adm area starts out locked; remember to unlock it when done. */
 static svn_error_t *
 init_adm (svn_string_t *path,
           svn_string_t *repository,
           svn_vernum_t version,
-          const char *initial_unwind,
           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -504,14 +504,11 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* Leave a note about what we're doing here, if anything, so there's
-     no point when the dir appears both complete and up-to-date. */
-  if (initial_unwind)
-    {
-      err = svn_wc__push_unwind (path, initial_unwind, NULL, pool);
-      if (err)
-        return err;
-    }
+  /* Lock the dir before completing it, so there's not even a
+     nanosecond when someone thinks it's unlocked. */
+  err = svn_wc__lock (path, 0, pool);
+  if (err)
+    return err;
 
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
@@ -547,41 +544,19 @@ svn_error_t *
 svn_wc__ensure_adm (svn_string_t *path,
                     svn_string_t *repository,
                     svn_vernum_t version,
-                    const char *initial_unwind,
+                    int *exists_already,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
-  int exists = 0;
 
-  err = check_adm_exists (&exists, path, pool);
+  err = check_adm_exists (exists_already, path, pool);
   if (err)
     return err;
 
-  if (! exists)
+  if (! *exists_already)
     {
-      /* kff todo: modify call chain to pass ancestry/version down. */
-      err = init_adm (path, repository, version, initial_unwind, pool);
-      if (err)
-        return err;
-    }
-  else if (initial_unwind)
-    {
-      /* Already exists, so just lock iff about to do something */
-
-      /* kff todo: again, overloading the initial_unwind argument a
-       * bit.  But is there ever a time when we'd want to unlock
-       * despite having an initial_unwind, or lock when not having
-       * initial_unwind?  I think not... 
-       * 
-       * Note that the `unwind' file can't just be our lockfile.  We
-       * will often need to lock first before generating an unwind
-       * stack.
-       */
-      err = svn_wc__lock (path, 0, pool);
-      if (err)
-        return err;
-
-      err = svn_wc__push_unwind (path, initial_unwind, NULL, pool);
+      /* kff todo: modify call chain to pass ancestry down? */
+      err = init_adm (path, repository, version, pool);
       if (err)
         return err;
     }
