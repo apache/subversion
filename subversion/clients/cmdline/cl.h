@@ -138,6 +138,7 @@ typedef struct
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,
+  svn_cl__blame,
   svn_cl__checkout,
   svn_cl__cleanup,
   svn_cl__commit,

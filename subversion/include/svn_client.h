@@ -358,6 +358,22 @@ typedef svn_error_t *
                                 void *baton,
                                 apr_pool_t *pool);
 
+/** Callback type used by svn_client_blame() to notify the caller
+ * that line @a line_no of the blamed file was last changed in
+ * @a revision by @a author on @a date, and that the contents were
+ * @a line.
+ *  
+ * All allocations should be performed in @a pool.
+ */
+typedef svn_error_t *
+(*svn_client_blame_receiver_t) (void *baton,
+                                apr_off_t line_no,
+                                svn_revnum_t revision,
+                                const char *author,
+                                const char *date,
+                                const char *line,
+                                apr_pool_t *pool);
+
 
 /** A client context structure, which holds client specific callbacks, 
  * batons, serves as a cache for configuration options, and other various 
@@ -731,6 +747,27 @@ svn_client_log (const apr_array_header_t *targets,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
+/** Invoke @a receiver with @a receiver_baton on each line-blame item
+ * associated with revision @a end of @a target, using @a start as the
+ * default source of all blame. 
+ *
+ * If @a strict_node_history is set, copy history (if any exists) will
+ * not be traversed while harvesting revision logs for each target.
+ *
+ * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
+ * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * Use @a pool for any temporary allocation.
+ */
+svn_error_t *
+svn_client_blame (const char *target,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  svn_boolean_t strict_node_history,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 /** Produce diff output which describes the delta between
  * @a path1/@a revision1 and @a path2/@a revision2.  Print the output 
