@@ -301,15 +301,6 @@ dir_deltas (const char **msg,
     {
       for (j = 0; j < revision_count; j++)
         {
-          svn_revnum_t *revision;
-          apr_hash_t *rev_diffs;
-
-          /* Initialize our source revisions hash. */
-          rev_diffs = apr_hash_make (subpool);
-          revision = apr_pcalloc (subpool, sizeof (svn_revnum_t));
-          *revision = i;
-          apr_hash_set (rev_diffs, "", APR_HASH_KEY_STRING, revision);
-
           /* Prepare a txn that will receive the changes from
              svn_repos_dir_delta */
           SVN_ERR (svn_fs_begin_txn (&txn, fs, i, subpool));
@@ -328,7 +319,6 @@ dir_deltas (const char **msg,
           SVN_ERR (svn_repos_dir_delta (txn_root,
                                         "",
                                         NULL,
-                                        rev_diffs,
                                         revision_root,
                                         "",
                                         editor,

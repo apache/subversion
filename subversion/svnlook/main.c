@@ -128,12 +128,8 @@ generate_delta_tree (svn_repos_node_t **tree,
   svn_fs_root_t *base_root;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  apr_hash_t *src_revs = apr_hash_make (pool);
   apr_pool_t *edit_pool = svn_pool_create (pool);
   svn_fs_t *fs = svn_repos_fs (repos);
-
-  /* Get the current root. */
-  apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev);
 
   /* Get the base root. */
   SVN_ERR (svn_fs_revision_root (&base_root, fs, base_rev, pool));
@@ -143,7 +139,7 @@ generate_delta_tree (svn_repos_node_t **tree,
                                   base_root, root, pool, edit_pool));
   
   /* Drive our editor. */
-  SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, src_revs, root, "",
+  SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, root, "",
                                 editor, edit_baton, FALSE, TRUE, FALSE, TRUE,
                                 edit_pool));
 
