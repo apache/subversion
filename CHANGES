@@ -1,14 +1,36 @@
-Version 0.32.0 (released 21 October 2003, revision ????)
+Version 0.32.0 (released ?? October 2003, revision ????)
 http://svn.collab.net/repos/svn/tags/0.32.0
 
  NOTICE: This release of Subversion causes an ra_dav client/server
          compatibility break with Subversions older than 0.28.0.
 
  User-visible changes:
- * [in progress]
+ * new 'svn blame' subcommand. (r7389, 7438, #508)
+ * fix huge ra_dav 'svn import' memory leak. (r7381)
+ * other bugfixes: proper line endings in diff headers (r7450, #1533),
+   stop auto-props from removing all whitespace (r7358), 'svn st' UI
+   consistency fix (r7364), various 'svn switch' fixes (r7366),
+   mini-manpages for svnadmin, svnserve, svnversion (r7421), remove
+   'P' field from 'svn ls -v' (r7432), 'svn merge' double-notification
+   bug (r7447), prevent 'svn:externals' infinite loop (r7459), 'svn
+   merge' segfault (r7458).
 
  Developer-visible changes:
- * [in progress]
+ * 'svn diff' is now reasonably streamy. (r7393, 7439, #1481)
+ * fix many ra_dav pool abuses. (r7370-3, 7380, 7368, 7400, ...)
+ * fix mini leaks:  clear unused svn_error_t's. (r7378-9, 7405, 7408, 7429)
+ * tons of code, doc, API cleanup. (from julianfoad!)
+ * new RA->get_repos_root() API. (r7428)
+ * swig/python, swig/perl and native JNI updates and improvements.
+ * more work on build depenedency generator. (r7412-8)
+ * svn_repos_finish_report() now aborts txns on error. (r7424)
+ * remove crufty old ra_dav compatibility code (r7466, 7468)
+ * other changes: new SVN_DEBUG_ERROR tool macro, new 'davautocheck'
+   and 'contrib' makefile targets, new --enable-gprof configure option
+   (r7437), new scramble-tree.py testing tool, auth provider
+   reorganization, make RA->get_dir fetch props correctly over ra_dav
+   (r7431), notice permission error when creating unique tmpfile (r7434).
+
 
 Version 0.31.0 (released 08 October 2003, revision 7355)
 http://svn.collab.net/repos/svn/tags/0.31.0
