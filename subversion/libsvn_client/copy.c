@@ -202,6 +202,11 @@ path_driver_cb_func (void **dir_baton,
   /* Initialize return value. */
   *dir_baton = NULL;
 
+  /* This function should never get an empty PATH.  We can neither
+     create nor delete the empty PATH, so if someone is calling us
+     with such, the code is just plain wrong. */
+  assert (! svn_path_is_empty (path));
+
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
   if (cb_baton->resurrection)
@@ -314,25 +319,30 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   else
     dst_rel = "";
 
+  /* We can't move something into itself, period. */
+  if (svn_path_is_empty (src_rel) && is_move)
+    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                              "cannot move URL '%s' into itself", src_url);
+
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   err = svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool);
 
   /* If the two URLs appear not to be in the same repository, then
-   * top_url will be empty and the call to svn_ra_get_ra_library()
-   * above will have failed.  Below we check for that, and propagate a
-   * descriptive error back to the user.
-   *
-   * Ideally, we'd contact the repositories and compare their UUIDs to
-   * determine whether or not src and dst are in the same repository,
-   * instead of depending on an essentially textual comparison.
-   * However, it is simpler to assume that if someone is using the
-   * same repository, then they will use the same hostname/path to
-   * refer to it both times.  Conversely, if the repositories are
-   * different, then they can't share a non-empty prefix, so top_url
-   * would still be "" and svn_ra_get_library() would still error.
-   * Thus we can get this check without extra network turnarounds to
-   * fetch the UUIDs.
+     top_url will be empty and the call to svn_ra_get_ra_library()
+     above will have failed.  Below we check for that, and propagate a
+     descriptive error back to the user.
+   
+     Ideally, we'd contact the repositories and compare their UUIDs to
+     determine whether or not src and dst are in the same repository,
+     instead of depending on an essentially textual comparison.
+     However, it is simpler to assume that if someone is using the
+     same repository, then they will use the same hostname/path to
+     refer to it both times.  Conversely, if the repositories are
+     different, then they can't share a non-empty prefix, so top_url
+     would still be "" and svn_ra_get_library() would still error.
+     Thus we can get this check without extra network turnarounds to
+     fetch the UUIDs.
    */
   if (err)
     {
@@ -1058,11 +1068,12 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
-    SVN_ERR (wc_to_wc_copy (src_path, dst_path,
-                            is_move, force,
-                            ctx,
-                            pool));
-
+    {
+      SVN_ERR (wc_to_wc_copy (src_path, dst_path,
+                              is_move, force,
+                              ctx,
+                              pool));
+    }
   else if ((! src_is_url) && (dst_is_url))
     {
       SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
