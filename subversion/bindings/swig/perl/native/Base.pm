@@ -70,7 +70,7 @@ bootstrap SVN::_$pkg;
 	my $name = $_;
 	next unless s/^$prefix//i;
     foreach my $ignored_symbol (@ignore) {
-        next SYMBOL if ("$prefix$ignored_symbol" eq $name);
+        next SYMBOL if ($name =~ /^(?i:$prefix)$ignored_symbol$/);
     }
 
 	# insert the accessor
