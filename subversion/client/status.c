@@ -75,11 +75,11 @@ svn_cl__print_status (apr_hash_t *statushash)
       apr_size_t keylen;
       void *value;
       const char *path;
-      svn_wc__status_t *status;
+      svn_wc_status_t *status;
       
       apr_hash_this (hi, &key, &keylen, &value);
       path = (const char *) key;
-      status = (svn_wc__status_t *) value;
+      status = (svn_wc_status_t *) value;
 
       switch (status->flag)
         {
@@ -95,6 +95,9 @@ svn_cl__print_status (apr_hash_t *statushash)
         case svn_wc_status_modified:
           statuschar = 'M';
           break;
+        case svn_wc_status_merged:
+          statuschar = 'G';
+          break;
         case svn_wc_status_conflicted:
           statuschar = 'C';
         default:
@@ -102,14 +105,18 @@ svn_cl__print_status (apr_hash_t *statushash)
           break;
         }
       
-      if (status->local_ver == SVN_INVALID_VERNUM)
-        printf ("%c  none    (r%6.0ld)   %s\n",
+      if ((status->local_ver == SVN_INVALID_VERNUM)
+          && (status->repos_ver == SVN_INVALID_VERNUM))
+        printf ("%c  none     ( none )   %s\n",
+                statuschar, path);
+      else if (status->local_ver == SVN_INVALID_VERNUM)
+        printf ("%c  none     (%6ld)   %s\n",
                 statuschar, status->repos_ver, path);
       else if (status->repos_ver == SVN_INVALID_VERNUM)
-        printf ("%c  %-6.0ld  (r  none)  %s\n",
+        printf ("%c  %-6ld  ( none )  %s\n",
                 statuschar, status->local_ver, path);
       else
-        printf ("%c  %-6.0ld  (r%6.0ld)  %s\n",
+        printf ("%c  %-6ld  (%6ld)  %s\n",
                 statuschar, status->local_ver, status->repos_ver, path);
     }
 }
