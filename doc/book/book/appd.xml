@@ -52,10 +52,10 @@
         <varlistentry>
           <term>New write methods</term>
           <listitem>
-            <para>Beyond the standard HTTP <command>PUT</command>
+            <para>Beyond the standard HTTP <literal>PUT</literal>
             method (which creates or overwrites a web resource),
-            WebDAV defines new <command>COPY</command> and
-            <command>MOVE</command> methods for duplicating or
+            WebDAV defines new <literal>COPY</literal> and
+            <literal>MOVE</literal> methods for duplicating or
             rearranging resources.</para>
           </listitem>
         </varlistentry>
@@ -68,8 +68,8 @@
               <quote>directory</quote>.  You can tell something is a
               collection if it ends with a trailing <quote>/</quote>.
               Whereas file resources can be written or created with a
-              <command>PUT</command> method, collection resources are
-              created with the new <command>MKCOL</command>
+              <literal>PUT</literal> method, collection resources are
+              created with the new <literal>MKCOL</literal>
               method.</para>
           </listitem>
         </varlistentry>
@@ -81,8 +81,8 @@
               Subversion&mdash;metadata attached to files and
               collections.  A client can list or retrieve properties
               attached to a resource with the new
-              <command>PROPFIND</command> method, and can change them
-              with the <command>PROPPATCH</command> method.  Some
+              <literal>PROPFIND</literal> method, and can change them
+              with the <literal>PROPPATCH</literal> method.  Some
               properties are wholly created and controlled by users
               (e.g. a property called <quote>color</quote>), and
               others are wholly created and controlled by the WebDAV
@@ -100,7 +100,7 @@
             feature to clients&mdash;this part of the specification is
             optional, although most WebDAV servers do offer the
             feature.  If present, then clients can use the new
-            <command>LOCK</command> and <command>UNLOCK</command>
+            <literal>LOCK</literal> and <literal>UNLOCK</literal>
             methods to mediate access to a resource.  In most cases
             these methods are used to create exclusive write locks (as
             discussed in <xref linkend="svn-ch-2-sect-2.2"/>),
@@ -136,10 +136,10 @@
               assumes that each resource has a potentially infinite
               number of states.  A client begins by placing a resource
               under version control using the new
-              <command>VERSION-CONTROL</command> method.  This creates
+              <literal>VERSION-CONTROL</literal> method.  This creates
               a new Version Controlled Resource (VCR).  Every time you
-              change the VCR (via <command>PUT</command>,
-              <command>PROPPATCH</command>, etc.), a new state of the
+              change the VCR (via <literal>PUT</literal>,
+              <literal>PROPPATCH</literal>, etc.), a new state of the
               resource is created, called a Version Resource (VR).
               VCRs and VRs are still ordinary web resources, defined
               by URLs.  Specific VRs can have human-friendly names as
@@ -154,14 +154,14 @@
             <para>Some DeltaV servers support the ability to create a
             virtual <quote>workspace</quote> on the server, where all
             of your work is performed.  Clients use the
-            <command>MKWORKSPACE</command> method to create a private
+            <literal>MKWORKSPACE</literal> method to create a private
             area, then indicate they want to change specific VCRs by
             <quote>checking them out</quote> into the workspace,
             editing them, and <quote>checking them in</quote> again.
             In HTTP terms, the sequence of methods would be
-            <command>CHECKOUT</command>, <command>PUT</command>,
-            <command>CHECKIN</command>.  After each
-            <command>CHECKIN</command>, a new VR is created, and
+            <literal>CHECKOUT</literal>, <literal>PUT</literal>,
+            <literal>CHECKIN</literal>.  After each
+            <literal>CHECKIN</literal>, a new VR is created, and
             edited VCR's contents now <quote>point to</quote> the
             latest VR.  Each VCR has also has a <quote>history</quote>
             resource which tracks and orders its various VR
@@ -177,14 +177,14 @@
             VRs.  (This is how CVS and Subversion work.)  When the
             client wants to commit changes to the server, it begins by
             creating a temporary server transaction (called an
-            activity) with the <command>MKACTIVITY</command> method.
-            The client then performs a <command>CHECKOUT</command> on
+            activity) with the <literal>MKACTIVITY</literal> method.
+            The client then performs a <literal>CHECKOUT</literal> on
             each VR it wishes to change, which creates a number of
             temporary <quote>working resources</quote> in the
             activity, that can be modified using
-            <command>PUT</command> and <command>PROPPATCH</command>
+            <literal>PUT</literal> and <literal>PROPPATCH</literal>
             methods.  Finally, the client performs a
-            <command>CHECKIN</command> on each working resource, which
+            <literal>CHECKIN</literal> on each working resource, which
             creates a new VR within each VCR, and the entire activity
             is deleted.</para>
           </listitem>
@@ -197,11 +197,11 @@
             VCRs called <quote>configurations</quote>, which don't
             necessarily respond to particular directories.  Each VCR's
             contents can be made to point to a specific VR using the
-            <command>UPDATE</command> method.  Once the configuration
+            <literal>UPDATE</literal> method.  Once the configuration
             is perfect, the client can create a
             <quote>snapshot</quote> of the whole configuration, called
             a <quote>baseline</quote>.  Clients use the
-            <command>CHECKOUT</command> and <command>CHECKIN</command>
+            <literal>CHECKOUT</literal> and <literal>CHECKIN</literal>
             methods to capture specific states of configurations, much
             like they use these methods to create specific VR states
             of VCRs.</para>
@@ -212,9 +212,9 @@
         <term>Extensibility</term>
         <listitem>
             <para>DeltaV defines a new method,
-            <command>REPORT</command>, which allows the client and
+            <literal>REPORT</literal>, which allows the client and
             server to perform customized data exchanges.  The client
-            sends a <command>REPORT</command> request with a
+            sends a <literal>REPORT</literal> request with a
             properly-labeled xml body full of custom data; assuming
             the server understands the specific report-type, it
             responds with an equally custom xml body.  This technique
@@ -230,10 +230,10 @@
             then basic WebDAV clients (i.e. those unaware of
             versioning) can still write to the server, and the server
             will silently perform versioning anyway.  In the simplest
-            example, a ignorant <command>PUT</command> from a basic
+            example, a ignorant <literal>PUT</literal> from a basic
             WebDAV client might be translated by the server as a
-            <command>CHECKOUT</command>, <command>PUT</command>,
-            <command>CHECKIN</command>.</para>
+            <literal>CHECKOUT</literal>, <literal>PUT</literal>,
+            <literal>CHECKIN</literal>.</para>
           </listitem>
         </varlistentry>
         
@@ -253,7 +253,7 @@
     <para>While libsvn_ra_dav sends DeltaV requests to the server, the
       Subversion client is <emphasis>not</emphasis> a general-purpose
       DeltaV client.  In fact, it expects some custom features from
-      the server (especially through custom <command>REPORT</command>
+      the server (especially through custom <literal>REPORT</literal>
       requests).  Further, mod_dav_svn is <emphasis>not</emphasis> a
       general-purpose DeltaV server.  It only implements a strict
       subset of the DeltaV specification.  A more general WebDAV or
@@ -279,10 +279,10 @@
           <term>svn checkout/list</term>
           <listitem>
             <para>
-              Perform a <command>PROPFIND</command> of depth 1 on the
+              Perform a <literal>PROPFIND</literal> of depth 1 on the
               collection to get a list of immediate children.  Perform
-              a <command>GET</command> (and possibly a
-              <command>PROPFIND</command>) on each child.  Recurse
+              a <literal>GET</literal> (and possibly a
+              <literal>PROPFIND</literal>) on each child.  Recurse
               into collections and repeat.
             </para>
           </listitem>
@@ -292,11 +292,11 @@
           <term>svn commit</term>
           <listitem>
             <para>
-              Create an activity with <command>MKACTIVITY</command>,
-              and do a <command>CHECKOUT</command> of each changed
-              item, followed by a <command>PUT</command> of new data.
-              Finally, a <command>MERGE</command> request causes an
-              implicit <command>CHECKIN</command> of all working
+              Create an activity with <literal>MKACTIVITY</literal>,
+              and do a <literal>CHECKOUT</literal> of each changed
+              item, followed by a <literal>PUT</literal> of new data.
+              Finally, a <literal>MERGE</literal> request causes an
+              implicit <literal>CHECKIN</literal> of all working
               resources.
             </para>
           </listitem>
@@ -306,12 +306,12 @@
           <term>svn update/switch/status/merge/diff</term>
           <listitem>
             <para>
-              Send a custom <command>REPORT</command> request that
+              Send a custom <literal>REPORT</literal> request that
               describes the mixed-revision (and mixed-url) state of
               the working copy.  The server sends a custom response
               that describes which items need updating.  The client
               loops over the response, performing
-              <command>GET</command> and <command>PROPFIND</command>
+              <literal>GET</literal> and <literal>PROPFIND</literal>
               requests as needed.  For updates and switches, install
               the new data in the working copy.  For diff and merge
               commands, compare the data to the working copy, possibly
@@ -351,15 +351,15 @@
 </screen>
 
       <para>Normally, if a generic WebDAV client attempted a
-        <command>PUT</command> to a path within your repository
+        <literal>PUT</literal> to a path within your repository
         location, mod_dav_svn would outright reject the request.  (It
         normally only allows such operations on <quote>working
         resources</quote> within DeltaV <quote>activities</quote>.)
         With <literal>SVNAutoversioning</literal> turned on, however,
-        the server interprets the <command>PUT</command> request as an
-        internal <command>MKACTIVITY</command>,
-        <command>CHECKOUT</command>, <command>PUT</command>, and
-        <command>CHECKIN</command>.  A generic log message is
+        the server interprets the <literal>PUT</literal> request as an
+        internal <literal>MKACTIVITY</literal>,
+        <literal>CHECKOUT</literal>, <literal>PUT</literal>, and
+        <literal>CHECKIN</literal>.  A generic log message is
         auto-generated, and a new filesystem revision is
         created.</para>
 
@@ -377,9 +377,9 @@
 
       <para>Is this fantasy real?  Not quite.  The main snag is that
         Subversion 1.0 has no support whatsoever for the WebDAV
-        <command>LOCK</command> or <command>UNLOCK</command> methods.
+        <literal>LOCK</literal> or <literal>UNLOCK</literal> methods.
         Most operating system DAV clients attempt to
-        <command>LOCK</command> a resource opened directly from a
+        <literal>LOCK</literal> a resource opened directly from a
         DAV-mounted network share.  For now, users may have to copy a
         file from the DAV share to local disk, edit the file, then
         copy it back again.  Not ideal autoversioning, but still
@@ -402,7 +402,7 @@
 
       <para>Subversion, on the other hand, uses mod_dav_svn as a
         provider for mod_dav.  mod_dav_svn understands all WebDAV
-        methods except <command>LOCK</command>, and understands a
+        methods except <literal>LOCK</literal>, and understands a
         sizeable subset of DeltaV methods.  It accesses data in the
         Subversion repository, rather than in the real filesystem.
         Subversion 1.0 doesn't support locking, because it would
@@ -413,7 +413,7 @@
         happen soon.</para></footnote></para>
 
       <para>In Apache httpd-2.0, mod_dav supports the
-        <command>LOCK</command> method by tracking locks in a private
+        <literal>LOCK</literal> method by tracking locks in a private
         database, assuming that the provider is willing to accept
         them.  In Apache httpd-2.1 or later, however, this locking
         support has been broken into an independent module,
@@ -426,7 +426,7 @@
       <para>In a nutshell, you can use mod_dav_lock in Apache
         httpd-2.1 (or later) to create the
         <emphasis>illusion</emphasis> that mod_dav_svn is honoring
-        <command>LOCK</command> requests.  Make sure mod_dav_lock is
+        <literal>LOCK</literal> requests.  Make sure mod_dav_lock is
         either compiled into httpd, or being loaded in your
         <filename>httpd.conf</filename>.  Then simply add the
         <literal>DAVGenericLockDB</literal> directive to your
@@ -443,9 +443,9 @@
 
       <para>This techique is a risky business; in some sense, the
         mod_dav_svn is now lying to the WebDAV client.  It claims to
-        accept the <command>LOCK</command> request, but in reality the
+        accept the <literal>LOCK</literal> request, but in reality the
         lock isn't being enforced at all levels.  If a second WebDAV
-        client attempts to <command>LOCK</command> the same resource,
+        client attempts to <literal>LOCK</literal> the same resource,
         then mod_dav_lock will notice and correctly deny the request.
         But there's absolutely nothing preventing an ordinary
         Subversion client from changing the file via a normal
@@ -510,7 +510,7 @@
           <para>A file can't be opened for direct editing from the
             share; it always comes up read-only.  The mod_dav_lock
             technique doesn't help, because WebFolders doesn't use the
-            <command>LOCK</command> method at all.  The previously
+            <literal>LOCK</literal> method at all.  The previously
             mentioned <quote>copy, edit, re-copy</quote> method does
             work, however.  The file on the share can be successfully
             overwritten by a locally edited copy.</para>
@@ -532,9 +532,9 @@
       
       <para>Unfortunately, this client refuses to work against an
         autoversioning mod_dav_svn because of its lack of
-        <command>LOCK</command> support.  Mac OS X discovers the
-        missing <command>LOCK</command> ability during the initial
-        HTTP <command>OPTIONS</command> feature exchange, and thus
+        <literal>LOCK</literal> support.  Mac OS X discovers the
+        missing <literal>LOCK</literal> ability during the initial
+        HTTP <literal>OPTIONS</literal> feature exchange, and thus
         decides to mount the Subversion repository as a read-only
         share.  After that, no write operations are possible at all.
         In order to mount the repository as a read-write share, you
@@ -542,9 +542,9 @@
         previously.  Once locking seems to work, the share behaves
         very nicely: files can be opened directly in read/write mode,
         although each save operation will cause the client to do a
-        <command>PUT</command> to a temporary location, a
-        <command>DELETE</command> of original file, and a
-        <command>MOVE</command> of the temporary resource to the
+        <literal>PUT</literal> to a temporary location, a
+        <literal>DELETE</literal> of original file, and a
+        <literal>MOVE</literal> of the temporary resource to the
         original file name.  That's three new Subversion
         revisions per save!</para>
 
@@ -578,24 +578,24 @@ BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
           <para>Any files opened directly from the share are treated
             as read-only.  Even the mod_dav_lock trick seems to have
             no effect.  It seems that Nautilus never issues the
-            <command>LOCK</command> method at all.  The <quote>copy
+            <literal>LOCK</literal> method at all.  The <quote>copy
             locally, edit, copy back</quote> trick does work, however.
             Unfortunately, Nautilus overwrites the old file by issuing
-            a <command>DELETE</command> first, which creates an extra
+            a <literal>DELETE</literal> first, which creates an extra
             revision.</para>
         </listitem>
 
         <listitem>
           <para>When overwriting or creating a file , Nautilus first
-            does a <command>PUT</command> of an empty file, then
-            overwrites it with a second <command>PUT</command>.  This
+            does a <literal>PUT</literal> of an empty file, then
+            overwrites it with a second <literal>PUT</literal>.  This
             creates two Subversion filesystem revisions, rather than
             one.</para>
         </listitem>
 
         <listitem>
           <para>When deleting a collection, it issues an HTTP
-          <command>DELETE</command> on each individual child instead
+          <literal>DELETE</literal> on each individual child instead
           of on the collection itself.  This creates a whole bunch of
           new revisions.</para>
         </listitem>
@@ -616,7 +616,7 @@ BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
       <para>The word on the street is that this DAV client doesn't
         work at all with mod_dav_svn's autoversioning.  Every single
         attempt to write to the server is preceded by a
-        <command>LOCK</command> request, which mod_dav_svn doesn't
+        <literal>LOCK</literal> request, which mod_dav_svn doesn't
         support.  At this time, there is no data indicating whether
         the use of mod_dav_lock resolves this problem.</para>
 
