@@ -68,3 +68,8 @@ List of 1.1 features/changes (that still need to be documented)
 
   * New 'SVNPathAuthz Off' directive, to disable path-based authz in
     apache (and increase speed.)
+
+List of 1.2 features/changes (that still need to be documented)
+============================
+
+  * svn log --limit

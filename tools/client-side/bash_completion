@@ -104,7 +104,7 @@ _svn()
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
-		         --incremental --xml $qOpts"
+		         --incremental --xml $qOpts --limit"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
