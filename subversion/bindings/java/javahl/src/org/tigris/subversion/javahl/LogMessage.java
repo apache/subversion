@@ -43,18 +43,26 @@ public class LogMessage
     private String author;
 
     /**
+     * the items changed by this commit (only set when
+     * SVNClientInterface.logmessage is used with discoverPaths true.
+     */
+    private ChangePath[] changedPaths;
+
+    /**
      * this constructor is only called only from JNI code
      * @param m     the log message text
      * @param d     the date of the commit
      * @param r     the number of the revision
      * @param a     the author of the commit
+     * @param cp    the items changed by this commit
      */
-    LogMessage(String m, Date d, long r, String a)
+    LogMessage(String m, Date d, long r, String a, ChangePath[] cp)
     {
         message = m;
         date = d;
         revision = r;
         author = a;
+        changedPaths = cp;
     }
     /**
      * Return the log message text
@@ -100,4 +108,14 @@ public class LogMessage
     {
         return author;
     }
+
+    /**
+     * Returns the changes items by this commit
+     * @return the changes items by this commit
+     */
+    public ChangePath[] getChangedPaths()
+    {
+        return changedPaths;
+    }
+
 }

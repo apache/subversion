@@ -1247,13 +1247,15 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basis SVNClient.info functionality
+     * test the basic SVNClient.info functionality
      * @throws Throwable
      */
     public void testBasicInfo() throws Throwable
     {
         // create the working copy
         OneTest thisTest = new OneTest();
+
+        // get the item information and test it
         Info info = client.info(thisTest.getWCPath()+"/A/mu");
         assertEquals("wrong revision from info", 1,
                 info.getLastChangedRevision());
@@ -1261,5 +1263,30 @@ public class BasicTests extends SVNTests
                 info.getSchedule());
         assertEquals("wrong node kind from info", NodeKind.file,
                 info.getNodeKind());
+    }
+
+    /**
+     * test the basic SVNClientInfo.logMessage functionality
+     * @throws Throwable
+     */
+    public void testBasicLogMessage() throws Throwable
+    {
+        // create the working copy
+        OneTest thisTest = new OneTest();
+
+        // get the commit message of the initial import and test it
+        LogMessage lm[] = client.logMessages(thisTest.getWCPath(), null,
+                null, false, true);
+        assertEquals("wrong number of objects", 1, lm.length);
+        assertEquals("wrong message", "Log Mesage", lm[0].getMessage());
+        assertEquals("wrong revision", 1, lm[0].getRevisionNumber());
+        assertEquals("wrong user", "jrandom", lm[0].getAuthor());
+        assertNotNull("changed paths set", lm[0].getChangedPaths());
+        ChangePath cp[] = lm[0].getChangedPaths();
+        assertEquals("wrong number of chang pathes", 20, cp.length);
+        assertEquals("wrong path", "/A", cp[0].getPath());
+        assertEquals("wrong copy source rev", -1, cp[0].getCopySrcRevision());
+        assertNull("wrong copy source path", cp[0].getCopySrcPath());
+        assertEquals("wrong action", 'A', cp[0].getAction());
     }
 }
