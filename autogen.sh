@@ -9,60 +9,9 @@ for execfile in gen-make.py \
                 ac-helpers/get-neon-ver.sh \
                 ac-helpers/gnu-diff.sh \
                 ac-helpers/gnu-patch.sh \
-                ac-helpers/install.sh; do
+                ac-helpers/install-sh; do
   chmod +x $execfile                
 done
-
-# Make sure the APR directory is present
-if [ ! -d apr ]; then
-  echo "You don't have an apr/ subdirectory here.  Please get one:"
-  echo ""
-  echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login"
-  echo "      (password 'anoncvs')"
-  echo ""
-  echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr"
-  echo ""
-  echo "Run that right here in the top-level of the Subversion tree."
-  echo ""
-  PREREQ_FAILED="yes"
-fi
-
-# Make sure the Neon directory is present
-NEON_WANTED=0.17.1
-NEON_URL="http://www.webdav.org/neon/neon-${NEON_WANTED}.tar.gz"
-
-if [ ! -d neon ]; then
-  echo "You don't have a neon/ subdirectory here."
-  echo "Please get neon ${NEON_WANTED} from:"
-  echo "       ${NEON_URL}"
-  echo ""
-  echo "Unpack the archive using tar/gunzip and rename the resulting"
-  echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
-  echo ""
-  PREREQ_FAILED="yes"
-else
-   NEON_VERSION=`ac-helpers/get-neon-ver.sh neon`
-   if test "$NEON_WANTED" != "$NEON_VERSION"; then
-     echo "You have a neon/ subdir containing version $NEON_VERSION,"
-     echo "but Subversion needs neon ${NEON_WANTED}."
-     echo "Please get neon ${NEON_WANTED} from:"
-     echo "       ${NEON_URL}"
-     echo ""
-     echo "Unpack the archive using tar/gunzip and rename the resulting"
-     echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
-     echo ""
-     PREREQ_FAILED="yes"
-   fi
-fi
-
-
-#
-# If PREREQ_FAILED == "yes", then one or more required packages could
-# not be found in-tree, so exit now.
-#
-if [ "${PREREQ_FAILED}" = "yes" ]; then
-  exit 1
-fi
 
 
 # Run a quick test to ensure that our autoconf and libtool verison are ok
@@ -79,7 +28,7 @@ fi
 #
 echo "Copying libtool helper files..."
 
-libtoolize=`apr/build/PrintPath glibtoolize libtoolize`
+libtoolize=$(which glibtoolize libtoolize | head -1)
 if [ "x$libtoolize" = "x" ]; then
     echo "libtoolize not found in path"
     exit 1
@@ -151,12 +100,6 @@ fi
 # Produce ./configure
 echo "Creating configure..."
 autoconf
-
-# Meta-configure apr/ subdir
-if [ -d apr ]; then
-  echo "Creating config files for APR..."
-  (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
-fi
 
 # If we have a config.cache file, toss it if the configure script has
 # changed, or if we just built it for the first time.

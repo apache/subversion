@@ -15,16 +15,12 @@ AC_CONFIG_AUX_DIR(ac-helpers)
 abs_srcdir="`cd $srcdir && pwd`"
 abs_builddir="`pwd`"
 
-dnl $MKDIR is required for configuring apr and neon in a vpath build
-MKDIR="$abs_srcdir/apr/build/mkdir.sh"
-
-dnl APR defines a number of useful autoconf macros. grab them.
-sinclude(apr/build/apr_common.m4)
-
 dnl Grab our own macros
 sinclude(ac-helpers/berkeley-db.m4)
 sinclude(ac-helpers/svn-apache.m4)
 sinclude(ac-helpers/svn-macros.m4)
+sinclude(ac-helpers/neon.m4)
+sinclude(ac-helpers/apr.m4)
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
@@ -51,29 +47,17 @@ AC_ARG_ENABLE(subdir-config,
 
 dnl Configure APR, and local Berkeley DB if any --------------------------
 
-if test "$enable_subdir_config" = "yes"; then
-  APR_SUBDIR_CONFIG(apr)
-  if test -d $abs_srcdir/db ; then
-      # Note: We have to configure and build a db subdirectory even if
-      # some other berkeley db is configured via --with-berkeley-db
-      DB_SUBDIR=db/dist
-      DB_CONFIG_ARGS=
-      APR_SUBDIR_CONFIG($DB_SUBDIR, $DB_CONFIG_ARGS)
-  fi
-  AC_SUBST(DB_SUBDIR)
+
+SVN_LIB_APR
+
+if test -d $abs_srcdir/db ; then
+    # Note: We have to configure and build a db subdirectory even if
+    # some other berkeley db is configured via --with-berkeley-db
+    DB_SUBDIR=db/dist
+    DB_CONFIG_ARGS=
+    SVN_SUBDIR_CONFIG($DB_SUBDIR, $DB_CONFIG_ARGS)
 fi
-
-
-dnl Get libraries and thread flags from APR ---------------------
-
-if test -f "$abs_builddir/apr/APRVARS"; then
-  . "$abs_builddir/apr/APRVARS"
-  CPPFLAGS="$CPPFLAGS $EXTRA_CPPFLAGS"
-  CFLAGS="$CFLAGS $EXTRA_CFLAGS"
-  LIBS="$LIBS $EXTRA_LIBS"
-else
-  AC_MSG_ERROR([Must configure APR before Subversion.])
-fi
+AC_SUBST(DB_SUBDIR)
 
 dnl Set include dir and module library lists for Makefiles -----------------
 
@@ -81,23 +65,9 @@ dnl Top level
 SVN_INCLUDES='-I$(top_srcdir)/subversion/include -I$(top_builddir)'
 AC_SUBST(SVN_INCLUDES)
 
-dnl APR
-SVN_APR_INCLUDES=-I'$(top_srcdir)/apr/include'
-if test "$abs_srcdir" != "$abs_builddir"; then
-  SVN_APR_INCLUDES='-I$(top_builddir)/apr/include '"$SVN_APR_INCLUDES"
-fi
-AC_SUBST(SVN_APR_INCLUDES)
-SVN_APR_LIBS='$(abs_builddir)/apr/libapr.la '"$LIBTOOL_LIBS"
-AC_SUBST(SVN_APR_LIBS)
-
 dnl Expat
 SVN_EXPAT_INCLUDES='-I$(top_srcdir)/expat-lite'
 AC_SUBST(SVN_EXPAT_INCLUDES)
-
-dnl Neon
-SVN_NEON_INCLUDES=-'I$(top_srcdir)/neon/src'
-AC_SUBST(SVN_NEON_INCLUDES)
-
 
 dnl Check for programs ---------------------
 
@@ -111,34 +81,8 @@ dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
 AC_PROG_LIBTOOL
 
-dnl Configure neon --------------------------
-
-if test "$enable_subdir_config" = "yes"; then
-  # The arguments passed to this configure script are passed down to
-  # neon's configure script, but, since neon defaults to *not* building
-  # shared libs, and we default to building shared libs, we have to 
-  # explicitly pass down an --{enable,disable}-shared argument, to make
-  # sure neon does the same as we do.
-  if test "$enable_shared" = "yes"; then
-     args="--enable-shared"
-  else
-     args="--disable-shared"
-  fi
-
-  # neon uses an old autoconf which does not understand the -C and
-  # --config-cache arguments. strip them from the args passed down.
-  ac_configure_args="`echo $ac_configure_args | sed 's/-C//' | sed 's/--config-cache//'`"
-  APR_SUBDIR_CONFIG(neon, $args --with-expat="$abs_srcdir/expat-lite/libexpat.la")
-
-  AC_MSG_CHECKING([for any extra libraries neon needs])
-  # this is not perfect since it will pick up extra -L flags too,
-  # but that shouldn't do any real damage.
-  NEON_LIBS=`$SHELL $abs_builddir/neon/neon-config --libs | sed -e "s/-lneon//g"`
-  AC_MSG_RESULT([$NEON_LIBS])
-  # Also find out which macros neon defines (but ignore extra include paths):
-  # this will include -DNEON_SSL if neon was built with SSL support
-  CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e "s/-I[^ ]*//g"`"
-fi
+NEON_WANTED=0.17.1
+SVN_LIB_NEON($NEON_WANTED)
 
 dnl find Apache
 SVN_FIND_APACHE
@@ -146,11 +90,11 @@ SVN_FIND_APACHE
 dnl ### should we ever bother with the system install?
 dnl use abs_srcdir. sometimes during installation, libtool will relink the
 dnl library. when it does this, it does a "cd", so a relative use of
-dnl install.sh will not work.
-INSTALL="\$(abs_srcdir)/apr/build/install.sh -c"
+dnl install-sh will not work.
+INSTALL="\$(abs_srcdir)/ac-helpers/install-sh -c"
 AC_SUBST(INSTALL)
 
-dnl use APR's mkdir to enable creating intervening directories
+MKDIR="$INSTALL -d"
 AC_SUBST(MKDIR)
 
 dnl Check for libraries --------------------
@@ -295,7 +239,7 @@ if test "$enable_shared" = "no"; then
         [Defined if libsvn_client should link against libsvn_ra_dav])
   SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"
   SVN_RA_LIB_LINK="\$(abs_builddir)/subversion/libsvn_ra_dav/libsvn_ra_dav.la \
-	\$(abs_builddir)/neon/src/libneon.la $NEON_LIBS"
+    \$(NEON_LIBS)"
 
   if test "$svn_lib_berkeley_db" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
