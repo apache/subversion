@@ -1,4 +1,4 @@
-help (?, h): Display this usage message.
+help (?, h): Describe the usage of Subversion or the given subcommands.
 usage: help [SUBCOMMAND...]
 
 Valid options:
