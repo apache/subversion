@@ -3919,6 +3919,268 @@ not a dot, will pass from the law until all is accomplished.";
 }
 
 
+/* For each revision R in FS, from 0 to (NUM_REVS - 1), check that it
+   matches the tree in EXPECTED_TREES[R].  Use POOL for any
+   allocations.  This is a helper function for check_all_revisions(). */
+static svn_error_t *
+validate_revisions (svn_fs_t *fs,
+                    svn_test__tree_t *expected_trees,
+                    int num_revs,
+                    apr_pool_t *pool)
+{
+  svn_fs_root_t *revision_root;
+  int i;
+  svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* Validate all revisions up to the current one. */
+  for (i = 0; i < num_revs; i++)
+    {
+      SVN_ERR (svn_fs_revision_root (&revision_root, fs, 
+                                     (svn_revnum_t)i, subpool)); 
+      err = svn_test__validate_tree (revision_root, 
+                                     expected_trees[i].entries,
+                                     expected_trees[i].num_entries, 
+                                     subpool);
+      if (err)
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, 0, err, pool, 
+           "Error validating revision %lu (youngest is %lu)",
+           (long unsigned int) i, (long unsigned int) (num_revs - 1));
+      
+      svn_pool_clear (subpool);
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+check_all_revisions (const char **msg,
+                     apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev;
+  svn_test__tree_t expected_trees[5]; /* one tree per commit, please */
+  int revision_count = 0;
+
+  *msg = "after each commit, check all revisions";
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-check-all-revisions", pool));
+
+  /***********************************************************************/
+  /* REVISION 0 */
+  /***********************************************************************/
+  {
+    expected_trees[revision_count].num_entries = 0;
+    expected_trees[revision_count++].entries = 0;
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+  }
+
+  /* Create and commit the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /***********************************************************************/
+  /* REVISION 1 */
+  /***********************************************************************/
+  {
+    svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",        "This is the file 'iota'.\n" },
+      { "A",           0 },
+      { "A/mu",        "This is the file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" }
+    };
+    expected_trees[revision_count].entries = expected_entries;
+    expected_trees[revision_count++].num_entries = 20;
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+  }
+
+  /* Make a new txn based on the youngest revision, make some changes,
+     and commit those changes (which makes a new youngest
+     revision). */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  {
+    svn_test__txn_script_command_t script_entries[] = {
+      { 'a', "A/delta",     "This is the file 'delta'.\n" },
+      { 'a', "A/epsilon",   "This is the file 'epsilon'.\n" },
+      { 'a', "A/B/Z",       0 },
+      { 'a', "A/B/Z/zeta",  "This is the file 'zeta'.\n" },
+      { 'd', "A/C",         0 },
+      { 'd', "A/mu"         "" },
+      { 'd', "A/D/G/tau",   "" },
+      { 'd', "A/D/H/omega", "" },
+      { 'e', "iota",        "Changed file 'iota'.\n" },
+      { 'e', "A/D/G/rho",   "Changed file 'rho'.\n" }
+    };
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 10, pool));
+  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /***********************************************************************/
+  /* REVISION 2 */
+  /***********************************************************************/
+  {
+    svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",        "Changed file 'iota'.\n" },
+      { "A",           0 },
+      { "A/delta",     "This is the file 'delta'.\n" },
+      { "A/epsilon",   "This is the file 'epsilon'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/B/Z",       0 },
+      { "A/B/Z/zeta",  "This is the file 'zeta'.\n" },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "Changed file 'rho'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" }
+    };
+    expected_trees[revision_count].entries = expected_entries;
+    expected_trees[revision_count++].num_entries = 20;
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+  } 
+
+  /* Make a new txn based on the youngest revision, make some changes,
+     and commit those changes (which makes a new youngest
+     revision). */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  {
+    svn_test__txn_script_command_t script_entries[] = {
+      { 'a', "A/mu",        "Re-added file 'mu'.\n" },
+      { 'a', "A/D/H/omega", 0 }, /* re-add omega as directory! */
+      { 'd', "iota",        "" },
+      { 'e', "A/delta",     "This is the file 'delta'.\nLine 2.\n" }
+    };
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 4, pool));
+  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /***********************************************************************/
+  /* REVISION 3 */
+  /***********************************************************************/
+  {
+    svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "A",           0 },
+      { "A/delta",     "This is the file 'delta'.\nLine 2.\n" },
+      { "A/epsilon",   "This is the file 'epsilon'.\n" },
+      { "A/mu",        "Re-added file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/B/Z",       0 },
+      { "A/B/Z/zeta",  "This is the file 'zeta'.\n" },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "Changed file 'rho'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", 0 }
+    };
+    expected_trees[revision_count].entries = expected_entries;
+    expected_trees[revision_count++].num_entries = 21;
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+  }
+
+  /* Make a new txn based on the youngest revision, make some changes,
+     and commit those changes (which makes a new youngest
+     revision). */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  {
+    svn_test__txn_script_command_t script_entries[] = {
+      { 'c', "A/D/G",        "A/D/G2" },
+      { 'c', "A/epsilon",    "A/B/epsilon" },
+    };
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 2, pool));
+  }
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /***********************************************************************/
+  /* REVISION 4 */
+  /***********************************************************************/
+  {
+    svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "A",           0 },
+      { "A/delta",     "This is the file 'delta'.\nLine 2.\n" },
+      { "A/epsilon",   "This is the file 'epsilon'.\n" },
+      { "A/mu",        "Re-added file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/epsilon", "This is the file 'epsilon'.\n" },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/B/Z",       0 },
+      { "A/B/Z/zeta",  "This is the file 'zeta'.\n" },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "Changed file 'rho'.\n" },
+      { "A/D/G2",      0 },
+      { "A/D/G2/pi",   "This is the file 'pi'.\n" },
+      { "A/D/G2/rho",  "Changed file 'rho'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", 0 }
+    };
+    expected_trees[revision_count].entries = expected_entries;
+    expected_trees[revision_count++].num_entries = 25;
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -3951,6 +4213,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   merging_commit,
   commit_date,
   check_old_revisions,
+  check_all_revisions,
   0
 };
 

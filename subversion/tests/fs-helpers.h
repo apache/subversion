@@ -99,7 +99,6 @@ svn_test__validate_tree (svn_fs_root_t *root,
                          int num_entries, 
                          apr_pool_t *pool);
 
-
 /* Structure for describing script-ish commands to perform on a
    transaction using svn_test__txn_script_exec().  */
 typedef struct svn_test__txn_script_command_t
@@ -107,7 +106,7 @@ typedef struct svn_test__txn_script_command_t
   /* command: 
 
      'a' -- add (PARAM1 is file contents, or NULL for directories)
-     'c' -- copy (PARAM1 is target path, copy source is txn base-rev)
+     'c' -- copy (PARAM1 is target path, copy source is youngest rev)
      'd' -- delete
      'e' -- edit (PARAM1 is new file contents)
   */
