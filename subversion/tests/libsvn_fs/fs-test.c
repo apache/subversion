@@ -6122,6 +6122,96 @@ lazy_copies_rev_changed (const char **msg,
 }
 
 
+static svn_error_t *
+create_within_copy (const char **msg,
+                    svn_boolean_t msg_only,
+                    apr_pool_t *pool)
+{ 
+  apr_pool_t *spool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  
+  *msg = "create new items within a copied directory";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-within-copy", pool));
+
+  /*** Revision 1:  Create the greek tree in revision.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 2:  Copy A/D to A/D3 ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D3", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 3:  Copy A/D to A/D2 and create A/D2/up and A/D2/I  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/I", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/up", pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 4:  Create A/D3/down and A/D3/J ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D3/down", pool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D3/J", pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  {
+    /* New items should have same CopyID as their parent */
+    struct {
+      const char *path;
+      const char *unparsed_id;
+    } new_nodes[] = {
+      { "A/D2",      "b.2.3" },
+      { "A/D2/I",    "l.2.3" },
+      { "A/D2/up",   "m.2.3" },
+      { "A/D3",      "b.1.4" },
+      { "A/D3/down", "n.1.4" },
+      { "A/D3/J",    "o.1.4" },
+      { NULL, NULL }
+    }, *node = new_nodes; 
+
+    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+    while (node->path)
+      {
+        const svn_fs_id_t *id;
+        svn_string_t *s;
+        SVN_ERR (svn_fs_node_id (&id, rev_root, node->path, spool));
+        s = svn_fs_unparse_id (id, spool);
+        if (strcmp (s->data, node->unparsed_id) != 0)
+          return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                    "%s id: expected %s got: %s",
+                                    node->path, node->unparsed_id, s->data);
+        ++node;
+      }
+    svn_pool_clear (spool);
+  }
+
+  svn_pool_destroy (spool);
+  return SVN_NO_ERROR;
+}
 
 
 static svn_error_t *
@@ -6214,6 +6304,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (lazy_copies_created_rev),
     SVN_TEST_PASS (lazy_copies_dir_entries),
     SVN_TEST_PASS (lazy_copies_rev_changed),
+    SVN_TEST_XFAIL (create_within_copy),
     SVN_TEST_PASS (verify_checksum),
     SVN_TEST_NULL
   };
