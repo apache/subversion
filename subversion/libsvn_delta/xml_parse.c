@@ -71,20 +71,33 @@
 
 
 
-/* Recursively walk down delta D to find the bottommost object, and return a
-   pointer to it (its type is returned in ELT_KIND) */
+/* Recursively walk down delta D.  (PARENT is used for recursion purposes.)
 
-void *
-svn_find_delta_bottom (svn_XML_elt_t *elt_kind, svn_delta_t *d)
+   Return the bottommost object in BOTTOM_OBJ and BOTTOM_KIND.
+      (Needed later for appending objects to the delta.)
+
+   The penultimate object is returned in PENULT_OBJ and PENULT_KIND. 
+      (Needed later for removing objects from the delta.)
+*/
+
+void
+svn_find_delta_bottom (void **bottom_obj,
+                       svn_XML_elt_t *bottom_kind, 
+                       void **penult_obj,
+                       svn_XML_elt_t *penult_kind,
+                       svn_delta_t *d,
+                       void *parent)
 {
   svn_edit_t *current_edit = d->edit;
 
   /* Start at top-level tree-delta */
   if (current_edit == NULL)
     {
-      *elt_kind = svn_XML_treedelta;
-      return d;   /* The deepest object is this tree delta. */
-
+      *bottom_obj = d;
+      *bottom_kind = svn_XML_treedelta;
+      *penult_obj = parent;
+      *penult_kind = svn_XML_editcontent;
+      return;
     }
 
   else  /* ...go deeper. */
@@ -94,8 +107,11 @@ svn_find_delta_bottom (svn_XML_elt_t *elt_kind, svn_delta_t *d)
 
       if (current_content == NULL)
         {
-          *elt_kind = svn_XML_edit;
-          return current_edit;  /* The deepest object is the edit */
+          *bottom_obj = current_edit;
+          *bottom_kind = svn_XML_edit;
+          *penult_obj = d;
+          *penult_kind = svn_XML_treedelta;
+          return;
         }
 
       else  /* ...go deeper. */
@@ -103,16 +119,22 @@ svn_find_delta_bottom (svn_XML_elt_t *elt_kind, svn_delta_t *d)
           /* Look inside the content object */
           if (current_content->tree_delta == NULL)
             {
-              *elt_kind = svn_XML_editcontent;
-              return current_content; /* deepest object is the content */
+              *bottom_obj = current_content;
+              *bottom_kind = svn_XML_editcontent;
+              *penult_obj = current_edit;
+              *penult_kind = svn_XML_edit;
+              return;
             }
 
           else  /* ... go deeper. */
             {
               /* Since this edit_content already contains a
                  tree-delta, we better RECURSE to continue our search!  */
-              return svn_find_delta_bottom (elt_kind,
-                                            current_content->tree_delta);
+              svn_find_delta_bottom (bottom_obj, bottom_kind,
+                                     penult_obj, penult_kind,
+                                     d,
+                                     current_content->tree_delta);
+              return;
             }
         }
     }
@@ -122,49 +144,96 @@ svn_find_delta_bottom (svn_XML_elt_t *elt_kind, svn_delta_t *d)
 
 
 
-/* Append OBJECT to the end of delta D.  ELT_KIND is passed to
-   guarantee sanity and allow correct pointer casting. */
+/* 
+   svn_starpend_delta() : either (ap)pend or (un)pend an object to the
+                          end of a delta.  
+
+   (Feel free to think of a better name: svn_telescope_delta() ?) :)
+
+   Append or remove OBJECT to/from the end of delta D.  
+
+   ELT_KIND defines which kind of object is being appended or removed.
+
+   Use DESTROY-P to toggle append/remove behavior.  (When destroying,
+   OBJECT will be ignored -- only ELT_KIND matters.)
+
+*/
 
 svn_error_t *
-svn_append_to_delta (svn_delta_digger_t *digger, 
-                     void *object, 
-                     svn_XML_elt_t elt_kind)
+svn_starpend_delta (svn_delta_digger_t *digger,
+                    void *object,
+                    svn_XML_elt_t elt_kind,
+                    svn_boolean_t destroy-p)
 {
+  void *bottom_ptr, *penult_ptr;
+  svn_XML_elt_t bottom_kind, penult_kind;
   svn_delta_t *d = digger->delta;
 
-  /* Get a grip on the last object in the delta (by cdr'ing down) */
-  svn_XML_elt_t bottom_kind;
-  void *bottom_ptr = svn_find_delta_bottom (&bottom_kind, d);
+  /* Get a grip on the last two objects in the delta (by cdr'ing down) */
+  svn_find_delta_bottom (&bottom_ptr, &bottom_kind, 
+                         &penult_ptr, &penult_kind, 
+                         d);
+
+  /* Sanity-check: if we're destroying the last object in the delta,
+     then we should check that ELT_KIND (sent from the caller) and
+     BOTTOM_KIND match!  */
+  if (destroy_p && (elt_kind != bottom_kind))
+    {
+      return 
+        svn_create_error 
+        (SVN_ERR_MALFORMED_XML, NULL,
+         "caller thinks delta's bottom object type is different that it is!"
+         NULL, digger->pool);
+    }
 
   switch (bottom_kind)
     {
-    case (svn_XML_treedelta):
+    case (svn_XML_treedelta):  
       {
-        /* If bottom_ptr is a treedelta, then we must be appending an
-           svn_edit_t.  Sanity check.  */
-        if (elt_kind != svn_XML_edit)
-          return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
-                                   "expecting svn_edit_t, not found!",
-                                   NULL, digger->pool);
-        else
+        if (destroy_p)
           {
+            svn_edit_content_t *ec = (svn_edit_content_t *) penult_ptr;
+            ec->tree_delta = NULL;
+            return SVN_NO_ERROR;
+          }
+        else /* appending */
+          {
+            /* Bottom object is a tree-delta */
             svn_delta_t *this_delta = (svn_delta_t *) bottom_ptr;
+
+            /* If bottom_ptr is a treedelta, then we must be appending an
+               svn_edit_t.  Sanity check.  */
+            if (elt_kind != svn_XML_edit)
+              return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+                                       "expecting to append svn_edit_t, not found!",
+                                       NULL, digger->pool);
+
             this_delta->edit = (svn_edit_t *) object;
             return SVN_NO_ERROR;
           }
+        
       }
 
     case (svn_XML_edit):
       {
-        /* If bottom_ptr is an edit, then we must be appending an
-           svn_edit_content_t.  Sanity check.  */
-        if (elt_kind != svn_XML_editcontent)
-          return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
-                                   "expecting svn_edit_content_t, not found!",
-                                   NULL, digger->pool);
-        else
+        if (destroy_p)
           {
+            svn_delta_t *dl = (svn_delta_t *) penult_ptr;
+            dl->edit = NULL;
+            return SVN_NO_ERROR;
+          }
+        else /* appending */
+          {
+            /* Bottom object is an edit */
             svn_edit_t *this_edit = (svn_edit_t *) bottom_ptr;
+
+            /* If bottom_ptr is an edit, then we must be appending an
+               svn_edit_content_t.  Sanity check.  */
+            if (elt_kind != svn_XML_editcontent)
+              return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+                                       "expecting to append svn_edit_content_t, not found!",
+                                       NULL, digger->pool);
+
             this_edit->content = (svn_edit_content_t *) object;
             return SVN_NO_ERROR;
           }
@@ -172,35 +241,44 @@ svn_append_to_delta (svn_delta_digger_t *digger,
 
     case (svn_XML_editcontent):
       {
-        /* If bottom_ptr is an edit_content, then we must be appending
-           one of three kinds of objects. This is the only time we
-           absolutely _have_ to look at the elt_kind field. */
-        svn_edit_content_t *this_content = (svn_edit_content_t *) bottom_ptr;
-
-        switch (elt_kind)
+        if (destroy_p)
           {
-          case svn_XML_propdelta:
-            {
-              this_content->prop_delta = TRUE;
-              return SVN_NO_ERROR;
-            }
-          case svn_XML_textdelta:
-            {
-              this_content->text_delta = TRUE;
-              return SVN_NO_ERROR;
-            }
-          case svn_XML_treedelta:
-            {
-              this_content->tree_delta = (svn_delta_t *) object;
-              return SVN_NO_ERROR;
-            }
-          default:
-            {
-              return 
-                svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
-                                  "didn't find pdelta, vdelta, or textdelta!",
-                                  NULL, digger->pool);
-            }
+            svn_edit_t *ed = (svn_edit_t *) penult_ptr;
+            ed->content = NULL;
+            return SVN_NO_ERROR;
+          }
+        else  /* appending */ 
+          {
+            /* If bottom_ptr is an edit_content, then we must be appending
+               one of three kinds of objects.  Examine ELT_KIND. */
+            svn_edit_content_t *this_content 
+              = (svn_edit_content_t *) bottom_ptr;
+            
+            switch (elt_kind)
+              {
+              case svn_XML_propdelta:
+                {
+                  this_content->prop_delta = TRUE;
+                  return SVN_NO_ERROR;
+                }
+              case svn_XML_textdelta:
+                {
+                  this_content->text_delta = TRUE;
+                  return SVN_NO_ERROR;
+                }
+              case svn_XML_treedelta:
+                {
+                  this_content->tree_delta = (svn_delta_t *) object;
+                  return SVN_NO_ERROR;
+                }
+              default:
+                {
+                  return 
+                    svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+                                      "found something other than pdelta, vdelta, or textdelta to append.",
+                                      NULL, digger->pool);
+                }
+              }
           }
       }
 
