@@ -362,6 +362,13 @@ the section for unapproved changes.)
       -0: gstein
 
 
+-*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+
+These changes are to Subversion bindings.  Many are dependent on
+specific "core" changes in the previous section, so we're planning to
+finalize this list (and its votes) after we know the core changes,
+that is, after Thursday, Jan. 8th 2004.
+
 Bindings changes that affect the build system:
 
    * r8082
@@ -381,14 +388,7 @@ Bindings changes that affect the build system:
      Votes:
       +1: clkao, epg
 
-
--*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
-
-These changes are to Subversion bindings.  Many are dependent on
-specific "core" changes in the previous section, so we're planning to
-finalize this list (and its votes) after we know the core changes,
-that is, after Thursday, Jan. 8th 2004.
-
+Bindings changes that don't affect the build system:
 
    * r8057 (depends on core changes r8053, r8054)
      Constructor for svn_client_ctx_t used in javahl bindings.
