@@ -72,7 +72,7 @@ rep_lines_res = [
                   'Copyright (C) YYYY-YYYY CollabNet'),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
-                 (re.compile(r'^\d+\.\d+\.\d+\+?$'), 'X.Y.Z\n'),
+                 (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
                 ]
 
 def process_lines(lines):

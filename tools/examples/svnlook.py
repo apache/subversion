@@ -22,7 +22,6 @@ import os
 
 from svn import core, fs, delta, repos
 
-
 class SVNLook:
   def __init__(self, pool, path, cmd, rev, txn):
     self.pool = pool
@@ -125,8 +124,10 @@ class SVNLook:
     e_ptr, e_baton = delta.make_editor(editor, self.pool)
 
     # compute the delta, printing as we go
-    repos.svn_repos_dir_delta(base_root, '', None, root, '',
-                              e_ptr, e_baton, 0, 1, 0, 0, self.pool)
+    def authz_cb(root, path, pool):
+      return 1
+    repos.svn_repos_dir_delta(base_root, '', '', root, '',
+                              e_ptr, e_baton, authz_cb, 0, 1, 0, 0, self.pool)
 
 
 class Editor(delta.Editor):

@@ -258,6 +258,12 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#"
       APR_EOL_STR
+      "# The default working directory for the invocation is undefined, so"
+      APR_EOL_STR
+      "# the program should set one explicitly if it cares."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# If the hook program exits with success, the commit continues; but"
       APR_EOL_STR
       "# if it exits with failure (non-zero), the commit is stopped before"
@@ -347,6 +353,12 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "#   [1] REPOS-PATH   (the path to this repository)"
       APR_EOL_STR
       "#   [2] TXN-NAME     (the name of the txn about to be committed)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The default working directory for the invocation is undefined, so"
+      APR_EOL_STR
+      "# the program should set one explicitly if it cares."
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -571,21 +583,27 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#"
       APR_EOL_STR
-      "# The post-commit hook is invoked after a commit. Subversion runs"
+      "# The post-commit hook is invoked after a commit.  Subversion runs"
       APR_EOL_STR
-      "# this hook by invoking a program (script, executable, binary,"
+      "# this hook by invoking a program (script, executable, binary, etc.)"
       APR_EOL_STR
-      "# etc.) named '" 
+      "# named '"
       SVN_REPOS__HOOK_POST_COMMIT 
-      "' (for which"
+      "' (for which this file is a template) with the "
       APR_EOL_STR
-      "# this file is a template) with the following ordered arguments:"
+      "# following ordered arguments:"
       APR_EOL_STR
       "#"
       APR_EOL_STR
       "#   [1] REPOS-PATH   (the path to this repository)"
       APR_EOL_STR
       "#   [2] REV          (the number of the revision just committed)"
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
+      "# The default working directory for the invocation is undefined, so"
+      APR_EOL_STR
+      "# the program should set one explicitly if it cares."
       APR_EOL_STR
       "#"
       APR_EOL_STR
