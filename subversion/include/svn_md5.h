@@ -19,10 +19,17 @@
  * @brief Code for converting and comparing MD5 checksums.
  */
 
+#ifndef SVN_MD5_H
+#define SVN_MD5_H
+
 #include <apr_pools.h>
 #include <apr_md5.h>
 #include "svn_error.h"
 #include "svn_pools.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 
@@ -44,3 +51,9 @@ const char *svn_md5_digest_to_cstring (unsigned char digest[],
  */
 svn_boolean_t svn_md5_digests_match (unsigned const char d1[],
                                      unsigned const char d2[]);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_MD5_H */
