@@ -168,12 +168,11 @@ fold_change (apr_hash_t *changes,
           break;
 
         case svn_fs_path_change_delete:
-          if ((old_change->change_kind == svn_fs_path_change_replace)
-              || (old_change->change_kind == svn_fs_path_change_add))
+          if (old_change->change_kind == svn_fs_path_change_add)
             {
               /* If the path was introduced in this transaction via an
-                 add or replace, and we are deleting it, just remove
-                 the path altogether.  */
+                 add, and we are deleting it, just remove the path
+                 altogether. */
               old_change = NULL;
             }
           else
