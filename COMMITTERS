@@ -61,7 +61,6 @@ Commit access for specific areas:
 
   Miscellaneous:
 
-      rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
       kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
            nsd   Nick Duffek <nick@duffek.com>               (doc)
         xsteve   Stefan Reichör <stefan@xsteve.at>           (psvn)
@@ -118,6 +117,7 @@ Commit access for specific areas:
 Committers who have asked to be listed as dormant:
 
         bdenny   Brian Denny <brian@briandenny.net>
+      rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
 
 ## Local Variables:
 ## coding:utf-8
