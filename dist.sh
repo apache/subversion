@@ -173,14 +173,9 @@ for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.info-* \
             doc/programmer/design/svn-design.html   \
             doc/programmer/design/svn-design.txt    \
-            doc/handbook/svn-handbook.info          \
-            doc/handbook/svn-handbook.info-*        \
-            doc/handbook/svn-handbook.html          \
-            doc/handbook/svn-handbook.txt	    \
-            doc/handbook/translations/french/svn-handbook-french.info         \
-            doc/handbook/translations/french/svn-handbook-french.info-*       \
-            doc/handbook/translations/french/svn-handbook-french.html         \
-            doc/handbook/translations/french/svn-handbook-french.txt
+            doc/book/book/*.html                    \
+            doc/book/book/*.pdf                     \
+            doc/book/book/*.ps
 do
    cp ${name} ${DIST_SANDBOX}/${DISTNAME}/${name}
 done
