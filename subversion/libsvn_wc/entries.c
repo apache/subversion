@@ -1509,6 +1509,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   /* Sync changes to disk. */
   if (do_sync)
     SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
+  else
+    svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
 
   return SVN_NO_ERROR;
 }
