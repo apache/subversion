@@ -17,7 +17,7 @@
 
   </simplesect>
 
-  <sect1 id="svn-app-c-sect-1">
+  <sect1 id="svn-ap-c-sect-1">
     <title>Basic WebDAV Concepts</title> 
 
     <para>This section provides a very brief, very general overview to
@@ -25,7 +25,7 @@
       understanding WebDAV compatibility issues between clients and
       servers.</para>
 
-    <sect2 id="svn-app-c-sect1.1">
+    <sect2 id="svn-ap-c-sect1.1">
       <title>Just Plain WebDAV</title>
 
       <para>RFC 2518 defines a set of concepts and accompanying
@@ -112,7 +112,7 @@
 
     </sect2>
 
-    <sect2 id="svn-app-c-sect1.2">
+    <sect2 id="svn-ap-c-sect1.2">
       <title>DeltaV Extensions</title>
   
       <para>Because RFC 2518 left out versioning concepts, another
@@ -243,7 +243,7 @@
 
   </sect1>
 
-  <sect1 id="svn-app-c-sect-2">
+  <sect1 id="svn-ap-c-sect-2">
     <title>Subversion and DeltaV</title> 
     
     <para>So how <quote>compatible</quote> is Subversion with other
@@ -263,7 +263,7 @@
       development team plans to address general WebDAV
       interoperability in a future release of Subversion.</para>
 
-    <sect2 id="svn-app-c-sect2.1">
+    <sect2 id="svn-ap-c-sect2.1">
       <title>Mapping Subversion to DeltaV</title>
       
       <para>Here is a very <quote>high-level</quote> description of
@@ -324,7 +324,7 @@
       
     </sect2>
     
-    <sect2 id="svn-app-c-sect2.2">
+    <sect2 id="svn-ap-c-sect2.2">
       <title>Autoversioning Support</title>
       
       <para>At the time of writing, the truth is that there are very
@@ -387,7 +387,7 @@
 
     </sect2>
 
-    <sect2 id="svn-app-c-sect2.3">
+    <sect2 id="svn-ap-c-sect2.3">
       <title>The mod_dav_lock Alternative</title>
       
       <para>The mod_dav Apache module is a complex beast:  it
@@ -464,7 +464,7 @@
     
   </sect1>
   
-  <sect1 id="svn-app-c-sect-3">
+  <sect1 id="svn-ap-c-sect-3">
     <title>Autoversioning Interoperability</title> 
 
       <para>In this section, we'll describe the most common generic
@@ -477,7 +477,7 @@
         
         <!-- list of subsections goes here. -->
 
-    <sect2 id="svn-app-c-sect-3.1">
+    <sect2 id="svn-ap-c-sect-3.1">
       <title>Win32 WebFolders</title>
 
       <para>Windows 98, 2000, and XP have an integrated WebDAV client
@@ -520,7 +520,7 @@
 
     </sect2>
 
-    <sect2 id="svn-app-c-sect-3.2">
+    <sect2 id="svn-ap-c-sect-3.2">
       <title>Mac OS X</title>
 
       <para>Apple's OS X operating system has an integrated WebDAV
@@ -560,7 +560,7 @@ BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
 
     </sect2>
 
-    <sect2 id="svn-app-c-sect-3.3">
+    <sect2 id="svn-ap-c-sect-3.3">
       <title>Unix: Nautilus 2</title>
 
       <para>Nautilus is the official file manager/browser for the
@@ -604,7 +604,7 @@ BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
 
     </sect2>
 
-    <sect2 id="svn-app-c-sect-3.4">
+    <sect2 id="svn-ap-c-sect-3.4">
       <title>Linux davfs2</title>
 
       <para>Linux davfs2 is a filesystem module for the Linux kernel,

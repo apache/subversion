@@ -1,5 +1,5 @@
 <appendix id="svn-ap-a">
-<title>Subversion for CVS Users</title>
+  <title>Subversion for CVS Users</title>
 
   <simplesect>
 
@@ -21,7 +21,7 @@
   <!-- ================================================================= -->
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-1">
+  <sect1 id="svn-ap-a-sect-1">
     <title>Revision Numbers Are Different Now</title>
 
     <para>In CVS, revision numbers are per-file.  This is because CVS
@@ -55,7 +55,7 @@
   <!-- ================================================================= -->
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-2">
+  <sect1 id="svn-ap-a-sect-2">
     <title>Directory Versions</title>
     
     <para>Subversion tracks tree structures, not just file contents.
@@ -64,9 +64,8 @@
 
     <para>Here's what this means to you, as a former CVS user:</para>
 
-      <itemizedlist>
-
-        <listitem>
+    <itemizedlist>
+      <listitem>
         <para>The <command>svn add</command> and <command>svn
           delete</command> commands work on directories now, just as
           they work on files.  So do <command>svn copy</command> and
@@ -76,15 +75,13 @@
           <quote>scheduled</quote> for addition or deletion.  No
           repository changes happen until you run <command>svn
           commit</command>.</para>
-        </listitem>
-
+      </listitem>
       <listitem>
         <para>Directories aren't dumb containers anymore; they have
           revision numbers like files.  (Or more properly, it's
           correct to talk about <quote>directory
           <filename>foo/</filename> in revision 5</quote>.)</para>
       </listitem>
-
     </itemizedlist>
 
     <para>Let's talk more about that last point.  Directory versioning
@@ -93,7 +90,7 @@
       abuse this model.</para>
 
     <para>From a theoretical point of view, we define <quote>revision
-        5 of directory <filename>foo</filename></quote> to mean a
+      5 of directory <filename>foo</filename></quote> to mean a
       specific collection of directory-entries and properties.  Now
       suppose we start adding and removing files from
       <filename>foo</filename>, and then commit.  It would be a lie
@@ -110,8 +107,8 @@
       all accounts are settled with the repository, and the
       directory's new revision number is set correctly.
       <emphasis>Therefore, only after an update is it truly safe to
-        say that you have a <quote>perfect</quote> revision of a
-        directory.</emphasis> Most of the time, your working copy will
+      say that you have a <quote>perfect</quote> revision of a
+      directory.</emphasis> Most of the time, your working copy will
       contain <quote>imperfect</quote> directory revisions.</para>
     
     <para>Similarly, a problem arises if you attempt to commit
@@ -124,7 +121,7 @@
       up-to-date.</emphasis></para>
 
     <para>For more discussion about the limitations of directory
-    versioning, see <xref linkend="svn-ch-2-sect-3.4"/>.</para>
+      versioning, see <xref linkend="svn-ch-2-sect-3.4"/>.</para>
 
   </sect1>
 
@@ -132,7 +129,7 @@
   <!-- ================================================================= -->
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-3">
+  <sect1 id="svn-ap-a-sect-3">
     <title>More Disconnected Operations</title>
 
     <para>In recent years, disk space has become outrageously cheap
@@ -191,7 +188,7 @@
   <!-- ================================================================= -->
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-4">
+  <sect1 id="svn-ap-a-sect-4">
     <title>Distinction Between Status and Update</title>
 
     <para>In Subversion, we've tried to erase a lot of the confusion
@@ -319,7 +316,7 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <!-- ======================== SECTION 5 ============================= -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-5">
+  <sect1 id="svn-ap-a-sect-5">
     <title>Branches and Tags</title>
 
     <para>Subversion doesn't distinguish between filesystem space and
@@ -349,7 +346,7 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-6">
+  <sect1 id="svn-ap-a-sect-6">
     <title>Metadata Properties</title>
 
     <para>A new feature of Subversion is that you can attach arbitrary
@@ -370,7 +367,7 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-7">
+  <sect1 id="svn-ap-a-sect-7">
     <title>Conflict Resolution</title>
 
     <para>CVS marks conflicts with in-line <quote>conflict
@@ -392,7 +389,7 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-8">
+  <sect1 id="svn-ap-a-sect-8">
     <title>Binary Files and Translation</title>
 
     <para>In the most general sense, Subversion handles binary files
@@ -443,7 +440,7 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <!-- ======================== SECTION 9 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-9">
+  <sect1 id="svn-ap-a-sect-9">
 
     <title>Versioned Modules</title>
 
@@ -460,7 +457,7 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <!-- ======================== SECTION 10 ============================= -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-10">
+  <sect1 id="svn-ap-a-sect-10">
 
     <title>Authentication</title>
 
@@ -487,10 +484,42 @@ X    Resource is external to this working copy (comes from another
   <!-- ================================================================= -->
   <!-- ======================== SECTION 11 ============================= -->
   <!-- ================================================================= -->
-  <sect1 id="svn-app-a-sect-11">
+  <sect1 id="svn-ap-a-sect-11">
 
     <title>Converting a Repository from CVS to Subversion</title>
-    <para>See <xref linkend="svn-ap-e-sect-1"/>.</para>
+
+    <para>Perhaps the most important way to familiarize CVS users with
+      Subversion is to let them continue to work on their projects
+      using the new system.  And while that can be somewhat
+      accomplished using a flat import into a Subversion repository of
+      an exported CVS repository, the more thorough solution involves
+      transferring not just the latest snapshot of their data, but all
+      the history behind it as well, from one system to another.  This
+      is an extremely difficult problem to solve that involves
+      deducing changesets in the absence of atomicity, and translating
+      between the systems' completely orthogonal branching policies,
+      among other complications.  Still, there are a handful of tools
+      claiming to at least partially support the ability to convert
+      existing CVS repositories into Subversion ones.</para>
+
+    <para>One such tool is cvs2svn (<systemitem
+      class="url">http://cvs2svn.tigris.org/</systemitem>), a Python
+      script originally created by members of Subversion's own
+      development community.  Others include Chia-liang Kao's
+      Subversion converter plugin to the VCP tool (<systemitem
+      class="url">http://svn.clkao.org/revml/branches/svn-perl/</systemitem>)
+      and Lev Serebryakov's RefineCVS (<systemitem
+      class="url">http://lev.serebryakov.spb.ru/refinecvs/</systemitem>).
+      These tools have various levels of completeness, and may make
+      entirely different decisions about how to handle your CVS
+      repository history.  Whichever tool you decide to use, be sure
+      to perform as much verification as you can stand on the
+      conversion results&mdash;after all, you've worked hard to build
+      that history!</para>
+
+    <para>For an updated collection of links to known converter tools,
+      visit the Links page of the Subversion website (<systemitem
+      class="url">http://subversion.tigris.org/project_links.html</systemitem>).</para>
 
   </sect1>
 
