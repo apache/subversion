@@ -175,11 +175,6 @@ is_valid_flag (skel_t *skel)
     {      
       return 1;      
     }
-  else if (len == 1
-           && svn_fs__matches_atom (skel->children, "mutable"))
-    {      
-      return 1;
-    }
 
   return 0;
 }
