@@ -104,6 +104,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
 #define SVN_WC__ADM_AUTH_DIR            "auth"
+#define SVN_WC__ADM_EMPTY_FILE          "empty-file"
 
 
 /* The basename of the ".prej" file, if a directory ever has property
@@ -113,6 +114,11 @@ svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
 
 /* Return a string containing the admin subdir name. */
 svn_stringbuf_t *svn_wc__adm_subdir (apr_pool_t *pool);
+
+
+/* Return the path to the empty file in the adm area of PATH */
+svn_stringbuf_t *svn_wc__empty_file_path (const svn_stringbuf_t *path,
+                                          apr_pool_t *pool);
 
 
 /* Return a path to something in PATH's administrative area.
@@ -186,6 +192,19 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
 svn_error_t *svn_wc__remove_adm_file (svn_stringbuf_t *path,
                                       apr_pool_t *pool,
                                       ...);
+
+/* Open *readonly* the empty file in the in adm area of PATH */
+svn_error_t *svn_wc__open_empty_file (apr_file_t **handle,
+                                      svn_stringbuf_t *path,
+                                      apr_pool_t *pool);
+
+/* Close the empty file in the adm area of PATH. FP was obtain from
+ * svn_wc__open_empty_file().
+ */
+svn_error_t *svn_wc__close_empty_file (apr_file_t *fp,
+                                       svn_stringbuf_t *path,
+                                       apr_pool_t *pool);
+
 
 /* Open the text-base for FILE.
  * FILE can be any kind of path ending with a filename.

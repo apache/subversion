@@ -704,6 +704,41 @@ svn_boolean_t svn_wc_is_entry_prop (svn_stringbuf_t *name);
 
 /*** Diffs ***/
 
+
+/* The function type called by the diff editor when it has determined the
+ * two files that are to be diffed.
+ *
+ * PATH1 and PATH2 are the two files to be compared, these files
+ * exist. Since the PATH1 file may be temporary, it is possible that it is
+ * not in the "correct" location in the working copy, if this is the case
+ * then LABEL will be non-null and will contain the "correct" location.
+ *
+ * BATON is passed through by the diff editor.
+ */
+typedef svn_error_t *(*svn_wc_diff_cmd_t)(svn_stringbuf_t *path1,
+                                          svn_stringbuf_t *path2,
+                                          svn_stringbuf_t *label,
+                                          void *baton);
+
+
+/* Return an EDITOR/EDIT_BATON for diffing a working copy against the
+ * repository.
+ *
+ * ANCHOR and TARGET have the same meaning as svn_wc_get_update_editor.
+ *
+ * DIFF_CMD/DIFF_CMD_BATON are the function/baton to be called when two
+ * files are to be compared.
+ */
+svn_error_t *svn_wc_get_diff_editor (svn_stringbuf_t *anchor,
+                                     svn_stringbuf_t *target,
+                                     svn_wc_diff_cmd_t diff_cmd,
+                                     void *diff_cmd_baton,
+                                     svn_boolean_t recurse,
+                                     const svn_delta_edit_fns_t **editor,
+                                     void **edit_baton,
+                                     apr_pool_t *pool);
+
+
 /* Given a PATH to a wc file, return a PRISTINE_PATH which points to a
    pristine version of the file.  This is needed so clients can do
    diffs.  If the WC has no text-base, return a NULL instead of a
