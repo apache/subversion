@@ -155,10 +155,7 @@ def keywords_off(path):
 #----------------------------------------------------------------------
 
 def keywords_from_birth(sbox):
-  """Create some files that have the `svn:keywords' property set from
-  the moment they're first committed.  Some of the files actually
-  contain keywords, others don't.  Make sure everything behaves
-  correctly."""
+  "Commit new files with keywords active from birth"
 
   if sbox.build():
     return 1
@@ -166,9 +163,6 @@ def keywords_from_birth(sbox):
   wc_dir = sbox.wc_dir
 
   if setup_working_copy (wc_dir): return 1
-
-  keywords_on (author_rev_unexp_path)
-  keywords_on (embd_author_rev_exp_path)
 
   # Add all the files
   status_list = svntest.actions.get_virginal_status_list (wc_dir, '1')
@@ -208,13 +202,17 @@ def keywords_from_birth(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
 
+  # Add the keyword properties.
+  keywords_on (author_rev_unexp_path)
+  keywords_on (embd_author_rev_exp_path)
+
   # Commit.
-  output_list = [[author_rev_unexp_path, None, {}, {'verb' : 'Sending' }],
-                 [author_rev_exp_path, None, {}, {'verb' : 'Sending' }],
-                 [bogus_keywords_path, None, {}, {'verb' : 'Sending' }],
-                 [embd_author_rev_unexp_path, None, {}, {'verb' : 'Sending' }],
-                 [embd_author_rev_exp_path, None, {}, {'verb' : 'Sending' }],
-                 [embd_bogus_keywords_path, None, {}, {'verb' : 'Sending' }]]
+  output_list = [[author_rev_unexp_path, None, {}, {'verb' : 'Adding' }],
+                 [author_rev_exp_path, None, {}, {'verb' : 'Adding' }],
+                 [bogus_keywords_path, None, {}, {'verb' : 'Adding' }],
+                 [embd_author_rev_unexp_path, None, {}, {'verb' : 'Adding' }],
+                 [embd_author_rev_exp_path, None, {}, {'verb' : 'Adding' }],
+                 [embd_bogus_keywords_path, None, {}, {'verb' : 'Adding' }]]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
