@@ -6,6 +6,7 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 		       dbt.c			\
 		       fs.c			\
 		       id.c			\
+		       nodes-table.c		\
 		       skel.c
 
 # Set aside for the moment:

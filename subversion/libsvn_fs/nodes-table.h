@@ -35,9 +35,9 @@ int svn_fs__open_nodes_table (DB **nodes_p,
    skel and the data it points into in POOL.
 
    This verifies that *SKEL_P is a well-formed REPRESENTATION skel.  */
-svn_error_t *svn_fs__get_rep (skel_t *skel_p,
+svn_error_t *svn_fs__get_rep (skel_t **skel_p,
 			      svn_fs_t *fs,
-			      svn_fs_id_t *id,
+			      const svn_fs_id_t *id,
 			      DB_TXN *db_txn,
 			      apr_pool_t *pool);
 
@@ -48,7 +48,7 @@ svn_error_t *svn_fs__get_rep (skel_t *skel_p,
 
    This verifies that SKEL is a well-formed REPRESENTATION skel.  */
 svn_error_t *svn_fs__put_rep (svn_fs_t *fs,
-			      svn_fs_id_t *id,
+			      const svn_fs_id_t *id,
 			      skel_t *skel,
 			      DB_TXN *db_txn,
 			      apr_pool_t *pool);
