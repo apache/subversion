@@ -2,6 +2,11 @@
 
 # Testing merging and conflict resolution.
 
+if test "$#" != 1; then
+  echo "ERROR: not enough arguments. Must supply SOURCE-DIR."
+  exit 1
+fi
+
 SVN_PROG=../svn
 XML_DIR=$1
 TEST_DIR_1=t1
