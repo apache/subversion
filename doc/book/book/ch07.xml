@@ -1556,7 +1556,8 @@ Cumulus clouds are appearing more frequently as summer approaches.
 
     <para>Fortunately, Subversion provides support for
       <firstterm>externals definitions</firstterm>.  An externals
-      definition is a mapping of a local directory to the URL of a
+      definition is a mapping of a local directory to the
+      URL&mdash;and possibly a particular revision&mdash;of a
       versioned resource.  In Subversion, you declare externals
       definitions in groups using the <literal>svn:externals</literal>
       property.  This property is set on a versioned directory, and
@@ -1566,9 +1567,9 @@ Cumulus clouds are appearing more frequently as summer approaches.
 
     <screen>
 $ svn propget svn:externals calc
-third-party/sounds          http://sounds.red-bean.com/repos
-third-party/skins           http://skins.red-bean.com/repositories/skinproj
-third-party/skins/toolkit   http://svn.red-bean.com/repos/skin-maker
+third-party/sounds             http://sounds.red-bean.com/repos
+third-party/skins              http://skins.red-bean.com/repositories/skinproj
+third-party/skins/toolkit -r21 http://svn.red-bean.com/repos/skin-maker
 </screen>
 
     <para>The convenience of the <literal>svn:externals</literal>
@@ -1615,11 +1616,23 @@ Fetching external item into calc/third-party/skins
       others update their working copies and receive your changes to
       the externals definition.</para>
 
-    <!-- ### TECH-CHECK: Does this stuff really work?  Ben had a
-         comment here that was more than a little doubtful.  We *do*
-         have externals tests in place.  Perhaps Ben's update did nothing
-         because his directory was already up-to-date?  -->
-    
+    <para>The <command>svn status</command> command also recognizes
+      externals definitions, displaying a status code of
+      <literal>X</literal> for the disjoint subdirectories into which
+      externals are checked out, and then recursing into those
+      subdirectories to display the status of the external items
+      themselves.</para>
+
+    <para>The support that exists for externals definitions in
+      Subversion today can be a little misleading, though.  The
+      auxiliary working copies created via the externals definition
+      support are still disconnected from the primary working copy.
+      And Subversion still only truly operates on non-disjoint working
+      copies.  So, for example, if you want to commit changes that
+      you've made in one or more of the auxiliary working copies, you
+      must run <command>svn commit</command> explicitly on those
+      working copies, not on the primary working copy.</para>
+
   </sect1>
 
   <!-- ******************************************************************* -->
