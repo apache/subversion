@@ -46,7 +46,7 @@ private:
 	static svn_error_t *username_prompt(svn_auth_cred_username_t **cred_p, void *baton,
 										const char *realm, apr_pool_t *pool);
 	static svn_error_t *ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
-										void *baton,const char *realm, int failures, 
+										void *baton,const char *realm, apr_uint32_t failures, 
 										const svn_auth_ssl_server_cert_info_t *cert_info,
 										apr_pool_t *pool);
 	static svn_error_t *ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
