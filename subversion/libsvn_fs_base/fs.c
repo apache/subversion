@@ -297,17 +297,16 @@ base_bdb_set_errcall (svn_fs_t *fs,
 
 /* Allocating an appropriate Berkeley DB environment object.  */
 
-/* BDB error callback.  See bdb_errcall_baton_t in fs.h for more info. */
+/* BDB error callback.  See bdb_errcall_baton_t in fs.h for more info.
+   ### bdb_error_gatherer is a macro with BDB < 4.3, so be careful how
+       you use it. */
 static void
-#if (DB_VERSION_MAJOR > 4) \
-    || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 3)
 bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
-#else
-bdb_error_gatherer (const char *baton, char *msg)
-#endif
 {
   bdb_errcall_baton_t *ec_baton = (bdb_errcall_baton_t *) baton;
   svn_error_t *new_err;
+
+  SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
 
   new_err = svn_error_createf (SVN_NO_ERROR, NULL, "bdb: %s", msg);
   if (ec_baton->pending_errors)
@@ -316,7 +315,7 @@ bdb_error_gatherer (const char *baton, char *msg)
     ec_baton->pending_errors = new_err;
 
   if (ec_baton->user_callback)
-    ec_baton->user_callback (NULL, (char *) msg);
+    ec_baton->user_callback (NULL, (char *)msg); /* ### I hate this cast... */
 }
 
 
@@ -336,7 +335,8 @@ create_env (DB_ENV **envp, bdb_errcall_baton_t **ec_batonp, apr_pool_t *pool)
   if (!db_err)
     {
       (*envp)->set_errpfx (*envp, (char *) (*ec_batonp));
-      (*envp)->set_errcall (*envp, bdb_error_gatherer);
+      /* ### bdb_error_gatherer is in params to stop macro expansion. */
+      (*envp)->set_errcall (*envp, (bdb_error_gatherer));
 
       /* Needed on Windows in case Subversion and Berkeley DB are using
          different C runtime libraries  */
