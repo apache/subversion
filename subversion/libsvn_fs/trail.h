@@ -16,6 +16,7 @@
 
 #include "db.h"
 #include "apr_pools.h"
+#include "svn_fs.h"
 
 
 /* A `trail' structure provides a context for a Berkeley DB transaction,
