@@ -321,9 +321,6 @@ svn_cl__edit_externally (const char **edited_contents,
        "None of the environment variables "
        "SVN_EDITOR, VISUAL or EDITOR is set.");
 
-  /* By now, we had better have an EDITOR to work with. */
-  assert (editor);
-
   /* Ask the working copy for a temporary file based on BASE_DIR */
   SVN_ERR (svn_io_open_unique_file 
            (&tmp_file, &tmpfile_name,
@@ -532,6 +529,7 @@ svn_cl__get_log_message (const char **log_msg,
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_create (default_msg, pool);
       svn_error_t *err = NULL;
+      const char *msg2;  /* ### shim for svn_cl__edit_externally */
 
       for (i = 0; i < commit_items->nelts; i++)
         {
@@ -565,16 +563,9 @@ svn_cl__get_log_message (const char **log_msg,
           svn_stringbuf_appendcstr (tmp_message, "\n");
         }
 
-      {
-        const char *msg2;  /* ### shim */
-        err = svn_cl__edit_externally (&msg2, lmb->base_dir,
-                                       tmp_message->data, pool);
-        if (msg2)
-          {
-            message = svn_stringbuf_create (msg2, pool);
-          }
-      }
-
+      err = svn_cl__edit_externally (&msg2, lmb->base_dir,
+                                     tmp_message->data, pool);
+      
       if (err)
         {
           if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR)
@@ -584,6 +575,9 @@ svn_cl__get_log_message (const char **log_msg,
                "or using the --message (-m) or --file (-F) options.");
           return err;
         }
+
+      if (msg2)
+        message = svn_stringbuf_create (msg2, pool);
 
       /* Strip the prefix from the buffer. */
       if (message)
