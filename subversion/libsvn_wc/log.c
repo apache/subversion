@@ -157,92 +157,111 @@ file_xfer_under_path (svn_stringbuf_t *path,
 }
 
 
-
+/* If new text was committed, then replace the text base for
+ * newly-committed file NAME in directory PATH with the new
+ * post-commit text base, which is waiting in the adm tmp area in
+ * detranslated form.
+ *
+ * If eol and/or keyword translation would cause the working file to
+ * change, then overwrite the working file with a translated copy of
+ * the new text base (but only if the translated copy differs from the
+ * current working file -- if they are the same, do nothing, to avoid
+ * clobbering timestamps unnecessarily), and set OVERWROTE_WORKING to
+ * TRUE.  If the working file isn't touched, then set to FALSE.
+ * 
+ * Use POOL for any temporary allocation.
+ */
 static svn_error_t *
-replace_text_base (svn_stringbuf_t *path,
-                   const char *name,
-                   apr_pool_t *pool)
+install_committed_file (svn_boolean_t *overwrote_working,
+                        svn_stringbuf_t *path,
+                        const char *name,
+                        apr_pool_t *pool)
 {
   svn_stringbuf_t *filepath;
   svn_stringbuf_t *tmp_text_base;
-  svn_error_t *err;
   enum svn_node_kind kind;
   svn_wc_keywords_t *keywords;
+  apr_status_t apr_err;
+  apr_file_t *ignored;
+  svn_boolean_t same;
+  svn_stringbuf_t *tmp_wfile, *pdir, *bname;
+  enum svn_wc__eol_style eol_style;
+  const char *eol_str;
 
   filepath = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (filepath, name);
 
+  /* In the commit, newlines and keywords may have been
+   * canonicalized and/or contracted... Or they may not have
+   * been.  It's kind of hard to know.  Here's how we find out:
+   *
+   *    1. Make a translated tmp copy of the committed text base.
+   *       Or, if no committed text base exists (the commit must have
+   *       been a propchange only), make a translated tmp copy of the
+   *       working file.
+   *    2. Compare the translated tmpfile to the working file.
+   *    3. If different, copy the tmpfile over working file.
+   *
+   * This means we only rewrite the working file if we absolutely
+   * have to, which is good because it avoids changing the file's
+   * timestamp unless necessary, so editors aren't tempted to
+   * reread the file if they don't really need to.
+   */
+
+  /* start off getting the latest translation prop values. */
+  SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
+                                  filepath->data, pool));
+  SVN_ERR (svn_wc__get_keywords (&keywords,
+                                 filepath->data, NULL, pool));
+
+  svn_path_split (filepath, &pdir, &bname, pool);
+  tmp_wfile = svn_wc__adm_path (pdir, TRUE, pool, bname->data, NULL);
+  
+  SVN_ERR (svn_io_open_unique_file (&ignored, &tmp_wfile,
+                                    tmp_wfile->data, SVN_WC__TMP_EXT,
+                                    FALSE, pool));
+  apr_err = apr_file_close (ignored);
+  if (! (APR_STATUS_IS_SUCCESS (apr_err)))
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "install_committed_file: error closing %s", tmp_wfile->data);
+
+  /* Is there a tmp_text_base that needs to be installed?  */
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
-  err = svn_io_check_path (tmp_text_base->data, &kind, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_io_check_path (tmp_text_base->data, &kind, pool));
 
-  if (kind == svn_node_none)
-    return SVN_NO_ERROR;  /* tolerate mop-up calls gracefully */
-  else
-    {
-      apr_status_t apr_err;
-      apr_file_t *ignored;
-      svn_boolean_t same;
-      svn_stringbuf_t *tmp_wfile, *pdir, *bname;
-      enum svn_wc__eol_style eol_style;
-      const char *eol_str;
-
-      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
-                                      filepath->data, pool));
-      SVN_ERR (svn_wc__get_keywords (&keywords,
-                                     filepath->data, NULL, pool));
-
-      /* In the commit, newlines and keywords may have been
-       * canonicalized and/or contracted... Or they may not have
-       * been.  It's kind of hard to know.  Here's how we find out:
-       *
-       *    1. Make a translated tmp copy of the committed text base.
-       *    2. Compare it to the working file.
-       *    3. If different, rename the tmp file over working file;
-       *       else just remove the tmp file.
-       *
-       * This means we only rewrite the working file if we absolutely
-       * have to, which is good because it avoids changing the file's
-       * timestamp unless necessary, so editors aren't tempted to
-       * reread the file if they don't really need to.
-       */
-      svn_path_split (filepath, &pdir, &bname, pool);
-      tmp_wfile = svn_wc__adm_path (pdir, TRUE, pool, bname->data, NULL);
-      
-      SVN_ERR (svn_io_open_unique_file (&ignored,
-                                        &tmp_wfile,
+  if (kind == svn_node_file)
+    SVN_ERR (svn_wc_copy_and_translate (tmp_text_base->data,
                                         tmp_wfile->data,
-                                        SVN_WC__TMP_EXT,
-                                        FALSE,
+                                        eol_str,
+                                        FALSE, /* don't repair eol */
+                                        keywords,
+                                        TRUE, /* expand keywords */
+                                        pool));
+  else
+    SVN_ERR (svn_wc_copy_and_translate (filepath->data,
+                                        tmp_wfile->data,
+                                        eol_str,
+                                        FALSE, /* don't repair eol */
+                                        keywords,
+                                        TRUE, /* expand keywords */
                                         pool));
 
-      apr_err = apr_file_close (ignored);
-      if (! (APR_STATUS_IS_SUCCESS (apr_err)))
-        return svn_error_createf
-          (apr_err, 0, NULL, pool,
-           "replace_text_base: error closing %s", tmp_wfile->data);
-
-      SVN_ERR (svn_wc_copy_and_translate (tmp_text_base->data,
-                                          tmp_wfile->data,
-                                          eol_str,
-                                          FALSE, /* don't repair eol */
-                                          keywords,
-                                          TRUE, /* expand keywords */
-                                          pool));
-
-      SVN_ERR (svn_wc__files_contents_same_p
-               (&same, tmp_wfile, filepath, pool));
-
-      if (! same)
-        SVN_ERR (svn_io_copy_file (tmp_wfile->data, filepath->data, FALSE,
-                                   pool));
-
-      SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
-
-      /* Move committed tmp/text-base to real text-base. */
-      SVN_ERR (svn_wc__sync_text_base (filepath, pool));
+  SVN_ERR (svn_wc__files_contents_same_p (&same, tmp_wfile, filepath, pool));
+  
+  if (! same)
+    {
+      SVN_ERR (svn_io_copy_file (tmp_wfile->data, filepath->data,
+                                 FALSE, pool));
+      *overwrote_working = TRUE;
     }
+  else
+    *overwrote_working = FALSE;
+
+  SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
+  
+  if (kind == svn_node_file)  /* tmp_text_base exists */
+    SVN_ERR (svn_wc__sync_text_base (filepath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -618,7 +637,7 @@ log_do_committed (struct log_runner *loggy,
   int is_this_dir = (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0);
   const char *rev = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
   svn_stringbuf_t *sname = svn_stringbuf_create (name, pool);
-  svn_boolean_t wc_root;
+  svn_boolean_t wc_root, overwrote_working = FALSE;
   svn_stringbuf_t *full_path;
   svn_stringbuf_t *pdir, *basename;
   apr_hash_t *entries;
@@ -771,11 +790,6 @@ log_do_committed (struct log_runner *loggy,
             return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
                                       "error getting affected time: %s",
                                       chosen->data);
-                  
-          /* Finally, install a new `text-base' item. */
-          if ((err = replace_text_base (loggy->path, name, pool)))
-            return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
-                                      "error replacing text-base: %s", name);
         }
     }
               
@@ -836,6 +850,25 @@ log_do_committed (struct log_runner *loggy,
       }
   }   
 
+  /* Timestamps have been decided on, and prop-base has been installed
+     if necessary.  Now we install the new text-base (if present), and
+     possibly re-translate the working file. */
+  if (! is_this_dir)
+    {
+      if ((err = install_committed_file (&overwrote_working,
+                                         loggy->path, name, pool)))
+        return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                  "error replacing text-base: %s", name);
+      
+      /* If the working file was overwritten (due to re-translation), use
+       *that* textual timestamp instead! */
+      if (overwrote_working)
+        if ((err = svn_io_file_affected_time (&text_time, full_path, pool)))
+          return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                    "error getting affected time: %s",
+                                    full_path->data);
+    }
+    
   /* Files have been moved, and timestamps have been found.  It is now
      fime for The Big Entry Modification. */
   entry->revision = SVN_STR_TO_REV (rev);

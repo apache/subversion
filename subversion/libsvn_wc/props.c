@@ -54,20 +54,6 @@
 
 /*** Deducing local changes to properties ***/
 
-/* Given two property hashes, deduce the differences between them
-   (from BASEPROPS -> LOCALPROPS).  Return these changes as a series
-   of svn_prop_t structures stored in LOCAL_PROPCHANGES, allocated
-   from POOL.
-   
-   For note, here's a quick little table describing the logic of this
-   routine:
-
-   basehash        localhash         event
-   --------        ---------         -----
-   value = foo     value = NULL      Deletion occurred.
-   value = foo     value = bar       Set occurred (modification)
-   value = NULL    value = baz       Set occurred (creation)
-*/
 svn_error_t *
 svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
                               apr_hash_t *localprops,
