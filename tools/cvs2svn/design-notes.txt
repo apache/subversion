@@ -137,7 +137,7 @@ does, we tweak the line before writing it out, and then conditionally
 adjust the sublist's range to account for the timestamp we just
 adjusted (since it could be an outlier).  Note that this could, in
 theory, result in separate commits being accidentally unified, since
-we might gradually the two sides of the range such that they are
+we might gradually adjust the two sides of the range such that they are
 eventually more than COMMIT_THRESHOLD seconds apart.  However, this is
 really a case of CVS not recording enough information to disambiguate
 the commits; we'd know we have a time range that exceeds the
