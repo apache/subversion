@@ -114,7 +114,6 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
          PATH.  When we call reporter->finish_report, the
          status_editor will be driven by svn_repos_dir_delta. */
       SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
-                                       FALSE, /* ignore unversioned stuff */
                                        FALSE, /* don't restore missing files */
                                        descend,
                                        pool));

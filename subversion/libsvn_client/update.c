@@ -152,7 +152,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
          PATH.  When we call reporter->finish_report, the
          update_editor will be driven by svn_repos_dir_delta. */
       err = svn_wc_crawl_revisions (path, reporter, report_baton,
-                                    TRUE, TRUE, recurse, pool);
+                                    TRUE, recurse, pool);
       
       /* Sleep for one second to ensure timestamp integrity. */
       apr_sleep (APR_USEC_PER_SEC * 1);

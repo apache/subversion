@@ -24,7 +24,6 @@
 #include "apr_pools.h"
 #include "apr_file_io.h"
 #include "apr_hash.h"
-#include "apr_fnmatch.h"
 
 #include "wc.h"
 #include "svn_types.h"
@@ -35,60 +34,6 @@
 #include "svn_delta.h"
 
 #include <assert.h>
-
-static void add_default_ignores (apr_array_header_t *patterns)
-{
-  static const char *const ignores[] = 
-  {
-    "*.o", "*.lo", "*.la", "#*#", "*.rej", "*~", ".#*",
-    /* what else? */
-    NULL
-  };
-  int i;
-  
-  for (i = 0; ignores[i] != NULL; i++)
-    {
-      const char **ent = apr_array_push(patterns);
-      *ent = ignores[i];
-    }
-
-}
-
-
-/* Helper routine: add to a *PATTERNS list patterns from the value of
-   the SVN_PROP_IGNORE property set on DIRPATH.  If there is no such
-   property, or the property contains no patterns, do nothing.
-   Otherwise, add to *PATTERNS a list of (const char *) patterns to
-   match. */
-static svn_error_t *
-add_ignore_patterns (const char *dirpath,
-                     apr_array_header_t *patterns,
-                     apr_pool_t *pool)
-{
-  svn_stringbuf_t *value = NULL;
-  svn_stringbuf_t *name = svn_stringbuf_create (SVN_PROP_IGNORE, pool);
-
-  /* Try to load the SVN_PROP_IGNORE property. */
-  SVN_ERR (svn_wc_prop_get (&value, name, 
-                            svn_stringbuf_create (dirpath, pool), pool));
-  if (value != NULL)
-    {
-      char sep[3] = "\n\r";
-      char *last;
-      char *p = apr_strtok (value->data, sep, &last);
-      while (p)
-        {
-          if (p[0] != '\0')
-            {
-              (*((const char **) apr_array_push (patterns))) = 
-                apr_pstrdup (pool, p);
-            }
-          p = apr_strtok (NULL, sep, &last);
-        } 
-    }    
-  return SVN_NO_ERROR;
-}                  
-
 
 /* The values stored in `affected_targets' hashes are of this type.
  *
@@ -1834,14 +1779,12 @@ report_revisions (svn_stringbuf_t *wc_path,
                   const svn_ra_reporter_t *reporter,
                   void *report_baton,
                   svn_pool_feedback_t *fbtable,
-                  svn_boolean_t print_unrecognized,
                   svn_boolean_t restore_files,
                   svn_boolean_t recurse,
                   apr_pool_t *pool)
 {
   apr_hash_t *entries, *dirents;
   apr_hash_index_t *hi;
-  apr_array_header_t *patterns;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Construct the actual 'fullpath' = wc_path + dir_path */
@@ -1852,72 +1795,7 @@ report_revisions (svn_stringbuf_t *wc_path,
   SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
   SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
 
-  /* Try to load any '.svnignore' file that may be present. */
-  patterns = apr_array_make (pool, 1, sizeof(const char *));
-  add_default_ignores (patterns);
-  SVN_ERR (add_ignore_patterns (full_path->data, patterns, pool));
-
-  /* Phase 1:  Print out every unrecognized (unversioned) object. */
-
-  if (print_unrecognized)
-
-    for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
-      {
-        const void *key;
-        apr_ssize_t klen;
-        void *val;
-        const char *keystring;
-        svn_stringbuf_t *current_entry_name;
-        svn_stringbuf_t *printable_path;
-        
-        apr_hash_this (hi, &key, &klen, &val);
-        keystring = (const char *) key;
-        
-        /* If the dirent isn't in `.svn/entries'... */
-        if (! apr_hash_get (entries, key, klen))        
-          /* and we're not looking at .svn... */
-          if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
-            {
-              svn_boolean_t print_item = TRUE;
-              apr_status_t status;
-              int i;
-              
-              current_entry_name = svn_stringbuf_create (keystring, subpool);
-              
-              for (i = 0; i < patterns->nelts; i++)
-                {
-                  const char *pat = (((const char **) (patterns)->elts))[i];
-                  
-                  /* Try to match current_entry_name to pat. */
-                  status = apr_fnmatch (pat, current_entry_name->data,
-                                        FNM_PERIOD);
-                  
-                  if (status == APR_SUCCESS)
-                    {
-                      /* APR_SUCCESS means we found a match: */
-                      print_item = FALSE;
-                      break;
-                    }
-                }
-              
-              if (print_item)
-                {
-                  printable_path = svn_stringbuf_dup (full_path, subpool);
-                  svn_path_add_component (printable_path, current_entry_name,
-                                          svn_path_local_style);
-                  status = 
-                    fbtable->report_unversioned_item (printable_path->data);
-                  if (status)
-                    return 
-                      svn_error_createf (status, 0, NULL, subpool,
-                                         "error reporting unversioned '%s'",
-                                         printable_path->data);
-                }
-            }
-      }  /* end of dirents loop */
-  
-  
-  /* Phase 2:  Do the real reporting and recursing. */
+  /* Do the real reporting and recursing. */
 
   /* Looping over current directory's SVN entries: */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
@@ -2036,7 +1914,6 @@ report_revisions (svn_stringbuf_t *wc_path,
                                            full_entry_path,
                                            subdir_entry->revision,
                                            reporter, report_baton, fbtable,
-                                           print_unrecognized,
                                            restore_files,
                                            recurse,
                                            subpool));
@@ -2310,7 +2187,6 @@ svn_error_t *
 svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
-                        svn_boolean_t print_unrecognized,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
                         apr_pool_t *pool)
@@ -2379,8 +2255,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                                   svn_stringbuf_create ("", pool),
                                   base_rev,
                                   reporter, report_baton, fbtable, 
-                                  print_unrecognized, restore_files,
-                                  recurse, pool);
+                                  restore_files, recurse, pool);
           if (err)
             {
               /* Clean up the fs transaction. */

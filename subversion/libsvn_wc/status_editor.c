@@ -115,22 +115,9 @@ tweak_statushash (void *edit_baton,
     {
       svn_stringbuf_t *pathkey = svn_stringbuf_create (path, pool);
         
-      /* Note:  the path may be one that doesn't exist at all in the
-         working copy (if the repository is reporting an "added"
-         item).  That means that statstruct->entry comes back as
-         NULL.  Let's be safe and at least create an empty entry as a
-         placeholder.  */
       if (repos_text_status == svn_wc_status_added)
-        {
-          /* Make a status struct */
-          statstruct = apr_pcalloc (pool, sizeof(*statstruct));
-          
-          /* Make an entry struct inside it */
-          statstruct->entry = apr_pcalloc (pool, sizeof(svn_wc_entry_t *));
-          statstruct->entry->revision = SVN_INVALID_REVNUM;
-          statstruct->entry->kind = svn_node_unknown; /* who cares? */
-          statstruct->entry->schedule = svn_wc_schedule_normal;
-        }
+        /* Make an empty status struct */
+        statstruct = apr_pcalloc (pool, sizeof(*statstruct));
       else
         /* If this PATH isn't 'added', it must already exist in the
            working copy.  Use the public API to get a statstruct: */
