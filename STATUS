@@ -57,7 +57,7 @@ Candidate changes:
     r10401: Transfer some libsvn_swig_perl dependencies incorrectly listed as
       nonlibs to libs.
     Votes:
-      +1: maxb, ghudson
+      +1: maxb, ghudson, clkao
 
   * r10422
     Python bindings build fix. Make the compile flags more like distutils uses,
