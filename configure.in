@@ -25,7 +25,7 @@ dnl The following line is long and must be.  When this file is checked out with
 dnl CRLF line endings the carriage return ends up being interpreted as an
 dnl argument of its own and the script will fail.
        ifdef([__gnu__],
-	     [esyscmd(/usr/bin/env python build/getversion.py subversion/include/svn_version.h)],
+	     [esyscmd(python build/getversion.py subversion/include/svn_version.h)],
 	     [0.x]))
 AC_INIT(subversion, subversion_version, [http://subversion.tigris.org/])
 undefine([subversion_version])
