@@ -220,7 +220,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.47 or newer
+      7.  Apache Web Server 2.0.48 or newer
           (http://httpd.apache.org/download.cgi)
 
       The Apache HTTP server is required if you wish to offer your
@@ -386,7 +386,7 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.47 or greater)
+          apache*.i386.rpm (Version 2.0.48 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
           neon             (Version 0.24.4)
@@ -620,7 +620,7 @@ II.   INSTALLATION
       and all the import libraries to <SVN>\db4-win32\lib. Again, the
       DLLs should be somewhere in your path.
 
-      To build the Apache module, you will also need the Apache 2.0.47
+      To build the Apache module, you will also need the Apache 2.0.48
       or later Win32 source. You can download it from here:
 
           http://httpd.apache.org/download.cgi
@@ -631,7 +631,7 @@ II.   INSTALLATION
       Walkthrough:
 
           Unzip the Apache source. Copy the Apache apr, apr-util, and
-          apr-iconv directories from the Apache httpd-2.0.47\srclib
+          apr-iconv directories from the Apache httpd-2.0.48\srclib
           directory to the top-level Subversion directory.
 
           Open the Apache.dsw file and build the Apache source. If you
@@ -658,13 +658,13 @@ II.   INSTALLATION
       C:\SVN\src> ren neon-0.24.4 neon
       C:\SVN\src> unzip ..\db-4.0.14-win32.zip
       C:\SVN\src> cd ..
-      C:\SVN> unzip httpd_2.0.47-win32-src.zip
-      C:\SVN> xcopy /S httpd-2.0.47\srclib\apr src\apr
-      C:\SVN> xcopy /S httpd-2.0.47\srclib\apr-util src\apr-util
-      C:\SVN> xcopy /S httpd-2.0.47\srclib\apr-iconv src\apr-iconv
-      C:\SVN> msdev httpd-2.0.47\apache.dsw /MAKE "BuildBin - Win32 Debug"
+      C:\SVN> unzip httpd_2.0.48-win32-src.zip
+      C:\SVN> xcopy /S httpd-2.0.48\srclib\apr src\apr
+      C:\SVN> xcopy /S httpd-2.0.48\srclib\apr-util src\apr-util
+      C:\SVN> xcopy /S httpd-2.0.48\srclib\apr-iconv src\apr-iconv
+      C:\SVN> msdev httpd-2.0.48\apache.dsw /MAKE "BuildBin - Win32 Debug"
       C:\SVN> cd src
-      C:\SVN\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.47
+      C:\SVN\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.48
       C:\SVN\src> msdev subversion_msvc.dsw /MAKE "__ALL__ - Win32 Debug"
 
       [NOTE: Substitute "Release" for "Debug" in the "msdev" command lines
