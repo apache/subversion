@@ -896,6 +896,7 @@ struct rep_write_baton
      we write data, and finalized and stored when the stream is
      closed. */
   struct apr_md5_ctx_t md5_context;
+  unsigned char md5_digest[MD5_DIGESTSIZE];
 
   /* Used for temporary allocations, iff `trail' (above) is null.  */
   apr_pool_t *pool;
@@ -1042,31 +1043,10 @@ static svn_error_t *
 txn_body_write_close_rep (void *baton, trail_t *trail)
 {
   struct rep_write_baton *wb = baton;
-  unsigned char digest[MD5_DIGESTSIZE];
   svn_fs__representation_t *rep;
-  struct apr_md5_ctx_t tmp_context;
-
-  /* ### Thought: if we fixed apr-util MD5 contexts to allow repeated
-     digestification, then we wouldn't need a stream close function at
-     all -- instead, we could update the stored checksum each time a
-     write occurred, which would have the added advantage of making
-     interleaving reads and writes work.  Currently, they'd fail with
-     a checksum mismatch, it just happens that our code never tries to
-     do that anyway. */
-
-  /* apr_md5_final() invalidates the md5_context structure.  But if we
-     ever retry_txn(), this whole routine may run again, so we need to
-     preserve our original md5_context. 
-
-     ### Because apr_md5_ctx_t is transparent and shallow, the
-     memcpy() below is safe.  But ideally, we'd want something like
-     apr_md5_ctx_dup() in the future.     
-  */
-  memcpy (&tmp_context, &(wb->md5_context), sizeof(tmp_context));
-  apr_md5_final (digest, &tmp_context);
 
   SVN_ERR (svn_fs__bdb_read_rep (&rep, wb->fs, wb->rep_key, trail));
-  memcpy (rep->checksum, digest, MD5_DIGESTSIZE);
+  memcpy (rep->checksum, wb->md5_digest, MD5_DIGESTSIZE);
   SVN_ERR (svn_fs__bdb_write_rep (wb->fs, wb->rep_key, rep, trail));
 
   return SVN_NO_ERROR;
@@ -1082,6 +1062,16 @@ static svn_error_t *
 rep_write_close_contents (void *baton)
 {
   struct rep_write_baton *wb = baton;
+
+  /* ### Thought: if we fixed apr-util MD5 contexts to allow repeated
+     digestification, then we wouldn't need a stream close function at
+     all -- instead, we could update the stored checksum each time a
+     write occurred, which would have the added advantage of making
+     interleaving reads and writes work.  Currently, they'd fail with
+     a checksum mismatch, it just happens that our code never tries to
+     do that anyway. */
+
+  apr_md5_final (wb->md5_digest, &wb->md5_context);
 
   /* If we got a trail, use it; else make one. */
   if (wb->trail)
