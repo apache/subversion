@@ -1,10 +1,10 @@
-<!-- There doesn't seem to be a 'forword' element similar to the
+<!-- There doesn't seem to be a 'foreword' element similar to the
 'preface' element.  Not sure what to use instead; I guess 'preface' is
 the best solution for now, even though there's also a real preface in
 ch00.xml. -->
 
-<preface id="svn-forword">
-    <title>Forword</title>
+<preface id="svn-foreword">
+    <title>Foreword</title>
 
   <simplesect>
 
@@ -113,6 +113,6 @@ ch00.xml. -->
 
 <!--
 local variables: 
-sgml-parent-document: ("book.xml" "forword")
+sgml-parent-document: ("book.xml" "foreword")
 end:
 -->
