@@ -110,11 +110,12 @@ class Generator(gen_win.WinGeneratorBase):
         continue
 
       if isinstance(target, gen_base.TargetProject):
+        # Figure out where the external .dsp is located.
         if hasattr(target, 'project_name'):
           project_path = os.path.join(target.path, target.project_name)
         else:
           project_path = os.path.join(target.path, name)
-        fname = self.find_win_project(project_path, ['.dsp'])
+        fname = project_path + '.dsp'
       else:
         fname = os.path.join(self.projfilesdir,
                              "%s_msvc.dsp" % (string.replace(name, '-', '_')))
