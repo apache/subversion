@@ -277,6 +277,15 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 /* Bump SVN_WC__LOG_ATTR_NAME's version to SVN_WC__LOG_ATTR_VERSION */
 #define SVN_WC__LOG_SET_VERSION         "set-entry"
 
+/* A commit completed successfully, so:  
+ *   if SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
+ *      compare SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME with working file
+ *         if they're the same, use working file's timestamp
+ *         else use SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME's timestamp
+ *      set SVN_WC__LOG_ATTR_NAME's version to N
+ */
+#define SVN_WC__LOG_COMMITTED           "committed"
+
 /** Log attributes. **/
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_VERSION        "version"
