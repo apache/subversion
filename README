@@ -20,6 +20,8 @@ A rough guide to the source tree:
       Subversion web pages (live content at http://subversion.tigris.org/).
    tools/
       Stuff that works with Subversion, but that Subversion doesn't depend on.
+   packages/
+      Stuff to help packaging systems, like rpm and dpkg.
    subversion/  
       Source code to subversion itself (as opposed to external libraries).
    subversion/include/
