@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-# USAGE: annotate.py [-r REV] [-h DBHOME] repos-path
+# USAGE: blame.py [-r REV] [-h DBHOME] repos-path
 #
 
 import sys
