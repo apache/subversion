@@ -35,7 +35,7 @@ extern "C" {
 
    After this call, the node table manager assumes that the new node's
    contents will change frequently.  */
-svn_error_t *svn_fs__create_node (svn_fs_id_t **id_p,
+svn_error_t *svn_fs__create_node (const svn_fs_id_t **id_p,
                                   svn_fs_t *fs,
                                   svn_fs__node_revision_t *noderev,
                                   trail_t *trail);
@@ -48,9 +48,9 @@ svn_error_t *svn_fs__create_node (svn_fs_id_t **id_p,
    After this call, the deltification code assumes that the new node's
    contents will change frequently, and will avoid representing other
    nodes as deltas against this node's contents.  */
-svn_error_t *svn_fs__create_successor (svn_fs_id_t **new_id_p,
+svn_error_t *svn_fs__create_successor (const svn_fs_id_t **new_id_p,
                                        svn_fs_t *fs,
-                                       svn_fs_id_t *old_id,
+                                       const svn_fs_id_t *old_id,
                                        svn_fs__node_revision_t *new_nr,
                                        trail_t *trail);
 

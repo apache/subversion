@@ -147,7 +147,7 @@ svn_fs__put_rev (svn_revnum_t *rev,
 
 
 svn_error_t *
-svn_fs__rev_get_root (svn_fs_id_t **root_id_p,
+svn_fs__rev_get_root (const svn_fs_id_t **root_id_p,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
                       trail_t *trail)

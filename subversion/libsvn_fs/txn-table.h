@@ -71,8 +71,8 @@ svn_error_t *svn_fs__get_txn (svn_fs__transaction_t **txn_p,
    the error returned.
 
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in TRAIL->pool.  */
-svn_error_t *svn_fs__get_txn_ids (svn_fs_id_t **root_id_p,
-                                  svn_fs_id_t **base_root_id_p,
+svn_error_t *svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
+                                  const svn_fs_id_t **base_root_id_p,
                                   svn_fs_t *fs,
                                   const char *svn_txn,
                                   trail_t *trail);
