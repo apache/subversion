@@ -615,6 +615,39 @@ def update_receive_change_under_external(sbox):
     return 1
   fp.close()
 
+  # Commit more modifications
+  other_rho_path = os.path.join(other_wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(other_rho_path, "\nNew text in other rho.")
+
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
+  expected_status.tweak(repos_rev=7)
+  expected_status.tweak('A/D/gamma', wc_rev=6)
+  expected_status.tweak('A/D/G/rho', wc_rev=7)
+  if svntest.actions.run_and_verify_commit(other_wc_dir,
+                                           expected_output,
+                                           expected_status,
+                                           None, None, None, None, None,
+                                           other_wc_dir):
+    print "Commit from other working copy failed"
+    return 1
+
+  out_lines, err_lines = svntest.main.run_svn (None, 'up',
+                                               os.path.join(wc_dir, "A", "B"))
+  if err_lines: return 1
+
+  external_rho_path = os.path.join(wc_dir, 'A', 'B', 'exdir_G', 'rho')
+  fp = open(external_rho_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 2)
+          and (lines[0] == "This is the file 'rho'.\n")
+          and (lines[1] == "New text in other rho.")):
+    print "Unexpected contents for externally modified ", external_rho_path
+    return 1
+  fp.close()
+
   return 0
 
 ########################################################################
