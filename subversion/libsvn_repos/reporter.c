@@ -853,8 +853,8 @@ drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
                          "", info->start_empty, pool));
   else
     SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, b->t_path,
-                           t_entry, root_baton, b->s_operand,
-                           (info_is_set_path) ? NULL : info, TRUE, pool));
+                           t_entry, root_baton, b->s_operand, info,
+                           TRUE, pool));
 
   SVN_ERR (b->editor->close_directory (root_baton, pool));
   SVN_ERR (b->editor->close_edit (b->edit_baton, pool));
