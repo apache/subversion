@@ -389,6 +389,16 @@ class TreeMirror:
       else:
         highest_empty = None
 
+    # Confirm that the parent dir actually contains the ultimate
+    # target.  It's possible that the target has been removed before;
+    # if it has, all bets are off, so do nothing and return.  (We
+    # don't prune, because if the highest_empty subtree were pruneable
+    # at all, it should have been done before now.)
+    #
+    # See the run-tests.py:prune_with_care() for the scenario.
+    if not parent_dir.has_key(components[-1:][0]):
+      return None
+
     # Remove subtree, if any, then remove this entry from its parent.
     if highest_empty:
       path = highest_empty[0]
