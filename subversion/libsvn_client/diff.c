@@ -237,7 +237,7 @@ struct diff_cmd_baton {
 
   /* These are the numeric representations of the revisions passed to
      svn_client_diff, either may be SVN_INVALID_REVNUM.  We need these
-     because some of the svn_wc_diff_callbacks_t don't get revision
+     because some of the svn_wc_diff_callbacks2_t don't get revision
      arguments.
 
      ### Perhaps we should change the callback signatures and eliminate
@@ -274,20 +274,43 @@ diff_label (const char *path,
   return label;
 }
 
+static svn_error_t *
+diff_props_changed (svn_wc_adm_access_t *adm_access,
+                    svn_wc_notify_state_t *state,
+                    const char *path,
+                    const apr_array_header_t *propchanges,
+                    apr_hash_t *original_props,
+                    void *diff_baton)
+{
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  apr_array_header_t *props;
+  apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
+
+  SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, subpool));
+
+  if (props->nelts > 0)
+    SVN_ERR (display_prop_diffs (props, original_props, path,
+                                 diff_cmd_baton->outfile, subpool));
+
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
 /* The main workhorse, which invokes an external 'diff' program on the
    two temporary files.   The path is the "true" label to use in the
    diff output. */
 static svn_error_t *
-diff_file_changed (svn_wc_adm_access_t *adm_access,
-                   svn_wc_notify_state_t *state,
-                   const char *path,
-                   const char *tmpfile1,
-                   const char *tmpfile2,
-                   svn_revnum_t rev1,
-                   svn_revnum_t rev2,
-                   const char *mimetype1,
-                   const char *mimetype2,
-                   void *diff_baton)
+diff_content_changed (const char *path,
+                      const char *tmpfile1,
+                      const char *tmpfile2,
+                      svn_revnum_t rev1,
+                      svn_revnum_t rev2,
+                      const char *mimetype1,
+                      const char *mimetype2,
+                      void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   const char *diff_cmd = NULL;
@@ -411,8 +434,6 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
         }
 
       /* Exit early. */
-      if (state)
-        *state = svn_wc_notify_state_unknown;
       svn_pool_destroy (subpool);
       return SVN_NO_ERROR;
     }
@@ -485,21 +506,47 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
      to need to write a diff plug-in mechanism that makes use of the
      two paths, instead of just blindly running SVN_CLIENT_DIFF.  */
 
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-
   /* Destroy the subpool. */
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+diff_file_changed (svn_wc_adm_access_t *adm_access,
+                   svn_wc_notify_state_t *content_state,
+                   svn_wc_notify_state_t *prop_state,
+                   const char *path,
+                   const char *tmpfile1,
+                   const char *tmpfile2,
+                   svn_revnum_t rev1,
+                   svn_revnum_t rev2,
+                   const char *mimetype1,
+                   const char *mimetype2,
+                   const apr_array_header_t *prop_changes,
+                   apr_hash_t *original_props,
+                   void *diff_baton)
+{
+  if (tmpfile1)
+    SVN_ERR (diff_content_changed (path,
+                                   tmpfile1, tmpfile2, rev1, rev2,
+                                   mimetype1, mimetype2, diff_baton));
+  if (prop_changes->nelts > 0)
+    SVN_ERR (diff_props_changed (adm_access, prop_state, path, prop_changes,
+                                 original_props, diff_baton));
+  if (content_state)
+    *content_state = svn_wc_notify_state_unknown;
+  if (prop_state)
+    *prop_state = svn_wc_notify_state_unknown;
+  return SVN_NO_ERROR;
+}
 /* The because the repos-diff editor passes at least one empty file to
    each of these next two functions, they can be dumb wrappers around
    the main workhorse routine. */
 static svn_error_t *
 diff_file_added (svn_wc_adm_access_t *adm_access,
-                 svn_wc_notify_state_t *state,
+                 svn_wc_notify_state_t *content_state,
+                 svn_wc_notify_state_t *prop_state,
                  const char *path,
                  const char *tmpfile1,
                  const char *tmpfile2,
@@ -507,6 +554,8 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
                  svn_revnum_t rev2,
                  const char *mimetype1,
                  const char *mimetype2,
+                 const apr_array_header_t *prop_changes,
+                 apr_hash_t *original_props,
                  void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
@@ -518,9 +567,11 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
      user see that *something* happened. */
   diff_cmd_baton->force_diff_output = TRUE;
 
-  SVN_ERR (diff_file_changed (adm_access, state, path, tmpfile1, tmpfile2, 
+  SVN_ERR (diff_file_changed (adm_access, content_state, prop_state, path,
+                              tmpfile1, tmpfile2, 
                               rev1, rev2,
-                              mimetype1, mimetype2, diff_baton));
+                              mimetype1, mimetype2,
+                              prop_changes, original_props, diff_baton));
   
   diff_cmd_baton->force_diff_output = FALSE;
 
@@ -535,13 +586,19 @@ diff_file_deleted_with_diff (svn_wc_adm_access_t *adm_access,
                              const char *tmpfile2,
                              const char *mimetype1,
                              const char *mimetype2,
+                             apr_hash_t *original_props,
                              void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
-  return diff_file_changed (adm_access, state, path, tmpfile1, tmpfile2, 
+  /* We don't list all the deleted properties. */
+  return diff_file_changed (adm_access, state, NULL, path,
+                            tmpfile1, tmpfile2, 
                             diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
-                            mimetype1, mimetype2, diff_baton);
+                            mimetype1, mimetype2,
+                            apr_array_make (diff_cmd_baton->pool, 1,
+                                            sizeof(svn_prop_t)),
+                            apr_hash_make (diff_cmd_baton->pool), diff_baton);
 }
 
 static svn_error_t *
@@ -552,6 +609,7 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
                            const char *tmpfile2,
                            const char *mimetype1,
                            const char *mimetype2,
+                           apr_hash_t *original_props,
                            void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
@@ -596,31 +654,6 @@ diff_dir_deleted (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
   
-static svn_error_t *
-diff_props_changed (svn_wc_adm_access_t *adm_access,
-                    svn_wc_notify_state_t *state,
-                    const char *path,
-                    const apr_array_header_t *propchanges,
-                    apr_hash_t *original_props,
-                    void *diff_baton)
-{
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
-  apr_array_header_t *props;
-  apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
-
-  SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, subpool));
-
-  if (props->nelts > 0)
-    SVN_ERR (display_prop_diffs (props, original_props, path,
-                                 diff_cmd_baton->outfile, subpool));
-
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-
-  svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
-}
-
 
 /*-----------------------------------------------------------------*/
 
@@ -648,10 +681,49 @@ struct merge_cmd_baton {
   apr_pool_t *pool;
 };
 
+static svn_error_t *
+merge_props_changed (svn_wc_adm_access_t *adm_access,
+                     svn_wc_notify_state_t *state,
+                     const char *path,
+                     const apr_array_header_t *propchanges,
+                     apr_hash_t *original_props,
+                     void *baton)
+{
+  apr_array_header_t *props;
+  struct merge_cmd_baton *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+  svn_error_t *err;
+
+  SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, subpool));
+
+  /* We only want to merge "regular" version properties:  by
+     definition, 'svn merge' shouldn't touch any data within .svn/  */
+  if (props->nelts)
+    {
+      err = svn_wc_merge_prop_diffs (state, path, adm_access, props,
+                                     FALSE, merge_b->dry_run, subpool);
+      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
+		  || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
+        {
+          /* if the entry doesn't exist in the wc, just 'skip' over
+             this part of the tree-delta. */
+          if (state)
+            *state = svn_wc_notify_state_missing;
+          svn_error_clear (err);
+          return SVN_NO_ERROR;        
+        }
+      else if (err)
+        return err;
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 merge_file_changed (svn_wc_adm_access_t *adm_access,
-                    svn_wc_notify_state_t *state,
+                    svn_wc_notify_state_t *content_state,
+                    svn_wc_notify_state_t *prop_state,
                     const char *mine,
                     const char *older,
                     const char *yours,
@@ -659,6 +731,8 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
                     svn_revnum_t yours_rev,
                     const char *mimetype1,
                     const char *mimetype2,
+                    const apr_array_header_t *prop_changes,
+                    apr_hash_t *original_props,
                     void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -679,8 +753,10 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   /* Easy out:  no access baton means there ain't no merge target */
   if (adm_access == NULL)
     {
-      if (state)
-        *state = svn_wc_notify_state_missing;
+      if (content_state)
+        *content_state = svn_wc_notify_state_missing;
+      if (prop_state)
+        *prop_state = svn_wc_notify_state_missing;
       return SVN_NO_ERROR;
     }
   
@@ -700,8 +776,10 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
 
     if ((! entry) || (kind != svn_node_file))
       {
-        if (state)
-          *state = svn_wc_notify_state_missing;
+        if (content_state)
+          *content_state = svn_wc_notify_state_missing;
+        if (prop_state)
+          *prop_state = svn_wc_notify_state_missing;
         return SVN_NO_ERROR;
       }
   }
@@ -711,58 +789,70 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
-  SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, FALSE,
-                                   adm_access, subpool));
+  /* Do property merge before text merge so that keyword expansion takes
+     into account the new property values. */
+  if (prop_changes->nelts > 0)
+    SVN_ERR (merge_props_changed (adm_access, prop_state, mine, prop_changes,
+                                  original_props, baton));
+  else
+    if (prop_state)
+      *prop_state = svn_wc_notify_state_unchanged;
 
-  /* Special case:  if a binary file isn't locally modified, and is
-     exactly identical to the 'left' side of the merge, then don't
-     allow svn_wc_merge to produce a conflict.  Instead, just
-     overwrite the working file with the 'right' side of the merge. */
-  if ((! has_local_mods)
-      && ((mimetype1 && svn_mime_type_is_binary (mimetype1))
-          || (mimetype2 && svn_mime_type_is_binary (mimetype2))))
+  if (older)
     {
-      svn_boolean_t same_contents;
-      /* ### someday, we should just be able to compare
-         identity-strings here.  */
-      SVN_ERR (svn_io_files_contents_same_p (&same_contents,
-                                             older, mine, subpool));
-      if (same_contents)
+      SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, FALSE,
+                                       adm_access, subpool));
+
+      /* Special case:  if a binary file isn't locally modified, and is
+         exactly identical to the 'left' side of the merge, then don't
+         allow svn_wc_merge to produce a conflict.  Instead, just
+         overwrite the working file with the 'right' side of the merge. */
+      if ((! has_local_mods)
+          && ((mimetype1 && svn_mime_type_is_binary (mimetype1))
+              || (mimetype2 && svn_mime_type_is_binary (mimetype2))))
         {
-          if (! merge_b->dry_run)
-            SVN_ERR (svn_io_file_rename (yours, mine, subpool));          
-          merge_outcome = svn_wc_merge_merged;
-          merge_required = FALSE;
+          svn_boolean_t same_contents;
+          /* ### someday, we should just be able to compare
+             identity-strings here.  */
+          SVN_ERR (svn_io_files_contents_same_p (&same_contents,
+                                                 older, mine, subpool));
+          if (same_contents)
+            {
+              if (! merge_b->dry_run)
+                SVN_ERR (svn_io_file_rename (yours, mine, subpool));          
+              merge_outcome = svn_wc_merge_merged;
+              merge_required = FALSE;
+            }
+        }  
+
+      if (merge_required)
+        {
+          SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
+                                 left_label, right_label, target_label,
+                                 merge_b->dry_run, &merge_outcome, 
+                                 merge_b->diff3_cmd, subpool));
         }
-    }  
 
-  if (merge_required)
-    {
-      SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
-                             left_label, right_label, target_label,
-                             merge_b->dry_run, &merge_outcome, 
-                             merge_b->diff3_cmd, subpool));
-    }
+      /* Philip asks "Why?"  Why does the notification depend on whether the
+         file had modifications before the merge?  If the merge didn't change
+         the file because the local mods already included the change why does
+         that result it "merged" notification?  That's information available
+         through the status command, while the fact that the merge didn't
+         change the file is lost :-( */
 
-  /* Philip asks "Why?"  Why does the notification depend on whether the
-     file had modifications before the merge?  If the merge didn't change
-     the file because the local mods already included the change why does
-     that result it "merged" notification?  That's information available
-     through the status command, while the fact that the merge didn't
-     change the file is lost :-( */
-
-  if (state)
-    {
-      if (merge_outcome == svn_wc_merge_conflict)
-        *state = svn_wc_notify_state_conflicted;
-      else if (has_local_mods)
-        *state = svn_wc_notify_state_merged;
-      else if (merge_outcome == svn_wc_merge_merged)
-        *state = svn_wc_notify_state_changed;
-      else if (merge_outcome == svn_wc_merge_no_merge)
-        *state = svn_wc_notify_state_missing;
-      else /* merge_outcome == svn_wc_merge_unchanged */
-        *state = svn_wc_notify_state_unchanged;
+      if (content_state)
+        {
+          if (merge_outcome == svn_wc_merge_conflict)
+            *content_state = svn_wc_notify_state_conflicted;
+          else if (has_local_mods)
+            *content_state = svn_wc_notify_state_merged;
+          else if (merge_outcome == svn_wc_merge_merged)
+            *content_state = svn_wc_notify_state_changed;
+          else if (merge_outcome == svn_wc_merge_no_merge)
+            *content_state = svn_wc_notify_state_missing;
+          else /* merge_outcome == svn_wc_merge_unchanged */
+            *content_state = svn_wc_notify_state_unchanged;
+        }
     }
 
   svn_pool_destroy (subpool);
@@ -772,7 +862,8 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
 
 static svn_error_t *
 merge_file_added (svn_wc_adm_access_t *adm_access,
-                  svn_wc_notify_state_t *state,
+                  svn_wc_notify_state_t *content_state,
+                  svn_wc_notify_state_t *prop_state,
                   const char *mine,
                   const char *older,
                   const char *yours,
@@ -780,6 +871,8 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                   svn_revnum_t rev2,
                   const char *mimetype1,
                   const char *mimetype2,
+                  const apr_array_header_t *prop_changes,
+                  apr_hash_t *original_props,
                   void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -787,6 +880,22 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   const char *copyfrom_url;
   const char *child;
+  int i;
+  apr_hash_t *new_props;
+
+  /* In most cases, we just leave prop_state as unknown, and let the
+     content_state what happened, so we set prop_state here to avoid that
+     below. */
+  if (prop_state)
+    *prop_state = svn_wc_notify_state_unknown;
+
+  /* Apply the prop changes to a new hash table. */
+  new_props = apr_hash_copy (subpool, original_props);
+  for (i = 0; i < prop_changes->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX (prop_changes, i, svn_prop_t);
+      apr_hash_set (new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -794,14 +903,16 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
      send a 'skip' notification. */
   if (! adm_access)
     {
-      if (state)
+      if (merge_b->dry_run && merge_b->added_path
+          && svn_path_is_child (merge_b->added_path, mine, subpool))
         {
-          if (merge_b->dry_run && merge_b->added_path
-              && svn_path_is_child (merge_b->added_path, mine, subpool))
-            *state = svn_wc_notify_state_changed;
-          else
-            *state = svn_wc_notify_state_missing;
+          if (content_state)
+            *content_state = svn_wc_notify_state_changed;
+          if (prop_state && apr_hash_count (new_props))
+            *prop_state = svn_wc_notify_state_changed;
         }
+      else
+        *content_state = svn_wc_notify_state_missing;
       return SVN_NO_ERROR;
     }
 
@@ -815,8 +926,8 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
         if (entry && entry->schedule != svn_wc_schedule_delete)
           {
             /* It's versioned but missing. */
-            if (state)
-              *state = svn_wc_notify_state_obstructed;
+            if (content_state)
+              *content_state = svn_wc_notify_state_obstructed;
             return SVN_NO_ERROR;
           }
         if (! merge_b->dry_run)
@@ -836,20 +947,22 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
 
             SVN_ERR (svn_wc_add_repos_file (mine, adm_access,
                                             yours,
-                                            apr_hash_make (merge_b->pool),
+                                            new_props,
                                             copyfrom_url,
                                             rev2,
                                             merge_b->pool));
           }
-        if (state)
-          *state = svn_wc_notify_state_changed;
+        if (content_state)
+          *content_state = svn_wc_notify_state_changed;
+        if (prop_state && apr_hash_count (new_props))
+          *prop_state = svn_wc_notify_state_changed;
       }
       break;
     case svn_node_dir:
       {
         /* this will make the repos_editor send a 'skipped' message */
-        if (state)
-          *state = svn_wc_notify_state_obstructed;
+        if (content_state)
+          *content_state = svn_wc_notify_state_obstructed;
       }
     case svn_node_file:
       {
@@ -863,22 +976,23 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
         if (!entry || entry->schedule == svn_wc_schedule_delete)
           {
             /* this will make the repos_editor send a 'skipped' message */
-            if (state)
-              *state = svn_wc_notify_state_obstructed;
+            if (content_state)
+              *content_state = svn_wc_notify_state_obstructed;
           }
         else
           {
-            SVN_ERR (merge_file_changed (adm_access, state,
+            SVN_ERR (merge_file_changed (adm_access, content_state, prop_state,
                                          mine, older, yours,
                                          rev1, rev2,
                                          mimetype1, mimetype2,
+                                         prop_changes, original_props,
                                          baton));            
           }
         break;      
       }
     default:
-      if (state)
-        *state = svn_wc_notify_state_unknown;
+      if (content_state)
+        *content_state = svn_wc_notify_state_unknown;
       break;
     }
 
@@ -894,6 +1008,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
                     const char *yours,
                     const char *mimetype1,
                     const char *mimetype2,
+                    apr_hash_t *original_props,
                     void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -1127,47 +1242,8 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
   
-static svn_error_t *
-merge_props_changed (svn_wc_adm_access_t *adm_access,
-                     svn_wc_notify_state_t *state,
-                     const char *path,
-                     const apr_array_header_t *propchanges,
-                     apr_hash_t *original_props,
-                     void *baton)
-{
-  apr_array_header_t *props;
-  struct merge_cmd_baton *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
-  svn_error_t *err;
-
-  SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, subpool));
-
-  /* We only want to merge "regular" version properties:  by
-     definition, 'svn merge' shouldn't touch any data within .svn/  */
-  if (props->nelts)
-    {
-      err = svn_wc_merge_prop_diffs (state, path, adm_access, props,
-                                     FALSE, merge_b->dry_run, subpool);
-      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
-		  || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
-        {
-          /* if the entry doesn't exist in the wc, just 'skip' over
-             this part of the tree-delta. */
-          if (state)
-            *state = svn_wc_notify_state_missing;
-          svn_error_clear (err);
-          return SVN_NO_ERROR;        
-        }
-      else if (err)
-        return err;
-    }
-
-  svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
-}
-
 /* The main callback table for 'svn merge'.  */
-static const svn_wc_diff_callbacks_t 
+static const svn_wc_diff_callbacks2_t
 merge_callbacks =
   {
     merge_file_changed,
@@ -1269,7 +1345,7 @@ do_merge (const char *initial_URL1,
           svn_boolean_t recurse,
           svn_boolean_t ignore_ancestry,
           svn_boolean_t dry_run,
-          const svn_wc_diff_callbacks_t *callbacks,
+          const svn_wc_diff_callbacks2_t *callbacks,
           void *callback_baton,
           svn_client_ctx_t *ctx,
           apr_pool_t *pool)
@@ -1498,14 +1574,18 @@ do_single_file_merge (const char *initial_URL1,
   pval = apr_hash_get (props2, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
   mimetype2 = pval ? pval->data : NULL;
 
+  /* Deduce property diffs. */
+  SVN_ERR (svn_prop_diffs (&propchanges, props2, props1, pool));
+
   SVN_ERR (merge_file_changed (adm_access,
-                               &text_state,
+                               &text_state, &prop_state,
                                merge_b->target,
                                tmpfile1,
                                tmpfile2,
                                rev1,
                                rev2,
                                mimetype1, mimetype2,
+                               propchanges, props1,
                                merge_b));
 
   /* Ignore if temporary file not found. It may have been renamed. */
@@ -1515,19 +1595,9 @@ do_single_file_merge (const char *initial_URL1,
   svn_error_clear (err);
   err = svn_io_remove_file (tmpfile2, pool);
   if (err && ! APR_STATUS_IS_ENOENT (err->apr_err))
-     return err;
+    return err;
   svn_error_clear (err);
   
-  /* Deduce property diffs, and merge those too. */
-  SVN_ERR (svn_prop_diffs (&propchanges, props2, props1, pool));
-
-  SVN_ERR (merge_props_changed (adm_access,
-                                &prop_state,
-                                merge_b->target,
-                                propchanges,
-                                NULL,
-                                merge_b));
-
   if (merge_b->ctx->notify_func)
     {
       (*merge_b->ctx->notify_func) (merge_b->ctx->notify_baton,
@@ -1599,7 +1669,7 @@ diff_wc_wc (const apr_array_header_t *options,
             const svn_opt_revision_t *revision2,
             svn_boolean_t recurse,
             svn_boolean_t ignore_ancestry,
-            const svn_wc_diff_callbacks_t *callbacks,
+            const svn_wc_diff_callbacks2_t *callbacks,
             struct diff_cmd_baton *callback_baton,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -1630,7 +1700,7 @@ diff_wc_wc (const apr_array_header_t *options,
            (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
-  SVN_ERR (svn_wc_diff2 (adm_access, target, callbacks, callback_baton,
+  SVN_ERR (svn_wc_diff3 (adm_access, target, callbacks, callback_baton,
                          recurse, ignore_ancestry, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
@@ -1655,7 +1725,7 @@ diff_repos_repos (const apr_array_header_t *options,
                   const svn_opt_revision_t *peg_revision,
                   svn_boolean_t recurse,
                   svn_boolean_t ignore_ancestry,
-                  const svn_wc_diff_callbacks_t *callbacks,
+                  const svn_wc_diff_callbacks2_t *callbacks,
                   struct diff_cmd_baton *callback_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
@@ -1822,7 +1892,7 @@ diff_repos_wc (const apr_array_header_t *options,
                svn_boolean_t reverse,
                svn_boolean_t recurse,
                svn_boolean_t ignore_ancestry,
-               const svn_wc_diff_callbacks_t *callbacks,
+               const svn_wc_diff_callbacks2_t *callbacks,
                struct diff_cmd_baton *callback_baton,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
@@ -1889,7 +1959,7 @@ diff_repos_wc (const apr_array_header_t *options,
                                         NULL, NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
       
-  SVN_ERR (svn_wc_get_diff_editor2 (adm_access, target,
+  SVN_ERR (svn_wc_get_diff_editor3 (adm_access, target,
                                     callbacks, callback_baton,
                                     recurse,
                                     ignore_ancestry,
@@ -1935,7 +2005,7 @@ do_diff (const apr_array_header_t *options,
          const svn_opt_revision_t *revision2,
          svn_boolean_t recurse,
          svn_boolean_t ignore_ancestry,
-         const svn_wc_diff_callbacks_t *callbacks,
+         const svn_wc_diff_callbacks2_t *callbacks,
          struct diff_cmd_baton *callback_baton,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
@@ -2020,7 +2090,7 @@ do_diff_peg (const apr_array_header_t *options,
              const svn_opt_revision_t *revision2,
              svn_boolean_t recurse,
              svn_boolean_t ignore_ancestry,
-             const svn_wc_diff_callbacks_t *callbacks,
+             const svn_wc_diff_callbacks2_t *callbacks,
              struct diff_cmd_baton *callback_baton,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
@@ -2147,7 +2217,7 @@ svn_client_diff (const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton;
-  svn_wc_diff_callbacks_t diff_callbacks;
+  svn_wc_diff_callbacks2_t diff_callbacks;
 
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
@@ -2155,7 +2225,7 @@ svn_client_diff (const apr_array_header_t *options,
                                                   diff_file_deleted_with_diff;
   diff_callbacks.dir_added =  diff_dir_added;
   diff_callbacks.dir_deleted = diff_dir_deleted;
-  diff_callbacks.props_changed = diff_props_changed;
+  diff_callbacks.dir_props_changed = diff_props_changed;
     
   diff_cmd_baton.orig_path_1 = path1;
   diff_cmd_baton.orig_path_2 = path2;
@@ -2195,7 +2265,7 @@ svn_client_diff_peg (const apr_array_header_t *options,
                      apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton;
-  svn_wc_diff_callbacks_t diff_callbacks;
+  svn_wc_diff_callbacks2_t diff_callbacks;
 
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
@@ -2203,7 +2273,7 @@ svn_client_diff_peg (const apr_array_header_t *options,
                                                   diff_file_deleted_with_diff;
   diff_callbacks.dir_added =  diff_dir_added;
   diff_callbacks.dir_deleted = diff_dir_deleted;
-  diff_callbacks.props_changed = diff_props_changed;
+  diff_callbacks.dir_props_changed = diff_props_changed;
     
   diff_cmd_baton.orig_path_1 = path;
   diff_cmd_baton.orig_path_2 = path;
