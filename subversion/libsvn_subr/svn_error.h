@@ -89,7 +89,7 @@ typedef struct svn_error_t
 {
   ap_status_t err;             /* native OS errno */
   svn_boolean_t fatal;         /* does the creator think this a fatal error? */
-  char *message;               /* details from producer of error */
+  const char *message;         /* details from producer of error */
   struct svn_error_t *child;   /* ptr to next error below this one */
   ap_pool_t *pool;             /* place to generate message strings from */
 
@@ -135,7 +135,7 @@ typedef struct svn_error_t
 
 svn_error_t *svn_create_error (ap_status_t err,
                                svn_boolean_t fatal,
-                               svn_string_t *message,
+                               const char *message,
                                svn_error_t *child,
                                ap_pool_t *pool);
 
@@ -145,12 +145,12 @@ svn_error_t *svn_create_error (ap_status_t err,
    message, before throwing it up the stack.  (It uses all of the
    child's fields.)  */
 
-svn_error_t * svn_quick_wrap_error (svn_error_t *child, char *new_msg)
+svn_error_t * svn_quick_wrap_error (svn_error_t *child, const char *new_msg);
 
 
 /* Very dumb "default" error handler that anyone can use if they wish. */
 
-void svn_handle_error (svn_error_t *error);
+void svn_handle_error (svn_error_t *error, FILE *stream);
 
 
 
