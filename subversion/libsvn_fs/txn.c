@@ -123,6 +123,13 @@ svn_fs_txn_name (char **name_p,
 }
 
 
+svn_fs_t *
+svn_fs_txn_fs (svn_fs_txn_t *txn)
+{
+  return txn->fs;
+}
+
+
 svn_error_t *
 svn_fs_close_txn (svn_fs_txn_t *txn)
 {
@@ -186,47 +193,6 @@ svn_fs_open_txn (svn_fs_txn_t **txn_p,
   *txn_p = txn;
   return SVN_NO_ERROR;
 }
-
-
-struct txn_root_args
-{
-  svn_fs_root_t **root_p;
-  svn_fs_txn_t *txn;
-};
-
-
-static svn_error_t *
-txn_body_txn_root (void *baton,
-                   trail_t *trail)
-{
-  struct txn_root_args *args = baton;
-  svn_fs_root_t *root;
-
-#if 0  /* Reinstate when tree.c is part of the compilation again. */
-  SVN_ERR (svn_fs__txn_root_node (&root, args->txn->fs, args->txn->id, trail));
-#endif /* 0 */
-
-  *args->root_p = root;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_txn_root (svn_fs_root_t **root_p,
-                 svn_fs_txn_t *txn,
-                 apr_pool_t *pool)
-{
-  svn_fs_root_t *root;
-  struct txn_root_args args;
-
-  args.root_p = &root;
-  args.txn    = txn;
-  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_txn_root, &args, pool));
-
-  *root_p = root;
-  return SVN_NO_ERROR;
-}
-
 
 
 struct list_transactions_args

@@ -401,6 +401,10 @@ svn_error_t *svn_fs_txn_name (char **name_p,
                               apr_pool_t *pool);
 
 
+/* Return the filesystem to which TXN belongs.  */
+svn_fs_t *svn_fs_txn_fs (svn_fs_txn_t *txn);
+
+
 /* Open the transaction named NAME in the filesystem FS.  Set *TXN to
    the transaction.
 
