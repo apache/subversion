@@ -1,0 +1,229 @@
+head	1.6;
+access;
+symbols
+	icewm-1_2_2:1.6.2.6
+	icewm-1_2_1:1.6.2.5
+	AFTER_YMENU_MERGE:1.6.2.4
+	BEFORE_YMENU_MERGE:1.6.2.4
+	icewm-1_2_1pre1:1.6.2.4
+	POST_YARRAY:1.6.2.3
+	PRE_YARRAY:1.6.2.3
+	icewm-1_2_0:1.6.2.1
+	icewm-1-2-BRANCH:1.6.0.2
+	icewm-1-2-ROOT:1.6
+	icewm_1-2-0-pre3:1.6
+	icewm_1-2-0-pre2:1.5
+	icewm_1-2-0-pre1:1.4
+	start:1.1.1.1
+	icewm:1.1.1;
+locks; strict;
+comment	@# @;
+
+
+1.6
+date	2002.06.12.04.54.12;	author captnmark;	state Exp;
+branches
+	1.6.2.1;
+next	1.5;
+
+1.5
+date	2002.05.28.18.02.11;	author captnmark;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.05.09.19.55.20;	author captnmark;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2002.05.09.19.44.29;	author captnmark;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2002.03.17.10.44.53;	author gallium;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2002.03.17.09.12.39;	author gallium;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2002.03.17.09.12.39;	author gallium;	state Exp;
+branches;
+next	;
+
+1.6.2.1
+date	2002.06.30.14.50.06;	author captnmark;	state Exp;
+branches;
+next	1.6.2.2;
+
+1.6.2.2
+date	2002.07.06.18.40.00;	author massel;	state Exp;
+branches;
+next	1.6.2.3;
+
+1.6.2.3
+date	2002.07.14.17.30.19;	author massel;	state Exp;
+branches;
+next	1.6.2.4;
+
+1.6.2.4
+date	2002.08.18.08.26.39;	author captnmark;	state Exp;
+branches;
+next	1.6.2.5;
+
+1.6.2.5
+date	2002.09.01.13.47.52;	author captnmark;	state Exp;
+branches;
+next	1.6.2.6;
+
+1.6.2.6
+date	2002.09.06.17.14.14;	author captnmark;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.6
+log
+@pre3
+@
+text
+@VERSION=1.2.0pre3
+@
+
+
+1.6.2.1
+log
+@.
+@
+text
+@d1 1
+a1 1
+VERSION=1.2.0
+@
+
+
+1.6.2.2
+log
+@bugfix: added --help switch to icewm, allow GNU stylish long options
+@
+text
+@d1 1
+a1 1
+VERSION=1.2.1/CVS
+@
+
+
+1.6.2.3
+log
+@reduced GNU make dependencies
+@
+text
+@a0 1
+PACKAGE=icewm
+@
+
+
+1.6.2.4
+log
+@ver
+@
+text
+@d2 1
+a2 1
+VERSION=1.2.1pre1
+@
+
+
+1.6.2.5
+log
+@.
+@
+text
+@d2 1
+a2 1
+VERSION=1.2.1
+@
+
+
+1.6.2.6
+log
+@1.2.2
+@
+text
+@d2 1
+a2 1
+VERSION=1.2.2
+@
+
+
+1.5
+log
+@.
+@
+text
+@d1 1
+a1 1
+VERSION=1.2.0pre2
+@
+
+
+1.4
+log
+@more release stuff
+@
+text
+@d1 1
+a1 1
+VERSION=1.2.0pre1
+@
+
+
+1.3
+log
+@release build work
+@
+text
+@d1 1
+a1 1
+VERSION=1.2.0
+@
+
+
+1.2
+log
+@This is IceWM 1.2.0-beta1 (minus the soon to come bugfixes)
+@
+text
+@a1 1
+RELEASE=beta1
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d1 2
+a2 2
+VERSION=1.0.9
+RELEASE=2
+@
+
+
+1.1.1.1
+log
+@Import of IceWM 1.0.9-2
+@
+text
+@@
