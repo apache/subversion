@@ -378,7 +378,7 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
   struct edit_context *ec;
 
   /* Set up the editor. */
-  my_editor = apr_pcalloc (pool, sizeof (*my_editor));
+  my_editor = svn_delta_default_editor (pool);
   my_editor->delete_item        = test_delete_item;
   my_editor->add_directory      = test_add_directory;
   my_editor->replace_directory  = test_replace_directory;

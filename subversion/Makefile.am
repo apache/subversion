@@ -3,8 +3,7 @@
 
 ## List of directories in which Makefile.in's should be generated:
 
-SUBDIRS = tests-common               \
-          libsvn_subr                \
+SUBDIRS = libsvn_subr                \
           libsvn_delta               \
           libsvn_wc                  \
           libsvn_ra_dav              \
@@ -12,7 +11,8 @@ SUBDIRS = tests-common               \
           client                     \
           @LIBSVN_FS@                \
           svnadmin                   \
-          @APACHE_MODULES@
+          @APACHE_MODULES@           \
+          tests
 
 ## Include these extra files when building `dist' target
 

@@ -21,8 +21,6 @@ LDFLAGS = -avoid-version
 
 INCLUDES = @SVN_INCLUDES@ $(APACHE_INCLUDES) @SVN_APR_INCLUDES@
 
-SUBDIRS = . tests
-
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 

@@ -15,9 +15,9 @@
 #include <apr_pools.h>
 #include "svn_error.h"
 #include "svn_fs.h"
-#include "fs.h"
-#include "rev-table.h"
-#include "trail.c"
+#include "../../libsvn_fs/fs.h"
+#include "../../libsvn_fs/rev-table.h"
+#include "../../libsvn_fs/trail.c"
 
 /* Some utility functions.  */
 

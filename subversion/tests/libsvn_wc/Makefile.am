@@ -13,7 +13,7 @@ checkout_test_LDADD = @SVN_LIBSVN_WC_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
                       @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
 commit_test_LDADD = @SVN_LIBSVN_WC_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
-                    @SVN_TESTS_COMMON_EDITOR_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+                    @SVN_TESTS_EDITOR_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
                     @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
 ## Make libtool be quiet

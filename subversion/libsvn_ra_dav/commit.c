@@ -590,23 +590,6 @@ commit_close_file (void *file_baton)
   return NULL;
 }
 
-/*
-** This structure is used during the commit process. An external caller
-** uses these callbacks to describe all the changes in the working copy
-** that must be committed to the server.
-*/
-static const svn_delta_edit_fns_t commit_editor = {
-  commit_delete_item,
-  commit_add_dir,
-  commit_rep_dir,
-  commit_change_dir_prop,
-  commit_close_dir,
-  commit_add_file,
-  commit_rep_file,
-  commit_apply_txdelta,
-  commit_change_file_prop,
-  commit_close_file,
-};
 
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
@@ -618,6 +601,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_ra_session_t *ras = session_baton;
   commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
   dir_baton_t *rb = apr_pcalloc(ras->pool, sizeof(*rb));
+  svn_delta_edit_fns_t *commit_editor = svn_delta_default_editor(ras->pool);
 
   /* Construct a context. */
   cc->ras = ras;
@@ -634,8 +618,24 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   rb->res.url = cc->ras->root.path;
   /* ### fetch vsn_url from props */
 
+  /* Set up the editor.
+  ** This structure is used during the commit process. An external caller
+  ** uses these callbacks to describe all the changes in the working copy
+  ** that must be committed to the server.
+  */
+  commit_editor->delete_item = commit_delete_item;
+  commit_editor->add_directory = commit_add_dir;
+  commit_editor->replace_directory = commit_rep_dir;
+  commit_editor->change_dir_prop = commit_change_dir_prop;
+  commit_editor->close_directory = commit_close_dir;
+  commit_editor->add_file = commit_add_file;
+  commit_editor->replace_file = commit_rep_file;
+  commit_editor->apply_textdelta = commit_apply_txdelta;
+  commit_editor->change_file_prop = commit_change_file_prop;
+  commit_editor->close_file = commit_close_file;
+
   *root_dir_baton = rb;
-  *editor = &commit_editor;
+  *editor = commit_editor;
 
   return NULL;
 }

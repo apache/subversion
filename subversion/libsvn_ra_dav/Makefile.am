@@ -7,7 +7,5 @@ libsvn_ra_dav_la_SOURCES = session.c fetch.c commit.c ra_dav.h
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_NEON_INCLUDES@
 
-SUBDIRS = . tests
-
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

@@ -493,6 +493,22 @@ typedef struct svn_delta_edit_fns_t
 } svn_delta_edit_fns_t;
 
 
+/* Return a default delta editor template, allocated in POOL.
+ *
+ * The editor functions in the template do only the most basic
+ * baton-swapping: each editor function that produces a baton does so
+ * by copying its incoming baton into the outgoing baton reference.
+ *
+ * This editor is not intended to be useful by itself, but is meant to
+ * be the basis for a useful editor.  After getting a default editor,
+ * you substitute in your own implementations for the editor functions
+ * you care about.  The ones you don't care about, you don't have to
+ * implement -- you can rely on the template's implementation to
+ * safely do nothing of consequence.
+ */
+svn_delta_edit_fns_t *svn_delta_default_editor (apr_pool_t *pool);
+
+
 /* Compose EDITOR_1 and its baton with EDITOR_2 and its root dir
  * baton.
  *

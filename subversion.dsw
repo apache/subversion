@@ -186,7 +186,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_test_editor"=".\subversion\tests-common\libsvn_test_editor.dsp" - Package Owner=<4>
+Project: "libsvn_test_editor"=".\subversion\tests\libsvn_test_editor.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -201,7 +201,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_tests_main"=".\subversion\tests-common\libsvn_test_main.dsp" - Package Owner=<4>
+Project: "libsvn_tests_main"=".\subversion\tests\libsvn_test_main.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

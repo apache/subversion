@@ -571,27 +571,13 @@ close_file (void *file_baton)
 }
 
 
-static const svn_delta_edit_fns_t tree_editor =
-{
-  delete_item,
-  add_directory,
-  replace_directory,
-  change_dir_prop,
-  close_directory,
-  add_file,
-  replace_file,
-  apply_textdelta,
-  change_file_prop,
-  close_file,
-};
-
-
 svn_error_t *
 svn_delta_get_xml_editor (svn_stream_t *output,
 			  const svn_delta_edit_fns_t **editor,
 			  void **root_dir_baton,
 			  apr_pool_t *pool)
 {
+  svn_delta_edit_fns_t *tree_editor;
   struct edit_context *ec;
   svn_string_t *str = NULL;
   apr_size_t len;
@@ -606,8 +592,21 @@ svn_delta_get_xml_editor (svn_stream_t *output,
   ec->open_file_count = 0;
   ec->root_dir_closed = FALSE;
 
+  /* Construct the editor itself. */
+  tree_editor = svn_delta_default_editor (pool);
+  tree_editor->delete_item = delete_item;
+  tree_editor->add_directory = add_directory;
+  tree_editor->replace_directory = replace_directory;
+  tree_editor->change_dir_prop = change_dir_prop;
+  tree_editor->close_directory = close_directory;
+  tree_editor->add_file = add_file;
+  tree_editor->replace_file = replace_file;
+  tree_editor->apply_textdelta = apply_textdelta;
+  tree_editor->change_file_prop = change_file_prop;
+  tree_editor->close_file = close_file;
+
   /* Now set up the editor and root baton for the caller.  */
-  *editor = &tree_editor;
+  *editor = tree_editor;
   *root_dir_baton = make_dir_baton (ec, elem_delta_pkg);
 
   /* Construct and write out the header.  This should probably be

@@ -51,9 +51,6 @@ libsvn_fs_la_LIBADD = -ldb
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
-## Build *this* directory first, *then* the test subdirectory!
-SUBDIRS = . tests
-
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
