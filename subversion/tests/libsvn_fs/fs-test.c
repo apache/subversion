@@ -1486,6 +1486,7 @@ merge_trees (const char **msg,
   /* Create greek trees. */
   SVN_ERR (svn_test__create_greek_tree (source_root, pool));
   SVN_ERR (svn_test__create_greek_tree (target_root, pool));
+#if 0
   SVN_ERR (svn_test__create_greek_tree (ancestor_root, pool));
 
   /* Do some things in target. */
@@ -1518,7 +1519,7 @@ merge_trees (const char **msg,
 
   /* ### kff todo: hmmm, and now merging_commit() does these tests.
      Is this function obsolete? */
-
+#endif
   return SVN_NO_ERROR;
 }
 
