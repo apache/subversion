@@ -499,7 +499,10 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
    read-only.  If any of these are modified then it is the callers
    resposibility to ensure that the entries file on disk is updated.  Treat
    the hash values as type (const svn_wc_entry_t *) if you wish to avoid
-   accidental modification.
+   accidental modification.  Modifying the schedule member is a
+   particularly bad idea, as the entries writing process relies on having
+   access to the original schedule.  Use a duplicate entry to modify the
+   schedule.
 
    Important note: only the entry structures representing files and
    SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry

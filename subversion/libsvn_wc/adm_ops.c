@@ -416,7 +416,7 @@ mark_tree (svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_wc_entry_t *entry; 
+  const svn_wc_entry_t *entry; 
 
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
@@ -428,6 +428,7 @@ mark_tree (svn_wc_adm_access_t *adm_access,
       const void *key;
       void *val;
       const char *base_name;
+      svn_wc_entry_t *dup_entry;
 
       /* Get the next entry */
       apr_hash_this (hi, &key, NULL, &val);
@@ -453,11 +454,11 @@ mark_tree (svn_wc_adm_access_t *adm_access,
                               subpool));
         }
 
-      /* Mark this entry.  This modifys the cache, but it's OK we are about
-         to write it out again. */
-      entry->schedule = schedule;
-      entry->copied = copied; 
-      SVN_ERR (svn_wc__entry_modify (adm_access, base_name, entry, 
+      /* Need to duplicate the entry because we are changing the scheduling */
+      dup_entry = svn_wc_entry_dup (entry, subpool);
+      dup_entry->schedule = schedule;
+      dup_entry->copied = copied; 
+      SVN_ERR (svn_wc__entry_modify (adm_access, base_name, dup_entry, 
                                      modify_flags, subpool));
 
       /* Tell someone what we've done. */
@@ -482,11 +483,13 @@ mark_tree (svn_wc_adm_access_t *adm_access,
   if (! (entry->schedule == svn_wc_schedule_add
          && schedule == svn_wc_schedule_delete))
   {
+    /* Need to duplicate the entry because we are changing the scheduling */
+    svn_wc_entry_t *dup_entry = svn_wc_entry_dup (entry, subpool);
     if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
-      entry->schedule = schedule;
+      dup_entry->schedule = schedule;
     if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
-      entry->copied = copied;
-    SVN_ERR (svn_wc__entry_modify (adm_access, NULL, entry, modify_flags,
+      dup_entry->copied = copied;
+    SVN_ERR (svn_wc__entry_modify (adm_access, NULL, dup_entry, modify_flags,
                                    subpool));
   }
   
