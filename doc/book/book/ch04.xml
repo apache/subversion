@@ -114,7 +114,7 @@
       sharing information for a week or two.  That is, start gutting
       and reorganizing all the files in your working copy, but don't
       commit or update until you're completely finished with the task.
-      There are are number of problems with this, though.  First, it's
+      There are a number of problems with this, though.  First, it's
       not very safe.  Most people like to save their work to the
       repository frequently, should something bad accidentally happen
       to their working copy.  Second, it's not very flexible.  If you
@@ -293,22 +293,22 @@ Checked out revision 341.
       commits happen:</para>
 
       <itemizedlist>
-        <listitem>
+        <listitem><para>
           You make a change to
           <filename>/branches/write/my-write-branch/search.c</filename>,
-          which creates revision 342.
+          which creates revision 342.</para>
         </listitem>
 
-        <listitem>
+        <listitem><para>
           You make a change to
           <filename>/branches/write/my-write-branch/document.c</filename>,
-          which creates revision 343.
+          which creates revision 343.</para>
         </listitem>
 
-        <listitem>
+        <listitem><para>
           Felix makes a change to
           <filename>/trunk/write/document.c</filename>, which creates
-          revision 344.
+          revision 344.</para>
         </listitem>
       </itemizedlist>
 
@@ -659,7 +659,7 @@ Committed revision 350.
       diff</command> to confirm that your work is in the state you
       want it to be in, and then use <command>svn commit</command> to
       send the final version to the repository.  After committing,
-      this particular changeset in no longer reflected in the HEAD
+      this particular changeset is no longer reflected in the HEAD
       revision.</para>
 
     <para>Again, you may be thinking: well, that really didn't undo
@@ -749,7 +749,7 @@ Committed revision 351.
     <para>If you are administering a repository, there are two
       approaches you can take to managing tags.  The first approach is
       "hands off": as a matter of project policy, decide where your
-      tags will live, and make sure all users know to how treat the
+      tags will live, and make sure all users know how to treat the
       directories they copy in there.  (That is, make sure they know
       not to commit to them.)  The second approach is more paranoid:
       you can use one of the access-control scripts provided with
@@ -893,7 +893,7 @@ Committed revision 377.
       strictly necessary for working with branches, it provides a nice
       shortcut to users.  In our earlier example, after creating your
       private branch, you checked out a fresh working copy of the new
-      repository directory.  Instead, you could simply asked
+      repository directory.  Instead, you could simply ask
       Subversion to change your working copy of
       <filename>/trunk/write</filename> to mirror the new branch
       location:</para>
