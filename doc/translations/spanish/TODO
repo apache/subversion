@@ -2,6 +2,12 @@ Mejorar el script que envía un informe de estado con un porcentaje
 estimado para completar la traducción. Automatizar envío del mismo
 una vez se verifique que funciona relativamente bien.
 
+Averiguar qué versión estamos traduciendo realmente (1.0 o 1.1) y
+modificar la página web. Aparentemente estamos con la 1.1. Revisar
+si esto representa algún problema comprobando cuántos cambios se
+han realizado desde la revisión inglesa tomada como original hacia
+atrás hasta la 1.0 inglesa.
+
 Estandarizar el uso de nombres como Harry o Sally. No me acuerdo
 cuáles se usaban en la literatura Española, pero no son esos. El
 caso es que estos nombres van empotrados en las imágenes de ejemplo,
