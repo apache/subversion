@@ -330,7 +330,7 @@ use_implicit (skel_t *skel)
   /* If it contains any whitespace or parens, then we must use
      explicit-length form.  */
   {
-    int i;
+    apr_size_t i;
 
     for (i = 1; i < skel->len; i++)
       if (skel_char_type[(unsigned char) skel->data[i]] == type_space
@@ -491,7 +491,7 @@ svn_fs__matches_atom (skel_t *skel, const char *str)
   if (skel
       && skel->is_atom)
     {
-      int len = strlen (str);
+      apr_size_t len = strlen (str);
 
       return (skel->len == len
               && ! memcmp (skel->data, str, len));
