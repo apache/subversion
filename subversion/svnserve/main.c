@@ -157,7 +157,7 @@ int main(int argc, const char *const *argv)
           exit(1);
         }
 
-      conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
+      conn = svn_ra_svn_create_conn(usock, NULL, NULL, pool);
 
       if (listen_once)
         {
