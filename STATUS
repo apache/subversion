@@ -110,7 +110,7 @@ Candidate changes:
     Wrap root->paths_change for Perl.
     Justification: Perl bindings completeness, low risk.
     Votes:
-      +1: clkao
+      +1: clkao, breser
 
   * r9144
     Fix a problem that return values of apply_textdelta of a Perl editor
@@ -118,3 +118,5 @@ Candidate changes:
     Justification: Perl bindings bug.
     Votes:
       +1: clkao
+      +0: breser (I'm not terribly fond of this logic and not terribly familiar
+                  with the SVN::Delta code)
