@@ -14,6 +14,8 @@
  * ====================================================================
  */
 
+#include "../clients/init_cmdline.h"
+
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_utf.h"
@@ -51,8 +53,6 @@
 int
 main(int argc, char *argv[])
 {
-  apr_status_t apr_err;
-  int err2;
   const char *wc_path;
   apr_pool_t *pool;
   svn_error_t *err;
@@ -69,23 +69,16 @@ main(int argc, char *argv[])
       fprintf(stderr, "usage: svnversion wc_path [trail_url]\n");
       return EXIT_FAILURE;
     }
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
 
+  /* Initialize the app. */
+  if (init_cmdline ("svnversion", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
   SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], NULL, pool));
-  wc_path = svn_path_canonicalize (wc_path, pool);
+  wc_path = svn_path_internal_style (wc_path, pool);
   err = svn_client_status (&status_hash, &youngest, wc_path, TRUE, TRUE,
                            FALSE, FALSE, &ctx, pool);
   if (err)

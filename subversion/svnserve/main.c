@@ -18,6 +18,7 @@
 
 
 
+#include "../clients/init_cmdline.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -69,9 +70,13 @@ int main(int argc, const char *const *argv)
   apr_proc_t proc;
 #endif
 
-  apr_initialize();
-  atexit(apr_terminate);
+  /* Initialize the app. */
+  if (init_cmdline ("svn", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool. */
   pool = svn_pool_create(NULL);
+
   apr_getopt_init(&os, pool, argc, argv);
 
   while (1)
@@ -97,6 +102,7 @@ int main(int argc, const char *const *argv)
 
         case 'r':
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&root, arg, NULL, pool));
+          root = svn_path_internal_style(root, pool);
           SVN_INT_ERR(svn_path_get_absolute(&root, root, pool));
           break;
         }

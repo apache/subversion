@@ -17,7 +17,7 @@
  */
 
 
-#include <locale.h>
+#include "../clients/init_cmdline.h"
 
 #include <apr_file_io.h>
 
@@ -354,6 +354,7 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_root_t *rev_root;
   svn_revnum_t youngest_rev;
   apr_array_header_t *revs, *args, *paths;
+  const char *path_utf8;
   int i;
 
   SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
@@ -363,9 +364,11 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                               "exactly one path argument required");
 
   paths = apr_array_make (pool, 1, sizeof (const char *));
-  SVN_ERR (svn_utf_cstring_to_utf8 ((const char **)apr_array_push(paths),
+  SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
+  *(const char **)apr_array_push(paths) =
+    svn_path_internal_style (path_utf8, pool);
   
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
@@ -496,6 +499,7 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
+  filename_utf8 = svn_path_internal_style (filename_utf8, pool);
   SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
 
   log_contents->data = file_contents->data;
@@ -525,7 +529,6 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  int err2;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -535,21 +538,11 @@ main (int argc, const char * const *argv)
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
 
-  setlocale (LC_CTYPE, "");
+  /* Initialize the app. */
+  if (init_cmdline ("svnadmin", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
-
+  /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
   if (argc <= 1)
@@ -631,7 +624,8 @@ main (int argc, const char * const *argv)
         opt_state.follow_copies = TRUE;
         break;
       case svnadmin__on_disk_template:
-        err = svn_path_cstring_to_utf8 (&opt_state.on_disk, opt_arg, pool);
+        err = svn_utf_cstring_to_utf8 (&opt_state.on_disk, opt_arg,
+                                       NULL, pool);
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
@@ -640,7 +634,8 @@ main (int argc, const char * const *argv)
           }
         break;
       case svnadmin__in_repos_template:
-        err = svn_path_cstring_to_utf8 (&opt_state.in_repos, opt_arg, pool);
+        err = svn_utf_cstring_to_utf8 (&opt_state.in_repos, opt_arg,
+                                       NULL, pool);
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
@@ -704,7 +699,7 @@ main (int argc, const char * const *argv)
                                                 opt_state.repository_path,
                                                 NULL, pool));
           repos_path 
-            = svn_path_canonicalize (opt_state.repository_path, pool);
+            = svn_path_internal_style (opt_state.repository_path, pool);
         }
 
       if (repos_path == NULL)

@@ -22,9 +22,10 @@
 
 /*** Includes. ***/
 
+#include "../init_cmdline.h"
+
 #include <string.h>
 #include <assert.h>
-#include <locale.h>
 
 #include <apr_strings.h>
 #include <apr_tables.h>
@@ -510,7 +511,7 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_pool_t *pool;
-  int opt_id, err2;
+  int opt_id;
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state = { { 0 } };
   svn_client_ctx_t ctx = { 0 };
@@ -523,25 +524,9 @@ main (int argc, const char * const *argv)
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
 
-  /* C programs default to the "C" locale by default.  But because svn
-     is supposed to be i18n-aware, it should inherit the default
-     locale of its environment.  */
-  setlocale (LC_ALL, "");
-
-  /* Initialize the APR subsystem, and register an atexit() function
-     to Uninitialize that subsystem at program exit. */
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
+  /* Initialize the app. */
+  if (init_cmdline ("svn", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
   /* Create our top-level pool. */
   pool = svn_pool_create (NULL);

@@ -16,7 +16,8 @@
  * ====================================================================
  */
 
-#include <locale.h>
+#include "../clients/init_cmdline.h"
+
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
@@ -1130,7 +1131,6 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  int err2;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -1140,21 +1140,11 @@ main (int argc, const char * const *argv)
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
 
-  setlocale (LC_CTYPE, "");
+  /* Initialize the app. */
+  if (init_cmdline ("svnlook", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
-
+  /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
   if (argc <= 1)
@@ -1276,7 +1266,7 @@ main (int argc, const char * const *argv)
           SVN_INT_ERR (svn_utf_cstring_to_utf8 (&repos_path,
                                                 os->argv[os->ind++],
                                                 NULL, pool));
-          repos_path = svn_path_canonicalize (repos_path, pool);
+          repos_path = svn_path_internal_style (repos_path, pool);
         }
 
       if (repos_path == NULL)
