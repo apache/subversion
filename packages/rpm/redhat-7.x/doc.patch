@@ -1,5 +1,5 @@
---- ./doc/book/Makefile	2003/09/23 23:01:23	1.1
-+++ ./doc/book/Makefile	2003/09/23 23:03:26
+--- ./doc/book/Makefile.orig	2004-09-26 22:25:14.000000000 -0500
++++ ./doc/book/Makefile	2004-09-26 22:28:30.000000000 -0500
 @@ -4,7 +4,7 @@
  
  ## You shouldn't normally need to edit anything below here.
@@ -9,21 +9,21 @@
  
  BOOK_TOP = .
  BOOK_HTML_CHUNK_DIR = $(BOOK_DIR)/html-chunk
-@@ -68,16 +68,7 @@
+@@ -71,16 +71,7 @@
  $(BOOK_VERSION_SOURCE): book-version
  
  book-version:
 -	@if $(SVNVERSION) . > /dev/null; then \
--	echo '<!ENTITY svn.version "Draft Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
+-	echo '<!ENTITY svn.version "Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
 -	else \
--	echo '<!ENTITY svn.version "Draft">' > $(BOOK_VERSION_SOURCE).tmp; \
+-	echo '<!ENTITY svn.version "">' > $(BOOK_VERSION_SOURCE).tmp; \
 -	fi
 -	@if cmp -s $(BOOK_VERSION_SOURCE) $(BOOK_VERSION_SOURCE).tmp; then \
 -	rm $(BOOK_VERSION_SOURCE).tmp; \
 -	else \
 -	mv $(BOOK_VERSION_SOURCE).tmp $(BOOK_VERSION_SOURCE); \
 -	fi
-+	echo '<!ENTITY svn.version "Draft Revision '`echo $(SVNVERSION)`'">' > $(BOOK_VERSION_SOURCE);
++	echo '<!ENTITY svn.version "Draft Revision '`echo ${SVNVERSION}`'">' > $(BOOK_VERSION_SOURCE);
  
  book-html: $(BOOK_HTML_TARGET)
  
