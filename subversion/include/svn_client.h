@@ -859,6 +859,34 @@ svn_client_proplist (apr_array_header_t **props,
                      svn_boolean_t recurse,
                      apr_pool_t *pool);
 
+/* Export the contents of either a subversion repository or a subversion 
+   working copy into a 'clean' directory (meaning a directory with no 
+   administrative directories).
+
+   FROM is either the path the the working copy on disk, or a url to the 
+   repository you wish to export.
+
+   TO is the path to the directory where you wish to create the exported
+   tree.
+
+   REVISION is the revision that should be exported, which is only used 
+   when exporting from a repository.
+
+   AUTH_BATON is an authentication baton that is only used when exporting 
+   from a repository.
+
+   NOTIFY_FUNC and NOTIFY_BATON are the notification functions and baton 
+   which are passed to svn_client_checkout when exporting from a repository.
+
+   All allocations are done in POOL.  */
+svn_error_t *
+svn_client_export (const char *from,
+                   const char *to,
+                   svn_client_revision_t *revision,
+                   svn_client_auth_baton_t *auth_baton,
+                   svn_wc_notify_func_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *pool);
 
 
 /* Cancellation. */

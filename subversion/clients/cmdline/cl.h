@@ -128,6 +128,7 @@ svn_cl__cmd_proc_t
   svn_cl__copy,
   svn_cl__delete,
   svn_cl__diff,
+  svn_cl__export,
   svn_cl__help,
   svn_cl__import,
   svn_cl__info,
