@@ -39,23 +39,11 @@
 /* -----------------------------------------------------------------------
    get_logs takes a callback function, so we have to thunk it
 */
-%ignore svn_repos_get_logs;
-%rename(get_logs) svn_swig_py_repos_get_logs;
-%typemap(python, in) PyObject *py_receiver {
-  $1 = $input;
+%typemap(python, in) (svn_log_message_receiver_t receiver, 
+                      void *receiver_baton) {
+    $1 = svn_swig_py_thunk_log_receiver;
+    $2 = (void *)$input;
 }
-
-#ifdef SWIGPYTHON
-svn_error_t * svn_swig_py_repos_get_logs(svn_repos_t *repos,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t start,
-                                         svn_revnum_t end,
-                                         svn_boolean_t discover_changed_paths,
-                                         svn_boolean_t strict_node_history,
-                                         PyObject *py_receiver,
-                                         apr_pool_t *pool);
-#endif
-
 
 /* -----------------------------------------------------------------------
    handle the 'paths' parameter appropriately

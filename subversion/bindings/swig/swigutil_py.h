@@ -89,17 +89,14 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              PyObject *py_editor,
                              apr_pool_t *pool);
 
-/* wrapper for svn_repos_get_logs.  ### note that the callback
-   function provided as PY_RECEIVER lacks the CHANGED_PATHS hash from
-   the original svn_log_message_receiver_t type. */
-svn_error_t * svn_swig_py_repos_get_logs(svn_repos_t *repos,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t start,
-                                         svn_revnum_t end,
-                                         svn_boolean_t discover_changed_paths,
-                                         svn_boolean_t strict_node_history,
-                                         PyObject *py_receiver,
-                                         apr_pool_t *pool);
+/* thunked log receiver function.  */
+svn_error_t * svn_swig_py_thunk_log_receiver(void *py_receiver,
+                                             apr_hash_t *changed_paths,
+                                             svn_revnum_t rev,
+                                             const char *author,
+                                             const char *date,
+                                             const char *msg,
+                                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
