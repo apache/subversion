@@ -1317,7 +1317,7 @@ calc/Makefile:6
         <command>svn status</command>-kommandoen vil vise deg tilstanden 
         til ethvert element i arbeidskopien din.
         For mer informasjon om denne kommandoen, se <xref 
-        linkend="svn-ch-3-sect-4.3.1" />.</para>
+        linkend="svn-ch-3-sect-5.3.1" />.</para>
      
     </sect2>
     
