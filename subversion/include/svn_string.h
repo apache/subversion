@@ -75,6 +75,14 @@ svn_string_t * svn_string_create (const char *cstring,
 svn_string_t * svn_string_ncreate (const char *bytes, const apr_size_t size, 
                                    apr_pool_t *pool);
 
+/* Make sure that the string STR has at least MINIMUM_SIZE bytes of
+   space available in the memory block.  (MINIMUM_SIZE should include
+   space for the terminating null character.)  If we need more memory,
+   get it from POOL.  */
+void svn_string_ensure (svn_string_t *str,
+                        apr_size_t minimum_size,
+                        apr_pool_t *pool);
+
 /* Set/get  a bytestring empty */
 
 void svn_string_setempty (svn_string_t *str);
