@@ -1068,6 +1068,70 @@ def diff_base_to_repos(sbox):
     raise svntest.Failure
   
 
+#----------------------------------------------------------------------
+# This is a simple regression test for issue #891, whereby ra_dav's
+# REPORT request would fail, because the object no longer exists in HEAD.
+
+def diff_deleted_in_head(sbox):
+  "repos-repos diff on item deleted from HEAD"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(sbox.wc_dir, 'A')
+  mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
+
+  # Make a change to mu, commit r2, update.
+  svntest.main.file_append(mu_path, "some rev2 mu text.")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak ('A/mu',
+                       contents="This is the file 'mu'.some rev2 mu text.")
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status)
+
+  # Now delete the whole directory 'A', and commit as r3.
+  svntest.main.run_svn(None, 'rm', A_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=2)
+  expected_status.remove('A', 'A/B', 'A/B/E', 'A/B/E/beta', 'A/B/E/alpha',
+                         'A/B/F', 'A/B/lambda', 'A/D', 'A/D/G', 'A/D/G/rho',
+                         'A/D/G/pi', 'A/D/G/tau', 'A/D/H', 'A/D/H/psi',
+                         'A/D/H/omega', 'A/D/H/chi', 'A/D/gamma', 'A/mu',
+                         'A/C')
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Doing an 'svn diff -r1:2' on the URL of directory A should work,
+  # especially over the DAV layer.
+  the_url = sbox.repo_url + '/A'
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 '1:2', the_url)
+  if err_output:    
+    raise svntest.Failure
+
+  
+
 ########################################################################
 #Run the tests
 
@@ -1088,6 +1152,7 @@ test_list = [ None,
               diff_nonextant_urls,
               diff_head_of_moved_file,
               diff_base_to_repos,
+              # diff_deleted_in_head,
               ]
 
 if __name__ == '__main__':
