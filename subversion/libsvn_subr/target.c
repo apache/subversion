@@ -36,6 +36,7 @@ svn_error_t *
 svn_path_condense_targets (const char **pbasedir,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
+                           svn_boolean_t remove_redundancies,
                            apr_pool_t *pool)
 {
   if (targets->nelts <= 0)
@@ -82,63 +83,69 @@ svn_path_condense_targets (const char **pbasedir,
             *pbasedir = "";
         }
       
-      /* If we need to find the targets, find the common part of each pair
-         of targets.  If common part is equal to one of the paths, the other
-         is a child of it, and can be removed.  If a target is equal to
-         *pbasedir, it can also be removed. */
       if (pcondensed_targets != NULL)
         {
-          /* First pass: when one non-removed target is a child of
-             another non-removed target, remove the child. */
-          for (i = 0; i < abs_targets->nelts; ++i)
+          if (remove_redundancies)
             {
-              if (removed[i])
-                continue;
+              /* Find the common part of each pair of targets.  If
+                 common part is equal to one of the paths, the other
+                 is a child of it, and can be removed.  If a target is
+                 equal to *pbasedir, it can also be removed. */
 
-              for (j = i + 1; j < abs_targets->nelts; ++j)
+              /* First pass: when one non-removed target is a child of
+                 another non-removed target, remove the child. */
+              for (i = 0; i < abs_targets->nelts; ++i)
                 {
-                  const char *abs_targets_i;
-                  const char *abs_targets_j;
-                  const char *ancestor;
-
-                  if (removed[j])
+                  if (removed[i])
                     continue;
-
-                  abs_targets_i = 
-                    ((const char **)abs_targets->elts)[i];
-
-                  abs_targets_j = 
-                    ((const char **)abs_targets->elts)[j];
-
-                  ancestor = svn_path_get_longest_ancestor 
-                    (abs_targets_i, abs_targets_j, pool);
-
-                  if (! ancestor)
-                    continue;
-
-                  if (strcmp (ancestor, abs_targets_i) == 0)
+                  
+                  for (j = i + 1; j < abs_targets->nelts; ++j)
                     {
-                      removed[j] = TRUE;
-                      num_condensed--;
+                      const char *abs_targets_i;
+                      const char *abs_targets_j;
+                      const char *ancestor;
+                      
+                      if (removed[j])
+                        continue;
+                      
+                      abs_targets_i = 
+                        ((const char **)abs_targets->elts)[i];
+                      
+                      abs_targets_j = 
+                        ((const char **)abs_targets->elts)[j];
+                      
+                      ancestor = svn_path_get_longest_ancestor 
+                        (abs_targets_i, abs_targets_j, pool);
+                      
+                      if (! ancestor)
+                        continue;
+                      
+                      if (strcmp (ancestor, abs_targets_i) == 0)
+                        {
+                          removed[j] = TRUE;
+                          num_condensed--;
+                        }
+                      else if (strcmp (ancestor, abs_targets_j) == 0)
+                        {
+                          removed[i] = TRUE;
+                          num_condensed--;
+                        }
                     }
-                  else if (strcmp (ancestor, abs_targets_j) == 0)
+                }
+              
+              /* Second pass: when a target is the same as *pbasedir,
+                 remove the target. */
+              for (i = 0; i < abs_targets->nelts; ++i)
+                {
+                  const char *abs_targets_i
+                    = ((const char **) abs_targets->elts)[i];
+
+                  if ((strcmp (abs_targets_i, *pbasedir) == 0)
+                      && (! removed[i]))
                     {
                       removed[i] = TRUE;
                       num_condensed--;
                     }
-                }
-            }
-          
-          /* Second pass: when a target is the same as *pbasedir,
-             remove the target. */
-          for (i = 0; i < abs_targets->nelts; ++i)
-            {
-              const char *abs_targets_i
-                = ((const char **) abs_targets->elts)[i];
-              if ((strcmp (abs_targets_i, *pbasedir) == 0) && (! removed[i]))
-                {
-                  removed[i] = TRUE;
-                  num_condensed--;
                 }
             }
           

@@ -709,8 +709,20 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   const char *display_dir = "";
   int i;
 
+  /* Committing URLs doesn't make sense, so error if it's tried. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX (targets, i, const char *);
+      if (svn_path_is_url (target))
+        return svn_error_createf
+          (SVN_ERR_ILLEGAL_TARGET, NULL,
+           "'%s' is a URL, but URLs cannot be commit targets", target);
+    }
+
   /* Condense the target list. */
-  SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets, pool));
+  SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets,
+                                      nonrecursive ? FALSE : TRUE,
+                                      pool));
 
   /* No targets means nothing to commit, so just return. */
   if (! base_dir)

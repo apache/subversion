@@ -119,6 +119,41 @@ check_prop_mods (svn_boolean_t *props_changed,
   return SVN_NO_ERROR;
 }
 
+
+/* If there is a commit item for PATH in COMMITTABLES, return it, else
+   return NULL.  Use POOL for temporary allocation only. */
+static svn_client_commit_item_t *
+look_up_committable (apr_hash_t *committables,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first (pool, committables); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      apr_array_header_t *these_committables;
+      int i;
+      
+      apr_hash_this (hi, &key, NULL, &val);
+      these_committables = val;
+      
+      for (i = 0; i < these_committables->nelts; i++)
+        {
+          svn_client_commit_item_t *this_committable
+            = APR_ARRAY_IDX (these_committables, i,
+                             svn_client_commit_item_t *);
+          
+          if (strcmp (this_committable->path, path) == 0)
+            return this_committable;
+        }
+    }
+
+  return NULL;
+}
+
+
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
@@ -154,6 +189,10 @@ harvest_committables (apr_hash_t *committables,
   svn_boolean_t tc, pc;
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
+
+  /* Early out if the item is already marked as committable. */
+  if (look_up_committable (committables, path, pool))
+    return SVN_NO_ERROR;
 
   assert (entry);
   assert (url);
@@ -502,6 +541,30 @@ svn_client__harvest_committables (apr_hash_t **committables,
   svn_wc_adm_access_t *dir_access;
   apr_pool_t *subpool = svn_pool_create (pool);
 
+  /* It's possible that one of the named targets has a parent that is
+   * itself scheduled for addition or replacement -- that is, the
+   * parent is not yet versioned in the repository.  This is okay, as
+   * long as the parent itself is part of this same commit, either
+   * directly, or by virtue of a grandparent, great-grandparent, etc,
+   * being part of the commit.
+   *
+   * Since we don't know what's included in the commit until we've
+   * harvested all the targets, we can't reliably check this as we
+   * go.  So in `danglers', we record named targets whose parents
+   * are unversioned, then after harvesting the total commit group, we
+   * check to make sure those parents are included.
+   *
+   * Each key of danglers is an unversioned parent.  The (const char *) 
+   * value is one of that parent's children which is named as part of
+   * the commit; the child is included only to make a better error
+   * message.
+   *
+   * (The reason we don't bother to check unnamed -- i.e, implicit --
+   * targets is that they can only join the commit if their parents
+   * did too, so this situation can't arise for them.)
+   */
+  apr_hash_t *danglers = apr_hash_make (pool);
+
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
 
@@ -568,12 +631,14 @@ svn_client__harvest_committables (apr_hash_t **committables,
                "does not appear to be under version control.", target);
           if ((p_entry->schedule == svn_wc_schedule_add)
               || (p_entry->schedule == svn_wc_schedule_replace))
-            return svn_error_createf 
-              (SVN_ERR_ILLEGAL_TARGET, NULL, 
-               "`%s' is the child of an unversioned (or not-yet-versioned) "
-               "directory.\nTry committing the directory itself.",
-               target);
-          
+            {
+              /* Copy the parent and target into pool; subpool lasts
+                 only for this loop iteration, and we check danglers
+                 after the loop is over. */ 
+              apr_hash_set (danglers, apr_pstrdup (pool, parent),
+                            APR_HASH_KEY_STRING, apr_pstrdup (pool, target));
+            }
+
           /* Manufacture a URL for this TARGET. */
           url = svn_path_url_add_component (p_entry->url, base_name, subpool);
         }
@@ -605,6 +670,34 @@ svn_client__harvest_committables (apr_hash_t **committables,
       svn_pool_clear (subpool);
     }
   while (i < targets->nelts);
+
+  /* Make sure that every path in danglers is part of the commit. */
+  {
+    apr_hash_index_t *hi;
+
+    for (hi = apr_hash_first (pool, danglers); hi; hi = apr_hash_next (hi))
+      {
+        const void *key;
+        void *val;
+        const char *dangling_parent, *dangling_child;
+
+        /* Get the next entry.  Name is an entry name; value is an
+           entry structure. */
+        apr_hash_this (hi, &key, NULL, &val);
+        dangling_parent = key;
+        dangling_child = val;
+
+        if (! look_up_committable (*committables, dangling_parent, pool))
+          {
+            return svn_error_createf 
+              (SVN_ERR_ILLEGAL_TARGET, NULL, 
+               "`%s' is not versioned in the repository "
+               "and is not part of the commit, "
+               "yet its child '%s' is part of the commit.",
+               dangling_parent, dangling_child);
+          }
+      }
+  }
 
   svn_pool_destroy (subpool);
 
