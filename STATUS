@@ -112,3 +112,8 @@ Candidate changes:
       +1: clkao
       +0: breser (I'm not terribly fond of this logic and not terribly familiar
                   with the SVN::Delta code)
+
+  * r9358
+    Make mod_authz_svn less restrictive per issue #1821.
+    Votes:
+      +1: striker
