@@ -647,7 +647,7 @@ add_to_revision_control (svn_stringbuf_t *path,
                   path,
                   pool));
     }  
-  else
+  else /* scheduling a directory for addition */
     {
       svn_wc_entry_t *p_entry;
       svn_stringbuf_t *p_path;
@@ -675,7 +675,12 @@ add_to_revision_control (svn_stringbuf_t *path,
       /* If we had to manually calculate a copied directory's ancestor
          url, add to the flags. */
       if (url)
-        flags |= SVN_WC__ENTRY_MODIFY_ANCESTOR;
+        {
+          flags |= SVN_WC__ENTRY_MODIFY_ANCESTOR;
+
+          /* ### call a function that recursively tweaks every
+             subdir's url to be correct   */
+        }
 
       /* And finally, make sure this entry is marked for addition in
          its own administrative directory. */

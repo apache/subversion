@@ -920,9 +920,17 @@ report_single_mod (const char *name,
               /* Add the new directory WITH HISTORY */
               SVN_ERR (editor->add_directory (entry_name,
                                               *dir_baton,
-                                              NULL, SVN_INVALID_REVNUM,
+                                              copyfrom_url, copyfrom_rev,
                                               &new_dir_baton));
             }
+          
+          /* History or not, decide if there are props to send. */
+          SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, full_path, 
+                                            (*stack)->pool));
+          if (prop_modified_p)
+            SVN_ERR (do_prop_deltas (full_path, entry, editor, 
+                                     tb->editor_baton, (*stack)->pool));
+
         }
       
       /* Adding a new file: */
