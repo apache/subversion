@@ -729,7 +729,7 @@ svn_wc__do_property_merge (svn_string_t *path,
       svn_xml_make_open_tag (entry_accum,
                              pool,
                              svn_xml_self_closing,
-                             SVN_WC__LOG_DELETE_ENTRY,
+                             SVN_WC__LOG_RM,
                              SVN_WC__LOG_ATTR_NAME,
                              reject_tmp_path,
                              NULL);
