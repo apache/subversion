@@ -2149,6 +2149,14 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_txdelta:
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore <txdelta> tags
+         altogether. */
+      if (! rb->receiving_all)
+        break;
+
       CHKERR( (*rb->editor->apply_textdelta)(rb->file_baton,
                                              NULL, /* ### base_checksum */
                                              rb->file_pool,
@@ -2188,7 +2196,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
                                             rb->namestr->data, 
                                             NULL, TOP_DIR(rb).pool) );
       else
-        CHKERR( rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
+        CHKERR( rb->editor->change_file_prop(rb->file_baton, rb->namestr->data,
                                              NULL, rb->file_pool) );
       break;
       
@@ -2375,6 +2383,14 @@ static int cdata_handler(void *userdata, int state,
       {
         apr_size_t nlen = len;
 
+        /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+           <fetch-file>s and such) when *not* in "send-all" mode.  As a
+           client, we're smart enough to know that's wrong, so when not
+           in "receiving-all" mode, we'll ignore <txdelta> tags
+           altogether. */
+        if (! rb->receiving_all)
+          break;
+
         CHKERR( svn_stream_write(rb->base64_decoder, cdata, &nlen) );
         if (nlen != len)
           {
@@ -2468,6 +2484,14 @@ static int end_element(void *userdata, int state,
       break;
 
     case ELEM_txdelta:
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore <txdelta> tags
+         altogether. */
+      if (! rb->receiving_all)
+        break;
+
       CHKERR( svn_stream_close(rb->base64_decoder) );
       rb->whandler = NULL;
       rb->whandler_baton = NULL;
