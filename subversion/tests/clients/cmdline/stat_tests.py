@@ -270,6 +270,138 @@ def status_blank_for_unignored_file(sbox):
   return status
 
 
+def status_file_needs_update(sbox):
+  "status -u should show that outdated file needs update"
+
+  # See this thread:
+  #
+  #    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=27975
+  #
+  # Basically, Andreas was seeing inconsistent results depending on
+  # whether or not he accompanied 'svn status -u' with '-v':
+  #
+  #    % svn st -u
+  #    Head revision:     67
+  #    %
+  #
+  # ...and yet...
+  # 
+  #    % svn st -u -v
+  #                   56        6          k   cron-daily.pl
+  #           *       56       44          k   crontab.root
+  #                   56        6          k   gmls-lR.pl
+  #    Head revision:     67
+  #    %
+  #
+  # The first status should show the asterisk, too.  There was never
+  # any issue for this bug, so this comment and the thread are your
+  # audit trail :-).
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  other_wc = wc_dir + '-other'
+
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+  svntest.main.file_append('crontab.root', 'New file crontab.root.\n')
+  svntest.main.run_svn(None, 'add', 'crontab.root')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+
+  os.chdir(was_cwd)
+  os.chdir(other_wc)
+  svntest.main.run_svn(None, 'up')
+
+  os.chdir(was_cwd)
+  os.chdir(wc_dir)
+  svntest.main.file_append('crontab.root', 'New line in crontab.root.\n')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+
+  # The `svntest.actions.run_and_verify_*_status' routines all pass
+  # the -v flag, which we don't want, as this bug never appeared when
+  # -v was passed.  So we run status by hand:
+  os.chdir(was_cwd)
+  out, err = svntest.main.run_svn(None, 'status', '-u', other_wc)
+  if err:
+    return 1
+
+  saw_it = 0
+  for line in out:
+    if re.match("\\s+\\*.*crontab\\.root$", line):
+      saw_it = 1
+
+  return not saw_it
+
+
+def status_uninvited_parent_directory(sbox):
+  "status -u wc/added-and-outdated-file should show only that status"
+
+  # To reproduce, check out working copies wc1 and wc2, then do:
+  #
+  #   $ cd wc1
+  #   $ echo "new file" >> newfile
+  #   $ svn add newfile
+  #   $ svn ci -m 'log msg'
+  #
+  #   $ cd ../wc2
+  #   $ echo "new file" >> newfile
+  #   $ svn add newfile
+  #
+  #   $ cd ..
+  #   $ svn st wc2/newfile
+  #
+  # You *should* get one line of status output, for newfile.  The bug
+  # is that you get two instead, one for newfile, and one for its
+  # parent directory, wc2/.
+  #
+  # This bug was originally discovered during investigations into
+  # issue #1042, "fixed" in revision 4181, then later the fix was
+  # reverted because it caused other status problems (see the test
+  # status_file_needs_update(), which fails when 4181 is present).
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  other_wc = wc_dir + '-other'
+
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+  svntest.main.file_append('newfile', 'New file.\n')
+  svntest.main.run_svn(None, 'add', 'newfile')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+
+  os.chdir(was_cwd)
+  os.chdir(other_wc)
+  svntest.main.file_append('newfile', 'New file.\n')
+  svntest.main.run_svn(None, 'add', 'newfile')
+
+  os.chdir(was_cwd)
+
+  # We don't want a full status tree here, just one line (or two, if
+  # the bug is present).  So run status by hand:
+  os.chdir(was_cwd)
+  out, err = svntest.main.run_svn(None, 'status', '-u',
+                                  os.path.join(other_wc, 'newfile'))
+  if err:
+    return 1
+
+  saw_uninvited_parent_dir = 0
+  for line in out:
+    # The "/?" is just to allow for an optional trailing slash.
+    if re.match("\\s+\\*.*-other/?$", line):
+      saw_uninvited_parent_dir = 1
+
+  return saw_uninvited_parent_dir
+
+
 ########################################################################
 # Run the tests
 
@@ -283,6 +415,8 @@ test_list = [ None,
               status_type_change,
               status_with_new_files_pending,
               status_blank_for_unignored_file,
+              status_file_needs_update,
+              XFail(status_uninvited_parent_directory),
              ]
 
 if __name__ == '__main__':
