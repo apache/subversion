@@ -384,12 +384,8 @@ def space_fname():
 def two_quick():
   "two commits in quick succession"
   repos, wc, logs = ensure_conversion('main')
-  out = run_svn('log', os.path.join(wc, 'trunk', 'single-files', 'twoquick'))
-  num_revisions = 0
-  for line in out:
-    if line.find("rev ") == 0:
-      num_revisions = num_revisions + 1
-  if num_revisions != 2:
+  logs2 = parse_log(os.path.join(repos, 'trunk', 'single-files', 'twoquick'))
+  if len(logs2) != 2:
     raise svntest.Failure
 
 
