@@ -26,6 +26,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "cl.h"
 
 
