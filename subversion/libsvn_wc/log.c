@@ -571,10 +571,13 @@ log_do_modify_entry (struct log_runner *loggy,
   svn_string_t *kindstr = apr_hash_get (ah,
                                         SVN_WC_ENTRY_ATTR_KIND,
                                         APR_HASH_KEY_STRING);
-          
+
   /* Create a full path to the file's textual component */
   tfile = svn_string_dup (loggy->path, loggy->pool);
-  svn_path_add_component (tfile, sname, svn_path_local_style);
+  if (strcmp (sname->data, SVN_WC_ENTRY_THIS_DIR) != 0)
+    {
+      svn_path_add_component (tfile, sname, svn_path_local_style);
+    }
 
   /* Create a full path to the file's property component */
   err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
