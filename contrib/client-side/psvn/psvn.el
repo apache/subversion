@@ -90,16 +90,16 @@
 
 ;; The output in the buffer contains this header to ease reading
 ;; of svn output:
-;;   FPH locl chgd author   em file
+;;   FPH BASE CMTD Author   em File
 ;; F = Filemark
 ;; P = Property mark
 ;; H = History mark
-;; locl = local base revision
-;; chgd = last changed revision
-;; author = author of change
+;; BASE = local base revision
+;; CMTD = last committed revision
+;; Author = author of change
 ;; em = "**" or "(Update Available)" [see `svn-status-short-mod-flag-p']
 ;;      if file can be updated
-;; file = path/filename
+;; File = path/filename
 ;;
 
 ;; To use psvn.el put the following line in your .emacs:
@@ -214,6 +214,12 @@ If this variale is nil, and the file is out of date then the longer phrase
 In either case the mark gets the face
 `svn-status-update-available-face', and will only be visible if
 `\\[svn-status-update]' is run with a prefix argument")
+
+(defvar svn-status-use-header-line t
+  "*Whether a header line should be used.
+When t: Use the emacs header line
+When 'inline: Insert the header line in the *svn-status* buffer
+Otherwise: Don't display a header line")
 
 ;;; default arguments to pass to svn commands
 (defvar svn-status-default-log-arguments ""
@@ -1033,15 +1039,21 @@ PREFIX is passed to `popup-menu'."
       (delete-overlay o))))
 
 (defun svn-status-mode ()
-  "Major mode used by  psvn.el to process the output of \"svn status\".
+  "Major mode used by psvn.el to display the output of \"svn status\".
 
-psvn.el is an interface for the revision control tool subversion
-\(see http://subversion.tigris.org).
-psvn.el provides a similar interface for subversion as pcl-cvs does for cvs.
-At the moment the following commands are implemented:
-  M-x svn-status: run 'svn -status -v'
-  and show the result in the *svn-status* buffer, this buffer uses the
-  svn-status mode. In this mode the following keys are defined:
+The Output has the following format:
+  FPH BASE CMTD Author   em File
+F = Filemark
+P = Property mark
+H = History mark
+BASE = local base revision
+CMTD = last committed revision
+Author = author of change
+em = \"**\" or \"(Update Available)\" [see `svn-status-short-mod-flag-p']
+     if file can be updated
+File = path/filename
+
+The following keys are defined:
 \\{svn-status-mode-map}"
   (interactive)
   (kill-all-local-variables)
@@ -1471,6 +1483,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (user-elide-count 0)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
+        (header-line-string)
         (column (current-column)))
     (delete-region (point-min) (point-max))
     (insert "\n")
@@ -1517,11 +1530,14 @@ Symbolic links to directories count as directories (see `file-directory-p')."
     (when (> user-elide-count 0)
       (insert (format "%d file(s) elided\n" user-elide-count)))
     (insert (format "%d file(s) marked\n" marked-count))
-    (insert "\n "
-            (format svn-status-line-format
-                    70 80 72 "locl" "chgd" "author")
-            (if svn-status-short-mod-flag-p "em " "")
-            "file\n")
+    (setq header-line-string (concat (format svn-status-line-format
+                                             70 80 72 "BASE" "CMTD" "Author")
+                                     (if svn-status-short-mod-flag-p "em " "")
+                                     "File"))
+    (cond ((eq svn-status-use-header-line t)
+           (setq header-line-format (concat "    " header-line-string)))
+          ((eq svn-status-use-header-line 'inline)
+           (insert "\n " header-line-string "\n")))
     (setq svn-start-of-file-list-line-number (+ (count-lines (point-min) (point)) 1))
     (if fname
         (progn
