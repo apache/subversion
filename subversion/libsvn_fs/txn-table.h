@@ -57,9 +57,9 @@ svn_error_t *svn_fs__set_txn_root (svn_fs_t *fs,
 				   trail_t *trail);
 
 
-/* Make a list of currently active transactions FS in NAMES_P, as part
-   of TRAIL. Allocate the array in POOL; do any necessary temporary
-   allocation in TRAIL->pool.. */
+/* Set *NAMES_P to a null-terminated array of strings, giving the
+   names of all currently active transactions in FS, as part of TRAIL.
+   Allocate the array and the names in TRAIL->pool.  */
 svn_error_t *svn_fs__get_txn_list (char ***names_p,
                                    svn_fs_t *fs,
                                    apr_pool_t *pool,
