@@ -111,7 +111,7 @@ III.  Repository Administration
 IV. Appendices
 
   1. SVN for CVS users
-  2. Compiling from source
+  2. Compiling and Installing
   3. Contributing to the project
   4. Quickref sheet [can this be ported from latex?]
   5. Links:  pointers to FAQ, WebDAV docs

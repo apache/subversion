@@ -1,7 +1,13 @@
 @node Getting Started
 @chapter Getting Started
 
-How to get started with Subversion.
+@quotation
+``The mere absence of that blisteringly arbitrary chaos that makes CVS
+CVS is like leaving the squalor of an inner-city tenement for a walk
+in a park, filled with trees, children on skates, and people having
+picnics.''
+      -- a former CVS user
+@end quotation
 
 @menu
 * Introduction::                History and overview of features.

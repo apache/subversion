@@ -12,8 +12,9 @@ In this section, we'll mainly focus on how to use the
 * Repository hooks::            
 * Repository maintenance::
 * Networking a repository::
+* Migrating a repository::
 @end menu
-@c * Migrating a repository::
+
 
 
 @c ------------------------------------------------------------------
@@ -112,11 +113,7 @@ The point is:  if you're administering a Subversion repository, you're
 going to have to examine revisions and transactions.  It's part of
 monitoring the health of the repository.
 
-@menu
-* svnlook::                     
-@end menu
 
-@node svnlook
 @subsection svnlook
 
 @command{svnlook} is a read-only@footnote{Why read-only?  Because if a
@@ -289,12 +286,13 @@ able to access the repository.
 
 The pre-commit and post-commit hooks need to know things about the
 change about to be committed (or that has just been committed).  The
-solution is a standalone program, @command{svnlook} (@xref{svnlook},)
-which was installed in the same place as the @command{svn} binary.  Have
-the script use @command{svnlook} to examine a transaction or revision
-tree.  It produces output that is both human- and machine-readable, so
-hook scripts can easily parse it.  Note that `svnlook' is read-only --
-it can only inspect, not change the repository.
+solution is a standalone program, @command{svnlook} (@xref{Examining a
+repository}.)  which was installed in the same place as the
+@command{svn} binary.  Have the script use @command{svnlook} to
+examine a transaction or revision tree.  It produces output that is
+both human- and machine-readable, so hook scripts can easily parse it.
+Note that `svnlook' is read-only -- it can only inspect, not change
+the repository.
 
 
 @c ------------------------------------------------------------------
@@ -340,10 +338,10 @@ db_recover: Maximum transaction id 80000000 Recovery checkpoint [40][4080333]
 @end example
 
 Make sure you run this command as the user that owns and manages the
-database and not as root because running @command{db_recover} as root
+database and @emph{not} as root.  Running @command{db_recover} as root
 will leave root owned files in the db directory which cannot be opened
-by the non-root user that manages the database, which is typically your
-Apache process.
+by the non-root user that manages the database, which is typically
+your Apache process.
 
 Second, a repository administrator may need to manage the growth of
 logfiles.  At any given time, the DB environment is using at least one
@@ -447,4 +445,288 @@ Undeltifying `/project/tags/release-1.3' in revision 230...done.
 @c ------------------------------------------------------------------
 @node Networking a repository
 @section Networking a repository
+
+Okay, so now you have a repository, and you want to make it available
+over a network.
+
+Subversion's primary network server is Apache httpd speaking
+WebDAV/deltaV protocol, which is a set of extension methods to http.
+(For more information on DAV, see @url{http://www.webdav.org}.)
+
+To network your repository, you'll need to
+
+@itemize @bullet
+@item
+get Apache httpd 2.0 up and running with the @file{mod_dav} module
+@item
+install the @file{mod_dav_svn} plugin to mod_dav, which uses
+Subversion's libraries to access the repository
+@item
+configure your @file{httpd.conf} file to export the repository
+@end itemize
+
+You can accomplish the first two items by either building httpd and
+Subversion from source code, or by installing a binary packages on
+your system.  The second appendix of this document contains more
+detailed instructions on doing this. (@xref{Compiling and
+installing}.)  Instructions are also available in the @file{INSTALL}
+file in Subversion's source tree.
+
+In this section, we focus on configuring your @file{httpd.conf}.
+
+Somewhere near the bottom of your configuration file, define a new
+@command{Location} block:
+
+@example
+<Location /repos>
+   DAV svn
+   SVNPath /absolute/path/to/myrepos
+</Location>
+@end example
+
+This now makes your repository @file{myrepos} available at the URL
+@url{http://hostname/repos}, with no access restrictions at all:
+
+@itemize @bullet
+@item
+Anyone can use their svn client to checkout either a working copy of
+the URL, or of any URL that corresponds to a subdirectory of the
+repository.
+@item
+By pointing an ordinary web browser at the URL, anyone can
+interactively browse the latest revision.
+@item
+Anyone can commit to the repository.
+@end itemize
+
+If you want to restrict either read or write access to the repository
+as a whole, you can use Apache's built-in access control features.
+
+First, create an empty file that will hold httpd usernames and
+passwords.   Place names and crypted passwords into this file like so:
+
+@example
+joe:Msr3lKOsYMkpc
+frank:Ety6rZX6P.Cqo
+mary:kV4/mQbu0iq82
+@end example
+
+You can generate the crypted passwords by using the standard
+@command{crypt(3)} command.  Here's a tiny perl program that does the
+trick as well:
+
+@example
+#!/usr/bin/perl
+srand (time());
+my $randletter = "(int (rand (26)) + (int (rand (1) + .5) % 2 ? 65 : 97))";
+my $salt = sprintf ("%c%c", eval $randletter, eval $randletter);
+my $plaintext = shift;
+my $crypttext = crypt ($plaintext, $salt);
+@end example
+
+Next, add lines within your <Location> block that point to the user file:
+
+@example
+AuthType Basic
+AuthName "Subversion repository"
+AuthUserFile /path/to/users/file
+@end example
+
+If you want to restrict @emph{all} access to the repository, add one
+more line:
+
+@example
+Require valid-user
+@end example
+
+This line make Apache require user authentication for every single
+type of http request to your repository.
+
+To restrict write-access only, you need to require a valid user for
+all request methods @emph{except} those that are read-only:
+
+@example
+<LimitExcept GET PROPFIND OPTIONS REPORT>
+   Require valid-user
+</LimitExcept>
+@end example
+
+Or, if you want to get fancy, you can create two separate user files,
+one for readers, and one for writers:
+
+@example
+AuthGroupFile /my/svn/group/file
+
+<LimitExcept GET PROPFIND OPTIONS REPORT>
+   Require group svn_committers
+</LimitExcept>
+
+<Limit GET PROPFIND OPTIONS REPORT>
+   Require group svn_committers
+   Require group svn_readers
+</Limit>
+@end example
+
+These are only a few simple examples.  For a complete tutorial on
+Apache access contol, please consider taking a look at the
+``Security'' tutorials found at
+@url{http://httpd.apache.org/docs-2.0/misc/tutorials.html}.
+
+Another note: in order for 'svn cp' to work (which is actually
+implemented as a DAV COPY request), mod_dav needs to be able to be
+able to determine the hostname of the server.  A standard way of doing
+this is to use Apache's ServerName directive to set the server's
+hostname.  Edit your @file{httpd.conf} to include:
+
+@example
+ServerName svn.myserver.org
+@end example 
+
+If you are using virtual hosting through Apache's NameVirtualHost
+directive, you may need to use the ServerAlias directive to specify
+additional names that your server is known by.
+
+(If you are unfamiliar with an Apache directive, or not exactly sure
+about what it does, don't hesitate to look it up in the documentation:
+@url{http://httpd.apache.org/docs-2.0/mod/directives.html}.)
+
+You can test your exported repository by firing up httpd:
+
+@example
+$ /usr/local/apache2/bin/apachectl stop
+$ /usr/local/apache2/bin/apachectl start
+@end example
+
+Check /usr/local/apache2/logs/error_log to make sure it started up
+okay.  Try doing a network checkout from the repository:
+
+@example
+$ svn co http://localhost/repos -d wc
+@end example
+
+The most common reason this might fail is permission problems reading
+the repository db files.  Make sure that the user 'nobody' (or
+whatever UID the httpd process runs as) has permission to read and
+write the Berkeley DB files!  This is a very common problem.
+
+You can see all of mod_dav_svn's complaints in the Apache error
+logfile, @file{/usr/local/apache2/logs/error_log}, or wherever you
+installed Apache.  For more information about tracing problems, see
+"Debugging the server" in the @file{HACKING} file.
+
+
+@c ------------------------------------------------------------------
+@node Migrating a repository
+@section Migrating a repository
+
+Sometimes special situations arise where you need to move all of your
+filesystem data from one repository to another.  Perhaps the internal
+fs database schema has changed in some way in a new release of
+Subversion, or perhaps you'd like to start using a different database
+'back end'.
+
+Either way, your data needs to be migrated to a new repository.  To do
+this, we have the @command{svnadmin dump} and @command{svnadmin load}
+commands. 
+
+@command{svnadmin dump} writes a stream of your repository's data to
+stdout:
+
+@example
+$ svnadmin dump myrepos > dumpfile
+* Dumped revision 0.
+* Dumped revision 1.
+* Dumped revision 2.
+[...]
+@end example
+
+This stream describes every revision in your repository as a list of
+changes to nodes.  It's mostly human-readable text; but when a file's
+contents change, the entire fulltext is dumped into the stream.  If
+you have binary files or binary property-values in your repository,
+those parts of the stream may be unfriendly to human readers.
+
+After dumping your data, you would then move the file to a different
+system (or somehow alter the environment to use a different version of
+@command{svnadmin} and/or @file{libsvn_fs.so}), and create a
+``new''-style repository that has a new schema or DB back-end:
+
+@example
+$ svnadmin create newrepos
+@end example
+
+The @command{svnadmin load} command attempts to read a dumpstream from
+stdin, and effectively replays each commit:
+
+@example
+$ svnadmin load newrepos < dumpfile
+<<< Started new txn, based on original revision 1
+     * adding path : A ... done.
+     * adding path : A/B ... done.
+[...]
+------- Committed new rev 1 (loaded from original rev 1) >>>
+
+<<< Started new txn, based on original revision 2
+     * editing path : A/mu ... done.
+     * editing path : A/D/G/rho ... done.
+
+------- Committed new rev 2 (loaded from original rev 2) >>>
+@end example
+
+Voila, your revisions have been recommitted into the new repository.
+
+
+@subsection Stupid dump/load tricks
+
+People who are feeling saucy with Unix can try things like this:
+
+@example
+$ svnadmin create newrepos
+$ svnadmin dump myrepos | svnadmin load newrepos
+@end example
+
+Also, it's possible to create a series of smaller dumpfiles and load
+them in succession.  But it requires a small bit of hackery.
+
+@example
+$ svnadmin dump myrepos 0 2000 > dumpfile1
+$ svnadmin dump myrepos 2000 4000 > dumpfile2
+@end example
+
+So now you have two dumpfiles;  the first contains revisions 0-2000,
+and the second contains revisions 2000-4000.  Why the overlap?
+
+Here's why.  The first revision dumped by @command{svnadmin dump} is
+always compared against revision 0, which is just the empty root
+directory @file{/}.  That means that the first revision an any
+dumpfile will always look like a gigantic list of ``added'' nodes.  We
+do this so that a file like @file{dumpfile2} can be directly loaded
+into an empty repository.
+
+But there's a flip side to this nicety.  When we want to load a number
+of dumpfiles in sequence, we need to make sure each file overlaps by
+at least one revision.  Before loading, the first revision of a file
+like @file{dumpfile2} needs to be @emph{removed}, so that the file
+begins with a description of revision 2001 as a tree-delta against
+revision 2000:
+
+@itemize @bullet
+@item
+open the @file{dumpfile2}  in an editor
+@item 
+do @emph{not} remove the @code{SVN-fs-dump-format-version} header line
+at the beginning of the file
+@item
+@emph{do} remove the first revision, which begins with a
+@code{Revision-number:} record, and goes all the way until the next
+@code{Revision-number:} block.
+@end itemize
+
+Once your dumpfiles have all been properly trimmed, you can load them
+in sequence:
+
+@example
+$ svnadmin load newrepos < dumpfile1
+$ svnadmin load newrepos < dumpfile2
+@end example
 
