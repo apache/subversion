@@ -15,7 +15,12 @@ done
 
 
 # Run tests to ensure that our build requirements are met
-./build/buildcheck.sh || exit 1
+NEON_CHECK_CONTROL=""
+if test "$1" = "--disable-neon-version-check"; then
+    NEON_CHECK_CONTROL="$1"
+    shift
+fi
+./build/buildcheck.sh $NEON_CHECK_CONTROL || exit 1
 
 ### temporary cleanup during transition to libtool 1.4
 (cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
