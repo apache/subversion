@@ -190,6 +190,17 @@ svn_fs__err_corrupt_txn (svn_fs_t *fs,
 
 
 svn_error_t *
+svn_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+     "corrupt entry in `copies' table for `%s' in filesystem `%s'", 
+     copy_id, fs->path);
+}
+
+
+svn_error_t *
 svn_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 {
   return
@@ -222,7 +233,16 @@ svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 }
 
 
-/* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
+svn_error_t *
+svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_COPY, 0, 0, fs->pool,
+     "no copy with id `%s' in filesystem `%s'", copy_id, fs->path);
+}
+
+
 svn_error_t *
 svn_fs__err_not_directory (svn_fs_t *fs, const char *path)
 {

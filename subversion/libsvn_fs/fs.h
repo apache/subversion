@@ -46,7 +46,7 @@ struct svn_fs_t
   DB_ENV *env;
 
   /* The filesystem's various tables.  See `structure' for details.  */
-  DB *nodes, *revisions, *transactions, *representations, *strings;
+  DB *nodes, *revisions, *transactions, *representations, *strings, *copies;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
@@ -197,6 +197,16 @@ typedef struct
 } svn_fs__representation_t;
 
 
+/*** Copy ***/
+typedef struct
+{
+  /* Node-revision of copy destination. */
+  svn_fs_id_t *dst_noderev_id;
+
+} svn_fs__copy_t;
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

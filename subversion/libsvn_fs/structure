@@ -401,9 +401,9 @@ ID, and two mis-formed IDs are compared byte-by-byte.
 REVISION: filesystem revisions, and the Berkeley DB "revisions" table
 
 We represent a filesystem revision using a skel of the form:
-    ("revision" ID TXN PROPLIST)
+    ("revision" ROOT-ID TXN PROPLIST)
 where:
-- ID is the node revision ID of this revision's root directory,
+- ROOT-ID is the node revision ID of this revision's root directory,
 - TXN is the key into the `transactions' table (which see) whose
   value is the transaction that was committed to create this revision, and
 - PROPLIST is the revision's property list
@@ -476,14 +476,10 @@ form.
 The Berkeley DB `copies' table records all filesystem copies.  Every
 key in this table is copy ID, and every value is a skel of the form:
 
-   ("copy" SRC-PATHREV DST-PATHREV)
+   ("copy" DST-NODE-ID)
 
-where SRC-PATHREV and DST-PATHREV are both skels of the form:
-
-   (PATH REVISION)
-
-SRC-PATHREV represents the path and revision that was the source of
-the copy operation; TGT-PATHREV the destination.
+where DST-NODE-ID represents the new node revision created as a result
+of the copy.
 
 As the sole exception to the rule above, the `copies' table always has
 one entry whose key is `next-id', and whose value is the lowest copy ID
@@ -666,7 +662,7 @@ Property lists:
 
 Filesystem revisions:
 
-               REVISION ::= ("revision" ID TXN PROPLIST) ;
+               REVISION ::= ("revision" ROOT-ID TXN PROPLIST) ;
 
 
 Transactions:
@@ -680,11 +676,8 @@ Transactions:
 
 Copies:
 
-                   COPY ::= ("copy" SRC-PATHREV DST-PATHREV)
-            SRC-PATHREV ::= PATH-REV
-            DST-PATHREV ::= PATH-REV
-               PATH-REV ::= (PATH REVISION)    
-                   PATH ::= atom ;
+                   COPY ::= ("copy" DST-NODE-ID)
+            DST-NODE-ID ::= NODE-REV-ID ;
 
 
 Entries lists:
