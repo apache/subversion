@@ -35,7 +35,10 @@ SVN::Delta - Subversion delta functions
 
 SVN::Delta wraps delta related function in subversion. The most
 important one is SVN::Delta::Editor, the interface for describing tree
-deltas.
+deltas. by default SVN::Delta::Editor relays method calls to its
+internal member C<_editor>, which could either be a editor in C (such
+as the one you get from get_commit_editor), or another
+SVN::Delta::Editor object.
 
 =head1 SVN::Delta::Editor
 
@@ -71,7 +74,8 @@ Turn on debug.
 
 =item _editor
 
-An arrayref of the editor/baton pair to link with.
+An arrayref of the editor/baton pair or another SVN::Delta::Editor
+object to link with.
 
 =back
 
@@ -103,6 +107,8 @@ use SVN::Base qw(Delta svn_delta_editor_);
 
 sub convert_editor {
     my $self = shift;
+    $self->{_editor} = $_[0], return 1
+	if UNIVERSAL::isa ($_[0], __PACKAGE__);
     if (ref($_[0]) && $_[0]->isa('_p_svn_delta_editor_t')) {
 	@{$self}{qw/_editor _baton/} = @_;
 	return 1;
@@ -132,8 +138,9 @@ sub AUTOLOAD {
     warn "$AUTOLOAD: ".join(',',@_) if $_[0]->{_debug};
     return unless $_[0]->{_editor};
     my $class = ref($_[0]);
-    $AUTOLOAD =~ s/^${class}::(SUPER::)?//;
-    return if $AUTOLOAD =~ m/^[A-Z]/;
+    my $func = $AUTOLOAD;
+    $func =~ s/^${class}::(SUPER::)?//;
+    return if $func =~ m/^[A-Z]/;
 
     my %ebaton = ( set_target_revision => 1,
 		   open_root => 1,
@@ -143,8 +150,11 @@ sub AUTOLOAD {
 
     my $self = shift;
     no strict 'refs';
-    my @ret = &{"invoke_$AUTOLOAD"}($self->{_editor},
-			  $ebaton{$AUTOLOAD} ? $self->{_baton} : (), @_);
+
+    my @ret = UNIVERSAL::isa ($self->{_editor}, __PACKAGE__) ?
+	$self->{_editor}->$func (@_) :
+        &{"invoke_$func"}($self->{_editor},
+			      $ebaton{$func} ? $self->{_baton} : (), @_);
 
     return $#ret == 0 ? $ret[0] : [@ret];
 }
