@@ -122,9 +122,12 @@ svn_error_t * svn_ra_dav__get_activity_url(const svn_string_t **activity_url,
   if (oc.activity_url == NULL)
     {
       /* ### error */
-      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+      return svn_error_create(SVN_ERR_RA_OPTIONS_REQUEST_FAILED,
+                              0, NULL, pool,
                               "The OPTIONS response did not include the "
-                              "requested activity-collection-set.");
+                              "requested activity-collection-set.\n"
+                              "(Check the URL again;  this often means that "
+                              "the URL is not WebDAV-enabled.)");
     }
 
   *activity_url = oc.activity_url;
