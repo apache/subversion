@@ -1086,16 +1086,17 @@ def crawl_filesystem_dir (root, directory, pool):
         los usuarios del lenguaje no necesitan preocuparse con la
         reserva y liberación de memoria.</para>
 
-      <para>In the previous section of this chapter, we mentioned the
-        <filename>libsvn_client</filename> interface, and how it
-        exists for the sole purpose of simplifying the process of
-        writing a Subversion client.  The following is a brief example
-        of how that library can be accessed via the SWIG bindings.  In
-        just a few lines of Python, you can check out a fully
-        functional Subversion working copy!</para>
+      <para>En la sección previa de este capítulo, mencionamos la
+        interfaz <filename>libsvn_client</filename>, y cómo existe
+        con el único propósito de simplificar el proceso de escribir
+        un cliente de Subversion. A continuación presentamos un breve
+        ejemplo que muestra cómo esta librería puede ser usada vía
+        los envoltorios SWIG. ¡En sólo unas pocas línea de Python,
+        puede obtener una copia de trabajo local de Subversion
+        totalmente funcional!</para>
 
       <example id="svn-ch-8-sect-2.3-ex-2">
-        <title>A Simple Script to Check Out a Working Copy.</title>
+        <title>Un script simple para obtener una copia de trabajo local.</title>
 
         <programlisting>
 #!/usr/bin/env python
@@ -1125,18 +1126,20 @@ if __name__ == '__main__':
 </programlisting>
       </example>
 
-      <para>Subversion's language bindings unfortunately tend to lack
-        the level of attention given to the core Subversion modules.
-        However, there have been significant efforts towards creating
-        functional bindings for Python, Perl, and Java.  Once you have
-        the SWIG interface files properly configured, generation of
-        the specific wrappers for all the supported SWIG languages
-        (which currently includes versions of C#, Guile, Java,
-        MzScheme, OCaml, Perl, PHP, Python, Ruby, and Tcl) should
-        theoretically be trivial.  Still, some extra programming is
-        required to compensate for complex APIs that SWIG needs some
-        help generalizing.  For more information on SWIG itself, see
-        the project's website at <systemitem
+      <para>Los envoltorios de Subversion para otros lenguajes
+        desafortunadamente tienden a no recibir el mismo nivel
+        de atención redibido por los módulos principales de
+        Subversion. No obstante, se han dado pasos significativos
+        hacia la creación de enlaces funcionales para Python,
+        Perl y Java. Una vez tenga los ficheros del interfaz SWIG
+        configurados correctamente, la generación de envoltorios
+        específicos para todos los lenguajes soportados por SWIG
+        (que actualmente incluye versiones de C#, Guile, Java,
+        MzScheme, OCaml, Perl, PHP, Python, Ruby y Tcl) debería ser
+        teóricamente trivial. A pesar de esto, todavía se requiere
+        un poco de programación extra para compensar las complejas
+        APIs con las que SWIG necesita ayuda. Para más información
+        sobre SWIG, vea la página web del proyecto en <systemitem
         class="url">http://www.swig.org/</systemitem>.</para>
 
     </sect2>
