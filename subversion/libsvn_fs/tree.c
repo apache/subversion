@@ -36,6 +36,7 @@
 #include "err.h"
 #include "trail.h"
 #include "txn-table.h"
+#include "rev-table.h"
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
@@ -884,104 +885,260 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
 
 
 
-/* Merging trees. */
+/* Merges and commits. */
  
-struct reroot_path_args
+struct get_root_args
 {
   svn_fs_root_t *root;
-  const char *path;
-  svn_fs_id_t *id;
+  dag_node_t *node;
 };
 
 
-/* Assuming that BATON points to a struct reroot_path_args *, then:
-
-   Change PATH in ROOT to point to ID.  ROOT must be a txn root, and
-   PATH in ROOT should currently point at an immutable node (although
-   this function does not check that).
-
-   If PATH is the root directory, then ROOT's txn must be pristine
-   and will be rerooted, by a call to
-
-      svn_fs__dag_reroot_txn (ROOT->fs, ROOT->txn, ID, TRAIL);
-
-   Otherwise, the appropriate entry in PATH's parent will be created
-   or set, pointing at ID.
-*/
+/* Set ARGS->node to the root node of ARGS->root.  */
 static svn_error_t *
-txn_body_reroot_path (void *baton, trail_t *trail)
+txn_body_get_root (void *baton, trail_t *trail)
 {
-  struct reroot_path_args *args = baton;
-  parent_path_t *head;
-  
-  SVN_ERR (open_path (&head, args->root, args->path, 0, trail));
-  
-  if (head->parent == NULL)
-    {
-      /* We're changing the root, so we need to set target's txn to
-         use either source_id or source_id's content as its txn root.
-         This is subtle, and not particularly elegant, but I don't see
-         any way around it:
-         
-         If source_id refers to an immutable node, then we
-         should set both of txn's roots.  In other words, the
-         txn gets re-based, having never been modified.
-         
-         If source_id refers to a mutable node, then we
-         certainly don't want to share it with target, so we
-         make a new mutable root for target and *copy*
-         source_id's content over.
-         
-         svn_fs__dag_reroot_txn does all this for us.
-      */
+  struct get_root_args *args = baton;
+  SVN_ERR (get_dag (&(args->node), args->root, "", trail));
+  return SVN_NO_ERROR;
+}
 
-      SVN_ERR (svn_fs__dag_reroot_txn (args->root->fs,
-                                       args->root->txn,
-                                       args->id, trail));
-    }
-  else     /* we're not changing the root */
+
+struct merge_args
+{
+  dag_node_t *node;
+  svn_fs_txn_t *txn;
+  const char *conflict;
+};
+
+
+/* Merge changes between ARGS->txn's base and ARGS->node into
+   ARGS->txn's root.  If the merge is successful, ARGS->txn's base
+   will become ARGS->node. */
+static svn_error_t *
+txn_body_merge (void *baton, trail_t *trail)
+{
+  struct merge_args *args = baton;
+  dag_node_t *youngish_node, *txn_root_node, *txn_base_root_node;
+  const svn_fs_id_t *youngish_id;
+  svn_fs_t *fs = svn_fs__txn_fs (args->txn);
+  const char *txn_name = svn_fs__txn_id (args->txn);
+  
+  /* This was the root of the youngest revision when we prepared to
+     call txn_body_merge.  There is no guarantee that this is still
+     the youngest revision in the repository, hence it is "youngish"
+     but not necessarily youngest. */
+  youngish_node = args->node;
+  youngish_id = svn_fs__dag_get_id (youngish_node);
+  
+  SVN_ERR (svn_fs__dag_txn_root (&txn_root_node, fs, txn_name, trail));
+  SVN_ERR (svn_fs__dag_txn_base_root (&txn_base_root_node, fs, txn_name,
+                                      trail));
+  
+  if (svn_fs_id_eq (svn_fs__dag_get_id (txn_base_root_node),
+                    svn_fs__dag_get_id (txn_root_node)))
     {
-      SVN_ERR (make_path_mutable (args->root, head->parent,
-                                  args->path, trail));
+      /* If no changes have been made in TXN since its current base,
+         then it can't conflict with any changes since that base.  So
+         we just set *both* its base and root to youngish, making TXN
+         in effect a repeat of youngish. */
       
-      SVN_ERR (svn_fs__dag_set_entry (head->parent->node, head->entry,
-                                      args->id, trail));
+      /* ### kff todo: this would, of course, be a mighty silly thing
+         for the caller to do, and we might want to consider whether
+         this response is really appropriate. */
+      
+      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, youngish_id, trail));
+      SVN_ERR (svn_fs__set_txn_root (fs, txn_name, youngish_id, trail));
+    }
+  else
+    {
+      SVN_ERR (svn_fs__dag_merge (&(args->conflict),
+                                  "",
+                                  youngish_node,
+                                  txn_root_node,
+                                  txn_base_root_node,
+                                  trail));
+      
+      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, youngish_id, trail));
     }
   
   return SVN_NO_ERROR;
 }
 
 
-struct dag_merge_args
+struct commit_args
 {
-  svn_fs_t *fs;
-  svn_fs_id_t *source_id;
-  svn_fs_id_t *target_id;
-  svn_fs_id_t *ancestor_id;
-  const char **conflict_p;
-  const char *target_path;
+  svn_fs_txn_t *txn;
+  svn_revnum_t new_rev;
 };
 
 
+/* Commit ARGS->txn, setting ARGS->new_rev to the resulting new
+ * revision, if ARGS->txn is up-to-date w.r.t. the repository.
+ *
+ * Up-to-date means that ARGS->txn's base root is the same as the root
+ * of the youngest revision.  If ARGS->txn is not up-to-date, the
+ * error SVN_ERR_TXN_OUT_OF_DATE is returned, and the commit fails: no
+ * new revision is created, and ARGS->new_rev is not touched.
+ *
+ * If the commit succeeds, ARGS->txn is destroyed.
+ */
 static svn_error_t *
-txn_body_dag_merge (void *baton, trail_t *trail)
+txn_body_commit (void *baton, trail_t *trail)
 {
-  struct dag_merge_args *args = baton;
-  dag_node_t *source_node, *target_node, *ancestor_node;
+  struct commit_args *args = baton;
 
-  SVN_ERR (svn_fs__dag_get_node (&source_node, args->fs,
-                                 args->source_id, trail));
-  SVN_ERR (svn_fs__dag_get_node (&target_node, args->fs,
-                                 args->target_id, trail));
-  SVN_ERR (svn_fs__dag_get_node (&ancestor_node, args->fs,
-                                 args->ancestor_id, trail));
+  svn_fs_txn_t *txn = args->txn;
+  svn_fs_t *fs = svn_fs__txn_fs (txn);
+  const char *txn_name = svn_fs__txn_id (txn);
 
-  SVN_ERR (svn_fs__dag_merge (args->conflict_p,
-                              args->target_path,
-                              source_node,
-                              target_node,
-                              ancestor_node,
-                              trail));
+  svn_revnum_t youngest_rev;
+  svn_fs_id_t *y_rev_root_id;
+  dag_node_t *txn_base_root_node;
+
+  /* Getting the youngest revision locks the revisions table until
+     this trail is done. */
+  SVN_ERR (svn_fs__youngest_rev (&youngest_rev, fs, trail));
+
+  /* If the root of the youngest revision is the same as txn's base,
+     then no further merging is necessary and we can commit. */
+  SVN_ERR (svn_fs__rev_get_root (&y_rev_root_id, fs, youngest_rev, trail));
+  SVN_ERR (svn_fs__dag_txn_base_root (&txn_base_root_node, fs, txn_name,
+                                      trail));
+  /* ### kff todo: it seems weird to grab the ID for one, and the node
+     for the other.  We can certainly do the comparison we need, but
+     it would be nice to grab the same type of information from the
+     start, instead of having to transform one of them. */ 
+  if (! svn_fs_id_eq (y_rev_root_id, svn_fs__dag_get_id (txn_base_root_node)))
+    {
+      svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
+      return svn_error_createf
+        (SVN_ERR_TXN_OUT_OF_DATE, 0, NULL, trail->pool,
+         "txn `%s' out of date w.r.t. revision `%s'", txn_name, id_str->data);
+    }
+  
+  /* Else, commit the txn. */
+  SVN_ERR (svn_fs__dag_commit_txn (&(args->new_rev), fs, txn_name, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_commit_txn (const char **conflict_p,
+                   svn_revnum_t *new_rev, 
+                   svn_fs_txn_t *txn)
+{
+  /* How do commits work in Subversion?
+   *
+   * When you're ready to commit, here's what you have:
+   *
+   *    1. A transaction, with a mutable tree hanging off it.
+   *    2. A base revision, against which TXN_TREE was made.
+   *    3. A latest revision, which may be newer than the base rev.
+   *
+   * The problem is that if latest != base, then one can't simply
+   * attach the txn root as the root of the new revision, because that
+   * would lose all the changes between base and latest.  It is also
+   * not acceptable to insist that base == latest; in a busy
+   * repository, commits happen too fast to insist that everyone keep
+   * their entire tree up-to-date at all times.  Non-overlapping
+   * changes should not interfere with each other.
+   *
+   * The solution is to merge the changes between base and latest into
+   * the txn tree (see svn_fs__dag_merge).  The txn tree is the only
+   * one of the three trees that is mutable, so it has to be the one
+   * to adjust.
+   *
+   * You might have to adjust it more than once, if a new latest
+   * revision gets committed while you were merging in the previous
+   * one.  For example:
+   *
+   *    1. Jane starts txn T, based at revision 6.
+   *    2. Someone commits (or already committed) revision 7.
+   *    3. Jane's starts merging the changes between 6 and 7 into T.
+   *    4. Meanwhile, someone commits revision 8.
+   *    5. Jane finishes the 6-->7 merge.  T could now be committed
+   *       against a latest revision of 7, if only that were still the
+   *       latest.  Unfortunately, 8 is now the latest, so... 
+   *    6. Jane starts merging the changes between 7 and 8 into T.
+   *    7. Meanwhile, no one commits any new revisions.  Whew.
+   *    8. Jane commits T, creating revision 9, whose tree is exactly
+   *       T's tree, except immutable now.
+   *
+   * Lather, rinse, repeat.
+   */
+
+  svn_error_t *err;
+
+  while (1729)
+    {
+      struct get_root_args get_root_args;
+      struct merge_args merge_args;
+      struct commit_args commit_args;
+      svn_revnum_t youngish_rev;
+      svn_fs_root_t *youngish_root;
+      dag_node_t *youngish_root_node;
+      svn_fs_t *fs = svn_fs__txn_fs (txn);
+      apr_pool_t *pool = svn_fs__txn_pool (txn);
+
+      /* Get the *current* youngest revision, in one short-lived
+         Berkeley transaction.  (We don't want the revisions table
+         locked while we do the main merge.)  We call it "youngish"
+         because new revisions might get committed after we've
+         obtained it. */
+
+      SVN_ERR (svn_fs_youngest_rev (&youngish_rev, fs, pool));
+      SVN_ERR (svn_fs_revision_root (&youngish_root, fs, youngish_rev, pool));
+
+      /* Get the dag node for the youngest revision, also in one
+         Berkeley transaction.  Later we'll use it as the SOURCE
+         argument to a merge, and if the merge succeeds, this youngest
+         root node will become the new base root for the svn txn that
+         was the target of the merge (but note that the youngest rev
+         may have changed by then -- that's why we're careful to get
+         this root in its own bdb txn here). */
+      get_root_args.root = youngish_root;
+      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_root,
+                                  &get_root_args, pool));
+      youngish_root_node = get_root_args.node;
+      
+      /* Try to merge.  If the merge succeeds, the base root node of
+         TARGET's txn will become the same as youngish_root_node, so
+         any future merges will only be between that node and whatever
+         the root node of the youngest rev is by then. */ 
+      merge_args.node = youngish_root_node;
+      merge_args.txn = txn;
+      err = svn_fs__retry_txn (fs, txn_body_merge, &merge_args, pool);
+      if (err) 
+        {
+          if (err->apr_err == SVN_ERR_FS_CONFLICT)
+            *conflict_p = merge_args.conflict;
+          return err;
+        }
+      
+      /* Try to commit. */
+      commit_args.txn = txn;
+      err = svn_fs__retry_txn (fs, txn_body_commit, &commit_args, pool);
+      if (err)
+        {
+          /* Did someone else finish committing a new revision while we
+             were in mid-commit.  If so, we'll need to loop again to
+             merge those changes in, then try to commit again.  Or if
+             that's not what happened, then just return the error. */
+
+          svn_revnum_t youngest_rev;
+          SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
+          if (youngest_rev == youngish_rev)
+            return err;
+        }
+      else
+        {
+          *new_rev = commit_args.new_rev;
+          break;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -996,63 +1153,13 @@ svn_fs_merge (const char **conflict_p,
               const char *ancestor_path,
               apr_pool_t *pool)
 {
-  svn_fs_id_t *source_id, *target_id, *ancestor_id;
-
-  /* Make sure we're merging into a txn. */
-  if (! svn_fs_is_txn_root (target_root))
-    {
-      return svn_error_create
-        (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
-         "attempting to merge into a non-transaction");
-    }
-
-  SVN_ERR (svn_fs_node_id (&source_id, source_root, source_path, pool));
-  SVN_ERR (svn_fs_node_id (&target_id, target_root, target_path, pool));
-  SVN_ERR (svn_fs_node_id (&ancestor_id, ancestor_root, ancestor_path, pool));
-
-  *conflict_p = NULL;
-
-  /* If nothing to merge, leave in peace. */
-  if (svn_fs_id_eq (ancestor_id, source_id)
-      || (svn_fs_id_eq (source_id, target_id)))
-    return SVN_NO_ERROR;
-
-  /* Else proceed, knowing ancestor != source, and source != target. */
-
-  /* target has not changed since ancestor, so merge from source */
-  if (svn_fs_id_eq (ancestor_id, target_id))
-    {
-      /* Target must take the change between ancestor and source.
-         This means updating target's entry in its parent; or if it's
-         the root, updating the target txn itself.
-
-         Note that if this is happening, it implies a mighty silly
-         circumstance on our caller's part.  But it would be
-         rather arbitrary of us to insist that callers can only
-         pass targets in which changes have been made since ancestor.
-      */
-
-      struct reroot_path_args args;
-      args.root = target_root;
-      args.path = target_path;
-      args.id = source_id;
-      SVN_ERR (svn_fs__retry_txn (target_root->fs,
-                                  txn_body_reroot_path,
-                                  &args, pool));
-    }
-  else   /* ancestor != target, so we can call svn_fs__dag_merge() */
-    {
-      struct dag_merge_args args;
-      args.fs          = target_root->fs;
-      args.source_id   = source_id;
-      args.target_id   = target_id;
-      args.ancestor_id = ancestor_id;
-      args.conflict_p  = conflict_p;
-      args.target_path = target_path;
-      SVN_ERR (svn_fs__retry_txn (target_root->fs,
-                                  txn_body_dag_merge,
-                                  &args, pool));
-    }
+  /* ### kff todo: Reimplement to share as much merging code as
+     possible with svn_fs_commit_txn; possibly a lot of the code that
+     used to be here can be salvaged for that.  Search for a log
+     message by kfogel on 2001-03-12 for revision numbers and details
+     about related potentially salvageable code that was removed at
+     the same time. */
+  abort ();
 
   return SVN_NO_ERROR;
 }

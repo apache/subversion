@@ -914,6 +914,21 @@ svn_fs__dag_txn_root (dag_node_t **node_p,
 
 
 svn_error_t *
+svn_fs__dag_txn_base_root (dag_node_t **node_p,
+                           svn_fs_t *fs,
+                           const char *txn,
+                           trail_t *trail)
+{
+  svn_fs_id_t *base_root_id, *ignored;
+  
+  SVN_ERR (svn_fs__get_txn (&ignored, &base_root_id, fs, txn, trail));
+  SVN_ERR (svn_fs__dag_get_node (node_p, fs, base_root_id, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs__dag_clone_child (dag_node_t **child_p,
                          dag_node_t *parent,
                          const char *name,
@@ -1038,48 +1053,6 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
    * Randall Garrett and Isaac Asimov.)
    */
 
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__dag_reroot_txn (svn_fs_t *fs,
-                        const char *svn_txn,
-                        svn_fs_id_t *id,
-                        trail_t *trail)
-{
-  dag_node_t *node;
-  svn_fs_id_t *root_id, *base_id;
-  svn_boolean_t is_mutable;
-
-  SVN_ERR (svn_fs__get_txn (&root_id, &base_id, fs, svn_txn, trail));
-
-  /* Ensure that this transaction has not yet received changes. */
-  if (! svn_fs_id_eq (root_id, base_id))
-    {
-      return svn_error_createf
-        (SVN_ERR_FS_TXN_NOT_PRISTINE, 0, 0, trail->pool,
-         "txn `%s' not pristine", svn_txn);
-    }
-
-  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
-  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
-  
-  if (is_mutable)
-    {
-      skel_t *node_revision;
-      svn_fs_id_t *new_id;
-
-      SVN_ERR (svn_fs__get_node_revision (&node_revision, fs, id, trail));
-      SVN_ERR (svn_fs__create_successor (&new_id, fs, base_id, node_revision,
-                                         trail));
-      SVN_ERR (svn_fs__set_txn_root (fs, svn_txn, new_id, trail));
-    }
-  else  /* not mutable, so becomes both new base and new root */
-    {
-      SVN_ERR (svn_fs__set_txn_roots (fs, svn_txn, id, trail));
-    }
-  
   return SVN_NO_ERROR;
 }
 
@@ -1836,6 +1809,8 @@ svn_fs__dag_merge (const char **conflict_p,
       SVN_ERR (svn_fs__dag_dir_entries_hash (&s_entries, source, trail));
       SVN_ERR (svn_fs__dag_dir_entries_hash (&t_entries, target, trail));
       SVN_ERR (svn_fs__dag_dir_entries_hash (&a_entries, ancestor, trail));
+
+      /* ### kff todo: what about cycle detection? */
 
       /* for each entry E in a_entries... */
       for (hi = apr_hash_first (a_entries); hi; hi = apr_hash_next (hi))

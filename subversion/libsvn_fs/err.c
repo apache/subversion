@@ -231,17 +231,6 @@ svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 }
 
 
-svn_error_t *
-svn_fs__err_txn_not_pristine (svn_fs_t *fs, const char *txn)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_TXN_NOT_PRISTINE, 0, 0, fs->pool,
-     "txn `%s' in filesystem `%s' already has cloned root",
-     txn, fs->env_path);
-}
-
-
 /* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
 svn_error_t *
 svn_fs__err_not_directory (svn_fs_t *fs, const char *path)

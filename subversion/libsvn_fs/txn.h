@@ -20,6 +20,16 @@
 const char *svn_fs__txn_id (svn_fs_txn_t *txn);
 
 
+/* Return a pointer to the FS of TXN.  The return value is live for as
+   long as TXN is.  */
+svn_fs_t *svn_fs__txn_fs (svn_fs_txn_t *txn);
+
+
+/* Return a pointer to the POOL of TXN.  Freeing this pool frees TXN
+   (but see svn_fs_close_txn).  */ 
+apr_pool_t *svn_fs__txn_pool (svn_fs_txn_t *txn);
+
+
 #endif /* SVN_LIBSVN_FS_TXN_H */
 
 
