@@ -56,19 +56,38 @@
 #include "svn_error.h"
 
 #define DEFAULT_MAXLEN (100 * 1024)
+#define SEEDS 50
+#define MAXSEQ 100
 
-/* Generate a temporary file containing random data.  */
+/* Generate a temporary file containing sort-of random data.  Diffs
+   between files of random data tend to be pretty boring, so we try to
+   make sure there are a bunch of common substrings between two runs
+   of this function with the same seedbase.  */
 static FILE *
-generate_random_file (int maxlen)
+generate_random_file (int maxlen, unsigned long seedbase)
 {
-  int len, i;
+  int len, seqlen;
   FILE *fp;
+  unsigned long r;
 
   fp = tmpfile ();
   assert (fp != NULL);
-  len = rand () % maxlen;
-  for (i = 0; i < len; i++)
-    putc (rand () % 256, fp);
+  len = rand () % maxlen;       /* We might go over this by a bit.  */
+  while (len > 0)
+    {
+      /* Generate a pseudo-random sequence of up to MAXSEQ bytes,
+         where the seed is in the range [seedbase..seedbase+MAXSEQ-1].
+         (Use our own pseudo-random number generator here to avoid
+         clobbering the seed of the libc random number generator.)  */
+      seqlen = rand () % MAXSEQ;
+      len -= seqlen;
+      r = seedbase + rand () % SEEDS;
+      while (seqlen-- > 0)
+        { 
+          putc (r % 256, fp);
+          r = r * 1103515245 + 12345;
+        }
+    }
   rewind (fp);
   return fp;
 }
@@ -121,6 +140,7 @@ main (int argc, char **argv)
   char optch;
   const char *optarg;
   unsigned int seed;
+  unsigned long seedbase;
   int seed_set = 0, maxlen = DEFAULT_MAXLEN, c1, c2;
   svn_txdelta_stream_t *stream;
   svn_txdelta_window_t *window;
@@ -160,8 +180,9 @@ main (int argc, char **argv)
     }
 
   /* Generate source and target files for the delta and its application.  */
-  source = generate_random_file (maxlen);
-  target = generate_random_file (maxlen);
+  seedbase = rand ();
+  source = generate_random_file (maxlen, seedbase);
+  target = generate_random_file (maxlen, seedbase);
   source_copy = copy_tempfile (source);
   rewind (source);
   target_regen = tmpfile ();
