@@ -518,7 +518,6 @@ make_path_mutable (svn_fs_root_t *root,
     SVN_ERR (mutable_root_node (&clone, root, error_path, trail));
 
   /* Update the PARENT_PATH link to refer to the clone.  */
-  svn_fs__dag_close (parent_path->node);
   parent_path->node = clone;
   return SVN_NO_ERROR;
 }
