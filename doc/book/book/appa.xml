@@ -296,6 +296,7 @@ M    local Modification
 U    Updated
 G    merGed
 C    Conflict
+X    eXternal
     </screen>
 
     <para>Subversion has combined the CVS <command>P</command> and

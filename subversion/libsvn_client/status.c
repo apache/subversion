@@ -151,6 +151,7 @@ svn_client_status (apr_hash_t **statushash,
 {
   apr_hash_t *hash = apr_hash_make (pool);
   svn_wc_adm_access_t *adm_access;
+  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
 
   /* Need to lock the tree as even a non-recursive status requires the
      immediate directories to be locked. */
@@ -163,7 +164,16 @@ svn_client_status (apr_hash_t **statushash,
                             descend, get_all, no_ignore,
                             ctx->notify_func, ctx->notify_baton,
                             ctx->cancel_func, ctx->cancel_baton,
-                            ctx->config, pool));
+                            ctx->config, traversal_info, pool));
+
+  /* If there are svn:externals set, we don't want those to show up as
+     unversioned or unrecognized, so patchup the hash.  If callers wants
+     all the statuses, we will change unversioned status items that
+     are interesting to an svn:externals property to
+     svn_wc_status_unversioned, otherwise we'll just remove the status
+     item altogether. */
+  SVN_ERR (svn_client__recognize_externals (hash, traversal_info, 
+                                            get_all ? FALSE : TRUE, pool));
 
   if (update)    
     {

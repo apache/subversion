@@ -834,6 +834,16 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
           </varlistentry>
 
           <varlistentry>
+            <term><computeroutput>X      dir</computeroutput></term>
+            <listitem>
+              <para>The directory <filename>dir</filename> is
+                unversioned, but is related to a Subversion externals
+                definition.  To find out more about externals
+                definitions, see <xref linkend="svn-ch-6-sect-3"/>.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
             <term><computeroutput>?      file_or_dir</computeroutput></term>
             <listitem>
               <para>The file or directory

@@ -203,6 +203,46 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
 
 
 
+/** Traversal information is information gathered by a working copy
+ * crawl or update.  For example, the before and after values of the
+ * svn:externals property are important after an update, and since
+ * we're traversing the working tree anyway (a complete traversal
+ * during the initial crawl, and a traversal of changed paths during
+ * the checkout/update/switch), it makes sense to gather the
+ * property's values then instead of making a second pass.
+ */
+typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
+
+
+/** Return a new, empty traversal info object, allocated in @a pool. */
+svn_wc_traversal_info_t *svn_wc_init_traversal_info (apr_pool_t *pool);
+
+
+/** Set @a *externals_old and @a *externals_new to hash tables representing
+ * changes to values of the svn:externals property on directories
+ * traversed by @a traversal_info.
+ *
+ * @a traversal_info is obtained from @c svn_wc_init_traversal_info, but is
+ * only useful after it has been passed through another function, such
+ * as @c svn_wc_crawl_revisions, @c svn_wc_get_update_editor,
+ * @c svn_wc_get_checkout_editor, @c svn_wc_get_switch_editor, etc.
+ *
+ * Each hash maps <tt>const char *</tt> directory names onto 
+ * <tt>const char *</tt> values of the externals property for that directory.  
+ * The dir names are full paths -- that is, anchor plus target, not target 
+ * alone. The values are not parsed, they are simply copied raw, and are
+ * never null: directories that acquired or lost the property are
+ * simply omitted from the appropriate table.  Directories whose value
+ * of the property did not change show the same value in each hash.
+ *
+ * The hashes, keys, and values have the same lifetime as @a traversal_info.
+ */
+void svn_wc_edited_externals (apr_hash_t **externals_old,
+                              apr_hash_t **externals_new,
+                              svn_wc_traversal_info_t *traversal_info);
+
+
+
 /* Notification/callback handling. */
 
 /**
@@ -891,6 +931,9 @@ enum svn_wc_status_kind
     /** an unversioned resource is in the way of the versioned resource */
     svn_wc_status_obstructed,
 
+    /** an unversioned path populated by an svn:external property */
+    svn_wc_status_external,
+
     /** a directory doesn't contain a complete entries list  */
     svn_wc_status_incomplete
 };
@@ -988,6 +1031,10 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * If @a cancel_func is non-null, call it with @a cancel_baton while building 
  * the @a statushash to determine if the client has cancelled the operation.
  *
+ * If @a traversal_info is non-null, then record pre-update traversal
+ * state in it.  (Caller should obtain @a traversal_info from
+ * @c svn_wc_init_traversal_info.)
+ *
  * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
@@ -1001,6 +1048,7 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_hash_t *config,
+                              svn_wc_traversal_info_t *traversal_info,
                               apr_pool_t *pool);
 
 
@@ -1248,46 +1296,6 @@ svn_error_t *svn_wc_process_committed (const char *path,
                                        apr_array_header_t *wcprop_changes,
                                        apr_pool_t *pool);
 
-
-
-
-/** Traversal information is information gathered by a working copy
- * crawl or update.  For example, the before and after values of the
- * svn:externals property are important after an update, and since
- * we're traversing the working tree anyway (a complete traversal
- * during the initial crawl, and a traversal of changed paths during
- * the checkout/update/switch), it makes sense to gather the
- * property's values then instead of making a second pass.
- */
-typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
-
-
-/** Return a new, empty traversal info object, allocated in @a pool. */
-svn_wc_traversal_info_t *svn_wc_init_traversal_info (apr_pool_t *pool);
-
-
-/** Set @a *externals_old and @a *externals_new to hash tables representing
- * changes to values of the svn:externals property on directories
- * traversed by @a traversal_info.
- *
- * @a traversal_info is obtained from @c svn_wc_init_traversal_info, but is
- * only useful after it has been passed through another function, such
- * as @c svn_wc_crawl_revisions, @c svn_wc_get_update_editor,
- * @c svn_wc_get_checkout_editor, @c svn_wc_get_switch_editor, etc.
- *
- * Each hash maps <tt>const char *</tt> directory names onto 
- * <tt>const char *</tt> values of the externals property for that directory.  
- * The dir names are full paths -- that is, anchor plus target, not target 
- * alone. The values are not parsed, they are simply copied raw, and are
- * never null: directories that acquired or lost the property are
- * simply omitted from the appropriate table.  Directories whose value
- * of the property did not change show the same value in each hash.
- *
- * The hashes, keys, and values have the same lifetime as @a traversal_info.
- */
-void svn_wc_edited_externals (apr_hash_t **externals_old,
-                              apr_hash_t **externals_new,
-                              svn_wc_traversal_info_t *traversal_info);
 
 
 
