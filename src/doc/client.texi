@@ -90,9 +90,7 @@ into the skelta.
 Equivalent to 
 
 @example
-@code
    fill_skelta (make_skelta (path1, ...))
-@end code
 @end example
 
 @item apply_delta (delta)
