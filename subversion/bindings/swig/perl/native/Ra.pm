@@ -130,7 +130,7 @@ package _p_svn_ra_session_t;
 use SVN::Base qw(Ra svn_ra_);
 
 package SVN::Ra::Reporter;
-use SVN::Base qw(Ra svn_ra_reporter_);
+use SVN::Base qw(Ra svn_ra_reporter2_);
 
 =head1 SVN::Ra::Reporter
 
@@ -150,10 +150,11 @@ sub AUTOLOAD {
     my $self = shift;
     no strict 'refs';
 
-    die "no such method $AUTOLOAD"
-	unless $self->can("invoke_$AUTOLOAD");
+    my $method = $self->can("invoke_$AUTOLOAD")
+        or die "no such method $AUTOLOAD";
 
-    &{"invoke_$AUTOLOAD"}(@$self, @_);
+    no warnings 'uninitialized';
+    $method->(@$self, @_);
 }
 
 package SVN::Ra::Callbacks;

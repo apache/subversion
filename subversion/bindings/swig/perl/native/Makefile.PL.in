@@ -129,7 +129,7 @@ $svnlib_srcdir/include/svn_ra.h svn_ra_plugin_t > \$@
 
 ra_reporter.hi: $svnlib_srcdir/include/svn_ra.h
 \t$perl_path $swig_srcdir/perl/native/h2i.pl \\
-$svnlib_srcdir/include/svn_ra.h svn_ra_reporter_t > \$@
+$svnlib_srcdir/include/svn_ra.h svn_ra_reporter2_t > \$@
 
 delta_editor.hi: $svnlib_srcdir/include/svn_delta.h
 \t$perl_path $swig_srcdir/perl/native/h2i.pl \\
