@@ -107,9 +107,8 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   svn_stringbuf_t *top_url, *src_rel, *dst_rel, *basename, *unused;
   apr_array_header_t *src_pieces = NULL, *dst_pieces = NULL;
   svn_revnum_t youngest;
-  void *ra_baton, *sess, *cb_baton;
+  void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
-  svn_ra_callbacks_t *ra_callbacks;
   svn_node_kind_t src_kind, dst_kind;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton, *root_baton, *baton;
@@ -170,10 +169,11 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url->data, pool));
 
-  /* Get the client callbacks for auth stuffs. */
-  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, auth_baton, 
-                                         top_url, TRUE, TRUE, pool));
-  SVN_ERR (ra_lib->open (&sess, top_url, ra_callbacks, cb_baton, pool));
+  /* Open an RA session for the URL. Note that we don't have a local
+     directory, nor a place to put temp files or store the auth data. */
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url, NULL,
+                                        FALSE, FALSE, auth_baton, pool));
+
   SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest));
 
   /* Use YOUNGEST for copyfrom args if not provided. */
@@ -305,9 +305,8 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
                   apr_pool_t *pool)
 {
   svn_stringbuf_t *anchor, *target, *parent, *basename;
-  void *ra_baton, *sess, *cb_baton;
+  void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
-  svn_ra_callbacks_t *ra_callbacks;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   svn_node_kind_t src_kind, dst_kind;
@@ -327,10 +326,9 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor->data, pool));
 
-  /* Get the client callbacks for auth stuffs. */
-  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, auth_baton, 
-                                         parent, TRUE, TRUE, pool));
-  SVN_ERR (ra_lib->open (&sess, anchor, ra_callbacks, cb_baton, pool));
+  /* Open an RA session for the anchor URL. */
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, anchor, parent,
+                                        TRUE, TRUE, auth_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (ra_lib->check_path (&dst_kind, sess, target->data,
@@ -344,10 +342,9 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
       anchor = dst_url;
       target = svn_stringbuf_dup (basename, pool);
       SVN_ERR (ra_lib->close (sess));
-      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, 
-                                             auth_baton, src_path, TRUE, 
-                                             TRUE, pool));
-      SVN_ERR (ra_lib->open (&sess, anchor, ra_callbacks, cb_baton, pool));
+
+      SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, anchor, src_path,
+                                            TRUE, TRUE, auth_baton, pool));
     }
   else
     return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
@@ -391,9 +388,8 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                   void *after_edit_baton,
                   apr_pool_t *pool)
 {
-  void *ra_baton, *sess, *cb_baton;
+  void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
-  svn_ra_callbacks_t *ra_callbacks;
   svn_node_kind_t src_kind, dst_kind;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
@@ -402,10 +398,12 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, src_url->data, pool));
 
-  /* Get the client callbacks for auth stuffs. */
-  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, auth_baton, 
-                                         src_url, TRUE, TRUE, pool));
-  SVN_ERR (ra_lib->open (&sess, src_url, ra_callbacks, cb_baton, pool));
+  /* Open a repository session to the given URL. We do not (yet) have a
+     working copy, so we don't have a corresponding path and tempfiles
+     cannot go into the admin area. We do want to store the resulting
+     auth data, though, once the WC is built. */
+  SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, NULL,
+                                        TRUE, FALSE, auth_baton, pool));
       
   /* Verify that SRC_URL exists in the repository. */
   SVN_ERR (ra_lib->check_path (&src_kind, sess, "", src_rev));
