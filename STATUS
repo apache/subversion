@@ -45,6 +45,7 @@ Candidate changes:
     Fix "problem" in svnserve man page.
     Justification: Shut up esr's script.
     Votes:
+      +0: dlr
 
   * r8708
     Use warnings pragma on perl hook-scripts.
