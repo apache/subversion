@@ -285,10 +285,14 @@ typedef struct svn_ra_plugin_t
                                      svn_revnum_t *latest_revnum,
                                      apr_pool_t *pool);
 
-  /** Get the latest revision number at time @a time. */
+  /** Get the latest revision number at time @a tm.
+   *
+   * Use @a pool for memory allocation.
+   */
   svn_error_t *(*get_dated_revision) (void *session_baton,
                                       svn_revnum_t *revision,
-                                      apr_time_t tm);
+                                      apr_time_t tm,
+                                      apr_pool_t *pool);
 
   /** Set the property @a name to @a value on revision @a rev.
    *

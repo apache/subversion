@@ -1464,26 +1464,27 @@ static int drev_end_element(void *userdata, const struct ne_xml_elm *elm,
 
 svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              svn_revnum_t *revision,
-                                             apr_time_t timestamp)
+                                             apr_time_t timestamp,
+                                             apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   const char *body;
   svn_error_t *err;
 
-  body = apr_psprintf(ras->pool,
+  body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                       "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                       "xmlns:D=\"DAV:\">"
                       "<D:creationdate>%s</D:creationdate>"
                       "</S:dated-rev-report>",
-                      svn_time_to_cstring(timestamp, ras->pool));
+                      svn_time_to_cstring(timestamp, pool));
 
   *revision = SVN_INVALID_REVNUM;
   err = svn_ra_dav__parsed_request(ras, "REPORT", ras->root.path, body, NULL,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
-                                   revision, NULL, ras->pool);
+                                   revision, NULL, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, "Server does not support date-based "
                                 "operations.");
