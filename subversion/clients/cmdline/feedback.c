@@ -58,10 +58,9 @@ report_added_item (const char *path, apr_pool_t *pool)
 
   if (entry->kind == svn_node_file)
     {
-      svn_stringbuf_t *value;
-      svn_stringbuf_t *name = svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool);
+      const svn_string_t *value;
 
-      err = svn_wc_prop_get (&value, name, spath, pool);
+      err = svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, pool);
       if (err)
         return err->apr_err;
 

@@ -317,7 +317,7 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
 
-  if (svn_wc_is_normal_prop (name))
+  if (svn_wc_is_normal_prop (name->data))
     fb->prop_changed = TRUE;
 
   return SVN_NO_ERROR;
@@ -331,7 +331,7 @@ change_dir_prop (void *parent_baton,
 {
   struct dir_baton *d = parent_baton;
 
-  if (svn_wc_is_normal_prop (name))
+  if (svn_wc_is_normal_prop (name->data))
     d->prop_changed = TRUE;
 
   return SVN_NO_ERROR;

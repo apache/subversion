@@ -688,23 +688,17 @@ svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
 /* Set *PROPS to a hash table mapping char * names onto
    svn_stringbuf_t * values for all the wc properties of PATH.
    Allocate the table, names, and values in POOL.  If the node has no
-   properties, an empty hash is returned.
-
-   ### todo (issue #406): values could be svn_string_t instead of
-   svn_stringbuf_t.  */
+   properties, an empty hash is returned. */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
-                               svn_stringbuf_t *path,
+                               const char *path,
                                apr_pool_t *pool);
 
 
 /* Set *VALUE to the value of wc property NAME for PATH, allocating
-   *VALUE in POOL.  If no such prop, set *VALUE to NULL.
-
-   ### todo (issue #406): name could be const char *, value
-   svn_string_t instead of svn_stringbuf_t.  */
-svn_error_t *svn_wc_prop_get (svn_stringbuf_t **value,
-                              svn_stringbuf_t *name,
-                              svn_stringbuf_t *path,
+   *VALUE in POOL.  If no such prop, set *VALUE to NULL. */
+svn_error_t *svn_wc_prop_get (const svn_string_t **value,
+                              const char *name,
+                              const char *path,
                               apr_pool_t *pool);
 
 /* Set wc property NAME to VALUE for PATH.  Do any temporary
@@ -712,9 +706,9 @@ svn_error_t *svn_wc_prop_get (svn_stringbuf_t **value,
 
    ### todo (issue #406): name could be const char *, value
    svn_string_t instead of svn_stringbuf_t.  */
-svn_error_t *svn_wc_prop_set (svn_stringbuf_t *name,
-                              svn_stringbuf_t *value,
-                              svn_stringbuf_t *path,
+svn_error_t *svn_wc_prop_set (const char *name,
+                              const svn_string_t *value,
+                              const char *path,
                               apr_pool_t *pool);
 
 
@@ -730,15 +724,15 @@ svn_error_t *svn_wc_prop_set (svn_stringbuf_t *name,
 
    If these patterns aren't found, then the property is assumed to be
    Normal.  */
-svn_boolean_t svn_wc_is_normal_prop (svn_stringbuf_t *name);
+svn_boolean_t svn_wc_is_normal_prop (const char *name);
 
 
 
 /* Return true iff NAME is a 'wc' property name.  (see above) */
-svn_boolean_t svn_wc_is_wc_prop (svn_stringbuf_t *name);
+svn_boolean_t svn_wc_is_wc_prop (const char *name);
 
 /* Return true iff NAME is a 'entry' property name.  (see above) */
-svn_boolean_t svn_wc_is_entry_prop (svn_stringbuf_t *name);
+svn_boolean_t svn_wc_is_entry_prop (const char *name);
 
 
 
@@ -872,10 +866,10 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 /* Values used in keyword expansion. */
 typedef struct svn_wc_keywords_t
 {
-  svn_string_t *revision;
-  svn_string_t *date;
-  svn_string_t *author;
-  svn_string_t *url;
+  const svn_string_t *revision;
+  const svn_string_t *date;
+  const svn_string_t *author;
+  const svn_string_t *url;
 } svn_wc_keywords_t;
 
 

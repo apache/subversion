@@ -72,11 +72,11 @@ svn_cl__propget (apr_getopt_t *os,
       svn_string_t pname;
       apr_hash_t *props;
       apr_hash_index_t *hi;
+
       pname.data = propname->data;
       pname.len = propname->len;
- 
 
-      SVN_ERR (svn_client_propget (&props, propname, target,
+      SVN_ERR (svn_client_propget (&props, propname->data, target->data,
                                    opt_state->recursive, pool));
 
       for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))

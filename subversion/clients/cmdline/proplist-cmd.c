@@ -52,7 +52,8 @@ svn_cl__proplist (apr_getopt_t *os,
       apr_array_header_t *props;
       int j;
 
-      SVN_ERR (svn_client_proplist(&props, target, opt_state->recursive, pool));
+      SVN_ERR (svn_client_proplist(&props, target->data, opt_state->recursive,
+                                   pool));
 
       for (j = 0; j < props->nelts; ++j)
         {

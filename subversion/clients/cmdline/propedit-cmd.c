@@ -72,7 +72,8 @@ svn_cl__propedit (apr_getopt_t *os,
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
 
       /* Fetch the current property. */
-      SVN_ERR (svn_client_propget (&props, propname, target, FALSE, pool));
+      SVN_ERR (svn_client_propget (&props, propname->data, target->data,
+                                   FALSE, pool));
 
       /* ### todo: all the following: */
 
@@ -89,6 +90,6 @@ svn_cl__propedit (apr_getopt_t *os,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */

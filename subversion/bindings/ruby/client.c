@@ -655,22 +655,19 @@ cl_copy (int argc, VALUE *argv, VALUE self)
 static VALUE
 cl_propset (VALUE class, VALUE name, VALUE val, VALUE aTarget, VALUE recurse)
 {
-  svn_stringbuf_t *propname, *propval, *target;
   apr_pool_t *pool;
   svn_error_t *err;
+  svn_string_t propval;
 
   Check_Type (name, T_STRING);
   Check_Type (val, T_STRING);
   Check_Type (aTarget, T_STRING);
 
   pool = svn_pool_create (NULL);
-  propname = svn_stringbuf_ncreate (StringValuePtr (name),
-                                    RSTRING (name)->len, pool);
-  propval = svn_stringbuf_ncreate (StringValuePtr (val),
-                                   RSTRING (val)->len, pool);
-  target = svn_stringbuf_ncreate (StringValuePtr (aTarget),
-                                  RSTRING (aTarget)->len, pool);
-  err = svn_client_propset (propname, propval, target, RTEST (recurse), pool);
+  propval.data = StringValuePtr (val);
+  propval.len = RSTRING (val)->len;
+  err = svn_client_propset (StringValuePtr (name), &propval,
+                            StringValuePtr (aTarget), RTEST (recurse), pool);
 
   if (err)
     {
@@ -685,7 +682,6 @@ static VALUE
 cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
 {
   apr_hash_t *props;
-  svn_stringbuf_t *propname, *target;
   apr_pool_t *pool;
   svn_error_t *err;
   VALUE obj;
@@ -694,11 +690,8 @@ cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
   Check_Type (aTarget, T_STRING);
 
   pool = svn_pool_create (NULL);
-  propname = svn_stringbuf_ncreate (StringValuePtr (name),
-                                    RSTRING (name)->len, pool);
-  target = svn_stringbuf_ncreate (StringValuePtr (aTarget),
-                                  RSTRING (aTarget)->len, pool);
-  err = svn_client_propget (&props, propname, target, RTEST (recurse), pool);
+  err = svn_client_propget (&props, StringValuePtr (name),
+                            StringValuePtr (aTareget), RTEST (recurse), pool);
 
   if (err)
     {
@@ -715,16 +708,14 @@ static VALUE
 cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
 {
   apr_array_header_t *props;
-  svn_stringbuf_t *target;
   apr_pool_t *pool;
   svn_error_t *err;
 
   Check_Type (aTarget, T_STRING);
 
   pool = svn_pool_create (NULL);
-  target = svn_stringbuf_ncreate (StringValuePtr (aTarget),
-                                  RSTRING (aTarget)->len, pool);
-  err = svn_client_proplist (&props,target, RTEST (recurse), pool);
+  err = svn_client_proplist (&props, StringValuePtr (aTarget),
+                             RTEST (recurse), pool);
 
   if (err)
     {

@@ -789,21 +789,6 @@ svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
 
 
 
-
-/* A general in-memory representation of a single property.  Most of
-   the time, property lists will be stored completely in hashes.  But
-   sometimes it's useful to have an "ordered" collection of
-   properties, in which case we use an apr_array of the type below. 
-
-   ### todo (issue #406): name could be const char *, value
-   svn_string_t instead of svn_stringbuf_t.  */
-typedef struct svn_prop_t
-{
-  svn_stringbuf_t *name;
-  svn_stringbuf_t *value;
-} svn_prop_t;
-
-
 
 #ifdef __cplusplus
 }

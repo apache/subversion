@@ -35,6 +35,18 @@
 
 
 
+/* A general in-memory representation of a single property.  Most of
+   the time, property lists will be stored completely in hashes.  But
+   sometimes it's useful to have an "ordered" collection of
+   properties, in which case we use an apr_array of the type below. */
+typedef struct svn_prop_t
+{
+  const char *name;
+  const svn_string_t *value;
+} svn_prop_t;
+
+
+
 /** File comparisons **/
 
 /* Set *SAME to non-zero if file1 and file2 have the same contents,
@@ -651,7 +663,7 @@ svn_wc__has_props (svn_boolean_t *has_props,
 
 /* Given two property hashes (working copy and `base'), deduce what
    propchanges the user has made since the last update.  Return these
-   changes as a series of (svn_prop_t *) objects stored in
+   changes as a series of svn_prop_t structures stored in
    LOCAL_PROPCHANGES, allocated from POOL.  */
 svn_error_t *
 svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
@@ -678,9 +690,9 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 
 */
 svn_boolean_t
-svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
-                                   svn_prop_t *local,
-                                   svn_prop_t *update,
+svn_wc__conflicting_propchanges_p (const svn_string_t **description,
+                                   const svn_prop_t *local,
+                                   const svn_prop_t *update,
                                    apr_pool_t *pool);
 
 /* Look up the entry NAME within PATH and see if it has a `current'
@@ -688,16 +700,16 @@ svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
    return the name of the file in REJECT_FILE.  If no such file exists,
    return (REJECT_FILE = NULL). */
 svn_error_t *
-svn_wc__get_existing_prop_reject_file (svn_stringbuf_t **reject_file,
-                                       svn_stringbuf_t *path,
-                                       const svn_stringbuf_t *name,
+svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
+                                       const char *path,
+                                       const char *name,
                                        apr_pool_t *pool);
 
 /* If PROPFILE_PATH exists (and is a file), assume it's full of
    properties and load this file into HASH.  Otherwise, leave HASH
    untouched.  */
 svn_error_t *
-svn_wc__load_prop_file (svn_stringbuf_t *propfile_path,
+svn_wc__load_prop_file (const char *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool);
 
@@ -706,7 +718,7 @@ svn_wc__load_prop_file (svn_stringbuf_t *propfile_path,
 /* Given a HASH full of property name/values, write them to a file
    located at PROPFILE_PATH */
 svn_error_t *
-svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
+svn_wc__save_prop_file (const char *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool);
 
@@ -724,14 +736,15 @@ svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
    already-existing .prej file in PATH.
 
    Any conflicts are also returned in a hash that maps (const char *)
-   propnames -> conflicting (svn_prop_t *) objects in the PROPCHANGES
+   propnames -> conflicting (const svn_prop_t *) ptrs from the PROPCHANGES
    array.  In this case, *CONFLICTS will be allocated in POOL.  If no
    conflicts occurred, then *CONFLICTS is simply allocated as an empty
-   hash. */
+   hash.
+*/
 svn_error_t *
-svn_wc__do_property_merge (svn_stringbuf_t *path,
-                           const svn_stringbuf_t *name,
-                           apr_array_header_t *propchanges,
+svn_wc__do_property_merge (const char *path,
+                           const char *name,
+                           const apr_array_header_t *propchanges,
                            apr_pool_t *pool,
                            svn_stringbuf_t **entry_accum,
                            apr_hash_t **conflicts);
@@ -830,8 +843,8 @@ void svn_wc__eol_value_from_string (const char **value,
    the empty string ("").
 */
 svn_error_t *svn_wc__get_keywords (svn_wc_keywords_t **keywords,
-                                   char *path,
-                                   char *force_list,
+                                   const char *path,
+                                   const char *force_list,
                                    apr_pool_t *pool);
 
 
