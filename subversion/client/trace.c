@@ -131,9 +131,9 @@ add_directory (svn_string_t *name,
   svn_path_add_component (child_d->path, name, svn_path_local_style);
   child_d->added = TRUE;
 
+  printf ("A  %s\n", child_d->path->data);
   *child_baton = child_d;
 
-  printf ("A  %s\n", name->data);
   return SVN_NO_ERROR;
 }
 
@@ -168,8 +168,6 @@ close_directory (void *dir_baton)
 {
   struct dir_baton *d = dir_baton;
 
-  if (d->added)
-    printf ("A  %s\n", d->path->data);
   if (d->prop_changed)
     printf ("X  %s\n", d->path->data);
 
