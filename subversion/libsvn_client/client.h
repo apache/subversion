@@ -209,6 +209,36 @@ svn_error_t * svn_client__can_delete (const char *path,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 
+
+/* ---------------------------------------------------------------- */
+
+/*** Export ***/
+
+/* ### Note:  someday svn_client_export() won't just do a checkout and
+   call this function.  Instead, we'll probably write a really
+   lightweight 'export editor' which dumps data to disk without doing
+   any administrative accounting or logging. */
+
+/* Recursively walk over working copy DIR, removing all administrative
+   areas.  Use CTX for cancellation checks. */
+svn_error_t * svn_client__remove_admin_dirs (const char *dir,
+                                             svn_client_ctx_t *ctx,
+                                             apr_pool_t *pool);
+
+
+/* ---------------------------------------------------------------- */
+
+/*** Export ***/
+
+/* The main logic of the public svn_client_add;  the only difference
+   is that this function uses an existing access baton.
+   (svn_client_add just generates an access baton and calls this func.) */
+svn_error_t * svn_client__add (const char *path, 
+                               svn_boolean_t recursive,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** Checkout and update ***/
@@ -331,7 +361,7 @@ svn_client__get_diff_editor (const char *target,
    The prototypes below are still in development.  In general, the
    idea is that commit-y processes (`svn mkdir URL`, `svn delete URL`,
    `svn commit`, `svn copy WC_PATH URL`, `svn copy URL1 URL2`, `svn
-   move URL1 URL2`, others??) generate the cached commit candidate
+   move URL1 URL2`, others?) generate the cached commit candidate
    information, and hand this information off to a consumer which is
    responsible for driving the RA layer's commit editor in a
    URL-depth-first fashion and reporting back the post-commit

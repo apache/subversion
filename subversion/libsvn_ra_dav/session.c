@@ -598,15 +598,23 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
                                             apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
+  svn_error_t *err;
 
   if (! ras->uuid)
     {
-      apr_hash_t *props;
       const svn_string_t *value;
-      SVN_ERR(svn_ra_dav__get_dir(ras, "", 0, NULL, NULL, &props, pool));
-      value = apr_hash_get(props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING);
+      ne_propname uuid_propname = { SVN_DAV_PROP_NS_DAV, "repository-uuid" };
+
+      err = svn_ra_dav__get_one_prop(&value, ras->sess, ras->url, NULL,
+                                     &uuid_propname, pool);
+
+      if (err)
+        return svn_error_quick_wrap(err, "Repository has no UUID property.");
+
       if (value)
-        ras->uuid = apr_pstrdup(ras->pool, value->data);
+        ras->uuid = apr_pstrdup(ras->pool, value->data); /* cache UUID */
+      else
+        return svn_error_quick_wrap(err, "Repository UUID is NULL.");
     }
 
   *uuid = ras->uuid;
