@@ -119,14 +119,28 @@ wc_to_wc_copy (const char *src_path,
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
       if (strcmp (src_parent, dst_parent) == 0)
-        adm_access = src_access;
-      else if (src_kind == svn_node_dir
-               && svn_path_is_child (src_parent, dst_parent, pool))
-        SVN_ERR (svn_wc_adm_retrieve (&adm_access, src_access, dst_parent,
-                                      pool));
-      else
-        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent, TRUE, FALSE,
-                                  pool));
+        {
+          adm_access = src_access;
+        }
+      else 
+        {
+          const char *src_parent_abs, *dst_parent_abs;
+
+          SVN_ERR (svn_path_get_absolute (&src_parent_abs, src_parent, pool));
+          SVN_ERR (svn_path_get_absolute (&dst_parent_abs, dst_parent, pool));
+
+          if ((src_kind == svn_node_dir)
+              && (svn_path_is_child (src_parent_abs, dst_parent_abs, pool)))
+            {
+              SVN_ERR (svn_wc_adm_retrieve (&adm_access, src_access,
+                                            dst_parent, pool));
+            }
+          else
+            {
+              SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent,
+                                        TRUE, FALSE, pool));
+            }
+        }
 
       if (!force)
         /* Ensure there are no "awkward" files. */
