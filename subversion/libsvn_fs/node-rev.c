@@ -1,4 +1,4 @@
-/* rep.c --- storing and retrieving NODE-VERSION skels
+/* node-rev.c --- storing and retrieving NODE-VERSION skels
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -14,115 +14,16 @@
 #include <db.h>
 
 #include "svn_fs.h"
-#include "rep.h"
+#include "node-rev.h"
+#include "fs.h"
 #include "dbt.h"
 #include "err.h"
 
 
 /* Creating and opening the Berkeley DB `nodes' table.  */
 
-
-/* Compare two node ID's, according to the rules in `structure'.  */
-static int
-compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
-{
-  int i = 0;
-
-  while (a[i] == b[i])
-    {
-      if (a[i] == -1)
-        return 0;
-      i++;
-    }
-
-  /* Different nodes, or different branches, are ordered by their
-     node / branch numbers.  */
-  if ((i & 1) == 0)
-    return a[i] - b[i];
-
-  /* This function is only prepared to handle node revision ID's.  */
-  if (a[i] == -1 || b[i] == -1)
-    abort ();
-
-  /* Different revisions of the same node are ordered by revision number.  */
-  if (a[i + 1] == -1 && b[i + 1] == -1)
-    return a[i] - b[i];
-
-  /* A branch off of any revision of a node comes after all revisions
-     of that node.  */
-  if (a[i + 1] == -1)
-    return -1;
-  if (b[i + 1] == -1)
-    return 1;
-
-  /* Branches are ordered by increasing revision number.  */
-  return a[i] - b[i];
-}
-
-
-/* Parse a node revision ID from D.
-   Return zero if D does not contain a well-formed node revision ID.  */
-static svn_fs_id_t *
-parse_node_revision_dbt (const DBT *d)
-{
-  svn_fs_id_t *id = svn_fs_parse_id (d->data, d->size, 0);
-
-  if (! id)
-    return 0;
-
-  /* It must be a node revision ID, not a node ID.  */
-  if (svn_fs_id_length (id) & 1)
-    {
-      free (id);
-      return 0;
-    }
-
-  return id;
-}
-
-
-/* The key comparison function for the `nodes' table.
-
-   Strictly speaking, this function only needs to handle strings that
-   we actually use as keys in the table.  However, if we happen to
-   insert garbage keys, and this comparison function doesn't do
-   something consistent with them (i.e., something transitive and
-   reflexive), we can actually corrupt the btree structure.  Which
-   seems unfriendly.
-
-   So this function tries to act as a proper comparison for any two
-   arbitrary byte strings.  Two well-formed node revisions ID's compare
-   according to the rules described in the `structure' file; any
-   malformed key comes before any well-formed key; and two malformed
-   keys come in byte-by-byte order.  */
-static int
-compare_nodes_keys (const DBT *ak, const DBT *bk)
-{
-  svn_fs_id_t *a = parse_node_revision_dbt (ak);
-  svn_fs_id_t *b = parse_node_revision_dbt (bk);
-  int result;
-
-  /* Two well-formed keys are compared by the rules in `structure'.  */
-  if (a && b)
-    result = compare_ids (a, b);
-
-  /* Malformed keys come before well-formed keys.  */
-  else if (a)
-    result = 1;
-  else if (b)
-    result = -1;
-
-  /* Two malformed keys are compared byte-by-byte.  */
-  else
-    result = svn_fs__compare_dbt (ak, bk);
-
-  if (a) free (a);
-  if (b) free (b);
-
-  return result;
-}
-
-
+#if 0 /* make_nodes has no callers.  Jim, any plans for this function,
+         or should we delete? */
 /* Open / create FS's `nodes' table.  FS->env must already be open;
    this function initializes FS->nodes.  If CREATE is non-zero, assume
    we are creating the filesystem afresh; otherwise, assume we are
@@ -145,20 +46,7 @@ make_nodes (svn_fs_t *fs, int create)
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_fs__create_nodes (svn_fs_t *fs)
-{
-  return make_nodes (fs, 1);
-}
-
-
-svn_error_t *
-svn_fs__open_nodes (svn_fs_t *fs)
-{
-  return make_nodes (fs, 0);
-}
+#endif /* 0 */
 
 
 
@@ -166,33 +54,32 @@ svn_fs__open_nodes (svn_fs_t *fs)
 
 
 /* Set *SKEL_P to point to the REPRESENTATION skel for the node ID in
-   FS, as part of the Berkeley DB transaction DB_TXN.  Allocate the
-   skel and the data it points into in POOL.
+   FS, as part of TRAIL.  Allocate the skel and the data it points
+   into in TRAIL->POOL.
 
    Beyond verifying that it's a syntactically valid skel, this doesn't
    validate the data returned at all.  */
 static svn_error_t *
 get_representation_skel (skel_t **skel_p,
                          svn_fs_t *fs,
-                         DB_TXN *db_txn,
                          const svn_fs_id_t *id,
-                         apr_pool_t *pool)
+                         trail_t *trail)
 {
   int db_err;
   DBT key, value;
   skel_t *skel;
 
   /* Generate the ASCII form of the node revision ID.  */
-  db_err = fs->nodes->get (fs->nodes, db_txn,
-                           svn_fs__id_to_dbt (&key, id, pool),
+  db_err = fs->nodes->get (fs->nodes, trail->db_txn,
+                           svn_fs__id_to_dbt (&key, id, trail->pool),
                            svn_fs__result_dbt (&value),
                            0);
   if (db_err == DB_NOTFOUND)
     return svn_fs__err_dangling_id (fs, id);
   SVN_ERR (DB_WRAP (fs, "reading node representation", db_err));
-  svn_fs__track_dbt (&value, pool);
+  svn_fs__track_dbt (&value, trail->pool);
 
-  skel = svn_fs__parse_skel (value.data, value.size, pool);
+  skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
   if (! skel)
     return svn_fs__err_corrupt_representation (fs, id);
 
@@ -202,21 +89,23 @@ get_representation_skel (skel_t **skel_p,
 
 
 /* Set the REPRESENTATION skel for node ID in filesystem FS to SKEL,
-   as part of the Berkeley DB transaction TXN.  Do any necessary
-   temporary allocation in POOL.  */
+   as part of TRAIL.  Do any necessary temporary allocation in
+   TRAIL->POOL. */
 static svn_error_t *
 put_representation_skel (svn_fs_t *fs,
-                         DB_TXN *db_txn,
                          const svn_fs_id_t *id, 
                          skel_t *skel,
-                         apr_pool_t *pool)
+                         trail_t *trail)
+
 {
   DBT key, value;
 
   SVN_ERR (DB_WRAP (fs, "storing node representation",
-                    fs->nodes->put (fs->nodes, db_txn,
-                                    svn_fs__id_to_dbt (&key, id, pool),
-                                    svn_fs__skel_to_dbt (&value, skel, pool),
+                    fs->nodes->put (fs->nodes,
+                                    trail->db_txn,
+                                    svn_fs__id_to_dbt (&key, id, trail->pool),
+                                    svn_fs__skel_to_dbt (&value, skel,
+                                                         trail->pool),
                                     0)));
 
   return SVN_NO_ERROR;
@@ -230,13 +119,12 @@ put_representation_skel (svn_fs_t *fs,
 svn_error_t *
 svn_fs__get_node_revision (skel_t **skel_p,
                            svn_fs_t *fs,
-                           DB_TXN *db_txn,
                            const svn_fs_id_t *id,
-                           apr_pool_t *pool)
+                           trail_t *trail)
 {
   skel_t *skel;
 
-  SVN_ERR (get_representation_skel (&skel, fs, db_txn, id, pool));
+  SVN_ERR (get_representation_skel (&skel, fs, id, trail));
 
   /* This is where we would handle diffy representations, to construct
      a NODE-REVISION given its REPRESENTATION.  But I want to get the
@@ -254,14 +142,12 @@ svn_fs__get_node_revision (skel_t **skel_p,
 
 
 /* Store SKEL as the NODE-REVISION skel for the node ID in FS, as part
-   of the Berkeley DB transaction DB_TXN.  Use POOL for any necessary
-   temporary allocation.  */
+   of TRAIL.  Use TRAIL->POOL for any necessary temporary allocation.  */
 svn_error_t *
 svn_fs__put_node_revision (svn_fs_t *fs,
-                           DB_TXN *db_txn,
                            const svn_fs_id_t *id,
                            skel_t *skel,
-                           apr_pool_t *pool)
+                           trail_t *trail)
 {
   /* We always write out new nodes as fulltext.  Converting older
      nodes to deltas against this one happens later, when we call
@@ -271,13 +157,13 @@ svn_fs__put_node_revision (svn_fs_t *fs,
      NODE-REVISION skel for this node.  */
   skel_t rep[] = {
     { 0, 0, 0, &rep[1], 0 },
-    { 1, "fulltext", 8, 0, 0 }
+    { 1, (char *) "fulltext", 8, 0, 0 }
   };
 
   rep[1].next = skel;
   skel->next = 0;
 
-  SVN_ERR (put_representation_skel (fs, db_txn, id, &rep[0], pool));
+  SVN_ERR (put_representation_skel (fs, id, &rep[0], trail));
 
   return 0;
 }
@@ -289,13 +175,12 @@ svn_fs__put_node_revision (svn_fs_t *fs,
 
 /* Check FS's `nodes' table to find an unused node number, and set
    *ID_P to the ID of the first revision of an entirely new node in
-   FS, as part of DB_TXN.  Allocate the new ID, and do all temporary
-   allocation, in POOL.  */
+   FS, as part of TRAIL.  Allocate the new ID, and do all temporary
+   allocation, in TRAIL->POOL.  */
 static svn_error_t *
 new_node_id (svn_fs_id_t **id_p,
              svn_fs_t *fs,
-             DB_TXN *db_txn,
-             apr_pool_t *pool)
+             trail_t *trail)
 {
   int db_err;
   DBC *cursor = 0;
@@ -304,7 +189,7 @@ new_node_id (svn_fs_id_t **id_p,
 
   /* Create a database cursor.  */
   SVN_ERR (DB_WRAP (fs, "choosing new node ID (creating cursor)",
-                    fs->nodes->cursor (fs->nodes, db_txn, &cursor, 0)));
+                    fs->nodes->cursor (fs->nodes, trail->db_txn, &cursor, 0)));
 
   /* Find the last entry in the `nodes' table, and increment its node
      number.  */
@@ -329,10 +214,10 @@ new_node_id (svn_fs_id_t **id_p,
       SVN_ERR (DB_WRAP (fs, "choosing new node ID (finding last entry)",
                         db_err));
     }
-  svn_fs__track_dbt (&key, pool);
+  svn_fs__track_dbt (&key, trail->pool);
 
   /* Try to parse the key as a node revision ID.  */
-  id = svn_fs_parse_id (key.data, key.size, pool);
+  id = svn_fs_parse_id (key.data, key.size, trail->pool);
   if (! id
       || svn_fs_id_length (id) < 2)
     {
@@ -358,17 +243,16 @@ new_node_id (svn_fs_id_t **id_p,
 svn_error_t *
 svn_fs__create_node (svn_fs_id_t **id_p,
                      svn_fs_t *fs,
-                     DB_TXN *db_txn,
                      skel_t *skel,
-                     apr_pool_t *pool)
+                     trail_t *trail)
 {
   svn_fs_id_t *id;
 
   /* Find an unused ID for the node.  */
-  SVN_ERR (new_node_id (&id, fs, db_txn, pool));
+  SVN_ERR (new_node_id (&id, fs, trail));
 
   /* Store its representation.  */
-  SVN_ERR (put_representation_skel (fs, db_txn, id, skel, pool));
+  SVN_ERR (put_representation_skel (fs, id, skel, trail));
 
   *id_p = id;
   return SVN_NO_ERROR;
@@ -434,8 +318,8 @@ last_key_before (DB *db,
 
 
 /* Set *SUCCESSOR_P to the ID of an immediate successor to node
-   revision ID in FS that does not exist yet, as part of the Berkeley
-   DB transaction DB_TXN.  Do any needed temporary allocation in POOL.
+   revision ID in FS that does not exist yet, as part of TRAIL.  Do
+   any needed temporary allocation in TRAIL->POOL.
 
    If ID is the youngest revision of its node, then the successor is
    simply ID with its rightmost revision number increased; otherwise,
@@ -443,9 +327,8 @@ last_key_before (DB *db,
 static svn_error_t *
 new_successor_id (svn_fs_id_t **successor_p,
                   svn_fs_t *fs,
-                  DB_TXN *db_txn, 
                   svn_fs_id_t *id,
-                  apr_pool_t *pool)
+                  trail_t *trail)
 {
   int id_len = svn_fs_id_length (id);
   svn_fs_id_t *new_id;
@@ -458,13 +341,14 @@ new_successor_id (svn_fs_id_t **successor_p,
 
   /* Set NEW_ID to the next node revision after ID.  Allocate some
      extra room, in case we need to construct a branch ID below.  */
-  new_id = NEWARRAY (pool, svn_fs_id_t, (id_len + 3) * sizeof (*id));
+  new_id = (svn_fs_id_t *) apr_palloc (trail->pool,
+                                       (id_len + 3) * sizeof (*id));
   memcpy (new_id, id, (id_len + 1) * sizeof (*id)); /* copy the -1 */
   new_id[id_len - 1]++;         /* increment the revision number */
 
   /* Check to see if there already exists a node whose ID is NEW_ID.  */
-  db_err = fs->nodes->get (fs->nodes, db_txn,
-                           svn_fs__id_to_dbt (&key, new_id, pool),
+  db_err = fs->nodes->get (fs->nodes, trail->db_txn,
+                           svn_fs__id_to_dbt (&key, new_id, trail->pool),
                            svn_fs__nodata_dbt (&value),
                            0);
   if (db_err == DB_NOTFOUND)
@@ -494,12 +378,13 @@ new_successor_id (svn_fs_id_t **successor_p,
   new_id[id_len + 1] = 1;
   new_id[id_len + 2] = -1;
   SVN_ERR (DB_WRAP (fs, "checking for next node branch",
-                    last_key_before (fs->nodes, db_txn,
+                    last_key_before (fs->nodes, trail->db_txn,
                                      svn_fs__result_dbt (&key))));
-  svn_fs__track_dbt (&key, pool);
+  svn_fs__track_dbt (&key, trail->pool);
 
   {
-    svn_fs_id_t *last_branch_id = svn_fs_parse_id (key.data, key.size, pool);
+    svn_fs_id_t *last_branch_id
+      = svn_fs_parse_id (key.data, key.size, trail->pool);
     int last_branch_len;
 
     if (! last_branch_id)
@@ -551,18 +436,17 @@ new_successor_id (svn_fs_id_t **successor_p,
 svn_error_t *
 svn_fs__create_successor (svn_fs_id_t **new_id_p,
                           svn_fs_t *fs,
-                          DB_TXN *db_txn,
                           svn_fs_id_t *old_id,
                           skel_t *new_skel,
-                          apr_pool_t *pool)
+                          trail_t *trail)
 {
   svn_fs_id_t *new_id;
 
   /* Choose an ID for the new node, and store it in the database.  */
-  SVN_ERR (new_successor_id (&new_id, fs, db_txn, old_id, pool));
+  SVN_ERR (new_successor_id (&new_id, fs, old_id, trail));
 
   /* Store the new skel under that ID.  */
-  SVN_ERR (put_representation_skel (fs, db_txn, new_id, new_skel, pool));
+  SVN_ERR (put_representation_skel (fs, new_id, new_skel, trail));
 
   *new_id_p = new_id;
   return SVN_NO_ERROR;
