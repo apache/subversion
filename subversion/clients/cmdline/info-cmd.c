@@ -97,7 +97,7 @@ svn_cl__info (apr_getopt_t *os,
                 break;
 
               case svn_node_dir:
-                printf ("Node Kind: dIrectory\n");
+                printf ("Node Kind: directory\n");
                 break;
 
               case svn_node_unknown:
