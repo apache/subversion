@@ -45,6 +45,7 @@ svn_wc_merge (const char *left,
   /* The merge target must be under revision control. */
   {
     svn_wc_entry_t *ignored_ent;
+    
     SVN_ERR (svn_wc_entry (&ignored_ent, target, pool));
     if (ignored_ent == NULL)
       return svn_error_createf
@@ -62,7 +63,7 @@ svn_wc_merge (const char *left,
                                APR_WRITE, APR_OS_DEFAULT, pool);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+          (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to open tmp file `%s'", tmp_target);
     }
   else
@@ -86,34 +87,72 @@ svn_wc_merge (const char *left,
   apr_err = apr_file_close (tmp_f);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (apr_err, 0, NULL, pool,
        "svn_wc_merge: unable to close tmp file `%s'", tmp_target);
 
   if (exit_code == 1)  /* got a conflict */
     {
-      /* preserve old text base, old working file, new repos file
-         and modify entry: mark as conflicted, track above copies */
+      /* Preserve the three files pre-merge files, and modify the
+         entry (mark as conflicted, track the preserved files). */ 
 
-#if 0
-      svn_stringbuf_t *old_base;
+      svn_stringbuf_t *left_copy, *right_copy, *target_copy;
+      apr_file_t *lcopy_f, *rcopy_f, *tcopy_f;
 
-      /* we'll have to construct the extension, based on the
-         revision */
+      /* I miss Lisp. */
 
-      SVN_ERR (svn_io_open_unique_file (&tmp_f,
-                                        &tmp_target,
+      SVN_ERR (svn_io_open_unique_file (&lcopy_f,
+                                        &left_copy,
                                         merge_target,
-                                        SVN_WC__TMP_EXT,
+                                        left_label,
                                         FALSE,
                                         pool));
-#endif /* 0 */
+
+      apr_err = apr_file_close (lcopy_f);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to close tmp file `%s'", left_copy);
+
+      /* Have I mentioned how much I miss Lisp? */
+
+      SVN_ERR (svn_io_open_unique_file (&rcopy_f,
+                                        &right_copy,
+                                        merge_target,
+                                        right_label,
+                                        FALSE,
+                                        pool));
+
+      apr_err = apr_file_close (rcopy_f);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to close tmp file `%s'", right_copy);
+
+      /* Why, how much more pleasant to be forced to unroll my loops.
+         If I'd been writing in Lisp, I might have mapped an inline
+         lambda form over a list, or something equally disgusting.
+         Thank goodness C was here to protect me! */
+
+      SVN_ERR (svn_io_open_unique_file (&tcopy_f,
+                                        &target_copy,
+                                        merge_target,
+                                        target_label,
+                                        FALSE,
+                                        pool));
+
+      apr_err = apr_file_close (tcopy_f);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to close tmp file `%s'", target_copy);
+
+      /* What about translation??  Ben said:
+       *
+       *   cp-and-translate merged-result merge_target
+       *   rm merged-result (and merge_target.tmp)
+       */
 
     }
-
-  /*
-    cp-and-translate merged-result merge_target
-    rm merged-result (and merge_target.tmp)
-  */
 
   /* ### PROBLEM: Callers need to be careful about making sure the
      values of svn:eol-style and svn:keywords are correct in the
