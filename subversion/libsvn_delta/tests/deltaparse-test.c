@@ -189,7 +189,7 @@ int main()
                          foo_baton, bar_baton,       /* with these objects */
                          globalpool);
 
-  apr_close (xmlfile);
+  apr_close (source_baton);
 
   if (err)
     {
