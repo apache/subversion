@@ -3261,7 +3261,7 @@ Updated to revision 30.
 
               <itemizedlist>
                 <listitem><para>default/</para></listitem>
-                <listitem><para>README</para></listitem>
+                <listitem><para>README.txt</para></listitem>
                 <listitem><para>dav/</para></listitem>
                 <listitem><para>format</para></listitem>
                 <listitem><para>hooks/</para></listitem>

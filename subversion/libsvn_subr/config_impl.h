@@ -112,7 +112,7 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 #endif /* SVN_WIN32 */
 
 /* The description/instructions file in the config directory. */
-#define SVN_CONFIG__USR_README_FILE    "README"
+#define SVN_CONFIG__USR_README_FILE    "README.txt"
 
 /* The name of the main authentication subdir in the config directory */
 #define SVN_CONFIG__AUTH_SUBDIR        "auth"

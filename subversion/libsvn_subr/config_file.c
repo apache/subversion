@@ -532,7 +532,7 @@ svn_config_ensure (apr_pool_t *pool)
   /** If non-existent, try to create a number of auth/ subdirectories. */
   ensure_auth_dirs (path, pool);
 
-  /** Ensure that the `README' file exists. **/
+  /** Ensure that the `README.txt' file exists. **/
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_README_FILE, pool));
 
@@ -547,118 +547,191 @@ svn_config_ensure (apr_pool_t *pool)
     {
       apr_file_t *f;
       const char *contents =
-   "This directory holds run-time configuration information for Subversion\n"
-   "clients.  The configuration files all share the same syntax, but you\n"
-   "should examine a particular file to learn what configuration\n"
-   "directives are valid for that file.\n"
-   "\n"
+   "This directory holds run-time configuration information for Subversion"
+   APR_EOL_STR
+   "clients.  The configuration files all share the same syntax, but you"
+   APR_EOL_STR
+   "should examine a particular file to learn what configuration"
+   APR_EOL_STR
+   "directives are valid for that file."
+   APR_EOL_STR
+   APR_EOL_STR
    "The syntax is standard INI format:"
-   "\n"
-   "\n"
-   "   - Empty lines, and lines starting with '#', are ignored.\n"
-   "     The first significant line in a file must be a section header.\n"
-   "\n"
-   "   - A section starts with a section header, which must start in\n"
-   "     the first column:\n"
-   "\n"
-   "       [section-name]\n"
-   "\n"
-   "   - An option, which must always appear within a section, is a pair\n"
-   "     (name, value).  There are two valid forms for defining an\n"
-   "     option, both of which must start in the first column:\n"
-   "\n"
-   "       name: value\n"
-   "       name = value\n"
-   "\n"
-   "     Whitespace around the separator (:, =) is optional.\n"
-   "\n"
-   "   - Section and option names are case-insensitive, but case is\n"
-   "     preserved.\n"
-   "\n"
-   "   - An option's value may be broken into several lines.  The value\n"
-   "     continuation lines must start with at least one whitespace.\n"
-   "     Trailing whitespace in the previous line, the newline character\n"
-   "     and the leading whitespace in the continuation line is compressed\n"
-   "     into a single space character.\n"
-   "\n"
-   "   - All leading and trailing whitespace around a value is trimmed,\n"
-   "     but the whitespace within a value is preserved, with the\n"
-   "     exception of whitespace around line continuations, as\n"
-   "     described above.\n"
-   "\n"
-   "   - When a value is a list, it is comma-separated.  Again, the\n"
-   "     whitespace around each element of the list is trimmed.\n"
-   "\n"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - Empty lines, and lines starting with '#', are ignored."
+   APR_EOL_STR
+   "     The first significant line in a file must be a section header."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - A section starts with a section header, which must start in"
+   APR_EOL_STR
+   "     the first column:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "       [section-name]"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - An option, which must always appear within a section, is a pair"
+   APR_EOL_STR
+   "     (name, value).  There are two valid forms for defining an"
+   APR_EOL_STR
+   "     option, both of which must start in the first column:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "       name: value"
+   APR_EOL_STR
+   "       name = value"
+   APR_EOL_STR
+   APR_EOL_STR
+   "     Whitespace around the separator (:, =) is optional."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - Section and option names are case-insensitive, but case is"
+   APR_EOL_STR
+   "     preserved."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - An option's value may be broken into several lines.  The value"
+   APR_EOL_STR
+   "     continuation lines must start with at least one whitespace."
+   APR_EOL_STR
+   "     Trailing whitespace in the previous line, the newline character"
+   APR_EOL_STR
+   "     and the leading whitespace in the continuation line is compressed"
+   APR_EOL_STR
+   "     into a single space character."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - All leading and trailing whitespace around a value is trimmed,"
+   APR_EOL_STR
+   "     but the whitespace within a value is preserved, with the"
+   APR_EOL_STR
+   "     exception of whitespace around line continuations, as"
+   APR_EOL_STR
+   "     described above."
+   APR_EOL_STR
+   APR_EOL_STR
+   "   - When a value is a list, it is comma-separated.  Again, the"
+   APR_EOL_STR
+   "     whitespace around each element of the list is trimmed."
+   APR_EOL_STR
+   APR_EOL_STR
 #if 0   /* expansion not implemented yet */
-   "   - Option values may be expanded within a value by enclosing the\n"
-   "     option name in parentheses, preceded by a percent sign:\n"
-   "\n"
-   "       %(name)\n"
-   "\n"
-   "     The expansion is performed recursively and on demand, during\n"
-   "     svn_option_get.  The name is first searched for in the same\n"
-   "     section, then in the special [DEFAULT] section. If the name\n"
-   "     is not found, the whole %(name) placeholder is left\n"
-   "     unchanged.\n"
-   "\n"
-   "     Any modifications to the configuration data invalidate all\n"
-   "     previously expanded values, so that the next svn_option_get\n"
-   "     will take the modifications into account.\n"
-   "\n"
+   "   - Option values may be expanded within a value by enclosing the"
+   APR_EOL_STR
+   "     option name in parentheses, preceded by a percent sign:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "       %(name)"
+   APR_EOL_STR
+   APR_EOL_STR
+   "     The expansion is performed recursively and on demand, during"
+   APR_EOL_STR
+   "     svn_option_get.  The name is first searched for in the same"
+   APR_EOL_STR
+   "     section, then in the special [DEFAULT] section. If the name"
+   APR_EOL_STR
+   "     is not found, the whole %(name) placeholder is left"
+   APR_EOL_STR
+   "     unchanged."
+   APR_EOL_STR
+   APR_EOL_STR
+   "     Any modifications to the configuration data invalidate all"
+   APR_EOL_STR
+   "     previously expanded values, so that the next svn_option_get"
+   APR_EOL_STR
+   "     will take the modifications into account."
+   APR_EOL_STR
+   APR_EOL_STR
 #endif /* 0 */
-   "\n"
-   "Configuration data in the Windows registry\n"
-   "==========================================\n"
-   "\n"
-   "On Windows, configuration data may also be stored in the registry.  The\n"
-   "functions svn_config_read and svn_config_merge will read from the\n"
-   "registry when passed file names of the form:\n"
-   "\n"
-   "   REGISTRY:<hive>/path/to/config-key\n"
-   "\n"
-   "The REGISTRY: prefix must be in upper case. The <hive> part must be\n"
-   "one of:\n"
-   "\n"
-   "   HKLM for HKEY_LOCAL_MACHINE\n"
-   "   HKCU for HKEY_CURRENT_USER\n"
+   APR_EOL_STR
+   "Configuration data in the Windows registry"
+   APR_EOL_STR
+   "=========================================="
+   APR_EOL_STR
+   APR_EOL_STR
+   "On Windows, configuration data may also be stored in the registry.  The"
+   APR_EOL_STR
+   "functions svn_config_read and svn_config_merge will read from the"
+   APR_EOL_STR
+   "registry when passed file names of the form:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   REGISTRY:<hive>/path/to/config-key"
+   APR_EOL_STR
+   APR_EOL_STR
+   "The REGISTRY: prefix must be in upper case. The <hive> part must be"
+   APR_EOL_STR
+   "one of:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "   HKLM for HKEY_LOCAL_MACHINE"
+   APR_EOL_STR
+   "   HKCU for HKEY_CURRENT_USER"
+   APR_EOL_STR
 #if 0   /* expansion not implemented yet */
-   "\n"
+   APR_EOL_STR
    "The values in config-key represent the options in the [DEFAULT] section."
-   "\n"
-   "The keys below config-key represent other sections, and their values\n"
+   APR_EOL_STR
+   "The keys below config-key represent other sections, and their values"
+   APR_EOL_STR
 #else
-   "\n"
-   "The keys below config-key represent the sections, and their values\n"
+   APR_EOL_STR
+   "The keys below config-key represent the sections, and their values"
+   APR_EOL_STR
 #endif /* 0 */
-   "represent the options. Only values of type REG_SZ whose name doesn't\n"
-   "start with a '#' will be used; other values, as well as the keys'\n"
-   "default values, will be ignored.\n"
-   "\n"
-   "\n"
-   "File locations\n"
-   "==============\n"
-   "\n"
-   "Typically, Subversion uses two config directories, one for site-wide\n"
-   "configuration,\n"
-   "\n"
-   "  /etc/subversion/servers\n"
-   "  /etc/subversion/config\n"
-   "  /etc/subversion/hairstyles\n"
-   "     -- or --\n"
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Servers\n"
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config\n"
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
-   "\n"
-   "and one for per-user configuration:\n"
-   "\n"
-   "  ~/.subversion/servers\n"
-   "  ~/.subversion/config\n"
-   "  ~/.subversion/hairstyles\n"
-   "     -- or --\n"
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Servers\n"
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config\n"
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
-   "\n";
+   "represent the options. Only values of type REG_SZ whose name doesn't"
+   APR_EOL_STR
+   "start with a '#' will be used; other values, as well as the keys'"
+   APR_EOL_STR
+   "default values, will be ignored."
+   APR_EOL_STR
+   APR_EOL_STR
+   APR_EOL_STR
+   "File locations"
+   APR_EOL_STR
+   "=============="
+   APR_EOL_STR
+   APR_EOL_STR
+   "Typically, Subversion uses two config directories, one for site-wide"
+   APR_EOL_STR
+   "configuration,"
+   APR_EOL_STR
+   APR_EOL_STR
+   "  /etc/subversion/servers"
+   APR_EOL_STR
+   "  /etc/subversion/config"
+   APR_EOL_STR
+   "  /etc/subversion/hairstyles"
+   APR_EOL_STR
+   "     -- or --"
+   APR_EOL_STR
+   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Servers"
+   APR_EOL_STR
+   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config"
+   APR_EOL_STR
+   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles"
+   APR_EOL_STR
+   APR_EOL_STR
+   "and one for per-user configuration:"
+   APR_EOL_STR
+   APR_EOL_STR
+   "  ~/.subversion/servers"
+   APR_EOL_STR
+   "  ~/.subversion/config"
+   APR_EOL_STR
+   "  ~/.subversion/hairstyles"
+   APR_EOL_STR
+   "     -- or --"
+   APR_EOL_STR
+   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Servers"
+   APR_EOL_STR
+   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config"
+   APR_EOL_STR
+   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles"
+   APR_EOL_STR
+   APR_EOL_STR;
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
