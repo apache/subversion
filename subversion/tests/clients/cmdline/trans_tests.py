@@ -93,9 +93,17 @@ path_index = svntest.actions.path_index
 ######################################################################
 
 
+# Paths that the tests
+global author_rev_unexp_path
+global author_rev_exp_path
+global bogus_keywords_path
+global embd_author_rev_unexp_path
+global embd_author_rev_exp_path
+global embd_bogus_keywords_path
+
 def setup_working_copy(sbox):
-  "Setup a standard test working copy, then create (but do not add)
-  various files for testing translation."
+  """Setup a standard test working copy, then create (but do not add)
+  various files for testing translation."""
   
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
@@ -148,49 +156,70 @@ def keywords_off(path):
 #----------------------------------------------------------------------
 
 def keywords_from_birth():
-  "Create some files that have the `svn:keywords' property set from
+  """Create some files that have the `svn:keywords' property set from
   the moment they're first committed.  Some of the files actually
   contain keywords, others don't.  Make sure everything behaves
-  correctly."
+  correctly."""
   
-  sbox = sandbox(keywords_from_birth)
+  sbox = sandbox (keywords_from_birth)
   wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  setup_working_copy ()
+  if setup_working_copy (wc_dir): return 1
   keywords_on (author_rev_unexp_path)
   keywords_on (embd_author_rev_exp_path)
 
-  # fooo
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
-  status_list.append([author_rev_unexp_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  status_list.append([embd_author_rev_exp_path, None, {},
-                      {'status' : 'A ',
-                       'wc_rev' : '0',
-                       'repos_rev' : '1'}])
-  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  # Add all the files
+  status_list = svntest.actions.get_virginal_status_list (wc_dir, '1')
+  status_list.append ([author_rev_unexp_path, None, {},
+                       {'status' : 'A ',
+                        'wc_rev' : '0',
+                        'repos_rev' : '1'}])
+  status_list.append ([author_rev_exp_path, None, {},
+                       {'status' : 'A ',
+                        'wc_rev' : '0',
+                        'repos_rev' : '1'}])
+  status_list.append ([bogus_keywords_path, None, {},
+                       {'status' : 'A ',
+                        'wc_rev' : '0',
+                        'repos_rev' : '1'}])
+  status_list.append ([embd_author_rev_unexp_path, None, {},
+                       {'status' : 'A ',
+                        'wc_rev' : '0',
+                        'repos_rev' : '1'}])
+  status_list.append ([embd_author_rev_exp_path, None, {},
+                       {'status' : 'A ',
+                        'wc_rev' : '0',
+                        'repos_rev' : '1'}])
+  status_list.append ([embd_bogus_keywords_path, None, {},
+                       {'status' : 'A ',
+                        'wc_rev' : '0',
+                        'repos_rev' : '1'}])
+
+  expected_output_tree = svntest.tree.build_generic_tree (status_list)
+
+  svntest.main.run_svn (None, 'add', author_rev_unexp_path)
+  svntest.main.run_svn (None, 'add', author_rev_exp_path)
+  svntest.main.run_svn (None, 'add', bogus_keywords_path)
+  svntest.main.run_svn (None, 'add', embd_author_rev_unexp_path)
+  svntest.main.run_svn (None, 'add', embd_author_rev_exp_path)
+  svntest.main.run_svn (None, 'add', embd_bogus_keywords_path)
+
   svntest.actions.run_and_verify_status(wc_dir, expected_output_tree)
 
-
-  # fooo
-  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
-                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
+  # Commit.
+  output_list = [[author_rev_unexp_path, None, {}, {'verb' : 'Sending' }],
+                 [author_rev_exp_path, None, {}, {'verb' : 'Sending' }],
+                 [bogus_keywords_path, None, {}, {'verb' : 'Sending' }],
+                 [embd_author_rev_unexp_path, None, {}, {'verb' : 'Sending' }],
+                 [embd_author_rev_exp_path, None, {}, {'verb' : 'Sending' }],
+                 [embd_bogus_keywords_path, None, {}, {'verb' : 'Sending' }]]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
-  # fooo
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    if (item[0] != mu_path) and (item[0] != rho_path):
-      item[3]['wc_rev'] = '1'
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
-
-  # fooo
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
                                             expected_status_tree, None,
                                             None, None, None, None, wc_dir):
+    return 1
 
-
+  return 0
 
 
 def enable_translation():
