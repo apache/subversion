@@ -122,16 +122,9 @@ echo "Exporting revision ${VERSION} of Subversion into sandbox..."
  svn export -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
         ${DISTNAME} --username none --password none)
 
-### Ship with (relatively) clean APR, APRUTIL, and neon working copies
-### inside the tarball, just to make people's lives easier.
-echo "Copying apr into sandbox, making clean..."
-cp -r apr ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make extraclean)
-# Defang the APR working copy.
-echo "Removing all CVS/ and .cvsignore files from apr..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
-
+### Ship with (relatively) clean APRUTIL, APR, and neon working copies
+### inside the tarball, just to make people's lives easier.  Always do
+### APR-UTIL first, because it depends on APR's makefile.
 echo "Copying apr-util into sandbox, making clean..."
 cp -r apr-util ${DIST_SANDBOX}/${DISTNAME}
 (cd ${DIST_SANDBOX}/${DISTNAME}/apr-util && make extraclean)
@@ -139,6 +132,14 @@ cp -r apr-util ${DIST_SANDBOX}/${DISTNAME}
 echo "Removing all CVS/ and .cvsignore files from apr-util..."
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name CVS -type d -print`
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name .cvsignore -print`
+
+echo "Copying apr into sandbox, making clean..."
+cp -r apr ${DIST_SANDBOX}/${DISTNAME}
+(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make extraclean)
+# Defang the APR working copy.
+echo "Removing all CVS/ and .cvsignore files from apr..."
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
 
 # Clean most of neon.
 echo "Coping neon into sandbox, making clean..."
