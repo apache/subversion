@@ -50,7 +50,7 @@ paths adjusted appropriately:
 
    <Location /repositories>
      DAV svn
-     SVNParentPath /home/jrandom/projects/svn/subversion/tests/clients/cmdline/repositories
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/clients/cmdline/repositories
      AuthType Basic
      AuthName "Subversion Repository"
      AuthUserFile /usr/local/apache2/conf/users
@@ -59,7 +59,7 @@ paths adjusted appropriately:
      
    <Location /local_tmp/repos>
      DAV svn
-     SVNPath /home/jrandom/projects/svn/subversion/tests/clients/cmdline/local_tmp/repos
+     SVNPath /home/yourusernamehere/projects/svn/subversion/tests/clients/cmdline/local_tmp/repos
      AuthType Basic
      AuthName "Subversion Repository"
      AuthUserFile /usr/local/apache2/conf/users
@@ -71,7 +71,7 @@ it's running as you, so it has read/write access to the repositories
 that are probably living in your Subversion working copy.  To do this,
 set the User and Group directives in httpd.conf, something like this:
 
-   User jrandom
+   User yourusernamehere
    Group users
 
 You need to run the tests over ra_dav with authentication enabled, so
