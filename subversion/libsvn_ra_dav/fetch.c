@@ -1747,15 +1747,20 @@ static int validate_element(void *userdata,
         return NE_XML_INVALID;
 
     case ELEM_prop:
-      if (child == ELEM_version_name
-          || child == ELEM_creationdate
-          || child == ELEM_creator_displayname
-          || child == ELEM_md5_checksum
-          || child == ELEM_repository_uuid
-          || child == ELEM_remove_prop)
-        return NE_XML_VALID;
-      else
-        return NE_XML_DECLINE;
+      /*      if (child == ELEM_version_name
+              || child == ELEM_creationdate
+              || child == ELEM_creator_displayname
+              || child == ELEM_md5_checksum
+              || child == ELEM_repository_uuid
+              || child == ELEM_remove_prop)
+              return NE_XML_VALID;
+              else
+              return NE_XML_DECLINE;
+      */
+      /* ### TODO:  someday uncomment the block above, and make the
+         else clause return NE_XML_IGNORE.  But first, neon needs to
+         define that value.  :-) */
+      return NE_XML_VALID;
 
     default:
       return NE_XML_DECLINE;
