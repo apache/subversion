@@ -433,10 +433,21 @@ do_check_path (svn_node_kind_t *kind,
 
 static svn_error_t *
 get_file (void *session_baton,
-          svn_stringbuf_t *url,
+          svn_stringbuf_t *path,
           svn_revnum_t revision,
           svn_stream_t *stream)
 {
+
+#if 0
+  svn_stream_t *contents;
+
+  SVN_ERR (svn_fs_file_contents (&contents
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+#endif /* 0 */
+
   abort ();
   return SVN_NO_ERROR;
 }
