@@ -124,7 +124,7 @@ change_file_prop (void *file_baton,
 
 
 static svn_error_t *
-change_dir_prop (void *parent_baton,
+change_dir_prop (void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
