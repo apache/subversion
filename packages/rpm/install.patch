@@ -5,7 +5,7 @@
  
  install-mods-shared: subversion/mod_dav_svn/mod_dav_svn.la
 -	cd subversion/mod_dav_svn ; $(INSTALL_MOD_SHARED) -n dav_svn mod_dav_svn.la
-+	cd subversion/mod_dav_svn ; mkdir -p $(libexecdir); cp ./.libs/mod_dav_svn.so $(libexecdir)/mod_dav_svn.so; cp ./mod_dav_svn.la $(libexecdir)
++	cd subversion/mod_dav_svn ; mkdir -p $(RPM_BUILD_ROOT)/usr/local/apache2/modules; cp ./.libs/mod_dav_svn.so $(RPM_BUILD_ROOT)/usr/local/apache2/modules/mod_dav_svn.so; cp ./mod_dav_svn.la $(RPM_BUILD_ROOT)/usr/local/apache2/modules
 +#$(INSTALL_MOD_SHARED) -n dav_svn mod_dav_svn.la
 +
  

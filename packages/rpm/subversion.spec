@@ -1,5 +1,6 @@
-%define apache_version 2.0.37-0.1
-%define neon_version 0.19.4
+%define apache_version 2.0.40-0.1
+%define neon_version 0.21.2
+%define apache_dir /usr/local/apache2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -17,15 +18,20 @@ Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
+BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
 BuildPreReq: apache-libapr-utils-devel >= %{apache_version}
-BuildPreReq: autoconf >= 2.52
+BuildPreReq: autoconf253 >= 2.53
 BuildPreReq: db-devel >= 4.0.14
 BuildPreReq: expat-devel
+BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2
 BuildPreReq: neon = %{neon_version}
+BuildPreReq: openssl-devel
 BuildPreReq: python
+BuildPreReq: texinfo
+BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
@@ -41,6 +47,7 @@ package.
 Group: Utilities/System
 Summary: Development package for Subversion developers.
 Requires: subversion = %{version}-%{release}
+Requires: apache >= %{apache_version}
 %description devel
 The subversion-devel package includes the static libraries and include files
 for developers interacing with the subversion package.
@@ -58,6 +65,12 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
+* Tue Jun 18 2002 David Summers <david@summersoft.fay.ar.us> 0.13.0-2277
+- Updated for RedHat 7.3 (autoconf253).
+- Added a bunch of pre-requisites I didn't know were needed because I built a
+  new machine that didn't have them already installed.
+- Fixed installation of man and info documentation pages.
+
 * Wed Mar 06 2002 David Summers <david@summersoft.fay.ar.us> 0.9.0-1447
 - Back to apache-libapr* stuff, hopefully to stay.
 
@@ -107,9 +120,29 @@ the Apache directories and configuration.
 %prep
 %setup -q
 
+if [ -f /usr/bin/autoconf-2.53 ]; then
+   AUTOCONF="autoconf-2.53"
+   AUTOHEADER="autoheader-2.53"
+   export AUTOCONF AUTOHEADER
+fi
 sh autogen.sh
 
-LDFLAGS="-lcrypt -ldl -pthread" ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr
+LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
+	" ./configure \
+	--prefix=/usr \
+	--with-apxs=%{apache_dir}/usr/bin/apxs \
+	--with-apr=%{apache_dir}/bin/apr-config \
+	--with-apr-util=%{apache_dir}/bin/apu-config
+
+#	--libdir=/usr/lib \
 
 # Fix up mod_dav_svn installation.
 %patch0 -p1
@@ -120,13 +153,15 @@ make
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/share
-make prefix=$RPM_BUILD_ROOT/usr libexecdir=$RPM_BUILD_ROOT/usr/lib/apache install
+make install \
+	prefix=$RPM_BUILD_ROOT/usr \
+	mandir=$RPM_BUILD_ROOT/usr/share/man \
+	fs_libdir=$RPM_BUILD_ROOT/usr/lib \
+	base_libdir=$RPM_BUILD_ROOT/usr/lib \
+	infodir=$RPM_BUILD_ROOT/usr/share/info \
+	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
 
-# Install man page until the previous install can do it correctly.
-mv $RPM_BUILD_ROOT/usr/man $RPM_BUILD_ROOT/usr/share/man
-
-# Install INFO pages in correct place.
-mv $RPM_BUILD_ROOT/usr/info $RPM_BUILD_ROOT/usr/share/info
+#	libdir=$RPM_BUILD_ROOT/usr/lib \
 
 %post
 /sbin/install-info /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
@@ -145,7 +180,7 @@ mv $RPM_BUILD_ROOT/usr/info $RPM_BUILD_ROOT/usr/share/info
 
 %post server
 # Load subversion server into apache configuration.
-CONF=/etc/httpd/conf/httpd.conf
+CONF=%{apache_dir}/conf/httpd.conf
 
 # Search for Subversion dav_svn_module and add it to config file if not found.
 
@@ -159,7 +194,7 @@ if [ "`grep -i dav_svn_module $CONF`"x = "x" ]; then
       $InsertPointFound = 1,
          print "LoadModule dav_svn_module modules/mod_dav_svn.so\n"
          if ( $FirstLoadFound && ! $InsertPointFound &&
-              ! (/^LoadModule/ || /^#LoadModule/ || /^# LoadModule/ ) );
+              ! (/^LoadModule/ ) );
       print;
       }
    ' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
@@ -192,7 +227,7 @@ fi
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
-   /etc/init.d/httpd restart
+   /etc/init.d/httpd2 restart
 fi
 
 %preun server
@@ -200,18 +235,18 @@ fi
 # Only take it out if this package is being erased and not upgraded.
 if [ "$1" = "0" ];
    then
-   cd /etc/httpd/conf && sed -e 's/^LoadModule dav_svn_module/#LoadModule dav_svn_module/' -e '/^# Begin Subversion server/,/^# End Subversion server/s/^/#/' < httpd.conf > httpd.conf.new && mv httpd.conf httpd.conf.bak && mv httpd.conf.new httpd.conf
+   cd %{apache_dir}/conf && sed -e 's/^LoadModule dav_svn_module/#LoadModule dav_svn_module/' -e '/^# Begin Subversion server/,/^# End Subversion server/s/^/#/' < httpd.conf > httpd.conf.new && mv httpd.conf httpd.conf.bak && mv httpd.conf.new httpd.conf
 fi
 
 %postun server
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
-   /etc/init.d/httpd restart
+   /etc/init.d/httpd2 restart
 fi
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+#rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
@@ -228,8 +263,9 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 /usr/lib/libsvn*.a
 /usr/lib/libsvn*.la
-/usr/include/svn*
+/usr/include/subversion-1
 
 %files server
 %defattr(-,root,root)
-/usr/lib/apache/mod_dav_svn.*
+%{apache_dir}/modules/mod_dav_svn.la
+%{apache_dir}/modules/mod_dav_svn.so
