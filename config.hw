@@ -1,0 +1,43 @@
+/*
+ * config.hw : Template used to generate config.h on Win32.
+ *
+ * ====================================================================
+ * Copyright (c) 2000 CollabNet.  All rights reserved.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
+ * ====================================================================
+ */
+
+/* ==================================================================== */
+
+
+
+
+#ifndef CONFIG_HW
+#define CONFIG_HW
+
+
+/* Diff program */
+#ifndef SVN_CLIENT_DIFF
+#  define SVN_CLIENT_DIFF "X:/path/to/diff.exe"
+#endif
+
+/* Patch program */
+#ifndef SVN_CLIENT_PATCH
+#  define SVN_CLIENT_PATCH "X:/path/to/patch.exe"
+#endif
+
+
+#endif /* CONFIG_HW */
+
+
+/* 
+ * local variables:
+ * mode: C
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
