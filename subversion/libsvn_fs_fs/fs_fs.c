@@ -1460,3 +1460,112 @@ svn_fs__fs_paths_changed (apr_hash_t **changed_paths_p,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *svn_fs__fs_begin_txn (svn_fs_txn_t **txn_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_change_txn_prop (svn_fs_txn_t *txn,
+                            const char *name,
+                            const svn_string_t *value,
+                            apr_pool_t *pool)
+{
+  abort ();
+  
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_get_txn (svn_fs__transaction_t **txn_p,
+                    svn_fs_t *fs,
+                    const char *txn_id,
+                    apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+  
+svn_error_t *
+svn_fs__fs_create_node (const svn_fs_id_t **id_p,
+                        svn_fs_t *fs,
+                        svn_fs__node_revision_t *noderev,
+                        const char *copy_id,
+                        const char *txn_id,
+                        apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_purge_txn (svn_fs_t *fs,
+                      const char *txn_id,
+                      apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_set_entry (svn_fs_t *fs,
+                      const char *txn_id,
+                      svn_fs__node_revision_t *parent_noderev,
+                      const char *name,
+                      const svn_fs_id_t *id,
+                      svn_node_kind_t kind,
+                      apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_add_change (svn_fs_t *fs,
+                       const char *txn_id,
+                       const char *path,
+                       const svn_fs_id_t *id,
+                       svn_fs_path_change_kind_t change_kind,
+                       svn_boolean_t text_mod,
+                       svn_boolean_t prop_mod,
+                       apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+    
+svn_error_t *
+svn_fs__fs_set_contents (svn_stream_t **stream,
+                         svn_fs_t *fs,
+                         svn_fs__node_revision_t *noderev,
+                         apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
+                             svn_fs_t *fs,
+                             const svn_fs_id_t *old_idp,
+                             svn_fs__node_revision_t *new_noderev,
+                             const char *copy_id,
+                             const char *txn_id,
+                             apr_pool_t *pool)
+{
+  abort ();
+
+  return SVN_NO_ERROR;
+}

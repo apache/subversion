@@ -26,6 +26,38 @@
 
 /* Creating ID's.  */
 
+/* Parse the transaction field of the id as given in STR, and store
+   the appropriate values in ID.  Perform temporary allocations in
+   POOL. */
+static svn_fs_id_t *
+validate_transaction_field (svn_fs_id_t *id, char *str, apr_pool_t *pool)
+{
+  if (str[0] == 'r')
+    {
+      char *local_str, *local_last_str;
+      /* This is a revision type ID */
+      local_str = apr_strtok (str + 1, "/", &local_last_str);
+      if (local_str == NULL)
+        return NULL;
+      id->rev = atoi (local_str);
+      
+      local_str = apr_strtok (NULL, "/", &local_last_str);
+      if (local_str == NULL)
+        return NULL;
+      id->offset = apr_atoi64 (local_str);
+      
+      id->txn_id = NULL;
+    }
+  else if (str[0] == 't')
+    {
+      /* This is a transaction type ID */
+      id->txn_id = str + 1;
+      id->rev = SVN_INVALID_REVNUM;
+    }
+
+  return id;
+}
+
 svn_fs_id_t *
 svn_fs__create_id (const char *node_id,
                    const char *copy_id,
@@ -35,7 +67,7 @@ svn_fs__create_id (const char *node_id,
   svn_fs_id_t *id = apr_palloc (pool, sizeof (*id));
   id->node_id = apr_pstrdup (pool, node_id);
   id->copy_id = apr_pstrdup (pool, copy_id);
-  id->txn_id = apr_pstrdup (pool, txn_id);
+  validate_transaction_field (id, apr_pstrdup (pool, txn_id), pool);
   return id;
 }
 
@@ -102,7 +134,8 @@ svn_fs__id_eq (const svn_fs_id_t *a,
         return FALSE;
       if ((a->copy_id != b->copy_id) && (strcmp (a->copy_id, b->copy_id)))
         return FALSE;
-      if ((a->txn_id != b->txn_id) && (strcmp (a->txn_id, b->txn_id)))
+      if ((a->txn_id != b->txn_id) && a->txn_id && b->txn_id &&
+          (strcmp (a->txn_id, b->txn_id)))
         return FALSE;
       if (a->rev != b->rev)
         return FALSE;
@@ -152,32 +185,8 @@ svn_fs_parse_id (const char *data,
   if ((str == NULL) || (*str == '\0'))
     return NULL;
 
-  if (str[0] == 'r')
-    {
-      char *local_str, *local_last_str;
-      /* This is a revision type ID */
-      local_str = apr_strtok (str + 1, "/", &local_last_str);
-      if (local_str == NULL)
-        return NULL;
-      id->rev = atoi (local_str);
-
-      local_str = apr_strtok (NULL, "/", &local_last_str);
-      if (local_str == NULL)
-        return NULL;
-      id->offset = apr_atoi64 (local_str);
-      
-      id->txn_id = NULL;
-    }
-  else if (str[0] == 't')
-    {
-      /* This is a transaction type ID */
-      id->txn_id = str + 1;
-      id->rev = SVN_INVALID_REVNUM;
-    }
-  else
-    {
-      return NULL;
-    }
+  if (! validate_transaction_field (id, str, pool))
+    return NULL;
   
   /* Return our ID */
   return id;
@@ -190,10 +199,10 @@ svn_fs_unparse_id (const svn_fs_id_t *id,
 {
   const char *txn_rev_id;
 
-  if (id->txn_id)
+  if ((! id->txn_id))
     {
       txn_rev_id = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT "/%"
-                                 APR_SIZE_T_FMT, id->rev, id->offset);
+                                 APR_OFF_T_FMT, id->rev, id->offset);
     }
   else
     {

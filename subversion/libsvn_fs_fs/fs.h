@@ -148,8 +148,12 @@ typedef struct
 
   /* The size of the fulltext of the representation. */
   apr_size_t expanded_size;
-  
 
+  /* Is this representation a transaction? */
+  const char *txn_id;
+
+  /* Is this a data rep for a directory node? */
+  svn_boolean_t is_directory_contents;
 } svn_fs__representation_t;
 
 

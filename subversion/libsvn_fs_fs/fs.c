@@ -35,21 +35,6 @@
 #include "svn_private_config.h"
 
 
-/* Checking for return values, and reporting errors.  */
-
-/* If FS is already open, then return an SVN_ERR_FS_ALREADY_OPEN
-   error.  Otherwise, return zero.  */
-static svn_error_t *
-check_already_open (svn_fs_t *fs)
-{
-  if (fs->uuid)
-    return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
-                             "Filesystem object already open");
-  else
-    return SVN_NO_ERROR;
-}
-
-
 /* A default warning handling function.  */
 
 static void
