@@ -12,7 +12,7 @@ tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
          'subversion/tests/clients/cmdline/xmltests/svn-test.sh',
          'subversion/tests/clients/cmdline/xmltests/svn-test2.sh',
-         'subversion/tests/libsvn_subr/target-test.sh']
+         'subversion/tests/libsvn_subr/target-test.py']
 
 fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.py',
             'subversion/tests/libsvn_repos/run-repos-tests.py']
