@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 
@@ -88,7 +89,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
       if (! ent)
         return svn_error_createf
         (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-	 "'%s' is not under version control", path);
+	 _("'%s' is not under version control"), path);
       
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))
@@ -103,7 +104,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   else
     return svn_error_createf
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       "Unrecognized revision type requested for '%s'", path);
+       _("Unrecognized revision type requested for '%s'"), path);
   
   return SVN_NO_ERROR;
 }

@@ -40,6 +40,7 @@
 #include "client.h"
 #include <assert.h>
 
+#include "svn_private_config.h"
 
 /*
  * Constant separator strings
@@ -185,26 +186,26 @@ check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         "URLs have no schema ('%s' and '%s')", url, ent->url);
+         _("URLs have no schema ('%s' and '%s')"), url, ent->url);
     }
   else if (idx1 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         "URL has no schema: '%s'", url);
+         _("URL has no schema: '%s'"), url);
     }
   else if (idx2 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         "URL has no schema: '%s'", ent->url);
+         _("URL has no schema: '%s'"), ent->url);
     }
   else if (((idx1 - url) != (idx2 - ent->url))
            || (strncmp (url, ent->url, idx1 - url) != 0))
     {
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Access schema mixtures not yet supported ('%s' and '%s')", 
+         _("Access schema mixtures not yet supported ('%s' and '%s')"),
 	 url, ent->url);
     }
 
@@ -266,7 +267,7 @@ diff_label (const char *path,
     label = apr_psprintf (pool, "%s\t(revision %" SVN_REVNUM_T_FMT ")",
                           path, revnum);
   else
-    label = apr_psprintf (pool, "%s\t(working copy)", path);
+    label = apr_psprintf (pool, _("%s\t(working copy)"), path);
 
   return label;
 }
@@ -455,7 +456,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
                 continue;
               else
                 return svn_error_createf(SVN_ERR_INVALID_DIFF_OPTION, NULL,
-                                         "'%s' is not supported", arg);
+                                         _("'%s' is not supported"), arg);
             }
         }
 
@@ -1202,7 +1203,7 @@ convert_to_url (const char **url,
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not under version control", path);
+                              _("'%s' is not under version control"), path);
 
   if (entry->url)  
     *url = apr_pstrdup (pool, entry->url);
@@ -1246,8 +1247,8 @@ do_merge (const char *URL1,
       || (revision2->kind == svn_opt_revision_unspecified))
     {
       return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, NULL, 
-         "Not all required revisions are specified");
+        (SVN_ERR_CLIENT_BAD_REVISION, NULL,
+	 _("Not all required revisions are specified"));
     }
 
   /* Establish first RA session to URL1. */
@@ -1457,8 +1458,8 @@ static svn_error_t *
 unsupported_diff_error (svn_error_t *child_err)
 {
   return svn_error_create (SVN_ERR_INCORRECT_PARAMS, child_err,
-                           "Sorry, svn_client_diff was called in a way "
-                           "that is not yet supported");
+                           _("Sorry, svn_client_diff was called in a way "
+                           "that is not yet supported"));
 }
 
 
@@ -1496,8 +1497,8 @@ diff_wc_wc (const apr_array_header_t *options,
     return unsupported_diff_error
       (svn_error_create 
        (SVN_ERR_INCORRECT_PARAMS, NULL,
-        "Only diffs between a path's text-base "
-        "and its working files are supported at this time"));
+        _("Only diffs between a path's text-base "
+          "and its working files are supported at this time")));
 
   SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
   SVN_ERR (svn_io_check_path (path1, &kind, pool));
@@ -1814,7 +1815,7 @@ do_diff (const apr_array_header_t *options,
   if ((revision1->kind == svn_opt_revision_unspecified)
       || (revision2->kind == svn_opt_revision_unspecified))
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                             "Not all required revisions are specified");
+                             _("Not all required revisions are specified"));
 
   /* Revisions can be said to be local or remote.  BASE and WORKING,
      for example, are local.  */
@@ -1990,12 +1991,12 @@ svn_client_merge (const char *source1,
   SVN_ERR (svn_client_url_from_path (&URL1, source1, pool));
   if (! URL1)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              "'%s' has no URL", source1);
+                              _("'%s' has no URL"), source1);
 
   SVN_ERR (svn_client_url_from_path (&URL2, source2, pool));
   if (! URL2)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL, 
-                              "'%s' has no URL", source2);
+                              _("'%s' has no URL"), source2);
 
   if (URL1 == source1)
     path1 = NULL;
@@ -2013,7 +2014,7 @@ svn_client_merge (const char *source1,
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, adm_access, FALSE, pool));
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not under version control", 
+                              _("'%s' is not under version control"), 
                               target_wcpath);
 
   merge_cmd_baton.force = force;

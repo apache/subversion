@@ -33,6 +33,7 @@
 #include "svn_config.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -105,12 +106,12 @@ svn_client_switch (svn_revnum_t *result_rev,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       "'%s' is not under version control", path);
+       _("'%s' is not under version control"), path);
 
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       "Entry '%s' has no URL", path);
+       _("Entry '%s' has no URL"), path);
 
   if (entry->kind == svn_node_file)
     {
@@ -121,12 +122,12 @@ svn_client_switch (svn_revnum_t *result_rev,
       if (! session_entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           "'%s' is not under version control", anchor);
+           _("'%s' is not under version control"), anchor);
 
       if (! session_entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
-           "Directory '%s' has no URL", anchor);
+           _("Directory '%s' has no URL"), anchor);
     }
   else if (entry->kind == svn_node_dir)
     {

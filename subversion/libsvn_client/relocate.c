@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -52,7 +53,7 @@ relocate_error (const char *url,
 {
   return svn_error_createf 
     (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
-     "The repository at '%s' has uuid '%s', but the WC has '%s'",
+     _("The repository at '%s' has uuid '%s', but the WC has '%s'"),
      url, actual_uuid, expected_uuid);
 }
 

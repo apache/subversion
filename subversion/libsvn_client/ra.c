@@ -31,6 +31,8 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "svn_private_config.h"
+
 
 static svn_error_t *
 open_admin_tmp_file (apr_file_t **fp,
@@ -125,7 +127,7 @@ push_wc_prop (void *baton,
   if (! cb->commit_items)
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       "Attempt to set wc property '%s' on '%s' in a non-commit operation",
+       _("Attempt to set wc property '%s' on '%s' in a non-commit operation"),
        name, relpath);
 
   for (i = 0; i < cb->commit_items->nelts; i++)
@@ -309,7 +311,7 @@ svn_client_uuid_from_path (const char **uuid,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "Can't find entry for '%s'", path);
+                              _("Can't find entry for '%s'"), path);
 
   if (entry->uuid)
     {
