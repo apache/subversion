@@ -1544,11 +1544,20 @@ check_repos_version (svn_repos_t *repos,
   format_path = svn_path_join (repos->path, SVN_REPOS__FORMAT, pool);
   SVN_ERR (svn_io_read_version_file (&version, format_path, pool));
 
-  if (version != SVN_REPOS__VERSION)
-    return svn_error_createf 
-      (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
-       _("Expected version '%d' of repository; found version '%d'"), 
-       SVN_REPOS__VERSION, version);
+  /* Normally the repository format number must match exactly.
+     But we tolerate one "soft upgrade" case: libsvn_repos will
+     automatically upgrade version 3 repositories to version 4 the
+     moment one of the version 4 features is invoked.  So if we're
+     looking for 4 but find 3, just accept the 3 -- later code will
+     know what to do. */
+  if ((version != SVN_REPOS__VERSION)
+      && !(version == 3 && SVN_REPOS__VERSION == 4))
+    {
+      return svn_error_createf 
+        (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
+         _("Expected version '%d' of repository; found version '%d'"), 
+         SVN_REPOS__VERSION, version);
+    }
 
   repos->format = version;
 

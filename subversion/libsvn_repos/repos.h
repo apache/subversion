@@ -29,7 +29,7 @@ extern "C" {
 
 
 /*** Repository version number. */
-#define SVN_REPOS__VERSION     3
+#define SVN_REPOS__VERSION     4
 
 
 /*** Repository layout. ***/
