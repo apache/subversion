@@ -113,9 +113,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
   svn_ra_plugin_t *ra_lib;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-  const char *committed_date = NULL;
-  const char *committed_author = NULL;
+  void *commit_baton;
   const char *log_msg;
   svn_node_kind_t kind;
   const char *auth_dir;
@@ -185,11 +183,10 @@ delete_urls (svn_client_commit_info_t **commit_info,
     }
 
   /* Fetch RA commit editor */
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
   SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
-                                      &committed_rev,
-                                      &committed_date,
-                                      &committed_author,
-                                      log_msg, pool));
+                                      log_msg, svn_client__commit_callback,
+                                      commit_baton, pool));
 
   /* Call the path-based editor driver. */
   SVN_ERR (svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 
@@ -198,12 +195,6 @@ delete_urls (svn_client_commit_info_t **commit_info,
 
   /* Close the edit. */
   SVN_ERR (editor->close_edit (edit_baton, pool));
-
-  /* Fill in the commit_info structure. */
-  *commit_info = svn_client__make_commit_info (committed_rev,
-                                               committed_author,
-                                               committed_date,
-                                               pool);
 
   return SVN_NO_ERROR;
 }

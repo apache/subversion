@@ -257,6 +257,15 @@
 %apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
 
 /* -----------------------------------------------------------------------
+   thunk commit_callback
+*/
+%typemap(perl5, in) (svn_commit_callback_t callback, void *callback_baton) {
+    $1 = svn_swig_pl_thunk_commit_callback;
+    $2 = (void *)$input;
+    SvREFCNT_inc($input);
+};
+
+/* -----------------------------------------------------------------------
    svn_stream interpolability with io handle
 */
 

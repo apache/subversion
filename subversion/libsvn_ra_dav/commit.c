@@ -98,15 +98,9 @@ typedef struct
   /* Log message for the commit. */
   const char *log_msg;
 
-  /* The new revision created by this commit. */
-  svn_revnum_t *new_rev;
-
-  /* The date (according to the repository) of this commit. */
-  const char **committed_date;
-
-  /* The author (also according to the repository) of this commit. */
-  const char **committed_author;
-
+  /* The commit callback and baton */
+  svn_commit_callback_t callback;
+  void *callback_baton;
 } commit_ctx_t;
 
 typedef struct
@@ -1128,11 +1122,14 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                        apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
+  svn_revnum_t new_rev;
+  const char *committed_date;
+  const char *committed_author;
 
   /* ### different pool? */
-  SVN_ERR( svn_ra_dav__merge_activity(cc->new_rev,
-                                      cc->committed_date,
-                                      cc->committed_author,
+  SVN_ERR( svn_ra_dav__merge_activity(&new_rev,
+                                      &committed_date,
+                                      &committed_author,
                                       cc->ras,
                                       cc->ras->root.path,
                                       cc->activity_url,
@@ -1141,6 +1138,10 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->ras->pool) );
   SVN_ERR( delete_activity(edit_baton, pool) );
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
+
+  if (new_rev != SVN_INVALID_REVNUM)
+    SVN_ERR( cc->callback (new_rev, committed_date, committed_author,
+                           cc->callback_baton));
 
   return SVN_NO_ERROR;
 }
@@ -1205,10 +1206,9 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_editor_t **editor,
   void **edit_baton,
-  svn_revnum_t *new_rev,
-  const char **committed_date,
-  const char **committed_author,
   const char *log_msg,
+  svn_commit_callback_t callback,
+  void *callback_baton,
   apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
@@ -1224,9 +1224,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->push_func = ras->callbacks->push_wc_prop;
   cc->cb_baton = ras->callback_baton;
   cc->log_msg = log_msg;
-  cc->new_rev = new_rev;
-  cc->committed_date = committed_date;
-  cc->committed_author = committed_author;
+  cc->callback = callback;
+  cc->callback_baton = callback_baton;
 
   /* If the caller didn't give us any way of storing wcprops, then
      there's no point in getting back a MERGE response full of VR's. */

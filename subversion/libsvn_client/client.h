@@ -186,13 +186,19 @@ svn_error_t *svn_client__default_auth_dir (const char **auth_dir_p,
 
 /*** Commit ***/
 
-/* If REVISION or AUTHOR or DATE has a valid value, then allocate (in
-   POOL) an svn_client_commit_info_t structure and populate it with
-   those values (that is, copies of them allocated in POOL).  */
-svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
-                                                        const char *author,
-                                                        const char *date,
-                                                        apr_pool_t *pool);
+/* Get the commit_baton to be used in couple with commit_callback. */
+svn_error_t *svn_client__commit_get_baton (void **baton,
+                                           svn_client_commit_info_t **info,
+                                           apr_pool_t *pool);
+
+/* The commit_callback function for storing svn_client_commit_info_t
+   pointed by commit_baton. If the commit_info supplied by get_baton
+   points to NULL after close_edit, it means the commit is a no-op.
+*/
+svn_error_t *svn_client__commit_callback (svn_revnum_t revision,
+                                          const char *date,
+                                          const char *author,
+                                          void *baton);
 
 /* ---------------------------------------------------------------- */
 

@@ -482,12 +482,12 @@ get_ra_editor (void **ra_baton,
                svn_wc_adm_access_t *base_access,
                const char *log_msg,
                apr_array_header_t *commit_items,
-               svn_revnum_t *committed_rev,
-               const char **committed_date,
-               const char **committed_author,
+               svn_client_commit_info_t **commit_info,
                svn_boolean_t is_commit,
                apr_pool_t *pool)
 {
+  void *commit_baton;
+
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (ra_lib, *ra_baton, 
@@ -519,9 +519,10 @@ get_ra_editor (void **ra_baton,
     SVN_ERR ((*ra_lib)->get_latest_revnum (*session, latest_rev, pool));
   
   /* Fetch RA commit editor. */
-  return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 
-                                       committed_rev, committed_date, 
-                                       committed_author, log_msg, pool);
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
+  return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, log_msg,
+                                       svn_client__commit_callback,
+                                       commit_baton, pool);
 }
 
 
@@ -541,9 +542,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   void *edit_baton;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
-  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-  const char *committed_date = NULL;
-  const char *committed_author = NULL;
   apr_hash_t *excludes = apr_hash_make (pool);
   const char *new_entry = NULL;
 
@@ -621,8 +619,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
         }
       while ((err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
                                    &editor, &edit_baton, ctx, url, base_dir,
-                                   NULL, log_msg, NULL, &committed_rev,
-                                   &committed_date, &committed_author,
+                                   NULL, log_msg, NULL, commit_info,
                                    FALSE, subpool)));
 
       /* If there were some intermediate directories that needed to be
@@ -663,11 +660,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       return err;
     }
 
-  /* Finally, fill in the commit_info structure. */
-  *commit_info = svn_client__make_commit_info (committed_rev,
-                                               committed_author,
-                                               committed_date,
-                                               pool);
   return SVN_NO_ERROR;
 }
 
@@ -810,9 +802,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   void *edit_baton;
   void *ra_baton, *session;
   const char *log_msg;
-  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-  const char *committed_date = NULL;
-  const char *committed_author = NULL;
   svn_ra_plugin_t *ra_lib;
   const char *base_dir;
   const char *base_url;
@@ -929,8 +918,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
                                 &editor, &edit_baton, ctx,
                                 base_url, base_dir, base_dir_access,
-                                log_msg, commit_items, &committed_rev, 
-                                &committed_date, &committed_author, 
+                                log_msg, commit_items, commit_info,
                                 TRUE, pool)))
     goto cleanup;
 
@@ -1024,11 +1012,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
               && (item->copyfrom_url))
             recurse = TRUE;
 
+          assert (*commit_info);
           if ((bump_err = svn_wc_process_committed (item->path, adm_access,
                                                     recurse,
-                                                    committed_rev, 
-                                                    committed_date,
-                                                    committed_author, 
+                                                    (*commit_info)->revision,
+                                                    (*commit_info)->date,
+                                                    (*commit_info)->author,
                                                     item->wcprop_changes,
                                                     subpool)))
             break;
@@ -1058,11 +1047,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       if (! unlock_err)
         cleanup_err = remove_tmpfiles (tempfiles, pool);
     }
-
-  /* Fill in the commit_info structure */
-  *commit_info = svn_client__make_commit_info (committed_rev, 
-                                               committed_author, 
-                                               committed_date, pool);
 
   return reconcile_errors (cmt_err, unlock_err, bump_err, cleanup_err, pool);
 }

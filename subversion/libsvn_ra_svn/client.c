@@ -43,8 +43,8 @@ typedef struct {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;
   svn_revnum_t *new_rev;
-  const char **committed_date;
-  const char **committed_author;
+  svn_commit_callback_t callback;
+  void *callback_baton;
 } ra_svn_commit_callback_baton_t;
 
 typedef struct {
@@ -543,20 +543,26 @@ static svn_error_t *ra_svn_rev_prop(void *sess, svn_revnum_t rev,
 static svn_error_t *ra_svn_end_commit(void *baton)
 {
   ra_svn_commit_callback_baton_t *ccb = baton;
+  svn_revnum_t new_rev;
+  const char *committed_date;
+  const char *committed_author;
 
-  return svn_ra_svn_read_tuple(ccb->conn, ccb->pool, "r(?c)(?c)",
-                               ccb->new_rev,
-                               ccb->committed_date,
-                               ccb->committed_author);
+  SVN_ERR(svn_ra_svn_read_tuple(ccb->conn, ccb->pool, "r(?c)(?c)",
+                                &new_rev,
+                                &committed_date,
+                                &committed_author));
+
+  return ccb->callback(new_rev, committed_date, committed_author,
+                       ccb->callback_baton);
+
 }
 
 static svn_error_t *ra_svn_commit(void *sess,
                                   const svn_delta_editor_t **editor,
                                   void **edit_baton,
-                                  svn_revnum_t *new_rev,
-                                  const char **committed_date,
-                                  const char **committed_author,
                                   const char *log_msg,
+                                  svn_commit_callback_t callback,
+                                  void *callback_baton,
                                   apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
@@ -570,9 +576,8 @@ static svn_error_t *ra_svn_commit(void *sess,
   ccb = apr_palloc(pool, sizeof(*ccb));
   ccb->conn = conn;
   ccb->pool = pool;
-  ccb->new_rev = new_rev;
-  ccb->committed_date = committed_date;
-  ccb->committed_author = committed_author;
+  ccb->callback = callback;
+  ccb->callback_baton = callback_baton;
 
   /* Fetch an editor for the caller to drive.  The editor will call
    * ra_svn_end_commit() upon close_edit(), at which point we'll fill

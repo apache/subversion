@@ -280,9 +280,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   svn_node_kind_t src_kind, dst_kind;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-  const char *committed_date = NULL;
-  const char *committed_author = NULL;
+  void *commit_baton;
   svn_revnum_t src_revnum;
   const char *auth_dir;
   svn_boolean_t resurrection = FALSE;
@@ -424,11 +422,10 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     }
 
   /* Fetch RA commit editor. */
-  SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton,
-                                      &committed_rev,
-                                      &committed_date,
-                                      &committed_author,
-                                      message, pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
+  SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton, message,
+                                      svn_client__commit_callback,
+                                      commit_baton, pool));
 
   /* Setup our PATHS for the path-based editor drive. */
   APR_ARRAY_PUSH (paths, const char *) = dst_rel;
@@ -452,12 +449,6 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Close the edit. */
   SVN_ERR (editor->close_edit (edit_baton, pool));
-
-  /* Fill in the commit_info structure. */
-  *commit_info = svn_client__make_commit_info (committed_rev,
-                                               committed_author,
-                                               committed_date,
-                                               pool);
 
   return SVN_NO_ERROR;
 }
@@ -566,9 +557,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_node_kind_t src_kind, dst_kind;
-  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-  const char *committed_date = NULL;
-  const char *committed_author = NULL;
+  void *commit_baton;
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *adm_access, *dir_access;
   apr_array_header_t *commit_items;
@@ -667,9 +656,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   /* Fetch RA commit editor. */
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
   if ((cmt_err = ra_lib->get_commit_editor (session, &editor, &edit_baton, 
-                                            &committed_rev, &committed_date, 
-                                            &committed_author, message, pool)))
+                                            message,
+                                            svn_client__commit_callback,
+                                            commit_baton, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -699,11 +690,6 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     cleanup_err = remove_tmpfiles (tempfiles,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    pool);
-
-  /* Fill in the commit_info structure */
-  *commit_info = svn_client__make_commit_info (committed_rev, 
-                                               committed_author, 
-                                               committed_date, pool);
 
   return reconcile_errors (cmt_err, unlock_err, cleanup_err, pool);
 }

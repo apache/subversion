@@ -48,7 +48,7 @@ struct edit_baton
   const char *log_msg;
 
   /* Callback to run when the commit is done. */
-  svn_repos_commit_callback_t callback;
+  svn_commit_callback_t callback;
   void *callback_baton;
 
   /* The already-open svn repository to commit to. */
@@ -596,7 +596,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                              const char *base_path,
                              const char *user,
                              const char *log_msg,
-                             svn_repos_commit_callback_t callback,
+                             svn_commit_callback_t callback,
                              void *callback_baton,
                              apr_pool_t *pool)
 {

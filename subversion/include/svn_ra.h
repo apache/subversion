@@ -343,15 +343,16 @@ typedef struct svn_ra_plugin_t
    *
    * Any of these functions may be @c NULL.
    *
-   * After the editor's close_edit function returns successfully,
-   * @a *new_rev holds either the new revision, or @c SVN_INVALID_REVNUM if
-   * the commit was a no-op (i.e. nothing was committed);
-   * @a *committed_date holds the repository-side date, or NULL if the
-   * date is unavailable; @a *committed_author holds the repository-side
-   * author (i.e., the one recorded as the author of the commit in the
-   * repository), or @c NULL if the author is unavailable.  Allocate the
-   * latter two in the session.  Any of @a new_rev, @a committed_date, or
-   * @a committed_author may be @c NULL, in which case not touched.
+   * Before @c close_edit returns, but after the commit has succeeded,
+   * it will invoke @a callback with the new revision number, the
+   * commit date (as a <tt>const char *</tt>), commit author (as a
+   * <tt>const char *</tt>), and @a callback_baton as arguments.  If
+   * @a callback returns an error, that error will be returned from @c
+   * close_edit, otherwise @c close_edit will return successfully
+   * (unless it encountered an error before invoking @a callback).
+   *
+   * The callback will not be called if the commit was a no-op
+   * (i.e. nothing was committed);
    *
    * The caller may not perform any ra operations using
    * @a session_baton before finishing the edit.
@@ -361,10 +362,9 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_editor_t **editor,
                                      void **edit_baton,
-                                     svn_revnum_t *new_rev,
-                                     const char **committed_date,
-                                     const char **committed_author,
                                      const char *log_msg,
+                                     svn_commit_callback_t callback,
+                                     void *callback_baton,
                                      apr_pool_t *pool);
 
   /** Fetch the contents and properties of file @a path at @a revision.
