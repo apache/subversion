@@ -25,6 +25,7 @@
 #include "JNIStringHolder.h"
 #include <apr_tables.h>
 #include <apr_strings.h>
+#include <svn_path.h>
 #include <iostream>
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -75,7 +76,7 @@ const apr_array_header_t *Targets::array (const Pool & pool)
 				{
 					return NULL;
 				}
-				const char *tt = text;
+				const char *tt = svn_path_internal_style (text, pool.pool());
 				m_targets.push_back(tt);
 			}
 			if(JNIUtil::isJavaExceptionThrown())

@@ -244,9 +244,10 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer, bo
 
 	rev.kind = svn_opt_revision_unspecified;
 	statusBaton.pool = subPool.pool();
+	const char *intPath = svn_path_internal_style (path, subPool.pool());
 
     svn_error_t *Err = svn_client_status (
-							 &youngest, path, &rev, statusReceiver, &statusBaton/*&statusVect*/, 
+							 &youngest, intPath, &rev, statusReceiver, &statusBaton/*&statusVect*/, 
 							 descend ? TRUE : FALSE,
 							 getAll ? TRUE : FALSE,
 							 onServer ? TRUE : FALSE,     //update
@@ -314,8 +315,9 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
 
 	rev.kind = svn_opt_revision_unspecified;
 	statusBaton.pool = subPool.pool();
+	const char *intPath = svn_path_internal_style (path, subPool.pool());
 
-    svn_error_t *Err = svn_client_status (&youngest, path, &rev, statusReceiver, &statusBaton,
+    svn_error_t *Err = svn_client_status (&youngest, intPath, &rev, statusReceiver, &statusBaton,
 							 FALSE, 
 							 TRUE,  // get_All
 							 onServer ? TRUE : FALSE,     //update
@@ -369,9 +371,8 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart, R
 {
 	std::vector<jobject> logs;
     Pool pool;
-	m_lastPath = path;
+	m_lastPath = svn_path_internal_style (path, pool.pool());
     Targets target (m_lastPath.c_str () );
-    apr_pool_t *apr_pool = pool.pool ();
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -382,7 +383,7 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart, R
                         revisionEnd.revision (),
                         0, // not reverse by default
                         1, // strict by default (not showing cp info)
-                        messageReceiver, &logs, ctx, apr_pool);
+                        messageReceiver, &logs, ctx, pool.pool());
 	if(JNIUtil::isJavaExceptionThrown())
 	{
 		return NULL;
@@ -434,7 +435,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath, Revision
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = destPath;
+    m_lastPath = svn_path_internal_style (destPath, apr_pool);
     svn_revnum_t retval;
 
     if(m_notify == NULL)
@@ -489,7 +490,7 @@ void SVNClient::revert(const char *path, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = path;
+    m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -507,7 +508,7 @@ void SVNClient::add(const char *path, bool recurse)
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
 
-    m_lastPath = path;
+    m_lastPath = svn_path_internal_style (path, apr_pool);
 	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -525,7 +526,7 @@ jlong SVNClient::update(const char *path, Revision &revision, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = path;
+    m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
     svn_revnum_t retval;
 	if(ctx == NULL)
@@ -576,7 +577,7 @@ void SVNClient::copy(const char *srcPath, const char *destPath, const char *mess
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
     Path sourcePath = srcPath;
-    m_lastPath = destPath;
+    m_lastPath = svn_path_internal_style (destPath, apr_pool);
 
     svn_client_commit_info_t *commit_info = NULL;
    	svn_client_ctx_t *ctx = getContext(message);
@@ -602,7 +603,7 @@ void SVNClient::move(const char *srcPath, const char *destPath, const char *mess
     apr_pool_t * apr_pool = subPool.pool ();
     svn_client_commit_info_t *commit_info = NULL;
     Path sourcePath = srcPath;
-    m_lastPath = destPath;
+    m_lastPath = svn_path_internal_style (destPath, apr_pool);
    	svn_client_ctx_t *ctx = getContext(message);
 	if(ctx == NULL)
 	{
@@ -626,7 +627,6 @@ void SVNClient::mkdir(Targets &targets, const char *message)
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
     svn_client_commit_info_t *commit_info = NULL;
-//    m_lastPath = path;
    	svn_client_ctx_t *ctx = getContext(message);
 	if(ctx == NULL)
 	{
@@ -647,7 +647,7 @@ void SVNClient::cleanup(const char *path)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = path;
+    m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -664,7 +664,7 @@ void SVNClient::resolved(const char *path, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = path;
+    m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
 	{
@@ -685,7 +685,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath, Revision &r
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
     Path sourcePath = srcPath;
-    m_lastPath = destPath;
+    m_lastPath = svn_path_internal_style (destPath, apr_pool);
     svn_revnum_t retval;
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
@@ -714,7 +714,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url, Revision &revision,
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = path;
+    m_lastPath = svn_path_internal_style (path, apr_pool);
     svn_revnum_t retval;
    	svn_client_ctx_t *ctx = getContext(NULL);
 	if(ctx == NULL)
@@ -740,7 +740,7 @@ void SVNClient::doImport(const char *path, const char *url, const char *message,
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = path;
+    m_lastPath = svn_path_internal_style (path, apr_pool);
     svn_client_commit_info_t *commit_info = NULL;
    	svn_client_ctx_t *ctx = getContext(message);
 	if(ctx == NULL)
@@ -764,7 +764,7 @@ void SVNClient::merge(const char *path1, Revision &revision1, const char *path2,
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
-    m_lastPath = localPath;
+    m_lastPath = svn_path_internal_style (localPath, apr_pool);
     Path srcPath1 = path1;
     Path srcPath2 = path2;
    	svn_client_ctx_t *ctx = getContext(NULL);
@@ -797,7 +797,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path, const char *name
 {
   Pool subPool;
   apr_pool_t * apr_pool = subPool.pool ();
-  m_lastPath = path;
+  m_lastPath = svn_path_internal_style (path, apr_pool);
 	
   Revision rev(Revision::START);
   svn_client_ctx_t *ctx = getContext(NULL);
@@ -838,7 +838,7 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path)
   apr_array_header_t * props;
   Pool subPool;
   apr_pool_t * apr_pool = subPool.pool ();
-  m_lastPath = path;
+  m_lastPath = svn_path_internal_style (path, apr_pool);
 	
   Revision rev(Revision::START);
   svn_client_ctx_t *ctx = getContext(NULL);
@@ -962,7 +962,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
 	apr_file_t *outfile = NULL;
 	apr_status_t rv;
-	rv = apr_file_open(&outfile, outfileName,
+	rv = apr_file_open(&outfile, svn_path_internal_style (outfileName, pool.pool()),
                        APR_CREATE|APR_WRITE|APR_TRUNCATE , APR_OS_DEFAULT,
                        pool.pool());
 	if (rv != APR_SUCCESS) 
@@ -977,9 +977,9 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
     svn_error_t *Err = svn_client_diff (
 							options,    // options
-							target1,
+							svn_path_internal_style (target1, pool.pool()),
 							revision1.revision(),
-							target2,
+							svn_path_internal_style (target2, pool.pool()) ,
 							revision2.revision(),
 							recurse ? TRUE : FALSE,
                             TRUE,  // ignore_ancestry
@@ -1459,7 +1459,7 @@ jobject SVNClient::createJavaProperty(jobject jthis, const char *path, const cha
 
 void SVNClient::propertySet(const char *path, const char *name, svn_string_t *value, bool recurse)
 {
-  svn_error_t * error = svn_client_propset (name, value, path,
+	svn_error_t * error = svn_client_propset (name, value, svn_path_internal_style (path, JNIUtil::getRequestPool()->pool()),
 								recurse, JNIUtil::getRequestPool()->pool());
   if(error != NULL)
  		JNIUtil::handleSVNError(error);
@@ -1468,6 +1468,8 @@ void SVNClient::propertySet(const char *path, const char *name, svn_string_t *va
 jbyteArray SVNClient::fileContent(const char *path, Revision &revision)
 {
 	Pool pool;
+	path = svn_path_internal_style (path, pool.pool());
+
 	svn_stream_t *read_stream = NULL;
 	size_t size = 0;
 
@@ -1622,7 +1624,7 @@ jobject SVNClient::revProperty(jobject jthis, const char *path, const char *name
 {
   Pool subPool;
   apr_pool_t * apr_pool = subPool.pool ();
-  m_lastPath = path;
+  m_lastPath = svn_path_internal_style (path, apr_pool);
 	
   svn_client_ctx_t *ctx = getContext(NULL);
   if(ctx == NULL)
@@ -1662,7 +1664,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path, boo
 {
   Pool subPool;
   apr_pool_t * apr_pool = subPool.pool ();
-  m_lastPath = path;
+  m_lastPath = svn_path_internal_style (path, apr_pool);
 	
   svn_client_ctx_t *ctx = getContext(NULL);
   if(ctx == NULL)
@@ -1702,7 +1704,7 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision 
 {
   Pool subPool;
   apr_pool_t * apr_pool = subPool.pool ();
-  m_lastPath = path;
+  m_lastPath = svn_path_internal_style (path, apr_pool);
 	
   svn_client_ctx_t *ctx = getContext(NULL);
   if(ctx == NULL)
