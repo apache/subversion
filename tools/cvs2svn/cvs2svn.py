@@ -2184,6 +2184,16 @@ def main():
     sys.stderr.write("Error: cannot pass both '--create' and '--dump-only'.\n")
     sys.exit(1)
 
+  if ((string.find(ctx.trunk_base, '/') > -1)
+      or (string.find(ctx.tags_base, '/') > -1)
+      or (string.find(ctx.branches_base, '/') > -1)):
+    sys.stderr.write("Error: cannot pass multicomponent path to ")
+    sys.stderr.write("--trunk, --tags, or --branches yet.\n")
+    sys.stderr.write("  See http://subversion.tigris.org/issues/show_bug.cgi?")
+    sys.stderr.write("id=1409 ")
+    sys.stderr.write("for details.\n")
+    sys.exit(1)
+
   convert(ctx, start_pass=start_pass)
 
 
