@@ -127,10 +127,10 @@ when directory *entries* are considered entities.  I think so, but am
 not sure yet.
 
 [2] The working copy doesn't always want to compare against the pure
-latest version of everything -- it may be comparing against some other
-version, or perhaps even different versions for different parts?  In
-the worst case scenario, every entity in the working copy snapshot may
-have a different "latest" to compare against, in addition to the
-possiblity of a different base version.  I haven't thought about this
-carefully yet either, but see no reason the snapshots can't include
-this information.
+latest version in the repository -- it may be comparing against some
+other version, or perhaps even different versions for different parts.
+In fact, every entity in the working copy snapshot might have a
+different "latest" to compare against, in addition to the possiblity
+of a different base version.  I haven't thought about this carefully
+yet either, but see no reason the snapshots can't include both sides
+of the comparison for each entity.
