@@ -45,6 +45,17 @@ char **test_argv;
 
 
 /* ================================================================= */
+/* Quite a few tests use random numbers. */
+
+apr_uint32_t
+svn_test_rand (apr_uint32_t *seed)
+{
+  *seed = (*seed * 1103515245UL + 12345UL) & 0xffffffffUL;
+  return *seed;
+}
+
+
+/* ================================================================= */
 
 
 /* Determine the array size of test_funcs[], the inelegant way.  :)  */

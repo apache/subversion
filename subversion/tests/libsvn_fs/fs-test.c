@@ -29,6 +29,7 @@
 #include "svn_delta.h"
 #include "svn_test.h"
 
+#include "../svn_tests.h"
 #include "../fs-helpers.h"
 
 #include "../../libsvn_fs/fs.h"
@@ -4320,10 +4321,13 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
 
 /* Return a pseudo-random number in the range [0,SCALAR) i.e. return
    a number N such that 0 <= N < SCALAR */
-static int my_rand (int scalar)
+static int my_rand (int scalar, apr_uint32_t *seed)
 {
-  /* Assumes RAND_MAX+1 can be exactly represented in a double */
-  return (int)(((double)rand() / ((double)RAND_MAX+1.0)) * (double)scalar);
+  static const apr_uint32_t TEST_RAND_MAX = 0xffffffffUL;
+  /* Assumes TEST_RAND_MAX+1 can be exactly represented in a double */
+  return (int)(((double)svn_test_rand(seed)
+                / ((double)TEST_RAND_MAX+1.0))
+               * (double)scalar);
 }
 
 
@@ -4334,7 +4338,8 @@ static int my_rand (int scalar)
 static void
 random_data_to_buffer (char *buf, 
                        apr_size_t buf_len, 
-                       svn_boolean_t full)
+                       svn_boolean_t full,
+                       apr_uint32_t *seed)
 {
   apr_size_t i;
   apr_size_t num_bytes;
@@ -4348,18 +4353,18 @@ random_data_to_buffer (char *buf,
     {
       for (i = 0; i < buf_len; i++)
         {
-          ds_off = my_rand (dataset_size);
+          ds_off = my_rand (dataset_size, seed);
           buf[i] = dataset[ds_off];
         }
 
       return;
     }
 
-  num_bytes = my_rand (buf_len / 100) + 1;
+  num_bytes = my_rand (buf_len / 100, seed) + 1;
   for (i = 0; i < num_bytes; i++)
     {
-      offset = my_rand (buf_len - 1);
-      ds_off = my_rand (dataset_size);
+      offset = my_rand (buf_len - 1, seed);
+      ds_off = my_rand (dataset_size, seed);
       buf[offset] = dataset[ds_off];
     }
 
@@ -4368,7 +4373,8 @@ random_data_to_buffer (char *buf,
 
 
 static svn_error_t *
-file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
+file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
+                       apr_pool_t *pool)
 { 
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -4410,7 +4416,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_fs_make_file (txn_root, "bigfile", subpool));
-  random_data_to_buffer (content_buffer, filesize, TRUE);
+  random_data_to_buffer (content_buffer, filesize, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4424,7 +4430,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  random_data_to_buffer (content_buffer, 20, TRUE);
+  random_data_to_buffer (content_buffer, 20, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4437,7 +4443,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE);
+  random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4451,8 +4457,8 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  random_data_to_buffer (content_buffer, 20, TRUE);
-  random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE);
+  random_data_to_buffer (content_buffer, 20, TRUE, seed);
+  random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4469,7 +4475,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
       svn_pool_clear (subpool);
       SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-      random_data_to_buffer (content_buffer, filesize, FALSE);
+      random_data_to_buffer (content_buffer, filesize, FALSE, seed);
       apr_md5 (digest, contents.data, contents.len);
       SVN_ERR (svn_fs_apply_textdelta 
                (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4504,15 +4510,22 @@ static svn_error_t *
 medium_file_integrity (const char **msg,
                        svn_boolean_t msg_only,
                        apr_pool_t *pool)
-{ 
-  *msg = "create and modify a medium file, verifying its integrity";
+{
+  char msg_buf[256];
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+  sprintf (msg_buf,
+           "create and modify a medium file,"
+           " verifying its integrity, seed = %lu", (unsigned long) seed);
+  *msg = msg_buf;
 
   if (msg_only)
     return SVN_NO_ERROR;
+  else
+    printf ("SEED: %s\n", msg_buf);
 
   /* Being no larger than the standard delta window size affects
      deltification internally, so test that. */
-  return file_integrity_helper (SVN_STREAM_CHUNK_SIZE, pool);
+  return file_integrity_helper (SVN_STREAM_CHUNK_SIZE, &seed, pool);
 }
 
 
@@ -4520,15 +4533,22 @@ static svn_error_t *
 large_file_integrity (const char **msg,
                        svn_boolean_t msg_only,
                        apr_pool_t *pool)
-{ 
-  *msg = "create and modify a large file, verifying its integrity";
+{
+  char msg_buf[256];
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+  sprintf (msg_buf,
+           "create and modify a large file,"
+           " verifying its integrity, seed = %lu", (unsigned long) seed);
+  *msg = msg_buf;
 
   if (msg_only)
     return SVN_NO_ERROR;
+  else
+    printf ("SEED: %s\n", msg_buf);
 
   /* Being larger than the standard delta window size affects
      deltification internally, so test that. */
-  return file_integrity_helper (SVN_STREAM_CHUNK_SIZE + 1, pool);
+  return file_integrity_helper (SVN_STREAM_CHUNK_SIZE + 1, &seed, pool);
 }
 
 
@@ -4621,10 +4641,17 @@ undeltify_deltify (const char **msg,
     { "A/D/H/omega", 0 }
   };
   
-  *msg = "pound on the filesystem's explicit (un-)deltification code";
+  char msg_buf[256];
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+  sprintf (msg_buf,
+           "pound on the filesystem's explicit"
+           " (un-)deltification codem seed = %lu", (unsigned long) seed);
+  *msg = msg_buf;
 
   if (msg_only)
     return SVN_NO_ERROR;
+  else
+    printf ("SEED: %s\n", msg_buf);
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-undeltify-deltify", pool));
@@ -4647,7 +4674,8 @@ undeltify_deltify (const char **msg,
           const char *path = greek_files[i][0];
           char buf[1025];
 
-          random_data_to_buffer (buf, 1024, youngest_rev ? FALSE : TRUE);
+          random_data_to_buffer (buf, 1024, youngest_rev ? FALSE : TRUE,
+                                 &seed);
           buf[1024] = 0;
           greek_files[i][youngest_rev + 1] = apr_pstrdup (pool, buf);
           SVN_ERR (svn_test__set_file_contents 
