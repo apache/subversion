@@ -1901,7 +1901,7 @@ txn_body_copy (void *baton,
          entry of this name, we'll just create one. */
       SVN_ERR (svn_fs__dag_set_entry 
                (to_parent_path->parent->node,
-                from_parent_path->entry,
+                to_parent_path->entry,
                 (svn_fs_id_t *)svn_fs__dag_get_id (from_parent_path->node),
                 trail));
     }
