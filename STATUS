@@ -13,8 +13,7 @@ Candidate changes:
     When configured without Berkeley DB, make libsvn_fs default to
     the fsfs back-end.
     Votes:
-      +1 (r10299 only): rooneg
-      +1: ghudson, epg
+      +1: ghudson, epg, rooneg
 
   * r10313:
     Shouldn't tell people that --without-berkeley-db will keep us
