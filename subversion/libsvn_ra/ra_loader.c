@@ -229,7 +229,7 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
   apr_hash_t *hash = ra_baton;
   int count = apr_hash_count (hash);
   ra_lib_list_t *list = apr_pcalloc (pool, count * sizeof (*list));
-  int index = 0;
+  int idx = 0;
 
   /* Copy the RA library list into an array. */
   for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
@@ -240,31 +240,31 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 
       /* Get key and val. */
       apr_hash_this (this, &key, &keylen, &val);
-      list[index].ra_lib = val;
-      list[index].schema = key;
-      ++index;
+      list[idx].ra_lib = val;
+      list[idx].schema = key;
+      ++idx;
     }      
 
   /* Sort the RA libs by name to print each name and description only once. */
-  qsort (list, index, sizeof (*list), compare_ra_lib_lists);
+  qsort (list, idx, sizeof (*list), compare_ra_lib_lists);
   *descriptions = svn_stringbuf_create ("", pool);
   prev_ra_lib = NULL;
-  for (index = 0; index < count; ++index)
+  for (idx = 0; idx < count; ++idx)
     {
       char *line;
 
-      if (list[index].ra_lib != prev_ra_lib)
+      if (list[idx].ra_lib != prev_ra_lib)
         {
           line = apr_psprintf (pool, "* %s : %s\n",
-                               list[index].ra_lib->name,
-                               list[index].ra_lib->description);
+                               list[idx].ra_lib->name,
+                               list[idx].ra_lib->description);
           svn_stringbuf_appendcstr (*descriptions, line);
         }
 
       line = apr_psprintf (pool, "  - handles '%s' schema\n",
-                           list[index].schema);
+                           list[idx].schema);
       svn_stringbuf_appendcstr (*descriptions, line);
-      prev_ra_lib = list[index].ra_lib;
+      prev_ra_lib = list[idx].ra_lib;
     }
 
   return SVN_NO_ERROR;
