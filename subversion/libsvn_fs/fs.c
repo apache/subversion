@@ -27,6 +27,7 @@
 #include "err.h"
 #include "nodes-table.h"
 #include "clones-table.h"
+#include "rev-table.h"
 #include "txn-table.h"
 #include "dag.h"
 
@@ -92,6 +93,7 @@ cleanup_fs (svn_fs_t *fs)
   /* Close the databases.  */
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->clones, "clones"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
 
   /* Checkpoint any changes.  */
@@ -272,6 +274,10 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   svn_err = DB_WRAP (fs, "creating `clones' table",
 		     svn_fs__open_clones_table (&fs->clones, fs->env, 1));
   if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "creating `revisions' table",
+		     svn_fs__open_revisions_table (&fs->revisions,
+                                                   fs->env, 1));
+  if (svn_err) goto error;
   svn_err = DB_WRAP (fs, "creating `transactions' table",
 		     svn_fs__open_transactions_table (&fs->transactions,
 						      fs->env, 1));
@@ -316,6 +322,10 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
   svn_err = DB_WRAP (fs, "opening `clones' table",
 		     svn_fs__open_clones_table (&fs->clones, fs->env, 0));
+  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "opening `revisions' table",
+		     svn_fs__open_revisions_table (&fs->revisions,
+                                                   fs->env, 0));
   if (svn_err) goto error;
   svn_err = DB_WRAP (fs, "opening `transactions' table",
 		     svn_fs__open_transactions_table (&fs->transactions,
