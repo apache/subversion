@@ -338,7 +338,13 @@ svn_boolean_t svn_path_is_single_path_component (const char *name);
  * (The remainder is the component which, added to @a path1, yields
  * @a path2.  The remainder does not begin with a dir separator.)  
  *
- * Both paths must be in canonical form.
+ * Both paths must be in canonical form, and must either be absolute,
+ * or contain no ".." components.
+ *
+ * ### todo: the ".." restriction is unfortunate, and would ideally
+ * be lifted by making the implementation smarter.  But this is not
+ * trivial: if the path is "../foo", how do you know whether or not
+ * the current directory is named "foo" in its parent?
  */
 const char *svn_path_is_child (const char *path1,
                                const char *path2,
