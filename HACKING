@@ -607,8 +607,11 @@ more crucial, so let's all get in the habit of using it early.
 
 
 
+Debugging the server
+====================
+
 Debugging the ra_dav server
-===========================
+---------------------------
 
 'mod_dav_svn.so' contains the main Subversion server logic; it runs as
 a module within mod_dav, which runs as a module within httpd.  Since
@@ -637,9 +640,8 @@ to help determine what might be going wrong and where to set
 breakpoints.
 
 
-
 Debugging the ra_svn client and server, on Unix
-===============================================
+-----------------------------------------------
 
 Bugs in ra_svn usually manifest themselves with one of the following
 cryptic error messages:
