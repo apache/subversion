@@ -366,14 +366,36 @@ svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
 }
 
 
-
-svn_error_t *svn_fs__dag_dir_entries (skel_t **entries_p,
-                                      dag_node_t *node,
-                                      trail_t *trail)
+svn_error_t *
+svn_fs__dag_dir_entries (skel_t **entries_p,
+                         dag_node_t *node,
+                         trail_t *trail)
 {
-  abort();
-  /* NOTREACHED */
-  return NULL;
+  skel_t *node_rev, *entries, *entry;
+  
+  if (! svn_fs__dag_is_directory (node))
+    return svn_error_create
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+       "Attempted to get entry from non-directory node.");
+  
+  /* Get the NODE-REVISION for this node. */
+  SVN_ERR (get_node_revision (&node_rev, node, trail));
+  
+  /* Directory entries start at the second element of a node-revision
+     skel, itself a list. */
+  entries = node_rev->children->next;
+  
+  /* Check entries are well-formed. */
+  for (entry = entries->children; entry; entry = entry->next)
+    {
+      /* ENTRY must be a list of two elements. */
+      if (svn_fs__list_length (entry) != 2)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+                                 "Malformed directory entry.");
+    }
+  
+  *entries_p = entries;
+  return SVN_NO_ERROR;
 }
 
 

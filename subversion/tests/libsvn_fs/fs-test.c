@@ -452,6 +452,103 @@ create_greek_tree_transaction (const char **msg)
 }
 
 
+/* Helper for list_directory. */
+static svn_error_t *
+verify_entry (apr_hash_t *entries, const char *key)
+{
+  svn_fs_dirent_t *ent = apr_hash_get (entries, key, strlen (key));
+
+  if (ent == NULL)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "didn't find dir entry for \"%s\"", key);
+
+  if ((ent->name == NULL) && (ent->id == NULL))
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "dir entry for \"%s\" has null name and null id", key);
+  
+  if (ent->name == NULL)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "dir entry for \"%s\" has null name", key);
+  
+  if (ent->id == NULL)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "dir entry for \"%s\" has null id", key);
+  
+  if (strcmp (ent->name, key) != 0)
+     return svn_error_createf
+     (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      "dir entry for \"%s\" contains wrong name (\"%s\")", key, ent->name);
+        
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+list_directory (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_hash_t *entries;
+
+  *msg = "fill a directory, then list it";
+
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-list-dir"));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  
+  /* We create this tree
+   *
+   *         /q
+   *         /A/x
+   *         /A/y
+   *         /A/z
+   *         /B/m
+   *         /B/n
+   *         /B/o
+   *
+   * then list dir A.  It should have 3 files: "x", "y", and "z", no
+   * more, no less.
+   */
+
+  /* Create the tree. */
+  SVN_ERR (svn_fs_make_file (txn_root, "q", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/x", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/y", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/z", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "B", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "B/m", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "B/n", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "B/o", pool));
+
+  /* Get A's entries. */
+  SVN_ERR (svn_fs_dir_entries (&entries, txn_root, "A", pool));
+
+  /* Make sure exactly the right set of entries is present. */
+  if (apr_hash_count (entries) != 3)
+    {
+      return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                               "unexpected number of entries in dir");
+    }
+  else
+    {
+      SVN_ERR (verify_entry (entries, "x"));
+      SVN_ERR (verify_entry (entries, "y"));
+      SVN_ERR (verify_entry (entries, "z"));
+    }
+
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -468,6 +565,8 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   write_and_read_file,
   create_mini_tree_transaction,
   create_greek_tree_transaction,
+  list_directory,
+  verify_txn_list,
   0
 };
 
