@@ -255,16 +255,6 @@ delete_strings (apr_array_header_t *keys,
  */
 
 
-/* kff todo: this is an experiment -- we're going to trade space for
-   time, in a tuneable way.  */
-
-struct reconstructed_data_cache_t
-{
-  /* fooo */
-};
-   
-
-
 /* Baton for window_handler() below.  Note that this baton can live
    across multiple calls to window_handler(). */
 struct window_handler_baton_t
