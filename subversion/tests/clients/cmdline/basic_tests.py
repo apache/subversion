@@ -1479,9 +1479,7 @@ def basic_add_ignores(sbox):
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
-  (output, errput) = svntest.main.run_svn (None, 'add',
-                                           '--config-dir', 'config',
-                                           dir_path)
+  (output, errput) = svntest.main.run_svn (None, 'add', dir_path)
 
   if not output:
     raise svntest.actions.SVNUnexpectedOutput
@@ -1529,7 +1527,6 @@ def basic_import_ignores(sbox):
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import',
-    '--config-dir', 'config',
     dir_path, url)
 
   lastline = string.strip(output.pop())

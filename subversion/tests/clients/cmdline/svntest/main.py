@@ -149,6 +149,7 @@ temp_dir = 'local_tmp'
 # (derivatives of the tmp dir.)
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
+config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
 
 #
@@ -255,7 +256,9 @@ def run_svn(error_expected, *varargs):
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn() or
   actions.run_and_verify_svn_error()."""
-  return run_command(svn_binary, error_expected, 0, *varargs)
+  global config_dir
+  return run_command(svn_binary, error_expected, 0,
+                     *varargs + ('--config-dir', config_dir))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
