@@ -1,7 +1,6 @@
 Este documento contiene las siguientes secciones:
 
   Pasos para poder compilar el libro
-  Metodología usada para realizar la traducción
   Cómo colaborar con la traducción
   Cambios futuros que se realizarán en el libro
   Herramientas para ayudar en la traducción
@@ -12,61 +11,74 @@ Este documento contiene las siguientes secciones:
 Pasos para poder compilar el libro:
 ===================================
 
-1. Conseguir compilar el libro original en HTML. Esto significa:
+1. Obtener una copia fresca del libro en español. El libro está
+   alojado en el repositorio principal de desarrollo de Subversion,
+   pero no hace falta descargar todo el árbol completo, únicamente
+   el subdirectorio con la traducción, tal y como muestra el
+   siguiente comando:
 
- 1a) Descargar el código fuente original:
+      svn co http://svn.collab.net/repos/svn/trunk/doc/translations/spanish svnbook-es
 
-        svn co http://svn.collab.net/repos/svn/trunk
+2. Obtener las hojas de estilo XSL para Docbook y ponerlas en
+   tools/xsl
 
-     En realidad sólo nos interesa el subdirectorio "doc", pero
-     es útil tener el resto también, por si hay algún que otro
-     documento de lectura recomendada.
+   El "Docbook Open Repository" en Sourceforge tiene una
+   larga colección de hojas de estilo XSL que funcionan con
+   Docbook. Descarge e instale el último paquete 'docbook-xsl'
+   de la siguiente página:
+  
+      http://sourceforge.net/project/showfiles.php?group_id=21935
 
- 1b) Leer y seguir las instrucciones de doc/book/README sobre cómo
-     compilar el libro. Básicamente consiste en obtener la última
-     versión de las hojas de estilo XSL, tener libxslt instalada
-     (que depende de libxml2). En Debian existe el paquete libxslt.
+   Tras descargar la última versión de docbook-xsl, descomprima el
+   fichero, y renombre/mueva el directorio descomprimido a tools/xsl,
+   algo como esto:
 
- 1c) Ejecutar "make all-html". Obviamente necesitaremos GNU make. Si
-     todo el software necesario está instalado, acabaremos con un
-     libro en un sólo html en el subdirectorio book, y otro dividido
-     en trozos en book/html-chunk.
+      $ cd svnbook-es/tools
+      $ tar zxvf docbook-xsl-X.YY.Z.tar.gz
+      $ mv docbook-xsl-X.YY.Z xsl
 
-2. Obtener una copia fresca del libro en español:
+   Este proceso es importante porque el proceso de compilación del
+   libro espera que las hojas de estilo estén alojadas en tools/xsl/.
 
-        svn co svn://gradha.no-ip.org:3603/ svnbook-es
+3. Usar XSLT para transformar el libro
 
-3. Dentro de svnbook-es, hacer un enlace simbólico al directorio
-   doc/book/tools del árbol subversion original. Esto nos permite
-   rehusar las hojas de estilo XSL instaladas previamente ahí para
-   compilar el libro en inglés.
+   XSLT aplica una hoja de estilo .xsl sobre un fichero .xml,
+   y produce un nuevo documento.
 
-4. Ejecutar "make". Si todo va bien, acabaremos con otra
-   versión del libro... ¡en inglés!
+   * Obtenga libxslt, una librería en C para XSLT, desde
+     http://xmlsoft.org/XSLT/.  (Si se encuentra con problemas para
+     encontrar un paquete de código fuente compilable, pruebe en
+     ftp://archive.progeny.com/GNOME/sources/libxslt/1.0/.)
+     Instalación:
 
-5. Vale, nos ponemos a trabajar y traducimos los ficheros xml del
-   subdirectorio book.
+        $ tar zxvf libxslt-1.0.22.tar.gz
+        $ cd libxslt-1.0.22
+        $ ./configure
+        $ ./make
+        # make install
+
+     (Nota: quizás descubra que necesita
+     instalar antes libxml2. Puede encontrarlo en
+     ftp://archive.progeny.com/GNOME/sources/libxml2/)
+
+     Si no desea compilar libxslt a mano, puede optar por descargar el
+     paquete binario apropiado para su SO. Por ejemplo, en Debian puede
+     instalar el paquete libxslt directamente y ahorrarse este paso.
+
+4. Ejecutar "make" desde el directorio svnbook-es. Obviamente
+   necesitaremos tener GNU make instalado. Si todo el software
+   necesario está instalado, acabaremos con un libro en un sólo
+   html en book/svn-book.html, y otro dividido en trozos en
+   book/html-chunk/index.html.
+
+5. Opcionalmente, colaborar con el proyecto traduciendo ficheros
+   .xml o revisando el libro generado y enviando cualquier comentario
+   a la lista de correo de traducción de Subversion (información
+   sobre esto al final de este documento).
 
 Para cualquier duda, contactar con Grzegorz Adam Hankiewicz en
-gradha@titanium.sabren.com.
-
-
-Metodología usada para realizar la traducción
-=============================================
-
-La metodología de los autores del libro para contribuir parches es la
-misma que la de los desarrolladores de Subversion, y en mi opinión
-demasiado rígida. Por esta razón está habilitado un servidor SVN
-con la traducción del libro en el que se realizarán los cambios a
-diario sin apenas restricciones.
-
-Periódicamente (cada una o dos semanas) el coordinador recogerá el
-trabajo realizado y realizará una petición formal en la lista de
-correo de los desarrolladores de subversion para que los cambios
-sean incluídos en el repositorio principal.
-
-Esto básicamente significa que el coordinador hace de intermediario
-entre el grupo de Subversion y los traductores (usted).
+gradha@titanium.sabren.com si no le resulta posible usar la lista
+de correo, que es el método de comunicación preferido.
 
 
 Cómo colaborar con la traducción
