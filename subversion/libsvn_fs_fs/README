@@ -1,0 +1,118 @@
+This directory contains work-in-progress materials for a new FS back
+end to be implemented on top of a native filesystem.
+
+At the time of this writing, nothing in this directory hooks into the
+build system; not only is there no working code yet, but there isn't
+support in Subversion for pluggable FS back ends yet.  (That work will
+occur on a branch; after it is complete and merged into the trunk,
+there will be something for code in this directory to plug into.)
+
+Goals
+-----
+
+This project aims to generate a back end which has:
+
+  * Low space overhead
+  * Low administration requirements
+  * Scalability to high read throughput and moderate write throughput
+  * Flexibility of underlying file store; specifically:
+    - Works on remote filesystems
+    - Does not require write access for read-only operations
+    - Committing does not require write access to existing revs
+  * Simplicity
+  * Robustness
+
+To achieve these goals, the project may sacrifice:
+
+  * Speed
+  * Scalability to high write throughput
+
+Design
+------
+
+This is a high-level design.  The details of the file formats and
+layouts will be recorded in the file "structure".
+
+Committed revisions are represented as a single file which never
+changes.
+
+Node-revisions are located by a revision number and an offset within
+the revision file.
+
+In contrast to the existing BDB back end, the contents of recent
+revision of nodes will be stored as deltas against earlier revisions.
+This is less efficient for common-case checkouts, but gives us greater
+simplicity and robustness, as well as the flexibility to make commits
+work without write access to existing revisions.  Skip deltas and
+delta combination will mitigate the checkout cost.
+
+In-progress transactions will be represented with a file for the
+changed-file data (appended to as changed files come in) and a
+directory tree mirroring the changed part of the transaction.
+
+To commit a transaction, the FS code must:
+
+  * Perform an auto-merge against any new revs.
+  * Grab a write lock on the repository.
+  * Marshal the changed-directory data onto the changed-file data.
+  * Move the new file into place.
+  * Release the write lock.
+
+(As a possible variation, we could grab the write lock one step later;
+if a rev is committed between the auto-merge and the write lock, we
+truncate the rev file back to the end of the changed-file data and go
+back to the beginning.  This would prevent large commits from blocking
+small ones, but would also mean large commits could take a long time
+to finalize.)
+
+Workplan
+--------
+
+  1. Develop a straw-man revision file format.  It's not critically
+     important to get it right on the first try, but it should be
+     something that we think can efficiently support the libsvn_fs
+     read APIs, including the ones related to node history.
+
+  2. Write code to turn a (standard, not diffy) svn dump into the
+     proposed file format.  This code will not survive the project,
+     but will allow rapid generation of test cases.  At this point,
+     the code should store everything node-rev contents as plain text,
+     and it can do stupid things like hold the entire directory
+     structure of the head revision in memory.  It doesn't need to
+     work incrementally.
+
+  3. Write FS code to read, but not write, the file format, under the
+     assumption that node-revs contain only plain text.  Use the tool
+     from (2) to generate test cases to ensure that the code works.
+
+  4. Develop a format for the directory part of mutable transactions.
+
+  5. Produce some test case transactions, either using an extension of
+     the tool from (2) or by hand.
+
+  6. Extend the read code from (3) to be able to read from unfinished
+     transactions as well as from revision files.
+
+  7. Write FS code to create and modify unfinished transactions.
+     It can store node-rev contents in plain text.
+
+  8. Write FS code to perform the auto-merge of an unfinished
+     transaction and any revisions which have occurred since the
+     transaction was created.
+
+  9. Write FS code to commit an unfinished transaction by marshalling
+     its changed-directory data onto the end of the changed-file data
+     and moving the resulting file into place.
+
+  10. Extend the tool from (2) to write out node-rev contents in delta
+      form, possibly using the code from (3) to determine the base
+      contents to diff against.
+
+  11. Extend the read code from (3) to handle deltas.
+
+  12. Extend the write code from (7) and (9) to generate deltas
+      instead of plain text.  (Or do we use deltas for directories in
+      the current code?  I forget.  It may be desirable not to.)
+
+Not every step depends on the previous step, so not everything has to
+proceed in order.

@@ -1,0 +1,72 @@
+This is a placeholder for a file describing file formats and layouts.
+For the moment, it just describes in general terms the decisions we
+have to make.
+
+See the "Design" section of the README file for a design overview.
+
+Layout of the FS directory
+--------------------------
+
+We will need:
+
+  * A naming scheme for revision files (probably the obvious one)
+  * A naming scheme for rev-prop files
+  * A way of quickly determining the most recent revision
+  * A lockfile to grab during the final part of a commit
+  * A way of naming transaction directories
+
+(Rev-props must live in a separate file from the immutable part of
+revisions so that they can be atomically replaced without rewriting
+the entire rev file.)
+
+Revision file format
+--------------------
+
+A revision file contains:
+
+  * One or more node-revisions
+  * The changed-path data
+
+We'll need a quick way to find the offset of the changed-path data and
+the offset of the root directory's node rev.  There are a bunch of
+workable (if not terribly elegant) options for storing these offsets:
+lump them in with the rev-prop file; store them in a separate file;
+store them at the beginning (in a binary field or with padding to
+accomodate an arbitrary decimal number up to the maximum offset);
+store them at the end (either with padding or not).
+
+We will need to pick a marshalling syntax (XML, skels, ra_svn-style
+marshalling, RFC822ish, fixed binary fields a la xdr, whatever).
+
+Meta-data fields we will need:
+
+  * The ID of the node-rev
+  * The type of node (file or dir)
+  * A pointer to the predecessor node-rev
+  * A count of the node-revs since the base of this node
+  (The previous two fields allow finding the appropriate base for a
+  skip-delta for a future node.)
+  * A pointer to the node-rev which acts as a base for the delta
+  * The copy ancestry of the node-rev, if any
+
+We may also need extra fields to support svn_fs_node_created_path and
+svn_fs_node_history.
+
+Directory format
+----------------
+
+The text contents of a directory node-rev are structured data
+containing a map of filenames to directory entries, which must each
+contain an id, kind, and node-rev pointer.
+
+Transaction layout
+------------------
+
+The transaction layout needs to have easily mutable directories, but
+also quickly transformable into a rev file.  So we store changed-file
+data into a prototype rev file, and changed-directory data in a
+directory tree which mirrors the changed part of the transaction.
+Each changed directory will contain a special file for directory
+property changes, a file for each changed file underneath it
+(containing the offset and ID of the file's new node-rev) and a
+subdirectory for each changed directory underneath it.
