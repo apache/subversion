@@ -74,8 +74,6 @@ enum
     svnadmin__version = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__incremental,
     svnadmin__follow_copies,
-    svnadmin__on_disk_template,
-    svnadmin__in_repos_template,
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
     svnadmin__parent_dir,
@@ -110,12 +108,6 @@ static const apr_getopt_option_t options_table[] =
     {"copies",   svnadmin__follow_copies, 0,
      "follow copy history"},
 
-    {"on-disk-template", svnadmin__on_disk_template, 1,
-     "specify template for the on disk structure"},
-
-    {"in-repos-template", svnadmin__in_repos_template, 1,
-     "specify template for the repository structure"},
-
     {"quiet",           'q', 0,
      "no progress (only errors) to stderr"},
 
@@ -146,8 +138,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
-     {svnadmin__on_disk_template, svnadmin__in_repos_template,
-      svnadmin__bdb_txn_nosync, svnadmin__config_dir} },
+     {svnadmin__bdb_txn_nosync, svnadmin__config_dir} },
     
     {"createtxn", subcommand_createtxn, {0},
      "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
@@ -247,8 +238,6 @@ struct svnadmin_opt_state
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
-  const char *on_disk;
-  const char *in_repos;
   const char *parent_dir;
 
   const char *config_dir;    /* Overriding Configuration Directory */
@@ -273,7 +262,7 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR (svn_config_get_config (&config, opt_state->config_dir, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
-                             opt_state->on_disk, opt_state->in_repos, 
+                             NULL, NULL, 
                              config, fs_config, pool));
 
   return SVN_NO_ERROR;
@@ -686,7 +675,7 @@ main (int argc, const char * const *argv)
   apr_allocator_max_free_set (allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
 
   pool = svn_pool_create_ex (NULL, allocator);
-  apr_allocator_set_owner (allocator, pool);
+  apr_allocator_owner_set (allocator, pool);
 
   if (argc <= 1)
     {
@@ -773,29 +762,6 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__follow_copies:
         opt_state.follow_copies = TRUE;
-        break;
-      case svnadmin__on_disk_template:
-        err = svn_utf_cstring_to_utf8 (&opt_state.on_disk, opt_arg,
-                                       NULL, pool);
-        if (err)
-          {
-            svn_handle_error (err, stderr, FALSE);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
-        opt_state.on_disk = svn_path_internal_style (opt_state.on_disk, pool);
-        break;
-      case svnadmin__in_repos_template:
-        err = svn_utf_cstring_to_utf8 (&opt_state.in_repos, opt_arg,
-                                       NULL, pool);
-        if (err)
-          {
-            svn_handle_error (err, stderr, FALSE);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
-        opt_state.in_repos = svn_path_internal_style (opt_state.in_repos,
-                                                      pool);
         break;
       case svnadmin__ignore_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_ignore;

@@ -33,9 +33,6 @@
 #define SVN_FS_WANT_DB_PATCH	14
 
 
-/* Location of the on-disk and in-repos templates. */
-#define SVN_TEMPLATE_ROOT_DIR "C:\\SVN\\templates"
-
 /* Path separator for local filesystem */
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
 
