@@ -310,10 +310,6 @@ static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct window_handler_baton *whb = baton;
-  
-  if (window != NULL)
-    whb->node->text_mod = TRUE;
-
   return SVN_NO_ERROR;
 }
 
@@ -328,6 +324,7 @@ apply_textdelta (void *file_baton,
   struct window_handler_baton *whb = apr_palloc (eb->pool, sizeof (*whb));
 
   whb->node = fb->node;
+  whb->node->text_mod = TRUE;
   *handler = window_handler;
   *handler_baton = whb;
 
