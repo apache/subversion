@@ -23,10 +23,12 @@
 #include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_md5.h"
 
 #include "apr_uuid.h"
 #include "apr_file_io.h"
 #include "apr_file_info.h"
+#include "apr_md5.h"
 
 #include "lock.h"
 #include "tree.h"
@@ -69,14 +71,47 @@ merge_paths (char **result,
 }
 
 static svn_error_t *
+abs_path_to_lock_digest_file (char **abs_path,
+                              svn_fs_t *fs,
+                              const char *digest,
+                              apr_pool_t *pool)
+{
+  SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
+  SVN_ERR (merge_paths (abs_path, *abs_path, LOCK_LOCK_DIR, pool));
+  /* ###TODO create a 1 or 2 char subdir to spread the love across
+     many directories */
+  SVN_ERR (merge_paths (abs_path, *abs_path, digest, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
+static const char *
+make_digest (const char *str,
+             apr_pool_t *pool)
+{
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+
+  apr_md5 (digest, str, strlen(str));
+  return svn_md5_digest_to_cstring (digest, pool);
+}
+
+static svn_error_t *
 abs_path_to_lock_file (char **abs_path,
                        svn_fs_t *fs,
                        const char *rel_path,
                        apr_pool_t *pool)
 {
+  const char *digest_cstring;
+
   SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
   SVN_ERR (merge_paths (abs_path, *abs_path, LOCK_LOCK_DIR, pool));
-  SVN_ERR (merge_paths (abs_path, *abs_path, (char *)rel_path, pool));
+
+  digest_cstring = make_digest (rel_path, pool);
+
+  /* ###TODO create a 1 or 2 char subdir to spread the love across
+     many directories */
+  SVN_ERR (merge_paths (abs_path, *abs_path, digest_cstring, pool));
 
   return SVN_NO_ERROR;
 }
@@ -88,6 +123,8 @@ base_path_to_lock_file (char **base_path,
 {
   SVN_ERR (merge_paths (base_path, fs->path, LOCK_ROOT_DIR, pool));
   SVN_ERR (merge_paths (base_path, *base_path, LOCK_LOCK_DIR, pool));
+  /* ###TODO create a 1 or 2 char subdir to spread the love across
+     many directories (and take the hash as an optional arg. */
 
   return SVN_NO_ERROR;
 }
@@ -134,10 +171,177 @@ hash_fetch (apr_hash_t *hash,
   return NULL;
 }
 
+/* Write each hash in ENTRIES to path, one hash per line. */
+static svn_error_t *
+write_entries_file (apr_hash_t *entries,
+                    char *path, 
+                    apr_pool_t *pool)
+{
+  apr_file_t *fd;
+  apr_hash_index_t *hi;
+  char *digest, *content;
+  int status;
 
-/* Store the lock in the OS level filesystem in a tree under
-   repos/db/locks/locks that reflects the location of lock->path in
-   the repository. */
+  status = apr_file_open (&fd, path, APR_WRITE | APR_TRUNCATE,
+                          APR_OS_DEFAULT, pool);
+
+  if (status)
+    return svn_error_wrap_apr (status, 
+                               _("Can't open '%s' to write lock entries."),
+                               path);
+  
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi)) 
+    {
+      apr_hash_this(hi, (void *)&digest, NULL, NULL);
+      content = apr_pstrcat (pool, digest, "\n", NULL);
+      svn_io_file_write_full (fd, content, strlen(content), NULL, pool);
+    }
+  apr_file_close (fd);
+  return SVN_NO_ERROR;
+}
+
+/* Read lock entries file at PATH, adding each child hash as a key in
+   ENTRIES.  If FD is non-NULL, read entries from FD instead of
+   PATH.  FD will be closed before returning. */
+static svn_error_t *
+read_entries_file (apr_hash_t **entries,
+                   const char *path, 
+                   apr_file_t *fd,
+                   apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_size_t buf_len = (APR_MD5_DIGESTSIZE * 2) + 1; /* Add room for "\n". */
+
+  *entries = apr_hash_make (pool);
+
+  if (!fd) /* Only open PATH if fd is NULL. */
+    {
+    status = apr_file_open (&fd, path, APR_READ, APR_OS_DEFAULT, pool);
+    
+    /* This happens when attempting to open the entries for "/" and it's
+       been deleted. */
+    if (APR_STATUS_IS_ENOENT (status))
+      return SVN_NO_ERROR;
+    if (status)
+      return svn_error_wrap_apr (status, 
+                                 _("Can't open '%s' to read lock entries."),
+                                 path);
+    }
+
+  while (apr_file_eof (fd) != APR_EOF)
+    {
+      apr_size_t nbytes = buf_len;
+      char *buf = apr_palloc (pool, buf_len);
+      status = apr_file_read (fd, buf, &nbytes);
+
+      if (nbytes == 0)
+        continue;
+
+      if (status) 
+        {
+          apr_file_close(fd);
+          return svn_error_wrap_apr (status, 
+                                     _("Error reading lock entries file '%s.'"),
+                                     path);
+        }
+      if (buf_len != nbytes)
+        {
+          apr_file_close(fd);
+          return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                    _("Error reading lock entries file '%s'."),
+                                    path);
+        }
+
+      buf[buf_len - 1] = '\0'; /* Strip '\n' off the end. */
+      apr_hash_set (*entries, buf,
+                    APR_HASH_KEY_STRING, &(buf[0])); /* Grab a byte for val.*/
+
+      APR_DECLARE(apr_status_t) apr_file_read(apr_file_t *thefile, void *buf,
+                                              apr_size_t *nbytes);
+    }
+
+  apr_file_close(fd);
+  return SVN_NO_ERROR;
+}
+
+/* If PATH does not have a leading slash, prepend one and return the
+   new string.  Else, just return a copy of PATH. */ 
+static char * 
+repository_abs_path(const char *path,
+                    apr_pool_t *pool)
+{
+  char *new_path = apr_pstrdup (pool, path);
+  if (path[0] != '/')
+    new_path = apr_pstrcat (pool, "/", path, NULL);
+  return new_path;
+}
+
+
+
+/* If ABS_PATH exists, add DIGEST_STR to it iff it's not already in
+   it.  Else, create ABS_PATH with DIGEST_STR as its only member. */
+static svn_error_t *
+add_hash_to_entries_file (const char *abs_path,
+                          const char *digest_str,
+                          apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_finfo_t finfo;
+  char *content;
+
+  status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
+  content = apr_pstrcat (pool, digest_str, "\n", NULL);
+      
+  if (APR_STATUS_IS_ENOENT (status)) /* Entries file doesn't exist. */
+    {
+      apr_status_t status;
+      apr_file_t *fd;
+      
+      status = apr_file_open (&fd, abs_path, APR_WRITE | APR_CREATE,
+                              APR_OS_DEFAULT, pool);
+      
+      if (status)
+        return svn_error_wrap_apr (status, 
+                                   _("Can't create '%s' for lock entry."),
+                                   abs_path);
+      
+      SVN_ERR (svn_io_file_write_full (fd, content, strlen (content), 
+                                       NULL, pool));
+      apr_file_close(fd);
+    }      
+  else /* Entries file exists. */
+    {
+      apr_hash_t *entries;
+      
+      SVN_ERR (read_entries_file(&entries, abs_path, NULL, pool));
+      
+      /* - Append the MD5 hash of the next component to existing file. */
+      if (apr_hash_get (entries, digest_str, APR_HASH_KEY_STRING)
+          == NULL)
+        {
+          apr_status_t status;
+          apr_file_t *fd;
+          
+          status = apr_file_open (&fd, abs_path, APR_WRITE | APR_APPEND,
+                                  APR_OS_DEFAULT, pool);
+          
+          if (status)
+            return svn_error_wrap_apr (status, 
+                                       _("Can't append lock entry to '%s'"),
+                                       abs_path);
+          
+          SVN_ERR (svn_io_file_write_full (fd, content, strlen (content), 
+                                           NULL, pool));
+          apr_file_close(fd);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/* Store the lock in the OS level filesystem under
+   repos/db/locks/locks in a file named by composing the MD5 hash of
+   lock->path. */
 static svn_error_t *
 write_lock_to_file (svn_fs_t *fs,
                     svn_lock_t *lock,
@@ -146,21 +350,44 @@ write_lock_to_file (svn_fs_t *fs,
   apr_hash_t *hash;
   apr_file_t *fd;
   svn_stream_t *stream;
-  apr_status_t status = APR_SUCCESS;
-  char *abs_path;
+  apr_status_t status;
+  apr_array_header_t *nodes;
+  char *abs_path, *node_name, *path_so_far = "/";
+  const char *digest_str, *path;
+  int i;
 
-  char *dir;
-  /* ###file and pathnames will be limited by the native filesystem's
-     encoding--could that pose a problem? */
-  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, lock->path, pool));
-
-  /* Make sure that the directory exists before we create the lock file. */
-  dir = svn_path_dirname (abs_path, pool);
-  status = apr_dir_make_recursive (dir, APR_OS_DEFAULT, pool);
+  SVN_ERR (base_path_to_lock_file (&abs_path, fs, pool));
+  status = apr_dir_make_recursive (abs_path, APR_OS_DEFAULT, pool);
   
   if (status)
     return svn_error_wrap_apr (status, _("Can't create lock directory '%s'"),
-                               dir);
+                               abs_path);
+
+  path = repository_abs_path (lock->path, pool);
+  nodes = svn_path_decompose (path, pool);
+
+  /* Make sure that each parent directory, starting with "/", has an
+     entries file on disk, and that the entries file contains an entry
+     for its child. */
+  for (i = 0; i < (nodes->nelts - 1); i++)
+    {
+      char *child_path = "/";
+
+      node_name = APR_ARRAY_IDX (nodes, i, char *);
+
+      SVN_ERR (merge_paths (&path_so_far, path_so_far, node_name, pool));
+
+      SVN_ERR (merge_paths (&child_path, 
+                            path_so_far,
+                            APR_ARRAY_IDX (nodes, i + 1, char *),
+                            pool));
+
+      digest_str = make_digest (child_path, pool);
+
+      SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path_so_far, pool));
+
+      SVN_ERR (add_hash_to_entries_file (abs_path, digest_str, pool));
+    }
 
   /* Create our hash and load it up. */
   hash = apr_hash_make (pool);
@@ -175,20 +402,22 @@ write_lock_to_file (svn_fs_t *fs,
   hash_store (hash, EXPIRATION_DATE_KEY, 
               svn_time_to_cstring(lock->expiration_date, pool), pool);
 
+  digest_str = make_digest (path, pool);
 
+  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
+  
   status = apr_file_open (&fd, abs_path, APR_WRITE | APR_CREATE, 
                           APR_OS_DEFAULT, pool);
   if (status && !APR_STATUS_IS_ENOENT (status))
     return svn_error_wrap_apr (status, _("Can't open '%s' to write lock"),
                                abs_path);
-
+  
   stream = svn_stream_from_aprfile (fd, pool);
-
+  
   SVN_ERR_W (svn_hash_write2 (hash, stream, SVN_HASH_TERMINATOR, pool),
              apr_psprintf (pool,
                            _("Cannot write lock hash to '%s'"),
                            svn_path_local_style (abs_path, pool)));
-
   return SVN_NO_ERROR;
 }
 
@@ -242,26 +471,85 @@ save_lock (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+
+/* Join all items in COMPONENTS with directory separators to create
+   PATH. */
+static svn_error_t *
+merge_array_components (char **path,
+                        apr_array_header_t *components,
+                        apr_pool_t *pool)
+{
+  int i;
+  *path = "/";
+
+  for (i = 0; i < components->nelts; i++)
+    {
+      char *component;
+      component = APR_ARRAY_IDX (components, i, char *);
+      merge_paths (path, *path, component, pool);
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 delete_lock (svn_fs_t *fs, 
              svn_lock_t *lock,
              apr_pool_t *pool)
 {
   apr_status_t status = APR_SUCCESS;
-  char *abs_path;
+  apr_array_header_t *nodes;
+  char *abs_path, *path, *child_path, *parent_path, *node;
+  const char *digest_str;
 
-  /* Delete lock from locks area */
-  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, lock->path, pool));
-  SVN_ERR (svn_io_remove_file (abs_path, pool));
+  path = repository_abs_path (lock->path, pool);
+  nodes = svn_path_decompose (path, pool);
 
-  /* Prune directories on the way back */
-  while (status == APR_SUCCESS)
+  do  /* Iterate in reverse. */ 
     {
-      abs_path = svn_path_dirname (abs_path, pool);
-      /* If this fails, status will != APR_SUCCESS, so we drop out of
-         the loop. */
-      status = apr_dir_remove (abs_path, pool);
+      apr_hash_t *entries;
+
+      SVN_ERR (merge_array_components (&child_path, nodes, pool));
+      digest_str = make_digest (child_path, pool);
+
+      /* Compose the path to the parent entries file. */
+      (node = (char *) apr_array_pop (nodes));
+      SVN_ERR (merge_array_components (&parent_path, nodes, pool));
+
+      /* Stop when we get to the root. */
+      if (strcmp (child_path, "/") && strcmp (parent_path, "/"))
+        break;
+
+      /* Remove child hash from entries, deleting the entries file if
+         we've removed the last hash. */
+      SVN_ERR (abs_path_to_lock_file (&abs_path, fs, parent_path, pool));
+      SVN_ERR (read_entries_file (&entries, abs_path, NULL, pool));
+      apr_hash_set (entries, digest_str,
+                    APR_HASH_KEY_STRING, NULL); /* Delete from hash.*/
+
+      if (apr_hash_count (entries) == 0) /* We just removed the last entry. */
+        {
+          status = apr_file_remove (abs_path, pool);
+          if (status)
+            return svn_error_wrap_apr (status, 
+                                       _("Can't delete lock entries file '%s'"),
+                                       abs_path);
+        }
+      else
+        {
+          write_entries_file (entries, abs_path, pool);
+          break; /* We're done deleting entries files. */
+        }
     }
+  while (node);
+
+  digest_str = make_digest (path, pool);
+  
+  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
+  status = apr_file_remove (abs_path, pool);
+  if (status)
+    return svn_error_wrap_apr (status, 
+                               _("Can't delete lock file '%s'."),
+                               abs_path);
 
   /* Delete lock from tokens area */
   SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->token, pool));
@@ -288,7 +576,6 @@ generate_new_lock (svn_lock_t **lock_p,
   lock->path = apr_pstrdup (pool, path);
   lock->owner = apr_pstrdup (pool, owner);
   lock->comment = apr_pstrdup (pool, comment);
-  /* ### this function should take a 'comment' argument!  */
   lock->creation_date = apr_time_now();
 
   if (timeout)
@@ -297,6 +584,7 @@ generate_new_lock (svn_lock_t **lock_p,
   *lock_p = lock;
   return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 read_path_from_lock_token_file(svn_fs_t *fs, 
@@ -330,37 +618,36 @@ read_path_from_lock_token_file(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-
+/* Read lock from file in FS at ABS_PATH into LOCK_P.  If open FD is
+   non-NULL, use FD instead of opening a new file. FD will be closed
+   before returning. */
 static svn_error_t *
-read_lock_from_file (svn_lock_t **lock_p,
-                     svn_fs_t *fs,
-                     const char *path,
-                     apr_pool_t *pool)
+read_lock_from_abs_path (svn_lock_t **lock_p,
+                         svn_fs_t *fs,
+                         const char *abs_path,
+                         apr_file_t *fd,
+                         apr_pool_t *pool)
 {
   svn_lock_t *lock;
   apr_hash_t *hash;
-  apr_file_t *fd;
   svn_stream_t *stream;
   apr_status_t status;
-  char *abs_path;
   const char *val;
   apr_finfo_t finfo;
-
-  SVN_ERR (abs_path_to_lock_file(&abs_path, fs, path, pool));
 
   status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
   /* If file doesn't exist, then there's no lock, so return immediately. */
   if (APR_STATUS_IS_ENOENT (status))
     {
       *lock_p = NULL;
-      return svn_fs_fs__err_no_such_lock (fs, path);
+      return svn_fs_fs__err_no_such_lock (fs, abs_path);
     }      
 
-  /* ###Is this necessary? */ 
   if (status  && !APR_STATUS_IS_ENOENT (status))
     return svn_error_wrap_apr (status, _("Can't stat '%s'"), abs_path);
 
-  status = apr_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool);
+  if (!fd) /* Only open the file if we haven't been passed an apr_file_t. */
+    status = apr_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't open '%s' to read lock"),
                                abs_path);
@@ -370,6 +657,8 @@ read_lock_from_file (svn_lock_t **lock_p,
   stream = svn_stream_from_aprfile(fd, pool);
   SVN_ERR_W (svn_hash_read2 (hash, stream, SVN_HASH_TERMINATOR, pool),
              apr_psprintf (pool, _("Can't parse '%s'"), abs_path));
+
+  apr_file_close (fd);
 
   /* Create our lock and load it up. */
   lock = apr_palloc (pool, sizeof (*lock));
@@ -405,6 +694,42 @@ read_lock_from_file (svn_lock_t **lock_p,
 
 
 static svn_error_t *
+read_lock_from_file (svn_lock_t **lock_p,
+                     svn_fs_t *fs,
+                     const char *path,
+                     apr_file_t *fd,
+                     apr_pool_t *pool)
+{
+  char *abs_path, *rep_path;
+  const char *digest_str;
+  /* - Gen MD5 hash of full path to file. */
+  rep_path = repository_abs_path (path, pool);
+  digest_str = make_digest (rep_path, pool);
+
+  SVN_ERR (abs_path_to_lock_file(&abs_path, fs, path, pool));
+  SVN_ERR (read_lock_from_abs_path (lock_p, fs, abs_path, fd, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+read_lock_from_hash_name (svn_lock_t **lock_p,
+                          svn_fs_t *fs,
+                          const char *hash,
+                          apr_file_t *fd,
+                          apr_pool_t *pool)
+{
+  char *abs_path;
+
+  SVN_ERR (abs_path_to_lock_digest_file (&abs_path, fs, hash, pool));
+  SVN_ERR (read_lock_from_abs_path (lock_p, fs, abs_path, fd, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 get_lock_from_path (svn_lock_t **lock_p,
                     svn_fs_t *fs,
                     const char *path,
@@ -412,7 +737,7 @@ get_lock_from_path (svn_lock_t **lock_p,
 {
   svn_lock_t *lock;
     
-  SVN_ERR (read_lock_from_file (&lock, fs, path, pool));
+  SVN_ERR (read_lock_from_file (&lock, fs, path, NULL, pool));
 
   /* Possibly auto-expire the lock. */
   if (lock->expiration_date 
@@ -452,6 +777,56 @@ get_lock_from_path_helper (svn_fs_t *fs,
     SVN_ERR (err);
 
   *lock_p = lock;
+  return SVN_NO_ERROR;
+}
+
+
+/* A recursive function that puts all locks under PATH in FS into
+   LOCKS.  FD, if non-NULL, will be read from by read_entries_file
+   instead of read_entries_file opening PATH. */
+static svn_error_t *
+get_locks_under_path (apr_hash_t **locks, 
+                      svn_fs_t *fs, 
+                      const char *path,
+                      apr_file_t *fd,
+                      apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  char *abs_path;
+  apr_hash_index_t *hi;
+  char *child;
+  apr_off_t offset = 0;
+  apr_status_t status;
+  
+  SVN_ERR (read_entries_file (&entries, path, fd, pool));
+      
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi)) 
+    {
+      int nbytes = 2;
+      char *buf = apr_palloc (pool, nbytes);
+      apr_hash_this(hi, (void *)&child, NULL, NULL);
+
+      abs_path_to_lock_digest_file (&abs_path, fs, child, pool);
+
+      status = apr_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool);
+      if (status)
+        return svn_error_wrap_apr (status, 
+                                   _("Can't open '%s' to read lock info."),
+                                   abs_path);
+
+      status = apr_file_read (fd, buf, &nbytes);
+      apr_file_seek (fd, APR_SET, &offset); /* Rewind to the beginning. */
+
+      if (strncmp (buf, "K ", 2) == 0) /* We have a lock file. */
+        {
+          svn_lock_t *lock;
+          SVN_ERR (read_lock_from_hash_name (&lock, fs, child, fd, pool));
+
+          apr_hash_set (*locks, lock->path, APR_HASH_KEY_STRING, lock);
+        }
+      else /* It's another entries file.  Recurse. */ 
+        get_locks_under_path (locks, fs, abs_path, fd, pool);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -728,42 +1103,6 @@ svn_fs_fs__get_lock_from_path (svn_lock_t **lock_p,
 
 
 
-struct dir_walker_baton
-{
-  svn_fs_t *fs;
-  apr_hash_t *locks;
-};
-
-
-static svn_error_t *
-locks_dir_walker (void *baton,
-                  const char *path,
-                  const apr_finfo_t *finfo,
-                  apr_pool_t *pool)
-{
-  char *base_path;
-  const char *rel_path;
-  svn_lock_t *lock;
-  struct dir_walker_baton *dir_baton;
-  dir_baton = baton;
-  
-  /* Skip directories. */
-  if (finfo->filetype == APR_DIR)
-    return SVN_NO_ERROR;
-
-  /* Get the repository-relative path for the lock. */
-  SVN_ERR (base_path_to_lock_file (&base_path, dir_baton->fs, pool));
-  rel_path = path + strlen (base_path);
-
-  /* Get lock */
-  SVN_ERR (svn_fs_fs__get_lock_from_path (&lock, dir_baton->fs, 
-                                          rel_path, pool));
-
-  /* Stuff lock in hash, keyed on lock->path */
-  apr_hash_set (dir_baton->locks, lock->path, APR_HASH_KEY_STRING, lock);
-
-  return SVN_NO_ERROR;
-}
 
 
 svn_error_t *
@@ -773,9 +1112,9 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
                       apr_pool_t *pool)
 {
   char *abs_path;
-  struct dir_walker_baton baton;
   apr_finfo_t finfo;
   apr_status_t status;
+  const char *digest_str; 
 
   /* Make the hash that we'll return. */
   *locks = apr_hash_make(pool);
@@ -783,18 +1122,23 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
   /* Compose the absolute/rel path to PATH */
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
 
+  /* Strip any trailing slashes. */
+  if (abs_path[strlen (abs_path) - 1] == '/')
+    abs_path[strlen (abs_path) - 1] = '\0';
+
   status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
 
   /* If base dir doesn't exist, then we don't have any locks. */
   if (APR_STATUS_IS_ENOENT (status))
       return SVN_NO_ERROR;
 
-  baton.fs = fs;
-  baton.locks = *locks;
-
-  SVN_ERR (svn_io_dir_walk (abs_path, APR_FINFO_TYPE, locks_dir_walker,
-                            &baton, pool));
-
+  digest_str = make_digest (path, pool);
+  abs_path = repository_abs_path (path, pool);
+  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
+  
+  /* Recursively walk lock "tree" */
+  SVN_ERR (get_locks_under_path (locks, fs, abs_path, NULL, pool));
+  
   return SVN_NO_ERROR;
 }
 
