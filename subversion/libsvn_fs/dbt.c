@@ -62,6 +62,19 @@ svn_fs__clear_dbt (DBT *dbt)
 }
 
 
+DBT *svn_fs__nodata_dbt (DBT *dbt)
+{
+  svn_fs__clear_dbt (dbt);
+
+  /* A `nodata' dbt is one which retrieves zero bytes from offset zero,
+     and stores them in a zero-byte buffer in user-allocated memory.  */
+  dbt->flags |= (DB_DBT_USERMEM | DB_DBT_PARTIAL);
+  dbt->doff = dbt->dlen = 0;
+
+  return dbt;
+}
+
+
 DBT *
 svn_fs__set_dbt (DBT *dbt, void *data, u_int32_t size)
 {
@@ -115,4 +128,43 @@ svn_fs__compare_dbt (const DBT *a, const DBT *b)
     return cmp;
   else
     return a->size - b->size;
+}
+
+
+
+/* Building DBT's from interesting things.  */
+
+
+/* Set DBT to the unparsed form of ID; allocate memory from POOL. 
+   Return DBT.  */
+DBT *
+svn_fs__id_to_dbt (DBT *dbt,
+		   svn_fs_id_t *id,
+		   apr_pool_t *pool)
+{
+  svn_string_t *unparsed_id = svn_fs__unparse_id (id, pool);
+  svn_fs__set_dbt (dbt, unparsed_id->data, unparsed_id->len);
+  return dbt;
+}
+
+
+/* Set DBT to the unparsed form of SKEL; allocate memory form POOL.  */
+DBT *
+svn_fs__skel_to_dbt (DBT *dbt,
+		     skel_t *skel,
+		     apr_pool_t *pool)
+{
+  svn_string_t *unparsed_skel = svn_fs__unparse_skel (skel, pool);
+  svn_fs__set_dbt (dbt, unparsed_skel->data, unparsed_skel->len);
+  return dbt;
+}
+
+
+/* Set DBT to the text of the null-terminated string STR.  DBT will
+   refer to STR's storage.  Return DBT.  */
+DBT *
+svn_fs__str_to_dbt (DBT *dbt, char *str)
+{
+  svn_fs__set_dbt (dbt, str, strlen (str));
+  return dbt;
 }

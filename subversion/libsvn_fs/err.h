@@ -94,9 +94,41 @@ svn_error_t *svn_fs__wrap_db (svn_fs_t *fs,
 #define DB_WRAP(fs, op, err) (svn_fs__wrap_db ((fs), (op), (err)))
 
 
+/* If EXPR returns a non-zero value, return it.  This is like SVN_ERR,
+   but for functions that return a Berkeley DB error code.  */
+#define DB_ERR(expr)				\
+  do {						\
+    int db_err__temp = (expr);			\
+    if (db_err__temp)				\
+      return db_err__temp;			\
+  } while (0)
+
+
 /* Verify that FS refers to an open database; return an appropriate
    error if this is not the case.  */
 svn_error_t *svn_fs__check_fs (svn_fs_t *fs);
 
+
+/* Try a Berkeley DB transaction repeatedly until it doesn't deadlock.
+
+   That is:
+   - Begin a new Berkeley DB transaction, DB_TXN, in the filesystem FS.
+   - Apply TXN_BODY to BATON and DB_TXN.  TXN_BODY should try to do
+     some series of DB operations which needs to be atomic, using
+     DB_TXN as the transaction.  If a DB operation deadlocks, or if
+     any other kind of error happens, TXN_BODY should simply return
+     with an appropriate svn_error_t.
+   - If TXN_BODY returns an error indicating that a deadlock occurred,
+     retry the operation.
+   - Otherwise, return what TXN_BODY returned.
+
+   One benefit of using this function is that it makes it easy to
+   ensure that whatever transactions a filesystem function starts, it
+   either aborts or commits before it returns.  If we don't somehow
+   complete all our transactions, later operations could deadlock.  */
+svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
+				svn_error_t *(*txn_body) (void *baton,
+							  DB_TXN *db_txn),
+				void *baton);
 
 #endif /* SVN_LIBSVN_FS_ERR_H */

@@ -284,81 +284,6 @@ int svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b);
 svn_fs_id_t *svn_fs_copy_id (svn_fs_id_t *id, apr_pool_t *pool);
 
 
-/* Accessing properties and property lists.  */
-
-/* We use a two-step process for accessing property lists:
-   - you call a function to get something's property list, yielding a
-     property list object
-   - you apply functions to that property list object to read a
-     property, get a list of property names, or get a hash table of all
-     the properties.
-
-   The call to get a node's property list is guaranteed to succeed.
-   And the property list object is allocated in the underlying
-   object's pool, so you needn't free it.  So, while a two-step
-   process is annoying, it's less so than you'd expect because you
-   needn't check for the failure of the first call, or capture its
-   value to be freed later.  */
-
-
-/* The type representing a property list of a file, directory, or
-   directory entry.  */
-typedef struct svn_fs_proplist_t svn_fs_proplist_t;
-
-
-/* Set *VALUE to the value of the property in PROPLIST named NAME.
-   Set *VALUE to zero if there is no such property.  
-
-   If POOL is zero, allocate *VALUE in pool of the object PROPLIST
-   came from; it will be freed when the filesystem is closed.  If POOL
-   is non-zero, do allocation there.  */
-svn_error_t *svn_fs_proplist_get (svn_string_t **value,
-				  svn_fs_proplist_t *proplist,
-				  svn_string_t *name,
-				  apr_pool_t *pool);
-
-
-/* Set *NAMES to point to a null-terminated array of pointers to
-   strings giving the names of the properties in PROPLIST.  The name
-   list is sorted, according to the order defined by
-   `svn_fs_compare_prop_names', below.
-
-   If POOL is zero, allocate *NAMES in the pool of the object PROPLIST
-   came from; it will be freed when the filesystem is closed.  If POOL
-   is non-zero, do allocation there.  */
-svn_error_t *svn_fs_proplist_names (svn_string_t ***names,
-				    svn_fs_proplist_t *proplist,
-				    apr_pool_t *pool);
-
-
-/* Set *TABLE to an APR hash table containing the property list of
-   PROPLIST.  Each key in *TABLE is the text of a property name; each
-   value is a pointer to an `svn_string_t' object holding the
-   property's value.
-
-   If POOL is zero, allocate *TABLE in the pool of the object PROPLIST
-   came from; it will be freed when that object is closed.  If POOL is
-   non-zero, do allocation there.  */
-svn_error_t *svn_fs_proplist_hash_table (apr_hash_t **table,
-					 svn_fs_proplist_t *proplist,
-					 apr_pool_t *pool);
-
-
-/* Compare two property names A and B, with the same ordering used by
-   `svn_fs_proplist_names'.  Return zero if the names are equivalent,
-   a value < 0 if A precedes B, or a value > 0 if B precedes A.
-
-   As a convenience, a null pointer is considered to come "after" any
-   non-zero string pointer.  This means that the null pointer
-   terminating an array returned by `svn_fs_proplist_names' can be
-   safely compared with valid entries.
-
-   Within any given property list, every property name is guaranteed
-   to be distinct, according to this comparison.  */
-int svn_fs_compare_prop_names (svn_string_t *a, svn_string_t *b);
-
-
-
 /* Nodes.  */
 
 /* svn_fs_node_t is the common "superclass" for files, directories,
@@ -398,17 +323,22 @@ void svn_fs_kill_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
 void svn_fs_run_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
 
 
-/* Return the filesystem version number of NODE.
-   [[I think this is ill-defined.  What should this return for a node
-   which appears in multiple versions of the filesystem?]]  */
-svn_vernum_t svn_fs_node_version (svn_fs_node_t *node);
+/* Set *VALUE_P to the value of the property of NODE named PROPNAME.
+   If NODE has no property by that name, set *VALUE_P to zero.
+   Allocate the result in POOL.  */
+svn_error_t *svn_fs_get_node_prop (svn_string_t **value_p,
+				   svn_fs_node_t *node,
+				   svn_string_t *propname,
+				   apr_pool_t *pool);
+   
 
-
-/* Return the property list of NODE.  The property list object will
-   live exactly as long as NODE does.  Multiple calls to this function
-   on the same node object will return the same property list object.  */
-svn_fs_proplist_t *svn_fs_node_proplist (svn_fs_node_t *node);
-
+/* Set *TABLE_P to the entire property list of NODE, as an APR hash
+   table allocated in POOL.  The resulting table maps property names
+   to pointers to svn_string_t objects containing the property value.  */
+svn_error_t *svn_fs_get_node_proplist (apr_hash_t **table_p,
+				       svn_fs_node_t *node,
+				       apr_pool_t *pool);
+				       
 
 
 /* Reading and traversing directories.  */
@@ -442,10 +372,14 @@ svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
 			       svn_vernum_t v);
 
 
-/* Set *NODE to a node object representing the node named NAME in
-   PARENT_DIR.  NAME is a directory path.
+/* Set *CHILD_P to a node object representing the node named NAME in
+   PARENT_DIR.  NAME is a directory path. 
 
-   The details about NAME:
+   Do any necessary temporary allocation in POOL.  (The returned node
+   is *not* allocated in POOL; call svn_fs_cleanup_node if you want that
+   behavior.)
+
+   The details about NAME's syntax:
 
    - NAME must be a series of path components, encoded using UTF-8,
      and separated by slash characters (U+002f).
@@ -462,9 +396,10 @@ svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
      SVN_ERR_FS_PATH_SYNTAX error.  If you want to process absolute
      paths, you'll need to provide a root directory object as
      PARENT_DIR, and strip off the leading slash.  */
-svn_error_t *svn_fs_open_node (svn_fs_node_t **child,
+svn_error_t *svn_fs_open_node (svn_fs_node_t **child_p,
 			       svn_fs_dir_t *parent_dir,
-			       svn_string_t *name);
+			       svn_string_t *name,
+			       apr_pool_t *pool);
 
 
 /* Free the directory object DIR.  */
@@ -483,35 +418,14 @@ typedef struct svn_fs_dirent_t {
 } svn_fs_dirent_t;
 
 
-/* Return a list of DIR's contents.  Set *ENTRIES to point to a
-   null-terminated array of pointers to `svn_fs_dirent_t' structures.
-   The entries are sorted, according to `svn_fs_compare_dirents'.
-
-   All calls to `svn_fs_dir_entries' on a given directory object will
-   return a pointer to the same array; the directory object caches the
-   list of entries, so calls after the first one should be very quick.
-   The array will live as long as the directory object.  
-
-   The caller must not free or modify the elements of the array, or
-   the strings or ID's it refers to.  */
-svn_error_t *svn_fs_dir_entries (svn_fs_dirent_t ***entries,
-				 svn_fs_dir_t *dir);
-
-
-/* Compare two directory entries, A and B, by name.  If the names are
-   identical, return zero.  If A's name precedes B's, return a number
-   < 0.  If A's name comes after B's, return a number > 0.
-
-   As a convenience, a null pointer is considered to come "after" any
-   real directory entry.  This means that the null pointer terminating
-   an array returned by `svn_fs_dir_entries' can be safely compared
-   with valid entries.
-
-   Within any given directory, every entry is guaranteed to be
-   distinct, according to this comparison.  */
-int svn_fs_compare_dirents (const svn_fs_dirent_t *a,
-			    const svn_fs_dirent_t *b);
-
+/* Set *TABLE_P to a newly allocated APR hash table containing the
+   entries of the directory DIR.  The keys of the table are entry
+   names, as byte strings; the table's values are pointers to
+   svn_fs_dirent_t structures.  Allocate the table and its contents in
+   POOL.  */
+svn_error_t *svn_fs_dir_entries (apr_hash_t **table_p,
+				 svn_fs_dir_t *dir,
+				 apr_pool_t *pool);
 
 
 /* Accessing files.  */
@@ -551,8 +465,8 @@ svn_error_t *svn_fs_file_length (apr_off_t *length,
    `svn_delta.h'.  Set *CONTENTS_BATON to a baton to pass to CONTENTS.
    Allocate the baton in POOL.
 
-   You must keep FILE open until you are done reading data using
-   CONTENTS and CONTENTS_BATON.  */
+   You may only use CONTENTS and CONTENTS_BATON for as long as the
+   underlying filesystem is open.  */
 svn_error_t *svn_fs_file_contents (svn_read_fn_t **contents,
 				   void **contents_baton,
 				   svn_fs_file_t *file,
@@ -634,29 +548,39 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream,
    to cache changes accurately; and so on.
 
 
-   There are two kinds of node, file, and directory objects: mutable,
-   and immutable.  The functions above create immutable node objects,
-   that refer to nodes in extant versions of the filesystem.  Since
-   those nodes are in the history, they can never change.  The
-   functions below, for performing transactions, create mutable node
-   objects.  They refer to new nodes (or new versions of existing
-   nodes), which you can change as necessary to create the new version
-   the way you like it.
+   There are two kinds of nodes: mutable, and immutable.  The
+   committed versions in the filesystem consist entirely of immutable
+   nodes, whose contents never change.  An incomplete transaction,
+   which the user is in the process of constructing, uses mutable
+   nodes for those nodes which have been changed so far, and refer
+   back to immutable nodes for portions of the tree which haven't been
+   changed yet in this transaction.  Immutable nodes, as part of
+   committed transactions, never refer to mutable nodes, which are
+   part of uncommitted transactions.
+
+   The functions above start from some version's root directory, and
+   walk down from there; they can only access immutable nodes, in
+   extant versions of the filesystem.  Since those nodes are in the
+   history, they can never change.  The functions below, for building
+   transactions, create mutable nodes.  They refer to new nodes (or
+   new versions of existing nodes), which you can change as necessary
+   to create the new version the way you want.
 
    In other words, you use immutable nodes for reading committed,
    fixed versions of the filesystem, and you use mutable nodes for
    building new directories and files, as part of a transaction.
 
-   Note that the terms "mutable" and "immutable" describe the role of
-   the node objects --- not the permissions on the nodes they refer
-   to.  Even if you aren't authorized to modify the filesystem's root
-   directory, you could still have a mutable directory object
-   referring to it.  Since it's mutable, you could call
-   `svn_fs_replace_subdir' to get another mutable directory object
-   referring to a directory you do have permission to change.
-   Mutability refers to the role of the object --- reading an existing
-   version, or writing a new one --- which is independent of your
-   authorization to make changes in a particular place.
+   Note that the terms "immutable" and "mutable" describe whether the
+   nodes are part of a committed filesystem version or not --- not the
+   permissions on the nodes they refer to.  Even if you aren't
+   authorized to modify the filesystem's root directory, you could
+   still have a mutable directory object referring to it.  Since it's
+   mutable, you could call `svn_fs_replace_subdir' to get another
+   mutable directory object referring to a directory you do have
+   permission to change.  Mutability refers to the role of the node
+   --- part of an existing version, or part of a new one --- which is
+   independent of your authorization to make changes in a particular
+   place.
 
    A pattern to note in the interface below: you can't get mutable
    objects from immutable objects.  If you have an immutable directory
@@ -757,8 +681,10 @@ svn_error_t *svn_fs_replace_root (svn_fs_dir_t **root,
 
 
 /* Delete the entry named NAME from the directory DIR.  DIR must be a
-   mutable directory object.  */
-svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name);
+   mutable directory object.  Do any necessary temporary allocation in
+   POOL.  */
+svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name,
+			    apr_pool_t *pool);
 
 
 /* Create a new subdirectory of PARENT named NAME.  PARENT must be
@@ -847,7 +773,7 @@ extern svn_fs_node_t *svn_fs_default_base;
 
 /* Return non-zero iff NODE is a mutable node --- one that can be
    changed as part of a transaction.  */
-int svn_fs_is_mutable (svn_fs_node_t *node);
+int svn_fs_node_is_mutable (svn_fs_node_t *node);
 
 
 
@@ -870,12 +796,12 @@ int svn_fs_is_mutable (svn_fs_node_t *node);
    set.  */
 
 
-/* Set *NAME to the name of the transaction TXN.
+/* Set *NAME_P to the name of the transaction TXN.
 
    If POOL is zero, allocate NAME in the transaction's pool; it will
    be freed when the transaction is committed or aborted.  If POOL is
    non-zero, do allocation there.  */
-svn_error_t *svn_fs_txn_name (svn_string_t **name,
+svn_error_t *svn_fs_txn_name (svn_string_t **name_p,
 			      svn_fs_txn_t *txn,
 			      apr_pool_t *pool);
 

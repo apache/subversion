@@ -182,13 +182,45 @@ svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b)
 }
 
 
+int
+svn_fs__is_parent (svn_fs_id_t *parent,
+		   svn_fs_id_t *child)
+{
+  int i;
+
+  for (i = 0; parent[i] == child[i]; i++)
+    {
+      /* If they're completely identical, then CHILD isn't a direct
+	 child of PARENT.  */
+      if (parent[i] == -1)
+	return 0;
+    }
+
+  /* Is CHILD the next version of PARENT?  */
+  if ((i & 1) == 1
+      && child[i] == parent[i] + 1
+      && child[i + 1] == -1
+      && parent[i + 1] == -1)
+    return 1;
+
+  /* Is CHILD the first version of any branch from PARENT?  */
+  if ((i & 1) == 0
+      && parent[i] == -1
+      && child[i + 1] != -1
+      && child[i + 2] == 1)
+    return 1;
+
+  /* Anything else is no good.  */
+  return 0;
+}
+
+
 
 /* Parsing and unparsing node ID's.  */
 
 svn_fs_id_t *
 svn_fs__parse_id (char *data,
 		  apr_size_t data_len,
-		  int flags,
 		  apr_pool_t *pool)
 {
   svn_fs_id_t *id;
@@ -210,15 +242,6 @@ svn_fs__parse_id (char *data,
 	    return 0;
 	  last_start = i + 1;
 	  id_len++;
-
-	  /* If we're parsing a `nodes' key, check for '.head'.  */
-	  if (flags & svn_fs__key_id
-	      && i + 5 == data_len
-	      && ! memcmp (data + i, ".head", 5))
-	    {
-	      i += 5;
-	      break;
-	    }
 	}
       else if ('0' <= data[i] && data[i] <= '9')
 	;
@@ -236,39 +259,28 @@ svn_fs__parse_id (char *data,
   else
     id = (svn_fs_id_t *) malloc (sizeof (*id) * (id_len + 1));
 
-  for (;;)
-    {
-      int i = 0;
-      char *next = data;
-      char *end = data + data_len;
+  {
+    int i = 0;
+    char *end = data + data_len;
 
-      for (;;)
-	{
-	  id[i++] = svn_fs__getsize (data,
-				     end - data,
-				     &next,
-				     100000000);
-	  if (! next)
+    for (;;)
+      {
+	char *next;
+	id[i++] = svn_fs__getsize (data, end - data, &next, 100000000);
+	if (next == end)
+	  break;
+	if (! next
+	    || *next != '.')
+	  {
+	    if (! pool) free (id);
 	    return 0;
-	  if (next == end)
-	    break;
-	  if (*next != '.')
-	    return 0;
+	  }
 
-	  data = next + 1;
+	data = next + 1;
+      }
 
-	  /* If we're parsing a `nodes' key, check for ".head".  */
-	  if (flags & svn_fs__key_id
-	      && end - data == 4
-	      && ! memcmp (data, "head", 4))
-	    {
-	      id[i++] = -2;
-	      break;
-	    }
-	}
-
-      id[i] = -1;
-    }
+    id[i] = -1;
+  }
 
   return id;
 }

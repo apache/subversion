@@ -59,4 +59,9 @@ svn_error_t *svn_fs__create_transactions (svn_fs_t *fs);
 svn_error_t *svn_fs__open_transactions (svn_fs_t *fs);
 
 
+/* Return a pointer to the ID of TXN.  The return value is live for as
+   long as TXN is.  */
+char *svn_fs__txn_id (svn_fs_txn_t *txn);
+
+
 #endif /* SVN_LIBSVN_FS_TXN_H */

@@ -86,8 +86,9 @@ struct svn_fs_t {
      the ID's of the nodes that are part of that transaction.  */
   DB *transactions;
 
-  /* A cache of nodes we've read in, mapping svn_fs_id_t arrays onto
-     pointers to nodes.  */
+  /* A cache of nodes we've read in, mapping svn_fs_id_t arrays (not
+     including the terminating -1) onto pointers to svn_fs_node_t
+     objects.  */
   apr_hash_t *node_cache;
 
   /* A table of all currently open transactions.  Each value is a
@@ -121,145 +122,6 @@ struct svn_fs_t {
      fs_cleanup won't overwrite a pointer to an existing svn_error_t
      if it finds one.  */
   svn_error_t **cleanup_error;
-};
-
-
-
-/* Property lists.  */
-
-
-/* The structure underlying the public svn_fs_proplist_t typedef.  */
-
-struct svn_fs_proplist_t {
-
-  /* A hash table, mapping property names (as byte strings) onto
-     svn_string_t objects holding the values.  */
-  apr_hash_t *hash;
-
-  /* The pool of the underlying object.  */
-  apr_pool_t *pool;
-
-};
-
-
-
-/* Transactions.  */
-
-/* The private structure underlying the public svn_fs_txn_t typedef.  */
-
-struct svn_fs_txn_t {
-
-  /* This transaction's private pool, a subpool of fs->pool.
-
-     Freeing this must completely clean up the transaction object,
-     write back any buffered data, and release any database or system
-     resources it holds.  (But don't confused the transaction object
-     with the transaction it represents: freeing this does *not* abort
-     the transaction.)  */
-  apr_pool_t *pool;
-
-  /* The filesystem to which this transaction belongs.  */
-  svn_fs_t *fs;
-
-  /* The ID of this transaction --- a null-terminated string.
-     This is the key into the `transactions' table.  */
-  char *id;
-
-  /* The root directory for this transaction, or zero if the user
-     hasn't called svn_fs_replace_root yet.  */
-  svn_fs_id_t *root;
-};
-
-
-/* Nodes.  */
-
-
-/* The different kinds of filesystem nodes.  */
-typedef enum {
-  kind_file,
-  kind_dir
-} kind_t;
-
-
-/* The private structure underlying the public svn_fs_node_t typedef.
-
-   All the more specific node structures --- files, directories,
-   etc. --- include one of these as their first member.  ANSI
-   guarantees the right behavior when you cast a pointer to a
-   structure to a pointer to its first member, and back.  So this is
-   effectively the superclass for files and directories.  */
-
-struct svn_fs_node_t {
-  
-  /* The `open count' --- how many times this object has been opened,
-     minus the number of times it has been closed.  If this count is
-     zero, then we can free the object (although we may keep it around
-     anyway as part of a cache).  */
-  int open_count;
-
-  /* The filesystem to which we belong.  */
-  svn_fs_t *fs;
-
-  /* This node's private pool, a subpool of fs->pool.
-     Freeing this must completely clean up the node, and release any
-     database or system resources it holds.  It must also remove the
-     node from the filesystem's node cache.  */
-  apr_pool_t *pool;
-
-  /* The node version ID of this node.
-
-     If this node is part of a transaction, the immediate ancestor of
-     this node is the one we're merging against.  If this node has no
-     immediate ancestor, then it's new in this transaction.  */
-  svn_fs_id_t *id;
-
-  /* What kind of node this is, more specifically.  */
-  kind_t kind;
-
-  /* The node's property list.  */
-  svn_fs_proplist_t *proplist;
-
-  /* On mutable nodes, this points to transaction the node belongs to.
-     On immutable nodes, this is zero.  */
-  svn_fs_txn_t *txn;
-};
-
-
-
-/* Files.  */
-
-/* The private structure underlying the public svn_fs_file_t typedef.  */
-
-struct svn_fs_file_t {
-  
-  /* The node structure carries information common to all nodes.  */
-  svn_fs_node_t node;
-
-  /* The contents of the file.  In the future, we should replace this
-     with a reference to some database record we can read as needed.  */
-  svn_string_t *contents;
-
-};
-
-
-
-/* Directories.  */
-
-/* The private structure underlying the public svn_fs_dir_t typedef.  */
-
-struct svn_fs_dir_t {
-
-  /* The node structure carries information common to all nodes.  */
-  svn_fs_node_t node;
-
-  /* An array of pointers to the entries of this directory, terminated
-     by a null pointer.  */
-  svn_fs_dirent_t **entries;
-
-  /* The number of directory entries here, and the number of elements
-     allocated to the entries array.  */
-  int num_entries;
-  int entries_size;
 };
 
 

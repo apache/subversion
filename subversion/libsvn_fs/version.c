@@ -147,7 +147,7 @@ svn_fs__version_root (svn_fs_id_t **id_p,
   if (! id_skel->is_atom)
     goto corrupt;
 
-  id = svn_fs__parse_id (id_skel->data, id_skel->len, 0, pool);
+  id = svn_fs__parse_id (id_skel->data, id_skel->len, pool);
   if (! id)
     goto corrupt;
 
@@ -164,25 +164,22 @@ svn_fs__version_root (svn_fs_id_t **id_p,
 /* Writing versions.  */
 
 
-/* Add VERSION_SKEL as a new version to FS's `versions' table.  Set *V
-   to the number of the new version created.
-
-   Do this as part of the Berkeley DB transaction TXN; if TXN is zero,
-   then make the change without transaction protection.
+/* Add SKEL as a new version to FS's `versions' table.  Set *V_P to
+   the number of the new version created.  Do this as part of the
+   Berkeley DB transaction TXN; if TXN is zero, then make the change
+   without transaction protection.
 
    Do any necessary temporary allocation in POOL.  */
 static svn_error_t *
-put_version_skel (svn_fs_t *fs,
+put_version_skel (svn_vernum_t *v_p,
+		  svn_fs_t *fs,
+		  skel_t *skel,
 		  DB_TXN *txn,
-		  skel_t *version_skel,
-		  svn_vernum_t *v,
 		  apr_pool_t *pool)
 {
-  svn_string_t *version = svn_fs__unparse_skel (version_skel, pool);
   db_recno_t recno;
+  DB *versions = fs->versions;
   DBT key, value;
-
-  SVN_ERR (svn_fs__check_fs (fs));
 
   /* Since we use the DB_APPEND flag, the `put' call sets recno to the record
      number of the new version.  */
@@ -192,15 +189,16 @@ put_version_skel (svn_fs_t *fs,
   key.size = key.ulen = sizeof (recno);
   key.flags |= DB_DBT_USERMEM;
 
-  svn_fs__set_dbt (&value, version->data, version->len);
   SVN_ERR (DB_WRAP (fs, "adding new version",
-		    fs->versions->put (fs->versions, txn, &key, &value, 
-				       DB_APPEND)));
+		    versions->put (versions, txn,
+				   &key,
+				   svn_fs__skel_to_dbt (&value, skel, pool),
+				   DB_APPEND)));
 
   /* Turn the record number into a Subversion version number.
      Versions are numbered starting with zero; Berkeley DB record numbers
      begin with one.  */
-  *v = recno - 1;
+  *v_p = recno - 1;
   return 0;
 }
 
@@ -231,12 +229,12 @@ make_versions (svn_fs_t *fs, int create)
   if (create)
     {
       /* Create the initial version.  */
-      static char version_0[] = "(version 3 0.0 ())";
+      static char version_0[] = "(version 3 1.1 ())";
       skel_t *version_skel = svn_fs__parse_skel (version_0,
 						 sizeof (version_0) - 1,
 						 fs->pool);
       svn_vernum_t v;
-      SVN_ERR (put_version_skel (fs, 0, version_skel, &v, fs->pool));
+      SVN_ERR (put_version_skel (&v, fs, version_skel, 0, fs->pool));
 
       /* That had better have created version zero.  */
       if (v != 0)

@@ -1,3 +1,14 @@
+It would be nice to organize this file somehow.
+
+The 'delete' operation should actually delete mutable nodes, not just
+leave them around for the commit to clean up.  When this happens,
+svn_fs_open_node needs to use a transaction.
+
+Change the transaction name things to return ordinary C strings, since
+we know transaction names won't contain null characters.
+
+Does everyone call svn_fs__check_fs who should?
+
 Do transactions need an open_count field too?
 
 We don't store older node versions as deltas yet.
@@ -6,6 +17,9 @@ Get rid of proplists; just give the user an APR hash table instead.
 
 Produce helpful error messages when filename paths contain null
 characters.
+
+We should convert filenames to some canonical Unicode form, for
+comparison.
 
 The delta algorithm walks the whole tree using a single pool, so the
 memory used is proportional to the size of the target tree.  Instead,
@@ -23,6 +37,9 @@ table.  This would also help commits work better --- we could create
 the string objects while the user builds the transaction, and then
 move the transaction nodes into the real node table without having to
 touch all that text --- we just touch all that metainformation.
+
+The skel syntax should be changed, so that implicit-length atoms don't
+require a trailing space.  That's too different from common practice.
 
 svn_fs__getsize shouldn't rely on a maximum value for detecting
 overflow.
