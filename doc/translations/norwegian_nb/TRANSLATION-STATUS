@@ -38,7 +38,11 @@ documentation.
 
       doc/book/book/ch04.xml (51%) -- sunny256
 
-    2.1.3. Untranslated
+    2.1.3. Needs update
+
+      [None]
+
+    2.1.4. Untranslated
 
       doc/book/README
       doc/book/book-dist.py
@@ -69,11 +73,7 @@ documentation.
       doc/book/outline.txt
       doc/book/tools/readme-dblite.html
 
-    2.2.2. Contains possible i18n information
-
-      doc/book/tools/dtd/docbook41/dbhierx.mod
-
-    2.2.3. Contains no i18n information
+    2.2.2. Contains no i18n information
 
       doc/book/book/images/DirectoryModels.ppt
       doc/book/book/images/ch02dia6.png
@@ -86,39 +86,6 @@ documentation.
       doc/book/book/images/note.png
       doc/book/book/images/warning.png
       doc/book/book/styles.css
-      doc/book/tools/bin/run-fop.sh
-      doc/book/tools/chunk-stylesheet.xsl
-      doc/book/tools/dtd/dblite.dtd
-      doc/book/tools/dtd/docbook41/calstblx.dtd
-      doc/book/tools/dtd/docbook41/dbcentx.mod
-      doc/book/tools/dtd/docbook41/dbgenent.ent
-      doc/book/tools/dtd/docbook41/dbnotnx.mod
-      doc/book/tools/dtd/docbook41/dbpoolx.mod
-      doc/book/tools/dtd/docbook41/docbook.cat
-      doc/book/tools/dtd/docbook41/docbookx.dtd
-      doc/book/tools/dtd/docbook41/ent/iso-amsa.ent
-      doc/book/tools/dtd/docbook41/ent/iso-amsb.ent
-      doc/book/tools/dtd/docbook41/ent/iso-amsc.ent
-      doc/book/tools/dtd/docbook41/ent/iso-amsn.ent
-      doc/book/tools/dtd/docbook41/ent/iso-amso.ent
-      doc/book/tools/dtd/docbook41/ent/iso-amsr.ent
-      doc/book/tools/dtd/docbook41/ent/iso-box.ent
-      doc/book/tools/dtd/docbook41/ent/iso-cyr1.ent
-      doc/book/tools/dtd/docbook41/ent/iso-cyr2.ent
-      doc/book/tools/dtd/docbook41/ent/iso-dia.ent
-      doc/book/tools/dtd/docbook41/ent/iso-grk1.ent
-      doc/book/tools/dtd/docbook41/ent/iso-grk2.ent
-      doc/book/tools/dtd/docbook41/ent/iso-grk3.ent
-      doc/book/tools/dtd/docbook41/ent/iso-grk4.ent
-      doc/book/tools/dtd/docbook41/ent/iso-lat1.ent
-      doc/book/tools/dtd/docbook41/ent/iso-lat2.ent
-      doc/book/tools/dtd/docbook41/ent/iso-num.ent
-      doc/book/tools/dtd/docbook41/ent/iso-pub.ent
-      doc/book/tools/dtd/docbook41/ent/iso-tech.ent
-      doc/book/tools/dtd/docbook41/soextblx.dtd
-      doc/book/tools/fo-stylesheet.xsl
-      doc/book/tools/html-stylesheet.xsl
-      doc/book/tools/svnbook.el
 
 $Id$
 vim: set tw=72 nowrap et sw=2 ts=2 sts=2 fo+=2w fenc=utf8 :
