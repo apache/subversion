@@ -301,7 +301,7 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 
 #define SVN_WC__ENTRIES_ATTR_NAME      "name"
 #define SVN_WC__ENTRIES_ATTR_VERSION   "version"
-#define SVN_WC__ENTRIES_ATTR_TYPE      "type"
+#define SVN_WC__ENTRIES_ATTR_KIND      "kind"
 #define SVN_WC__ENTRIES_ATTR_TIMESTAMP "timestamp"
 #define SVN_WC__ENTRIES_ATTR_CHECKSUM  "checksum"
 #define SVN_WC__ENTRIES_ATTR_NEW       "new"
@@ -330,7 +330,7 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool);
 svn_error_t *svn_wc__entry_set (svn_string_t *path,
                                 svn_string_t *entryname,
                                 svn_vernum_t version,
-                                int kind,
+                                enum svn_node_kind kind,
                                 apr_pool_t *pool,
                                 ...);
 
@@ -346,7 +346,7 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
 svn_error_t *svn_wc__entry_get (svn_string_t *path,
                                 svn_string_t *entryname, 
                                 svn_vernum_t *version,
-                                int *kind,
+                                enum svn_node_kind *kind,
                                 apr_pool_t *pool,
                                 apr_hash_t **hash);
 
@@ -396,7 +396,19 @@ svn_error_t *svn_wc__entry_get_ancestry (svn_string_t *path,
 
 
 /*** General utilities that may get moved upstairs at some point. */
+
+/* Ensure that DIR exists. */
 svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
+
+
+/* Convert TIME to an svn string representation, which can be
+   converted back by svn_wc__string_to_time(). */
+svn_string_t *svn_wc__time_to_string (apr_time_t time, apr_pool_t *pool);
+
+
+/* Convert TIMESTR to an apr_time_t.  TIMESTR should be of the form
+   returned by svn_wc__time_to_string(). */
+apr_time_t svn_wc__string_to_time (svn_string_t *timestr);
 
 
 

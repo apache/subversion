@@ -246,6 +246,7 @@ typedef struct svn_wc__entry_baton_t
 
   svn_string_t *entryname; /* The name of the entry we're looking for. */
   svn_vernum_t version;    /* The version we will get or set. */
+  enum svn_node_kind kind; /* The kind we will get or set. */
 
   apr_hash_t *attributes;  /* The attribute list from XML, which will
                               be read from and written to. */
@@ -254,26 +255,39 @@ typedef struct svn_wc__entry_baton_t
 
 
 
-/* Search through ATTS and fill in BATON->attributes appropriately.
-   BATON->attributes is a hash whose keys are char *'s and values are
+/* Search through ATTS and fill in DESIRED_ATTRS appropriately.
+   DESIRED_ATTRS is a hash whose keys are char *'s and values are
    svn_string_t **'s, which will be set to point to new strings
    representing the values discovered in ATTS.
 
-   Also, BATON->version will be set appropriately.
+   Certain arguments will also be converted and set directly: VERSION
+   and KIND.
  */
 static void
 get_entry_attributes (const char **atts,
                       svn_vernum_t *version,
+                      enum svn_node_kind *kind,
                       apr_hash_t *desired_attrs,
                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
+  const char *found_version, *found_kind;
 
   /* Handle version specially. */
-  *version = (svn_vernum_t) 
-    atoi (svn_xml_get_attr_value (SVN_WC__ENTRIES_ATTR_VERSION, atts));
+  found_version = svn_xml_get_attr_value (SVN_WC__ENTRIES_ATTR_VERSION, atts);
+  if (found_version)
+    *version = (svn_vernum_t) atoi (found_version);
+  else
+    *version = SVN_INVALID_VERNUM;
+      
+  /* Handle kind specially. */
+  found_kind = svn_xml_get_attr_value (SVN_WC__ENTRIES_ATTR_KIND, atts);
+  if (found_kind)
+    *kind = (enum svn_node_kind) atoi (found_kind);
+  else
+    *kind = SVN_INVALID_VERNUM;
 
-  /* Now loop through the requested attributes, setting by reference. */
+  /* Now loop through the other requested attributes, setting by reference. */
   for (hi = apr_hash_first (desired_attrs); hi; hi = apr_hash_next (hi))
     {
       const char *key;
@@ -287,6 +301,41 @@ get_entry_attributes (const char **atts,
       val = svn_xml_get_attr_value (key, atts);
       *receiver = (val ? svn_string_create (val, pool) : NULL);
     }
+}
+
+
+static svn_error_t *
+write_entry (apr_file_t *outfile,
+             svn_string_t *entryname,
+             svn_vernum_t version,
+             enum svn_node_kind kind,
+             apr_hash_t *attributes,
+             apr_pool_t *pool)
+{
+  svn_string_t *verstr
+    = svn_string_create (apr_psprintf (pool, "%ld", (long int) version), pool);
+  
+  svn_string_t *kindstr 
+    = svn_string_create (apr_psprintf (pool, "%d", (int) kind), pool);
+  
+  apr_hash_set (attributes,
+                SVN_WC__ENTRIES_ATTR_VERSION,
+                strlen (SVN_WC__ENTRIES_ATTR_VERSION),
+                verstr);
+  apr_hash_set (attributes,
+                SVN_WC__ENTRIES_ATTR_KIND,
+                strlen (SVN_WC__ENTRIES_ATTR_KIND),
+                kindstr);
+  apr_hash_set (attributes,
+                SVN_WC__ENTRIES_ATTR_NAME,
+                strlen (SVN_WC__ENTRIES_ATTR_NAME),
+                entryname);
+  
+  return svn_xml_write_tag_hash (outfile,
+                                 pool,
+                                 svn_xml__self_close_tag,
+                                 SVN_WC__ENTRIES_ENTRY,
+                                 attributes);
 }
 
 
@@ -315,25 +364,12 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 
           if (baton->outfile) /* we're writing out a changed tag */
             {
-              char *verstr = apr_psprintf (baton->pool,
-                                           "%ld",
-                                           (long int) baton->version);
-
-              svn_xml_hash_atts_preserving (atts,
-                                            baton->attributes,
-                                            baton->pool);
-
-              /* Version has to be stored specially. */
-              apr_hash_set (baton->attributes,
-                            SVN_WC__ENTRIES_ATTR_VERSION,
-                            strlen (SVN_WC__ENTRIES_ATTR_VERSION),
-                            svn_string_create (verstr, baton->pool));
-
-              err = svn_xml_write_tag_hash (baton->outfile,
-                                            baton->pool,
-                                            svn_xml__self_close_tag,
-                                            SVN_WC__ENTRIES_ENTRY,
-                                            baton->attributes);
+              err = write_entry (baton->outfile,
+                                 baton->entryname,
+                                 baton->version,
+                                 baton->kind,
+                                 baton->attributes,
+                                 baton->pool);
               if (err)
                 {
                   svn_xml_signal_bailout (err, baton->parser);
@@ -343,6 +379,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           else  /* just reading attribute values, not writing a new tag */
             get_entry_attributes (atts,
                                   &(baton->version),
+                                  &(baton->kind),
                                   baton->attributes,
                                   baton->pool);
         }
@@ -396,18 +433,12 @@ handle_end_tag (void *userData, const char *tagname)
           /* If this entry didn't exist before, then add it now. */
           if (! baton->found_it)
             {
-              char *verstr
-                = apr_psprintf (baton->pool, "%ld", (long int) baton->version);
-              
-              err = svn_xml_write_tag (baton->outfile,
-                                       baton->pool,
-                                       svn_xml__self_close_tag,
-                                       SVN_WC__ENTRIES_ENTRY,
-                                       SVN_WC__ENTRIES_ATTR_NAME,
-                                       baton->entryname,
-                                       SVN_WC__ENTRIES_ATTR_VERSION,
-                                       svn_string_create (verstr, baton->pool),
-                                       NULL);
+              err = write_entry (baton->outfile,
+                                 baton->entryname,
+                                 baton->version,
+                                 baton->kind,
+                                 baton->attributes,
+                                 baton->pool);
               if (err)
                 {
                   svn_xml_signal_bailout (err, baton->parser);
@@ -491,6 +522,8 @@ do_entry (svn_string_t *path,
           svn_string_t *entryname,
           svn_vernum_t version,
           svn_vernum_t *version_receiver,
+          enum svn_node_kind kind,
+          enum svn_node_kind *kind_receiver,
           svn_boolean_t setting,
           apr_hash_t *attributes)
 {
@@ -524,6 +557,7 @@ do_entry (svn_string_t *path,
   baton->outfile    = outfile;
   baton->entryname  = entryname;
   baton->version    = version;
+  baton->kind       = kind;
   baton->attributes = attributes;
 
   /* Set the att. */
@@ -547,7 +581,10 @@ do_entry (svn_string_t *path,
         return err;
     }
   else
-    *version_receiver = baton->version;
+    {
+      *version_receiver = baton->version;
+      *kind_receiver = baton->kind;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -557,7 +594,7 @@ svn_error_t *
 svn_wc__entry_set (svn_string_t *path,
                    svn_string_t *entryname,
                    svn_vernum_t version,
-                   int kind,
+                   enum svn_node_kind kind,
                    apr_pool_t *pool,
                    ...)
 {
@@ -565,17 +602,16 @@ svn_wc__entry_set (svn_string_t *path,
   apr_hash_t *att_hash;
   va_list ap;
 
-  va_start (ap, pool);
-
   /* Convert the va_list into a hash of attributes */
+  va_start (ap, pool);
   att_hash = svn_xml_ap_to_hash (ap, pool);
+  va_end (ap);
   
-  /* kff todo: `kind' argument is getting tossed!  Change do_entry(). */
   err = do_entry (path, pool, entryname,
                   version, NULL,
-                  1,  /* "setting" flag */
+                  kind, NULL,
+                  1, /* setting */
                   att_hash);
-  va_end (ap);
 
   return err;
 }
@@ -586,15 +622,18 @@ svn_error_t *
 svn_wc__entry_get (svn_string_t *path,
                    svn_string_t *entryname,
                    svn_vernum_t *version,
-                   int *kind,
+                   enum svn_node_kind *kind,
                    apr_pool_t *pool,
                    apr_hash_t **hash)
 {
   svn_error_t *err;
-  apr_hash_t *ht = apr_make_hash (pool);  /* Create a new, empty hashtable */
+  apr_hash_t *ht = apr_make_hash (pool);
 
-  /* kff todo: `kind' argument is getting tossed!  Change do_entry(). */
-  err = do_entry (path, pool, entryname, 0, version, 0, ht);
+  err = do_entry (path, pool, entryname,
+                  SVN_INVALID_VERNUM, version,
+                  0, kind,
+                  0, /* not setting */
+                  ht);
   if (err)
     return err;
 
