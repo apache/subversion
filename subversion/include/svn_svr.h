@@ -76,13 +76,6 @@
 #include <apr_dso.h>     /* defines ap_dso_handle_t */
 
 
-/******************************************
-
-   The API for server-side "plug-ins"  (modeled after Apache)
-
-******************************************/
-
-
 /* 
    A "plug-in" object is a list which describes exactly where custom
    routines should be called from within the server.  We define broad
@@ -128,13 +121,6 @@ typedef struct svn_svr_plugin_t
 
 
 
-
-/******************************************
-
-   The API for general loading of policy config files
-
-******************************************/
-
 /* 
    This object holds three lists that describe the information read in
    from a `svn.conf' file.  Every svn_svr_* routine requires a pointer
@@ -146,16 +132,16 @@ typedef struct svn_svr_plugin_t
 typedef struct svn_svr_policies_t
 {
   /* A hash which maps repositories -> aliases.
-     KEY = (svn_string_t *),  VAL = (svn_string_t *)  */
+     KEY = bytestring data,  VAL = (svn_string_t *)  */
   ap_hash_t *repos_aliases;
 
   /* A hash which maps security commands -> command args.
      (These commands describe global security policies.)
-     KEY = (svn_string_t *),  VAL = (svn_string_t *)  */
+     KEY = bytestring data,  VAL = (svn_string_t *)  */
   ap_hash_t *global_restrictions;
   
-  /* A hash which maps DSO pathnames -> loaded plugin objects.
-     KEY = (svn_string_t *),  VAL = (svn_svr_plugin_t *)   */
+  /* A hash which maps plugin names -> loaded plugin objects.
+     KEY = bytestring data,  VAL = (svn_svr_plugin_t *)   */
   ap_hash_t *plugins;
 
   /* A convience memory pool, in case a server routine ever needs one */
@@ -222,9 +208,10 @@ svn_error_t * svn_svr_authorize (svn_svr_policies_t *policy,
 
 /* For reading history */
 
-svn_ver_t * svn_svr_latest (svn_svr_policies_t *policy,
-                            svn_string_t *repos, 
-                            svn_user_t *user);
+svn_error_t * svn_svr_latest (svn_ver_t **latest_ver,
+                              svn_svr_policies_t *policy,
+                              svn_string_t *repos, 
+                              svn_user_t *user);
 
 svn_string_t * svn_svr_get_ver_prop (svn_svr_policies_t *policy,
                                      svn_string_t *repos, 

@@ -54,18 +54,39 @@
 #include <apr_dso.h>
 
 
+/* 
+   svn_svr_load_plugin() : Utility to load/register a server plugin
+
+   Input:    * a policy in which to register the plugin
+             * a path to the shared library
+             * name of the initialization routine in the plugin
+            
+   Returns:  error structure or SVN_SUCCESS
+
+   ASSUMES that ap_dso_init() has already been called!
+
+*/
+
+svn_error_t *
+svn_svr_load_plugin (svn_svr_policies_t *policy,
+                     svn_string_t *path, 
+                     (svn_error_t *) (* ) ())
+{
+
+}
+
 
 
 
 /*  svr__load_plugins :  NOT EXPORTED
 
-    Loops through list of plugins, loads each using APR's DSO
+    Loops through hash of plugins, loads each using APR's DSO
     routines.  Each plugin ultimately registers (appends) itself into
-    the policy structure.
+    the policy structure.  
 */
 
-void
-svr__load_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
+svn_error_t *
+svr__load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
 {
   ap_hash_index_t *hash_index;
   void *key, *val;
@@ -79,8 +100,8 @@ svr__load_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
     {
       svn_string_t *msg = 
         svn_string_create 
-        ("svr__load_plugins(): fatal: can't ap_dso_init() ", pool);
-      svn_handle_error (svn_create_error (result, SVN_NON_FATAL, msg, pool));
+        ("svr__load_plugins(): fatal: can't ap_dso_init() ", policy->pool);
+      return (svn_create_error (result, SVN_NON_FATAL, msg, policy->pool));
     }
 
   /* Loop through the hash of plugins from configdata */
@@ -89,7 +110,7 @@ svr__load_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
        hash_index;                              /* NULL if out of entries */
        hash_index = ap_hash_next (hash_index))  /* get next hash entry */
     {
-      
+      /* call 
     }
 }
 
@@ -201,7 +222,7 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
             
             printf ("svr_init(): loading list of plugins...\n");
             
-            svr__load_plugins ((ap_hash_t *) val, my_policies);
+            svr__load_all_plugins ((ap_hash_t *) val, my_policies);
 
           }
 
@@ -238,7 +259,9 @@ svn_svr_register_plugin (svn_svr_policies_t *policy,
   /* Store in policy->plugins hashtable : 
      KEY = new_plugin->name, val = new_plugin */
 
-  return 0;  /* success */
+  /* Hm... how would this routine fail? :)  */
+
+  return SVN_SUCCESS;  /* success */
 }
 
 

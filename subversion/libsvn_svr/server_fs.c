@@ -83,10 +83,12 @@ svn_string_t *
 svr__expand_repos_name (svn_svr_policy_t *policy,
                         svn_string_t *repos)
 {
-  /* Loop through policy->repos_aliases hash.
+ /* Loop through policy->repos_aliases hash.
      If there's a match, return new bytestring containing hash value.
      If there's no match, return original string pointer.
   */
+
+  /* NOTE:  if we need a pool, use the one inside policy.  */
 
   return repos;
 }
@@ -136,11 +138,7 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
           /* Call the authorization routine, giving it a chance to
              kill our authorization assumption */
           err = (*my_hook) (repos, user, action, ver, path);
-        }
-
-      if (err)  /* bail out if we fail at any point in the loop */
-        {
-          return err;
+          RETURN_IF_ERROR(err);
         }
     }
 
@@ -157,7 +155,7 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
                                            policy->pool);
     }
   
-  return 0;  /* successfully authorized to perform the action! */
+  return SVN_SUCCESS;  /* successfully authorized to perform the action! */
 }
 
 
@@ -183,7 +181,7 @@ svn_svr_policy_authorize (svn_svr_policies_t *policy,
   /* BIG TODO: loop through policy->global_restrictions array,
      interpreting each restriction and checking authorization */
 
-  return 0;
+  return SVN_SUCCESS;
 }
 
 
@@ -213,20 +211,12 @@ svn_svr_authorize (svn_svr_policies_t *policy,
   svn_error_t *err;
   
   err = svn_svr_policy_authorize (policy, repos, user, action, ver, path);
-
-  if (err)
-    {
-      return err;
-    }
+  RETURN_IF_ERROR(err);
 
   err = svn_svr_plugin_authorize (policy, repos, user, action, ver, path);
+  RETURN_IF_ERROR(err);
 
-  if (err)
-    {
-      return err;
-    }
-
-  return 0;  /* successfully authorized! */
+  return SVN_SUCCESS;  /* successfully authorized! */
 }
 
 
@@ -245,8 +235,9 @@ svn_svr_authorize (svn_svr_policies_t *policy,
 
 /* Returns latest version of the repository */
 
-svn_ver_t * 
-svn_svr_latest (svn_svr_policies_t *policy, 
+svn_error_t *
+svn_svr_latest (svn_ver_t **latest_ver,
+                svn_svr_policies_t *policy, 
                 svn_string_t *repos, 
                 svn_user_t *user)
 {
@@ -254,26 +245,17 @@ svn_svr_latest (svn_svr_policies_t *policy,
   svn_string_t *repository = svr__expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = latest;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, NULL, NULL);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_latest (repository, 
-                             user->svn_username));
-    }
+  my_action = latest;
+  svn_error_t *error = svn_svr_authorize (policy, repository, user, 
+                                          my_action, NULL, NULL);
+  RETURN_IF_ERROR(error);
+ 
+  /* Do filesystem call with "canonical" username */
+  return  (svn_fs_latest (latest_ver,
+                          repository, 
+                          user->svn_username));
 }
+
 
 
 
