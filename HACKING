@@ -816,6 +816,10 @@ that was changed:
       necessary to organize the log message by paths and symbols, as
       in the examples above.
 
+   *  If your change was to multiple files, provide a brief summary of
+      the change at the top of the log message (before the paths and
+      symbols list).
+
 In general, there is a tension between making entries easy to find by
 searching for identifiers, and wasting time or producing unreadable
 entries by being exhaustive.  Use your best judgment --- and be
