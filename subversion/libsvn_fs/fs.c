@@ -658,6 +658,10 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 
   SVN_BDB_ERR (db_env_create (&env, 0));
 
+  /* Needed on Windows in case Subversion and Berkeley DB are using
+     different C runtime libraries  */
+  SVN_BDB_ERR (env->set_alloc (env, malloc, realloc, free));
+
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
                                              | DB_INIT_LOCK | DB_INIT_LOG
@@ -676,8 +680,6 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
       APR_ARRAY_PUSH (*logfiles, const char *) = apr_pstrdup (pool, *filename);
     }
 
-  /* allocate_env sets malloc and free as the memory management functions,
-     therefore we use free to release memory allocated by DB_ENV */
   free (filelist);
   
   SVN_BDB_ERR (env->close (env, 0));
