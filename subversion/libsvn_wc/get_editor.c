@@ -153,6 +153,12 @@ finish_directory (void *child_baton)
 
 
 static svn_error_t *
+finish_file (void *child_baton)
+{
+}
+
+
+static svn_error_t *
 add_file (svn_string_t *name,
           void *walk_baton, void *parent_baton,
           svn_string_t *base_path,
@@ -223,6 +229,7 @@ svn_wc_apply_delta (svn_delta_stream_t *src,
   walker.add_directory     = add_directory;
   walker.replace_directory = replace_directory;
   walker.finish_directory  = finish_directory;
+  walker.finish_file       = finish_file;
   walker.add_file          = add_file;
   walker.replace_file      = replace_file;
 
