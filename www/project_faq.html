@@ -72,8 +72,13 @@
 <li><a href="#merge-using-tags">I can't use tags to merge changes from a 
     branch into the trunk like I used to with CVS, can I?</a></li>
 <li><a href="#version-value-in-source">Why doesn't the $Revision$
-  keyword do what I want?  It expands to the file's last-changed revision,
-  but I want something that will expand to the file's current revision.</a></li>
+  keyword do what I want?  It expands to the file's last-changed
+  revision, but I want something that will expand to the file's
+  current revision.</a></li>
+<li><a href="#ignore-commit">I have a file in my project that every
+developer must change, but I don't want those local mods to ever be
+committed.  How can I make 'svn commit' ignore the file?</a></li>
+
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -138,7 +143,7 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#mod_dav_svn-win32">I am trying to use mod_dav_svn
     with Apache on Win32 and I'm getting an error saying that the 
     module cannot be found, yet the mod_dav_svn.so file is right 
-    there in <tt>\Apache\modules.</tt></li>
+    there in <tt>\Apache\modules.</tt></a></li>
 
 
 
@@ -1247,6 +1252,24 @@ href='http://tortoisesvn.tigris.org/download.html'>TortoiseSVN
 download page</a>; it replaces all <tt>$WCREV$</tt> tags in a given
 file with the current working copy revision.
 </p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="ignore-commit">I have a file in my project that every
+developer must change, but I don't want those local mods to ever be
+committed.  How can I make 'svn commit' ignore the file?</a></h3>
+
+<p>The answer is: don't put that file under version control.  Instead,
+put a <em>template</em> of the file under version control, something
+like "file.tmpl".</p>
+
+<p>Then, after the initial 'svn checkout', have your users (or your
+build system) do a normal OS copy of the template to the proper
+filename, and have users customize the copy.  The file is unversioned,
+so it will never be committed.  And if you wish, you can add the file
+to its parent directory's svn:ignore property, so it doesn't show up
+as '?'  in the 'svn status' command.</p>
+
 
 <![CDATA[=========================================================]]>
 
