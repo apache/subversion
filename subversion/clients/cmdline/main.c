@@ -842,7 +842,6 @@ main (int argc, const char * const *argv)
   os->interleave = 1;
   while (1)
     {
-      apr_status_t apr_err;
       const char *opt_arg;
       svn_boolean_t ret;
 
