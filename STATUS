@@ -72,13 +72,13 @@ Candidate changes:
     Justification:  fixes malformed XML errors from large
                     ra_dav checkouts/updates/etc.  
     Votes:
-      +1: sussman, david
+      +1: sussman, david, lundblad
 
   * r10148
     Fixes crash when deleting a revprop.
     Justification:  it's a crash.  we shouldn't ever crash.
     Votes:
-      +1: sussman
+      +1: sussman, lundblad
 
   * r10132, r10136, 10138, 10139
     Allow user to interrupt between auth prompts.
@@ -100,5 +100,13 @@ Candidate changes:
     Justification: Embarrassing bug;  a one-line fix to mod_auth_svn.
                    (We weren't unescaping a URI).
     Votes:
-      +1: sussman
+      +1: sussman, lundblad
+
+  * r10185, r10192
+    Fix crash when deleting revprop over ra_svn.
+    Justification: Don't ever crash.
+    Notes: Makes earlier servers close the connection immediately, still
+           better than a crashing client.
+    Votes:
+      +1: lundblad
 
