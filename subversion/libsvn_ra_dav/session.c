@@ -151,7 +151,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
-  svn_config_get(cfg, &exceptions, SVN_CONFIG_SECTION_DEFAULT, 
+  svn_config_get(cfg, &exceptions, SVN_CONFIG_SECTION_GLOBAL, 
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
     {
@@ -160,19 +160,19 @@ static svn_error_t *get_server_settings(const char **proxy_host,
     }
   if (! is_exception)
     {
-      svn_config_get(cfg, proxy_host, SVN_CONFIG_SECTION_DEFAULT, 
+      svn_config_get(cfg, proxy_host, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
-      svn_config_get(cfg, &port_str, SVN_CONFIG_SECTION_DEFAULT, 
+      svn_config_get(cfg, &port_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
-      svn_config_get(cfg, proxy_username, SVN_CONFIG_SECTION_DEFAULT, 
+      svn_config_get(cfg, proxy_username, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
-      svn_config_get(cfg, proxy_password, SVN_CONFIG_SECTION_DEFAULT, 
+      svn_config_get(cfg, proxy_password, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
-      svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_DEFAULT, 
+      svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
-      svn_config_get(cfg, &compress_str, SVN_CONFIG_SECTION_DEFAULT, 
+      svn_config_get(cfg, &compress_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_COMPRESSION, NULL);
-      svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_DEFAULT, 
+      svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
     }
 
