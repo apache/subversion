@@ -29,11 +29,27 @@ public class StatusKind
     public final static int MERGED=8;
     public final static int CONFLICTED=9;
 
-    public final int kind;
+    private int kind = NONE;
 
     public StatusKind(int kind) 
 	{
+	    super();
 	    this.kind = kind;
+	}
+
+    public StatusKind()
+	{
+	    this(NONE);
+	}
+
+    public void setKind(int _kind)
+	{
+	    kind = _kind;
+	}
+
+    public int getKind()
+	{
+	    return kind;
 	}
 }
 
