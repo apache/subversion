@@ -602,6 +602,33 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
   *edit_baton = make_baton(pool, py_editor, NULL);
 }
 
+
+void svn_swig_py_notify_func(void *baton,
+                             const char *path,
+                             svn_wc_notify_action_t action,
+                             svn_node_kind_t kind,
+                             const char *mime_type,
+                             svn_wc_notify_state_t content_state,
+                             svn_wc_notify_state_t prop_state,
+                             svn_revnum_t revision)
+{
+  PyObject *function = baton;
+  PyObject *arglist;
+  PyObject *result;
+
+  if (function != NULL && function != Py_None)
+    {
+      arglist = Py_BuildValue("(siisiii)",
+                              path, action, kind, mime_type,
+                              content_state, prop_state, revision);
+
+      result = PyEval_CallObject(function, arglist);
+
+      Py_XDECREF(arglist);
+      Py_XDECREF(result);
+    }
+}
+
 
 /*** Other Wrappers for SVN Functions ***/
 

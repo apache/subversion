@@ -31,6 +31,8 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_delta.h"
+#include "svn_client.h"
+#include "svn_repos.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,6 +89,17 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              PyObject *py_editor,
                              apr_pool_t *pool);
+
+/* a notify function that executes a Python function that is passed in
+   via the baton argument */
+void svn_swig_py_notify_func(void *baton,
+                             const char *path,
+                             svn_wc_notify_action_t action,
+                             svn_node_kind_t kind,
+                             const char *mime_type,
+                             svn_wc_notify_state_t content_state,
+                             svn_wc_notify_state_t prop_state,
+                             svn_revnum_t revision);
 
 /* thunked log receiver function.  */
 svn_error_t * svn_swig_py_thunk_log_receiver(void *py_receiver,
