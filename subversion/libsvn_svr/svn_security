@@ -27,6 +27,7 @@ core-programmer : checkout update commit add rm mv
 nitpicker : checkout update annotate
 admin : checkout update commit add rm mv import
 god : all
+offlimits: none
 
 
 ########### Section 3:  Role mappings ################################
@@ -34,6 +35,6 @@ god : all
 # subversion_username : role1 path1 : role2 path2 : ....
 
 joe : visitor /trunk/gnome : nitpicker /trunk/foo
-kfogel : admin /trunk/subversion
+kfogel : admin /trunk/subversion : offlimits /trunk/subversion/foo.c
 zeke : hacker /trunk/comp-tools : visitor /trunk/comp-tools/gdb
 
