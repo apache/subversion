@@ -567,7 +567,7 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
        * interesting state, i.e. with data in the newline or keyword
        * buffer.  First try to get to the boring state so we can copy
        * a run of boring characters; then try to get back to the
-       * interesting state. by processing an interesting character,
+       * interesting state by processing an interesting character,
        * and repeat. */
       for (p = buf; p < buf + readlen;)
         {
@@ -645,7 +645,7 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
                                 &src_format_len, newline_buf, newline_off, d,
                                 repair));
   if (keyword_off)
-    SVN_ERR (translate_write (d, keyword_buf, len));
+    SVN_ERR (translate_write (d, keyword_buf, keyword_off));
 
   return SVN_NO_ERROR;
 }
