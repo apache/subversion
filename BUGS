@@ -28,7 +28,12 @@ Where To Report A Bug:
    * If the bug is in the Neon HTTP library, please report it to:
      neon@webdav.org, dev@subversion.tigris.org
 
-   * If the bug is in your rug, please give it a hug and keep it snug.
+   * If the bug is in Apache httpd 2.0, file a bug report at
+     http://httpd.apache.org/bug_report.html.  There is also the
+     apache development mailing list dev@httpd.apache.org; don't know
+     whether they want questions or bug reports sent there.  [someone
+     who knows please correct this, i'm just taking it from the
+     httpd-2.0/README file]
 
 
 How To Report A Bug:
