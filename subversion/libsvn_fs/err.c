@@ -119,7 +119,7 @@ svn_fs__retry_txn (svn_fs_t *fs,
 
 
 static svn_error_t *
-corrupt_id (const char *fmt, svn_fs_id_t *id, svn_fs_t *fs)
+corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
 {
   svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
 
@@ -129,7 +129,7 @@ corrupt_id (const char *fmt, svn_fs_id_t *id, svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs__err_corrupt_representation (svn_fs_t *fs, svn_fs_id_t *id)
+svn_fs__err_corrupt_representation (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
     corrupt_id ("corrupt representation for node `%s' in filesystem `%s'",
@@ -138,7 +138,7 @@ svn_fs__err_corrupt_representation (svn_fs_t *fs, svn_fs_id_t *id)
 
 
 svn_error_t *
-svn_fs__err_corrupt_node_revision (svn_fs_t *fs, svn_fs_id_t *id)
+svn_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
     corrupt_id ("corrupt node revision for node `%s' in filesystem `%s'",
@@ -147,7 +147,7 @@ svn_fs__err_corrupt_node_revision (svn_fs_t *fs, svn_fs_id_t *id)
 
 
 svn_error_t *
-svn_fs__err_corrupt_id (svn_fs_t *fs, svn_fs_id_t *id)
+svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
     corrupt_id ("Corrupt node revision id `%s' appears in filesystem `%s'",
@@ -156,7 +156,7 @@ svn_fs__err_corrupt_id (svn_fs_t *fs, svn_fs_id_t *id)
 
 
 svn_error_t *
-svn_fs__err_dangling_id (svn_fs_t *fs, svn_fs_id_t *id)
+svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
     corrupt_id ("reference to non-existent node `%s' in filesystem `%s'",

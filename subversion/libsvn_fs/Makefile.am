@@ -4,6 +4,7 @@
 lib_LTLIBRARIES = libsvn_fs.la
 libsvn_fs_la_SOURCES = convert-size.c		\
 		       dbt.c			\
+		       err.c			\
 		       fs.c			\
 		       id.c			\
 		       nodes-table.c		\
@@ -12,7 +13,6 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 # Set aside for the moment:
 #		       delta.c			\
 #		       dir.c			\
-#		       err.c			\
 #		       file.c			\
 #		       node.c			\
 #		       rep.c			\
