@@ -311,10 +311,18 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
       return ctx.trunk_base
 
 
+if os.sep == '/':
+  def canonicalize_slashes(path):
+    return path
+else:
+  def canonicalize_slashes(path):
+    return string.replace(path, os.sep, '/')
+
+
 def relative_name(cvsroot, fname):
   l = len(cvsroot)
   if fname[:l] == cvsroot and fname[l] == os.sep:
-    return string.replace(fname[l+1:], os.sep, '/')
+    return canonicalize_slashes(fname[l+1:])
   sys.stderr.write('relative_path("%s", "%s"): fname is not a sub-path of'
                    ' cvsroot\n' % (cvsroot, fname))
   sys.exit(1)
