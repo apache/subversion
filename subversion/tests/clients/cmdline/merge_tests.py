@@ -100,7 +100,7 @@ def textual_merges_galore(sbox):
     return 1
 
   wc_dir = sbox.wc_dir
-  url = os.path.join(svntest.main.test_area_url, sbox.repo_dir)
+  #  url = os.path.join(svntest.main.test_area_url, sbox.repo_dir)
   
   # Change mu and rho for revision 2
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -269,7 +269,8 @@ def textual_merges_galore(sbox):
       print "Merge got unexpected singleton", a.name
       raise svntest.main.SVNTreeUnequal
 
-  if (svntest.actions.run_and_verify_merge(other_wc, '1', '3', url,
+  if (svntest.actions.run_and_verify_merge(other_wc, '1', '3',
+                                           svntest.main.current_repo_url,
                                            expected_output,
                                            expected_disk,
                                            expected_status,
@@ -360,7 +361,7 @@ def textual_merges_galore(sbox):
   return svntest.actions.run_and_verify_merge(
     os.path.join(other_wc, 'A', 'D', 'G'),
     '2', '3',
-    os.path.join(url, 'A', 'D', 'G'),
+    os.path.join(svntest.main.current_repo_url, 'A', 'D', 'G'),
     expected_output,
     expected_disk,
     expected_status,
