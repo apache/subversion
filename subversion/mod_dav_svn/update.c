@@ -547,7 +547,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     }
 
 
-  editor = svn_delta_default_editor(resource->pool);
+  editor = svn_delta_old_default_editor(resource->pool);
   editor->set_target_revision = upd_set_target_revision;
   editor->open_root = upd_open_root;
   editor->delete_entry = upd_delete_entry;

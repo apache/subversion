@@ -615,7 +615,7 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
                              apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (subpool);
+  svn_delta_edit_fns_t *tree_editor = svn_delta_old_default_editor (subpool);
   struct edit_baton *eb = apr_palloc (subpool, sizeof (*eb));
 
   eb->target = target;

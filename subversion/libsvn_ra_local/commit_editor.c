@@ -635,7 +635,7 @@ svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
                           void *hook_baton,
                           apr_pool_t *pool)
 {
-  svn_delta_edit_fns_t *e = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *e = svn_delta_old_default_editor (pool);
   apr_pool_t *subpool = svn_pool_create (pool);
   struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
 

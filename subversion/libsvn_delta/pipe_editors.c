@@ -270,7 +270,7 @@ svn_delta_default_pipe_editor (svn_delta_edit_fns_t **new_editor,
                                apr_pool_t *pool)
 {
   struct svn_pipe_edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-  svn_delta_edit_fns_t *editor = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *editor = svn_delta_old_default_editor (pool);
   
   /* Set up the editor. */
   editor->set_target_revision = set_target_revision;

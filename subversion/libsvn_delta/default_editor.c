@@ -182,11 +182,9 @@ static const svn_delta_edit_fns_t default_editor =
 
 
 svn_delta_edit_fns_t *
-svn_delta_default_editor (apr_pool_t *pool)
+svn_delta_old_default_editor (apr_pool_t *pool)
 {
-  svn_delta_edit_fns_t *e = apr_pcalloc (pool, sizeof (*e));
-  memcpy (e, &default_editor, sizeof (default_editor));
-  return e;
+  return apr_pmemdup (pool, &default_editor, sizeof (default_editor));
 }
 
 

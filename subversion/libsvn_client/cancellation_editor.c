@@ -168,7 +168,7 @@ svn_client_get_cancellation_editor
     apr_pool_t *pool)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-  svn_delta_edit_fns_t *cancel_editor = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *cancel_editor = svn_delta_old_default_editor (pool);
 
   /* Set up the edit context. */
   eb->pool = svn_pool_create (pool);
@@ -199,6 +199,6 @@ svn_client_get_cancellation_editor
 
 /* 
  * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: 
  */

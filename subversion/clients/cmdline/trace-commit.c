@@ -331,7 +331,7 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
 {
   /* Allocate an edit baton to be stored in every directory baton. */
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
-  svn_delta_edit_fns_t *trace_editor = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *trace_editor = svn_delta_old_default_editor (pool);
 
   /* kff todo: hmm, that's a bit of a kluge now, isn't it? */
   if ((initial_path == NULL) || (initial_path->len == 0))

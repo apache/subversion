@@ -2324,7 +2324,7 @@ make_editor (svn_stringbuf_t *anchor,
 {
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
+  svn_delta_edit_fns_t *tree_editor = svn_delta_old_default_editor (pool);
 
   if (is_checkout)
     assert (ancestor_url != NULL);
