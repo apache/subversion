@@ -187,7 +187,7 @@ report_unversioned_item (const char *path)
 }
 
 static apr_status_t 
-report_warning (const char *warning)
+report_warning (apr_status_t status, const char *warning)
 {
   return APR_SUCCESS;
 }

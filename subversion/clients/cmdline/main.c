@@ -169,6 +169,7 @@ main (int argc, const char * const *argv)
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
+  svn_cl__init_feedback_vtable (pool);
   memset (&opt_state, 0, sizeof (opt_state));
   opt_state.revision = SVN_INVALID_REVNUM;
 

@@ -108,8 +108,10 @@ typedef struct svn_pool_feedback_t
      under revision control, a'la CVS's "? foobar.c" */
   apr_status_t (*report_unversioned_item) (const char *path);
 
-  /* Generic human-readable we-think-it's-non-fatal warning. */
-  apr_status_t (*report_warning) (const char *warning);
+  /* Generic human-readable we-think-it's-non-fatal warning.  This
+     function can parse STATUS and decide whether a "real" error
+     should be returned. */
+  apr_status_t (*report_warning) (apr_status_t status, const char *warning);
 
   /* Progress indication, yielding what PERCENTAGE (from 0-100) of a
      given ACTION has been completed. */

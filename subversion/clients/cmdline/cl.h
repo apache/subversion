@@ -180,6 +180,12 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
                                  void **edit_baton,
                                  svn_stringbuf_t *initial_path,
                                  apr_pool_t *pool);
+
+
+/* Initialize the top-pool's feedback vtable to contain functions
+   specific to the command-line client. */
+void svn_cl__init_feedback_vtable (apr_pool_t *top_pool);
+
 
 
 #endif /* SVN_CL_H */
@@ -189,3 +195,4 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
  * eval: (load-file "../svn-dev.el")
  * end: 
  */
+
