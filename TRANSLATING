@@ -1,0 +1,119 @@
+                                                              -*- text -*-
+
+If you are contributing code or translations to the Subversion project,
+please read this first.
+
+                   ===============================
+                   Guide to translating Subversion
+                   ===============================
+
+$LastChangedDate$
+
+* Introduction
+* Starting a new translation
+* Updating existing po files
+* Requirements for po and mo files
+* Conventions for the empty string msgid section
+* Translation teams
+* Single versus double quotes
+
+
+
+Introduction
+============
+
+Subversion uses gettext for its translation.  Gettext uses '.po' files
+to store translation information; the existing ones are kept in the
+subversion/po directory of the repository.
+[Note that the last paragraph deliberately does not say GNU gettext.]
+
+Please take some time to go through this document as well as the HACKING
+document also in this directory.
+
+
+
+Starting a new translation
+==========================
+
+Before starting a new translation please contact the subversion
+development mailing list to make sure you are not duplicating efforts.
+
+After that, you should perform the following steps:
+
+ Unix
+
+1) check out Subversion (see INSTALL for more information)
+2) run ./autogen.sh
+3) run ./configure
+4) run make locale-gnu-pot
+  This step is currently only supported for GNU gettext Makefile based systems
+5) Copy the generated subversion.pot to a file named LANG.po, where LANG
+  is the language code of your language.
+
+Steps (2) and (3) generate a Makefile; step (4) generates
+subversion/po/subversion.pot
+
+
+
+Updating existing po files
+==========================
+
+The Makefile based part of the build system contains a make target to
+facilitate maintenance of existing po files.  To update po files on
+systems with GNU gettext run
+
+    make locale-gnu-po-update
+
+
+
+Requirements for po and mo files
+================================
+
+Any mo file used with Subversion - whether obtained through the project or
+created locally - must satisfy two conditions:
+
+1) mo files must be UTF-8 encoded
+2) the empty string section (msgid "") must not contain a 'charset='
+  string
+
+These requirements stem from the fact that Subversion uses UTF-8
+internally, some implementations translate to the active locale and the
+fact that bind_textdomain_codeset() is not portable accross
+implementations.
+
+To satisfy the first requirement po files are required to be UTF-8
+encoded.  The build system makes sure that the second requirement is
+satisfied. (Though this is yet to be implemented.)
+
+
+
+Conventions for the empty string msgid section
+==============================================
+
+Some gettext implementations use a section with a msgid "" (empty string)
+to keep administrative data. One of the strings suggested is the
+'Last-Translator:' field.  Because the Subversion project has a policy not
+to name names in specific files, but give credit in the repository log
+messages, you are requested not to use this field.
+
+
+
+Translation teams
+=================
+
+The translation project (http://www2.iro.umontreal.ca/~gnutra/po/HTML/)
+attempts to organise translation attempts and get translators for
+various packages.  Some teams have guidelines to stimulate consistency
+across packages.
+
+
+
+Single versus double quotes
+===========================
+
+The project has standardised the use of quotes. Some translation teams
+have done the same.  If there is no translation team for your locale or
+they did not standardise quoting, please follow the project guidelines per
+HACKING.  If they did: follow them :-)
+
+
