@@ -4,19 +4,6 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.1.0:
-================
-
-As of 1.1.0-rc3, 1.1.0 is in its final one-week soak period.  Any code
-changes made to 1.1.0 necessitate restarting the final one-week soak.
-(See HACKING for the precise definition of which changes necessitate a
-resoak.)  If you are proposing a code change for 1.1.0, make a note of
-whether it warrants a resoak on its own; otherwise, the change may be
-folded in if some other change warrants a resoak, but will be moved to
-1.1.1 if not.
-
-Candidate changes:
-
 Status of 1.1.1:
 ================
 
