@@ -953,13 +953,7 @@ test_list = [ None,
               # non-Posix platforms, we won't have to skip here:
               Skip(revprop_change, (os.name != 'posix')),
               prop_value_conversions,
-              # This stuff currently fails over DAV, but I can't seem to
-              # make a conditional for that (e.g., svntest.main.test_area_url
-              # has not yet been populated at this point, so I can't check
-              # whether or not it starts with 'http').  So, skip for all
-              # RA layers until we turn on binary property support in
-              # mod_dav_svn (see issue #1015).
-              Skip(binary_props, 1),
+              binary_props,
              ]
 
 if __name__ == '__main__':
