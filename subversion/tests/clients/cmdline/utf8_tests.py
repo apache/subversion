@@ -102,9 +102,14 @@ try:
 except:
   pass
 
+# Check to see if the locale uses ISO-8859-1 encoding.  The regex is necessary
+# because some systems ommit the first hyphen or use lowercase letters for ISO.
+localeregex = re.compile('^ISO-?8859-1$', re.I)
+localematch = localeregex.search(locale.getlocale()[1])
+
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(basic_utf8_conversion, locale.getlocale()[1] != 'ISO8859-1')
+              Skip(basic_utf8_conversion, localematch is None)
              ]
 
 if __name__ == '__main__':
