@@ -1030,14 +1030,34 @@ static svn_error_t * reporter_set_path(void *report_baton,
 static svn_error_t * reporter_delete_path(void *report_baton,
                                           svn_stringbuf_t *path)
 {
+  report_baton_t *rb = report_baton;
+  apr_status_t status;
+  const char *s;
+
+  s = apr_psprintf(rb->ras->pool,
+                   "<S:missing>%s</S:missing>" DEBUG_CR,
+                   path->data);
+
+  status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
+  if (status)
+    {
+      (void) apr_file_close(rb->tmpfile);
+      (void) apr_file_remove(rb->fname->data, rb->ras->pool);
+      return svn_error_create(status, 0, NULL, rb->ras->pool,
+                              "Could not write a missing entry to the "
+                              "temporary report file.");
+    }
+
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t * reporter_abort_report(void *report_baton)
 {
-  /* ## gstein:  this routine probably doesn't need to do anything but
-     delete rb->tmpfile, right?  */
+  report_baton_t *rb = report_baton;
+
+  (void) apr_file_close(rb->tmpfile);
+  (void) apr_file_remove(rb->fname->data, rb->ras->pool);
 
   return SVN_NO_ERROR;
 }
