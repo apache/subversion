@@ -23,6 +23,9 @@ General Problems (someone grab these):
    - don't use stdio's BUFSIZ (portability?). define an SVN specific
      constant and use it throughout.
 
+   - refactor client/main.c's cmdline handling and place it into
+     libsvn_subr. use the new functions within svnadmin/main.c.
+
 Ben & Karl todo:
 
    - clean up the interface in libsvn_client.  make it more canonical.
