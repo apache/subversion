@@ -2155,11 +2155,28 @@ def pass4(ctx):
     print count, 'commits processed.'
 
 
+def pass5(ctx):
+  if ctx.skip_cleanup:
+    return
+
+  # Remove our database files
+  os.unlink(SVN_REVISIONS_DB)
+  os.unlink(NODES_DB)
+  os.unlink(SYMBOLIC_NAME_ROOTS_DB)
+  os.unlink(SYMBOLIC_NAMES_DB)
+  
+  # Remove our other data files
+  for suffix in (REVS_SUFFIX, CLEAN_REVS_SUFFIX,
+                 SORTED_REVS_SUFFIX, RESYNC_SUFFIX):
+    os.unlink('cvs2svn-data' + suffix)
+
+
 _passes = [
   pass1,
   pass2,
   pass3,
   pass4,
+  pass5,
   ]
 
 
@@ -2206,6 +2223,8 @@ def usage(ctx):
         % ctx.encoding
   print '  --username=NAME  default name when CVS repos has no name (default: %s)' \
         % ctx.username
+  print '  --skip-cleanup   prevent the deletion of intermediate files (default: %s)' \
+        % ctx.skip_cleanup
 
 
 def main():
@@ -2228,6 +2247,7 @@ def main():
   ctx.svnadmin = "svnadmin"
   ctx.username = "unknown"
   ctx.print_help = 0
+  ctx.skip_cleanup = 0
 
   start_pass = 1
 
@@ -2237,7 +2257,8 @@ def main():
                                  "username=",
                                  "branches=", "tags=", "encoding=",
                                  "trunk-only", "no-prune",
-                                 "dump-only", "dumpfile=", "svnadmin="])
+                                 "dump-only", "dumpfile=", "svnadmin=",
+                                 "skip-cleanup"])
   except getopt.GetoptError, e:
     sys.stderr.write(error_prefix + ': ' + str(e) + '\n\n')
     usage(ctx)
@@ -2281,6 +2302,8 @@ def main():
       ctx.encoding = value
     elif opt == '--username':
       ctx.username = value
+    elif opt == '--skip-cleanup':
+      ctx.skip_cleanup = 1
 
   if ctx.print_help:
     usage(ctx)
