@@ -464,6 +464,17 @@ close_edit (void *edit_baton)
   svn_error_t *err;
   const char *conflict;
 
+  /* Here, we pass the log message to the filesystem by adding it as a
+     property on the transaction.  Later, when we commit the
+     transaction, that log message will be copied into the newly
+     created revision.   This solves the problem of making sure that
+     the commit and the setting of the initial log message happens as
+     a single atomic "thing." */
+  SVN_ERR (svn_fs_change_txn_prop (eb->txn,
+                                   svn_string_create (SVN_PROP_REVISION_LOG,
+                                                      eb->pool),
+                                   eb->log_msg, eb->pool));
+
   err = svn_fs_commit_txn (&conflict, &new_revision, eb->txn);
 
   if (err)
@@ -486,22 +497,6 @@ close_edit (void *edit_baton)
       SVN_ERR (svn_fs_abort_txn (eb->txn));
       return err;
     }
-
-  /* The commit succeeded.  Save the log message as a property of the
-     new revision.
-
-     TODO:  What if we crash right at this line?  We'd have a new
-     revision with no log message.  In the future, we need to make the
-     log message part of the same db txn that executes within
-     svn_fs_commit_txn -- probably by passing it right in. 
-
-     Followup: actually, jimb will soon allow us to set the "log"
-     property on the *transaction*, up at the top of this function, so
-     that the commit_txn() call will merge it all at once. */
-  SVN_ERR (svn_fs_change_rev_prop (eb->fs, new_revision,
-                                   svn_string_create (SVN_PROP_REVISION_LOG,
-                                                      eb->pool),
-                                   eb->log_msg, eb->pool));
 
   /* Pass the new revision number to the caller's hook. */
   SVN_ERR ((*eb->hook) (new_revision, eb->hook_baton));
