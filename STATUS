@@ -32,13 +32,6 @@ due to persistent lack of votes:
 
 Candidate changes:
 
-  * r13683
-    Fix FSFS segfault when handling non-existent data representations
-    Justification:
-      Client will segfault on otherwise valid revision files.
-    Votes:
-      +1: jpieper, jszakmeister
-
 Approved changes (further review is welcome, but not required):
 
   * r12637, r12640
@@ -126,3 +119,10 @@ Approved changes (further review is welcome, but not required):
     work correctly.
     Votes:
       +1: maxb, jszakmeister, philip
+
+  * r13683
+    Fix FSFS segfault when handling non-existent data representations
+    Justification:
+      Client will segfault on otherwise valid revision files.
+    Votes:
+      +1: jpieper, jszakmeister, ghudson
