@@ -171,12 +171,19 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
 
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then
-      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-pl"
-      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-pl"
-      SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-pl" 
-      SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
-      SWIG_PL_COMPILE="`$PERL -MConfig -e 'print $Config{cc}'` \$(SWIG_PL_INCLUDES)"
-      SWIG_PL_LINK="`$PERL -MConfig -e 'print $Config{ld}'` `$PERL -MConfig -e 'print $Config{lddlflags}'` `$PERL -MExtUtils::Embed -e ldopts`"
+      AC_MSG_CHECKING([perl version])
+      dnl Note that the q() bit is there to avoid unbalanced brackets
+      dnl which m4 really doesn't like.
+      PERL_VERSION="`$PERL -e 'q([[); print $]] * 1000000,$/;'`"
+      AC_MSG_RESULT([$PERL_VERSION])
+      if test "$PERL_VERSION" -ge "5008000"; then
+        SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-pl"
+        SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-pl"
+        SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-pl" 
+        SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
+      else
+        AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
+      fi
     fi
 
   fi
@@ -191,8 +198,6 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_JAVA_COMPILE)
   AC_SUBST(SWIG_JAVA_LINK)
   AC_SUBST(SWIG_PL_INCLUDES)
-  AC_SUBST(SWIG_PL_COMPILE)
-  AC_SUBST(SWIG_PL_LINK)
   AC_SUBST(SWIG_LIBSWIG_DIR)
   AC_SUBST(SWIG_LDFLAGS)
 ])
