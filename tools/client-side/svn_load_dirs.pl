@@ -574,17 +574,18 @@ sub safe_read_from_pipe {
     chomp;
     push(@output, $_);
   }
-  my $result = close(SAFE_READ);
-  my $exit   = $? >> 8;
-  my $signal = $? & 127;
-  my $cd     = $? & 128 ? "with core dump" : "";
+  close(SAFE_READ);
+  my $result = $?
+  my $exit   = $result >> 8;
+  my $signal = $result & 127;
+  my $cd     = $result & 128 ? "with core dump" : "";
   if ($signal or $cd) {
-    warn "$0: pipe from `@_' failed $cd: \$?=$exit signal=$signal\n";
+    warn "$0: pipe from `@_' failed $cd: exit=$exit signal=$signal\n";
   }
   if (wantarray) {
-    return ($exit, @output);
+    return ($result, @output);
   } else {
-    return $exit;
+    return $result;
   }
 }
 
