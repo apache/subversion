@@ -118,9 +118,6 @@ struct entries_accumulator
   /* Keys are entry names, vals are (struct svn_wc_entry_t *)'s. */
   apr_hash_t *entries; 
 
-  /* The dir whose entries file this is. */
-  svn_stringbuf_t *path;
-
   /* The parser that's parsing it, for signal_expat_bailout(). */
   svn_xml_parser_t *parser;
 
@@ -399,8 +396,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
 /* Resolve any missing information in ENTRIES by deducing from the
    directory's own entry (which must already be present in ENTRIES). */
 static svn_error_t *
-resolve_to_defaults (svn_stringbuf_t *path,
-                     apr_hash_t *entries,
+resolve_to_defaults (apr_hash_t *entries,
                      apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -587,7 +583,6 @@ read_entries (apr_hash_t *entries,
   /* Set up userData for the XML parser. */
   accum = apr_palloc (pool, sizeof (*accum));
   accum->entries = entries;
-  accum->path = path;
   accum->pool = pool;
 
   /* Create the XML parser */
@@ -624,7 +619,7 @@ read_entries (apr_hash_t *entries,
 
   /* Fill in any implied fields. */
   if (get_all_missing_info)
-    SVN_ERR (resolve_to_defaults (path, entries, pool));
+    SVN_ERR (resolve_to_defaults (entries, pool));
 
   return SVN_NO_ERROR;
 }
@@ -689,7 +684,10 @@ svn_wc_entry (svn_wc_entry_t **entry,
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
            "svn_wc_entry: %s is not a working copy directory", dir->data);
-      
+
+      /* ### it would be nice to avoid reading all of these. or maybe read
+         ### them into a subpool and copy the one that we need up to the
+         ### specified pool. */
       SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
       
       *entry = apr_hash_get (entries, basename->data, basename->len);
