@@ -2294,14 +2294,27 @@ $
        directory under which the main project development occurs;
        <filename>branches</filename>, which is a directory in which to
        create various named branches of the main development line;
-       <filename>tags</filename>, which is a directories of branches
+       <filename>tags</filename>, which is a directory of branches
        that are created, and perhaps destroyed, but never
-       changed.  Figure 5-1 demonstrates this layout.</para>
+       changed.</para>
 
-      <figure id="svn-ch5-sect5.1-dia1">
-        <title>Project Layout.</title>
-        <graphic fileref="images/ch05dia1.png"/>
-      </figure>
+     <para>For example, your repository might look like:</para>
+
+     <screen>
+/
+   calc/
+      trunk/
+      tags/
+      branches/
+   calendar/
+      trunk/
+      tags/
+      branches/
+   spreadsheet/
+      trunk/
+      tags/
+      branches/
+</screen>
 
       <para>Note that it doesn't matter where in your repository each
         project root is.  If you have only one project per repository,
@@ -2310,13 +2323,28 @@ $
         projects, you might want to arrange them in groups inside the
         repository, perhaps putting projects with similar goals or
         shared code in the same subdirectory, or maybe just grouping
-        them alphabetically.  See Figure 5-2 for one possible
-        arrangement of a fictional repository.</para>
+        them alphabetically.  Such an arrangment might look
+        like:</para>
 
-      <figure id="svn-ch5-sect5.1-dia2">
-        <title>Grouped Project Roots.</title>
-        <graphic fileref="images/ch05dia2.png"/>
-      </figure>
+      <screen>
+/
+   utils/
+      calc/
+         trunk/
+         tags/
+         branches/
+      calendar/
+         trunk/
+         tags/
+         branches/
+      &hellip;
+   office/
+      spreadsheet/
+         trunk/
+         tags/
+         branches/
+      &hellip;
+</screen>
 
       <para>Lay out your repository in whatever way you see fit.
         Subversion does not expect or enforce a layout schema&mdash;in
