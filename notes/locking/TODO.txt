@@ -14,6 +14,9 @@ MUST HAVE
 
 * lock-null support:
 
+    - er.  there's still a bug here (not showing deep locks), and some
+      optimizations to be done (cmpilato)
+
     - 'svn lock/unlock/info lock-null-URL' should work over all 3 RA
       layers, but then disable this feature for 1.2 (sussman)
 
