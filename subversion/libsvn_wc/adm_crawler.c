@@ -498,6 +498,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
   apr_hash_index_t *hi;
   svn_stringbuf_t *entrypath;
   struct target_baton *tb;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   for (hi = apr_hash_first (pool, affected_targets); 
        hi; 
@@ -509,7 +510,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
       svn_stringbuf_t *tmp_wfile, *tmp_text_base;
 
       apr_hash_this (hi, &key, &keylen, &val);
-      entrypath = svn_stringbuf_create ((char *) key, pool);
+      entrypath = svn_stringbuf_create ((char *) key, subpool);
       tb = val;
       
       /* Make an untranslated copy of the working file in
@@ -523,24 +524,29 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
          choose the filename, we have to do one extra copy.  But what
          the heck, we're about to generate an svndiff anyway. */
 
-      SVN_ERR (svn_wc_translated_file (&tmp_wfile, entrypath, pool));
-      tmp_text_base = svn_wc__text_base_path (entrypath, TRUE, pool);
+      SVN_ERR (svn_wc_translated_file (&tmp_wfile, entrypath, subpool));
+      tmp_text_base = svn_wc__text_base_path (entrypath, TRUE, subpool);
       SVN_ERR (svn_io_copy_file (tmp_wfile->data, tmp_text_base->data, FALSE,
-                                 pool));
+                                 subpool));
       if (tmp_wfile != entrypath)
-        SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
+        SVN_ERR (svn_io_remove_file (tmp_wfile->data, subpool));
 
       /* If there's a local mod, send a text-delta. */
       if (tb->text_modified_p)
         {
-          SVN_ERR (do_apply_textdelta (entrypath, editor, tb, pool));
+          SVN_ERR (do_apply_textdelta (entrypath, editor, tb, subpool));
         }
 
       /* Close the file baton, whether we sent a text-delta or not! */
       if (tb->entry->kind == svn_node_file)
         SVN_ERR (editor->close_file (tb->editor_baton));
+
+      /* Clear the iteration subpool. */
+      svn_pool_clear (subpool);
     }
 
+  /* Destroy the iteration subpool. */
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
