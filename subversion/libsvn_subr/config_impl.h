@@ -46,7 +46,8 @@ struct svn_config_t
   /* Indicates that some values in the configuration have been expanded. */
   svn_boolean_t x_values;
 
-  /* Temporary string used for lookups. */
+  /* Temporary string used for lookups.  (Using a stringbuf so that
+     frequent resetting is efficient.) */
   svn_stringbuf_t *tmp_key;
 };
 
