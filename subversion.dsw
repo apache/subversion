@@ -99,9 +99,6 @@ Package=<4>
     Project_Dep_Name tests_libsvn_wc_checkout
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name tests_libsvn_wc_commit
-    End Project Dependency
-    Begin Project Dependency
     Project_Dep_Name tests_libsvn_wc_translate
     End Project Dependency
 }}}
@@ -730,21 +727,6 @@ Package=<4>
 ###############################################################################
 
 Project: "tests_libsvn_wc_checkout"=.\subversion\tests\libsvn_wc\checkout_test.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name __config__
-    End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "tests_libsvn_wc_commit"=.\subversion\tests\libsvn_wc\commit_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
