@@ -235,14 +235,11 @@ set_node_revision (dag_node_t *node,
 }
 
 
-/* Constructor function for dag_node_t.
-   Create a new *NODE representing the node identified by ID in FS.
-   Allocate from TRAIL->pool, use TRAIL->pool for (*NODE)->pool. */
-static svn_error_t *
-create_node (dag_node_t **node,
-             svn_fs_t *fs,
-             svn_fs_id_t *id,
-             trail_t *trail)
+svn_error_t *
+svn_fs__dag_get_node (dag_node_t **node,
+                         svn_fs_t *fs,
+                         svn_fs_id_t *id,
+                         trail_t *trail)
 {
   dag_node_t *new_node;
   skel_t *contents;
@@ -535,7 +532,7 @@ svn_fs__dag_revision_root (dag_node_t **node_p,
   svn_fs_id_t *root_id;
 
   SVN_ERR (svn_fs__rev_get_root (&root_id, fs, rev, trail));
-  SVN_ERR (create_node (node_p, fs, root_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (node_p, fs, root_id, trail));
 
   return SVN_NO_ERROR;
 }
@@ -550,7 +547,7 @@ svn_fs__dag_txn_root (dag_node_t **node_p,
   svn_fs_id_t *root_id, *ignored;
   
   SVN_ERR (svn_fs__get_txn (&root_id, &ignored, fs, txn, trail));
-  SVN_ERR (create_node (node_p, fs, root_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (node_p, fs, root_id, trail));
 
   return SVN_NO_ERROR;
 }
@@ -663,8 +660,9 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
   }
 
   /* Initialize the youngster. */
-  SVN_ERR (create_node (child_p, svn_fs__dag_get_fs (parent), 
-                        new_node_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (child_p, 
+                                    svn_fs__dag_get_fs (parent), 
+                                    new_node_id, trail));
   
   return SVN_NO_ERROR;
 }
@@ -712,7 +710,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
     }
 
   /* One way or another, root_id now identifies a cloned root node. */
-  SVN_ERR (create_node (root_p, fs, root_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (root_p, fs, root_id, trail));
 
   /*
    * (Sung to the tune of "Home, Home on the Range", with thanks to
@@ -1018,8 +1016,9 @@ make_entry (dag_node_t **child_p,
   }
 
   /* Create a new node_dag_t for our new node */
-  SVN_ERR (create_node (child_p, svn_fs__dag_get_fs (parent),
-                        new_node_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (child_p, 
+                                    svn_fs__dag_get_fs (parent),
+                                    new_node_id, trail));
 
   /* We can safely call add_new_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
@@ -1288,8 +1287,9 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
                                trail->pool);
   }
 
-  SVN_ERR (create_node (child_p, svn_fs__dag_get_fs (parent),
-                        node_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (child_p, 
+                                    svn_fs__dag_get_fs (parent),
+                                    node_id, trail));
 
   return SVN_NO_ERROR;
 }
@@ -1451,13 +1451,15 @@ svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
        far above. */
     
     /* Time to actually create our new node in the filesystem */
-    SVN_ERR (svn_fs__create_node (&new_node_id, parent->fs,
+    SVN_ERR (svn_fs__create_node (&new_node_id, 
+                                  parent->fs,
                                   new_node_skel, trail));
   }
 
   /* Create a new node_dag_t for our new node */
-  SVN_ERR (create_node (child_p, svn_fs__dag_get_fs (parent),
-                        new_node_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (child_p, 
+                                    svn_fs__dag_get_fs (parent),
+                                    new_node_id, trail));
 
   /* We can safely call add_new_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
