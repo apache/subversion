@@ -237,10 +237,10 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
 /* Divide INPUT into substrings along SEP_CHAR boundaries, return an
  * array of copies of the substrings, all allocated in POOL.
  *
- * No element of the array contains SEP_CHAR, but some elements may
- * be empty.  If there are N occurrences of SEP_CHAR in INPUT, then
- * return N+1 elements; thus, the minimum number ofelements returned
- * is 1.
+ * No element of the array contains SEP_CHAR, though some elements
+ * may be empty.  If there are N occurrences of SEP_CHAR in INPUT,
+ * then return N+1 elements; thus, the minimum number of elements
+ * returned is 1.
  *
  * If CHOP_WHITESPACE is true, then remove leading and trailing
  * whitespace from the returned strings.
