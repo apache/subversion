@@ -1,6 +1,6 @@
 /* trail.h : internal interface to backing out of aborted Berkeley DB txns
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -222,6 +222,6 @@ void svn_fs__record_completion (trail_t *trail,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

@@ -1,7 +1,7 @@
 /*
  * config_file.c :  parsing configuration files
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -361,6 +361,6 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 
 /*
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

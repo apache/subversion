@@ -1,7 +1,7 @@
 /*
  * add.c:  wrappers around wc add/mkdir functionality.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -222,5 +222,5 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

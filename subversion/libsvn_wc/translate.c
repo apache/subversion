@@ -1,7 +1,7 @@
 /*
  * translate.c :  eol substitution and keyword expansion
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -805,6 +805,6 @@ svn_string_t *svn_wc__friendly_date (const char *date, apr_pool_t *pool)
 
 /*
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

@@ -1,7 +1,7 @@
 /*
  * swigutil.c: utility functions for the SWIG bindings
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -148,6 +148,6 @@ const apr_array_header_t *svn_swig_strings_to_array(PyObject *source,
 
 /* ----------------------------------------------------------------
  * local variables:
- * eval: (load-file "../../svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */

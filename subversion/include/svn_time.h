@@ -1,6 +1,6 @@
 /*  svn_time.h: time/date utilities
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -59,6 +59,6 @@ time_t svn_parse_date (char *text, struct getdate_time *now);
 
 /* ----------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

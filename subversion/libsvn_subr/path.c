@@ -1,7 +1,7 @@
 /*
  * paths.c:   a path manipulation library using svn_stringbuf_t
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -614,6 +614,6 @@ svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

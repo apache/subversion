@@ -1,7 +1,7 @@
 /*
  * xml.c:  xml helper code shared among the Subversion libraries.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -515,6 +515,6 @@ void svn_xml_make_close_tag (svn_stringbuf_t **str,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

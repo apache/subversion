@@ -2,7 +2,7 @@
  * native implementation of the functions declared in
  * the Java class org.tigris.subversion.lib.ClientImpl
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -303,6 +303,6 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 
 /* 
  * local variables:
- * eval: (load-file "../../../svn-dev.el")
+ * eval: (load-file "../../../../tools/dev/svn-dev.el")
  * end: 
  */

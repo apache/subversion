@@ -2,7 +2,7 @@
  * mod_dav_svn.c: an Apache mod_dav sub-module to provide a Subversion
  *                repository.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -238,6 +238,6 @@ module AP_MODULE_DECLARE_DATA dav_svn_module =
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

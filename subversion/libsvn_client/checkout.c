@@ -1,7 +1,7 @@
 /*
  * checkout.c:  wrappers around wc checkout functionality
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -163,5 +163,5 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

@@ -1,7 +1,7 @@
 /*
  * session.c :  routines for maintaining sessions state (to the DAV server)
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -259,6 +259,6 @@ svn_error_t *svn_ra_dav_init(int abi_version,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

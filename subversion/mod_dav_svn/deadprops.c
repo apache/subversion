@@ -1,7 +1,7 @@
 /*
  * deadprops.c: mod_dav_svn dead property provider functions for Subversion
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -470,6 +470,6 @@ const dav_hooks_propdb dav_svn_hooks_propdb = {
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

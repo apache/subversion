@@ -4,7 +4,7 @@
  *    cancel the pending request.  Compose this editor before a
  *    commit/update-editor, for example.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -199,6 +199,6 @@ svn_client_get_cancellation_editor
 
 /* 
  * local variables:
- * eval: (load-file "../../svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end: 
  */

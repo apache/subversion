@@ -5,7 +5,7 @@
  *              code that actually knows where administrative
  *              information is kept.  
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -1383,6 +1383,6 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

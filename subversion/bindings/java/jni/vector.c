@@ -1,7 +1,7 @@
 /*
  * utility functions to handle the java class java.util.Vector
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -178,7 +178,7 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
 
 /* 
  * local variables:
- * eval: (load-file "../../../svn-dev.el")
+ * eval: (load-file "../../../../tools/dev/svn-dev.el")
  * end: 
  */
 

@@ -1,7 +1,7 @@
 /*
  * lock.c:  routines for locking working copy subdirectories.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -86,6 +86,6 @@ svn_wc__locked (svn_boolean_t *locked, svn_stringbuf_t *path, apr_pool_t *pool)
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

@@ -1,8 +1,8 @@
 /*
  * io.c:   shared file reading, writing, and probing code.
  *
- * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+  * ====================================================================
+ * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1160,5 +1160,5 @@ apr_check_dir_empty (const char *path,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

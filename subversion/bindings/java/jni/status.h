@@ -2,7 +2,7 @@
  * utility functions to handle the java class
  * org.tigris.subversion.lib.Status
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -67,7 +67,7 @@ status__set_repos_prop_status(JNIEnv *env, jboolean *hasException,
 
 /* 
  * local variables:
- * eval: (load-file "../../../svn-dev.el")
+ * eval: (load-file "../../../../tools/dev/svn-dev.el")
  * end: 
  */
 

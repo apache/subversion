@@ -1,8 +1,8 @@
 /*
  * svn_client.h :  public interface for libsvn_client
  *
- * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+  * ====================================================================
+ * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -746,6 +746,6 @@ svn_error_t *svn_client_get_cancellation_editor
 
 /* --------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: 
  */

@@ -1,7 +1,7 @@
 /*
  * svn_hash.h :  dumping and reading hash tables to/from files.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -95,6 +95,6 @@ void *svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool);
 
 /* ----------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

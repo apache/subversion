@@ -1,7 +1,7 @@
 /* update-editor.c --- a 'pipe' editor that intercepts dir_delta()'s
  *                     drive of the wc update editor.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -403,6 +403,6 @@ svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

@@ -1,7 +1,7 @@
 /*
  * ra.c :  routines for interacting with the RA layer
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -122,5 +122,5 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

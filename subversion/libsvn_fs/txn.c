@@ -1,6 +1,6 @@
 /* txn.c : implementation of transaction functions
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -352,6 +352,6 @@ apr_pool_t *svn_fs__txn_pool (svn_fs_txn_t *txn)
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

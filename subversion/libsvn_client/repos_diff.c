@@ -648,5 +648,5 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

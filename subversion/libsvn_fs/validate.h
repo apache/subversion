@@ -1,6 +1,6 @@
 /* validate.h : internal interface to structure validators
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -47,6 +47,6 @@ int svn_fs__is_single_path_component (const char *name);
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

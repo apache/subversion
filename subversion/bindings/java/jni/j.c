@@ -1,7 +1,7 @@
 /*
  * generic functions to handle java classes
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -456,7 +456,7 @@ jobject j__get_object(JNIEnv *env, jboolean *hasException,
 
 /* 
  * local variables:
- * eval: (load-file "../../../svn-dev.el")
+ * eval: (load-file "../../../../tools/dev/svn-dev.el")
  * end: 
  */
 

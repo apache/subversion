@@ -1,6 +1,6 @@
 /* svn_fs.h :  interface to the Subversion filesystem
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -1187,6 +1187,6 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 
 /* ----------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

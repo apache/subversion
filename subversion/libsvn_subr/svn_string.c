@@ -1,7 +1,7 @@
 /*
  * svn_string.h:  routines to manipulate bytestrings (svn_stringbuf_t)
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -524,7 +524,7 @@ svn_string_compare_stringbuf (const svn_string_t *str1,
 
 /* --------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */
 
