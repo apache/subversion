@@ -373,7 +373,7 @@ write_field(struct parse_baton *pb, apr_pool_t *pool, const char *name,
     return svn_stream_printf(pb->rev_stream, pool, "%s: %s\n", name, val);
   else
     return svn_stream_printf(pb->rev_stream, pool,
-                             "%s:%" APR_SIZE_T_FMT "%s\n",
+                             "%s:%" APR_SIZE_T_FMT ":%s\n",
                              name, strlen(val), val);
 }
 
@@ -399,7 +399,7 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
   SVN_ERR(write_field(pb, pool, "cpath", "%s", entry->created_path));
   if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
     SVN_ERR(write_field(pb, pool, "copyfrom",
-                        "%s %" SVN_REVNUM_T_FMT "%s\n",
+                        "%s %" SVN_REVNUM_T_FMT " %s",
                         (entry->soft_copy) ? "soft" : "hard",
                         entry->copyfrom_rev, entry->copyfrom_path));
   else
