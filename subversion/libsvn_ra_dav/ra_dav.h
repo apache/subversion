@@ -733,6 +733,18 @@ svn_ra_dav__get_log2 (void *session_baton,
                       void *receiver_baton,
                       apr_pool_t *pool);
 
+svn_error_t *
+svn_ra_dav__get_commit_editor2(void *session_baton,
+                               const svn_delta_editor_t **editor,
+                               void **edit_baton,
+                               const char *log_msg,
+                               svn_commit_callback_t callback,
+                               void *callback_baton,
+                               apr_hash_t *lock_tokens,
+                               svn_boolean_t keep_locks,
+                               apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -909,7 +909,8 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__lock,
   svn_ra_dav__unlock,
   svn_ra_dav__get_lock,
-  svn_ra_dav__get_locks
+  svn_ra_dav__get_locks,
+  svn_ra_dav__get_commit_editor2
 };
 
 
