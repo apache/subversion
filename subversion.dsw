@@ -1,0 +1,164 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "aprlib"=.\apr\aprlib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libexpat"=".\EXPAT-LITE\libexpat.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libsvn_client"=.\SUBVERSION\LIBSVN_CLIENT\libsvn_client.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_delta"=.\SUBVERSION\LIBSVN_DELTA\libsvn_delta.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_subr"=.\SUBVERSION\LIBSVN_SUBR\libsvn_subr.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_test_editor"=".\SUBVERSION\TESTS-COMMON\libsvn_test_editor.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_tests_main"=".\subversion\tests-common\libsvn_test_main.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_wc"=.\SUBVERSION\LIBSVN_WC\libsvn_wc.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "subversion_client"=.\SUBVERSION\CLIENT\subversion_client.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libexpat
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_test_editor
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_wc
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+
