@@ -75,6 +75,7 @@ V.  Repository Administration
       1. examining a repository (svnlook, shell)
       2. maintaining a repository (svnadmin, svnadmin recover, backup options)
       3. migrating a repository (dump/load)
+      4. repository backup (tools and philosophy)
 
    C.  Networking your repository (apache setup, auth options)
 
