@@ -1,3 +1,5 @@
+<?xml version="1.0"?>
+<!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd">
 <!-- This is currently being roughed out.  Suggestions and comments
 are more than welcome, but patches are probably a bit premature at
 this point. -->
@@ -7,14 +9,11 @@ this point. -->
   <simplesect>
     <para>This chapter is intended to be a complete reference to using
       Subversion. This includes the command line client
-      (<command>svn</command>) and all its commands, repository
-      administration programs (<command>svnadmin</command> and
-      <command>svnlook</command>) and their respective commands,
-      repository configuration files, commit hooks, client
-      configuration files, and working copy administrative areas.
+      (<command>svn</command>) and all its commands, as well as the
+      repository administration programs (<command>svnadmin</command>
+      and <command>svnlook</command>) and their respective commands.
     </para>
   </simplesect>
-  
   
   <!-- ================================================================= -->
   <!-- ======================== SECTION 1 ============================== -->
@@ -30,8 +29,7 @@ this point. -->
       a minute.</para> </footnote> and any switches or targets that
       you wish to operate on.  You should note that there is no
       specific order that the subcommand and the switches must appear
-      in (the targets, however, are always last in the command line).
-      For example, all of the following are valid ways to use
+      in.  For example, all of the following are valid ways to use
       <command>svn status</command>:</para>
 
     <screen>
@@ -41,7 +39,7 @@ $ svn status -v myfile
     </screen>
 
     <para>You can find many more examples of how to use most client
-      commands, in <xref linkend="svn-ch-3"/>, commands for managing
+      commands in <xref linkend="svn-ch-3"/>, commands for managing
       properties in <xref linkend="svn-ch-6-sect-2"/></para>
     
     <sect2 id="svn-ch-8-sect-1.1">
@@ -70,21 +68,22 @@ $ svn status -v myfile
         <varlistentry>
           <term><option>--file</option>
             <replaceable>FILENAME</replaceable>
-            (<option>-f</option>)</term>
+            (<option>-F</option>)</term>
           <listitem>
             <para>Use the contents of the file passed as an argument
-              to this switch as a commit message for the subcommand
-              that you're running.</para>
+              to this switch for the subcommand that you're
+              running.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
-          <term><option>--encoding</option><replaceable>ENC</replaceable></term>
+          <term><option>--encoding</option> <replaceable>ENC</replaceable></term>
           <listitem>
-            <para>Tells Subversion that your commit message is
-              encoded in the charset provided.  The default is UTF8,
-              and you should specify the encoding if your commit
-              message is in any other encoding.</para>
+            <para>Tells Subversion that your commit message is encoded
+              in the charset provided.  The default is your operating
+              system's native locale, and you should specify the
+              encoding if your commit message is in any other
+              encoding.</para>
           </listitem>
         </varlistentry>
 
@@ -122,9 +121,9 @@ $ svn status -v myfile
         <varlistentry>
           <term><option>--help</option> (<option>-h or -?</option>)</term>
           <listitem>
-            <para>Shows the built in help text for a subcommand (if
-              used with a subcommand), or the general client help if
-              used alone.</para>
+            <para>If used with one or more subcommands, shows the
+              built-in help text for each subcommand.  If used alone,
+              it displays the general client help text.</para>
           </listitem>
         </varlistentry>
         
@@ -217,7 +216,7 @@ rev 27: ...
         <varlistentry>
           <term><option>--no-auth-cache</option></term>
           <listitem>
-            <para>Do not cache authentication information
+            <para>Prevents caching of authentication information
               (e.g. username and password) in the Subversion
               administrative directories.</para>
           </listitem>
@@ -239,7 +238,9 @@ rev 27: ...
           <listitem>
             <para>Shows files in the status listing that would
               normally be omitted since they match a pattern in the
-              svn:ignore property.</para>
+              svn:ignore property. See <xref
+              linkend="svn-ch-6-sect-1.3.2"/> for more
+              information.</para>
           </listitem>
         </varlistentry>
 
@@ -247,11 +248,11 @@ rev 27: ...
           <term><option>--non-interactive</option></term>
           <listitem>
             <para>In the case of an authentication failure, or
-            insufficient credentials, do not prompt for credentials
+            insufficient credentials, prevents prompting for credentials
             (e.g. username or password).  This is useful if you're
-            running Subversion inside of an automated script and
-            it's more appropriate to have Subversion fail then to
-            prompt for more information.</para>
+            running Subversion inside of an automated script and it's
+            more appropriate to have Subversion fail then to prompt
+            for more information.</para>
           </listitem>
         </varlistentry>
       
@@ -285,9 +286,8 @@ rev 27: ...
         <varlistentry>
           <term><option>--recursive</option> (<option>-R</option>)</term>
           <listitem>
-            <para>Makes a subcommand to recurse into subdirectories.
-              Note that some subcommands recurse by default, while
-              others don't.</para>
+            <para>Makes a subcommand recurse into subdirectories.
+              Most subcommands recurse by default.</para>
           </listitem>
         </varlistentry>
         
@@ -299,41 +299,45 @@ rev 27: ...
             <para>The revision flag indicates that you're going to
               supply a revision (or range of revisions) for a
               particular operation.  You can provide revision
-              numbers, revision keywords, or dates (in curly
+              numbers, revision keywords or dates (in curly
               braces), as arguments to the revision switch.  If you
               wish to provide a range of revisions, you can provide
               two revisions separated by a colon. For example:</para>
 
             <screen>
-$ svn checkout -r 1729
-$ svn checkout -r 1729:HEAD
-$ svn checkout -r 1729:1744
-$ svn checkout -r {12/04/02}:{2/17/02}
-$ svn checkout -r 1729:{2/17/02}
-              </screen>
+$ svn log -r 1729
+$ svn log -r 1729:HEAD
+$ svn log -r 1729:1744
+$ svn log -r {12/04/01}:{2/17/02}
+$ svn log -r 1729:{2/17/02}
+            </screen>
+
+            <para>See <xref linkend="svn-ch-3-sect-3.2"/> for more
+              information.</para>
             </listitem>
           </varlistentry>
           
           <varlistentry>
             <term><option>--revprop</option></term>
             <listitem>
-              <para>Operate on a revision property instead of a
-                regular Subversion property.  This switch requires
-                that you also pass a revision with the
-                <option>--revision</option> (<option>-r</option>)
-                switch.</para>
+              <para>Operates on a revision property instead of a
+                Subversion property specific to a file or directory.
+                This switch requires that you also pass a revision
+                with the <option>--revision</option>
+                (<option>-r</option>) switch. See <xref
+                linkend="svn-ch-5-sect-1.2"/> for more details on
+                unversioned properties.</para>
             </listitem>
           </varlistentry>
           
           <varlistentry>
-            <term><option>--show-updates</option></term>
+            <term><option>--show-updates</option> (<option>-u</option>)</term>
             <listitem>
-              <para>Causes the client to make a roundtrip to the
-                server to retrieve and display information about which
-                files in your working copy are out-of-date.  This
-                doesn't actually update any of your files&mdash;it
-                just shows you which files will be updated if you run
-                <command>svn update </command>.
+              <para>Causes the client to display information about
+                which files in your working copy are out-of-date.
+                This doesn't actually update any of your
+                files&mdash;it just shows you which files will be
+                updated if you run <command>svn update </command>.
               </para>
             </listitem>
           </varlistentry>
@@ -341,9 +345,9 @@ $ svn checkout -r 1729:{2/17/02}
           <varlistentry>
             <term><option>--strict</option></term>
             <listitem>
-              <para>Use strict semantics.  See <xref
-                  linkend="svn-ch-8"/><!-- ###TODO fix link --> for more
-                details </para>
+              <para>Causes Subversion to use strict semantics.  See
+                  <xref linkend="svn-ch-8"/><!-- ###TODO fix link -->
+                  for more details </para>
             </listitem>
           </varlistentry>
           
@@ -351,10 +355,9 @@ $ svn checkout -r 1729:{2/17/02}
             <term><option>--targets</option>
               <replaceable>FILENAME</replaceable></term>
             <listitem>
-              <para>You can use the targets switch to tell Subversion to
-                get the list of files that you wish to operate on from
-                the filename you provide instead of listing all the
-                files on the command line.
+              <para>Tells Subversion to get the list of files that you
+                wish to operate on from the filename you provide
+                instead of listing all the files on the command line.
               </para>
             </listitem>
           </varlistentry>
@@ -394,8 +397,7 @@ $ svn checkout -r 1729:{2/17/02}
           <varlistentry>
             <term><option>--xml</option></term>
             <listitem>
-              <para>Prints <command>svn log</command> output in xml
-                format.</para>
+              <para>Prints output in xml format.</para>
             </listitem>
           </varlistentry>
           
@@ -406,14 +408,7 @@ $ svn checkout -r 1729:{2/17/02}
       <sect2 id="svn-ch-8-sect-1.2">
         <title><command>svn subcommands</command></title>
 
-        <warning>
-          <para>This is all done in preformatted text until I hear
-            back from O'Reilly how they want it formatted.  Please be
-            patient and pardon the construction dust. -Fitz</para>
-        </warning>
-        
-        
-<!-- ###TODO Look for 'Note:' and turn them into warnings -->
+        <!-- ###TODO Look for 'Note:' and maybe turn them into warnings -->
         <refentry>
           <refnamediv>
             <refname>svn add</refname>
@@ -514,7 +509,7 @@ $ svn checkout -r 1729:{2/17/02}
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -537,6 +532,23 @@ $ svn checkout -r 1729:{2/17/02}
 $ svn cat http://svn.red-bean.com/repos/test/readme.txt
 This is a README file.
 You should read this.
+            </screen>
+
+            <tip>
+              <para>If your working copy is out of date (or you have
+              local modifications) and you want to see the HEAD
+              revision of a file in your working copy, <command>svn
+              cat</command> will automatically fetch the HEAD revision
+              when you give it a path:</para>
+            </tip>
+
+            <screen>
+$ cat foo.c
+This file is in my local working copy 
+and has changes that I've made.
+
+$ svn cat foo.c
+Latest revision fresh from the repository!
             </screen>
             
           </refsect1>
@@ -575,7 +587,7 @@ You should read this.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -655,10 +667,12 @@ working-copies
             <title>Description</title>
 
             <para>Recursively clean up the working copy, removing
-              locks resuming unfinished operations.  If you ever
-              get a <quote>working copy locked</quote> error, run
-              this command to remove stale locks and get your
-              working copy into a useable state again.</para>
+              locks resuming unfinished operations.  If you ever get a
+              <quote>working copy locked</quote> error, run this
+              command to remove stale locks and get your working copy
+              into a useable state again.</para> <!-- ###TODO Add xref
+              to FAQ on change journals when you add it to the
+              appendices -->
           </refsect1>
 
           <refsect1>
@@ -672,7 +686,7 @@ working-copies
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>No</para>
           </refsect1>
 
@@ -712,9 +726,13 @@ $ svn cleanup /path/to/working-copy
             <title>Description</title>
 
             <para>Send changes from your working copy to the
-              repository. You're required to supply a log message with
-              your commit by using either the <option>--file</option>
-              or <option>--message</option> switch.</para>
+              repository. If you do not supply a log message with your
+              commit by using either the <option>--file</option> or
+              <option>--message</option> switch,
+              <command>svn</command> will launch your editor for you
+              to compose acommit message.  See the
+              <literal>editor-cmd</literal> section in <xref
+              linkend="svn-ch-6-sect-1.3.2">.</para>
           </refsect1>
           
           <refsect1>
@@ -724,11 +742,11 @@ $ svn cleanup /path/to/working-copy
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy, repository</para>
+            <para>Working copy, repository</para>
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -754,7 +772,8 @@ $ svn cleanup /path/to/working-copy
             <title>Examples</title>
 
             <para>Commit a simple modification to a file with the
-              commit message on the cmdline:</para>
+              commit message on the command line and an implicit
+              target of your current directory (<quote>.</quote>):</para>
             
             <screen>
 $ svn commit -m "added howto section."
@@ -763,8 +782,10 @@ Transmitting file data .
 Committed revision 3.
             </screen>
 
-            <para>Commit a modification to a file with the commit
-              message in a file:</para>
+            <para>Commit a modification to the file
+              <filename>foo.c</filename> (explicitly specified on the
+              command line) with the commit message in a file named
+              <literal>msg</literal>:</para>
 
             <screen>
 $ svn commit -F msg foo.c
@@ -773,19 +794,24 @@ Transmitting file data .
 Committed revision 5.
             </screen>
 
-            <para>Note that if you want to use a files that's under
+            <para>Note that if you want to use a file that's under
               version control for your commit message with
               <option>--file</option>, you need to pass the
               <option>--force</option> switch:</para>
 
             <screen>
-$ svn commit --force -F file_under_vc.txt foo.c
+$ svn commit --file file_under_vc.txt foo.c
+subversion/clients/cmdline/main.c:862: (apr_err=205004)
+svn: The log message file is under version control
+svn: Log message file is a versioned file; use `--force' to override.
+
+$ svn commit --force --file file_under_vc.txt foo.c
 Sending        foo.c
 Transmitting file data .
 Committed revision 6.
             </screen>
 
-            <para>To commit a deleted a file:</para>
+            <para>To commit a file scheduled for deletion:</para>
 
             <screen>
 svn commit -m "removed file 'c'."
@@ -801,7 +827,8 @@ Committed revision 7.
         <refentry>
           <refnamediv>
             <refname>svn copy</refname>
-            <refpurpose>Copy a file in a working copy or in the repository.</refpurpose>
+            <refpurpose>Copy a file or directory in a working copy or
+              in the repository.</refpurpose>
           </refnamediv>
 
           <refsect1>
@@ -862,7 +889,7 @@ Committed revision 7.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -885,13 +912,14 @@ Committed revision 7.
           <refsect1>
             <title>Examples</title>
 
-            <para>Copy an item within your working copy (Just
+            <para>Copy an item within your working copy (just
               schedules the copy--nothing goes into the repository
               until you commit):</para>
 
             <screen>
-$ svn cp a b
-$
+$ svn copy foo.txt bar.txt
+$ svn status
+A  +   bar.txt
             </screen>
 
             <para>Copy an item in your working copy to a URL in the
@@ -899,7 +927,7 @@ $
               commit message):</para>
 
             <screen>
-$ svn cp a file:///tmp/repos/test/far-away -m "Remote copy."
+$ svn copy near.txt file:///tmp/repos/test/far-away.txt -m "Remote copy."
 
 Committed revision 8.
             </screen>
@@ -908,25 +936,30 @@ Committed revision 8.
               copy (Just schedules the copy--nothing goes into the
               repository until you commit):</para>
 
+            <tip>
+              <para>This is the recommended way to resurrect a dead
+                file in your repository!</para>
+            </tip>
+
             <screen>
-$ svn cp file:///tmp/repos/test/far-away near-here
+$ svn copy file:///tmp/repos/test/far-away near-here
 A         near-here
             </screen>
 
             <para>And finally, copying between two URLs:</para>
 
             <screen>
-$ svn cp file:///tmp/repos/test/far-away file:///tmp/repos/test/over-there -m "remote copy."
+$ svn copy file:///tmp/repos/test/far-away file:///tmp/repos/test/over-there -m "remote copy."
 
 Committed revision 9.
             </screen>
 
             <para>(Note: This is the easiest way to 'tag' a revision
-              in your repository--just svn copy that revision (usually
-              HEAD) into your tags directory).</para>
+              in your repository&mdash;just svn copy that revision
+              (usually HEAD) into your tags directory).</para>
 
             <screen>
-$ svn cp file:///tmp/repos/test/trunk file:///tmp/repos/test/tags/0.6.32-prerelease -m "tag tree"
+$ svn copy file:///tmp/repos/test/trunk file:///tmp/repos/test/tags/0.6.32-prerelease -m "tag tree"
 
 Committed revision 12.
             </screen>
@@ -935,7 +968,7 @@ Committed revision 12.
               always specify an older revision and tag anytime:</para>
 
             <screen>
-$ svn cp -r 11 file:///tmp/repos/test/trunk file:///tmp/repos/test/tags/0.6.32-prerelease -m "Forgot to tag at rev 11"
+$ svn copy -r 11 file:///tmp/repos/test/trunk file:///tmp/repos/test/tags/0.6.32-prerelease -m "Forgot to tag at rev 11"
 
 Committed revision 13.
             </screen>
@@ -956,14 +989,13 @@ Committed revision 13.
           <refsect1>
             <title>Description</title>
 
-            <para>If run on a working copy TARGET, the item
-              is scheduled for deletion upon the next
-              commit.  Files, and directories that have not
-              been committed, are immediately removed from
-              the working copy.  The command will not remove
-              TARGETs that are, or contain, unversioned or
-              modified items; use the --force option to
-              override this behaviour.</para>
+            <para>Items specified on the command line are scheduled
+              for deletion upon the next commit.  Files (and
+              directories that have not been committed) are
+              immediately removed from the working copy.  The command
+              will not remove any unversioned or modified items; use
+              the <option>--force</option> switch to override this
+              behavior.</para>
 
             <para>If run on an URL, the item is deleted from
               the repository via an immediate commit.</para>
@@ -980,7 +1012,7 @@ Committed revision 13.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on URLs</para>
           </refsect1>
 
@@ -1004,13 +1036,14 @@ Committed revision 13.
           <refsect1>
             <title>Examples</title>
 
-            <para>Deleting a file from your working copy merely
-              schedules it for deletion. When you commit, the file is
-              deleted in the repository.</para>
+            <para>Using <command>svn</command> to delete a file from
+              your working copy merely schedules it to be
+              deleted. When you commit, the file is deleted in the
+              repository.</para>
 
             <screen>
 $ svn delete myfile
-D         d
+D         myfile
 
 $ svn ci -m "Deleted file 'myfile'."
 Deleting       myfile
@@ -1027,8 +1060,8 @@ $ svn delete -m "Deleting file 'yourfile'" file:///tmp/repos/test/yourfile
 Committed revision 15.
             </screen>
 
-            <para>Here's an example of how to force delete a file that
-              has local mods:</para>
+            <para>Here's an example of how to force deletion of a file
+              that has local mods:</para>
 
             <screen>
 $ svn delete over-there 
@@ -1112,7 +1145,7 @@ D         over-there
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>For diffs against anything but BASE revision in your working copy</para>
           </refsect1>
 
@@ -1191,8 +1224,8 @@ Index: COMMITTERS
 +++ COMMITTERS	(revision 3500)
             </screen>
 
-            <para>Use -x to pass arguments directly to the external
-              diff program</para>
+            <para>Use <option>-x</option> to pass arguments directly
+              to the external diff program</para>
             
             <screen>
 svn diff -x "-i -b" COMMITTERS 
@@ -1220,16 +1253,16 @@ Index: COMMITTERS
           <refsect1>
             <title>Description</title>
 
-            <para>The first exports a clean directory tree from the
-              repository specified by URL, at revision REV if it is
-              given, otherwise at HEAD, into PATH. If PATH is omitted,
-              the last component of the URL is used for the local
-              directory name.</para>
+            <para>The first form exports a clean directory tree from
+              the repository specified by URL, at revision REV if it
+              is given, otherwise at HEAD, into PATH. If PATH is
+              omitted, the last component of the URL is used for the
+              local directory name.</para>
 
-            <para>The second exports a clean directory tree from the
-              working copy specified by PATH1 into PATH2.  all local
-              changes will be preserved, but files not under revision
-              control will not be copied.</para>
+            <para>The second form exports a clean directory tree from
+              the working copy specified by PATH1 into PATH2.  all
+              local changes will be preserved, but files not under
+              revision control will not be copied.</para>
           </refsect1>
 
           <refsect1>
@@ -1243,7 +1276,7 @@ Index: COMMITTERS
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if exporting from a URL</para>
           </refsect1>
 
@@ -1313,7 +1346,7 @@ Exported revision 15.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>No</para>
           </refsect1>
 
@@ -1357,7 +1390,7 @@ Exported revision 15.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -1449,7 +1482,7 @@ Committed revision 19.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>No</para>
           </refsect1>
 
@@ -1529,7 +1562,7 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -1604,7 +1637,7 @@ INSTALL
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -1736,7 +1769,7 @@ Made a change.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if working with URLs</para>
           </refsect1>
 
@@ -1816,7 +1849,7 @@ U  myproj/thhgttg.txt
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on a URL</para>
           </refsect1>
 
@@ -1908,7 +1941,7 @@ Committed revision 26.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on a URL</para>
           </refsect1>
 
@@ -2023,7 +2056,7 @@ Committed revision 27.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on a URL</para>
           </refsect1>
 
@@ -2128,7 +2161,7 @@ property `svn:log' set on repository revision '25'
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on a URL</para>
           </refsect1>
 
@@ -2195,7 +2228,7 @@ property `release-date' deleted from repository revision '26'
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on a URL</para>
           </refsect1>
 
@@ -2258,7 +2291,7 @@ Set new value for property `svn:keywords' on `foo.c'
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on a URL</para>
           </refsect1>
 
@@ -2325,7 +2358,7 @@ Began journal.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if operating on a URL</para>
           </refsect1>
 
@@ -2398,7 +2431,7 @@ Rev
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>No</para>
           </refsect1>
 
@@ -2474,7 +2507,7 @@ Reverted bar.txt
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>No</para>
           </refsect1>
 
@@ -2591,7 +2624,7 @@ include spaces.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Only if using --show-updates</para>
           </refsect1>
 
@@ -2677,7 +2710,7 @@ Head revision:   981
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
@@ -2779,7 +2812,7 @@ Updated to revision 31.
           </refsect1>
 
           <refsect1>
-            <title>Needs Network</title>
+            <title>Accesses Repository</title>
             <para>Yes</para>
           </refsect1>
 
