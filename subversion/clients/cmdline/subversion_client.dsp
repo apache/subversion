@@ -178,6 +178,10 @@ SOURCE=".\propset-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\resolve-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\revert-cmd.c"
 # End Source File
 # Begin Source File

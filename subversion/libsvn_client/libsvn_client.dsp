@@ -143,6 +143,10 @@ SOURCE=.\repos_diff.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\resolve.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\revert.c
 # End Source File
 # Begin Source File
