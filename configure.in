@@ -91,8 +91,10 @@ fi
 dnl Set include dir and module library lists for Makefiles -----------------
 
 dnl Expat
-SVN_EXPAT_INCLUDES='-I$(top_srcdir)/expat-lite'
-AC_SUBST(SVN_EXPAT_INCLUDES)
+APU_HAVE_OLD_EXPAT="`$apu_config --old-expat`"
+if test "$APU_HAVE_OLD_EXPAT" = "yes"; then
+  AC_DEFINE(SVN_HAVE_OLD_EXPAT, 1, [Defined if Expat 1.0 or 1.1 was found])
+fi
 
 dnl Check for programs ---------------------
 
