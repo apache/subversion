@@ -88,7 +88,10 @@ public class LogMessage
      */
     public Revision.Number getRevision()
     {
-        return new Revision.Number(revision);
+        if(revision < 0)
+            return null;
+        else
+            return new Revision.Number(revision);
     }
 
     /**

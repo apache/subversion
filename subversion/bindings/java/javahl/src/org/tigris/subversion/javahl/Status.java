@@ -183,7 +183,10 @@ public class Status
      */
     public Revision.Number getRevision()
     {
-        return new Revision.Number(revision);
+        if(revision < 0)
+            return null;
+        else
+            return new Revision.Number(revision);
     }
 
     /**
@@ -336,6 +339,8 @@ public class Status
      */
     public Revision.Number getLastChangedRevision()
     {
+        if(lastChangedRevision < 0)
+            return null;
         return new Revision.Number(lastChangedRevision);
     }
 
@@ -372,7 +377,10 @@ public class Status
      */
     public Revision.Number getRevisionCopiedFrom()
     {
-        return new Revision.Number(revisionCopiedFrom);
+        if(revisionCopiedFrom < 0)
+            return null;
+        else
+            return new Revision.Number(revisionCopiedFrom);
     }
 
     /**
