@@ -273,12 +273,18 @@ svn_fs_hotcopy (const char *src_path, const char *dest_path,
                 svn_boolean_t clean, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
+  const char *path;
+  svn_node_kind_t kind;
 
   SVN_ERR (fs_library_vtable (&vtable, src_path, pool));
   SVN_ERR (vtable->hotcopy (src_path, dest_path, clean, pool));
 
   /* Copy the fs-type file. */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, FS_TYPE_FILENAME, pool));
+  path = svn_path_join (src_path, FS_TYPE_FILENAME, pool);
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind != svn_node_none)
+    SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, FS_TYPE_FILENAME,
+                                   pool));
 
   return SVN_NO_ERROR;
 }
@@ -332,7 +338,9 @@ svn_fs_hotcopy_berkeley (const char *src_path, const char *dest_path,
   fs_library_vtable_t *vtable;
 
   SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, pool));
-  return vtable->hotcopy (src_path, dest_path, clean_logs, pool);
+  SVN_ERR (vtable->hotcopy (src_path, dest_path, clean_logs, pool));
+  SVN_ERR (write_fs_type (dest_path, DEFAULT_FS_TYPE, pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
