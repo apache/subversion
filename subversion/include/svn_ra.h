@@ -226,7 +226,7 @@ svn_ra_init_func_t svn_ra_local_init;
 
 
 
-/*** Public Interface for Loading RA libs ***/
+/*** Public Interfaces ***/
 
 /* Every user of the RA layer *must* call this routine and hold on to
    the RA_BATON returned.  This baton contains all known methods of

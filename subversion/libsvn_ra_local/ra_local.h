@@ -78,17 +78,6 @@ typedef struct svn_ra_local__commit_closer_t
 
 /** Private routines **/
 
-/* Allocate and return an EDITOR (in POOL) whose only purpose is to
-   track commits by storing committed targets in CLOSER.  For every
-   target in the edit, the editor will record the target (if you want
-   to know, it's storing the target as a relative path in
-   CLOSER->target_array).  Later, after the edit is over, the targets
-   will have their revision numbers updated appropriately. */
-svn_error_t *
-svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
-                                       void **edit_baton,
-                                       apr_pool_t *pool,
-                                       svn_ra_local__commit_closer_t *closer);
     
 
 
