@@ -25,6 +25,7 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_time.h"
+#include "svn_sorts.h"
 #include "repos.h"
 
 #include <assert.h>
@@ -254,16 +255,6 @@ svn_repos_history (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Compare revision numbers for sorting in decreasing order. */
-static int
-compare_revnums (const void *p_a, const void *p_b)
-{
-  svn_revnum_t a, b;
-  a = *(svn_revnum_t *)p_a;
-  b = *(svn_revnum_t *)p_b;
-
-  return (a < b) ? 1 : (a > b) ? -1 : 0;
-}
 
 /* The purpose of this function is to discover if fs_path@future_rev
  * is derived from fs_path@peg_rev.  The return is placed in *is_ancestor. */
@@ -360,7 +351,7 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
    * downward, so it will be easier to search on. */
   location_revisions = apr_array_copy (pool, location_revisions_orig);
   qsort (location_revisions->elts, location_revisions->nelts,
-         sizeof (*revision_ptr), compare_revnums);
+         sizeof (*revision_ptr), svn_sort_compare_revisions);
 
   revision_ptr = (svn_revnum_t *)location_revisions->elts;
   revision_ptr_end = revision_ptr + location_revisions->nelts;

@@ -830,15 +830,6 @@ check_lib_versions (void)
 }
 
 
-/* qsort-ready comparison function. */
-static int compare_paths (const void *a, const void *b)
-{
-  const char *item1 = *((const char * const *) a);
-  const char *item2 = *((const char * const *) b);
-  return svn_path_compare_paths (item1, item2);
-}
-
-
 /* Do the real work of filtering. */
 static svn_error_t *
 do_filter (apr_getopt_t *os, 
@@ -952,7 +943,7 @@ do_filter (apr_getopt_t *os,
           apr_hash_this (hi, &key, NULL, NULL);
           APR_ARRAY_PUSH (keys, const char *) = key;
         }
-      qsort (keys->elts, keys->nelts, keys->elt_size, compare_paths);
+      qsort (keys->elts, keys->nelts, keys->elt_size, svn_sort_compare_paths);
       for (i = 0; i < keys->nelts; i++)
         {
           svn_pool_clear (subpool);
