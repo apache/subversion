@@ -586,7 +586,7 @@ II.   INSTALLATION
       [NOTE: The neon library supports secure connections with OpenSSL
           and on-the-wire compression with zlib. If you want to use
           those features, you should pass the options "--with-zlib" and
-          "--with-openssl" to the gen-make.py script. See Section I.11
+          "--with-openssl" to the gen-make.py script. See Section I.10
           for more details.]
 
       If you are installing under Win9x, NT4, or WinME, and svn.exe
