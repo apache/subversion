@@ -94,6 +94,7 @@ sub CLOSE
     my $self = shift;
     *$self->{svn_stream}->close
 	if *$self->{svn_stream};
+    undef *$self->{svn_stream};
 }
 
 sub GETC
