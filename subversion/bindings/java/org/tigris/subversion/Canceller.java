@@ -17,7 +17,7 @@ package org.tigris.subversion;
  */
 
 /**
- * The methods of this interface correspond to the svn_nodekind_t enum
+ * The methods of this interface correspond to the svn_cancel_func_t type
  * described in the subversion C API located in 'svn_types.h'.
  */
 public interface Canceller
