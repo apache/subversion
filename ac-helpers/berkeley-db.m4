@@ -55,7 +55,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	   the \`=PATH' part completely, the configure script will search
 	   for Berkeley DB in a number of standard places.
 
-	   The Subversion server requires Berkeley DB 3.1.14 or newer.  If
+	   The Subversion server requires Berkeley DB 3.2.9 or newer.  If
 	   you specify \`--without-berkeley-db', the server will not be
 	   built.  Otherwise, the configure script builds the server if and
 	   only if it can find a new enough version installed.],
@@ -82,12 +82,12 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     if test "$places" = "search"; then
 
       # This is pretty messed up.  It seems that the FreeBSD port of Berkeley
-      # DB 3.1.14 puts the header file in /usr/local/include/db3, but the
+      # DB 3.2.9 puts the header file in /usr/local/include/db3, but the
       # database library in /usr/local/lib, as libdb.a.  There is no
       # /usr/local/include/db.h.  So if you check for /usr/local first, you'll
       # get the old header file from /usr/include, and the new library from
       # /usr/local/lib --- disaster.  Check for that bogosity first.
-      places="std /usr/local/include/db3:/usr/local/lib /usr/local /usr/local/BerkeleyDB.3.1"
+      places="std /usr/local/include/db3:/usr/local/lib /usr/local /usr/local/BerkeleyDB.3.2"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
     # search, no matter what flags the user passed.
