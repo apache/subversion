@@ -161,15 +161,6 @@ external-extraclean:
 	    fi; \
 	done;
 
-## Use Karl's script to create a Changelog from CVS.
-
-.PHONY: ChangeLog
-
-log changelog ChangeLog:
-	cvs2cl.pl --fsf -b -t -r -S -U ./AUTHORS      \
-            subversion doc www notes tools ac-helpers \
-            `find . -type f -maxdepth 1`
-
 doc: doc-info doc-txt doc-html
 
 doc-info: doc/programmer/design/svn-design.info doc/user/manual/svn-manual.info doc/user/svn_for_cvs_users/svn_for_cvs_users.info
