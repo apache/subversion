@@ -118,29 +118,6 @@ svn_lock_to_dav_lock(dav_lock **dlock,
 
 
 
-/* Helper function;  return only the cdata portion of the incoming
-   <D:owner> string, allocated in POOL. */
-static const char *
-extract_cdata(const char *ownerstring, apr_pool_t *pool)
-{
-  const char *closetag, *cdata;
-  apr_off_t end;
-
-  closetag = ap_strchr_c(ownerstring, '>');
-  if (! closetag)
-    return ownerstring;
-
-  cdata = closetag + 1;
-  
-  /* Jump to end of string, search backwards for '<'. */
-  end = strlen(cdata) - 1;
-  while ((cdata[end] != '<') && (end > 0))
-    end--;
-  
-  return apr_pstrndup(pool, cdata, end);
-}
-
-
 /* Helper func for dav_lock_to_svn_lock:  take an incoming 
    "<D:owner>&lt;foo&gt;</D:owner>" tag and convert it to
    "<foo>". */
