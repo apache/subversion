@@ -52,11 +52,13 @@ GUESS="/usr/local/share/libtool/config.guess"
 SENDMAIL="/usr/lib/sendmail"
 
 # Other stuff
+BASE64_E="$BIN/base64 -e"
 CAT="$BIN/cat"
 CP="$BIN/cp"
 CP_F="$BIN/cp -f"
 CUT="$BIN/cut"
 GREP="$BIN/grep"
+GZIP_C="$BIN/gzip -9c"
 ID_UN="$BIN/id -un"
 KILL="$BIN/kill"
 MAKE="$LOCALBIN/make"
