@@ -53,6 +53,19 @@ void svn_xml_escape_string (svn_stringbuf_t **outstr,
 			    const svn_stringbuf_t *string,
 			    apr_pool_t *pool);
 
+/* Unescape an XML-escaped string.  NOTE:  This function recognizes
+   only the following XML escape strings:
+
+      &amp;    - &
+      &apos;   - '
+      &gt;     - >
+      &lt;     - <
+      &quot;   - "
+*/
+void svn_xml_unescape_string (svn_stringbuf_t **outstr,
+                              const svn_stringbuf_t *string,
+                              apr_pool_t *pool);
+
 /*---------------------------------------------------------------*/
 
 /*** Generalized Subversion XML Parsing ***/

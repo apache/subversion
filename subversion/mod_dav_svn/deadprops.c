@@ -24,7 +24,7 @@
 #include <apr_hash.h>
 
 #include "dav_svn.h"
-
+#include "svn_xml.h"
 
 struct dav_db {
   const dav_resource *resource;
@@ -167,6 +167,7 @@ static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
   svn_string_t propname = { key.dptr, key.dsize };
   svn_string_t propval = { value.dptr, value.dsize };
   svn_error_t *serr;
+  svn_stringbuf_t *unxml = NULL;
 
   /* ### hope node is open, and it is mutable */
 
@@ -178,6 +179,16 @@ static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
   fix_name(db, &propname);
   ++propval.data;
   propval.len -= 2;
+
+  /* ### (another) temp hack.  Until mod_dav stops xml-escaping the
+     values of the properties, we need to perform another unescape of
+     the same. */
+  svn_xml_unescape_string 
+    (&unxml, 
+     svn_stringbuf_create (propval.data, db->resource->pool),
+     db->resource->pool);
+  propval.data = unxml->data;
+  propval.len = unxml->len;
 
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
