@@ -9,6 +9,13 @@ Status of 1.1.2:
 
 Candidate changes:
 
+  * r12075
+    Add pre-0.14 dumpfile compatability.
+    Justification: Some very old clients were recently spotted in
+    the wild.  And: Dumpfile compatibility is always good.
+    Votes:
+      +1: dionisos
+
   * r11483, r12072, r12157, r12158, r12180 (Issue #2091)
     Unitialized variable on Win98.
     Justification:
@@ -23,9 +30,8 @@ Candidate changes:
       from Max Bowsher and others.  The extra revs incorporate
       all of that.  -jszakmeister
     Votes:
-      +1: jszakmeister
+      +1: jszakmeister, dionisos
     Votes without r12072, r12157, r12158, or 12180:
-      +1: dionisos
       +0: kfogel, lundblad
 
   * r11050
@@ -37,16 +43,6 @@ Candidate changes:
     Votes:
       +1: ghudson
       Nominated by: David James <james82@gmail.com>
-
-  * r11862, r11921, r12061 (part of issue #1997)
-    Fix encoding bug in svnserve -h.
-    Justification:
-      Encoding bugs look ugly.
-    Note:
-      r12061 is just a docstring clarification.
-    Votes:
-      +1: lundblad, maxb, epg
-      +0: nori (not r12061)
 
   * r12006, r12136, r12146
     Fix issue 2124 - bugs in svn switch over ra-dav.
@@ -92,6 +88,14 @@ Candidate changes:
     Votes:
       +1: breser
 
+ * r12184
+   Fix crash in javahl binding, when trying to retrieve non-existing property
+   Justification:
+     2 simple fixes in javahl binding only to prevent crash of jvm. Reported
+     by users.
+   Votes:
+      +1: pmayweg
+
 Approved changes (further review is welcome, but not required):
 
   * r11438
@@ -101,13 +105,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: maxb, epg, rooneg
 
-  * r12172
-    Create FSFS write-lock file when repository is created.
-    Justification:
-      Fixed an edge-case umask dependency for FSFS repositories.
-    Votes:
-      +1: ghudson, epg, cmpilato
-
   * r12046
     Fix issue 2142 - svndumpfilter mislabels output as version 3.
     Justification:
@@ -115,7 +112,7 @@ Approved changes (further review is welcome, but not required):
       (This is a regression from 1.0.x)
       Trivial change.
     Votes:
-      +1: maxb, epg, kfogel
+      +1: maxb, epg, kfogel, dionisos
 
   * r11936
     Fixes a 'working copy not locked' error.
@@ -203,10 +200,27 @@ Approved changes (further review is welcome, but not required):
       +1: josander
       +0: maxb
 
- * r12184
-   Fix crash in javahl binding, when trying to retrieve non-existing property
-   Justification:
-     2 simple fixes in javahl binding only to prevent crash of jvm. Reported
-     by users.
-   Votes:
-      +1: pmayweg
+  * r11438
+    Fix a bug that caused 'svnversion --version .' to crash.
+    Justification:
+      Segfaults bad!
+    Votes:
+      +1: maxb, epg, rooneg
+
+  * r11862, r11921, r12061 (part of issue #1997)
+    Fix encoding bug in svnserve -h.
+    Justification:
+      Encoding bugs look ugly.
+    Note:
+      r12061 is just a docstring clarification.
+    Votes:
+      +1: lundblad, maxb, epg
+      +0: nori (not r12061)
+
+  * r12172
+    Create FSFS write-lock file when repository is created.
+    Justification:
+      Fixed an edge-case umask dependency for FSFS repositories.
+    Votes:
+      +1: ghudson, epg, cmpilato
+
