@@ -474,7 +474,7 @@ apply_textdelta (void *file_baton,
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
-  svn_stream_t *base64_encoder, *output;
+  svn_stream_t *output;
 
   if (fb->txdelta_id == 0)
     {
@@ -504,8 +504,8 @@ apply_textdelta (void *file_baton,
      the editor's output stream via output_svndiff_data().  */
   output = svn_stream_create (fb, fb->pool);
   svn_stream_set_write (output, output_svndiff_data);
-  svn_base64_encode (output, eb->pool, &base64_encoder);
-  svn_txdelta_to_svndiff (base64_encoder, eb->pool, handler, handler_baton);
+  svn_txdelta_to_svndiff (svn_base64_encode (output, eb->pool), eb->pool,
+                          handler, handler_baton);
 
   return err;
 }

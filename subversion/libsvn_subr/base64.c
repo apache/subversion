@@ -143,19 +143,20 @@ encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
 }
 
 
-void
-svn_base64_encode (svn_stream_t *output, apr_pool_t *pool,
-                   svn_stream_t **encode)
+svn_stream_t *
+svn_base64_encode (svn_stream_t *output, apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct encode_baton *eb = apr_palloc (subpool, sizeof (*eb));
+  svn_stream_t *stream;
 
   eb->output = output;
   eb->buflen = 0;
   eb->linelen = 0;
   eb->pool = subpool;
-  *encode = svn_stream_create (eb, pool);
-  svn_stream_set_write (*encode, encode_data);
+  stream = svn_stream_create (eb, pool);
+  svn_stream_set_write (stream, encode_data);
+  return stream;
 }
 
 
@@ -269,19 +270,20 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
 }
 
 
-void
-svn_base64_decode (svn_stream_t *output, apr_pool_t *pool,
-                   svn_stream_t **decode)
+svn_stream_t *
+svn_base64_decode (svn_stream_t *output, apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct decode_baton *db = apr_palloc (subpool, sizeof (*db));
+  svn_stream_t *stream;
 
   db->output = output;
   db->buflen = 0;
   db->done = FALSE;
   db->pool = subpool;
-  *decode = svn_stream_create (db, pool);
-  svn_stream_set_write (*decode, decode_data);
+  stream = svn_stream_create (db, pool);
+  svn_stream_set_write (stream, decode_data);
+  return stream;
 }
 
 

@@ -470,14 +470,14 @@ write_handler (void *baton,
   return err;
 }
 
-void
+svn_stream_t *
 svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
                            void *handler_baton,
-                           apr_pool_t *pool,
-                           svn_stream_t **parse)
+                           apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct decode_baton *db = apr_palloc (pool, sizeof (*db));
+  svn_stream_t *stream;
 
   db->consumer_func = handler;
   db->consumer_baton = handler_baton;
@@ -487,8 +487,9 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
   db->last_sview_offset = 0;
   db->last_sview_len = 0;
   db->header_bytes = 0;
-  *parse = svn_stream_create (db, pool);
-  svn_stream_set_write (*parse, write_handler);
+  stream = svn_stream_create (db, pool);
+  svn_stream_set_write (stream, write_handler);
+  return stream;
 }
 
 
