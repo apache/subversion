@@ -9,7 +9,7 @@
       administrator can offer.  While the repository is generally a
       low-maintenance item, it is important to understand how to
       properly configure and care for it so that potential problems
-      are avoided, and actual problems safely resolved.</para>
+      are avoided, and actual problems are safely resolved.</para>
 
     <para>In this chapter, we'll discuss how to create and configure a
       Subversion repository, and how to expose that repository for
@@ -95,12 +95,6 @@
         can choose to promote the transaction into a revision, or
         abort it.</para>
             
-      <para>What does all of this have to do with repository
-        administration?  The answer is simple: if you're administering
-        a Subversion repository, you're going to have to examine
-        revisions and transactions as part of monitoring the health of
-        your repository.</para>
-            
     </sect2>
 
     <!-- ***************************************************************** -->
@@ -109,7 +103,7 @@
 
       <para>Transactions and revisions in the Subversion repository
         can have properties attached to them.  These properties are
-        generic key-to-value mappings, and are used to store
+        generic key-to-value mappings, and are generally used to store
         information about the tree to which they are attached.  The
         names and values of these properties are stored in the
         repository's filesystem, along with the rest of your tree
@@ -149,15 +143,15 @@
       <title>Berkeley DB</title>
 
         <para>The data housed within Subversion repositories actually
-          lives inside a database, specifically, a Berkeley DB
-          Transactional Data Store.  When the initial design phase of
-          Subversion was in progress, the developers decided to use
-          Berkeley DB for a variety of reasons, including Berkeley
-          DB's open-source license, transaction support, reliability,
-          performance, API simplicity, thread-safety, support for
-          cursors, and so on.</para>
+          lives inside a database, specifically, a Berkeley DB Data
+          Store.  When the initial design phase of Subversion was in
+          progress, the developers decided to use Berkeley DB for a
+          variety of reasons, including its open-source license,
+          transaction support, reliability, performance, API
+          simplicity, thread-safety, support for cursors, and so
+          on.</para>
 
-        <para>The transaction support provided by Berkeley DB is
+        <para>Berkeley DB provides real transaction support&mdash;
           perhaps its most powerful feature.  Multiple processes
           accessing your Subversion repositories don't have to worry
           about accidentally clobbering each other's data.  The
@@ -176,7 +170,9 @@
           backups</firstterm>&mdash;the ability to backup the database
           environment without taking it <quote>offline</quote>.  We'll
           discuss how to backup your repository in <xref
-          linkend="svn-ch-5-sect-3.6"/>.</para>
+          linkend="svn-ch-5-sect-3.6"/>, but the benefits of being
+          able to make fully functional copies of your repositories
+          without any downtime should be obvious.</para>
 
         <para>Berkeley DB is also a very reliable database system.
           Subversion uses Berkeley DB's logging facilities, which
@@ -192,19 +188,19 @@
 
         <para>But every rose has its thorn, and so we must note some
           known limitations of Berkeley DB.  First, Berkeley DB
-          environments are not portable.  As such, you cannot simply
-          copy a Subversion repository that was created on a Unix
-          system onto a Windows system and expect it to work.  While
-          much of the Berkeley DB database format is architecture
-          independent, there are other aspects of the environment that
-          are not.  Secondly, Subversion uses Berkeley DB in a way
-          that will not operate on Windows 9x systems&mdash;if you
-          need to house a repository on a Windows machine, stick with
-          Windows 2000 or Windows XP.  Finally, you should never keep
-          a Subversion repository on a network share.  While Berkeley
-          DB promises to behave correctly on network shares that meet
-          a particular set of specifications, almost no known shares
-          actually meet all those specifications.</para>
+          environments are not portable.  You cannot simply copy a
+          Subversion repository that was created on a Unix system onto
+          a Windows system and expect it to work.  While much of the
+          Berkeley DB database format is architecture independent,
+          there are other aspects of the environment that are not.
+          Secondly, Subversion uses Berkeley DB in a way that will not
+          operate on Windows 95/98 systems&mdash;if you need to house
+          a repository on a Windows machine, stick with Windows 2000
+          or Windows XP.  Finally, you should never keep a Subversion
+          repository on a network share.  While Berkeley DB promises
+          to behave correctly on network shares that meet a particular
+          set of specifications, almost no known shares actually meet
+          all those specifications.</para>
 
     </sect2>
   </sect1>
@@ -547,18 +543,18 @@ pre-commit.tmpl
         more databases, log files, region files and configuration
         files.  The Berkeley DB environment has it own set of default
         configuration values for things like the number of locks
-        allowed to be taken out at any given time, or the size
-        cutoff for Berkeley's journaling log file, etc.
-        Subversion's filesystem code additionally chooses default
-        values for some of the Berkeley DB configuration options.
-        However, sometimes your particular repository, with its
-        unique collection of data and access patterns, might require
-        a different set of configuration option values.</para>
+        allowed to be taken out at any given time, or the maximum size
+        of the journaling log files, etc.  Subversion's filesystem
+        code additionally chooses default values for some of the
+        Berkeley DB configuration options.  However, sometimes your
+        particular repository, with its unique collection of data and
+        access patterns, might require a different set of
+        configuration option values.</para>
 
       <para>The folks at Sleepycat (the producers of Berkeley DB)
         understand that different databases have different
         requirements, and so they have provided a mechanism for
-        runtime overriding of many of the configuration values for the
+        overriding at runtime many of the configuration values for the
         Berkeley DB environment.  Berkeley checks for the presence of
         a file named <filename>DB_CONFIG</filename> in each
         environment directory, and parses the options found in that
@@ -710,15 +706,12 @@ Greek tree.
 
         <para>Another common use of <command>svnlook</command> is to
           actually view the contents of a revision or transaction
-          tree.  Examining the output of <command>svnlook
-          tree</command> command, which displays the directories and
-          files in the requested tree (optionally showing the
-          filesystem node revision IDs for each of those paths) can be
-          extremely helpful to administrators deciding on whether or
-          not it is safe to remove a seemingly dead transaction.  It
-          is also quite useful for Subversion developers who are
-          diagnosing filesystem-related problems when they
-          arise.</para>
+          tree.  The <command>svnlook tree</command> command displays
+          the directories and files in the requested tree.  If you
+          supply the <option>--show-ids</option> option, it will also
+          show the filesystem node revision IDs for each of those
+          paths (which is generally of more use to developers than to
+          users).</para>
 
         <screen>
 $ svnlook tree path/to/repos --show-ids
@@ -744,6 +737,12 @@ $ svnlook tree path/to/repos --show-ids
     psi &lt;j.0.1&gt;
  iota &lt;1.0.1&gt;
 </screen>
+
+        <para>Once you've seen the layout of directories and files in
+          your tree, you can use commands like <command>svnlook
+          cat</command>, <command>svnlook propget</command>, and
+          <command>svnlook proplist</command> to dig into the details
+          of those files and directories.</para>
 
         <para><command>svnlook</command> can perform a variety of
           other queries, displaying subsets of bits of information
@@ -1031,23 +1030,23 @@ Available subcommands:
           reason).  Or, perhaps you have multiple projects sharing a
           single repository, and you decide to split them up into
           their own repositories.  To accomplish tasks like this,
-          administrators need an more manageable representation of the
-          data in their repositories&mdash;the Subversion repository
-          dump format.</para>
+          administrators need an more manageable and malleable
+          representation of the data in their repositories&mdash;the
+          Subversion repository dump format.</para>
 
         <para>The Subversion repository dump format is a
           human-readable representation of the changes that you've
           made to your versioned data over time.  You use the
           <command>svnadmin dump</command> command to generate the
           dump data, and <command>svnadmin load</command> to populate
-          a new repository with it (for more about this process, see
-          <xref linkend="svn-ch-5-sect-3.5"/>).  The great thing about
-          the human-readibility aspect of the dump format is that, if
-          you aren't careless about it, you can manually inspect and
+          a new repository with it (see <xref
+          linkend="svn-ch-5-sect-3.5"/>).  The great thing about the
+          human-readibility aspect of the dump format is that, if you
+          aren't careless about it, you can manually inspect and
           modify it.  Of course, the downside is that if you have two
           years' worth of repository activity encapsulated in what is
-          likely to be a very large file, it could take you a long,
-          long time to manually inspect and modify it.</para>
+          likely to be a very large dumpfile, it could take you a
+          long, long time to manually inspect and modify it.</para>
 
         <para>While it won't be the most commonly used tool at the
           administrator's disposal, <command>svndumpfilter</command>
@@ -1102,7 +1101,7 @@ Available subcommands:
           choose a layout for the data in your
           repositories&mdash;using one repository per project or
           combining them, arranging stuff within your repository, and
-          so on.  But sometimes after new revision start flying in,
+          so on.  But sometimes after new revisions start flying in,
           you rethink your layout and would like to make some changes.
           A common change is the decision to move multiple projects
           which are sharing a single repository into a single
@@ -1162,13 +1161,13 @@ $
           original repository.  This means that even though you would
           have a repository solely for your <literal>calc</literal>
           project, that repository would still have a top-level
-          directory named <filename>calc</filename>.  If you want to
+          directory named <filename>calc</filename>.  If you want
           your <filename>trunk</filename>, <filename>tags</filename>,
           and <filename>branches</filename> directories to live in
           root of your repository, you might wish to edit your
           dumpfiles, tweaking the <literal>Node-path</literal> and
           <literal>Copyfrom-path</literal> headers to no longer have
-          that first <filename>calc</filename> path component.  Also,
+          that first <filename>calc/</filename> path component.  Also,
           you'll want to remove the section of dump data that creates
           the <filename>calc</filename> directory.  It will look
           something like:</para>
@@ -1205,14 +1204,13 @@ $
 </screen>
 
         <para>Both of <command>svndumpfilter</command>'s subcommands
-          accept options for controlling the output, all revolving
-          around what to do with <quote>empty</quote> revisions.  If a
-          given revision contained only changes to paths that were
-          filtered out, that now-empty revision could be considered
-          uninteresting or even unwanted.  So to give the user control
-          over what to do with those revisions,
-          <command>svndumpfilter</command> provides the following
-          command-line options:</para>
+          accept options for deciding how to deal with
+          <quote>empty</quote> revisions.  If a given revision
+          contained only changes to paths that were filtered out, that
+          now-empty revision could be considered uninteresting or even
+          unwanted.  So to give the user control over what to do with
+          those revisions, <command>svndumpfilter</command> provides
+          the following command-line options:</para>
 
         <variablelist>
           <varlistentry>
@@ -1271,9 +1269,8 @@ Node-path: spreadsheet/Makefile
               them&mdash;other programs which generate dump data might
               not be so consistent.</para>
           </footnote>
-          you should probably make a backup copy of your dumpfile, and
-          then normalize those paths to either all have, or all lack,
-          leading slashes.</para>
+          you should probably normalize those paths to either all
+          have, or all lack, leading slashes.</para>
 
         <para>Also, copied paths can give you some trouble.
           Subversion supports copy operations in the repository, where
@@ -1417,16 +1414,13 @@ $
       <sect3 id="svn-ch-5-sect-3.1.5">
         <title>Berkeley DB Utilities</title>
 
-        <para>The information housed within Subversion repositories
-          actually lives inside a database&mdash;a Berkeley DB
-          Transactional Data Store.  All of your versioned
-          filesystem's structure and data live in a set of tables
-          within the <filename>db</filename> subdirectory of your
-          repository.  This subdirectory is a regular Berkeley DB
-          environment directory, and can therefore be used in
-          conjunction with any of Berkeley's database tools (you can
-          see the documentation for these tools at SleepyCat's
-          website, <systemitem
+        <para>All of your versioned filesystem's structure and data
+          live in a set of Berkeley DB database tables within the
+          <filename>db</filename> subdirectory of your repository.
+          This subdirectory is a regular Berkeley DB environment
+          directory, and can therefore be used in conjunction with any
+          of Berkeley's database tools (you can see the documentation
+          for these tools at SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).</para>
 
         <para>For day-to-day Subversion use, these tools are
@@ -1523,9 +1517,9 @@ $ svnadmin setlog myrepos newlog.txt -r 388
         unversioned properties as a remote client is&mdash;the
         <literal>pre-</literal> and
         <literal>post-revprop-change</literal> hooks are still
-        triggered, and therefore must be setupto accept changes of
+        triggered, and therefore must be setup to accept changes of
         this nature.  But an administrator can get around these
-        protection by passing the <option>--bypass-hooks</option>
+        protections by passing the <option>--bypass-hooks</option>
         option to <command>svnadmin setlog</command> command.</para>
  
       <warning>
@@ -2046,10 +2040,8 @@ Committed revision 1.
 $ 
 </screen>
 
-      <para>Lastly, load our individual dumpfiles into their
-        respective locations in the new repository using the
-        <option>--parent-dir</option> option to <command>svnadmin
-        load</command>:</para>
+      <para>Lastly, load the individual dumpfiles into their
+        respective locations in the new repository:</para>
 
       <screen>
 $ svnadmin load /path/to/projects --parent-dir calc &lt; calc-dumpfile
@@ -2062,18 +2054,22 @@ $
 </screen>
 
       <para>We'll mention one final way to use the Subversion
-        repository dump file format&mdash;conversion from a different
+        repository dump format&mdash;conversion from a different
         storage mechanism or version control system altogether.
         Because the dump file format is, for the most part,
         human-readable,
         <footnote>
-          <para>The Subversion repository dump file format resembles
+          <para>The Subversion repository dump format resembles
             an RFC-822 format, the same type of format used for most
             email.</para>
         </footnote>
         it should be relatively easy to describe generic sets of
         changes&mdash;each of which should be treated as a new
-        revision&mdash;using this file format.</para>
+        revision&mdash;using this file format.  In fact, the
+        <command>cvs2svn.py</command> utility (see <xref
+        linkend="svn-ap-b"/>) uses the dump format to represent the
+        contents of a CVS repository so that those contents can be
+        moved in a Subversion repository.</para>
 
     </sect2>
 
@@ -2314,6 +2310,7 @@ $
       trunk/
       tags/
       branches/
+   &hellip;
 </screen>
 
       <para>Note that it doesn't matter where in your repository each
@@ -2432,8 +2429,7 @@ $
 
     <para>All that remains is for you to decide what exciting data to
       store in your repository, and finally, how to make it available
-      over a network.  The next chapter is all about
-      networking.</para>
+      over a network.  The next chapter is all about networking.</para>
 
   </sect1>
 </chapter>

@@ -53,32 +53,6 @@ Chapter 3
 
 Chapter 5
 
-    Section svn-ch-5-sect-2.1
-
-        #1) Blair
-
-            There is this paragraph
-
-            <para>Currently there are five true hooks implemented by the
-            Subversion repository:</para>
-
-            My question is, what makes a hook considered a "true" hook?
-
-    Section svn-ch-5-sect-3.1.1
-
-        #1) Blair
-
-            I think this section on svnlook tree requires more
-            explanation of what is being printed, what is a node
-            revision ID, etc.  It makes statements on how it can be
-            helpful to administrators but doesn't say how.  It also
-            doesn't say how to decide if a dead transaction is really
-            dead.  I suggest either removing it entirely, increasing
-            the description substantially, or least preferably, just
-            linking to an external document that explains this in
-            greater detail, but that's not really appropriate for a
-            book, is it then :)
-
     Section svn-ch-5-sect-6
 
         #1) Blair
