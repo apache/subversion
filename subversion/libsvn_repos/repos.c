@@ -710,6 +710,10 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#"
       APR_EOL_STR
+      "#   [STDIN] PROPVAL  ** the old property value is passed via STDIN."
+      APR_EOL_STR
+      "#"
+      APR_EOL_STR
       "# Because the propchange has already completed and cannot be undone,"
       APR_EOL_STR
       "# the exit code of the hook program is ignored.  The hook program"
