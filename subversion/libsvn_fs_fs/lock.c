@@ -661,7 +661,7 @@ get_locks_under_path (apr_hash_t **locks,
       
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi)) 
     {
-      int nbytes = 2;
+      apr_size_t nbytes = 2;
       const void *key;
       char *buf = apr_palloc (pool, nbytes);
       apr_hash_this(hi, &key, NULL, NULL);
@@ -669,7 +669,8 @@ get_locks_under_path (apr_hash_t **locks,
 
       SVN_ERR (abs_path_to_lock_digest_file (&abs_path, fs, child, pool));
 
-      SVN_ERR (svn_io_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_open (&fd, abs_path, 
+                                 APR_READ, APR_OS_DEFAULT, pool));
       SVN_ERR (svn_io_file_read_full (fd, buf, nbytes, &nbytes, pool));
       SVN_ERR (svn_io_file_seek (fd, APR_SET, &offset, pool));
 
