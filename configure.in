@@ -209,7 +209,7 @@ if test "$SVN_CLIENT_PATCH" = "";  then
 
 Cannot find a GNU patch program in your PATH.
 Please install GNU diff and patch from the GNU diffutils package,
-version 2.7 or later.  (ftp://ftp.gnu.org/diffutils)
+version 2.7 or later.  (ftp://ftp.gnu.org/pub/gnu/diffutils)
 ])
 fi
 AC_MSG_RESULT([$SVN_CLIENT_PATCH])
@@ -224,7 +224,7 @@ if test "$SVN_CLIENT_DIFF" = "";  then
 
 Cannot find an unbroken GNU diff program in your PATH.
 Please install GNU diff and patch from the GNU diffutils package,
-version 2.7 or later. (ftp://ftp.gnu.org/diffutils)
+version 2.7 or later. (ftp://ftp.gnu.org/pub/gnu/diffutils)
 
 (Note that FreeBSD uses a *hacked* version of GNU diff that is unable
 to handle certain types of text files.)
