@@ -29,21 +29,45 @@ svn_ra_local__set_path (void *report_baton,
     = (svn_ra_local__report_baton_t *) report_baton;
   svn_revnum_t *rev_ptr = apr_pcalloc (rbaton->pool, sizeof(*rev_ptr));
 
+  /* If this is the very first call, no txn exists yet. */
+  if (! rbaton->txn)
+    {
+      /* Sanity check: make sure that PATH is really the target dir. */
+      if (! svn_string_compare (path, svn_string_create ("", rbaton->pool)))
+        return 
+          svn_error_create
+          (SVN_ERR_RA_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
+           "svn_ra_local__set_path: initial revision report was bogus.");
 
-  /* Create the "from" root and path. */
-  SVN_ERR (svn_fs_revision_root (&from_root, rbaton->fs,
+      /* Start a transaction based on REVISION. */
+      SVN_ERR (svn_fs_begin_txn (&(rbaton->txn), rbaton->fs,
                                  revision, rbaton->pool));
-  from_path = svn_string_dup (rbaton->base_path, rbaton->pool);
-  svn_path_add_component (from_path, path, svn_path_repos_style);
+      SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn,
+                                rbaton->pool));
+      
+      /* In our hash, map the root of the txn ("") to the initial base
+         revision. */
+      *rev_ptr = revision;
+      apr_hash_set (rbaton->path_rev_hash, "", APR_HASH_KEY_STRING, rev_ptr);
+    }
 
-  /* Copy into our txn. */
-  SVN_ERR (svn_fs_copy (from_root, from_path->data,
-                        rbaton->txn_root, from_path->data, rbaton->pool));
-
-  /* Remember this path in our hashtable. */
-  *rev_ptr = revision;
-  apr_hash_set (rbaton->path_rev_hash, from_path->data,
-                from_path->len, rev_ptr);
+  else  /* this is not the first call to set_path. */ 
+    {
+    /* Create the "from" root and path. */
+    SVN_ERR (svn_fs_revision_root (&from_root, rbaton->fs,
+                                   revision, rbaton->pool));
+    from_path = svn_string_dup (rbaton->base_path, rbaton->pool);
+    svn_path_add_component (from_path, path, svn_path_repos_style);
+    
+    /* Copy into our txn. */
+    SVN_ERR (svn_fs_copy (from_root, from_path->data,
+                          rbaton->txn_root, from_path->data, rbaton->pool));
+    
+    /* Remember this path in our hashtable. */
+    *rev_ptr = revision;
+    apr_hash_set (rbaton->path_rev_hash, from_path->data,
+                  from_path->len, rev_ptr);    
+  }
 
   return SVN_NO_ERROR;
 }

@@ -553,45 +553,6 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 }
 
 
-/* ### not actually used for right now. remove when this func is used. */
-#if 0
-
-/* Given an array of starting PATHS (svn_string_t's), return the
-   longest common path that they all contain.  Return NULL if so such
-   beast exists.  */
-static svn_string_t *
-get_common_path (const apr_array_header_t *paths,
-                 apr_pool_t *pool)
-{
-  int i;
-  svn_string_t *longest_common_path;
-
-  if (paths->nelts <= 0)
-    return NULL;
-
-  longest_common_path = (((svn_string_t **)(paths)->elts)[0]);
-
-  for (i = 1; i < paths->nelts; i++)
-    {
-      svn_string_t *next_path, *the_longer;            
-
-      next_path = (((svn_string_t **)(paths)->elts)[i]);
-
-      /* might return NULL if no common base path: */
-      the_longer = svn_path_get_longest_ancestor (next_path,
-                                                  longest_common_path,
-                                                  pool);
-
-      if (! the_longer) /* at least two paths have NO common base path */
-        return NULL;
-
-      longest_common_path = the_longer;
-    }
-
-  return longest_common_path;
-}
-
-#endif
 
 
 /* A recursive working-copy "crawler", used for commits.
@@ -1143,7 +1104,13 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
   SVN_ERR (svn_wc_entry (&root_entry, root_directory, pool));
   base_rev = root_entry->revision;
 
-  /* Recursively crawl ROOT_DIRECTORY and report revisions. */
+  /* The first call to the reporter should be on "", telling it that
+     the top-level dir being updated is at BASE_REV. */
+  SVN_ERR (reporter->set_path (report_baton,
+                               svn_string_create ("", pool),
+                               base_rev));
+
+  /* Recursively crawl ROOT_DIRECTORY and report differing revisions. */
   SVN_ERR (report_revisions (root_directory,
                              svn_string_create ("", pool),
                              base_rev,
