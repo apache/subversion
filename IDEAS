@@ -144,3 +144,14 @@ editor.
 
 
 
+* split libsvn_WC into two components
+
+  split into: one for managing the metadata (the stuff in ./SVN/), and one
+  for the rest of the WC functionality (crawling and updating). This would
+  provide a way to use multiple metadata storage and management options,
+  possibly optimized for the platform at hand.
+
+  Alternate storage options: separate file streams (NTFS streams, MacOS
+  resource forks), a single database of data (rather than per-dir), or
+  server-based storage (via DeltaV)
+
