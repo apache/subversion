@@ -108,6 +108,7 @@ test_commit_txn (svn_revnum_t *new_rev,
 
   if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
     {
+      svn_error_clear (err);
       if (! expected_conflict)
         {
           return svn_error_createf
@@ -131,7 +132,6 @@ test_commit_txn (svn_revnum_t *new_rev,
              "commit conflicted at '%s', but expected conflict at '%s')",
              conflict, expected_conflict);
         }
-      svn_error_clear (err);
     }
   else if (err)   /* commit failed, but not due to conflict */
     {
