@@ -166,17 +166,16 @@ class SVNShell:
     """list the properties of a path"""
     args = args[0]
     catpath = self.path
-    if len(args):
+    if args:
       catpath = self._parse_path(args[0])
     kind = fs.check_path(self.root, catpath, self.taskpool)
     if kind == util.svn_node_none:
       print "Path '%s' does not exist." % catpath
       return
     plist = fs.node_proplist(self.root, catpath, self.taskpool)
-    if not len(plist):
+    if not plist:
       return
-    for pkey in plist.keys():
-      pval = plist[pkey]
+    for pkey, pval in plist.items():
       print 'K ' + str(len(pkey))
       print pkey
       print 'P ' + str(len(pval))
