@@ -82,6 +82,31 @@ test_read_fn (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+apply_delta (void *delta_src,
+             svn_delta_read_fn_t *read_fn,
+             svn_string_t *dest,
+             svn_string_t *repos,
+             svn_vernum_t version,
+             apr_pool_t *pool)
+{
+  const svn_delta_walk_t *walker;
+  void *walk_baton;
+  void *dir_baton;
+  svn_error_t *err;
+
+  /* Get the change-walker and friends... */
+  err = svn_wc_get_change_walker (dest, repos, version,
+                                  &walker, &walk_baton, &dir_baton, pool);
+  if (err)
+    return err;
+
+  /* ... and walk! */
+  return svn_xml_parse (read_fn, delta_src,
+                        walker, walk_baton, dir_baton, pool);
+}
+
+
 int
 main (int argc, char **argv)
 {
@@ -119,7 +144,7 @@ main (int argc, char **argv)
   if (argc == 3)
     target = svn_string_create (argv[2], pool);
 
-  err = svn_wc_apply_delta 
+  err = apply_delta
     (src, 
      test_read_fn,
      target,

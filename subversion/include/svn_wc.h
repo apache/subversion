@@ -90,61 +90,42 @@ svn_error_t *svn_wc_add    (apr_array_header_t *paths);
 svn_error_t *svn_wc_delete (apr_array_header_t *paths);
 
 
-/* Apply a delta to a working copy, or to create a working copy.
+/*
+ * Return a walker for effecting changes in a working copy, including
+ * creating the working copy (i.e., update and checkout).
  * 
- * If DEST is non-null, its existence as a directory is ensured (i.e.,
- * it is created if it does not already exist), and it will be
- * prepended to every path the delta causes to be touched.
+ * If DEST is non-null, the walker will ensure its existence as a
+ * directory (i.e., it is created if it does not already exist), and
+ * it will be prepended to every path the delta causes to be touched.
  *
  * It is the caller's job to make sure that DEST is not some other
  * working copy, or that if it is, it will not be damaged by the
- * application of this delta.  svn_wc_apply_delta() tries to detect
+ * application of this delta.  The wc library tries to detect
  * such a case and do as little damage as possible, but makes no
  * promises.
  *
- * REPOS is the repository string to be recorded by this working
+ * REPOS is the repository string to be recorded in this working
  * copy.
  *
+ * VERSION is the repository version that results from this set of
+ * changes.
+ *
+ * WALKER, WALK_BATON, and DIR_BATON are all returned by reference,
+ * and the latter two must be used as parameters to walker functions.
+ *
  * kff todo: Actually, REPOS is one of several possible non-delta-ish
- * things that may need to get passed to svn_wc_apply_delta() so it
- * can create new administrative subdirs.  Other things might be
- * username and/or auth info, which aren't necessarily included in the
- * repository string.
- *
- * Another way might have been to first call svn_wc_create(), or
- * somesuch, and then run apply_delta() on the resulting fresh working
- * copy skeleton -- in other words, apply_delta() wouldn't know
- * anything about where the delta came from, it would just re-use
- * information already present in the working copy, and it would never
- * be applied to anything but a working copy.  But then all sorts of
- * sanity checks would get harder, because apply_delta() couldn't
- * easily check that the delta it is applying is really right for the
- * working copy, and conversely, it would be more difficult to check
- * out a subdir from one repository into the working copy of another.
- * Also, when what's being checked out is a directory, it's nice to
- * make that be the tip-top of the working copy (assuming no loose
- * top-level files are encountered in the delta), and we can't do that
- * if we always have to apply to an existing working copy.
- *
- * Thinking out loud here, as you can see.  */
-svn_error_t *svn_wc_apply_delta (void *delta_src,
-                                 svn_delta_read_fn_t *delta_stream_reader,
-                                 svn_string_t *dest,
-                                 svn_string_t *repos,
-                                 svn_vernum_t version,
-                                 apr_pool_t *pool);
-
-/*
- * Return a walker that will be consumed by the Repository Access Layer.
- * This walker will effect the changes during an update/checkout.
+ * things that may be needed by a walker when creating new
+ * administrative subdirs.  Other things might be username and/or auth
+ * info, which aren't necessarily included in the repository string.
+ * Thinking more on this question...
  */
-svn_error_t *svn_wc_get_change_walker(svn_string_t *dest,
-                                      svn_string_t *repos,
-                                      svn_vernum_t version,
-                                      const svn_delta_walk_t **walker,
-                                      void **walk_baton,
-                                      void **dir_baton,
-                                      apr_pool_t *pool);
+svn_error_t *svn_wc_get_change_walker (svn_string_t *dest,
+                                       svn_string_t *repos,
+                                       svn_vernum_t version,
+                                       const svn_delta_walk_t **walker,
+                                       void **walk_baton,
+                                       void **dir_baton,
+                                       apr_pool_t *pool);
 
 
 #if 0
