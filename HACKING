@@ -83,6 +83,12 @@ issue without noticing that it has already been reported.  If you're
 not sure about an issue, post a question to dev@subversion.tigris.org.
 ("Subversion: We're here to help you help us!")
 
+Another way to help is to set up automated builds and test suite runs
+of Subversion on some platform, and have the output sent to the
+svn-breakage@subversion.tigris.org mailing list.  See more details at
+http://subversion.tigris.org/servlets/ProjectMailingListList, in the
+description for the svn-breakage list.
+
 
 
 Theory and documentation
