@@ -61,6 +61,12 @@ Candidate changes:
     Votes:
       +1: brane, kfogel
 
+  * r8756
+    Turn off warnings for bad constant values in SWIG bindings.
+    Justification: Easy warning fix.
+    Votes:
+      +1: breser
+
 
 Status of 1.0.1:
 ================
