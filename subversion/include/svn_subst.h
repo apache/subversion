@@ -91,7 +91,7 @@ typedef struct svn_subst_keywords_t
 
 
 /** Fill in an <tt>svn_subst_keywords_t *</tt> @a kw with the appropriate 
- * contents given an @a keywords_string (the contents of the svn:keywords 
+ * contents given a @a keywords_string (the contents of the svn:keywords 
  * property for the file in question), the revision @a rev, the @a url, 
  * the @a date the file was committed on, and the @a author of the last 
  * commit.  Any of these can be @c NULL to indicate that the information is 

@@ -610,7 +610,7 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
  * Ask the RA layer to 'switch' a working copy to a new
  * @a switch_url;  it's another form of @c svn_ra_do_update().
  *
- * The client initially provides an @a switch_editor/@a baton to the RA
+ * The client initially provides a @a switch_editor/@a baton to the RA
  * layer; this editor contains knowledge of where the change will
  * begin in the working copy (when @c open_root() is called). 
  *
@@ -659,7 +659,7 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
  * Ask the RA layer to describe the status of a working copy with respect
  * to @a revision of the repository (or HEAD, if @a revision is invalid).
  *
- * The client initially provides an @a status_editor/@a baton to the RA
+ * The client initially provides a @a status_editor/@a baton to the RA
  * layer; this editor contains knowledge of where the change will
  * begin in the working copy (when @c open_root() is called).
  *
@@ -897,7 +897,7 @@ svn_error_t *svn_ra_get_locations (svn_ra_session_t *session,
  * as seen in revision @a end (see @c svn_fs_history_prev for a
  * definition of "interesting revisions").  Invoke @a handler with
  * @a handler_baton as its first argument for each such revision.
- * @a sesson is an open RA session.  Use @a pool for all allocations.
+ * @a session is an open RA session.  Use @a pool for all allocations.
  *
  * If there is an interesting revision of the file that is less than or
  * equal to @a start, the iteration will begin at that revision.

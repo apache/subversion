@@ -149,7 +149,7 @@ typedef struct svn_version_t
   int patch;                    /**< Patch number */
 
   /**
-   * The verison tag (#SVN_VER_NUMTAG).\ Must always point to a
+   * The version tag (#SVN_VER_NUMTAG).\ Must always point to a
    * statically allocated string.
    */
   const char *tag;
@@ -181,7 +181,7 @@ typedef struct svn_version_t
 /**
  * @since New in 1.1.
  *
- * Check library version compatibility. Returns #TRUE if the clent's
+ * Check library version compatibility. Return #TRUE if the client's
  * version, given in @a my_version, is compatible with the library
  * version, provided in @a lib_version.
  *

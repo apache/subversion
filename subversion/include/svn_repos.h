@@ -702,7 +702,7 @@ typedef svn_error_t *(*svn_repos_history_func_t) (void *baton,
  * not, return SVN_ERR_AUTHZ_UNREADABLE.  Also verify the readability
  * of every ancestral path/revision pair before pushing them at @a
  * history_func.  If a pair is deemed unreadable, then do not send
- * them; instead, immmediately stop traversing history and return
+ * them; instead, immediately stop traversing history and return
  * SVN_NO_ERROR.
  */
 svn_error_t *
@@ -792,7 +792,7 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  * If @a paths is non-null and has one or more elements, then only show
  * revisions in which at least one of @a paths was changed (i.e., if
  * file, text or props changed; if dir, props changed or an entry was
- * added or deleted).  Each path is an <tt>const char *</tt> representing 
+ * added or deleted).  Each path is a <tt>const char *</tt> representing
  * an absolute path in the repository.
  *
  * ### todo: need to consider whether the above directory behavior is
@@ -1033,8 +1033,8 @@ svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
 
 
 /** Look up all the locks in and under @a path in @a repos, setting @a
- * locks to a hash which maps @c const char * paths to the @c
- * svn_lock_t locks associate with those paths.  Use @a
+ * *locks to a hash which maps <tt>const char *</tt> paths to the @c
+ * svn_lock_t locks associated with those paths.  Use @a
  * authz_read_func and @a authz_read_baton to "screen" all returned
  * locks.  That is: do not return any locks on any paths that are
  * unreadable in HEAD, just silently omit them.
