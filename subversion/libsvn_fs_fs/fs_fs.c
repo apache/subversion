@@ -2762,7 +2762,7 @@ choose_delta_base (representation_t **rep,
                    node_revision_t *noderev,
                    apr_pool_t *pool)
 {
-  int count, i;
+  int count;
   node_revision_t *base;
 
   /* If we have no predecessors, then use the empty stream as a
@@ -2773,14 +2773,18 @@ choose_delta_base (representation_t **rep,
       return SVN_NO_ERROR;
     }
 
+  /* Flip the rightmost '1' bit of the predecessor count to determine
+     which file rev (counting from 0) we want to use.  (To see why
+     count & (count - 1) unsets the rightmost set bit, think about how
+     you decrement a binary number.) */
   count = noderev->predecessor_count;
-  i = 0;
-  while ((count & (1 << i)) == 0)
-    i++;
-  count &= ~(1 << i);
+  count = count & (count - 1);
 
+  /* Walk back a number of predecessors equal to the difference
+     between count and the original predecessor count.  (For example,
+     if noderev has ten predecessors and we want the eighth file rev,
+     walk back two predecessors.) */
   base = noderev;
-
   while ((count++) < noderev->predecessor_count)
     SVN_ERR (svn_fs_fs__get_node_revision (&base, fs,
                                            base->predecessor_id, pool));
