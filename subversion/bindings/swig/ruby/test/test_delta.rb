@@ -134,6 +134,75 @@ class SvnDeltaTest < Test::Unit::TestCase
     assert_equal([].sort, editor.added_dirs)
   end
 
+  def test_change_prop
+    prop_name = "prop"
+    prop_value = "value"
+    
+    dir = "changed_dir"
+    dir_path = File.join(@wc_path, dir)
+    dir_svn_path = dir
+
+    log = "added 1 dirs\nanded 5 files"
+    ctx = make_context(log)
+
+    ctx.mkdir([dir_path])
+
+    file1 = "changed1.txt"
+    file2 = "changed2.txt"
+    file3 = "changed3.txt"
+    file4 = "changed4.txt"
+    file5 = "changed5.txt"
+    file1_path = File.join(@wc_path, file1)
+    file2_path = File.join(dir_path, file2)
+    file3_path = File.join(@wc_path, file3)
+    file4_path = File.join(dir_path, file4)
+    file5_path = File.join(@wc_path, file5)
+    file1_svn_path = file1
+    file2_svn_path = [dir_svn_path, file2].join("/")
+    file3_svn_path = file3
+    file4_svn_path = [dir_svn_path, file4].join("/")
+    file5_svn_path = file5
+    FileUtils.touch(file1_path)
+    FileUtils.touch(file2_path)
+    FileUtils.touch(file3_path)
+    FileUtils.touch(file4_path)
+    FileUtils.touch(file5_path)
+    ctx.add(file1_path)
+    ctx.add(file2_path)
+    ctx.add(file3_path)
+    ctx.add(file4_path)
+    ctx.add(file5_path)
+
+    ctx.propset(prop_name, prop_value, dir_path)
+
+    commit_info = ctx.commit(@wc_path)
+
+    editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
+    assert_equal(["", dir_svn_path].collect{|path| "#{path}/"}.sort,
+                 editor.changed_dirs)
+
+    
+    log = "prop changed"
+    ctx = make_context(log)
+    
+    ctx.propdel(prop_name, dir_path)
+
+    commit_info = ctx.commit(@wc_path)
+
+    editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
+    assert_equal([dir_svn_path].collect{|path| "#{path}/"}.sort,
+                 editor.changed_dirs)
+
+    
+    ctx.propset(prop_name, prop_value, file1_path)
+
+    commit_info = ctx.commit(@wc_path)
+
+    editor = traverse(Svn::Delta::ChangedDirsEditor, commit_info.revision)
+    assert_equal([""].collect{|path| "#{path}/"}.sort,
+                 editor.changed_dirs)
+  end
+  
   private
   def traverse(editor_class, rev, pass_root=false)
     root = @fs.root

@@ -572,7 +572,7 @@ change_dir_prop(void *dir_baton,
   args = rb_ary_new3(6,
                      ib->editor,
                      rb_id_change_dir_prop(),
-                     ib->editor,
+                     ib->baton,
                      c2r_string2(name),
                      value ? rb_str_new(value->data, value->len) : Qnil,
                      c2r_swig_type((void *)pool, (void *)"apr_pool_t *"));
