@@ -44,7 +44,7 @@ Subversion's hooks are run according to configuration files kept in
 the repository:
 
    $ ls some-repo
-   README   anarchy/   dav/   db/   conf/
+   README   custom/   dav/   db/   conf/
    $ ls some-repo/conf/
    pre-commit    post-commit    read-sentinels    write-sentinels
    $ 
