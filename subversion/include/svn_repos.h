@@ -99,6 +99,14 @@ svn_repos_set_path (void *report_baton,
                     svn_revnum_t revision);
 
 
+/* Given a REPORT_BATON constructed by svn_repos_begin_report(), this
+   routine will remove PATH from the current fs transaction. 
+
+   (This allows the reporter's driver to describe missing pieces of a
+   working copy, so that 'svn up' can recreate them.) */   
+svn_error_t *svn_repos_delete_path (void *report_baton,
+                                    svn_string_t *path);
+
 /* Make the filesystem compare the transaction to a revision and have
    it drive an update editor (using svn_repos_delta_dirs()).  Then
    abort the transaction. */
