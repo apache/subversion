@@ -5,7 +5,7 @@
 
 <center>
 <h2>Bite-Sized Tasks</h2>
-$Date: 2001-07-04 19:32:24 $
+$Date: 2001-07-04 20:10:32 $
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -172,6 +172,20 @@ Here are the tasks:
    >http://subversion.tigris.org/servlets/ReadMsg?msgId=30061&listName=dev</a>
    <p>
 
+   <!-- ---------------------------------------------------------- -->
+
+   <li> <b>Constify svn_parse_date()'s first parameter</b> <p>
+   </li>
+   This is
+   <a
+   href="http://subversion.tigris.org/issues/show_bug.cgi?id=408">issue
+   #408</a>, the description is:
+   <p>
+   The first argument of svn_parse_date() should be const.  However,
+   because the function originates in getdate.y and that parameter is
+   related to the global yyInput variable, there may be more to this
+   change than just adding the qualifier...
+   <p>
 
 <!-- template for further items: -->
 <!--
