@@ -304,10 +304,28 @@ svn_error_t *svn_fs__dag_rename (dag_node_t *from_dir, const char *from_name,
 /* Delete the directory entry named NAME from PARENT, as part of
    TRAIL.  PARENT must be mutable.  NAME must be a single path
    component; it cannot be a slash-separated directory path.  If the
-   node being deleted is a mutable directory, it must be empty.  */
+   node being deleted is a directory, it must be empty.  */
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
                                  const char *name,
                                  trail_t *trail);
+
+
+/* Delete the directory entry named NAME from PARENT, as part of
+   TRAIL.  PARENT must be mutable.  NAME must be a single path
+   component; it cannot be a slash-separated directory path.  If the
+   node being deleted is a mutable directory, remove all mutable nodes
+   reachable from it.  */
+svn_error_t *svn_fs__dag_delete_tree (dag_node_t *parent,
+                                      const char *name,
+                                      trail_t *trail);
+
+
+/* Delete all mutable node revisions reachable from node ID, including
+   ID itself, from FS's `nodes' table, as part of TRAIL.  ID may refer
+   to a file or directory, which may be mutable or immutable.  */
+svn_error_t *svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
+                                            svn_fs_id_t *id,
+                                            trail_t *trail);
 
 
 /* Create a new mutable directory named NAME in PARENT, as part of

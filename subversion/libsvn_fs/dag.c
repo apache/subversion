@@ -1063,15 +1063,20 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 }
 
 
-svn_error_t *
-svn_fs__dag_delete (dag_node_t *parent,
-                    const char *name,
-                    trail_t *trail)
+/* Delete the directory entry named NAME from PARENT, as part of
+   TRAIL.  PARENT must be mutable.  NAME must be a single path
+   component.  If REQUIRE_EMPTY is true and the node being deleted is
+   a directory, it must be empty.  */
+static svn_error_t *
+delete_entry (dag_node_t *parent,
+              const char *name,
+              svn_boolean_t require_empty,
+              trail_t *trail)
 {
   skel_t *node_rev, *new_dirent_list, *prev_entry, *entry;
   int deleted = FALSE;
 
-  /* Make sure we're looking at a directory node. */
+  /* Make sure parent is a directory. */
   if (! svn_fs__dag_is_directory (parent))
     return 
       svn_error_createf
@@ -1079,7 +1084,7 @@ svn_fs__dag_delete (dag_node_t *parent,
        "Attempted to delete entry `%s' from *non*-directory node.",
        name);    
 
-  /* Make sure the directory is mutable. */
+  /* Make sure parent is mutable. */
   {
     svn_boolean_t is_mutable;
 
@@ -1127,17 +1132,7 @@ svn_fs__dag_delete (dag_node_t *parent,
       /* entry looks like "(NAME ID)" */
       if (svn_fs__matches_atom (entry->children, name))
         {
-          /* Found it.  This is the entry we want to remove from the
-           * list.  But:
-           *
-           *    - If it's a mutable and *non-empty* directory, flag an
-           *      error.  Part of this routine's promise is that it
-           *      won't remove non-empty mutable dirs.
-           * 
-           *    - Otherwise, if it's mutable, delete it from the
-           *      database entirely, because this is the last handle 
-           *      anyone has on it.
-           */
+          /* Found the entry. */
 
           skel_t *id_atom = entry->children->next;
           dag_node_t *node; 
@@ -1148,30 +1143,28 @@ svn_fs__dag_delete (dag_node_t *parent,
           SVN_ERR (svn_fs__dag_get_node (&node, parent->fs, id, trail));
           SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
 
-          if (is_mutable)
+          if (svn_fs__dag_is_directory (node))
             {
-              if (svn_fs__dag_is_directory (node))
+              skel_t *content;
+              SVN_ERR (svn_fs__get_node_revision (&content, parent->fs,
+                                                  id, trail));
+              
+              if (require_empty
+                  && (svn_fs__list_length (content->children->next) != 0))
                 {
-                  skel_t *content;
-                  SVN_ERR (svn_fs__get_node_revision (&content, parent->fs,
-                                                      id, trail));
-                  
-                  if (svn_fs__list_length (content->children->next) != 0)
-                    {
-                      return
-                        svn_error_createf
-                        (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
-                         "Attempt to delete non-empty mutable directory `%s'.",
-                         name);
-                    }
+                  return
+                    svn_error_createf
+                    (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
+                     "Attempt to delete non-empty directory `%s'.",
+                     name);
                 }
-
-              /* Delete the mutable node from the database. */
-              SVN_ERR (svn_fs__delete_node_revision (parent->fs, id, trail));
             }
 
-          /* Just "lose" this entry by setting the *previous* entry's
-             next ptr to the current entry's next ptr. */          
+          /* If mutable, remove it and any mutable children from db. */
+          SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, id, trail));
+
+          /* Just "lose" this entry by setting the previous entry's
+             next ptr to the current entry's next ptr. */
           if (! prev_entry)
             /* Base case: the first entry (the head of the list) matched. */
             new_dirent_list->children = entry->next;
@@ -1197,6 +1190,62 @@ svn_fs__dag_delete (dag_node_t *parent,
                                       node_rev,
                                       trail));
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__dag_delete (dag_node_t *parent,
+                    const char *name,
+                    trail_t *trail)
+{
+  return delete_entry (parent, name, TRUE, trail);
+}
+
+
+svn_error_t *
+svn_fs__dag_delete_tree (dag_node_t *parent,
+                         const char *name,
+                         trail_t *trail)
+{
+  return delete_entry (parent, name, FALSE, trail);
+}
+
+
+svn_error_t *
+svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
+                               svn_fs_id_t *id,
+                               trail_t *trail)
+{
+  svn_boolean_t is_mutable;
+  dag_node_t *node;
+
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+
+  /* If immutable, do nothing and return immediately. */
+  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
+  if (! is_mutable)
+    return SVN_NO_ERROR;
+
+  /* Else it's mutable.  Recurse on directories... */
+  if (svn_fs__dag_is_directory (node))
+    {
+      skel_t *entries, *entry;
+      SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
+          
+      for (entry = entries->children; entry; entry = entry->next)
+        {
+          skel_t *id_skel = entry->children->next;
+          svn_fs_id_t *this_id
+            = svn_fs_parse_id (id_skel->data, id_skel->len, trail->pool);
+
+          SVN_ERR (svn_fs__dag_delete_if_mutable (fs, this_id, trail));
+        }
+    }
+
+  /* ... then delete the node itself. */
+  SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
+  
   return SVN_NO_ERROR;
 }
 

@@ -175,6 +175,9 @@ typedef enum svn_errno_t {
      or create another node named /.  */
   SVN_ERR_FS_ROOT_DIR,
 
+  /* The root object given is not a transaction root.  */
+  SVN_ERR_FS_NOT_TXN_ROOT,
+
   /* The transaction could not be committed, because of a conflict with
      a prior change.  */
   SVN_ERR_FS_CONFLICT,

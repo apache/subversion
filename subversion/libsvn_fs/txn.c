@@ -165,45 +165,6 @@ struct abort_txn_args
 };
 
 
-/* Delete all mutable node revisions reachable from node ID, including
-   ID itself, from filesystem FS, as part of TRAIL.  ID may refer to
-   a file or directory, which may be mutable or immutable.  */
-static svn_error_t *
-delete_from_id (svn_fs_t *fs, svn_fs_id_t *id, trail_t *trail)
-{
-  svn_boolean_t is_mutable;
-  dag_node_t *node;
-
-  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
-
-  /* If immutable, do nothing and return immediately. */
-  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
-  if (! is_mutable)
-    return SVN_NO_ERROR;
-
-  /* Else it's mutable.  Recurse on directories... */
-  if (svn_fs__dag_is_directory (node))
-    {
-      skel_t *entries, *entry;
-      SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
-          
-      for (entry = entries->children; entry; entry = entry->next)
-        {
-          skel_t *id_skel = entry->children->next;
-          svn_fs_id_t *this_id
-            = svn_fs_parse_id (id_skel->data, id_skel->len, trail->pool);
-
-          SVN_ERR (delete_from_id (fs, this_id, trail));
-        }
-    }
-
-  /* ... then delete the node itself. */
-  SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
-  
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 txn_body_abort_txn (void *baton, trail_t *trail)
 {
@@ -214,7 +175,7 @@ txn_body_abort_txn (void *baton, trail_t *trail)
 
   SVN_ERR (svn_fs_txn_name (&txn_name, txn, txn->pool));
   SVN_ERR (svn_fs__get_txn (&root_id, &ignored_id, txn->fs, txn_name, trail));
-  SVN_ERR (delete_from_id (txn->fs, root_id, trail));
+  SVN_ERR (svn_fs__dag_delete_if_mutable (txn->fs, root_id, trail));
   SVN_ERR (svn_fs__delete_txn (txn->fs, txn->id, trail));
 
   return SVN_NO_ERROR;

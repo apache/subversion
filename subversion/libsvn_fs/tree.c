@@ -1760,7 +1760,7 @@ struct delete_args
 {
   svn_fs_root_t *root;
   const char *path;
-  svn_boolean_t require_empty_dir;
+  svn_boolean_t delete_tree;
 };
 
 
@@ -1771,10 +1771,14 @@ txn_body_delete (void *baton,
   struct delete_args *args = baton;
   svn_fs_root_t *root = args->root;
   const char *path = args->path;
-  svn_boolean_t require_empty_dir = args->require_empty_dir;
   parent_path_t *parent_path;
 
   SVN_ERR (open_path (&parent_path, root, path, 0, trail));
+
+  if (root->kind != transaction_root)
+    return svn_error_create
+      (SVN_ERR_FS_NOT_TXN_ROOT, 0, NULL, trail->pool,
+       "root object must be a transaction root");
 
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
@@ -1784,29 +1788,18 @@ txn_body_delete (void *baton,
   /* Make the parent directory mutable.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
 
-  /* If this is a directory, we have to check to see if it is required
-     by our caller to be empty before deleting it. */
-  if (svn_fs__dag_is_directory (parent_path->node)
-      && require_empty_dir)
+  if (args->delete_tree)
     {
-      skel_t *entries;
-
-      SVN_ERR (svn_fs__dag_dir_entries_skel (&entries,
-                                             parent_path->node, 
-                                             trail));
-      if (svn_fs__list_length (entries))
-        {
-          return svn_error_create (SVN_ERR_FS_DIR_NOT_EMPTY, 0, 
-                                   NULL, trail->pool,
-                                   "unable to delete non-empty tree");
-        }
+      SVN_ERR (svn_fs__dag_delete_tree (parent_path->parent->node,
+                                        parent_path->entry,
+                                        trail));
     }
-
-  /* We have a (semi-)bug here: we'll happily delete non-empty directories,
-     if they're shared with the base revision.  */
-  SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
-                               parent_path->entry,
-                               trail));
+  else
+    {
+      SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
+                                   parent_path->entry,
+                                   trail));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1819,9 +1812,9 @@ svn_fs_delete (svn_fs_root_t *root,
 {
   struct delete_args args;
 
-  args.root = root;
-  args.path = path;
-  args.require_empty_dir = TRUE;
+  args.root        = root;
+  args.path        = path;
+  args.delete_tree = FALSE;
   return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
 }
 
@@ -1833,9 +1826,9 @@ svn_fs_delete_tree (svn_fs_root_t *root,
 {
   struct delete_args args;
 
-  args.root = root;
-  args.path = path;
-  args.require_empty_dir = FALSE;
+  args.root        = root;
+  args.path        = path;
+  args.delete_tree = TRUE;
   return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
 }
 
