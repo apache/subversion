@@ -63,7 +63,112 @@ Control List (ACL), file type (text, binary), file encoding, ...@}.
 Similarly, a version in a repository's history can store the log message
 as a property.
 
-@subsection Schema
+
+@subsection API
+
+This is the same API that the client calls, prefixed with @code{fs_}.
+For a full explanation, see @xref{The repository access library}.
+
+@table @code
+@item ver_t fs_latest (repos, user)
+@item prop_t fs_get_ver_prop (repos, user, ver, propname)
+@item proplist_t fs_get_ver_proplist (repos, user, ver)
+@item proplist_t fs_get_ver_propnames (repos, user, ver)
+@item node_t fs_read (repos, user, ver, path)
+@item str_t fs_get_node_prop (repos, user, ver, path, propname)
+@item str_t fs_get_dirent_prop (repos, user, ver, path, propname)
+@item proplist_t fs_get_node_proplist (repos, ver, path)
+@item proplist_t fs_get_dirent_proplist (repos, user, ver, path)
+@item proplist_t fs_get_node_propnames (repos, user, ver, path)
+@item proplist_t fs_get_dirent_propnames (repos, user, ver, path)
+@item skelta_t fs_get_status (repos, user, skelta)
+@item delta_t fs_get_update (repos, user, skelta)
+@item delta_t fs_get_delta (repos, user, ver1, path1, ver2, path2)
+@item diff_t fs_get_diff (repos, user, ver1, path1, ver2, path2)
+@item token_t fs_submit (repos, user, skelta)
+@item ver_t fs_write (repos, user, delta, token)
+@item bool_t fs_abandon (repos, user, token)
+@end table
+
+
+@c -----------------
+@subsection Locking
+
+The Subversion Filesystem has a locking mechanism.
+
+The locking mechanism deals with @dfn{readers} and @dfn{writers}.
+Readers never have to wait for writers; writers only have to wait for
+other writers whose changes conflict with theirs.
+
+@subsubsection Read Locks
+
+Reading is easy; if a server process wants to execute a @code{read()}
+call into the filesystem, it goes right through.  The design of the
+versioning filesystem allows a reader to simply skip down the version
+history, locate the correct "root" node, and then follow the particular
+tree downwards to the file or directory it wishes to read.  Any number
+of readers can follow this algorithm without interfering with another;
+and because writers don't link to the version history until they're
+finished writing everything, there's no way for a reader to accidentally
+stumble upon an unfinished tree.
+
+@subsubsection Write Locks
+
+Each Subversion filesystem has a process called a @dfn{lock manager}.
+The lock manager isn't always running; when a server process wishes to
+execute a @code{write()} on the filesystem, it must first determine if a
+lock manager is running.  If not, it creates one.
+
+@example
+
+                  D              /
+                   \            /
+                    \          /
+                     |        /
+                     v       /
+       +--------------------|--------------+
+       |                    v              |
+       |             Approved?             |
+       |                |                  |
+       |                |                  |
+       |                v                  |
+       |          Concurrency Pool         |
+       |       +--------------------+      |
+       |       |     D            D |      |
+       |       |  D        D   D    |      |
+       |       +--------------------+      |
+       +-----------------------------------+
+
+@end example
+
+After the lock manager is up, the server process first sends it a
+@code{submit()} call containing the skelta it would like to write.
+
+The lock manager contains a pool of "approved changes".  This pool is a
+set of skeltas which have been okayed for concurrent application to the
+filesystem.  After receiving a new skelta from @code{submit()}, the lock
+manager determines if it is safe to apply it at the same time as the
+other ones in progress.@footnote{This rule is actually quite simple: a
+set of skeltas may be concurrently written @emph{if and only if} the
+order in which they are applied does not matter!}
+
+If the lock manager decides that the requested skelta conflicts it
+returns a failure to the server, and the server must wait and try again
+with another @code{submit()} request.
+
+If the lock manager decides that the requested skelta does not conflict,
+it returns a transaction token to the server.  The server then uses this
+token to execute a @code{write()} on the filesystem.
+
+After the @code{write()} is completed, the skelta is removed from the
+lock manager's concurrency pool, and the server closes its connection.
+
+When the lock manager has no more open server connections, it dies.
+
+@c ------------------------------------
+@subsection Repository Structure 
+
+@subsubsection Schema
 
 To begin, please be sure that you're already casually familiar with
 Subversion's ideas of files, directories, and version histories.  If
@@ -71,8 +176,6 @@ not, @xref{Model}.  For completeness, we can now offer a precise,
 technical description of these terms.
 
 @c This is taken from jimb's very first Subversion spec!
-@c Is there some standardized notation for describing schemas like this?
-@c <jimb>
  
 @quotation
 
@@ -161,161 +264,35 @@ DAG'', so we still call it a ``directory tree'' here.
 @b{There are no dead nodes.}  Every node is a child of some version's
 root directory.
 
-@c  </jimb> ----------------------
+@c  </jimb>
 
 
+@subsubsection ``Bubble Up'' Method
 
-@subsection API
+This section provides a conversational explanation of how the repository
+actually stores and versions file trees.  It's not critical knowledge
+for a programmer using the Subversion Filesystem API, but most probably
+still want to know what's going on ``under the hood'' of the repository.
 
-@c  @subsubsection Data Types
-
-@c  The filesystem API routines require and return a number of data types
-@c  specific to Subversion's model and schema.
-
-@c  @dfn{bool} is a simple Boolean value, used to indicate success or
-@c  failure.
-
-@c  A @dfn{user} is a username (presumed to be previously authenticated by
-@c  the network layer) which is attempting to perform a filesystem action.
-
-@c  A @dfn{path} refers to an absolute path in the Subversion filesystem,
-@c  e.g. @code{/trunk/gdb/i386.c}
-
-@c  A @dfn{proplist} is a list of properties (key/value pairs).
-
-@c  A @dfn{propname} is a particular property key.
-
-@c  A @dfn{propnamelist} is a list of all the keys in a proplist.
-
-@c  A @dfn{file} is a string of bytes that contains both a ``text stream''
-@c  and a ``property stream''.  The text stream contains the main contents
-@c  of the file, while the property stream decodes into a proplist.
-
-@c  A @dfn{directory entry} (@dfn{dirent}) points to a file or directory.
-
-@c  A @dfn{directory} (@dfn{dir}) is a list of directory entries.
-
-@c  A @dfn{filesystem object} (@dfn{fs_obj}) contains either a file or
-@c  a directory. 
-
-@c  A @dfn{version} (abbreviated @dfn{ver}) refers to a global version
-@c  number in a repository's history.
-
-@c  A @dfn{diff} is a standard GNU diff, a textual context diff.
-
-@c  A @dfn{delta} is a structure that describes a difference between two
-@c  file trees.  For a detailed discussion, @xref{Protocol}.
-
-@c  A @dfn{skelta} A @dfn{skelta} is the skeleton of a delta: while it does
-@c  indicate which files are changed, it does not describe the specific
-@c  changes to the files' text.  This datatype allows the filesystem to
-@c  detect conflicts between transactions before the client has computed or
-@c  transmitted the (possibly large) textual deltas.
-
-@c  A @dfn{token} is a token used to represent a write transaction in
-@c  progress.
-
-@c ---------------------
-
-This is the same API that the client calls, prefixed with @code{fs_}.
-For a full explanation, see @xref{The repository access library}.
-
-@table @code
-@item ver_t fs_latest (repos, user)
-@item prop_t fs_get_ver_prop (repos, user, ver, propname)
-@item proplist_t fs_get_ver_proplist (repos, user, ver)
-@item proplist_t fs_get_ver_propnames (repos, user, ver)
-@item node_t fs_read (repos, user, ver, path)
-@item str_t fs_get_node_prop (repos, user, ver, path, propname)
-@item str_t fs_get_dirent_prop (repos, user, ver, path, propname)
-@item proplist_t fs_get_node_proplist (repos, ver, path)
-@item proplist_t fs_get_dirent_proplist (repos, user, ver, path)
-@item proplist_t fs_get_node_propnames (repos, user, ver, path)
-@item proplist_t fs_get_dirent_propnames (repos, user, ver, path)
-@item skelta_t fs_get_status (repos, user, skelta)
-@item delta_t fs_get_update (repos, user, skelta)
-@item delta_t fs_get_delta (repos, user, ver1, path1, ver2, path2)
-@item diff_t fs_get_diff (repos, user, ver1, path1, ver2, path2)
-@item token_t fs_submit (repos, user, skelta)
-@item ver_t fs_write (repos, user, delta, token)
-@item bool_t fs_abandon (repos, user, token)
-@end table
-
-
-@c -----------------
-@subsection Locking
-
-The Subversion Filesystem has a locking mechanism.
-
-The locking mechanism deals with @dfn{readers} and @dfn{writers}.
-Readers never have to wait for writers;  writer only have to wait for
-other writers whose changes conflict with theirs.
-
-@subsubsection Read Locks
-
-Reading is easy; if a server process wants to execute a @code{read()}
-call into the filesystem, it goes right through.  The design of the
-versioning filesystem allows a reader to simply skip down the version
-history, locate the correct "root" node, and then follow the particular
-tree downwards to the file or directory it wishes to read.  Any number
-of readers can follow this algorithm without interfering with another;
-and because writers don't link to the version history until they're
-finished writing everything, there's no way for a reader to accidentally
-stumble upon an unfinished tree.
-
-@subsubsection Write Locks
-
-Each Subversion filesystem has a process called a @dfn{lock manager}.
-The lock manager isn't always running; when a server process wishes to
-execute a @code{write()} on the filesystem, it must first determine if a
-lock manager is running.  If not, it creates one.
+Suppose we have a new project, at version 1, looking like this (using
+CVS syntax):
 
 @example
-
-                  D              /
-                   \            /
-                    \          /
-                     |        /
-                     v       /
-       +--------------------|--------------+
-       |                    v              |
-       |             Approved?             |
-       |                |                  |
-       |                |                  |
-       |                v                  |
-       |          Concurrency Pool         |
-       |       +--------------------+      |
-       |       |     D            D |      |
-       |       |  D        D   D    |      |
-       |       +--------------------+      |
-       +-----------------------------------+
-
+   prompt$ svn checkout myproj
+   U myproj/
+   U myproj/B
+   U myproj/A
+   U myproj/A/subA
+   U myproj/A/subA/fish
+   U myproj/A/subA/fish/tuna
+   prompt$
 @end example
 
-After the lock manager is up, the server process first sends it a
-@code{submit()} call containing the skelta it would like to write.
 
-The lock manager contains a pool of "approved changes".  This pool is a
-set of skeltas which have been okayed for concurrent application to the
-filesystem.  After receiving a new skelta from @code{submit()}, the lock
-manager determines if it is safe to apply it at the same time as the
-other ones in progress.@footnote{This rule is actually quite simple: a
-set of skeltas may be concurrently written @emph{if and only if} the
-order in which they are applied does not matter!}
 
-If the lock manager decides that the requested skelta conflicts it
-returns a failure to the server, and the server must wait and try again
-with another @code{submit()} request.
 
-If the lock manager decides that the requested skelta does not conflict,
-it returns a transaction token to the server.  The server then uses this
-token to execute a @code{write()} on the filesystem.
 
-After the @code{write()} is completed, the skelta is removed from the
-lock manager's concurrency pool, and the server closes its connection.
-
-When the lock manager has no more open server connections, it dies.
-
+@c -----------------------
 @subsection Implementation
 
 For the initial release of Subversion,
