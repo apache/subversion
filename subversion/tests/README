@@ -57,24 +57,22 @@ Instead, your code should define an externally visible array
 `test_funcs', like this:
 
     /* The test table.  */
-
-    svn_error_t *(*test_funcs[]) (const char **msg,
-                                  svn_boolean_t msg_only,
-                                  apr_pool_t *pool) = {
-      0,
-      test_a,
-      test_b,
-      test_c,
-      0
+    struct svn_test_descriptor_t test_funcs[] =
+    {
+      SVN_TEST_NULL,
+      SVN_TEST_PASS(test_a),
+      SVN_TEST_PASS(test_b),
+      SVN_TEST_PASS(test_c),
+      SVN_TEST_NULL
     };
 
 In this example, `test_a', `test_b', and `test_c' are the names of
 test functions.  The first and last elements of the array must be
-zero.  The first zero is there to leave room for Buddha.  The standard
-`main' function searches for the final zero to determine the size of
-the array.
+SVN_TEST_NULL.  The first SVN_TEST_NULL is there to leave room for
+Buddha.  The standard `main' function searches for the final
+SVN_TEST_NULL to determine the size of the array.
 
-Each test function has the following type:
+Each test function conforms to the svn_test_driver_t prototype:
 
 	svn_error_t *f (const char **MSG,
                         svn_boolean_t MSG_ONLY
@@ -116,7 +114,7 @@ case that in the process of fixing a bug, several old bugs are
 accidentally resurrected... and then quickly revealed by the test
 suite.
 
-This same rule should apply to Subversion development: ** If you fix a
+This same rule applies to Subversion development: ** If you fix a
 bug, write a test for it. **
 
 (However, we should note that this rule is somewhat relaxed until
