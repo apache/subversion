@@ -44,6 +44,34 @@ create_fs_and_repos (svn_fs_t **fs, const char *name)
   return SVN_NO_ERROR;
 }
 
+/* Read all data from a generic read STREAM, and return it in STRING.
+   Allocate the svn_string_t in POOL.  (All data in STRING will be
+   dup'ed from STREAM using POOL too.) */
+static svn_error_t *
+stream_to_string (svn_string_t **string,
+                  svn_stream_t *stream,
+                  apr_pool_t *puel)
+{
+  char buf[50];
+  apr_size_t len;
+  svn_string_t *str = svn_string_create ("", puel);
+
+  do 
+    {
+      /* "please read 40 bytes into buf" */
+      len = 40;
+      SVN_ERR (svn_stream_read (stream, buf, &len));
+      
+      /* Now copy however many bytes were *actually* read into str. */
+      svn_string_appendbytes (str, buf, len);
+      
+    } while (len);  /* Continue until we're told that no bytes were
+                       read. */
+
+  *string = str;
+  return SVN_NO_ERROR;
+}
+
 
 
 /*-----------------------------------------------------------------*/
@@ -258,7 +286,6 @@ verify_txn_list (const char **msg)
 }
 
 
-#if 0
 
 /* Test writing & reading a file's contents. */
 static svn_error_t *
@@ -270,12 +297,7 @@ write_and_read_file (const char **msg)
   svn_stream_t *rstream;
   svn_txdelta_window_handler_t *consumer_func;
   void *consumer_baton;
-  svn_txdelta_window_t *window;
-  svn_txdelta_stream_t *dstream;
-  svn_string_t *string;
-  char buf[50];
-  apr_size_t len = 50;
-  int i = 0;
+  svn_string_t *wstring, *rstring;
 
   *msg = "write and read a file's contents";
 
@@ -287,35 +309,28 @@ write_and_read_file (const char **msg)
   SVN_ERR (svn_fs_make_file (txn_root, "beer.txt", pool));
 
   /* And write some data into this file. */
-  string = svn_string_create ("Wicki wild, wicki wicki wild.", pool);
+  wstring = svn_string_create ("Wicki wild, wicki wicki wild.", pool);
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
                                    txn_root, "beer.txt", pool));
-  SVN_ERR (svn_txdelta_send_string (string, consumer_func,
+  SVN_ERR (svn_txdelta_send_string (wstring, consumer_func,
                                     consumer_baton, pool));
   
   /* Now let's read the data back from the file. */
   SVN_ERR (svn_fs_file_contents (&rstream, txn_root, "beer.txt", pool));  
-  do 
-    {
-      SVN_ERR (svn_stream_read (rstream, (buf + i), &len));
-      i += len;
-      len -= i;
+  SVN_ERR (stream_to_string (&rstring, rstream, pool));
 
-    } while (len && (i <= 50) );
-
-  /* Compare the read to our original string. */
-  if (strncmp (buf, string->data, 50))
+  /* Compare what was read to what was written. */
+  if (! svn_string_compare (rstring, wstring))
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
                              "data read != data written.");    
 
-  /* Clean up. */
+  /* Clean up the repos. */
   SVN_ERR (svn_fs_close_txn (txn));
   SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
 
-#endif /* 0 */
 
 
 /* Create a file, a directory, and a file in that directory! */
@@ -413,6 +428,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   trivial_transaction,
   reopen_trivial_transaction,
   create_file_transaction,
+  write_and_read_file,
   create_mini_tree_transaction,
   create_greek_tree_transaction,
   verify_txn_list,
