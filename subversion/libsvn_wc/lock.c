@@ -260,7 +260,25 @@ probe (const char **dir,
 
   /* a "version" of 0 means a non-wc directory */
   if (kind != svn_node_dir || *wc_format == 0)
-    *dir = svn_path_dirname (path, pool);
+    {
+      /* Passing a path ending in "." or ".." to svn_path_dirname() is
+         probably always a bad idea; certainly it is in this case.
+         Unfortunately, svn_path_dirname()'s current signature can't
+         return an error, so we have to insert the protection in this
+         caller, as making the larger API change would be very
+         destabilizing right now (just before 1.0).  See issue #1617. */
+      const char *base_name = svn_path_basename (path, pool);
+      if ((strcmp (base_name, "..") == 0)
+          || (strcmp (base_name, ".") == 0))
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_PATH, NULL,
+             "Path '%s' ends in '%s', which is unsupported for this operation",
+             svn_path_local_style (path, pool), base_name);
+        }
+
+      *dir = svn_path_dirname (path, pool);
+    }
   else
     *dir = path;
 

@@ -353,6 +353,10 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 21,
               "Unsupported working copy format")  
 
+  SVN_ERRDEF (SVN_ERR_WC_BAD_PATH,
+              SVN_ERR_WC_CATEGORY_START + 22,
+              "Path syntax not supported in this context")  
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,
