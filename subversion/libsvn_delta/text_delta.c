@@ -51,6 +51,24 @@ struct svn_txdelta_stream_t {
 };
 
 
+/* Target-push stream descriptor. */
+
+struct tpush_baton {
+  /* These are copied from parameters passed to svn_txdelta_target_push. */
+  svn_stream_t *source;
+  svn_txdelta_window_handler_t wh;
+  void *whb;
+  apr_pool_t *pool;
+
+  /* Private data */
+  char *buf;
+  apr_size_t source_offset;
+  apr_size_t source_len;
+  svn_boolean_t source_done;
+  apr_size_t target_len;
+};
+
+
 /* Text delta applicator.  */
 
 struct apply_baton {
@@ -103,6 +121,30 @@ svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
   new_data->len = build_baton->new_data->len;
   window->new_data = new_data;
 
+  return window;
+}
+
+
+/* Compute and return a delta window using the vdelta algorithm on
+   DATA, which contains SOURCE_LEN bytes of source data and TARGET_LEN
+   bytes of target data.  SOURCE_OFFSET gives the offset of the source
+   data, and is simply copied into the window's sview_offset field. */
+static svn_txdelta_window_t *
+compute_window (const char *data, apr_size_t source_len, apr_size_t target_len,
+                apr_size_t source_offset, apr_pool_t *pool)
+{
+  svn_txdelta__ops_baton_t build_baton = { 0 };
+  svn_txdelta_window_t *window;
+
+  /* Compute the delta operations. */
+  build_baton.new_data = svn_stringbuf_create ("", pool);
+  svn_txdelta__vdelta (&build_baton, data, source_len, target_len, pool);
+  
+  /* Create and return the delta window. */
+  window = svn_txdelta__make_window (&build_baton, pool);
+  window->sview_offset = source_offset;
+  window->sview_len = source_len;
+  window->tview_len = target_len;
   return window;
 }
 
@@ -316,6 +358,110 @@ svn_txdelta_md5_digest (svn_txdelta_stream_t *stream)
     return NULL;
 
   return stream->digest;
+}
+
+
+
+/* Functions for implementing a "target push" delta. */
+
+/* This is the write handler for a target-push delta stream.  It reads
+ * source data, buffers target data, and fires off delta windows when
+ * the target data buffer is full. */
+static svn_error_t *
+tpush_write_handler (void *baton, const char *data, apr_size_t *len)
+{
+  struct tpush_baton *tb = baton;
+  apr_size_t chunk_len, data_len = *len;
+  apr_pool_t *pool = svn_pool_create (tb->pool);
+  svn_txdelta_window_t *window;
+
+  while (data_len > 0)
+    {
+      svn_pool_clear (pool);
+
+      /* Make sure we're all full up on source data, if possible. */
+      if (tb->source_len == 0 && !tb->source_done)
+        {
+          tb->source_len = SVN_STREAM_CHUNK_SIZE;
+          SVN_ERR (svn_stream_read (tb->source, tb->buf, &tb->source_len));
+          if (tb->source_len < SVN_STREAM_CHUNK_SIZE)
+            tb->source_done = TRUE;
+        }
+
+      /* Copy in the target data, up to SVN_STREAM_CHUNK_SIZE. */
+      chunk_len = SVN_STREAM_CHUNK_SIZE - tb->target_len;
+      if (chunk_len > data_len)
+        chunk_len = data_len;
+      memcpy (tb->buf + tb->source_len + tb->target_len, data, chunk_len);
+      data += chunk_len;
+      data_len -= chunk_len;
+      tb->target_len += chunk_len;
+
+      /* If we're full of target data, compute and fire off a window. */
+      if (tb->target_len == SVN_STREAM_CHUNK_SIZE)
+        {
+          window = compute_window (tb->buf, tb->source_len, tb->target_len,
+                                   tb->source_offset, pool);
+          SVN_ERR (tb->wh (window, tb->whb));
+          tb->source_offset += tb->source_len;
+          tb->source_len = 0;
+          tb->target_len = 0;
+        }
+    }
+
+  svn_pool_destroy(pool);
+  return SVN_NO_ERROR;
+}
+
+
+/* This is the close handler for a target-push delta stream.  It sends
+ * a final window if there is any buffered target data, and then sends
+ * a NULL window signifying the end of the window stream. */
+static svn_error_t *
+tpush_close_handler (void *baton)
+{
+  struct tpush_baton *tb = baton;
+  svn_txdelta_window_t *window;
+
+  /* Send a final window if we have any residual target data. */
+  if (tb->target_len > 0)
+    {
+      window = compute_window(tb->buf, tb->source_len, tb->target_len,
+                              tb->source_offset, tb->pool);
+      SVN_ERR(tb->wh(window, tb->whb));
+    }
+
+  /* Send a final NULL window signifying the end. */
+  SVN_ERR(tb->wh(NULL, tb->whb));
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
+                         void *handler_baton, svn_stream_t *source,
+                         apr_pool_t *pool)
+{
+  struct tpush_baton *tb;
+  svn_stream_t *stream;
+
+  /* Initialize baton. */
+  tb = apr_palloc (pool, sizeof(*tb));
+  tb->source = source;
+  tb->wh = handler;
+  tb->whb = handler_baton;
+  tb->pool = pool;
+  tb->buf = apr_palloc (pool, 2 * SVN_STREAM_CHUNK_SIZE);
+  tb->source_offset = 0;
+  tb->source_len = 0;
+  tb->source_done = FALSE;
+  tb->target_len = 0;
+
+  /* Create and return writable stream. */
+  stream = svn_stream_create (tb, pool);
+  svn_stream_set_write (stream, tpush_write_handler);
+  svn_stream_set_close (stream, tpush_close_handler);
+  return stream;
 }
 
 
