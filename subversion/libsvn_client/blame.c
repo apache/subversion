@@ -101,8 +101,8 @@ cleanup_tempfile (void *f)
 
 
 
-/* Create a blame chunk associated with REV for a change starting
-   at token START. */
+/* Return a blame chunk associated with REV for a change starting
+   at token START, and allocated in BATON->mainpool. */
 static struct blame *
 blame_create (struct file_rev_baton *baton, struct rev *rev, apr_off_t start)
 {
