@@ -784,6 +784,10 @@ SVN_ERROR_START
               SVN_ERR_CL_CATEGORY_START + 7,
               "No external editor available")
 
+  SVN_ERRDEF (SVN_ERR_CL_BAD_LOG_MESSAGE,
+              SVN_ERR_CL_CATEGORY_START + 8,
+              "Something is wrong with the log message's contents.")
+
 SVN_ERROR_END
 
 

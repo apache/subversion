@@ -1601,6 +1601,45 @@ def commit_out_of_date_deletions(sbox):
   return 0
 
 
+def commit_with_bad_log_message(sbox):
+  "commit with a log message containing bad data."
+
+  if sbox.build():
+    return 1
+  
+  wc_dir = sbox.wc_dir
+  
+  # Make a random change, so there's something to commit.
+  svntest.main.file_append(os.path.join(wc_dir, 'iota'), 'fish')
+  
+  # Create a log message containing bad (but non-zero) data.
+  log_msg_path = os.path.join(wc_dir, 'log-message') 
+  svntest.main.file_append(log_msg_path, '\x08')
+  
+  # Commit, expect an error.
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           None, None,
+                                           "Non-ascii character",
+                                           None, None,
+                                           None, None,
+                                           '-F', log_msg_path):
+    return 1
+
+  # Create a log message containing a zero-byte.
+  os.remove(log_msg_path)
+  svntest.main.file_append(log_msg_path, '\x00')
+
+  # Commit again, expect a different error this time.
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           None, None,
+                                           "contains a zero byte",
+                                           None, None,
+                                           None, None,
+                                           '-F', log_msg_path):
+    return 1
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1634,6 +1673,7 @@ test_list = [ None,
               XFail(failed_commit),
               Skip(commit_symlink, (os.name != 'posix')),
               commit_out_of_date_deletions,
+              commit_with_bad_log_message,
              ]
 
 if __name__ == '__main__':
