@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-10 17:02+0200\n"
+"POT-Creation-Date: 2004-09-14 00:57-0300\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -1621,9 +1621,8 @@ msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "Seta novo valor para propriedade '%s' na revisão %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:145
-#, fuzzy, c-format
 msgid "No changes to property '%s' on revision %ld\n"
-msgstr "Sem mudanças na propriedade '%s' na revisão %ld"
+msgstr "Sem mudanças na propriedade '%s' na revisão %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:153
 #, c-format
@@ -1835,8 +1834,8 @@ msgstr "Erro de framing no protocolo pipe"
 msgid "Read error in pipe"
 msgstr "Erro de leitura em pipe"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:313
-#: libsvn_subr/cmdline.c:330
+#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:316
+#: libsvn_subr/cmdline.c:333
 msgid "Write error"
 msgstr "Erro de escrita"
 
@@ -2462,12 +2461,12 @@ msgstr "Nenhum editor externo disponível"
 msgid "Something is wrong with the log message's contents"
 msgstr "Algo está errado com o conteúdo do log de mensagens"
 
-#: libsvn_client/add.c:343
+#: libsvn_client/add.c:348
 #, c-format
 msgid "Error during recursive add of '%s'"
 msgstr "Erro durante inclusão recursiva de '%s'"
 
-#: libsvn_client/add.c:353
+#: libsvn_client/add.c:358
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "Não foi possível fechar o diretório '%s'"
@@ -4785,7 +4784,6 @@ msgid "remove redundant log files from source repository"
 msgstr "remove arquivos redundantes de log do repositório origem"
 
 #: svnadmin/main.c:269
-#, fuzzy
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
