@@ -57,7 +57,8 @@ svn_ruby_fs_new (VALUE class, svn_fs_t *fs, apr_pool_t *pool)
   svn_ruby_fs_t *rb_fs;
   if (class == Qnil)
     {
-      /* This object shares pool with an Svn::Repos object.  */
+      /* Reference count parent's pool from svn_repos_t so that child pool
+         fs is allocated won't be blown away. */
       long count;
       obj = Data_Make_Struct (cSvnFS, svn_ruby_fs_t, 0, fs_free, rb_fs);
       count = svn_ruby_get_refcount (pool);

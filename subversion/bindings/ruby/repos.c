@@ -34,8 +34,6 @@ repos_free (void *p)
 {
   svn_ruby_repos_t *repos = p;
   long count = svn_ruby_get_refcount (repos->pool);
-  if (! repos->closed)
-    svn_repos_close (repos->repos);
   if (count == 1)
     apr_pool_destroy (repos->pool);
   else
@@ -102,6 +100,7 @@ repos_create (VALUE class, VALUE aPath)
   rb_repos->repos = repos;
   rb_repos->pool = pool;
   rb_repos->closed = FALSE;
+  svn_ruby_set_refcount (pool, 1);
   argv[0] = aPath;
   rb_obj_call_init (obj, 1, argv);
 
@@ -152,9 +151,7 @@ repos_close (VALUE self)
   Data_Get_Struct (self, svn_ruby_repos_t, repos);
   if (repos->closed)
     rb_raise (rb_eRuntimeError, "closed repos");
-  err = svn_repos_close (repos->repos);
-  if (err)
-    svn_ruby_raise (err);
+
   repos->closed = TRUE;
 
   return Qnil;
