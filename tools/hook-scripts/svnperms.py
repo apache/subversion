@@ -128,8 +128,8 @@ class SVNLook:
             raise Error, "command failed: %s\n%s" % (cmdstr, output)
         return status, output
 
-    def _execsvnlook(self, *args, **kwargs):
-        execcmd_args = ["svnlook", self.repospath]
+    def _execsvnlook(self, cmd, *args, **kwargs):
+        execcmd_args = ["svnlook", cmd, self.repospath]
         self._add_txnrev(execcmd_args, kwargs)
         execcmd_args += args
         execcmd_kwargs = {}
