@@ -121,7 +121,7 @@
 
     <para>And what could better help a developer gain a "big picture"
       perspective than a big picture?  To help you understand
-      how the Subversion libraries fit together, see Figure 7-2, a
+      how the Subversion libraries fit together, see Figure 7-1, a
       diagram of Subversion's layers.  Program flow begins at the top
       of the diagram (initiated by the user) and flows
       "downward".</para>
