@@ -106,6 +106,9 @@ typedef struct root_vtable_t
   /* Generic node operations */
   svn_error_t (*check_path) (svn_node_kind_t *kind_p, svn_fs_root_t *root,
 			     const char *path, apr_pool_t *pool);
+  svn_error_t *(*node_history) (svn_fs_history_t **history_p,
+                                svn_fs_root_t *root, const char *path,
+                                apr_pool_t *pool);
   svn_error_t *(*node_id) (const svn_fs_id_t **id_p, svn_fs_root_t *root,
                            const char *path, apr_pool_t *pool);
   svn_error_t *(*node_created_rev) (svn_revnum_t *revision,
@@ -190,6 +193,15 @@ typedef struct root_vtable_t
                          apr_pool_t *pool);
 } root_vtable_t;
 
+typedef struct history_vtable_t
+{
+  svn_error_t *(*prev) (svn_fs_history_t **prev_history_p,
+                        svn_fs_history_t *history, svn_boolean_t cross_copies,
+                        apr_pool_t *pool);
+  svn_error_t *(*location) (const char **path, svn_revnum_t *revision,
+                            svn_fs_history_t *history, apr_pool_t *pool);
+} history_vtable_t;
+
 
 /* --- Definitions of the abstract FS object types --- */
 
@@ -255,6 +267,13 @@ struct svn_fs_root_t
 
   /* FSAP-specific vtable and private data */
   root_vtable_t *vtable;
+  void *fsap_data;
+};
+
+struct svn_fs_history_t
+{
+  /* FSAP-specific vtable and private data */
+  history_vtable_t *vtable;
   void *fsap_data;
 };
 

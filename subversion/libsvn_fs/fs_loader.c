@@ -415,6 +415,7 @@ svn_error_t *
 svn_fs_node_history (svn_fs_history_t **history_p, svn_fs_root_t *root,
                      const char *path, apr_pool_t *pool)
 {
+  return root->vtable->node_history (history_p, root, path, pool);
 }
 
 svn_error_t *
@@ -422,12 +423,14 @@ svn_fs_history_prev (svn_fs_history_t **prev_history_p,
                      svn_fs_history_t *history, svn_boolean_t cross_copies,
                      apr_pool_t *pool)
 {
+  return history->vtable->prev (prev_history_p, history, cross_copies, pool);
 }
 
 svn_error_t *
 svn_fs_history_location (const char **path, svn_revnum_t *revision,
                          svn_fs_history_t *history, apr_pool_t *pool)
 {
+  return history->vtable->lcation (path, revision, history, pool);
 }
 
 svn_error_t *
