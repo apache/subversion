@@ -259,20 +259,6 @@ svn_repos_dated_revision (svn_revnum_t *revision,
 */
 
 
-
-/*** Hook-sensitive wrappers for libsvn_fs routines. ***/
-
-
-/* Like svn_fs_commit_txn(), but invoke the repository's pre- and
- * post-commit hooks around the commit.
- *
- * CONFLICT_P, NEW_REV, and TXN are as in svn_fs_commit_txn().
- */
-svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
-                                      svn_revnum_t *new_rev,
-                                      svn_fs_txn_t *txn);
-
-
 #endif /* SVN_REPOS_H */
 
 #ifdef __cplusplus
