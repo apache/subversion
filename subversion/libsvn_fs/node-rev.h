@@ -16,6 +16,7 @@
 
 #include "db.h"
 #include "svn_fs.h"
+#include "skel.h"
 
 
 /* Set *SKEL_P to the NODE-REVISION skel for the node ID in FS, as
