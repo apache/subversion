@@ -724,27 +724,28 @@ U   my-calc-branch/integer.c
     </sect2>
 
     <sect2 id="svn-ch-4-sect-3.2">
-      <title>Best Practices for Merging</title>
+      <title>Procedimientos ideales de fusionado</title>
 
       <sect3 id="svn-ch-4-sect-3.2.1">
-        <title>Tracking Merges Manually</title>
+        <title>Realizar fusiones de forma manual</title>
 
-        <para>Merging changes sounds simple enough, but in practice it
-          can become a headache.  The problem is that if you
-          repeatedly merge changes from one branch to another, you
-          might accidentally merge the same change
-          <emphasis>twice</emphasis>.  When this happens, sometimes
-          things will work fine.  When patching a file, Subversion
-          typically notices if the file already has the change, and
-          does nothing.  But if the already-existing change has been
-          modified in any way, you'll get a conflict.</para>
+        <para>Fusionar cambios suena bastante simple, pero en
+          la práctica puede convertirse en un dolor de cabeza. El
+          problema es que si fusiona cambios con frecuencia de una
+          rama a otra, puede acabar fusionando accidentalmente el
+          mismo cambio <emphasis>dos veces</emphasis>.  Cuando esto
+          ocurre, a veces las cosas seguirán funcionando bien. Cuando
+          aplica un parche a un fichero, Subversion normalmente se
+          da cuenta de que el fichero ya contiene el cambio, y no
+          hace nada. Pero si el cambio ya existente fue modificado
+          de algún modo, obtendrá un conflicto.</para>
 
-        <para>Ideally, your version control system should prevent the
-          double-application of changes to a branch.  It should
-          automatically remember which changes a branch has already
-          received, and be able to list them for you.  It should use
-          this information to help automate merges as much as
-          possible.</para>
+        <para>Idealmente, su sistema de control de versiones debería
+          prevenir la doble aplicación de cambios a una rama. Debería
+          recordar automáticamente qué cambios fueron recibidos en la
+          rama, y ser capaz de mostrarle un listado de los mismos.
+          Debería poder usar esta información para automatizar las
+          fusiones tanto como sea posible.</para>
 
         <para>Unfortunately, Subversion is not such a system.  Like
           CVS, Subversion 1.0 does not yet record any information
