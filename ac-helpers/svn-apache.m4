@@ -20,10 +20,8 @@ AC_ARG_WITH(apache,
 	fi
 	if test -r $withval/src/modules/dav/main/mod_dav.h; then
 		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/src/include -I$withval/src/os/unix -I$withval/src/modules/dav/main -I$withval/src/lib/apr/include"
-		TARGET=$withval/src/modules/dav/svn
+		APACHE_TARGET=$withval/src/modules/dav/svn
 		BINNAME=mod_dav_svn.a
-		LIBS="$extra_l"
-		INSTALL_IT="mkdir -p $TARGET; cp $BINNAME mod_dav.c mod_dav.exp Makefile.tmpl Makefile.libdir libdav.module dav_shared_stub.c $extra_copy $TARGET"
 
   		AC_MSG_RESULT(yes - Apache 2.0.x)
 
@@ -101,9 +99,11 @@ if test "$BINNAME" = ""; then
 else
     APACHE_MODULES=mod_dav_svn
 fi
+AC_SUBST(APACHE_TARGET)
 AC_SUBST(APACHE_MODULES)
 AC_SUBST(APACHE_INCLUDES)
 
+AM_CONDITIONAL(IS_STATIC_APACHE, test -z "$APXS")
 
 if test -n "$APXS"; then
   CFLAGS="$CFLAGS `$APXS -q CFLAGS CFLAGS_SHLIB`"
