@@ -1141,6 +1141,9 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
 
  This works around the problem by inserting a rewinddir after we
  remove each item in the directory, which makes the problem go away.
+
+ See http://subversion.tigris.org/issues/show_bug.cgi?id=1896 for more
+ discussion.
 */
 #if defined(__APPLE__) && defined(__MACH__)
 #define MACOSX_REWINDDIR_HACK(dir, path)                                   \
