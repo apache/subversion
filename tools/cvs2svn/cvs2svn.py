@@ -1894,6 +1894,11 @@ class Commit:
     self.changes = [ ]
     self.deletes = [ ]
 
+    # Start out with a t_min higher than any incoming time T, and a
+    # t_max lower than any incoming T.  This way the first T will
+    # push t_min down to T, and t_max up to T, naturally (without any
+    # special-casing), and successive times will then ratchet them
+    # outward as appropriate.
     self.t_min = 1L<<32
     self.t_max = 0
 
