@@ -100,14 +100,11 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
       {
         svn_wc_keywords_t *keywords;
         const char *eol_str;
-        enum svn_wc__eol_style style;
-        svn_boolean_t toggled;
 
         /* Note that this action takes properties from dest, not source. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path, adm_access,
                                        NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (&style, &eol_str,
-                                        full_dest_path, pool));
+        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path, pool));
 
         SVN_ERR (svn_wc_copy_and_translate (full_from_path,
                                             full_dest_path,
@@ -117,26 +114,21 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                                             TRUE,
                                             pool));
 
-        /* After copying, toggle the executable bit if props dictate. */
-        return svn_wc__maybe_toggle_working_executable_bit 
-          (&toggled,
-           full_dest_path,
-           pool);
+        /* After copying, set the file executable if props dictate. */
+        return svn_wc__maybe_set_executable (NULL, full_dest_path, pool);
       }
 
     case svn_wc__xfer_cp_and_detranslate:
       {
         svn_wc_keywords_t *keywords;
         const char *eol_str;
-        enum svn_wc__eol_style style;
 
         /* Note that this action takes properties from source, not dest. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path, adm_access,
                                        NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (&style, &eol_str,
-                                        full_from_path, pool));
+        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_from_path, pool));
 
-        /* If any specific eol style is indicated, then detranslate
+        /* If any specific eol style was indicated, then detranslate
            back to repository normal form ("\n"), repairingly.  But if
            no style indicated, don't touch line endings at all. */
         return svn_wc_copy_and_translate (full_from_path,
@@ -178,10 +170,10 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
  * current working file -- if they are the same, do nothing, to avoid
  * clobbering timestamps unnecessarily).
  *
- * If the executable property is set, the appropriately toggle the
- * working file's executability.
+ * If the executable property is set, the set working file's
+ * executable.
  *
- * If the working file was re-translated or had permissions toggled,
+ * If the working file was re-translated or had executability set,
  * then set OVERWROTE_WORKING to TRUE.  If the working file isn't
  * touched at all, then set to FALSE.
  * 
@@ -199,9 +191,8 @@ install_committed_file (svn_boolean_t *overwrote_working,
   svn_wc_keywords_t *keywords;
   apr_status_t apr_err;
   apr_file_t *ignored;
-  svn_boolean_t same, toggled;
+  svn_boolean_t same, did_set;
   const char *tmp_wfile, *pdir, *bname;
-  enum svn_wc__eol_style eol_style;
   const char *eol_str;
 
   /* start off assuming that the working file isn't touched. */
@@ -227,7 +218,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
    */
 
   /* start off getting the latest translation prop values. */
-  SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str, filepath, pool));
+  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, filepath, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords, filepath, adm_access, NULL, pool));
 
   svn_path_split_nts (filepath, &pdir, &bname, pool);
@@ -273,10 +264,9 @@ install_committed_file (svn_boolean_t *overwrote_working,
 
   SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
 
-  /* Toggle the working file's execute bit if props dictate. */
-  SVN_ERR (svn_wc__maybe_toggle_working_executable_bit (&toggled,
-                                                        filepath, pool));
-  if (toggled)
+  /* Set the working file's execute bit if props dictate. */
+  SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, pool));
+  if (did_set)
     /* okay, so we didn't -overwrite- the working file, but we changed
        its timestamp, which is the point of returning this flag. :-) */
     *overwrote_working = TRUE;
