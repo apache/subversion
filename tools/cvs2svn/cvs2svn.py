@@ -869,8 +869,6 @@ class Dumper:
     # repository will be created with one anyway.  So when we load
     # the dumpfile, we'll tell svnadmin to ignore the UUID below. 
     self.dumpfile.write('SVN-fs-dump-format-version: 2\n'
-                        '\n'
-                        'UUID: ????????-????-????-????-????????????\n'
                         '\n')
 
   def start_revision(self, props):
@@ -2108,7 +2106,7 @@ def pass5(ctx):
 
   # now, load the dumpfile into the repository
   print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
-  os.system('%s load --ignore-uuid %s < %s'
+  os.system('%s load %s < %s'
             % (ctx.svnadmin, ctx.target, ctx.dumpfile))
 
 
