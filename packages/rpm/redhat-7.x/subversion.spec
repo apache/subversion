@@ -198,11 +198,11 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	" ./configure \
 	--prefix=/usr \
 %if %{build_cvs2svn}
-	--with-swig
+	--with-swig \
 %endif
 	--with-apxs=%{apache_dir}/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config \
+	--with-apr-util=%{apache_dir}/bin/apu-config
 
 # Fix up mod_dav_svn installation.
 %patch0 -p1
