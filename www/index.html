@@ -74,33 +74,6 @@ will have the following features:
     succeeded.  Revision numbers are per-commit, not per-file.
 </li>
 
-<p>
-
-<li><strong>Internationalization</strong>
-    <p>
-    Subversion will have I18N support -- commands, user messages, and
-    errors can be customized to the appropriate human language at
-    build-time.  Also, there will be I18N support for the <i>names</i>
-    as well as the contents of versioned entities.
-</li>
-
-<p>
-
-<li><strong>Progressive multi-lingual support</strong>
-    <p>
-    In order to support keyword expansion and platform-dependent
-    line-ending conversion, CVS makes a distinction between text and
-    binary files, and treats the text files specially.
-    <p>
-    Subversion will make the same distinction, but with a more generous
-    notion of what constitutes a text file: not only ASCII, but UTF-*
-    encodings of Unicode too.  Not all such encodings will be handled
-    as text in the first release of Subversion, but the support will
-    become more complete over time.  UTF-8 is the first priority.
-</li>
-
-<p>
-
 <li><strong>Branching and tagging are cheap (constant time) operations</strong>
     <p>
     There is no reason for these operations to be expensive, so they
@@ -177,6 +150,40 @@ will have the following features:
     changes are taking place.  This is a property of the Subversion
     repository model.
 </li>
+
+<p>
+
+<font color="blue">
+Internationalization and multi-lingual support are planned, but may
+not be present in the first release:
+</font>
+
+<p>
+
+<li><strong>Internationalization</strong>
+    <p>
+    Subversion will have I18N support -- commands, user messages, and
+    errors can be customized to the appropriate human language at
+    build-time.  Also, there will be I18N support for the <i>names</i>
+    as well as the contents of versioned entities.
+</li>
+
+<p>
+
+<li><strong>Progressive multi-lingual support</strong>
+    <p>
+    In order to support keyword expansion and platform-dependent
+    line-ending conversion, CVS makes a distinction between text and
+    binary files, and treats the text files specially.
+    <p>
+    Subversion will make the same distinction, but with a more generous
+    notion of what constitutes a text file: not only ASCII, but UTF-*
+    encodings of Unicode too.  Not all such encodings will be handled
+    as text in the first release of Subversion, but the support will
+    become more complete over time.  UTF-8 is the first priority.
+</li>
+
+<p>
 
 </ul>  <!-- end list of features -->
 
