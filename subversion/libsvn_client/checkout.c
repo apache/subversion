@@ -109,8 +109,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
           SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
           
           /* Have update fix the incompleteness. */
-          err = svn_client_update (result_rev, path, revision,
-                                   recurse, ctx, pool);
+          err = svn_client__update_internal (result_rev, path, revision,
+                                             recurse, use_sleep, ctx, pool);
         }
       else if (kind == svn_node_dir)
         {
@@ -123,8 +123,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
             {
               /* Make the unversioned directory into a versioned one. */
               SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
-              err = svn_client_update (result_rev, path, revision, 
-                                       recurse, ctx, pool);
+              err = svn_client__update_internal (result_rev, path, revision,
+                                                 recurse, use_sleep, ctx, pool);
               goto done;
             }
 
@@ -139,8 +139,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
              interrupted checkout. */
           if (entry->url && (strcmp (entry->url, URL) == 0))
             {
-              err = svn_client_update (result_rev, path, revision, 
-                                       recurse, ctx, pool);
+              err = svn_client__update_internal (result_rev, path, revision,
+                                                 recurse, use_sleep, ctx, pool);
             }
           else
             {
