@@ -312,7 +312,7 @@ def detect_conflict_files(node, extra_files):
       return 0
 
   print "Found unexpected disk object:", node.name
-  raise svntest.tree.SVNTreeUnequal
+  raise svntest.main.SVNTreeUnequal
 
 def update_conflict_props(sbox):
   "update with conflicting props"
