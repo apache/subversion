@@ -21,7 +21,7 @@
 
 ;Build defines ----------------------------------------------------------------
 ; File names
-#define libdb_dll "libdb42.dll"
+#define libdb_dll "libdb43.dll"
 
 ; Uncomment the defines if true
 #define inc_dbgsyms
@@ -32,58 +32,59 @@
 #define apache_ver_min "2.0.49"
 
 ; You should edit the paths below the examples according to your system
+#define path_svn_win32 "C:\work\Subversion\binaries_svn\svn-win32\"
 
 ;Subversion Core --------------------------------------------------------------
 ; Basic files
-#define path_svnclient "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnadmin "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnlook "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnserve "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnversion "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svndumpfilter "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_locale "C:\work\Subversion\binaries_svn\svn-win32\share\locale"
+#define path_svnclient         (path_svn_win32 + "bin")
+#define path_svnadmin          (path_svn_win32 + "bin")
+#define path_svnlook           (path_svn_win32 + "bin")
+#define path_svnserve          (path_svn_win32 + "bin")
+#define path_svnversion        (path_svn_win32 + "bin")
+#define path_svndumpfilter     (path_svn_win32 + "bin")
+#define path_locale            (path_svn_win32 + "share\locale")
 ; APR
-#define path_libapr_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_libaprutil_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_libapriconv_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_iconv_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_intl_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_libapr_dll        (path_svn_win32 + "bin")
+#define path_libaprutil_dll    (path_svn_win32 + "bin")
+#define path_libapriconv_dll   (path_svn_win32 + "bin")
+#define path_iconv_dll         (path_svn_win32 + "bin")
+#define path_intl_dll          (path_svn_win32 + "bin")
 ; httpd
-#define path_davsvn "C:\work\Subversion\binaries_svn\svn-win32\httpd"
-#define path_authzsvn "C:\work\Subversion\binaries_svn\svn-win32\httpd"
+#define path_davsvn            (path_svn_win32 + "bin")
+#define path_authzsvn          (path_svn_win32 + "bin")
 ; Misc
-#define path_msvcr70_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_brkdb_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnpath "tools\svnpath"
-#define path_iconv "C:\work\Subversion\binaries_svn\svn-win32\iconv"
-#define path_ssl "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_msvcr70_dll       (path_svn_win32 + "bin")
+#define path_brkdb_dll         (path_svn_win32 + "bin")
+#define path_svnpath           "tools\svnpath"
+#define path_iconv             (path_svn_win32 + "iconv")
+#define path_ssl               (path_svn_win32 + "bin")
 
 ;Debug symbols ----------------------------------------------------------------
 ; Basic files
-#define path_svnclient_pdb "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnadmin_pdb "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnlook_pdb "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnserve_pdb "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svnversion_pdb "C:\work\Subversion\binaries_svn\svn-win32\bin"
-#define path_svndumpfilter_pdb "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_svnclient_pdb     (path_svn_win32 + "bin")
+#define path_svnadmin_pdb      (path_svn_win32 + "bin")
+#define path_svnlook_pdb       (path_svn_win32 + "bin")
+#define path_svnserve_pdb      (path_svn_win32 + "bin")
+#define path_svnversion_pdb    (path_svn_win32 + "bin")
+#define path_svndumpfilter_pdb (path_svn_win32 + "bin")
 ; httpd
-#define path_davsvn_pdb "C:\work\Subversion\binaries_svn\svn-win32\httpd"
-#define path_authzsvn_pdb "C:\work\Subversion\binaries_svn\svn-win32\httpd"
+#define path_davsvn_pdb        (path_svn_win32 + "bin")
+#define path_authzsvn_pdb      (path_svn_win32 + "bin")
 ; Misc
-#define path_iconv_pdb "C:\work\Subversion\binaries_svn\svn-win32\iconv"
-#define path_libapr_pdb "C:\work\Subversion\binaries_svn\svn-win32\lib\apr"
-#define path_libapu_pdb "C:\work\Subversion\binaries_svn\svn-win32\lib\apr-util"
-#define path_py_libsvn_pdb "C:\work\Subversion\binaries_svn\svn-win32\python\libsvn"
+#define path_iconv_pdb         (path_svn_win32 + "iconv")
+#define path_libapr_pdb        (path_svn_win32 + "lib\apr")
+#define path_libapu_pdb        (path_svn_win32 + "lib\apr-util")
+#define path_py_libsvn_pdb     (path_svn_win32 + "python\libsvn")
 
 ;Development -------------------------------------------------------------------
-#define path_dev_doc "C:\work\Subversion\binaries_svn\svn-win32\doc"
-#define path_dev_inc "C:\work\Subversion\binaries_svn\svn-win32\include"
-#define path_dev_inc_apr "C:\work\Subversion\binaries_svn\svn-win32\include\apr"
-#define path_dev_inc_apu "C:\work\Subversion\binaries_svn\svn-win32\include\apr-util"
-#define path_dev_lib "C:\work\Subversion\binaries_svn\svn-win32\lib"
-#define path_dev_lib_apr "C:\work\Subversion\binaries_svn\svn-win32\lib\apr"
-#define path_dev_lib_apu "C:\work\Subversion\binaries_svn\svn-win32\lib\apr-util"
+#define path_dev_doc           (path_svn_win32 + "doc")
+#define path_dev_inc           (path_svn_win32 + "include")
+#define path_dev_inc_apr       (path_svn_win32 + "include\apr")
+#define path_dev_inc_apu       (path_svn_win32 + "include\apr-util")
+#define path_dev_lib           (path_svn_win32 + "lib")
+#define path_dev_lib_apr       (path_svn_win32 + "lib\apr")
+#define path_dev_lib_apu       (path_svn_win32 + "lib\apr-util")
 
 ;Python bindings
-#define path_py_bind_libsvn "C:\work\Subversion\binaries_svn\python_bindings\libsvn"
-#define path_py_bind_svn "C:\work\Subversion\binaries_svn\python_bindings\svn"
+#define path_py_bind_libsvn    (path_svn_win32 + "python\libsvn")
+#define path_py_bind_svn       (path_svn_win32 + "python\svn")

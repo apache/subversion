@@ -58,7 +58,7 @@ Name: apachehandler; Description: Install and configure Subversion modules (the 
 Source: in\subversion\Readme.dist; DestDir: {app}; DestName: Readme.txt
 Source: W32notes.txt; DestDir: {app}
 Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Flags: ignoreversion
-Source: {#= path_svnclient}\..\README.txt; DestDir: {app}; DestName: Buildnotes.txt
+Source: {#= path_svn_win32}\README.txt; DestDir: {app}; DestName: Buildnotes.txt
 Source: {#= path_svnclient}\svn.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}\bin; Flags: ignoreversion
@@ -77,8 +77,7 @@ Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
 Source: {#= path_libapr_dll}\libapr.dll; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_libaprutil_dll}\libaprutil.dll; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_libapriconv_dll}\libapriconv.dll; DestDir: {app}\bin; Flags: ignoreversion
-;Source: {#= path_iconv_dll}\iconv.dll; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_intl_dll}\intl.dll; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_intl_dll}\intl3_svn.dll; DestDir: {app}\bin; Flags: ignoreversion
 
 ; VC7 Runtime
 #ifdef VC7
