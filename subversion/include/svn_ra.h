@@ -40,6 +40,13 @@ extern "C" {
 
 /* Misc. declarations */
 
+/**
+ * Get libsvn_ra version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *svn_ra_version (void);
+
+
 /** This is a function type which allows the RA layer to fetch working
  * copy (WC) properties.
  *

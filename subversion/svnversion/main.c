@@ -157,6 +157,23 @@ usage(const apr_getopt_option_t *options, apr_pool_t *pool)
 }
 
 
+/* Version compatibility check */
+static svn_error_t *
+check_lib_versions (void)
+{
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",   svn_subr_version },
+      { "svn_client", svn_client_version },
+      { "svn_wc",     svn_wc_version },
+      { NULL, NULL }
+    };
+
+   SVN_VERSION_DEFINE (my_version);
+   return svn_ver_check_list (&my_version, checklist);
+}
+
+
 /*
  * Why is this not an svn subcommand?  I have this vague idea that it could
  * be run as part of the build process, with the output embedded in the svn
@@ -199,6 +216,16 @@ main(int argc, const char *argv[])
 
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
+
+  /* Check library versions */
+  err = check_lib_versions ();
+  if (err)
+    {
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
 
   sb.switched = FALSE;
   sb.modified = FALSE;

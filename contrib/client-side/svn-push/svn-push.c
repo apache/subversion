@@ -145,6 +145,24 @@ do_job (apr_pool_t * pool, const char *src_url, const char *dest_url,
   return SVN_NO_ERROR;
 }
 
+
+/* Version compatibility check */
+static svn_error_t *
+check_lib_versions (void)
+{
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",   svn_subr_version },
+      { "svn_delta",  svn_delta_version },
+      { "svn_ra",     svn_ra_version },
+      { NULL, NULL }
+    };
+
+   SVN_VERSION_DEFINE (my_version);
+   return svn_ver_check_list (&my_version, checklist);
+}
+
+
 int
 main (int argc, char *argv[])
 {
@@ -159,6 +177,14 @@ main (int argc, char *argv[])
     return EXIT_FAILURE;
 
   top_pool = svn_pool_create (NULL);
+
+  /* Check library versions */
+  error = check_lib_versions ();
+  if (error)
+    {
+      svn_handle_error (error, stderr, 0);
+      return EXIT_FAILURE;
+    }
 
 #define CMD_LINE_ERROR \
         { \

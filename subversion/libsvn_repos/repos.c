@@ -1335,3 +1335,9 @@ svn_repos_hotcopy (const char *src_path,
   return SVN_NO_ERROR;
 }
 
+/* Return the library version number. */
+const svn_version_t *
+svn_repos_version (void)
+{
+  SVN_VERSION_BODY;
+}

@@ -37,6 +37,8 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
+#include "svn_repos.h"
+#include "svn_version.h"
 
 #include "server.h"
 
@@ -195,6 +197,25 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 }
 #endif
 
+/* Version compatibility check */
+static svn_error_t *
+check_lib_versions (void)
+{
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_repos", svn_repos_version },
+      { "svn_fs",    svn_fs_version },
+      { "svn_delta", svn_delta_version },
+      { "svn_ra_svn", svn_ra_svn_version },
+      { NULL, NULL }
+    };
+
+   SVN_VERSION_DEFINE (my_version);
+   return svn_ver_check_list (&my_version, checklist);
+}
+
+
 int main(int argc, const char *const *argv)
 {
   enum run_mode run_mode = run_mode_none;
@@ -228,6 +249,16 @@ int main(int argc, const char *const *argv)
 
   /* Create our top-level pool. */
   pool = svn_pool_create(NULL);
+
+  /* Check library versions */
+  err = check_lib_versions ();
+  if (err)
+    {
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
 
   apr_getopt_init(&os, pool, argc, argv);
 

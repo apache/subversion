@@ -29,6 +29,7 @@
 #include "svn_delta.h"
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_version.h"
 
 
 #ifdef __cplusplus
@@ -36,6 +37,13 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* ---------------------------------------------------------------*/
+
+/**
+ * Get libsvn_repos version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *svn_repos_version (void);
+
 
 
 /** Callback type for checking authorization on paths produced by (at

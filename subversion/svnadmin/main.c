@@ -30,6 +30,7 @@
 #include "svn_config.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
+#include "svn_version.h"
 
 #include "svn_private_config.h"
 
@@ -130,6 +131,24 @@ open_repos (svn_repos_t **repos,
   SVN_ERR (svn_repos_open (repos, path, pool));
   svn_fs_set_warning_func (svn_repos_fs (*repos), warning_func, NULL);
   return SVN_NO_ERROR;
+}
+
+
+/* Version compatibility check */
+static svn_error_t *
+check_lib_versions (void)
+{
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_repos", svn_repos_version },
+      { "svn_fs",    svn_fs_version },
+      { "svn_delta", svn_delta_version },
+      { NULL, NULL }
+    };
+
+   SVN_VERSION_DEFINE (my_version);
+   return svn_ver_check_list (&my_version, checklist);
 }
 
 
@@ -865,6 +884,16 @@ main (int argc, const char * const *argv)
 
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
+
+  /* Check library versions */
+  err = check_lib_versions ();
+  if (err)
+    {
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
 
   if (argc <= 1)
     {

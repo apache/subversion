@@ -255,6 +255,26 @@ check_cancel (void *baton)
     return SVN_NO_ERROR;
 }
 
+
+/* Version compatibility check */
+static svn_error_t *
+check_lib_versions (void)
+{
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_repos", svn_repos_version },
+      { "svn_fs",    svn_fs_version },
+      { "svn_delta", svn_delta_version },
+      { "svn_diff",  svn_diff_version },
+      { NULL, NULL }
+    };
+
+   SVN_VERSION_DEFINE (my_version);
+   return svn_ver_check_list (&my_version, checklist);
+}
+
+
 static svn_error_t *
 get_property (svn_string_t **prop_value /* native */,
               svn_boolean_t need_translation,
@@ -1810,6 +1830,16 @@ main (int argc, const char * const *argv)
 
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
+
+  /* Check library versions */
+  err = check_lib_versions ();
+  if (err)
+    {
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
 
   if (argc <= 1)
     {

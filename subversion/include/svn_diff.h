@@ -50,6 +50,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,6 +58,13 @@ extern "C" {
 
 
 
+/**
+ * Get libsvn_diff version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *svn_diff_version (void);
+
+
 /* Diffs. */
 
 /** An opaque type that represents a difference between either two or

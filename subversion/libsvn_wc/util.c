@@ -102,3 +102,10 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+/* Return the library version number. */
+const svn_version_t *
+svn_wc_version (void)
+{
+  SVN_VERSION_BODY;
+}

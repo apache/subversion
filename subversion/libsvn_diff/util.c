@@ -181,3 +181,10 @@ svn_diff_output(svn_diff_t *diff,
 
   return SVN_NO_ERROR;
 }
+
+/* Return the library version number. */
+const svn_version_t *
+svn_diff_version (void)
+{
+  SVN_VERSION_BODY;
+}

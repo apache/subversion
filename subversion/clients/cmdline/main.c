@@ -692,8 +692,11 @@ check_lib_versions (void)
 {
   static const svn_version_checklist_t checklist[] =
     {
-      { "svn_subr", svn_subr_version },
+      { "svn_subr",   svn_subr_version },
       { "svn_client", svn_client_version },
+      { "svn_wc",     svn_wc_version },
+      { "svn_ra",     svn_ra_version },
+      { "svn_delta",  svn_delta_version },
       { NULL, NULL }
     };
 
