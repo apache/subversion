@@ -683,6 +683,58 @@ svn_wc__entry_merge_sync (svn_string_t *path,
 }
 
 
+
+/* Utility: return a duplicate of ENTRY object allocated in POOL. */
+svn_wc__entry_t *
+svn_wc__entry_dup (svn_wc__entry_t *entry, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  svn_wc__entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
+
+  dupentry->version    = entry->version;
+  dupentry->ancestor   = svn_string_dup (entry->ancestor, pool);
+  dupentry->kind       = entry->kind;
+  dupentry->flags      = entry->flags;
+  dupentry->timestamp  = entry->timestamp;
+
+  dupentry->attributes = apr_make_hash (pool);
+
+  /* Now the hard part:  copying one hash to another! */
+
+  for (hi = apr_hash_first (entry->attributes); hi; hi = apr_hash_next (hi))
+    {
+      const void *k;
+      apr_size_t klen;
+      void *v;
+
+      const char *key;
+      svn_string_t *val;
+
+      svn_string_t *new_keystring, *new_valstring;
+
+      /* Get a hash key and value */
+      apr_hash_this (hi, &k, &klen, &v);
+      key = (const char *) k;
+      val = (svn_string_t *) v;
+
+      /* Allocate two *new* svn_string_t's from them, out of POOL. */
+      new_keystring = svn_string_ncreate (key, klen, pool);
+      new_valstring = svn_string_dup (val, pool);
+
+      /* Store in *new* hashtable */
+      apr_hash_set (dupentry->attributes,
+                    new_keystring->data, new_keystring->len,
+                    new_valstring);
+    }
+
+  return dupentry;
+}
+
+
+
+
+
+
 
 #if 0
 /*** Recursion on entries. ***/
