@@ -1,0 +1,61 @@
+# Microsoft Developer Studio Project File - Name="[target.name]" - Package Owner=<4>
+# Microsoft Developer Studio Generated Build File, Format Version 6.00
+# ** DO NOT EDIT **
+
+# TARGTYPE "[target_type]" [target_number]
+
+CFG=[target.name] - [default_platform] [default_config]
+!MESSAGE This is not a valid makefile. To build this project using NMAKE,
+!MESSAGE use the Export Makefile command and run
+!MESSAGE 
+!MESSAGE NMAKE /f "[target.name]_msvc.mak".
+!MESSAGE 
+!MESSAGE You can specify a configuration when running NMAKE
+!MESSAGE by defining the macro CFG on the command line. For example:
+!MESSAGE 
+!MESSAGE NMAKE /f "[target.name]_msvc.mak" CFG="[target.name] - [default_platform] [default_config]"
+!MESSAGE 
+!MESSAGE Possible choices for configuration are:
+!MESSAGE 
+[for platforms][for configs]!MESSAGE "[target.name] - [platforms] [configs.name]" (based on "[target_type]")
+[end][end]!MESSAGE 
+
+# Begin Project
+# PROP AllowPerConfigDependencies 0
+# PROP Scc_ProjName ""
+# PROP Scc_LocalPath ""
+CPP=cl.exe
+RSC=rc.exe
+[for platforms][for configs]
+![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.name] - [platforms] [configs.name]"
+
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries [is configs.name "Debug"]1[else]0[end]
+[if-any is_external]# PROP Output_Dir "[rootpath]\[target.path]\[configs.name]"
+# PROP Intermediate_Dir "[rootpath]\[target.path]\[configs.name]"
+# PROP Cmd_Line "cmd /c [target.cmd] [configs.lower]"
+# PROP Rebuild_Opt "rebuild"
+# PROP Target_File "[rootpath]\[target.path]\[is configs.name "Debug"][target.debug][else][target.release][end]"
+# PROP Target_Dir "[rootpath]\[target.path]"
+[else]# PROP Output_Dir "[rootpath]\[configs.name]"
+# PROP Intermediate_Dir "[configs.name]\[target.name]"
+# PROP Target_Dir ""
+[if-any is_utility][else]LIB32=link.exe -lib
+# ADD LIB32 /out:"[rootpath]\[configs.name]\[target.name].lib"
+# ADD CPP /nologo /W3 /FD /c [is configs.name "Debug"]/MDd /Gm /Gi /GX /ZI /Od /GZ[else]/MD /GX /O2 /Ob2[end][for configs.defines] /D "[configs.defines]"[end][for includes] /I "[includes]"[end]
+# ADD RSC /l [if-any is_exe]0x409[else]0x424[end]
+BSC32=bscmake.exe
+LINK32=link.exe
+[if-any is_exe is_apache_mod]# ADD LINK32 /nologo [is configs.name "Debug"]/debug[end] [if-any is_apache_mod]/dll[end] /machine:IX86[for libs] [libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.name].[if-any is_exe]exe[else]dll[end]"
+[end][end][end][end][end]
+!ENDIF 
+
+# Begin Target
+
+[for platforms][for configs]# Name "[target.name] - [platforms] [configs.name]"
+[end][end][for sources]# Begin Source File
+
+SOURCE=[sources]
+# End Source File
+[end]# End Target
+# End Project

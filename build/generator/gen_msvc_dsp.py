@@ -4,13 +4,16 @@
 
 import os
 import sys
+import string
 
-import gen_base
-import gen_win
 try:
   from cStringIO import StringIO
 except ImportError:
   from StringIO import StringIO
+
+import gen_base
+import gen_win
+import ezt
 
 
 class Generator(gen_win.WinGeneratorBase):
@@ -25,19 +28,13 @@ class Generator(gen_win.WinGeneratorBase):
   def write_project(self, target, fname, rootpath):
     "Write a Project (.dsp)"
 
-    ext = None
-    dll = ""
-
     if isinstance(target, gen_base.TargetExe):
       targtype = "Win32 (x86) Console Application"
       targval = "0x0103"
-      ext = 'exe'
     elif isinstance(target, gen_base.TargetLib):
       if target == 'mod_dav_svn':
         targtype = "Win32 (x86) Dynamic-Link Library"
         targval = "0x0102"
-        ext = 'dll'
-        dll = '/dll'
       else:
         targtype = "Win32 (x86) Static Library"
         targval = "0x0104"
@@ -50,109 +47,49 @@ class Generator(gen_win.WinGeneratorBase):
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
-    fout = StringIO()
-    fout.write("# Microsoft Developer Studio Project File - Name=\"%s\" - Package Owner=<4>\n" % target.name)
-    fout.write("# Microsoft Developer Studio Generated Build File, Format Version 6.00\n")
-    fout.write("# ** DO NOT EDIT **\n\n")
-    fout.write("# TARGTYPE \"%s\" %s\n\n" % (targtype, targval))
-    fout.write("CFG=%s - %s %s\n" % (target.name, self.platforms[0], self.configs[0]))
-    fout.write("!MESSAGE This is not a valid makefile. To build this project using NMAKE,\n")
-    fout.write("!MESSAGE use the Export Makefile command and run\n")
-    fout.write("!MESSAGE \n")
-    fout.write("!MESSAGE NMAKE /f \"%s_msvc.mak\".\n" % target.name)
-    fout.write("!MESSAGE \n")
-    fout.write("!MESSAGE You can specify a configuration when running NMAKE\n")
-    fout.write("!MESSAGE by defining the macro CFG on the command line. For example:\n")
-    fout.write("!MESSAGE \n")
-    fout.write("!MESSAGE NMAKE /f \"%s_msvc.mak\" CFG=\"%s - %s %s\"\n" % (target.name, target.name, self.platforms[0], self.configs[0]))
-    fout.write("!MESSAGE \n")
-    fout.write("!MESSAGE Possible choices for configuration are:\n")
-    fout.write("!MESSAGE \n")
-    for plat in self.platforms:
-      for cfg in self.configs:
-        fout.write("!MESSAGE \"%s - %s %s\" (based on \"%s\")\n" % (target.name, plat, cfg, targtype))
-    fout.write("!MESSAGE \n\n")
-    fout.write("# Begin Project\n")
-    fout.write("# PROP AllowPerConfigDependencies 0\n")
-    fout.write("# PROP Scc_ProjName \"\"\n")
-    fout.write("# PROP Scc_LocalPath \"\"\n")
-    fout.write("CPP=cl.exe\n")
-    fout.write("RSC=rc.exe\n")
+    configs = [ ]
+    for cfg in self.configs:
+      configs.append(_item(name=cfg,
+                           lower=string.lower(cfg),
+                           defines=self.get_win_defines(target, cfg),
+                           libdirs=self.get_win_lib_dirs(target, rootpath,
+                                                         cfg),
+                           ))
 
-    ifelse = ""
-    for plat in self.platforms:
-      for cfg in self.configs:
-        if cfg == "Debug":
-          debug = 1
-        else:
-          debug = 0
-
-        includes = ' '.join(map(lambda x:"/I \"%s\"" % x, self.get_win_includes(target, rootpath)))
-        defines = ' '.join(map(lambda x:"/D \"%s\"" % x, self.get_win_defines(target, cfg)))
-        libs = ' '.join(self.get_win_libs(target))
-        libpath = ' '.join(map(lambda x:"/libpath:\"%s\"" % x, self.get_win_lib_dirs(target, rootpath, cfg)))
-
-        fout.write("\n!%sIF  \"$(CFG)\" == \"%s - %s %s\"\n\n" % (ifelse, target.name, plat, cfg))
-        ifelse = "ELSE"
-        fout.write("# PROP Use_MFC 0\n")
-        fout.write("# PROP Use_Debug_Libraries %d\n" % (debug))
-
-        if isinstance(target, gen_base.TargetExternal):
-          if debug:
-            library = target.debug
-          else:
-            library = target.release
-          fout.write("# PROP Output_Dir \"%s\\%s\\%s\"\n" % (rootpath, target.path, cfg))
-          fout.write("# PROP Intermediate_Dir \"%s\\%s\\%s\"\n" % (rootpath, target.path, cfg))
-          fout.write("# PROP Cmd_Line \"cmd /c %s %s\"\n" % (target.cmd, cfg.lower()))
-          fout.write("# PROP Rebuild_Opt \"rebuild\"\n")
-          fout.write("# PROP Target_File \"%s\\%s\\%s\"\n" % (rootpath, target.path, library))
-          fout.write("# PROP Target_Dir \"%s\\%s\"\n" % (rootpath, target.path))
-          continue
-
-        fout.write("# PROP Output_Dir \"%s\\%s\"\n" % (rootpath, cfg))
-        fout.write("# PROP Intermediate_Dir \"%s\\%s\"\n" % (cfg, target.name))
-        fout.write("# PROP Target_Dir \"\"\n")
-
-        if isinstance(target, gen_base.TargetUtility):
-          continue
-
-        fout.write("LIB32=link.exe -lib\n")
-        fout.write("# ADD LIB32 /out:\"%s\\%s\\%s.lib\"\n" % (rootpath, cfg, target.name))
-        if debug:
-          compileopts = "/MDd /Gm /Gi /GX /ZI /Od /GZ"
-          linkopts = "/debug"
-        else:
-          compileopts = "/MD /GX /O2 /Ob2"
-          linkopts = ""
-        fout.write("# ADD CPP /nologo /W3 /FD /c %s %s %s\n" % (compileopts, defines, includes))
-        if isinstance(target, gen_base.TargetExe):
-          fout.write("# ADD RSC /l 0x409\n")
-        elif isinstance(target, gen_base.TargetLib):
-          fout.write("# ADD RSC /l 0x424\n")
-        fout.write("BSC32=bscmake.exe\n")
-        fout.write("LINK32=link.exe\n")
-        if ext:
-          fout.write("# ADD LINK32 /nologo %s %s /machine:IX86 %s %s /out:\"%s\\%s\%s.%s\"\n" % (linkopts, dll, libs, libpath, rootpath, cfg, target.name, ext))
-
-    fout.write("\n!ENDIF \n\n")
-    fout.write("# Begin Target\n\n")
-    for plat in self.platforms:
-      for cfg in self.configs:
-        fout.write("# Name \"%s - %s %s\"\n" % (target.name, plat, cfg))
-
+    sources = [ ]
     if not isinstance(target, gen_base.TargetUtility):
       for src in self.get_win_sources(target):
-        rsrc=os.path.join(rootpath, src).replace(os.sep, '\\')
+        rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
         if '-' in rsrc:
-          rsrc = "\"%s\"" % (rsrc)
-        fout.write("# Begin Source File\n\n")
-        fout.write("SOURCE=%s\n" % (rsrc))
-        fout.write("# End Source File\n")
+          rsrc = '"%s"' % rsrc
+        sources.append(rsrc)
 
-    fout.write("# End Target\n")
-    fout.write("# End Project\n")
-    fout.seek(0)
+    data = {
+      'target' : target,
+      'target_type' : targtype,
+      'target_number' : targval,
+      'rootpath' : rootpath,
+      'platforms' : self.platforms,
+      'configs' : configs,
+      'includes' : self.get_win_includes(target, rootpath),
+      'libs' : self.get_win_libs(target),
+      'sources' : sources,
+      'default_platform' : self.platforms[0],
+      'default_config' : configs[0].name,
+      'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
+      'is_external' : ezt.boolean(isinstance(target,
+                                             gen_base.TargetExternal)),
+      'is_utility' : ezt.boolean(isinstance(target,
+                                            gen_base.TargetUtility)),
+      'is_apache_mod' : ezt.boolean(target.install == 'apache-mod'),
+      }
+
+    fout = StringIO()
+
+    template = ezt.Template(compress_whitespace = 0)
+    template.parse_file(os.path.join('build', 'generator', 'msvc_dsp.ezt'))
+    template.generate(fout, data)
+
     if self.write_file_if_changed(fname, fout.getvalue()):
       print "Wrote %s" % fname
 
@@ -240,3 +177,7 @@ class Generator(gen_win.WinGeneratorBase):
 
     if self.write_file_if_changed(oname, fout.getvalue()):
       print "Wrote %s\n" % oname
+
+class _item:
+  def __init__(self, **kw):
+    vars(self).update(kw)
