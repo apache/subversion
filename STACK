@@ -60,12 +60,6 @@ Ben and Karl (longer term):
 
    - xml dtd, for both xml deltas and wc formats
 
-   - for milestone 3: TREE DELTAS.  Quake before them.  This problem
-     has many aspects to it, *including* {the need for commands to
-     take lists of paths, canconicalizing these lists, testing paths
-     if they exist and/or what their entries say about them, etc.}
-     Just a tip of the iceberg.
-
 Greg:
 
    - mod_dav_svn:
