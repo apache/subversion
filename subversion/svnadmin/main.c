@@ -1092,6 +1092,13 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       err = svn_fs_get_lock_from_path (&lock, fs, lock_path_utf8, subpool);
       if (err)
         goto move_on;
+      if (! lock)
+        {
+          SVN_ERR (svn_cmdline_printf (subpool,
+                                       _("Path '%s' isn't locked.\n"),
+                                       lock_path));
+          continue;
+        }
       
       /* Now forcibly destroy the lock. */
       err = svn_fs_unlock (fs, lock->token, 1 /* force */, subpool);
