@@ -1,0 +1,35 @@
+<!-- originated from English revision 10817 -->
+<glossary id="svn-glossary">
+  <title>Glossary</title>
+
+  <simplesect>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>Glossary</term>
+        <listitem>
+
+          <para>1. A collection of glosses or explanations of words
+            and passages of a work or author; a partial dictionary of
+            a work, an author, a dialect, art, or science, explaining
+            archaic, technical, or other uncommon words.</para>
+ 
+          <para>2. An alphabetical list of technical terms in some
+            specialized field of knowledge; usually published as an
+            appendix to a text on that field.</para>
+
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </simplesect>
+
+</glossary>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "glossary")
+end:
+-->

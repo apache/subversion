@@ -1,0 +1,91 @@
+Pequeño glosario de términos traducidos. Aquí deben ponerse esos
+"bonitos palabros" que tanto nos ha costado traducir para evitar
+inconsistencias en la traducción por varias personas. Normalmente
+son técnicos, pero puede incluirse cualquier "giro" o expresión que
+consideremos útil mantener y repetir a lo largo de la traducción.
+En el libro final posiblemente se añada una versión de este fichero
+como apéndice.
+
+Para incluir algo, hay que especificar la expresión en inglés, su
+versión traducida, y una pequeña explicación como justificación.
+
+commit data -> enviar cambios al repositorio
+    No hay traducción directa de "commit". Es habitual leer
+    comentarios del tipo "Voy a hacer un commit para que veas los
+    cambios". Dado que tanto en CVS como Subversion se trata de un
+    programa cliente-servidor, realizar "un commit", es equivalente a
+    enviar los cambios al repositorio o hacerlos públicos/visibles.
+    Nunca traducir como sustantivo. Dependiendo del contexto,
+    usar estas expresiones o variación aceptable:
+    
+    ...enviar cambios al repositorio... (a ser posible no usar el
+                                         término "subir", por muy
+                                         atractivo que resulte)
+    ...guardar los cambios en el servidor...
+    ...hacer los cambios públicos/visibles...
+
+merge -> fusionar cambios, fusión
+    Obtenida referencia del manual de CVS en castellano, la otra
+    alternativa obvia para traducir merge es mezclar. No obstante,
+    mezclar tiene una connotación de azar al realizar la mezcla. Se
+    mezclan líquidos, ingredientes, etc. En cambio, un "merge" es
+    cualquier cosa menos un proceso realizado al azar (especialmente
+    si ha habido conflictos). En caso de traducir como sustantivo,
+    fusión vuelve a "sonar mejor" que mezcla, que por alguna razón me
+    suena a un combustible especial usado en vehículos de transporte.
+
+repository -> repositorio
+    No hay mucha alternativa, ¿verdad?
+
+branching and merging -> crear ramas y fusionarlas
+    Aunque branch está bien traducido como rama o rama de desarrollo
+    (en su versión "verbose"), no hay forma de hacer de un sustantivo
+    un verbo.  Por lo tanto, se crean, borran y fusionan ramas.
+
+tag, tagging -> etiqueta, etiquetar
+    Expresión ya común en español.
+
+working copy -> copia (de trabajo) local/activa
+    Traducción similar a la de "commit data" (razonamiento
+    cliente-servidor). Quizás se podría traducir como copia activa.
+
+build -> comodín
+    No es que se traduzca como comodín, sino que en función del
+    contexto es una de esas palabras que significan muchas cosas y
+    no es posible traducirla literalmente. Por ejemplo, cuando se
+    usa como verbo se suele referir a compilar código fuente. En
+    cambio, cuando se usa como sustantivo se suele referir a una
+    versión particular del fichero binario ejecutable de un software,
+    resultado de una compilación previa. Cuidado con esto. Anotar
+    aquí traducciones realizadas para comparar.
+
+        ...using and building Subversion...
+        ...usando y compilando Subversion...
+
+DAV share -> recurso DAV compartido
+    No tengo ni idea de lo que es un DAV share, así que cuando me
+    entere (o alguien lo haga), que cambie esta entrada del glosario.
+
+browse -> navegar
+    Usado con frecuencia para navegar por directorios o repositorios.
+
+open source -> código fuente abierto
+    Referencia: http://es.tldp.org/ORCA/glosario.html#O
+
+file path -> ruta del fichero
+    Cuando se ve path a secas, la forma más común de traducirlo
+    es decir ruta a secas igualmente. Bueno, el glosario de ORCA
+    también da como válidos camino y trayectoria. A ser posible
+    usar ruta si el contexto de la frase así lo favorece, en caso
+    contrario probar con camino o trayectoria.
+
+timestamp -> marca de tiempo, fecha y hora
+    Esa traducción viene del ORCA. No obstante en muchos casos es
+    más claro traducirla como "fecha de fichero" o "fecha" a secas.
+    Ejemplo: ...will show the modification timestamp. -> mostrará
+    la fecha de modificación. Decir "mostrará la marca de tiempo de
+    la modificación" o algo así es una traducción demasiado literal,
+    así que ojo con el contexto.
+
+repository layout -> estructura del repositorio
+    En referencia a cómo están organizados los directorios.

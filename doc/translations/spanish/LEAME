@@ -1,0 +1,267 @@
+Este documento contiene las siguientes secciones:
+
+  Pasos para poder compilar el libro
+  Metodología usada para realizar la traducción
+  Cómo colaborar con la traducción
+  Cambios futuros que se realizarán en el libro
+  Herramientas para ayudar en la traducción
+  Reglas mínimas para traductores
+  Lista de correo para discutir la traducción
+
+
+Pasos para poder compilar el libro:
+===================================
+
+1. Conseguir compilar el libro original en HTML. Esto significa:
+
+ 1a) Descargar el código fuente original:
+
+        svn co http://svn.collab.net/repos/svn/trunk
+
+     En realidad sólo nos interesa el subdirectorio "doc", pero
+     es útil tener el resto también, por si hay algún que otro
+     documento de lectura recomendada.
+
+ 1b) Leer y seguir las instrucciones de doc/book/README sobre cómo
+     compilar el libro. Básicamente consiste en obtener la última
+     versión de las hojas de estilo XSL, tener libxslt instalada
+     (que depende de libxml2). En Debian existe el paquete libxslt.
+
+ 1c) Ejecutar "make all-html". Obviamente necesitaremos GNU make. Si
+     todo el software necesario está instalado, acabaremos con un
+     libro en un sólo html en el subdirectorio book, y otro dividido
+     en trozos en book/html-chunk.
+
+2. Obtener una copia fresca del libro en español:
+
+        svn co svn://gradha.no-ip.org:3603/ svnbook-es
+
+3. Dentro de svnbook-es, hacer un enlace simbólico al directorio
+   doc/book/tools del árbol subversion original. Esto nos permite
+   rehusar las hojas de estilo XSL instaladas previamente ahí para
+   compilar el libro en inglés.
+
+4. Ejecutar "make". Si todo va bien, acabaremos con otra
+   versión del libro... ¡en inglés!
+
+5. Vale, nos ponemos a trabajar y traducimos los ficheros xml del
+   subdirectorio book.
+
+Para cualquier duda, contactar con Grzegorz Adam Hankiewicz en
+gradha@titanium.sabren.com.
+
+
+Metodología usada para realizar la traducción
+=============================================
+
+La metodología de los autores del libro para contribuir parches es la
+misma que la de los desarrolladores de Subversion, y en mi opinión
+demasiado rígida. Por esta razón está habilitado un servidor SVN
+con la traducción del libro en el que se realizarán los cambios a
+diario sin apenas restricciones.
+
+Periódicamente (cada una o dos semanas) el coordinador recogerá el
+trabajo realizado y realizará una petición formal en la lista de
+correo de los desarrolladores de subversion para que los cambios
+sean incluídos en el repositorio principal.
+
+Esto básicamente significa que el coordinador hace de intermediario
+entre el grupo de Subversion y los traductores (usted).
+
+
+Cómo colaborar con la traducción
+================================
+
+En este momento el coordinador del proyecto de traducción
+es Grzegorz Adam Hankiewicz, con quien se puede contactar en
+gradha@titanium.sabren.com.  Se puede colaborar traduciendo el
+libro o revisando las traducciones realizadas. En ambos casos,
+cualquier colaboración por mímina que sea será anotada en un listado
+de contribuciones.
+
+Antes de colaborar alguna traducción, hay que entender que
+esta traducción se realiza bajo la misma licencia que el libro
+original, es decir, la Creative Commons Attribution License
+(http://svnbook.red-bean.com/svnbook-1.0/ape.html). Se entiende que
+cualquier traducción se ofrece al proyecto bajo esta licencia. No
+se aceptarán traducciones bajo otras licencias.
+
+El repositorio de la traducción está disponible en modo sólo
+lectura.  La sección "Pasos para poder compilar el libro" indica
+cómo obtenerlo.  Para traducir conviene contactar con el coordinador
+para que este diga qué secciones están siendo traducidas por qué
+personas. Para evitar duplicar esfuerzos a cada persona se le
+asignaría un capítulo. Si hay más personas que capítulos, varias
+traducirán el mismo, requiriendo la comunicación de ambas partes
+para no pisarse trabajo. El listado de quién hace qué cosa se lleva
+en el fichero TRABAJO.
+
+Cuando un traductor comienza con un capítulo, se entiende que el
+trabajo puede llevar bastante tiempo hasta ser completado. Conviene
+notificar al menos una vez a la semana al coordinador del estado
+de la traducción mandando parches si es apropiado. Si un traductor
+no se comunica con el coordinador en 14 días, el trozo que se le
+había asignado quedará libre para otros traductores. Se pretende
+evitar así el estancamiento de la traducción. No poder traducir
+algo en el tiempo acordado es algo que puede pasar. No cumplir
+estos plazos no acarrea ningún perjuicio para el traductor.
+
+El trabajo de revisión normalmente no se hará de forma global hasta
+que al menos un capítulo esté completo. No obstante, si leyendo algo
+se encuentra algúna falta ortográfica o gramatical, se agradecerán
+las sugerencias o parches realizados contra el servidor público
+(resultado del comando svn diff). Un capítulo se considerará
+revisado cuando al menos una persona que no haya colaborado en
+su traducción lo haya leído sin encontrar fallos. Por supuesto,
+cuantas más personas realicen esta tarea mejor.
+
+Conviene recordar que hay dos tipos de revisión: el primer tipo
+consiste en leer un capítulo traducido y ver si "suena" bien al ser
+leído. El segundo tipo consiste en leer frase a frase el original
+en inglés, verificando que la traducción ha sido realizada con la
+mayor fidelidad. El primer tipo de revisión es el más sencillo,
+pero para validar el libro habrá que realizar ambos tipos al menos
+una vez por una o dos personas como mínimo.
+
+Al finalizar la traducción completa se volverá a realizar una
+revisión global. Tras ésta, se considerará actualizar la traducción
+a la versión actual del libro original, pues la traducción se realiza
+sobre una versión específica que con seguiridad quedará obsoleta.
+
+
+Cambios futuros que se realizarán en el libro
+=============================================
+
+La licencia del original permite modificarlo. Esto se usará para
+añadir un capítulo adicional al libro (o quizás un apéndice) en
+el que se especifique cómo se ha realizado la traducción, quienes
+han colaborado, el estado actual, lista de palabras que no tiene
+traducción directa, etc, etc. Aparte de este capítulo, se preservará
+el contenido del resto del libro tal y como está en el original.
+
+
+Herramientas para ayudar en la traducción
+=========================================
+
+Glosario de informática Inglés-Español:
+http://es.tldp.org/ORCA/glosario.html más info en
+http://quark.fe.up.pt/orca/index.es.html?.
+
+Cómo traducción:
+http://libertonia.escomposlinux.org/story/2004/6/4/12518/28489
+
+Cómo traducción wiki (¿es el mismo que arriba?):
+http://wiki.escomposlinux.org/bin/view/Escomposlinux/ComoTraduccion
+
+Diccionario online de la RAE:
+http://buscon.rae.es/diccionario/cabecera.htm
+
+Traductor de Google:
+http://www.google.es/language_tools?hl=es
+
+Artículo sobre malas traducciones, que es la razón por la que al
+menos deberían hacerse revisiones por varias personas diferentes:
+http://www.javiermarias.es/PAGINASARTICULOSSEMANAL/secolapsarontributos.html
+
+Traducciones de expresiones en varios lenguajes:
+http://www.proz.com/kudoz?pairs=&level=
+
+Manual de CVS en español:
+http://es.tldp.org/htmls/manuales.html
+Es buena idea leerse esto en busca de términos y traducciones. Al
+fin y al cabo, estaría bien tener una continuidad en la traducción
+de los términos.
+
+Por último, sentido común. Si hay alguna duda sobre un trozo
+traducido, a veces viene bien cerrar los ojos y recitar las frases
+una y otra vez en voz alta. A veces oir las palabras escritas
+es el mejor método para saber si están bien traducidas, pues
+deben reflejar lo que una persona humana le diría a otra en una
+conversación natural. Si algo le suena "raro", márquelo como un
+TODO para revisar/discutir en el futuro.
+
+
+Reglas mínimas para traductores
+===============================
+
+- No usar tabuladores "duros". Usar espacios al salvar ficheros.
+
+- Cuando se tiene duda sobre una traducción, traducir lo mejor
+  que se considere y poner una etiqueta <!-- TODO explicación del
+  problema --> dentro del propio texto. Así luego se puede hacer
+  "grep TODO *" para ver qué falta.
+
+- Estar suscrito a la "lista virtual" de commits. Cada vez que se
+  hace un commit, el servidor manda un email a los traductores. Si
+  se es traductor y no se está recibiendo este email, dar un toque
+  a Grzegorz para que añada la dirección de email del traductor a
+  la lista. La lista es "virtual" porque en la dirección From del
+  mensaje se usa una dirección falsa. Intentar responder a esta
+  dirección por correo generará un mensaje de error, pues no existe.
+
+- Si se añade un fichero de texto al repositorio, indicar que los
+  retornos de línea sean "nativos". Ejemplo:
+
+     svn propset svn:eol-style native ruta_ficheros
+
+  Para más información sobre esto, leer capítulo 7 del libro. No se
+  crea una regla auto-props porque añadir ficheros debería ser una
+  tarea inusual al tener ya todos los documentos del libro original
+  en el repositorio.
+
+- Por ahora ningún ejemplo de línea de comando o imagen será
+  traducido. Dejar las cosas tal cual (ej: lo que viene dentro de
+  las etiquetas screen).
+
+- A veces es necesario añadir una nota de traductor ya sea para
+  indicar un uso inusual de una palabra o comando, explicar alguna
+  traducción rebuscada, cosas así. El formato es:
+
+    <footnote><para>N.T.: xxx.</para></footnote>.
+
+  Da igual si se empotra todo en una línea o se formatea (si la
+  nota es larga), eso queda a gusto del traductor. Hay un ejemplo
+  al comienzo de ch00.xml.
+
+  No obstante, como esto es contenido nuevo no existente en el libro,
+  siempre que se añade una nota de este estilo hay que publicar en
+  la lista de correo en qué revisión se ha añadido la nota (no hace
+  falta incluir el parche en el email) para recibir comentarios
+  sobre la misma y si es necesario, modificarla.
+
+A medida que salgan cosas, ser irán poniendo aquí.
+
+
+Lista de correo para discutir la traducción
+===========================================
+
+Hay una lista de correo habilitada para discutir la traducción
+tanto del libro como de los mensajes .po de Subversion. Se puede
+ver aquí:
+
+ http://subversion.tigris.org/servlets/SummarizeList?listName=l10n-es
+
+Para apuntarse, enviar un email a
+l10n-es-subscribe@subversion.tigris.org y esperar respuesta con
+instrucciones. Para desapuntarse, realizar el mismo proceso con la
+dirección l10n-es-unsubscribe@subversion.tigris.org.
+
+A diferencia de las listas de usuarios y desarrollo de Subversion,
+esta lista de correo incluye la cabecera:
+
+  Reply-To: l10n-es@subversion.tigris.org
+  
+Así que cualquier cliente de correo decente debería responder a la
+lista y evitar mandar mensajes duplicados al autor y a la lista
+(práctica habitual en las listas de subversion). También incluye
+la cabecera:
+
+  List-Post: <mailto:l10n-es@subversion.tigris.org>
+
+La cual resulta útil para filtrar el correo en otra carpeta. A
+diferencia de las listas de correo que usan la interfaz web Mailman
+para ser gestionadas, esta lista de correo se maneja totalmente
+a través de email. Para obtener una lista de los comandos que se
+pueden realizar y cómo, enviar un email a la siguiente dirección:
+
+  l10n-es-help@subversion.tigris.org

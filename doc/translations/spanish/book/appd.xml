@@ -1,0 +1,275 @@
+<!-- originated from English revision 10817 -->
+<appendix id="svn-ap-d">
+  <title>Third Party Tools</title>
+
+  <simplesect>
+
+    <para>Subversion's modular design (covered in <xref
+      linkend="svn-ch-8-sect-1"/>) and the availability of language
+      bindings (as described in <xref linkend="svn-ch-8-sect-2.3"/>)
+      make it a likely candidate for use as an extension or backend to
+      other pieces of software.  In this appendix, we'll briefly
+      introduce you to some of the many third-party tools that are
+      using Subversion functionality under-the-hood.</para>
+
+    <para>For a more recently updated version of this information,
+      check out the Links page on the Subversion website (<systemitem
+      class="url">http://subversion.tigris.org/project_links.html</systemitem>).</para>
+
+  </simplesect>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 1:  CLIENTS AND PLUGINS                             *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-d-sect-1">
+    <title>Clients and Plugins</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>AnkhSVN (<systemitem
+          class="url">http://ankhsvn.tigris.org/</systemitem>)</term>
+        <listitem><para>Subversion add-in for Microsoft Visual Studio
+          .NET</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>JSVN (<systemitem
+          class="url">http://jsvn.alternatecomputing.com/</systemitem>)</term>
+        <listitem><para>Java Subversion Client, including a
+          plugin for IDEA</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>psvn.el (<systemitem
+          class="url">http://xsteve.nit.at/prg/vc_svn/</systemitem>)</term>
+        <listitem><para>Subversion interface for
+          emacs</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>RapidSVN (<systemitem
+          class="url">http://rapidsvn.tigris.org/</systemitem>)</term>
+        <listitem><para>Cross-platform Subversion GUI, based on the
+          WxPython libraries</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Subclipse (<systemitem
+          class="url">http://subclipse.tigris.org/</systemitem>)</term>
+        <listitem><para>Subversion plugin for the Eclipse
+          environment</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Subway (<systemitem
+          class="url">http://nidaros.homedns.org/subway/</systemitem>)</term>
+        <listitem><para>Microsoft SCC provider for
+          Subversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>sourcecross.org (<systemitem
+          class="url">http://www.sourcecross.org/</systemitem>)</term>
+        <listitem><para>Microsoft SCC provider for
+          Subversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Supervision (<systemitem
+          class="url">http://supervision.tigris.org/</systemitem>)</term>
+        <listitem><para>Java/Swing visual client for
+          Subversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Sven (<systemitem
+          class="url">http://www.nikwest.de/Software/#SvenOverview</systemitem>)</term>
+        <listitem><para>Native GUI for Subversion using the Mac OS X
+          Cocoa framework</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Svn4Eclipse (<systemitem
+          class="url">http://svn4eclipse.tigris.org/</systemitem>)</term>
+        <listitem><para>Subversion plugin for the Eclipse
+          IDE</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Svn-Up (<systemitem
+          class="url">http://svnup.tigris.org/</systemitem>)</term>
+        <listitem><para>Java-based GUI for Subversion and plugin for
+          the IDEA IDE</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>TortoiseSVN (<systemitem
+          class="url">http://tortoisesvn.tigris.org/</systemitem>)</term>
+        <listitem><para>Subversion client, implemented as a Microsoft
+          Windows shell extension</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>WorkBench (<systemitem
+          class="url">http://pysvn.tigris.org/</systemitem>)</term>
+        <listitem><para>Cross platform Python-based software
+          development GUI built on Subversion</para></listitem>
+      </varlistentry>
+
+    </variablelist>
+  </sect1>
+  
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 2:  LANGUAGE BINDINGS                               *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-d-sect-2">
+    <title>Language Bindings</title>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>PySVN (<systemitem
+          class="url">http://pysvn.tigris.org/</systemitem>)</term>
+        <listitem><para>Object-oriented Python bindings for the
+          Subversion client API</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Subversion (<systemitem
+          class="url">http://subversion.tigris.org/</systemitem>)</term>
+        <listitem><para>Python, Perl, and Java bindings to Subversion
+          API, mirroring the core C API</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>SVNCPP (<systemitem
+          class="url">http://rapidsvn.tigris.org/</systemitem>)</term>
+        <listitem><para>C++ object-oriented bindings for the
+          Subversion client API</para></listitem>
+      </varlistentry>
+
+    </variablelist>
+  </sect1>
+  
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 3:  REPOSITORY CONVERTERS                           *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-d-sect-3">
+    <title>Repository Converters</title>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>cvs2svn (<systemitem
+          class="url">http://cvs2svn.tigris.org/</systemitem>)</term>
+       <listitem><para>CVS-to-Subversion conversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>vss2svn (<systemitem
+          class="url">http://vss2svn.tigris.org/</systemitem>)</term>
+       <listitem><para>Microsoft SourceSafe to Subversion conversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Subversion VCP Plugin (<systemitem
+          class="url">http://svn.clkao.org/revml/branches/svn-perl/</systemitem>)</term>
+        <listitem><para>VCP plugin for CVS-to-Subversion</para></listitem>
+      </varlistentry>
+
+    </variablelist>
+  </sect1>
+  
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 4:  HIGHER LEVEL TOOLS                              *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-d-sect-4">
+    <title>Higher Level Tools</title>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>Kwiki (<systemitem
+          class="url">http://www.kwiki.org/</systemitem>)</term>
+       <listitem><para>Wiki with a Subversion backup
+          backend</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Subissue (<systemitem
+          class="url">http://subissue.tigris.org/</systemitem>)</term>
+        <listitem><para>Track issues directly in your 
+          Subversion repository</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Subwiki (<systemitem
+          class="url">http://subwiki.tigris.org/</systemitem>)</term>
+       <listitem><para>Wiki that uses Subversion for its data
+          repository</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svk (<systemitem
+          class="url">http://svk.elixus.org/</systemitem>)</term>
+        <listitem><para>Decentralized version control system based
+          on Subversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>submaster (<systemitem
+          class="url">http://www.rocklinux.org/submaster.html</systemitem>)</term>
+        <listitem><para>System for distributed software development,
+          based on Subversion</para></listitem>
+      </varlistentry>
+
+    </variablelist>
+  </sect1>
+  
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 5:  REPOSITORY BROWSING TOOLS                       *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-d-sect-5">
+    <title>Repository Browsing Tools</title>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>SVN::Web (<systemitem
+          class="url">http://svn.elixus.org/repos/member/clkao/</systemitem>)</term>
+        <listitem><para>Perl-based Subversion repository Web
+          interface</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>ViewCVS (<systemitem
+          class="url">http://viewcvs.sourceforge.net/</systemitem>)</term>
+        <listitem><para>Python-based CGI script for browsing CVS and
+          Subversion repositories</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>WebSVN (<systemitem
+          class="url">http://websvn.tigris.org/</systemitem>)</term>
+        <listitem><para>PHP-based Subversion repository
+          browser</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Trac (<systemitem
+          class="url">http://projects.edgewall.com/trac</systemitem>)</term>
+        <listitem><para>Minimalistic web-based software project
+          management and bug/issue tracking system with version
+          control interfaces and integrated Wiki
+          support</para></listitem>
+      </varlistentry>
+
+    </variablelist>
+  </sect1>
+</appendix>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "appendix")
+end:
+-->

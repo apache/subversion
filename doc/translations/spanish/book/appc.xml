@@ -1,0 +1,647 @@
+<!-- originated from English revision 10817 -->
+<appendix id="svn-ap-c">
+<title>WebDAV and Autoversioning</title>
+
+  <simplesect>
+
+    <para>WebDAV is an extension to HTTP, and is growing more and more
+      popular as a standard for file-sharing.  Today's operating
+      systems are becoming extremely Web-aware, and many have now
+      built-in support for mounting <quote>shares</quote> exported by
+      WebDAV servers.</para>
+
+    <para>If you use Apache/mod_dav_svn as your Subversion network
+      server, then to some extent, you are also running a WebDAV
+      server.  This appendix gives some background on the nature of
+      this protocol, how Subversion uses it, and how well Subversion
+      interoperates with other software that is WebDAV-aware.</para>
+
+  </simplesect>
+
+  <sect1 id="svn-ap-c-sect-1">
+    <title>Basic WebDAV Concepts</title> 
+
+    <para>This section provides a very brief, very general overview to
+      the ideas behind WebDAV.  It should lay the foundation for
+      understanding WebDAV compatibility issues between clients and
+      servers.</para>
+
+    <sect2 id="svn-ap-c-sect-1.1">
+      <title>Just Plain WebDAV</title>
+
+      <para>RFC 2518 defines a set of concepts and accompanying
+        extension methods to HTTP 1.1 that make the web into a more
+        universal read/write medium.  The basic idea is that a
+        WebDAV-compliant web server can act like a generic file server;
+        clients can mount WebDAV <quote>shares</quote> that behave
+        much like NFS or SMB shares.</para>
+      
+      <para>However, it's important to note that RFC 2518 does
+        <emphasis>not</emphasis> provide any sort of model for version
+        control, despite the <quote>V</quote> in DAV.  Basic WebDAV
+        clients and servers assume only one version of each file or
+        directory exists, and can be repeatedly overwritten.
+        <footnote><para>For this reason, some people jokingly refer to
+        generic WebDAV clients as <quote>WebDA</quote>
+        clients!</para></footnote></para>
+  
+      <para>Here are the new concepts and methods introduced in basic
+        WebDAV:</para>
+
+      <variablelist>
+
+        <varlistentry>
+          <term>New write methods</term>
+          <listitem>
+            <para>Beyond the standard HTTP <literal>PUT</literal>
+            method (which creates or overwrites a web resource),
+            WebDAV defines new <literal>COPY</literal> and
+            <literal>MOVE</literal> methods for duplicating or
+            rearranging resources.</para>
+          </listitem>
+        </varlistentry>
+                
+        <varlistentry>
+          <term>Collections</term>
+          <listitem>
+            <para>This is simply the WebDAV term for a grouping of
+              resources (URIs).  In most cases, it is analogous to a
+              <quote>directory</quote>.  You can tell something is a
+              collection if it ends with a trailing <quote>/</quote>.
+              Whereas file resources can be written or created with a
+              <literal>PUT</literal> method, collection resources are
+              created with the new <literal>MKCOL</literal>
+              method.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Properties</term>
+          <listitem>
+            <para>This is the same idea present in
+              Subversion&mdash;metadata attached to files and
+              collections.  A client can list or retrieve properties
+              attached to a resource with the new
+              <literal>PROPFIND</literal> method, and can change them
+              with the <literal>PROPPATCH</literal> method.  Some
+              properties are wholly created and controlled by users
+              (e.g. a property called <quote>color</quote>), and
+              others are wholly created and controlled by the WebDAV
+              server (e.g. a property that contains the last
+              modification time of a file).  The former kind are
+              called <quote>dead</quote> properties, and the latter
+              kind are called <quote>live</quote> properties.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>Locking</term>
+          <listitem>
+            <para>A WebDAV server may decide to offer a locking
+            feature to clients&mdash;this part of the specification is
+            optional, although most WebDAV servers do offer the
+            feature.  If present, then clients can use the new
+            <literal>LOCK</literal> and <literal>UNLOCK</literal>
+            methods to mediate access to a resource.  In most cases
+            these methods are used to create exclusive write locks (as
+            discussed in <xref linkend="svn-ch-2-sect-2.2"/>),
+            although shared write locks are also possible.</para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+
+    </sect2>
+
+    <sect2 id="svn-ap-c-sect-1.2">
+      <title>DeltaV Extensions</title>
+  
+      <para>Because RFC 2518 left out versioning concepts, another
+        capable group was left with the responsibility of writing RFC
+        3253, which adds versioning to WebDAV.  WebDAV/DeltaV clients
+        and servers are often called just <quote>DeltaV</quote>
+        clients and servers, since DeltaV implies the existence of
+        basic WebDAV.</para>
+
+      <para>DeltaV introduces a whole slew of new acronyms, but don't
+        be intimidated.  The ideas are fairly straightforward.  Here
+        are the new concepts and methods introduced in DeltaV:</para>
+
+      <variablelist>
+
+      <varlistentry>
+        <term>Per-resource versioning</term>
+        <listitem>
+            <para>
+              Like CVS and other version-control systems, DeltaV
+              assumes that each resource has a potentially infinite
+              number of states.  A client begins by placing a resource
+              under version control using the new
+              <literal>VERSION-CONTROL</literal> method.  This creates
+              a new Version Controlled Resource (VCR).  Every time you
+              change the VCR (via <literal>PUT</literal>,
+              <literal>PROPPATCH</literal>, etc.), a new state of the
+              resource is created, called a Version Resource (VR).
+              VCRs and VRs are still ordinary web resources, defined
+              by URLs.  Specific VRs can have human-friendly names as
+              well.
+            </para>
+          </listitem>
+        </varlistentry>
+
+      <varlistentry>
+        <term>Server-side working-copy model</term>
+        <listitem>
+            <para>Some DeltaV servers support the ability to create a
+            virtual <quote>workspace</quote> on the server, where all
+            of your work is performed.  Clients use the
+            <literal>MKWORKSPACE</literal> method to create a private
+            area, then indicate they want to change specific VCRs by
+            <quote>checking them out</quote> into the workspace,
+            editing them, and <quote>checking them in</quote> again.
+            In HTTP terms, the sequence of methods would be
+            <literal>CHECKOUT</literal>, <literal>PUT</literal>,
+            <literal>CHECKIN</literal>.  After each
+            <literal>CHECKIN</literal>, a new VR is created, and
+            the edited VCR's contents now <quote>point to</quote> the
+            latest VR.  Each VCR has also has a <quote>history</quote>
+            resource which tracks and orders its various VR
+            states.</para>
+          </listitem>
+        </varlistentry>
+
+      <varlistentry>
+        <term>Client-side working-copy model</term>
+        <listitem>
+            <para>Some DeltaV servers also support the idea that the
+            client may have a private working copy full of specific
+            VRs.  (This is how CVS and Subversion work.)  When the
+            client wants to commit changes to the server, it begins by
+            creating a temporary server transaction (called an
+            activity) with the <literal>MKACTIVITY</literal> method.
+            The client then performs a <literal>CHECKOUT</literal> on
+            each VR it wishes to change, which creates a number of
+            temporary <quote>working resources</quote> in the
+            activity, that can be modified using
+            <literal>PUT</literal> and <literal>PROPPATCH</literal>
+            methods.  Finally, the client performs a
+            <literal>CHECKIN</literal> on each working resource, which
+            creates a new VR within each VCR, and the entire activity
+            is deleted.</para>
+          </listitem>
+        </varlistentry>
+
+      <varlistentry>
+        <term>Configurations</term>
+        <listitem>
+            <para>DeltaV allows you define flexible collections of
+            VCRs called <quote>configurations</quote>, which don't
+            necessarily respond to particular directories.  Each VCR's
+            contents can be made to point to a specific VR using the
+            <literal>UPDATE</literal> method.  Once the configuration
+            is perfect, the client can create a
+            <quote>snapshot</quote> of the whole configuration, called
+            a <quote>baseline</quote>.  Clients use the
+            <literal>CHECKOUT</literal> and <literal>CHECKIN</literal>
+            methods to capture specific states of configurations, much
+            like they use these methods to create specific VR states
+            of VCRs.</para>
+          </listitem>
+        </varlistentry>
+
+      <varlistentry>
+        <term>Extensibility</term>
+        <listitem>
+            <para>DeltaV defines a new method,
+            <literal>REPORT</literal>, which allows the client and
+            server to perform customized data exchanges.  The client
+            sends a <literal>REPORT</literal> request with a
+            properly-labeled XML body full of custom data; assuming
+            the server understands the specific report-type, it
+            responds with an equally custom XML body.  This technique
+            is very similar to XML-RPC.</para>
+          </listitem>
+        </varlistentry>
+
+      <varlistentry>
+        <term>Autoversioning</term>
+        <listitem>
+            <para>For many, this is the <quote>killer</quote> feature
+            of DeltaV.  If the DeltaV server supports this feature,
+            then basic WebDAV clients (i.e. those unaware of
+            versioning) can still write to the server, and the server
+            will silently perform versioning anyway.  In the simplest
+            example, an ignorant <literal>PUT</literal> from a basic
+            WebDAV client might be translated by the server as a
+            <literal>CHECKOUT</literal>, <literal>PUT</literal>,
+            <literal>CHECKIN</literal>.</para>
+          </listitem>
+        </varlistentry>
+        
+      </variablelist>
+      
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="svn-ap-c-sect-2">
+    <title>Subversion and DeltaV</title> 
+    
+    <para>So how <quote>compatible</quote> is Subversion with other
+      DeltaV software?  In two words: not very.  At least not yet, not
+      in Subversion 1.0.</para>
+    
+    <para>While libsvn_ra_dav sends DeltaV requests to the server, the
+      Subversion client is <emphasis>not</emphasis> a general-purpose
+      DeltaV client.  In fact, it expects some custom features from
+      the server (especially through custom <literal>REPORT</literal>
+      requests).  Further, mod_dav_svn is <emphasis>not</emphasis> a
+      general-purpose DeltaV server.  It only implements a strict
+      subset of the DeltaV specification.  A more general WebDAV or
+      DeltaV client may very well be able to interoperate against it,
+      but only if that client operates within the narrow confines of
+      those features that the server has implemented.  The Subversion
+      development team plans to address general WebDAV
+      interoperability in a future release of Subversion.</para>
+
+    <sect2 id="svn-ap-c-sect-2.1">
+      <title>Mapping Subversion to DeltaV</title>
+      
+      <para>Here is a very <quote>high-level</quote> description of
+        how various Subversion client operations use DeltaV.  In many
+        cases, these explanations are gross oversimplifications.  They
+        should <emphasis>not</emphasis> be taken as a substitute for
+        reading Subversion's source code or talking with its
+        developers.</para>
+      
+      <variablelist>
+        
+        <varlistentry>
+          <term>svn checkout/list</term>
+          <listitem>
+            <para>
+              Perform a <literal>PROPFIND</literal> of depth 1 on the
+              collection to get a list of immediate children.  Perform
+              a <literal>GET</literal> (and possibly a
+              <literal>PROPFIND</literal>) on each child.  Recurse
+              into collections and repeat.
+            </para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>svn commit</term>
+          <listitem>
+            <para>
+              Create an activity with <literal>MKACTIVITY</literal>,
+              and do a <literal>CHECKOUT</literal> of each changed
+              item, followed by a <literal>PUT</literal> of new data.
+              Finally, a <literal>MERGE</literal> request causes an
+              implicit <literal>CHECKIN</literal> of all working
+              resources.
+            </para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term>svn update/switch/status/merge/diff</term>
+          <listitem>
+            <para>
+              Send a custom <literal>REPORT</literal> request that
+              describes the mixed-revision (and mixed-url) state of
+              the working copy.  The server sends a custom response
+              that describes which items need updating.  The client
+              loops over the response, performing
+              <literal>GET</literal> and <literal>PROPFIND</literal>
+              requests as needed.  For updates and switches, install
+              the new data in the working copy.  For diff and merge
+              commands, compare the data to the working copy, possibly
+              applying changes as local modifications.
+            </para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+      
+    </sect2>
+    
+    <sect2 id="svn-ap-c-sect-2.2">
+      <title>Autoversioning Support</title>
+      
+      <para>At the time of writing, the truth is that there are very
+        few DeltaV clients in the world; RFC 3253 is still relatively
+        new.  However users do have access to <quote>generic</quote>
+        clients, because almost every modern operating system now has
+        an integrated basic WebDAV client.  With this in mind,
+        Subversion developers realized that if Subversion 1.0 was to
+        have <emphasis>any</emphasis> interoperability features,
+        support for DeltaV autoversioning would be the best
+        approach.</para>
+      
+      <para>To activate autoversioning in mod_dav_svn, use the
+        <literal>SVNAutoversioning</literal> directive within the
+        <filename>httpd.conf</filename> <literal>Location</literal>
+        block, like so:</para>
+      
+              <screen>
+&lt;Location /repos&gt;
+  DAV svn
+  SVNPath /absolute/path/to/repository
+  SVNAutoversioning on
+&lt;/Location&gt;
+</screen>
+
+      <para>Normally, if a generic WebDAV client attempted a
+        <literal>PUT</literal> to a path within your repository
+        location, mod_dav_svn would outright reject the request.  (It
+        normally only allows such operations on <quote>working
+        resources</quote> within DeltaV <quote>activities</quote>.)
+        With <literal>SVNAutoversioning</literal> turned on, however,
+        the server interprets the <literal>PUT</literal> request as an
+        internal <literal>MKACTIVITY</literal>,
+        <literal>CHECKOUT</literal>, <literal>PUT</literal>, and
+        <literal>CHECKIN</literal>.  A generic log message is
+        auto-generated, and a new filesystem revision is
+        created.</para>
+
+      <para>Because so many operating systems already have integrated
+        WebDAV abilities, the use-case for this feature borders on
+        fantastical: imagine an office of ordinary users running
+        Microsoft Windows or Mac OS.  Each computer
+        <quote>mounts</quote> the Subversion repository, which appears
+        to be an ordinary network share.  They use the server as they
+        always do:  open files from the server, edit them, and
+        save them back to the server.  But in this fantasy, the server
+        is automatically versioning everything.  Later on, a sysadmin
+        can use a Subversion client to search and retrieve all older
+        versions.</para>
+
+      <para>Is this fantasy real?  Not quite.  The main snag is that
+        Subversion 1.0 has no support whatsoever for the WebDAV
+        <literal>LOCK</literal> or <literal>UNLOCK</literal> methods.
+        Most operating system DAV clients attempt to
+        <literal>LOCK</literal> a resource opened directly from a
+        DAV-mounted network share.  For now, users may have to copy a
+        file from the DAV share to local disk, edit the file, then
+        copy it back again.  Not ideal autoversioning, but still
+        doable.</para>
+
+    </sect2>
+
+    <sect2 id="svn-ap-c-sect-2.3">
+      <title>The mod_dav_lock Alternative</title>
+      
+      <para>The mod_dav Apache module is a complex beast:  it
+        understands and parses all of the WebDAV and DeltaV methods,
+        yet it depends on a back-end <quote>provider</quote> to
+        access the resources themselves.</para>
+
+      <para>In its simplest incarnation, a user can use mod_dav_fs as
+        a provider for mod_dav.  mod_dav_fs uses the ordinary
+        filesystem to store files and directories, and only
+        understands vanilla WebDAV methods, not DeltaV.</para>
+
+      <para>Subversion, on the other hand, uses mod_dav_svn as a
+        provider for mod_dav.  mod_dav_svn understands all WebDAV
+        methods except <literal>LOCK</literal>, and understands a
+        sizable subset of DeltaV methods.  It accesses data in the
+        Subversion repository, rather than in the real filesystem.
+        Subversion 1.0 doesn't support locking, because it would
+        actually be quite difficult to implement, since Subversion uses
+        the copy-modify-merge model.<footnote><para>Subversion may
+        someday develop a reserved-checkout locking model that can
+        live peaceably with copy-modify-merge, but it probably won't
+        happen soon.</para></footnote></para>
+
+      <para>In Apache httpd-2.0, mod_dav supports the
+        <literal>LOCK</literal> method by tracking locks in a private
+        database, assuming that the provider is willing to accept
+        them.  In Apache httpd-2.1 or later, however, this locking
+        support has been broken into an independent module,
+        mod_dav_lock.  It allows any mod_dav provider to take
+        advantage of the lock database, including mod_dav_svn, even
+        though mod_dav_svn doesn't actually understand locking.</para>
+
+      <para>Confused yet?</para>
+
+      <para>In a nutshell, you can use mod_dav_lock in Apache
+        httpd-2.1 (or later) to create the
+        <emphasis>illusion</emphasis> that mod_dav_svn is honoring
+        <literal>LOCK</literal> requests.  Make sure mod_dav_lock is
+        either compiled into httpd, or being loaded in your
+        <filename>httpd.conf</filename>.  Then simply add the
+        <literal>DAVGenericLockDB</literal> directive to your
+        <literal>Location</literal> like so:</para>
+
+              <screen>
+&lt;Location /repos&gt;
+  DAV svn
+  SVNPath /absolute/path/to/repository
+  SVNAutoversioning on
+  DavGenericLockDB /path/to/store/locks
+&lt;/Location&gt;
+</screen>
+
+      <para>This technique is a risky business; in some sense, the
+        mod_dav_svn is now lying to the WebDAV client.  It claims to
+        accept the <literal>LOCK</literal> request, but in reality the
+        lock isn't being enforced at all levels.  If a second WebDAV
+        client attempts to <literal>LOCK</literal> the same resource,
+        then mod_dav_lock will notice and correctly deny the request.
+        But there's absolutely nothing preventing an ordinary
+        Subversion client from changing the file via a normal
+        <command>svn commit</command>!  If you use this technique,
+        you're giving users the opportunity to stomp on each others'
+        changes.  In particular, a WebDAV client might accidentally
+        overwrite a change committed by regular svn client.</para>
+
+      <para>On the other hand, if you set up your environment very
+        carefully, you may mitigate the risk.  For example, if
+        <emphasis>all</emphasis> of your users are working though
+        basic WebDAV clients (rather than svn clients), then things
+        should be fine.</para>
+
+    </sect2>
+    
+  </sect1>
+  
+  <sect1 id="svn-ap-c-sect-3">
+    <title>Autoversioning Interoperability</title> 
+
+      <para>In this section, we'll describe the most common generic
+        WebDAV clients (at the time of writing), and how well they
+        operate against a mod_dav_svn server using the
+        <literal>SVNAutoversioning</literal> directive.  RFC 2518 is a
+        bit large, and perhaps a bit too flexible.  Every WebDAV
+        client behaves slightly differently, and creates slightly
+        different problems.</para>
+        
+        <!-- list of subsections goes here. -->
+
+    <sect2 id="svn-ap-c-sect-3.1">
+      <title>Win32 WebFolders</title>
+
+      <para>Windows 98, 2000, and XP have an integrated WebDAV client
+        known as <quote>WebFolders</quote>.  On Windows 98, the
+        feature might need to be explicitly installed;  if present, a
+        <quote>WebFolders</quote> directory appears directly within My
+        Computer.  On Windows 2000 and XP, simply open My Network
+        Places, and run the Add Network Place icon.  When prompted,
+        enter the WebDAV URL.  The shared folder will appear within My
+        Network Places.</para>
+
+      <para>Most write operations work fine against an autoversioning
+        mod_dav_svn server, but there are a few problems:</para>
+
+      <itemizedlist>
+
+        <listitem>
+          <para>If a Windows XP computer is a member of an NT Domain,
+            then it seems to be unable to connect to the WebDAV share.
+            It repeatedly asks for a name and password, even when the
+            Apache server isn't issuing an authentication challenge!
+            If the machine isn't part of an NT Domain, then the share
+            is mounted without a problem.</para>
+            
+          <para>This problem seems to stem from changes in the way
+            Windows XP creates WebFolder shortcuts (
+            <filename>.lnk</filename> files).  It sometimes replaces
+            the URL of the WebDAV share with a Windows
+            <quote>UNC</quote> (Universal Naming Convention) path
+            instead.  This causes Explorer to attempt a connection
+            using SMB instead of HTTP.</para>
+            
+          <para>A workaround for this problem is to create the
+            <filename>.lnk</filename> shortcut on a Windows 2000
+            computer and then copy this shortcut to the Windows XP
+            computer.  It would probably also be possible to
+            <quote>fix</quote> the shortcut using a HEX editor, if
+            one were to reverse-engineer the <filename>.lnk</filename>
+            file format.</para>
+        </listitem>
+
+        <listitem>
+          <para>A file can't be opened for direct editing from the
+            share; it always comes up read-only.  The mod_dav_lock
+            technique doesn't help, because WebFolders doesn't use the
+            <literal>LOCK</literal> method at all.  The previously
+            mentioned <quote>copy, edit, re-copy</quote> method does
+            work, however.  The file on the share can be successfully
+            overwritten by a locally edited copy.</para>
+        </listitem>
+
+      </itemizedlist>
+
+    </sect2>
+
+    <sect2 id="svn-ap-c-sect-3.2">
+      <title>Mac OS X</title>
+
+      <para>Apple's OS X operating system has an integrated WebDAV
+        client.  From the Finder, select the <quote>Connect to
+          Server</quote> item from the Go menu.  Enter a WebDAV URL,
+        and it appears as a disk on the desktop, just like any file
+        server.<footnote><para>Unix users can also run <command>mount
+        -t webdav URL /mountpoint</command>.</para></footnote></para>
+      
+      <para>Unfortunately, this client refuses to work against an
+        autoversioning mod_dav_svn because of its lack of
+        <literal>LOCK</literal> support.  Mac OS X discovers the
+        missing <literal>LOCK</literal> ability during the initial
+        HTTP <literal>OPTIONS</literal> feature exchange, and thus
+        decides to mount the Subversion repository as a read-only
+        share.  After that, no write operations are possible at all.
+        In order to mount the repository as a read-write share, you
+        <emphasis>must</emphasis> use the mod_dav_lock trick discussed
+        previously.  Once locking seems to work, the share behaves
+        very nicely: files can be opened directly in read/write mode,
+        although each save operation will cause the client to do a
+        <literal>PUT</literal> to a temporary location, a
+        <literal>DELETE</literal> of original file, and a
+        <literal>MOVE</literal> of the temporary resource to the
+        original filename.  That's three new Subversion revisions per
+        save!</para>
+
+      <para>One more word of warning: OS X's WebDAV client can be
+        overly sensitive to HTTP redirects.  If you're unable to mount
+        the repository at all, you may need to enable the
+        <literal>BrowserMatch</literal> directive in your
+        <filename>httpd.conf</filename>:</para>
+
+              <screen>
+BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
+</screen>
+
+    </sect2>
+
+    <sect2 id="svn-ap-c-sect-3.3">
+      <title>Unix: Nautilus 2</title>
+
+      <para>Nautilus is the official file manager/browser for the
+        GNOME desktop.  Its main home page is at <systemitem
+        class="url">http://www.gnome.org/projects/nautilus/</systemitem>.
+        By simply typing a WebDAV URL into the Nautilus window,
+        the DAV share appears like a local filesystem.</para>
+
+      <para>In general, Nautilus 2 works reasonably well against an
+        autoversioning mod_dav_svn, with the following caveats:</para>
+
+      <itemizedlist>
+
+        <listitem>
+          <para>Any files opened directly from the share are treated
+            as read-only.  Even the mod_dav_lock trick seems to have
+            no effect.  It seems that Nautilus never issues the
+            <literal>LOCK</literal> method at all.  The <quote>copy
+            locally, edit, copy back</quote> trick does work, however.
+            Unfortunately, Nautilus overwrites the old file by issuing
+            a <literal>DELETE</literal> first, which creates an extra
+            revision.</para>
+        </listitem>
+
+        <listitem>
+          <para>When overwriting or creating a file , Nautilus first
+            does a <literal>PUT</literal> of an empty file, then
+            overwrites it with a second <literal>PUT</literal>.  This
+            creates two Subversion filesystem revisions, rather than
+            one.</para>
+        </listitem>
+
+        <listitem>
+          <para>When deleting a collection, it issues an HTTP
+          <literal>DELETE</literal> on each individual child instead
+          of on the collection itself.  This creates a whole bunch of
+          new revisions.</para>
+        </listitem>
+
+      </itemizedlist>
+
+    </sect2>
+
+    <sect2 id="svn-ap-c-sect-3.4">
+      <title>Linux davfs2</title>
+
+      <para>Linux davfs2 is a filesystem module for the Linux kernel,
+        whose development is located at <systemitem
+        class="url">http://dav.sourceforge.net/</systemitem>.  Once
+        installed, a WebDAV network share can be mounted with the
+        usual Linux <command>mount</command> command.</para>
+
+      <para>The word on the street is that this DAV client doesn't
+        work at all with mod_dav_svn's autoversioning.  Every single
+        attempt to write to the server is preceded by a
+        <literal>LOCK</literal> request, which mod_dav_svn doesn't
+        support.  At this time, there is no data indicating whether
+        the use of mod_dav_lock resolves this problem.</para>
+
+    </sect2>
+
+  </sect1>
+
+</appendix>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "appendix")
+end:
+-->
