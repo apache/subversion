@@ -516,8 +516,9 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# has been changed. Subversion runs this hook by invoking a program\n"
       "# (script, executable, binary, etc.) named `"
       SVN_REPOS__HOOK_POST_REVPROP_CHANGE 
-      "' \n (for which"
-      "# this file is a template), with the following ordered arguments:\n"
+      "'\n"
+      "# (for which this file is a template), with the following ordered\n"
+      "# arguments:\n"
       "#\n"
       "#   [1] REPOS-PATH   (the path to this repository)\n"
       "#   [2] REV          (the revision that was tweaked)\n"
