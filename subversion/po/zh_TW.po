@@ -1310,7 +1310,7 @@ msgstr "無法復原 '%s' -- 請改用更新試試.\n"
 #: clients/cmdline/notify.c:123
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
-msgstr "'%s' 的已解決的衝突狀態\n"
+msgstr "'%s' 的衝突狀態已解決\n"
 
 #: clients/cmdline/notify.c:202
 #, c-format
