@@ -54,13 +54,6 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
-  * r10841
-    Fix crash bug in "svn st -u" on out-of-sync working copies
-    Justification:
-      Crashes bad.
-    Votes:
-      +1: ghudson, lundblad, jpieper
-
   * r10860
     Trivial message fixes.
     Votes:
