@@ -1,5 +1,17 @@
 
 Scratch space for client work.
+
+
+Fitz TODO:
+
+- Rework help mechanism so that help strings are declared in cmd files
+- Move misc public funcs in main.c into util.c?
+- svn_cl__push_implicit_dot_target should be encapsulated inside of
+  svn_cl__args_to_target_array
+- Fix propset --val-file problem
+- Once over cmds, check args against README and get cleaning
+- Document cmd structure
+- Dive into commit and checkout in libsvn_client
 
 
 
