@@ -15,8 +15,11 @@
 
 #include "apr_strings.h"
 #include "apr_pools.h"
+
 #include "svn_fs.h"
+
 #include "fs.h"
+#include "txn.h"
 #include "err.h"
 #include "trail.h"
 #include "rev-table.h"
@@ -229,6 +232,11 @@ svn_fs_list_transactions (char ***names_p,
   return SVN_NO_ERROR;
 }
 
+const char *
+svn_fs__txn_id (svn_fs_txn_t *txn)
+{
+  return txn->id;
+}
 
 
 /* 
