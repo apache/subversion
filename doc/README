@@ -8,8 +8,9 @@ documentation for texinfo is at
 
 To build particular things, you'll need one or more of:
 
-  * the `makeinfo' from ftp://ftp.gnu.org/pub/gnu/texinfo/texinfo-4.0.tar.gz
-  * the 'texi2dvi' or 'texi2html' programs
+  * the `makeinfo' program from the latest texinfo package in
+    ftp://ftp.gnu.org/pub/gnu/texinfo/
+  * the `texi2dvi' or `texi2html' programs
   * the `dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
 
 
