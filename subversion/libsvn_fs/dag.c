@@ -980,6 +980,10 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
 
         /* Go get a fresh NODE-REVISION for current child node. */
         SVN_ERR (get_node_revision (&node_rev, cur_entry, trail));
+        
+        /* Set the mutable flag */
+        if (! has_mutable_flag (node_rev))
+          set_mutable_flag (node_rev, NULL, trail->pool);
 
         /* Do the clone thingy here. */
         SVN_ERR (svn_fs__create_successor (&new_node_id, 
