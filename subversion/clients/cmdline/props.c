@@ -1,5 +1,5 @@
 /*
- * main.c:  Subversion command line client.
+ * props.c: Utility functions for property handling
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
