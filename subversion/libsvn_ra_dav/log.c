@@ -246,6 +246,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                   svn_revnum_t start,
                                   svn_revnum_t end,
                                   svn_boolean_t discover_changed_paths,
+                                  svn_boolean_t strict_node_history,
                                   svn_log_message_receiver_t receiver,
                                   void *receiver_baton)
 {
@@ -308,7 +309,14 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                apr_psprintf(ras->pool,
                                             "<S:discover-changed-paths/>"));
     }
-    
+
+  if (strict_node_history)
+    {
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(ras->pool,
+                                            "<S:strict-node-history/>"));
+    }
+
   for (i = 0; i < paths->nelts; i++)
     {
       const char *this_path = ((const char **)paths->elts)[i];

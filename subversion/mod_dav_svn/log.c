@@ -130,6 +130,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   svn_revnum_t start = SVN_INVALID_REVNUM;   /* defaults to HEAD */
   svn_revnum_t end = SVN_INVALID_REVNUM;     /* defaults to HEAD */
   svn_boolean_t discover_changed_paths = 0;  /* off by default */
+  svn_boolean_t strict_node_history = 0;     /* off by default */
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 0, sizeof(const char *));
 
@@ -167,6 +168,12 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
              (I.e., is that a traditional way to do things here?) */
           discover_changed_paths = 1;
         }
+      else if (strcmp(child->name, "strict-node-history") == 0)
+        {
+          /* ### todo: value doesn't matter, presence alone is enough?
+             (I.e., is that a traditional way to do things here?) */
+          strict_node_history = 1;
+        }
       else if (strcmp(child->name, "path") == 0)
         {
           /* Convert these relative paths to absolute paths in the
@@ -202,6 +209,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                             start,
                             end,
                             discover_changed_paths,
+                            strict_node_history,
                             log_receiver,
                             &lrb,
                             resource->pool);

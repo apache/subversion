@@ -71,6 +71,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"extensions",    'x', 1, "pass \"ARG\" as bundled options to GNU diff"},
     {"targets",       svn_cl__targets_opt, 1, "pass contents of file \"ARG\" as additional args"},
     {"xml",           svn_cl__xml_opt, 0, "output in xml"},
+    {"strict",        svn_cl__strict_opt, 0, "use strict semantics"},
     {0,               0, 0}
   };
 
@@ -216,19 +217,20 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: svn log [URL] [PATH1 [PATH2] ...] \n"
     "    Either get the log messages for local PATHs or PATHs at the\n"
-    "    URL. If URL is given by itself, then log messages are output for\n"
-    "    that specific path. The -v option will include a list of affected\n"
-    "    files for each log message. Examples are:\n"
+    "    URL.  If URL is given by itself, then log messages are output for\n"
+    "    that specific path.  The -v option will include a list of affected\n"
+    "    files for each log message.  By default, the resultant collection\n"
+    "    of log messages for a given path will include logs for all the\n"
+    "    revisions in which that path's node was modified, spanning copy\n"
+    "    history where such exists.  This can be disabled by using the\n"
+    "    --strict option.  Examples are:\n"
     "\n"
-    "    svn log\n"
-    "\n"
-    "    svn log foo.c\n"
-    "\n"
-    "    svn log http://www.example.com/repo/project/foo.c\n"
-    "\n"
-    "    svn log http://www.example.com/repo/project foo.c bar.c\n",
+    "       svn log\n"
+    "       svn log foo.c\n"
+    "       svn log http://www.example.com/repo/project/foo.c\n"
+    "       svn log http://www.example.com/repo/project foo.c bar.c\n",
     {'r', 'D', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
-     svn_cl__auth_password_opt, svn_cl__xml_opt} },
+     svn_cl__auth_password_opt, svn_cl__strict_opt, svn_cl__xml_opt} },
   
   { "merge", svn_cl__merge, {0},
     "merge:  apply the differences between two paths to a working copy path.\n"
@@ -1000,6 +1002,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__xml_opt:
         opt_state.xml = TRUE;
+        break;
+      case svn_cl__strict_opt:
+        opt_state.strict = TRUE;
         break;
       case 'x':
         opt_state.extensions = apr_pstrdup (pool, opt_arg);

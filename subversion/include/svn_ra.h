@@ -479,6 +479,9 @@ typedef struct svn_ra_plugin_t
      the hash's keys are all the paths committed in that revision.
      Otherwise, each call to receiver passes null for CHANGED_PATHS.
     
+     If STRICT_NODE_HISTORY is set, copy history will not be traversed
+     (if any exists) when harvesting the revision logs for each path.
+
      If any invocation of RECEIVER returns error, return that error
      immediately and without wrapping it.
 
@@ -491,6 +494,7 @@ typedef struct svn_ra_plugin_t
                            svn_revnum_t start,
                            svn_revnum_t end,
                            svn_boolean_t discover_changed_paths,
+                           svn_boolean_t strict_node_history,
                            svn_log_message_receiver_t receiver,
                            void *receiver_baton);
 

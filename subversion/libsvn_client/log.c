@@ -51,6 +51,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                 const svn_client_revision_t *start,
                 const svn_client_revision_t *end,
                 svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
                 svn_log_message_receiver_t receiver,
                 void *receiver_baton,
                 apr_pool_t *pool)
@@ -157,6 +158,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                          start_revnum,
                          end_revnum,
                          discover_changed_paths,
+                         strict_node_history,
                          receiver,
                          receiver_baton);
   

@@ -591,7 +591,10 @@ svn_client_status (apr_hash_t **statushash,
   
    If DISCOVER_CHANGED_PATHS is set, then the `changed_paths' argument
    to RECEIVER will be passed on each invocation.
-  
+
+   If STRICT_NODE_HISTORY is set, copy history (if any exists) will
+   not be traversed while harvest revision logs for each target.
+
    If START->kind or END->kind is svn_client_revision_unspecified,
    return the error SVN_ERR_CLIENT_BAD_REVISION.
 
@@ -609,14 +612,14 @@ svn_client_status (apr_hash_t **statushash,
    common case of log invocation -- the user wants to see all log
    messages from youngest to oldest, where the oldest commit is
    revision 1.  That works fine, except when there are no commits in
-   the repository, hence this special case.
- */
+   the repository, hence this special case.  */
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
                 const apr_array_header_t *targets,
                 const svn_client_revision_t *start,
                 const svn_client_revision_t *end,
                 svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
                 svn_log_message_receiver_t receiver,
                 void *receiver_baton,
                 apr_pool_t *pool);

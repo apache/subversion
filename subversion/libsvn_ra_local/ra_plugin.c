@@ -499,6 +499,7 @@ svn_ra_local__get_log (void *session_baton,
                        svn_revnum_t start,
                        svn_revnum_t end,
                        svn_boolean_t discover_changed_paths,
+                       svn_boolean_t strict_node_history,
                        svn_log_message_receiver_t receiver,
                        void *receiver_baton)
 {
@@ -523,6 +524,7 @@ svn_ra_local__get_log (void *session_baton,
                              start,
                              end,
                              discover_changed_paths,
+                             strict_node_history,
                              receiver,
                              receiver_baton,
                              sbaton->pool);
