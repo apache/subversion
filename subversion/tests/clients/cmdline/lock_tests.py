@@ -194,16 +194,11 @@ def break_lock(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'trying to break', file_path_b)
 
-  ### TODO This should succeed, but currently does not! 
   svntest.actions.run_and_verify_svn(None, None, None,
                                      'unlock', '--force',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'trying to break', file_path_b)
-
-
-  ### TODO attempt to break lock as a user who is not the lock owner
-
 
 #----------------------------------------------------------------------
 # II.C.2.d: Lock a file in wc A as user FOO.  Attempt to lock same
@@ -253,9 +248,6 @@ def steal_lock(sbox):
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'trying to break', file_path_b)
-
-  ### TODO attempt to steal lock as a user who is not the lock owner
-
 
 #----------------------------------------------------------------------
 # II.B.2, II.C.2.e: Lock a file in wc A.  Query wc for the
