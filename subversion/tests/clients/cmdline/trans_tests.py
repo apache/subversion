@@ -482,7 +482,7 @@ def keyword_expanded_on_checkout(sbox):
   if errput: return 1
   keywords_on(url_path)
 
-  output, errput = svntest.main.run_svn (None, 'commit', wc_dir)
+  output, errput = svntest.main.run_svn(None, 'ci', '-m', 'log msg', wc_dir)
   if errput: return 1
 
   other_wc_dir = wc_dir + ".other"
