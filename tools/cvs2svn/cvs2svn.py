@@ -470,7 +470,7 @@ class Dump:
     # This record is done.
     self.dumpfile.write('\n')
 
-  def delete_path(svn_path):
+  def delete_path(self, svn_path):
     ### FIXME: After we reimplement the head tree mirror sanely, this
     ### should check for empty directory in the head tree and move
     ### the deletion up as far as it can go.  (It's okay to output a
@@ -586,7 +586,7 @@ class Commit:
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = branch_path(ctx, br) + cvs_path
       print '    deleting %s : %s' % (cvs_rev, svn_path)
-      dump.delete_path(cvs_path, svn_path, cvs_rev, rcs_file)
+      dump.delete_path(svn_path)
 
     previous_rev = dump.end_revision()
     print '    new revision:', previous_rev
