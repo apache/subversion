@@ -38,7 +38,10 @@ class Generator(gen_base.GeneratorBase):
       sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
 
       target = target_ob.name
-      path = target_ob.path
+      if isinstance(target_ob, gen_base.TargetJava):
+        path = target_ob.classes
+      else:
+        path = target_ob.path
 
       retreat = gen_base._retreat_dots(path)
 
@@ -71,6 +74,8 @@ class Generator(gen_base.GeneratorBase):
       objnames = string.join(gen_base._strip_path(path, objects))
 
       if isinstance(target_ob, gen_base.TargetJava):
+        ### TODO: --enable-maintainer-mode should add the -g argument
+        ### to include all debugging info in compiled bytecodes.
         self.ofile.write(
           '%s_DEPS = %s %s\n'
           '%s: $(%s_DEPS)\n'
@@ -82,12 +87,22 @@ class Generator(gen_base.GeneratorBase):
              targ_varname))
         for dep in target_ob.deps:
           if isinstance(dep, gen_base.SourceFile):
-            self.ofile.write('%s ' % os.path.join('$(abs_srcdir)', dep.filename))
+            self.ofile.write('%s ' % os.path.join('$(abs_srcdir)',
+                                                  dep.filename))
           elif isinstance(dep, gen_base.HeaderFile):
             self.ofile.write('%s ' % dep.classname)
           else:
             print type(dep)
             raise UnknownDependency
+
+        # Once the bytecodes have been compiled up, we produce the
+        # JAR.
+        if target_ob.jar:
+          self.ofile.write('\n\t$(JAR) cf %s -C %s %s' %
+                           (os.path.join(target_ob.classes, target_ob.jar),
+                            target_ob.classes,
+                            string.join(target_ob.packages, ' ')))
+
         self.ofile.write('\n\n')
       else:
         self.ofile.write(
