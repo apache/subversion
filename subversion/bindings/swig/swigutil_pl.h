@@ -210,7 +210,7 @@ void svn_swig_pl_status_func(void *baton,
                              svn_wc_status_t *status);
 /* Thunked version of svn_client_blame_receiver_t callback type. */
 svn_error_t *svn_swig_pl_blame_func (void *baton,
-                                     apr_off_t line_no,
+                                     apr_int64_t line_no,
                                      svn_revnum_t revision,
                                      const char *author,
                                      const char *date,

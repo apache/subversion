@@ -28,7 +28,7 @@
 /*** Code. ***/
 static svn_error_t *
 blame_receiver (void *baton,
-                apr_off_t line_no,
+                apr_int64_t line_no,
                 svn_revnum_t revision,
                 const char *author,
                 const char *date,

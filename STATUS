@@ -73,17 +73,7 @@ Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
 
-    * Issue #1705 (patch 291)
-      Change blame receiver's line_no argument from apr_off_t to apr_int64_t.
-      Justification:  Fixes the most user visible problem from the
-        apr_off_t issue.
-      Notes: kfogel would even prefer to change to svn_filesize_t
-             instead of apr_int64_t, assuming that issue #1713 is
-             approved.  Suspect same is true of ghudson, but ask him.
-             If also same is true of you, and you vote for this, then
-             please note it here so the merger can do it.
-      Votes:
-       +1: ghudson, kfogel, bliss
+  [none pending]
 
 
     * r8139
@@ -115,7 +105,7 @@ Bindings changes that affect the build system:
      
 Bindings changes that don't affect the build system:
 
-[none pending]
+  [none pending]
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
@@ -123,4 +113,4 @@ These changes are to Subversion tools that do not use the bindings.
 As such, they may be updated independently of any "core" or API
 changes.
 
-[none pending]
+  [none pending]
