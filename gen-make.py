@@ -19,33 +19,22 @@ sys.path.insert(1, 'build')
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
-  'nmake-msvc' : ('gen_msvc_nmake', '### need description'),
-  'mingw' : ('gen_mingw', 'Makefiles for mingw'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
-  'nmake-vcnet' : ('gen_vcnet_nmake', '### need description'),
-  'bpr' : ('gen_bcpp_bpr', '### need description'),
-  'make-bcpp' : ('gen_bcpp_make', '### need description'),
   }
 
-def main(fname, gentype, verfname=None, oname=None,
+def main(fname, gentype, verfname=None,
          skip_depends=0, other_options=None):
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
 
-  try:
-    gen_module = __import__(gen_modules[gentype][0])
-  except ImportError:
-    print 'ERROR: the "%s" generator is not yet implemented.' % gentype
-    sys.exit(1)
+  gen_module = __import__(gen_modules[gentype][0])
 
   generator = gen_module.Generator(fname, verfname, other_options)
+
   if not skip_depends:
     generator.compute_hdr_deps()
 
-  if oname is None:
-    oname = generator.default_output(fname)
-
-  generator.write(oname)
+  generator.write()
 
 
 def _usage_exit():

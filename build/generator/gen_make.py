@@ -20,10 +20,7 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     }
 
-  def default_output(self, conf_path):
-    return os.path.splitext(os.path.basename(conf_path))[0] + '-outputs.mk'
-
-  def write(self, oname):
+  def write(self):
     install_deps = self.graph.get_deps(gen_base.DT_INSTALL)
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
 
@@ -31,7 +28,7 @@ class Generator(gen_base.GeneratorBase):
     install_deps.sort()
     install_sources.sort(lambda s1, s2: cmp(s1.name, s2.name))
 
-    self.ofile = open(oname, 'w')
+    self.ofile = open('build-outputs.mk', 'w')
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
     # write various symbols at the top of the file so they will be
