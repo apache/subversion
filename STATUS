@@ -63,14 +63,6 @@ Candidate changes:
     Votes:
      +1: jerenkrantz
 
-  * r10794
-    Add the new boolean config file option store-passwords.
-    Justification:
-      Unintrusive change.  Much more user friendly than store-auth-creds
-      because username, SSL server cert trust, etc, is still saved.
-    Votes:
-       +1: bliss, ghudson, lundblad
-
   * r10819
     Avoid repository corruption if executed with closed std{in,out,err}
     Justification:
