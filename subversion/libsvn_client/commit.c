@@ -662,7 +662,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   if ((err = import (path, new_entry,
                      editor, edit_baton, nonrecursive, excludes, ctx, pool)))
     {
-      editor->abort_edit (edit_baton, pool);
+      svn_error_clear (editor->abort_edit (edit_baton, pool));
       return err;
     }
 

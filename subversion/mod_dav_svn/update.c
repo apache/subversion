@@ -1274,8 +1274,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             /* we require the `rev' attribute for this to make sense */
             if (! SVN_IS_VALID_REVNUM (rev))
               {
-                /* ### This removes the fs txn.  todo: check error. */
-                svn_repos_abort_report(rbaton);
+                svn_error_clear(svn_repos_abort_report(rbaton));
                 serr = svn_error_create (SVN_ERR_XML_ATTRIB_NOT_FOUND, 
                                          NULL, "rev");
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1295,8 +1294,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                          start_empty, resource->pool);
             if (serr != NULL)
               {
-                /* ### This removes the fs txn.  todo: check error. */
-                svn_repos_abort_report(rbaton);
+                svn_error_clear(svn_repos_abort_report(rbaton));
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the items of "
@@ -1328,8 +1326,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             serr = svn_repos_delete_path(rbaton, path, resource->pool);
             if (serr != NULL)
               {
-                /* ### This removes the fs txn.  todo: check error. */
-                svn_repos_abort_report(rbaton);
+                svn_error_clear(svn_repos_abort_report(rbaton));
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the (missing) "
@@ -1405,8 +1402,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      resource-walker... */
   if (serr != NULL)
     {
-      /* ### This removes the fs txn.  todo: check error. */
-      svn_repos_abort_report(rbaton);
+      svn_error_clear(svn_repos_abort_report(rbaton));
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "A failure occurred during the completion "
                                  "and response generation for the update "

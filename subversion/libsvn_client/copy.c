@@ -718,7 +718,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
  cleanup:
   /* Abort the commit if it is still in progress. */
   if (commit_in_progress)
-    editor->abort_edit (edit_baton, pool); /* ignore return value */
+    svn_error_clear (editor->abort_edit (edit_baton, pool));
 
   /* It's only a read lock, so unlocking is harmless. */
   unlock_err = svn_wc_adm_close (adm_access);

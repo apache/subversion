@@ -712,7 +712,7 @@ svn_subst_copy_and_translate (const char *src,
   const char *dst_tmp;
   svn_stream_t *src_stream, *dst_stream;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
-  svn_error_t *err, *err2;
+  svn_error_t *err;
 
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || keywords))
@@ -739,17 +739,15 @@ svn_subst_copy_and_translate (const char *src,
   if (err)
     {
       /* ignore closure errors if we're bailing. */
-      svn_stream_close (src_stream);
-      svn_stream_close (dst_stream);      
+      svn_error_clear (svn_stream_close (src_stream));
+      svn_error_clear (svn_stream_close (dst_stream));
       if (s)
         apr_file_close (s);
       if (d)
-        apr_file_close (d);      
+        apr_file_close (d);
 
-      err2 = svn_io_remove_file (dst_tmp, pool);      
-      if (err2)
-        svn_error_clear (err2);
-      return 
+      svn_error_clear (svn_io_remove_file (dst_tmp, pool));
+      return
         svn_error_createf (err->apr_err, err,
                            "file translation failed when copying '%s' to '%s'",
                            src, dst);
