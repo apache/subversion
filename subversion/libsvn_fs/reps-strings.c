@@ -304,11 +304,13 @@ rep_undeltify_range (svn_fs_t *fs,
 
   do
     {
-      struct compose_handler_baton cb = { NULL, NULL, trail, FALSE, FALSE };
+      struct compose_handler_baton cb = { 0 };
       char *source_buf, *target_buf;
       apr_size_t target_len;
       int cur_rep;
 
+      cb.trail = trail;
+      cb.done = FALSE;
       for (cur_rep = 0; !cb.done && cur_rep < deltas->nelts; ++cur_rep)
         {
           svn_fs__representation_t *const rep =
