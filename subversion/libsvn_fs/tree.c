@@ -40,6 +40,7 @@
 #include "txn-table.h"
 #include "rev-table.h"
 #include "nodes-table.h"
+#include "node-rev.h"
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
@@ -1060,7 +1061,7 @@ merge (const char **conflict_p,
    *     // change, it bumps the directory's revision, and therefore
    *     // must be able to depend on there being no other changes to
    *     // that directory in the repository.
-   *     if (source's property list differs from ancestor's)
+   *     if (target's property list differs from ancestor's)
    *        conflict;
    *
    *     for (each entry E in ancestor)
@@ -1127,11 +1128,40 @@ merge (const char **conflict_p,
       apr_hash_t *s_entries, *t_entries, *a_entries;
       apr_hash_index_t *hi;
       
-#if 0
-      /* Ben, here ya go. */
-      if (source's property list differs from ancestor's)
-        conflict;
-#endif /* 0 */
+      /* Possible early merge failure: if target and ancestor have
+         different property lists, then the merge should fail.
+         Propchanges can *only* be committed on an up-to-date
+         directory. 
+
+         ### TODO: Please see issue #418 about the inelegance of
+         this. */
+      {
+        const svn_fs_id_t *tgt_id, *anc_id;
+        skel_t *tgt_skel, *anc_skel;
+
+        /* Convert dag_nodes into id's, and id's into skels. */
+        tgt_id = svn_fs__dag_get_id (target);
+        anc_id = svn_fs__dag_get_id (ancestor);
+        SVN_ERR (svn_fs__get_node_revision (&tgt_skel, fs, tgt_id, trail));
+        SVN_ERR (svn_fs__get_node_revision (&anc_skel, fs, anc_id, trail));
+        
+        /* Now compare the prop-keys of the skels.  Note that just
+           because the keys are different -doesn't- mean the proplists
+           have different contents.  But merge() isn't concerned with
+           contents; it doesn't do a brute-force comparison on textual
+           contents, so it won't do that here either.  Checking to see
+           if the propkey atoms are `equal' is enough. */
+        if (! svn_fs__skels_are_equal (SVN_FS__NR_PROP_KEY(tgt_skel),
+                                       SVN_FS__NR_PROP_KEY(anc_skel)))
+          {
+            /* ### kff todo: abstract path creation func here? */
+            *conflict_p = apr_psprintf (trail->pool, "%s", target_path);
+            
+            return svn_error_createf
+              (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
+               "conflict at \"%s\"", *conflict_p);
+          }
+      }
 
       SVN_ERR (svn_fs__dag_dir_entries_hash (&s_entries, source, trail));
       SVN_ERR (svn_fs__dag_dir_entries_hash (&t_entries, target, trail));
@@ -1360,7 +1390,10 @@ merge (const char **conflict_p,
               else if (svn_fs_id_distance (t_entry->id, a_entry->id) != -1)
                 {
                   /* E is an attempt to modify ancestor, so it's a
-                     conflict with the deletion of E in source. */
+                     conflict with the deletion of E in source.
+
+                     ### TODO: see issue #418 about this
+                     inelegance. */
                   *conflict_p = apr_psprintf (trail->pool, "%s/%s",
                                               target_path, t_entry->name);
 

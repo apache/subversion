@@ -539,7 +539,7 @@ svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
   if (skel1->is_atom && skel2->is_atom)
     {
       if ((skel1->len == skel2->len)
-          && (strncmp (skel1->data, skel2->data, skel1->len)))
+          && (! strncmp (skel1->data, skel2->data, skel1->len)))
         return 1;
       else
         return 0;
