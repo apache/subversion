@@ -106,7 +106,7 @@ dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
 AC_PROG_LIBTOOL
 
-NEON_WANTED="`sed -n '/NEON_WANTED=/s/.*=//p' $srcdir/buildcheck.sh`"
+NEON_WANTED="`sed -n '/NEON_WANTED=/s/.*=//p' $srcdir/build/buildcheck.sh`"
 SVN_LIB_NEON($NEON_WANTED)
 
 dnl find Apache
