@@ -184,11 +184,11 @@ int
 svn_path_is_empty (const svn_string_t *path, enum svn_path_style style)
 {
   char dirsep = get_separator_from_style (style);
-
   char buf[3];
+
   buf[0] = '.';
-  buf[0] = dirsep;
-  buf[0] = '\0';
+  buf[1] = dirsep;
+  buf[2] = '\0';
 
   return ((path == NULL)
           || (svn_string_isempty (path))
