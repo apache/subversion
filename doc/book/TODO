@@ -28,11 +28,6 @@ To be fixed by cmpilato:
     and then chuckle about how the examples are still shorter and
     easier to read than they were before.
 
-  - deltification no longer happens in-process -- repository
-    administrators *must* use 'svnadmin deltify', preferably
-    backgrounded in the post-commit hook, to keep their repositories
-    small.
-
   - define a 'project root', recommend 'standard' repos layout beneath
     such roots.
 
@@ -51,11 +46,12 @@ To be fixed by cmpilato:
     application *have* to set up in the cxt_t in order to call an
     svn_client_foo() function?
 
-  - I think we need to add  a *bit* more background on "how berkeley db"
-    works.  It's not clear to most readers 1) what the db logfiles are,
-    2) that they need to be pruned regularly, 3) that they grow *even*
-    if you only do checkouts and updates.   Ben wrote an email about
-    this which should probably be assimilated into ch05:
+  - I think we need to add a *bit* more background on "how berkeley
+    db" works.  It's not clear to most readers 1) what the db logfiles
+    are, 2) that they need to be pruned regularly (if not using 4.2),
+    3) that they grow *even* if you only do checkouts and updates.
+    Ben wrote an email about this which should probably be assimilated
+    into ch05:
 
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=38769
 
@@ -63,8 +59,15 @@ To be fixed by cmpilato:
     think this level of information is the exact right level of BDB
     knowledge that users/admins need to use svn well.
 
+  - Please point out and explain why BerkeleyDB environments aren't
+    portable.  You can't just move it from Unix to Win32.
+
   - book says that deleting a ~/.subversion file will recreate it,
     which is wrong.  the whole directory needs to be renamed and recreated.
+
+  - ch06: externals chapter.  Please be explicit about exactly which
+    commands honor 'svn:externals' (co, up, st, etc.), and exactly
+    which commands don't (commit).
 
 --------------------------------------------------------------
 
@@ -80,42 +83,36 @@ To be fixed by fitz:
   - some folks want a glossary.  that's good, since we have a
     glossary.xml anyway.  :-)  probably something we do at the last minute.
 
-  - Check all commands for flags in ch08
+  - Check all commands for flags in ch09
+
+  - document the 'autoprops' feature in ~/.subversion/servers
+
+  - new 'svn diff' UI (when it's done) -- affects ch03, ch09, and
+    maybe other chapters.
+
 
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
-  - certificate support in the client.  how to configure
-    ~/.subversion/servers, manage certs, etc.
-
-  - the auth data now lives in ~/.subversion/auth.  explain exactly
-    when stuff gets cached, how to prevent it from being cached, and
-    how to invalidate a cache.
-
-  - new 'svn diff' UI (when it's done) -- affects ch03, ch08, and
-    maybe other chapters.
-
   - svn merge --dry-run   (different than 'svn diff')
 
-  - ch06: document the [tunnels] section of ~/.subversion/config.
-    also document the log-encoding and use-commit-times variables in
+  - ch06: document the log-encoding and use-commit-times variables in
     the [miscellany] section
-
-  - need big new section on authorization:  document
-    mod_auth_svn and svnserve.  they now share the same authz file format!
 
   - appA should mention no $Log$ keyword.  Or maybe it should mention
     what keywords *do* exist as well.
 
-  - somehow clarify that --username has no affect on svn:// or
-    svn+ssh://.   Actually;  look at r7060.  Maybe it *does* do
-    something now.
+  - ch04:  new "use-cases" section:
 
-  - ch04:  add use-case of resurrecting a deleted file.  (how do I
-    find out where the file was deleted?  how to use 'merge' to get it
-    back?  how to use 'copy' to get it back?)
+      - resurrecting a deleted file or directory.  (how do I find out
+        where the item was deleted?  how to use 'merge' to get it
+        back;  how to use 'copy' to get it back.)
 
+      - move use-case to new section:  undoing a committed change.
+
+      - move use-case to new section:  merging one branch to another.
+       
   - in httpd.conf setup, remind people not to put the svn <Location>
     within an existing DocumentRoot, else the 301 error.
 

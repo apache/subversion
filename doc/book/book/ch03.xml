@@ -18,7 +18,7 @@
       encounter.  This chapter assumes that you've read and understood
       <xref linkend="svn-ch-2"/> and are familiar with the general
       model of Subversion.  For a complete reference of all commands,
-      see <xref linkend="svn-ch-8"/>.</para>
+      see <xref linkend="svn-ch-9"/>.</para>
 
   </simplesect>
 
@@ -682,7 +682,7 @@ Updated to revision 2.
       <sidebar>
         <title>Changing the Repository Without a Working Copy</title>
 
-        <!-- pll - Fri 07 Feb 2003 12:55:07                              -->
+        <!-- ### pll - Fri 07 Feb 2003 12:55:07                            -->
         <!-- I find this sidebar rather confusing here, since you really   -->
         <!-- haven't gone through explaining the svn command line syntax   -->
         <!-- anywhere.  Maybe a short section explaining that subversion   -->
@@ -841,7 +841,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
               <para>The directory <filename>dir</filename> is
                 unversioned, but is related to a Subversion externals
                 definition.  To find out more about externals
-                definitions, see <xref linkend="svn-ch-6-sect-3"/>.</para>
+                definitions, see <xref linkend="svn-ch-7-sect-3"/>.</para>
             </listitem>
           </varlistentry>
 
@@ -856,7 +856,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
                 status</command>, or by setting the
                 <literal>svn:ignore</literal> property on the parent
                 directory.  For more information on ignored files, see
-                <xref linkend="svn-ch-6-sect-2.3.3" />.</para>
+                <xref linkend="svn-ch-7-sect-2.3.3" />.</para>
 
             </listitem>
           </varlistentry>
@@ -907,7 +907,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
 
         <para>The second column tells the status of a file or
           directory's properties (see <xref
-          linkend="svn-ch-6-sect-2"></xref> for more information on
+          linkend="svn-ch-7-sect-2"></xref> for more information on
           properties).  If an <computeroutput>M</computeroutput>
           appears in the second column, then the properties have been
           modified, otherwise a whitespace will be printed.</para>
@@ -1177,7 +1177,7 @@ $ svn status README
           <command>svn revert</command>) can be used without any
           network access.  This makes it easy to manage your
           changes-in-progress when you are somewhere without a network
-          connection such as traveling on an airplane, riding a
+          connection, such as traveling on an airplane, riding a
           commuter train or hacking on the beach.</para>
 
         <para>Subversion does this by keeping private caches of
@@ -2000,8 +2000,8 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
     <title>Other Useful Commands</title>
 
       <para>While not as frequently used as the commands previously
-      discussed in this chapter, you will need these commands on
-      occasion.</para>
+      discussed in this chapter, you will occasionally need these
+      commands.</para>
 
     <sect2 id="svn-ch-3-sect-7.1">
       <title><command>svn cleanup</command></title>
@@ -2043,7 +2043,7 @@ M      ./somedir/foo.c
       <title><command>svn import</command></title>
 
       <para>The <command>svn import</command> command is a quick way
-        to move an unversioned tree of files into a repository.</para>
+        to copy an unversioned tree of files into a repository.</para>
 
       <screen>
 $ svnadmin create /usr/local/svn/newrepos
@@ -2056,7 +2056,7 @@ Transmitting file data....
 Committed revision 1.
       </screen>
 
-      <para>The above example places the contents of directory
+      <para>The above example copied the contents of directory
         <filename>mytree</filename> under the directory
         <filename>fooproject</filename> in the repository:</para>
 
@@ -2080,9 +2080,9 @@ Committed revision 1.
       <para>Now we've covered most of the Subversion client
           commands.  Notable exceptions are those dealing with
           branching and merging (see <xref linkend="svn-ch-4"/>) and
-          properties (see <xref linkend="svn-ch-6-sect-2"/>).
+          properties (see <xref linkend="svn-ch-7-sect-2"/>).
           However, you may want to take a moment to skim through <xref
-          linkend="svn-ch-8"/> to get an idea of all the many
+          linkend="svn-ch-9"/> to get an idea of all the many
           different commands that Subversion has&mdash;and how you can
           use them to make your work easier.</para>
 

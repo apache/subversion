@@ -295,7 +295,7 @@ M    Resource has local modifications
 C    Resource has conflicts (changes have not been completely merged
        between the repository and working copy version)
 X    Resource is external to this working copy (comes from another
-       repository.  See <xref linkend="svn-ch-6-sect-2.3.6" />)
+       repository.  See <xref linkend="svn-ch-7-sect-2.3.6" />)
 ?    Resource is not under version control
 !    Resource is missing or incomplete (removed by another tool than
        Subversion)
@@ -348,7 +348,7 @@ X    Resource is external to this working copy (comes from another
       subcommands.  To list all properties on an object, use
       <command>svn proplist</command>.</para>
 
-    <para>For more information, see <xref linkend="svn-ch-6-sect-2"/>.</para>
+    <para>For more information, see <xref linkend="svn-ch-7-sect-2"/>.</para>
 
   </sect1>
 
@@ -397,8 +397,8 @@ X    Resource is external to this working copy (comes from another
     <para>Subversion takes the more paranoid route: first, it never
       performs any kind of keyword or line-ending translation unless
       you explicitly ask it do so (see <xref
-      linkend="svn-ch-6-sect-2.3.4"/> and <xref
-      linkend="svn-ch-6-sect-2.3.5"/> for more details).  By default,
+      linkend="svn-ch-7-sect-2.3.4"/> and <xref
+      linkend="svn-ch-7-sect-2.3.5"/> for more details).  By default,
       Subversion treats all file data as literal byte strings, and
       files are always stored in the repository in an untranslated
       state.</para>
@@ -438,7 +438,7 @@ X    Resource is external to this working copy (comes from another
       will update the working copy appropriately.</para>
 
     <para>Subversion defines modules as a list of directories within a
-      directory property:  see <xref linkend="svn-ch-6-sect-3"/>.</para>
+      directory property:  see <xref linkend="svn-ch-7-sect-3"/>.</para>
 
   </sect1>
 

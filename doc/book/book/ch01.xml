@@ -234,7 +234,7 @@
       have all of the packages documented in the INSTALL file.  If you
       plan to work on Subversion itself, you can use your client
       program to grab the latest, bleeding-edge source code.  This is
-      documented in <xref linkend="svn-ch-7-sect-6.2" />.</para>
+      documented in <xref linkend="svn-ch-8-sect-6.2" />.</para>
 
   </sect1>
 
