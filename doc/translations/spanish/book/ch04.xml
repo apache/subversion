@@ -514,20 +514,21 @@ Changed paths:
     
 
     <sect2 id="svn-ch-4-sect-3.1">
-      <title>Copying Specific Changes</title>
+      <title>Copiando cambios específicos</title>
       
-
-      <para>In the previous section, we mentioned that both you and
-        Sally made changes to <filename>integer.c</filename> on
-        different branches.  If you look at Sally's log message for
-        revision 344, you can see that she fixed some spelling errors.
-        No doubt, your copy of the same file still has the same spelling
-        errors.  It's likely that your future changes to this file will
-        be affecting the same areas that have the spelling errors, so
-        you're in for some potential conflicts when you merge your
-        branch someday.  It's better, then, to receive Sally's change
-        now, <emphasis>before</emphasis> you start working too heavily
-        in the same places.</para>
+      <para>El la sección anterior, mencionamos que tanto usted
+        como Sally han realizado cambios a
+        <filename>integer.c</filename> en ramas diferentes.
+        Si observa el informe de cambios de la revisión 344,
+        puede ver que ella realizó algunas correcciones de
+        ortografía. Sin duda, su copia del mismo fichero debe tener
+        todavía los mismos errores de ortografía.  Es probable que
+        futuros cambios al fichero afectarán las mismas áreas que
+        tienen estos errores ortográficos, lo que potencialmente
+        generará conflictos cuando fusione su rama algún día. Es
+        mejor, entonces, recibir ahora los cambios de Sally,
+        <emphasis>antes</emphasis> de que comience a trabajar de
+        forma intensiva en el mismo sitio.</para>
 
       <para>It's time to use the <command>svn merge</command> command.
         This command, it turns out, is a very close cousin to the
