@@ -463,7 +463,6 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
                          svn_string_t *path,
                          apr_pool_t *pool)
 {
-  svn_boolean_t identical_p;
   enum svn_node_kind kind;
   svn_error_t *err;
   svn_string_t *prop_path;
@@ -531,20 +530,39 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   
   /* If we get here, then we know that the filesizes are the same,
      but the timestamps are different.  That's still not enough
-     evidence to make a correct decision.  So we just give up and
-     get the answer the hard way -- a brute force, byte-for-byte
-     comparison. */
-  err = contents_identical_p (&identical_p,
-                              prop_path,
-                              prop_base_path,
-                              pool);
-  if (err)
-    return err;
-  
-  if (identical_p)
-    *modified_p = FALSE;
-  else
-    *modified_p = TRUE;
+     evidence to make a correct decision;  we need to look at the
+     files' contents directly.
+
+     However, doing a byte-for-byte comparison won't work.  The two
+     properties files may have the *exact* same name/value pairs, but
+     arranged in a different order.  (Our hashdump format makes no
+     guarantees about ordering.)
+
+     Therefore, rather than use contents_identical_p(), we use
+     svn_wc__get_local_propchanges(). */
+  {
+    apr_array_header_t *local_propchanges;
+    apr_hash_t *localprops = apr_make_hash (pool);
+    apr_hash_t *baseprops = apr_make_hash (pool);
+
+    err = svn_wc__load_prop_file (prop_path, localprops, pool);
+    if (err) return err;
+
+    err = svn_wc__load_prop_file (prop_base_path, baseprops, pool);
+    if (err) return err;
+
+    err = svn_wc__get_local_propchanges (&local_propchanges,
+                                         localprops,
+                                         baseprops,
+                                         pool);
+    if (err) return err;
+                                         
+    if (local_propchanges->nelts > 0)
+      *modified_p = TRUE;
+    else
+      *modified_p = FALSE;
+  }
+
   
   return SVN_NO_ERROR;
 }
