@@ -475,6 +475,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                        void *subctx,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
                                        void *cb_baton,
+                                       svn_boolean_t use_base,
                                        svn_boolean_t compression,
                                        apr_pool_t *pool)
 {
@@ -486,10 +487,18 @@ static svn_error_t *custom_get_request(ne_session *sess,
   int code;
   int decompress_rv;
   
-  /* See if we can get a version URL for this resource. This will refer to
-     what we already have in the working copy, thus we can get a diff against
-     this particular resource. */
-  SVN_ERR( get_delta_base(&delta_base, relpath, get_wc_prop, cb_baton, pool) );
+  if (use_base)
+    {
+      /* See if we can get a version URL for this resource. This will
+         refer to what we already have in the working copy, thus we
+         can get a diff against this particular resource. */
+      SVN_ERR( get_delta_base(&delta_base, relpath,
+                              get_wc_prop, cb_baton, pool) );
+    }
+  else
+    {
+      delta_base = NULL;
+    }
 
   req = ne_request_create(sess, "GET", url);
   if (req == NULL)
@@ -701,7 +710,8 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   SVN_ERR( custom_get_request(sess, url, relpath,
                               fetch_file_reader, &frc,
-                              get_wc_prop, cb_baton, compression, pool) );
+                              get_wc_prop, cb_baton,
+                              TRUE, compression, pool) );
 
   /* close the handler, since the file reading completed successfully. */
   SVN_ERR( (*frc.handler)(NULL, frc.handler_baton) );
@@ -1030,7 +1040,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   get_file_reader, &fwc,
                                   ras->callbacks->get_wc_prop,
                                   ras->callback_baton,
-                                  ras->compression, pool) );
+                                  FALSE, ras->compression, pool) );
 
       if (fwc.do_checksum)
         {

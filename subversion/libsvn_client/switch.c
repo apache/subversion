@@ -225,6 +225,7 @@ svn_client_switch (const char *path,
       svn_stream_t *file_stream;
       svn_revnum_t fetched_rev = 1; /* this will be set by get_file() */
       apr_status_t apr_err;
+      const char *url_parent, *url_basename, *path_parent;
 
       /* Create a unique file */
       SVN_ERR (svn_io_open_unique_file (&fp, &new_text_path,
@@ -236,30 +237,24 @@ svn_client_switch (const char *path,
       file_stream = svn_stream_from_aprfile (fp, pool);
 
       /* Open an RA session to 'target' file URL. */
-      /* ### FIXME: we shouldn't be passing a NULL base-dir to
-         open_ra_session.  This is a just a way of forcing the server
-         to send a fulltext instead of svndiff data against something
-         in our working copy.  We need to add a callback to
-         open_ra_session that will fetch a 'source' stream from the
-         WC, so that ra_dav's implementation of get_file() can use the
-         svndiff data to construct a fulltext.  */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, NULL,
+      svn_path_split (switch_url, &url_parent, &url_basename, pool);
+      svn_path_split (path, &path_parent, NULL, pool);
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_parent,
+                                            path_parent,
                                             NULL, NULL, TRUE, TRUE,
                                             ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
-      /* Passing "" as a relative path, since we opened the file URL.
-         This pushes the text of the file into our file_stream, which
-         means it ends up in our unique tmpfile.  We also get the full
-         proplist. */
-      SVN_ERR (ra_lib->get_file (session, "", revnum, file_stream,
+      /* Push the file's text into file_stream, which means it ends up
+         in our unique tmpfile.  We also get the full proplist. */
+      SVN_ERR (ra_lib->get_file (session, url_basename, revnum, file_stream,
                                  &fetched_rev, &prophash, pool));
       SVN_ERR (svn_stream_close (file_stream));
       apr_err = apr_file_close (fp); 
       if (apr_err)
-        return svn_error_createf (apr_err, NULL,
-                                  "closing temporary file '%s'", new_text_path);
+        return svn_error_createf
+          (apr_err, NULL, "closing temporary file '%s'", new_text_path);
 
       /* Convert the prophash into an array, which is what
          svn_wc_install_file (and its helpers) want.  */
