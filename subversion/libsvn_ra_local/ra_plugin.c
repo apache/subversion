@@ -314,7 +314,8 @@ svn_ra_local__change_rev_prop (void *session_baton,
 
 static svn_error_t *
 svn_ra_local__get_uuid (void *session_baton,
-                        const char **uuid)
+                        const char **uuid,
+                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
