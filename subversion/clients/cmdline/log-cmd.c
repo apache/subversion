@@ -31,6 +31,8 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_pools.h"
+#include "svn_xml.h"
 #include "cl.h"
 
 
@@ -77,7 +79,69 @@ struct log_message_receiver_baton
 };
 
 
-/* This implements `svn_log_message_receiver_t'. */
+/* Maximum length of a human-readable date string, including final '\0'. */
+#define SVN_LOG__DATE_MAX 38
+
+
+/* Format an svn_time_to_string()-created date for human consumption,
+ * store the result in RESULT, which is at least SVN_LOG__DATE_MAX
+ * bytes long.
+ *
+ * Why do this?  The problem is that svn_time_to_string() returns a
+ * date like this:
+ *
+ *  "Sat 2 Mar 2002 20:41:01.695108 (day 061, dst 0, gmt_off -21600)"
+ *
+ * but humans only want to see:
+ *
+ *  "Sat 2 Mar 2002 20:41:01"
+ *
+ * You would think the part before the dot would be constant length,
+ * but it's not, because the day-of-month can be one or two digits.
+ * Also, we want to get the right result unconditionally, even when
+ * handed an already-truncated date.  So, we have this function to
+ * sort it all out and Do The Right Thing.
+ */
+static void
+humanize_date (char *result, const char *date)
+{
+  const char *p = strchr (date, '.');
+  
+  if (p && ((p - date) < SVN_LOG__DATE_MAX))
+    {
+      strncpy (result, date, (p - date));
+      result[p - date] = '\0';
+    }
+  else  /* hmmm, not the format we expected, so use as much as can */
+    {
+      strncpy (result, date, (SVN_LOG__DATE_MAX - 1));
+      result[SVN_LOG__DATE_MAX - 1] = '\0';
+    }
+}
+
+
+/* This implements `svn_log_message_receiver_t', printing the logs in
+ * a human-readable and machine-parseable format:
+ *
+ * $ svn log -r1847:1846
+ * ------------------------------------------------------------------------
+ * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26 | 7 lines
+ * 
+ * Fix for Issue #694.
+ * 
+ * * subversion/libsvn_repos/delta.c
+ *   (delta_files): Rework the logic in this function to only call
+ * send_text_deltas if there are deltas to send, and within that case,
+ * only use a real delta stream if the caller wants real text deltas.
+ * 
+ * ------------------------------------------------------------------------
+ * rev 1846:  whoever | Wed 1 May 2002 15:23:41 | 1 line
+ *   
+ * imagine an example log message here
+ * ------------------------------------------------------------------------
+ * 
+ * And so on.
+ */
 static svn_error_t *
 log_message_receiver (void *baton,
                       apr_hash_t *changed_paths,
@@ -92,29 +156,9 @@ log_message_receiver (void *baton,
   int lines;
 
   /* As much date as we ever want to see. */
-  char dbuf[38];
+  char dbuf[SVN_LOG__DATE_MAX];
 
-  /* The result of svn_time_to_string() looks something like this:
-   *
-   *  "Sat 2 Mar 2002 20:41:01.695108 (day 061, dst 0, gmt_off -21600)"
-   *
-   * You might think the part before the dot would be constant length,
-   * but apparently it's not; so we grab it the hard way.
-   */
-  {
-    const char *p = strchr (date, '.');
-
-    if (p && ((p - date) < (sizeof (dbuf))))
-      {
-        strncpy (dbuf, date, (p - date));
-        dbuf[p - date] = '\0';
-      }
-    else  /* hmmm, not the format we expected, so use as much as can */
-      {
-        strncpy (dbuf, date, ((sizeof (dbuf)) - 1));
-        dbuf[(sizeof (dbuf)) - 1] = '\0';
-      }
-  }
+  humanize_date (dbuf, date);
 
 #define SEP_STRING \
   "------------------------------------------------------------------------\n"
@@ -160,6 +204,124 @@ log_message_receiver (void *baton,
   printf ("\n");  /* A blank line always precedes the log message. */
   printf ("%s\n", msg);
   printf (SEP_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_log_message_receiver_t', printing the logs in
+ * XML:
+ *
+ * $ svn log --xml -r1648:1649
+ * <log>
+ * <logentry
+ *    revision="1648">
+ * <author>david</author>
+ * <date>Sat 6 Apr 2002 16:34:51.428043 (day 096, dst 0, gmt_off -21600)</date>
+ * <msg> * packages/rpm/subversion.spec : Now requires apache 2.0.36.
+ * </msg>
+ * </logentry>
+ * <logentry
+ *    revision="1649">
+ * <author>cmpilato</author>
+ * <date>Sat 6 Apr 2002 17:01:28.185136 (day 096, dst 0, gmt_off -21600)</date>
+ * <msg>Fix error handling when the $EDITOR is needed but unavailable.  Ah
+ * ... now that&apos;s *much* nicer.
+ * 
+ * * subversion/clients/cmdline/util.c
+ *   (svn_cl__edit_externally): Clean up the &quot;no external editor&quot;
+ *   error message.
+ *   (svn_cl__get_log_message): Wrap &quot;no external editor&quot; 
+ *   errors with helpful hints about the -m and -F options.
+ * 
+ * * subversion/libsvn_client/commit.c
+ *   (svn_client_commit): Actually capture and propogate &quot;no external
+ *   editor&quot; errors.</msg>
+ * </logentry>
+ * </log>
+ *
+ */
+static svn_error_t *
+log_message_receiver_xml (void *baton,
+                          apr_hash_t *changed_paths,
+                          svn_revnum_t rev,
+                          const char *author,
+                          const char *date,
+                          const char *msg)
+{
+  struct log_message_receiver_baton *lb = baton;
+  /* New pool for every received message. */
+  apr_pool_t *subpool = svn_pool_create (lb->pool);
+  /* Collate whole log message into sb before printing. */
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", subpool);
+  char *revstr;
+
+  revstr = apr_psprintf (subpool, "%" SVN_REVNUM_T_FMT, rev);
+  /* <logentry revision="xxx"> */
+  svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "logentry",
+                         "revision", svn_stringbuf_create (revstr, subpool),
+                         NULL);
+
+  /* <author>xxx</author> */
+  svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "author",
+                         NULL);
+  svn_xml_escape_nts (&sb, author, subpool);
+  svn_xml_make_close_tag (&sb, subpool, "author");
+
+  /* Print the full, uncut, date.  This is machine output. */
+  /* <date>xxx</date> */
+  svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "date",
+                         NULL);
+  svn_xml_escape_nts (&sb, date, subpool);
+  svn_xml_make_close_tag (&sb, subpool, "date");
+
+  if (changed_paths)
+    {
+      apr_hash_index_t *hi;
+      char *path;
+
+      /* <paths> */
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "paths",
+                             NULL);
+      
+      for (hi = apr_hash_first (subpool, changed_paths);
+           hi != NULL;
+           hi = apr_hash_next (hi))
+        {
+          void *val;
+          char action;
+          char *actionstr;
+
+          apr_hash_this(hi, (void *) &path, NULL, &val);
+          action = (char) ((int) val);
+
+          actionstr = apr_psprintf (subpool, "%c",
+                                    (action == 'R' ? 'U' : action));
+          /* <path action="X">xxx</path> */
+          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata,
+                                 "path", "action",
+                                 svn_stringbuf_create(actionstr, subpool),
+                                 NULL);
+          svn_xml_escape_nts (&sb, path, subpool);
+          svn_xml_make_close_tag (&sb, subpool, "path");
+        }
+
+      /* </paths> */
+      svn_xml_make_close_tag (&sb, subpool, "paths");
+    }
+
+  /* <msg>xxx</msg> */
+  svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "msg",
+                         NULL);
+  svn_xml_escape_nts (&sb, msg, subpool);
+  svn_xml_make_close_tag (&sb, subpool, "msg");
+  
+  /* </logentry> */
+  svn_xml_make_close_tag (&sb, subpool, "logentry");
+
+  printf ("%s", sb->data);
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -217,14 +379,47 @@ svn_cl__log (apr_getopt_t *os,
 
   lb.first_call = 1;
   lb.pool = pool;
-  SVN_ERR (svn_client_log (auth_baton,
-                           targets,
-                           &(opt_state->start_revision),
-                           &(opt_state->end_revision),
-                           opt_state->verbose,
-                           log_message_receiver,
-                           &lb,
-                           pool));
+  if (opt_state->xml)
+    {
+      svn_stringbuf_t *sb;
+      
+      /* The header generation is commented out because it might not
+         be certain that the log messages are indeed the advertised
+         encoding, UTF-8. The absence of the header should not matter
+         to people processing the output, and they should add it
+         themselves if storing the output as a fully-formed XML
+         document. */
+      /* <?xml version="1.0" encoding="utf-8"?> */
+      /* svn_xml_make_header (&sb, pool); */
+      
+      sb = NULL;
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
+      printf ("%s", sb->data);  /* "<log>" */
+      
+      SVN_ERR (svn_client_log (auth_baton,
+                               targets,
+                               &(opt_state->start_revision),
+                               &(opt_state->end_revision),
+                               opt_state->verbose,
+                               log_message_receiver_xml,
+                               &lb,
+                               pool));
+      
+      sb = NULL;
+      svn_xml_make_close_tag (&sb, pool, "log");
+      printf ("%s", sb->data);  /* "</log>" */
+    }
+  else  /* default output format */
+    {
+      SVN_ERR (svn_client_log (auth_baton,
+                               targets,
+                               &(opt_state->start_revision),
+                               &(opt_state->end_revision),
+                               opt_state->verbose,
+                               log_message_receiver,
+                               &lb,
+                               pool));
+    }
 
   return SVN_NO_ERROR;
 }

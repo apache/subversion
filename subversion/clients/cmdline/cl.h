@@ -48,10 +48,10 @@ typedef enum {
   svn_cl__force_opt,
   svn_cl__locale_opt,
   svn_cl__version_opt,
-  /* Here are authentication args: */
   svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
   svn_cl__targets_opt,
+  svn_cl__xml_opt,
 } svn_cl__longopt_t;
 
 
@@ -89,16 +89,13 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t very_verbose;
   svn_boolean_t update;
   apr_array_header_t *args;
-  /* TODO fixme. This still doesn't handle binary data from a file! */
   svn_stringbuf_t *filedata;
   svn_boolean_t help;
-  /* Here begin authentication args;  add more as needed. */
   svn_stringbuf_t *auth_username;
   svn_stringbuf_t *auth_password;
-  /* Extension arguments (eg arguments to be passed into GNU diff) */
-  svn_stringbuf_t *extensions;
-  /* Targets supplied from a file with --targets */
-  apr_array_header_t *targets;
+  svn_stringbuf_t *extensions;   /* for extension args to subprocesses */
+  apr_array_header_t *targets;   /* when target list supplied from file */
+  svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
 } svn_cl__opt_state_t;
 
 
