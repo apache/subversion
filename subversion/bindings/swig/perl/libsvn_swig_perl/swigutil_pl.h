@@ -49,6 +49,8 @@ extern "C" {
 #endif
 
 
+
+#if SVN_SWIG_VERSION < 103024
 /* If this file is being included outside of a wrapper file, then need to
    create stubs for some of the SWIG types. */
 
@@ -78,6 +80,8 @@ int SWIG_ConvertPtr(SV *, void **, swig_type_info *, int flags);
 void SWIG_MakePtr(SV *, void *, swig_type_info *, int flags);
 
 #endif /* SVN_NEED_SWIG_TYPES */
+#endif /* SVN_SWIG_VERSION < 103024 */
+
 
 apr_pool_t *svn_swig_pl_make_pool (SV *obj);
 

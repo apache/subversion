@@ -566,7 +566,7 @@ class TargetSWIG(TargetLib):
 class TargetSWIGRuntime(TargetLinked):
   def __init__(self, lang):
     self.name = None
-    self.external_lib = "-lswig" + lang_abbrev[lang]
+    self.external_lib = "$(LSWIG" + string.upper(lang_abbrev[lang]) + ")"
 
 class TargetSWIGLib(TargetLib):
   def __init__(self, name, options, gen_obj):
