@@ -980,7 +980,7 @@ write_entry (svn_stringbuf_t **output,
              the uuid. */
           if (entry->uuid)
             {
-              if (!strcmp(entry->uuid, this_dir->uuid))
+              if (strcmp(entry->uuid, this_dir->uuid) == 0)
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, 
                               APR_HASH_KEY_STRING, NULL);
             }

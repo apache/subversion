@@ -1431,8 +1431,6 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 /* UUID manipulation. */
 
 /** Populate @a *uuid with the UUID associated with @a fs.
- *
- * Populate @a *uuid with the UUID associated with @a fs.
  */
 
 svn_error_t *
@@ -1442,8 +1440,6 @@ svn_fs_get_uuid(svn_fs_t *fs,
 
 
 /** Associate @a *uuid with @a fs.
- *
- * Associate @a *uuid with @a fs.
  */
 
 svn_error_t *

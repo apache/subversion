@@ -576,15 +576,15 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
                      svn_fs__bdb_open_changes_table (&fs->changes,
                                                      fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `representations' table",
+  svn_err = BDB_WRAP (fs, "opening `representations' table",
                      svn_fs__bdb_open_reps_table (&fs->representations,
                                                   fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `strings' table",
+  svn_err = BDB_WRAP (fs, "opening `strings' table",
                      svn_fs__bdb_open_strings_table (&fs->strings,
                                                      fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `uuids' table",
+  svn_err = BDB_WRAP (fs, "opening `uuids' table",
                      svn_fs__bdb_open_uuids_table (&fs->uuids,
                                                      fs->env, 0));
   if (svn_err) goto error;

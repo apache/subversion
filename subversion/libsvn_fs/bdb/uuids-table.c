@@ -27,7 +27,9 @@
 #include "uuids-table.h"
 
 
-/*** Creating and opening the uuids table. ***/
+/*** Creating and opening the uuids table.
+     When the table is created, the repository's uuid is
+     is generated and stored as record #1. ***/
 
 int
 svn_fs__bdb_open_uuids_table (DB **uuids_p,
@@ -118,7 +120,7 @@ svn_error_t *svn_fs__bdb_set_uuid (svn_fs_t *fs,
     value.data = apr_pstrmemdup(trail->pool, uuid, value.size);
      
     SVN_ERR (BDB_WRAP (fs,
-                       "get repository uuid",
+                       "set repository uuid",
                        uuids->put (uuids, trail->db_txn, &key, &value, 0)));
 
     return SVN_NO_ERROR;
