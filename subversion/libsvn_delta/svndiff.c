@@ -399,7 +399,7 @@ write_handler (void *baton,
   if (db->header_bytes < 4)
     {
       int nheader = 4 - db->header_bytes;
-      if (nheader < *len)
+      if (nheader > *len)
         nheader = *len;
       if (memcmp (buffer, "SVN\0" + db->header_bytes, nheader) != 0)
         return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
