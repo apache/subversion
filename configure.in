@@ -153,8 +153,8 @@ NEON_LATEST_WORKING_VER="`sed -n '/NEON_LATEST_WORKING_VER=/s/.*=//p' $srcdir/bu
 eval "`grep '^ *NEON_URL=' $srcdir/build/buildcheck.sh`"
 SVN_LIB_NEON($NEON_WANTED_REGEX, $NEON_LATEST_WORKING_VER, $NEON_URL)
 
-dnl find Apache
-SVN_FIND_APACHE
+dnl find Apache with a recent-enough magic module number.
+SVN_FIND_APACHE(20020903)
 
 dnl Check for libraries --------------------
 

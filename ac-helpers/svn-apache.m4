@@ -10,6 +10,8 @@ dnl
 
 AC_DEFUN(SVN_FIND_APACHE,[
 
+HTTPD_WANTED_MMN="$1"
+
 AC_MSG_CHECKING(for static Apache module support)
 AC_ARG_WITH(apache,
 AC_HELP_STRING([--with-apache=DIR],
@@ -29,6 +31,17 @@ AC_HELP_STRING([--with-apache=DIR],
 		BINNAME=mod_dav_svn.a
 
   		AC_MSG_RESULT(yes - Apache 2.0.x)
+
+                AC_MSG_CHECKING([httpd version])
+                AC_EGREP_CPP(VERSION_OKAY,
+                [
+#include "$withval/include/ap_mmn.h"
+#if AP_MODULE_MAGIC_AT_LEAST($HTTPD_WANTED_MMN,0)
+VERSION_OKAY
+#endif],
+                [AC_MSG_RESULT([recent enough])],
+                [AC_MSG_ERROR
+                 ([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
 
                 if test ! -r $withval/srclib/apr/include/apr.h; then
                         AC_MSG_WARN(Apache 2.0.x is not configured)
@@ -71,6 +84,18 @@ if test -n "$APXS" -a "$APXS" != "no"; then
     APXS_INCLUDE="`$APXS -q INCLUDEDIR`"
     if test -r $APXS_INCLUDE/mod_dav.h; then
         AC_MSG_RESULT(found at $APXS)
+
+        AC_MSG_CHECKING([httpd version])
+        AC_EGREP_CPP(VERSION_OKAY,
+        [
+#include "$APXS_INCLUDE/ap_mmn.h"
+#if AP_MODULE_MAGIC_AT_LEAST($HTTPD_WANTED_MMN,0)
+VERSION_OKAY
+#endif],
+        [AC_MSG_RESULT([recent enough])],
+        [AC_MSG_ERROR
+         ([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
+
     elif test "$APXS_EXPLICIT" != ""; then
 	AC_MSG_ERROR(no - APXS refers to an old version of Apache
                      Unable to locate $APXS_INCLUDE/mod_dav.h)
