@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include <apr_fnmatch.h>
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -30,11 +31,184 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
+#include "svn_config.h"
 #include "client.h"
 
 
 
 /*** Code. ***/
+
+/* This structure is used as baton for enumerating the config entries
+   in the auto-props section.
+*/
+typedef struct
+{
+  /* the file name for which properties are searched */
+  const char *filename;
+
+  /* when this flag is set the hash contains svn:executable */
+  svn_boolean_t have_executable;
+
+  /* when mimetype is not NULL is set the hash contains svn:mime-type */
+  const char *mimetype;
+
+  /* the hash table for storing the property name/value pairs */
+  apr_hash_t *properties;
+
+  /* a pool used for allocating memory */
+  apr_pool_t *pool;
+} auto_props_baton_t;
+
+/* For one auto-props config entry (NAME, VALUE), if the filename pattern
+   NAME matches BATON->filename then add the properties listed in VALUE
+   into BATON->properties.  BATON must point to an auto_props_baton_t.
+*/
+static svn_boolean_t
+auto_props_enumerator (const char *name,
+                       const char *value,
+                       void *baton)
+{
+  auto_props_baton_t *autoprops = baton;
+  char *property;
+  char *last_token;
+  int len;
+
+  /* nothing to do here without a value */
+  if (strlen (value) == 0)
+    return TRUE;
+
+  /* check if filename matches and return if it doesn't */
+  if (apr_fnmatch (name, autoprops->filename, 0) == APR_FNM_NOMATCH)
+    return TRUE;
+  
+  /* parse the value */
+  property = apr_pstrdup (autoprops->pool, value);
+  property = apr_strtok (property, ";", &last_token);
+  while (property)
+    {
+      char *value;
+
+      value = strchr (property, '=');
+      if (value)
+        {
+          *value = 0;
+          value++;
+          apr_collapse_spaces (value, value);
+        }
+      else
+        value = "";
+      apr_collapse_spaces (property, property);
+      len = strlen (property);
+      if (len > 0)
+        {
+          apr_hash_set (autoprops->properties, property, len, value );
+          if (strcmp (property, SVN_PROP_MIME_TYPE) == 0)
+            autoprops->mimetype = value;
+          else if (strcmp (property, SVN_PROP_EXECUTABLE) == 0)
+            autoprops->have_executable = TRUE;
+        }
+      property = apr_strtok (NULL, ";", &last_token);
+    }
+  return TRUE;
+}
+
+svn_error_t *
+svn_client__get_auto_props (apr_hash_t **properties,
+                            const char **mimetype,
+                            const char *path,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  const char *cfgvalue;
+  auto_props_baton_t autoprops;
+
+  /* initialisation */
+  autoprops.properties = apr_hash_make (pool);
+  autoprops.filename = svn_path_basename (path, pool);
+  autoprops.pool = pool;
+  autoprops.mimetype = NULL;
+  autoprops.have_executable = FALSE;
+  *properties = autoprops.properties;
+  cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                        APR_HASH_KEY_STRING);
+
+  /* check that auto props is enabled */
+  svn_config_get (cfg, &cfgvalue, SVN_CONFIG_SECTION_MISCELLANY,
+                  SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, "no");
+  if (strcmp (cfgvalue, "yes") == 0)
+  {
+    /* search for auto props */
+    svn_config_enumerate (cfg, SVN_CONFIG_SECTION_AUTO_PROPS,
+                          auto_props_enumerator, &autoprops);
+  }
+  /* if mimetype has not been set check the file */
+  if (!autoprops.mimetype)
+    {
+      SVN_ERR (svn_io_detect_mimetype (&autoprops.mimetype, path, pool));
+      if (autoprops.mimetype)
+        apr_hash_set (autoprops.properties, SVN_PROP_MIME_TYPE,
+                      strlen (SVN_PROP_MIME_TYPE), autoprops.mimetype );
+    }
+
+  /* if executable has not been set check the file */
+  if (!autoprops.have_executable)
+    {
+      svn_boolean_t executable = FALSE;
+      SVN_ERR (svn_io_is_file_executable (&executable, path, pool));
+      if (executable)
+        apr_hash_set (autoprops.properties, SVN_PROP_EXECUTABLE,
+                      strlen (SVN_PROP_EXECUTABLE), "" );
+    }
+
+  *mimetype = autoprops.mimetype;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+add_file (const char *path,
+          svn_client_ctx_t *ctx,
+          svn_wc_adm_access_t *adm_access,
+          apr_pool_t *pool)
+{
+  apr_hash_t* properties;
+  apr_hash_index_t *hi;
+  const char *mimetype;
+
+  /* add the file */
+  SVN_ERR (svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       NULL, NULL, pool));
+  /* get automatic properties */
+  SVN_ERR (svn_client__get_auto_props (&properties, &mimetype, path, ctx,
+                                       pool));
+  if (properties)
+    {
+      /* loop through the hashtable and add the properties */
+      for (hi = apr_hash_first (pool, properties);
+           hi != NULL; hi = apr_hash_next (hi))
+        {
+          const void *propname;
+          void *propvalue;
+          svn_string_t propvaluestr;
+
+          apr_hash_this (hi, &propname, NULL, &propvalue);
+          propvaluestr.data = propvalue;
+          propvaluestr.len = strlen (propvaluestr.data);
+          SVN_ERR (svn_wc_prop_set (propname, &propvaluestr, path,
+                                    adm_access, pool));
+        }
+    }
+  /* Report the addition to the caller. */
+  if (ctx->notify_func != NULL)
+    (*ctx->notify_func) (ctx->notify_baton, path, svn_wc_notify_add,
+                         svn_node_file,
+                         mimetype,
+                         svn_wc_notify_state_unknown,
+                         svn_wc_notify_state_unknown,
+                         SVN_INVALID_REVNUM);
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 add_dir_recursive (const char *dirname,
@@ -97,9 +271,7 @@ add_dir_recursive (const char *dirname,
         SVN_ERR (add_dir_recursive (fullpath, dir_access, ctx, subpool));
 
       else if (this_entry.filetype == APR_REG)
-        SVN_ERR (svn_wc_add (fullpath, dir_access, NULL, SVN_INVALID_REVNUM,
-                             ctx->cancel_func, ctx->cancel_baton,
-                             ctx->notify_func, ctx->notify_baton, subpool));
+        SVN_ERR (add_file (fullpath, ctx, dir_access, subpool));
 
       /* Clean out the per-iteration pool. */
       svn_pool_clear (subpool);
@@ -146,6 +318,8 @@ add (const char *path,
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && recursive)
     err = add_dir_recursive (path, adm_access, ctx, pool);
+  else if (kind == svn_node_file)
+    err = add_file (path, ctx, adm_access, pool);
   else
     err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,

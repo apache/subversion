@@ -127,6 +127,7 @@ temp_dir = 'local_tmp'
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
+default_config_dir = config_dir
 
 
 #
@@ -225,6 +226,20 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
     map(sys.stdout.write, stderr_lines)
 
   return stdout_lines, stderr_lines
+
+def set_config_dir(cfgdir):
+  "Set the config directory."
+
+  global config_dir
+  config_dir = cfgdir
+
+def reset_config_dir():
+  "Reset the config directory to the default value."
+
+  global config_dir
+  global default_config_dir
+
+  config_dir = default_config_dir
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -442,6 +457,7 @@ def run_one_test(n, test_list):
   exit_code = tc.run(args)
   if sandbox is not None and not exit_code and cleanup_mode:
     sandbox.cleanup_test_paths()
+  reset_config_dir()
   return exit_code
 
 def _internal_run_tests(test_list, testnum=None):

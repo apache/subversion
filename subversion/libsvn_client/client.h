@@ -237,6 +237,21 @@ svn_error_t * svn_client__get_export_editor (const svn_delta_editor_t **editor,
 
 /*** Add/delete ***/
 
+/* Read automatic properties matching PATH from CTX->config.
+   A hash is returned in *PROPERTIES containing propname/value pairs or
+   when auto-props are disabled *PROPERTIES is set to NULL.
+   *MIMETYPE is set to to the mimetype or to NULL.
+   This function does not create a subpool, the caller is responsible to
+   create one if necessary.
+*/
+svn_error_t *
+svn_client__get_auto_props (apr_hash_t **properties,
+                            const char **mimetype,
+                            const char *path,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool);
+                            
+
 /* The main logic for client deletion from a working copy. Deletes PATH
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE is TRUE.

@@ -106,29 +106,35 @@ import_file (const svn_delta_editor_t *editor,
 {
   void *file_baton;
   const char *mimetype;
-  svn_boolean_t executable;
   unsigned char digest[MD5_DIGESTSIZE];
   const char *text_checksum;
+  apr_hash_t* properties;
+  apr_hash_index_t *hi;
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
                              pool, &file_baton));
 
-  /* If the file has a discernable mimetype, add that as a property to
-     the file. */
-  SVN_ERR (svn_io_detect_mimetype (&mimetype, path, pool));
-  if (mimetype)
-    SVN_ERR (editor->change_file_prop (file_baton, SVN_PROP_MIME_TYPE,
-                                       svn_string_create (mimetype, pool), 
+  /* add automatic properties */
+  SVN_ERR (svn_client__get_auto_props (&properties, &mimetype, path, ctx,
                                        pool));
+  if (properties)
+    {
+      for (hi = apr_hash_first (pool, properties);
+           hi != NULL; hi = apr_hash_next (hi))
+        {
+          const void *propname;
+          void *propvalue;
+          svn_string_t propvaluestr;
 
-  /* If the file is executable, add that as a property to the file. */
-  SVN_ERR (svn_io_is_file_executable (&executable, path, pool));
-  if (executable)
-    SVN_ERR (editor->change_file_prop (file_baton, SVN_PROP_EXECUTABLE,
-                                       svn_string_create ("", pool), 
-                                       pool));
-  
+          apr_hash_this (hi, &propname, NULL, &propvalue);
+          propvaluestr.data = propvalue;
+          propvaluestr.len = strlen (propvaluestr.data);
+          SVN_ERR (editor->change_file_prop (file_baton, propname,
+                                             &propvaluestr, pool));
+        }
+    }
+
   if (ctx->notify_func)
     (*ctx->notify_func) (ctx->notify_baton,
                          path,
