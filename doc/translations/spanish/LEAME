@@ -133,11 +133,10 @@ sección <para></para> por día, para evitar saturarse. Mejor cambios
 pequeños frecuentes que ningún cambio.
 
 No poder traducir algo en esos 14 es algo que puede pasar, la vida
-es así. No cumplir estos plazos no acarrea ningún perjuicio para el
-traductor. Tras 90 días del último cambio realizado, se notificará
-a los administradores del repositorio para que cancelen el acceso
-de escritura al traductor, por considerar que ya no colabora con
-el proyecto.
+es así. No cumplir estos plazos no acarrea ningún perjuicio para
+el traductor. La política de acceso de escritura al repositorio
+de Subversion es permisiva, así que una vez obtenido el acceso de
+escritura ya nunca lo cancelan.
 
 El trabajo de revisión normalmente no se hará de forma global hasta
 que al menos un capítulo esté completo. No obstante, si leyendo algo
@@ -319,9 +318,6 @@ Reglas mínimas para traductores con acceso de escritura
 Las siguientes reglas están orientadas a aquellos que tienen acceso
 de escritura al servidor y trabajan de forma activa sobre algún
 fichero en particular:
-
-- Se pierde acceso de escritura al repositorio (en caso de tenerlo)
-  tras 90 días sin realizar ningún cambio en el repositorio.
 
 - Como cambio al repositorio se considera cualquier modificación
   por pequeña que sea a cualquier fichero del proyecto (incluyendo
