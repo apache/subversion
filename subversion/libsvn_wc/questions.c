@@ -629,17 +629,12 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
   *text_conflicted_p = FALSE;
   *prop_conflicted_p = FALSE;
 
-  /* ### If the entry is not marked as conflicted, we don't even check
-     for conflict files.  For now this means we won't detect it if
-     there's an inconsistency between entry->conflicted and real-world
-     conflict state, but since the entry->conflicted flag is about to
-     go away anyway, that's fine. */
-
   /* Look for any text conflict, exercising only as much effort as
      necessary to obtain a definitive answer.  This only applies to
      files, but we don't have to explicitly check that entry is a
      file, since these attributes would never be set on a directory
-     anyway.  */
+     anyway.  A conflict file entry notation only counts if the
+     conflict file still exists on disk.  */
   if (entry->conflict_old)
     {
       path = svn_stringbuf_dup (dir_path, subpool);
@@ -648,7 +643,8 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
-  else if (entry->conflict_new)
+
+  if ((! *text_conflicted_p) && (entry->conflict_new))
     {
       path = svn_stringbuf_dup (dir_path, subpool);
       svn_path_add_component (path, entry->conflict_new);
@@ -656,7 +652,8 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
-  else if (entry->conflict_wrk)
+
+  if ((! *text_conflicted_p) && (entry->conflict_wrk))
     {
       path = svn_stringbuf_dup (dir_path, subpool);
       svn_path_add_component (path, entry->conflict_wrk);
