@@ -1,4 +1,4 @@
-Last updated: $Date: 2001-04-19 22:37:57 $
+Last updated: $Date: 2001-05-03 21:35:07 $
 
 [Note: much of this was thought up by Jim Blandy, or developed in
 conversation with him.  Please review, folks; I'm planning to start on
@@ -388,4 +388,140 @@ I'm not sure what to do with that.  It almost seems like we want the
 text delta computation algorithm to optimize deltas for network
 transmission and deltas for storage differently.
 
+
+------------------------------------------------------------------------
+  Notes from Brane: Delta composition
 
+Despite JimB's concerns, it turns out that delta composition is
+straight-forward. The basic idea is that combining two deltas is
+equivalent to applying the second delta to a representation of the
+first delta's result. Bear with me while I shamelessly abuse what
+little I remember about linear algebra.
+
+Given two deltas, A and B, and the source stream S, we want to
+construct a composed delta, AB, that converts S to the target stream
+T. Let's borrow notation from linear algebra and write this
+transformation like this:
+
+    T = AB(S)
+
+Abusing algebra some more, I'll assume that a delta behaves like any
+other linear transformatsion; therefore,
+
+    AB(S) = B(A(S))
+
+and since I'm not about to develop any rigorous proofs here, I'll
+just say that it follows from the above that
+
+    T = B(S'), where S' = A(S)
+
+A small note here: Every delta is actually an n-tuple delta
+opserations, represented by what I'll call the delta operators [n]
+(for new data), [s] (for source copies) and [t] (for target
+copies). [s] and [t] create bits of the target stream by operating on
+contiguous parts of the source and (existing) target stream,
+respectively; while [n] does the same by operating on raw data.
+
+
+Now, what we actually want to do is derive some form of AB (which, by
+the way, does not have a unique representation, sice we're not trying
+to find the optimal ("normalized") transform) that doesn't in any way
+rely on the value of S'. We do that by building a representation of S'
+that relies only on S, and any new data introduced by the [n]
+operators in A. That's possible because any [t] ops in A merely copy
+parts of S' that have been previously defined by [s] and [n]
+ops. Transforming A by (recursively) replacing all [t] ops with the
+equivalent [s] and [n] ops gives us exactly such a representation,
+which I'll call A'. [*]
+
+Building AB from B and A' is trivial: traversing the list of delta ops
+in B, copy all [n] and [t] ops into the result; for [s] ops, copy the
+range of ops from A' that define the appropriate range in S'. For some
+of the copies, the first or last op from the range in A' will have to
+be split, and the first op in the copy range can sometimes be merged
+with the previous op in AB.
+
+
+Of course, stopping here could give a very sub-optimal AB, because it
+could contain many duplicate copies of the same op ranges from A'. We
+fix this by doing exactly the opposite transformation than A->A': by
+transforming [s] ops from B into [t] ops. We do this by recording the
+source and target of each copy from A' to AB and, whenever the [s]
+from B describes a range in T that was already defined, converting
+that into a [t] instead [==]. Unlike the A->A' transform, we can't remove
+all copies from A' to AB (we can only do that when AB doesn't refer to
+S at all), but we can significantly reduce the number of such copies.
+
+Finally, the resulting AB will usually not be the optimal delta from S
+to T, because we will never actually look at S while constructing AB.
+
+
+Summarizing the above, we get the following delta composition
+algorithm:
+
+    ;; X is the set of byte ranges in T defined by copies from S'
+    ;; Y is the current offset in T, defined by the ops in AB
+    foreach OP in B:
+      if (OP = [t]) or (OP = [n]):
+        copy OP to AB
+      else
+        R = (set of ops from A that define S'[OP.offset, OP.length])
+[**]    using X, find the optimal set O of [t] ops to replace part of R
+        foreach OP' in R:
+          if OP' is in (R - O):
+            if (OP' = [t]):
+[*]           replace OP' with equivalent [s] and [n] ops
+            copy OP' to AB
+          else
+[**]        copy OP's equivalent in O to AB
+        insert [Y, OP.length] into X
+
+
+This algorithm ignores details such as op splitting and merging,
+ensuring every op from O gets copied exactly once, helper indexes,
+etc..., but those are implementation details.
+
+
+------------------------------------------------------------------------
+  Notes from Brane: Delta storage
+
+O.K., now that delta composition is out of the way, let's talk a bit
+about storing and retrieving deltified text from the filesystem. I'll
+just jot down a few thoughts about how this could be done, assuming
+one of two possible models of storage management in the filesystem:
+
+  a) all data store and retreive operations are synchronous; or,
+  b) deltification can run in the background.
+
+
+1) Storing new data
+
+New data arrives either as fulltext (from add) or as a delta from an
+existing version (copy, modify).
+
+  a) if the new data is a delta, convert it to fulltext (possibly
+     combining several existing deltas in the process). Store the
+     fulltext in the tip, and replace the previous tip (which, by
+     induction, contains fulltext) with a delta from the current tip.
+
+  b) store the fulltext or delta in the tip and mark it for async
+     modification. Do a) in the background.
+
+2) Retreiving old data
+
+  a) If the data is a delta, follow the delte references (combining
+     the deltas) until a fulltext is found; apply the combined delta
+     to get the required fulltext.
+
+     If the combined delta reduces to a no-op (the two fulltexts are
+     the same), store the fulltext in the younger of the two nodes and
+     replace the older node's data with a "same" note.
+
+  b) Same as para 1 of a), then mark the node for async
+     modification. In the background, find the diff between the two
+     fulltexts. If they're equal, do para 2 of a). Otherwise, if the
+     diff is smaller than the current diff in the node, replace the
+     current representation. ("Smaller" could be construed as "more
+     optimal" -- it would make sense to take into account the number
+     of delta combinations that could be skipped by replacing the
+     current representation when comparing sizes.)
