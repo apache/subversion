@@ -65,15 +65,22 @@ completely independent of one another.
 
 * End-of-line conversion (on/off)
 
-* Check for commit markers prior to checkin (on/off)
+* Check for conflict markers/state prior to checkin (on/off)
 
+* Will we provide anything like the most basic tasks that .cvswrappers does?
 
 
-Global options
+Common options
 ==============
+
+  /* While these are listed under `common options', we would probably
+   be well-served to document which subcommands support which
+   options. -Fitz */
+
 
   -? -h -H --help  Help.
   -q               Quiet.  (CVS has two levels of this, but that's overkill?)
+                   (Yes, overkill. -Fitz)  
   -v VERSION       Like "cvs cmd -r REV"
   --version        Print program name, version, and url.
                      /* Problem: "--version" and "-v" are both
@@ -81,14 +88,22 @@ Global options
                         things. */
   -V --verbose     Run with a wordily prolix verbositude.
   -D DATE          Like "cvs cmd -D DATE"
-  -l               Local dir only, do not recurse.
+  -l               Local dir only, do not recurse. 
+                   (-R doesn't apply as it is the default behavior)
   -d               Target directory (like "cvs checkout -d DIR")
   -f               Force (probably useful for a few commands)
+  -m               Use "message" for the creation log.
+  -F file          Read the log message from file.
+
+  -p               Check out/update/whatever files to standard output 
+                   (avoids stickiness).
+
   --dry-run        Like "cvs -n"
   --no-rc          Suppress reading of .svnrc.
   --trace          Like "cvs -t"
   --               End of option processing (this is the standard, right?)
                    (Yes, it is one of the standards) :)
+
 
   -R REPOSITORY    Use REPOSITORY.
                      /* Issue: -R may be unnecessary, if arguments
@@ -114,40 +129,40 @@ Summary:
    commit   | ci
    add      | ad | new
    rename   | mv
-   delete   | del | rm
+   delete   | rm | del
    copy     | cp
    branch  /* implemented via copy, though may want to be its own command */
    tag     /* implemented via copy, though may want to be its own command */
-   status   | stat
+   status   | st | stat
    diff     | di | dif
    rdiff
-   annotate | ann
+   annotate | an | ann
    import   | im | imp
    log      | lo
-   propset  | pset
-   propget  | pget
+   propset  | ps | pset
+   propget  | pg | pget
    apply    | ap
    merge    | me
    convert  | cv
+   sync     | sy
+   repo
 
-   /* Karl: Why are some short commands 2 letters, some 3, and some 4?
-            Would it be better to make them all 2 letters? -Fitz */
+NOTE: For now, I am not including Common Options in the usage
+      statements for each subcommand -Fitz
 
 
   checkout
   ========
 
-    -R    Process directories recursively. (Default)
-    -l    Local directory only, not recursive
+  Usage: svn checkout [-N] [-c] [-s] modules...
 
-    -d dir    Check out into dir instead of module name.
     -N    Don't shorten module paths if -d specified.
-    /* This feels *weird* to me. Why have -d if you don't want things short? */
+    /* This feels *weird* to me. Why use -d if you don't want things short? */
 
-    -p    Check out files to standard output (avoids stickiness).
 
-    Module specific commands (I entertained the thought of making
-          `modules' a subcommand--thoughts?)
+    Module specific commands 
+    /* I entertained the thought of making
+       `modules' a subcommand and merge the following--thoughts? -Fitz */
 
     -c    "cat" the module database.
     -s    Like -c, but include module status.
@@ -164,15 +179,10 @@ Summary:
   update
   ======
 
+  Usage: svn update [-C] [--dirs] [-I ign] files...
+
     -C    Overwrite locally modified files with clean repository copies.
-    -d    Build directories, like checkout does.
-
-    -R    Process directories recursively.
-    -l    Local directory only, no recursion.
-
-    -v version   Update using specified revision/tag (is sticky).
-
-    -p    Send updates to standard output (avoids stickiness).
+    --dirs    Build directories, like checkout does.
 
     -I ign    More files to ignore (! to reset).
 
@@ -186,15 +196,11 @@ Summary:
 
   commit
   ======
+
+  Usage: svn commit files...
+
+- Looks like all these guys have moved to Common Options.
  
-    -R    Process directories recursively. (Default)
-    -l    Local directory only (not recursive).
-
-    -F file    Read the log message from file.
-    -m msg    Log message.
-
-    -r rev    Commit to this branch or trunk revision.
-
 /* Do these apply to svn? 
  *  -n    Do not run the module program (if any).
  *  -f    Force the file to be committed; disables recursion.
@@ -205,20 +211,34 @@ Summary:
 
   add
   === 
-    -m    Use "message" for the creation log.
+
+  Usage: svn add files...
+
+- Looks like all these guys have moved to Common Options.
 
 
   rename
   ======
 
-  /* I fell asleep here */
+  Usage: svn rename FILE1 FILE2
+
+  This command is syntactic sugar for 'svn repo mv FILE1 FILE2', no?
+
  
+
   delete
   ======
  
+  Usage: cvs remove [-f] files...
+
+    -f    Delete the file before removing it.
+
+
   copy
   ====
  
+  /* I fell asleep here */
+
   branch  /*  implemented via copy, though may want to be its own command */
   ======
  
@@ -265,7 +285,19 @@ svn convert local-dir remote-dir
 
 (svn vert)
 
+
+  repo
+  ====
 
+
+
+  sync
+  ====
+
+This is going to take a bit of explaining. Imagine an intelligent
+update that knows to add new files and remove files that you've
+removed, and all recursively (without having to svn add, svn rm, ad
+nauseam). More to come!
 
 
 Miscellaneous Notes and addenda
