@@ -421,26 +421,42 @@ typedef struct svn_delta_edit_fns_t
      ANCESTOR_PATH and ANCESTOR_VERSION indicate the ancestor of the
      resulting object.
 
-     There are two restrictions on the order in which the producer may
-     use the batons:
+     There are five restrictions on the order in which the producer
+     may use the batons:
 
-     - The producer may call `replace_directory', `add_directory',
-       `replace_file', `add_file', or `delete' at most once on any given
-       directory entry.
+     1. The producer may call `replace_directory', `add_directory',
+        `replace_file', `add_file', or `delete' at most once on any
+        given directory entry.
 
-     - The producer may not close a directory baton until it has
-       closed all batons for its subdirectories.
+     2. The producer may not close a directory baton until it has
+        closed all batons for its subdirectories.
 
-     What these rules add up to is that you, the producer, need to use
-     directory batons as if you were doing a single traversal of the
-     tree.  You go in only once, and you finish all your
-     subdirectories before you leave.
+     3. When a producer calls `replace_directory' or `add_directory',
+        it must specify the most recently opened of the currently open
+        directory batons.  Put another way, the producer cannot have
+        to sibling directory batons open at the same time.
 
-     Note that the `close' rule does *not* apply to file batons: you
-     don't need to close a file baton before closing its parent
-     directory's baton.  You can keep as many file batons alive for as
-     long as you like, and call `apply_textdelta' or
-     `change_file_prop' on them any time you please.
+     4. When the producer calls `replace_file' or `add_file', either:
+
+        (a) The producer must follow with the changes to the file
+        (`change_file_prop' and/or `apply_textdelta', as applicable)
+        followed by a `close_file' call, before issuing any other file
+        or directory calls, or
+
+        (b) The producer must follow with a `change_file_prop' call if
+        it is applicable, before issuing any other file or directory
+        calls; later, after all directory batons including the root
+        have been closed, the producer must issue `apply_textdelta'
+        and `close_file' calls.
+
+     5. When the producer calls `apply_textdelta', it must make all of
+        the window handler calls (including the NULL window at the
+        end) before issuing any other edit_fns calls.
+
+     So, the producer needs to use directory and file batons as if it
+     is doing a single depth-first traversal of the tree, with the
+     exception that the producer may keep file batons open in order to
+     make apply_textdelta calls at the end.
 
      These restrictions make it easier to write a consumer that
      generates an XML-style tree delta.  An XML tree delta mentions
