@@ -709,6 +709,10 @@ svn_client_status (svn_revnum_t *youngest,  /* only touched if `update' set */
  * messages from youngest to oldest, where the oldest commit is
  * revision 1.  That works fine, except when there are no commits in
  * the repository, hence this special case.
+ *
+ * If @a ctx->notify_func is non-null, then call @a ctx->notify_func/baton
+ * with a 'skip' signal on any unversioned targets.
+ *
  */
 svn_error_t *
 svn_client_log (const apr_array_header_t *targets,

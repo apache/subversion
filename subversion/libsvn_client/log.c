@@ -82,7 +82,7 @@ svn_client_log (const apr_array_header_t *targets,
   if (svn_path_is_url (path))
     {
       base_url = path;
-      
+
       /* Initialize this array, since we'll be building it below */
       condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
 
@@ -111,10 +111,12 @@ svn_client_log (const apr_array_header_t *targets,
     {
       svn_wc_adm_access_t *adm_access;
       apr_array_header_t *target_urls;
+      apr_array_header_t *real_targets;
       int i;
       
       /* Get URLs for each target */
       target_urls = apr_array_make (pool, 1, sizeof (const char *));
+      real_targets = apr_array_make (pool, 1, sizeof (const char *));
       for (i = 0; i < targets->nelts; i++) 
         {
           const svn_wc_entry_t *entry;
@@ -124,9 +126,18 @@ svn_client_log (const apr_array_header_t *targets,
                                           FALSE, FALSE, pool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
           if (! entry)
-            return svn_error_createf
-              (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-              "svn_client_log: '%s' is not under revision control", target);
+            {
+              /* Remove unversioned target from list, send 'skip' signal. */
+              if (ctx->notify_func)
+                (*ctx->notify_func) (ctx->notify_baton, target,
+                                     svn_wc_notify_skip, svn_node_unknown,
+                                     NULL, svn_wc_notify_state_unknown,
+                                     svn_wc_notify_state_unknown,
+                                     SVN_INVALID_REVNUM);
+
+              
+              continue;
+            }
           if (! entry->url)
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,
@@ -134,7 +145,12 @@ svn_client_log (const apr_array_header_t *targets,
           URL = apr_pstrdup (pool, entry->url);
           SVN_ERR (svn_wc_adm_close (adm_access));
           (*((const char **)apr_array_push (target_urls))) = URL;
+          (*((const char **)apr_array_push (real_targets))) = target;
         }
+
+      /* if we have no valid target_urls, just exit. */
+      if (target_urls->nelts == 0)
+        return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
       SVN_ERR (svn_path_condense_targets (&base_url, &condensed_targets,
@@ -142,6 +158,10 @@ svn_client_log (const apr_array_header_t *targets,
 
       if (condensed_targets->nelts == 0)
         (*((const char **)apr_array_push (condensed_targets))) = "";
+
+      /* 'targets' now becomes 'real_targets', which has bogus,
+         unversioned things removed from it. */
+      targets = real_targets;
     }
 
   /* Get the RA library that handles BASE_URL */
