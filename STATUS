@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       Duh.  It's a compiler warning.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, lundblad
 
   * r10604
     Cleanup some qsort-related stuff.
