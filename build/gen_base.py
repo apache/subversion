@@ -6,6 +6,7 @@ import os, sys
 import string, glob, re
 import fileinput
 import ConfigParser
+import getversion
 
 
 __all__ = ['GeneratorBase', 'MsvcProjectGenerator']
@@ -29,13 +30,11 @@ class GeneratorBase:
     # extract some basic information
 
     # Version comes from a header file since it is used in the code.
-    versionre = re.compile(r'^\s*#\s*define\s+SVN_VER_LIBRARY\s+(\d+)\s+$')
-    for line in open(verfname, 'r').readlines():
-      match = versionre.match(line)
-      if match is not None:
-        self.version = match.group(1)
-        break
-    else:
+    try:
+      parser = getversion.Parser()
+      parser.search('SVN_VER_LIBRARY', 'libver')
+      self.version = parser.parse(verfname).libver
+    except:
       raise GenError('Unable to extract version.')
 
     self.targets = { }
