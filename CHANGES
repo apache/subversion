@@ -1,4 +1,4 @@
-Version 0.10.1 (released 17 Mar 2002, revision 1535)
+Version 0.10.1 (released 17 Mar 2002, revision 1536)
 
  User-visible changes:
  * New --targets command-line option for some commands.
@@ -13,7 +13,7 @@ Version 0.10.1 (released 17 Mar 2002, revision 1535)
  * start work on commit-driver rewrite
  * start work on ~/.subversion/ configuration directory, and proxy support
  * move a lot of svn_wc.h into private wc.h
- * small bugfixes relating to commits, network prop xfers, 'svn log', etc.
+ * bugfixes relating to commits, network prop xfers, 'svn log', 'svn co -q'
  * major deletion bug fixed 
    (see email WARNING: 
     http://subversion.tigris.org/servlets/ReadMsg?msgId=64442&listName=dev)
