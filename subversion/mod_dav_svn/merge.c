@@ -174,7 +174,9 @@ static svn_error_t *do_resources(const dav_svn_repos *repos,
       if (send_parent)
         {
           /* If it hasn't already been sent, send the parent directory
-             (and then remember that you sent it). */
+             (and then remember that you sent it).  Allocate parent in
+             pool, not subpool, because it stays in the sent hash
+             afterwards. */
           const char *parent = svn_path_dirname(path, pool);
           if (! apr_hash_get(sent, parent, APR_HASH_KEY_STRING))
             {
