@@ -708,11 +708,13 @@ main (int argc, const char * const *argv)
         {
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
+          const char *filename_utf8 = svn_path_internal_style (utf8_opt_arg,
+                                                               pool);
 
-          err = svn_wc_adm_probe_open (&adm_access, NULL, utf8_opt_arg, FALSE,
-                                       FALSE, pool);
+          err = svn_wc_adm_probe_open (&adm_access, NULL, filename_utf8,
+                                       FALSE, FALSE, pool);
           if (! err)
-            err = svn_wc_entry (&e, utf8_opt_arg, adm_access, FALSE, pool);
+            err = svn_wc_entry (&e, filename_utf8, adm_access, FALSE, pool);
           if ((err == SVN_NO_ERROR) && e)
             log_under_version_control = TRUE;
           if (err)
