@@ -118,7 +118,10 @@ typedef enum svn_errno_t {
   /* Entry already exists when adding a file. */
   SVN_ERR_WC_ENTRY_EXISTS,
 
-  /* Unable to get ancestry for an entry, which should never happen. */
+  /* Unable to get version for an entry. */
+  SVN_ERR_WC_ENTRY_MISSING_VERSION,
+
+  /* Unable to get ancestry for an entry. */
   SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
 
   /* Working copy is not up-to-date w.r.t. the repository. */
