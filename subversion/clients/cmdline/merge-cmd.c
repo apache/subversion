@@ -84,6 +84,8 @@ svn_cl__merge (apr_getopt_t *os,
 
   if (using_alternate_syntax)
     {
+      const char *source, *url;
+
       if ((targets->nelts < 1) || (targets->nelts > 2))
         {
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
@@ -93,7 +95,13 @@ svn_cl__merge (apr_getopt_t *os,
         }
 
       /* the first path becomes both of the 'sources' */
-      sourcepath1 = sourcepath2 = ((const char **) (targets->elts))[0];
+      source = ((const char **)(targets->elts))[0];
+      SVN_ERR (svn_cl__get_url_from_target(&url, source, pool));
+      if (! url)
+        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
+                                  "'%s' has no URL", source);
+
+      sourcepath1 = sourcepath2 = url;
       
       /* decide where to apply the diffs, defaulting to '.' */
       if (targets->nelts == 2)

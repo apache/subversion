@@ -605,21 +605,20 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               apr_pool_t *pool);
 
 
-/* Merge changes from PATH1/REVISION1 to PATH2/REVISION2 into the
-   working-copy path TARGET_WCPATH.  PATH1 and PATH2 can be either
-   working-copy paths or URLs.
+/* Merge changes from URL1/REVISION1 to URL2/REVISION2 into the
+   working-copy path TARGET_WCPATH.
 
    By "merging", we mean:  apply file differences using
    svn_wc_merge(), and schedule additions & deletions when appopriate.
 
-   PATH1 and PATH2 must both represent the same node kind -- that is,
+   URL1 and URL2 must both represent the same node kind -- that is,
    if PATH1 is a directory, PATH2 must also be, and if PATH1 is a
    file, PATH2 must also be.
 
    If either REVISION1 or REVlISION2 has an `unspecified' or
    unrecognized `kind', return SVN_ERR_CLIENT_BAD_REVISION.
   
-   If RECURSE is true (and the PATHs are directories), apply changes
+   If RECURSE is true (and the URLSs are directories), apply changes
    recursively; otherwise, only apply changes in the current
    directory.
 
@@ -635,9 +634,9 @@ svn_error_t *
 svn_client_merge (svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   svn_client_auth_baton_t *auth_baton,
-                  const char *path1,
+                  const char *URL1,
                   const svn_opt_revision_t *revision1,
-                  const char *path2,
+                  const char *URL2,
                   const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_boolean_t recurse,

@@ -285,9 +285,9 @@ diff_callbacks =
 
 struct merge_cmd_baton {
   svn_boolean_t force;
-  const char *target;
-  const char *path;
-  const svn_opt_revision_t *revision;
+  const char *target;                 /* Working copy target of merge */
+  const char *url;                    /* The second URL in the merge */
+  const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
 };
@@ -369,7 +369,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
     case svn_node_none:
       child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
       assert (child != NULL);
-      copyfrom_url = svn_path_join (merge_b->path, child, merge_b->pool);
+      copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
       /* ### FIXME: This will get the file again! */
       /* ### 838 When 838 stops using svn_client_copy the adm_access
          parameter can be removed from the function. */
@@ -468,7 +468,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
 
   child = svn_path_is_child (merge_b->target, path, subpool);
   assert (child != NULL);
-  copyfrom_url = svn_path_join (merge_b->path, child, subpool);
+  copyfrom_url = svn_path_join (merge_b->url, child, subpool);
 
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
@@ -650,9 +650,9 @@ static svn_error_t *
 do_merge (svn_wc_notify_func_t notify_func,
           void *notify_baton,
           svn_client_auth_baton_t *auth_baton,
-          const char *path1,
+          const char *URL1,
           const svn_opt_revision_t *revision1,
-          const char *path2,
+          const char *URL2,
           const svn_opt_revision_t *revision2,
           const char *target_wcpath,
           svn_wc_adm_access_t *adm_access,
@@ -662,7 +662,6 @@ do_merge (svn_wc_notify_func_t notify_func,
           apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
-  const char *URL1, *URL2;
   void *ra_baton, *session, *session2;
   svn_ra_plugin_t *ra_lib;
   const svn_ra_reporter_t *reporter;
@@ -680,10 +679,6 @@ do_merge (svn_wc_notify_func_t notify_func,
          "do_merge: caller failed to specify all revisions");
     }
 
-  /* Make sure we have two URLs ready to go.*/
-  SVN_ERR (convert_to_url (&URL1, path1, pool));
-  SVN_ERR (convert_to_url (&URL2, path2, pool));
-
   /* Establish first RA session to URL1. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
@@ -692,9 +687,9 @@ do_merge (svn_wc_notify_func_t notify_func,
                                         auth_baton, pool));
   /* Resolve the revision numbers. */
   SVN_ERR (svn_client__get_revision_number
-           (&start_revnum, ra_lib, session, revision1, path1, pool));
+           (&start_revnum, ra_lib, session, revision1, NULL, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, revision2, path2, pool));
+           (&end_revnum, ra_lib, session, revision2, NULL, pool));
 
   /* Open a second session used to request individual file
      contents. Although a session can be used for multiple requests, it
@@ -749,9 +744,9 @@ static svn_error_t *
 do_single_file_merge (svn_wc_notify_func_t notify_func,
                       void *notify_baton,
                       svn_client_auth_baton_t *auth_baton,
-                      const char *path1,
+                      const char *URL1,
                       const svn_opt_revision_t *revision1,
-                      const char *path2,
+                      const char *URL2,
                       const svn_opt_revision_t *revision2,
                       const char *target_wcpath,
                       svn_wc_adm_access_t *adm_access,
@@ -760,7 +755,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   apr_status_t status;
   svn_error_t *err;
   apr_file_t *fp1 = NULL, *fp2 = NULL;
-  const char *tmpfile1, *tmpfile2, *URL1, *URL2;
+  const char *tmpfile1, *tmpfile2;
   svn_stream_t *fstream1, *fstream2;
   const char *oldrev_str, *newrev_str;
   svn_revnum_t rev1, rev2;
@@ -787,26 +782,24 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
 
-  SVN_ERR (convert_to_url (&URL1, path1, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
   SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, URL1, NULL, NULL,
                                         NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&rev1, ra_lib, session1, revision1, path1, pool));
+           (&rev1, ra_lib, session1, revision1, NULL, pool));
   SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, NULL, &props1));
   SVN_ERR (ra_lib->close (session1));
 
   /* ### heh, funny.  we could be fetching two fulltexts from two
      *totally* different repositories here.  :-) */
 
-  SVN_ERR (convert_to_url (&URL2, path2, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL2, pool));
   SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, NULL, NULL,
                                         NULL, FALSE, FALSE, TRUE, 
                                         auth_baton, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&rev2, ra_lib, session2, revision2, path2, pool));
+           (&rev2, ra_lib, session2, revision2, NULL, pool));
   SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL, &props2));
   SVN_ERR (ra_lib->close (session2));
 
@@ -1284,9 +1277,9 @@ svn_error_t *
 svn_client_merge (svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   svn_client_auth_baton_t *auth_baton,
-                  const char *path1,
+                  const char *URL1,
                   const svn_opt_revision_t *revision1,
-                  const char *path2,
+                  const char *URL2,
                   const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_boolean_t recurse,
@@ -1313,8 +1306,8 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
       SVN_ERR (do_single_file_merge (notify_func,
                                      notify_baton,
                                      auth_baton,
-                                     path1, revision1,
-                                     path2, revision2,
+                                     URL1, revision1,
+                                     URL2, revision2,
                                      target_wcpath,
                                      adm_access,
                                      pool));
@@ -1327,9 +1320,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
       struct merge_cmd_baton merge_cmd_baton;
       merge_cmd_baton.force = force;
       merge_cmd_baton.target = target_wcpath;
-      /* ### The issue 838 "use copy to add-with-history" fix should
-         ### use repository items, just like any other merge */
-      SVN_ERR (convert_to_url (&merge_cmd_baton.path, path2, pool));
+      merge_cmd_baton.url = URL2;
       merge_cmd_baton.revision = revision2;
       merge_cmd_baton.auth_baton = auth_baton;
       merge_cmd_baton.pool = pool;
@@ -1337,9 +1328,9 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
       SVN_ERR (do_merge (notify_func,
                          notify_baton,
                          auth_baton,
-                         path1,
+                         URL1,
                          revision1,
-                         path2,
+                         URL2,
                          revision2,
                          target_wcpath,
                          adm_access,
