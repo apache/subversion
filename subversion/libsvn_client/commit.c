@@ -272,8 +272,6 @@ import (svn_string_t *path,
 
   if (kind == svn_node_file)
     {
-      svn_string_t *filename;
-
       if (! new_entry)
         {
           return svn_error_create
@@ -281,7 +279,7 @@ import (svn_string_t *path,
              "new entry name required when importing a file");
         }
 
-      SVN_ERR (import_file (editor, root_baton, path, filename, pool));
+      SVN_ERR (import_file (editor, root_baton, path, new_entry, pool));
     }
   else if (kind == svn_node_dir)
     {
