@@ -1420,7 +1420,13 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
             {
               /* ...close directories and remove stackframes until the
                  stack reaches the common parent. */
-              SVN_ERR (do_dir_closures (subparent, &stack, editor));
+              err = do_dir_closures (subparent, &stack, editor);         
+              if (err)
+                {
+                  remove_all_locks (locked_dirs, pool);
+                  return svn_error_quick_wrap 
+                    (err, "commit failed: error traversing working copy.");
+                }
 
               /* Reset the dir_baton to NULL; it is of no use to our
                  target (which is not a sibling, or a child of a
@@ -1465,7 +1471,14 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                   new_path = svn_stringbuf_dup (stack->path, pool);
                   svn_path_add_component (new_path, component,
                                           svn_path_local_style);
-                  SVN_ERR (svn_wc_entry (&new_entry, new_path, pool));
+                  err = svn_wc_entry (&new_entry, new_path, pool);
+                  if (err)
+                    {
+                      remove_all_locks (locked_dirs, pool);
+                      return svn_error_quick_wrap 
+                        (err, "commit failed: looking for next commit target");
+                    }
+
                   push_stack (&stack, new_path, NULL, new_entry, pool);
                 }
             }
@@ -1478,7 +1491,13 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
           
 
           /* Get the entry for TARGET. */
-          SVN_ERR (svn_wc_entry (&tgt_entry, target, pool));
+          err = svn_wc_entry (&tgt_entry, target, pool);
+          if (err)
+            {
+              remove_all_locks (locked_dirs, pool);
+              return svn_error_quick_wrap 
+                (err, "commit failed: getting entry of commit target");
+            }
 
           if (tgt_entry)
             {
@@ -1486,9 +1505,12 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
               svn_stringbuf_t *basename;
               
               if (tgt_entry->existence == svn_wc_existence_deleted)
-                return svn_error_createf
-                  (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-                   "entry '%s' has already been deleted", target->data);
+                {
+                  remove_all_locks (locked_dirs, pool);
+                  return svn_error_createf
+                    (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+                     "entry '%s' has already been deleted", target->data);
+                }
 
               basename = svn_path_last_component (target,
                                                   svn_path_local_style, 
@@ -1521,6 +1543,7 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
             }
           else
             {
+              remove_all_locks (locked_dirs, pool);
               return svn_error_createf
                 (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
                  "svn_wc_crawl_local_mods: '%s' is not a versioned resource",
@@ -1531,12 +1554,26 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
       
       /* To finish, pop the stack all the way back to the grandaddy
          parent_dir, and call close_dir() on all batons we find. */
-      SVN_ERR (do_dir_closures (parent_dir, &stack, editor));
+      err = do_dir_closures (parent_dir, &stack, editor);
+      if (err)
+        {
+          remove_all_locks (locked_dirs, pool);
+          return svn_error_quick_wrap 
+            (err, "commit failed: finishing the crawl");
+        }
 
       /* Don't forget to close the root-dir baton on the bottom
          stackframe, if one exists. */
       if (stack->baton)        
-        SVN_ERR (editor->close_directory (stack->baton));
+        {
+          err = editor->close_directory (stack->baton);
+          if (err)
+            {
+              remove_all_locks (locked_dirs, pool);
+              return svn_error_quick_wrap 
+                (err, "commit failed: closing editor's root directory");
+            }
+        }
 
     }  /* End of multi-target section */
 
