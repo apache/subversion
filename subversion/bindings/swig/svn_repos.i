@@ -65,6 +65,15 @@
     void **edit_baton
 };
 
+/* -----------------------------------------------------------------------
+   handle svn_repos_history_func_t/baton pairs
+*/
+%typemap(python,in) (svn_repos_history_func_t history_func, void *history_baton) {
+
+  $1 = svn_swig_py_repos_history_func;
+  $2 = $input; /* our function is the baton. */
+}
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_repos.h
