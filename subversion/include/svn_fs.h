@@ -840,7 +840,11 @@ svn_error_t *svn_fs_file_length (apr_off_t *length_p,
    If ROOT is the root of a transaction, it is possible that the
    contents of the file PATH will change between calls to
    svn_fs_file_contents().  In that case, the result of reading from
-   *CONTENTS is undefined.  */
+   *CONTENTS is undefined.  
+
+   ### kff todo: I am worried about lifetime issues with this pool vs
+   the trail created farther down the call stack.  Trace this function
+   to investigate...  */
 svn_error_t *svn_fs_file_contents (svn_stream_t **contents,
                                    svn_fs_root_t *root,
                                    const char *path,
