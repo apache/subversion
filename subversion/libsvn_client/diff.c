@@ -1222,7 +1222,7 @@ merge_delete_notify_func (void *baton,
 
   /* Skip the notification for the path we called svn_client__wc_delete() with,
    * because it will be outputed by repos_diff.c:delete_item */  
-  if (strcmp (path,mdb->path_skip) != 0)
+  if (strcmp (path, mdb->path_skip) == 0)
     return;
   
   /* svn_client__wc_delete() is written primarily for scheduling operations not
