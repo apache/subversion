@@ -127,12 +127,13 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         const char **proxy_password,
                                         int *timeout_seconds,
                                         int *neon_debug,
+                                        svn_boolean_t *compression,
                                         apr_hash_t *config,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
   const char *exceptions;
-  const char *port_str, *timeout_str, *server_group, *debug_str;
+  const char *port_str, *timeout_str, *server_group, *debug_str, *compress_str;
   svn_boolean_t is_exception = FALSE;
   svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_SERVERS,
                                     APR_HASH_KEY_STRING);
@@ -145,6 +146,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
+  compress_str    = "yes";
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -179,6 +181,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      *proxy_password);
       svn_config_get(cfg, &timeout_str, server_group, "http-timeout",
                      timeout_str);
+      svn_config_get(cfg, &debug_str, server_group, "http-compression",
+                     compress_str);
       svn_config_get(cfg, &debug_str, server_group, "neon-debug-mask",
                      debug_str);
     }
@@ -233,6 +237,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
     }
   else
     *neon_debug = 0;
+
+  if (compress_str)
+    *compression = (strcasecmp(compress_str, "yes") == 0) ? TRUE : FALSE;
+  else
+    *compression = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -306,6 +315,7 @@ svn_ra_dav__open (void **session_baton,
   ne_uri uri = { 0 };
   svn_ra_session_t *ras;
   int is_ssl_session;
+  svn_boolean_t compression;
 
   /* Sanity check the URI */
   if (ne_uri_parse(repos_URL, &uri) 
@@ -371,6 +381,7 @@ svn_ra_dav__open (void **session_baton,
                               &proxy_password,
                               &timeout,
                               &debug,
+                              &compression,
                               config,
                               uri.host,
                               pool);
@@ -446,7 +457,7 @@ svn_ra_dav__open (void **session_baton,
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
-  ras->config = config;
+  ras->compression = compression;
 
   /* note that ras->username and ras->password are still NULL at this
      point. */

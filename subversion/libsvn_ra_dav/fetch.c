@@ -46,7 +46,6 @@
 #include "svn_xml.h"
 #include "svn_dav.h"
 #include "svn_time.h"
-#include "svn_config.h"
 
 #include "ra_dav.h"
 
@@ -450,30 +449,22 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
 }
 
 static svn_error_t *custom_get_request(ne_session *sess,
-                                       apr_hash_t *config,
                                        const char *url,
                                        const char *relpath,
                                        ne_block_reader reader,
                                        void *subctx,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
                                        void *cb_baton,
+                                       svn_boolean_t compression,
                                        apr_pool_t *pool)
 {
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
-  const char *do_compression;
   ne_request *req;
   ne_decompress *decompress;
   svn_error_t *err;
   int code;
   int decompress_rv;
-  int decompress_on;
-
-  svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
-                                    APR_HASH_KEY_STRING);
-
-  svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
-  decompress_on = (strcasecmp(do_compression, "yes") == 0);
   
   /* See if we can get a version URL for this resource. This will refer to
      what we already have in the working copy, thus we can get a diff against
@@ -507,7 +498,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 
   /* add in a reader to capture the body of the response. */
-  if (decompress_on) {
+  if (compression) {
     decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
   }
   else {
@@ -654,10 +645,10 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 }
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
-                                      apr_hash_t *config,
                                       const char *url,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
+                                      svn_boolean_t compression,
                                       void *file_baton,
                                       const char *base_checksum,
                                       const char *result_checksum,
@@ -688,9 +679,9 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   frc.pool = pool;
 
-  SVN_ERR( custom_get_request(sess, config, url, relpath,
+  SVN_ERR( custom_get_request(sess, url, relpath,
                               fetch_file_reader, &frc,
-                              get_wc_prop, cb_baton, pool) );
+                              get_wc_prop, cb_baton, compression, pool) );
 
   /* close the handler, since the file reading completed successfully. */
   SVN_ERR( (*frc.handler)(NULL, frc.handler_baton) );
@@ -699,11 +690,11 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 }
 
 static svn_error_t *fetch_file(ne_session *sess,
-                               apr_hash_t *config,
                                const svn_ra_dav_resource_t *rsrc,
                                void *dir_baton,
                                const svn_delta_editor_t *editor,
                                const char *edit_path,
+                               svn_boolean_t compression,
                                apr_pool_t *pool)
 {
   const char *bc_url = rsrc->url;    /* url in the Baseline Collection */
@@ -722,9 +713,8 @@ static svn_error_t *fetch_file(ne_session *sess,
   /* fetch_file() is only used for checkout, so we just pass NULL for the
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
-  err = simple_fetch_file(sess, config, bc_url, NULL, TRUE, file_baton, 
-                          NULL, checksum,
-                          editor, NULL, NULL, pool);
+  err = simple_fetch_file(sess, bc_url, NULL, TRUE, compression, file_baton, 
+                          NULL, checksum, editor, NULL, NULL, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -1016,10 +1006,11 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
         apr_md5_init(&(fwc.md5_context));
 
       /* Fetch the file, shoving it at the provided stream. */
-      SVN_ERR( custom_get_request(ras->sess, ras->config, final_url, path,
+      SVN_ERR( custom_get_request(ras->sess, final_url, path,
                                   get_file_reader, &fwc,
                                   ras->callbacks->get_wc_prop,
-                                  ras->callback_baton, ras->pool) );
+                                  ras->callback_baton,
+                                  ras->compression, ras->pool) );
 
       if (fwc.do_checksum)
         {
@@ -1360,8 +1351,9 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           svn_path_add_component(edit_path, comp);
 
           /* ### should we close the dir batons first? */
-          SVN_ERR_W( fetch_file(ras->sess, ras->config, rsrc, this_baton,
-                                editor, edit_path->data, subpool),
+          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton,
+                                editor, edit_path->data, 
+                                ras->compression, subpool),
                      "could not checkout a file");
           svn_stringbuf_chop(edit_path, edit_path->len - edit_len);
 
@@ -1990,10 +1982,11 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       base_checksum = get_attr(atts, "base-checksum");
       result_checksum = get_attr(atts, "result-checksum");
       /* assert: rb->href->len > 0 */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->ras->config,
+      CHKERR( simple_fetch_file(rb->ras->sess2, 
                                 rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
+                                rb->ras->compression,
                                 rb->file_baton,
                                 base_checksum,
                                 result_checksum,
@@ -2118,10 +2111,11 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->ras->config,
+      CHKERR( simple_fetch_file(rb->ras->sess2,
                                 rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
+                                rb->ras->compression,
                                 rb->file_baton,
                                 NULL,  /* no base checksum in an add */
                                 rb->result_checksum,
