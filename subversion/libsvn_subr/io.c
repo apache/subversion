@@ -39,8 +39,8 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"
-#include "svn_private_config.h" /* for SVN_CLIENT_DIFF */
 
+#include "svn_private_config.h" /* For SVN_WIN32 */
 
 
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();

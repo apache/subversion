@@ -82,7 +82,7 @@
 #define bcopy(from, to, len) memcpy ((to), (from), (len))
 #endif
 
-#if defined (STDC_HEADERS)
+#if 1 || defined (STDC_HEADERS)
 #include <stdlib.h>
 #endif
 
@@ -101,8 +101,8 @@
 
 /* ### if these prototypes don't match the system's prototypes all
  * this will break. */
-extern struct tm	*gmtime(const time_t *t);
-extern struct tm	*localtime(const time_t *t);
+/*extern struct tm	*gmtime(const time_t *t);
+extern struct tm	*localtime(const time_t *t);*/
 
 #define yyparse getdate_yyparse
 #define yylex getdate_yylex
