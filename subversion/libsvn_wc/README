@@ -52,14 +52,15 @@ other:
       conflicts with the repository.  The client is always responsible
       for sending non-conflicting deltas.
 
-Given these principles, the process for updates is largely the same as
-for commits, so the two are described together here:
+Given these principles [though see footnote 1], the process for
+updates is largely the same as for commits, so the two are described
+together here:
 
    1. The working copy creates a snapshot (W) of its state, and sends
       it to the server.
 
    2. The server checks if the entities listed in W have changed in
-      the repository too [see footnote 1].  If there are no conflicts,
+      the repository too [see footnote 2].  If there are no conflicts,
       then the commit is registered and a token sent back (or, if this
       is an update, the server sends back the appropriate delta).
 
@@ -75,11 +76,49 @@ for commits, so the two are described together here:
          - update case:
              Well, this is where all the hardship happens. :-)
 
+             First, a definition: "conflict-to-date" is when a working
+             copy is up-to-date wherever there are no conflicts, but
+             reflects both sides of the conflict wherever there *are*
+             conflicts.
 
+             The Subversion server tries, but is not required, to
+             compute a delta that will bring the working copy
+             conflict-to-date.  When it can do so, it sends this delta
+             to the client, which then makes its working copy be
+             conflict-to-date and leaves resolution to the user (same
+             as CVS).
 
+             However, for complex tree-structure conflicts, there is
+             often no way to reflect both sides of the conflict in the
+             working copy without being more confusing than helpful
+             anyway.  How does one put "conflict markers" into a
+             directory, especially when what was a directory might now
+             be a file, or vice-versa?  For purely textual conflicts,
+             CVS found a useful way to overlay the conflicting areas
+             in all cases; if there is a similar overlay method for
+             arbitrarily changed directory trees, I don't know what it
+             is. :-)
+
+             Therefore, an acceptable response from the Subversion
+             server is: "Your working copy is too out of whack; please
+             move it aside, check out a fresh one, redo your changes
+             in the fresh copy, and commit from that."  (This response
+             may apply to subtrees of the working copy, of course).
+
+             Subversion initially implements a _simple_
+             conflict-to-date delta generation algorithm at first; it
+             can improve as we get smarter and/or as there is demand
+             for more informative conflicting updates.
 
 --------------------------- Footnotes -----------------------------------
 
-[1] Working copy is not always wanting to compare against LATEST; the
-request may need some way of specifying which *repository* revisions
-to compare against as well!
+[1] Haven't thought carefully about whether this all works smoothly
+when directory *entries* are considered entities.  I think so, but am
+not sure yet.
+
+[2] The working copy doesn't always want to compare against the pure
+latest version of everything -- it may be comparing against some other
+version, or perhaps even different versions for different parts?  So
+the request may need some way of specifying which *repository*
+versions to compare against as well.  I haven't thought about this
+carefully.
