@@ -97,7 +97,6 @@ Candidate changes:
      http://www.contactor.se/~dast/svn/archive-2004-08/0804.shtml
     Votes:
       +1: mbk
-      -1: bliss (implementation broken without r10759)
 
   * r10752
     Remove packages/rpm/mandrake-*.
