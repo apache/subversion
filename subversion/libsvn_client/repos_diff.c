@@ -115,9 +115,6 @@ struct file_baton {
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
 
-  /* The baton for the parent directory.
-  struct dir_baton *dir_baton; */
-
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
 
@@ -134,45 +131,38 @@ struct temp_file_cleanup_s {
   apr_pool_t *pool;
 };
 
-/* Create a new directory baton in POOL. NAME is the directory name sans
- * path. ADDED is set if this directory is being added rather than
- * replaced. PARENT_BATON is the baton of the parent directory, it will be
- * null if this is the root of the comparison hierarchy. The directory and
- * its parent may or may not exist in the working copy. EDIT_BATON is the
- * overall crawler editor baton.
+/* Create a new directory baton for PATH in POOL.  ADDED is set if
+ * this directory is being added rather than replaced. PARENT_BATON is
+ * the baton of the parent directory, it will be null if this is the
+ * root of the comparison hierarchy. The directory and its parent may
+ * or may not exist in the working copy. EDIT_BATON is the overall
+ * crawler editor baton.
  */
 static struct dir_baton *
-make_dir_baton (const char *name,
+make_dir_baton (const char *path,
                 struct dir_baton *parent_baton,
-                struct edit_baton *edit_baton,
                 svn_boolean_t added,
                 apr_pool_t *pool)
 {
   struct dir_baton *dir_baton = apr_pcalloc (pool, sizeof (*dir_baton));
 
   dir_baton->dir_baton = parent_baton;
-  dir_baton->edit_baton = edit_baton;
+  dir_baton->edit_baton = parent_baton->edit_baton;
   dir_baton->added = added;
   dir_baton->pool = pool;
-
-  dir_baton->path = apr_pstrdup (pool, 
-                                 parent_baton ? parent_baton->path : "");
-
-  if (name)
-    dir_baton->path = svn_path_join (dir_baton->path, name, pool);
+  dir_baton->path = apr_pstrdup (pool, path);
 
   return dir_baton;
 }
 
-/* Create a new file baton in POOL. NAME is the directory name sans
- * path, which is a child of directory PARENT_PATH. ADDED is set if
- * this file is being added rather than replaced.  EDIT_BATON is a
- * pointer to the global edit baton.
+/* Create a new file baton for PATH in POOL, which is a child of
+ * directory PARENT_PATH. ADDED is set if this file is being added
+ * rather than replaced.  EDIT_BATON is a pointer to the global edit
+ * baton.
  */
 static struct file_baton *
-make_file_baton (const char *name,
+make_file_baton (const char *path,
                  svn_boolean_t added,
-                 const char *parent_path,
                  void *edit_baton,
                  apr_pool_t *pool)
 {
@@ -181,8 +171,7 @@ make_file_baton (const char *name,
   file_baton->edit_baton = edit_baton;
   file_baton->added = added;
   file_baton->pool = pool;
-
-  file_baton->path = svn_path_join (parent_path, name, pool);
+  file_baton->path = apr_pstrdup (pool, path);
 
   return file_baton;
 }
@@ -355,10 +344,15 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *b;
+  struct dir_baton *dir_baton = apr_pcalloc (pool, sizeof (*dir_baton));
 
-  b = make_dir_baton (NULL, NULL, eb, FALSE, pool);
-  *root_baton = b;
+  dir_baton->dir_baton = NULL;
+  dir_baton->edit_baton = eb;
+  dir_baton->added = FALSE;
+  dir_baton->pool = pool;
+  dir_baton->path = "";
+
+  *root_baton = dir_baton;
 
   return SVN_NO_ERROR;
 }
@@ -385,8 +379,8 @@ delete_entry (const char *path,
     case svn_node_file:
       {
         /* Compare a file being deleted against an empty file */
-        struct file_baton *b = make_file_baton (svn_path_basename (path, pool),
-                                                FALSE, pb->path,
+        struct file_baton *b = make_file_baton (path,
+                                                FALSE,
                                                 pb->edit_baton,
                                                 pool);
         SVN_ERR (get_file_from_ra (b));
@@ -420,8 +414,7 @@ add_directory (const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  b = make_dir_baton (svn_path_basename (path, pool),
-                      pb, pb->edit_baton, TRUE, pool);
+  b = make_dir_baton (path, pb, TRUE, pool);
   *child_baton = b;
 
   return SVN_NO_ERROR;
@@ -439,8 +432,7 @@ open_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
 
-  b = make_dir_baton (svn_path_basename (path, pool),
-                      pb, pb->edit_baton, FALSE, pool);
+  b = make_dir_baton (path, pb, FALSE, pool);
   *child_baton = b;
 
   return SVN_NO_ERROR;
@@ -462,8 +454,7 @@ add_file (const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  b = make_file_baton (svn_path_basename (path, pool),
-                       TRUE, pb->path, pb->edit_baton, pool);
+  b = make_file_baton (path, TRUE, pb->edit_baton, pool);
   *file_baton = b;
 
   SVN_ERR (get_empty_file (b->edit_baton, &b->path_start_revision));
@@ -483,8 +474,7 @@ open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
 
-  b = make_file_baton (svn_path_basename (path, pool), 
-                       FALSE, pb->path, pb->edit_baton, pool);
+  b = make_file_baton (path, FALSE, pb->edit_baton, pool);
   *file_baton = b;
 
   SVN_ERR (get_file_from_ra (b));

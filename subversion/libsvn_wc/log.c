@@ -361,8 +361,8 @@ log_do_merge (struct log_runner *loggy,
 {
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
-  apr_pool_t *subpool;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create (loggy->pool);
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
   left = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
@@ -382,12 +382,11 @@ log_do_merge (struct log_runner *loggy,
   target_label = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_5, atts);
 
   /* Convert the 3 basenames into full paths. */
-  left = svn_path_join (loggy->path->data, left, loggy->pool);
-  right = svn_path_join (loggy->path->data, right, loggy->pool);
-  name = svn_path_join (loggy->path->data, name, loggy->pool);
+  left = svn_path_join (loggy->path->data, left, subpool);
+  right = svn_path_join (loggy->path->data, right, subpool);
+  name = svn_path_join (loggy->path->data, name, subpool);
   
   /* Now do the merge with our full paths. */
-  subpool = svn_pool_create (loggy->pool);
   err = svn_wc_merge (left, right, name,
                       left_label, right_label, target_label,
                       subpool);
