@@ -1104,8 +1104,8 @@ validate_eol_prop_against_file (const char *path,
      here is whether or not the function fails on inconsistent line
      endings.  The function is "translating" to an empty stream.  This
      is sneeeeeeeeeeeaky. */
-  err = svn_wc_translate_stream (read_stream, write_stream, 
-                                 "", FALSE, NULL, FALSE);
+  err = svn_subst_translate_stream (read_stream, write_stream, 
+                                    "", FALSE, NULL, FALSE);
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, err,
                               "File '%s' has inconsistent newlines", path);
@@ -1124,7 +1124,7 @@ svn_wc_prop_set (const char *name,
   apr_status_t apr_err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
-  svn_wc_keywords_t *old_keywords;
+  svn_subst_keywords_t *old_keywords;
   svn_node_kind_t kind;
   enum svn_prop_kind prop_kind = svn_property_kind (NULL, name);
 
@@ -1206,11 +1206,11 @@ svn_wc_prop_set (const char *name,
 
   if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
     {
-      svn_wc_keywords_t *new_keywords;
+      svn_subst_keywords_t *new_keywords;
       SVN_ERR (svn_wc__get_keywords (&new_keywords, path, adm_access, NULL,
                                      pool));
 
-      if (svn_wc_keywords_differ (old_keywords, new_keywords, FALSE))
+      if (svn_subst_keywords_differ (old_keywords, new_keywords, FALSE))
         {
           const char *base_name;
           svn_wc_entry_t tmp_entry;

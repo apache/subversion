@@ -43,7 +43,7 @@ svn_wc_merge (const char *left,
   const char *mt_pt, *mt_bn;
   apr_file_t *tmp_f, *result_f;
   svn_boolean_t is_binary;
-  svn_wc_keywords_t *keywords;
+  svn_subst_keywords_t *keywords;
   const char *eol;
   apr_status_t apr_err;
   int exit_code;
@@ -214,14 +214,14 @@ svn_wc_merge (const char *left,
           SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                          NULL, pool));
           SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
-          SVN_ERR (svn_wc_copy_and_translate (left, 
-                                              left_copy,
-                                              eol, eol ? TRUE : FALSE, 
-                                              keywords, TRUE, pool));
-          SVN_ERR (svn_wc_copy_and_translate (right,
-                                              right_copy,
-                                              eol, eol ? TRUE : FALSE, 
-                                              keywords, TRUE, pool));
+          SVN_ERR (svn_subst_copy_and_translate (left, 
+                                                 left_copy,
+                                                 eol, eol ? TRUE : FALSE, 
+                                                 keywords, TRUE, pool));
+          SVN_ERR (svn_subst_copy_and_translate (right,
+                                                 right_copy,
+                                                 eol, eol ? TRUE : FALSE, 
+                                                 keywords, TRUE, pool));
 
           /* Back up MERGE_TARGET verbatim (it's already in expanded form.) */
           SVN_ERR (svn_io_copy_file (merge_target,
@@ -268,9 +268,9 @@ svn_wc_merge (const char *left,
           SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, adm_access,
                                          NULL, pool));
           SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
-          SVN_ERR (svn_wc_copy_and_translate (result_target, merge_target,
-                                              eol, eol ? TRUE : FALSE, 
-                                              keywords, TRUE, pool));
+          SVN_ERR (svn_subst_copy_and_translate (result_target, merge_target,
+                                                 eol, eol ? TRUE : FALSE, 
+                                                 keywords, TRUE, pool));
         }
 
       /* Don't forget to clean up tmp_target, result_target, tmp_left,

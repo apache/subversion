@@ -143,6 +143,10 @@ SOURCE=.\sorts.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\subst.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\svn_string.c
 # End Source File
 # Begin Source File

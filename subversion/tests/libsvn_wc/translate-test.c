@@ -35,6 +35,7 @@
 #include <apr_time.h>
 #include <svn_wc.h>
 #include "svn_test.h"
+#include "svn_subst.h"
 
 
 
@@ -103,7 +104,7 @@ const char *lines[] =
     "reported about keyword expansion.  The problem was that a line "
     "had more than SVN_KEYWORD_MAX_LEN (255 at the time) characters "
     "after an initial dollar sign, which triggered a buglet in our "
-    "svn_wc_copy_and_translate() function and resulted in, in some cases "
+    "svn_subst_copy_and_translate() function and resulted in, in some cases "
     "a SEGFAULT, and in others a filthy corrupt commit. ",
     "", /* Lines 54-69 are blank to test consecutive newlines */
     "",
@@ -229,7 +230,7 @@ remove_file (const char *fname, apr_pool_t *pool)
  * Create a file TEST_NAME.src using global `lines' as the initial
  * data, with SRC_EOL as the line separator, then convert it to file
  * TEST_NAME.dst (using DST_EOL, REPAIR, EXPAND, REV, AUTHOR, DATE,
- * and URL as svn_wc_copy_and_translate() does), and verify that the
+ * and URL as svn_subst_copy_and_translate() does), and verify that the
  * conversion worked.  Null SRC_EOL means create a mixed eol src
  * file.
  *
@@ -245,7 +246,7 @@ remove_file (const char *fname, apr_pool_t *pool)
  *
  * Use POOL for temporary allocation.
  *
- * Note: as with svn_wc_copy_and_translate(), if any of DST_EOL, REV,
+ * Note: as with svn_subst_copy_and_translate(), if any of DST_EOL, REV,
  * AUTHOR, DATE, and/or URL is null, then that substitution is not
  * performed.
  */
@@ -263,7 +264,7 @@ substitute_and_verify (const char *test_name,
 {
   svn_error_t *err;
   svn_stringbuf_t *contents;
-  svn_wc_keywords_t keywords;
+  svn_subst_keywords_t keywords;
   apr_size_t idx = 0;
   apr_size_t i;
   const char *expect[(sizeof (lines) / sizeof (*lines))];
@@ -280,8 +281,8 @@ substitute_and_verify (const char *test_name,
   keywords.author   = author ? svn_string_create (author, pool) : NULL;
   keywords.url      = url    ? svn_string_create (url, pool)    : NULL;
 
-  err = svn_wc_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
-                                   &keywords, expand, pool);
+  err = svn_subst_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
+                                      &keywords, expand, pool);
 
 
   /* Conversion should have failed, if src has mixed eol, and the

@@ -24,6 +24,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_subst.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +97,7 @@ void svn_wc__eol_value_from_string (const char **value,
    corresponding value is available, set that element of *KEYWORDS to
    the empty string ("").
 */
-svn_error_t *svn_wc__get_keywords (svn_wc_keywords_t **keywords,
+svn_error_t *svn_wc__get_keywords (svn_subst_keywords_t **keywords,
                                    const char *path,
                                    svn_wc_adm_access_t *adm_access,
                                    const char *force_list,

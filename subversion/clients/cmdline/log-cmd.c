@@ -36,6 +36,7 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_subst.h"
 #include "cl.h"
 
 
@@ -162,12 +163,12 @@ log_message_receiver (void *baton,
   else if (err)
     return err;
 
-  SVN_ERR (svn_wc_translate_cstring (msg_native, &msg_native_eol,
-                                     APR_EOL_STR, /* the 'native' eol */
-                                     FALSE,       /* no need to repair */
-                                     NULL,        /* no keywords */
-                                     FALSE,       /* no expansion */
-                                     pool));
+  SVN_ERR (svn_subst_translate_cstring (msg_native, &msg_native_eol,
+                                        APR_EOL_STR, /* the 'native' eol */
+                                        FALSE,       /* no need to repair */
+                                        NULL,        /* no keywords */
+                                        FALSE,       /* no expansion */
+                                        pool));
 
   printf (SEP_STRING);
 
@@ -359,12 +360,12 @@ log_message_receiver_xml (void *baton,
 
   /* <msg>xxx</msg> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
-  SVN_ERR (svn_wc_translate_cstring (msg, &msg_native_eol,
-                                     APR_EOL_STR, /* the 'native' eol */
-                                     FALSE,       /* no need to repair */
-                                     NULL,        /* no keywords */
-                                     FALSE,       /* no expansion */
-                                     pool));
+  SVN_ERR (svn_subst_translate_cstring (msg, &msg_native_eol,
+                                        APR_EOL_STR, /* the 'native' eol */
+                                        FALSE,       /* no need to repair */
+                                        NULL,        /* no keywords */
+                                        FALSE,       /* no expansion */
+                                        pool));
   svn_xml_escape_cstring (&sb, msg_native_eol, pool);
   svn_xml_make_close_tag (&sb, pool, "msg");
   
