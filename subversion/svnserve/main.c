@@ -91,6 +91,7 @@ enum run_mode {
 #define SVNSERVE_OPT_LISTEN_PORT 256
 #define SVNSERVE_OPT_LISTEN_HOST 257
 #define SVNSERVE_OPT_FOREGROUND  258
+#define SVNSERVE_OPT_TUNNEL_USER 259
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -106,6 +107,8 @@ static const apr_getopt_option_t svnserve__options[] =
     {"root",             'r', 1, "root of directory to serve"},
     {"read-only",        'R', 0, "deprecated; use repository config file"},
     {"tunnel",           't', 0, "tunnel mode"},
+    {"tunnel-user",      SVNSERVE_OPT_TUNNEL_USER, 1,
+     "tunnel username (default is current uid's name)"},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     {"threads",          'T', 0, "use threads instead of fork"},
 #endif
@@ -220,6 +223,7 @@ int main(int argc, const char *const *argv)
 
   params.root = "/";
   params.tunnel = FALSE;
+  params.tunnel_user = NULL;
   params.read_only = FALSE;
   while (1)
     {
@@ -258,6 +262,10 @@ int main(int argc, const char *const *argv)
           run_mode = run_mode_tunnel;
           break;
 
+        case SVNSERVE_OPT_TUNNEL_USER:
+          params.tunnel_user = arg;
+          break;
+
         case 'X':
           run_mode = run_mode_listen_once;
           break;
@@ -287,9 +295,15 @@ int main(int argc, const char *const *argv)
   if (os->ind != argc)
     usage(argv[0]);
 
+  if (params.tunnel_user && run_mode != run_mode_tunnel)
+    {
+      fprintf(stderr, "Option --tunnel-user is only valid in tunnel mode.\n");
+      exit(1);
+    }
+
   if (run_mode == run_mode_none)
     {
-      fprintf(stdout, "You must specify one of -d, -i, -t or -X.\n");
+      fprintf(stderr, "You must specify one of -d, -i, -t or -X.\n");
       usage(argv[0]);
     }
 
