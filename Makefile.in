@@ -220,15 +220,18 @@ revision-install:
 install-static: @INSTALL_STATIC_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
-	@$(PYTHON) $(top_srcdir)/build/pycheck.py ;                        \
-        if test "$(BASE_URL)" != ""; then                                  \
-           base_url="--url $(BASE_URL)";                                   \
-        else                                                               \
-           base_url="";                                                    \
-        fi;                                                                \
-        $(PYTHON) $(top_srcdir)/build/run_tests.py $$base_url              \
-                  '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
-                  $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
+	@$(PYTHON) $(top_srcdir)/build/pycheck.;                           \
+	base_url=""; cleanup=""; verbose="--verbose";                      \
+	if test "$(BASE_URL)" != ""; then                                  \
+	  base_url="--url $(BASE_URL)";                                    \
+	fi;                                                                \
+	if test "$(CLEANUP)" != ""; then                                   \
+	  cleanup="--cleanup";                                             \
+	fi;                                                                \
+	$(PYTHON) $(top_srcdir)/build/run_tests.py                         \
+		  $$base_url $$cleanup $$verbose                           \
+		  '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
+		  $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
 # First, set up Apache as documented in
 # subversion/tests/clients/cmdline/README.
