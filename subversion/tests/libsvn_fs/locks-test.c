@@ -75,7 +75,7 @@ basic_lock (const char **msg,
 
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree and commit it. */
@@ -136,7 +136,7 @@ lock_credentials (const char **msg,
 
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree and commit it. */
@@ -154,7 +154,7 @@ lock_credentials (const char **msg,
   SVN_ERR (svn_fs_access_add_lock_token (access, mylock->token));
 
   /* Make a new transaction and change rho. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, newrev, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "/A/D/G/rho",
                                         "new contents", pool));
@@ -227,7 +227,7 @@ final_lock_check (const char **msg,
 
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree and commit it. */
@@ -235,7 +235,7 @@ final_lock_check (const char **msg,
   SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
 
   /* Make a new transaction and delete "/A" */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, newrev, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_delete (txn_root, "/A", pool));
 
@@ -287,7 +287,7 @@ lock_dir_propchange (const char **msg,
 
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree and commit it. */
@@ -303,7 +303,7 @@ lock_dir_propchange (const char **msg,
   SVN_ERR (svn_fs_set_access (fs, NULL));
 
   /* Make a new transaction and make a propchange on "/A" */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, newrev, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_change_node_prop (txn_root, "/A",
                                     "foo", svn_string_create ("bar", pool),
@@ -341,7 +341,7 @@ lock_name_reservation (const char **msg,
 
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree and commit it. */
@@ -357,7 +357,7 @@ lock_name_reservation (const char **msg,
   SVN_ERR (svn_fs_set_access (fs, NULL));
 
   /* Make a new transaction. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, newrev, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* This copy should fail, because an imaginary path in the target of
@@ -396,7 +396,7 @@ lock_expiration (const char **msg,
 
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree and commit it. */
@@ -404,7 +404,7 @@ lock_expiration (const char **msg,
   SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
 
   /* Make a new transaction and change rho. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, newrev, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "/A/D/G/rho",
                                         "new contents", pool));
@@ -456,7 +456,7 @@ lock_break_steal_refresh (const char **msg,
 
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create the greek tree and commit it. */

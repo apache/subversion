@@ -127,7 +127,8 @@ typedef struct fs_vtable_t
   svn_error_t *(*revision_root) (svn_fs_root_t **root_p, svn_fs_t *fs,
                                  svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*begin_txn) (svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                             svn_revnum_t rev, apr_pool_t *pool);
+                             svn_revnum_t rev, apr_uint32_t flags,
+                             apr_pool_t *pool);
   svn_error_t *(*open_txn) (svn_fs_txn_t **txn, svn_fs_t *fs,
                             const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn) (svn_fs_t *fs, const char *txn_id,
@@ -289,6 +290,13 @@ typedef struct id_vtable_t
 
 /*** Definitions of the abstract FS object types ***/
 
+/* These are transaction properties that correspond to the bitfields
+   in the 'flags' argument to svn_fs_lock().  */
+#define SVN_FS_PROP_TXN_CHECK_LOCKS            SVN_PROP_PREFIX "check-locks"
+#define SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS  SVN_PROP_PREFIX "check-ood"
+
+
+
 struct svn_fs_t
 {
   /* A pool managing this filesystem */
@@ -345,6 +353,9 @@ struct svn_fs_root_t
 
   /* For transaction roots, the name of the transaction  */
   const char *txn;
+
+  /* For transaction roots, flags describing the txn's behavior. */
+  apr_uint32_t txn_flags;
 
   /* For revision roots, the number of the revision.  */
   svn_revnum_t rev;

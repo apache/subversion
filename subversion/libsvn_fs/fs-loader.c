@@ -396,10 +396,18 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 /* --- Transaction functions --- */
 
 svn_error_t *
+svn_fs_begin_txn2 (svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
+                   apr_uint32_t flags, apr_pool_t *pool)
+{
+  return fs->vtable->begin_txn (txn_p, fs, rev, flags, pool);
+}
+
+
+svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
                   apr_pool_t *pool)
 {
-  return fs->vtable->begin_txn (txn_p, fs, rev, pool);
+  return fs->vtable->begin_txn (txn_p, fs, rev, 0, pool);
 }
 
 svn_error_t *

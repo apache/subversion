@@ -124,7 +124,7 @@ static svn_fs_root_t *make_revision_root (svn_fs_t *fs, svn_revnum_t rev,
                                           apr_pool_t *pool);
 
 static svn_fs_root_t *make_txn_root (svn_fs_t *fs, const char *txn,
-                                     apr_pool_t *pool);
+                                     apr_uint32_t flags, apr_pool_t *pool);
 
 
 /*** Node Caching in the Roots. ***/
@@ -286,12 +286,28 @@ txn_body_txn_root (void *baton,
   const char *svn_txn_id = txn->id;
   const svn_fs_id_t *root_id, *base_root_id;
   svn_fs_root_t *root;
+  apr_hash_t *txnprops;
+  apr_uint32_t flags = 0;
 
   /* Verify that the transaction actually exists.  */
   SVN_ERR (svn_fs_base__get_txn_ids (&root_id, &base_root_id, fs,
                                      svn_txn_id, trail));
 
-  root = make_txn_root (fs, svn_txn_id, trail->pool);
+  /* Look for special txn props that represent the 'flags' behavior of
+     the transaction. */
+  SVN_ERR (svn_fs_base__txn_proplist_in_trail (&txnprops, svn_txn_id, trail));
+  if (txnprops)
+    {
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+                        APR_HASH_KEY_STRING))
+        flags |= SVN_FS_TXN_CHECK_OUT_OF_DATENESS;
+
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                        APR_HASH_KEY_STRING))
+        flags |= SVN_FS_TXN_CHECK_LOCKS;
+    }
+
+  root = make_txn_root (fs, svn_txn_id, flags, trail->pool);
 
   *root_p = root;
   return SVN_NO_ERROR;
@@ -1277,11 +1293,12 @@ txn_body_change_node_prop (void *baton,
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, txn_id, trail));
 
   /* Check to see if path is locked;  if so, check that we can use it. 
-     Notice that we're calling with recurse==0, regardless of node kind. */
-  SVN_ERR (svn_fs_base__allow_locked_operation 
-           (args->path,
-            svn_fs_base__dag_node_kind (parent_path->node),
-            0, trail));
+     Notice that we're calling with recurse==0, regardless of node kind. */  
+  if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_base__allow_locked_operation 
+             (args->path,
+              svn_fs_base__dag_node_kind (parent_path->node),
+              0, trail));
 
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
   SVN_ERR (svn_fs_base__dag_get_proplist (&proplist, parent_path->node,
@@ -2847,10 +2864,13 @@ txn_body_make_dir (void *baton,
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
      can use it. */
-  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
-                                                1, trail));
-  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                0, trail));
+  if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    {
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
+                                                    1, trail));
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
+                                                    0, trail));
+    }
 
   /* Create the subdirectory.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
@@ -2919,15 +2939,16 @@ txn_body_delete (void *baton,
 
   /* Check to see if path (or any child thereof) is locked; if so,
      check that we can use the existing lock(s). */
-  {
-    svn_node_kind_t kind = svn_fs_base__dag_node_kind (parent_path->node);
-    SVN_ERR (svn_fs_base__allow_locked_operation 
-             (path,
-              kind,
-              (kind == svn_node_dir) ? 1 : 0,
-              trail));
-  }
-
+  if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    {
+      svn_node_kind_t kind = svn_fs_base__dag_node_kind (parent_path->node);
+      SVN_ERR (svn_fs_base__allow_locked_operation 
+               (path,
+                kind,
+                (kind == svn_node_dir) ? 1 : 0,
+                trail));
+    }
+  
   /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
   SVN_ERR (svn_fs_base__dag_delete (parent_path->parent->node,
@@ -2991,14 +3012,15 @@ txn_body_copy (void *baton,
   /* Check to see if to-path (or any child thereof) is locked, or at
      least 'reserved', whether it exists or not; if so, check that we
      can use the existing lock(s). */
-  {
-    svn_node_kind_t kind = svn_fs_base__dag_node_kind (from_node);
-    SVN_ERR (svn_fs_base__allow_locked_operation 
-             (to_path,
-              kind,
-              (kind == svn_node_dir) ? 1 : 0,
-              trail));
-  }
+  if (to_root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    {
+      svn_node_kind_t kind = svn_fs_base__dag_node_kind (from_node);
+      SVN_ERR (svn_fs_base__allow_locked_operation 
+               (to_path,
+                kind,
+                (kind == svn_node_dir) ? 1 : 0,
+                trail));
+    }
 
   /* If the destination node already exists as the same node as the
      source (in other words, this operation would result in nothing
@@ -3223,10 +3245,13 @@ txn_body_make_file (void *baton,
   /* Check to see if some lock is 'reserving' a file-path or dir-path
      at that location, or even some child-path;  if so, check that we
      can use it. */
-  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
-                                                1, trail));
-  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                0, trail));
+  if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    {
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
+                                                    1, trail));
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
+                                                    0, trail));
+    }
 
   /* Create the file.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
@@ -3544,10 +3569,11 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, trail));
 
   /* Check to see if path is locked;  if so, check that we can use it. */
-  SVN_ERR (svn_fs_base__allow_locked_operation 
-           (tb->path,
-            svn_fs_base__dag_node_kind (parent_path->node),
-            0, trail));
+  if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_base__allow_locked_operation 
+             (tb->path,
+              svn_fs_base__dag_node_kind (parent_path->node),
+              0, trail));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
@@ -3731,10 +3757,11 @@ txn_body_apply_text (void *baton, trail_t *trail)
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, trail));
 
   /* Check to see if path is locked;  if so, check that we can use it. */
-  SVN_ERR (svn_fs_base__allow_locked_operation 
-           (tb->path,
-            svn_fs_base__dag_node_kind (parent_path->node),
-            0, trail));
+  if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_base__allow_locked_operation 
+             (tb->path,
+              svn_fs_base__dag_node_kind (parent_path->node),
+              0, trail));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
@@ -4395,15 +4422,18 @@ make_revision_root (svn_fs_t *fs,
 
 
 /* Construct a root object referring to the root of the transaction
-   named TXN in FS.  Create the new root in POOL.  */
+   named TXN in FS.  FLAGS represents the behavior of the transaction.
+   Create the new root in POOL.  */
 static svn_fs_root_t *
 make_txn_root (svn_fs_t *fs,
                const char *txn,
+               apr_uint32_t flags,
                apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root (fs, pool);
   root->is_txn_root = TRUE;
   root->txn = apr_pstrdup (root->pool, txn);
+  root->txn_flags = flags;
 
   return root;
 }

@@ -3467,6 +3467,7 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   apr_file_t *proto_file;
   apr_off_t changed_path_offset, offset;
   char *buf;
+  apr_hash_t *txnprops;
 
   /* First grab a write lock. */
   SVN_ERR (get_write_lock (fs, subpool));
@@ -3518,6 +3519,23 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   SVN_ERR (svn_io_file_flush_to_disk (proto_file, subpool));
   
   SVN_ERR (svn_io_file_close (proto_file, subpool));
+
+  /* Remove any temporary txn props representing 'flags'. */
+  SVN_ERR (svn_fs_fs__txn_proplist (&txnprops, txn, subpool));
+  if (txnprops)
+    {
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+                        APR_HASH_KEY_STRING))
+        SVN_ERR (svn_fs_fs__change_txn_prop 
+                 (txn, SVN_FS_PROP_TXN_CHECK_OUT_OF_DATENESS,
+                  NULL, subpool));
+      
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                        APR_HASH_KEY_STRING))
+        SVN_ERR (svn_fs_fs__change_txn_prop 
+                 (txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                  NULL, subpool));
+    }
 
   /* Move the finished rev file into place. */
   old_rev_filename = path_rev (fs, old_rev, subpool);

@@ -72,8 +72,9 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
   /* Run start-commit hooks. */
   SVN_ERR (svn_repos__hooks_start_commit (repos, author, pool));
 
-  /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
+  /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
+  SVN_ERR (svn_fs_begin_txn2 (txn_p, repos->fs, rev,
+                              SVN_FS_TXN_CHECK_LOCKS, pool));
 
   /* We pass the author and log message to the filesystem by adding
      them as properties on the txn.  Later, when we commit the txn,
@@ -119,7 +120,7 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
   /* ### someday, we might run a read-hook here. */
 
   /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
+  SVN_ERR (svn_fs_begin_txn2 (txn_p, repos->fs, rev, 0, pool));
 
   /* We pass the author to the filesystem by adding it as a property
      on the txn. */

@@ -482,22 +482,59 @@ svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id,
 typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 
-/** Begin a new transaction on the filesystem @a fs, based on existing
+/* @since New in 1.2  -- for use with svn_fs_begin_txn2 */
+
+/* Do on-the-fly out-of-dateness checks.  That is, an fs routine may
+   throw error if a caller tries to edit an out-of-date item in the
+   transaction.   ### NOTE:   NOT YET IMPLEMENTED.  */
+#define SVN_FS_TXN_CHECK_OUT_OF_DATENESS         0x00001
+
+/* Do on-the-fly lock checks.  That is, an fs routine may throw error
+   if a caller tries to edit a locked item without having rights to
+   the lock. */
+#define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
+
+/** @since New in 1.2
+ *
+ * Begin a new transaction on the filesystem @a fs, based on existing
  * revision @a rev.  Set @a *txn_p to a pointer to the new transaction.
  * When committed, this transaction will create a new revision.
  *
  * Allocate the new transaction in @a pool; when @a pool is freed, the new
  * transaction will be closed (neither committed nor aborted).
  *
+ * @a flags determines transaction enforcement behaviors.  See the
+ * comments above SVN_FS_TXN_* constants above.
+ *
+ * If @a check_locks is TRUE, then do on-the-fly lock checks.  That
+ * is, various fs routines may throw an error the instant a caller
+ * tries to modify something in the transaction that is locked (or
+ * contains locks) which the caller has no right to use.
+ *
  *<pre>   >> Note: if you're building a txn for committing, you probably <<
  *   >> don't want to call this directly.  Instead, call            <<
  *   >> @c svn_repos_fs_begin_txn_for_commit(), which honors the       <<
  *   >> repository's hook configurations.                           <<</pre>
  */
+svn_error_t *svn_fs_begin_txn2 (svn_fs_txn_t **txn_p,
+                                svn_fs_t *fs,
+                                svn_revnum_t rev,
+                                apr_uint32_t flags,
+                                apr_pool_t *pool);
+
+
+/** @deprecated Provided for backward compatibility with the pre-1.2 APIs. 
+ *
+ * Same as svn_fs_begin_txn2(), but with @a check_ood and @a
+ * check_locks arguments both set to FALSE.
+ *
+ */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
                                svn_fs_t *fs,
                                svn_revnum_t rev,
                                apr_pool_t *pool);
+
 
 
 /** Commit @a txn.
