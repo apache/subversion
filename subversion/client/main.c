@@ -189,7 +189,7 @@ main (int argc, const char * const *argv)
   const char *optarg;
   apr_getopt_t *os;
   svn_cl__opt_state_t opt_state;
-  const svn_cl__cmd_desc_t *subcommand;
+  const svn_cl__cmd_desc_t *subcommand = NULL;
   apr_array_header_t *targets;  /* file/dir args from the command line */
 
   static const apr_getopt_option_t options[] =
@@ -260,7 +260,7 @@ main (int argc, const char * const *argv)
            non-file args: name and value. name is (effectively, since
            I'm using an apr_array) args[0] and value is
            args[1]. Suggestions? Greg[SH]? I'll get to it this week
-           -Fitz 4-Mar-2001*/
+           -Fitz 14-Mar-2001*/
 #if 0
         err = svn_string_from_file (&(opt_state.value), optarg, pool);
         if (err)
@@ -272,7 +272,9 @@ main (int argc, const char * const *argv)
         opt_state.force = TRUE;
         break;
       default:
-        break;  /* kff todo: ? */
+        /* Hmmm. Perhaps this would be a good place to squirrel away
+           opts that commands like svn diff might need. Hmmm indeed. */
+        break;  
       }
     }
 
@@ -282,8 +284,6 @@ main (int argc, const char * const *argv)
      actually run is svn_cl__help(). */
   if (opt_state.help)
     subcommand = svn_cl__get_canonical_command ("help");
-  else
-    subcommand = NULL;
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -312,10 +312,9 @@ main (int argc, const char * const *argv)
   
   /* If we made it this far, then we definitely have the subcommand. */
 
-  /* Below, we greedily parse out some of the regular arguments,
-   * because certain subcommands consume them.  For example, both
-   * propget and propset need NAME, and propset needs VALUE in
-   * addition. */
+  /* Below, we parse out some of the regular arguments, because
+   * certain subcommands consume them.  For example, both propget and
+   * propset need NAME, and propset needs VALUE in addition. */
   opt_state.args = apr_array_make (pool, 0, sizeof (svn_string_t *));
 
   if (subcommand->num_args > 0) {
@@ -329,9 +328,6 @@ main (int argc, const char * const *argv)
                  subcommand->name, subcommand->num_args, 
                  (subcommand->num_args == 1) ? "" : plural);
         fprintf (stderr, "Help for %s:\n%s", subcommand->name, subcommand->help);
-        /* svn_cl__help (NULL, targets, pool); */
-        /* TODO Do we have to print out the WHOLE help thing every
-           time for EVERY error? -Fitz */
         apr_pool_destroy (pool);
         return EXIT_FAILURE;
       }
@@ -343,11 +339,11 @@ main (int argc, const char * const *argv)
   }
   /* greedily suck up all args if num_args is a negative number. */
   else if (subcommand->num_args == -1) {
-    /* TODO. This is currently not used by any subcommand, so I'm not
-       writing it right now. -Fitz */
-    fprintf (stderr, "unimplemented function. -1 args not written yet\n");
-    apr_pool_destroy (pool);
-    return EXIT_FAILURE;
+    while (os->ind < os->argc) {
+      const char *this_arg = os->argv[os->ind++];
+      (*((svn_string_t **) apr_array_push (opt_state.args)))
+        = svn_string_create (this_arg, pool);
+    }
   }
 
   /* Do the regular arguments (target files and target dirs). */
