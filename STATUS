@@ -119,33 +119,35 @@ already know about.)
      Make svn_config__parse_file do charset conversion.
      Justification: Correctness, and went into 0.35.1.
      Votes:
-      +1: brane, jerenkrantz
+      +1: brane, jerenkrantz, ghudson
 
 
    * r8021
      'svn revert' performance improvement (timestamp sleep once, not N times)
      Justification: trivial; API change; makes error returns correct priority
      Votes:
-      +1: jerenkrantz, rooneg
+      +1: jerenkrantz, rooneg, ghudson
 
 
    * r8031
      Implementing API change of r8021 in javahl bindings.
      Justification: with 8021 and without 8031 javahl breaks. Local change.
      Votes:
+      +1: ghudson
 
 
    * r8006
      Add prompting and retry count (at most 2) to SSL auth providers
      Justification: API, consistency with other auth provider behavior
      Votes:
-      +1: jerenkrantz, bliss
+      +1: jerenkrantz, bliss, ghudson
 
 
    * r8012
      Implementing API change of r8006 in javahl bindings.
      Justification: with 8006 and without 8012 javahl breaks. Local change.
      Votes:
+      +1: ghudson
 
 
    * r8013
@@ -157,7 +159,7 @@ already know about.)
        r8101 below solves the problem, I believe, so will remove this
        veto when that one has got approval.
      Votes:
-      +1: jerenkrantz, bliss
+      +1: jerenkrantz, bliss, ghudson
       -1: kfogel
 
 
@@ -166,7 +168,7 @@ already know about.)
      Justification: Better external API documentation, ultra-low risk.
      Notes: See Concerns field of r8013 above.
      Votes:
-      +1: bliss
+      +1: bliss, ghudson
 
 
    * r8015,r8020
@@ -179,7 +181,7 @@ already know about.)
      Update references to BDB version in documentation.
      Justification: very low risk, and accurate documentation is good
      Votes:
-      +1: jerenkrantz, rooneg
+      +1: jerenkrantz, rooneg, ghudson
 
 
    * Issue #1652
@@ -187,13 +189,14 @@ already know about.)
      Justification: low impact (though huge); better user experience
      Votes:
       +1 (concept): jerenkrantz
+      +1: ghudson
 
 
    * r8082
      Fix for bindings build on Windows. Related to issue 1666.
      Justification: Python bindings will not build otherwise. Low risk.
      Votes:
-       +1 brane, jerenkrantz
+       +1: brane, jerenkrantz
 
 
    * Issue #1668
@@ -284,7 +287,7 @@ already know about.)
      Fix a compiler warning.
      Justification: trivially fixes embarassing warning; zero risk.
      Votes:
-      +1: mbk
+      +1: mbk, ghudson
 
 
    * r8035, r8036, r8037, r8128
@@ -305,7 +308,7 @@ already know about.)
      Implement "--listen-port" and "--listen-host" svnserve options.
      Justification: useful features for 1.0, low risk.
      Votes:
-      +1: mbk, bliss
+      +1: mbk, bliss, ghudson
 
 
    * r8055, r8085, r8104, r8105
@@ -333,11 +336,11 @@ already know about.)
      Fix an svnserve crash bug for network errors.
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
-      +1: bliss, mbk
+      +1: bliss, mbk, ghudson
 
 
    * Issue #1681
      Make svnserve require --inetd to use stdin/stdout.
      Justification: Make svnserve more user friendly, low risk.
      Votes:
-      +1: bliss
+      +1: bliss, ghudson
