@@ -2135,8 +2135,8 @@ $
         post-commit hooks, and may not even trigger the
         pre-revprop-change and post-revprop-change hooks.
         <footnote>
-          <para><command>svnadmin setlog</command>, for example,
-            bypasses the hook interface altogether.</para>
+          <para><command>svnadmin setlog</command> can be called in a
+            way that bypasses the hook interface altogether.</para>
         </footnote>  
         And since you can change revision properties without respect
         to chronological order&mdash;you can change any revision's
