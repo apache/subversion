@@ -340,7 +340,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->text_time = svn_time_from_nts (text_timestr);
+          SVN_ERR (svn_time_from_nts (&entry->text_time, text_timestr, pool));
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
       }
@@ -357,7 +357,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->prop_time = svn_time_from_nts (prop_timestr);
+          SVN_ERR (svn_time_from_nts (&entry->prop_time, prop_timestr, pool));
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
       }
@@ -379,7 +379,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                 APR_HASH_KEY_STRING);
     if (cmt_datestr)
       {
-        entry->cmt_date = svn_time_from_nts (cmt_datestr);
+        SVN_ERR (svn_time_from_nts (&entry->cmt_date, cmt_datestr, pool));
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
       }
     else

@@ -110,11 +110,11 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
 
 
 static int
-find_matching_string (char *str, const char strings[][4])
+find_matching_string (char *str, size_t size, const char strings[][4])
 {
   int i;
 
-  for (i = 0; ; i++)
+  for (i = 0; i < size; i++)
     if (strings[i] && (strcmp (str, strings[i]) == 0))
       return i;
 
@@ -122,12 +122,12 @@ find_matching_string (char *str, const char strings[][4])
 }
 
 
-apr_time_t
-svn_time_from_nts (const char *data)
+svn_error_t *
+svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
 {
   apr_time_exp_t exploded_time;
+  apr_status_t apr_err;
   char wday[4], month[4];
-  apr_time_t when;
 
   /* First try the new timestamp format. */
   if (sscanf (data,
@@ -146,8 +146,15 @@ svn_time_from_nts (const char *data)
       exploded_time.tm_yday = 0;
       exploded_time.tm_isdst = 0;
       exploded_time.tm_gmtoff = 0;
-
-      apr_implode_gmt (&when, &exploded_time);
+      
+      apr_err = apr_implode_gmt (when, &exploded_time);
+      if(apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL, pool,
+                                    "Date conversion failed.");
+        }
+      
+      return SVN_NO_ERROR;
     }
   /* Then try the compatibility option. */
   else if (sscanf (data,
@@ -166,21 +173,26 @@ svn_time_from_nts (const char *data)
     {
       exploded_time.tm_year -= 1900;
       exploded_time.tm_yday -= 1;
-      exploded_time.tm_wday = find_matching_string (wday, apr_day_snames);
-      exploded_time.tm_mon = find_matching_string (month, apr_month_snames);
+      /* Using hard coded limits for the arrays - they are going away
+         soon in any case. */
+      exploded_time.tm_wday = find_matching_string (wday, 7, apr_day_snames);
+      exploded_time.tm_mon = find_matching_string (month, 12, apr_month_snames);
 
-      apr_implode_gmt (&when, &exploded_time);
+      apr_err = apr_implode_gmt (when, &exploded_time);
+      if(apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL, pool,
+                                    "Date conversion failed.");
+        }
+
+      return SVN_NO_ERROR;
     }
   /* Timestamp is something we do not recognize. */
   else
     {
-      /* XXX: fix this function to return real error codes and all the
-         places that use it. */
-      /* Better zero than something random. */
-      when = 0;
+      return svn_error_createf(SVN_ERR_BAD_DATE, 0, NULL, pool,
+                               "Date parsing failed.");
     }
-
-  return when;
 }
 
 
