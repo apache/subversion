@@ -910,51 +910,54 @@ The following repository access (RA) modules are available:
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-2.1">
-      <title>The Apache Portable Runtime Library</title>
+      <title>La librería Apache Portable Runtime<!--TODO verificar si hay traducción --></title>
 
-      <para>Along with Subversion's own datatype, you will see many
-        references to datatypes that begin with
-        <literal>apr_</literal>&mdash;symbols from the Apache
-        Portable Runtime (APR) library.  APR is Apache's portability
-        library, originally carved out of its server code as an
-        attempt to separate the OS-specific bits from the
-        OS-independent portions of the code.  The result was a library
-        that provides a generic API for performing operations that
-        differ mildly&mdash;or wildly&mdash;from OS to OS.  While the
-        Apache HTTP Server was obviously the first user of the APR
-        library, the Subversion developers immediately recognized the
-        value of using APR as well.  This means that there are
-        practically no OS-specific code portions in Subversion itself.
-        Also, it means that the Subversion client compiles and runs
-        anywhere that the server does.  Currently this list includes
-        all flavors of Unix, Win32, BeOS, OS/2, and Mac OS X.</para>
+      <para>Junto con los tipos de datos de Subversion, verá muchas
+        referencias a tipos de datos que comienzan con
+        <literal>apr_</literal>&mdash;símbolos de la librería
+        Apache Portable Runtime (APR).  APR es la librería de
+        portabilidad de Apache, originada a partir del código fuente
+        del servidor en un intento de separar el código dependiente
+        del SO de las porciones de código independientes del SO. El
+        resultado es una librería que proporciona una API genérica
+        para realizar operaciones que difieren ligeramente &mdash;o
+        terriblemente&mdash; de SO a SO. Aunque el servidor HTTP
+        Apache fue obviamente el primer usuario de la librería
+        APR, los desarrolladores de Subversion reconocieron
+        inmediatamente el valor de usar también APR. Esto significa
+        que prácticamente no hay porciones de código dependiente
+        del SO en Subversion. También, significa que el cliente
+        Subversion se puede compilar y ejecutar dondequiera que lo
+        haga el servidor. Actualmente esta lista incluye todas las
+        variantes de Unix, Win32, BeOS, OS/2, y Mac OS X.</para>
 
-      <para>In addition to providing consistent implementations of
-        system calls that differ across operating systems,
+      <para>Además de proporcionar implemntaciones consistentes de
+        llamadas de sistema que difieren entre sistemas operativos,
         <footnote>
-          <para>Subversion uses ANSI system calls and datatypes as much
-            as possible.</para>
-        </footnote>
-        APR gives Subversion immediate access to many custom
-        datatypes, such as dynamic arrays and hash tables.  Subversion
-        uses these types extensively throughout the codebase.  But
-        perhaps the most pervasive APR datatype, found in nearly every
-        Subversion API prototype, is the
-        <literal>apr_pool_t</literal>&mdash;the APR memory pool.
-        Subversion uses pools internally for all its memory allocation
-        needs (unless an external library requires a different memory
-        management schema for data passed through its API),
-        <footnote>
-          <para>Neon and Berkeley DB are examples of such libraries.</para>
-        </footnote>
-        and while a person coding against the Subversion APIs is
-        not required to do the same, they are required to provide
-        pools to the API functions that need them.  This means that
-        users of the Subversion API must also link against APR, must
-        call <function>apr_initialize()</function> to initialize the
-        APR subsystem, and then must acquire a pool for use with
-        Subversion API calls.  See <xref linkend="svn-ch-8-sect-5"/>
-        for more information.</para>
+          <para>Subversion uses ANSI system calls and datatypes
+            as much as possible.</para>
+        </footnote> APR le da a Subversion acceso inmediato a muchos
+        tipos de datos, como arrays dinámicos o tablas hash<!--
+        TODO picadillo? -->.  Subversion usa en gran medida estos
+        tipos a lo largo del código fuente. Pero quizás el tipo de
+        datos APR más usado, encontrado en casi todo prototipo de la
+        API de Subversion, es <literal>apr_pool_t</literal>&mdash;el
+        grupo de memoria de APR.  Subversion usa internamente grupos
+        de memoria para todas las peticiones de reserva de memoria
+        que necesita (excepto cuando una librería externa requiere
+        un esquema de gestión de memoria diferente para los datos
+        que pasan por su API), <footnote>
+          <para>Neon y la base de datos de Berkeley son tales
+            librerías.</para>
+        </footnote> y aunque una persona que programa usando las
+        APIs de Subversion no está obligada a hacer lo mismo, tiene
+        que proporcionar grupos de memoria a las funciones de la API
+        que los necesitan. Esto significa que los usuarios de la API
+        de Subversion también tienen que enlazar con APR, y deben
+        llamar <function>apr_initialize()</function> para iniciar el
+        subsistema APR, y entonces adquirir un grupo de memoria para
+        usarlo con las llamadas de la API de Subversion. Vea <xref
+        linkend="svn-ch-8-sect-5"/> para más información.</para>
 
     </sect2>
 
