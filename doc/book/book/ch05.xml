@@ -170,6 +170,29 @@ $ svnadmin create path/to/repos
       directory.  Initially, revision 0 also has a single revision
       property, <literal>svn:date</literal>, set to the time at which
       the repository was created.</para>
+
+    <sidebar>
+      <title>WARNING!  Avoid network shares!</title>
+
+      <para>Make sure you <emphasis>don't</emphasis> create your
+        repository on a network share&mdash;it
+        <emphasis>cannot</emphasis> exist on a remote filesystem such
+        as NFS, AFS, or Windows SMB.  BerkeleyDB requires that the
+        underlying filesystem implement strict POSIX locking
+        semantics, and more importantly, the ability to map files
+        directly into process memory.  Almost no network filesystems
+        provide these features.   If you attempt to use BerkeleyDB on
+        a network share, the results are unpredictable:  you may see
+        mysterious errors right away, or it may be months before you
+        discover that your repository database is subtly
+        corrupted.</para>
+
+      <para>If you need multiple computers to access the repository,
+        then set up a server process (such as Apache or
+        <command>svnserve</command>) to make the repository available
+        over a network.  See <xref linkend="svn-ch-6"/>.</para>
+    </sidebar>
+
           
     <para>You may have noticed that the path argument to
       <command>svnadmin</command> was just a regular filesystem path

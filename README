@@ -110,6 +110,15 @@ IV.   QUICKSTART GUIDE
 
         $ svnadmin create /usr/local/svn/repos1
 
+      === WARNING!   WARNING!   WARNING!  ============================
+      |
+      | Note: The repository should *NOT* live on a remote or
+      | networked filesystem like NFS or AFS!  For details see:
+      |
+      |    http://subversion.tigris.org/project_faq.html#nfs
+      |
+      === WARNING!   WARNING!   WARNING!  ============================
+
       After the repository is created, you can initially import data
       into it, using libsvn_ra_local (invoked by using a 'file' URL):
 
@@ -126,27 +135,30 @@ IV.   QUICKSTART GUIDE
       rights to modify the .db files.
 
 
-      Note: The repository should NOT be on a remote filesystem like
-      NFS or AFS.  For details see:
-
-          http://subversion.tigris.org/project_faq.html#nfs
-
-
       3.  Creating a Subversion Server
 
-      Subversion uses Apache 2.0 as its network server.  Apache's
-      mod_dav speaks to a special mod_dav_svn module, which uses
-      Berkeley DB to talk to a repository.
+      Subversion uses either 'svnserve' or Apache 2.0 as its network
+      server.   Detailed instructions on how to set up either (or
+      both) server(s) is documented in chapter 6 of the Subversion
+      book at http://svnbook.red-bean.com.
 
-      Apache's own authentication system allows remote users to access
-      the repository with Subversion clients.  However: make sure that
-      Apache has the right to edit the .db files itself, or you'll get
-      all sorts of Apache errors.  Often people create a special 'svn'
-      user who owns the repository, and folks put a line into
-      httpd.conf that tells Apache to run as that special user.
+      Apache's mod_dav speaks to a special mod_dav_svn module, which
+      uses Berkeley DB to talk to a repository.  'svnserve' is a
+      lighter-weight process similar to cvs pserver, which also
+      accesses the repository.
+
+      Each server has an authentication system which allows remote
+      users to access the repository with Subversion clients.
+      However: make sure that Apache or svnserve has the right to edit
+      the .db files itself, or you'll get all sorts of errors.  Often
+      people create a special 'svn' user who owns the repository, and
+      then make sure svnserve or httpd is running at that user.
 
       Compiling Apache and mod_dav_svn is a separate project; please
       see section II at the end of the INSTALL document for a HOWTO.
+      And if your 'configure' script detected a proper version of
+      BerkeleyDB, then 'make' will automatically build the svnserve
+      binary.
 
 
   B.  EXAMPLE WALKTHROUGH

@@ -28,11 +28,6 @@ To be fixed by cmpilato:
     and then chuckle about how the examples are still shorter and
     easier to read than they were before.
 
-  - deltification no longer happens in-process -- repository
-    administrators *must* use 'svnadmin deltify', preferably
-    backgrounded in the post-commit hook, to keep their repositories
-    small.
-
   - define a 'project root', recommend 'standard' repos layout beneath
     such roots.
 
@@ -64,9 +59,8 @@ To be fixed by cmpilato:
     think this level of information is the exact right level of BDB
     knowledge that users/admins need to use svn well.
 
-  - Also regarding BDB:  make a big point (grey alert box?) about
-    *not* accessing repositories directly via network filesystems
-    (NFS, SMB, etc.)
+  - Please point out and explain why BerkeleyDB environments aren't
+    portable.  You can't just move it from Unix to Win32.
 
   - book says that deleting a ~/.subversion file will recreate it,
     which is wrong.  the whole directory needs to be renamed and recreated.
