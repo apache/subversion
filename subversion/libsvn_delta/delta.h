@@ -205,9 +205,6 @@ typedef struct svn_xml__digger_t
   svn_string_t *base_path;
   svn_revnum_t base_revision;
 
-  /* The target revision for this editor instance */
-  svn_revnum_t target_revision;
-
   /* Userdata structures that we need to keep track of while we parse,
      given to us by either the SVN filesystem or the SVN client */
   void *edit_baton;  /* (global data from our caller) */
