@@ -39,24 +39,24 @@ typedef void * svn_repos_file_rev_handler_t;
 #endif
 
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
-    svn_repos_t **
+    svn_repos_t **,
+    const svn_delta_editor_t **editor,
+    void **edit_baton
 };
 
-/* -----------------------------------------------------------------------
-   Some of the various parameters need to be NULL sometimes
-*/
 %apply const char *MAY_BE_NULL {
-    const char *src_entry,
-    const char *on_disk_template,
-    const char *in_repos_template
+    const char *src_entry
 };
 
-/* -----------------------------------------------------------------------
-   handle the 'paths' parameter appropriately
-*/
+/* svn_repos_db_logfiles() */
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    apr_array_header_t **logfiles
+}
+
+/* svn_repos_get_logs() */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths
 };
@@ -79,14 +79,6 @@ typedef void * svn_repos_file_rev_handler_t;
 %typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton) {
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
-
-/* -----------------------------------------------------------------------
-   commit editor support	
-*/
-%apply SWIGTYPE **OUTPARAM {
-    const svn_delta_editor_t **editor,
-    void **edit_baton
-};
 
 /* -----------------------------------------------------------------------
    handle svn_repos_history_func_t/baton pairs

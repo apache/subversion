@@ -106,7 +106,9 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
 /* helper function to convert an array of 'svn_revnum_t' to a Python list
    of int objects */
+/* Formerly used by pre-1.0 APIs. Now unused
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
+*/
 
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the

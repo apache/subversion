@@ -38,7 +38,7 @@
 %nodefault;
 
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_fs_root_t **,
@@ -49,68 +49,31 @@
     svn_fs_t **
 };
 
-/* and this is always an OUT param */
 %apply const char **OUTPUT { const char ** };
+
+/* svn_fs_*_proplist() */
+%apply apr_hash_t **PROPHASH { apr_hash_t **table_p };
 
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
    ### incompatible. */
 
-/* -----------------------------------------------------------------------
-   These parameters may be NULL.
-*/
+/* svn_fs_apply_textdelta(), svn_fs_apply_text() */
 %apply const char *MAY_BE_NULL {
     const char *base_checksum,
     const char *result_checksum
 };
 
-/* -----------------------------------------------------------------------
-   for the FS, 'int *' will always be an OUTPUT parameter
-*/
-%apply int *OUTPUT { int * };
-
-/* -----------------------------------------------------------------------
-   define the data/len pair of svn_fs_parse_id to be a single argument
-*/
+/* svn_fs_parse_id() */
 %apply (const char *PTR, apr_size_t LEN) {
     (const char *data, apr_size_t len)
 }
 
-/* -----------------------------------------------------------------------
-   list_transaction's "apr_array_header_t **" is returning a list of strings.
-*/
-
-%typemap(in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
-    $1 = &temp;
+/* svn_fs_berkeley_logfiles(), svn_fs_list_transactions() */
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    apr_array_header_t **logfiles,
+    apr_array_header_t **names_p
 }
-%typemap(python, argout, fragment="t_output_helper") 
-apr_array_header_t **names_p {
-    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
-}
-
-%typemap(perl5, argout) apr_array_header_t **names_p {
-    $result = svn_swig_pl_array_to_list(*$1);
-    ++argvi;
-}
-/* -----------------------------------------------------------------------
-   revisions_changed's "apr_array_header_t **" is returning a list of
-   revs.  also, its input array is a list of strings.
-*/
-
-%typemap(python, argout, fragment="t_output_helper") 
-apr_array_header_t **revs {
-    $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
-}
-%typemap(perl5, argout) apr_array_header_t **revs {
-    $result = svn_swig_pl_ints_to_list(*$1);
-    ++argvi;
-}
-
-/* -----------------------------------------------------------------------
-   all uses of "apr_hash_t **" are returning property hashes
-*/
-
-%apply apr_hash_t **PROPHASH { apr_hash_t ** };
 
 /* -----------------------------------------------------------------------
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures

@@ -260,10 +260,12 @@ SV *svn_swig_pl_array_to_list(const apr_array_header_t *array)
     return convert_array (array, (element_converter_t)convert_string, NULL);
 }
 
+/* Formerly used by pre-1.0 APIs. Now unused
 SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array)
 {
     return convert_array (array, (element_converter_t)convert_int, NULL);
 }
+*/
 
 SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
                               swig_type_info *tinfo)

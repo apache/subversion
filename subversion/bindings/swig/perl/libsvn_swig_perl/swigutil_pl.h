@@ -109,7 +109,9 @@ const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
                                                     apr_pool_t *pool);
 
 SV *svn_swig_pl_array_to_list(const apr_array_header_t *array);
+/* Formerly used by pre-1.0 APIs. Now unused
 SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array);
+*/
 SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
                               swig_type_info *tinfo);
 
