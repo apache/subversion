@@ -240,8 +240,8 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
 /* register our live property URIs with mod_dav. */
 void dav_svn_register_uris(apr_pool_t *p);
 
-/* generate an ETag for the given resource and return it. */
-const char * dav_svn_getetag(const dav_resource *resource);
+/* generate an ETag for RESOURCE and return it, allocated in POOL. */
+const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool);
 
 /* our hooks structures; these are gathered into a dav_provider */
 extern const dav_hooks_repository dav_svn_hooks_repos;
