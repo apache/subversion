@@ -1484,7 +1484,7 @@ compatibility questions:
 
  2. Working copy and repository formats are backward- and
     forward-compatible for all patch releases in the same minor
-    series.  They are backward-compatible for all minor releases in
+    series.  They are forward-compatible for all minor releases in
     the same major series; however, a minor release is allowed to make
     a working copy or repository that doesn't work with previous minor
     releases, where "make" could mean "upgrade" as well as "create".
