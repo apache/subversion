@@ -880,6 +880,9 @@ typedef struct svn_repos_parse_fns_t
                                      const char *name,
                                      const svn_string_t *value);
 
+  /** For a given @a node_baton, remove all properties. */
+  svn_error_t *(*remove_node_props) (void *node_baton);
+
   /** For a given @a node_baton, receive a writable @a stream capable of
    * receiving the node's fulltext.
    *

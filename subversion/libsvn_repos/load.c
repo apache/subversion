@@ -493,6 +493,11 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
                                   APR_HASH_KEY_STRING)))
         {
+          /* First, remove all node properties. */
+          if (found_node)
+            SVN_ERR (parse_fns->remove_node_props (node_baton));
+
+          /* Then add the "new" proplist to the node. */
           SVN_ERR (parse_property_block (stream, 
                                          (apr_size_t) atoi (valstr),
                                          parse_fns,
@@ -822,6 +827,7 @@ set_revision_property (void *baton,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 set_node_property (void *baton,
                    const char *name,
@@ -833,6 +839,34 @@ set_node_property (void *baton,
   SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
                                     name, value, nb->pool));
   
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+remove_node_props (void *baton)
+{
+  struct node_baton *nb = baton;
+  struct revision_baton *rb = nb->rb;
+  apr_hash_t *proplist;
+  apr_hash_index_t *hi;
+
+  SVN_ERR (svn_fs_node_proplist (&proplist,
+                                 rb->txn_root, nb->path, nb->pool));
+
+  for (hi = apr_hash_first (nb->pool, proplist); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+
+      SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
+                                        (const char *) key, NULL,
+                                        nb->pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -931,6 +965,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
   parser->uuid_record = uuid_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
+  parser->remove_node_props = remove_node_props;
   parser->set_fulltext = set_fulltext;
   parser->close_node = close_node;
   parser->close_revision = close_revision;
