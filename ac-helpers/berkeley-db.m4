@@ -87,7 +87,8 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       # /usr/local/include/db.h.  So if you check for /usr/local first, you'll
       # get the old header file from /usr/include, and the new library from
       # /usr/local/lib --- disaster.  Check for that bogosity first.
-      places="std /usr/local/include/db3:/usr/local/lib /usr/local /usr/local/BerkeleyDB.3.2"
+      places="std /usr/local/include/db3:/usr/local/lib /usr/local /usr/local/BerkeleyDB.3.2 
+	      /usr/include/db3:/usr/lib"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
     # search, no matter what flags the user passed.
