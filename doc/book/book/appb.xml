@@ -79,11 +79,8 @@
     <para>Invoking the script is simple:</para>
     
     <screen>
-$ cvs2svn.py -s /path/to/new/svn/repos /path/to/cvs/repos
-[...]
-
-### INSERT SAMPLE OUTPUT HERE
-
+$ svnadmin create /new/svn/repos
+$ cvs2svn.py -s /new/svn/repos /cvs/repos
 [...]
     </screen>
 
