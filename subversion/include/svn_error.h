@@ -36,6 +36,16 @@ extern "C" {
    Define custom Subversion error numbers, in the range reserved for
    that in APR: from APR_OS_START_USEERR to APR_OS_START_SYSERR (see
    apr_errno.h).
+
+   *****  HEY, WAKE UP! ******
+
+   If you're about to add a new svn-specific errorcode below, be SURE
+   you add an english description to the svn_strerror() hash in
+   svn_error.c.
+
+   If you forget, it's not catastrophic; svn_strerror() will print a
+   generic "undefined" message for your error.
+
 */
 typedef enum svn_errno_t {
   SVN_WARNING = (APR_OS_START_USEERR + 1),
@@ -287,9 +297,12 @@ typedef enum svn_errno_t {
 
 
 
-/* Lookup APR_ERR in svn_error_strings[] above and write
-   human-readable description into BUF.  Return BUF */
-char *svn_strerror (apr_status_t apr_err, char *buf, apr_size_t bufsize);
+/* Lookup APR_ERR and return an english description.
+
+   POOL is used on the very first call to allocate a hash of
+   descriptions. */
+const char *svn_strerror (apr_status_t apr_err, apr_pool_t *pool);
+
 
 
 
