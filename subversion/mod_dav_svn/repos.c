@@ -1394,9 +1394,9 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
 
   svn_error_t *serr;
   
-  serr = svn_fs_copy (src->info->root.root,  /* the root object of src */
-                      src->info->repos_path  /* the relative path of src */
-                      dst->info->root.txn,   /* the txn of dst */ 
+  serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
+                      src->info->repos_path, /* the relative path of src */
+                      dst->info->root.root,  /* the root object of dst txn*/ 
                       dst->info->repos_path, /* the relative path of dst */
                       src->pool);
   if (serr)
