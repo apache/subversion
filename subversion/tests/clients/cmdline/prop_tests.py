@@ -756,12 +756,12 @@ def strip_or_add_whitespace(sbox):
   propval_path = os.path.join(wc_dir, 'propval.tmp')
   propval_file = open(propval_path, 'wb')
 
-  def set_prop(name, value, path):
-    propval_file.seek(0)
-    propval_file.truncate(0)
-    propval_file.write(value)
-    propval_file.flush()
-    svntest.main.run_svn(None, 'propset', '-F', propval_path, name, path)
+  def set_prop(name, value, path, valf=propval_file, valp=propval_path):
+    valf.seek(0)
+    valf.truncate(0)
+    valf.write(value)
+    valf.flush()
+    svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
 
   # Leading and trailing whitespace should be stripped
   set_prop('svn:mime-type', ' text/html\n\n', iota_path)
