@@ -18,8 +18,12 @@
 #ifndef SVN_VERSION_H
 #define SVN_VERSION_H
 
+/* Hack to prevent the resource compiler from including
+   apr_general.h.  It doesn't resolve the include paths
+   correctly and blows up without this.
+ */
 #ifndef APR_STRINGIFY
-#include <apr_version.h>
+#include <apr_general.h>
 #endif
 
 #ifdef __cplusplus
