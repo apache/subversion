@@ -200,29 +200,16 @@ INSTALL_EXTRA_SWIG_PY=\
        $(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_BUILD_DIR}/python" "$(DESTDIR)$(swig_pydir)" ; \
    fi
 
-# These are for the SWIG generated bindings
+# The path to generated and complementary source files for the SWIG
+# bindings.
 SWIG_JAVA_DIR = $(abs_builddir)/subversion/bindings/swig/java
-# These are the 'extra' classes which complement SWIG's generated bindings
-SWIG_EXTRA_JAVA_DIR = $(abs_srcdir)/subversion/bindings/java
-SWIG_EXTRA_SWIG_DIR = $(abs_srcdir)/subversion/bindings/swig/java
-SWIG_JAVA_SOURCES = $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/*.java \
-                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/auth/*.java \
-                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/client/*.java \
-                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/opt/*.java \
-                    $(SWIG_EXTRA_JAVA_DIR)/org/tigris/subversion/wc/*.java \
-                    $(SWIG_EXTRA_SWIG_DIR)/org/tigris/subversion/util/*.java \
-                    $(SWIG_EXTRA_SWIG_DIR)/org/tigris/subversion/client/*.java \
-                    $(SWIG_JAVA_DIR)/org/tigris/subversion/swig/*.java
 
-# Have to work around different versions of SWIG that output the java files
-# in different directories.
+### Enhance using Makefile generator to support JAR installation.
 INSTALL_EXTRA_SWIG_JAVA=\
-	if [ ! -d $(SWIG_JAVA_DIR)/build ]; then mkdir $(SWIG_JAVA_DIR)/build; fi; \
-	if [ ! -f $(SWIG_JAVA_DIR)/org/tigris/subversion/swig/clientJNI.java ]; then mv $(SWIG_JAVA_DIR)/*.java $(SWIG_JAVA_DIR)/org/tigris/subversion/swig; fi; \
-	$(JAVAC) -g -d $(SWIG_JAVA_DIR)/build $(SWIG_JAVA_SOURCES); \
-	$(JAR) cf $(SWIG_JAVA_DIR)/build/svn-api.jar -C $(SWIG_JAVA_DIR)/build org; \
-	$(INSTALL_DATA) $(SWIG_JAVA_DIR)/build/svn-api.jar $(DESTDIR)$(swig_javadir);
+	$(INSTALL_DATA) $(SWIG_JAVA_DIR)/build/svn-api.jar $(DESTDIR)$(swig_javadir)
 
+### Automate JAR creation using Makefile generator's javahl-java.jar
+### property.  Enhance generator to support JAR installation.
 INSTALL_EXTRA_JAVAHL_JAVA=\
 	$(JAR) cf subversion/bindings/java/javahl/svn-javahl.jar -C subversion/bindings/java/javahl/classes org; \
 	$(INSTALL_DATA) subversion/bindings/java/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
@@ -242,6 +229,7 @@ JAR = @JAR@
 JAVA_CLASSPATH=@JAVA_CLASSPATH@
 javahl_java_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_tests_CLASSPATH=$(JAVA_CLASSPATH)
+swig_java_tests_CLASSPATH=$(SWIG_JAVA_DIR)/build:$(JAVA_CLASSPATH)
 
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -298,6 +286,16 @@ javahl: javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
 install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
 check-javahl:
 	$(JAVA) -Djava.library.path=$(libdir) -classpath subversion/bindings/java/javahl/classes:$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.BasicTests
+
+# Different versions of SWIG generate the Java source files in
+# different directories.
+swig-java-setup:
+	if [ ! -d $(SWIG_JAVA_DIR)/build ]; then mkdir $(SWIG_JAVA_DIR)/build; fi; \
+	if [ ! -f $(SWIG_JAVA_DIR)/org/tigris/subversion/swig/clientJNI.java ]; then mv $(SWIG_JAVA_DIR)/*.java $(SWIG_JAVA_DIR)/org/tigris/subversion/swig; fi
+
+# SWIG/Java testing
+check-swig-java: swig-java-tests
+	$(JAVA) -Djava.library.path=$(libdir):$(SVN_APR_PREFIX)/lib -classpath $(SWIG_JAVA_DIR)/build/svn-api.jar:$(JAVA_CLASSPATH) org.tigris.subversion.test.BasicTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/clients/cmdline/basic_tests.py"

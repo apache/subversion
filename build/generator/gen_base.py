@@ -606,6 +606,8 @@ class TargetJava(TargetLib):
   def __init__(self, name, options, cfg, extmap):
     TargetLib.__init__(self, name, options, cfg, extmap)
     self.link_cmd = options.get('link-cmd')
+    self.packages = string.split(options.get('package-roots', ''))
+    self.jar = options.get('jar')
     self.deps = [ ]
     self.filename = ''
 
@@ -685,6 +687,21 @@ class TargetJavaClasses(TargetJava):
     for src, reldir in sources:
       if src[-5:] == '.java':
         objname = src[:-5] + self.objext
+
+        # As .class files are likely not generated into the same
+        # directory as the source files, the object path may need
+        # adjustment.  To this effect, take "target_ob.classes" into
+        # account.
+        dirs = string.split(objname, os.sep)
+        i = len(dirs) - 2  # Last element is the .class file name.
+        while i >= 0:
+          if dirs[i] in self.packages:
+            # Java package root found.
+            objname = os.path.join(self.classes, string.join(dirs[i:], os.sep))
+            break
+          i = i - 1
+        if i < 0:
+              raise GenError('Unable to find Java package root in path')
       else:
         raise GenError('ERROR: unknown file extension on ' + src)
 
@@ -704,7 +721,7 @@ class TargetJavaClasses(TargetJava):
     graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
     graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
     for pattern in string.split(self.sources):
-      idx = string.rfind(pattern, '/')
+      idx = string.rfind(pattern, os.sep)
       if idx != -1:
         ### hmm. probably shouldn't be os.path.join() right here
         ### (at this point in the control flow; defer to output)
