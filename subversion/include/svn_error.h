@@ -147,6 +147,9 @@ typedef enum svn_errno_t {
   /* There is no file by the given name.  */
   SVN_ERR_FS_NOT_FOUND,
 
+  /* The given node revision id does not exist.  */
+  SVN_ERR_FS_ID_NOT_FOUND,
+
   /* The name given does not refer to a directory.  */
   SVN_ERR_FS_NOT_DIRECTORY,
 
