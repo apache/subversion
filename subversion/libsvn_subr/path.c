@@ -468,10 +468,20 @@ svn_path_compare_paths (const char *path1,
 }
 
 
-char *
-svn_path_get_longest_ancestor (const char *path1,
-                               const char *path2,
-                               apr_pool_t *pool)
+/* Return the longest common ancestor of PATH1 and PATH2.  
+ *
+ * This function handles everything except the URL-handling logic 
+ * of svn_path_get_longest_ancestor, and assumes that PATH1 and 
+ * PATH2 are *not* URLs.  
+ *
+ * If the two paths do not share a common ancestor, NULL is returned.
+ *
+ * New strings are allocated in POOL.
+ */
+static char *
+get_longest_path_ancestor (const char *path1,
+                           const char *path2,
+                           apr_pool_t *pool)
 {
   char *common_path;
   apr_size_t path1_len, path2_len;
@@ -500,14 +510,67 @@ svn_path_get_longest_ancestor (const char *path1,
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
      that non-matching byte. */
-  if (((i == path1_len) && (path2[i] == '/'))
-      || ((i == path2_len) && (path1[i] == '/'))
-      || ((i == path1_len) && (i == path2_len)))
+  if (i == 0)
+    return NULL;
+  else if (((i == path1_len) && (path2[i] == '/'))
+           || ((i == path2_len) && (path1[i] == '/'))
+           || ((i == path1_len) && (i == path2_len)))
     common_path = apr_pstrmemdup (pool, path1, i);
+  else if (last_dirsep == 0)
+    return NULL;
   else
     common_path = apr_pstrmemdup (pool, path1, last_dirsep);
 
   return common_path;
+}
+
+
+char *
+svn_path_get_longest_ancestor (const char *path1,
+                               const char *path2,
+                               apr_pool_t *pool)
+{
+  if (svn_path_is_url (path1)) 
+    {
+      if (svn_path_is_url (path2))
+        {
+          char *ancestor, *path_ancestor, *prefix;
+          int i = 0;
+
+          /* Find ':' */
+          for (i = 0; path1[i] != ':'; i++) 
+            {
+              /* They're both URLs, so EOS can't come before ':' */
+              assert (path1[i] != '\0' && path2[i] != '\0');
+
+              /* No shared protocol => no common prefix */
+              if (path1[i] != path2[i])
+                return NULL;  
+            }
+
+          i += 3;  /* Advance past '://' */
+
+          path_ancestor = get_longest_path_ancestor (path1 + i, path2 + i, 
+                                                     pool); 
+
+          /* No shared path => no common prefix */
+          if ((! path_ancestor) || (*path_ancestor == '\0'))
+            return NULL;  
+
+          else 
+            return apr_pstrcat (pool, apr_pstrndup (pool, path1, i),
+                                path_ancestor, NULL);
+        }
+      else
+        {
+          /* A URL and a non-URL => no common prefix */
+          return NULL;  
+        }
+    }
+  else
+    { 
+      return get_longest_path_ancestor (path1, path2, pool);
+    }
 }
 
 
@@ -870,16 +933,23 @@ svn_path_get_absolute(const char **pabsolute,
   SVN_ERR (svn_path_cstring_from_utf8
            (&path_apr, svn_path_canonicalize (relative, pool), pool));
 
-  apr_err = apr_filepath_merge(&buffer, NULL,
-                               path_apr,
-                               (APR_FILEPATH_NOTRELATIVE
-                                | APR_FILEPATH_TRUENAME),
-                               pool);
+  if (svn_path_is_url (path_apr))
+    {
+      buffer = apr_pstrdup (pool, path_apr);
+    }
+  else
+    {
+      apr_err = apr_filepath_merge(&buffer, NULL,
+                                   path_apr,
+                                   (APR_FILEPATH_NOTRELATIVE
+                                    | APR_FILEPATH_TRUENAME),
+                                   pool);
 
-  if (apr_err)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                             "Couldn't determine absolute path of '%s'.", 
-                             relative);
+      if (apr_err)
+        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
+                                 "Couldn't determine absolute path of '%s'.", 
+                                 relative);
+    }
 
   SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
   *pabsolute = svn_path_canonicalize (*pabsolute, pool);

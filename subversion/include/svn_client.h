@@ -688,10 +688,11 @@ svn_client_status (apr_hash_t **statushash,
  * given log message more than once).
  *
  * @a targets contains all the working copy paths (as <tt>const char 
- * *</tt>'s) for which log messages are desired; the common prefix of @a 
- * targets determines the repository and auth info.  @a receiver is invoked 
- * only on messages whose revisions involved a change to some path in
- * @a targets.
+ * *</tt>'s) for which log messages are desired.  The repository info is
+ * determinied by taking the common prefix of the target entries' URLs.
+ * The common prefix of @a targets, if it is a valid working copy, 
+ * determines the auth info.  @a receiver is invoked only on messages 
+ * whose revisions involved a change to some path in @a targets.
  *
  * ### todo: the above paragraph is not fully implemented yet.
  *

@@ -34,7 +34,22 @@ tests = [('normal use',
           cwd + '/z/A: \n'),
          ('single file',
           'z/A/file',
-          cwd + '/z/A: file, \n')]
+          cwd + '/z/A: file, \n'),
+         ('URLs',
+          'http://host/A/C http://host/A/C/D http://host/A/B/D',
+          'http://host/A: C, B/D, \n'),
+         ('URLs with no common prefix',
+          'http://host1/A/C http://host2/A/C/D http://host3/A/B/D',
+          ': http://host1/A/C, http://host2/A/C/D, http://host3/A/B/D, \n'),
+         ('file URLs with no common prefix',
+          'file:///A/C file:///B/D',
+          ': file:///A/C, file:///B/D, \n'),
+         ('URLs with mixed protocols',
+          'http://host/A/C file:///B/D',
+          ': http://host/A/C, file:///B/D, \n'),
+         ('mixed paths and URLs',
+          'z/A/B http://host/A/C/D',
+          ': ' + cwd + '/z/A/B, http://host/A/C/D, \n')]
 
 # (re)Create the test directory
 if os.path.exists('z'):
