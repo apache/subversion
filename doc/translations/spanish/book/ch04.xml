@@ -28,7 +28,7 @@
     <title>¿Qué es una rama?</title>
 
     <para>Supongamos que su trabajo es mantener un documento para
-      una de las divisiones de su companía, una especie de
+      una de las divisiones de su compañía, una especie de
       manual. Un día una división diferente le pide ese manual,
       pero con algunas partes 'retocadas' para ellos, dado que
       <!-- TODO tweak. Puede ser retocado, modificado, personalizado,
@@ -37,7 +37,7 @@
 
     <para>¿Qué hace en esta situación? Lo más obvio: realiza
       una segunda copia de su documento, y comienza a mantener
-      ambas copias de forma separada. A medida que cada departamente
+      ambas copias de forma separada. A medida que cada departamento
       solicita pequeños cambios, usted los incorpora en una de las
       copias o la otra.</para>
 
@@ -52,7 +52,7 @@
       <firstterm>rama</firstterm>&mdash; una línea de desarrollo
       que existe de forma independiente a otra, pero comparte
       una historia común si mira suficientemente atrás en el
-      tiempo. Una rama siempre nace como una copia d ealgo, y a
+      tiempo. Una rama siempre nace como una copia de algo, y a
       partir de ahí, pasa a generar su propia historia (vea <xref
       linkend="svn-ch-4-dia-1"/>).</para>
 
@@ -85,7 +85,7 @@
       de ficheros (llamado <!-- TODO en efecto, hay que ponerse
       de acuerdo con traducir revision.  Por ahora usaré revision
       sin acento para indicar que es una palabra que he decidido
-      no traducir --> <quote>revision</quote>). Si no es así,
+      no traducir --> <quote>revisión</quote>). Si no es así,
       debería volver atrás y leer información sobre revisiones en
       <xref linkend="svn-ch-2-sect-3.2"/>.</para>
 
@@ -118,10 +118,10 @@
       reorganización radical del proyecto. Le tomará un largo
       tiempo realizar la modificación, y ésta afectará a todos
       los ficheros del proyecto. En esta situación el problema
-      es que no quiere intereferir con Carmen, quien sigue en
+      es que no quiere interferir con Carmen, quien sigue en
       el proceso de corregir pequeños fallos aquí y allá. Ella
       depende del hecho que la última versión del proyecto (en
-      <filename>/calc/trunk</filename>) siempre es usable. Si
+      <filename>/calc/trunk</filename>) siempre sea usable. Si
       comienza a enviar cambios al repositorio poco a poco,
       seguramente fastidiará la tarea de Carmen.</para>
 
@@ -139,7 +139,7 @@
       <filename>/calc/trunk</filename> en dos máquinas diferentes),
       necesitará copiar manualmente sus cambios de un lado a otro,
       o realizar todo el trabajo en un solo ordenador. Del mismo
-      modo, es dificil compartir sus cambios a mitad del desarrollo
+      modo, es difícil compartir sus cambios a mitad del desarrollo
       con otras personas. Una <quote>práctica ideal</quote> común
       en el desarrollo de software es permitir que sus compañeros
       puedan revisar su trabajo a medida que progresa. Si nadie
@@ -156,13 +156,13 @@
       desarrollo, en el repositorio. Esto le permite guardar su
       trabajo a medio hacer con frecuencia sin interferir con otros,
       permitiendo a su vez compartir de forma selectiva información
-      con sus colaboradores. Más adelante verá exáctamente como
+      con sus colaboradores. Más adelante verá exactamente como
       funciona esto.</para>
 
   <sect2 id="svn-ch-4-sect-2.1">
     <title>Creando una rama</title>
 
-      <para>Crear una rama es muy simple&mdash;realize una copia
+      <para>Crear una rama es muy simple&mdash;realice una copia
         del proyecto en el repositorio usando el comando
         <command>svn copy</command>. Subversion no sólo es
         capaz de copiar ficheros individuales, sino también
@@ -170,7 +170,7 @@
         directorio <filename>/calc/trunk</filename>. ¿Dónde debería
         colocar la nueva copia? Donde desee&mdash;es una cuestión
         de política de su proyecto. Digamos que su equipo tiene
-        la política de crear ramas en el area de repositorio
+        la política de crear ramas en el área de repositorio
         <filename>/calc/branches</filename>, y quiere nombrar
         la rama <literal>my-calc-branch</literal>. Entonces
         querrá crear un nuevo directorio
@@ -281,7 +281,7 @@ Committed revision 341.
       
         <para>Por esta razón escuchará a los usuarios de Subversion
           hablar con frecuencia sobre <quote>copias ligeras</quote>.
-          No importa cuán grande sea el directorio&mdash;sólo
+          No importa cuan grande sea el directorio&mdash;sólo
           requiere un tiempo constante muy pequeño realizar una
           copia del mismo.  De hecho, esta es la característica en
           la que se basan los cambios realizados en Subversion:
@@ -295,7 +295,7 @@ Committed revision 341.
           y compartir datos está oculto al usuario, que simplemente
           ve copias de árboles de ficheros. Lo importante es saber
           que las copias son ligeras, tanto en tiempo como espacio.
-          Crée tantas ramas como desee.  <!-- TODO, aquí quizás cheap
+          Cree tantas ramas como desee.  <!-- TODO, aquí quizás cheap
           debería traducirse tal cual.  Aparte, "crée" quizás pueda
           reemplazarse por algo mejor--></para>
       </sidebar>
@@ -587,7 +587,7 @@ Index: integer.c
 </screen>
       
       <para>El comando <command>svn merge</command> es casi
-        exáctamente idéntico.  En lugar de mostrar las diferencias
+        exactamente idéntico.  En lugar de mostrar las diferencias
         en su terminal, no obstante, las aplica directamente
         a su copia local como <emphasis>modificaciones
         locales</emphasis>:</para>
@@ -635,8 +635,9 @@ Transmitting file data .
 Committed revision 360.
 </screen>
 
-      <para>As you'll see in the next sections, this is a very
-        important <quote>best practice</quote> to follow.</para>
+      <para>Tal y como verá en las siguientes secciones, es muy
+        importante seguir esta <quote>práctica
+        recomendada</quote>.</para>
 
       <sidebar>
         <title>¿Por qué no usar parches?</title>
@@ -831,9 +832,9 @@ $ svn status
           tener <quote>características de changeset</quote>.
           Para nuestros propósitos, digamos que un changeset es una
           colección de cambios con nombre único. Los cambios pueden
-          incluír ediciones textuales a los contenidos de un fichero,
+          incluir ediciones textuales a los contenidos de un fichero,
           modificaciones a la estructura de un directorio, o cambios
-          en los metadatos. En el habla habitual, un changeset es
+          en los meta datos. En el habla habitual, un changeset es
           un parche con un nombre al que se puede referir.</para>
 
         <para>En Subversion, un número global de revisión N nombra el
@@ -906,7 +907,7 @@ $ svn status
           por defecto. No obstante, ocasionalmente puede querer
           que el comando de fusionado compare dos árboles no
           relacionados. Por ejemplo, puede haber importado
-          dos árboles de código fuente representando diferenes
+          dos árboles de código fuente representando diferentes
           versiones <!-- TODO vendor release, no veo traducción
           sencilla --> de un proyecto de software (lea <xref
           linkend="svn-ch-7-sect-4"/>).  ¡Si usase <command>svn
@@ -958,7 +959,7 @@ $ svn status
       <para>¿Cómo usamos <command>svn merge</command> en esta
         situación? Recuerde que este comando compara dos árboles,
         y aplica las diferencias en una copia local. Así que para
-        recivir los cambios, necesita tener una copia local del
+        recibir los cambios, necesita tener una copia local del
         tronco. Asumiremos que todavía tiene una copia original
         del tronco por alguna parte (completamente actualizada),
         o que recientemente ha obtenido una copia local fresca de
@@ -993,7 +994,7 @@ $ svn status
         <para>Un buen método para encontrar la revisión en
         la cual fue creada una rama (la "base" de la misma)
         es usar la opción <option>--stop-on-copy</option> con
-        <command>svn log</command>. El subcomando log normalmente
+        <command>svn log</command>. El sub comando log normalmente
         muestra todo cambio realizado en la rama, incluyendo
         los de la copia a partir de la cual fue creada. Así que
         normalmente verá también la historia del tronco. La opción
@@ -1001,7 +1002,7 @@ $ svn status
         comando en cuanto <command>svn log</command> detecte que
         la rama fue copiada o renombrada.</para>
 
-        <para>Así que en nuestro ejemplo contínuo:</para>
+        <para>Así que en nuestro ejemplo continuo:</para>
 
 <screen>
 $ svn log --verbose --stop-on-copy \
@@ -1051,7 +1052,7 @@ Committed revision 406.
 </screen>
 
       <para>De nuevo, fíjese que el mensaje de cambios menciona de
-        forma expecífica el rango de cambios que fue fusionado en el
+        forma explícita el rango de cambios que fue fusionado en el
         tronco. Recuerde siempre hacer esto, porque es información
         crítica que necesitará más adelante.</para>
 
@@ -1082,7 +1083,7 @@ Merged my-calc-branch changes r341:405 into the trunk.
 &hellip;
 </screen>
       
-      <para>¡Ahá! Dado que todos los cambios que ocurrieron en la
+      <para>¡Ajá! Dado que todos los cambios que ocurrieron en la
         rama entre las revisiones 341 y 405 fueron fusionados
         con el tronco como la revisión 406, ahora sabe que sólo
         quiere fusionar los cambios de la rama posteriores
@@ -1162,7 +1163,7 @@ Committed revision 350.
         <command>svn merge</command> para aplicar el changeset #303
         a nuestra copia local <emphasis>al revés</emphasis>.</para>
     
-      <para>Tenga presente que reshacer un cambio de esta manera es
+      <para>Tenga presente que deshacer un cambio de esta manera es
         como realizar cualquier otra operación <command>svn
         merge</command>, así que debería usar <command>svn
         status</command> y <command>svn diff</command> para
@@ -1219,7 +1220,7 @@ Committed revision 350.
         es, <quote>¿Cómo puedo recuperar mi fichero o directorio
         antiguo?</quote></para>
 
-      <para>El primer paso es definir exáctamente<emphasis
+      <para>El primer paso es definir exactamente<emphasis
         role="bold">qué</emphasis> elemento está intentando
         resucitar.  Aquí tiene una metáfora útil: puede pensar
         que todo objeto en el repositorio existe en una especie de
@@ -1249,7 +1250,7 @@ Committed revision 350.
         necesita hacer es encontrar la revisión en la cual borró
         el fichero o directorio. Puede hacer esto visualmente, o
         usando otra herramienta para examinar el informe de cambios
-        (via <command>grep</command>, o quizás con una búsqueda
+        (vía <command>grep</command>, o quizás con una búsqueda
         incremental en un editor.)</para>
 
       <screen>
@@ -1293,7 +1294,7 @@ Removed real.c because code now in double.c.
         probablemente no es la mejor estrategia. Aplicar al revés
         la revisión 808 no solamente programaría la adición
         de <filename>real.c</filename>, ya que el mensaje de
-        cambios indica que también se deshacerían ciertos cambios
+        cambios indica que también se desharían ciertos cambios
         a <filename>integer.c</filename>, cosa que no desea.
         Ciertamente, podría fusionar al revés la revisión 808
         y entonces ejecutar <command>svn revert</command> sobre
@@ -1409,7 +1410,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       un único fichero de su copia local a la rama!) De ese modo,
       sigue pudiendo recibir modificaciones normales del 'tronco'
       en su copia local, pero las porciones que cambió a otra rama
-      quedarán inmunes (a no ser que alguien envie un cambio a
+      quedarán inmunes (a no ser que alguien envíe un cambio a
       esa rama).  Esta característica añade una nueva dimensión al
       concepto de <quote>copia local mezclada</quote>&mdash;no sólo
       pueden tener las copias locales una mezcla de revisiones,
@@ -1498,7 +1499,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       <firstterm>etiqueta</firstterm>.  Una etiqueta no es
       más que una <quote>instantánea</quote> del proyecto en
       el tiempo. En Subversion, esta idea ya está presente en
-      todas partes. Cada revisión del repositorio es exáctamente
+      todas partes. Cada revisión del repositorio es exactamente
       eso&mdash;una instantánea del sistema de ficheros tras cada
       envío al repositorio.</para>
 
@@ -1515,7 +1516,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
 
       <para>De nuevo, <command>svn copy</command> viene al
         rescate. Si desea crear una instantánea de
-        <filename>/calc/trunk</filename> exáctamente tal y como
+        <filename>/calc/trunk</filename> exactamente tal y como
         se ve en la revisión <literal>HEAD</literal>, haga una
         copia:</para>
 
@@ -1533,12 +1534,12 @@ Committed revision 351.
         Tras finalizar la copia, el nuevo directorio
         <filename>lanzamiento-1.0</filename> será para siempre
         una instantánea del aspecto que tenía la revisión
-        <literal>HEAD</literal> del projecto en el momento que
+        <literal>HEAD</literal> del proyecto en el momento que
         realizó la copia. Por supuesto puede querer ser más
         preciso sobre qué revisión exacta copiar, en caso de
         que alguien realice un cambio al proyecto mientras no
         está observando. Así que si sabe que la revisión 350
-        de <filename>/calc/trunk</filename> es exáctamente la
+        de <filename>/calc/trunk</filename> es exactamente la
         instantánea que desea, puede especificarla pasando <option>-r
         350</option> al comando <command>svn copy</command>.</para>
 
@@ -1557,15 +1558,15 @@ Committed revision 351.
       <para>Si está administrando un repositorio, hay dos formas de
         de gestionar etiquetas. La primera es <quote>manos
         fuera</quote>: según la política de su proyecto, decida
-        dónde pondrá sus etiquetas, y asegurese de que todos
+        dónde pondrá sus etiquetas, y asegúrese de que todos
         los usuarios saben cómo tratar los directorios que copian
-        ahí. (En otras palabras, asegurese de que no cambian nada en
-        esos directorios.) La segunda forma es más paranóica: puede
+        ahí. (En otras palabras, asegúrese de que no cambian nada en
+        esos directorios.) La segunda forma es más paranoica: puede
         usar uno de los scripts de control de acceso proporcionados
         con Subversion para prevenir cualquier cosa que no sea
         la creación de nuevas copias en el área de etiquetado
         (Vea <xref linkend="svn-ch-6"/>.)  No obstante, el método
-        paranóico normalmente no es necesario. Si un usuario envía
+        paranoico normalmente no es necesario. Si un usuario envía
         un cambio accidentalmente al directorio de etiquetas,
         puede simplemente deshacer el cambio tal y como discutimos
         en la sección anterior. Después de todo, esto es control
@@ -1599,7 +1600,7 @@ Committed revision 351.
       <para>Hora de tomar una instantánea.  Copiar una URL en otra
         no funcionará esta vez. <!-- TODO: Revisar el significado
         de la frase original --> En este caso, quiere hacer una
-        instantánea de la configuración exácta de su copia local y
+        instantánea de la configuración exacta de su copia local y
         almacenarla en el repositorio. Afortunadamente, <command>svn
         copy</command> tiene en realidad cuatro usos diferentes
         (sobre los cuales puede leer en el noveno capítulo),
@@ -1674,7 +1675,7 @@ Committed revision 352.
       <para>Si un repositorio contiene múltiples proyectos, los
         administradores normalmente indexan la estructura por
         proyecto (vea <xref linkend="svn-ch-5-sect-6.1"/> para leer
-        más sobre <quote>raices de proyecto</quote>):</para>
+        más sobre <quote>raíces de proyecto</quote>):</para>
 
 <screen>
 /paint/trunk
@@ -1761,7 +1762,7 @@ Committed revision 376.
         creado para corregir un fallo o implementar una nueva
         característica. Cuando su tarea está terminada, así lo está
         su rama. No obstante, en el desarrollo de software también es
-        comun tener dos ramas <quote>principales</quote> que viven en
+        común tener dos ramas <quote>principales</quote> que viven en
         paralelo por largos periodos de tiempo. Por ejemplo, suponga
         que es el momento de hacer público el proyecto estable
         <filename>calc</filename>, y sabe que va a necesitar un par
@@ -1787,7 +1788,7 @@ Committed revision 377.
         <filename>/calc/branches/stable-1.0</filename>.  Es decir,
         a medida que la gente continúa su trabajo en el tronco, un
         humano portará selectivamente las correcciones de fallos
-        a la rama establa. Incluso después de haber lanzado la
+        a la rama estable. Incluso después de haber lanzado la
         rama estable, probablemente continuará manteniéndola por
         un largo tiempo&mdash;es decir, tanto como desee continuar
         el soporte de esa versión para sus usuarios.</para>
