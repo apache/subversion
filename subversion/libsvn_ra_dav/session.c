@@ -24,11 +24,9 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
+#include "svn_private_config.h"
 
 #include "ra_dav.h"
-
-/* ### need to pick this up from somewhere else... */
-#define SVN_VERSION "0.1"
 
 
 static apr_status_t cleanup_session(void *sess)

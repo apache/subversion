@@ -38,23 +38,13 @@
 enum {
   ELEM_resourcetype = DAV_ELM_207_UNUSED,
   ELEM_collection,
-  ELEM_target,
-  ELEM_activity_collection_set,
-  ELEM_version_name
+  ELEM_checked_in,
 };
 
 static const dav_propname fetch_props[] =
 {
-  { "DAV:", "activity-collection-set" },
   { "DAV:", "resourcetype" },
-  { "DAV:", "target" },
-
-  /* ### note: DAV:version-name is not necessarily located on the
-     ### version-controlled resource. We know mod_dav_svn will do this,
-     ### but this is a possible interop issue. Of course, simply the
-     ### fact that we consider DAV:version-name to contain the revision
-     ### number is pretty non-interoperable... */
-  { "DAV:", "version-name" },
+  { "DAV:", "checked-in" },
   { NULL }
 };
 
@@ -62,10 +52,8 @@ static const struct hip_xml_elm fetch_elems[] =
 {
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, HIP_XML_CDATA },
-  { "DAV:", "target", ELEM_target, 0 },
-  { "DAV:", "activity-collection-set", ELEM_activity_collection_set, 0 },
+  { "DAV:", "checked-in", ELEM_checked_in, 0 },
   { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
-  { "DAV:", "version-name", ELEM_version_name, HIP_XML_CDATA },
   { NULL }
 };
 
@@ -99,8 +87,6 @@ typedef struct {
 
   apr_pool_t *pool;
 
-  svn_string_t *activity_url;   /* where to create activities */
-
   /* the name of the local property to hold the version resource's URL */
   svn_string_t *vsn_url_name;
 
@@ -131,8 +117,6 @@ start_resource (void *userdata, const char *url)
   fetch_ctx_t *fc = userdata;
   resource_t *r = apr_pcalloc(fc->pool, sizeof(*r));
 
-  /* printf("start_resource: %s\n", url); */
-
   r->parent_baton = fc->cur_baton;
 
   /* ### mod_dav returns absolute paths in the DAV:href element. that is
@@ -153,19 +137,6 @@ end_resource (void *userdata, void *resource, const char *status_line,
 {
   fetch_ctx_t *fc = userdata;
   resource_t *r = resource;
-
-#if 0
-  printf("end_resource: %s\n", r->url);
-  if (status_line != NULL)
-    printf("    status line: %s\n", status_line);
-  if (status != NULL) {
-    printf("         status: HTTP/%d.%d  %d (%s)\n",
-           status->major_version, status->minor_version, status->code,
-           status->reason_phrase);
-  }
-  if (description != NULL)
-    printf("    description: %s\n", description);
-#endif
 
   if (r->is_collection)
     {
@@ -207,23 +178,19 @@ end_resource (void *userdata, void *resource, const char *status_line,
 static int
 validate_element (hip_xml_elmid parent, hip_xml_elmid child)
 {
-  /*  printf("validate_element: #%d as child of #%d\n", child, parent); */
-  
   switch (parent)
     {
     case DAV_ELM_prop:
         switch (child)
           {
-          case ELEM_target:
+          case ELEM_checked_in:
           case ELEM_resourcetype:
-          case ELEM_activity_collection_set:
-          case ELEM_version_name:
             return HIP_XML_VALID;
           default:
             return HIP_XML_DECLINE;
           }
         
-    case ELEM_target:
+    case ELEM_checked_in:
       if (child == DAV_ELM_href)
         return HIP_XML_VALID;
       else
@@ -231,12 +198,6 @@ validate_element (hip_xml_elmid parent, hip_xml_elmid child)
       
     case ELEM_resourcetype:
       if (child == ELEM_collection)
-        return HIP_XML_VALID;
-      else
-        return HIP_XML_INVALID;
-
-    case ELEM_activity_collection_set:
-      if (child == DAV_ELM_href)
         return HIP_XML_VALID;
       else
         return HIP_XML_INVALID;
@@ -259,23 +220,13 @@ start_element (void *userdata, const struct hip_xml_elm *elm,
      ### a successful propstat, or a failing one...
      ### waiting on Joe for feedback */
 
-  /* printf("start_element: %s:%s  (#%d)\n", elm->nspace, elm->name, elm->id);
-
-  while (*atts)
-    {
-      printf("    attr: %s='%s'\n", atts[0], atts[1]);
-      atts += 2;
-    }
-  */
-
   switch (elm->id)
     {
     case ELEM_collection:
       r->is_collection = 1;
       break;
 
-    case ELEM_target:
-    case ELEM_activity_collection_set:
+    case ELEM_checked_in:
       r->href_parent = elm->id;
       break;
 
@@ -293,45 +244,18 @@ end_element (void *userdata, const struct hip_xml_elm *elm, const char *cdata)
   fetch_ctx_t *fc = userdata;
   resource_t *r = dav_propfind_get_current_resource(fc->dph);
 
-#if 0
-  printf("end_element: %s:%s  (#%d)\n", elm->nspace, elm->name, elm->id);
-
-  if (cdata == NULL)
-    {
-      /* ### add something to fetch_ctx_t to signal an error */
-      /*      return 1;*/
-    }
-  else {
-    printf("      cdata: '%s'\n", cdata);
-  }
-#endif
-
   if (elm->id == DAV_ELM_href)
     {
-      if (r->href_parent == ELEM_target)
+      /* ### the only href we fetch? */
+      if (r->href_parent == ELEM_checked_in)
         {
-          /* <version-name><href>...cdata...</href></version-name> */
+          /* <checked-in><href>...cdata...</href></checked-in> */
 
           /* Store the URL for the version resource */
           r->vsn_url = apr_pstrdup(fc->pool, cdata);
         }
-      /* else: assert href_parent == ELEM_activity_collection_set */
-
-      /* store the activity HREF only once */
-      else if (fc->activity_url == NULL)
-        {
-          /* DAV:activity-collection-set
-
-             ### should/how about dealing with multiple HREFs in here? */
-          fc->activity_url = svn_string_create(cdata, fc->pool);
-        }
     }
-  else if (elm->id == ELEM_version_name)
-    {
-      /* DAV:version-name */
-
-      /* ### store the revision number */
-    }
+  /* ### else what kind of elem? */
 
   return 0;
 }
@@ -343,7 +267,6 @@ fetch_dirents (svn_ra_session_t *ras,
 {
   hip_xml_parser *hip;
   int rv;
-  const dav_propname *props;
 
   fc->cur_collection = url;
   fc->dph = dav_propfind_create(ras->sess, url, DAV_DEPTH_ONE);
@@ -352,13 +275,9 @@ fetch_dirents (svn_ra_session_t *ras,
   hip = dav_propfind_get_parser(fc->dph);
 
   hip_xml_push_handler(hip, fetch_elems,
-                      validate_element, start_element, end_element, fc);
+                       validate_element, start_element, end_element, fc);
 
-  if (fc->activity_url == NULL)
-    props = fetch_props;
-  else
-    props = fetch_props + 1;    /* don't fetch the activity href */
-  rv = dav_propfind_named(fc->dph, props, fc);
+  rv = dav_propfind_named(fc->dph, fetch_props, fc);
 
   dav_propfind_destroy(fc->dph);
 
@@ -473,6 +392,8 @@ fetch_file (svn_ra_session_t *ras,
     {
       svn_string_t *vsn_url_value;
 
+      /* ### use set_wc_file_prop */
+
       vsn_url_value = svn_string_create(rsrc->vsn_url, fc->pool);
       err = (*fc->editor->change_file_prop)(file_baton,
                                             fc->vsn_url_name, vsn_url_value);
@@ -494,6 +415,31 @@ fetch_file (svn_ra_session_t *ras,
   return err ? err : err2;
 }
 
+static svn_error_t * begin_checkout(fetch_ctx_t *fc,
+                                    svn_string_t **activity_url,
+                                    svn_revnum_t *target_rev)
+{
+
+  /* ### send an OPTIONS to get: server capabilities, activity coll set */
+
+  /* ### get DAV:version-controlled-configuration, and the
+     ### SVN:baseline-relative-path */
+  /* ### send Label hdr, get DAV:baseline-collection [from the baseline] */
+
+  /* ### for "latest", no Label hdr needed; use REPORT for above */
+
+  /* ### get label-name-set from the baseline. it has the revision. */
+
+  /* ### begin checkout from baseline-collection + relative */
+
+
+  /* ### use above values instead of these temporaries */
+  *activity_url = svn_string_create("test-activity", fc->pool);
+  *target_rev = 1;
+
+  return NULL;
+}
+
 svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton)
@@ -509,12 +455,8 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
   svn_string_t *act_url_name;
   resource_t *rsrc;
   resource_t **prsrc;
-
-  /* In the checkout case, we don't really have a base revision, so
-     pass SVN_IGNORED_REVNUM. */
-  err = (*editor->replace_root)(edit_baton, SVN_IGNORED_REVNUM, &root_baton);
-  if (err != SVN_NO_ERROR)
-    return err;
+  svn_string_t *activity_url;
+  svn_revnum_t target_rev;
 
   fc.editor = editor;
   fc.edit_baton = edit_baton;
@@ -522,6 +464,19 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
   fc.subdirs = apr_array_make(ras->pool, 5, sizeof(resource_t *));
   fc.files = apr_array_make(ras->pool, 10, sizeof(resource_t *));
   fc.vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
+
+  /* ### use quick_wrap rather than SVN_ERR on some of these? */
+
+  /* begin the checkout process by fetching some basic information */
+  SVN_ERR( begin_checkout(&fc, &activity_url, &target_rev) );
+
+  /* all the files we checkout will have TARGET_REV for the revision */
+  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev) );
+
+  /* In the checkout case, we don't really have a base revision, so
+     pass SVN_IGNORED_REVNUM. */
+  SVN_ERR( (*editor->replace_root)(edit_baton, SVN_IGNORED_REVNUM,
+                                   &root_baton) );
 
   /* Build a directory resource for the root. We'll pop this off and fetch
      the information for it. */
@@ -602,18 +557,15 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
       if (err)
         return svn_error_quick_wrap(err, "could not fetch directory entries");
 
-      /* we should have successfully fetched an activity URL */
-      if (fc.activity_url != NULL)
-        {
-          /* store the activity URL as a property */
-          err = (*editor->change_dir_prop)(this_baton,
-                                           act_url_name, fc.activity_url);
-          if (err)
-            /* ### should we close the dir batons first? */
-            return svn_error_quick_wrap(err,
-                                        "could not save the URL to indicate "
-                                        "where to create activities");
-        }
+      /* ### use set_wc_dir_prop() */
+
+      /* store the activity URL as a property */
+      err = (*editor->change_dir_prop)(this_baton, act_url_name, activity_url);
+      if (err)
+        /* ### should we close the dir batons first? */
+        return svn_error_quick_wrap(err,
+                                    "could not save the URL to indicate "
+                                    "where to create activities");
 
       /* process each of the files that were found */
       for (i = fc.files->nelts; i--; )
