@@ -423,22 +423,46 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   struct handle_externals_desc_change_baton *cb = baton;
   struct handle_external_item_change_baton ib;
   const char *old_desc_text, *new_desc_text;
-  apr_hash_t *old_desc, *new_desc;
+  apr_array_header_t *old_desc, *new_desc;
+  apr_hash_t *old_desc_hash, *new_desc_hash;
+  int i;
+  svn_wc_external_item_t *item;
 
   if ((old_desc_text = apr_hash_get (cb->externals_old, key, klen)))
-    SVN_ERR (svn_wc_parse_externals_description (&old_desc, (const char *) key,
-                                                 old_desc_text, cb->pool));
+    SVN_ERR (svn_wc_parse_externals_description2 (&old_desc, (const char *) key,
+                                                  old_desc_text, cb->pool));
   else
     old_desc = NULL;
 
   if ((new_desc_text = apr_hash_get (cb->externals_new, key, klen)))
-    SVN_ERR (svn_wc_parse_externals_description (&new_desc, (const char *) key,
-                                                 new_desc_text, cb->pool));
+    SVN_ERR (svn_wc_parse_externals_description2 (&new_desc, (const char *) key,
+                                                  new_desc_text, cb->pool));
   else
     new_desc = NULL;
 
-  ib.old_desc          = old_desc;
-  ib.new_desc          = new_desc;
+  old_desc_hash = apr_hash_make (cb->pool);
+  new_desc_hash = apr_hash_make (cb->pool);
+
+  /* Create hashes of our two externals arrays so that we can
+     efficiently generate a diff for them. */
+  for (i = 0; old_desc && (i < old_desc->nelts); i++)
+    {
+      item = APR_ARRAY_IDX (old_desc, i, svn_wc_external_item_t *);
+
+      apr_hash_set (old_desc_hash, item->target_dir,
+                    APR_HASH_KEY_STRING, item);
+    }
+  
+  for (i = 0; new_desc && (i < new_desc->nelts); i++)
+    {
+      item = APR_ARRAY_IDX (new_desc, i, svn_wc_external_item_t *);
+
+      apr_hash_set (new_desc_hash, item->target_dir,
+                    APR_HASH_KEY_STRING, item);
+    }
+
+  ib.old_desc          = old_desc_hash;
+  ib.new_desc          = new_desc_hash;
   ib.parent_dir        = (const char *) key;
   ib.ctx               = cb->ctx;
   ib.update_unchanged  = cb->update_unchanged;
@@ -446,9 +470,32 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = svn_pool_create (cb->pool);
 
-  SVN_ERR (svn_hash_diff (old_desc, new_desc,
-                          handle_external_item_change, &ib, cb->pool));
+  /* We must use a custom version of svn_hash_diff so that the diff
+     entries are processed in the order they were originally specified
+     in the svn:external properties. */
 
+  for (i = 0; old_desc && (i < old_desc->nelts); i++)
+    {
+      item = APR_ARRAY_IDX (old_desc, i, svn_wc_external_item_t *);
+
+      if (apr_hash_get (new_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
+        SVN_ERR (handle_external_item_change (item->target_dir,
+                                              APR_HASH_KEY_STRING,
+                                              svn_hash_diff_key_both, &ib));
+      else
+        SVN_ERR (handle_external_item_change (item->target_dir,
+                                              APR_HASH_KEY_STRING,
+                                              svn_hash_diff_key_a, &ib));
+    }
+  for (i = 0; new_desc && (i < new_desc->nelts); i++)
+    {
+      item = APR_ARRAY_IDX (new_desc, i, svn_wc_external_item_t *);
+      if (! apr_hash_get (old_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
+        SVN_ERR (handle_external_item_change (item->target_dir,
+                                              APR_HASH_KEY_STRING,
+                                              svn_hash_diff_key_b, &ib));
+    }
+  
   /* Now destroy the subpool we pass to the hash differ.  This will
      close any remaining RA sessions used by the hash diff callback. */
   svn_pool_destroy (ib.pool);
@@ -532,13 +579,13 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
        hi; 
        hi = apr_hash_next (hi))
     {
-      apr_hash_t *exts;
-      apr_hash_index_t *hi2;
+      apr_array_header_t *exts;
       const void *key;
       void *val;
       const char *path;
       const char *propval;
       apr_pool_t *iterpool;
+      int i;
 
       /* Clear the subpool. */
       svn_pool_clear (subpool);
@@ -549,16 +596,14 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
-      SVN_ERR (svn_wc_parse_externals_description (&exts, path, 
-                                                   propval, subpool));
+      SVN_ERR (svn_wc_parse_externals_description2 (&exts, path, 
+                                                    propval, subpool));
 
       /* Make a sub-pool of SUBPOOL. */
       iterpool = svn_pool_create (subpool);
 
-      /* Loop over the subdir hash. */
-      for (hi2 = apr_hash_first (subpool, exts); 
-           hi2; 
-           hi2 = apr_hash_next (hi2))
+      /* Loop over the subdir array. */
+      for (i = 0; exts && (i < exts->nelts); i++)
         {
           const char *fullpath;
           svn_wc_external_item_t *external;
@@ -566,9 +611,8 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
 
           svn_pool_clear (iterpool);
 
-          apr_hash_this (hi2, &key, NULL, &val);
-          external = val;
-          fullpath = svn_path_join (path, key, iterpool);
+          external = APR_ARRAY_IDX (exts, i, svn_wc_external_item_t *);
+          fullpath = svn_path_join (path, external->target_dir, iterpool);
 
           /* If the external target directory doesn't exist on disk,
              just skip it. */

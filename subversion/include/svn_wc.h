@@ -313,9 +313,11 @@ typedef struct svn_wc_external_item_t
 } svn_wc_external_item_t;
 
 
-/** If @a externals_p is non-null, set @a *externals_p to a hash table
- * whose keys are subdirectory names and values are @a
- * svn_wc_external_item_t * objects, based on @a desc.
+/**
+ * @since New in 1.1.
+ *
+ * If @a externals_p is non-null, set @a *externals_p to an array of
+ * @a svn_wc_external_item_t * objects based on @a desc.
  *
  * If the format of @a desc is invalid, don't touch @a *externals_p and
  * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.  Thus, if
@@ -329,10 +331,26 @@ typedef struct svn_wc_external_item_t
  *
  * Use @a parent_directory only in constructing error strings.
  */
-svn_error_t *svn_wc_parse_externals_description (apr_hash_t **externals_p,
-                                                 const char *parent_directory,
-                                                 const char *desc,
-                                                 apr_pool_t *pool);
+svn_error_t *
+svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
+                                     const char *parent_directory,
+                                     const char *desc,
+                                     apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatability with the 1.0.0 API.
+ *
+ * Similar to svn_wc_parse_externals_description2, but returns the
+ * parsed externals in a hash instead of an array.  This function
+ * should not be used, as storing the externals in a hash causes their
+ * order of evaluation to be not easily identifiable.
+ */
+svn_error_t *
+svn_wc_parse_externals_description (apr_hash_t **externals_p,
+                                    const char *parent_directory,
+                                    const char *desc,
+                                    apr_pool_t *pool);
 
 
 

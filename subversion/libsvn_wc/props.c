@@ -1052,7 +1052,7 @@ svn_wc_prop_set (const char *name,
                  checks for this, so all we have to is invoke it --
                  we're not interested in the parsed result, only in
                  whether or the parsing errored. */
-              SVN_ERR (svn_wc_parse_externals_description
+              SVN_ERR (svn_wc_parse_externals_description2
                        (NULL, path, value->data, pool));
             }
         }
@@ -1445,16 +1445,16 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
 /** Externals **/
 
 svn_error_t *
-svn_wc_parse_externals_description (apr_hash_t **externals_p,
-                                    const char *parent_directory,
-                                    const char *desc,
-                                    apr_pool_t *pool)
+svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
+                                     const char *parent_directory,
+                                     const char *desc,
+                                     apr_pool_t *pool)
 {
   apr_array_header_t *lines = svn_cstring_split (desc, "\n\r", TRUE, pool);
   int i;
   
   if (externals_p)
-    *externals_p = apr_hash_make (pool);
+    *externals_p = apr_array_make (pool, 1, sizeof (svn_wc_external_item_t *));
 
   for (i = 0; i < lines->nelts; i++)
     {
@@ -1558,11 +1558,37 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
       item->url = svn_path_canonicalize (item->url, pool);
 
       if (externals_p)
+        APR_ARRAY_PUSH (*externals_p, svn_wc_external_item_t *) = item;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_parse_externals_description (apr_hash_t **externals_p,
+                                    const char *parent_directory,
+                                    const char *desc,
+                                    apr_pool_t *pool)
+{
+  apr_array_header_t *list;
+  int i;
+
+  SVN_ERR (svn_wc_parse_externals_description2 (externals_p ? &list : NULL,
+                                                parent_directory, desc, pool));
+
+  /* Store all of the items into the hash if that was requested. */
+  if (externals_p)
+    {
+      *externals_p = apr_hash_make (pool);
+      for (i = 0; i < list->nelts; i++)
         {
+          svn_wc_external_item_t *item;
+          item = APR_ARRAY_IDX (list, i, svn_wc_external_item_t *);
+
           apr_hash_set (*externals_p, item->target_dir,
                         APR_HASH_KEY_STRING, item);
         }
     }
-
   return SVN_NO_ERROR;
 }

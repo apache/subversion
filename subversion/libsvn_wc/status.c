@@ -725,7 +725,8 @@ get_dir_status (struct edit_baton *eb,
           const char *dup_path = apr_pstrdup (dup_pool, path);
           const char *dup_val = apr_pstrmemdup (dup_pool, prop_val->data, 
                                                 prop_val->len);
-          apr_hash_t *ext_items;
+          apr_array_header_t *ext_items;
+          int i;
 
           /* First things first -- we put the externals information
              into the "global" traversal info structure. */
@@ -736,17 +737,17 @@ get_dir_status (struct edit_baton *eb,
 
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
-          SVN_ERR (svn_wc_parse_externals_description (&ext_items, path,
-                                                       dup_val, dup_pool));
-          for (hi = apr_hash_first (dup_pool, ext_items); 
-               hi; 
-               hi = apr_hash_next (hi))
+          SVN_ERR (svn_wc_parse_externals_description2 (&ext_items, path,
+                                                        dup_val, dup_pool));
+          for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
-              const void *key;
-              void *val;
-              apr_hash_this (hi, &key, NULL, &val);
-              apr_hash_set (eb->externals, svn_path_join (path, key, dup_pool),
-                            APR_HASH_KEY_STRING, val);
+              svn_wc_external_item_t *item;
+
+              item = APR_ARRAY_IDX (ext_items, i, svn_wc_external_item_t *);
+              apr_hash_set (eb->externals, svn_path_join (path,
+                                                          item->target_dir,
+                                                          dup_pool),
+                            APR_HASH_KEY_STRING, item);
             }
         }
     }
