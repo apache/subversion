@@ -36,9 +36,9 @@ Step 1:  Build & install the proper version of SWIG (which is
            - /usr/local/lib/libswig*.so
            - /usr/local/bin/swig
 
-      In particular, you want to make sure that libswigpy.so was
-      built and installed, since the python bindings are the most-used
-      ones at the moment.
+      In particular, you want to make sure that libswigpy.so (if you want to
+      use Python) and/or libswigpl.so (if you want to use Perl) was/were
+      built and installed.
 
 
 Step 2:  Build and Install Subversion.

@@ -25,27 +25,15 @@
 
 %include typemaps.i
 
-/* This is default in SWIG 1.3.17 and is a really good idea */
+/* -----------------------------------------------------------------------
+   This is default in SWIG 1.3.17 and is a really good idea
+*/
+
 %typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
   protected static long getCPtr($javaclassname obj) {
     return (obj == null) ? 0 : obj.swigCPtr;
   }
 %}
-
-/* ----------------------------------------------------------------------- */
-
-/* define an OUTPUT typemap for 'apr_off_t *'. for now, we'll treat it as
-   a 'long' even if that isn't entirely correct... */
-
-%typemap(python,in,numinputs=0) apr_off_t * (apr_off_t temp)
-    "$1 = &temp;";
-
-%typemap(python,argout,fragment="t_output_helper") apr_off_t *
-    "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
-
-%typemap(perl5,argout) apr_off_t * {
-    /* ### FIXME-perl apr_off_t out*/
-}
 
 /* ----------------------------------------------------------------------- */
 
@@ -92,11 +80,6 @@ typedef apr_int32_t time_t;
 %typemap(in,numinputs=0) apr_time_t * (apr_time_t temp)
     "$1 = &temp;";
 
-
-%typemap(java,argout) apr_time_t * {
-	/* FIXME: What goes here? */
-}
-
 /* -----------------------------------------------------------------------
    create some INOUT typemaps for apr_size_t
 */
@@ -116,6 +99,7 @@ typedef apr_int32_t time_t;
     temp = (apr_size_t) SvIV($input);
     $1 = &temp;
 }
+
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **
 */
@@ -136,6 +120,12 @@ typedef apr_int32_t time_t;
     /* toss prior result, get new result from the hash */
     Py_DECREF($result);
     $result = svn_swig_py_prophash_to_dict(*$1);
+}
+
+%typemap(perl5,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
+%typemap(perl5,argout) apr_hash_t **PROPHASH {
+    $result = svn_swig_pl_prophash_to_hash(*$1);
+    argvi++;
 }
 
 /* -----------------------------------------------------------------------
@@ -184,11 +174,6 @@ typedef apr_int32_t time_t;
     svn_swig_java_add_to_list(jenv, $1, $input);
 }
 
-%typemap(perl5,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(perl5,argout) apr_hash_t **PROPHASH {
-    $result = svn_swig_pl_prophash_to_hash(*$1);
-    argvi++;
-}
 /* -----------------------------------------------------------------------
   handle apr_file_t *
 */
