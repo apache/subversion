@@ -88,3 +88,11 @@ Candidate changes:
       creating 1.1.x Win32 binary packages a lot easier.
     Votes:
       +1: brane
+
+  * r11290
+      Fix an error in the perl bindings.
+    Justification:
+      Completely breaks Perl bindings for some versions of Perl.
+    Votes:
+      +1: breser
+      
