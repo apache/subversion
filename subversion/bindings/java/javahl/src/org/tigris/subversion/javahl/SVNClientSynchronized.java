@@ -453,7 +453,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     {
         synchronized(clazz)
         {
-            return worker.commit(path, message, recurse);
+            return worker.commit(path, message, recurse, false);
         }
     }
     /**
@@ -1259,6 +1259,83 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             return worker.info(path);
+        }
+    }
+
+    /**
+     * Commits changes to the repository.
+     *
+     * @param path     files to commit.
+     * @param message  log message.
+     * @param recurse  whether the operation should be done recursively.
+     * @param noUnlock do remove any locks
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @throws ClientException
+     *
+     */
+    public long commit(String[] path, String message, boolean recurse,
+                       boolean noUnlock) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.commit(path, message, recurse, noUnlock);
+        }
+    }
+
+    /**
+     * Lock a working copy item
+     *
+     * @param path  path of the item
+     * @param comment
+     * @param lockCallback
+     * @param force break an existing lock
+     * @throws ClientException
+     *
+     */
+    public Lock[] lock(String[] path, String comment, LockCallback lockCallback, boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.lock(path, comment, lockCallback, force);
+        }
+    }
+
+    /**
+     * Unlock a working copy item
+     *
+     * @param path  path of the item
+     * @param lockCallback
+     * @param force break an existing lock
+     * @throws ClientException
+     *
+     */
+    public void unlock(String[] path, LockCallback lockCallback, boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.unlock(path, lockCallback, force);
+        }
+    }
+
+    /**
+     * Retrieve information about repository or working copy items.
+     *
+     * @param pathOrUrl   the path or the url of the item
+     * @param revision    the revision of the item to return
+     * @param pegRevision the revision to interpret pathOrUrl
+     * @param recurse     flag if to recurse, if the item is a directory
+     * @return the information objects
+     */
+    public Info2[] info2(String pathOrUrl, Revision revision,
+                         Revision pegRevision, boolean recurse)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.info2(pathOrUrl, revision, pegRevision, recurse);
         }
     }
 

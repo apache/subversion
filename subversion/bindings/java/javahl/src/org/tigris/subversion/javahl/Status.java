@@ -109,7 +109,22 @@ public class Status
      * if copied, the revision number of the copy source
      */
     private long revisionCopiedFrom;
-
+    /**
+     * token specified for the lock (null if not locked)
+     */
+    private String lockToken;
+    /**
+     * owner of the lock (null if not locked)
+     */
+    private String lockOwner;
+    /**
+     * comment specified for the lock (null if not locked)
+     */
+    private String lockComment;
+    /**
+     * date of the creation of the lock (null if not locked)
+     */
+    private long lockCreationDate;
     /**
      * this constructor should only called from JNI code
      * @param path                  the file system path of item
@@ -136,7 +151,8 @@ public class Status
      * @param urlCopiedFrom         if copied, the url of the copy source
      * @param revisionCopiedFrom    if copied, the revision number of the copy
      *                              source
-     * @param switched
+     * @param switched              flag if the node has been switched in the 
+     *                              path
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -145,7 +161,8 @@ public class Status
                   boolean locked, boolean copied, String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched)
+                  boolean switched, String lockToken, String lockOwner, 
+                  String lockComment, long lockCreationDate)
     {
         this.path = path;
         this.url = url;
@@ -166,6 +183,10 @@ public class Status
         this.urlCopiedFrom = urlCopiedFrom;
         this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
+        this.lockToken = lockToken;
+        this.lockOwner = lockOwner;
+        this.lockComment = lockComment;
+        this.lockCreationDate = lockCreationDate;
     }
 
     /**
@@ -464,6 +485,45 @@ public class Status
     {
         int textStatus = getTextStatus();
         return textStatus == Status.Kind.modified;
+    }
+
+    /**
+     * Returns the lock token
+     * @return the lock token
+     */
+    public String getLockToken()
+    {
+        return lockToken;
+    }
+
+    /**
+     * Returns the lock  owner
+     * @return the lock owner
+     */
+    public String getLockOwner()
+    {
+        return lockOwner;
+    }
+
+    /**
+     * Returns the lock comment
+     * @return the lock comment
+     */
+    public String getLockComment()
+    {
+        return lockComment;
+    }
+
+    /**
+     * Returns the lock creation date
+     * @return the lock creation date
+     */
+    public Date getLockCreationDate()
+    {
+        if (lockCreationDate == 0)
+            return null;
+        else
+            return new Date(lastChangedDate / 1000);
     }
 
     /**
