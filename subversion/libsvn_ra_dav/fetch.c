@@ -317,19 +317,6 @@ static void add_props(const svn_ra_dav_resource_t *r,
         }
 #undef NSLEN
 
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
-      if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
-        {
-          /* ### Backwards compatibility: look for old 'svn:custom:'
-             namespace and strip it away, instead of the good URI
-             namespace.  REMOVE this block someday! */
-          (*setter)(baton, key + NSLEN, val, pool);
-          continue;
-        }
-#undef NSLEN
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-
 #define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
       if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
         {
@@ -341,25 +328,6 @@ static void add_props(const svn_ra_dav_resource_t *r,
                     val, pool);
         }
 #undef NSLEN
-
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
-      else if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
-        {
-          /* ### Backwards compatibility: if the property is already
-             in the deprecated 'svn:' namespace, pass it straight
-             through without change.  But filter out the
-             baseline-relative-path property.  REMOVE this block
-             someday.*/
-          if (strcmp(key + NSLEN, "baseline-relative-path") == 0)
-            continue;
-
-          /* ### urk. this value isn't binary-safe... */
-          (*setter)(baton, key, val, pool);
-          continue;
-        }
-#undef NSLEN
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
       else
         {
@@ -889,19 +857,6 @@ filter_props (apr_hash_t *props,
         }
 #undef NSLEN
 
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-      /* ### Backwards compatibility: look for old 'svn:custom:'
-         namespace and strip it away, instead of the good URI
-         namespace.  REMOVE this block someday! */
-#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
-      if (strncmp(name, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
-        {
-          apr_hash_set(props, name + NSLEN, APR_HASH_KEY_STRING, value);
-          continue;
-        }
-#undef NSLEN
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-
       /* If the property is in the 'svn' namespace, then it's a
          normal user-controlled property coming from the fs.  Just
          strip off the URI prefix, add an 'svn:', and add to the hash. */
@@ -915,20 +870,6 @@ filter_props (apr_hash_t *props,
           continue;
         }
 #undef NSLEN
-
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-      /* ### Backwards compatibility: look for old 'svn:' instead
-         of the good URI namespace.  Filter out
-         baseline-rel-path. REMOVE this block someday! */
-#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
-      if (strncmp(name, SVN_PROP_PREFIX, NSLEN) == 0)
-        {
-          if (strcmp(name + NSLEN, "baseline-relative-path") != 0)
-            apr_hash_set(props, name, APR_HASH_KEY_STRING, value);
-        }
-#undef NSLEN
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-
       else if (strcmp(name, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
         {
           /* For files, we currently only have one 'wc' prop. */
@@ -1170,18 +1111,6 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
               else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
                                sizeof(SVN_DAV_PROP_NS_SVN)) == 0)
                 entry->has_props = TRUE;
-              
-#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-              else if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
-                               sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
-                entry->has_props = TRUE;
-              
-              else if (strncmp((const char *)kkey, SVN_PROP_PREFIX,
-                               sizeof(SVN_PROP_PREFIX)) == 0)
-                if (strcmp((const char *)kkey + sizeof(SVN_PROP_PREFIX),
-                           "baseline-relative-path") != 0)
-                  entry->has_props = TRUE;          
-#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
             }
           
           /* created_rev & friends */
