@@ -2286,11 +2286,11 @@ Made a change.
           <title>Examples</title>
 
           <para>Merge a branch back into the trunk (assuming that
-            you have a working copy of the trunk):</para>
+            you have a working copy of the trunk, and that the branch
+            was created in revision 250):</para>
 
           <screen>
-$ svn merge http://svn.red-bean.com/repos/trunk/vendors \
-            http://svn.red-bean.com/repos/branches/vendors-with-fix
+$ svn merge -r 250:HEAD http://svn.red-bean.com/repos/branches/my-branch
 U  myproj/tiny.txt
 U  myproj/thhgttg.txt
 U  myproj/win.txt
