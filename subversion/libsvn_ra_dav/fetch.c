@@ -1238,7 +1238,7 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
      1.0.x servers and older don't support this report. */
   if (status_code == 501)
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("get-locations REPORT not implemented"));
+                             _("'get-locations' REPORT not implemented"));
 
   return err;
 }
