@@ -35,11 +35,11 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *trace_editor;
-  void *trace_root_dir_baton;
+  void *trace_edit_baton;
   svn_error_t *err;
 
   err = svn_cl__get_trace_update_editor (&trace_editor,
-                                         &trace_root_dir_baton,
+                                         &trace_edit_baton,
                                          opt_state->target,
                                          pool);
   if (err)
@@ -48,7 +48,7 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
 
   err = svn_client_checkout (NULL, NULL,
                              trace_editor,
-                             trace_root_dir_baton,
+                             trace_edit_baton,
                              opt_state->target,
                              opt_state->xml_file,
                              opt_state->ancestor_path,

@@ -42,7 +42,7 @@
 
 /*** batons ***/
 
-struct edit_context
+struct edit_baton
 {
   svn_string_t *dest_dir;
   svn_revnum_t target_revision;
@@ -74,7 +74,7 @@ struct dir_baton
   int ref_count;
 
   /* The global edit baton. */
-  struct edit_context *edit_context;
+  struct edit_baton *edit_baton;
 
   /* Baton for this directory's parent, or NULL if this is the root
      directory. */
@@ -104,7 +104,7 @@ struct handler_baton
 };
 
 /* Create a new dir_baton for subdir NAME in PARENT_PATH with
- * EDIT_CONTEXT, using a new subpool of POOL.
+ * EDIT_BATON, using a new subpool of POOL.
  *
  * The new baton's ref_count is 1.
  *
@@ -112,21 +112,21 @@ struct handler_baton
  */
 static struct dir_baton *
 make_dir_baton (svn_string_t *name,
-                struct edit_context *edit_context,
+                struct edit_baton *edit_baton,
                 struct dir_baton *parent_baton,
                 apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
   svn_string_t *parent_path
-    = parent_baton ? parent_baton->path : edit_context->dest_dir;
+    = parent_baton ? parent_baton->path : edit_baton->dest_dir;
   svn_string_t *path = svn_string_dup (parent_path, subpool);
 
-  if (name) /* kff todo: yo, is this a bug?? */
+  if (name)
     svn_path_add_component (path, name, svn_path_local_style);
 
   d->path         = path;
-  d->edit_context   = edit_context;
+  d->edit_baton   = edit_baton;
   d->parent_baton = parent_baton;
   d->ref_count    = 1;
   d->pool         = subpool;
@@ -152,10 +152,11 @@ free_dir_baton (struct dir_baton *dir_baton)
   svn_error_t *err;
   struct dir_baton *parent = dir_baton->parent_baton;
 
+  /* Bump this dir to the new revision. */
   err = svn_wc__entry_fold_sync_intelligently
     (dir_baton->path,
      NULL,
-     dir_baton->edit_context->target_revision,
+     dir_baton->edit_baton->target_revision,
      svn_node_dir,
      0,
      0,
@@ -164,8 +165,8 @@ free_dir_baton (struct dir_baton *dir_baton)
      NULL,
      NULL);
   
-  if (err)
-    return err;
+   if (err)
+     return err;
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
   apr_destroy_pool (dir_baton->pool);
@@ -177,11 +178,6 @@ free_dir_baton (struct dir_baton *dir_baton)
       err = decrement_ref_count (parent);
       if (err)
         return err;
-    }
-  else
-    {
-      /* This was the root directory, so the edit is over. */
-      apr_destroy_pool (dir_baton->edit_context->pool);
     }
 
   return SVN_NO_ERROR;
@@ -297,7 +293,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* Either we're done (window is NULL) or we had an error.  In either
      case, clean up the handler.  */
-  if ((! fb->dir_baton->edit_context->is_checkout) && hb->source)
+  if ((! fb->dir_baton->edit_baton->is_checkout) && hb->source)
     {
       err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
@@ -375,7 +371,38 @@ prep_directory (svn_string_t *path,
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
 static svn_error_t *
-delete_item (svn_string_t *name, void *parent_baton)
+begin_edit (void *edit_baton,
+              void **dir_baton)
+{
+  struct edit_baton *eb = edit_baton;
+  struct dir_baton *d;
+  svn_error_t *err;
+  svn_string_t *ancestor_path;
+  svn_revnum_t ancestor_revision;
+
+  *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
+
+  if (eb->is_checkout)
+    {
+      ancestor_path = eb->ancestor_path;
+      ancestor_revision = eb->target_revision;
+      
+      err = prep_directory (d->path,
+                            eb->repository,
+                            ancestor_path,
+                            ancestor_revision,
+                            1, /* force */
+                            d->pool);
+      if (err)
+        return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+delete_entry (svn_string_t *name, void *parent_baton)
 {
   svn_error_t *err;
   struct dir_baton *parent_dir_baton = parent_baton;
@@ -444,7 +471,7 @@ add_directory (svn_string_t *name,
 
   struct dir_baton *this_dir_baton
     = make_dir_baton (name,
-                      parent_dir_baton->edit_context,
+                      parent_dir_baton->edit_baton,
                       parent_dir_baton,
                       parent_dir_baton->pool);
 
@@ -465,7 +492,7 @@ add_directory (svn_string_t *name,
 
 
   err = prep_directory (this_dir_baton->path,
-                        this_dir_baton->edit_context->repository,
+                        this_dir_baton->edit_baton->repository,
                         ancestor_path,
                         ancestor_revision,
                         1, /* force */
@@ -494,7 +521,7 @@ replace_directory (svn_string_t *name,
 
   struct dir_baton *this_dir_baton
     = make_dir_baton (name,
-                      parent_dir_baton->edit_context,
+                      parent_dir_baton->edit_baton,
                       parent_dir_baton,
                       parent_dir_baton->pool);
 
@@ -594,7 +621,7 @@ close_directory (void *dir_baton)
       /* Set revision. */
       revision_str = apr_psprintf (db->pool,
                                    "%d",
-                                   db->edit_context->target_revision);
+                                   db->edit_baton->target_revision);
       
       /* Write a log entry to bump the directory's revision. */
       svn_xml_make_open_tag (&entry_accum,
@@ -772,7 +799,7 @@ apply_textdelta (void *file_baton,
 
   /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
-  if (! fb->dir_baton->edit_context->is_checkout)
+  if (! fb->dir_baton->edit_baton->is_checkout)
     {
       /* 
          kff todo: what we really need to do here is:
@@ -1179,7 +1206,7 @@ close_file (void *file_baton)
   /* Set revision. */
   revision_str = apr_psprintf (fb->pool,
                               "%d",
-                              fb->dir_baton->edit_context->target_revision);
+                              fb->dir_baton->edit_baton->target_revision);
 
   /* Write log entry which will bump the revision number:  */
   svn_xml_make_open_tag (&entry_accum,
@@ -1282,6 +1309,20 @@ close_file (void *file_baton)
 }
 
 
+static svn_error_t *
+close_edit (void *edit_baton)
+{
+  struct edit_baton *eb = edit_baton;
+  
+  /* The edit is over, free its pool. */
+  apr_destroy_pool (eb->pool);
+  
+  /* kff todo:  Wow.  Is there _anything_ else that needs to be done? */
+  
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Returning editors. ***/
 
@@ -1293,12 +1334,10 @@ make_editor (svn_string_t *dest,
              svn_string_t *repos,
              svn_string_t *ancestor_path,
              const svn_delta_edit_fns_t **editor,
-             void **root_dir_baton,
+             void **edit_baton,
              apr_pool_t *pool)
 {
-  svn_error_t *err;
-  struct edit_context *ec;
-  struct dir_baton *rb;
+  struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
 
@@ -1308,33 +1347,18 @@ make_editor (svn_string_t *dest,
       assert (repos != NULL);
     }
 
-  /* Construct an edit context. */
-  ec = apr_palloc (subpool, sizeof (*ec));
-  ec->pool            = subpool;
-  ec->dest_dir        = dest;
-  ec->is_checkout     = is_checkout;
-  ec->ancestor_path   = ancestor_path;
-  ec->repository      = repos;
-  ec->target_revision = target_revision;
-
-  /* Construct root directory baton. */
-  rb = make_dir_baton (NULL, ec, NULL, ec->pool);
-
-  /* Prep root directory if this is a checkout. */
-  if (is_checkout)
-    {
-      err = prep_directory (rb->path,
-                            ec->repository,
-                            ec->ancestor_path,
-                            0, /* the Original Revision number */
-                            1, /* force */
-                            rb->pool);
-      if (err)
-        return err;
-    }
+  /* Construct an edit baton. */
+  eb = apr_palloc (subpool, sizeof (*eb));
+  eb->pool            = subpool;
+  eb->dest_dir        = dest;
+  eb->is_checkout     = is_checkout;
+  eb->ancestor_path   = ancestor_path;
+  eb->repository      = repos;
+  eb->target_revision = target_revision;
 
   /* Construct an editor. */
-  tree_editor->delete_item = delete_item;
+  tree_editor->begin_edit = begin_edit;
+  tree_editor->delete_entry = delete_entry;
   tree_editor->add_directory = add_directory;
   tree_editor->replace_directory = replace_directory;
   tree_editor->change_dir_prop = change_dir_prop;
@@ -1344,8 +1368,9 @@ make_editor (svn_string_t *dest,
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;
+  tree_editor->close_edit = close_edit;
 
-  *root_dir_baton = rb;
+  *edit_baton = eb;
   *editor = tree_editor;
 
   return SVN_NO_ERROR;
@@ -1356,13 +1381,13 @@ svn_error_t *
 svn_wc_get_update_editor (svn_string_t *dest,
                           svn_revnum_t target_revision,
                           const svn_delta_edit_fns_t **editor,
-                          void **root_dir_baton,
+                          void **edit_baton,
                           apr_pool_t *pool)
 {
   return
     make_editor (dest, target_revision,
                  0, NULL, NULL,
-                 editor, root_dir_baton, pool);
+                 editor, edit_baton, pool);
 }
 
 
@@ -1372,12 +1397,12 @@ svn_wc_get_checkout_editor (svn_string_t *dest,
                             svn_string_t *ancestor_path,
                             svn_revnum_t target_revision,
                             const svn_delta_edit_fns_t **editor,
-                            void **root_dir_baton,
+                            void **edit_baton,
                             apr_pool_t *pool)
 {
   return make_editor (dest, target_revision,
                       1, repos, ancestor_path,
-                      editor, root_dir_baton, pool);
+                      editor, edit_baton, pool);
 }
 
 

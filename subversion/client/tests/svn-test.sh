@@ -66,13 +66,13 @@ ${SVN_PROG} delete --force ${TEST_DIR_1}/A/D/H/omega
 
 check_status 4
 
-echo "Deleting added file A/B/E/newfile2, without --force."
+echo "Deleting added files A/B/E/newfile2, without --force."
 ${SVN_PROG} delete ${TEST_DIR_1}/A/B/E/newfile2
  
 check_status 5
 
 ### Commit.
-echo "Committing from ${TEST_DIR_1} to ${COMMIT_RESULTFILE_NAME}-2.xml."
+echo "Committing changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                                   \
  ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
                 --revision 2;                                        \
@@ -88,6 +88,7 @@ echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
  )
 
 check_status 7
+
 
 ### Modify some more files.
 echo "Modifying ${TEST_DIR_2}/A/D/G/pi."
@@ -112,7 +113,7 @@ echo "for commit rev2, tenth line in A/mu" >> ${TEST_DIR_2}/A/mu
 
 
 ### Commit.
-echo "Committing from ${TEST_DIR_2} to ${COMMIT_RESULTFILE_NAME}-3.xml"
+echo "Committing changes, this time from ${TEST_DIR_2}."
 (cd ${TEST_DIR_2};                                                   \
  ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
                 --revision 3;                                        \
@@ -161,7 +162,7 @@ echo "for commit rev4, a non-conflicting change" >> ${TEST_DIR_2}/A/mu
 
 
 ### Commit.
-echo "Committing mergeables, ${TEST_DIR_1} to ${COMMIT_RESULTFILE_NAME}-4.xml"
+echo "Committing changes for merge, from ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                                   \
  ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
                 --revision 4;                                        \

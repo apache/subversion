@@ -42,10 +42,10 @@ svn_cl__commit (svn_cl__opt_state_t *opt_state,
       {
         svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
         const svn_delta_edit_fns_t *trace_editor;
-        void *trace_root_dir_baton;
+        void *trace_edit_baton;
     
         err = svn_cl__get_trace_commit_editor (&trace_editor,
-                                               &trace_root_dir_baton,
+                                               &trace_edit_baton,
                                                target, pool);
         if (err) return err;
 
@@ -53,7 +53,7 @@ svn_cl__commit (svn_cl__opt_state_t *opt_state,
            pass TARGETS on down into svn_client_commit(). */
 
         err = svn_client_commit (NULL, NULL,
-                                 trace_editor, trace_root_dir_baton,
+                                 trace_editor, trace_edit_baton,
                                  target,
                                  opt_state->xml_file,
                                  opt_state->revision,

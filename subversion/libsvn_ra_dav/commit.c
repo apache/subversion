@@ -63,7 +63,6 @@ typedef struct
 
 typedef struct
 {
-  svn_boolean_t is_root;
   commit_ctx_t *cc;
   resource_t res;
   apr_hash_t *prop_changes;
@@ -309,7 +308,23 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 }
 
 static svn_error_t *
-commit_delete_item (svn_string_t *name, void *parent_baton)
+commit_begin_edit (void *edit_baton, void **root_baton)
+{
+  commit_ctx_t *cc = edit_baton;
+  dir_baton_t *root = apr_pcalloc(cc->ras->pool, sizeof(*root));
+
+  root->cc = cc;
+
+  root->res.url = cc->ras->root.path;
+  /* ### fetch vsn_url from props */
+
+  *root_baton = root;
+
+  return NULL;
+}
+
+static svn_error_t *
+commit_delete_entry (svn_string_t *name, void *parent_baton)
 {
   dir_baton_t *parent = parent_baton;
   const char *workcol;
@@ -317,7 +332,7 @@ commit_delete_item (svn_string_t *name, void *parent_baton)
   int code;
 
   /* get the URL to the working collection */
-  printf("[delete_item] ");
+  printf("[delete_entry] ");
   SVN_ERR( checkout_resource(parent->cc, parent->res.url, &workcol) );
 
   /* create the URL for the child resource */
@@ -441,26 +456,6 @@ commit_close_dir (void *dir_baton)
      checked out the directory when the first prop change was noted. */
   printf("[close_dir] ");
   SVN_ERR( do_proppatch(dir->cc->ras, &dir->res, dir->prop_changes) );
-
-  /* kff todo: Greg, I didn't know of any other way to identify the
-     root directory baton, so I added an `is_root' flag to
-     dir_baton_t, I set it in svn_ra_dav__get_commit_editor(), and I
-     don't set it anywhere else.  Undo this kluge as desired. :-) */
-  if (dir->is_root)
-    {
-      svn_revnum_t new_revision = SVN_INVALID_REVNUM;
-
-      /* ### MERGE the activity */
-      printf("[close_edit] MERGE: %s\n",
-             dir->cc->activity_url ? dir->cc->activity_url : "(activity)");
-      
-      /* ### set new_revision according to response from server */
-      /* ### get the new version URLs for all affected resources */
-
-      /* Make sure the caller (most likely the working copy library, or
-         maybe its caller) knows the new revision. */
-      *dir->cc->new_revision = new_revision;
-    }
 
   return NULL;
 }
@@ -591,39 +586,52 @@ commit_close_file (void *file_baton)
 }
 
 
+static svn_error_t *
+commit_close_edit (void *edit_baton)
+{
+  commit_ctx_t *cc = edit_baton;
+  svn_revnum_t new_revision = SVN_INVALID_REVNUM;
+
+  /* ### MERGE the activity */
+  printf("[close_edit] MERGE: %s\n",
+         cc->activity_url ? cc->activity_url : "(activity)");
+
+  /* ### set new_revision according to response from server */
+  /* ### get the new version URLs for all affected resources */
+
+  /* Make sure the caller (most likely the working copy library, or
+     maybe its caller) knows the new revision. */
+  *cc->new_revision = new_revision;
+
+  return NULL;
+}
+ 
+
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
-  void **root_dir_baton,
+  void **edit_baton,
   svn_revnum_t *new_revision)
 {
-  svn_error_t *err;
   svn_ra_session_t *ras = session_baton;
   commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
-  dir_baton_t *rb = apr_pcalloc(ras->pool, sizeof(*rb));
   svn_delta_edit_fns_t *commit_editor = svn_delta_default_editor(ras->pool);
+  svn_error_t *err;
 
-  /* Construct a context. */
   cc->ras = ras;
   cc->resources = apr_make_hash(ras->pool);
   cc->vsn_url_name = svn_string_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
   err = create_activity(cc);
   if (err)
     return err;
-  cc->new_revision = new_revision;  /* Where caller wants new rev stored. */
-
-  /* Construct a root directory baton. */
-  rb->is_root = 1;
-  rb->cc = cc;
-  rb->res.url = cc->ras->root.path;
-  /* ### fetch vsn_url from props */
 
   /* Set up the editor.
   ** This structure is used during the commit process. An external caller
   ** uses these callbacks to describe all the changes in the working copy
   ** that must be committed to the server.
   */
-  commit_editor->delete_item = commit_delete_item;
+  commit_editor->begin_edit = commit_begin_edit;
+  commit_editor->delete_entry = commit_delete_entry;
   commit_editor->add_directory = commit_add_dir;
   commit_editor->replace_directory = commit_rep_dir;
   commit_editor->change_dir_prop = commit_change_dir_prop;
@@ -633,8 +641,9 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   commit_editor->apply_textdelta = commit_apply_txdelta;
   commit_editor->change_file_prop = commit_change_file_prop;
   commit_editor->close_file = commit_close_file;
+  commit_editor->close_edit = commit_close_edit;
 
-  *root_dir_baton = rb;
+  *edit_baton = cc;
   *editor = commit_editor;
 
   return NULL;

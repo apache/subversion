@@ -166,8 +166,6 @@ svn_wc_get_pristine_copy_path (svn_string_t *path,
                                svn_string_t **pristine_path,
                                apr_pool_t *pool)
 {
-  /* Although the current implementation can't return error, the
-     interface should continue to support the possibility. */
   *pristine_path = svn_wc__text_base_path (path, FALSE, pool);
   return SVN_NO_ERROR;
 }

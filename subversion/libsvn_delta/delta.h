@@ -182,8 +182,9 @@ typedef struct svn_xml__digger_t
 
   /* Userdata structures that we need to keep track of while we parse,
      given to us by either the SVN filesystem or the SVN client */
-  void *root_dir_baton; /* (local info about root directory;  local subdir
-                           info will be stored in each stackframe structure) */
+  void *edit_baton;  /* (global data from our caller) */
+  void *rootdir_baton; /* (local info about root directory;  local subdir
+                          info will be stored in each stackframe structure) */
   void *dir_baton;   /* (temporary info about current working dir, also
                         stored within stackframes.) */
   void *file_baton;  /* (local info about current file) */
