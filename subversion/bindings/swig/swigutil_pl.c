@@ -951,3 +951,23 @@ SV *svn_swig_pl_from_stream (svn_stream_t *stream)
 
     return sv_2mortal (ret);
 }
+
+apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool)
+{
+    apr_file_t *apr_file = NULL;
+
+    if (!SvOK(file) || file == &PL_sv_undef)
+	return NULL;
+
+    if (SvPOKp(file)) {
+      apr_file_open(&apr_file, SvPV_nolen(file),
+                    APR_CREATE | APR_READ | APR_WRITE,
+                    APR_OS_DEFAULT,
+                    pool);
+    }
+    else {
+	croak ("apr_file_t conversion from non-string not supported yet");
+    }
+
+    return apr_file;
+}

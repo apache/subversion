@@ -188,8 +188,9 @@ typedef apr_int32_t time_t;
   $1 = svn_swig_py_make_file($input, _global_pool);
 }
 
-/* ### FIXME-perl */
-%typemap(perl5, in) apr_file_t *;
+%typemap(perl5, in) apr_file_t * {
+  $1 = svn_swig_pl_make_file($input, _global_pool);
+}
 
 /* -----------------------------------------------------------------------
    apr_file_t ** is always an OUT param
