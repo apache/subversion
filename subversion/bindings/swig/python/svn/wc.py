@@ -14,4 +14,16 @@
 ######################################################################
 #
 
-from libsvn.wc import *
+import libsvn.wc
+
+# copy the wrapper functions out of the extension module, dropping the
+# 'svn_wc_' prefix.
+for name in dir(libsvn.wc):
+  if name[:7] == 'svn_wc_':
+    vars()[name[7:]] = getattr(libsvn.wc, name)
+
+  # XXX: For compatibility reasons, also include the prefixed name
+  vars()[name] = getattr(libsvn.wc, name)
+
+# we don't want these symbols exported
+del name, libsvn
