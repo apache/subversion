@@ -48,14 +48,6 @@
 
 /*--------------------------------------------------------------- */
 
-/*** XML Attribute names and values ***/
-
-/* Attribute values for 'schedule' */
-#define SVN_WC__ENTRY_VALUE_ADD        "add"
-#define SVN_WC__ENTRY_VALUE_DELETE     "delete"
-#define SVN_WC__ENTRY_VALUE_REPLACE    "replace"
-
-
 
 /*** Initialization of the entries file. ***/
 
@@ -304,12 +296,16 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
     entry->copyfrom_url = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                                         APR_HASH_KEY_STRING);
+    if (entry->copyfrom_url)
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
 
     revstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, 
                            APR_HASH_KEY_STRING);
     if (revstr)
-      entry->copyfrom_rev = SVN_STR_TO_REV (revstr);
-    
+      {
+        entry->copyfrom_rev = SVN_STR_TO_REV (revstr);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+      }
   }
 
   /* Is this entry deleted? */

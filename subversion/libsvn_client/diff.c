@@ -705,66 +705,6 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
 }
 
 
-/* A context for fetch_file_helper(). */
-struct fetch_file_baton {
-  const char *path;             /* the file to push at the stream */
-  apr_pool_t *pool;             /* for scratchwork */
-};
-
-/* A helper func of type svn_wc_add_repos_file_helper_t, to aid
-   merge_file_added()'s call to svn_wc_add_repos_file().  */
-static svn_error_t *
-fetch_file_helper (svn_stream_t *target_stream,
-                   apr_hash_t **props,
-                   void *baton)
-{
-  struct fetch_file_baton *b = baton;
-  svn_stream_t *file_source_stream;
-  apr_file_t *fp;
-  apr_size_t rlen, wlen;
-  char buf[SVN_STREAM_CHUNK_SIZE];
-
-  /* We have no props yet, so return an empty hash.  This means
-     svn_wc_add_repos_file() will install an empty prop & prop-base
-     for us, which is fine.  Later on, the repos-diff editor will push
-     the full proplist at us via merge_props_changed().  */
-  *props = apr_hash_make (b->pool);
-
-  /* Push the contents of the tmpfile at the stream. */
-  SVN_ERR_W (svn_io_file_open (&fp, b->path, (APR_READ),
-                               APR_OS_DEFAULT, b->pool),           
-             "failed to open file for reading.");
-  file_source_stream =  svn_stream_from_aprfile (fp, b->pool);
-
-  while (1)
-    {
-      /* read a maximum number of bytes */
-      rlen = SVN_STREAM_CHUNK_SIZE; 
-      SVN_ERR (svn_stream_read (file_source_stream, buf, &rlen));
-      
-      /* write however many bytes you read */
-      wlen = rlen;
-      SVN_ERR (svn_stream_write (target_stream, buf, &wlen));
-      if (wlen != rlen)
-        {
-          /* Uh oh, didn't write as many bytes as we read, and no
-             error was returned.  According to the docstring, this
-             should never happen. */
-          return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                   "Error writing to svn_stream.");
-        }          
-      if (rlen != SVN_STREAM_CHUNK_SIZE)
-        {
-          /* svn_stream_read didn't throw an error, yet it didn't read
-             all the bytes requested.  According to the docstring,
-             this means a plain old EOF happened, so we're done. */
-          break;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 merge_file_added (svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -801,20 +741,13 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                copying 'yours' to 'mine', isn't enough; we need to get
                the whole text-base and props installed too, just as if
                we had called 'svn cp wc wc'. */
-            struct fetch_file_baton ffb;
-            ffb.path = yours;
-            ffb.pool = merge_b->pool;
 
             SVN_ERR (svn_wc_add_repos_file (mine, adm_access,
-                                            fetch_file_helper, &ffb,
+                                            yours,
+                                            apr_hash_make (merge_b->pool),
+                                            copyfrom_url,
+                                            rev2,
                                             merge_b->pool));
-
-            SVN_ERR (svn_wc_add (mine, adm_access,
-                                 copyfrom_url, rev2,
-                                 merge_b->ctx->cancel_func,
-                                 merge_b->ctx->cancel_baton,
-                                 NULL, NULL, /* don't pass notify func! */
-                                 merge_b->pool));
 
             if (state)
               *state = svn_wc_notify_state_changed;

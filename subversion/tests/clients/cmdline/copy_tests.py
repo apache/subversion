@@ -1145,7 +1145,69 @@ def diff_repos_to_wc_copy(sbox):
 
   # Run diff.
   svntest.actions.run_and_verify_svn(None, None, [], 'diff', wc_dir)
+ 
+
+#-------------------------------------------------------------
+
+def repos_to_wc_copy_eol_keywords(sbox):
+  "repos->WC copy with keyword or eol property set"
+
+  # See issue #1473: repos->wc copy would seg fault if svn:keywords or
+  # svn:eol were set on the copied file, because we'd be querying an
+  # entry for keyword values when the entry was still null (because
+  # not yet been fully installed in the wc).
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
   
+  iota_repos_path = svntest.main.current_repo_url + '/iota'
+  iota_wc_path = os.path.join(wc_dir, 'iota');
+  target_wc_path = os.path.join(wc_dir, 'new_file');
+
+  # Modify iota to make it checkworthy.
+  f = open(iota_wc_path, "ab")
+  f.write("\nHello\nSubversion\n$LastChangedRevision$\n");
+  f.close();
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:eol-style',
+                                     'CRLF', iota_wc_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords',
+                                     'Rev', iota_wc_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'log msg',
+                                     wc_dir);
+
+  # Copy a file from the repository to the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     iota_repos_path, target_wc_path)
+
+  # The original bug was that the copy would seg fault.  So we test
+  # that the copy target exists now; if it doesn't, it's probably
+  # because of the segfault.  Note that the crash would be independent
+  # of whether there are actually any line breaks or keywords in the
+  # file's contents -- the mere existence of the property would
+  # trigger the bug.
+  if not os.path.exists(target_wc_path):
+    raise svntest.Failure
+
+  # Okay, if we got this far, we might as well make sure that the
+  # translations/substitutions were done correctly:
+  f = open(target_wc_path, "rb");
+  raw_contents = f.read();
+  f.seek(0, 0);
+  line_contents = f.readlines();
+  f.close();
+
+  if re.match('[^\\r]\\n', raw_contents):
+    raise svntest.Failure
+
+  if not re.match('.*\$LastChangedRevision:\s*\d+\s*\$', line_contents[3]):
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -1171,6 +1233,7 @@ test_list = [ None,
               wc_copy_parent_into_child,
               resurrect_deleted_file,
               diff_repos_to_wc_copy,
+              repos_to_wc_copy_eol_keywords,
              ]
 
 if __name__ == '__main__':

@@ -233,15 +233,6 @@ svn_error_t * svn_client__get_export_editor (const svn_delta_editor_t **editor,
 
 /*** Add/delete ***/
 
-/* The main logic of the public svn_client_add;  the only difference
-   is that this function uses an existing access baton.
-   (svn_client_add just generates an access baton and calls this func.) */
-svn_error_t * svn_client__add (const char *path, 
-                               svn_boolean_t recursive,
-                               svn_wc_adm_access_t *adm_access,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool);
-
 /* The main logic for client deletion from a working copy. Deletes PATH
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE is TRUE.
