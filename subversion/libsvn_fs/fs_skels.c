@@ -188,17 +188,13 @@ is_valid_node_revision_skel (skel_t *skel)
 static int
 is_valid_copy_skel (skel_t *skel)
 {
-  int len = svn_fs__list_length (skel);
-
-  if ((len == 2)
-      && svn_fs__matches_atom (skel->children, "copy")
-      && skel->children->next->is_atom)
-    {
-      return 1;
-    }
-
-  return 0;
+  return ((svn_fs__list_length (skel) == 4)
+          && svn_fs__matches_atom (skel->children, "copy")
+          && skel->children->next->is_atom
+          && skel->children->next->next->is_atom
+          && skel->children->next->next->next->is_atom);
 }
+
 
 
 /*** Parsing (conversion from skeleton to native FS type) ***/
@@ -472,11 +468,21 @@ svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
 
   /* Create the returned structure */
   copy = apr_pcalloc (pool, sizeof (*copy));
-  
+
+  /* SRC-PATH */
+  copy->src_path = apr_pstrmemdup (pool,
+                                   skel->children->next->data,
+                                   skel->children->next->len);
+
+  /* SRC-REV */
+  copy->src_revision = atoi (apr_pstrmemdup (pool,
+                                             skel->children->next->next->data,
+                                             skel->children->next->next->len));
+
   /* DST-NODE-ID */
-  copy->dst_noderev_id = svn_fs_parse_id (skel->children->next->data,
-                                          skel->children->next->len, 
-                                          pool);
+  copy->dst_noderev_id 
+    = svn_fs_parse_id (skel->children->next->next->next->data,
+                       skel->children->next->next->next->len, pool);
 
   /* Return the structure. */
   *copy_p = copy;
@@ -833,15 +839,23 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
                            apr_pool_t *pool)
 {
   skel_t *skel;
-  svn_stringbuf_t *id_str;
+  svn_stringbuf_t *tmp_str;
 
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
 
   /* DST-NODE-ID */
-  id_str = svn_fs_unparse_id (copy->dst_noderev_id, pool);
-  svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), skel);
+  tmp_str = svn_fs_unparse_id (copy->dst_noderev_id, pool);
+  svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
 
+  /* SRC-REV */
+  tmp_str = svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT, 
+                                   copy->src_revision);
+  svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
+
+  /* SRC-PATH */
+  svn_fs__prepend (svn_fs__str_atom (copy->src_path, pool), skel);
+  
   /* "copy" */
   svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
 

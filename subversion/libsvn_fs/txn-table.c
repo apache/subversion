@@ -29,8 +29,6 @@
 #include "validate.h"
 #include "id.h"
 
-static const char next_id_key[] = "next-id";
-
 
 int
 svn_fs__open_transactions_table (DB **transactions_p,
@@ -50,7 +48,8 @@ svn_fs__open_transactions_table (DB **transactions_p,
     DBT key, value;
 
     DB_ERR (txns->put (txns, 0,
-                       svn_fs__str_to_dbt (&key, (char *) next_id_key),
+                       svn_fs__str_to_dbt (&key, 
+                                           (char *) svn_fs__next_key_key),
                        svn_fs__str_to_dbt (&value, (char *) "0"),
                        0));
   }
@@ -92,48 +91,35 @@ allocate_txn_id (char **id_p,
                  svn_fs_t *fs,
                  trail_t *trail)
 {
-  DBT key, value;
-  apr_size_t next_id;
-  char *next_id_str;
+  DBT query, result;
+  apr_size_t len;
+  char next_key[200];
+  int db_err;
 
-  svn_fs__str_to_dbt (&key, (char *) next_id_key);
+  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
 
-  /* Get the current value associated with the `next-id' key in the
-     transactions table.  */
-  SVN_ERR (DB_WRAP (fs, "allocating new transaction ID (getting `next-id')",
+  /* Get the current value associated with the `next-key' key in the
+     copies table.  */
+  SVN_ERR (DB_WRAP (fs, "allocating new txn ID (getting `next-key')",
                     fs->transactions->get (fs->transactions, trail->db_txn,
-                                           &key,
-                                           svn_fs__result_dbt (&value),
+                                           &query, 
+                                           svn_fs__result_dbt (&result), 
                                            0)));
-  svn_fs__track_dbt (&value, trail->pool);
+  svn_fs__track_dbt (&result, trail->pool);
 
-  /* That's the value we want to return.  */
-  next_id_str = apr_pstrmemdup (trail->pool, value.data, value.size);
+  /* Set our return value. */
+  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
 
-  /* Try to parse the value.  */
-  {
-    const char *endptr;
+  /* Bump to future key. */
+  len = result.size;
+  svn_fs__next_key (result.data, &len, next_key);
+  db_err = fs->copies->put (fs->transactions, trail->db_txn,
+                            svn_fs__str_to_dbt (&query, 
+                                                (char *) svn_fs__next_key_key),
+                            svn_fs__str_to_dbt (&result, (char *) next_key), 
+                            0);
 
-    next_id = svn_fs__getsize (value.data, value.size, &endptr, 1000000);
-    if (endptr != (const char *) value.data + value.size)
-      return svn_fs__err_corrupt_next_id (fs, "transactions");
-  }
-
-  /* Store the next value.  */
-  {
-    char buf[200];
-    int buf_len;
-
-    buf_len = svn_fs__putsize (buf, sizeof (buf), next_id + 1);
-    SVN_ERR (DB_WRAP (fs, "allocating new transaction ID (setting `next-id')",
-                      fs->transactions->put (fs->transactions, trail->db_txn,
-                                             &key,
-                                             svn_fs__set_dbt (&value, 
-                                                              buf, buf_len),
-                                             0)));
-  }
-
-  *id_p = next_id_str;
+  SVN_ERR (DB_WRAP (fs, "bumping next txn key", db_err));
   return SVN_NO_ERROR;
 }
 
@@ -266,7 +252,7 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
                                    apr_pool_t *pool,
                                    trail_t *trail)
 {
-  apr_size_t const next_id_key_len = strlen (next_id_key);
+  apr_size_t const next_id_key_len = strlen (svn_fs__next_key_key);
 
   char **names;
   apr_size_t names_count = 0;
@@ -299,7 +285,7 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
 
       /* Ignore the "next-id" key. */
       if (key.size == next_id_key_len
-          && 0 == memcmp (key.data, next_id_key, next_id_key_len))
+          && 0 == memcmp (key.data, svn_fs__next_key_key, next_id_key_len))
         continue;
 
       /* Make sure there's enough space in the names array. */

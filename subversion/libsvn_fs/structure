@@ -682,7 +682,8 @@ Transactions:
 Copies:
 
                    COPY ::= ("copy" SRC-PATH SRC-REV DST-NODE-ID)
-               SRC-PATH ::= 
+               SRC-PATH ::= atom ;
+                SRC-REV ::= number ;
             DST-NODE-ID ::= NODE-REV-ID ;
 
 

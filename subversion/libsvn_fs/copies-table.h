@@ -34,11 +34,23 @@ int svn_fs__open_copies_table (DB **copies_p,
                                DB_ENV *env,
                                int create);
 
-/* Create a new copy in FS as part of TRAIL, with a destination node
-   revision id of DST_NODEREV_ID.  Set *COPY_ID_P to the id of the new
-   copy, allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__create_copy (char **copy_id_p,
+/* Reserve a slot in the `copies' table in FS for a new copy operation
+   as part of TRAIL.  Return the slot's id in *COPY_ID_P, allocated in
+   TRAIL->pool.  */
+svn_error_t *svn_fs__reserve_copy_id (char **copy_id_p,
+                                      svn_fs_t *fs,
+                                      trail_t *trail);
+
+/* Create a new copy with id COPY_ID in FS as part of TRAIL.
+   SRC_PATH/SRC_REV are the path/revision (respectively) of the copy
+   source, and DST_NODEREV_ID is the node revision id of the copy
+   destination.  
+
+   COPY_ID should generally come from a call to svn_fs__reserve_copy_id().  */
+svn_error_t *svn_fs__create_copy (const char *copy_id,
                                   svn_fs_t *fs,
+                                  const char *src_path,
+                                  svn_revnum_t src_rev,
                                   const svn_fs_id_t *dst_noderev_id,
                                   trail_t *trail);
 

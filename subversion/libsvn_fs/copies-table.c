@@ -29,8 +29,6 @@
 #include "validate.h"
 #include "id.h"
 
-static const char next_id_key[] = "next-id";
-
 
 int
 svn_fs__open_copies_table (DB **copies_p,
@@ -44,17 +42,13 @@ svn_fs__open_copies_table (DB **copies_p,
                         create ? (DB_CREATE | DB_EXCL) : 0,
                         0666));
 
-  /* Create the initial copy id `0' and the `next-id' table entry.  */
+  /* Create the initial `next-id' table entry.  */
   if (create)
   {
     DBT key, value;
-
     DB_ERR (copies->put (copies, 0,
-                         svn_fs__str_to_dbt (&key, (char *) "0"),
-                         svn_fs__str_to_dbt (&value, (char *) "0.0.0"),
-                         0));
-    DB_ERR (copies->put (copies, 0,
-                         svn_fs__str_to_dbt (&key, (char *) next_id_key),
+                         svn_fs__str_to_dbt (&key, 
+                                             (char *) svn_fs__next_key_key),
                          svn_fs__str_to_dbt (&value, (char *) "0"),
                          0));
   }
@@ -65,6 +59,7 @@ svn_fs__open_copies_table (DB **copies_p,
 
 
 /* Store COPY as a copy named COPY_ID in FS as part of TRAIL.  */
+/* ### only has one caller; might not need to be abstracted */
 static svn_error_t *
 put_copy (svn_fs_t *fs,
           const svn_fs__copy_t *copy,
@@ -89,73 +84,57 @@ put_copy (svn_fs_t *fs,
 }
 
 
-/* Allocate a Subversion copy ID in FS, as part of TRAIL.  Set ID_P to
-   *the new copy ID, allocated in TRAIL->pool.  */
-static svn_error_t *
-allocate_copy_id (char **id_p,
-                  svn_fs_t *fs,
-                  trail_t *trail)
+svn_error_t *
+svn_fs__reserve_copy_id (char **id_p,
+                         svn_fs_t *fs,
+                         trail_t *trail)
 {
-  DBT key, value;
-  apr_size_t next_id;
-  char *next_id_str;
+  DBT query, result;
+  apr_size_t len;
+  char next_key[200];
+  int db_err;
 
-  svn_fs__str_to_dbt (&key, (char *) next_id_key);
+  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
 
   /* Get the current value associated with the `next-id' key in the
      copies table.  */
-  SVN_ERR (DB_WRAP (fs, "allocating new copy ID (getting `next-id')",
+  SVN_ERR (DB_WRAP (fs, "allocating new copy ID (getting `next-key')",
                     fs->copies->get (fs->copies, trail->db_txn,
-                                     &key,
-                                     svn_fs__result_dbt (&value),
+                                     &query, svn_fs__result_dbt (&result), 
                                      0)));
-  svn_fs__track_dbt (&value, trail->pool);
+  svn_fs__track_dbt (&result, trail->pool);
 
-  /* That's the value we want to return.  */
-  next_id_str = apr_pstrndup (trail->pool, value.data, value.size);
+  /* Set our return value. */
+  *id_p = apr_pstrmemdup (trail->pool, result.data, result.size);
 
-  /* Try to parse the value.  */
-  {
-    const char *endptr;
+  /* Bump to future key. */
+  len = result.size;
+  svn_fs__next_key (result.data, &len, next_key);
+  db_err = fs->copies->put (fs->copies, trail->db_txn,
+                            svn_fs__str_to_dbt (&query, 
+                                                (char *) svn_fs__next_key_key),
+                            svn_fs__str_to_dbt (&result, (char *) next_key), 
+                            0);
 
-    next_id = svn_fs__getsize (value.data, value.size, &endptr, 1000000);
-    if (endptr != (const char *) value.data + value.size)
-      return svn_fs__err_corrupt_next_id (fs, "copies");
-  }
-
-  /* Store the next value.  */
-  {
-    char buf[200];
-    int buf_len;
-
-    buf_len = svn_fs__putsize (buf, sizeof (buf), next_id + 1);
-    SVN_ERR (DB_WRAP (fs, "allocating new copy ID (setting `next-id')",
-                      fs->copies->put (fs->copies, trail->db_txn,
-                                       &key,
-                                       svn_fs__set_dbt (&value, buf, buf_len),
-                                       0)));
-  }
-
-  *id_p = next_id_str;
+  SVN_ERR (DB_WRAP (fs, "bumping next copy key", db_err));
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs__create_copy (char **copy_id_p,
+svn_fs__create_copy (const char *copy_id,
                      svn_fs_t *fs,
+                     const char *src_path,
+                     svn_revnum_t src_rev,
                      const svn_fs_id_t *dst_noderev_id,
                      trail_t *trail)
 {
-  char *copy_id;
   svn_fs__copy_t copy;
 
-  SVN_ERR (allocate_copy_id (&copy_id, fs, trail));
+  copy.src_path = src_path;
+  copy.src_revision = src_rev;
   copy.dst_noderev_id = (svn_fs_id_t *) dst_noderev_id;
-  SVN_ERR (put_copy (fs, &copy, copy_id, trail));
-
-  *copy_id_p = copy_id;
-  return SVN_NO_ERROR;
+  return put_copy (fs, &copy, copy_id, trail);
 }
 
 

@@ -204,6 +204,12 @@ typedef struct
 /*** Copy ***/
 typedef struct
 {
+  /* Path of copy source. */
+  const char *src_path;
+
+  /* Revision of copy source. */
+  svn_revnum_t src_revision;
+
   /* Node-revision of copy destination. */
   svn_fs_id_t *dst_noderev_id;
 
