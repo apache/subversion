@@ -45,7 +45,7 @@ Candidate changes:
     Notes:
      Not worth a resoak on its own.
     Votes:
-      +1: ghudson
+      +1: ghudson, maxb
    
   * r10773
     Fix typo in test case of javahl binding.  
