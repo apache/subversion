@@ -20,7 +20,7 @@ def main(pool, files):
     try:
       entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
       print svn.wc.svn_wc_entry_t_url_get(entry)
-    except:
+    finally:
       svn.wc.svn_wc_adm_close(adm_baton)
 
 if __name__ == '__main__':
