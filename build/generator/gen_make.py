@@ -119,7 +119,7 @@ class Generator(gen_base.GeneratorBase):
       elif isinstance(target_ob, gen_base.TargetI18N):
         self.ofile.write(
           '%s_DEPS = %s %s\n'
-          '%s: $(%s_DEPS)\n'
+          '%s: $(%s_DEPS)\n\n'
           % (targ_varname, target_ob.add_deps, string.join(objects + deps),
              target_ob.name, targ_varname))
       else:
@@ -329,7 +329,7 @@ class Generator(gen_base.GeneratorBase):
       else:
         cmd = '$(RUN_SWIG_NORUN_%s)'
       cmd = cmd % string.upper(gen_base.lang_abbrev[objname.target.lang])
-      self.ofile.write('%s: %s\n\t%s %s\n' % (objname, deps, cmd, source))
+      self.ofile.write('%s: %s\n\t%s %s\n\n' % (objname, deps, cmd, source))
 
     obj_deps = self.graph.get_deps(gen_base.DT_OBJECT)
     obj_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
@@ -340,11 +340,13 @@ class Generator(gen_base.GeneratorBase):
       cmd = objname.compile_cmd
       if cmd:
         if not getattr(objname, 'source_generated', 0):
-          self.ofile.write('\t%s %s\n'
+          self.ofile.write('\t%s %s\n\n'
                            % (cmd, build_path_join('$(abs_srcdir)',
                               str(sources[0]))))
         else:
-          self.ofile.write('\t%s %s\n' % (cmd, sources[0]))
+          self.ofile.write('\t%s %s\n\n' % (cmd, sources[0]))
+      else:
+        self.ofile.write('\n')
 
   def write_symbols(self, install_sources):
     wrappers = { }
