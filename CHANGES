@@ -1,4 +1,4 @@
-Version 0.20.1 (released 25 Mar 2003, revision 5465, branches/release-0.20.1)
+Version 0.20.1 (released 26 Mar 2003, revision 5467, branches/release-0.20.1)
 
  User-visible changes:
  * fix svnadmin load bug so that property deletions actually occur
