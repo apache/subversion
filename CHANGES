@@ -1,3 +1,44 @@
+Version 0.34.0 (released 3 December 2003, from revision r7859)
+http://svn.collab.net/repos/svn/tags/0.34.0
+
+#####################################################################
+##  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  ##
+#####################################################################
+##                                                                 ##
+## This release makes  an incompatible  change  to  the Subversion ##
+## database.    Repositories created with versions  of  Subversion ##
+## prior to 0.34 will not work with Subversion 0.34.               ##  
+## To  upgrade,   first  use  'svnadmin dump'  with  your existing ##
+## Subversion binaries.   Then upgrade your binaries to 0.34,  and ##
+## use  'svnadmin load'  to  create  a  new  repository  from your ##
+## dumpfile.                                                       ##
+## Don't  forget  to  copy any custom configuration/hooks from the ##
+## old to the new repository.                                      ##
+##                                                                 ##
+#####################################################################
+
+ Please see the notes/repository_upgrade_HOWTO document located  for
+ documentation on migrating pre-0.34.0 repos to 0.34.0.
+
+ Also located here:
+    http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
+
+ User-visible changes:
+ * fs schema change (#1578, #1595) **NOTE: repos dump/load cycle required!**
+ * Berkeley DB 4.2.50 is now the recommended Berkeley version
+ * Fix: 'svn status' thought replaced items were unversioned (#1609)
+ * SSL server cert error prompt improvement (r7849)
+ * many error message improvements (r7745, r7763, r7824 and 7827 - #897)
+ * don't show update-completion message until all wc work completes (#1556) 
+ * many other enhancements, minor features, and bugfixes not listed here
+
+ Developer-visible changes:
+ * public client APIs changes (r7799) after fixing #1556
+ * many improvements and fixes on Perl bindings (perl => 5.8.0 are required)
+ * improvements, fixes on misc. test scripts
+ * many other changes not listed here
+
+
 Version 0.33.1 (released 17 November 2003, revision r7782)
 http://svn.collab.net/repos/svn/tags/0.33.1
 
@@ -45,7 +86,7 @@ http://svn.collab.net/repos/svn/tags/0.33.0
  * cvs2svn.py bugfixes, especially issue #1440
  * book and documentation updates
  * removed server config options ssl-ignore-invalid-date and
-   ssl-override-cert-hostname (r7644) 
+   ssl-override-cert-hostname (r7644)
  * many other enhancements, minor features, and bugfixes not listed here
 
  Developer-visible changes:
