@@ -160,19 +160,36 @@ make install \
 	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
 
 %post
-/sbin/install-info /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+# Only add to INFO directory if this is the only instance installed.
+if [ "$1"x = "1"x ]; then
+   /sbin/install-info /usr/share/info/svn-design.info.gz \
+      /usr/share/info/dir \
+      --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
 
-/sbin/install-info /usr/share/info/svn-manual.info.gz /usr/share/info/dir --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
+   /sbin/install-info /usr/share/info/svn-manual.info.gz \
+      /usr/share/info/dir \
+      --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
 
-/sbin/install-info /usr/share/info/svn_for_cvs_users.info.gz /usr/share/info/dir --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
+   /sbin/install-info /usr/share/info/svn_for_cvs_users.info.gz \
+      /usr/share/info/dir \
+      --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
+fi
 
 %preun
-/sbin/install-info --delete /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+# Only delete from INFO directory if this is the last instance being deleted.
+if [ "$1"x = "0"x ]; then
+   /sbin/install-info --delete /usr/share/info/svn-design.info.gz \
+      /usr/share/info/dir \
+      --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
 
-/sbin/install-info --delete /usr/share/info/svn-manual.info.gz /usr/share/info/dir --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
+   /sbin/install-info --delete /usr/share/info/svn-manual.info.gz \
+      /usr/share/info/dir \
+      --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
 
-/sbin/install-info --delete /usr/share/info/svn_for_cvs_users.info.gz /usr/share/info/dir --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
-
+   /sbin/install-info --delete /usr/share/info/svn_for_cvs_users.info.gz \
+      /usr/share/info/dir \
+      --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
+fi
 
 %post server
 # Load subversion server into apache configuration.
