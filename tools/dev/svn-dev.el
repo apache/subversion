@@ -29,7 +29,8 @@
     (message "Reverted \"%s\"." fname)))
 
 (defun svn-resolved ()
-  "Revert the current buffer and its file to its svn base revision."
+  "Tell Subversion that conflicts in the current buffer and its file have
+been resolved."
   (interactive)
   (let ((obuf (current-buffer))
         (fname (buffer-file-name))
