@@ -701,6 +701,187 @@ svn_wc__close_text_base (apr_file_t *fp,
 }
 
 
+
+svn_error_t *
+svn_wc__open_props (apr_file_t **handle,
+                    svn_string_t *path,
+                    apr_int32_t flags,
+                    svn_boolean_t base,
+                    svn_boolean_t wcprops,
+                    apr_pool_t *pool)
+{
+  svn_string_t *parent_dir, *basename;
+  enum svn_node_kind kind;
+
+  /* Check if path is a file or a dir. */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+  /* If file, split the path. */
+  if (kind == svn_node_file)
+    svn_path_split (path, &parent_dir, &basename,
+                    svn_path_local_style, pool);
+  else    
+    parent_dir = path;
+  
+  /* At this point, we know we need to open a file in the admin area
+     of parent_dir.  Examine the flags to know -which- kind of prop
+     file to get -- there are three types! */
+
+  if (base || wcprops)
+    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+                             "open_props: no such thing as 'base' wcprops!");
+
+  else if (base)
+    {
+      if (kind == svn_node_dir)
+        return open_adm_file (handle, parent_dir, flags, pool,
+                              SVN_WC__ADM_DIR_PROP_BASE, NULL);
+      else
+        return open_adm_file (handle, parent_dir, flags, pool,
+                              SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+    }
+  else if (wcprops)
+    {
+      if (kind == svn_node_dir)
+        return open_adm_file (handle, parent_dir, flags, pool,
+                              SVN_WC__ADM_DIR_WCPROPS, NULL);
+      else
+        return open_adm_file (handle, parent_dir, flags, pool,
+                              SVN_WC__ADM_WCPROPS, basename->data, NULL);
+    }
+  else /* plain old property file */
+    {
+      if (kind == svn_node_dir)
+        return open_adm_file (handle, parent_dir, flags, pool,
+                              SVN_WC__ADM_DIR_PROPS, NULL);
+      else
+        return open_adm_file (handle, parent_dir, flags, pool,
+                              SVN_WC__ADM_PROPS, basename->data, NULL);
+    }
+}
+
+
+
+svn_error_t *
+svn_wc__close_props (apr_file_t *fp,
+                     svn_string_t *path,
+                     svn_boolean_t base,
+                     svn_boolean_t wcprops,
+                     int sync,
+                     apr_pool_t *pool)
+{
+  svn_string_t *parent_dir, *basename;
+  enum svn_node_kind kind;
+
+  /* Check if path is a file or a dir. */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+  /* If file, split the path. */
+  if (kind == svn_node_file)
+    svn_path_split (path, &parent_dir, &basename,
+                    svn_path_local_style, pool);
+  else    
+    parent_dir = path;
+  
+  /* At this point, we know we need to open a file in the admin area
+     of parent_dir.  Examine the flags to know -which- kind of prop
+     file to get -- there are three types! */
+
+  if (base || wcprops)
+    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+                             "close_props: no such thing as 'base' wcprops!");
+
+  else if (base)
+    {
+      if (kind == svn_node_dir)
+        return close_adm_file (fp, parent_dir, sync, pool,
+                               SVN_WC__ADM_DIR_PROP_BASE, NULL);
+      else
+        return close_adm_file (fp, parent_dir, sync, pool,
+                               SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+    }
+  else if (wcprops)
+    {
+      if (kind == svn_node_dir)
+        return close_adm_file (fp, parent_dir, sync, pool,
+                               SVN_WC__ADM_DIR_WCPROPS, NULL);
+      else
+        return close_adm_file (fp, parent_dir, sync, pool,
+                               SVN_WC__ADM_WCPROPS, basename->data, NULL);
+    }
+  else /* plain old property file */
+    {
+      if (kind == svn_node_dir)
+        return close_adm_file (fp, parent_dir, sync, pool,
+                               SVN_WC__ADM_DIR_PROPS, NULL);
+      else
+        return close_adm_file (fp, parent_dir, sync, pool,
+                               SVN_WC__ADM_PROPS, basename->data, NULL);
+    }
+
+}
+
+
+
+svn_error_t *
+svn_wc__sync_props (svn_string_t *path,
+                    svn_boolean_t base,
+                    svn_boolean_t wcprops,
+                    apr_pool_t *pool)
+{
+  svn_string_t *parent_dir, *basename;
+  enum svn_node_kind kind;
+
+  /* Check if path is a file or a dir. */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+  /* If file, split the path. */
+  if (kind == svn_node_file)
+    svn_path_split (path, &parent_dir, &basename,
+                    svn_path_local_style, pool);
+  else    
+    parent_dir = path;
+  
+  /* At this point, we know we need to open a file in the admin area
+     of parent_dir.  Examine the flags to know -which- kind of prop
+     file to get -- there are three types! */
+
+  if (base || wcprops)
+    return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+                             "close_props: no such thing as 'base' wcprops!");
+
+  else if (base)
+    {
+      if (kind == svn_node_dir)
+        return sync_adm_file (parent_dir, pool,
+                              SVN_WC__ADM_DIR_PROP_BASE, NULL);
+      else
+        return sync_adm_file (parent_dir, pool,
+                              SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+    }
+  else if (wcprops)
+    {
+      if (kind == svn_node_dir)
+        return sync_adm_file (parent_dir, pool,
+                              SVN_WC__ADM_DIR_WCPROPS, NULL);
+      else
+        return sync_adm_file (parent_dir, pool,
+                              SVN_WC__ADM_WCPROPS, basename->data, NULL);
+    }
+  else /* plain old property file */
+    {
+      if (kind == svn_node_dir)
+        return sync_adm_file (parent_dir, pool,
+                              SVN_WC__ADM_DIR_PROPS, NULL);
+      else
+        return sync_adm_file (parent_dir, pool,
+                              SVN_WC__ADM_PROPS, basename->data, NULL);
+    }
+
+}
+
+
+
 svn_error_t *
 svn_wc__remove_adm_file (svn_string_t *path, apr_pool_t *pool, ...)
 {

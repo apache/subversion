@@ -852,8 +852,9 @@ svn_wc__wcprop_set (svn_string_t *name,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_status_t apr_err;
   apr_hash_t *prophash;
-  svn_string_t *prop_path;
+  apr_file_t *fp = NULL;
 
   err = wcprop_list (&prophash, path, pool);
   if (err)
@@ -864,14 +865,24 @@ svn_wc__wcprop_set (svn_string_t *name,
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
   apr_hash_set (prophash, name->data, name->len, value);
+
+  /* Open the propfile for writing. */
+  SVN_ERR (svn_wc__open_props (&fp, 
+                               path, /* open in PATH */
+                               (APR_WRITE | APR_CREATE),
+                               0, /* not base props */
+                               1, /* we DO want wcprops */
+                               pool));
+  /* Write. */
+  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "can't write prop hash for %s", path->data);
   
-  /* Construct a path to the relevant property file */
-  err = svn_wc__wcprop_path (&prop_path, path, 0, pool);
-  if (err) return err;
-  
-  /* Write the properties back out to disk. */
-  err = svn_wc__save_prop_file (prop_path, prophash, pool);
-  if (err) return err;
+  /* Close file, and doing an atomic "move". */
+  SVN_ERR (svn_wc__close_props (fp, path, 0, 1,
+                                1, /* sync! */
+                                pool));
 
   return SVN_NO_ERROR;
 }
@@ -964,8 +975,9 @@ svn_wc_prop_set (svn_string_t *name,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_status_t apr_err;
   apr_hash_t *prophash;
-  svn_string_t *prop_path;
+  apr_file_t *fp = NULL;
 
   err = svn_wc_prop_list (&prophash, path, pool);
   if (err)
@@ -977,13 +989,24 @@ svn_wc_prop_set (svn_string_t *name,
      property into it. */
   apr_hash_set (prophash, name->data, name->len, value);
   
-  /* Construct a path to the relevant property file */
-  err = svn_wc__prop_path (&prop_path, path, 0, pool);
-  if (err) return err;
+  /* Open the propfile for writing. */
+  SVN_ERR (svn_wc__open_props (&fp, 
+                               path, /* open in PATH */
+                               (APR_WRITE | APR_CREATE),
+                               0, /* not base props */
+                               0, /* not wcprops */
+                               pool));
+  /* Write. */
+  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "can't write prop hash for %s", path->data);
   
-  /* Write the properties back out to disk. */
-  err = svn_wc__save_prop_file (prop_path, prophash, pool);
-  if (err) return err;
+  /* Close file, and doing an atomic "move". */
+  SVN_ERR (svn_wc__close_props (fp, path, 0, 0,
+                                1, /* sync! */
+                                pool));
+
 
   return SVN_NO_ERROR;
 }
