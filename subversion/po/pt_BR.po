@@ -1,12 +1,12 @@
 # Brazilian portuguese translations for Subversion
 # Copyright (C) 2004 CollabNet.
 # This file is distributed under the same license as the subversion package.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-10-05 23:43-0300\n"
+"POT-Creation-Date: 2004-10-12 17:30-0200\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -2685,7 +2685,7 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "Ítem de commit '%s' possui flag de cópia mas uma revisão inválida"
 
 #: libsvn_client/copy.c:102 libsvn_client/copy.c:646 libsvn_client/copy.c:834
-#: libsvn_ra_dav/commit.c:869
+#: libsvn_ra_dav/commit.c:897
 #, c-format
 msgid "File '%s' already exists"
 msgstr "Arquivo '%s' já existe"
@@ -2874,7 +2874,7 @@ msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Ao menos uma revisão deve ser não local para um diff marcado"
 
 #: libsvn_client/diff.c:2268 libsvn_client/diff.c:2273
-#: libsvn_client/diff.c:2384 libsvn_client/export.c:729 libsvn_client/ra.c:694
+#: libsvn_client/diff.c:2384 libsvn_client/export.c:737 libsvn_client/ra.c:694
 #: libsvn_client/ra.c:814
 #, c-format
 msgid "'%s' has no URL"
@@ -2885,26 +2885,26 @@ msgstr "'%s' não possui URL"
 msgid "'%s' is not a valid EOL value"
 msgstr "'%s' não é um valor válido de EOL"
 
-#: libsvn_client/export.c:137
+#: libsvn_client/export.c:143
 msgid "Destination directory exists, and will not be overwritten unless forced"
 msgstr ""
 "Diretório de destino existe, e não será sobrescrito a menos que forçado"
 
-#: libsvn_client/export.c:264
+#: libsvn_client/export.c:272
 msgid "(local)"
 msgstr "(local)"
 
-#: libsvn_client/export.c:322 libsvn_client/export.c:464
+#: libsvn_client/export.c:330 libsvn_client/export.c:472
 #, c-format
 msgid "'%s' exists and is not a directory"
 msgstr "'%s' existe e não é um diretório"
 
-#: libsvn_client/export.c:325 libsvn_client/export.c:468
+#: libsvn_client/export.c:333 libsvn_client/export.c:476
 #, c-format
 msgid "'%s' already exists"
 msgstr "'%s' já existe"
 
-#: libsvn_client/export.c:639 libsvn_wc/update_editor.c:1584
+#: libsvn_client/export.c:647 libsvn_wc/update_editor.c:1584
 #: libsvn_wc/update_editor.c:2331
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
@@ -3331,21 +3331,21 @@ msgstr "Esquema URL não reconhecido '%s'"
 msgid "  - handles '%s' schema\n"
 msgstr "  - trata esquema '%s'\n"
 
-#: libsvn_ra_dav/commit.c:150
+#: libsvn_ra_dav/commit.c:167
 #, c-format
 msgid "Could not create a request (%s '%s')"
 msgstr "Não foi possível criar requisição (%s '%s')"
 
-#: libsvn_ra_dav/commit.c:984
+#: libsvn_ra_dav/commit.c:1018
 msgid "Could not write svndiff to temp file"
 msgstr "Não foi possível escrever svndiff para arquivo temporário"
 
-#: libsvn_ra_dav/commit.c:1074
+#: libsvn_ra_dav/commit.c:1108
 #, c-format
 msgid "Could not create a PUT request (%s)"
 msgstr "Não foi possível criar requisição PUT (%s)"
 
-#: libsvn_ra_dav/commit.c:1221
+#: libsvn_ra_dav/commit.c:1255
 #, c-format
 msgid "applying log message to %s"
 msgstr "aplicando mensagem de log a %s"
@@ -3649,7 +3649,7 @@ msgstr "URL local '%s' contém somente o nome de servidor, não caminho"
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "URL local '%s' contém nome de servidor não suportado"
 
-#: libsvn_ra_local/split_url.c:108 libsvn_ra_local/split_url.c:115
+#: libsvn_ra_local/split_url.c:109 libsvn_ra_local/split_url.c:116
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "Não foi possível abrir repositório '%s'"
@@ -5280,12 +5280,12 @@ msgstr "pronto.\n"
 #: svnadmin/main.c:578
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "uso geral: svnadmin SUB-COMANDO CAMINHO_REPOS  [ARGS & OPÇÕES ...]\n"
-"Digite \"svnadmin help <sub-comando>\" para ajuda em um sub-comando "
+"Digite 'svnadmin help <sub-comando>' para ajuda em um sub-comando "
 "específico.\n"
 "\n"
 "Sub-comandos disponíveis:\n"
@@ -5420,12 +5420,12 @@ msgstr ""
 #: svndumpfilter/main.c:799
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "uso geral: svndumpfilter SUB-COMANDO [ARGS & OPÇÕES ...]\n"
-"Digite \"svndumpfilter help <sub-comando>\" para ajuda em um sub-comando "
+"Digite 'svndumpfilter help <sub-comando>' para ajuda em um sub-comando "
 "específico.\n"
 "\n"
 "Sub-comandos disponíveis:\n"
@@ -5461,11 +5461,6 @@ msgstr "Revisões renumeradas como a seguir:\n"
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (removida)\n"
-
-#: svndumpfilter/main.c:925
-#, c-format
-msgid "   %ld => %ld\n"
-msgstr "   %ld => %ld\n"
 
 #: svndumpfilter/main.c:936
 #, c-format
@@ -5747,16 +5742,15 @@ msgid ""
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
 "      options will, if invoked without one of those options, act on\n"
 "      the repository's youngest revision.\n"
-"Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnlook help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "uso geral: svnlook SUB-COMANDO CAMINHO_REP [ARGS & OPÇÕES ...]\n"
-"Nota: qualquer sub-comando que leve as opções '--revision' e '--"
-"transaction'\n"
-"      irá, se invocado sem uma destas opções, atuar na revisão mais nova\n"
-"      do repositório.\n"
-"Digite \"svnlook help <sub-comando>\" para ajuda em um sub-comando "
+"Nota: qualquer sub-comando que leve as opções '--revision' e\n"
+"      '--transaction irá, se invocado sem uma destas opções,\n"
+"      atuar na revisão mais nova do repositório.\n"
+"Digite 'svnlook help <sub-comando>' para ajuda em um sub-comando\n"
 "específico.\n"
 "\n"
 "Sub-comandos disponíveis:\n"
@@ -5801,7 +5795,7 @@ msgstr ""
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
-"  Produce a compact \"version number\" for the working copy path\n"
+"  Produce a compact 'version number' for the working copy path\n"
 "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
 "  determine if WC_PATH itself is switched (detection of switches\n"
 "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
@@ -5821,18 +5815,17 @@ msgid ""
 "   4123:4168MS   mixed revision, modified, switched working copy\n"
 "\n"
 "  If invoked on a directory that is not a working copy, an\n"
-"  exported directory say, the program will output \"exported\".\n"
+"  exported directory say, the program will output 'exported'.\n"
 "\n"
 "Valid options:\n"
 msgstr ""
 "uso: svnversion [OPÇÕES] CAMINHO_CT [FIM_URL]\n"
 "\n"
-"  Produz um \"número de versão\" compacto para o caminho de cópia de\n"
+"  Produz um 'número de versão' compacto para o caminho de cópia de\n"
 "  trabalho CAMINHO_CT.  FIM_URL é a parte final da URL usada para "
-"determinar\n"
-"  se CAMINHO_CT está trocado (detecção de trocas dentro de CAMINHO_CT não\n"
-"  dependem de FIM_URL).  O número de versão é escrito na saída padrão.  Por\n"
-"  exemplo:\n"
+"  determinar se CAMINHO_CT está trocado (detecção de trocas dentro de\n"
+"  CAMINHO_CT não dependem de FIM_URL).  O número de versão é escrito na\n"
+"  saída padrão.  Por exemplo:\n"
 "\n"
 "    $ svnversion . /repos/svn/trunk \n"
 "    4168\n"
@@ -5849,7 +5842,7 @@ msgstr ""
 "   4123:4168MS   revisão mista, cópia de trabalho modificada e trocada\n"
 "\n"
 "  Se invocado em um diretório que não é uma cópia de trabalho, como em um\n"
-"  diretório exportado, o programa irá gerar \"exportado\" na saída.\n"
+"  diretório exportado, o programa irá gerar 'exportado' na saída.\n"
 "\n"
 "Opções válidas:\n"
 
