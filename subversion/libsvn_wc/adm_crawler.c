@@ -54,6 +54,7 @@
 #include "apr_file_io.h"
 #include "apr_hash.h"
 #include "wc.h"
+#include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_io.h"
 #include "svn_delta.h"
@@ -147,54 +148,67 @@ pop_stack (struct stack_object **stack)
 }
 
 
+
+/* Remove administrative-area locks on each path in LOCKS hash */
+static svn_error_t *
+remove_all_locks (apr_hash_t *locks, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  
+  for (hi = apr_hash_first (locks); hi; hi = apr_hash_next (hi))
+    {
+      svn_error_t *err;
+      const void *key;
+      void *val;
+      apr_size_t klen;
+      svn_string_t *unlock_path;
+      
+      apr_hash_this (hi, &key, &klen, &val);
+      unlock_path = svn_string_create ((char *)key, pool);
+      
+      err = svn_wc__unlock (unlock_path, pool);
+      if (err) 
+        {
+          char *message =
+            apr_psprintf (pool,
+                          "remove_all_locks:  couldn't unlock %s",
+                          unlock_path->data);
+          return svn_error_quick_wrap (err, message);
+        }          
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Attempt to grab a lock in PATH.  If we succeed, store PATH in LOCKS
    and return success.  If we fail to grab a lock, remove all locks in
    LOCKS and return error. */
 static svn_error_t *
 do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
 {
-  svn_error_t *err;
-  char *msg;
+  svn_error_t *err, *err2;
       
   err = svn_wc__lock (path, 0, pool);
   if (err)
     {
-      /* Couldn't lock */
+      /* Couldn't lock: */
       
       /* Remove _all_ previous commit locks */
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first (locks); hi; hi = apr_hash_next (hi))
+      err2 = remove_all_locks (locks, pool);
+      if (err2) 
         {
-          svn_error_t *err2;
-          const void *key;
-          void *val;
-          apr_size_t klen;
-          svn_string_t *unlock_path;
-
-          apr_hash_this (hi, &key, &klen, &val);
-          unlock_path = svn_string_create ((char *)key, pool);
-          
-          err2 = svn_wc__unlock (unlock_path, pool);
-          if (err2) 
-            {
-              char *message =
-                apr_psprintf (pool,
-                              "commit-crawler failed to lock %s,\n
-                               and also couldn't unlock previously-locked %s",
-                              path->data, unlock_path->data);
-              return svn_error_quick_wrap (err2, message);
-            }          
+          /* If this also errored, put the original error inside it. */
+          err2->child = err;
+          return err2;
         }
-            
-      /* Return a wrapped error */
-      msg = apr_psprintf (pool,
-                          "commit-crawler failed to lock %s", path->data);
-      return svn_error_quick_wrap (err, msg);
+      
+      return err;
     }
   
   /* Lock succeeded */
-
-  apr_hash_set (locks, path->data, APR_HASH_KEY_STRING, "<locked>");
+  apr_hash_set (locks, path->data, APR_HASH_KEY_STRING, "(locked)");
 
   return SVN_NO_ERROR;
 }
@@ -444,6 +458,48 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
 
 
 
+/* Decide if the file represented by ENTRY continues to exist in a
+   state of conflict.  If so, aid in the bailout of the current commit
+   by unlocking all admin-area locks in LOCKS and returning an error.
+   
+   Obviously, this routine should only be called on entries who have
+   the `conflicted' flag bit set.  */
+static svn_error_t *
+check_for_unresolved_file_conflict (svn_string_t *full_path_to_file,
+                                    svn_wc__entry_t *entry,
+                                    apr_hash_t *locks,
+                                    apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_time_t wc_time;
+
+  /* Get the timestamp from the working copy file */
+  err = svn_wc__file_affected_time (&wc_time, full_path_to_file, pool);
+  if (err) return err;
+
+  /* If the working copy has a later timestamp than the entry, then
+     assume the conflict has been resolved.  Otherwise, assume the
+     conflict is still present.  */
+  if (wc_time > entry->timestamp)
+    return SVN_NO_ERROR;
+
+  else
+    {
+      svn_error_t *final_err;
+      
+      final_err =
+        svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
+                           "Aborting commit:  file '%s' in state of conflict.",
+                           full_path_to_file->data);
+
+      err = remove_all_locks (locks, pool);
+      if (err)
+        final_err->child = err; /* nestle them */
+      
+      return final_err;
+    }
+}
+
 
 
 /* The recursive working-copy crawler.
@@ -536,6 +592,18 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
 
 
       /* Start examining the current_entry: */
+      
+      /* Preemptive strike:  if the current entry is a file in a state
+         of conflict that has NOT yet been resolved, we abort the
+         entire commit.  */
+      if ((current_entry->kind == svn_node_file)
+          && (current_entry->flags & SVN_WC__ENTRY_CONFLICT))
+        {
+          err = check_for_unresolved_file_conflict (full_path_to_entry,
+                                                    current_entry,
+                                                    locks, subpool);
+          if (err) return err;
+        }
 
       /* Is the entry marked for both deletion AND addition? */
       if ((current_entry->flags & SVN_WC__ENTRY_DELETE)
