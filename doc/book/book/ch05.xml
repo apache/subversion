@@ -1041,7 +1041,7 @@ Available subcommands:
           reason).  Or, perhaps you have multiple projects sharing a
           single repository, and you decide to split them up into
           their own repositories.  To accomplish tasks like this,
-          administrators need an more manageable and malleable
+          administrators need a more manageable and malleable
           representation of the data in their repositories&mdash;the
           Subversion repository dump format.</para>
 
