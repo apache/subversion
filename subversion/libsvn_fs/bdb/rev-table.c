@@ -15,7 +15,7 @@
  * ====================================================================
  */
 
-#include <db.h>
+#include "bdb_compat.h"
 #include "svn_fs.h"
 #include "../fs.h"
 #include "../err.h"
@@ -31,11 +31,14 @@ int svn_fs__open_revisions_table (DB **revisions_p,
                                   DB_ENV *env,
                                   int create)
 {
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *revisions;
 
+  DB_ERR (svn_bdb__check_version());
   DB_ERR (db_create (&revisions, env, 0));
-  DB_ERR (revisions->open (revisions, "revisions", 0, DB_RECNO,
-                           create ? (DB_CREATE | DB_EXCL) : 0,
+  DB_ERR (revisions->open (SVN_BDB_OPEN_PARAMS(revisions, NULL),
+                           "revisions", 0, DB_RECNO,
+                           open_flags | SVN_BDB_AUTO_COMMIT,
                            0666));
 
   *revisions_p = revisions;

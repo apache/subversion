@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-#include <db.h>
+#include "bdb_compat.h"
 #include "../fs.h"
 #include "../err.h"
 #include "../key-gen.h"
@@ -35,11 +35,14 @@ svn_fs__open_copies_table (DB **copies_p,
                            DB_ENV *env,
                            int create)
 {
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *copies;
 
+  DB_ERR (svn_bdb__check_version());
   DB_ERR (db_create (&copies, env, 0));
-  DB_ERR (copies->open (copies, "copies", 0, DB_BTREE,
-                        create ? (DB_CREATE | DB_EXCL) : 0,
+  DB_ERR (copies->open (SVN_BDB_OPEN_PARAMS(copies, NULL),
+                        "copies", 0, DB_BTREE,
+                        open_flags | SVN_BDB_AUTO_COMMIT,
                         0666));
 
   /* Create the initial `next-id' table entry.  */
@@ -50,7 +53,7 @@ svn_fs__open_copies_table (DB **copies_p,
                          svn_fs__str_to_dbt (&key, 
                                              (char *) svn_fs__next_key_key),
                          svn_fs__str_to_dbt (&value, (char *) "0"),
-                         0));
+                         SVN_BDB_AUTO_COMMIT));
   }
 
   *copies_p = copies;

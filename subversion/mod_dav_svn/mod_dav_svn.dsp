@@ -855,6 +855,23 @@ SOURCE=..\libsvn_fs\util\skel.c
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE="..\libsvn_fs\bdb\bdb_compat.c"
+
+!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\libsvn_fs\bdb"
+# ADD CPP /I "..\libsvn_fs" /I "..\..\db4-win32\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\libsvn_fs\bdb"
+# ADD CPP /I "..\libsvn_fs" /I "..\..\db4-win32\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE="..\libsvn_fs\bdb\changes-table.c"
 
 !IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
