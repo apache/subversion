@@ -18,10 +18,16 @@
 #define RA_DAV_H
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 
 #include <http_request.h>
 #include <uri.h>
+#include <dav_207.h>            /* for dav_propname */
 
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_error.h"
+#include "svn_delta.h"
 #include "svn_ra.h"
 
 
@@ -34,12 +40,6 @@ typedef struct {
 
 } svn_ra_session_t;
 
-/* Declare the initialization function here to prevent a GCC warning, but
-   nobody really uses this prototype right now. */
-/* ### hmm. when we statically link these, this prototype may be handy */
-/*svn_error_t *svn_ra_dav_init(int abi_version,
-  apr_pool_t *pconf,
-  const svn_ra_plugin_t **plugin); */
 
 
 /** plugin function prototypes */
@@ -64,7 +64,8 @@ svn_error_t * svn_ra_dav__do_update(
   void *session_baton,
   const svn_ra_reporter_t **reporter,
   void **report_baton,
-  apr_array_header_t *targets,
+  svn_revnum_t base_revision,
+  svn_revnum_t revision_to_update_to,
   const svn_delta_edit_fns_t *wc_update,
   void *wc_update_baton);
 
@@ -82,9 +83,54 @@ svn_error_t * svn_ra_dav__do_update(
 /* store the URL where Activities can be created */
 #define SVN_RA_DAV__LP_ACTIVITY_URL     SVN_RA_DAV__LP_NAMESPACE "activity-url"
 
-/* store the URL of the version resource (from the DAV:target property) */
+/* store the URL of the version resource (from the DAV:checked-in property) */
 #define SVN_RA_DAV__LP_VSN_URL          SVN_RA_DAV__LP_NAMESPACE "version-url"
 
+
+/*
+** SVN_RA_DAV__PROP_*: properties that we fetch from the server
+**
+** These are simply symbolic names for some standard properties that we fetch.
+*/
+#define SVN_RA_DAV__PROP_BASELINE_COLLECTION    "DAV:baseline-collection"
+#define SVN_RA_DAV__PROP_CHECKED_IN     "DAV:checked-in"
+#define SVN_RA_DAV__PROP_VCC            "DAV:version-controlled-configuration"
+#define SVN_RA_DAV__PROP_VERSION_NAME   "DAV:version-name"
+
+#define SVN_RA_DAV__PROP_BASELINE_RELPATH       "SVN:baseline-relative-path"
+
+typedef struct {
+  /* what is the URL for this resource */
+  const char *url;
+
+  /* is this resource a collection? (from the DAV:resourcetype element) */
+  int is_collection;
+
+  /* PROPSET: NAME -> VALUE (const char * -> const char *) */
+  apr_hash_t *propset;
+
+  /* --- only used during response processing --- */
+  /* when we see a DAV:href element, what element is the parent? */
+  int href_parent;
+
+} svn_ra_dav_resource_t;
+
+/* fetch a bunch of properties from the server. */
+svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
+                                    svn_ra_session_t *ras,
+                                    const char *url,
+                                    int depth,
+                                    const char *label,
+                                    const dav_propname *which_props,
+                                    apr_pool_t *pool);
+
+/* fetch a single resource's props from the server. */
+svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
+                                             svn_ra_session_t *ras,
+                                             const char *url,
+                                             const char *label,
+                                             const dav_propname *which_props,
+                                             apr_pool_t *pool);
 
 #endif  /* RA_DAV_H */
 
