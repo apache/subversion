@@ -1462,7 +1462,7 @@ typedef struct svn_wc_status2_t
   /** The entry's property status in the repository. */
   enum svn_wc_status_kind repos_prop_status;
 
-  /* The entry's lock in the repository, if any. */
+  /** The entry's lock in the repository, if any. */
   svn_lock_t *repos_lock;
 
 } svn_wc_status2_t;

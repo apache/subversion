@@ -494,11 +494,13 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 /** The auth-hash prefix indicating that the parameter is global. */
 #define SVN_AUTH_PARAM_PREFIX "svn:auth:"
 
+/** @{ */
 /** @brief Any 'default' credentials that came in through the application
  * itself, (e.g. --username and --password options).  Property values are
  * const char *.  */
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
+/** @} */
 
 /** @brief The application doesn't want any providers to prompt
  * users. Property value is irrelevant; only property's existence
