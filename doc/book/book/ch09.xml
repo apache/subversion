@@ -1006,7 +1006,7 @@ Committed revision 5.
           <screen>
 $ svn commit --file file_under_vc.txt foo.c
 svn: The log message file is under version control
-svn: Log message file is a versioned file; use `--force-log' to override.
+svn: Log message file is a versioned file; use '--force-log' to override
 
 $ svn commit --force-log --file file_under_vc.txt foo.c
 Sending        foo.c
@@ -1017,7 +1017,7 @@ Committed revision 6.
           <para>To commit a file scheduled for deletion:</para>
 
           <screen>
-svn commit -m "removed file 'c'."
+$ svn commit -m "removed file 'c'."
 Deleting       c
 
 Committed revision 7.
@@ -1536,7 +1536,7 @@ Index: COMMITTERS
             program</para>
           
           <screen>
-svn diff --diff-cmd /usr/bin/diff -x "-i -b" COMMITTERS 
+$ svn diff --diff-cmd /usr/bin/diff -x "-i -b" COMMITTERS 
 Index: COMMITTERS
 ===================================================================
 0a1,2
@@ -1946,7 +1946,7 @@ examples/
           information:</para>
 
           <screen>
-svn list --verbose file:///tmp/repos
+$ svn list --verbose file:///tmp/repos
      16 sally         28361 Jan 16 23:18 README.txt
      27 sally             0 Jan 18 15:27 INSTALL
      24 harry               Jan 18 11:27 examples/
@@ -2565,14 +2565,14 @@ Committed revision 27.
 
           <screen>
 $ svn propdel svn:mime-type  some-script
-property `svn:mime-type' deleted from 'some-script'.
+property 'svn:mime-type' deleted from 'some-script'.
 </screen>
 
           <para>Delete a revision property:</para>
 
           <screen>
 $ svn propdel --revprop -r 26 release-date 
-property `release-date' deleted from repository revision '26'
+property 'release-date' deleted from repository revision '26'
 </screen>
 
         </refsect1>
@@ -2642,7 +2642,7 @@ $ svn propedit svn:keywords  foo.c
     containing the current contents of the svn:keywords property.  You
     can add multiple values to a property easily here by entering one
     value per line.&gt;
-Set new value for property `svn:keywords' on `foo.c'
+Set new value for property 'svn:keywords' on 'foo.c'
 </screen>
 
         </refsect1>
@@ -2878,7 +2878,7 @@ Properties on 'foo.c':
 
           <screen>
 $ svn propset svn:mime-type image/jpeg foo.jpg 
-property `svn:mime-type' set on 'foo.jpg'
+property 'svn:mime-type' set on 'foo.jpg'
 </screen>
 
           <para>On a UNIX system, if you want a file to have the
@@ -2886,7 +2886,7 @@ property `svn:mime-type' set on 'foo.jpg'
 
           <screen>
 $ svn propset svn:executable ON somescript
-property `svn:executable' set on 'somescript'
+property 'svn:executable' set on 'somescript'
 </screen>
 
           <para>Perhaps you have an internal policy to set certain
@@ -2894,7 +2894,7 @@ property `svn:executable' set on 'somescript'
 
           <screen>
 $ svn propset owner sally foo.c
-property `owner' set on 'foo.c'
+property 'owner' set on 'foo.c'
 </screen>
 
           <para>If you made a mistake in a log message for a
@@ -2904,7 +2904,7 @@ property `owner' set on 'foo.c'
 
           <screen>
 $ svn propset --revprop -r 25 svn:log "Journaled about trip to New York."
-property `svn:log' set on repository revision '25'
+property 'svn:log' set on repository revision '25'
 </screen>
 
           <para>Or, if you don't have a working copy, you can
@@ -2912,7 +2912,7 @@ property `svn:log' set on repository revision '25'
           
           <screen>
 $ svn propset --revprop -r 26 svn:log "Document nap." http://svn.red-bean.com/repos
-property `svn:log' set on repository revision '25'
+property 'svn:log' set on repository revision '25'
 </screen>
 
           <para>Lastly, you can tell propset to take its input from
@@ -2921,7 +2921,7 @@ property `svn:log' set on repository revision '25'
 
           <screen>
 $ svn propset owner-pic -F sally.jpg moo.c 
-property `owner-pic' set on 'moo.c'
+property 'owner-pic' set on 'moo.c'
 </screen>
 
           <warning>
@@ -3548,7 +3548,6 @@ $ mv repos newlocation
 $ cd test/
 
 $ svn update
-svn: Couldn't open a repository.
 svn: Unable to open an ra_local session to URL
 svn: Unable to open repository 'file:///tmp/repos'
 
@@ -3680,7 +3679,7 @@ Updated to revision 32.
             linkend="svn-ap-a"/>):</para>
 
           <screen>
-svn update -r30
+$ svn update -r30
 A  newdir/README
 D  newdir/toggle.c
 D  newdir/disclose.c
@@ -4258,15 +4257,6 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
               log message.</para>
           </warning>
 
-        </refsect1>
-
-        <refsect1>
-          <title>Switches</title>
-          
-          <screen>
---revision (-r)
---bypass-hooks
-</screen>
         </refsect1>
 
         <refsect1>

@@ -425,8 +425,8 @@ C:\> svn checkout "file:///X|/path/to/repos"
 
 <screen>
 $ svn commit button.c
-Sending button.c
-Transmitting file data..
+Sending        button.c
+Transmitting file data .
 Committed revision 57.
 </screen>
 
@@ -518,9 +518,9 @@ U button.c
           repository after some committed change.  Another way to
           think about it is that revision N represents the state of
           the repository filesystem after the Nth commit.  When a
-          Subversion user talks about ``revision 5 of
-          <filename>foo.c</filename>'', they really mean
-          ``<filename>foo.c</filename> as it appears in revision 5.''
+          Subversion user talks about <quote>revision 5 of
+          <filename>foo.c</filename></quote>, they really mean
+          <quote><filename>foo.c</filename> as it appears in revision 5.</quote>
           Notice that in general, revisions N and M of a file do
           <emphasis>not</emphasis> necessarily differ!  Because CVS
           uses per-file revisions numbers, CVS users might want to see

@@ -758,7 +758,7 @@ collabnet = svn.collab.net
 
       <screen>
 $ svn propset copyright '(c) 2003 Red-Bean Software' calc/button.c
-property `copyright' set on 'calc/button.c'
+property 'copyright' set on 'calc/button.c'
 $
 </screen>
        
@@ -773,7 +773,7 @@ $
 
       <screen>
 $ svn propset license -F /path/to/LICENSE calc/button.c
-property `license' set on 'calc/button.c'
+property 'license' set on 'calc/button.c'
 $
 </screen>
 
@@ -796,7 +796,7 @@ $
 
       <screen>
 $ svn propedit copyright calc/button.c  ### exit the editor without changes
-No changes to property `copyright' on `calc/button.c'
+No changes to property 'copyright' on 'calc/button.c'
 $
 </screen>
 
@@ -808,9 +808,9 @@ $
 
       <screen>
 $ svn propset copyright '(c) 2002 Red-Bean Software' calc/*
-property `copyright' set on 'calc/Makefile'
-property `copyright' set on 'calc/button.c'
-property `copyright' set on 'calc/integer.c'
+property 'copyright' set on 'calc/Makefile'
+property 'copyright' set on 'calc/button.c'
+property 'copyright' set on 'calc/integer.c'
 &hellip;
 $
 </screen>
@@ -867,7 +867,7 @@ red-beans-and-rice.
 
       <screen>
 $ svn propset license '' calc/button.c
-property `license' set on 'calc/button.c'
+property 'license' set on 'calc/button.c'
 $ svn proplist --verbose calc/button.c
 Properties on 'calc/button.c':
   copyright : (c) 2003 Red-Bean Software
@@ -881,7 +881,7 @@ $
 
       <screen>
 $ svn propdel license calc/button.c
-property `license' deleted from ''.
+property 'license' deleted from ''.
 $ svn proplist --verbose calc/button.c
 Properties on 'calc/button.c':
   copyright : (c) 2003 Red-Bean Software
@@ -918,7 +918,7 @@ $
 
         <screen>
 $ svn propset svn:log '* button.c: Fix a compiler warning.' -r11 --revprop
-property `svn:log' set on repository revision '11'
+property 'svn:log' set on repository revision '11'
 $
 </screen>
 
@@ -997,7 +997,7 @@ $ svn status calc
  C     calc/button.c
 ?      calc/button.c.prej
 $ cat calc/button.c.prej 
-prop `linecount': user set to '1256', but update set to '1301'.
+prop 'linecount': user set to '1256', but update set to '1301'.
 $
 </screen>
  
@@ -1205,7 +1205,7 @@ $
        
           <screen>
 $ svn propset svn:ignore -F .cvsignore .
-property `svn:ignore' set on '.'
+property 'svn:ignore' set on '.'
 $
 </screen>        
 
@@ -1445,7 +1445,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
 
         <screen>
 $ svn propset svn:keywords "LastChangedDate Author" weather.txt
-property `svn:keywords' set on 'weather.txt'
+property 'svn:keywords' set on 'weather.txt'
 $
 </screen>        
 
