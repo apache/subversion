@@ -1031,7 +1031,12 @@ test_list = [ None,
               update_replace_dir,
               update_single_file,
               prop_update_on_scheduled_delete,
-              update_receive_illegal_name,
+              ### Skipping this test because our client no longer allows you
+              ### to do 'svn mkdir URL' where URL ends with '.svn'.  Karl
+              ### suggests that we use svnadmin load on a manufactured
+              ### dumpfile in order to get a repos with a .svn directory
+              ### in it.
+              Skip(update_receive_illegal_name, 1)
              ]
 
 if __name__ == '__main__':
