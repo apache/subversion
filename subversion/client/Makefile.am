@@ -1,6 +1,6 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = svn
+bin_PROGRAMS = svn
 svn_SOURCES = main.c status.c props.c                  \
               add-cmd.c commit-cmd.c checkout-cmd.c    \
               proplist-cmd.c delete-cmd.c status-cmd.c \
