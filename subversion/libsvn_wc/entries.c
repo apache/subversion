@@ -1549,7 +1549,7 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
                       svn_boolean_t do_sync,
                       apr_pool_t *pool)
 {
-  apr_hash_t *entries;
+  apr_hash_t *entries, *entries_nohidden;
   svn_boolean_t entry_was_deleted_p = FALSE;
 
   /* ENTRY is rather necessary, and ENTRY->kind is required to be valid! */
@@ -1557,6 +1557,10 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
 
   /* Load PATH's whole entries file. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries_nohidden, adm_access, FALSE, pool));
+
+  /* These two hashes cannot be the exact same ones. */
+  assert (entries != entries_nohidden);
 
   /* Ensure that NAME is valid. */
   if (name == NULL)
@@ -1565,6 +1569,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
       svn_wc_entry_t *entry_before, *entry_after;
+      apr_uint32_t orig_modify_flags = modify_flags;
+      svn_wc_schedule_t orig_schedule = entry->schedule;
 
       /* Keep a copy of the unmodified entry on hand. */
       entry_before = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
@@ -1573,6 +1579,14 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
          manage those modifications. */
       SVN_ERR (fold_scheduling (entries, name, &modify_flags, 
                                 &entry->schedule, pool));
+
+      SVN_ERR (fold_scheduling (entries_nohidden, name, &orig_modify_flags,
+                                &orig_schedule, pool));
+
+      /* Make certain that both folding operations had the same
+         result. */
+      assert(orig_modify_flags == modify_flags);
+      assert(orig_schedule == entry->schedule);
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
@@ -1588,14 +1602,16 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   /* If the entry wasn't just removed from the entries hash, fold the
      changes into the entry. */
   if (! entry_was_deleted_p)
-    fold_entry (entries, name, modify_flags, entry,
-                svn_wc_adm_access_pool (adm_access));
+    {
+      fold_entry (entries, name, modify_flags, entry,
+                  svn_wc_adm_access_pool (adm_access));
+      fold_entry (entries_nohidden, name, modify_flags, entry,
+                  svn_wc_adm_access_pool (adm_access));
+    }
 
   /* Sync changes to disk. */
   if (do_sync)
     SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
-  else
-    svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
 
   return SVN_NO_ERROR;
 }

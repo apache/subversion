@@ -915,30 +915,6 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
     {
       apr_hash_index_t *hi;
 
-      /* I think it will be common for there to be no deleted entries, so
-         it is worth checking for that case as we can optimise it. */
-      for (hi = apr_hash_first (pool, adm_access->entries_hidden);
-           hi;
-           hi = apr_hash_next (hi))
-        {
-          void *val;
-          const svn_wc_entry_t *entry;
-          apr_hash_this (hi, NULL, NULL, &val);
-          entry = val;
-          if ((entry->deleted
-               && (entry->schedule != svn_wc_schedule_add)
-               && (entry->schedule != svn_wc_schedule_replace))
-              || entry->absent)
-            break;
-        }
-
-      if (! hi)
-        {
-          /* There are no deleted entries, so we can use the full hash */
-          adm_access->entries = adm_access->entries_hidden;
-          return;
-        }
-
       /* Construct pruned hash without deleted entries */
       adm_access->entries = apr_hash_make (adm_access->pool);
       for (hi = apr_hash_first (pool, adm_access->entries_hidden);
