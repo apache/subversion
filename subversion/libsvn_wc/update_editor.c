@@ -600,9 +600,9 @@ add_directory (const char *path,
       svn_wc_entry_t *parent_entry;
 
       SVN_ERR (svn_wc_entry (&parent_entry, pb->path, FALSE, db->pool));
-      copyfrom_path = svn_path_join (parent_entry->url, 
-                                     svn_path_uri_encode (db->name, db->pool),
-                                     db->pool);
+      copyfrom_path = svn_path_url_add_component (parent_entry->url, 
+                                                  db->name,
+                                                  db->pool);
       copyfrom_revision = pb->edit_baton->target_revision;      
     }
 
@@ -2073,7 +2073,7 @@ check_wc_root (svn_boolean_t *wc_root,
                const char *path, 
                apr_pool_t *pool)
 {
-  const char *parent, *base_name, *expected_url;
+  const char *parent, *base_name;
   svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
 
@@ -2118,10 +2118,9 @@ check_wc_root (svn_boolean_t *wc_root,
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
-  expected_url = svn_path_join (p_entry->url, 
-                                svn_path_uri_encode (base_name, pool), 
-                                pool);
-  if (entry->url && (strcmp (expected_url, entry->url) != 0))
+  if (entry->url 
+      && (strcmp (svn_path_url_add_component (p_entry->url, base_name, pool),
+                  entry->url) != 0))
     return SVN_NO_ERROR;
 
   /* If we have not determined that PATH is a WC root by now, it must

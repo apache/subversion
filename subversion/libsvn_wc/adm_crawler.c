@@ -460,9 +460,8 @@ svn_wc_crawl_revisions (const char *path,
           && parent_entry->url 
           && entry->url
           && strcmp (entry->url, 
-                     svn_path_join (parent_entry->url, 
-                                    svn_path_uri_encode (bname, pool),
-                                    pool)))
+                     svn_path_url_add_component (parent_entry->url, 
+                                                 bname, pool)))
         {
           /* This file is disjoint with respect to its parent
              directory.  Since we are looking at the actual target of

@@ -473,8 +473,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                target);
           
           /* Manufacture a URL for this TARGET. */
-          url = svn_path_join (p_entry->url, 
-                               svn_path_uri_encode (base_name, pool), pool);
+          url = svn_path_url_add_component (p_entry->url, base_name, pool);
         }
       else
         url = entry->url;

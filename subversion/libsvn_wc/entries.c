@@ -460,8 +460,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
-      dst->url = svn_path_join (src->url, 
-                                svn_path_uri_encode (dst->name, pool), pool);
+      dst->url = svn_path_url_add_component (src->url, dst->name, pool);
     }
 }
 
@@ -979,9 +978,8 @@ write_entry (svn_stringbuf_t **output,
           if (entry->url)
             {
               if (strcmp (entry->url,
-                          svn_path_join (this_dir->url, 
-                                         svn_path_uri_encode (name, pool), 
-                                         pool)) == 0)
+                          svn_path_url_add_component (this_dir->url, 
+                                                      name, pool)) == 0)
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL,
                               APR_HASH_KEY_STRING, NULL);
             }

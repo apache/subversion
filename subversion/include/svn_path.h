@@ -313,6 +313,9 @@ const char *svn_path_is_child (const char *path1,
                                const char *path2,
                                apr_pool_t *pool);
 
+
+/*** URI/URL stuff ***/
+
 /* Compare PATH to an array of const char * URL SCHEMES (like "file",
    "http", etc.) to determine if PATH looks like a URL.  If so, return
    the matching scheme used by PATH, else return NULL.  Returned
@@ -327,6 +330,14 @@ const char *svn_path_uri_encode (const char *path, apr_pool_t *pool);
 
 /* Return a URI-decoded copy of PATH, allocated in POOL. */
 const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
+
+/* Extend URL by a single COMPONENT, URI-encoding that COMPONENT
+   before adding it to the URL.  Return the new URL, allocated in
+   POOL.  Note: if COMPONENT is already URI-encoded, calling code
+   should just use svn_path_join (url, component, pool). */
+const char *svn_path_url_add_component (const char *url,
+                                        const char *component,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

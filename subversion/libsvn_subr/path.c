@@ -913,6 +913,15 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
 }
 
 
+const char *
+svn_path_url_add_component (const char *url,
+                            const char *component,
+                            apr_pool_t *pool)
+{
+  return svn_path_join (url, svn_path_uri_encode (component, pool), pool);
+}
+
+
 svn_error_t *
 svn_path_get_absolute(const char **pabsolute,
                       const char *relative,
