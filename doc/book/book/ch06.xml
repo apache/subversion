@@ -142,10 +142,10 @@
       <para>Subversion looks for system-wide configuration values
         under the
         <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>
-        key.  For example, the <literal>compression</literal> option,
+        key.  For example, the <literal>global-ignores</literal> option,
         which is in the <literal>miscellany</literal> section of the
         <filename>config</filename> file, would be found at
-        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Config\Miscellany\compression</literal>.
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Config\Miscellany\global-ignores</literal>.
         Per-user configuration values should be stored under
         <literal>HKEY_CURRENT_USER\Software\Tigris.org\Subversion</literal>.
       </para>
@@ -203,6 +203,7 @@ REGEDIT4
 "#http-proxy-username"=""
 "#http-proxy-password"=""
 "#http-proxy-timeout"="0"
+"#http-compression"="yes"
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\auth]
 "#store-password"="no"
@@ -212,7 +213,6 @@ REGEDIT4
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\miscellany]
 "#global-ignores"="*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
-"#compression"="yes"
 </programlisting>
       </example>
 
@@ -325,6 +325,18 @@ collabnet = svn.collab.net
                 <literal>0</literal>, which instructs the underlying
                 HTTP library, Neon, to use its default timeout
                 setting.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-compression</literal></term>
+            <listitem>
+              <para>This specifies whether or not Subversion should
+                attempt to compress network requests made to DAV-ready
+                servers.  The default value is <literal>yes</literal>
+                (though compression will only occur if that capability
+                is compiled into the network layer).  Set this to
+                <literal>no</literal> to disable compression, such as
+                when debugging network transmissions.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -477,18 +489,6 @@ collabnet = svn.collab.net
                 For information on more fine-grained control of
                 ignored items, see <xref linkend="svn-ch-6-sect-2.3.3"
                 />.</para>
-            </listitem>
-          </varlistentry>
-          <varlistentry>
-            <term><literal>compression</literal></term>
-            <listitem>
-              <para>This specifies whether or not Subversion should
-                attempt to compress network requests made to DAV-ready
-                servers.  The default value is 'yes' (though
-                compression will only occur if that capability is
-                compiled into the network layer).  Set this to 'no' to
-                disable compression, such as when debugging network
-                transmissions.</para>
             </listitem>
           </varlistentry>
         </variablelist>

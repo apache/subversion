@@ -640,6 +640,7 @@ svn_config_ensure (apr_pool_t *pool)
         "###   http-proxy-username  Username for auth to proxy service\n"
         "###   http-proxy-password  Password for auth to proxy service\n"
         "###   http-timeout         Timeout (in seconds) for HTTP requests\n"
+        "###   http-compression     Whether or not to compress HTTP requests\n"
         "###   neon-debug-mask      Debug mask for Neon HTTP library\n"
         "###   svn-tunnel-agent     Program to connect to svn server\n"
         "###\n"
@@ -695,6 +696,7 @@ svn_config_ensure (apr_pool_t *pool)
         "# http-proxy-port = 7000\n"
         "# http-proxy-username = defaultusername\n"
         "# http-proxy-password = defaultpassword\n"
+        "# http-compression = yes\n"
         "# No http-timeout, so just use the builtin default.\n"
         "# No neon-debug-mask, so neon debugging is disabled.\n";
 
@@ -772,9 +774,6 @@ svn_config_ensure (apr_pool_t *pool)
         "###   which Subversion will ignore in its `status' output.\n"
         "# global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
         "\n"
-        "### Set compression to 'no' to avoid compressing requests\n"
-        "###   to a DAV-enabled Subversion server.  It defaults to 'yes'.\n"   
-        "# compression = yes\n"
         "### See http://subversion.tigris.org/issues/show_bug.cgi?id=668\n"
         "### for what else will soon be customized in this file.\n";
         

@@ -268,17 +268,10 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   ne_xml_parser *error_parser;
   int rv;
   int decompress_rv;
-  int decompress_on;
+  int decompress_on = ras->compression;
   int code;
   const char *msg;
-  const char *do_compression;
   svn_error_t *err = SVN_NO_ERROR;
-
-  svn_config_t *cfg = apr_hash_get (ras->config, SVN_CONFIG_CATEGORY_CONFIG,
-                                    APR_HASH_KEY_STRING);
-
-  svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
-  decompress_on = (strcasecmp(do_compression, "yes") == 0);
 
   /* create/prep the request */
   req = ne_request_create(ras->sess, method, url);

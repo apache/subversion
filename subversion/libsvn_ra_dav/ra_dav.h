@@ -44,10 +44,10 @@ extern "C" {
 typedef struct {
   apr_pool_t *pool;
 
-  const char *url;              /* original, unparsed url for this session */
-  ne_uri root;                  /* parsed version of above */
+  const char *url;                      /* original, unparsed session url */
+  ne_uri root;                          /* parsed version of above */
 
-  ne_session *sess;           /* HTTP session to server */
+  ne_session *sess;                     /* HTTP session to server */
   ne_session *sess2;
   
   const svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
@@ -55,7 +55,7 @@ typedef struct {
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
 
-  apr_hash_t *config;
+  svn_boolean_t compression;            /* should we use http compression? */
 
 } svn_ra_session_t;
 
