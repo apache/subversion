@@ -28,7 +28,17 @@
 
 #include <svn_pools.h>
 #include <svn_config.h>
-//#include <ios>
+#include "svn_path.h"
+#include "svn_private_config.h"
+#ifdef WIN32
+/* FIXME: We're using an internal APR header here, which means we
+   have to build Subversion with APR sources. This being Win32-only,
+   that should be fine for now, but a better solution must be found in
+   combination with issue #850. */
+extern "C" {
+#include "arch/win32/apr_arch_utf8.h"
+};
+#endif
 
 #include "SVNBase.h"
 #include "JNIMutex.h"
@@ -77,25 +87,108 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 	g_inInit = true;
 	g_initEnv = env;
 
-	/* C programs default to the "C" locale by default.  But because svn
-	 is supposed to be i18n-aware, it should inherit the default
-	 locale of its environment.  */
-	setlocale (LC_ALL, "");
+    apr_status_t status;
 
-	/* Initialize the APR subsystem, and register an atexit() function
-	to Uninitialize that subsystem at program exit. */
-	apr_status_t apr_err = apr_initialize ();
-	if (apr_err)
-	{
-		fprintf (stderr, "error: apr_initialize\n");
-		return false;
-	}
-	int err2 = atexit (apr_terminate);
-	if (err2)
-	{
-		fprintf (stderr, "error: atexit returned %d\n", err2);
-		return false;
-	}
+    /* C programs default to the "C" locale. But because svn is supposed
+       to be i18n-aware, it should inherit the default locale of its
+       environment.  */
+    if (!setlocale(LC_ALL, ""))
+    {
+        if (stderr)
+        {
+            const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
+            const char **env_var = &env_vars[0], *env_val = NULL;
+            while (*env_var)
+            {
+                env_val = getenv(*env_var);
+                if (env_val && env_val[0])
+                    break;
+                ++env_var;
+            }
+
+            if (!*env_var)
+            {
+                /* Unlikely. Can setlocale fail if no env vars are set? */
+                --env_var;
+                env_val = "not set";
+            }
+
+            fprintf(stderr,
+                  "%s: error: cannot set LC_ALL locale\n"
+                  "%s: error: environment variable %s is %s\n"
+                  "%s: error: please check that your locale name is correct\n",
+                  "svnjavahl", "svnjavahl", *env_var, env_val, "svnjavahl");
+        }
+        return FALSE;
+    }
+
+    /* Initialize the APR subsystem, and register an atexit() function
+       to Uninitialize that subsystem at program exit. */
+    status = apr_initialize();
+    if (status)
+    {
+        if (stderr)
+        {
+            char buf[1024];
+            apr_strerror(status, buf, sizeof(buf) - 1);
+            fprintf(stderr,
+                  "%s: error: cannot initialize APR: %s\n",
+                  "svnjavahl", buf);
+        }
+        return FALSE;
+    }
+
+    if (0 > atexit(apr_terminate))
+    {
+        if (stderr)
+            fprintf(stderr,
+                "%s: error: atexit registration failed\n",
+                "svnjavahl");
+        return FALSE;
+    }
+
+#ifdef ENABLE_NLS
+#ifdef WIN32
+    {
+        WCHAR ucs2_path[MAX_PATH];
+        char* utf8_path;
+        const char* internal_path;
+        apr_pool_t* pool;
+        apr_status_t apr_err;
+        unsigned int inwords, outbytes, outlength;
+    
+        apr_pool_create (&pool, 0);
+        /* get exe name - our locale info will be in '../share/locale' */
+        inwords = sizeof (ucs2_path) / sizeof(ucs2_path[0]);
+        HINSTANCE moduleHandle = GetModuleHandle("svnjavahl-1");
+        GetModuleFileNameW (moduleHandle, ucs2_path, inwords);
+        inwords = lstrlenW (ucs2_path);
+        outbytes = outlength = 3 * (inwords + 1);
+        utf8_path = (char *)apr_palloc (pool, outlength);
+        apr_err = apr_conv_ucs2_to_utf8 (ucs2_path, &inwords,
+                                         utf8_path, &outbytes);
+        if (!apr_err && (inwords > 0 || outbytes == 0))
+          apr_err = APR_INCOMPLETE;
+        if (apr_err)
+        {
+          if (stderr)
+            fprintf (stderr, "Can't convert module path to UTF-8");
+          return FALSE;
+        }
+        utf8_path[outlength - outbytes] = '\0';
+        internal_path = svn_path_internal_style (utf8_path, pool);
+        /* get base path name */
+        internal_path = svn_path_dirname (internal_path, pool);
+        internal_path = svn_path_join (internal_path, SVN_LOCALE_RELATIVE_PATH,
+                                       pool);
+        bindtextdomain (PACKAGE_NAME, internal_path);    
+        apr_pool_destroy (pool);
+    }
+#else
+    bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
+#endif
+    textdomain(PACKAGE_NAME);
+#endif
 
 	/* Create our top-level pool. */
 	g_pool = svn_pool_create (NULL);
