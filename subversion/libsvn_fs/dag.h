@@ -424,15 +424,6 @@ svn_fs__dag_merge (const char **conflict_p,
                    trail_t *trail);
 
 
-
-
-svn_error_t *
-svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
-                        svn_fs_t *fs,
-                        const char *svn_txn,
-                        trail_t *trail);
-
-
 #endif /* SVN_LIBSVN_FS_DAG_H */
 
 
