@@ -47,12 +47,33 @@ svn_binary = '../../../client/svn'
 svnadmin_binary = '../../../svnadmin/svnadmin'
 
 
-# The paths within our greek tree, used to assemble 'expected' trees.
-greek_paths = ['iota', 'A', 'A/mu', 'A/B', 'A/B/lambda', 'A/B/E',
-               'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/C', 'A/D',
-               'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
-               'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega']
+# Our pristine greek tree, used to assemble 'expected' trees.
+# This is in the form
+#
+#     [ ['path', 'contents', {props}], ...]
+#
+#   Which is the format expected by svn_tree.build_generic_tree().
 
+greek_tree = [ ['iota', "This is the file 'iota'.", {}],
+               ['A', None, {}],
+               ['A/mu', "This is the file 'mu'.", {}],
+               ['A/B', None, {}],
+               ['A/B/lambda', "This is the file 'lambda'.", {}],
+               ['A/B/E', None, {}],
+               ['A/B/E/alpha', "This is the file 'alpha'.", {}],
+               ['A/B/E/beta', "This is the file 'beta'.", {}],
+               ['A/B/F', None, {}],
+               ['A/C', None, {}],
+               ['A/D', None, {}],
+               ['A/D/gamma', "This is the file 'gamma'.", {}],
+               ['A/D/G', None, {}],
+               ['A/D/G/pi', "This is the file 'pi'.", {}],
+               ['A/D/G/rho', "This is the file 'rho'.", {}],
+               ['A/D/G/tau', "This is the file 'tau'.", {}],
+               ['A/D/H', None, {}],
+               ['A/D/H/chi', "This is the file 'chi'.", {}],
+               ['A/D/H/psi', "This is the file 'psi'.", {}],
+               ['A/D/H/omega', "This is the file 'omega'.", {}] ]
 
 
 ######################################################################
@@ -65,8 +86,13 @@ def run_svn(*varargs):
   command = svn_binary
   for arg in varargs:
     command = command + " " + `arg`    # build the command string
+
   infile, outfile = os.popen2(command) # run command, get 2 file descriptors
-  return outfile.readlines()           # convert stdout to list of lines
+  output_lines = outfile.readlines()
+  outfile.close()
+  infile.close()
+
+  return output_lines
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -75,8 +101,15 @@ def run_svnadmin(*varargs):
   command = svnadmin_binary
   for arg in varargs:
     command = command + " " + `arg`    # build the command string
-  os.popen2(command)                   # run command
-
+  pipe = os.popen(command)             # run command
+  output = pipe.read()                 # read *all* data,
+                                       # to guarantee the process is done.
+  if pipe.close():
+    print "ERROR running svnadmin:", output
+    exit(1)
+  
+  
+  
 
 # For clearing away working copies
 def remove_wc(dirname):
@@ -102,13 +135,24 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
   run_svnadmin("create", path)
 
-#  -- put more shared routines here --
+# Convert a list of lists of the form [ [path, contents], ...] into a
+# real tree on disk.
+def write_tree(path, lists):
+  "Create a dir PATH and populate it with files/dirs described in LISTS."
 
-# Need a routine which creates a repository containing a greek tree
+  if not os.path.exists(path):
+    os.makedirs(path)
 
-# Need a routine which creates a working copy of a certain name,
-# by copying a 'pristine' one.  (And which creates the pristine one via
-# checkout if necessary.)
+  for item in lists:
+    fullpath = os.path.join(path, item[0])
+    if not item[1]:  # it's a dir
+      if not os.path.exists(fullpath):
+        os.makedirs(fullpath)
+    else: # it's a file
+      fp = open(fullpath, 'w')
+      fp.write(item[1])
+      fp.close()
+      
 
 
 ######################################################################
