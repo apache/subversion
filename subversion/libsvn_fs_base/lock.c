@@ -52,15 +52,20 @@ svn_fs_base__lock (svn_lock_t **lock,
 {
   return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
                            "Function not yet implemented.");
-
-  /* Check if path is a dir, if so, return an error. */
 }
 
 
-svn_error_t *
-svn_fs_base__unlock_helper (void *baton, trail_t *trail)
+struct unlock_args
 {
-  struct svn_fs_base__unlock_args_t *args = baton;
+  const char *token;
+  svn_boolean_t force;
+};
+
+
+static svn_error_t *
+txn_body_unlock (void *baton, trail_t *trail)
+{
+  struct unlock_args *args = baton;
   svn_lock_t *lock;
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN */
@@ -91,19 +96,26 @@ svn_fs_base__unlock (svn_fs_t *fs,
                      svn_boolean_t force,
                      apr_pool_t *pool)
 {
-  struct svn_fs_base__unlock_args_t args;
+  struct unlock_args args;
 
   args.token = token;
   args.force = force;
-  return svn_fs_base__retry_txn (fs, svn_fs_base__unlock_helper, &args, pool);
+  return svn_fs_base__retry_txn (fs, txn_body_unlock, &args, pool);
 }
 
 
-svn_error_t *
-svn_fs_base__get_lock_from_path_helper (void *baton, trail_t *trail)
+struct lock_token_get_args
+{
+  svn_lock_t **lock_p;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_get_lock_from_path (void *baton, trail_t *trail)
 {
   const char *lock_token;
-  struct svn_fs_base__get_lock_from_path_args_t *args = baton;
+  struct lock_token_get_args *args = baton;
   svn_error_t *err;
   
   err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs,
@@ -138,23 +150,30 @@ svn_fs_base__get_lock_from_path (svn_lock_t **lock,
                                  const char *path,
                                  apr_pool_t *pool)
 {
-  struct svn_fs_base__get_lock_from_path_args_t args;
+  struct lock_token_get_args args;
   svn_error_t *err;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
   args.path = path;
   args.lock_p = lock;  
-  return svn_fs_base__retry_txn (fs, svn_fs_base__get_lock_from_path_helper,
+  return svn_fs_base__retry_txn (fs, txn_body_get_lock_from_path,
                                  &args, pool);
   return err;
 }
 
 
-svn_error_t *
-svn_fs_base__get_lock_from_token_helper (void *baton, trail_t *trail)
+struct lock_get_args
 {
-  struct svn_fs_base__get_lock_from_token_args_t *args = baton;
+  svn_lock_t **lock_p;
+  const char *lock_token;
+};
+
+
+static svn_error_t *
+txn_body_get_lock_from_token (void *baton, trail_t *trail)
+{
+  struct lock_get_args *args = baton;
   
   SVN_ERR (svn_fs_bdb__lock_get (args->lock_p, trail->fs,
                                  args->lock_token, trail));
@@ -169,21 +188,28 @@ svn_fs_base__get_lock_from_token (svn_lock_t **lock,
                                   const char *token,
                                   apr_pool_t *pool)
 {
-  struct svn_fs_base__get_lock_from_token_args_t args;
+  struct lock_get_args args;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
   args.lock_token = token;
   args.lock_p = lock;
-  return svn_fs_base__retry_txn (fs, svn_fs_base__get_lock_from_token_helper,
+  return svn_fs_base__retry_txn (fs, txn_body_get_lock_from_token,
                                  &args, pool);
 }
 
 
-svn_error_t *
-svn_fs_base__get_locks_helper (void *baton, trail_t *trail)
+struct locks_get_args
 {
-  struct svn_fs_base__get_locks_args_t *args = baton;
+  apr_hash_t **locks_p;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_get_locks (void *baton, trail_t *trail)
+{
+  struct locks_get_args *args = baton;
   apr_hash_index_t *hi;
 
   SVN_ERR (svn_fs_bdb__lock_tokens_get (args->locks_p, trail->fs,
@@ -226,13 +252,11 @@ svn_fs_base__get_locks (apr_hash_t **locks,
                         const char *path,
                         apr_pool_t *pool)
 {
-  struct svn_fs_base__get_locks_args_t args;
+  struct locks_get_args args;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
   args.locks_p = locks;
   args.path = path;
-  return svn_fs_base__retry_txn (fs,
-                                 svn_fs_base__get_locks_helper, &args,
-                                 pool);
+  return svn_fs_base__retry_txn (fs, txn_body_get_locks, &args, pool);
 }

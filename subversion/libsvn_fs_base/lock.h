@@ -18,8 +18,6 @@
 #ifndef SVN_LIBSVN_FS_LOCK_H
 #define SVN_LIBSVN_FS_LOCK_H
 
-#include "trail.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -56,48 +54,6 @@ svn_error_t *svn_fs_base__get_locks (apr_hash_t **locks,
                                      svn_fs_t *fs,
                                      const char *path,
                                      apr_pool_t *pool);
-
-
-
-/* These functions and types are helper functions for the FS to call
-   internally. */
-
-struct svn_fs_base__unlock_args_t
-{
-  const char *token;
-  svn_boolean_t force;
-};
-
-svn_error_t *svn_fs_base__unlock_helper (void *baton, trail_t *trail);
-
-
-struct svn_fs_base__get_lock_from_path_args_t
-{
-  svn_lock_t **lock_p;
-  const char *path;
-};
-
-svn_error_t *svn_fs_base__get_lock_from_path_helper (void *baton,
-                                                     trail_t *trail);
-
-
-struct svn_fs_base__get_lock_from_token_args_t
-{
-  svn_lock_t **lock_p;
-  const char *lock_token;
-};
-
-svn_error_t *svn_fs_base__get_lock_from_token_helper (void *baton,
-                                                      trail_t *trail);
-
-
-struct svn_fs_base__get_locks_args_t
-{
-  apr_hash_t **locks_p;
-  const char *path;
-};
-
-svn_error_t *svn_fs_base__get_locks_helper (void *baton, trail_t *trail);
 
 
 #ifdef __cplusplus
