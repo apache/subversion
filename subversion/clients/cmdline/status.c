@@ -25,204 +25,117 @@
 #include <apr_tables.h>
 #include "svn_sorts.h"
 #include "svn_wc.h"
-#include "svn_string.h"
 #include "svn_utf.h"
 #include "cl.h"
 
-
-/* Fill in the first four characters of STR_STATUS with status code
-   characters, based on TEXT_STATUS, PROP_STATUS, LOCKED, and COPIED.
-
-*/
-static void
-svn_cl__generate_status_codes (char *str_status,
-                               enum svn_wc_status_kind text_status,
-                               enum svn_wc_status_kind prop_status,
-                               svn_boolean_t locked,
-                               svn_boolean_t copied)
+
+/* Return the single character representation of STATUS */
+static char
+generate_status_code (enum svn_wc_status_kind status)
 {
-  char text_statuschar, prop_statuschar;
-
-  switch (text_status)
+  switch (status)
     {
-    case svn_wc_status_none:
-      text_statuschar = ' ';
-      break;
-    case svn_wc_status_normal:
-      text_statuschar = ' ';
-      break;
-    case svn_wc_status_added:
-      text_statuschar = 'A';
-      break;
-    case svn_wc_status_absent:
-      text_statuschar = '!';
-      break;
-    case svn_wc_status_deleted:
-      text_statuschar = 'D';
-      break;
-    case svn_wc_status_replaced:
-      text_statuschar = 'R';
-      break;
-    case svn_wc_status_modified:
-      text_statuschar = 'M';
-      break;
-    case svn_wc_status_merged:
-      text_statuschar = 'G';
-      break;
-    case svn_wc_status_conflicted:
-      text_statuschar = 'C';
-      break;
-    case svn_wc_status_obstructed:
-      text_statuschar = '~';
-      break;
-    case svn_wc_status_unversioned:
-    default:
-      text_statuschar = '?';
-      break;
+    case svn_wc_status_none:        return ' ';
+    case svn_wc_status_normal:      return ' ';
+    case svn_wc_status_added:       return 'A';
+    case svn_wc_status_absent:      return '!';
+    case svn_wc_status_deleted:     return 'D';
+    case svn_wc_status_replaced:    return 'R';
+    case svn_wc_status_modified:    return 'M';
+    case svn_wc_status_merged:      return 'G';
+    case svn_wc_status_conflicted:  return 'C';
+    case svn_wc_status_obstructed:  return '~';
+    case svn_wc_status_unversioned: return '?';
+    default:                        return '?';
     }
-
-  switch (prop_status)
-    {
-    case svn_wc_status_none:
-    case svn_wc_status_normal:
-      prop_statuschar = ' ';
-      break;
-    case svn_wc_status_added:
-      prop_statuschar = 'A';
-      break;
-    case svn_wc_status_absent:
-      prop_statuschar = '!';
-      break;
-    case svn_wc_status_deleted:
-      prop_statuschar = 'D';
-      break;
-    case svn_wc_status_replaced:
-      prop_statuschar = 'R';
-      break;
-    case svn_wc_status_modified:
-      prop_statuschar = 'M';
-      break;
-    case svn_wc_status_merged:
-      prop_statuschar = 'G';
-      break;
-    case svn_wc_status_conflicted:
-      prop_statuschar = 'C';
-      break;
-    case svn_wc_status_unversioned:
-    default:
-      prop_statuschar = '?';
-      break;
-    }
-
-  sprintf (str_status, "%c%c%c%c", 
-           text_statuschar, 
-           prop_statuschar,
-           locked ? 'L' : ' ',
-           copied ? '+' : ' ');
 }
 
-
-/* Print a single status structure in the short format */
+/* Print STATUS and PATH in a format determined by DETAILED and
+   SHOW_LAST_COMMITTED */
 static void 
-print_short_format (const char *path,
-                    svn_wc_status_t *status)
+print_status (const char *path,
+              svn_boolean_t detailed,
+              svn_boolean_t show_last_committed,
+              svn_wc_status_t *status)
 {
-  char str_status[5];
+  char ood_status;
+  char working_rev_buf[21]; /* Enough for 2^64 in base 10 plus '\0' */
+  char commit_rev_buf[21];
+  const char *working_rev = working_rev_buf;
+  const char *commit_rev = commit_rev_buf;
+  const char *commit_author = NULL; /* Silence a gcc unitialised warning */
 
-  if (! status)
-    return;
-
-  /* Create local-mod status code block. */
-  svn_cl__generate_status_codes (str_status,
-                                 status->text_status,
-                                 status->prop_status,
-                                 status->locked,
-                                 status->copied);
-
-  printf ("%s   %s\n", str_status, path);
-}
-
-
-/* Print a single status structure in the long format */
-static void 
-print_long_format (const char *path,
-                   svn_boolean_t show_last_committed,
-                   svn_wc_status_t *status)
-{
-  char str_status[5];
-  char str_rev[7];
-  char update_char;
-  svn_revnum_t local_rev;
-  char last_committed[6 + 3 + 8 + 3 + 1] = { 0 };
-
-  if (! status)
-    return;
-
-  /* Create local-mod status code block. */
-  svn_cl__generate_status_codes (str_status,
-                                 status->text_status,
-                                 status->prop_status,
-                                 status->locked,
-                                 status->copied);
-
-  /* Get local revision number */
-  if (status->entry)
-    local_rev = status->entry->revision;
-  else
-    local_rev = SVN_INVALID_REVNUM;
-
-  if (show_last_committed && status->entry)
+  if (detailed)
     {
-      char revbuf[20];
-      const char *revstr = revbuf;
-      const char *author;
-      
-      author = status->entry->cmt_author;
-      if (SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
-        sprintf(revbuf, "%" SVN_REVNUM_T_FMT, status->entry->cmt_rev);
+      if (! status->entry)
+        working_rev = "      ";
+      else if (! SVN_IS_VALID_REVNUM (status->entry->revision))
+        working_rev = "  ?   ";  /* ### Why the odd alignment? */
+      else if (status->copied)
+        working_rev = "     -";
       else
-        revstr = "    ? ";
+        sprintf (working_rev_buf, "%6" SVN_REVNUM_T_FMT,
+                 status->entry->revision);
 
-      /* ### we shouldn't clip the revstr and author, but that implies a
-         ### variable length 'last_committed' which means an allocation,
-         ### which means a pool, ...  */
-      sprintf (last_committed, "%6.6s   %8.8s   ",
-               revstr,
-               author ? author : "      ? ");
+      if (status->repos_text_status != svn_wc_status_none
+          || status->repos_prop_status != svn_wc_status_none)
+        ood_status = '*';
+      else
+        ood_status = ' ';
+
+      if (show_last_committed)
+        {
+          if (status->entry && SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
+            sprintf(commit_rev_buf, "%6" SVN_REVNUM_T_FMT,
+                    status->entry->cmt_rev);
+          else if (status->entry)
+            commit_rev = "    ? ";
+          else
+            commit_rev = "      ";
+
+          if (status->entry && status->entry->cmt_author)
+            commit_author = status->entry->cmt_author;
+          else if (status->entry)
+            commit_author = "      ? ";
+          else
+            commit_author = "        ";
+        }
     }
+
+  if (detailed && show_last_committed)
+    printf ("%c%c%c%c   %c   %6s   %6s   %8s   %s\n",
+            generate_status_code (status->text_status),
+            generate_status_code (status->prop_status),
+            status->locked ? 'L' : ' ',
+            status->copied ? '+' : ' ',
+            ood_status,
+            working_rev,
+            commit_rev,
+            commit_author,
+            path);
+
+  else if (detailed)
+    printf ("%c%c%c%c   %c   %6s   %s\n",
+            generate_status_code (status->text_status),
+            generate_status_code (status->prop_status),
+            status->locked ? 'L' : ' ',
+            status->copied ? '+' : ' ',
+            ood_status,
+            working_rev,
+            path);
+
   else
-    strcpy (last_committed, "                    ");
-
-  /* Set the update character. */
-  update_char = ' ';
-  if ((status->repos_text_status != svn_wc_status_none)
-      || (status->repos_prop_status != svn_wc_status_none))
-    update_char = '*';
-
-  /* Determine the appropriate local revision string. */
-  if (! status->entry)
-    strcpy (str_rev, "      ");
-  else if (local_rev == SVN_INVALID_REVNUM)
-    strcpy (str_rev, "  ?   ");
-  else if (status->copied)
-    strcpy (str_rev, "     -");
-  else
-    sprintf (str_rev, "%6ld", local_rev);
-
-  /* One Printf to rule them all, one Printf to bind them..." */
-  printf ("%s   %c   %s   %s%s\n", 
-          str_status, 
-          update_char, 
-          str_rev,
-          show_last_committed ? last_committed : "",
-          path);
+    printf ("%c%c%c%c   %s\n",
+            generate_status_code (status->text_status),
+            generate_status_code (status->prop_status),
+            status->locked ? 'L' : ' ',
+            status->copied ? '+' : ' ',
+            path);
 }
-
-
 
 /* Called by status-cmd.c */
 void
-svn_cl__print_status_list (apr_hash_t *statushash, 
+svn_cl__print_status_list (apr_hash_t *statushash,
                            svn_revnum_t youngest,
                            svn_boolean_t detailed,
                            svn_boolean_t show_last_committed,
@@ -248,7 +161,7 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
       status = item->value;
 
-      if ((skip_unrecognized) && (! status->entry))
+      if (! status || (skip_unrecognized && ! status->entry))
         continue;
 
       err = svn_utf_cstring_from_utf8 (&path, item->key, pool);
@@ -259,16 +172,13 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       if (path[0] == '\0')
         path = ".";
 
-      if (detailed)
-        print_long_format (path, show_last_committed, status);
-      else
-        print_short_format (path, status);
+      print_status (path, detailed, show_last_committed, status);
     }
 
   /* If printing in detailed format, we might have a head revision to
      print as well. */
   if (detailed && (youngest != SVN_INVALID_REVNUM))
-    printf ("Head revision: %6ld\n", youngest);
+    printf ("Head revision: %6" SVN_REVNUM_T_FMT "\n", youngest);
 }
 
 
