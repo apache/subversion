@@ -139,6 +139,10 @@ SOURCE=.\sorts.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\stream.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\subst.c
 # End Source File
 # Begin Source File
