@@ -898,7 +898,7 @@ typedef svn_error_t *
    {SVN_INVALID_REVNUM, NULL, NULL}.
   */
 svn_error_t *
-svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
+svn_delta_get_commit_track_editor (const svn_delta_edit_fns_t **editor,
                                    void **edit_baton,
                                    apr_pool_t *pool,
                                    apr_hash_t *committed_targets,

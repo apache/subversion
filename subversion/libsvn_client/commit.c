@@ -408,7 +408,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
   apr_status_t apr_err;
   svn_error_t *err;
   apr_file_t *dst = NULL; /* old habits die hard */
-  svn_delta_edit_fns_t *track_editor;
+  const svn_delta_edit_fns_t *track_editor;
   const svn_delta_edit_fns_t *commit_editor;
   void *commit_edit_baton, *track_edit_baton;
   const svn_delta_edit_fns_t *editor;
