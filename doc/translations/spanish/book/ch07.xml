@@ -183,37 +183,40 @@
         <literal>HKEY_CURRENT_USER\Software\Tigris.org\Subversion</literal>.
       </para>
 
-      <para>Registry-based configuration options are parsed
-        <emphasis>before</emphasis> their file-based counterparts,
-        so are overridden by values found in the configuration
-        files.  In other words, configuration priority is granted in
-        the following order on a Windows system:</para>
+      <para>Las opciones de configuración almacenadas en el registro
+        son procesadas <emphasis>antes</emphasis> que sus
+        versiones en ficheros de texto, por lo que sus valores
+        son sobreescritos por lo que contengan los ficheros de
+        configuración. En otras palabras, en un sistema Windows, la
+        prioridad de configuración sigue el siguiente orden:</para>
       
       <orderedlist>
         <listitem>
-          <para>Command-line options</para>
+          <para>Opciones de línea de comando</para>
         </listitem>
         <listitem>
-          <para>The per-user INI files</para>
+          <para>Ficheros INI de cada usuario</para>
         </listitem>
         <listitem>
-          <para>The per-user Registry values</para>
+          <para>Valores de registro de cada usuario</para>
         </listitem>
         <listitem>
-          <para>The system-wide INI files</para>
+          <para>Ficheros INI globales de sistema</para>
         </listitem>
         <listitem>
-          <para>The system-wide Registry values</para>
+          <para>Valores de registro globales de sistema</para>
         </listitem>
       </orderedlist>
 
-      <para>Also, the Windows Registry doesn't really support the
-        notion of something being <quote>commented out</quote>.
-        However, Subversion will ignore any option key whose name
-        begins with a hash (<literal>#</literal>) character.  This
-        allows you to effectively comment out a Subversion option
-        without deleting the entire key from the Registry, obviously
-        simplifying the process of restoring that option.</para>
+      <para>Además, el registro de Windows no soporta el concepto
+        de que algo esté <quote>comentado</quote>. No obstante,
+        Subversion ignorará cualquier opción cuyo nombre comience
+        con el carácter sostenido o cruz doble <!-- TODO buscar
+        nombre real del carácter--> (<literal>#</literal>). Esto le
+        permite comentar de forma efectiva una opción de Subversion
+        sin tener que borrar la clave completa del registro,
+        obviamente simplificando el proceso de recuperación de
+        esta opción.</para>
 
       <para>The <command>svn</command> command-line client never
         attempts to write to the Windows Registry, and will not
