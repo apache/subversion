@@ -1,4 +1,3 @@
-%define neon_version 0.17.1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: M5
@@ -14,14 +13,13 @@ Requires: apr >= 2001.10.24
 Requires: db3 >= 3.3.11
 Requires: expat
 Requires: libxml
-Requires: neon
 BuildPreReq: apr-devel >= 2001.10.24
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db3-devel >= 3.3.11
 BuildPreReq: expat-devel
 BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxml-devel
-BuildPreReq: neon >= 0.17.1
+BuildPreReq: neon >= 0.17.2
 BuildPreReq: python
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
