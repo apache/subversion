@@ -795,9 +795,9 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
 
           tb->entry = svn_wc__entry_dup (current_entry, top_pool);
 
-          err = svn_wc__file_modified_p (&modified_p,
-                                         full_path_to_entry,
-                                         subpool);
+          err = svn_wc_file_modified_p (&modified_p,
+                                        full_path_to_entry,
+                                        subpool);
           if (err) return err;
 
           if (modified_p)

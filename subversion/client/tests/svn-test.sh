@@ -3,12 +3,11 @@
 SVN_PROG=../svn
 TEST_DIR_1=t1
 TEST_DIR_2=t2
-COMMIT_RESULTFILE_1=commit-1.xml
-COMMIT_RESULTFILE_2=commit-2.xml
+COMMIT_RESULTFILE_NAME=commit
 ANCESTOR_PATH=anni       # See if Greg Stein notices. :-) 
 
 # Remove the testing tree
-rm -rf ${TEST_DIR_1} ${TEST_DIR_2} ${COMMIT_RESULTFILE_1}
+rm -rf ${TEST_DIR_1} ${TEST_DIR_2} ${COMMIT_RESULTFILE_NAME}*
 
 echo
 
@@ -52,15 +51,16 @@ ${SVN_PROG} delete --force ${TEST_DIR_1}/A/D/H/omega
  
 ### Commit.
 echo "Committing changes in ${TEST_DIR_1}."
-(cd ${TEST_DIR_1};                                               \
- ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_1} --revision 2;   \
+(cd ${TEST_DIR_1};                                                   \
+ ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
+                --revision 2;                                        \
  cd ..)
 
 ### Update.
 echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
-(cd ${TEST_DIR_2};                                           \
- ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_1}  \
-                --revision 2;                                 \
+(cd ${TEST_DIR_2};                                                    \
+ ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml  \
+                --revision 2;                                         \
  cd ..)
 
 ### Modify some more files.
@@ -86,16 +86,17 @@ echo "in t2, adding a tenth line to A/mu" >> ${TEST_DIR_2}/A/mu
 
 ### Commit.
 echo "Committing changes, this time in ${TEST_DIR_2}."
-(cd ${TEST_DIR_2};                                               \
- ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_2} --revision 3;   \
+(cd ${TEST_DIR_2};                                                   \
+ ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
+                --revision 3;                                        \
  cd ..)
 
 
 ### Update.
 echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
-(cd ${TEST_DIR_1};                                           \
- ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_2}  \
-                --revision 3;                                 \
+(cd ${TEST_DIR_1};                                                   \
+ ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
+                --revision 3;                                        \
  cd ..)
 
 
@@ -113,3 +114,35 @@ else
   diff -r ${TEST_DIR_1} ${TEST_DIR_2} |\
        egrep -v '(timestamp|revision|\.diff$|\.rej$)'
 fi
+
+
+### Make some non-overlapping changes in the same files, merge. ###
+
+### Sleep for long enough to make the timestamps differ.
+echo "Sleeping, so we are guaranteed a different timestamp."
+sleep 1
+echo "Done sleeping."
+
+
+### Make the changes.
+sed -e 's/sixth/SIXTH/' < ${TEST_DIR_1}/A/mu > mu.$$.tmp
+mv mu.$$.tmp ${TEST_DIR_1}/A/mu
+echo "A non-conflicting change." >> ${TEST_DIR_2}/A/mu
+
+
+### Commit.
+echo "Committing changes for merge, from ${TEST_DIR_1}."
+(cd ${TEST_DIR_1};                                                   \
+ ../${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
+                --revision 4;                                        \
+ cd ..)
+
+
+### Update.
+echo "Updating ${TEST_DIR_2}, merging changes from ${TEST_DIR_1}."
+(cd ${TEST_DIR_2};                                                   \
+ ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
+                --revision 4;                                        \
+ cd ..)
+
+

@@ -180,15 +180,31 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
+  char statchar_buf [3];
+
+  /* Second spot defaults to blank. */
+  statchar_buf[1] = ' ';
 
   if (fb->added)
-    printf ("A  %s\n", fb->path->data);
-  else if (fb->text_changed && fb->prop_changed)
-    printf ("UX %s\n", fb->path->data);
+    {
+      statchar_buf[0] = 'A';
+    }
   else if (fb->text_changed)
-    printf ("U  %s\n", fb->path->data);
+    {
+      statchar_buf[0] = 'U';
+    }
+  else if (fb->text_changed && fb->prop_changed)
+    {
+      statchar_buf[0] = 'U';
+      statchar_buf[1] = 'X';
+    }
   else if (fb->prop_changed)
-    printf ("X  %s\n", fb->path->data);
+    {
+      statchar_buf[0] = 'X';
+    }
+
+  statchar_buf[2] = '\0';
+  printf ("%s %s\n", statchar_buf, fb->path->data);
 
   return SVN_NO_ERROR;
 }
