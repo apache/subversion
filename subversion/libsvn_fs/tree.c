@@ -835,111 +835,153 @@ svn_fs_merge (const char **conflict_p,
               const char *ancestor_path,
               apr_pool_t *pool)
 {
+  svn_fs_id_t *source_id, *target_id, *ancestor_id;
+
   *conflict_p = NULL;
+
+  SVN_ERR (svn_fs_node_id (&source_id, source_root, source_path, pool));
+  SVN_ERR (svn_fs_node_id (&target_id, target_root, target_path, pool));
+  SVN_ERR (svn_fs_node_id (&ancestor_id, ancestor_root, ancestor_path, pool));
+
+  /* Base cases. */
+  if (svn_fs_id_eq (ancestor_id, source_id)
+      || (svn_fs_id_eq (source_id, target_id)))
+    return SVN_NO_ERROR;
+
+  /* Else proceed, knowing ancestor != source, and source != target. */
 
 #if 0
 
-  if (ancestor is dir, source is dir, target is dir)
+  /* ancestor is dir, source is dir, target is dir */
+  if (svn_fs_is_dir (source_root, source_path)
+      && svn_fs_is_dir (target_root, target_path)
+      && svn_fs_is_dir (ancestor_root, ancestor_path))
     {
-      if (ancestor is same as source is same as target)
-        the merge is done;
-      else if (ancestor is same as source, but target is different)
-        target stays the same;
-      else if (ancestor is same as target, but source is different)
-        target takes source;
-      else if (source is same as target, but ancestor is different)
-        target stays the same, since it was the same change;
-      else if (ancestor is different from source is different from target)
+      /* ancestor is same as target, but different from source */
+      if (svn_fs_id_eq (ancestor_id, target_id))
         {
-          for (each entry E in ancestor)
+          target takes source;
+        }
+      else  /* ancestor different from source, and both differ from target */
+        {
+          apr_hash_t *source_entries, *target_entries, *ancestor_entries;
+          apr_hash_index_t *hi;
+
+          SVN_ERR (svn_fs_dir_entries
+                   (&source_entries, source_root, source_path, pool));
+          SVN_ERR (svn_fs_dir_entries
+                   (&target_entries, target_root, target_path, pool));
+          SVN_ERR (svn_fs_dir_entries
+                   (&ancestor_entries, ancestor_root, ancestor_path, pool));
+
+          /* for each entry E in ancestor_entries... */
+          for (hi = apr_hash_first (ancestor_entries);
+               hi;
+               hi = apr_hash_next (hi))
             {
-              if (E exists in neither source nor target)
+              const void *key;
+              void *val;
+              apr_size_t klen;
+
+              apr_hash_this (hi, &key, &klen, &val);
+              
+              /* E exists in target and source */
+              if (apr_hash_get (source_entries, key, klen)
+                  && apr_hash_get (target_entries, key, klen))
                 {
-                  target stays as is, it was a double delete;
+                  recurse;
                 }
-              else if (E exists in source but not target)
+              /* E exists in source but not target */
+              else if (apr_hash_get (source_entries, key, klen)
+                       && (! apr_hash_get (target_entries, key, klen)))
                 {
                   target takes source;
                 }
-              else if (E exists in target but not source)
-                {
-                  target stays as is;
-                }
-              else if (E exists in target and source)
-                recurse;
+
+              /* The remaining two cases are;
+               *    - E exists in neither source nor target
+               *    - E exists in target but not source
+               *
+               * The first means a double delete, the second means E
+               * was added in target only.  In both cases, target
+               * stays as is.
+               */
+
+              /* We've taken care of any possible implications E could
+                 have.  Remove it from source_entries, so it's easy
+                 later to loop over all the source entries that didn't
+                 exist in ancestor_entries. */
+              apr_hash_set (source_entries, key, klen, NULL);
             }
 
-          /* Now take care of all remaining entries in source. */
-          
-          for (each entry E in source but not in ancestor)
+          /* For each entry E in source but not in ancestor */
+          for (hi = apr_hash_first (source_entries);
+               hi;
+               hi = apr_hash_next (hi))
             {
-              if (E does not exist in target)
-                target takes E from source;
-              else if (E exists in target and is same as in source)
-                target stays as is, it was a twin add;
-              else if (E exists in target but is different from source)
-                CONFLICT;
+              const void *key;
+              void *val;
+              apr_size_t klen;
+
+              apr_hash_this (hi, &key, &klen, &val);
+
+              /* E does not exist in target */
+              if (! apr_hash_get (target_entries, key, klen))
+                {
+                  target takes E from source;
+                }
+              else   /* else E exists in target */
+                {
+                  svn_fs_dirent_t *source_entry, *target_entry;
+
+                  source_entry = apr_hash_get (source_entries, key, klen);
+                  target_entry = apr_hash_get (target_entries, key, klen);
+
+                  /* E exists in target but is different from E in source */
+                  if (! svn_fs_id_eq (source_entry->id, target_entry->id))
+                    {
+                      *conflict_p = target_path;
+                      return svn_error_createf
+                        (SVN_ERR_FS_CONFLICT, 0, NULL,
+                         "conflict at \"%s\"", target_path);
+                    }
+                  /* The remaining case is: E exists in target and is same
+                   * as in source.  This implies a twin add, so target
+                   * just stays as is.
+                   */
+                }
             }
           
           /* All entries in ancestor and source have been accounted for.
-             Anything remaining in target is a non-conflicting add, so do
-             nothing. */
+           *
+           * Any entry name in target that does not exist in ancestor
+           * or source is a non-conflicting add, so we don't need to
+           * do anything about it.
+           */
         }
+
+      /* Else do nothing. */
+
+      /* The remaining cases are
+       *    - ancestor is same as source, but different from target
+       *    - source is same as target, but both differ from ancestor
+       *
+       * Ther first means there was no change between ancestor and
+       * source, and the second means there was a change, but it's
+       * exactly the same change as between ancestor and target.
+       * In both cases, target stays the same.
+       */
     }
-  else if (ancestor is dir, source is file, target is file)
+  else if (svn_fs_id_eq (ancestor_id, target_id))
     {
-      if (source is same file as target)
-        target stays as is;
-      else (source is different file from target)
-        CONFLICT;
+      target takes source;
     }
-  else if (ancestor is dir, source is dir, target is file)
+  else
     {
-      if (ancestor is same dir as source)
-        target stays file;
-      else (ancestor is different dir from source)
-        CONFLICT;
-    }
-  else if (ancestor is dir, source is file, target is dir)
-    {
-      if (ancestor is same dir as target)
-        target takes source file;
-      else (ancestor is different dir from target)
-        CONFLICT;
-    }
-  else if (ancestor is file, source is dir, target is dir)
-    {
-      if (source is same dir as target)
-        target stays as is;
-      else (source is different dir from target)
-        CONFLICT;
-    }
-  else if (ancestor is file, source is dir, target is file)
-    {
-      if (ancestor is same file as target)
-        target takes source dir;
-      else (ancestor is different file from target)
-        CONFLICT;
-    }
-  else if (ancestor is file, source is file, target is dir)
-    {
-      if (ancestor is same file as source)
-        target stays same;
-      else (ancestor is different file from source)
-        CONFLICT;
-    }
-  else if (ancestor is file, source is file, target is file)
-    {
-      if (ancestor is same as source is same as target)
-        target stays as is;
-      else if (ancestor is same as source, but target is different)
-        target stays as is;
-      else if (ancestor is same as target, but source is different)
-        target takes source;
-      else if (source is same as target, but ancestor is different)
-        target stays as is, it was the same change;
-      else (ancestor is different from source is different from target)
-        CONFLICT;
+      *conflict_p = target_path;
+      return svn_error_createf
+        (SVN_ERR_FS_CONFLICT, 0, NULL,
+         "conflict at \"%s\"", target_path);
     }
 
 #endif /* 0 */
