@@ -441,7 +441,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    D  Deleted\n"
     "    U  Updated\n"
     "    C  Conflict\n"
-    "    G  Merged\n",
+    "    G  Merged\n"
+    "\n"
+    "  A character in the first column signifies an update to the actual file,\n"
+    "  while updates to the file's props are shown in the second column.\n",
     {'r', 'N', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
      svn_cl__non_interactive_opt } },
