@@ -38,9 +38,6 @@ libsvn_fs_la_SOURCES =				\
 # Set aside for the moment:
 #		       delta.c			\
 
-# Do we need to add @SVN_LIBSVN_DELTA_LIBS@ below?
-libsvn_fs_la_LIBADD = -ldb
-
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 

@@ -165,12 +165,12 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	header="`echo $found | sed -e 's/:.*$//'`"
 	lib="`echo $found | sed -e 's/^.*://'`"
 	CPPFLAGS="$CPPFLAGS -I$header"
-	LIBS="$LIBS -L$lib"
+	LIBS="$LIBS -L$lib -ldb"
         svn_lib_berkeley_db=yes
       ;;
       * )
 	CPPFLAGS="$CPPFLAGS -I$found/include"
-	LIBS="$LIBS -L$found/lib"
+	LIBS="$LIBS -L$found/lib -ldb"
 	svn_lib_berkeley_db=yes
       ;;
     esac

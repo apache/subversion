@@ -19,6 +19,7 @@
 #include "apr_general.h"
 #include "apr_pools.h"
 #include "apr_file_io.h"
+
 #include "db.h"
 #include "svn_fs.h"
 #include "fs.h"
@@ -27,6 +28,7 @@
 #include "rev-table.h"
 #include "txn-table.h"
 #include "dag.h"
+#include "svn_private_config.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -37,6 +39,21 @@
 static svn_error_t *
 check_already_open (svn_fs_t *fs)
 {
+  int major, minor, patch;
+
+  /* ### check_already_open() doesn't truly have the right semantic for
+     ### this, but it is called by both create_berkeley and open_berkeley,
+     ### so it happens to be a low-cost point. probably should be
+     ### refactored to go elsewhere. note that svn_fs_new() doesn't return
+     ### an error, so it isn't quite suitable. */
+  db_version (&major, &minor, &patch);
+  if (major < SVN_FS_WANT_DB_MAJOR
+      || minor < SVN_FS_WANT_DB_MINOR
+      || patch < SVN_FS_WANT_DB_PATCH)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0, fs->pool,
+                              "bad database version: %d.%d.%d",
+                              major, minor, patch);
+
   if (fs->env)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0, 0, fs->pool,
                              "filesystem object already open");
