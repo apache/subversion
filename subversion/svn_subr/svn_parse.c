@@ -66,7 +66,7 @@
 
 
 ap_status_t
-my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
+svn__my_readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 {
   char c;
   ap_status_t result;
@@ -115,7 +115,7 @@ my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 */
 
 int
-slurp__to (const svn_string_t *searchstr,
+svn__slurp_to (const svn_string_t *searchstr,
            svn_string_t **substr,
            const size_t start, 
            const char sc,
@@ -159,7 +159,7 @@ slurp__to (const svn_string_t *searchstr,
    svn_parse()                        (finally)
 
 
-   Input:  a filename and pool
+   Input:  a filename and pool, pointer to a hash
 
    Output: a pointer to a hash of hashes, all built within the pool
 
@@ -222,7 +222,7 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
 
   /* Now start scanning our file, one line at a time */
 
-  while (my__readline (FILE, currentline, scratchpool) != APR_EOF)
+  while (svn__my_readline (FILE, currentline, scratchpool) != APR_EOF)
     {
       char c;
       size_t offset = svn_string_first_non_whitespace (currentline);
@@ -253,7 +253,7 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
             /* Slurp up the section name */
             svn_string_t *new_section;
 
-            slurp__to (currentline,  /* search current line */
+            svn__slurp_to (currentline,  /* search current line */
                        &new_section,  /* place new substring here */
                        offset + 1,    /* start searching past the '[' */
                        ']',          /* look for this ending character */
@@ -298,7 +298,7 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
             svn_string_t *new_key, *new_val;
             size_t local_offset;
 
-            local_offset = slurp__to (currentline, /* search current line */
+            local_offset = svn__slurp_to (currentline, /* search current line */
                                       &new_key,     /* put substring here */
                                       offset,      /* start at this offset */
                                       ':',         /* look for a colon */
@@ -320,7 +320,7 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
 
             /* Now slurp up the value, starting just past the colon */
 
-            slurp__to (currentline,
+            svn__slurp_to (currentline,
                        &new_val,
                        local_offset + 1,
                        '\n',
@@ -333,7 +333,7 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
                 svn_string_print (new_val, stdout, FALSE, FALSE);
                 printf ("'\n"); */
 
-            /* Should we check for a NULL result from slurp__to?
+            /* Should we check for a NULL result from svn__slurp_to?
                What are the chances it's not going to find a newline? :)
             */
 
