@@ -446,13 +446,10 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
   const char *path, *token;
   svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
-  apr_pool_t *subpool;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)c", &path, &rev, &token));
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
-  subpool = svn_pool_create(entry->pool);
-  SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, subpool));
-  apr_pool_destroy(subpool);
+  SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, pool));
   return SVN_NO_ERROR;
 }
 
