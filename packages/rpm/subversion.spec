@@ -169,7 +169,7 @@ if [ "`grep -i dav_svn_module $CONF`"x = "x" ]; then
       $FirstLoadFound = 1 if ( ! $FirstLoadFound &&
            (/^LoadModule/ || /^#LoadModule/ ||  /^# LoadModule/) );
       $InsertPointFound = 1,
-         print "LoadModule dav_svn_module modules/libmod_dav_svn.so\n"
+         print "LoadModule dav_svn_module modules/mod_dav_svn.so\n"
          if ( $FirstLoadFound && ! $InsertPointFound &&
               ! (/^LoadModule/ || /^#LoadModule/ || /^# LoadModule/ ) );
       print;
