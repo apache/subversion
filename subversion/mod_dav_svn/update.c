@@ -206,6 +206,39 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
       send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
     }
 
+  /* Unconditionally output the 3 CR-related properties right here.
+     ### later on, compress via the 'scattered table' solution as
+     discussed with gstein.  -bmcs */
+  {
+    svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+    svn_string_t *committed_date = NULL;
+    svn_string_t *last_author = NULL;
+    
+    /* Get the CR and two derivative props. ### check for error returns. */
+    svn_fs_node_created_rev(&committed_rev,
+                            baton->uc->rev_root, baton->path, baton->pool);
+    svn_fs_revision_prop(&committed_date,
+                         baton->uc->resource->info->repos->fs,
+                         committed_rev, SVN_PROP_REVISION_DATE, baton->pool);
+    svn_fs_revision_prop(&last_author,
+                         baton->uc->resource->info->repos->fs,
+                         committed_rev, SVN_PROP_REVISION_AUTHOR, baton->pool);
+    
+    /* ### grrr, these DAV: property names are already #defined in
+       ra_dav.h, and statically defined in liveprops.c.  And now
+       they're hardcoded here.  Isn't there some header file that both
+       sides of the network can share?? */
+    send_xml(baton->uc, "<S:prop>");
+    send_xml(baton->uc, "<D:version-name>%ld</D:version-name>",
+             committed_rev);
+    send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
+             committed_date->data);
+    send_xml(baton->uc,
+             "<D:creator-displayname>%s</D:creator-displayname>",
+             last_author->data);
+    send_xml(baton->uc, "</S:prop>\n");
+  }
+
   if (baton->added)
     send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
   else

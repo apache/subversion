@@ -132,6 +132,11 @@ static const struct ne_xml_elm report_elements[] =
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
+  { SVN_XML_NAMESPACE, "prop", ELEM_prop, 0 },
+
+  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+  { "DAV:", "creationdate", ELEM_creationdate, NE_XML_CDATA },
+  { "DAV:", "creator-displayname", ELEM_creator_displayname, NE_XML_CDATA },
 
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
   { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
@@ -189,6 +194,41 @@ static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
   return simple_store_vsn_url(vsn_url, baton, setter, vuh);
 }
 
+
+/* helper func which maps certain DAV: properties to svn:wc:
+   properties.  Used during checkouts and updates.  */
+static svn_error_t *set_special_wc_prop (const char *key,
+                                         const char *val,
+                                         prop_setter_t setter,
+                                         void *baton,
+                                         apr_pool_t *pool)
+{  
+  svn_stringbuf_t *skey = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *sval = svn_stringbuf_create("", pool);
+
+  if (strcmp(key, SVN_RA_DAV__PROP_VERSION_NAME) == 0)
+    {
+      svn_stringbuf_set(skey, SVN_PROP_ENTRY_COMMITTED_REV);
+      svn_stringbuf_set(sval, val);
+      SVN_ERR( (*setter)(baton, skey, sval) );
+    }
+  else if (strcmp(key, SVN_RA_DAV__PROP_CREATIONDATE) == 0)
+    {
+      svn_stringbuf_set(skey, SVN_PROP_ENTRY_COMMITTED_DATE);
+      svn_stringbuf_set(sval, val);
+      SVN_ERR( (*setter)(baton, skey, sval) );
+    }
+  else if (strcmp(key, SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME) == 0)
+    {
+      svn_stringbuf_set(skey, SVN_PROP_ENTRY_LAST_AUTHOR);
+      svn_stringbuf_set(sval, val);
+      SVN_ERR( (*setter)(baton, skey, sval) );
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static void add_props(const svn_ra_dav_resource_t *r,
                       prop_setter_t setter,
                       void *baton,
@@ -241,6 +281,16 @@ static void add_props(const svn_ra_dav_resource_t *r,
           (*setter)(baton, skey, sval);
         }
 #undef NSLEN
+      else
+        {
+          /* If we get here, then we have a property that is neither
+             in the 'svn:custom:' space, nor in the plain old 'svn:'
+             space.  There are a few properties like this.  Some of
+             them, like 'checked-in', 'version-controlled-configuration',
+             and 'getetag' seem to be handled in other places
+             (get_vsn_url()).  For all others, we filter them here. */
+          set_special_wc_prop (key, val, setter, baton, pool);
+        }
     }
 }
                       
@@ -855,6 +905,7 @@ static int validate_element(void *userdata,
           || child == ELEM_fetch_props
           || child == ELEM_remove_prop
           || child == ELEM_delete_entry
+          || child == ELEM_prop
           || child == ELEM_checked_in)
         return NE_XML_VALID;
       else
@@ -863,6 +914,7 @@ static int validate_element(void *userdata,
     case ELEM_add_directory:
       if (child == ELEM_add_directory
           || child == ELEM_add_file
+          || child == ELEM_prop
           || child == ELEM_checked_in)
         return NE_XML_VALID;
       else
@@ -871,6 +923,7 @@ static int validate_element(void *userdata,
     case ELEM_open_file:
       if (child == ELEM_checked_in
           || child == ELEM_fetch_file
+          || child == ELEM_prop
           || child == ELEM_fetch_props
           || child == ELEM_remove_prop)
         return NE_XML_VALID;
@@ -878,13 +931,22 @@ static int validate_element(void *userdata,
         return NE_XML_INVALID;
 
     case ELEM_add_file:
-      if (child == ELEM_checked_in)
+      if (child == ELEM_checked_in
+          || child == ELEM_prop)
         return NE_XML_VALID;
       else
         return NE_XML_INVALID;
 
     case ELEM_checked_in:
       if (child == NE_ELM_href)
+        return NE_XML_VALID;
+      else
+        return NE_XML_INVALID;
+
+    case ELEM_prop:
+      if (child == ELEM_version_name
+          || child == ELEM_creationdate
+          || child == ELEM_creator_displayname)
         return NE_XML_VALID;
       else
         return NE_XML_INVALID;
@@ -1219,6 +1281,27 @@ static int end_element(void *userdata,
         }
       break;
 
+    case ELEM_version_name:
+    case ELEM_creationdate:
+    case ELEM_creator_displayname:
+      {
+        /* The name of the xml tag is the property that we want to set. */
+        svn_stringbuf_t *tagname = 
+          svn_stringbuf_create (elm->nspace, rb->ras->pool); 
+        svn_stringbuf_appendcstr (tagname, elm->name);
+
+        CHKERR ( set_special_wc_prop (tagname->data, 
+                                      cdata, 
+                                      rb->file_baton ? 
+                                        rb->editor->change_file_prop :
+                                        rb->editor->change_dir_prop,
+                                      rb->file_baton ?
+                                        rb->file_baton :
+                                        TOP_DIR(rb).baton,
+                                      rb->ras->pool) );      
+        break;
+      }
+
     default:
       break;
     }
@@ -1231,6 +1314,7 @@ static int end_element(void *userdata,
   /* stop the parsing */
   return 1;
 }
+
 
 static svn_error_t * reporter_set_path(void *report_baton,
                                        svn_stringbuf_t *path,
