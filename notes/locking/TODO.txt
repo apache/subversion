@@ -12,23 +12,6 @@ MUST HAVE
 
      - make svn_client_(un)lock() use the new notify callback also.
 
-* lock-null support issues
-
-    - allow fs to lock nonexistent paths, as it already does.
-
-    - mod_dav_svn changes:
-
-        --> LOCK/UNLOCK/PROPFIND on lock-null should work.  (sussman)
-
-    - don't let svn clients lock nonexistent paths -- for now. 
-
-        --> reserve future option to do so.
-        --> 'svn lock/unlock/info lock-null-URL' should work over all 3 RA
-            layers, but then disable this feature for 1.2 (sussman)
-        --> explicitly prevent 'svn lock schedule-add-wcpath' (sussman)
-
-* use new client-id system instead of 'X-SVN-Options: svn-lock" (sussman)
-
 * scan the whole patch for TODO items introduced on the branch (all, please)
 
 * fsfs backend schema (not logic, mind you) must support the notion of
