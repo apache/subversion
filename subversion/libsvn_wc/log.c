@@ -434,6 +434,20 @@ log_do_file_readonly (struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+/* Maybe make file NAME in log's CWD readonly */
+static svn_error_t *
+log_do_file_maybe_readonly (struct log_runner *loggy,
+                            const char *name)
+{
+  const char *full_path
+    = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
+                     loggy->pool);
+
+  SVN_ERR (svn_wc__maybe_set_read_only (NULL, full_path, loggy->adm_access,
+                                        loggy->pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Set file NAME in log's CWD to timestamp value in ATTS. */
 static svn_error_t *
@@ -1297,6 +1311,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_READONLY) == 0) {
     err = log_do_file_readonly (loggy, name);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_MAYBE_READONLY) == 0) {
+    err = log_do_file_maybe_readonly (loggy, name);
   }
   else if (strcmp (eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp (loggy, name, atts);

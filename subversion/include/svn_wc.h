@@ -563,6 +563,20 @@ typedef enum svn_wc_notify_state_t
 
 } svn_wc_notify_state_t;
 
+/** @since New in 1.2.
+ *
+ * What happened to a lock during an operation.
+ *
+ * ### This isn't currently used in the notify API.
+ */
+typedef enum svn_wc_notify_lock_state_t {
+  svn_wc_notify_lock_state_inapplicable = 0,
+  /** The lock wasn't changed. */
+  svn_wc_notify_lock_state_unchanged,
+  /** The item was unlocked. */
+  svn_wc_notify_lock_state_unlocked
+} svn_wc_notify_lock_state_t;
+
 
 /** Notify the world that @a action has happened to @a path.  @a path is 
  * either absolute or relative to cwd (i.e., not relative to an anchor).

@@ -281,8 +281,8 @@ def examine_lock(sbox):
   if ((len(lock_info) != 4)
       or lock_info[0].find('Lock Token: opaquelocktoken:')
       or (not lock_info[1] == 'Lock Owner: ' + svntest.main.wc_author + '\n')
-      or (not lock_info[2] == 'Lock Comment: ' + comment + '\n')
-      or lock_info[3].find('Lock Creation Date:')):
+      or lock_info[2].find('Lock Created:')
+      or (not lock_info[3] == 'Lock Comment: ' + comment + '\n')):
     raise svntest.Failure
 
 
@@ -461,12 +461,12 @@ def defunct_lock(sbox):
 test_list = [ None,
               lock_file,
               unlock_file,
-              XFail(break_lock),
+              break_lock,
               steal_lock,
               examine_lock,
-              XFail(handle_defunct_lock),
+              handle_defunct_lock,
               enforce_lock,
-              XFail(Skip(defunct_lock, (os.name != 'posix'))),
+              Skip(defunct_lock, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':

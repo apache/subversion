@@ -79,6 +79,9 @@ extern "C" {
 /* Make file SVN_WC__LOG_ATTR_NAME readonly */
 #define SVN_WC__LOG_READONLY            "readonly"
 
+/* Make file SVN_WC__LOG_ATTR_NAME readonly if needs-lock property is set. */
+#define SVN_WC__LOG_MAYBE_READONLY "maybe-readonly"
+
 /* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
 #define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
 

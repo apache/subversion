@@ -954,6 +954,9 @@ rmlocks (const char **msg,
   svn_revnum_t youngest_rev;
   svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
+  svn_lock_t *l1, *l2, *l3, *l4;
+  svn_fs_access_t *fs_access;
+  apr_hash_t *removed;
 
   *msg = "test removal of defunct locks";
 
@@ -969,17 +972,15 @@ rmlocks (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
   SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
+
+  SVN_ERR (svn_fs_create_access (&fs_access, "user1", pool));
+  SVN_ERR (svn_fs_set_access (fs, fs_access));
 
   /* Lock some files, break a lock, steal another and check that those get
      removed. */
   {
-    svn_lock_t *l1, *l2, *l3, *l4;
-    svn_fs_access_t *fs_access;
-    apr_hash_t *removed;
     const char *expected [] = { "A/mu", "A/D/gamma", NULL };
-
-    SVN_ERR (svn_fs_create_access (&fs_access, "user1", subpool));
-    SVN_ERR (svn_fs_set_access (fs, fs_access));
 
     SVN_ERR (svn_fs_lock (&l1, fs, "/iota", NULL, FALSE, 0, youngest_rev,
                           subpool));
