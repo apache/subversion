@@ -95,10 +95,7 @@ svn_fs__make_proplist (skel_t *proplist, apr_pool_t *pool)
       name_copy = NEWARRAY (pool, char, name->len);
       memcpy (name_copy, name->data, name->len);
       value_copy = svn_string_ncreate (value->data, value->len, pool);
-      apr_hash_set (p->hash,
-		    name->len > 0 ? name_copy : "",
-		    name->len,
-		    value_copy);
+      apr_hash_set (p->hash, name_copy, name->len, value_copy);
     }
 
   return p;
@@ -208,7 +205,7 @@ svn_fs_proplist_hash_table (apr_hash_t **table_p,
       memcpy (name_copy, name, name_len);
 
       /* Add them to the new hash table.  */
-      apr_hash_set (copy, name_copy, name_len, (void *) value_copy);
+      apr_hash_set (copy, name_copy, name_len, value_copy);
     }
 
   *table_p = copy;
