@@ -24,19 +24,23 @@ import getopt
 
 def _do_usage():
   print "Usage: setup.py [OPTIONS] build"
-  print "       setup.py [--with-prefix PREFIX] install"
+  print "       setup.py install [--prefix PREFIX]"
+  print "       setup.py install_lib [--install-dir DIR]"
   print ""
   print "Options:"
   print "   -I dir    " + \
-        "directory to search for includes (multiple instances allowed)"
+        "search DIR for includes (multiple instances allowed)"
   print "   -L dir    " + \
-        "directory to search for libraries (multiple instances allowed)"
+        "search DIR for libraries (multiple instances allowed)"
+  print "   -s path   " + \
+        "use the swig binary found at PATH"
   sys.exit(0)
 
 # Default option values
 include_dirs = []
 library_dirs = []
 source_dir = '..'
+swig_location = None
 
 # No args?  Give usage.
 if len(sys.argv) < 2:
@@ -48,13 +52,18 @@ if len(sys.argv) < 2:
 # all the options that we allow (which is FAR less than the set of
 # distutils options).  If we find that people actually care, we can
 # revisit this.
-options, leftovers = getopt.getopt(sys.argv[1:], "I:L:", ["prefix="])
+options, leftovers = getopt.getopt(sys.argv[1:], "I:L:s:",
+                                   ["prefix=", "install-dir="])
 for option in options:
   if option[0] == '-I':
     include_dirs.append(option[1])
   if option[0] == '-L':
     library_dirs.append(option[1])
-  if option[0] == '--prefix':
+  if option[0] == '-s':
+    swig_location = option[1]
+
+  # All long options just get passed through
+  if option[0][:2] == '--':
     leftovers.append(option[0])
     leftovers.append(option[1])
 sys.argv[1:] = leftovers
@@ -67,12 +76,19 @@ class build_swig(build_ext.build_ext):
   def initialize_options(self):
     build_ext.build_ext.initialize_options(self)
     self.build_base = None
-
+    
   def finalize_options(self):
     build_ext.build_ext.finalize_options(self)
     self.set_undefined_options('build',
                                ('build_base', 'build_base'),
                                )
+
+  def find_swig(self):
+    global swig_location
+    if swig_location is None:
+      return build_ext.build_ext.find_swig(self)
+    else:
+      return swig_location
 
   def swig_sources(self, sources):
     swig = self.find_swig()

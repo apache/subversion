@@ -3,7 +3,7 @@
 
 import sys
 sys.path.insert(0, './build/lib.linux-i686-2.2')
-from svn import fs, _util
+from svn import fs, _util, util
 
 def run(db_path):
   _util.apr_initialize()

@@ -217,7 +217,7 @@ swig-py-ext:
 
 install-swig-py-ext:
 	(cd subversion/bindings/swig/python;                \
-	 $(PYTHON) setup.py --prefix $(prefix) install)
+	 $(PYTHON) setup.py install --prefix $(prefix))
 
 ### Build a tarball.
 dist: 
