@@ -497,8 +497,11 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
         {
           entrypath = svn_stringbuf_create ((char *) key, pool);
           SVN_ERR (do_apply_textdelta (entrypath, editor, tb, pool));
-          SVN_ERR (editor->close_file (tb->editor_baton));
         }
+
+      /* Close the file baton, whether we sent a text-delta or not! */
+      if (tb->entry->kind == svn_node_file)
+        SVN_ERR (editor->close_file (tb->editor_baton));
     }
 
   return SVN_NO_ERROR;
@@ -834,9 +837,6 @@ report_single_mod (const char *name,
   /* DELETION CHECK */
   if (do_delete)
     {
-      svn_stringbuf_t *longpath;
-      struct target_baton *tb;
-
       /* Do what's necessary to get a baton for current directory */
       if (! *dir_baton)
         SVN_ERR (do_dir_replaces (dir_baton,
@@ -853,11 +853,6 @@ report_single_mod (const char *name,
       /* Delete the entry */
       SVN_ERR (editor->delete_entry (entry_name, *dir_baton));
           
-      /* Remember that it was affected. */
-      tb = apr_pcalloc (top_pool, sizeof (*tb));            
-      tb->entry = svn_wc__entry_dup (entry, top_pool);
-      longpath = svn_stringbuf_dup (full_path, top_pool);
-      apr_hash_set (affected_targets, longpath->data, longpath->len, tb);
     }  
   /* END DELETION CHECK */
   
@@ -956,12 +951,13 @@ report_single_mod (const char *name,
           if (prop_modified_p)
             SVN_ERR (do_prop_deltas (full_path, entry, editor, 
                                      tb->editor_baton, (*stack)->pool));
+
+          /* Store the (added) affected-target for safe keeping (possibly
+             to be used later for postfix text-deltas) */
+          longpath = svn_stringbuf_dup (full_path, top_pool);
+          apr_hash_set (affected_targets, longpath->data, longpath->len, tb);
         }
       
-      /* Store the (added) affected-target for safe keeping (possibly
-         to be used later for postfix text-deltas) */
-      longpath = svn_stringbuf_dup (full_path, top_pool);
-      apr_hash_set (affected_targets, longpath->data, longpath->len, tb);
     } 
   /* END ADDITION CHECK */
   
@@ -1004,7 +1000,7 @@ report_single_mod (const char *name,
                                       *stack, editor, edit_baton,
                                       locks, top_pool));
           
-          /* Replace a file's text, getting a new file baton */
+          /* Replace a file, getting a new file baton */
           if (entry->kind == svn_node_file)
             SVN_ERR (editor->replace_file (entry_name,
                                            *dir_baton,
@@ -1028,9 +1024,10 @@ report_single_mod (const char *name,
                 SVN_ERR (editor->close_file (tb->editor_baton));
             }
           
-          /* Store the affected-target for safe keeping (possibly to
-             be used later for postfix text-deltas) */
-          apr_hash_set (affected_targets, longpath->data, longpath->len, tb);
+          /* Store the affected-target for safe keeping, to be used
+             later for postfix text-deltas. */
+          if (text_modified_p)
+            apr_hash_set (affected_targets, longpath->data, longpath->len, tb);
         }
     }  
   /* END LOCAL MOD CHECK */
