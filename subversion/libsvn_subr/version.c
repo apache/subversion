@@ -35,10 +35,7 @@ svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
 {
   if (lib_version->tag[0] != '\0')
     /* Development library; require exact match. */
-    return (my_version->major == lib_version->major
-            && my_version->minor == lib_version->minor
-            && my_version->patch == lib_version->patch
-            && 0 == strcmp (my_version->tag, lib_version->tag));
+    return svn_ver_equal (my_version, lib_version);
   else if (my_version->tag[0] != '\0')
     /* Development client; must be newer than the library
        and have the same major and minor version. */
@@ -49,6 +46,16 @@ svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
     /* General compatibility rules for released versions. */
     return (my_version->major == lib_version->major
             && my_version->minor <= lib_version->minor);
+}
+
+
+svn_boolean_t svn_ver_equal (const svn_version_t *my_version,
+                             const svn_version_t *lib_version)
+{
+  return (my_version->major == lib_version->major
+          && my_version->minor == lib_version->minor
+          && my_version->patch == lib_version->patch
+          && 0 == strcmp (my_version->tag, lib_version->tag));
 }
 
 
