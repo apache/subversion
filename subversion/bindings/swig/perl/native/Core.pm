@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package SVN::Core;
-use SVN::Base qw(Core svn_);
+use SVN::Base qw(Core svn_ VERSION);
 $SVN::Core::VERSION = "$SVN::Core::VER_MAJOR.$SVN::Core::VER_MINOR." .
                       "$SVN::Core::VER_MICRO";
 
