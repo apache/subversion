@@ -65,6 +65,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t nonrecursive;
   svn_boolean_t quiet;
   svn_boolean_t version;
+  svn_boolean_t modified;
   apr_array_header_t *args;
   /* TODO fixme. This still doesn't handle binary data from a file! */
   svn_stringbuf_t *filedata;
@@ -175,7 +176,9 @@ void svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status);
 
 /* Print a hash that maps names to status-structs to stdout for human
    consumption. */
-void svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool);
+void svn_cl__print_status_list (apr_hash_t *statushash, 
+                                svn_boolean_t print_modified_only,
+                                apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values
    (svn_stringbuf_t *). */
