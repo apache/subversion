@@ -2354,6 +2354,7 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
 {
   svn_error_t *serr;
   dav_error *err;
+  const char *src_repos_path, *dst_repos_path;
 
   /* ### source must be from a collection under baseline control. the
      ### baseline will (implicitly) indicate the source revision, and the
@@ -2395,12 +2396,29 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
       if (err)
         return err;
     }
-  
-  serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
-                      src->info->repos_path, /* the relative path of src */
-                      dst->info->root.root,  /* the root object of dst txn*/ 
-                      dst->info->repos_path, /* the relative path of dst */
-                      src->pool);
+
+  serr = svn_path_get_absolute(&src_repos_path,
+                               svn_repos_path(src->info->repos->repos, 
+                                              src->pool),
+                               src->pool);
+  if (!serr)
+    serr = svn_path_get_absolute(&dst_repos_path,
+                                 svn_repos_path(dst->info->repos->repos, 
+                                                dst->pool),
+                                 dst->pool);
+
+  if (!serr)
+    {
+      if (strcmp(src_repos_path, dst_repos_path) != 0)
+        return dav_new_error
+          (dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+           "Copy source and destination are in different repositories.");
+      serr = svn_fs_copy (src->info->root.root,  /* root object of src rev*/
+                          src->info->repos_path, /* relative path of src */
+                          dst->info->root.root,  /* root object of dst txn*/ 
+                          dst->info->repos_path, /* relative path of dst */
+                          src->pool);
+    }
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Unable to make a filesystem copy.",

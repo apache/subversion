@@ -1059,7 +1059,8 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * difference (modulo node revision ID's) between copying @a from and
  * simply adding a reference to it.  So the operation takes place in
  * constant time.  However, there's no reason not to extend this to
- * mutable nodes --- it's just more code.)
+ * mutable nodes --- it's just more code.)  Further, @a to_root and @a
+ * from_root must represent the same filesystem.
  *
  * Note: to do a copy without preserving copy history, use
  * @c svn_fs_revision_link().
