@@ -110,9 +110,9 @@ typedef struct svn_cl__cmd_desc_t
  *
  * The entire list must be terminated with a entry of nulls.
  */
-const svn_cl__cmd_desc_t svn_cl__cmd_table[] = 
+const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 {
-  { "add", svn_cl__add, {"ad", "new"},
+  { "add", svn_cl__add, {0},
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: svn add [OPTIONS] [TARGETS]\n", 
