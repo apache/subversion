@@ -161,6 +161,14 @@ def append_successors(nodes, node_id, affected_nodes):
 
 def main():
     kill_preds = 1
+
+    ### Until this thing learns to purge the 'changes', it ise
+    ### basically useless (because dumps/loads are entirely
+    ### 'changes'-table driven).  So just bail.
+
+    print "This script will, at the moment, destroy your repository."
+    print "You don't really want that, right?"
+    sys.exit(0)
     
     # Parse the commandline arguments.
     argc = len(sys.argv)
