@@ -461,23 +461,49 @@ svn_client_checkout (svn_revnum_t *result_rev,
                      apr_pool_t *pool);
 
 
-/** Update working tree @a path to @a revision, authenticating with
- * the authentication baton cached in @a ctx.  If @a result_rev is not
- * @c NULL, set @a *result_rev to the value of the revision to which
- * the working copy was actually updated.
+/**
+ * @since New in 1.2.
+ *
+ * Update working trees @a paths to @a revision, authenticating with the
+ * authentication baton cached in @a ctx.  @a paths is an array of const
+ * char * paths to be updated.  Unversioned paths that are direct children
+ * of a versioned path will cause an update that attempts to add that path,
+ * other unversioned paths are skipped.  If @a result_revs is not
+ * @c NULL an array of svn_revnum_t will be returned with each element set
+ * to the value of the actual revision to which the corresponding path was
+ * updated.
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If @a 
  * revision does not meet these requirements, return the error
  * @c SVN_ERR_CLIENT_BAD_REVISION.
  *
- * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with 
- * @a ctx->notify_baton for each item handled by the update, and also for 
- * files restored from text-base.
+ * The paths in @a paths can be from multiple working copies from multiple
+ * repositories, but even if they all come from the same repository there
+ * is no guarantee that revision represented by @c svn_opt_revision_head
+ * will remain the same as each path is updated.
  *
- * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with
+ * @a ctx->notify_baton for each item handled by the update, and also for
+ * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
+ * it passing @a ctx->cancel_baton at various places during the update.
  *
  * Use @a pool for any temporary allocation.
+ */
+svn_error_t *
+svn_client_update2 (apr_array_header_t **result_revs,
+                    const apr_array_header_t *paths,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_update2 except that it accepts only a single
+ * target in @a path and returns a single revision if @a result_rev is not
+ * NULL.
  */
 svn_error_t *
 svn_client_update (svn_revnum_t *result_rev,
