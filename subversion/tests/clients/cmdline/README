@@ -11,3 +11,21 @@ The cmdline client test suite doesn't use the C-level testing
 framework.  Instead, it drives the client just like a user would,
 examining the output and the on-disk results (i.e., the working copy)
 carefully as it goes.
+
+The files in this directory:
+ 
+ * svn_test_main.py:      main test framework.
+                          exports client_test(), which runs a list of 
+                             provided tests.
+
+ * example_tests1.py:     template test program.
+                          demonstrates how to write tests and then
+                             call svn_test_main.client_test() on them.
+
+ * svn_entry.py:          parser for subversion's 'entries' file.
+
+ * svn_output.py:         parser for various line-oriented outputs of 
+                            of the svn command-line client.
+
+ * xml_tests.py:          set of tests for doing client operations to/from XML.
+
