@@ -45,7 +45,6 @@ svn_client_cat (svn_stream_t *out,
   void *ra_baton, *session;
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
-  svn_string_t *mime_type;
   svn_string_t *eol_style;
   svn_string_t *keywords;
   apr_hash_t *props;
@@ -86,15 +85,12 @@ svn_client_cat (svn_stream_t *out,
      special needs to be done with this file. */
   SVN_ERR (ra_lib->get_file (session, "", rev, NULL, NULL, &props, pool));
 
-  mime_type = apr_hash_get (props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
   eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
   keywords = apr_hash_get (props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
 
-  if ((mime_type && svn_mime_type_is_binary (mime_type->data))
-      || (! eol_style && ! keywords))
+  if (! eol_style && ! keywords)
     {
-      /* Either it's a binary file, or it's a text file with no special eol 
-         style. */
+      /* It's a file with no special eol style or keywords. */
       SVN_ERR (ra_lib->get_file (session, "", rev, out, NULL, NULL, pool));
     }
   else
