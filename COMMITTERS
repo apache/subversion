@@ -32,7 +32,6 @@ Blanket commit access:
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
-        bdenny   Brian Denny <brian@briandenny.net>
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julianfoad@btopenworld.com>
          bliss   Tobias Ringstrom <tobias@ringstrom.mine.nu>
@@ -60,7 +59,7 @@ Commit access for specific areas:
           mass   David Waite <mass@akuma.org>                (certs branch)
       jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
         knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
-        mprice   Michael Price <michael.price@computer.org>  (releases)
+        mprice   Michael Price <mprice@atl.lmco.com>         (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
@@ -73,3 +72,8 @@ Commit access for specific areas:
       lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
           maxb   Max Bowsher <maxb@ukf.net>                  (cvs2svn)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
+        breser   Ben Reser <ben@reser.org>                   (perl bindings)
+
+Committers who have asked to be listed as dormant:
+
+        bdenny   Brian Denny <brian@briandenny.net>

@@ -20,7 +20,7 @@ Contents:
 
 I.    A FEW POINTERS
 
-      This code is still under development.  For an overview, visit
+      For an overview of the Subversion project, visit
 
          http://subversion.tigris.org/
 
@@ -75,9 +75,9 @@ IV.   QUICKSTART GUIDE
 
           $ svn --version
           svn, version X.YY.Z (rXXXX)
-             compiled Jul 10 2003, 11:49:32
+             compiled Jul 10 2004, 11:49:32
 
-          Copyright (C) 2000-2003 CollabNet.
+          Copyright (C) 2000-2004 CollabNet.
           Subversion is open source software, see http://subversion.tigris.org/
 
           The following repository access (RA) modules are available:

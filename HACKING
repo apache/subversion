@@ -36,6 +36,7 @@ TABLE OF CONTENTS
    * How to release a distribution tarball
    * Release numbering
    * Compatibility
+   * Stabilizing a release branch
 
 
 Participating in the community
@@ -310,8 +311,8 @@ invoked with improper values.
 
 String operations
 
-Use only the string functions provided in apr_strings.h.  These are
-replacements for standard C library string functions, except safer
+Use the string functions provided in apr_strings.h instead of standard
+C library functions that write to strings.  The APR functions are safer
 because they do bounds-checking and dest allocation automatically.
 Although there may be circumstances where it's theoretically safe to
 use plain C string functions (such as when you already know the
@@ -368,8 +369,8 @@ and immediately after the page break comes the title of the section.
 
 This helps out people who use the Emacs page commands, such as
 `pages-directory' and `narrow-to-page'.  Such people are not as scarce
-as you might think, and if you'd like to become one of them, then type
-C-x C-p C-h in Emacs sometime.
+as you might think, and if you'd like to become one of them, then add
+(require 'page-ext) to your .emacs and type C-x C-p C-h sometime.
 
 
 
@@ -389,7 +390,6 @@ For error messages the following conventions apply:
    * Don't end the error message with a '.'.
 
    * Don't include newline characters in error messages.
-
 
    * Quoting information is done using single quotes ('some info').
 
@@ -417,13 +417,6 @@ For error messages the following conventions apply:
    * Try to stay within the boundaries of these conventions, so please avoid
      separating different parts of error messages by other separators such 
      as '--' and others.
-
-   * Please wrap your lines in such a way that the message text (if you 
-     supply any) so that the message appears on the start of a new line.
-     Like:
-
-        svn_error_createf (SVN_ERR_FOO, NULL,
-                           "Authorisation failed for '%s'", url);
 
 
 
@@ -465,16 +458,19 @@ In addition to the GNU standards, Subversion uses these conventions:
       so you get svn-dev.el and svnbook.el when needed:
 
          ;;; Begin Subversion development section
-         (defun my-find-file-hook ()
-           (if (string-match "projects/svn/" buffer-file-name)
-               (load "~/projects/svn/tools/dev/svn-dev"))
-           (if (string-match "projects/svn/doc/book" buffer-file-name)
-               (load "~/projects/svn/doc/book/tools/svnbook")))
+         (setq svntree-path "~/projects/subversion/")
 
+         (defun my-find-file-hook ()
+           (setq svntree-path (expand-file-name svntree-path))
+           (if (string-match (concat svntree-path "doc/book") buffer-file-name)
+               (load (concat svntree-path "doc/book/tools/svnbook"))
+             (if (string-match svntree-path buffer-file-name)
+	         (load (concat svntree-path "tools/dev/svn-dev")))))
+  
          (add-hook 'find-file-hooks 'my-find-file-hook)
          ;;; End Subversion development section
 
-      You'll need to customize the paths for your setup, of course.
+      You'll need to customize the path for your setup, of course.
       You can also make the regexp to string-match more selective; for
       example, one developer says:
 
@@ -637,8 +633,8 @@ typedef struct svn_error
 2.  If you are the *original* creator of an error, you would do
     something like this:
 
-        return svn_create_error (SVN_ERR_FOO, NULL, 
-                                  "User not permitted to write file");
+        return svn_error_create (SVN_ERR_FOO, NULL, 
+                                 "User not permitted to write file");
 
 
     NOTICE the NULL field... indicating that this error has no child,
@@ -680,7 +676,7 @@ typedef struct svn_error
         error = some_routine (foo);
         if (error)
           {
-           svn_error_t *wrapper = svn_create_error (SVN_ERR_FOO, error,
+           svn_error_t *wrapper = svn_error_create (SVN_ERR_FOO, error,
                                                     "Authorization failed");
            return wrapper;
           }
@@ -692,7 +688,7 @@ typedef struct svn_error
         error = some_routine (foo);
         if (error)
           {
-           return svn_quick_wrap_error (error, 
+           return svn_error_quick_wrap (error, 
                                         "Authorization failed");
           }
 
@@ -921,6 +917,12 @@ Make a log message for every change.  The value of the log becomes
 much less if developers cannot rely on its completeness.  Even if
 you've only changed comments, write a log that says "Doc fix." or
 something.
+
+Start off the log message with one line indicating the general nature
+of the change.  This not only helps put developers in the right frame
+of mind for reading the rest of the log message, but also plays well
+with the "CIA" bot that echoes the first line of each commit to
+realtime forums like IRC.  (See http://cia.navi.cx/ for details.)
 
 Use full sentences, not sentence fragments.  Fragments are more often
 ambiguous, and it takes only a few more seconds to write out what you
@@ -1374,54 +1376,208 @@ See notes/releases.txt.
 
 
 
-Release numbering
-=================
+Release numbering and compatibility
+===================================
 
-Please see http://apr.apache.org/versioning.html -- Subversion uses
-the same guidelines.
+Subversion uses the same release numbering guidelines as APR (see
+http://apr.apache.org/versioning.html), with a few extensions.  The
+extensions are:
+
+ 1. A patch or minor number release of a server (or client) never
+    breaks compatibility with a client (or server) in the same major
+    line.  However, new features offered by the release might be
+    unsupported without a corresponding upgrade to the other side of
+    the connection.  For updating ra_svn code specifically, please
+    observe these principles:
+
+    (a) Fields can be added to any tuple; old clients will simply
+        ignore them.  (Right now, the marshalling implementation does
+        not let you put number or boolean values in the optional part
+        of a tuple, but changing that will not affect the protocol.)
+   
+        We can use this mechanism when information is added to an API
+        call.
+   
+    (b) At connection establishment time, clients and servers exchange
+        a list of capability keywords.
+   
+        We can use this mechanism for more complicated changes, like
+        introducing pipelining or removing information from API calls.
+   
+    (c) New commands can be added; trying to use an unsupported
+        command will result in an error which can be checked and dealt
+        with.
+   
+    (d) The protocol version number can be bumped to allow graceful
+        refusal of old clients or servers, or to allow a client or
+        server to detect when it has to do things the old way.
+ 
+        This mechanism is a last resort, to be used when capability
+        keywords would be too hard to manage.
+
+ 2. Working copy and repository formats are backward- and
+    forward-compatible for all patch releases in the same minor
+    series.  They are backward-compatible for all minor releases in
+    the same major series; however, a minor release is allowed to make
+    a working copy or repository that doesn't work with previous minor
+    releases, where "make" could mean "upgrade" as well as "create".
+
+Any unqualified triplet indicates a stable release:
+
+   1.0.1  -->  first stable patch release of 1.0
+   1.1.0  -->  next stable minor release of 1.x after 1.0.x
+   1.1.1  -->  first stable patch release of 1.1.x
+   1.1.2  -->  second stable patch release of 1.1.x
+   1.2.0  -->  next stable minor release after that
+
+The order of releases is semi-nonlinear -- a 1.0.3 *might* come out
+after a 1.1.0.  But it's only "semi"-nonlinear because eventually we
+declare a patch line defunct and tell people to upgrade to the next
+minor release, so over the long run the numbering is basically linear.
+
+Non-stable releases are qualified with "alphaN" or "betaN" suffixes;
+generally we use "beta" unless there's some reason to think the code
+is especially risky.  For example, the prereleases leading to 1.3.7
+might look like this:
+
+   subversion-1.3.7-beta1.tar.gz
+   subversion-1.3.7-beta2.tar.gz
+   subversion-1.3.7-beta3.tar.gz
+   subversion-1.3.7.tar.gz
+
+The output of 'svn --version' corresponds in the obvious way:
+
+   version 1.3.7 (beta 1)
+   version 1.3.7 (beta 2)
+   version 1.3.7 (beta 3)
+   version 1.3.7
+
+When you 'make install' subvesion-1.3.7-beta1, it still installs as
+though it were "1.3.7", of course.  The beta modifier is metadata on
+the release; we want each subsequent beta release to overwrite the
+previous one, and the stable release to overwrite the last beta.
+
+For working copy builds, there is no tarball name to worry about, but
+'svn --version' still produces special output:
+
+   version 1.3.7 (dev build, rXXXX)
+
+The "rXXXX" is not important (if it proves difficult to implement, we
+may omit it).  The important thing is to say "dev build".  This
+indicates that the build came from a working copy, which is useful in
+bug reports.
+
+We have no mechanism for releasing dated snapshots.  If we want code
+to get wider distribution than just those who build from working
+copies, we put out a prerelease.
 
 
 
-Compatibility
-=============
+Stabilizing and maintaining releases
+====================================
 
-Before 1.0, we require only that each interim release be compatible
-with the one before it.  For example, a 0.20 server must work with
-both 0.19 and 0.21 clients (and, obviously, a 0.20 client as well),
-but may be incompatible with a 0.18 client (though gratuitous
-incompatibility should be avoided whenever possible, of course).
-Patch levels don't count: 0.20.1, 0.20.2, etc, must be compatible with
-0.19.*.
+Minor and major number releases go through a stabilization period
+before release, and remain in maintenance (bugfix) mode after release.
+To start the release process, we create a "A.B.x" branch based on the
+previous release, for example:
 
-The purpose of this policy is to help early adopters make good
-decisions about when to upgrade, without impeding development too
-much.  After 1.0 is released, we will probably adopt a more
-conservative policy.
+   $ svn cp http://svn.collab.net/repos/svn/tags/A.(B-1).C \
+            http://svn.collab.net/repos/svn/branches/A.B.x
 
-Changes to the ra_lib, editor, or reporter API may result in
-incompatibilities in ra_dav or ra_svn.  Observe these principles when
-updating the ra_svn code:
+The main difference between "stabilization" and "maintenance" is that
+the stabilization involves a four week soak period before the first
+release of the new line (A.B.0).  The soak period is to make sure that
+no surprise showstopper bugs are lurking.  A "showstopper" means a
+non-edge-case crash, a data corruption problem, a major security hole,
+or something equally serious.  In the unlikely event that the full
+committers cannot agree on whether a bug is showstopper, they vote.
 
- (1) Fields can be added to any tuple; old clients will simply ignore
-     them.  (Right now, the marshalling implementation does not let
-     you put number or boolean values in the optional part of a tuple,
-     but changing that will not affect the protocol.)
-   
-     We can use this mechanism when information is added to an API
-     call.
-   
- (2) At connection establishment time, clients and servers exchange a
-     list of capability keywords.
-   
-     We can use this mechanism for more complicated changes, like
-     introducing pipelining or removing information from API calls.
-   
- (3) New commands can be added; trying to use an unsupported command
-     will result in an error which can be checked and dealt with.
-   
- (4) The protocol version number can be bumped to allow graceful
-     refusal of old clients or servers, or to allow a client or
-     server to detect when it has to do things the old way.
- 
-     This mechanism is a last resort, to be used when capability
-     keywords would be too hard to manage.
+A major or minor release soak starts with A.B.0-beta1; A.B.0-beta2 and
+higher are only released if necessary, as each such release restarts
+the soak period.  Once A.B.0 is out, subsequent releases in that line
+do not require a four week soak, because only conservative changes go
+into the line.
+
+Certain kinds of commits can into A.B.0 without restarting the soak
+period, or into a later release without affecting the testing schedule
+or release date:
+
+   Without voting:
+     - Changes to the STATUS file.
+     - Documentation file changes, including to the book, README,
+       INSTALL, HACKING, www/, etc. 
+     - Changes that are a normal part of release bookkeeping, for
+       example, the steps listed in notes/releases.txt.
+     - Changes to dist.sh by, or approved by, the release manager.
+   With voting:
+     - Anything affecting only tools/, packages/, or bindings/.
+     - Doc fixes in core code header or source files.
+     - Changes to printed output, such as error and usage messages, as
+       long as format string "%" codes and their args are not touched.
+
+Core code changes, of course, require voting, and restart the soak or
+test period, since otherwise the change could be undertested.
+
+The voting system works like this:
+
+A change to the A.B.x line must be first proposed in the A.B.x/STATUS
+file.  Each proposal consists of a short identifying block (e.g., the
+revision number of a trunk or related-line commit, or perhaps an issue
+number), a brief description of the change, an at-most-one-line
+justification of why it should be in A.B.x, perhaps some
+notes/concerns, and finally the votes.  The notes and concerns are
+meant to be brief summaries to help a reader get oriented; please
+don't use the STATUS file for actual discussion, use dev@ instead.
+
+Here's an example, probably as complex as an entry would ever get:
+
+   * r98765 (issue #56789)
+     Make commit editor take a closure object for future mindreading.
+     Justification: API stability, as prep for future enhancement.
+     Notes: There was consensus on the desirability of this feature in
+       the near future; see thread at http://... (Message-Id: blahblah).
+     Concerns: Vetoed by jerenkrantz due to privacy concerns with the
+       implementation; see thread at http://... (Message-Id: blahblah)
+     Votes:
+       +1: ghudson, bliss
+       +0: cmpilato
+       -0: gstein
+       -1: jerenkrantz
+
+A change needs three +1 votes from full committers (or partial
+committers for the involved areas), and no vetoes, to go into A.B.x.
+
+If you cast a veto (i.e. -1), please state the reason in the concerns
+field, and include a url / message-id for the list discussion if any.
+You can go back and add the link later if the thread isn't available
+at the time you commit the veto.
+
+Voting +1 on a change doesn't just mean you approve of it in principle.
+It means you have thoroughly reviewed the change, and find it correct
+and as nondisruptive as possible.  When it is committed to the release
+branch, the log message will include the names of all who voted for
+it, as well as the original author and the person making the commit.
+All of these people are considered equally answerable for bugs.
+
+If you've reviewed a patch, and like it but have some reservations,
+you can write "+1 (concept)" and then ask questions on the list about
+your concerns.  You can write "+0" if you like the general idea but
+haven't reviewed the patch carefully.  Neither of these votes counts
+toward the total, but they can be useful for tracking down people who
+are following the change and might be willing to spend more time on
+it.
+
+There is a somewhat looser voting system for the tools/, packages/,
+and bindings/ areas, because they are not core code, and because there
+are usually fewer experts available to review changes there.  A change
+in these areas can go in with a +1 from a full committer or a partial
+committer for that area, at least one +0 or "concept +1" from any
+other committer, and no vetoes.  (If a change affects the build
+system, however, it is considered a core change, and needs three
++1's.)  Use your judgment and don't review changes unless you have
+some competence to do so, of course.  The goal is to get at least two
+pairs of eyes on the change, without demanding that every reviewer
+have the same amount of expertise as the area maintainer.  This way
+one can review for general sanity, accurate comments, obvious
+mistakes, etc, without being forced to assert "Yes, I understand these
+changes in every detail and have tested them."
