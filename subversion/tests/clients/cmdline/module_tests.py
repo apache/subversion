@@ -650,6 +650,56 @@ def update_receive_change_under_external(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
+def modify_and_update_receive_new_external(sbox):
+  "modify to specify, and update to receive, a new external module"
+
+  if externals_test_setup(sbox):
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy
+  out_lines, err_lines = svntest.main.run_svn(None, 'checkout',
+                                              repo_url, wc_dir)
+  if err_lines: return 1
+
+  # Add one more external item
+  B_path = os.path.join(wc_dir, "A/B")
+  externals_desc = \
+          "exdir_G       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
+          "exdir_H  -r1  " + os.path.join(other_repo_url, "A/D/H") + "\n" + \
+          "exdir_Z       " + os.path.join(other_repo_url, "A/D/H") + "\n"
+
+  tmp_f = os.tempnam()
+  svntest.main.file_append(tmp_f, externals_desc)
+  out_lines, err_lines = svntest.main.run_svn(None, 'pset', '-F', tmp_f,
+                                              'svn:externals', B_path)
+  if err_lines: return 1
+  os.remove(tmp_f)
+
+  # Now cd into A/B and try updating
+  was_cwd = os.getcwd()
+  os.chdir(B_path)
+  try:
+    # Once apon a time there was a core-dump here
+    out_lines, err_lines = svntest.main.run_svn (None, 'up')
+    if err_lines or not out_lines:
+      print "update failed"
+      return 1
+
+  finally:
+    os.chdir(was_cwd)
+
+  exdir_Z_path = os.path.join(B_path, "exdir_Z")
+  if not os.path.exists(exdir_Z_path):
+    print "Probing for", exdir_Z_path, "failed."
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -662,6 +712,7 @@ test_list = [ None,
               update_change_pristine_external,
               update_change_modified_external,
               update_receive_change_under_external,
+              modify_and_update_receive_new_external,
              ]
 
 if __name__ == '__main__':

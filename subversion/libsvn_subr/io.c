@@ -424,6 +424,11 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   char *dir;
 
+  if (svn_path_is_empty_nts (path))
+    /* Empty path (current dir) is assumed to always exist,
+       so we do nothing, per docs. */
+    return SVN_NO_ERROR;
+
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
 #if 0
@@ -448,29 +453,6 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
 
   if (APR_STATUS_IS_ENOENT(apr_err))
     {
-      /* ### Unfortunately, this won't work on Win32 without the following
-         patch to APR:
-
-Index: apr_errno.h
-===================================================================
-RCS file: /home/cvs/apr/include/apr_errno.h,v
-retrieving revision 1.91
-diff -u -p -r1.91 apr_errno.h
---- apr_errno.h 20 May 2002 13:22:36 -0000      1.91
-+++ apr_errno.h 8 Jun 2002 10:18:30 -0000
-@@ -923,6 +923,7 @@ APR_DECLARE(char *) apr_strerror(apr_sta
-                 || (s) == APR_OS_START_SYSERR + WSAENAMETOOLONG)
- #define APR_STATUS_IS_ENOENT(s)         ((s) == APR_ENOENT \
-                 || (s) == APR_OS_START_SYSERR + ERROR_FILE_NOT_FOUND \
-+                || (s) == APR_OS_START_SYSERR + ERROR_PATH_NOT_FOUND \
-                 || (s) == APR_OS_START_SYSERR + ERROR_OPEN_FAILED \
-                 || (s) == APR_OS_START_SYSERR + ERROR_NO_MORE_FILES)
- #define APR_STATUS_IS_ENOTDIR(s)        ((s) == APR_ENOTDIR \
-
-
-         I had long discussions about this on the apr list with wrowe,
-         but nothing has come of it yet. --xbc */
-
       /* Missing an intermediate dir */
       svn_error_t *svn_err;
 
