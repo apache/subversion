@@ -712,7 +712,7 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
         }
       else if (!svn_string_compare(current_author, &request_author))
         {
-          return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+          return dav_new_error(pool, HTTP_NOT_IMPLEMENTED, 0,
                    "Multi-author commits not supported.");
         }
     }
