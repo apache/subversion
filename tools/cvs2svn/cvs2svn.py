@@ -96,6 +96,9 @@ SYMBOLIC_NAME_ROOTS_DB = 'cvs2svn-symroots.db'
 # See class SymbolicNameTracker for details.
 SYMBOLIC_NAMES_DB = "cvs2svn-sym-names.db"
 
+# Records the author and log message for each changeset
+METADATA_DB = "cvs2svn-metadata.db"
+
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
@@ -134,6 +137,7 @@ class CollectData(rcsparse.Sink):
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
     self.default_branches_db = default_branches_db
+    self.metadata_db = anydbm.open(METADATA_DB, 'n')
     # See set_fname() for initializations of other variables.
 
   def set_fname(self, fname):
@@ -379,6 +383,9 @@ class CollectData(rcsparse.Sink):
                     self.rev_to_branch_name(revision),
                     self.get_tags(revision),
                     self.get_branches(revision))
+
+    if not self.metadata_db.has_key(digest):
+      self.metadata_db[digest] = marshal.dumps([author, log])
 
 
 def make_path(ctx, path, branch_name = None, tag_name = None):
@@ -1971,7 +1978,10 @@ def is_trunk_vendor_revision(default_branches_db, cvs_path, cvs_rev):
 
 
 class Commit:
-  def __init__(self):
+  def __init__(self, author, log):
+    self.author = author
+    self.log = log
+
     self.files = { }
 
     # For consistency, the elements of both lists are of the form
@@ -2016,26 +2026,6 @@ class Commit:
                            tags, branches))
     self.files[file] = 1
 
-  def get_metadata(self):
-    # by definition, the author and log message must be the same for all
-    # items that went into this commit. therefore, just grab any item from
-    # our record of changes/deletes.
-    if self.changes:
-      file, rev, dt_code, br, tags, branches = self.changes[0]
-    else:
-      # there better be one...
-      file, rev, dt_code, br, tags, branches = self.deletes[0]
-
-    # now, fetch the author/log from the ,v file
-    rip = RevInfoParser()
-    rip.parse_cvs_file(file)
-    author = rip.authors[rev]
-    log = rip.logs[rev]
-    # and we already have the date, so just format it
-    date = format_date(self.t_max)
-
-    return author, log, date
-
   def commit(self, dumper, ctx, sym_tracker):
     # commit this transaction
     seconds = self.t_max - self.t_min
@@ -2058,26 +2048,28 @@ class Commit:
 
     do_copies = [ ]
 
-    # get the metadata for this commit
-    author, log, date = self.get_metadata()
+    # we already have the date, so just format it
+    date = format_date(self.t_max)
     try: 
       ### FIXME: The 'replace' behavior should be an option, like
       ### --encoding is.
-      unicode_author = unicode(author, ctx.encoding, 'replace')
-      unicode_log = unicode(log, ctx.encoding, 'replace')
+      unicode_author = unicode(self.author, ctx.encoding, 'replace')
+      unicode_log = unicode(self.log, ctx.encoding, 'replace')
       props = { 'svn:author' : unicode_author.encode('utf8'),
                 'svn:log' : unicode_log.encode('utf8'),
                 'svn:date' : date }
     except UnicodeError:
       print '%s: problem encoding author or log message:' % warning_prefix
-      print "  author: '%s'" % author
-      print "  log:    '%s'" % log
+      print "  author: '%s'" % self.author
+      print "  log:    '%s'" % self.log
       print "  date:   '%s'" % date
       for rcs_file, cvs_rev, dt_code, br, tags, branches in self.changes:
         print "    rev %s of '%s'" % (cvs_rev, rcs_file)
       print "Consider rerunning with (for example) '--encoding=latin1'."
       # Just fall back to the original data.
-      props = { 'svn:author' : author, 'svn:log' : log, 'svn:date' : date }
+      props = { 'svn:author' : self.author,
+                'svn:log' : self.log,
+                'svn:date' : date }
       
 
     # Tells whether we actually wrote anything to the dumpfile.
@@ -2318,6 +2310,7 @@ def pass3(ctx):
 
 def pass4(ctx):
   sym_tracker = SymbolicNameTracker()
+  metadata_db = anydbm.open(METADATA_DB, 'r')
 
   # A dictionary of Commit objects, keyed by digest.  Each object
   # represents one logical commit, which may involve multiple files.
@@ -2374,7 +2367,8 @@ def pass4(ctx):
     if commits.has_key(id):
       c = commits[id]
     else:
-      c = commits[id] = Commit()
+      author, log = marshal.loads(metadata_db[id])
+      c = commits[id] = Commit(author, log)
     c.add(timestamp, op, fname, rev, deltatext_code, branch_name,
           tags, branches)
 
@@ -2407,6 +2401,7 @@ def pass5(ctx):
   os.unlink(SYMBOLIC_NAME_ROOTS_DB)
   os.unlink(SYMBOLIC_NAMES_DB)
   os.unlink(DEFAULT_BRANCHES_DB)
+  os.unlink(METADATA_DB)
   
   # Remove our other data files
   for suffix in (REVS_SUFFIX, CLEAN_REVS_SUFFIX,
