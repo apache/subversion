@@ -1139,6 +1139,9 @@ close_file (void *file_baton)
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
   char *revision, *date, *author, *url;
+  svn_stringbuf_t *s_revision, *s_date, *s_author, *s_url, *s_true;
+
+  s_true = svn_stringbuf_create ("true", fb->pool);
 
   /* Lock the working directory while we change things. */
   SVN_ERR (svn_wc__lock (fb->dir_baton->path, 0, fb->pool));
@@ -1203,6 +1206,56 @@ close_file (void *file_baton)
      and run the log.  */
   entry_accum = svn_stringbuf_create ("", fb->pool);
 
+  /* MERGE ANY PROPERTY CHANGES, if they exist. */
+  if (fb->prop_changed)
+    {
+      /* This will merge the old and new props into a new prop db, and
+         write <cp> commands to the logfile to install the merged
+         props. It also returns any conflicts to us in a hash, which
+         we'll need to know before attempting any textual merging.
+         (The textual merging process cares about conflicts on the
+         eol-style and keywords properties.) */
+      err = svn_wc__do_property_merge (fb->dir_baton->path, fb->name,
+                                       fb->propchanges, fb->pool,
+                                       &entry_accum, &prop_conflicts);
+      if (err) 
+        return
+          svn_error_quick_wrap (err, "close_file: couldn't do prop merge.");
+    }
+
+  /* If there are any ENTRY PROPS, make sure those get appended to the
+     growing log as fields for the file's entry.  This needs to happen
+     before we do any textual merging, because that process might
+     expand keywords, and we want the keyword info to be up-to-date. */
+  if (fb->entryprop_changed)
+    {
+      int i;
+
+      /* foreach entry prop... */
+      for (i = 0; i < fb->entrypropchanges->nelts; i++)
+        {
+          svn_prop_t *prop;
+          prop = (((svn_prop_t **)(fb->entrypropchanges)->elts)[i]);
+
+          /* strip the 'svn:wc:entry:' prefix from the property name. */
+          svn_wc__strip_entry_prefix (prop->name);
+
+          /* append a command to the log which will append the
+             property as a entry attribute. */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_MODIFY_ENTRY,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 fb->name,
+                                 prop->name->data,
+                                 prop->value ? 
+                                      prop->value : 
+                                      svn_stringbuf_create ("", fb->pool),
+                                 NULL);         
+        }
+    }
+
   /* We implement this matrix:
 
                   Text file                Binary File
@@ -1216,21 +1269,6 @@ close_file (void *file_baton)
 
    So the first thing we do is figure out where we are in the
    matrix. */
-
-  /* MERGE ANY PROPERTY CHANGES, if they exist. */
-  if (fb->prop_changed)
-    {
-      /* This will merge the old and new props into a new prop db, and
-         write <cp> commands to the logfile to install the merged
-         props. It also returns any conflicts to us in a hash. */
-      err = svn_wc__do_property_merge (fb->dir_baton->path, fb->name,
-                                       fb->propchanges, fb->pool,
-                                       &entry_accum, &prop_conflicts);
-      if (err) 
-        return
-          svn_error_quick_wrap (err, "close_file: couldn't do prop merge.");
-    }
-
 
   if (fb->text_changed)
     {
@@ -1257,7 +1295,7 @@ close_file (void *file_baton)
             /* Check to see if the new property conflicted. */
             svn_prop_t *conflict = 
               (svn_prop_t *) apr_hash_get (prop_conflicts, SVN_PROP_EOL_STYLE,
-                                           strlen(SVN_PROP_EOL_STYLE));
+                                           APR_HASH_KEY_STRING);
 
             if (conflict)
               /* Use our current locally-modified style. */
@@ -1279,10 +1317,8 @@ close_file (void *file_baton)
               }
           }
         
-        if (eol_str)
-          s_eol_str = svn_stringbuf_create (eol_str, fb->pool);
-        else
-          s_eol_str = NULL;
+        s_eol_str = 
+          eol_str ? svn_stringbuf_create (eol_str, fb->pool) : NULL;
       }
 
       /* Decide which value of 'svn:keywords' to use. */
@@ -1298,7 +1334,7 @@ close_file (void *file_baton)
             /* Check to see if the new property conflicted. */
             svn_prop_t *conflict = 
               (svn_prop_t *) apr_hash_get (prop_conflicts, SVN_PROP_KEYWORDS,
-                                           strlen(SVN_PROP_KEYWORDS));
+                                           APR_HASH_KEY_STRING);
 
             if (conflict)
               /* Use our current locally-modified style. */
@@ -1325,11 +1361,15 @@ close_file (void *file_baton)
                           fb->new_keywords_value, fb->path, fb->pool));
               }
           }
-        
-        if (eol_str)
-          s_eol_str = svn_stringbuf_create (eol_str, fb->pool);
-        else
-          s_eol_str = NULL;
+
+        s_revision = 
+          revision ? svn_stringbuf_create (revision, fb->pool) : NULL;
+        s_date = 
+          date ? svn_stringbuf_create (date, fb->pool) : NULL;
+        s_author = 
+          author ? svn_stringbuf_create (author, fb->pool) : NULL;
+        s_url = 
+          url ? svn_stringbuf_create (url, fb->pool) : NULL;
       }
 
 
@@ -1353,33 +1393,33 @@ close_file (void *file_baton)
         {
           /* If there are no local mods (or we're doing an initial
              checkout), who cares whether it's a text or binary file!
-             Just overwrite any working file with the new one. */
-          if (eol_style == svn_wc__eol_style_native)
-            {
-              /* CP command:  translate to 'native' EOL style. */
-              svn_xml_make_open_tag (&entry_accum,
-                                     fb->pool,
-                                     svn_xml_self_closing,
-                                     SVN_WC__LOG_CP,
-                                     SVN_WC__LOG_ATTR_NAME,
-                                     txtb,
-                                     SVN_WC__LOG_ATTR_DEST,
-                                     fb->name,
-                                     SVN_WC__LOG_ATTR_EOL_STR,
-                                     s_eol_str,
-                                     NULL);
-            }
-          else
-            /* regular CP command */
-            svn_xml_make_open_tag (&entry_accum,
-                                   fb->pool,
-                                   svn_xml_self_closing,
-                                   SVN_WC__LOG_CP,
-                                   SVN_WC__LOG_ATTR_NAME,
-                                   txtb,
-                                   SVN_WC__LOG_ATTR_DEST,
-                                   fb->name,
-                                   NULL);
+             Just overwrite any working file with the new one.  If
+             newline conversion or keyword substitution is activated,
+             this will happen as well during the copy. */
+          
+          /* ### use make_open_tag_hash once we have a keyword struct! */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_CP,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 txtb,
+                                 SVN_WC__LOG_ATTR_DEST,
+                                 fb->name,
+                                 SVN_WC__LOG_ATTR_EOL_STR,
+                                 s_eol_str,
+                                 SVN_WC__LOG_ATTR_REVISION,
+                                 s_revision,
+                                 SVN_WC__LOG_ATTR_DATE,
+                                 s_date,
+                                 SVN_WC__LOG_ATTR_AUTHOR,
+                                 s_author,
+                                 SVN_WC__LOG_ATTR_URL,
+                                 s_url,
+                                 SVN_WC__LOG_ATTR_EXPAND,
+                                 s_true,
+                                 /* no need for repair */
+                                 NULL);
         }
   
       else   /* file is locally modified, and this is an update. */
@@ -1398,32 +1438,31 @@ close_file (void *file_baton)
                 {
                   /* If the working file is missing, then just copy
                      the new base text to the working file. */
-                  if (eol_style == svn_wc__eol_style_native)
-                    {
-                      /* CP command:  translate to 'native' EOL style. */
-                      svn_xml_make_open_tag (&entry_accum,
-                                             fb->pool,
-                                             svn_xml_self_closing,
-                                             SVN_WC__LOG_CP,
-                                             SVN_WC__LOG_ATTR_NAME,
-                                             txtb,
-                                             SVN_WC__LOG_ATTR_DEST,
-                                             fb->name,
-                                             SVN_WC__LOG_ATTR_EOL_STR,
-                                             s_eol_str,
-                                             NULL);
-                    }
-                  else
-                    /* regular CP command */
-                    svn_xml_make_open_tag (&entry_accum,
-                                           fb->pool,
-                                           svn_xml_self_closing,
-                                           SVN_WC__LOG_CP,
-                                           SVN_WC__LOG_ATTR_NAME,
-                                           txtb,
-                                           SVN_WC__LOG_ATTR_DEST,
-                                           fb->name,
-                                           NULL);
+
+                  /* ### use make_open_tag_hash once we have a keyword
+                         struct! */
+                  svn_xml_make_open_tag (&entry_accum,
+                                         fb->pool,
+                                         svn_xml_self_closing,
+                                         SVN_WC__LOG_CP,
+                                         SVN_WC__LOG_ATTR_NAME,
+                                         txtb,
+                                         SVN_WC__LOG_ATTR_DEST,
+                                         fb->name,
+                                         SVN_WC__LOG_ATTR_EOL_STR,
+                                         s_eol_str,
+                                         SVN_WC__LOG_ATTR_REVISION,
+                                         s_revision,
+                                         SVN_WC__LOG_ATTR_DATE,
+                                         s_date,
+                                         SVN_WC__LOG_ATTR_AUTHOR,
+                                         s_author,
+                                         SVN_WC__LOG_ATTR_URL,
+                                         s_url,
+                                         SVN_WC__LOG_ATTR_EXPAND,
+                                         s_true,
+                                         /* no need for repair */
+                                         NULL);
                 }
               else  /* working file exists */
                 {                  
@@ -1464,20 +1503,22 @@ close_file (void *file_baton)
 
                   /* Copy *LF-translated* text-base files to these
                      reserved locations. */
+
+                  /* ### use NULL keyword structures in the future.. */
                   SVN_ERR (svn_io_copy_and_translate (txtb_full_path->data,
                                                       tr_txtb->data,
-                                                      "\n",
+                                                      SVN_WC__DEFAULT_EOL_MARKER,
                                                       1, NULL, NULL, 
                                                       NULL, NULL, 
-                                                      TRUE, /* ### expand? */
+                                                      FALSE,
                                                       fb->pool));
                   
                   SVN_ERR (svn_io_copy_and_translate (tmp_txtb_full_path->data,
                                                       tr_tmp_txtb->data,
-                                                      eol_str,
+                                                      SVN_WC__DEFAULT_EOL_MARKER,
                                                       1, NULL, NULL,
                                                       NULL, NULL, 
-                                                      TRUE, /* ### expand? */
+                                                      FALSE,
                                                       fb->pool));
 
                   /* Build the diff command. */
@@ -1561,10 +1602,12 @@ close_file (void *file_baton)
                      - fb->dir_baton->path->len - 1,
                      fb->pool);
 
-                  
-                  if (eol_style == svn_wc__eol_style_none)
+                  /* ### check for NULL keyword structure in future: */
+                  if ((eol_style == svn_wc__eol_style_none)
+                      && (! (revision || date || author || url)))
                     {
-                      /* If the eol property is turned off, then just
+                      /* If the eol property is turned off, and we're
+                         not doing keyword translation, then just
                          apply the LF patchfile directly to the
                          working file.  No big deal. */
 
@@ -1591,7 +1634,8 @@ close_file (void *file_baton)
                          received_diff_filename,
                          NULL);
                     }
-                  else  /* eol_style is native or fixed */
+                  else  /* keyword expansion or EOL translation is
+                           active */
                     {
                       apr_file_t *tmp_fp;
                       svn_stringbuf_t *tmp_working;
@@ -1604,7 +1648,8 @@ close_file (void *file_baton)
                                                         FALSE,
                                                         fb->pool));
 
-                      /* Copy the working file to tmp-working with LF's.*/
+                      /* Copy the working file to tmp-working with
+                         LF's, and any keywords contracted. */
 
                       /* note: pass the repair flag.  if the
                          locally-modified working file has mixed EOL
@@ -1612,6 +1657,8 @@ close_file (void *file_baton)
                          normalization, because the eol prop is set,
                          and an update is a 'checkpoint' just like a
                          commit. */
+
+                      /* ### use make_open_tag_hash here in future */
                       svn_xml_make_open_tag (&entry_accum, fb->pool,
                                              svn_xml_self_closing,
                                              SVN_WC__LOG_CP,
@@ -1623,8 +1670,17 @@ close_file (void *file_baton)
                                              svn_stringbuf_create ("\n",
                                                                    fb->pool),
                                              SVN_WC__LOG_ATTR_REPAIR,
-                                             svn_stringbuf_create ("true",
-                                                                   fb->pool),
+                                             s_true,
+                                             SVN_WC__LOG_ATTR_REVISION,
+                                             s_revision,
+                                             SVN_WC__LOG_ATTR_DATE,
+                                             s_date,
+                                             SVN_WC__LOG_ATTR_AUTHOR,
+                                             s_author,
+                                             SVN_WC__LOG_ATTR_URL,
+                                             s_url,
+                                             /* no 'expand' implies
+                                                contraction. */
                                              NULL);
 
                       /* Now patch the tmp-working file. */
@@ -1650,28 +1706,41 @@ close_file (void *file_baton)
                          must be either 'native' or 'fixed', and is
                          already defined in eol_str.  Therefore, copy
                          the merged tmp_working back to working with
-                         this style. */
-                        svn_xml_make_open_tag (&entry_accum,
-                                               fb->pool,
-                                               svn_xml_self_closing,
-                                               SVN_WC__LOG_CP,
-                                               SVN_WC__LOG_ATTR_NAME,
-                                               tmp_working,
-                                               SVN_WC__LOG_ATTR_DEST,
-                                               fb->name,
-                                               SVN_WC__LOG_ATTR_EOL_STR,
-                                               s_eol_str, NULL);
+                         this style.  Also, re-expand keywords. */
 
-                        /* Remove tmp_working. */
-                        svn_xml_make_open_tag (&entry_accum,
-                                               fb->pool,
-                                               svn_xml_self_closing,
-                                               SVN_WC__LOG_RM,
-                                               SVN_WC__LOG_ATTR_NAME,
-                                               tmp_working, NULL);
-                        
+                      /* ## use make_open_tag_hash in future.  */
+                      svn_xml_make_open_tag (&entry_accum,
+                                             fb->pool,
+                                             svn_xml_self_closing,
+                                             SVN_WC__LOG_CP,
+                                             SVN_WC__LOG_ATTR_NAME,
+                                             tmp_working,
+                                             SVN_WC__LOG_ATTR_DEST,
+                                             fb->name,
+                                             SVN_WC__LOG_ATTR_EOL_STR,
+                                             s_eol_str,
+                                             SVN_WC__LOG_ATTR_REVISION,
+                                             s_revision,
+                                             SVN_WC__LOG_ATTR_DATE,
+                                             s_date,
+                                             SVN_WC__LOG_ATTR_AUTHOR,
+                                             s_author,
+                                             SVN_WC__LOG_ATTR_URL,
+                                             s_url,
+                                             SVN_WC__LOG_ATTR_EXPAND,
+                                             s_true,
+                                             NULL);
+                      
+                      /* Remove tmp_working. */
+                      svn_xml_make_open_tag (&entry_accum,
+                                             fb->pool,
+                                             svn_xml_self_closing,
+                                             SVN_WC__LOG_RM,
+                                             SVN_WC__LOG_ATTR_NAME,
+                                             tmp_working, NULL);
+                      
                     } /* end:  eol-style is native or fixed */
-
+                  
                   /* Remove the patchfile. */
                   svn_xml_make_open_tag (&entry_accum,
                                          fb->pool,
@@ -1747,37 +1816,6 @@ close_file (void *file_baton)
       
     }  /* End  of "textual" merging process */
   
-
-  /* If there are any ENTRY PROPS, make sure those get appended to the
-     growing log as fields for the file's entry. */
-  if (fb->entryprop_changed)
-    {
-      int i;
-
-      /* foreach entry prop... */
-      for (i = 0; i < fb->entrypropchanges->nelts; i++)
-        {
-          svn_prop_t *prop;
-          prop = (((svn_prop_t **)(fb->entrypropchanges)->elts)[i]);
-
-          /* strip the 'svn:wc:entry:' prefix from the property name. */
-          svn_wc__strip_entry_prefix (prop->name);
-
-          /* append a command to the log which will append the
-             property as a entry attribute. */
-          svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_MODIFY_ENTRY,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 fb->name,
-                                 prop->name->data,
-                                 prop->value ? 
-                                      prop->value : 
-                                      svn_stringbuf_create ("", fb->pool),
-                                 NULL);         
-        }
-    }
 
   /* Set revision. */
   revision_str = apr_psprintf (fb->pool,
