@@ -70,6 +70,8 @@ book-pdf: $(BOOK_PDF_TARGET)
 book-ps: $(BOOK_PS_TARGET)
 
 $(BOOK_PDF_TARGET): $(BOOK_ALL_SOURCE)
+#	$(XSLTPROC) --output $(BOOK_FO_TARGET) --stringparam  page.height 9in \
+#     --stringparam  page.width 6.4in $(XSL_FO) $(BOOK_XML_SOURCE)
 	$(XSLTPROC) $(XSL_FO) $(BOOK_XML_SOURCE) > $(BOOK_FO_TARGET)
 	$(RUN_FOP) $(BOOK_TOP) -fo $(BOOK_FO_TARGET) -pdf $(BOOK_PDF_TARGET)
 
