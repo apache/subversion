@@ -95,8 +95,9 @@ get_creds (const char **username,
      wrong reading the file, no big deal.  What really matters is that
      we failed to get the creds, so allow libsvn_auth to try the next
      provider. */
-  svn_config_read_auth_data (&creds_hash, pb->cred_kind,
-                             pb->realmstring, config_dir, pool);
+  svn_error_clear (svn_config_read_auth_data (&creds_hash, pb->cred_kind,
+                                              pb->realmstring, config_dir,
+                                              pool));
   if (creds_hash != NULL)
     {
       if (! def_username)
@@ -141,15 +142,11 @@ save_creds (svn_boolean_t *saved,
             const char *config_dir,
             apr_pool_t *pool)
 {
-  const char *auth_file;
   svn_error_t *err;
   apr_hash_t *creds_hash = NULL;
 
   *saved = FALSE;
 
-  /* Find the correct credentials file to open or create. */
-  auth_file = "booga"; /* ### a path based on cred_kind and realmstring */
-  
   if (strcmp (pb->cred_kind, SVN_AUTH_CRED_SIMPLE) == 0)
     {
       /* If the creds are different from our baton cache, store in hash */
@@ -170,6 +167,7 @@ save_creds (svn_boolean_t *saved,
           err = svn_config_write_auth_data (creds_hash, pb->cred_kind,
                                             pb->realmstring, config_dir, pool);
           *saved = err ? FALSE : TRUE;
+          svn_error_clear (err);
         }
     }
 
@@ -188,6 +186,7 @@ save_creds (svn_boolean_t *saved,
           err = svn_config_write_auth_data (creds_hash, pb->cred_kind,
                                             pb->realmstring, config_dir, pool);
           *saved = err ? FALSE : TRUE;
+          svn_error_clear (err);
         }
     }
 
