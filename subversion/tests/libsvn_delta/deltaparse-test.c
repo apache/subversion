@@ -413,6 +413,8 @@ int main(int argc, char *argv[])
   my_editor.change_dir_prop    = test_change_dir_prop;
   my_editor.change_dirent_prop = test_change_dirent_prop;
 
+  my_editor.finish_edit        = NULL;
+
   /* Set context variables for evaluating a tree-delta */
   base_version = 1;
   base_path = svn_string_create ("/root", globalpool);
