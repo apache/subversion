@@ -243,17 +243,20 @@
       sobre los ficheros que están actualizados, <emphasis>no</emphasis>
       sobre modificaciones locales.</para>
 
-    <para><command>svn status</command> prints all files that have
-      local modifications.  By default, the repository is not
-      contacted.  While this subcommand accepts a fair number of
-      options, the following are the most commonly used ones:</para>
+    <para><command>svn status</command> imprime todos los ficheros que
+      tienen modificaciones locales. Por defecto, no se contacta con el
+      repositorio<!--TODO:the repository is not contacted...eso de "el
+      repositorio no es contactado" no queda muy bien-->. Mientras
+      este subcomando acepta un número justo de opciones, los siguientes
+      son los usados más comúnmente:</para>
 
     <variablelist>
       <varlistentry>
         <term><option>-u</option></term>
         <listitem>
-          <para>Contact the repository to determine, and then display,
-            out-of-dateness information.</para>
+          <para>Contacta con el repositorio para determinar, y después
+            mostrar, la información más desactualizada<!--TODO:
+            out-of-dateness information-->.</para>
         </listitem>
       </varlistentry>
       
