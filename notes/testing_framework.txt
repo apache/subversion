@@ -40,18 +40,18 @@ sub-tests it can run.  It has a standard interface:
 
 3.  The program returns either 0 (success) or 1 (if any sub-test failed).
 
-4.  The program prints standardized, human-readable output after
-    finishing a test.
+4.  Upon finishing a test, the program reports the results in a format
+    which is both machine-readable (for the benefit of automatic
+    regression tracking scripts), and human-readable (for the sake of
+    painstaking grovelling by hand in the dead of night):
 
-      (argv[0]) test (N):  (description) ............... (PASS | FAIL)
+      (PASS | FAIL): (argv[0]) (argv[1]): (description)
 
 For example,
 
   [sussman@newton:~] ./frobtest 2
-
-  frobtest test 2: frobnicating fragile data..................... PASS
-
-
+  PASS: frobtest 2: frobnicating fragile data
+  [sussman@newton:~] 
 
 How to write a new sub-test
 ---------------------------
