@@ -56,7 +56,6 @@
 
 #include <apr_pools.h>
 #include <apr_file_io.h>
-#include <xmlparse.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -303,7 +302,14 @@ typedef struct svn_delta_walk_t
                                     svn_propchange_location_t location);
 
 
-  /* We are going to add a new file named NAME.    */
+  /* We are going to add a new file named NAME.  The callback can store
+     a baton for the new file in **FILE_BATON; whatever value is stored there
+     can be passed on to 
+
+should store
+     whatever state it needs for that file in **FILE_BATON
+
+     **FILE_BATON to 
   svn_error_t *(*add_file) (svn_string_t *name,
 			    void *walk_baton, void *parent_baton,
 			    svn_string_t *ancestor_path,
@@ -316,7 +322,8 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*replace_file) (svn_string_t *name,
 				void *walk_baton, void *parent_baton,
 				svn_string_t *ancestor_path,
-				svn_vernum_t ancestor_version);
+				svn_vernum_t ancestor_version,
+                                void **file_baton);
 
 
 } svn_delta_walk_t;
