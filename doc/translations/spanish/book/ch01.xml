@@ -201,7 +201,7 @@
 
     <variablelist>
       <varlistentry>
-        <term>Versionamiento de directorios</term> <!--TODO:Directory
+        <term>Versionado de directorios</term> <!--TODO:Directory
            versioning-->
         <listitem>
           <para>CVS solamente sigue la historia de ficheros individuales,
@@ -218,7 +218,7 @@
         <term>Historial real de versiones</term>
               <!--TODO:True version history-->
         <listitem>
-          <para>Desde que CVS está limitado al versionamiento de ficheros
+          <para>Desde que CVS está limitado al versionado de ficheros
             <!--TODO:to file versioning-->, operaciones como copiar y
             renombrar&mdash;las cuales pueden ocurrir a ficheros, pero
             que realmente son cambios al contenido de un directorio
@@ -300,11 +300,11 @@
       </varlistentry>
 
       <varlistentry>
-        <term>Ramificación y etiquetación eficientes</term>
+        <term>Ramificación y etiquetado eficientes</term>
         <!--TODO:Efficient branching and tagging-->
         <listitem>
           <para>
-            El coste de ramificación y etiquetación no necesita ser
+            El coste de ramificación y etiquetado no necesita ser
             proporcional al tamaño del proyecto. Subversion crea ramas y
             etiquetas simplemente copiando el proyecto, usando un mecanismo
             similar al enlace-duro.<!--TODO:hard-link.--> De este modo estas
@@ -320,8 +320,8 @@
           <para>Subversion no tiene un paquete historico;<!--TODO:baggage-->
             está implementado como una colección de librerías compartidas de
             C con una API <!--TODO:traducir API?-->bien definida. Esto hace
-            de Subversion extremadamente mantenible y usable por otras
-            aplicaciones y lenguajes.</para>
+            de Subversion extremadamente fácil de mantener y reutilizable 
+            por otras aplicaciones y lenguajes.</para>
         </listitem>
       </varlistentry>
 
