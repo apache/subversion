@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-06-21 09:04+0200\n"
-"PO-Revision-Date: 2004-06-19 02:20+0200\n"
+"POT-Creation-Date: 2004-06-25 22:10+0200\n"
+"PO-Revision-Date: 2004-06-25 22:15+0200\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2531,7 +2531,8 @@ msgstr "'%s' finnes ikke"
 msgid "Path '%s' does not exist"
 msgstr "Filstien '%s' finnes ikke"
 
-#: libsvn_client/commit.c:661 libsvn_client/copy.c:413
+#: libsvn_client/commit.c:661 libsvn_client/copy.c:397
+#: libsvn_client/copy.c:413
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Filstien '%s' finnes allerede"
@@ -2599,7 +2600,7 @@ msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 #: libsvn_client/revisions.c:92 libsvn_client/status.c:120
 #: libsvn_client/status.c:169 libsvn_client/switch.c:114
 #: libsvn_client/update.c:85 libsvn_wc/adm_ops.c:2067 libsvn_wc/copy.c:291
-#: libsvn_wc/entries.c:1374 libsvn_wc/entries.c:1792 libsvn_wc/props.c:282
+#: libsvn_wc/entries.c:1374 libsvn_wc/entries.c:1793 libsvn_wc/props.c:282
 #: libsvn_wc/questions.c:171 libsvn_wc/update_editor.c:2709
 #, c-format
 msgid "'%s' is not under version control"
@@ -2680,11 +2681,6 @@ msgstr ""
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "Filstien '%s' finnes ikke i revisjon %ld"
 
-#: libsvn_client/copy.c:397
-#, c-format
-msgid "Path '%s' already exists."
-msgstr "Filstien '%s' finnes allerede."
-
 #: libsvn_client/copy.c:418
 #, c-format
 msgid "Unrecognized node kind of '%s'"
@@ -2714,7 +2710,8 @@ msgstr "Innslag for '%s' finnes (men arbeidskopi-filen mangler)"
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
-"Kilde-URL '%s' er fra et fremmed kodelager; beholder det som adskilt arbeidskopi"
+"Kilde-URL '%s' er fra et fremmed kodelager; beholder det som adskilt "
+"arbeidskopi"
 
 #: libsvn_client/copy.c:1022
 #, c-format
@@ -2838,11 +2835,12 @@ msgid "Directory '%s' has no URL"
 msgstr "Katalogen '%s' mangler adresse"
 
 #: libsvn_client/diff.c:2046
-msgid "At least one revision must be non-local for a pegged diff."
-msgstr "Minst én revisjon må være ikke-lokal for en bundet diff."
+msgid "At least one revision must be non-local for a pegged diff"
+msgstr "Minst én revisjon må være ikke-lokal for en bundet diff"
 
 #: libsvn_client/diff.c:2260 libsvn_client/diff.c:2265
-#: libsvn_client/diff.c:2376 libsvn_client/export.c:719 libsvn_client/ra.c:752
+#: libsvn_client/diff.c:2376 libsvn_client/export.c:719 libsvn_client/ra.c:690
+#: libsvn_client/ra.c:810
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s' har ingen nettadresse"
@@ -2940,20 +2938,29 @@ msgstr "Kan ikke finne post for '%s'"
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "Manglende sti-endringsinformasjon for '%s' i revisjon %ld"
 
-#: libsvn_client/ra.c:614
+#: libsvn_client/ra.c:556
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "Filstien '%s' finnes ikke i revisjon %ld"
 
-#: libsvn_client/ra.c:674 libsvn_client/ra.c:679 libsvn_client/ra.c:684
+#: libsvn_client/ra.c:617 libsvn_client/ra.c:752
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "Kan ikke finne kodelagerplassering for '%s' i revisjon %ld"
 
-#: libsvn_client/ra.c:704
+#: libsvn_client/ra.c:628
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' i revisjon %ld er et urelatert objekt"
+
+#: libsvn_client/ra.c:757
+#, c-format
+msgid ""
+"The location for '%s' for revision %ld does not exist in the repository or "
+"refers to an unrelated object"
+msgstr ""
+"Plasseringen for '%s' for revisjon %ld finnes ikke i kodelageret, eller "
+"refererer til et urelatert objekt"
 
 #: libsvn_client/relocate.c:56
 #, c-format
@@ -2990,7 +2997,7 @@ msgstr "Referanse til ikke-eksisterende revisjon %ld i filsystem '%s'"
 msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
 msgstr "Uforanderlig fil: Filsystem '%s', revisjon %ld, sti '%s'"
 
-#: libsvn_fs_base/fs.c:926
+#: libsvn_fs_base/fs.c:1077
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -3001,7 +3008,7 @@ msgstr ""
 "skape problemer for hotcopy-algoritmen. Hvis problemet vedvarer, \n"
 "prøv å deaktivere det i DB_CONFIG."
 
-#: libsvn_fs_base/fs.c:945
+#: libsvn_fs_base/fs.c:1096
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -3023,7 +3030,7 @@ msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
 msgstr "Filen eksisterer allerede: Filsystem '%s', revisjon %ld, sti '%s'"
 
 #: libsvn_fs_fs/err.c:40
-msgid "filesystem object has not been opened yet"
+msgid "Filesystem object has not been opened yet"
 msgstr "Filsystemobjektet har ikke blitt åpnet enda"
 
 #: libsvn_fs_fs/err.c:61
@@ -3101,8 +3108,8 @@ msgid "Malformed text rep offset line in node-rev"
 msgstr "Misformet angivelse i node-rev av tekstrepresentasjonens forskyving"
 
 #: libsvn_fs_fs/fs_fs.c:593
-msgid "Missing kind field in node-rev."
-msgstr "Mangler typefelt i node-rev."
+msgid "Missing kind field in node-rev"
+msgstr "Mangler typefelt i node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:624
 msgid "Missing cpath in node-rev"
@@ -3116,13 +3123,13 @@ msgstr "Misformet copyroot-linje i node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Misformet copyfrom-linje i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2865
-msgid "Attempted to write to non-transaction."
-msgstr "Forsøk på å skrive til en ikke-transaksjon."
+#: libsvn_fs_fs/fs_fs.c:779
+msgid "Attempted to write to non-transaction"
+msgstr "Forsøk på å skrive til en ikke-transaksjon"
 
 #: libsvn_fs_fs/fs_fs.c:863
-msgid "Malformed representation header."
-msgstr "Ugyldig hodedata for representasjon."
+msgid "Malformed representation header"
+msgstr "Ugyldig hodedata for representasjon"
 
 #: libsvn_fs_fs/fs_fs.c:887
 msgid "Missing node-id in node-rev"
@@ -3133,12 +3140,12 @@ msgid "Corrupt node-id in node-rev"
 msgstr "Korrupt node-id i node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:938
-msgid "Revision file lacks trailing newline."
-msgstr "Revisjonsfil mangler avsluttende linjeskift."
+msgid "Revision file lacks trailing newline"
+msgstr "Revisjonsfil mangler avsluttende linjeskift"
 
 #: libsvn_fs_fs/fs_fs.c:950
-msgid "Final line in revision file longer than 64 characters."
-msgstr "Siste linje i revisjonsfil er lengre enn 64 tegn."
+msgid "Final line in revision file longer than 64 characters"
+msgstr "Siste linje i revisjonsfil er lengre enn 64 tegn"
 
 #: libsvn_fs_fs/fs_fs.c:963
 msgid "Final line in revision file missing space."
@@ -3168,8 +3175,8 @@ msgid "svndiff requested position beyond end of stream."
 msgstr "svndiff forespurte posisjon forbi slutten av datastrømmen."
 
 #: libsvn_fs_fs/fs_fs.c:1362
-msgid "svndiff window length is corrupt."
-msgstr "Korrupt vindulengde for svndiff."
+msgid "svndiff window length is corrupt"
+msgstr "Korrupt vindulengde for svndiff"
 
 #: libsvn_fs_fs/fs_fs.c:1498 libsvn_fs_fs/fs_fs.c:1511
 #: libsvn_fs_fs/fs_fs.c:1517
@@ -3208,8 +3215,8 @@ msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ugyldig prop-mod-merke i rev-file"
 
 #: libsvn_fs_fs/fs_fs.c:2098
-msgid "Copying from transactions not allowed."
-msgstr "Kopiering fra transaksjoner er ikke tillatt."
+msgid "Copying from transactions not allowed"
+msgstr "Kopiering fra transaksjoner er ikke tillatt"
 
 #: libsvn_fs_fs/fs_fs.c:2340 libsvn_fs_fs/fs_fs.c:2347
 msgid "next-id file corrupt"
@@ -3218,6 +3225,10 @@ msgstr "next-id-fil er korrupt"
 #: libsvn_fs_fs/fs_fs.c:2573
 msgid "Invalid change type."
 msgstr "Ugyldig endringstype."
+
+#: libsvn_fs_fs/fs_fs.c:2865
+msgid "Attempted to write to non-transaction."
+msgstr "Forsøk på å skrive til en ikke-transaksjon."
 
 #: libsvn_fs_fs/fs_fs.c:2884
 msgid "Can't set text contents of a directory"
@@ -3234,12 +3245,12 @@ msgid "Can't chmod '%s'"
 msgstr "Kan ikke endre filrettigheter på '%s'"
 
 #: libsvn_fs_fs/fs_fs.c:3407
-msgid "Transaction out of date."
-msgstr "Transaksjonen er foreldet."
+msgid "Transaction out of date"
+msgstr "Transaksjonen er foreldet"
 
 #: libsvn_fs_fs/fs_fs.c:3646
-msgid "No such transaction."
-msgstr "Ingen slik transaksjon."
+msgid "No such transaction"
+msgstr "Ingen slik transaksjon"
 
 #: libsvn_ra/ra_loader.c:210
 #, c-format
@@ -3270,29 +3281,29 @@ msgstr "Kunne ikke lage en PUT-forespørsel (%s)"
 msgid "applying log message to %s"
 msgstr "Bruker loggmelding på %s"
 
-#: libsvn_ra_dav/fetch.c:256
+#: libsvn_ra_dav/fetch.c:257
 msgid "Could not save the URL of the version resource"
 msgstr "Kunne ikke lagre adressen på den versjonerte ressursen"
 
-#: libsvn_ra_dav/fetch.c:400
+#: libsvn_ra_dav/fetch.c:401
 #, c-format
 msgid "Could not create a GET request for '%s'"
 msgstr "Kunne ikke lage GET-forespørsel for %s"
 
-#: libsvn_ra_dav/fetch.c:464
+#: libsvn_ra_dav/fetch.c:465
 #, c-format
 msgid "GET request failed for '%s'"
 msgstr "GET-forespørsel feilet for %s"
 
-#: libsvn_ra_dav/fetch.c:587
+#: libsvn_ra_dav/fetch.c:588
 msgid "Could not save file"
 msgstr "Kunne ikke lagre filen"
 
-#: libsvn_ra_dav/fetch.c:636
+#: libsvn_ra_dav/fetch.c:637
 msgid "Error writing to stream: unexpected EOF"
 msgstr "Feil under skriving til strøm, forventet EOF"
 
-#: libsvn_ra_dav/fetch.c:821
+#: libsvn_ra_dav/fetch.c:822
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -3303,15 +3314,19 @@ msgstr ""
 "   forventet kontrollsum:  %s\n"
 "   gjeldende kontrollsum:  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1088
+#: libsvn_ra_dav/fetch.c:1089
 msgid "Server does not support date-based operations"
 msgstr "Tjeneren støtter ikke datobaserte operasjoner"
 
-#: libsvn_ra_dav/fetch.c:1095
+#: libsvn_ra_dav/fetch.c:1096
 msgid "Invalid server response to dated-rev request"
 msgstr "Ugyldig tjenersvar på forespørsel for dated-rev"
 
-#: libsvn_ra_dav/fetch.c:1182
+#: libsvn_ra_dav/fetch.c:1237
+msgid "get-locations REPORT not implemented"
+msgstr "get-locations REPORT er ikke implementert"
+
+#: libsvn_ra_dav/fetch.c:1323
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -3319,17 +3334,17 @@ msgstr ""
 "DAV-forespørsel feilet. Det er mulig at haken til kodelagerets pre-revprop-"
 "change enten feilet eller ikke finnes"
 
-#: libsvn_ra_dav/fetch.c:1925
+#: libsvn_ra_dav/fetch.c:2066
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Feil under skriving til '%s': Uventet EOF"
 
-#: libsvn_ra_dav/fetch.c:2062
+#: libsvn_ra_dav/fetch.c:2203
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Ukjent XML-koding: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2320
+#: libsvn_ra_dav/fetch.c:2461
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr ""
 "REPORT-responsens håndtering kunne ikke fullføre kjøringen av "
@@ -3479,7 +3494,7 @@ msgstr "Oppgrader tjeneren til versjon 0.19 eller senere."
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "Modul for tilgang til kodelager via protokollen WebDav (DeltaV)."
 
-#: libsvn_ra_dav/session.c:865
+#: libsvn_ra_dav/session.c:866
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_dav."
 msgstr "Mangler støtte for innstikkemodulens ABI-versjon (%d) for ra_dav."
@@ -3521,6 +3536,10 @@ msgstr "Forespørselen %s returnerte ugyldig XML i svaret: %s (%s)"
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "Forespørselen %s feilet på '%s'"
+
+#: libsvn_ra_svn/client.c:1095
+msgid "get-locations not implemented"
+msgstr "get-locations ikke implementert"
 
 #: libsvn_repos/dump.c:425
 #, c-format
@@ -3676,16 +3695,16 @@ msgid ""
 "The entry '%s' is no longer a directory; remove the entry before updating"
 msgstr "Posten '%s' er ikke lengre en katalog. Slett den før oppdatering"
 
-#: libsvn_wc/adm_crawler.c:590
+#: libsvn_wc/adm_crawler.c:607
 msgid "Error aborting report"
 msgstr "Feil mens rapportering ble avbrutt"
 
-#: libsvn_wc/adm_crawler.c:687
+#: libsvn_wc/adm_crawler.c:704
 #, c-format
 msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
 msgstr "Kontrollsum for '%s' er feil. Forventet: '%s', gjeldende: '%s'"
 
-#: libsvn_wc/adm_crawler.c:712
+#: libsvn_wc/adm_crawler.c:729
 msgid "Error opening local file"
 msgstr "Feil under åpning av lokal fil"
 
@@ -3810,8 +3829,7 @@ msgstr "Kan ikke tilbakestille '%s': Nodetypen er ikke støttet"
 #: libsvn_wc/adm_ops.c:1408
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
-msgstr ""
-"Kan ikke tilbakestille '%s': Nodetypen i arbeidskopien er ikke støttet"
+msgstr "Kan ikke tilbakestille '%s': Nodetypen i arbeidskopien er ikke støttet"
 
 #: libsvn_wc/adm_ops.c:1455
 msgid ""
@@ -3867,8 +3885,8 @@ msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
 "first"
 msgstr ""
-"Kan ikke kopiere eller flytte '%s': Den er foreløpig ikke i kodelageret. Prøv "
-"innsending først"
+"Kan ikke kopiere eller flytte '%s': Den er foreløpig ikke i kodelageret. "
+"Prøv innsending først"
 
 #: libsvn_wc/entries.c:119
 #, c-format
@@ -3991,22 +4009,22 @@ msgstr "Oppføringen '%s' er allerede under versjonskontroll"
 msgid "Entry '%s' has illegal schedule"
 msgstr "Oppføringen '%s' er forberedt for å gjøre en ulovlig oppgave"
 
-#: libsvn_wc/entries.c:1669
+#: libsvn_wc/entries.c:1670
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "Ingen slik oppføring: '%s'"
 
-#: libsvn_wc/entries.c:1735
+#: libsvn_wc/entries.c:1736
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "Katalogen '%s' har ingen THIS_DIR-oppføring"
 
-#: libsvn_wc/entries.c:1803
+#: libsvn_wc/entries.c:1804
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "'%s' har en ukjent nodetype"
 
-#: libsvn_wc/entries.c:1838
+#: libsvn_wc/entries.c:1839
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "Fant '%s' uventet: Filstien er merket som savnet"
