@@ -270,7 +270,7 @@ svn_fs_base__err_lock_expired (svn_fs_t *fs, const char *token)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_LOCK, 0,
+    (SVN_ERR_FS_LOCK_EXPIRED, 0,
      "Lock has expired:  lock-token '%s' in filesystem '%s'",
      token, fs->path);
 }

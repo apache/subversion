@@ -87,9 +87,12 @@ txn_body_lock (void *baton, trail_t *trail)
 
   SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
 
-  /* Until we implement directory locks someday: */
-  if (kind != svn_node_file)
+  /* Until we implement directory locks someday, we only allow locks
+     on files or non-existent paths. */
+  if (kind == svn_node_dir)
     return svn_fs_base__err_not_file (trail->fs, args->path);
+  if (kind == svn_node_none)
+    kind = svn_node_file;    /* pretend, so the name can be reserved */
 
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
