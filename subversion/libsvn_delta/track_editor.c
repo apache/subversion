@@ -303,11 +303,10 @@ close_edit (void *edit_baton)
     {
       char *path;
       void *val;
-      apr_ssize_t ignored_len;
       svn_stringbuf_t path_str;
       enum svn_recurse_kind r;
 
-      apr_hash_this (hi, (void *) &path, &ignored_len, &val);
+      apr_hash_this (hi, (void *) &path, NULL, &val);
 
       /* Sigh. */
       path_str.data = path;

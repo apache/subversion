@@ -1276,7 +1276,7 @@ merge (const char **conflict_p,
 
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
           
       /* KEY will be the entry name in ancestor, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
@@ -1515,7 +1515,7 @@ merge (const char **conflict_p,
       svn_fs_dirent_t *s_entry, *t_entry;
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
           
       apr_hash_this (hi, &key, &klen, &val);
       s_entry = val;

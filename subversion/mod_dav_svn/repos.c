@@ -1884,7 +1884,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_fs_dirent_t *dirent;
       int is_file;

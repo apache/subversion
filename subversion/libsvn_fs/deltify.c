@@ -249,7 +249,7 @@ deltify_undeltify (svn_fs_t *fs,
         {
           const void *key;
           void *val;
-          apr_size_t klen;
+          apr_ssize_t klen;
           svn_fs_dirent_t *entry;
           
           /* KEY will be the entry name in source, VAL the dirent */

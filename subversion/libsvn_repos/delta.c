@@ -477,7 +477,7 @@ delta_proplists (struct context *c,
       const svn_string_t *s_value;
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
           
       /* KEY is property name in target, VAL the value */
       apr_hash_this (hi, &key, &klen, &val);
@@ -856,7 +856,7 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
     {
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
       int this_distance;
       svn_fs_dirent_t *this_entry;
       int s_is_dir;
@@ -963,7 +963,7 @@ delta_dirs (struct context *c,
       const svn_fs_dirent_t *s_entry, *t_entry;
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
       svn_stringbuf_t *target_fullpath =
         svn_stringbuf_create (target_path, subpool);
           
@@ -1109,7 +1109,7 @@ delta_dirs (struct context *c,
           const svn_fs_dirent_t *s_entry;
           const void *key;
           void *val;
-          apr_size_t klen;
+          apr_ssize_t klen;
           svn_stringbuf_t *source_fullpath = svn_stringbuf_create (source_path,
                                                                    subpool);
           int is_dir;

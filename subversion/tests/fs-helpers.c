@@ -217,7 +217,7 @@ get_dir_entries (apr_hash_t *tree_entries,
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       svn_fs_dirent_t *dirent;
       svn_stringbuf_t *full_path;
@@ -325,7 +325,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
        hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       svn_test__tree_entry_t *entry;
 
@@ -371,7 +371,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
        hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
 
       apr_hash_this (hi, &key, &keylen, &val);
