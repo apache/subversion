@@ -30,7 +30,10 @@
      The fourth arg says to use the "prefork" style of operation.
        NOTE: The fourth arg is needed for FreeBSD systems (broken
        threads), but should be left out for other platforms (which
-       will cause Apache to default to a threaded model of operation)
+       will cause Apache to default to a threaded model of
+       operation).  Also note that "libmm.so" is needed for the
+       prefork option;  if you're running FreeBSD, you may have to
+       build it out of /usr/ports.
 
      Note: if you build Subversion with --enable-maintainer-mode, then
      do the same for Apache. mod_dav_svn uses Apache's maintainer-mode
