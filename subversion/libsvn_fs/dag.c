@@ -1604,50 +1604,60 @@ svn_error_t *
 svn_fs__dag_copy (dag_node_t *to_node,
                   const char *entry,
                   dag_node_t *from_node,
+                  svn_boolean_t preserve_history,
                   svn_revnum_t from_rev,
                   const char *from_path,
                   trail_t *trail)
 {
-  skel_t *from_node_rev, *to_node_rev;
-  svn_fs_id_t *new_id;
+  const svn_fs_id_t *id;
 
-  /* Make a copy of the original node revision skel. */
-  SVN_ERR (get_node_revision (&from_node_rev, from_node, trail));
-  to_node_rev = svn_fs__copy_skel (from_node_rev, trail->pool);
-  
-  /* Set the copy option in the new skel. */
-  {
-    skel_t *copy_option;
-    char *rev_str = apr_psprintf (trail->pool, "%ld", from_rev);
+  if (preserve_history)
+    {
+      skel_t *from_node_rev, *to_node_rev;
+      
+      /* Make a copy of the original node revision skel. */
+      SVN_ERR (get_node_revision (&from_node_rev, from_node, trail));
+      to_node_rev = svn_fs__copy_skel (from_node_rev, trail->pool);
+      
+      /* Set the copy option in the new skel. */
+      {
+        skel_t *copy_opt;
+        char *rev_str = apr_psprintf (trail->pool, "%ld", from_rev);
+        
+        copy_opt = svn_fs__make_empty_list (trail->pool);
+        svn_fs__prepend (svn_fs__str_atom (from_path, trail->pool), copy_opt);
+        svn_fs__prepend (svn_fs__str_atom (rev_str, trail->pool), copy_opt);
+        svn_fs__prepend (svn_fs__str_atom ("copy", trail->pool), copy_opt);
+        
+        /* If the from_node was itself a copy, we don't want to preserve
+           that copy history in the new node. */
+        if (SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (to_node_rev)))
+          SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (to_node_rev)) = NULL;
+        
+        /* Set or replace with the new copy history. */
+        svn_fs__append (copy_opt, SVN_FS__NR_HEADER (to_node_rev));
+      }
+      
+      /* The new node doesn't know what revision it was created in yet. */
+      (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (to_node_rev)))->len = 0;
+      
+      /* Store the new node under a new id in the filesystem.
+         Note: The id is not related to from_node's id.  This is
+         because the new node is not a next revision of from_node, but
+         rather a copy of it.  Since for copies, all the ancestry
+         information we care about is recorded in the copy options, there
+         is no reason to make the id's be related.  */
+      SVN_ERR (svn_fs__create_node ((svn_fs_id_t **) &id,
+                                    to_node->fs, to_node_rev, trail));
+    }
+  else  /* don't preserve history */
+    {
+      id = svn_fs__dag_get_id (from_node);
+    }
+      
+  /* Set the entry in to_node to the new id. */
+  SVN_ERR (svn_fs__dag_set_entry (to_node, entry, id, trail));
 
-    copy_option = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (svn_fs__str_atom (from_path, trail->pool), copy_option);
-    svn_fs__prepend (svn_fs__str_atom (rev_str, trail->pool), copy_option);
-    svn_fs__prepend (svn_fs__str_atom ("copy", trail->pool), copy_option);
-
-    /* If the from_node was itself a copy, we don't want to preserve
-       that copy history in the new node. */
-    if (SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (to_node_rev)))
-      SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (to_node_rev)) = NULL;
-
-    /* Set or replace with the new copy history. */
-    svn_fs__append (copy_option, SVN_FS__NR_HEADER (to_node_rev));
-  }
-
-  /* The new node doesn't know what revision it was created in yet. */
-  (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (to_node_rev)))->len = 0;
-  
-  /* Store the new node under a new id in the filesystem.
-     Note: The new_id is not related to from_node's id.  This is
-     because the new node is not a next revision of from_node, but
-     rather a copy of it.  Since for copies, all the ancestry
-     information we care about is recorded in the copy options, there
-     is no reason to make the id's be related.  */
-  SVN_ERR (svn_fs__create_node (&new_id, to_node->fs, to_node_rev, trail));
-  
-  /* Set the entry in to_node to the id of new, copied node. */
-  SVN_ERR (svn_fs__dag_set_entry (to_node, entry, new_id, trail));
-  
   return SVN_NO_ERROR;
 }
 

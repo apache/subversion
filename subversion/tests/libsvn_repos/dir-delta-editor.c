@@ -86,12 +86,10 @@ test_replace_root (void *edit_baton,
 
 
 static svn_error_t *
-add_or_replace_dir (svn_stringbuf_t *name,
-                    void *parent_baton,
-                    svn_stringbuf_t *base_path,
-                    svn_revnum_t base_revision,
-                    void **child_baton,
-                    svn_boolean_t is_replace)
+test_replace_directory (svn_stringbuf_t *name,
+                        void *parent_baton,
+                        svn_revnum_t base_revision,
+                        void **child_baton)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   struct dir_baton *d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
@@ -105,47 +103,19 @@ add_or_replace_dir (svn_stringbuf_t *name,
   d->edit_baton = pd->edit_baton;
   *child_baton = d;
 
-  if (SVN_IS_VALID_REVNUM(base_revision)) /* todo: and base_revision
-                                             != base_revision we
-                                             already have? */
-    {
-      SVN_ERR (svn_fs_revision_root (&rev_root, pd->edit_baton->fs, 
-                                     base_revision,
-                                     pd->edit_baton->pool));   
-    }
+  SVN_ERR (svn_fs_revision_root (&rev_root,
+                                 pd->edit_baton->fs,
+                                 base_revision,
+                                 pd->edit_baton->pool));
 
-  /* If this is a replace or an add with history, do a copy. */
-  if (rev_root) 
-    {
-      return svn_fs_copy (rev_root,
-                          (base_path ? base_path->data : d->path->data),
-                          pd->edit_baton->txn_root,
-                          d->path->data,
-                          pd->edit_baton->pool);
-    }
-  else if (! is_replace)
-    {
-      /* This wasn't a replace, and not an add with history */
-      return svn_fs_make_dir (pd->edit_baton->txn_root,
-                              d->path->data,
-                              pd->edit_baton->pool);
-    }
+  SVN_ERR (svn_fs_link (rev_root,
+                        d->path->data,
+                        pd->edit_baton->txn_root,
+                        d->path->data,
+                        pd->edit_baton->pool));
+
+
   return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-test_replace_directory (svn_stringbuf_t *name,
-                        void *parent_baton,
-                        svn_revnum_t base_revision,
-                        void **child_baton)
-{
-  return add_or_replace_dir (name,
-                             parent_baton,
-                             NULL,
-                             base_revision,
-                             child_baton,
-                             TRUE);
 }
 
 
@@ -156,22 +126,48 @@ test_add_directory (svn_stringbuf_t *name,
                     svn_revnum_t copyfrom_revision,
                     void **child_baton)
 {
-  return add_or_replace_dir (name,
-                             parent_baton,
-                             NULL,
-                             copyfrom_revision,
-                             child_baton,
-                             FALSE);
+  struct dir_baton *pd = (struct dir_baton *) parent_baton;
+  struct dir_baton *d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
+
+  /* Construct the full path of the new directory */
+  d->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
+  svn_path_add_component (d->path, name, svn_path_local_style);
+
+  /* Fill in other baton members */
+  d->edit_baton = pd->edit_baton;
+  *child_baton = d;
+
+  if (copyfrom_path)  /* add with history */
+    {
+      svn_fs_root_t *rev_root = NULL;
+
+      SVN_ERR (svn_fs_revision_root (&rev_root,
+                                     pd->edit_baton->fs, 
+                                     copyfrom_revision,
+                                     pd->edit_baton->pool));   
+      
+      SVN_ERR (svn_fs_copy (rev_root,
+                            copyfrom_path->data,
+                            pd->edit_baton->txn_root,
+                            d->path->data,
+                            pd->edit_baton->pool));
+    }
+  else  /* add without history */
+    {
+      SVN_ERR (svn_fs_make_dir (pd->edit_baton->txn_root,
+                                d->path->data,
+                                pd->edit_baton->pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-add_or_replace_file (svn_stringbuf_t *name,
-                     void *parent_baton,
-                     svn_stringbuf_t *base_path,
-                     svn_revnum_t base_revision,
-                     void **file_baton,
-                     svn_boolean_t is_replace)
+test_replace_file (svn_stringbuf_t *name,
+                   void *parent_baton,
+                   svn_revnum_t base_revision,
+                   void **file_baton)
 {
   struct dir_baton *pd = (struct dir_baton *) parent_baton;
   struct file_baton *fb = apr_pcalloc (pd->edit_baton->pool, sizeof (*fb));
@@ -185,47 +181,19 @@ add_or_replace_file (svn_stringbuf_t *name,
   fb->dir_baton = pd;
   *file_baton = fb;
 
-  if (SVN_IS_VALID_REVNUM(base_revision)) /* todo: and base_revision
-                                             != base_revision we
-                                             already have? */
-    {
-      SVN_ERR (svn_fs_revision_root (&rev_root, pd->edit_baton->fs, 
-                                     base_revision, 
-                                     pd->edit_baton->pool)); 
-    }
+  SVN_ERR (svn_fs_revision_root (&rev_root,
+                                 pd->edit_baton->fs,
+                                 base_revision,
+                                 pd->edit_baton->pool));
 
-  /* If this is a replace or an add with history, do a copy. */
-  if (rev_root)
-    {
-      return svn_fs_copy (rev_root,
-                          fb->path->data,
-                          pd->edit_baton->txn_root,
-                          fb->path->data,
-                          pd->edit_baton->pool);
-    }
-  else if (! is_replace)
-    {
-      /* This wasn't a replace, and not an add with history */
-      return svn_fs_make_file (pd->edit_baton->txn_root,
-                               fb->path->data,
-                               pd->edit_baton->pool);
-    }
+  SVN_ERR (svn_fs_link (rev_root,
+                        fb->path->data,
+                        pd->edit_baton->txn_root,
+                        fb->path->data,
+                        pd->edit_baton->pool));
+
+
   return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-test_replace_file (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **file_baton)
-{
-  return add_or_replace_file (name,
-                              parent_baton,
-                              NULL,
-                              base_revision,
-                              file_baton,
-                              TRUE);
 }
 
 
@@ -236,12 +204,40 @@ test_add_file (svn_stringbuf_t *name,
                svn_revnum_t copyfrom_revision,
                void **file_baton)
 {
-  return add_or_replace_file (name,
-                              parent_baton,
-                              copyfrom_path,
-                              copyfrom_revision,
-                              file_baton,
-                              FALSE);
+  struct dir_baton *pd = (struct dir_baton *) parent_baton;
+  struct file_baton *fb = apr_pcalloc (pd->edit_baton->pool, sizeof (*fb));
+
+  /* Construct the full path of the new directory */
+  fb->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
+  svn_path_add_component (fb->path, name, svn_path_local_style);
+
+  /* Fill in other baton members */
+  fb->dir_baton = pd;
+  *file_baton = fb;
+
+  if (copyfrom_path)  /* add with history */
+    {
+      svn_fs_root_t *rev_root = NULL;
+
+      SVN_ERR (svn_fs_revision_root (&rev_root,
+                                     pd->edit_baton->fs,
+                                     copyfrom_revision,
+                                     pd->edit_baton->pool));
+
+      SVN_ERR (svn_fs_copy (rev_root,
+                            copyfrom_path->data,
+                            pd->edit_baton->txn_root,
+                            fb->path->data,
+                            pd->edit_baton->pool));
+    }
+  else  /* add without history */
+    {
+      SVN_ERR (svn_fs_make_file (pd->edit_baton->txn_root,
+                                 fb->path->data,
+                                 pd->edit_baton->pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

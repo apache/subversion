@@ -272,7 +272,7 @@ replace_directory (svn_stringbuf_t *name,
 
       SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
                                      base_revision, new_dirb->subpool));
-      SVN_ERR (svn_fs_copy (other_root, new_dirb->path->data,
+      SVN_ERR (svn_fs_link (other_root, new_dirb->path->data,
                             eb->txn_root, new_dirb->path->data,
                             new_dirb->subpool));
     }
@@ -421,6 +421,7 @@ replace_file (svn_stringbuf_t *name,
 
       SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
                                      base_revision, new_fb->subpool));
+      /* ### todo kff xxx: */
       SVN_ERR (svn_fs_copy (other_root, new_fb->path->data,
                             eb->txn_root, new_fb->path->data,
                             new_fb->subpool));

@@ -386,12 +386,16 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
 /* Make ENTRY in TO_NODE be a copy of FROM_NODE, as part of TRAIL.
    TO_NODE must be mutable.
 
-   The new node will record the fact that it was copied from FROM_PATH
-   in FROM_REV; therefore, FROM_NODE should be the node found at
-   FROM_PATH in FROM_REV, although this is not checked.  */
+   If PRESERVE_HISTORY is true, the new node will record that it was
+   copied from FROM_PATH in FROM_REV; therefore, FROM_NODE should be
+   the node found at FROM_PATH in FROM_REV, although this is not
+   checked.  
+
+   If PRESERVE_HISTORY is false, FROM_PATH and FROM_REV are ignored.  */
 svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
                                const char *entry,
                                dag_node_t *from_node,
+                               svn_boolean_t preserve_history,
                                svn_revnum_t from_rev,
                                const char *from_path,
                                trail_t *trail);

@@ -853,6 +853,9 @@ svn_error_t *svn_fs_rename (svn_fs_root_t *root,
    If FROM_PATH in FROM_ROOT is a directory, copy the tree it refers
    to recursively.
 
+   The copy will remember its source; use svn_fs_copied_from() to
+   access this information.
+
    TO_ROOT must be the root of a transaction; FROM_PATH must be the
    root of a revision.  (Requiring FROM_PATH to be the root of a
    revision makes the implementation trivial: there is no detectable
@@ -860,6 +863,9 @@ svn_error_t *svn_fs_rename (svn_fs_root_t *root,
    simply adding a reference to it.  So the operation takes place in
    constant time.  However, there's no reason not to extend this to
    mutable nodes --- it's just more code.)
+
+   Note: to do a copy without preserving copy history, use
+   svn_fs_link().
 
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
@@ -869,6 +875,17 @@ svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
                           apr_pool_t *pool);
 
 
+/* Like svn_fs_copy(), but doesn't record copy history.  I.e., you
+   cannot use svn_fs_copied_from() later to find out where this copy
+   came from.
+
+   Use svn_fs_link() in situations where you don't care about the copy
+   history, because it is slightly cheaper than svn_fs_copy().  */
+svn_error_t *svn_fs_link (svn_fs_root_t *from_root,
+                          const char *from_path,
+                          svn_fs_root_t *to_root,
+                          const char *to_path,
+                          apr_pool_t *pool);
 
 /* Files.  */
 

@@ -440,10 +440,11 @@ typedef struct svn_delta_edit_fns_t
   
   /* We are going to add a new subdirectory named NAME.  We will use
      the value this callback stores in *CHILD_BATON as the
-     PARENT_BATON for further changes in the new subdirectory.  If
-     COPYFROM_PATH is non-NULL, this add has history (which is the
-     copy case), and its most recent path-y alias was COPYFROM_PATH,
-     which was at version COPYFROM_REVISION. */
+     PARENT_BATON for further changes in the new subdirectory.  
+
+     If COPYFROM_PATH is non-NULL, this add has history (i.e., is a
+     copy), and the origin of the copy may be recorded as
+     COPYFROM_PATH under COPYFROM_REVISION.  */
   svn_error_t *(*add_directory) (svn_stringbuf_t *name,
                                  void *parent_baton,
                                  svn_stringbuf_t *copyfrom_path,
@@ -452,7 +453,7 @@ typedef struct svn_delta_edit_fns_t
 
   /* We are going to change the directory entry named NAME to a
      subdirectory.  The callback must store a value in *CHILD_BATON
-     that will be used as the PARENT_BATON for subsequent changes in
+     that should be used as the PARENT_BATON for subsequent changes in
      this subdirectory.  BASE_REVISION is the current revision of the
      subdirectory. */
   svn_error_t *(*replace_directory) (svn_stringbuf_t *name,
@@ -483,11 +484,12 @@ typedef struct svn_delta_edit_fns_t
 
   /* We are going to add a new file named NAME.  The callback can
      store a baton for this new file in **FILE_BATON; whatever value
-     it stores there will be passed through to apply_textdelta and/or
-     apply_propdelta.  If COPYFROM_PATH is non-NULL, this add has
-     history (which is the copy case), and its most recent path-y
-     alias was COPYFROM_PATH, which was at version
-     COPYFROM_REVISION. */
+     it stores there should be passed through to apply_textdelta
+     and/or apply_propdelta.
+
+     If COPYFROM_PATH is non-NULL, this add has history (i.e., is a
+     copy), and the origin of the copy may be recorded as
+     COPYFROM_PATH under COPYFROM_REVISION.  */
   svn_error_t *(*add_file) (svn_stringbuf_t *name,
                             void *parent_baton,
                             svn_stringbuf_t *copy_path,
@@ -496,7 +498,7 @@ typedef struct svn_delta_edit_fns_t
 
   /* We are going to change the directory entry named NAME to a file.
      The callback can store a baton for this new file in **FILE_BATON;
-     whatever value it stores there will be passed through to
+     whatever value it stores there should be passed through to
      apply_textdelta and/or apply_propdelta.  This file has a current
      revision of BASE_REVISION.  */
   svn_error_t *(*replace_file) (svn_stringbuf_t *name,
