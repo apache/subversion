@@ -1329,6 +1329,12 @@ base_version (void)
   SVN_VERSION_BODY;
 }
 
+static const char *
+base_get_description (void)
+{
+  return _("Module for working with a Berkeley DB repository.");
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -1338,6 +1344,7 @@ static fs_library_vtable_t library_vtable = {
   base_open,
   base_delete_fs,
   base_hotcopy,
+  base_get_description,
   base_bdb_set_errcall,
   base_bdb_recover,
   base_bdb_logfiles,

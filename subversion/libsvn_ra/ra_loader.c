@@ -539,8 +539,8 @@ svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
 
 
 svn_error_t *
-svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
-                            apr_pool_t *pool)
+svn_ra_print_modules (svn_stringbuf_t *output,
+                      apr_pool_t *pool)
 {
   const struct ra_lib_defn *defn;
   const char * const *schemes;
@@ -548,7 +548,6 @@ svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
   const svn_ra__vtable_t *vtable;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  *descriptions = svn_stringbuf_create ("", pool);
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
     {
       char *line;
@@ -563,17 +562,20 @@ svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
       if (initfunc)
         {
           SVN_ERR (initfunc (svn_ra_version(), &vtable));
+
+          SVN_ERR (check_ra_version (vtable->get_version (), defn->ra_name));
+
           line = apr_psprintf (iterpool, "* ra_%s : %s\n",
                                defn->ra_name,
                                vtable->get_description());
-          svn_stringbuf_appendcstr (*descriptions, line);
+          svn_stringbuf_appendcstr (output, line);
 
           for (schemes = vtable->get_schemes(iterpool); *schemes != NULL;
                ++schemes)
             {
               line = apr_psprintf (iterpool, _("  - handles '%s' schema\n"),
                                    *schemes);
-              svn_stringbuf_appendcstr (*descriptions, line);
+              svn_stringbuf_appendcstr (output, line);
             }
         }
     }
@@ -589,7 +591,8 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
                            void *ra_baton,
                            apr_pool_t *pool)
 {
-  return svn_ra_print_ra_libraries2 (descriptions, pool);
+  *descriptions = svn_stringbuf_create ("", pool);
+  return svn_ra_print_modules (*descriptions, pool);
 }
 
 

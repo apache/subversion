@@ -27,6 +27,8 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "svn_pools.h"
+#include "svn_string.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
@@ -107,34 +109,24 @@ load_module (fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Fetch a library vtable by FS type. */
+/* Fetch a library vtable by a pointer into the library definitions array. */
 static svn_error_t *
-get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
-                    apr_pool_t *pool)
+get_library_vtable_direct (fs_library_vtable_t **vtable,
+                           const struct fs_type_defn *fst,
+                           apr_pool_t *pool)
 {
-  const struct fs_type_defn *fst;
-  const char *fsap_name;
   fs_init_func_t initfunc = NULL;
   const svn_version_t *my_version = svn_fs_version();
   const svn_version_t *fs_version;
 
-  for (fst = fs_modules; fst->fs_type; fst++)
-    {
-      if (strcmp (fs_type, fst->fs_type) == 0)
-        break;
-    }
-
-  if (fst->fs_type)
-    {
-      fsap_name = fst->fsap_name;
-      initfunc = fst->initfunc;
-      if (! initfunc)
-        SVN_ERR (load_module (&initfunc, fsap_name, pool));
-    }
+  initfunc = fst->initfunc;
+  if (! initfunc)
+    SVN_ERR (load_module (&initfunc, fst->fsap_name, pool));
 
   if (! initfunc)
     return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
-                              _("Unknown FS type '%s'"), fs_type);
+                              _("Failed to load module for FS type '%s'"),
+                              fst->fs_type);
 
   SVN_ERR (initfunc (my_version, vtable));
   fs_version = (*vtable)->get_version();
@@ -143,12 +135,29 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
                               _("Mismatched FS module version for '%s':"
                                 " found %d.%d.%d%s,"
                                 " expected %d.%d.%d%s"),
-                              fs_type,
+                              fst->fs_type,
                               my_version->major, my_version->minor,
                               my_version->patch, my_version->tag,
                               fs_version->major, fs_version->minor,
                               fs_version->patch, fs_version->tag);
   return SVN_NO_ERROR;
+}
+
+/* Fetch a library vtable by FS type. */
+static svn_error_t *
+get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
+                    apr_pool_t *pool)
+{
+  const struct fs_type_defn *fst;
+
+  for (fst = fs_modules; fst->fs_type; fst++)
+    {
+      if (strcmp (fs_type, fst->fs_type) == 0)
+        return get_library_vtable_direct (vtable, fst, pool);
+    }
+  
+  return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
+                            _("Unknown FS type '%s'"), fs_type);
 }
 
 /* Fetch the library vtable for an existing FS. */
@@ -894,6 +903,45 @@ svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   return a->vtable->compare (a, b);
 }
+
+svn_error_t *
+svn_fs_print_modules (svn_stringbuf_t *output,
+                      apr_pool_t *pool)
+{
+  const struct fs_type_defn *defn;
+  fs_library_vtable_t *vtable;
+  apr_pool_t *iterpool = svn_pool_create (pool);
+
+  for (defn = fs_modules; defn->fs_type != NULL; ++defn)
+    {
+      char *line;
+      svn_error_t *err;
+
+      svn_pool_clear (iterpool);
+
+      err = get_library_vtable_direct (&vtable, defn, iterpool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_FS_UNKNOWN_FS_TYPE)
+            {
+              svn_error_clear (err);
+              continue;
+            }
+          else
+            return err;
+        }
+
+      line = apr_psprintf (iterpool, "* fs_%s : %s\n",
+                           defn->fsap_name,
+                           vtable->get_description());
+      svn_stringbuf_appendcstr (output, line);
+    }
+
+  svn_pool_destroy (iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Return the library version number. */
 const svn_version_t *

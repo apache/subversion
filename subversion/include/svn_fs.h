@@ -1604,6 +1604,14 @@ svn_error_t *svn_fs_get_locks (svn_fs_t *fs,
                                apr_pool_t *pool);
 
 
+/** @since New in 1.2.
+ *
+ * Append a textual list of all available FS modules to the stringbuf
+ * @a output.
+ */
+svn_error_t *svn_fs_print_modules (svn_stringbuf_t *output,
+                                   apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
