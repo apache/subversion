@@ -54,13 +54,17 @@
 
 
 svn_error_t *
-svn_create_error (ap_status_t errno, svn_boolean_t fatal, ap_pool_t *pool)
+svn_create_error (ap_status_t errno, 
+                  svn_boolean_t fatal, 
+                  svn_string_t *message,
+                  ap_pool_t *pool)
 {
   svn_error_t *new_error = (svn_error_t *) ap_palloc (pool,
                                                       sizeof(svn_error_t));
 
   new_error->errno = errno;
   new_error->fatal = fatal;
+  new_error->message = message;
   new_error->description = svn_string_create (ap_strerror (errno), pool);
   new_error->canonical_errno = ap_canonical_error (errno);
 
@@ -73,6 +77,7 @@ void
 svn_handle_error (svn_error_t err)
 {
   printf ("svn_error: errno %d\n");
+  svn_string_print (err->message);
   svn_string_print (err->description);
 
   /* We can examine the APR canonicalized error here, make general

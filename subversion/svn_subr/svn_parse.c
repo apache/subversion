@@ -77,8 +77,30 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
 {
   ap_hash_t *uberhash;      /* our hash of hashes */
   ap_hash_t *current_hash;  /* the hash we're currently storing vals in */
-
+  ap_status_t result;
+  ap_file_t *FILE;
+  
+  /* Create our uberhash */
   uberhash = ap_make_hash (pool);
+
+  /* Open the config file */
+  result = ap_open (&FILE,
+                    svn_string_2cstring (filename, pool),
+                    APR_READ,
+                    perms,
+                    pool);
+  
+  if (result != APR_SUCCESS)
+    {
+      svn_string_t *msg = svn_string_create 
+        ("svn_parse(): can't open for reading, file ", pool);
+      svn_string_appendstr (filename, pool);
+
+      /* Declare this a fatal error! */
+      svn_handle_error (svn_create_error (result, TRUE, msg, pool));
+    }
+
+
 
   /* now loop through the file (using apr file routines?)...
 
