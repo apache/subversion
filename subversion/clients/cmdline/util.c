@@ -95,7 +95,6 @@ svn_cl__parse_num_args (apr_getopt_t *os,
     {
       if (os->ind >= os->argc)
         {
-          svn_cl__subcommand_help (subcommand, pool);
           return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
                                    0, 0, pool, "");
         }
@@ -119,7 +118,6 @@ svn_cl__parse_all_args (apr_getopt_t *os,
 
   if (os->ind >= os->argc)
     {
-      svn_cl__subcommand_help (subcommand, pool);
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
     }
 
