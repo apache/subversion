@@ -24,7 +24,7 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-6-sect-1">
     
-    <title>Which Server Process to Use?</title>
+    <title>Overview</title>
     
     <para>Subversion was designed with an abstract network layer.
       This means that a repository can be programmatically accessed by
@@ -136,8 +136,197 @@
       </tgroup>      
     </table>
     
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-6-sect-2">
+
+    <title>Network Model</title>
+
+    <para>blah</para>
+
+    <sect2 id="svn-ch-6-sect-2.1">
+      <title>Requests and Responses</title>
+
+      <para>request/response model;  authentication "pulled" by
+        server;  for commits, authn stored as a revprop (ch05 xref);
+        empty svn:author meaning.</para>
+
+    </sect2>
+
+    <sect2 id="svn-ch-6-sect-2.2">
+      <title>Client Credentials Caching</title>
+
+      <para>the itch;  where and when creds are cached;  how to turn
+        off caching;  how to invalidate a cache;  how --username works.</para>
+
+    </sect2>
 
   </sect1>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-6-sect-3">
+    
+    <title>svnserve, a custom server</title>
+
+    <para>blah</para>
+
+    <sect2 id="svn-ch-6-sect-3.1">
+      <title>Modes of Operation</title>
+
+      <para>start at cmdline; daemon (-d) mode; starting via inetd
+      (sample inetd entry); setting a root (-r); tunnel mode
+      (-t)</para>
+
+    </sect2>
+
+    <sect2 id="svn-ch-6-sect-3.2">
+      <title>Built-in authentication and authorization</title>
+
+      <para>creating the users file;  document the svnserve.conf file.</para>
+
+    </sect2>
+    
+    <sect2 id="svn-ch-6-sect-3.3">
+      <title>SSH authentication and authorization</title>
+
+      <para>uses pre-existing SSH system accounts;  authz is determined
+        soley by system permissions on the berkeleydb files;  show
+        example of using unix groups</para>
+
+    </sect2>
+
+  </sect1>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-6-sect-4">
+    
+    <title>httpd, the Apache HTTP server</title>
+
+    <para>blah</para>
+
+    <sect2 id="svn-ch-6-sect-4.1">
+      <title>SVNPath and SVNParentPath directives</title>
+
+      <para>show simplest possible Location block with these
+      directives.</para>
+
+    </sect2>
+
+    <sect2 id="svn-ch-6-sect-4.2">
+      <title>Authentication Options</title>
+
+      <para>anonymous auth;  basic auth via AuthUserFile;  certificate
+        setup:  ptrs to apache docs on setting up httpd.conf for this,
+        and document how to manage client/server certs from client.</para>
+
+    </sect2>
+    
+    <sect2 id="svn-ch-6-sect-4.3">
+      <title>Authorization Options</title>
+
+      <para>blanket access control via 'Require' directive;  per-path
+        access control via mod_authz_svn (document the syntax!)</para>
+
+    </sect2>
+
+
+  </sect1>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-6-sect-5">
+    
+    <title>Using Multiple Servers</title>
+
+    <para>You've seen how a repository can be accessed in many
+      different ways.  But is it possible&mdash;or safe&mdash;for
+      your repository to be accessed by multiple repository access
+      methods simultaneously?  The answer is yes, provided you use a
+      bit of foresight.</para>
+    
+    <para>At any given time, these processes may require read and/or
+      write access to your repository:</para>
+    
+    <itemizedlist>
+      <listitem>
+        <para>regular system users using a Subversion client (as
+          themselves) to access the repository directly;</para>
+      </listitem>
+      <listitem>
+        <para>regular system users connecting to SSH-spawned private
+          <command>svnserve</command> processes (running as
+          themselves) which access the repository;</para>
+      </listitem>
+      <listitem>
+        <para>an <command>svnserve</command> process&mdash;either a
+          daemon or one launched by
+          <command>inetd</command>&mdash;running as a particular fixed
+          user;</para>
+      </listitem>
+      <listitem>
+        <para>an Apache <command>httpd</command> process, running as a
+          particular fixed user.</para>
+      </listitem>
+    </itemizedlist>
+    
+    <para>The most common problem administrators run into is repository
+      ownership and permissions.  Does every process (or user) in the
+      previous list have the rights to read and write the Berkeley DB
+      files?  Assuming you have a Unix-like operating system, a
+      straightforward approach might be to place every potential
+      repository user into a new <literal>svn</literal> group, and
+      make the repository wholly owned by that group.  But even that's
+      not enough, because a process may write to the database files
+      using an unfriendly umask&mdash;one that prevents access by
+      other users.</para>
+    
+    <para>So the next step beyond setting up a common group for
+      repository users is to force every repository-accessing process
+      to use a sane umask.  For users accessing the repository
+      directly, you can make the <command>svn</command> program into a
+      wrapper script that first sets <command>umask 002</command> and
+      then runs the real <command>svn</command> client program.  You
+      can write a similar wrapper script for the
+      <command>svnserve</command> program, and add a <command>umask
+      002</command> command to Apache's own startup script,
+      <filename>apachectl</filename>.</para>
+
+    <!-- TODO: example of such a wrapper script? -->
+    
+    <para>Once you've jumped through these hoops, your repository
+      should be accessible by all the necessary processes.  It may
+      seem a bit messy and complicated, but the problems of having
+      multiple users sharing write-access to common files are classic
+      ones that are not often elegantly solved.</para>
+    
+    <para>Fortunately, most repository administrators will never
+      <emphasis>need</emphasis> to have such a complex configuration.
+      Users who wish to access repositories that live on the same
+      machine are not limited to using <literal>file://</literal>
+      access URLs&mdash;they can typically contact the Apache HTTP
+      server or <command>svnserve</command> using
+      <literal>localhost</literal> for the server name in their
+      <literal>http://</literal> or <literal>svn://</literal> URLs.
+      And to maintain multiple server processes for your Subversion
+      repositories is likely to be more of a headache than necessary.
+      We recommend you choose the server that best meets your needs
+      and stick with it!</para>
+
+  </sect1>
+
+
+
 
 </chapter>
 
