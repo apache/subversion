@@ -742,6 +742,22 @@ svn_error_t *svn_ra_check_path (svn_ra_session_t *session,
                                 svn_node_kind_t *kind,
                                 apr_pool_t *pool);
 
+/**
+ * @since New in 1.2.
+ *
+ * Set @a *dirent to an @c svn_dirent_t associated with @a path at @a
+ * revision.  @a path is relative to the @a session's parent's URL.
+ * If @a path does not exist in @a revision, set @a *dirent to NULL.
+ *
+ * Use @a pool for memory allocation.
+ */
+svn_error_t *svn_ra_stat (svn_ra_session_t *session,
+                          const char *path,
+                          svn_revnum_t revision,
+                          svn_dirent_t **dirent,
+                          apr_pool_t *pool);
+
+
 /** @since New in 1.2.
  *
  * Set @a *uuid to the repository's UUID.

@@ -24,6 +24,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_time.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
@@ -1432,4 +1433,46 @@ const svn_version_t *
 svn_repos_version (void)
 {
   SVN_VERSION_BODY;
+}
+
+
+
+svn_error_t *
+svn_repos_stat (svn_dirent_t **dirent,
+                svn_fs_root_t *root,
+                const char *path,
+                apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  svn_dirent_t *ent;
+  const char *datestring;
+  apr_hash_t *prophash;
+
+  SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+  
+  if (kind == svn_node_none)
+    {
+      *dirent = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  ent = apr_pcalloc (pool, sizeof(*ent));
+  ent->kind = kind;
+
+  if (kind == svn_node_file)
+    SVN_ERR (svn_fs_file_length (&(ent->size), root, path, pool));
+
+  SVN_ERR (svn_fs_node_proplist (&prophash, root, path, pool));
+  if (apr_hash_count(prophash) > 0)
+    ent->has_props = TRUE;
+  
+  SVN_ERR (svn_repos_get_committed_info (&(ent->created_rev),
+                                         &datestring,
+                                         &(ent->last_author),
+                                         root, path, pool));
+  if (datestring)
+    SVN_ERR (svn_time_from_cstring (&(ent->time), datestring, pool));
+
+  *dirent = ent;
+  return SVN_NO_ERROR;
 }
