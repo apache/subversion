@@ -30,8 +30,7 @@ Candidate changes:
     Justification:
       Broken otherwise. (and _still_ broken with only r13961).
     Votes:
-      +1: maxb
-      +1 (r13961 only): epg
+      +1: maxb, epg
 
   * r13978
     Make copy_tests 25 pass over DAV.
