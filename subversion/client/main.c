@@ -268,7 +268,6 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
      callee read streamily from the file. */
 
   svn_string_t *res;
-  svn_error_t *err;
   apr_status_t apr_err;
   char buf[BUFSIZ];
   apr_size_t len = BUFSIZ;
@@ -283,9 +282,11 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
                               filename);
       
   do {
-    err = svn_io_file_reader (f, buf, &len, pool);
-    if (err)
-      return err;
+    apr_err = apr_full_read (f, buf, len, &len);
+    if (apr_err && !APR_STATUS_IS_EOF (apr_err))
+      return svn_error_createf (apr_err, 0, NULL, pool,
+                                "read_from_file: failed to read '%s'",
+                                filename);
     
     svn_string_appendbytes (res, buf, len);
   } while (len != 0);
