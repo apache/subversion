@@ -63,9 +63,12 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 {
   int i;
 
-  SVN_ERR (svn_io_file_printf (file, "\nProperty changes on: %s\n", path));
+  SVN_ERR (svn_io_file_printf (file,
+                               APR_EOL_STR "Property changes on: %s"
+                               APR_EOL_STR, path));
   apr_file_printf (file, 
-     "___________________________________________________________________\n");
+     "___________________________________________________________________"
+     APR_EOL_STR);
 
   for (i = 0; i < propchanges->nelts; i++)
     {
@@ -80,7 +83,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       else
         original_value = NULL;
       
-      SVN_ERR (svn_io_file_printf (file, "Name: %s\n", propchange->name));
+      SVN_ERR (svn_io_file_printf (file, "Name: %s" APR_EOL_STR,
+                                   propchange->name));
 
       /* For now, we have a rather simple heuristic: if this is an
          "svn:" property, then assume the value is UTF-8 and must
@@ -98,7 +102,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               printable_val = original_value->data;
             
-            apr_file_printf (file, "   - %s\n", printable_val);
+            apr_file_printf (file, "   - %s" APR_EOL_STR, printable_val);
           }
         
         if (propchange->value != NULL)
@@ -109,12 +113,12 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               printable_val = propchange->value->data;
 
-            apr_file_printf (file, "   + %s\n", printable_val);
+            apr_file_printf (file, "   + %s" APR_EOL_STR, printable_val);
           }
       }
     }
 
-  apr_file_printf (file, "\n");
+  apr_file_printf (file, APR_EOL_STR);
 
   return SVN_NO_ERROR;
 }
@@ -273,7 +277,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
     {
       /* Print out the diff header. */
       SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
-      SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+      SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
+                                   "%s" APR_EOL_STR,
                                    path_native, equal_string));
 
       SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
@@ -312,7 +317,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
 
           /* Print out the diff header. */
           SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
-          SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+          SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
+                                       "%s" APR_EOL_STR,
                                        path_native, equal_string));
 
           /* If either file is marked as a known binary type, just
@@ -326,22 +332,25 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
             {
               svn_io_file_printf 
                 (outfile,
-                 "Cannot display: file marked as a binary type.\n");
+                 "Cannot display: file marked as a binary type." APR_EOL_STR);
               
               if (mt1_binary && !mt2_binary)
                 svn_io_file_printf (outfile,
-                                    "svn:mime-type = %s\n", mimetype1);
+                                    "svn:mime-type = %s" APR_EOL_STR,
+                                    mimetype1);
               else if (mt2_binary && !mt1_binary)
                 svn_io_file_printf (outfile,
-                                    "svn:mime-type = %s\n", mimetype2);
+                                    "svn:mime-type = %s" APR_EOL_STR,
+                                    mimetype2);
               else if (mt1_binary && mt2_binary)
                 {
                   if (strcmp (mimetype1, mimetype2) == 0)
                     svn_io_file_printf (outfile,
-                                        "svn:mime-type = %s\n", mimetype1);
+                                        "svn:mime-type = %s" APR_EOL_STR,
+                                        mimetype1);
                   else
                     svn_io_file_printf (outfile,
-                                        "svn:mime-type = (%s, %s)\n",
+                                        "svn:mime-type = (%s, %s)" APR_EOL_STR,
                                         mimetype1, mimetype2);
                 }
             }
@@ -415,7 +424,8 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
-  svn_io_file_printf(diff_cmd_baton->outfile, "Index: %s (deleted)\n%s\n", 
+  svn_io_file_printf(diff_cmd_baton->outfile,
+                     "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
                      path, equal_string);
 
   return SVN_NO_ERROR;
