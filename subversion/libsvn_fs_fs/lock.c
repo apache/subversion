@@ -508,9 +508,15 @@ get_lock (svn_lock_t **lock_p,
           /* Reread the lock to avoid a race. */
           SVN_ERR (read_digest_file (NULL, &lock, fs, digest_path, pool));
           if (! lock)
-            return svn_fs_fs__err_no_such_lock (fs, path);
-          
-          SVN_ERR (delete_lock (fs, lock, pool));
+            {
+              svn_pool_destroy (subpool);
+              return svn_fs_fs__err_no_such_lock (fs, path);
+            }
+
+          /* Check to make sure that the lock that we read the second
+             time around is actually expired. */
+          if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
+            SVN_ERR (delete_lock (fs, lock, pool));
           
           /* Destroy our subpool and release the fs write lock. */
           svn_pool_destroy (subpool);
