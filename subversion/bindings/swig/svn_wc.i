@@ -50,6 +50,18 @@
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
 /* -----------------------------------------------------------------------
+   handle svn_wc_entries_read's entries hash
+*/
+
+%typemap(python,in,numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries {
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_entry_t));
+}
+
+
+/* -----------------------------------------------------------------------
    handle svn_wc_notify_func_t/baton pairs
 */
 
