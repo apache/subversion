@@ -62,6 +62,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   svn_string_t path_str;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
+  svn_revnum_t youngest_rev;
 
   if ((start->kind == svn_client_revision_unspecified)
       || (end->kind == svn_client_revision_unspecified))
@@ -156,13 +157,28 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
            (&end_revnum, ra_lib, session, end, 
             basename ? basename->data : NULL, pool));
 
-  SVN_ERR (ra_lib->get_log (session,
-                            condensed_targets,
-                            start_revnum,
-                            end_revnum,
-                            discover_changed_paths,
-                            receiver,
-                            receiver_baton));
+  /* If there have been no commits, there are no logs.
+   *
+   * See also http://subversion.tigris.org/issues/show_bug.cgi?id=692.
+   */
+  SVN_ERR (ra_lib->get_latest_revnum (session, &youngest_rev));
+  if (youngest_rev == 0)
+    {
+      /* Log receivers are free to handle revision 0 specially... But
+         just in case some don't, we make up a message here. */
+      SVN_ERR (receiver (receiver_baton,
+                         NULL, 0, "", "", "No commits in repository.", pool));
+    }
+  else
+    {
+      SVN_ERR (ra_lib->get_log (session,
+                                condensed_targets,
+                                start_revnum,
+                                end_revnum,
+                                discover_changed_paths,
+                                receiver,
+                                receiver_baton));
+    }
 
   /* We're done with the RA session. */
   SVN_ERR (ra_lib->close (session));

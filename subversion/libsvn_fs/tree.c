@@ -2824,7 +2824,7 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
         if (tmp_id->digits[len - 1] == 0)
           tmp_id->digits[len - 2] = -1;
         }
-      while (tmp_id->digits[0] != -1);
+      while ((tmp_id->digits[0] != -1) && (tmp_id->digits[1] != -1));
     }
 
   /* Now sort the array */

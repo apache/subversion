@@ -161,6 +161,12 @@ log_message_receiver (void *baton,
   /* As much date as we ever want to see. */
   char dbuf[SVN_LOG__DATE_MAX];
 
+  if (rev == 0)
+    {
+      printf ("No commits in repository.\n");
+      return SVN_NO_ERROR;
+    }
+
   humanize_date (dbuf, date);
 
 #define SEP_STRING \
@@ -259,6 +265,9 @@ log_message_receiver_xml (void *baton,
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
   char *revstr;
+
+  if (rev == 0)
+    return SVN_NO_ERROR;
 
   revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
   /* <logentry revision="xxx"> */
