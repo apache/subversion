@@ -64,6 +64,133 @@ def export_greek_tree(sbox):
                                         expected_output,
                                         svntest.main.greek_state.copy())
 
+def export_working_copy(sbox):
+  "export working copy"
+  sbox.build()
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        svntest.main.greek_state.copy())
+
+def export_working_copy_with_mods(sbox):
+  "export working copy with mods"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Make a couple of local mods to files
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(mu_path, 'appended mu text')
+  svntest.main.file_append(rho_path, 'new appended text for rho')
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+  expected_disk.tweak('A/D/G/rho',
+                      contents=expected_disk.desc['A/D/G/rho'].contents
+                      + 'new appended text for rho')
+
+  export_target = sbox.add_wc_path('export')
+
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_disk)
+
+def export_over_existing_dir(sbox):
+  "export over existing dir"
+  sbox.build()
+
+  export_target = sbox.add_wc_path('export')
+
+  # Create the target directory which should cause
+  # the export operation to fail.
+  os.mkdir(export_target)
+
+  svntest.actions.run_and_verify_svn("No error where one is expected",
+                                     None, svntest.SVNAnyOutput,
+                                     'export', sbox.wc_dir, export_target)
+
+  # As an extra precaution, make sure export_target doesn't have
+  # anything in it.
+  if len(os.listdir(export_target)):
+    raise svntest.Failure("Unexpected files/directories in " + export_target)
+
+def export_keyword_translation(sbox):
+  "export with keyword translation"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Add a couple of keywords to A/mu and set the svn:keywords
+  # property appropriately to make sure they translated during
+  # the export operation
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '$LastChangedRevision$ $LastChangedBy$')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords', 
+                       'LastChangedRevision LastChangedBy', mu_path)
+  svntest.main.run_svn(None, 'ci',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', 'Added keywords to mu', mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents + 
+                      '$LastChangedRevision: 2 $ $LastChangedBy: ' + 
+                      svntest.main.wc_author + ' $')
+
+  export_target = sbox.add_wc_path('export')
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = export_target
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk)
+
+def export_eol_translation(sbox):
+  "export with eol translation"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Append a '\n' to A/mu and set svn:eol-style to 'CR'
+  # to see if it's applied correctly in the export operation
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, '\n')
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 
+                       'CR', mu_path)
+  svntest.main.run_svn(None, 'ci',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', 'Added eol-style prop to mu', mu_path)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents + 
+                      '\r')
+
+  export_target = sbox.add_wc_path('export')
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = export_target
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk)
+
 ########################################################################
 # Run the tests
 
@@ -72,6 +199,11 @@ def export_greek_tree(sbox):
 test_list = [ None,
               export_empty_directory,
               export_greek_tree,
+              export_working_copy,
+              export_working_copy_with_mods,
+              export_over_existing_dir,
+              export_keyword_translation,
+              export_eol_translation
              ]
 
 if __name__ == '__main__':
