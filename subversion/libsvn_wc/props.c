@@ -958,12 +958,24 @@ svn_wc_prop_set (svn_stringbuf_t *name,
   apr_status_t apr_err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
+  svn_wc_keywords_t *old_keywords;
 
   err = svn_wc_prop_list (&prophash, path, pool);
   if (err)
     return
       svn_error_quick_wrap
       (err, "svn_wc_prop_set: failed to load props from disk.");
+
+  /* If we're changing this file's list of expanded keywords, then
+   * we'll need to invalidate its text timestamp, since keyword
+   * expansion affects the comparison of working file to text base.
+   *
+   * Here we retrieve the old list of expanded keywords; after the
+   * property is set, we'll grab the new list and see if it differs
+   * from the old one.
+   */
+  if ((strcmp (name->data, SVN_PROP_KEYWORDS)) == 0)
+    SVN_ERR (svn_wc__get_keywords (&old_keywords, path->data, NULL, pool));
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
@@ -987,6 +999,37 @@ svn_wc_prop_set (svn_stringbuf_t *name,
                                 1, /* sync! */
                                 pool));
 
+  if ((strcmp (name->data, SVN_PROP_KEYWORDS)) == 0)
+    {
+      svn_wc_keywords_t *new_keywords;
+      SVN_ERR (svn_wc__get_keywords (&new_keywords, path->data, NULL, pool));
+
+      if (svn_wc_keywords_differ (old_keywords, new_keywords, FALSE))
+        {
+          /* If we changed the keywords or newlines, void the entry
+             timestamp for this file, so svn_wc_text_modified_p() does
+             a real (albeit slow) check later on. */
+
+          svn_stringbuf_t *pdir, *basename;
+
+          svn_path_split (path, &pdir, &basename, svn_path_local_style, pool);
+          SVN_ERR (svn_wc__entry_modify (path,
+                                         basename,
+                                         0,
+                                         SVN_INVALID_REVNUM,
+                                         svn_node_file,
+                                         svn_wc_schedule_normal,
+                                         FALSE,
+                                         FALSE,
+                                         0,
+                                         0,
+                                         NULL,
+                                         NULL,
+                                         pool,
+                                         SVN_WC_ENTRY_ATTR_TEXT_TIME,
+                                         NULL));
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1130,12 +1173,17 @@ void svn_wc__eol_value_from_string (const char **value,
 
 /* Helper for svn_wc__get_keywords().
    
-   Given a file at PATH, look up KEYWORD (or a mapping thereof) in its
-   entry.  If the entry attribute is present, duplicate the attribute
-   value in the appropriate field in KEYWORDS, allocating the value in
-   POOL.  */
+   If KEYWORD is a valid keyword, look up its value for PATH, fill in
+   the appropriate field in KEYWORDS with that value (allocated in
+   POOL), and set *IS_VALID_P to TRUE.  If the value is not available,
+   use "" instead.
+
+   If KEYWORD is not a valid keyword, set *IS_VALID_P to FALSE and
+   return with no error.
+*/
 static svn_error_t *
-expand_keyword (svn_io_keywords_t *keywords,
+expand_keyword (svn_wc_keywords_t *keywords,
+                svn_boolean_t *is_valid_p,
                 const char *keyword,
                 const char *path,
                 apr_pool_t *pool)
@@ -1145,6 +1193,8 @@ expand_keyword (svn_io_keywords_t *keywords,
 
   SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool), pool));
   
+  *is_valid_p = TRUE;
+
   if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
       || (! strcmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
@@ -1204,30 +1254,33 @@ expand_keyword (svn_io_keywords_t *keywords,
       else
         keywords->url = svn_string_create_from_buf (value, pool);
     }
-
-  /* else, do nothing.  it's an unrecognized keyword. */
+  else
+    *is_valid_p = FALSE;
   
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__get_keywords (svn_io_keywords_t **keywords,
+svn_wc__get_keywords (svn_wc_keywords_t **keywords,
                       char *path,
-                      char *optional_value,
+                      char *force_list,
                       apr_pool_t *pool)
 {
   svn_stringbuf_t *propval;
-  const char *value;
+  const char *list;
   int offset = 0;
   svn_stringbuf_t *found_word;
+  svn_wc_keywords_t tmp_keywords;
+  svn_boolean_t got_one = FALSE;
 
-  /* Sanity.  Safety.  Stop, drop, n' roll. */
+  /* Start by assuming no keywords. */
   *keywords = NULL;
+  memset (&tmp_keywords, 0, sizeof (tmp_keywords));
 
-  /* Choose a property value to parse:  either the one that came into
+  /* Choose a property list to parse:  either the one that came into
      this function, or the one attached to PATH. */
-  if (optional_value == NULL)
+  if (force_list == NULL)
     {
       svn_stringbuf_t *propname =
         svn_stringbuf_create (SVN_PROP_KEYWORDS, pool);
@@ -1235,36 +1288,35 @@ svn_wc__get_keywords (svn_io_keywords_t **keywords,
       SVN_ERR (svn_wc_prop_get (&propval, propname,
                                 svn_stringbuf_create (path, pool), pool));
       
-      value = propval ? propval->data : NULL;
+      list = propval ? propval->data : NULL;
     }
   else
-    value = optional_value;
+    list = force_list;
 
-  /* Now parse the value for words.  For now, this parser assumes that
-     the value will contain keywords separated by whitespaces.  This
+  /* Now parse the list for words.  For now, this parser assumes that
+     the list will contain keywords separated by whitespaces.  This
      can be made more complex later if somebody cares. */
 
   /* The easy answer. */
-  if (value == NULL)
+  if (list == NULL)
     return SVN_NO_ERROR;
-  else
-    *keywords = apr_pcalloc (pool, sizeof (**keywords));
 
   do {
     /* Find the start of a word by skipping past whitespace. */
-    while ((value[offset] != '\0') && (apr_isspace (value[offset])))
+    while ((list[offset] != '\0') && (apr_isspace (list[offset])))
       offset++;
     
     /* Hit either a non-whitespace or NULL char. */
 
-    if (value[offset] != '\0') /* found non-whitespace char */
+    if (list[offset] != '\0') /* found non-whitespace char */
       {
+        svn_boolean_t is_valid;
         int word_start, word_end;
 
         word_start = offset;
         
         /* Find the end of the word by skipping non-whitespace chars */
-        while ((value[offset] != '\0') && (! apr_isspace (value[offset])))
+        while ((list[offset] != '\0') && (! apr_isspace (list[offset])))
           offset++;
         
         /* Hit either a whitespace or NULL char.  Either way, it's the
@@ -1272,25 +1324,26 @@ svn_wc__get_keywords (svn_io_keywords_t **keywords,
         word_end = offset;
         
         /* Make a temporary copy of the word */
-        found_word = svn_stringbuf_ncreate (value + word_start,
+        found_word = svn_stringbuf_ncreate (list + word_start,
                                             (word_end - word_start),
                                             pool);
         
-        /* If this word is an officially recognized keyword, then
-           this routine will find its expansion (if available) and
-           possibly fill in one of the char ** pointers.  */
-        SVN_ERR (expand_keyword (*keywords, found_word->data, path, pool));
+        SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,
+                                 found_word->data, path, pool));
+        if (is_valid)
+          got_one = TRUE;
       }
 
-  } while (value[offset] != '\0');
+  } while (list[offset] != '\0');
 
+  if (got_one)
+    {
+      *keywords = apr_pcalloc (pool, sizeof (**keywords));
+      memcpy (*keywords, &tmp_keywords, sizeof (**keywords));
+    }
       
   return SVN_NO_ERROR;
 }
-
-
-
-
 
 
 

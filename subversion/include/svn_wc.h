@@ -866,6 +866,75 @@ svn_wc_create_tmp_file (apr_file_t **fp,
                         apr_pool_t *pool);
 
 
+
+/*** Eol conversion and keyword expansion. ***/
+
+/* Values used in keyword expansion. */
+typedef struct svn_wc_keywords_t
+{
+  svn_string_t *revision;
+  svn_string_t *date;
+  svn_string_t *author;
+  svn_string_t *url;
+} svn_wc_keywords_t;
+
+
+/* Return TRUE if A and B do not hold the same keywords.
+ *
+ * If COMPARE_VALUES is set, "same" means that the A and B contain
+ * exactly the same set of keywords, and the values of corresponding
+ * keywords match as well.  Else if COMPARE_VALUES is not set, then
+ * "same" merely means that A and B hold the same set of keywords,
+ * although those keywords' values might differ.
+ *
+ * A and/or B may be NULL; for purposes of comparison, NULL is
+ * equivalent to holding no keywords.
+ */
+svn_boolean_t svn_wc_keywords_differ (svn_wc_keywords_t *a,
+                                      svn_wc_keywords_t *b,
+                                      svn_boolean_t compare_values);
+
+
+/* Copy the contents of SRC to DST, overwriting DST if it exists,
+   possibly performing line ending and keyword translations.
+
+   If EOL_STR is non-NULL, replace whatever bytestring SRC uses to
+   denote line endings with EOL_STR in the output.  If SRC has an
+   inconsistent line ending style, then: if REPAIR is FALSE, return
+   SVN_ERR_IO_INCONSISTENT_EOL and remove DST, else if REPAIR is TRUE,
+   convert any line ending in SRC to EOL_STR in DST.  Recognized line
+   endings are: "\n", "\r", and "\r\n".
+
+   Expand and contract keywords using the contents of KEYWORDS as the
+   new values.  If EXPAND is TRUE, expand contracted keywords and
+   re-expand expanded keywords.  If EXPAND is FALSE, contract expanded
+   keywords and ignore contracted ones.  NULL for any of the keyword
+   values (KEYWORDS->revision, e.g.) indicates that that keyword
+   should be ignored (not contracted or expanded).  If the
+   KEYWORDS structure itself is NULL, keyword substition will be
+   altogether ignored.
+
+   Detect only keywords that are no longer than SVN_IO_MAX_KEYWORD_LEN
+   bytes, including the delimiters and the keyword itself.
+
+   If anything goes wrong during the copy, attempt to delete DST (if
+   it exists).
+
+   Recommendation: if EXPAND is false, then you don't care about the
+   keyword values, so pass empty strings as non-null signifiers.
+
+   Note: If EOL_STR and KEYWORDS are NULL, behavior is just a
+   byte-for-byte copy.  */
+svn_error_t *svn_wc_copy_and_translate (const char *src,
+                                        const char *dst,
+                                        const char *eol_str,
+                                        svn_boolean_t repair,
+                                        svn_wc_keywords_t *keywords,
+                                        svn_boolean_t expand,
+                                        apr_pool_t *pool);
+
+
+
 /* Set *XLATED_P to a path to a possibly translated copy of versioned
  * file VFILE, or to VFILE itself if no translation is necessary.
  * That is, if VFILE's properties indicate newline conversion or

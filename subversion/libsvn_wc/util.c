@@ -111,7 +111,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
 {
   enum svn_wc__eol_style style;
   const char *eol;
-  svn_io_keywords_t *keywords;
+  svn_wc_keywords_t *keywords;
   
   SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile->data, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords,
@@ -153,7 +153,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
       
       if (style == svn_wc__eol_style_fixed)
         {
-          SVN_ERR (svn_io_copy_and_translate (vfile->data,
+          SVN_ERR (svn_wc_copy_and_translate (vfile->data,
                                               tmp_vfile->data,
                                               eol,
                                               TRUE,
@@ -163,7 +163,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
         }
       else if (style == svn_wc__eol_style_native)
         {
-          SVN_ERR (svn_io_copy_and_translate (vfile->data,
+          SVN_ERR (svn_wc_copy_and_translate (vfile->data,
                                               tmp_vfile->data,
                                               SVN_WC__DEFAULT_EOL_MARKER,
                                               FALSE,
@@ -173,7 +173,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
         }
       else if (style == svn_wc__eol_style_none)
         {
-          SVN_ERR (svn_io_copy_and_translate (vfile->data,
+          SVN_ERR (svn_wc_copy_and_translate (vfile->data,
                                               tmp_vfile->data,
                                               NULL,
                                               FALSE,

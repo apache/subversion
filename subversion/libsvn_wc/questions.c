@@ -165,7 +165,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
       entrytime = entry->prop_time;
     }
 
-  if (entry == NULL || (! entrytime))
+  if (! entrytime)
     {
       /* TODO: If either timestamp is inaccessible, the test cannot
          return an answer.  Assume that the timestamps are
