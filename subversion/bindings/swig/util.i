@@ -118,6 +118,8 @@ void apr_terminate(void);
 
 apr_status_t apr_ansi_time_to_apr_time(apr_time_t *result, time_t input);
 
+void apr_pool_destroy(apr_pool_t *p);
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_io.h
