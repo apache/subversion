@@ -143,6 +143,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT,
               "MD5 checksum is missing")
 
+  SVN_ERRDEF (SVN_ERR_DIR_NOT_EMPTY,
+              "Directory needs to be empty but is not")
+
   SVN_ERRDEF (SVN_ERR_XML_ATTRIB_NOT_FOUND,
               "No such XML tag attribute")
 
@@ -292,9 +295,6 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_FS_ALREADY_EXISTS,
               "Item already exists in filesystem")
-
-  SVN_ERRDEF (SVN_ERR_FS_DIR_NOT_EMPTY,
-              "Attempt to remove non-empty filesystem directory")
 
   SVN_ERRDEF (SVN_ERR_FS_ROOT_DIR,
               "Attempt to remove or recreate fs root dir")

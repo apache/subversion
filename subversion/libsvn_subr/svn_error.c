@@ -402,7 +402,7 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 /*-----------------------------------------------------------------*/
 
 #if APR_HAS_THREADS
-/* Cleanup function to reset the allocator mutex so that apr_alloctor_free
+/* Cleanup function to reset the allocator mutex so that apr_allocator_free
    doesn't try to lock a destroyed mutex during pool cleanup or destruction.
  */
 static apr_status_t

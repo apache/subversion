@@ -1623,40 +1623,80 @@ svn_io_fd_from_file (int *fd_p, apr_file_t *file)
 }
 
 
-apr_status_t
-apr_check_dir_empty (const char *path, 
-                     apr_pool_t *pool)
+/**
+ * Determine if a directory is empty or not.
+ * @param Return APR_SUCCESS if the dir is empty, else APR_ENOTEMPTY if not.
+ * @param path The directory.
+ * @param pool Used for temporary allocation.
+ * @remark If path is not a directory, or some other error occurs,
+ * then return the appropriate apr status code.
+ */                        
+static apr_status_t
+apr_dir_is_empty (const char *dir, apr_pool_t *pool)
 {
-  apr_status_t apr_err, retval;
-  apr_dir_t *dir;
+  apr_status_t apr_err;
+  apr_dir_t *dir_handle;
   apr_finfo_t finfo;
+  apr_status_t retval = APR_SUCCESS;
   
-  apr_err = apr_dir_open (&dir, path, pool);
-  if (apr_err)
+  apr_err = apr_dir_open (&dir_handle, dir, pool);
+  if (apr_err != APR_SUCCESS)
     return apr_err;
       
-  /* All systems return "." and ".." as the first two files, so read
-     past them unconditionally. */
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (apr_err) return apr_err;
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (apr_err) return apr_err;
+  /* ### What is the gospel on the APR_STATUS_IS_SUCCESS macro these
+     days? :-) */
 
-  /* Now, there should be nothing left.  If there is something left,
-     return EGENERAL. */
-  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (APR_STATUS_IS_ENOENT (apr_err))
-    retval = APR_SUCCESS;
-  else if (! apr_err)
-    retval = APR_EGENERAL;
-  else
-    retval = apr_err;
+  for (apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir_handle);
+       apr_err == APR_SUCCESS;
+       apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir_handle))
+    {
+      /* Ignore entries for this dir and its parent, robustly.
+         (APR promises that they'll come first, so technically
+         this guard could be moved outside the loop.  But Ryan Bloom
+         says he doesn't believe it, and I believe him. */
+      if (! (finfo.name[0] == '.'
+             && (finfo.name[1] == '\0'
+                 || (finfo.name[1] == '.' && finfo.name[2] == '\0'))))
+        {
+          retval = APR_ENOTEMPTY;
+          break;
+        }
+    }
 
-  apr_err = apr_dir_close (dir);
-  if (apr_err)
+  /* Make sure we broke out of the loop for the right reason. */
+  if (! APR_STATUS_IS_ENOENT (apr_err))
+    return apr_err;
+
+  apr_err = apr_dir_close (dir_handle);
+  if (apr_err != APR_SUCCESS)
     return apr_err;
 
   return retval;
+}
+
+
+svn_error_t *
+svn_io_dir_empty (svn_boolean_t *is_empty_p,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  /* ### Need to do UTF-8 conversion here, when we apply the rest of
+     Marcus Comstedt's patch.  His patch won't cover this function, 
+     since the function didn't exist when he wrote the patch. */
+
+  status = apr_dir_is_empty (path, pool);
+
+  if (APR_STATUS_IS_SUCCESS (status))
+    *is_empty_p = TRUE;
+  else if (APR_STATUS_IS_ENOTEMPTY (status))
+    *is_empty_p = FALSE;
+  else
+    return svn_error_createf (status, 0, NULL, pool,
+                              "unable to check directory '%s'", path);
+
+  return SVN_NO_ERROR;
 }
 
 
