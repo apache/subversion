@@ -3507,11 +3507,9 @@ write_final_current (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Obtain a write lock on the filesystem FS.  Temporary allocations
-   are from POOL. */
-static svn_error_t *
-get_write_lock (svn_fs_t *fs,
-                apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__get_write_lock (svn_fs_t *fs,
+                           apr_pool_t *pool)
 {
   const char *lock_filename;
   svn_node_kind_t kind;
@@ -3550,7 +3548,7 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   apr_hash_index_t *hi;
 
   /* First grab a write lock. */
-  SVN_ERR (get_write_lock (fs, subpool));
+  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
 
   /* Get the current youngest revision. */
   SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, fs, subpool));

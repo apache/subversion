@@ -347,5 +347,9 @@ const char *svn_fs_fs__path_rev (svn_fs_t *fs,
                                  svn_revnum_t rev, 
                                  apr_pool_t *pool);
 
+/* Obtain a write lock on the filesystem FS.  Temporary allocations
+   are from POOL. */
+svn_error_t *svn_fs_fs__get_write_lock (svn_fs_t *fs,
+                                        apr_pool_t *pool);
 
 #endif
