@@ -21,6 +21,7 @@
 
 #include <apr_file_io.h>
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_error.h"
 #include "svn_opt.h"
@@ -635,14 +636,14 @@ close_revision (void *revision_baton)
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
                                  rb->body->data   , &(rb->body->len)));
       if (! rb->pb->quiet)
-        fprintf (stderr, "Revision %ld committed as %ld.\n",
+        fprintf (stderr, _("Revision %ld committed as %ld.\n"),
                  rb->rev_orig, rb->rev_actual);
     }
   else
     {
       rb->pb->rev_drop_count++;
       if (! rb->pb->quiet)
-        fprintf (stderr, "Revision %ld skipped.\n",
+        fprintf (stderr, _("Revision %ld skipped.\n"),
                  rb->rev_orig);
     }
   return SVN_NO_ERROR;
@@ -885,11 +886,11 @@ do_filter (apr_getopt_t *os,
                                             &this_key,
                                             sizeof (this_key)));
           if (this_val == SVN_INVALID_REVNUM)
-            fprintf (stderr, "   '%ld' => (dropped)\n",
+            fprintf (stderr, _("   %ld => (dropped)\n"),
                      this_key);
           else
             fprintf (stderr, 
-                     "   '%ld' => '%ld'\n", 
+                     _("   %ld => %ld\n"),
                      this_key, this_val);
         }
       fprintf (stderr, "\n");

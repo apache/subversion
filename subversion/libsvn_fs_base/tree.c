@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -377,7 +378,7 @@ not_found (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0,
-       "File not found: revision '%ld', path '%s'",
+       _("File not found: revision %ld, path '%s'"),
        root->rev, path);
 }
 
@@ -398,7 +399,7 @@ already_exists (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_ALREADY_EXISTS, 0,
-       "File already exists: filesystem '%s', revision '%ld', path '%s'",
+       _("File already exists: filesystem '%s', revision %ld, path '%s'"),
        fs->path, root->rev, path);
 }
 

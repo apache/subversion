@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_fs.h"
 #include "err.h"
 #include "id.h"
@@ -65,7 +66,7 @@ svn_fs_base__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0,
-     "Corrupt filesystem revision '%ld' in filesystem '%s'",
+     _("Corrupt filesystem revision %ld in filesystem '%s'"),
      rev, fs->path);
 }
 
@@ -108,7 +109,7 @@ svn_fs_base__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
     (SVN_ERR_FS_NO_SUCH_REVISION, 0,
-     "Reference to non-existent revision '%ld' in filesystem '%s'",
+     _("Reference to non-existent revision %ld in filesystem '%s'"),
      rev, fs->path);
 }
 
@@ -163,7 +164,7 @@ svn_fs_base__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
   return
     svn_error_createf
     (SVN_ERR_FS_NOT_MUTABLE, 0,
-     "File is not mutable: filesystem '%s', revision %ld, path '%s'",
+     _("File is not mutable: filesystem '%s', revision %ld, path '%s'"),
      fs->path, rev, path);
 }
 

@@ -431,7 +431,7 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if ((start > youngest) || (end > youngest))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Revisions must not be greater than the youngest revision (%ld)",
+       _("Revisions must not be greater than the youngest revision (%ld)"),
        youngest);
 
   /* Loop over the requested revision range, performing the
@@ -441,7 +441,7 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_pool_clear (subpool);
       SVN_ERR (check_cancel (NULL));
       if (! opt_state->quiet)
-        printf ("Deltifying revision %ld...", revision);
+        printf (_("Deltifying revision %ld..."), revision);
       SVN_ERR (svn_fs_deltify_revision (fs, revision, subpool));
       if (! opt_state->quiet)
         printf (_("done.\n"));
@@ -499,7 +499,7 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if ((lower > youngest) || (upper > youngest))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       "Revisions must not be greater than the youngest revision (%ld)",
+       _("Revisions must not be greater than the youngest revision (%ld)"),
        youngest);
 
   /* Run the dump to STDOUT.  Let the user redirect output into
@@ -614,7 +614,7 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
      recovery actually worked. */
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, svn_repos_fs (repos), pool));
-  printf ("The latest repos revision is %ld.\n",
+  printf (_("The latest repos revision is %ld.\n"),
           youngest_rev);
 
   return SVN_NO_ERROR;

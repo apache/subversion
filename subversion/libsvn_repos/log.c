@@ -19,6 +19,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -159,11 +160,11 @@ svn_repos_get_logs (svn_repos_t *repos,
   if (start > head)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REVISION, 0,
-       "No such revision '%ld'", start);
+       _("No such revision %ld"), start);
   if (end > head)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REVISION, 0,
-       "No such revision '%ld'", end);
+       _("No such revision %ld"), end);
 
   /* If paths were specified, then we only really care about revisions
      in which those paths were changed.  So we ask the filesystem for

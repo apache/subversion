@@ -16,6 +16,7 @@
  */
 
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -421,10 +422,10 @@ dump_node (struct edit_baton *eb,
               && eb->feedback_stream)
             svn_stream_printf 
               (eb->feedback_stream, pool,
-               "WARNING: Referencing data in revision %ld" 
-               ", which is older than the oldest\nWARNING: dumped revision "
-               "(%ld).  Loading this dump into an empty "
-               "repository\nWARNING: will fail.\n",
+               _("WARNING: Referencing data in revision %ld" 
+                 ", which is older than the oldest\nWARNING: dumped revision "
+                 "(%ld).  Loading this dump into an empty "
+                 "repository\nWARNING: will fail.\n"),
                cmp_rev, eb->oldest_dumped_rev);
 
           if (eb->stream)
@@ -951,13 +952,13 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
   /* Validate the revisions. */
   if (start_rev > end_rev)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "Start revision %ld"
-                              " is greater than end revision %ld",
+                              _("Start revision %ld"
+                                " is greater than end revision %ld"),
                               start_rev, end_rev);
   if (end_rev > youngest)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "End revision %ld is invalid "
-                              "(youngest revision is %ld)",
+                              _("End revision %ld is invalid "
+                                "(youngest revision is %ld)"),
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)
     incremental = FALSE; /* revision 0 looks the same regardless of
@@ -1065,7 +1066,7 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
       svn_pool_clear (subpool);
       if (feedback_stream)
         SVN_ERR (svn_stream_printf (feedback_stream, pool,
-                                    "* %s revision %ld.\n",
+                                    _("* %s revision %ld.\n"),
                                     stream ? "Dumped" : "Verified", to_rev));
     }
 

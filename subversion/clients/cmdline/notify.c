@@ -180,19 +180,19 @@ notify (void *baton,
                 if (nb->is_export)
                   {
                     if (nb->in_external)
-                      printf ("Exported external at revision %ld.\n",
+                      printf (_("Exported external at revision %ld.\n"),
                               revision);
                     else
-                      printf ("Exported revision %ld.\n",
+                      printf (_("Exported revision %ld.\n"),
                               revision);
                   }
                 else if (nb->is_checkout)
                   {
                     if (nb->in_external)
-                      printf ("Checked out external at revision %ld.\n",
+                      printf (_("Checked out external at revision %ld.\n"),
                               revision);
                     else
-                      printf ("Checked out revision %ld.\n",
+                      printf (_("Checked out revision %ld.\n"),
                               revision);
                   }
                 else
@@ -200,19 +200,19 @@ notify (void *baton,
                     if (nb->received_some_change)
                       {
                         if (nb->in_external)
-                          printf ("Updated external to revision %ld.\n",
+                          printf (_("Updated external to revision %ld.\n"),
                                   revision);
                         else
-                          printf ("Updated to revision %ld.\n",
+                          printf (_("Updated to revision %ld.\n"),
                                   revision);
                       }
                     else
                       {
                         if (nb->in_external)
-                          printf ("External at revision %ld.\n",
+                          printf (_("External at revision %ld.\n"),
                                   revision);
                         else
-                          printf ("At revision %ld.\n",
+                          printf (_("At revision %ld.\n"),
                                   revision);
                       }
                   }

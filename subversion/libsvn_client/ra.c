@@ -440,8 +440,8 @@ svn_client__prev_log_path (const char **prev_path_p,
         prev_path = apr_pstrdup (pool, path);
       else
         return svn_error_createf (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                                  "Missing changed-path information for "
-                                  "'%s' in revision %ld",
+                                  _("Missing changed-path information for "
+                                    "'%s' in revision %ld"),
                                   path, revision);
     }
   
@@ -576,7 +576,7 @@ svn_client__repos_locations (const char **start_url,
   if (lrb.kind == svn_node_none)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "path '%s' doesn't exist in revision %ld", 
+       _("path '%s' doesn't exist in revision %ld"),
        path, peg_revnum);
 
   /* Populate most of our log receiver baton structure. */
@@ -636,17 +636,17 @@ svn_client__repos_locations (const char **start_url,
   if (! lrb.start_path)
     return svn_error_createf 
       (APR_EGENERAL, NULL,
-       "Unable to find repository location for '%s' in revision %ld",
+       _("Unable to find repository location for '%s' in revision %ld"),
        path, start_revnum);
   if (! lrb.end_path)
     return svn_error_createf 
       (APR_EGENERAL, NULL,
-       "Unable to find repository location for '%s' in revision %ld",
+       _("Unable to find repository location for '%s' in revision %ld"),
        path, end_revnum);
   if (! lrb.peg_path)
     return svn_error_createf 
       (APR_EGENERAL, NULL,
-       "Unable to find repository location for '%s' in revision %ld",
+       _("Unable to find repository location for '%s' in revision %ld"),
        path, peg_revnum);
     
   /* Repository paths might be absolute, but we want to treat them as
@@ -666,7 +666,7 @@ svn_client__repos_locations (const char **start_url,
       if (strcmp (url, svn_path_join (repos_url, lrb.peg_path, pool)) != 0)
         return svn_error_createf
           (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-           "'%s' in revision %ld is an unrelated object.",
+           _("'%s' in revision %ld is an unrelated object."),
            path, youngest);
     }
 

@@ -93,7 +93,7 @@ print_entry (const char *target,
     }
  
   if (SVN_IS_VALID_REVNUM (entry->revision))
-    printf ("Revision: %ld\n", entry->revision);
+    printf (_("Revision: %ld\n"), entry->revision);
 
   switch (entry->kind) 
     {
@@ -156,7 +156,7 @@ print_entry (const char *target,
         }
  
       if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
-        printf ("Copied From Rev: %ld\n", 
+        printf (_("Copied From Rev: %ld\n"),
                 entry->copyfrom_rev);
     }
  
@@ -168,7 +168,7 @@ print_entry (const char *target,
     }
  
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
-    printf ("Last Changed Rev: %ld\n", entry->cmt_rev);
+    printf (_("Last Changed Rev: %ld\n"), entry->cmt_rev);
 
   if (entry->cmt_date)
     SVN_ERR (svn_cl__info_print_time (entry->cmt_date, 

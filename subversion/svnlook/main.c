@@ -807,7 +807,7 @@ print_diff_tree (svn_fs_root_t *root,
 
       SVN_ERR (svn_utf_cstring_from_utf8 (&base_path_native, base_path, pool));
 
-      printf ("Copied: %s (from rev %ld, %s)\n",
+      printf (_("Copied: %s (from rev %ld, %s)\n"),
               path_native, node->copyfrom_rev, base_path_native);
 
       SVN_ERR (svn_fs_revision_root (&base_root,
