@@ -110,19 +110,18 @@ sub new {
 
     my $pool = $self->{pool} ||= SVN::Pool->new;
 
-    $self->{ra} = get_ra_library ($ralib, $self->{url});
+    $self->{ra} = get_ra_library ($ralib, $self->{url}, $pool);
     my $callback = 'SVN::Ra::Callbacks';
 
     # custom callback namespace
     if ($self->{callback} && !ref($self->{callback})) {
-	$callback = $self->{callback};
-	undef $self->{callback};
+	$callback = delete $self->{callback};
     }
-    $self->{callback} ||= $callback->new(auth => $self->{auth},
-						  pool => $pool),
+    # instantiate callbacks
+    $callback = (delete $self->{callback}) || $callback->new (auth => $self->{auth});
 
     $self->{session} = plugin_invoke_open
-	($self->{ra}, $self->{url}, $self->{callback},
+	($self->{ra}, $self->{url}, $callback,
 	 $self->{config} || {}, $pool);
 
     return $self;
@@ -180,11 +179,11 @@ sub new {
 
 sub open_tmp_file {
     local $^W; # silence the warning for unopened temp file
-    my $self = shift;
+    my ($self, $pool) = @_;
     my ($fd, $name) = SVN::Core::io_open_unique_file(
         ( File::Temp::tempfile(
             'XXXXXXXX', OPEN => 0, DIR => File::Spec->tmpdir
-        ))[1], 'tmp', 1, $self->{pool}
+        ))[1], 'tmp', 1, $pool
     );
     return $fd;
 }
