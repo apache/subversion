@@ -682,7 +682,7 @@ Updated to revision 2.
       <sidebar>
         <title>Changing the Repository Without a Working Copy</title>
 
-        <!-- pll - Fri 07 Feb 2003 12:55:07                              -->
+        <!-- ### pll - Fri 07 Feb 2003 12:55:07                            -->
         <!-- I find this sidebar rather confusing here, since you really   -->
         <!-- haven't gone through explaining the svn command line syntax   -->
         <!-- anywhere.  Maybe a short section explaining that subversion   -->
@@ -1177,7 +1177,7 @@ $ svn status README
           <command>svn revert</command>) can be used without any
           network access.  This makes it easy to manage your
           changes-in-progress when you are somewhere without a network
-          connection such as traveling on an airplane, riding a
+          connection, such as traveling on an airplane, riding a
           commuter train or hacking on the beach.</para>
 
         <para>Subversion does this by keeping private caches of
@@ -2000,8 +2000,8 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
     <title>Other Useful Commands</title>
 
       <para>While not as frequently used as the commands previously
-      discussed in this chapter, you will need these commands on
-      occasion.</para>
+      discussed in this chapter, you will occasionally need these
+      commands.</para>
 
     <sect2 id="svn-ch-3-sect-7.1">
       <title><command>svn cleanup</command></title>
@@ -2043,7 +2043,7 @@ M      ./somedir/foo.c
       <title><command>svn import</command></title>
 
       <para>The <command>svn import</command> command is a quick way
-        to move an unversioned tree of files into a repository.</para>
+        to copy an unversioned tree of files into a repository.</para>
 
       <screen>
 $ svnadmin create /usr/local/svn/newrepos
@@ -2056,7 +2056,7 @@ Transmitting file data....
 Committed revision 1.
       </screen>
 
-      <para>The above example places the contents of directory
+      <para>The above example copied the contents of directory
         <filename>mytree</filename> under the directory
         <filename>fooproject</filename> in the repository:</para>
 

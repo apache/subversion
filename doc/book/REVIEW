@@ -1,0 +1,71 @@
+Review and comments on the Subversion book listed by chapter.
+
+Chapter 5
+
+    Section svn-ch-5-sect-2.1
+
+        #1) Blair
+
+            There is this paragraph
+
+            <para>Currently there are five true hooks implemented by the
+            Subversion repository:</para>
+
+            My question is, what makes a hook considered a "true" hook?
+
+    Section svn-ch-5-sect-3.1.1
+
+        #1) Blair
+
+            I think this section on svnlook tree requires more
+            explanation of what is being printed, what is a node
+            revision ID, etc.  It makes statements on how it can be
+            helpful to administrators but doesn't say how.  It also
+            doesn't say how to decide if a dead transaction is really
+            dead.  I suggest either removing it entirely, increasing
+            the description substantially, or least preferably, just
+            linking to an external document that explains this in
+            greater detail, but that's not really appropriate for a
+            book, it it then :)
+
+    Section svn-ch-5-sect-6
+
+        #1) Blair
+
+            I don't know if the "Adding Projects" sections works best
+            here.  It follows pretty specific information on setting
+            up a repository, debugging, recovering, which are highly
+            specific and not generally used.  This section could be
+            missed.  This information is also used by people who
+            aren't Subversion "administrator's".  For example, at my
+            work, there are people creating new projects pretty
+            consistently and we have 61 projects.  While I'm the
+            administrator, the users and programmers also need to know
+            project layout information.
+
+            There's a repository layout section in chapter 4 that this
+            could well be merged into.  If that doesn't work, I would
+            consider moving it up to the front of this chapter.
+
+Chapter 6
+
+    Section svn-ch-6-sect-4
+
+        #1) Blair
+
+            In this sentence:
+
+                The result is a standardized,
+                robust system that is conveniently packaged as part of the
+                Apache 2.0 software, is supported by numerous pieces of core
+                operating system and third-party products, and which doesn't
+                require network administrators to open up yet another custom
+                port.
+
+            What does this mean "is supported by numerous pieces of
+            core operating system ... products"?  It would seem that
+            Apache supports running on these OSes.
+
+            Maybe changing it to read "is supported by numerous
+            operating systems and third-party products, and which ..." 
+            makes more sense.

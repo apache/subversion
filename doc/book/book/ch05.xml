@@ -349,9 +349,10 @@ pre-commit.tmpl
               <command>pre-commit</command> to implement fine-grained
               access control.  At this time, this is the only method
               by which administrators can implement finer-grained access
-              control beyond what <filename>httpd.conf</filename>
+              control beyond what Apache's <filename>httpd.conf</filename>
               offers.  In a future version of Subversion, we plan to
-              implement ACLs directly in the filesystem.</para>
+              implement access control lists (ACLs) directly in the
+              filesystem.</para>
           </listitem>
         </varlistentry>
 
@@ -470,7 +471,7 @@ pre-commit.tmpl
         unique collection of data and access patterns, might require
         a different set of configuration option values.</para>
 
-     <para>The folks at Sleepycat (the producers of Berkeley DB)
+      <para>The folks at Sleepycat (the producers of Berkeley DB)
         understand that different databases have different
         requirements, and so they have provided a mechanism for
         runtime overriding of many of the configuration values for the
@@ -798,6 +799,7 @@ Type "svnadmin help &lt;subcommand&gt;" for help on a specific subcommand.
 
 Available subcommands:
    create
+   deltify
    dump
    help (?, h)
 &hellip;
@@ -1104,9 +1106,8 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
           tree, the script
           <filename>tools/backup/hot-backup.py</filename> illustrates
           the safe way to perform a backup of a Berkeley DB database
-          environment while it's being actively accessed:  recursively
-          copy the entire repository directory, then re-copy the
-          log files listed by <command>db_archive -l</command>.</para>
+          environment while it's being actively accessed:  use the
+          <command>svnadmin hotcopy</command> command.</para>
             
         <para>Generally speaking, only the truly paranoid would need
           to backup their entire repository every time a commit
@@ -1265,20 +1266,20 @@ $
 #!/bin/sh
 
 ### Generate informational output for all outstanding transactions in
-### a Subversion repository
+### a Subversion repository.
 
 SVNADMIN=/usr/local/bin/svnadmin
 SVNLOOK=/usr/local/bin/svnlook
 
-REPOS=${1}
-if [ x$REPOS = x ] ; then
+REPOS="${1}"
+if [ "x$REPOS" = x ] ; then
   echo "usage: $0 REPOS_PATH"
   exit
 fi
 
 for TXN in `${SVNADMIN} lstxns ${REPOS}`; do 
   echo "---[ Transaction ${TXN} ]-------------------------------------------"
-  ${SVNLOOK} info ${REPOS} --transaction ${TXN}
+  ${SVNLOOK} info "${REPOS}" --transaction "${TXN}"
 done
 </programlisting>
       </example>
@@ -1362,7 +1363,7 @@ $
         transactions and checkpoints and pre-write journaling to
         ensure that only the most catastrophic of events
         <footnote>
-          <para>e.g.: hard drive + huge electromagnet = disaster</para>
+          <para>e.g.: hard drive + huge electromagnet = disaster.</para>
         </footnote>
         can permanently destroy a database environment.  A
         sufficiently paranoid repository administrator will be making
@@ -1389,11 +1390,12 @@ $
             this:</para>
               
           <screen>
-Acquiring exclusive lock on repository db, and running recovery procedures.
-Please stand by...
+Please wait; recovering the repository may take some time...
+
 Recovery completed.
 The latest repos revision is 19.
 </screen>
+          <para>This command may take many minutes to complete.</para>
         </listitem>
         <listitem>
           <para>Restart the Subversion server.</para>

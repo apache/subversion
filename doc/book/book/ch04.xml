@@ -90,7 +90,7 @@
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
 
-    <para>As before, assume that you and Sally both have working
+    <para>As before, assume that Sally and you both have working
       copies of the <filename>/trunk/calc</filename> project.</para>
 
     <para>Let's say that you've been given the task of performing a
@@ -222,7 +222,8 @@ Committed revision 341.
         It's an easier procedure, because it doesn't require you to
         check out a large mirror of the repository.  In fact, this
         technique doesn't even require you to have a working copy at
-        all.</para>
+        all.    It can be dangerous though; you do not get a chance
+        to undo your commit.</para>
       
       <figure id="svn-ch4-dia3">
         <title>Repository With New Copy</title>
@@ -1199,7 +1200,7 @@ Committed revision 376.
 
 <screen>
 $ svn copy http://svn.example.com/repos/trunk/calc \
-         http://svn.example.com/branches/calc/stable-1.0
+         http://svn.example.com/branches/calc/stable-1.0 \
          -m "Creating stable branch of calc project."
 
 Committed revision 377.
