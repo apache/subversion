@@ -50,6 +50,10 @@ AC_DEFUN(SVN_FIND_JDK,
   fi
   AC_MSG_RESULT([$JDK_SUITABLE])
 
-  dnl We use JDK in the swig.m4 macros, not in the Makefile
-  dnl AC_SUBST(JDK)
+  JAVAC='$(JDK)/bin/javac'
+  # TODO: Test for Jikes, which should be preferred (for speed) if available
+
+  dnl We use JDK in both the swig.m4 macros and the Makefile
+  AC_SUBST(JDK)
+  AC_SUBST(JAVAC)
 ])
