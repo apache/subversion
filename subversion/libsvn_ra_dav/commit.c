@@ -275,17 +275,24 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                cc->ras->pool,
-                               "The CHECKOUT request failed (#%d) (%s)",
+                               "The CHECKOUT request failed (neon #%d) (%s)",
                                rv, res->vsn_url);
     }
 
   if (code != 201)
     {
-      /* ### error */
+      /* ### need to be more sophisticated with reporting the failure */
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                               cc->ras->pool,
+                               "The CHECKOUT request failed (http #%d) (%s)",
+                               code, res->vsn_url);
     }
   if (locn == NULL)
     {
-      /* ### error */
+      return svn_error_create(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                              cc->ras->pool,
+                              "The CHECKOUT response did not contain a "
+                              "Location: header.");
     }
 
   /* The location is an absolute URI. We want just the path portion. */
