@@ -129,7 +129,7 @@ svn_client__update_internal (const char *path,
       /* ### todo: shouldn't svn_client__get_revision_number be able
          to take a url as easily as a local path?  */
       SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, anchor, pool));
+               (&revnum, ra_lib, session, revision, path, pool));
 
       /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision.  */
