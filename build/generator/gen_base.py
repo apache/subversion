@@ -191,35 +191,10 @@ class DependencyGraph:
     sources = [ ]
     for group in self.deps[type].values():
       sources.extend(group)
-    sources.sort()  # ensures consistency between runs
     return sources
 
-  def get_targets(self, type):
-    targets = self.deps[type].keys()
-    targets.sort()  # ensures consistency between runs
-    return targets
-
   def get_deps(self, type):
-    deps = self.deps[type].items()
-    deps.sort()  # ensures consistency between runs
-
-    ### this function is handy for looking at differences between running
-    ### gen-make using different versions of Python. the dictionary
-    ### algorithm changes periodically, so items are inserted into the
-    ### dependency list in different orders. we do not want to keep this
-    ### enabled, however, as it makes assumptions that the first dependency
-    ### is a source file. in fact, other parts of the code assume that, too,
-    ### so a dumb sort is not possible: we have to sort [1:]. but for
-    ### testing purposes, to look at the output, this can be handy. just
-    ### uncomment the map() call as needed.
-    def test_sorter((objname, sources)):
-      first = sources[0]
-      del sources[0]
-      sources.sort()
-      sources.insert(0, first)
-    #map(test_sorter, deps)
-
-    return deps
+    return self.deps[type].items()
 
 # dependency types
 dep_types = [
@@ -253,21 +228,6 @@ class DependencyNode:
 
   def __str__(self):
     return self.filename
-
-  def __cmp__(self, ob):
-    myname = self.filename
-    if myname == '':
-      myname = self.name
-    othername = ob.filename
-    if othername == '':
-      othername = ob.name
-    return cmp(myname, othername)
-
-  def __hash__(self):
-    myname = self.filename
-    if myname == '':
-      myname = self.name
-    return hash(myname)
 
 class ObjectFile(DependencyNode):
   def __init__(self, filename, compile_cmd = None):
@@ -513,7 +473,6 @@ class TargetI18N(Target):
     Target.__init__(self, name, options, cfg, extmap)
     self.install = options.get('install')
     self.sources = options.get('sources')
-    self.filename = ''
     # Let the Makefile determine this via .SUFFIXES
     self.compile_cmd = None
     self.objext = '.mo'
@@ -669,7 +628,7 @@ class TargetJava(TargetLib):
     self.packages = string.split(options.get('package-roots', ''))
     self.jar = options.get('jar')
     self.deps = [ ]
-    self.filename = ''
+    del self.filename
 
 class TargetJavaHeaders(TargetJava):
   def __init__(self, name, options, cfg, extmap):
@@ -1026,7 +985,7 @@ def _sorted_files(graph, area):
         # to add to the files list now.
         # If the filename is blank, see if there are any NONLIB dependencies
         # rather than adding a blank filename to the list.
-        if t.filename != '':
+        if not isinstance(t, TargetI18N) and not isinstance(t, TargetJava):
           files.append(t.filename)
         else:
           s = graph.get_sources(DT_NONLIB, t.name)

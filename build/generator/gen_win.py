@@ -212,7 +212,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         install_targets.append(self.create_fake_target(target))
 
     # sort these for output stability, to watch out for regressions.
-    install_targets.sort()
+    install_targets.sort(lambda t1, t2: cmp(t1.name, t2.name))
     return install_targets
 
   def create_fake_target(self, dep):
@@ -379,7 +379,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     depends.extend(self.get_win_depends(target, FILTER_PROJECTS))
 
-    depends.sort() ### temporary
     return depends
     
   def get_win_depends(self, target, mode):
@@ -405,7 +404,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     else:
       raise NotImplementedError
 
-    deps.sort()
+    deps.sort(lambda d1, d2: cmp(d1.name, d2.name))
     return deps
 
   def get_direct_depends(self, target):
