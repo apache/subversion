@@ -40,6 +40,13 @@ typedef struct {
 
   const char *anchor;
 
+  /* if doing a regular update, then dst_path == anchor.  if this is a
+     'switch' operation, then this field is the fs path that is being
+     switched to.  This path needs to telescope in the update-editor
+     just like 'anchor' above; it's used for retrieving CR's and
+     vsn-url's during the edit. */
+  const char *dst_path;
+
   /* ### the two fields below will go away, when we switch to filters for
      ### report generation */
 
@@ -53,7 +60,8 @@ typedef struct {
 typedef struct {
   apr_pool_t *pool;
   update_ctx_t *uc;
-  const char *path;
+  const char *path;    /* a telescoping extension of uc->anchor */
+  const char *path2;   /* a telescoping extension of uc->dst_path */
   svn_boolean_t added;
   apr_array_header_t *changed_props;
   apr_array_header_t *removed_props;
@@ -77,10 +85,17 @@ static item_baton_t *make_child_baton(item_baton_t *parent, const char *name,
   baton->pool = pool;
   baton->uc = parent->uc;
 
+  /* Telescope the path based on uc->anchor.  */
   if (parent->path[1] == '\0')  /* must be "/" */
     baton->path = apr_pstrcat(pool, "/", name, NULL);
   else
     baton->path = apr_pstrcat(pool, parent->path, "/", name, NULL);
+
+  /* Telescope the path based on uc->dst_path in the exact same way. */
+  if (parent->path2[1] == '\0')  /* must be "/" */
+    baton->path2 = apr_pstrcat(pool, "/", name, NULL);
+  else
+    baton->path2 = apr_pstrcat(pool, parent->path2, "/", name, NULL);
 
   return baton;
 }
@@ -105,7 +120,7 @@ static void send_vsn_url(item_baton_t *baton)
   const char *href;
 
   /* note: baton->path has a leading "/" */
-  serr = svn_fs_node_id(&id, baton->uc->rev_root, baton->path, baton->pool);
+  serr = svn_fs_node_id(&id, baton->uc->rev_root, baton->path2, baton->pool);
   if (serr != NULL)
     {
       /* ### what to do? */
@@ -113,7 +128,7 @@ static void send_vsn_url(item_baton_t *baton)
     }
 
   stable_id = svn_fs_unparse_id(id, baton->pool);
-  svn_stringbuf_appendcstr(stable_id, baton->path);
+  svn_stringbuf_appendcstr(stable_id, baton->path2);
 
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
 			   DAV_SVN_BUILD_URI_VERSION,
@@ -216,7 +231,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     
     /* Get the CR and two derivative props. ### check for error returns. */
     svn_fs_node_created_rev(&committed_rev,
-                            baton->uc->rev_root, baton->path, baton->pool);
+                            baton->uc->rev_root, baton->path2, baton->pool);
     svn_fs_revision_prop(&committed_date,
                          baton->uc->resource->info->repos->fs,
                          committed_rev, SVN_PROP_REVISION_DATE, baton->pool);
@@ -282,6 +297,7 @@ static svn_error_t * upd_open_root(void *edit_baton,
   b->uc = uc;
   b->pool = pool;
   b->path = uc->anchor;
+  b->path2 = uc->dst_path;
 
   *root_baton = b;
 
@@ -433,7 +449,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   int ns;
   svn_error_t *serr;
-  svn_stringbuf_t *switch_path;
+  const char *dst_path = NULL;
+  const char *dir_delta_target = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
   svn_boolean_t recurse = TRUE;
@@ -462,6 +479,24 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           /* ### assume no white space, no child elems, etc */
           revnum = SVN_STR_TO_REV(child->first_cdata.first->text);
         }
+      if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
+        {
+          /* ### assume no white space, no child elems, etc */
+          dav_svn_uri_info this_info;
+
+          /* split up the 2nd public URL. */
+          serr = dav_svn_simple_parse_uri(&this_info, resource,
+                                          child->first_cdata.first->text,
+                                          resource->pool);
+          if (serr != NULL)
+            {
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "Could not parse dst-path URL.");
+            }
+
+          dst_path = apr_pstrdup(resource->pool, this_info.repos_path);
+        }
+
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
           /* ### assume no white space, no child elems, etc */
@@ -474,6 +509,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               recurse = FALSE;
         }
     }
+
   if (revnum == SVN_INVALID_REVNUM)
     {
       serr = svn_fs_youngest_rev(&revnum, repos->fs, resource->pool);
@@ -484,6 +520,32 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      "revision for the update process.");
         }
     }
+
+  /* If dst_path never came over the wire, then assume this is a
+     normal update.  */
+  if (dst_path == NULL)
+    {
+      /* All vsn-urls and CR props should be mined from the normal
+         anchor of the update:  */
+      dst_path = apr_pstrdup(resource->pool, resource->info->repos_path);
+
+      /* The 2nd argument to dir_delta should be [anchor + target]. */
+      dir_delta_target = dst_path;
+      if (target)
+        dir_delta_target = apr_pstrcat(resource->pool, 
+                                       dir_delta_target, "/", target, NULL);
+    }
+  else  /* this is some kind of 'switch' operation */
+    {
+      /* All vsn-urls and CR props will be mined from dst_path, which
+         should already be equal to the fs portion of the extra URL we
+         received. */
+
+      /* The 2nd argument to dir_delta should be the fs portion the
+         extra URL. */
+      dir_delta_target = dst_path;
+    }
+
 
   editor = svn_delta_default_editor(resource->pool);
   editor->set_target_revision = upd_set_target_revision;
@@ -504,6 +566,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.opool = resource->pool;  /* ### not ideal, but temporary anyhow */
   uc.output = report;
   uc.anchor = resource->info->repos_path;
+  uc.dst_path = dst_path;
 
   /* Get the root of the revision we want to update to. This will be used
      to generated stable id values. */
@@ -514,16 +577,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                  "The revision root could not be created.");
     }
 
-  /* We want dir_delta to run on -identical- fs paths.  */
-  switch_path =
-    svn_stringbuf_create (resource->info->repos_path, resource->pool);  
-  if (target)
-    svn_path_add_component_nts (switch_path, target);
-
+  /* When we call svn_repos_finish_report, it will ultimately run
+     dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
+     case of an update or status, these paths should be identical.  In
+     the case of a switch, they should be different. */
   serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
                                 repos->repos, 
                                 resource->info->repos_path, target,
-                                switch_path->data,
+                                dir_delta_target,
                                 FALSE, /* don't send text-deltas */
                                 recurse,
                                 editor, &uc, resource->pool);
