@@ -922,17 +922,6 @@ svn_error_t *svn_wc_process_committed (const char *path,
 
 
 
-/* DEPRECATED: This function will vanish when issue #806 is resolved.
-   Use svn_wc_prop_set() instead.
-
-   Set property NAME to VALUE on PATH.  If VALUE is null, remove
-   property NAME. */
-svn_error_t *svn_wc_set_wc_prop (const char *path,
-                                 const char *name,
-                                 const svn_string_t *value,
-                                 apr_pool_t *pool);
-
-
 
 /*** Traversal info. ***/
 
