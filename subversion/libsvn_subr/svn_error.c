@@ -161,7 +161,7 @@ svn_error__set_error_pool (apr_pool_t *pool,
   if (rooted_here)
     {
       apr_err = apr_pool_userdata_set ((void *) 1, SVN_ERROR_POOL_ROOTED_HERE,
-                                  apr_pool_cleanup_null, pool);
+                                       apr_pool_cleanup_null, pool);
       if (apr_err)
         abort_on_pool_failure (apr_err);
     }
@@ -338,6 +338,16 @@ svn_pool_create_debug (apr_pool_t *parent_pool,
                              apr_pool_cleanup_null, ret_pool);
     }
 
+  /* Sanity check:  do we actually have an error pool? */
+  {
+    svn_boolean_t subpool_of_p_p;
+    apr_pool_t *error_pool;
+    svn_error__get_error_pool (ret_pool, &error_pool,
+                               &subpool_of_p_p);
+    if (! error_pool)
+      abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
+  }
+
 #ifdef SVN_POOL_DEBUG
   {
     fprintf (stderr, 
@@ -362,7 +372,6 @@ svn_pool_clear_debug (apr_pool_t *p,
                       int line)
 #endif /* SVN_POOL_DEBUG */
 {
-  apr_pool_t *parent;
   apr_pool_t *error_pool;
   svn_pool_feedback_t *vtable, vtable_tmp;
   svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
@@ -379,17 +388,9 @@ svn_pool_clear_debug (apr_pool_t *p,
   }
 #endif /* SVN_POOL_DEBUG */
 
-  parent = apr_pool_get_parent (p);
-  if (parent)
-    {
-      /* Get the error pool */
-      svn_error__get_error_pool (parent, &error_pool, &subpool_of_p_p);
-    }
-  else
-    {
-      error_pool = NULL;    /* Paranoia. */
-      subpool_of_p_p = 1;   /* The only possibility. */
-    }
+  /* Get the error_pool from this pool.  If it's rooted in this pool, we'll
+     need to re-create it after we clear the pool. */
+  svn_error__get_error_pool (p, &error_pool, &subpool_of_p_p);
 
   /* Get the feedback vtable */
   apr_pool_userdata_get ((void **)&vtable, SVN_ERROR_FEEDBACK_VTABLE, p);
@@ -399,11 +400,11 @@ svn_pool_clear_debug (apr_pool_t *p,
       /* Here we have a problematic situation.  We're getting ready to
          clear this pool P, which will invalidate all its userdata.
          The problem is that as far as we can tell, the error pool and
-         feedback vtable on this pool are copies of the originals,
+         feedback vtable on this pool aren't copies of the originals,
          they *are* the originals.  We need to be able to re-create
          them in this pool after it has been cleared.
 
-         For the error pool, this turn out to be not that big of a
+         For the error pool, this turns out to be not that big of a
          deal.  We don't actually need to keep *the* original error
          pool -- we can just initialize a new error pool to stuff into
          P here after it's been cleared.
@@ -414,7 +415,7 @@ svn_pool_clear_debug (apr_pool_t *p,
          So, we have to copy out those function pointers temporarily. */
       vtable_tmp = *vtable;
     }
- 
+
   /* Clear the pool.  All userdata of this pool is now invalid. */
   apr_pool_clear (p);
 
