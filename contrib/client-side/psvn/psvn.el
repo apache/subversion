@@ -1498,13 +1498,17 @@ Symbolic links to directories count as directories (see `file-directory-p')."
   "Parse the svn info output for the base directory.
 Show the repository url after this call in the *svn-status* buffer.
 When called with the prefix argument 0, reset the information to nil.
-This hides the repository information again."
+This hides the repository information again.
+
+When ARG is t, don't update the svn status buffer. This useful for
+non-interactive use."
   (interactive "P")
   (if (eq arg 0)
       (setq svn-status-base-info nil)
     (svn-run-svn nil t 'parse-info "info" ".")
     (svn-status-parse-info-result))
-  (svn-status-update-buffer))
+  (unless (eq arg t)
+    (svn-status-update-buffer)))
 
 (defun svn-status-parse-info-result ()
   (let ((url))
@@ -2697,10 +2701,10 @@ Commands:
                  (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
       (svn-status-create-arg-file svn-status-temp-arg-file ""
                                   svn-status-files-to-commit "")
-      (setq svn-status-files-to-commit nil)
       (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
                    "-F" svn-status-temp-file-to-remove)
-      (run-hooks 'svn-log-edit-done-hook))
+      (run-hooks 'svn-log-edit-done-hook)
+      (setq svn-status-files-to-commit nil))
     (set-window-configuration svn-status-pre-commit-window-configuration)
     (message "svn-log editing done")))
 
