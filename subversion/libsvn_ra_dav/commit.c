@@ -299,28 +299,26 @@ static svn_error_t * add_child(resource_t **child,
   rsrc->local_path = svn_stringbuf_dup(parent->local_path, pool);
   svn_path_add_component_nts(rsrc->local_path, name, svn_path_local_style);
 
-  /* If the resource was just created, then its WR appears under the
-     parent and it has no VR URL. If the resource already existed, then
-     it has no WR and its VR can be found in the WC properties. */
-  if (created)
+  /* Case 1:  the resource is truly "new".  Either it was added as a
+     completely new object, or implicitly created via a COPY.  Either
+     way, it has no VR URL anywhere.  However, we *can* derive its WR
+     URL by the rules of deltaV:  "copy structure is preserved below
+     the WR you COPY to."  */
+  if (created || (parent->vsn_url == NULL))
     {
       /* ### does the workcol have a trailing slash? do some extra work */
       rsrc->wr_url = apr_pstrcat(pool, parent->wr_url, "/", name, NULL);
     }
+
+  /* Case 2: the resource is already under version-control somewhere.
+     This means it has a VR URL already, and the WR URL won't exist
+     until it's "checked out". */
   else
     {
       svn_stringbuf_t *vsn_url_value;
 
-      /* NOTE: we cannot use get_version_url() here. If we don't have the
-         right version url, then we certainly can't use the "head" (which
-         is the one fetched by get_version_url()).
-
-         Theoretically, we *do* have the base revision, so we could track
-         down through the Baseline Collection for that revision and grab
-         the version resource URL.
-
-         However, we don't need to do that now...
-      */
+      /* Someday, we could call get_versioned_resource(), which does
+         the get_func() check itself.  */
 
       SVN_ERR( (*cc->get_func)(cc->close_baton,
                                rsrc->local_path,
