@@ -382,7 +382,7 @@ END
       schema.  This section will explain the different ways of running
       <command>svnserve</command>, how clients authenticate themselves
       to the server, and how to configure appropriate access control
-      on your repositories.</para>
+      to your repositories.</para>
 
     <sect2 id="svn-ch-6-sect-3.1">
       <title>Invoking the Server</title>
@@ -402,12 +402,12 @@ $ svnserve
         you happen to be trying to debug the program.  This is,
         however, the standard behavior for a program run via
         <command>inetd</command>.  The IANA has reserved TCP port 3690
-        for the svnserve protocol, so on a Unix-like system you can
+        for the Subversion protocol, so on a Unix-like system you can
         add a line to <literal>/etc/services</literal> like
-        this:</para>
+        this (if it doesn't already exist):</para>
 
 <screen>
-svnserve      3690/tcp                        # SVN client/server operations
+svnserve      3690/tcp                        # Subversion protocol
 </screen>
 
       <para>...and when a client connection comes into your server on
@@ -476,7 +476,7 @@ $               # svnserve is now running, listening on port 3690
         example, if a repository is located at
         <filename>/usr/local/repositories/project1</filename>, then a
         client would reach it via <systemitem
-        class="url">svn://example.com/usr/local/repositories/project1
+        class="url">svn://host.example.com/usr/local/repositories/project1
         </systemitem>.  To increase security, you can pass the
         <option>-r</option> option to <command>svnserve</command>,
         which restricts it to exporting only repositories below that
@@ -494,7 +494,7 @@ $ svnserve -d -r /usr/local/repositories
         shorter (and much less revealing) URLs:</para>
       
 <screen>
-$ svn checkout svn://example.com/project1
+$ svn checkout svn://host.example.com/project1
 &hellip;
 </screen>
  
@@ -581,9 +581,10 @@ realm = example realm
             with the server's hostname and port) for caching
             credentials on disk (see <xref
             linkend="svn-ch-6-sect-2.2"/>.)  The
-            <literal>password-db</literal> points to a separate file
-            that contains a list of usernames and passwords, using the
-            same familiar format.  For example:</para>
+            <literal>password-db</literal> variable points to a
+            separate file that contains a list of usernames and
+            passwords, using the same familiar format.  For
+            example:</para>
 
 <screen>
 [users]
@@ -722,11 +723,50 @@ baz
         <literal>auth-access = read</literal> or <literal>auth-access
         = none</literal>.</para>
       
+      <para>You'd think that the story of SSH tunneling would end
+        here, but it doesn't.  Subversion allows you to create custom
+        tunnel behaviors in your run-time <filename>config</filename>
+        file (see <xref linkend="svn-ch-7-sect-1"/>.)  For example,
+        suppose you want to use RSH instead of SSH.  In the
+        <literal>[tunnels]</literal> section of your
+        <filename>config</filename> file, simply define it like
+        this:</para>
 
+<screen>
+[tunnels]
+rsh = rsh
+</screen>
 
-      <para><emphasis>.  explain how to use tunnels section of servers
-        file.  explain the nasty details around making this work in
-        win32?</emphasis></para>
+      <para>And now, you can use this new tunnel definition by using a
+        URL schema that matches the name of your new variable:
+        <literal>svn+rsh://host/path</literal>.  When using the new
+        URL schema, the Subversion client will actually be running the
+        command <command>rsh host svnserve -t</command> behind the
+        scenes.  If you include a username in the URL (for example,
+        <literal>svn+rsh://username@host/path</literal>) the client
+        will also include that in its command (<command>rsh
+        username@host svnserve -t</command>.)  But you can define new
+        tunneling schemes to be much more clever than that:</para>
+
+<screen>
+[tunnels]
+joessh = $JOESSH /opt/alternate/ssh -p 29934
+</screen>
+
+      <para>This example demonstrates a couple of things.  First, it
+        shows how to make the Subversion client launch a very specific
+        tunneling binary (the one located at
+        <filename>/opt/alternate/ssh</filename>) with specific
+        options.  In this case, accessing a
+        <literal>svn+joessh://</literal> URL would invoke the
+        particular SSH binary with <option>-p 29934</option> as
+        arguments&mdash; useful if you want the tunnel program to
+        connect to a non-standard port.  Second, it shows how to
+        define a custom environment variable that can override the
+        name of the tunneling program.  If we were to set the
+        <literal>JOESSH</literal> environment variable to a different
+        program, it would be executed instead of
+        <filename>/opt/alternate/ssh</filename>.</para>
 
     </sect2>
 
@@ -791,7 +831,8 @@ baz
     <itemizedlist>
       <listitem>
         <para>regular system users using a Subversion client (as
-          themselves) to access the repository directly;</para>
+          themselves) to access the repository directly via
+          <literal>file:///</literal> URLs;</para>
       </listitem>
       <listitem>
         <para>regular system users connecting to SSH-spawned private
