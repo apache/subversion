@@ -22,7 +22,7 @@ Vorwort.
     werden.  Vielleicht haben Sie solche schon gesehen:</para>
 
     <blockquote>
-      <para>Q: Wie kann ich Glorbosoft XYZ einsetzen um die
+      <para>F: Wie kann ich Glorbosoft XYZ einsetzen um die
       Team-Produktivität zu maximieren?</para>
     </blockquote>
 
@@ -49,8 +49,8 @@ Vorwort.
     die Lebensdauer einer Software müssen hereinkommende Anfragen
     ausgewertet und Rückmeldungen evaluiert werden und zu einem
     konsistenten und benutzungsfreundlichen Ganzen zusammengeführt
-    werden, das die gesammelte Erfahrung der AnwenderInnen wiedergibt.
-    Es verlangt die geduldige Achtsamkeit eines Naturforschers.  Nicht
+    werden, das die gesammelte Erfahrung der Anwendenden wiedergibt.
+    Es verlangt die geduldige Achtsamkeit der Naturwissenschaften.  Nicht
     großartige Hypothesen und visionäre Vorhersagen, sondern
     hauptsächlich offene Augen und genaue Wahrnehmung sind gefragt.
     </para>
@@ -72,19 +72,19 @@ Vorwort.
     eine Sechzig-Seiten-Anleitung, welche die Grundlagen der Benutzung
     von Subversion beschrieb.  Die Anleitung erhob keinen Anspruch auf
     Vollständigkeit, aber es wurde mit Subversion verteilt und half
-    AnwenderInnen über die ersten Hürden in der Lernkurve.  Als
+    vielen über die ersten Hürden in der Lernkurve.  Als
     O'Reilly and Associates sich entschieden ein vollständiges Buch
     über Subversion herauszugeben, war der Weg vorgezeichnet:
     Erweiterung des Subversion Handbook.</para>
 
     <para>Die drei Co-Autoren des neuen Buches waren mit einer
     unüblichen Möglichkeit konfrontiert.  Eigentlich war es ihre
-    Aufgabe ein Buch von oben nach unten, beginnend mit einer
-    Inhaltsübersicht und einem Grobkonzept, zu schreiben.  Aber sie
+    Aufgabe ein Buch vom Grobentwurf hin zu den Details, beginnend mit einer
+    Inhaltsübersicht und einem Rohkonzept, zu schreiben.  Aber sie
     hatten auch Zugang zu einem ständigen Strom &mdash; eigentlich
-    einem unkontrollierbaren Geisier &mdash; von unten nach oben
-    Material.  Subversion war bereits in der Hand von tausenden frühen
-    InteressentInnen und diese AnwenderInnen gaben Tonnen an
+    einem unkontrollierbaren Geisier &mdash; von den Detailinformationen.
+    Subversion wurde bereits in dieser frühen Phase von tausenden Menschen benutzt
+    und diese gaben Unmengen an
     Rückmeldungen &mdash; nicht nur über Subversion, sondern auch über
     die Dokumentation. </para>
 
@@ -106,12 +106,12 @@ Vorwort.
     Details können nur aus der Erfahrung mit dem Unerwarteten, die
     Beispiele aus dem tatsächlichem Einsatz stammen und
     berücksichtigen in erster Linie die Bedürfnisse und den
-    Blickwinkel der AnwenderInnen. </para>
+    Blickwinkel derjenigen, die Subversion einsetzen. </para>
 
     <para>Narürlich kann niemand versprechen, dass dieses Buch alle
     Fragen beantwortet, die Sie mit Subversion haben werden.  Manchmal
     wird die Genauigkeit, mit der es auf Ihre Fragen eingeht, unheimlich 
-    telepathisch erscheinen; gelegentlich werden Sie in eine Lücke im
+    und telepathisch erscheinen; gelegentlich werden Sie in eine Lücke im
     Wissen der Gemeinschaft stolpern und mit leeren Händen dastehen.  Wenn
     das passiert schreiben Sie am Besten eine Mail an
     <email>users@subversion.tigris.org</email> und schildern Ihr
@@ -129,7 +129,7 @@ Vorwort.
     <emphasis>Sie sind nicht allein</emphasis>.
     </para>
 
-    <para>Dieses Buch soll Ihr erster Begleiter beim Einstieg sein. </para>
+    <para>Dieses Buch soll Ihr erster Begleiter beim Einstieg sein.</para>
 
     <para>&mdash;
       <author>
@@ -146,7 +146,3 @@ local variables:
 sgml-parent-document: ("book.xml" "foreword")
 end:
 -->
-
-
-
-

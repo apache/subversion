@@ -24,22 +24,22 @@
     <para>Dieses Kapitel wirft ein Licht auf einige der Fähigkeiten
       von Subversion, die nicht so häufig benutzt werden.  Wir werden
       die Unterstützung von Subversion für Eigenschaften (oder
-      <quote>Metadaten</quote>) besprechen und wie über die Laufzeit
-      Konfiguration das Standardverhalten von Subversion ändern
-      können.  Wir werden beschreiben, wie sie die externals
+      <quote>Metadaten</quote>) besprechen und wie Sie über die 
+      Laufzeitkonfiguration das Standardverhalten von Subversion ändern
+      können.  Wir werden beschreiben, wie Sie die externals
       Definition benutzen können, um Subversion anzuweisen, Daten aus
       verschiedenen Projektarchiven zu holen.  Wir werden verschiedene
       clientseitige und serverseitige Werkzeuge im Detail vorstellen,
-      die Teil der Subversion Auslieferung (Distribution) sind.</para>
+      die Teil des Subversion-Paketes sind.</para>
 
-    <para>Bevor sie dieses Kapitel lesen, sollten sie mit den
-      grundsätzlichen Fähigkeiten von Subversion betreffend
-      Versionskontrolle für Dateien und Verzeichnisse sein.  Wenn sie
-      über diese noch nichts gelesen haben oder wenn sie eine
+    <para>Bevor Sie dieses Kapitel lesen, sollten Sie mit den
+      grundsätzlichen Möglichkeiten von Subversion in Bezug auf
+      Versionskontrolle für Dateien und Verzeichnissen vertraut sein.  Wenn Sie
+      über diese noch nichts gelesen haben oder wenn Sie eine
       Auffrischung brauchen, dann empfehlen wir einen Blick auf <xref
-      linkend="svn-ch-2" /> und <xref linkend="svn-ch-3" />.  Wenn sie
+      linkend="svn-ch-2" /> und <xref linkend="svn-ch-3" />.  Wenn Sie
       die Grundlagen gemeistert und dieses Kapitel hinter sich haben,
-      dann werden sie zu den Fortgeschrittenen zählen!</para>
+      dann werden Sie zu den Fortgeschrittenen zählen!</para>
 
   </simplesect>
 
@@ -47,13 +47,13 @@
   <!-- *** SECTION 1:  RUNTIME CONFIGURATION AREA                      *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-7-sect-1">
-    <title>Laufzeit Konfiguration</title>
+    <title>Laufzeitkonfiguration</title>
     
     <para>Subversion bietet viele Optionen, die das Verhalten von
       Subversion beeinflussen.  Manchmal ist es erwünscht, dass solche
       Optionen auf alle Operationen von Subversion angewendet werden.
-      Anstatt nun zu verlangen, dass sie sich an all diese
-      Kommandozeilen Argumente erinnern und dass sie diese für alle
+      Anstatt nun zu verlangen, dass Sie sich an all diese
+      Kommandozeilen Argumente erinnern und dass Sie diese für alle
       und jede Operation immer wieder angeben müssen, verwendet
       Subversion dafür Konfigurationsdateien.</para>
 
@@ -61,8 +61,8 @@
       eine zweiteilige Hierarchie aus Optionsnamen und den
       dazugehörenden Werten.  Üblicherweise läuft das auf ein
       spezielles Verzeichnis mit den entsprechenden
-      <firstterm>Konfigurations Dateien</firstterm> (die erste Ebene)
-      hinaus, das sind Textdateien im Standard INI Format mit
+      <firstterm>Konfigurationsdateien</firstterm> (die erste Ebene)
+      hinaus, das sind Textdateien im Standard-INI-Format mit
       <quote>Abschnitten</quote> (welche die zweite Ebene darstellen).
       Diese Dateien können einfach mit dem bevorzugten Texteditor (wie
       Emacs oder vi) bearbeitet werden und enthalten Direktiven, die
@@ -73,16 +73,16 @@
     <sect2 id="svn-ch-7-sect-1.1">
       <title>Layout der Konfiguration</title>
 
-      <para>Das erste Mal, wenn der <command>svn</command>
-        Kommandozeilen Client gestartet wird, erzeugt er eine
-        benuterInnen bezogene Konfiguration.  Auf unixartigen Systemen
+      <para>Wenn der <command>svn</command>
+        Kommandozeilen Client das erste Mal gestartet wird, erzeugt er eine
+        Konfiguration für die angemeldete Person.  Auf unixartigen Systemen
         ist dies ein Verzeichnis mit dem Namen
         <filename>.subversion</filename> im Heimatverzeichnis (home
         directory).  Auf Win32 Systemen wird ein Ordner
         <filename>Subversion</filename> erzeugt, der typischerweise
         unter <filename>Anwendungsdaten</filename> im
-        anmeldungsbezogenen Profil (Dokumente und Einstellungen)
-        liegt, ((*TODO* ich habe die namen geraten, aber nicht
+        Profil (Dokumente und Einstellungen) der angemeldeten Person
+        liegt, ((*TODO* ich habe die deutschen windows-dateinamen geraten, aber nicht
         verifiziert!))  (welches üblicherweise ein versteckter Ordner
         ist).  Auf alle Fälle ist auf dieser Plattform die genaue
         Position von System zu System verschieden und wird von der
@@ -90,7 +90,7 @@
         <footnote>
           <para>Die Umgebungsvariable <literal>APPDATA</literal>
             enthält den Pfad für die Konfiguration der
-            <filename>Anwendungsdaten</filename>, sodass sie auf
+            <filename>Anwendungsdaten</filename>, sodass Sie auf
             diesen über <filename>%APPDATA%\Subversion</filename>
             verweisen können.</para>
         </footnote>
@@ -98,10 +98,10 @@
         Position unter Unix verweisen, nämlich
         <filename>.subversion</filename>.</para>
 
-      <para>Zusätzlich zur Konfiguration auf Ebene der BenutzerInnen
+      <para>Zusätzlich zur Konfiguration auf Ebene der individuellen Anmeldung
         kennt Subversion auch systemweite Einstellungen.  Dies erlaubt
-        die Definition von Standardeinstellungen für alle
-        AnwenderInnen auf einer bestimmten Maschine.  Beachten Sie,
+        die Definition von Standardeinstellungen für alle Personen,
+        die auf einer bestimmten Maschine arbeiten.  Beachten Sie,
         dass die systemweite Konfiguration kein Diktat bedeutet
         &mdash; die anmeldungsbezogenen Einstellungen überschreiben
         die systemweiten Werte und die Kommandozeilenargumente, die
@@ -112,8 +112,8 @@
         unter Windows wird nach dem Verzeichnis
         <filename>Subversion</filename> in dem Bereich für
         Anwendungsdaten (wie in der Windows Registrierdatenbank
-        festgelegt) gesucht.  Im Gegensatz zur benuzterInnen
-        spezifischen Konfiguration versucht <command>svn</command>
+        festgelegt) gesucht.  Im Gegensatz zur personenbezogenen
+        Konfiguration versucht <command>svn</command>
         nicht eine systemweite Konfiguration anzulegen.</para>
 
       <para>Die Konfiguration besteht derzeit aus drei Dateien
@@ -123,15 +123,15 @@
         Dateien Standardwerte für alle unterstützten Optionen von
         Subversion, die meistens auskommentiert sind und mit
         erklärendem Text zu Gruppen zusammengefasst werden.  Um ein
-        bestimmtes Verhalten brauchen sie nur die zuständige
+        bestimmtes Verhalten zu erreichen müssen Sie nur die zuständige
         Konfigurationsdatei mit einem Editor bearbeiten und den Wert
-        der gewünschten Option ändern.  Wenn sie zu einem beliebigen
+        der gewünschten Option ändern.  Wenn Sie zu einem beliebigen
         Zeitpunt das Standardverhalten wieder herstellen wollen können
-        sie das Konfiguratiosnverzeichnis entfernen (oder umbenennen)
+        Sie das Konfigurationsverzeichnis entfernen (oder umbenennen)
         und irgendein harmloses <command>svn</command> Kommando
         aufrufen, wie zum Beispiel <command>svn --version</command>
-        und eine neue Konfiguration mit den Standardwerten wird
-        erstellt werden.</para>
+        und es wird eine neue Konfiguration mit den Standardwerten
+        erstellt.</para>
 
       <para>Die anmeldungsbezogene Konfiguration enthält auch einen
         Zwischenspeicher für Authentifizierungsdaten.  Das
@@ -139,8 +139,8 @@
         Unterverzeichnisse mit gespeicherten Informationen, die von
         Subversion für die verschiedenen unterstützten
         Authentifizierungsmethoden verwendet werden.  Dieses
-        Verzeichnis wird so angelegt, dass nur die BenutzerInnen
-        selbst das Recht haben den Inhalt zu lesen.</para>
+        Verzeichnis wird so angelegt, dass nur die dazugehörige Person
+        selbst das Recht hat den Inhalt zu lesen.</para>
 
     </sect2>
 
@@ -148,19 +148,19 @@
     <sect2 id="svn-ch-7-sect-1.2">
       <title>Konfiguration und Windows Registrierdatenbank</title>
 
-      <para>Zusätzlich zu den üblichen INI basierten
-        Konfigurationsdateien können Subversions Clienten, die auf
-        Windows Plattformen laufen auch die Windows
+      <para>Zusätzlich zu den üblichen INI-basierten
+        Konfigurationsdateien können Subversion-Clienten auf
+        Windows Plattformen auch die Windows
         Registrierdatenbank benutzen um Konfigurationsdaten zu
         speichern.  Die Optionsnamen und Werte sind die gleichen wie
-        in den INI Dateien.  Die <quote>Datei/Abschnitt</quote>
+        in den INI-Dateien.  Die <quote>Datei/Abschnitt</quote>
         Hierarchie wird in abgeänderter Form ebenfalls abgebildet
         &mdash; Dateien und Abschnitte sind hier verschiedene Ebenen
-        im Registrier Schlüssel Baum.</para>
+        in der Baumstruktur der Registrierschlüssel.</para>
 
       <para>Subversion sucht die systemweite Konfiguration unter dem
         Schlüssel
-        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>.
         Zum Beispiel die Option <literal>global-ignores</literal>,
         welche im <literal>miscellany</literal> Abschnitt der
         <filename>config</filename> Datei steht, findet sich unter
@@ -171,7 +171,7 @@
 
       <para>Konfigurationswerte in der Registrierdatenbank werden
         <emphasis>vor</emphasis> den gleichlautenden Gegenstücken in
-        den Konfigurationsdateien eingelesen und daher durch diese
+        den Konfigurationsdateien eingelesen und werden daher durch diese
         überschrieben, falls dort Einstellungen für die gleiche Option
         gefunden werden.  Die Konfigurationen auf Windows Systemen
         werden also nach folgender Priorität berücksichtigt:</para>
@@ -181,13 +181,13 @@
           <para>Kommandozeilen Optionen</para>
         </listitem>
         <listitem>
-          <para>Die anmeldungsbezogenen INI Dateien</para>
+          <para>Die anmeldungsbezogenen INI-Dateien</para>
         </listitem>
         <listitem>
           <para>Die anmeldungsbezogenen Werte aus der Registrierdatenbank</para>
         </listitem>
         <listitem>
-          <para>Die systemweiten INI Dateien</para>
+          <para>Die systemweiten INI-Dateien</para>
         </listitem>
         <listitem>
           <para>Die systemweiten Werte aus der Registrierdatenbank</para>
@@ -199,14 +199,14 @@
         ignoriert Subversion alle Optionen, deren Optionsschlüssel mit
         einem Rautezeichen (<literal>#</literal>) beginnt.  Das
         erlaubt es eine Option inaktiv zu sezten, ohne den Schlüssel
-        löschen zu müssen und erleichtert so ein späteres wieder
-        herstellen dieser Option.</para>
+        löschen zu müssen und erleichtert so ein späteres Wiederherstellen 
+        dieser Option.</para>
 
-      <para>Der <command>svn</command> Kommandozeilen Client versucht
+      <para>Der <command>svn</command> Kommandozeilen-Client versucht
         niemals die Windows Registrierdatenbank zu beschreiben und
         wird dort keine Konfiguration mit den Standardwerten erzeugen.
         Sie können die benötigten Schlüssel mit
-        <command>REGEDIT</command> anlegen.  Alternativ können sie
+        <command>REGEDIT</command> anlegen.  Alternativ können Sie
         eine <filename>.reg</filename> Datei erstellen und durch
         Doppelcklick auf diese Datei im Windows Explorer die
         angegebenen Werte in die Registrierdatenbank eintragen
@@ -257,13 +257,13 @@ REGEDIT4
       </example>
 
       <para>Das vorangegangene Beispiel zeigt den Inhalt einer
-        <filename>.reg</filename> Datei mit einigen der am meisten
+        <filename>.reg</filename> Datei mit einigen der am häufigsten
         benutzten Konfigurationsoptionen und den dazugehörigen
-        Standardwerten.  Beachten sie die Existenz von beiden
+        Standardwerten.  Beachten Sie die Existenz von beiden
         Konfigurationen &mdash; den systemweiten Einstellungen (für
         proxybezogene Optionen im Netzwerk) und anmeldungsbezogene
         Einstellungen (zu vewendendes Editorprogramm,
-        Passwortspeicherung und andere).  Beachten sie auch, dass alle
+        Passwortspeicherung und andere).  Beachten Sie auch, dass alle
         Optionen auskommentiert sind.  Sie müssen nur das Rautezeichen
         vom Beginn des Optionsnamens entfernen und den gewünschten
         Wert eintragen.</para>
@@ -281,11 +281,11 @@ REGEDIT4
         <title>Servers</title>
 
         <para>Die <filename>servers</filename> Datei enthält die
-          Konfiguration für die Netzwerk Ebene von Subversion.  Es
+          Konfiguration für die Netzwerkebene von Subversion.  Es
           gibt zwei spezielle Abschnittsnamen in dieser Datei &mdash;
           <literal>groups</literal> und <literal>global</literal>.
           Der <literal>groups</literal> Abschnitt ist im wesentlichen
-          eine Crossreferenz Tabelle.  Die Schlüssel in diesem
+          eine Crossreferenz-Tabelle.  Die Schlüssel in diesem
           Abschnitt sind die Namen von anderen Abschnitten in der
           Datei; ihre Werte sind <firstterm>globs</firstterm> &mdash;
           Textmarken, die möglicherweise Platzhalter (Jokerzeichen)
@@ -326,34 +326,34 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>http-proxy-host</literal></term>
             <listitem>
-              <para>Dies legt den Hostnamen des Proxy Computers fest,
+              <para>Dies legt den Hostnamen des Proxy-Computers fest,
                 den ihre HTTP-basierte Anfrage passieren muss.  Dieser
                 Wert ist per Voreinstellung leer, was bedeutet, dass
-                Subversion nicht versucht die HTTP Anfragen durch
-                einen Proxy Computer zu leiten, sondern versucht die
+                Subversion nicht versucht die HTTP-Anfragen durch
+                einen Proxy-Computer zu leiten, sondern versucht die
                 Zielmaschine direkt zu erreichen.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>http-proxy-port</literal></term>
             <listitem>
-              <para>Dies legt fest, welche Portnummer auf der Proxy
-                Maschine zu verwenden ist.  Per Voreinstellung ist
+              <para>Dies legt fest, welche Portnummer auf dem Proxy
+                zu verwenden ist.  Per Voreinstellung ist
                 diese Option leer.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>http-proxy-username</literal></term>
             <listitem>
-              <para>Dies legt den Anmeldungsnamen für die Proxy
-                Maschine fest.  Per Voreinstellung ist diese Option
+              <para>Dies legt den Anmeldenamen für den Proxy
+                fest.  Per Voreinstellung ist diese Option
                 leer.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>http-proxy-password</literal></term>
             <listitem>
-              <para>Dies legt das Passwort für die Proxy Maschine
+              <para>Dies legt das Passwort für den Proxy
                 fest. Per Voreinstellung ist diese Option leer.</para>
             </listitem>
           </varlistentry>
@@ -361,13 +361,13 @@ collabnet = svn.collab.net
             <term><literal>http-timeout</literal></term>
             <listitem>
               <para>Dies gibt an, wieviele Sekunden auf die Antwort
-                des Servers gewartet wird.  Wenn sie Probleme mit
+                des Servers gewartet wird.  Wenn Sie Probleme mit
                 Subversion haben, weil Fehler wegen
                 Zeitüberschreitungen aufgrund einer langsamen
-                Netzwerkverbindung auftreten, dann sollten sie den
+                Netzwerkverbindung auftreten, dann sollten Sie den
                 Wert dieser Option hinaufsetzen.  Der voreingestellte
                 Wert ist <literal>0</literal>, was die
-                darunterliegende HTTP Bibliothek, nämlich Neon,
+                darunterliegende HTTP-Bibliothek, nämlich Neon,
                 anweist ihre eigenen Standardwerte zu verwenden.<para>
             </listitem>
           </varlistentry>
@@ -379,21 +379,21 @@ collabnet = svn.collab.net
                 komprimieren.  Der Standardwert ist
                 <literal>yes</literal> (obwohl die Komprimierung nur
                 durchgeführt wird, wenn diese Fähigkeit in der
-                Netzwerkebene einkompiliert ist).  Setzen sie diese
+                Netzwerkebene einkompiliert ist).  Setzen Sie diese
                 Option auf <literal>no</literal> um die Kompression
                 abzuschalten, zum Beispiel für die Fehlersuche
-                (debugging) in der Netwerk Übertragung.</para>
+                (debugging) in der Netzwerkübertragung.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>neon-debug-mask</literal></term>
             <listitem>
               <para>Dies ist eine Ganzzahlmaske, welche die
-                darunterliegende HTTP Bibliothek, also Neon, benutzt
+                darunterliegende HTTP-Bibliothek, also Neon, benutzt
                 um festzulegen welcher Typ für die Ausgabe von
                 Informationen zur Fehlersuche benutzt wird.  Der
                 Standardwert ist <literal>0</literal>, was jegliche
-                Fehlersuch Information unterdrückt.  Mehr
+                Fehlerinformation unterdrückt.  Mehr
                 Informationen darüber, wie Subversion Gebrauch von
                 Neon macht, finden sie unter <xref linkend="svn-ch-8"
                 />.</para>
@@ -403,21 +403,23 @@ collabnet = svn.collab.net
             <term><literal>ssl-authority-files</literal></term>
             <listitem>
               <para>Dies ist eine durch Strichpunkte getrennte Liste
-                von Pfaden zu Dateien, die Zertifikate der
-                Zertifizierungsstellen enthalten welche vom Subversion
-                Clienten akzeptiert werden, wenn über HTTPS auf das
-                Projektarchiv zugegriffen wird.</para>
+                von Pfaden zu Dateien, die Zertifikate enthalten
+                die benötigt werden, wenn über HTTPS auf das
+                Projektarchiv zugegriffen wird.  Die Zertifikate müssen
+                von einer Zertifizierungsstelle stammen, die vom 
+                Subversion-Clienten akzeptiert wird.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>ssl-trust-default-ca</literal></term>
             <listitem>
-              <para>Setzen sie diese Variable auf
-                <literal>yes</literal>, wenn sie wollen, dass
+              <para>Setzen Sie diese Variable auf
+                <literal>yes</literal>, wenn Sie wollen, dass
                 Subversion automatisch die Zertifizierungsstellen
                 akzeptiert, die standardmässig mit OpenSSL geliefert
-                werden. (ca im Optonsnamen steht für certificate
-                authorities).
+                werden. (<quote>ca</quote> im Optonsnamen steht für 
+                <quote>certificate authorities</quote> &mdash; 
+                also Zertifizierungsstelle).</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -426,7 +428,7 @@ collabnet = svn.collab.net
               <para>Wenn ein Host (oder eine Gruppe von Hosts) ein SSL
                 Zertifikat des Clienten verlangen, dann wird
                 normalerweise die Eingabe des Pfades zu ihrem
-                Zertifikat verlangt.  Wenn sie diese Option auf eben
+                Zertifikat verlangt.  Wenn Sie diese Option auf eben
                 diesen Pfad setzen, dann kann der Client von
                 Subversion das Zertifikat automatisch finden, ohne
                 eine Eingabe zu verlangen.  Es gibt keinen Standard
@@ -438,15 +440,15 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>ssl-client-cert-password</literal></term>
             <listitem>
-              <para>Wenn ihre Datei mit den SSL Clienten Zertifikaten
+              <para>Wenn Ihre Datei mit den SSL-Zertifikaten für den Clienten
                 mit einer Passphrase verschlüsselt ist, dann wird
                 Subversion jedesmal die Eingabe der Passphrase
-                verlangen, wenn das Zertifikat benutzt wird.  Wenn sie
-                das lästig finden, (und sie kein Problem damit haben
+                verlangen, wenn das Zertifikat benutzt wird.  WenN sie
+                das lästig finden, (und Sie kein Problem damit haben
                 die Passphrase in der <filename>servers</filename>
-                Datei zu speichern), dann können sie die Passphrase in
+                Datei zu speichern), dann können Sie die Passphrase in
                 dieser Variable hinterlegen.  Es wird keine Eingabe
-                mehr von ihnen verlangt werden.</para>
+                mehr von Ihnen verlangt werden.</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -472,18 +474,17 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>store-auth-creds</literal></term>
             <listitem>
-              <para>Dies gibt an, ob Subversion Authentifizierungs
-                Informationen, welche die BenutzerInnen als Antwort
-                auf Authentifizierungs Anforderungen des Servers
-                eingeben zwischenspeichern soll oder nicht.  Der
-                Standardwert ist <literal>yes</literal>.  Setzen sie
+              <para>Dies gibt an, ob Subversion die Informationen
+                zwischenspeichern soll, die eingegeben werden, 
+                wenn vom Server eine Authentifizierung angefordert wird.
+                Der Standardwert ist <literal>yes</literal>.  Setzen Sie
                 diesen Wert auf <literal>no</literal> um die
                 Zwischenspeicherung auf der Platte abzuschalten.  Sie
                 können diese Option für einen einzelnen Aufruf von
-                Subversion überschreiben, indem sie
-                <option>--no-auth-cache</option> als Kommandozeilen
-                Parameter angeben (für Subkommandos, die diese Option
-                unterstützen).  Weitere Informationen finden sie unter
+                Subversion überschreiben, indem Sie (für Subkommandos, 
+                die diese Option unterstützen) 
+                <option>--no-auth-cache</option> als Kommandozeilen-Parameter 
+                angeben .  Weitere Informationen finden Sie unter
                 <xref linkend="svn-ch-6-sect-2.2" />.</para>
             </listitem>
           </varlistentry>
@@ -500,7 +501,7 @@ collabnet = svn.collab.net
             <listitem>
               <para>Dies gibt das Programm an, das Subversion
                 verwenden soll, um die Eingabe für Log-Nachrichten
-                während einer Übertragung entgegenzunehmen. Wenn sie
+                während einer Übertragung entgegenzunehmen. Wenn Sie
                 <command>svn commit</command> ohne eine der Optionen
                 <option>--message</option> (<option>-m</option>) oder
                 <option>--file</option> (<option>-F</option>)
@@ -514,21 +515,21 @@ collabnet = svn.collab.net
                 diese Option ist leer.  Wenn die Option nicht
                 angegeben wird, dann durchsucht Subversion die
                 Umgebungsvariablen <literal>SVN_EDITOR</literal>,
-                <literal>VISUAL</literal>, und
+                <literal>VISUAL</literal> und
                 <literal>EDITOR</literal> (in dieser Reihenfolge) nach
-                einem Wert für das Editor Programm.</para>
+                einem Wert für den zu verwendenden Editor.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>diff-cmd</literal></term>
             <listitem>
               <para>Dies gibt den absoluten Pfad eines Programmes zur
-                Feststellung von Unterschieden von Dateiinhalten (Diff
+                Feststellung von Unterschieden in den Dateiinhalten (Diff
                 Programm) an, das benutzt wird, wenn Subversion die
                 <quote>Differenz</quote> ausgibt (z.B. wenn das
                 <command>svn diff</command> Kommando aufgerufen wird).
                 Standardmässsig verwendet Subversion eine interne
-                Diff-Bibliothek &mdash; wenn sie diese Option setzen,
+                Diff-Bibliothek &mdash; wenn Sie diese Option setzen,
                 dann wird diese Aufgabe an das externe Programm
                 übertragen.</para>
             </listitem>
@@ -542,7 +543,7 @@ collabnet = svn.collab.net
                 Änderungen, die vom Projektarchiv empfangen wurden
                 zusammenzuführen.  Standardmässsig verwendet
                 Subversion eine interne Diff-Bibliothek &mdash; wenn
-                sie diese Option setzen, dann wird diese Aufgabe an
+                Sie diese Option setzen, dann wird diese Aufgabe an
                 das externe Programm übertragen.</para>
             </listitem>
           </varlistentry>
@@ -560,15 +561,15 @@ collabnet = svn.collab.net
 
         <para>Der <literal>tunnels</literal> Abschnitt erlaubt Ihnen
           die Definition neuer Tunnel-Schemata für
-          <command>svnserve</command> and <literal>svn://</literal>
-          Klienten Verbindungen.  Für weitere Details siehe <xref
+          <command>svnserve</command> und <literal>svn://</literal>
+          Clienten-Verbindungen.  Für weitere Details siehe <xref
           linkend="svn-ch-6-sect-3.3"/>.</para>
 
         <para>Der <literal>miscellany</literal> Abschnitt enthält
           alles, was nicht bereits den anderen Abschnitten zugeordnet
           ist.
           <footnote>
-            <para>Anyone for potluck dinner?</para>
+            <para>Jemand für ein Überraschungstreffen?</para>
           </footnote>
           Hier finden Sie:</para>
 
@@ -577,13 +578,13 @@ collabnet = svn.collab.net
             <term><literal>global-ignores</literal></term>
             <listitem>
               <para>Wenn das <command>svn status</command> Kommando
-                aufgerufen wird, dann listet Subversion Dateien und
-                Verzeichnisse ohne Versionkontrolle gemeinsam mit
-                denen unter Versionskontrolle auf und kennzeichnet sie
+                aufgerufen wird, dann listet Subversion nicht 
+                versionierte Dateien und Verzeichnisse gemeinsam mit jenen
+                auf, die unter Versionskontrolle stehen und kennzeichnet sie
                 mit <literal>?</literal> (siehe <xref
                 linkend="svn-ch-3-sect-4.3.1" />).  Manchmal kann es
                 lästig sein, dass diese Einheiten &mdash;
-                z.B. Objektdateien, die aus der Compilierung eines
+                z.B. Objektdateien, die aus der Kompilierung eines
                 Programmes stammen &mdash; angezeigt werden.  Die
                 <literal>global-ignores</literal> Option ist eine
                 durch Leerraum (whitespace) getrennte Liste von
@@ -594,11 +595,11 @@ collabnet = svn.collab.net
                 <literal>*.o *.lo *.la #*# .*.rej *.rej .*~ *~
                 .#*</literal>.</para>
 
-              <para>Sie könnten diese Option für einen einzelnen
+              <para>Sie könnten diese Einstellung für einen einzelnen
                 Aufruf von <command>svn status</command>
-                überschreiben, indem sie den
-                <option>--no-ignore</option> Kommandozeilen-Schalter
-                benutzen.  Für Informationen über eine exaktere
+                überschreiben, indem Sie die Option
+                <option>--no-ignore</option> auf der Kommandozeile
+                benutzen.  Für Informationen über eine genauere
                 Einstellung der zu ignorierenden Objekten siehe <xref
                 linkend="svn-ch-7-sect-2.3.3" />.</para>
             </listitem>
@@ -615,7 +616,7 @@ collabnet = svn.collab.net
                 einzuschalten.</para>
 
               <para>Der <literal>auto-props</literal> Abschnitt
-                steuert die Fähigkeit des Subversion Clienten
+                steuert die Fähigkeit des Subversion-Clienten
                 automatisch Eigenschaften für neu hinzugefügte bzw
                 importierte Dateien zu erstellen.  Er enthält beliebig
                 viele Schlüssel-Wert Paare in der Form <literal>MUSTER
@@ -623,17 +624,17 @@ collabnet = svn.collab.net
                 <literal>MUSTER</literal> ein Dateimuster ist, das
                 einer Gruppe von Dateinamen entspricht und der Rest
                 der Zeile ist die Eigenschaft und der dazugehörige
-                Wert.  Entspricht ein Dateinamen mehreren
-                Dateimustern, dann werden für diese Datei mehrere
+                Wert.  Passt ein Dateiname auf mehrere
+                Dateimuster, dann werden für diese Datei mehrere
                 Eigenschaften gesetzt &mdash; allerdings ist nicht
                 sichergestellt, dass die auto-props in der Reihenfolge
                 angewendet werden, in der sie in der
-                Konfigurationsdatei stehen, sodass sie nicht festlegen
+                Konfigurationsdatei stehen, sodass Sie nicht festlegen
                 können, dass eine Regel eine andere
                 <quote>überschreibt</quote>.  Sie können einige
                 Beispiele für die Verwendung von auto-props in der
                 <filename>config</filename> Datei finden.
-                Schlussendlich dürfen sie nicht vergessen
+                Schlussendlich dürfen Sie nicht vergessen
                 <literal>enable-auto-props</literal> auf
                 <literal>yes</literal> zu setzen, damit die auto-probs
                 auch verwendet werden.</para>
@@ -643,15 +644,15 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>log-encoding</literal></term>
             <listitem>         
-              <para>Diese Variable setzt den Standard-Zeichenkodierung
-                für Log-Nachrichten.  Es ist eine dauerhafte
+              <para>Diese Variable setzt die Standard-Zeichenkodierung
+                für Log-Nachrichten.  Dies hinterlegt eine dauerhafte
                 Einstellung für die <option>--encoding</option> Option
                 (siehe <xref linkend="svn-ch-9-sect-1.1"/>.)  Das
                 Projektarchiv von Subversion speichert Log-Nachrichten
-                in UTF8 und nimmt an, dass ihre Log-Nachrichten der
+                in UTF8 und nimmt an, dass Ihre Log-Nachrichten der
                 Ländereinstellung ihres Betriebssystems entsprechen.
-                Wenn ihre Log-Nachrichten eine anderere
-                Zeichenkodierung verwenden, dann sollten sie diese
+                Wenn Ihre Log-Nachrichten eine anderere
+                Zeichenkodierung verwenden, dann sollten Sie diese
                 hier angeben.</para>
             </listitem>
           </varlistentry>
@@ -673,16 +674,16 @@ collabnet = svn.collab.net
                 ist, wenn die Zeitstempel für die Dateien in der
                 Arbeitskopie den Zeitpunkt angeben, an dem diese
                 zuletzt im Projektarchiv geändert wurden.  Das
-                <command>svn export</command> Kommando setzt immer
-                diese <quote>zuletzt-übertragen Zeitstempel</quote> in
-                den Dateibäumen die es erzeugt.  Wenn sie diese
+                <command>svn export</command> Kommando setzt in den
+                Dateibäumen die es erzeugt den Zeitstempel immer auf
+                diesen Wert aus dem Projektarchiv.  Wenn Sie diese
                 Variable auf <literal>yes</literal> setzen, dann
                 setzen auch die Kommandos <command>svn
                 checkout</command>, <command>svn update</command>,
-                <command>svn switch</command>, and <command>svn
+                <command>svn switch</command> und <command>svn
                 revert</command> den Zeitpunkt der letzen Übertragung
-                an das Projektarchiv auf allen Dateien, die sie
-                behandeln.</para>
+                an das Projektarchiv auf allen Dateien, auf die
+                diese Kommandos angewendet werden.</para>
             </listitem>
           </varlistentry>
           
@@ -704,27 +705,27 @@ collabnet = svn.collab.net
     <para>Wir haben bereits im Detail besprochen, wie Subversion
       verschiedene Versionen von Datein und Verzeichnissen im
       Projektarchiv speichert und wiederfindet.  Ganze Kapitel wurden
-      für diese zentrale Funktion von Subversion verwendet und selbst,
+      für diese zentralen Funktionen von Subversion verwendet und selbst,
       wenn der Funktionsumfang hier enden würde, wäre Subversion aus
       der Sicht der Versionskontrolle ein vollständiges Werkzeug.
       Aber es ist noch nicht aus.</para>
 
     <para>Zusätzlich zu der Versionskontrolle für Verzeichnisse und
-      Dateien, bietet Subversion Schnittstellen um zu den
-      Verzeichnissen und Dateien, die unter Versionskontrolle stehen
+      Dateien bietet Subversion auch Schnittstellen um für diese 
+      versionierten Verzeichnisse und Dateien
       auch Metadaten zu speichern.  Wir bezeichnen diese Metadaten als
       <firstterm>Eigenschaften</firstterm>.  Sie können sich diese als
-      eine Tabelle mit zwei Spalten vorstellen bei der zu jeder
-      Einheit ihrer Arbeitskopie Eigenschaftsnamen mit beliebigen
+      eine Tabelle mit zwei Spalten vorstellen, bei der zu jeder
+      Einheit Ihrer Arbeitskopie Eigenschaftsnamen mit beliebigen
       Werten verbunden werden können.  Generell gesagt können die
       Namen und Werte der Eigenschaften darstellen was immer Sie
-      wollen mit der Einschränkung, dass es sich bei den Namen um
+      wollen &mdash; mit der Einschränkung, dass es sich bei den Namen um
       menschenlesbaren Text handeln muss.  Und das Beste daran ist,
       dass diese Eigenschaften genauso unter Versionskontrolle stehen,
       wie der Inhalt der Dateien.  Sie können diese Eigenschaften
       ganauso einfach ändern, übertragen und Änderungen rückgängig
-      machen wie den Änderungen am Inhalt.  Und Sie erhalten die
-      Änderung von anderen Personen wenn sie ihre Arbeitskopie
+      machen wie bei den Änderungen am Inhalt.  Und Sie erhalten die
+      Änderung von anderen Personen wenn Sie Ihre Arbeitskopie
       aktualisieren.</para>
 
     <sidebar>
@@ -748,21 +749,21 @@ collabnet = svn.collab.net
       Eigenschaften beleuchten und wie Änderungen an den Eigenschaften
       den normalen Arbeitsablauf von Subversion beeinflussen und
       wollen Sie davon überzeugen, dass diese Eigenschaften in
-      Subversion Ihren Umgang mit Versionskontrolle verbessern
+      Subversion Ihren Umgang mit der Versionskontrolle verbessern
       können.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-2.1">
       <title>Warum Eigenschaften?</title>
 
-      <para>Eigenschaften können eine sehr sinnvolle Ergänzung ihrer
+      <para>Eigenschaften können eine sehr sinnvolle Ergänzung Ihrer
         Arbeitskopie darstellen.  Subversion selbst benutzt
         Eigenschaften um spezielle Informationen zu verwalten und als
-        Kennzeichnung, dass spezielle Abläufe notwendig wind.
-        Gleichermassen können Sie Eigenschaften für ihre eigenen
+        Markierung, dass spezielle Abläufe notwendig wind.
+        Gleichermassen können Sie Eigenschaften für Ihre eigenen
         Zwecke einsetzen.  Natürlich kann alles was mit Eigenschaften
-        gemacht wird auch mit regulären Dateien unter
-        Versionskontrolle erreicht werden, aber betrachten Sie
+        gemacht wird auch mit regulären versionierten Dateien
+        erreicht werden, aber betrachten Sie
         folgendes Beispiel für den Einsatz von Eigenschaften.</para>
 
       <para>Sagen wir Sie wollen eine Website entwerfen, die viele
@@ -772,7 +773,7 @@ collabnet = svn.collab.net
         Diese Fotos sind ziemlich gross, sodass Sie &mdash; wie bei
         solchen Webauftritten üblich &mdash; den BesucherInnen
         kleinere Vorschaubilder anbieten wollen.  Sie können dies mit
-        traditionellen Datein bewerkstelligen.  Sie können zum
+        traditionellen Dateien bewerkstelligen.  Sie können zum
         Beispiel die Dateien <filename>image123.jpg</filename> und
         <filename>image123-thumbnail.jpg</filename> nebeneinander in
         einem Verzeichnis stehen haben.  Oder wenn Sie die Dateinamen
@@ -783,22 +784,22 @@ collabnet = svn.collab.net
         &mdash; wiederum getrennt von der eigentlichen Bilddatei.  So
         wird allerdings der Dateibaum ziemlich aufgeblasen und wächst
         mit jedem neuen Foto das hinzugefügt wird um ein
-        mehrfaches.</para>
+        Vielfaches.</para>
 
      <para>Betrachten Sie nun das Gleiche unter Verwendung von
-        Eigenschaften in Subversion.  Angenommen, sie haben eine
+        Eigenschaften in Subversion.  Angenommen, Sie haben eine
         einzelne Bilddatei <filename>image123.jpg</filename> und
         setzen für diese Datei Eigenschaften mit den Namen
         <literal>Ueberschrift</literal>,
         <literal>Zeitstempel</literal> und sogar
-        <literal>Vorschaubild</literal>.  Nun sieht ihre Arbeitskopie
+        <literal>Vorschaubild</literal>.  Nun sieht Ihre Arbeitskopie
         viel aufgeräumter aus &mdash; eigentlich sieht es so aus, als
-        ob es nur Bilddateien enthalten würde.  Aber ihre
-        Automatisations Skripte wissen es besser.  Diese wissen, dass
-        sie <command>svn</command> (oder noch besser die
-        Programmsprachen Bindungen von Subversion &mdash; siehe <xref
+        ob sie nur Bilddateien enthalten würde.  Aber Ihre
+        Automatisations-Skripte wissen es besser.  Diese wissen, dass
+        Sie <command>svn</command> (oder noch besser eine Anbindung
+        von Subversion an eine Programmiersprache &mdash; siehe <xref
         linkend="svn-ch-8-sect-2.3" />) benutzen können, um die
-        zusätzlichen Informationen für ihren Webauftritt zu
+        zusätzlichen Informationen für Ihren Webauftritt zu
         ermitteln.</para>
 
       <para>Wie (und ob) Sie Eigenschaften in Subversion nutzen ist
@@ -827,8 +828,8 @@ property 'copyright' set on 'calc/button.c'
 $
 </screen>
        
-      <para>Wir die Flexibilität beworben, die Subversion für die
-        Werte von Eigenschaften bietet.  Wenn sie mehrzeilige Texte
+      <para>Wir haben die Flexibilität angepriesen die Subversion in Bezug
+        auf die möglichen Werte von Eigenschaften bietet.  Wenn Sie mehrzeilige Texte
         oder auch binäre Werte haben, dann werden Sie diese nicht auf
         der Kommandozeile übergeben wollen.  Daher unterstützt das
         <command>propset</command> Subkommando die Option
@@ -851,7 +852,7 @@ $
         übergibt die aktellen Werte der Eigenschaft in einer
         temporären Datei (oder eine leere Datei, wenn neue
         Eigenschaften hinzugefügt werden).  Dann bearbeiten Sie die
-        Werte solange in ihrem Editor, bis Sie ihren Vorstellungen
+        Werte solange in Ihrem Editor, bis Sie Ihren Vorstellungen
         entsprechen, speichern diese ab und verlassen den Editor.
         Wenn Subversion feststellt, dass der Wert der Eigenenschaft
         verändert wurde, dann übernimmt es den neuen Wert.  Wenn Sie
@@ -865,7 +866,7 @@ $
 </screen>
 
       <para>Wir sollten anmerken, dass <command>svn</command> bei
-        Subkommandos, die mit Eigenschaften arbeiten gleichzeitig
+        Subkommandos für die Bearbeitung von Eigenschaften 
         mehrere Pfade gleichzeitig verarbeiten kann.  Dies erlaubt es
         die Eigenschaften für ganze Dateigruppen mit einem einzigen
         Kommando durchzuführen.  Beispielsweise können Sie folgendes
@@ -882,13 +883,13 @@ $
 
       <para>All das Hinzufügen und Ändern von Eigenschaften würde
         nicht viel Sinn machen, wenn es nicht leicht wäre die
-        gespeicherten Werte zu bekommen.  Daher bietet
+        gespeicherten Werte wieder zu bekommen.  Daher bietet
         <command>svn</command> zwei Subkommandos um die Namen und
         Werte von Eigenschaften, die zu Dateien und Verzeichnissen
         gespeichert sind anzuzeigen.  Das <command>svn
         proplist</command> Kommando listet die Namen der Eigenschaften
-        die für einen Pfad existieren.  Wenn sie die Namen für die
-        Eigenschaften eines Objektes kennen, können sie die Werte
+        auf, die für einen Pfad existieren.  Wenn Sie die Namen für die
+        Eigenschaften eines Objektes kennen, können Sie die Werte
         einzeln mit <command>svn propget</command> abrufen.  Dieses
         Kommando wird für den gewünschten Pfad (oder eine Gruppe von
         Pfaden) den Wert der Eigenschaften auf der Standardausgabe
@@ -905,8 +906,8 @@ $ svn propget copyright calc/button.c
 
       <para>Es gibt auch eine Variation des
         <command>proplist</command> Kommandos, das sowohl die Namen,
-        als auch die Werte für alle Eigenschaften auflistet.
-        Verwenden Sie einfach die <option>--verbose</option>
+        als auch die Werte für alle Eigenschaften auflistet &mdash;
+        verwenden Sie einfach die <option>--verbose</option>
         (<option>-v</option>) Option.</para>
 
       <screen>
@@ -927,7 +928,7 @@ red-beans-and-rice.
 </screen>
 
       <para>Das letzte Subkommando im Zusammenhang mit Eigenschaften
-        ist <command>propdel</command>.  Da Subversion die das
+        ist <command>propdel</command>.  Da Subversion das
         Speichern von leeren Werten erlaubt können Eigenschaften nicht
         mit <command>propedit</command> oder
         <command>propset</command> entfernt werden.  Zum Beispiel hat
@@ -957,8 +958,8 @@ Properties on 'calc/button.c':
 $
 </screen>
 
-      <para>Nun, da Sie vertraut sind mit allen
-        eigenschaften-bezogenen Kommandos von <command>svn</command>
+      <para>Nun, da Sie mit allen Kommandos von <command>svn</command> 
+        zur Bearbeitung von Eigenschaften vertraut sind
         wollen wir besprechen, wie Änderungen der Eigenschaften den
         normalen Arbeitsablauf von Subversion beeinflussen.  Wie wir
         früher erwähnten stehen Eigenschaften von Dateien und
@@ -966,7 +967,7 @@ $
         von Dateien.  Deshalb bietet Subversion die gleichen
         Möglichkeiten um die Änderung von anderen Personen mit den
         eigenen Änderungen &mdash; reibungslos, oder mit Konflikten
-        &mdash; zusammenführen.</para>
+        &mdash; zusammenzuführen.</para>
 
       <sidebar>
         <title>Änderungen von Versions-Eigenschaften</title>
@@ -979,10 +980,10 @@ $
           wollen.  Da Revisionen global sind, brauchen Sie in diesem
           Fall keinen Pfad angeben, solange Sie sich in der
           Arbeitskopie des Projektarchives befinden, deren Revision
-          sie ändern wollen.  Beispielsweise könnten sie die
+          Sie ändern wollen.  Beispielsweise könnten Sie die
           Log-Nachricht einer bestehenden Revision ändern wollen.
           <footnote>
-            <para>Rechtschreibfehler, unsaubere Gramatik einfach
+            <para>Rechtschreibfehler, unsaubere Gramatik oder einfach
               <quote>falsche Aussagen</quote> in Log-Nachrichten sind
               wahrscheinlich der häufigste Grund für die Verwendung
               der <option>--revprop</option> Option.</para>
@@ -994,29 +995,29 @@ property 'svn:log' set on repository revision '11'
 $
 </screen>
 
-        <para>Beachte, dass die Möglichkeit zur Änderung dieser
-          Eigenschaften ohne Versionskontrolle explizit von der
+        <para>Beachten Sie, dass die Möglichkeit zur Änderung dieser
+          unversionierten Eigenschaften explizit von der
           Administration des Projektarchives freigegeben werden muss
           (siehe <xref linkend="svn-ch-5-sect-2.1" />).  Da diese
           Eigenschaften nicht unter Versionskontrolle stehen besteht
-          die Gefahr, dass Information verlorengeht, wenn Sie nicht
-          sorgfältig mit den Änderungen umgehen.  Die Administration
+          die Gefahr, dass Information verlorengeht, wenn Sie bei der
+          Änderung nicht sorgfältig vorgehen.  Die Administration
           des Projektarchives kann Methoden einfügen, um solche
           Verluste zu vermeiden und standardmässig ist die Änderung
-          von Eigenschaften ohne Versionskontolle
+          von nicht versionierten Eigenschaften 
           ausgeschaltet.</para>
 
       </sidebar>
 
       <para>Und wie beim Dateiinhalt sind Änderungen an den
         Eigenschaften vorerst nur lokal, erst mit der Übertragung
-        durch <command>svn commit</command> an das Projektarchiv
+        an das Projektarchiv durch <command>svn commit</command>
         werden sie dauerhaft.  Ihre Änderungen an Eigenschaften können
-        Sie ebenfalls leicht zurückgenommen werden &mdash;
+        Sie daher ebenfalls leicht zurücknehmen &mdash;
         <command>svn revert</command> stellt den Zustand für Dateien
         und Verzeichnisse vor der Bearbeitung wieder her. Das betrifft
         sowohl den Inhalt, als auch die Eigenschaften.  Sie können
-        interessante Informationen über den Status ihrer Dateien und
+        interessante Informationen über den Status Ihrer Dateien und
         Verzeichnisse erhalten, indem Sie die Kommandos <command>svn
         status</command> und <command>svn diff</command>
         aufrufen.</para>
@@ -1046,10 +1047,10 @@ $
         <title>Konflikte bei Eigenschaften</title>
 
         <para>Genauso wie beim Datei-Inhalt können lokale Änderungen
-          im Konflikt mit Änderungen von anderen Personen stehen.
-          Wenn Sie ihre Arbeiskopie aktualisieren und Änderungen von
+          in Konflikt mit Änderungen von anderen Personen stehen.
+          Wenn Sie Ihre Arbeiskopie aktualisieren und Änderungen von
           Eigenschaften unter Versionskontrolle empfangen, die mit
-          ihren eigenen Kollidieren, wird Subversion dies melden und
+          Ihren eigenen Änderungen kollidieren, dann wird Subversion dies melden und
           das Objekt mit dem Konflikt-Status versehen.</para>
  
         <screen>
@@ -1081,7 +1082,7 @@ $
 </screen>
  
         <para>Um Konflikte von Eigenschaften aufzulösen, stellen Sie
-          einfach sicher, dass die kollidierte Eigenschaft die Werte
+          einfach sicher, dass die konfliktbehaftete Eigenschaft die Werte
           enthält, die sie enthalten soll und benutzen Sie dann das
           <command>svn resolved</command> Kommando, um Subversion
           mitzuteilen, dass das Problem von Ihnen aufgelöst
@@ -1103,10 +1104,10 @@ $
 
       <para>Wie Sie sehen, hat die Änderung von Eigenschaften keinen
         besonderen Einfluss auf den typischen Arbeitsablauf von
-        Subversion.  Die generellen Aufgaben von Aktualisieren der
-        Arbeitskopie, Überprüfen des Status von Dateien und
-        Verzeichnissen, Anzeigen von Änderungen die Sie gemacht haben
-        und Übertragen dieser Änderungen an das Projektarchiv wurden
+        Subversion.  Die generellen Aufgaben wie das Aktualisieren der
+        Arbeitskopie, das Überprüfen des Status von Dateien und
+        Verzeichnissen, die Anzeigen von Änderungen die Sie gemacht haben
+        und das Übertragen dieser Änderungen an das Projektarchiv wurden
         durch die Anwesenheit von Eigenschaften nicht verändert.  Das
         <command>svn</command> Progamm hat einige zusätzliche
         Subkommandos um Eigenschaften zu bearbeiten, aber das ist die
@@ -1125,9 +1126,9 @@ $
         Eigenschaftsnamen verwenden, die mit dem Präfix
         <literal>svn:</literal> beginnen.  Dies ist der Namensraum den
         es für seinen eigenen Bedarf reserviert hat.  Tatsächlich
-        definiert Subversion wichtige Eigenschaften, die magische
-        Auswirkungen auf die Dateien und Verzeichnisse haben denen
-        diese zugeordnet wurden.  In diesem Abschnitt werden wir den
+        vergibt Subversion wichtige Eigenschaften, die magische
+        Auswirkungen auf die zugeordnenten Dateien und Verzeichnisse haben.
+        In diesem Abschnitt werden wir den
         Schleier lüften und beschreiben, wie diese
         Spezialeigenschaften ihr Leben ein bischen einfacher machen
         können.</para>
@@ -1137,8 +1138,8 @@ $
  
         <para>Die <literal>svn:executable</literal> Eigenschaft wird
           benutzt um das Ausführungsrecht-Bit (execute permission bit)
-          einer Datei unter Versionskontrolle auf eine
-          halbautomatisierte Weise zu verwalten.  Diese Eigenschaft
+          einer versionierten Datei auf eine
+          halbautomatische Weise zu verwalten.  Diese Eigenschaft
           hat keine definierten Werte &mdash; die blosse Anwesenheit
           der Eigenschaft bedeutet den Wunsch, dass Subversion das
           Ausführungsrecht-Bit gesetzt halten soll.  Das Entfernen
@@ -1148,15 +1149,16 @@ $
 
         <para>Bei vielen Betriebssystemen ist die Möglichkeit eine
           Datei als Kommando auszuführen an die Existenz des
-          Ausführungsrecht-Bits gebunden.  Standardmässig ist dieses
-          Bit nicht gesetzt und muss ausdrücklich vergeben werden,
+          Ausführungsrecht-Bits gebunden.  Standardmässig wird dieses
+          Bit bei einer Neuanlage nicht automatisch gesetzt, 
+          sondern muss ausdrücklich vergeben werden,
           wenn es benötigt wird.  In einer Arbeitskopie wird
-          allerdings auch für bestehende Dateien eine neue Datei
+          allerdings für bestehende Dateien auch dann eine neue Kopie
           angelegt, wenn im Zuge der Aktualisierung eine Änderung
-          empfangen wird.  Das heisst, dass Sie das
-          Ausführungsrecht-Bit für eine Datei gesetzt haben, dass
-          dieses Bit aber wieder verlorengeht, wenn die Datei bei
-          einer Aktualisierung geändert wird.  Daher bietet Subversion
+          empfangen wird.  Das heisst, dass das Ausführungsrecht-Bit
+          bei Dateien, die im Zuge der Aktualisierung geändert werden
+          wieder verlorengeht, obwohl Sie dieses Bit gesetzt haben.
+          Daher bietet Subversion
           die <literal>svn:executable</literal> Eigenschaft um das
           Ausführungsrecht-Bit gesetzt zu halten.</para>
 
@@ -1166,7 +1168,7 @@ $
           <footnote>
             <para>Die Windows Dateisysteme benutzen die
               Dateierweiterung (wie <literal>.EXE</literal>,
-              <literal>.BAT</literal>, und <literal>.COM</literal>) um
+              <literal>.BAT</literal> und <literal>.COM</literal>) um
               ausführbare Datein zu kennzeichnen bzw zu
               erkennen.</para>
           </footnote>
@@ -1197,16 +1199,17 @@ $
           während einer Aktualisierung empfangen werden.  Aber für
           Dateien, deren Inhalt scheinbar aus Binärdaten besteht, gibt
           es kein Konzept von <quote>Zeilen</quote>.  Daher versucht
-          Subversion für diese Dateien kein kontextbezogenes
+          Subversion für diese Dateien kein kontextorientiertes
           Zusammenführen während der Aktualisierung.  Stattdessen wird
           jedesmal, wenn in der Arbeitskopie eine Binärdatei lokal
-          geändert wurde und für die eine Aktualisierung vom Server
-          empfangen wird die lokale Datei auf eine
+          geändert wurde und für diese Datei eine Aktualisierung vom 
+          Server empfangen wird die lokale Datei auf eine
           <filename>.orig</filename> Erweiterung umbenannt und
-          Subversion speichert die eine neue Datei in der
-          Arbeitskopie, welche die empfangenen Änderungen enthält,
-          aber nicht ihre eigenen lokalen Änderungen.  Dieses
-          Verhalten dient der Absicherung gegen fehlerhafte Versuche
+          Subversion speichert eine neue Datei, die der aktuellen 
+          Version im Projektarchiv entspricht. Diese Datei 
+          enthält also die empfangenen Änderungen,
+          aber nicht Ihre eigenen lokalen Anpassungen.  Dieses
+          Verhalten dient zur Absicherung gegen fehlerhafte Versuche
           eines kontextbezogenen Zusammenführens für Dateien, für die
           das einfach nicht möglich ist.</para>
 
@@ -1216,7 +1219,7 @@ $
           Header damit zu belegen, wenn auf eine GET Anforderung
           geantwortet wird.  Dies gibt einen entscheidenden Hinweis
           darauf, wie die Dateien angezeigt werden sollen, wenn Sie
-          das Projektarchiv mit einem Web-Browser durchsehen.</para>
+          das Projektarchiv mit einem Web-Browser betrachten.</para>
 
       </sect3>
 
@@ -1243,19 +1246,18 @@ $
           explizit mit dem <command>svn add</command> oder
           <command>svn import</command> Kommandos unter die Verwaltung
           von Subversion gestellt werden.  Als Folge gibt es oftmals
-          Ressourcen, die nicht unter Versionskontrolle stehen.</para>
+          nicht versionierte Ressourcen.</para>
 
         <para>Nun, das <command>svn status</command> Kommando zeigt
-          als Teil seiner Ausgabe auch alle Dateien und
-          Unterverzeichnisse an, die nicht unter Versionskontrolle
-          stehen, sofern sie nicht schon von der
+          als Teil seiner Ausgabe auch alle nicht versionierten Dateien und
+          Unterverzeichnisse an, sofern diese nicht schon von der
           <literal>global-ignores</literal> Option (oder den
           einprogrammierten Standardwerten) ausgefiltert werden.  Dies
-          geschieht, damit Sie sehen, ob sie eventuell vergessen haben
+          geschieht damit Sie sehen, ob Sie eventuell vergessen haben
           eine Ressource unter Versionskontrolle zu stellen.</para>
 
        <para>Aber Subversion kann nicht die Namen aller Ressourcen
-          erraten, die ignoriert werden sollen, bwohl es sehr oft die
+          erraten, die ignoriert werden sollen, obwohl es sehr oft die
           gleichen Dinge sind die in <emphasis>jeder</emphasis>
           Arbeitskopie ignoriert werden sollen.  Alle diese
           Dateimuster in die anmeldungsspezifische
@@ -1263,9 +1265,9 @@ $
           sondern birgt die Gefahr mit den Erfordernissen von anderen
           ausgecheckten Arbeitskopien zu kollidieren.</para>
 
-        <para>Die Lösung besteht darin, die zu ignorierenden
-          Dateimuster, die speziell für eine einzelne Ressource sind
-          und meist das Erscheinen in einem Verzeichnis betreffen, mit
+        <para>Die Lösung besteht darin, die Dateimuster mit den
+          zu ignorierenden Ressourcen, die sehr speziell sind &mdash;
+          und meist nur ein einzeles Verzeichnis betreffen &mdash; mit
           dem Verzeichnis selbst zu speichern.  Geläufige Beispiele
           für Ressourcen, die nicht unter Versionskontrolle stehen
           sollen und die grundsätzlich ausschliesslich in einem
@@ -1273,7 +1275,7 @@ $
           ist die Ausgabe von Programmkompilierungen.  Oder &mdash; um
           ein Beispiel zu verwenden, das besser zu diesem Buch passt
           &mdash; die HTML, PDF oder PostScript Dateien, die als
-          Ergebnis der Umformung einiger DocBook XML Dateien in ein
+          Ergebnis der Umwandlung einiger DocBook XML Dateien in ein
           gefälligeres Format entstehen.</para>
 
         <sidebar>
@@ -1300,8 +1302,8 @@ $
             für die zu ignorierenden Dateien zu unterschiedlichen
             Zeitpunkten und es gibt geringfügige Unterschiede, auf was
             sich die Dateimuster beziehen.  Subversion versteht auch
-            nicht die besondere Bedeutung von <literal>!</literal> für
-            das Zurücksetzen in den Zustand, dass überhaupt keine zu
+            nicht die besondere Bedeutung von <literal>!</literal> als
+            Angabe dafür, dass keine zu 
             ignorierenden Dateimuster vorhanden sind.</para>
 
         </sidebar>
@@ -1337,17 +1339,17 @@ $ svn status calc
           <filename>calculator</filename> Programm, das Sie aus ihrem
           Quellcode kompiliert haben, eine Quellcode-Datei namens
           <filename>data.c</filename> und einige
-          Debugging-Protokolldateien.  Nun wissen Sie, dass ihr
-          Erstellungs-System (build system) immer als Ergebnis das
+          Debugging-Protokolldateien.  Nun wissen Sie, dass Ihr
+          Build-System immer als Ergebnis das
           <filename>calculator</filename> Programm generiert.
           <footnote>
-            <para>Ist das nicht der Zweck eines Build Systems?</para>
+            <para>Ist das nicht der Zweck eines Build-Systems?</para>
           </footnote>
-          Und Sie wissen, dass ihre Testumgebung immer solche
+          Und Sie wissen, dass Ihre Testumgebung immer solche
           Debugging-Protokolldateien zurücklässt.  Diese Umstände
           treffen auf alle Arbeitskopien zu und nicht nur auf dieses
           eine Verzeichnis.  Und Sie wissen, dass Sie kein Interesse
-          haben, diese Dinge jedesmal zu sehen, wenn sie <command>svn
+          haben, diese Dinge jedesmal zu sehen, wenn Sie <command>svn
           status</command> aufrufen.  Also verwenden Sie <command>svn
           propedit svn:ignore calc</command> um einige zu ignorierende
           Dateimuster zum <filename>calc</filename> Verzeichnis
@@ -1380,7 +1382,7 @@ $ svn status
           Und nun, da all die uninteressanten Störungen aus der
           Ausgabe entfernt wurden, bleiben aussagekräftigere Angaben
           zurück &mdash; zum Beispiel die Quellcode-Datei die
-          möglicherweise vergessen wurde unter die Versionskontrolle
+          Sie möglicherweise vergessen haben unter Versionskontrolle
           zu stellen.</para>
 
         <para>Wenn Sie die ignorierten Dateien trotzdem sehen wollen,
@@ -1415,20 +1417,20 @@ I      calc/debug_log.3.gz
       <sect3 id="svn-ch-7-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
 
-        <para>Subversion besitzt die Fähigkeit um
+        <para>Subversion besitzt die Fähigkeit 
           <firstterm>Schlüsselworte</firstterm> (keywords) im Inhalt
-          einer Datei unter Versionskontrolle mit nützlicher
+          einer versionierten Datei mit nützlicher
           dynamischer Information über die Datei selbst zu ersetzen.
-          Schlüsselworte beschreiben gewöhnlich Informationen für den
-          Zeitpunkt als die Datei zum letzten Mal geändert wurde.  Da
-          sich diese Information jedesmal ändert, wenn die Datei
+          Schlüsselworte beschreiben gewöhnlich Informationen zu dem
+          Zeitpunkt als die Datei das letzte Mal geändert wurde.  Da
+          sich diese Information jedesmal ändert, wenn die Datei selbst
           verändert wird, und zwar genaugenommen
           <emphasis>nachdem</emphasis> sich die Datei geändert hat,
           ist es für jeden Prozess &mdash; mit Ausnahme der
           Versionskontrolle selbst &mdash; mühsam diese Information
           auf dem letzten Stand zu halten.  Würde diese Aufgabe
           Menschen überlassen, dann würde die Information unweigerlich
-          veralten.</para>
+          irgendwann nicht aktualisiert werden.</para>
 
         <para>Sagen wir, Sie haben ein Dokument, in welchem Sie das
           Datum der letzen Änderung anzeigen wollen.  Sie können jeden
@@ -1475,8 +1477,8 @@ I      calc/debug_log.3.gz
           <varlistentry>
             <term><literal>LastChangedBy</literal></term>
             <listitem>
-              <para>Dieses Schlüsselwort beschreibt den letzen
-                Benutzer, der eine Änderung für diese Datei an das
+              <para>Dieses Schlüsselwort beschreibt die Person, die
+                zuletzt eine Änderung für diese Datei an das
                 Projektarchiv übertragen hat und könnte so aussehen:
                 <literal>$LastChangedBy: harry $</literal>.  Es kann
                 mit <literal>Author</literal> abgekürzt werden.</para>
@@ -1509,8 +1511,8 @@ I      calc/debug_log.3.gz
           </varlistentry>
         </variablelist>
 
-        <para>Wenn Sie nur den Schlüsselwort-Anker in den Text ihrer
-          Datei einfügen geschieht noch gar nichts besonderes.
+        <para>Wenn Sie nur den Schlüsselwort-Anker in den Text Ihrer
+          Datei einfügen geschieht noch gar nichts.
           Subversion wird nicht versuchen Textersetzungen in einem
           Dateiinhalt durchzuführen, solange dies nicht ausdrücklich
           angeordnet wird.  Nach alledem möchten Sie vielleicht ein
@@ -1527,8 +1529,8 @@ I      calc/debug_log.3.gz
         <para>Um Subversion mitzuteilen, ob Schlüsselworte für eine
           bestimmte Datei ersetzt werden sollen oder nicht, verwenden
           wir wieder die eigenschaftsbezogenen Subkommandos.  Die
-          <literal>svn:keywords</literal> Eigenschaft einer Datei
-          unter Versionskontrolle bestimmt, welche Schlüsselworte für
+          <literal>svn:keywords</literal> Eigenschaft einer versionierten Datei
+          bestimmt, welche Schlüsselworte für
           diese Datei ersetzt werden sollen.  Der Wert der Eigenschaft
           ist eine durch Leerschritte getrennte Liste von
           Schlüsselwort-Namen oder deren Abkürzungen aus der vorigen
@@ -1547,7 +1549,7 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
         
         <para>Wenn die <literal>svn:keywords</literal> Eigenschaft für
           diese Datei nicht gesetzt wird, dann wird Subversion auch
-          nichts besonderes machen.  Nun schalten wir die Ersetzung
+          keine Ersetzungen vornehmen.  Nun schalten wir die Ersetzung
           für das <literal>LastChangedDate</literal> Schlüsselwort
           ein.</para>
 
@@ -1566,8 +1568,9 @@ $
           <literal>Rev</literal> Schlüsselwort enthält, wir aber
           bisher dieses Schlüsselwort noch nicht in den
           Eigenschaftwert aufgenommen haben.  Subversion ignoriert
-          glücklicherweise Anforderungen zur Ersetzung von
-          Schlüsselworten, die in der Datei nicht vorkommen und
+          glücklicherweise Schlüsselworte in der 
+          <literal>svn:keywords</literal> Eigenschaft, 
+          die in der Datei nicht vorkommen und
           ersetzt keine Schlüsselworte die nicht im Wert der
           <literal>svn:keywords</literal> Eigenschaften gesetzt
           wurden.</para>
@@ -1578,14 +1581,14 @@ $
           <para>Das sichtbare Resultat einer Schlüsselwort-Ersetzung
             mag zu der Annahme führen, dass jede Version einer Datei
             mit diesem Merkmal sich von der vorhergehenden Version
-            zumindest in dem Bereich unterscheidet, in dem der
-            Schlüsselwort-Anker gesetzt wurde.  Dies ist jedoch nicht
-            der Fall.  Während durch <command>svn diff</command>
+            &mdash; zumindest in dem Bereich, in dem der
+            Schlüsselwort-Anker gesetzt wurde &mdash;  unterscheidet.  Dies ist jedoch nicht
+            der Fall.  Wenn durch <command>svn diff</command>
             lokale Änderungen ermittelt werden und bevor diese lokalen
             Änderungen mit <command>svn commit</command> an das
-            Projektarchiv übertragen werden, entfernt
-            (<quote>zurück-ersetzt</quote>) Subversion alle
-            Schlüsselworte die vorher ersetzt wurden.  Dies führt
+            Projektarchiv übertragen werden, entfernt Subversion alle
+            Schlüsselworte die vorher ersetzt wurden (<quote>nimmt die 
+            Ersetzungen zurück</quote>).  Dies führt
             dazu, dass die im Projektarchiv gespeicherten Versionen
             nur jene Änderungen enthalten, die von der bearbeitenden
             Person vorgenommen wurden.</para>
@@ -1613,8 +1616,8 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
         <para>Wenn nun eine andere Person Änderungen für die Datei
           <filename>wetter.txt</filename> überträgt, dann wird Ihre
           Kopie der Datei den gleichen Ersatztext zeigen wie davor
-          &mdash; bis Sie ihre Arbeitskopie aktualisieren.  Dann
-          werden die Schlüsselworte in ihrer
+          &mdash; bis Sie Ihre Arbeitskopie aktualisieren.  Dann
+          werden die Schlüsselworte in Ihrer
           <filename>wetter.txt</filename> Datei wieder mit
           Informationen ersetzt, welche den Stand der aktuellsten
           Übertragung für diese Datei wiederspiegeln.</para>
@@ -1633,12 +1636,12 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
           für eine Datei davon aus, dass es sich um einen
           menschen-lesbaren Inhalt handelt.  Allgemein gesprochen
           benutzt Subversion diese Information nur um festzustellen,
-          ob bei dieser Datei Unterschiede kontextbezogen ermittelt
+          ob bei dieser Datei kontextbezogene Unterschiede ermittelt
           werden können.  Ansonsten arbeitet Subversion
           byteweise.</para>
         
         <para>Das bedeutet, dass Subversion standardmässig den
-          <firstterm>end-of-line (EOL)</firstterm> also
+          <firstterm>end-of-line (EOL)</firstterm> also den
           Zeilenende-Markierungen, ihrer Dateien keine Beachtung
           schenkt.  Leider benutzen die verschiedenen Betriebssysteme
           unterschiedliche Marken, um das Ende einer Textzeile zu
@@ -1652,7 +1655,7 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
 
         <para>Nicht alle Werkzeuge auf den verschiedenen
           Betriebssystemen können mit einem Zeilenende-Format umgehen,
-          das vom <firstterm>muttersprachlichen Endestil</firstterm>
+          das vom <firstterm>systemspezifischen Zeilenende-Stil</firstterm>
           des Betriebssystems auf dem sie laufen abweicht.
           Gebräuchliche Ergebnisse sind, dass Unix-Programme die
           <literal>CR</literal> Zeichen von Windows-Dateien als
@@ -1669,7 +1672,7 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
           Gehen wir zum Beispiel von einer Programm-Quelldatei aus,
           die sowohl auf Windows, als auch auf Unix-Systemen
           bearbeitet wird.  Wenn auf beiden Plattformen Werkzeuge
-          verwendet werden, welche die den gleichen Zeilenende-Stil
+          verwendet werden, welche den gleichen Zeilenende-Stil
           haben, dann wird es zu keinen Schwierigkeiten kommen.</para>
 
         <para>In der Praxis scheitern aber viele Werkzeuge, wenn sie
@@ -1712,17 +1715,17 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
           <varlistentry>
             <term><literal>native</literal></term>
             <listitem>
-              <para>Dies legt fest, dass die Datei die EOL-Marken
+              <para>Dies legt fest, dass die Datei die Art von EOL-Marken
                 enthält, die auf dem Betriebssystem auf dem Subversion
                 läuft heimisch (üblich) sind.  In anderen Worten, wenn
-                auf einer Windows-Maschine eine Arbeitskopie auscheckt
-                wird, die eine Datei enthält, deren
+                auf einer Windows-Maschine eine Arbeitskopie einer Datei
+                ausgecheckt wird, deren
                 <literal>svn:eol-style</literal> Eigenschaft auf
                 <literal>native</literal> gesetzt ist, dann wird die
                 Datei <literal>CRLF</literal> als
                 Zeilenende-Markierung enthalten.  Wenn die gleiche
-                Arbeitskopie auf einem Unix-System ausgecheckt wird,
-                dann wird die gleiche Datei <literal>LF</literal> als
+                Datei auf einem Unix-System ausgecheckt wird,
+                dann wird diese Datei dort <literal>LF</literal> als
                 EOL-Marker enthalten.</para>
 
               <para>Beachten Sie, dass Subversion derzeit die Dateien
@@ -1735,27 +1738,27 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
           <varlistentry>
             <term><literal>CRLF</literal></term>
             <listitem>
-              <para>Dies bedeutet, dass die Datei die
-                <literal>CRLF</literal> Abfolge als EOL-Markierung
-                enthält &mdash; unabhängig vom verwendeten
-                Betriebssystem.</para>
+              <para>Dies bedeutet, dass die Datei unabhängig vom 
+                verwendeten Betriebssystem immer die
+                <literal>CRLF</literal> Kombination als 
+                EOL-Markierung enthält.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>LF</literal></term>
             <listitem>
-              <para>Dies bedeutet, dass die Datei das
-                <literal>LF</literal> Zeichen als EOL-Marke enthält
-                &mdash; unabhängig vom verwendeten
-                Betriebssystem.</para>
+              <para>Dies bedeutet, dass die Datei unabhängig vom 
+                verwendeten Betriebssystem immer das
+                <literal>LF</literal> Zeichen als EOL-Marke
+                enthält.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><literal>CR</literal></term>
             <listitem>
-              <para>Dies bedeutet, dass die Datei das
-                <literal>CR</literal> Zeichen als EOL-Marke enthält
-                &mdash; unabhängig vom verwendeten Betriebssystem.
+              <para>Dies bedeutet, dass die Datei unabhängig vom 
+                verwendeten Betriebssystem immer das
+                <literal>CR</literal> Zeichen als EOL-Marke enthält.
                 Dieser Zeilenende-Stil ist nicht sehr verbreitet.  Er
                 wurde auf älteren Macintosh-Plattformen verwendet (auf
                 denen Subversion niemals gelaufen ist).</para>
@@ -1771,8 +1774,8 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
         <para>Die <literal>svn:externals</literal> Eigenschaft enthält
           Anweisungen für Subversion, um ein versioniertes Verzeichnis
           mit einem oder mehreren zusätzlichen ausgecheckten
-          Arbeitskopien zu versorgen.<!-- *TODO* überprüfen/querlesen
-          --> Für weitere Informationen zu diesem Schlüsselwort und
+          Arbeitskopien zu versorgen.
+          Für weitere Informationen zu diesem Schlüsselwort und
           seiner Verwendung siehe <xref
           linkend="svn-ch-7-sect-3"/>.</para>
 
@@ -1783,9 +1786,9 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
     <sect2 id="svn-ch-7-sect-2.4">
       <title>Automatisches setzen von Eigenschaften</title>
 
-      <para>Eigenschaften sind eine mächtige Eigenschaft von
-        Subversion, die als Schlüssel zu vielen Fähigkeiten von
-        Subversion dient, die in diesem oder anderen Kapiteln
+      <para>Die Verwendung von Eigenschaften ist der
+        Schlüssel zu vielen Fähigkeiten von
+        Subversion, die in diesem oder anderen Kapiteln
         diskutiert werden &mdash; Unterstützung für
         Unterschiedserkennung (diff) und Zusammenführung (merge) von
         Texten, Schlüsselwort-Ersetzung, Zeilenende-Übersetzung, usw.
@@ -1793,16 +1796,16 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
         müssen diese auf den richtigen Dateien und Verzeichnissen
         gesetzt werden.  Unglücklicherweise kann dieser Schritt leicht
         vergessen werden, speziell deswegen, weil eine fehlende
-        Eigenschaft üblicherweise nicht in einem augenscheinlichen
+        Eigenschaft üblicherweise nicht zu einem offensichtlichen
         Fehlerzustand (verglichen mit dem Scheitern beim Hinzufügen
         einer Datei zur Versionskontrolle) resultiert.  Damit
         Eigenschaften dort verwendet werden, wo sie benötigt werden,
-        bietet Subversion Reihe von nützichen Hilfestellungen.</para>
+        bietet Subversion eine Reihe von nützichen Hilfestellungen.</para>
 
       <para>Wenn sie eine Datei mit <command>svn add</command> oder
         <command>svn import</command>unter Versionskontrolle stellen,
-        verwendet Subversion eine sehr einfache Heuristik um
-        festzustellen, ob der Dateiinhalt menschen-lesbar ist oder
+        dann verwendet Subversion eine sehr einfache Heuristik um
+        festzustellen, ob der Dateiinhalt menschenlesbar ist oder
         nicht.  Wenn zweiteres der Fall ist, dann wird Subversion
         automatisch die <literal>svn:mime-type</literal> Eigenschaft
         auf <literal>application/octet-stream</literal> setzen (das
@@ -1818,13 +1821,13 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
 
       <para>Subversion bietet auch die auto-props Fähigkeit, mit der
         Sie Dateinamen-Muster auf Eigenschaftennamen und -werte
-        abbilden können.  Diese Abbildung wird in der
+        umsetzen können.  Diese Umsetzung wird in der
         Laufzeit-Konfiguration eingestellt.  Diese betreffen wiederrum
         das Hinzfügen und Importieren und können nicht nur die
         standardmässig ausgewählten MIME-Typen von Subversion während
         dieser Aktionen überschreiben, sondern damit können auch
         zusätzliche Eigenschaften gesetzt werden.  Zum Beispiel
-        könnten Sie eine Abbildung erstellten, die besagt, dass
+        könnten Sie eine Umsetzungstabelle erstellten, die besagt, dass
         Subversion jedesmal, wenn eine JPEG-Datei &mdash; eine Datei
         die dem Dateimuster <literal>*.jpg</literal> entspricht
         &mdash; hinzugefügt wird, die <literal>svn:mime-type</literal>
@@ -1848,18 +1851,18 @@ Die Cumulus-Wolken entfernen sich mit der Ankunft des Sommers.
   <sect1 id="svn-ch-7-sect-3">
     <title>Externe Definitionen</title>
     
-    <para>Manchmal ist es nützlich, eine Arbeitskopie zu erstellen,
-      die aus einer Anzahl von verschiedenen <!-- *TODO* -->Checkouts
+    <para>Manchmal ist es nützlich eine Arbeitskopie zu erstellen,
+      die aus einer Anzahl von verschiedenen Checkout-Operationen
       zusammengesetz ist.  Zum Beispiel können Sie wollen, dass
       verschiedene Unterverzeichnisse aus verschiedenen Orten des
-      Projektarchives kommen, oder möglicherweise sogar überhaupt aus
+      Projektarchives kommen oder möglicherweise sogar überhaupt aus
       verschiedenen Projektarchiven.  Sie können natürlich ein solches
       Szenario händisch erreichen, indem Sie <command>svn
       checkout</command> verwenden um die spezielle Art von
       Verschachtelung zu bekommen, die Sie wünschen.  Aber wenn diese
       Anordnung wichtig für alle ist, die Ihr Projektarchiv nützen,
-      dann müssen alle anderen die gleichen <!-- *TODO* checkout -->
-      Checkout-Operationen durchführen wie Sie.</para>
+      dann müssen alle anderen die gleichen manuellen
+      Checkout-Schritte durchführen wie Sie.</para>
 
     <para>Glücklicherweise bietet Subversion Unterstützung für
       <firstterm>externe Definitionen</firstterm>.  Eine externe
@@ -1934,7 +1937,8 @@ Fetching external item into calc/third-party/skins
 
     <para>Das <command>svn status</command> Kommando erkennt ebenfalls
       externe Definitionen und zeigt <literal>X</literal> als
-      Statuscode für <quote>deplazierte</quote> Unterverzeichnisse in
+      Statuscode für solche <quote>lose verbundenen</quote> 
+      Unterverzeichnisse an in
       welche externe Einheiten ausgecheckt wurden und zeigt dann
       normal den Status der externen Einheiten innerhalb des
       Unterverzeichnisses an.</para>
@@ -1946,7 +1950,7 @@ Fetching external item into calc/third-party/skins
       primären Arbeitskopie (also die Arbeitskopie, an dessen
       versioniertem Verzeichniss die <literal>svn:externals</literal>
       Eigenschaft gesetzt wurde) verbunden.  Subversion wird nur mit
-      <quote>nicht-deplazierten</quote> Arbeitskopien wirklich voll
+      <quote>fest verbundenen</quote> Arbeitskopien wirklich voll
       arbeiten.  Zum Beispiel, wenn Sie Änderungen, die Sie an einer
       oder mehreren Dateien einer externen Arbeitskopie gemacht haben,
       übertragen wollen, dann müssen Sie <command>svn commit</command>
@@ -1954,13 +1958,13 @@ Fetching external item into calc/third-party/skins
       Übertragung der primären Arbeitskopie werden externe
       Arbeitskopien nicht berücksichtigt.</para>
 
-    <para>Da die externe Definition absolute URLS verwendet, hat des
-      beim Verschieben oder Kopieren des Verzeichnisses, an das die
-      externe Definition gebunden ist, keine Auswirkung auf das was
-      exerne Arbeitskopie ausgecheckt wird (das relative lokale
-      Unterverzeichnis, das Ziel der Operation ist, verschiebt sich
+    <para>Da die externe Definition absolute URLS verwendet, hat das
+      Verschieben oder Kopieren des Verzeichnisses, an das die
+      externe Definition gebunden ist, keine Auswirkung darauf welche
+      exerne Arbeitskopie ausgecheckt wird &mdash; das relative lokale
+      Unterverzeichnis das Ziel der Operation ist, verschiebt sich
       also gemeinsam mit dem umbenannten Verzeichnis in dem es
-      liegt). Dies kann unter bestimmten Situationen verwirrend
+      liegt. Dies kann unter bestimmten Situationen verwirrend
       &mdash; wenn nicht frustrierend &mdash; sein.  Zum Beispiel,
       wenn Sie externe Definitionen in einem Verzeichnis Ihrer
       Haupt-Entwicklungslinie (<filename>/trunk</filename>) verwenden,
@@ -1991,8 +1995,8 @@ Fetching external item into calc/third-party/skins
       halten ohne die Stabilität des eigenen Projektes zu gefährden.
       Dieses Szenario kommt immer dann ins Spiel, wenn die
       Information, die von einer Personengruppe erstellt wird eine
-      direkte Auswirkung auf das hat was eine andere Gruppe
-      erzeugt.</para>
+      direkte Auswirkung auf das Produkt einer anderen Gruppe
+      hat.</para>
 
     <para>Zum Beispiel könnte eine Software erstellt werden, die eine
       Bibliothek von dritter Seite (third-party library) verwendet.
@@ -2000,11 +2004,11 @@ Fetching external item into calc/third-party/skins
       Laufzeit-Bibliothek von Apache &mdash; Apache Portable Runtime
       library (siehe <xref linkend="svn-ch-8-sect-2.1" />).  Der
       Quellcode von Subversion ist &mdash; in Hinblick auf die
-      Möglichkeiten zur Portierung &mash; voll abhängig von der
-      APR-Bibliothek.  In früheren Stadien der Enwicklung von
+      Möglichkeiten zur Portierung &mash; voll von der
+      APR-Bibliothek abhängig.  In frühen Stadien der Enwicklung von
       Subversion hat das Projekt jede Änderung der API nachvollzogen
-      und klebte an der <quote>blutjungen<!-- *TODO* taufrischen
-      --></quote> sich ständig ändernden Entwicklungsversion.  Nun da
+      und klebte an der jeweils <quote>brandaktuellen</quote> 
+      sich ständig ändernden Entwicklungsversion.  Nun da
       beide, APR und Subversion, gereifter sind, versucht Subversion
       nur gut getestete und stabile Versionen der APR-Bibliothek
       synchron zu halten.</para>
@@ -2025,10 +2029,10 @@ Fetching external item into calc/third-party/skins
       von Dritter Seite im eigenen Versions-Kontroll-System verwaltet
       werden.  Um zum Beispiel der Software-Entwicklung
       zurückzukommen, kann es notwendig sein Änderungen an der
-      Bibliotek von Dritter Seite zu machen um diese an die eigenen
+      Fremd-Bibliothek zu machen, um diese an die eigenen
       Bedürfnisse anzupassen.  Diese Änderungen können neue Funktionen
       enthalten oder Fehlerbereinigungen und müssen intern verwaltet
-      werden, bis sie Bestandteil eines neuen offiziellen
+      werden, bis sie Bestandteil einer neuen offiziellen
       Veröffentlichung der Information von Dritter Seite werden.  Oder
       die Änderungen werden niemals an die externe Quelle
       zurückgegeben und dienen nur der Anpassung an spezielle eigene
@@ -2040,45 +2044,45 @@ Fetching external item into calc/third-party/skins
       selbständigte alternative Versionen zur Verfügung gestellt
       werden.  Dies wird aber schnell zu Problemen bei der Wartung
       führen und benötigt Mechanismen um Ihre eigenen Änderungen auf
-      die externen Daten anzuwenden und notwendigerweise eine
-      Wiederherstellung dieser Änderungen nach jeder neuen Übernahme
+      die externen Daten zu übertragen und notwendigerweise eine
+      Neuübertragung dieser Änderungen nach jeder neuen Übernahme
       der externen Quellen.</para>
 
-    <para>Die Lösung für dieses Problem ist die Verwendung einer
-      <firstterm>Lieferanten-Zweiglinie</firstterm>.  Eine
-      Lieferanten-Zweiglinie ist ein Verzeichnis, das die Informationen
+    <para>Die Lösung für dieses Problem ist die Verwendung eines
+      <firstterm>Lieferantenzweiges</firstterm>.  Ein
+      Lieferantenzweig ist ein Verzeichnis, das die Informationen
       enthält, die von Dritter Seite zur Verfügung gestellt werden.
       Jede Version der externen Quelle, die Sie in Ihr Projekt
-      übernehmen wollen heisst
-      <firstterm>Lieferanten-Tropfen</firstterm>.</para>
+      übernehmen wollen wird manchmal als
+      <firstterm>Lieferanten-Tropfen</firstterm> bezeichnet.</para>
 
-    <para>Lieferanten-Zweiglinien bieten zwei wichtige Vorteile.
-      Erstens speichern sie den aktuellen Lieferanten-Tropfen in ihrem
+    <para>Lieferantenzweige bieten zwei wichtige Vorteile.
+      Erstens speichern sie die aktuelle Lieferantenversion in Ihrem
       Versions-Kontroll-System.  Die Mitglieder Ihres Projektes müssen
       sich nicht darum kümmern, ob sie die richtige Version der
       Information von Dritter Seite haben sondern empfangen die
       korrekte Version als Teil der regulären Aktualisierung ihrer
-      Arbeitskopie.  Zweitens benötigen Sie keine (schlimmstenfalls
+      Arbeitskopie.  Zweitens benötigen Sie keine speziellen (schlechtestenfalls
       händischen) Abläufe mehr um die eigenen Änderungen an den
       richtigen Stellen vorzunehmen, da die externen Daten eine Platz
       in Ihrem eigenen Projektarchiv haben.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-4.1">
-      <title>Allgemeine Verwaltung einer Lieferanten-Zweiglinie</title>
+      <title>Allgemeine Verwaltung eines Lieferantenzeiges</title>
 
-      <para>Im Allgemeinen verläuft die Verwaltung einer
-        Lieferanten-Zweiglinie folgendermassen.  Sie erzeugen ein
+      <para>Im Allgemeinen verläuft die Verwaltung eines
+        Lieferantenzweiges folgendermassen.  Sie erzeugen ein
         Top-Level Verzeichnis (zum Beispiel
-        <filename>/vendor</filename>) um die Lieferanten-Zweiglinie
+        <filename>/vendor</filename>) um den Lieferantenzweig
         aufzunehmen.  Dann importieren Sie den Quellcode von Dritter
         Seite in ein Unterverzeichnis dieses Top-Level Verzeichnisses
-        und kopieren dann dieses Unterverzeichnis an eine passende
+        und kopieren dieses Unterverzeichnis dann an eine passende
         Stelle in Ihren Haupt-Entwicklungszweig (zum Beispiel
         <filename>/trunk</filename>).  Sie führen Ihre lokalen
         Änderungen immer im Haupt-Entwicklungszweig durch.  Mit jeder
         neuen Veröffentlichung des externen Quellcodes übernehmen Sie
-        diese in die Lieferanten-Zweiglinie und führen die Änderungen
+        diese in den Lieferantenzweig und führen die Änderungen
         daran mit <filename>/trunk</filename> zusammen. Dabei lösen
         Sie die Konflikte auf, die sich zwischen den lokalen Änderunge
         und den übernommenen externen Änderungen ergeben
@@ -2090,11 +2094,11 @@ Fetching external item into calc/third-party/skins
         Dritter Seite gebunden ist, die Arithmetik mit Komplexen
         Zahlen zur Verfügung stellt und
         <filename>libcomplex</filename> heisst.  Wir beginnen mit der
-        Erstellung der Lieferanten-Zweiglinie und dem Import des
-        ersten Lieferanten-Tropfen.  Wir nennen das Verzeichnis für
-        die Lieferanten-Zweiglinie <filename>libcomplex</filename> und
-        unsere Code-Tropfen gehen ein Unterverzeichnis dieser
-        Lieferanten-Zweiglinie das wir <filename>current</filename>
+        Erstellung des Lieferantenzweiges und dem Import der
+        ersten Lieferantenversion.  Wir nennen das Verzeichnis für
+        den Lieferantenzweig <filename>libcomplex</filename> und
+        die Lieferanenversion geht in ein Unterverzeichnis dieses
+        Lieferantenzweiges das wir <filename>current</filename>
         nennen.  Da <command>svn import</command> alle benötigten
         Elternverzeichnisse automatisch erzeugt, können wir beide
         Schritte mit einem einzigen Kommando erledigen.</para>
@@ -2102,7 +2106,7 @@ Fetching external item into calc/third-party/skins
       <screen>
 $ svn import /path/to/libcomplex-1.0 \
              http://svn.example.com/repos/vendor/libcomplex/current \
-             -m 'importing initial 1.0 vendor drop'
+             -m 'Import der Lieferantenversion 1.0'
 &hellip;
 </screen>
     
@@ -2128,8 +2132,8 @@ $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
 </screen>
 
       <para>Wir checken unseren Projekt Hauptzweig &mdash; welcher nun
-        die Kopie des Lieferanten-Tropfen enthält &mdash; aus und
-        beginnen den Quellcode von libcomplex zu bearbeiten.  Bevor
+        die Kopie der Lieferantenversion enthält &mdash; aus und
+        beginnen den Quellcode von libcomplex zu bearbeiten.  Ohne dass
         wir es richtig bemerken, sind unsere Änderungen an libcomplex
         komplett im Rechenprogramm integriert.
         <footnote>
@@ -2147,21 +2151,23 @@ $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
         von libcomplex 1.0 durch eine Kopie von libcomplex 1.1
         ersetzen und dann die eigenen Änderungen die wir an der
         Bibliothek gemancht haben auf die neue Version überführen.
-        Aber wir nähern uns dem Problem jetzt aber aus der anderen
+        Wir nähern uns dem Problem jetzt aber aus der anderen
         Richtung, indem wir die Änderungen, die zwischen den Versionen
         1.0 und 1.1 an libcomplex vorgenommen wurden auf unsere
         abgeänderte Kopie übertragen.</para>
       
       <para>Um die Aktualisierung vorzunehmen checken wir eine neue
-        Kopie der Lieferanten-Zweigline aus und ersetzen den Code im
-        <filename>current</filename> Verzeichnis mit dem neuen
+        Kopie des Lieferantenzweiges &mdash; den wir am Beginn des 
+        Beispieles importiert und markiert haben &mdash; aus unserem 
+        Projektarchiv aus. Dann ersetzen wir den Code im
+        <filename>current</filename> Verzeichnis der lokalen Arbeitskopie mit dem neuen
         Quellcode von libcomplex 1.1.  Wir überschreiben bestehende
         Dateien indem wir zum Beispiel den Entwicklungs-Tarball von
         libcomplex 1.1 entpacken.  Das Ziel ist es, dass das
-        <filename>current</filename> ausschliesslich den Quellcode von
-        libcomplex 1.1 enthält und sicherzustellen, dass der ganze
-        Quellcode unter Versionskontrolle steht.  Natürlich mit so
-        wenig Turbulenzen wie möglich in der
+        <filename>current</filename> Verzeichnis ausschliesslich den Quellcode von
+        libcomplex 1.1 enthält.  Weiters wollen wir sicherstellen, dass der ganze
+        Quellcode unter Versionskontrolle steht.  Natürlich mit
+        möglichst wenig Turbulenzen in der
         Versionsgeschichte.</para>
 
       <para>Nachdem wir den Quellcode der Version 1.0 von libcomplex
@@ -2181,10 +2187,10 @@ $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
         die notwendig waren um diesen Zustand herzustellen ins
         Projektarchiv.</para>
 
-      <para>Unser <filename>current</filename> Zweig enthält nun den
-        neuen Lieferanten-Tropfen.  Wir markieren die neue Version (in
-        der gleichen Art, wie wir vorher die Version 1.0 des
-        Lieferanten-Tropfen markiert haben) und führen die
+      <para>Unser <filename>current</filename> Zweig enthält nun die
+        neuen Lieferantenversion.  Wir markieren die neue Version (in
+        der gleichen Art, wie wir vorher die Version 1.0 der
+        Lieferantenversion markiert haben) und führen die
         Unterschiede zwischen den beiden markierten Versionen mit
         unserer Haupt-Entwicklungslinie zusammen.</para>
 
@@ -2193,18 +2199,18 @@ $ cd working-copies/calc
 $ svn merge http://svn.example.com/repos/vendor/libcomplex/1.0      \
             http://svn.example.com/repos/vendor/libcomplex/current  \
             libcomplex
-&hellip; # resolve all the conflicts between their changes and our changes
-$ svn commit -m 'merging libcomplex-1.1 into the main branch'
+&hellip; # lösen Sie alle Konflikte zwischen Ihren Änderungen und den Änderungen von Dritter Seite auf
+$ svn commit -m 'führe libcomplex-1.1 mit dem Haupt-Entwicklungszweig zusammen'
 &hellip;
 </screen>
 
-      <para>Im einfachsten Fall entspricht die neue externe Quellcode
+      <para>Im einfachsten Fall entspricht der neue externe Quellcode
         aus der Sicht der Datei- und Verzeichnisstruktur einfach der
         alten Version.  Keine der Dateien mit dem Quellcode von
         libcomplex wurden gelöscht, umbenannt oder an einen anderen
         Ort verschoben &mdash; die neue Version enthält im Vergleich
-        zur alten Version nur Änderungen im Text.  In einer perfekten
-        Welt sollten sich die Änderungen sauber und ohne
+        zur alten Version nur Änderungen im Text.  Theoretisch
+        sollten sich die Änderungen sauber und ohne
         Komplikationen oder Konflikte übertragen lassen.</para>
 
      <para>Aber es ist nicht immer so einfach. In Wahrheit ist es
@@ -2218,7 +2224,7 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
        vorigen Ablageorte &mdash; wird das einpflegen der neuen
        Version wesentlich vereinfacht.  Aber wir sind verantwortlich
        dafür, dass wir Subversion mitteilen, wie sich das Datei-Layout
-       von Lieferanten-Tropfen zu Lieferanten-Tropfen geändert
+       von Lieferantenversion zu Lieferantenversion geändert
        hat.</para>
 
     </sect2>
@@ -2232,17 +2238,17 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
     <sect2 id="svn-ch-7-sect-4.2">
       <title><command>svn_load_dirs.pl</command></title>
 
-      <para>Lieferanten-Tropfen, bei denen mehr als nur einige wenige
+      <para>Lieferantenversionen, bei denen mehr als nur einige wenige
         Dateien gelöscht, hinzugefügt oder verschoben wurden,
         erschweren den Ablauf der Aktualisierung bei jeder neuen
         Version aus der externen Quelle.  Daher bietet Subversion das
         <command>svn_load_dirs.pl</command> Skript zur Unterstützung
         dieses Prozesses.  Dieses Skript automatisiert die wichtigsten
         Schritte, die wir in der allgmeinen Verwaltung von
-        Lieferanten-Zweiglinien erwähnt haben um die Fehlerquellen
+        Lieferantenzweigen erwähnt haben um die Fehlerquellen
         möglichst gering zu halten.  Sie sind nach wie vor
         verantwortlich für die Durchführung der Kommandos zum
-        Zusammenführen der neuen Version der externen Quelle mit ihrem
+        Zusammenführen der neuen Version der externen Quelle mit Ihrem
         Haupt-Entwicklungszweig, aber
         <command>svn_load_dirs.pl</command> kann Ihnen helfen, dass
         Sie dieses Ziel schneller und leichter erreichen.</para>
@@ -2261,14 +2267,14 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
         </listitem>
         <listitem>
           <para>Es beachtet komplizierte Folgen von Operationen,
-            zwischen denen Subversion eine zwischenzeitliche
-            Übertragung benötigt &mdash; zum Beispiel bevor ein
+            zwischen denen eine
+            Übertragung notwendig ist &mdash; zum Beispiel bevor ein
             Verzeichnis oder eine Datei ein zweites mal umbenannt
             werden kann.</para>
         </listitem>
         <listitem>
           <para>Es kann optional das neu importierte Verzeichnis mit
-            einer Namensmarke versehen.</para>
+            einer Markierung versehen.</para>
         </listitem>
         <listitem>
           <para>Es kann optional verschiedene Eigenschaften zu Dateien
@@ -2280,8 +2286,8 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
       <para><command>svn_load_dirs.pl</command> hat drei
         verpflichtende Argumente.  Das erste Argument die URL zum
         Basisverzeichnis im Projektarchiv.  Diesem Argument folgt die
-        URL &mdash; relativ zum ersten Argument &mdash; in welche der
-        Lieferanten-Tropfen importiert wird.  Das dritte Argument
+        URL &mdash; relativ zum ersten Argument &mdash; in welche die
+        Lieferantenversion importiert wird.  Das dritte Argument
         schliesslich ist das lokale Verzeichnis, das importiert werden
         soll.  Angewendet auf unser voriges Beispiel könnte ein
         typischer Aufruf von <command>svn_load_dirs.pl</command>
@@ -2295,7 +2301,7 @@ $ svn_load_dirs.pl http://svn.example.com/repos/vendor/libcomplex \
 </screen>
 
       <para>Sie können <command>svn_load_dirs.pl</command> beauftragen
-        den neuen Lieferanten-Tropfen mit einer Marke zu versehen,
+        die neue Lieferantenversion mit einer Marke zu versehen,
         indem auf der Kommandozeile die <option>-t</option> Option mit
         dem gewünschten Namen angegeben wird.  Diese Marke ist eine
         weitere URL relativ zum ersten Argument.</para>
@@ -2309,9 +2315,9 @@ $ svn_load_dirs.pl -t libcomplex-1.1                              \
 </screen>
 
       <para>Wenn Sie <command>svn_load_dirs.pl</command> aufrufen,
-        vergleicht es den Inhalt ihres existierenden
-        Lieferanten-Tropfen in <quote>current</quote> mit dem
-        gewünschten neuen Lieferanten-Tropfen.  Im einfachsten Fall
+        vergleicht es den Inhalt ihrer existierenden
+        Lieferantenversion in <quote>current</quote> mit der
+        gewünschten neuen Lieferantenversion.  Im einfachsten Fall
         gibt es keine Dateien, die nur in einer Version existieren,
         aber nicht in der anderen.  Wenn es jedoch Abweichungen im
         Datei-Layout zwischen den Versionen gibt, wird
