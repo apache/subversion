@@ -184,6 +184,11 @@ svn_txdelta (svn_txdelta_stream_t **stream,
 
   /* Initialize MD5 digest calculation. */
   apr_md5_init (&((*stream)->context));
+
+  /* ### Need to initalise this as the value gets used later in
+     use_implicit(). I don't know what the initial value should be,
+     zero appears to work. */
+  memset ((*stream)->digest, 0, MD5_DIGESTSIZE);
 }
 
 
