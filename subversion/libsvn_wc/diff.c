@@ -1157,8 +1157,7 @@ close_file (void *file_baton,
   const char *pristine_mimetype, *working_mimetype;
 
   /* The path to the temporary copy of the pristine repository version. */
-  const char *temp_file_path
-    = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
+  const char *temp_file_path;
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, b->edit_baton->anchor,
                                       b->wc_path, b->pool));
   SVN_ERR (svn_wc_entry (&entry, b->wc_path, adm_access, FALSE, b->pool));
@@ -1172,6 +1171,8 @@ close_file (void *file_baton,
 
   if (b->added)
     {
+      temp_file_path = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
+
       /* Remember that the default diff order is to show repos->wc,
          but we ask the server for a wc->repos diff.  So if
          'reverse_order' is TRUE, then we do what the server says:
@@ -1232,8 +1233,10 @@ close_file (void *file_baton,
             /* a detranslated version of the working file */
             SVN_ERR (svn_wc_translated_file (&localfile, b->path, adm_access,
                                              TRUE, b->pool));
-
+          temp_file_path = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
         }
+      else
+        localfile = temp_file_path = NULL;
       
       if (b->propchanges->nelts > 0
           && ! eb->reverse_order)
