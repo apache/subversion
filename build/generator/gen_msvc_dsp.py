@@ -51,40 +51,9 @@ class Generator(gen_win.WinGeneratorBase):
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
-    configs = [ ]
-    for cfg in self.configs:
-      configs.append(_item(name=cfg,
-                           lower=string.lower(cfg),
-                           defines=self.get_win_defines(target, cfg),
-                           libdirs=self.get_win_lib_dirs(target,rootpath, cfg),
-                           libs=self.get_win_libs(target, cfg),
-                           ))
+    configs = self.get_configs(target, rootpath)
 
-    sources = [ ]
-    if not isinstance(target, gen_base.TargetUtility):
-      for src, reldir in self.get_win_sources(target):
-        rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
-        if '-' in rsrc:
-          rsrc = '"%s"' % rsrc
-        sources.append(_item(path=rsrc, reldir=reldir, swig_language=None,
-                             swig_output=None))
-
-    if isinstance(target, gen_base.SWIGLibrary):
-      for obj in self.graph.get_sources(gen_base.DT_LINK, target):
-        if isinstance(obj, gen_base.SWIGObject):
-          for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-            if isinstance(cobj, gen_base.SWIGObject):
-              csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
-              sources.append(_item(path=csrc, reldir=None, swig_language=None,
-                                   swig_output=None))
-
-              for ifile in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
-                isrc = rootpath + '\\' + string.replace(ifile, '/', '\\')
-                sources.append(_item(path=isrc, reldir=None, 
-                                     swig_language=target.lang,
-                                     swig_output=csrc))
-        
-    sources.sort(lambda x, y: cmp(x.path, y.path))
+    sources = self.get_proj_sources(True, target, rootpath)
 
     data = {
       'target' : target,
@@ -113,23 +82,8 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self, oname):
     "Write a Workspace (.dsw)"
 
-    # Generate a fake depaprutil project
-    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', None,
-                                                     'build/win32',
-                                                     None, None, self.cfg,
-                                                     None)
-    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', None,
-                                                      'build/win32',
-                                                      None, None, self.cfg,
-                                                      None)
-
-    install_targets = self.targets.values() \
-                      + self.graph.get_all_sources(gen_base.DT_INSTALL)
-    install_targets = gen_base.unique(install_targets)
-
-    # sort these for output stability, to watch out for regressions.
-    install_targets.sort()
-
+    install_targets = self.get_install_targets()
+    
     targets = [ ]
 
     self.gen_proj_names(install_targets)
@@ -164,9 +118,10 @@ class Generator(gen_win.WinGeneratorBase):
       for dep in depends:
         dep_names.append(dep.proj_name)
 
-      targets.append(_item(name=target.proj_name,
-                           dsp=string.replace(fname, os.sep, '\\'),
-                           depends=dep_names))
+      targets.append(
+        gen_win.ProjectItem(name=target.proj_name,
+                            dsp=string.replace(fname, os.sep, '\\'),
+                            depends=dep_names))
 
     targets.sort()
     data = {
@@ -174,8 +129,3 @@ class Generator(gen_win.WinGeneratorBase):
       }
 
     self.write_with_template(oname, 'msvc_dsw.ezt', data)
-
-
-class _item:
-  def __init__(self, **kw):
-    vars(self).update(kw)

@@ -49,41 +49,10 @@ class Generator(gen_win.WinGeneratorBase):
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
-    configs = [ ]
-    for cfg in self.configs:
-      configs.append(_item(name=cfg,
-                           lower=string.lower(cfg),
-                           defines=self.get_win_defines(target, cfg),
-                           libdirs=self.get_win_lib_dirs(target,rootpath, cfg),
-                           libs=self.get_win_libs(target, cfg),
-                           ))
+    configs = self.get_configs(target, rootpath)
 
+    sources = self.get_proj_sources(False, target, rootpath)
 
-    sources = [ ]
-    
-    if not isinstance(target, gen_base.TargetUtility):
-      for src, reldir in self.get_win_sources(target):
-        rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
-        sources.append(_item(path=rsrc, reldir=reldir, swig_language=None,
-                             swig_output=None))
-
-    if isinstance(target, gen_base.SWIGLibrary):
-      for obj in self.graph.get_sources(gen_base.DT_LINK, target):
-        if isinstance(obj, gen_base.SWIGObject):
-          for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-            if isinstance(cobj, gen_base.SWIGObject):
-              csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
-              sources.append(_item(path=csrc, reldir=None, swig_language=None,
-                                   swig_output=None))
-
-              for ifile in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
-                isrc = rootpath + '\\' + string.replace(ifile, '/', '\\')
-                sources.append(_item(path=isrc, reldir=None, 
-                                     swig_language=target.lang,
-                                     swig_output=csrc))
-
-    sources.sort(lambda x, y: cmp(x.path, y.path))
-    
     data = {
       'target' : target,
       'target_type' : config_type,
@@ -138,30 +107,19 @@ class Generator(gen_win.WinGeneratorBase):
     # over if they don't match
     self.move_proj_file('apr', 'apr.vcproj')
     self.move_proj_file('apr-iconv', 'apriconv.vcproj')
-    self.move_proj_file(os.path.join('apr-iconv','ccs'), 'apriconv_ccs_modules.vcproj')
-    self.move_proj_file(os.path.join('apr-iconv','ces'), 'apriconv_ces_modules.vcproj')
+    self.move_proj_file(os.path.join('apr-iconv','ccs'),
+                        'apriconv_ccs_modules.vcproj')
+    self.move_proj_file(os.path.join('apr-iconv','ces'),
+                        'apriconv_ces_modules.vcproj')
     self.move_proj_file('apr-util', 'aprutil.vcproj')
-    self.move_proj_file(os.path.join('apr-util','uri'), 'gen_uri_delims.vcproj')
-    self.move_proj_file(os.path.join('apr-util','xml', 'expat', 'lib'), 'xml.vcproj')
+    self.move_proj_file(os.path.join('apr-util','uri'),
+                        'gen_uri_delims.vcproj')
+    self.move_proj_file(os.path.join('apr-util','xml', 'expat', 'lib'),
+                        'xml.vcproj')
 
-    # Generate a fake depaprutil project
-    self.targets['depsubr'] = gen_base.TargetUtility('depsubr', None,
-                                                     'build/win32',
-                                                     None, None, self.cfg,
-                                                     None)
-    self.targets['depdelta'] = gen_base.TargetUtility('depdelta', None,
-                                                      'build/win32',
-                                                      None, None, self.cfg,
-                                                      None)
+    install_targets = self.get_install_targets()
 
     targets = [ ]
-
-    install_targets = self.targets.values() \
-                      + self.graph.get_all_sources(gen_base.DT_INSTALL)
-    install_targets = gen_base.unique(install_targets)
-
-    # sort these for output stability, to watch out for regressions.
-    install_targets.sort()
 
     guids = { }
 
@@ -201,22 +159,22 @@ class Generator(gen_win.WinGeneratorBase):
 
       deplist = [ ]
       for i in range(len(depends)):
-        deplist.append(_item(guid=guids[depends[i].name],
-                             index=i,
-                             ))
-      targets.append(_item(name=target.name,
-                           path=string.replace(fname, os.sep, '\\'),
-                           guid=guids[target.name],
-                           depends=deplist,
-                           ))
+        deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
+                                           index=i,
+                                           ))
+      targets.append(
+        gen_win.ProjectItem(name=target.name,
+                            path=string.replace(fname, os.sep, '\\'),
+                            guid=guids[target.name],
+                            depends=deplist,
+                            ))
 
     targets.sort()
 
     configs = [ ]
     for i in range(len(self.configs)):
-
       ### this is different from write_project
-      configs.append(_item(name=self.configs[i], index=i))
+      configs.append(gen_win.ProjectItem(name=self.configs[i], index=i))
 
     # sort the values for output stability.
     guidvals = guids.values()
@@ -230,7 +188,3 @@ class Generator(gen_win.WinGeneratorBase):
       }
 
     self.write_with_template(oname, 'vcnet_sln.ezt', data)
-
-class _item:
-  def __init__(self, **kw):
-    vars(self).update(kw)
