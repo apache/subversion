@@ -860,20 +860,27 @@ svn_fs_fs__allow_locked_operation (const char *path,
                                    svn_boolean_t recurse,
                                    apr_pool_t *pool)
 {
-  if (kind == svn_node_dir && recurse)
+  if (kind == svn_node_dir)
     {
-      apr_hash_t *locks;
-
-      /* Discover all locks at or below the path. */
-      SVN_ERR (svn_fs_fs__get_locks (&locks, fs, path, pool));
-
-      /* Easy out. */
-      if (apr_hash_count (locks) == 0)
-          return SVN_NO_ERROR;
-
-      /* Some number of locks exist below path; are we allowed to
-         change them? */
-      return verify_locks (fs, locks, pool);      
+      if (recurse)
+        {
+          apr_hash_t *locks;
+          
+          /* Discover all locks at or below the path. */
+          SVN_ERR (svn_fs_fs__get_locks (&locks, fs, path, pool));
+          
+          /* Easy out. */
+          if (apr_hash_count (locks) == 0)
+            return SVN_NO_ERROR;
+          
+          /* Some number of locks exist below path; are we allowed to
+             change them? */
+          return verify_locks (fs, locks, pool); 
+        }
+      /* If this function is called on a directory non-recursively,
+         then just return--directory locking isn't supported, so a
+         directory can't be locked. */
+      return SVN_NO_ERROR;
     }
 
   /* We're either checking a file, or checking a dir non-recursively: */
