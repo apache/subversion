@@ -374,3 +374,21 @@ right now) could remove the entry in SVN/conflicts, too.
   
   the ability to do repository operations from the client via the 'svn
   repo' subcommand. 
+
+* use a format string to construct ``svn status'' output
+
+  Because `svn status' seems like a very convenient vehicle for
+  supplying arbitrary information that a script may wish to extract.
+  What if `svn status' had a standard, default display that was
+  configured with a format string.  That format string could be
+  over-ridden with an option (``--format=....'') and we made an
+  option alias or two for formats that were likely to be commonly
+  used?  Here is an approximation that would likely be abbreviated:
+  
+     --format="%{obj-name}:  %{ver=TAG} vs. %{local-ver} is %{mod-state}\n"
+  
+  So, if TAG were associated with the 1234 version of object mumble,
+  but the local copy were version 1222 but unchanged, you get:
+  
+    mumble:  1234 vs. 1222 is unchanged
+  - Bruce
