@@ -118,10 +118,6 @@ SOURCE=".\diff-cmd.c"
 # End Source File
 # Begin Source File
 
-SOURCE=.\diff.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\feedback.c
 # End Source File
 # Begin Source File
