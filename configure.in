@@ -34,6 +34,7 @@ sinclude(ac-helpers/find_apr.m4)
 sinclude(ac-helpers/apr.m4)
 sinclude(ac-helpers/find_apu.m4)
 sinclude(ac-helpers/aprutil.m4)
+sinclude(ac-helpers/swig.m4)
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
@@ -308,34 +309,7 @@ if test "$PYTHON" != "none"; then
   ${PYTHON} ${abs_srcdir}/build/pycheck.py
 fi
 
-dnl try to find "swig" to build the SWIG bindings
-AC_PATH_PROG(SWIG, swig, none)
-if test "$SWIG" != "none"; then
-  AC_MSG_CHECKING([swig version])
-  SWIG_VERSION="`$SWIG -version 2>&1 | sed -ne 's/^.*Version \(.*\)$/\1/p'`"
-  AC_MSG_RESULT([$SWIG_VERSION])
-  case $SWIG_VERSION in
-      [1.3.1[23]*])
-        SWIG_SUITABLE=yes
-        ;;
-      *)
-        SWIG_SUITABLE=no
-        AC_MSG_WARN([swig bindings require 1.3.12.])
-        ;;
-  esac
-  if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
-    SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
-    SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
-
-    AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
-	ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
-    ])
-    SWIG_PY_INCLUDES="-I$ac_cv_python_includes"
-  fi
-fi
-AC_SUBST(SWIG_BUILD_RULES)
-AC_SUBST(SWIG_INSTALL_RULES)
-AC_SUBST(SWIG_PY_INCLUDES)
+SVN_CHECK_SWIG
 
 dnl try to find the "makeinfo" program
 AC_PATH_PROG(MAKEINFO, makeinfo, [echo cannot run makeinfo])
