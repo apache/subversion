@@ -49,7 +49,15 @@ Candidate changes:
     Votes:
       +1: maxb, dlr
 
+  * r13983
+    Correct valid warnings and bogus compilation errors specific to
+    Jikes.
+    Justification:
+      Avoid warnings, improve compile times.
+    Votes:
+      +1: dlr
+
 
 Approved changes (further review is welcome, but not required):
 
-  
+  [None]
