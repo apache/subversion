@@ -100,12 +100,11 @@ A node version skel has one of the following forms:
     This node version is a directory.  The list (ENTRY ...) gives the
     directory entries.  Each ENTRY has the form:
 
-        (NAME ID PROPLIST)
+        (NAME ID)
 
     where:
     - NAME is the name of the directory entry, in UTF-8
     - ID is the ID of the nv to which this entry refers, and
-    - PROPLIST is a property list for this directory entry.
 
 Note that a node cannot change its kind from one version to the next.
 A directory node is always a directory; a file node is always a file;
@@ -211,7 +210,7 @@ There is only one form of CHECKSUM skel at the moment:
 
 
 
-How we store all this in Berkeley DB.
+The Berkeley DB "nodes" table
 
 The database contains a table called "nodes", which is a btree indexed
 by node version ID's, mapping them onto REPRESENTATION skels.
@@ -262,6 +261,18 @@ Assuming that we store the most recent version on every branch as
 fulltext, and all other versions as deltas, we can retrieve any node
 version NODE.VERSION by searching for NODE.head, and then walking
 backwards to NODE.VERSION, applying deltas as we go.
+
+
+VERSION: filesystem versions, and the Berkeley DB "versions" table
+
+We represent a filesystem version using a skel of the form:
+    ("version" ID PROPLIST)
+where:
+- ID is the node version ID of this version's root directory, and
+- PROPLIST is the version's property list.
+
+The database contains a table called "versions", which is a btree
+mapping version numbers (as ASCII decimal numbers) onto VERSION skels.
 
 
 Transactions
