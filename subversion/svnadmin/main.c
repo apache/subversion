@@ -254,7 +254,7 @@ static const apr_getopt_option_t options_table[] =
      N_("set repos UUID to that found in stream, if any")},
 
     {"fs-type", svnadmin__fs_type, 1,
-     N_("type of repository: 'bdb' or 'fsfs'")},
+     N_("type of repository: 'fsfs' (default) or 'bdb'")},
 
     {"parent-dir", svnadmin__parent_dir, 1,
      N_("load at specified directory in repository")},

@@ -9,27 +9,18 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r13930
-    In the help for `svnadmin create`, show the default file
-    system backend type for the --fs-type option.
-    Justification: That we did not previously display this info was
-      likely legacy; it should've been added with the introduction
-      of fsfs.  As the default to fsfs is a change in behavior for
-      1.2.0, it's now especially important to display this info.
-    Votes:
-      +1: dlr, lundblad, jerenkrantz
-
   * r13936
     Doxygen tweaks.
     Justification:
       API documentation correctness.
     Votes:
-      +1: lundblad
+      +1: lundblad, dlr
 
   * r13939, r13940
     Doxygen tweaks.
     Votes:
       +1: maxb
+      +0: dlr
 
   * r13945
     Revert r13369 (svn:keywords canonicalization).
