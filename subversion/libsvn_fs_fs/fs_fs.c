@@ -75,12 +75,17 @@ hash_read (apr_hash_t *hash,
     {
       /* Read a key length line.  Might be END, though. */
       SVN_ERR (svn_stream_readline (stream, &stringbuf, "\n", &eof, pool));
-      if (eof)
+      if (eof && first_time)
         {
           /* We got an EOF on our very first attempt to read, which
              means it's a zero-byte file.  No problem, just go home. */
           return SVN_NO_ERROR;
         }
+      else if (eof)
+        /* Any other circumstance is a genuine error. */
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Premature EOF when reading hash.");
+      
       first_time = 0;
 
       if ((strcmp (stringbuf->data, "END") == 0)
