@@ -215,7 +215,7 @@ static const command_rec dav_svn_cmds[] =
                 "resources"),
 
   /* per directory/location */
-  AP_INIT_TAKE1("SVNRepoName", dav_svn_repo_name, NULL, ACCESS_CONF,
+  AP_INIT_TAKE1("SVNReposName", dav_svn_repo_name, NULL, ACCESS_CONF,
                 "specify the name of a Subversion repository"),
 
   { NULL }
