@@ -30,6 +30,7 @@ const char *test_old_timestring =
 "Mon 13 May 2002 22:00:50.966679 (day 133, dst 1, gmt_off 010800)";
 
 
+#if 0  /* ### XXX: enable after new timestamps are in use */
 static svn_error_t *
 test_time_to_nts (const char **msg,
                   svn_boolean_t msg_only,
@@ -55,6 +56,7 @@ test_time_to_nts (const char **msg,
 
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 static svn_error_t *
@@ -148,7 +150,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
-  /* XXX: enable after new timestamps are in use */
+  /* ### XXX: enable after new timestamps are in use */
   /* test_time_to_nts, */
   test_time_from_nts,
   test_time_from_nts_old,
