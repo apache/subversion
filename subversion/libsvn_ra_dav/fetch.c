@@ -343,9 +343,9 @@ static void add_props(const svn_ra_dav_resource_t *r,
         {
           /* This property is an 'svn:' prop, recognized by client, or
              server, or both.  Convert the URI namespace into normal
-             'svn:' prefix again before pushing it at the wc.*/
-          /* ### urk. this value isn't binary-safe... */
-          (*setter)(baton, apr_pstrcat(pool, "svn:", key + NSLEN, NULL), 
+             'svn:' prefix again before pushing it at the wc. */
+          (*setter)(baton, apr_pstrcat(pool, SVN_PROP_PREFIX, 
+                                       key + NSLEN, NULL), 
                     svn_string_create (val, pool), pool);
         }
 #undef NSLEN
@@ -868,18 +868,19 @@ filter_props (apr_hash_t *props,
   for (hi = apr_hash_first(pool, rsrc->propset); hi; hi = apr_hash_next(hi)) 
     {
       const void *key;
+      const char *name;
       void *val;
 
       apr_hash_this(hi, &key, NULL, &val);
-      
+      name = key;
+
       /* If the property is in the 'custom' namespace, then it's a
          normal user-controlled property coming from the fs.  Just
          strip off this prefix and add to the hash. */
 #define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
-      if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
+      if (strncmp(name, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
         {
-          apr_hash_set(props, &((const char *)key)[NSLEN], 
-                       APR_HASH_KEY_STRING, 
+          apr_hash_set(props, name + NSLEN, APR_HASH_KEY_STRING, 
                        svn_string_create(val, pool));
           continue;
         }
@@ -890,10 +891,9 @@ filter_props (apr_hash_t *props,
          namespace and strip it away, instead of the good URI
          namespace.  REMOVE this block someday! */
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
-      if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
+      if (strncmp(name, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
         {
-          apr_hash_set(props, &((const char *)key)[NSLEN], 
-                       APR_HASH_KEY_STRING, 
+          apr_hash_set(props, name + NSLEN, APR_HASH_KEY_STRING, 
                        svn_string_create(val, pool));
           continue;
         }
@@ -904,13 +904,10 @@ filter_props (apr_hash_t *props,
          normal user-controlled property coming from the fs.  Just
          strip off the URI prefix, add an 'svn:', and add to the hash. */
 #define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
-      if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
+      if (strncmp(name, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
         {
-          const char *newkey = apr_pstrcat(pool,
-                                           SVN_PROP_PREFIX,
-                                           (const char *)key + NSLEN,
-                                           NULL);
-          apr_hash_set(props, newkey, 
+          apr_hash_set(props, 
+                       apr_pstrcat(pool, SVN_PROP_PREFIX, name + NSLEN, NULL),
                        APR_HASH_KEY_STRING, 
                        svn_string_create(val, pool));
           continue;
@@ -922,29 +919,31 @@ filter_props (apr_hash_t *props,
          of the good URI namespace.  Filter out
          baseline-rel-path. REMOVE this block someday! */
 #define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
-      if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
+      if (strncmp(name, SVN_PROP_PREFIX, NSLEN) == 0)
         {
-          if (strcmp((const char *)key + NSLEN,
-                     "baseline-relative-path") != 0)
-            apr_hash_set(props, key,
-                         APR_HASH_KEY_STRING, 
+          if (strcmp(name + NSLEN, "baseline-relative-path") != 0)
+            apr_hash_set(props, name, APR_HASH_KEY_STRING, 
                          svn_string_create(val, pool));
         }
 #undef NSLEN
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
-      else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
-        /* For files, we currently only have one 'wc' prop. */
-        apr_hash_set(props, SVN_RA_DAV__LP_VSN_URL,
-                     APR_HASH_KEY_STRING, 
-                     svn_string_create(val, pool));
+      else if (strcmp(name, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
+        {
+          /* For files, we currently only have one 'wc' prop. */
+          apr_hash_set(props, SVN_RA_DAV__LP_VSN_URL,
+                       APR_HASH_KEY_STRING, 
+                       svn_string_create(val, pool));
+        }
       else
-        /* If it's one of the 'entry' props, this func will
-           recognize the DAV: name & add it to the hash mapped to a
-           new name recognized by libsvn_wc. */
-        if (add_entry_props)
-          SVN_ERR( set_special_wc_prop (key, val, add_prop_to_hash, props, 
-                                        pool) );
+        {
+          /* If it's one of the 'entry' props, this func will
+             recognize the DAV: name & add it to the hash mapped to a
+             new name recognized by libsvn_wc. */
+          if (add_entry_props)
+            SVN_ERR(set_special_wc_prop (name, val, add_prop_to_hash, 
+                                         props, pool));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1501,20 +1500,38 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 }
 
 
+/* Populate the members of ne_propname structure *PROP for the
+   Subversion property NAME.  */
+static void
+make_ne_propname (ne_propname *prop,
+                  const char *name)
+{
+  if (strncmp(name, SVN_PROP_PREFIX, (sizeof (SVN_PROP_PREFIX) - 1)) == 0)
+    {
+      prop->nspace = SVN_DAV_PROP_NS_SVN;
+      prop->name = name + sizeof(SVN_PROP_PREFIX) - 1;
+    }
+  else
+    {
+      prop->nspace = SVN_DAV_PROP_NS_CUSTOM;
+      prop->name = name;
+    }
+}
+
 svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           svn_revnum_t rev,
                                           const char *name,
                                           const svn_string_t *value,
                                           apr_pool_t *pool)
 {
+  const svn_string_t *propval = value;
   const char *val = NULL;
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
-  svn_boolean_t is_svn_prop;
   int rv;
-  static ne_propname propname_struct = {0, 0};
+
   ne_proppatch_operation po[2] = { { 0 } };
-  ne_propname wanted_props[] =
+  ne_propname prop, wanted_props[] =
     {
       { "DAV:", "auto-version" },
       { NULL }
@@ -1549,22 +1566,16 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
          to attempt the PROPPATCH if the deltaV server is going to do
          auto-versioning and create a new baseline! */
 
-  /* Possibly strip off the 'svn:' prefix for DAV transport.  The
-     namespace will be used instead to convey the same meaning. */
-  is_svn_prop = svn_prop_is_svn_prop (name);
-  propname_struct.nspace = is_svn_prop ? SVN_DAV_PROP_NS_SVN 
-                                       : SVN_DAV_PROP_NS_CUSTOM;
-  propname_struct.name = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) 
-                                     : name;
+   make_ne_propname(&prop, name);
 
-  if (value)
-    {
-      svn_stringbuf_t *valstr = NULL;
-      svn_xml_escape_cdata_cstring(&valstr, value->data, pool);
-      val = valstr->data;
-    }
+   if (propval)
+     {
+       svn_stringbuf_t *propesc = NULL;
+       svn_xml_escape_cdata_cstring(&propesc, propval->data, pool);
+       val = propesc->data;
+     }
 
-  po[0].name = &propname_struct;
+  po[0].name = &prop;
   po[0].type = value ? ne_propset : ne_propremove;
   po[0].value = val;
   
@@ -1603,7 +1614,7 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
      resource.  In particular, convert the xml-property-namespaces
      into ones that the client understands.  Strip away the DAV:
      liveprops as well. */
-  SVN_ERR (filter_props (*props, baseline, FALSE, pool));
+  SVN_ERR (filter_props(*props, baseline, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1618,7 +1629,6 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   apr_hash_t *filtered_props;
-  svn_boolean_t is_svn_prop;
 
   /* E-Z initialization */
   ne_propname wanted_props[] =
@@ -1628,11 +1638,7 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
     };
 
   /* Decide on the namespace and propname for XML marshalling. */
-  is_svn_prop = svn_prop_is_svn_prop(name);
-  wanted_props[0].nspace = is_svn_prop ? SVN_DAV_PROP_NS_SVN 
-                                       : SVN_DAV_PROP_NS_CUSTOM;
-  wanted_props[0].name = is_svn_prop ? name + sizeof(SVN_PROP_PREFIX) - 1
-                                     : name;
+  make_ne_propname(&(wanted_props[0]), name);
 
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
@@ -2077,7 +2083,7 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
       if (! rb->fetch_props)
         return SVN_NO_ERROR;
 
-      /* Fetch dir props. */
+      /* Fetch file props. */
       SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
                                              rb->ras->sess2,
                                              rb->href->data,

@@ -110,7 +110,7 @@ typedef struct
 {
   commit_ctx_t *cc;
   resource_t *rsrc;
-  apr_table_t *prop_changes; /* name/values pairs of changed (or new) properties. */
+  apr_hash_t *prop_changes; /* name/values pairs of new/changed properties. */
   apr_array_header_t *prop_deletes; /* names of properties to delete. */
   svn_boolean_t created; /* set if this is an add rather than an update */
 } resource_baton_t;
@@ -503,43 +503,48 @@ static void record_prop_change(apr_pool_t *pool,
 {
   /* copy the name into the pool so we get the right lifetime (who knows
      what the caller will do with it) */
-  /* ### this isn't strictly need for the table case, but we're going
-     ### to switch that to a hash soon */
   name = apr_pstrdup(pool, name);
 
   if (value)
     {
-      svn_stringbuf_t *escaped = NULL;
-
       /* changed/new property */
       if (r->prop_changes == NULL)
-        r->prop_changes = apr_table_make(pool, 5);
-
-      svn_xml_escape_cdata_string(&escaped, value, pool);
-      apr_table_set(r->prop_changes, name, escaped->data);
+        r->prop_changes = apr_hash_make(pool);
+      apr_hash_set(r->prop_changes, name, APR_HASH_KEY_STRING,
+                   svn_string_dup(value, pool));
     }
   else
     {
       /* deleted property. */
-
       if (r->prop_deletes == NULL)
         r->prop_deletes = apr_array_make(pool, 5, sizeof(char *));
-  
       *(const char **)apr_array_push(r->prop_deletes) = name;
     }
 }
 
 /* Callback iterator for apr_table_do below. */
-static int do_setprop(void *rec, const char *name, const char *value)
+static int do_setprop(ne_buffer *body, 
+                      const char *name, 
+                      svn_string_t *value,
+                      apr_pool_t *pool)
 {
-  ne_buffer *body = rec;
-
-  /* use custom prefix for anything that doesn't start with "svn:" */
-  if (strncmp(name, "svn:", 4) == 0)
-    ne_buffer_concat(body, "<S:", name + 4, ">", value, "</S:", name + 4, ">",
-                     NULL);
-  else
-    ne_buffer_concat(body, "<C:", name, ">", value, "</C:", name, ">", NULL);
+  /* Map property names to namespaces */
+#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
+  if (strncmp(name, SVN_PROP_PREFIX, NSLEN) == 0)
+    {
+      svn_stringbuf_t *xml_esc = NULL;
+      svn_xml_escape_cdata_string(&xml_esc, value, pool);
+      ne_buffer_concat(body, "<S:", name + NSLEN, ">", xml_esc->data, 
+                       "</S:", name + NSLEN, ">", NULL);
+    }
+#undef NSLEN
+  else 
+    {
+      svn_stringbuf_t *xml_esc = NULL;
+      svn_xml_escape_cdata_string(&xml_esc, value, pool);
+      ne_buffer_concat(body, "<C:", name, ">", xml_esc->data,
+                       "</C:", name, ">", NULL);
+    }
 
   return 1;
 }
@@ -595,7 +600,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   const char *url = rsrc->wr_url;
 
   /* just punt if there are no changes to make. */
-  if ((rb->prop_changes == NULL || apr_is_empty_table(rb->prop_changes))
+  if ((rb->prop_changes == NULL || (! apr_hash_count(rb->prop_changes)))
       && (rb->prop_deletes == NULL || rb->prop_deletes->nelts == 0))
     return NULL;
 
@@ -611,8 +616,19 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 
   if (rb->prop_changes != NULL)
     {
+      apr_hash_index_t *hi;
+
       ne_buffer_zappend(body, "<D:set><D:prop>");
-      apr_table_do(do_setprop, body, rb->prop_changes, NULL);      
+
+      for (hi = apr_hash_first (ras->pool, rb->prop_changes);
+           hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this (hi, &key, NULL, &val);
+          do_setprop(body, key, val, ras->pool);
+        }
+
       ne_buffer_zappend(body, "</D:prop></D:set>");
     }
   
