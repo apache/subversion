@@ -139,6 +139,12 @@ char *svn_path_join (const char *base,
   if (clen == 0)
     return apr_pmemdup (pool, base, blen + 1);
 
+  /* If either is "." return the other */
+  if (blen == 1 && *base == '.')
+    return apr_pmemdup (pool, component, clen + 1);
+  if (clen == 1 && *component == '.')
+    return apr_pmemdup (pool, base, blen + 1);
+
   /* If the base ends with a slash, then don't copy it.
 
      Note: we don't account for multiple trailing slashes. Callers should
@@ -166,7 +172,8 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
   apr_size_t len;
   char *path;
   char *p;
-  svn_boolean_t base_is_root = 0;
+  svn_boolean_t base_is_dot = FALSE, base_is_root = FALSE;
+  svn_boolean_t saw_dot_component = FALSE;
   int base_arg = 0;
 
   total_len = strlen (base);
@@ -175,10 +182,14 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
       /* if the base is empty, then skip it */
       base_arg = 1;
     }
+  else if (total_len == 1 && *base == '.')
+    {
+      base_is_dot = TRUE;
+    }
   else if (base[total_len - 1] == '/')
     {
       if (total_len == 1)
-        base_is_root = 1;
+        base_is_root = TRUE;
       else
         --total_len;
     }
@@ -206,6 +217,12 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
             base_arg = nargs + 1;
           continue;
         }
+      else if (len == 1 && *s == '.')
+        {
+          if (! base_is_root)
+            saw_dot_component = TRUE;
+          continue;
+        }
 
       if (*s == '/')
         {
@@ -214,6 +231,8 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
           total_len = len;
           base_arg = nargs;
           base_is_root = len == 1;
+          base_is_dot = FALSE;
+          saw_dot_component = FALSE;
         }
       else if (nargs == base_arg || (nargs == base_arg + 1 && base_is_root))
         {
@@ -235,6 +254,19 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
   /* base == "/" and no further components. just return that. */
   if (base_is_root && total_len == 1)
     return apr_pmemdup (pool, "/", 2);
+
+  if (base_is_dot)
+    {
+      if (total_len == 1)
+        return apr_pmemdup (pool, ".", 2);
+      else
+        {
+          base_arg = 1;
+          total_len -= 2;
+        }
+    }
+  else if (saw_dot_component && total_len == 0)
+    return apr_pmemdup (pool, ".", 2);
 
   /* we got the total size. allocate it, with room for a NUL character. */
   path = p = apr_palloc (pool, total_len + 1);
@@ -263,6 +295,8 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
             --len;
         }
       if (!len)
+        continue;
+      else if (len == 1 && *s == '.')
         continue;
 
       /* insert a separator if we aren't copying in the first component
@@ -618,6 +652,11 @@ svn_path_is_child (const char *path1,
   /* If either path is empty, return NULL. */
   if ((! path1) || (! path2) || (path1[0] == '\0') || (path2[0] == '\0'))
     return NULL;
+
+  /* Allow "." and "foo" to be parent/child */
+  if (path1[0] == '.' && path1[1] == '\0' && path2[0] != '.'
+      && path2[0] != SVN_PATH_SEPARATOR)
+    return apr_pstrdup (pool, path2);
 
   /* Reach the end of at least one of the paths. */
   for (i = 0; path1[i] && path2[i]; i++)
