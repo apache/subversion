@@ -64,14 +64,28 @@ void svn_path_remove_component (svn_string_t *path,
                                 enum svn_path_style style);
 
 
-/* Duplicate and return PATH's last component, w/o separator. */
-svn_string_t *svn_path_last_component (svn_string_t *path,
+/* Duplicate and return PATH's last component, w/o separator. 
+ *
+ * If PATH is the root directory, then its last component is still the
+ * root directory.  Else if PATH ends with a separator, then PATH's
+ * last component is the empty string.
+ */
+svn_string_t *svn_path_last_component (const svn_string_t *path,
                                        enum svn_path_style style,
                                        apr_pool_t *pool);
 
-/* Divide PATH into DIRPATH and BASENAME, return them by reference,
-   in their own storage in POOL.  The separator between DIRPATH and
-   BASENAME is not included in either of the new names. */
+/* Divide PATH into *DIRPATH and *BASENAME, return them by reference,
+ * in their own storage in POOL.
+ *
+ * If DIRPATH or BASENAME is null, then that one will not be used.
+ *
+ * DIRPATH or BASENAME may be PATH's own address, but they may not
+ * both be PATH's address; in fact, in general they must not be the
+ * same, or the results are undefined.
+ *
+ * The separator between DIRPATH and BASENAME is not included in
+ * either of the new names.
+ */
 void svn_path_split (const svn_string_t *path,
                      svn_string_t **dirpath,
                      svn_string_t **basename,

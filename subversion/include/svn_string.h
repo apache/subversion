@@ -112,7 +112,7 @@ void svn_string_strip_whitespace (svn_string_t *str);
 
 /* Return position of last occurrence of CHAR in STR, or return
    STR->len if no occurrence. */ 
-apr_size_t svn_string_find_char_backward (svn_string_t *str, char ch);
+apr_size_t svn_string_find_char_backward (const svn_string_t *str, char ch);
 
 /* Chop STR back to CHAR, inclusive.  Returns number of chars
    chopped, so if no such CHAR in STR, chops nothing and returns 0. */
