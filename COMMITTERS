@@ -1,4 +1,4 @@
-The following people have commit access to the Subversion sources.
+﻿The following people have commit access to the Subversion sources.
 Note that this is not a full list of Subversion's authors, however --
 for that, you'd need to look over the log messages to see all the
 patch contributors.
@@ -74,13 +74,20 @@ Commit access for specific areas:
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
-       niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (.po files)
-        luebbe   Lübbe Onken <l.onken@rac.de>                (.po files)
+       niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
+        luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
        mthelen   Michael W Thelen <thelenm@cs.utah.edu>      (doc)
   jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (hook script)
       martinto   Martin Tomes <lists@tomes.org>              (hook script)
     khmarbaise   Karl Heinz Marbaise <khmarbaise@gmx.de>     (German docs)
-      oyvindmo   Øyvind Møll <svn@moll.no>                   (.po files)
+      oyvindmo   Øyvind Møll <svn@moll.no>                   (doc, po: nb)
+      sunny256   Øyvind A. Holm <sunny@sunbase.org>          (doc, po: nb)
+          nori   KOBAYASHI Noritada <nori1@dolphin.c.u-tokyo.ac.jp> (po: jp)
+        jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
+      karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
+        plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
+       jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
+       marcosc   Marcos Chaves <mchvs@hotmail.com>           (po: pt_BR)
 
 Committers who have asked to be listed as dormant:
 
