@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "POT-Creation-Date: 2004-09-30 16:40+0900\n"
-"PO-Revision-Date: 2004-10-14 12:22+0900\n"
+"PO-Revision-Date: 2004-10-18 00:59+0900\n"
 "Last-Translator: Hojin Choi <pynoos@users.kldp.net>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3149,79 +3149,79 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:593
 msgid "Missing kind field in node-rev"
-msgstr ""
+msgstr "node-rev 내에 kind 필드가 없습니다."
 
 #: libsvn_fs_fs/fs_fs.c:624
 msgid "Missing cpath in node-rev"
-msgstr ""
+msgstr "node-rev 내에 cpath가 없습니다"
 
 #: libsvn_fs_fs/fs_fs.c:651
 #: libsvn_fs_fs/fs_fs.c:657
 msgid "Malformed copyroot line in node-rev"
-msgstr ""
+msgstr "node-rev 내에 copyroot 형식이 잘못되었습니다."
 
 #: libsvn_fs_fs/fs_fs.c:675
 #: libsvn_fs_fs/fs_fs.c:681
 msgid "Malformed copyfrom line in node-rev"
-msgstr ""
+msgstr "node-rev 내에 copyfrom 행에 오류가 있습니다."
 
 #: libsvn_fs_fs/fs_fs.c:779
 #: libsvn_fs_fs/fs_fs.c:2928
 msgid "Attempted to write to non-transaction"
-msgstr ""
+msgstr "트랜잭션이 아닌 것에 쓰기 시도를 하였습니다."
 
 #: libsvn_fs_fs/fs_fs.c:863
 msgid "Malformed representation header"
-msgstr ""
+msgstr "보여질 내용의 헤더 형식이 잘못되었습니다."
 
 #: libsvn_fs_fs/fs_fs.c:887
 msgid "Missing node-id in node-rev"
-msgstr ""
+msgstr "node-rev 내에 node-id가 없습니다."
 
 #: libsvn_fs_fs/fs_fs.c:893
 msgid "Corrupt node-id in node-rev"
-msgstr ""
+msgstr "node-rev 내에 손상된 node-id가 있습니다."
 
 #: libsvn_fs_fs/fs_fs.c:938
 msgid "Revision file lacks trailing newline"
-msgstr ""
+msgstr "리비전 파일 내에 마지막 개행문자가 없습니다."
 
 #: libsvn_fs_fs/fs_fs.c:950
 msgid "Final line in revision file longer than 64 characters"
-msgstr ""
+msgstr "리비전 파일 마지막 행의 길이가 64 문자를 넘습니다."
 
 #: libsvn_fs_fs/fs_fs.c:963
 msgid "Final line in revision file missing space"
-msgstr ""
+msgstr "리비전 파일의 마지막 행에 스페이스가 없습니다."
 
 #: libsvn_fs_fs/fs_fs.c:990
 #: libsvn_repos/log.c:239
 #: libsvn_repos/log.c:243
 #, c-format
 msgid "No such revision %ld"
-msgstr ""
+msgstr "없는 리비전 %ld 입니다."
 
 #: libsvn_fs_fs/fs_fs.c:1108
 msgid "Malformed svndiff data in representation"
-msgstr ""
+msgstr "보여질 내용에 잘못된 svndiff 데이터가 있습니다."
 
 #: libsvn_fs_fs/fs_fs.c:1224
 #: libsvn_fs_fs/fs_fs.c:1244
 #: libsvn_fs_fs/fs_fs.c:1257
 msgid "Reading one svndiff window read beyond the end of the representation"
-msgstr ""
+msgstr "표시될 내용의 끝부분을 넘어 읽은 svndiff 창을 읽고 있습니다."
 
 #: libsvn_fs_fs/fs_fs.c:1346
 msgid "svndiff data requested non-existent source"
-msgstr ""
+msgstr "존재하지않는 소스에 대하여 svndiff 데이터를 요청하였습니다."
 
 #: libsvn_fs_fs/fs_fs.c:1352
 msgid "svndiff requested position beyond end of stream"
-msgstr ""
+msgstr "스트림의 마지막을 지난 위치에 대한 svndiff 요청을 받았습니다."
 
 #: libsvn_fs_fs/fs_fs.c:1374
 msgid "svndiff window length is corrupt"
-msgstr ""
+msgstr "svndiff 창 길이가 손상되었습니다."
 
 #: libsvn_fs_fs/fs_fs.c:1549
 #: libsvn_fs_fs/fs_fs.c:1562
@@ -3301,58 +3301,58 @@ msgstr "그런 트랜잭션이 없습니다."
 #: libsvn_ra/ra_loader.c:209
 #, c-format
 msgid "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr ""
+msgstr "RA 플러그인 버전이 다릅니다. '%s': 발견된 것 %d.%d.%d%s, 예상한 것 %d.%d.%d%s"
 
 #: libsvn_ra/ra_loader.c:225
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
-msgstr ""
+msgstr "알 수 없는 URL 스키마입니다. '%s'"
 
 #: libsvn_ra/ra_loader.c:291
 #, c-format
 msgid "  - handles '%s' schema\n"
-msgstr ""
+msgstr "  - '%s' 스키마를 처리합니다.\n"
 
 #: libsvn_ra_dav/commit.c:150
 #, c-format
 msgid "Could not create a request (%s '%s')"
-msgstr ""
+msgstr "요청을 할 수 없습니다 (%s '%s')"
 
 #: libsvn_ra_dav/commit.c:984
 msgid "Could not write svndiff to temp file"
-msgstr ""
+msgstr "svndiff 를 임시 파일에 기록할 수 없습니다."
 
 #: libsvn_ra_dav/commit.c:1074
 #, c-format
 msgid "Could not create a PUT request (%s)"
-msgstr ""
+msgstr "PUT 요청을 할 수 없습니다. (%s)"
 
 #: libsvn_ra_dav/commit.c:1221
 #, c-format
 msgid "applying log message to %s"
-msgstr ""
+msgstr "로그 메시지를 %s에 적용할 수 없습니다."
 
 #: libsvn_ra_dav/fetch.c:257
 msgid "Could not save the URL of the version resource"
-msgstr ""
+msgstr "버전 관리대상인 URL을 저장할 수 없습니다."
 
 #: libsvn_ra_dav/fetch.c:401
 #, c-format
 msgid "Could not create a GET request for '%s'"
-msgstr ""
+msgstr "'%s'에 대한 GET 요청을 할 수 없습니다."
 
 #: libsvn_ra_dav/fetch.c:465
 #, c-format
 msgid "GET request failed for '%s'"
-msgstr ""
+msgstr "'%s'에 대한 GET 요청이 실패하였습니다."
 
 #: libsvn_ra_dav/fetch.c:588
 msgid "Could not save file"
-msgstr ""
+msgstr "파일을 저장할 수 없습니다."
 
 #: libsvn_ra_dav/fetch.c:637
 msgid "Error writing to stream: unexpected EOF"
-msgstr ""
+msgstr "스트림에 쓰기 오류: 예상치 않은 EOF"
 
 #: libsvn_ra_dav/fetch.c:822
 #: libsvn_ra_svn/client.c:846
@@ -3362,32 +3362,35 @@ msgid ""
 "   expected checksum:  %s\n"
 "   actual checksum:    %s\n"
 msgstr ""
+"체크섬 불일치 오류 '%s':\n"
+"  기대값 :  %s\n"
+"  실제값 :  %s\n"
 
 #: libsvn_ra_dav/fetch.c:1089
 msgid "Server does not support date-based operations"
-msgstr ""
+msgstr "서버가 날짜 기반 명령을 지원하지 않습니다."
 
 #: libsvn_ra_dav/fetch.c:1096
 msgid "Invalid server response to dated-rev request"
-msgstr ""
+msgstr "dated-rev 요청에 대한 서버의 응답이 올바르지 않습니다."
 
 #: libsvn_ra_dav/fetch.c:1235
 msgid "get-locations REPORT not implemented"
-msgstr ""
+msgstr "get-locations REPORT 는 구현되지 않았습니다."
 
 #: libsvn_ra_dav/fetch.c:1303
 msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
-msgstr ""
+msgstr "DAV 요청 실패: 아마, pre-revprop-change 훅이 실패하였거나 존재하지 않는 저장소일 것입니다."
 
 #: libsvn_ra_dav/fetch.c:2018
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
-msgstr ""
+msgstr "'%s'에 쓰기 오류: 예상치 못한 EOF"
 
 #: libsvn_ra_dav/fetch.c:2155
 #, c-format
 msgid "Unknown XML encoding: '%s'"
-msgstr ""
+msgstr "알 수 없는 XML 인코딩: '%s'"
 
 #: libsvn_ra_dav/fetch.c:2413
 msgid "REPORT response handling failed to complete the editor drive"
@@ -3395,120 +3398,120 @@ msgstr ""
 
 #: libsvn_ra_dav/file_revs.c:360
 msgid "get-file-revs REPORT not implemented"
-msgstr ""
+msgstr "get-file-revs REPORT는 아직 구현되지 않았습니다."
 
 #: libsvn_ra_dav/file_revs.c:367
 msgid "The file-revs report didn't contain any revisions"
-msgstr ""
+msgstr "file-revs 는 리비전정보를 가지고 있지 않습니다."
 
 #: libsvn_ra_dav/merge.c:216
 #, c-format
 msgid "Protocol error: we told the server not to auto-merge any resources, but it said that '%s' was merged"
-msgstr ""
+msgstr "프로토콜 오류: 서버에게 자동 병합을 하지 말도록 지시하였으나 서버에서 '%s'의 병합이 이루어졌다는 응답을 받았습니다."
 
 #: libsvn_ra_dav/merge.c:225
 #, c-format
 msgid "Internal error: there is an unknown parent (%d) for the 'DAV:response' element within the MERGE response"
-msgstr ""
+msgstr "내부 오류: MERGE 응답안에 DAV:response 개체에 대한 알 수 없는 상위개체(%d)가 있습니다."
 
 #: libsvn_ra_dav/merge.c:240
 #, c-format
 msgid "Protocol error: the MERGE response for the '%s' resource did not return all of the properties that we asked for (and need to complete the commit)"
-msgstr ""
+msgstr "프로토콜 오류: '%s' 에 대한 MERGE 응답이 요청한 모든 속성정보를 포함하고 있지 않습니다. (그리고, 커밋을 완료해야할 필요가 있습니다.)"
 
 #: libsvn_ra_dav/merge.c:259
 #, c-format
 msgid "A MERGE response for '%s' is not a child of the destination ('%s')"
-msgstr ""
+msgstr "'%s'에 대한 MERGE 응답은 대상 ('%s')에 대한 하위가 아닙니다."
 
 #: libsvn_ra_dav/merge.c:480
 msgid "The MERGE property response had an error status"
-msgstr ""
+msgstr "MERGE 속성 응답이 오류 상태를 포함하고 있습니다."
 
 #: libsvn_ra_dav/options.c:132
 msgid "The OPTIONS response did not include the requested activity-collection-set; this often means that the URL is not WebDAV-enabled"
-msgstr ""
+msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
 
 #: libsvn_ra_dav/props.c:583
 #, c-format
 msgid "Failed to find label '%s' for URL '%s'"
-msgstr ""
+msgstr "라벨 '%s' (URL '%s')을 찾을 수 없습니다."
 
 #: libsvn_ra_dav/props.c:612
 #, c-format
 msgid "'%s' was not present on the resource"
-msgstr ""
+msgstr "'%s'는 소스내에 존재 하지 않습니다."
 
 #: libsvn_ra_dav/props.c:674
 msgid "The path was not part of a repository"
-msgstr ""
+msgstr "경로는 저장소의 일부가 아닙니다."
 
 #: libsvn_ra_dav/props.c:685
 #, c-format
 msgid "No part of path '%s' was found in repository HEAD"
-msgstr ""
+msgstr "'%s'의 경로가 저장소의 HEAD 에서 발견되지 않았습니다."
 
 #: libsvn_ra_dav/props.c:719
 #: libsvn_ra_dav/props.c:774
 msgid "The VCC property was not found on the resource"
-msgstr ""
+msgstr "VCC 속성이 리소스내에서 발견되지 않았습니다."
 
 #: libsvn_ra_dav/props.c:787
 msgid "The relative-path property was not found on the resource"
-msgstr ""
+msgstr "relative-path 속성이 리소스에서 발견되지 않았습니다."
 
 #: libsvn_ra_dav/props.c:908
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
-msgstr ""
+msgstr "'DAV:baseline-collection' 은 꺼내온(baseline) 리소스에 존재하지 않습니다."
 
 #: libsvn_ra_dav/props.c:927
 msgid "'DAV:version-name' was not present on the baseline resource"
-msgstr ""
+msgstr "'DAV:version-name' 은 꺼내온(baseline) 리소스에 존재하지 않습니다."
 
 #: libsvn_ra_dav/props.c:1080
 msgid "At least one property change failed; repository is unchanged"
-msgstr ""
+msgstr "적어도 하나의 속성이 변경에 실패하였습니다.: 저장소는 변경되지 않습니다."
 
 #: libsvn_ra_dav/session.c:429
 msgid "Invalid URL: illegal character in proxy port number"
-msgstr ""
+msgstr "잘못된 URL: 잘못된 문자가 프록시 포트 번호에 있습니다."
 
 #: libsvn_ra_dav/session.c:433
 msgid "Invalid URL: negative proxy port number"
-msgstr ""
+msgstr "잘못된 URL: 포트 번호가 음수입니다."
 
 #: libsvn_ra_dav/session.c:436
 msgid "Invalid URL: proxy port number greater than maximum TCP port number 65535"
-msgstr ""
+msgstr "잘못된 URL: 프록시 포트 번호가 TCP 포트번호의 최대값인 65536를 넘어섭니다."
 
 #: libsvn_ra_dav/session.c:450
 msgid "Invalid config: illegal character in timeout value"
-msgstr ""
+msgstr "잘못된 설정: 타임아웃 값에 잘못된 문자가 있습니다."
 
 #: libsvn_ra_dav/session.c:454
 msgid "Invalid config: negative timeout value"
-msgstr ""
+msgstr "잘못된 설정: 타임아웃 값이 음수입니다."
 
 #: libsvn_ra_dav/session.c:467
 msgid "Invalid config: illegal character in debug mask value"
-msgstr ""
+msgstr "잘못된 설정: 디버그 마스크 값에 잘못된 문자가 있습니다."
 
 #: libsvn_ra_dav/session.c:557
 msgid "Malformed URL for repository"
-msgstr ""
+msgstr "저장소에 대한 잘못된 URL"
 
 #: libsvn_ra_dav/session.c:565
 msgid "Network socket initialization failed"
-msgstr ""
+msgstr "네트워크 소켓 초기화 실패"
 
 #: libsvn_ra_dav/session.c:578
 msgid "SSL is not supported"
-msgstr ""
+msgstr "SSL은 지원되지 않습니다."
 
 #: libsvn_ra_dav/session.c:724
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
-msgstr ""
+msgstr "잘못된 설정: 인증서 파일 '%s' 를 읽을 수 없습니다."
 
 #: libsvn_ra_dav/session.c:812
 msgid "The UUID property was not found on the resource or any of its parents"
