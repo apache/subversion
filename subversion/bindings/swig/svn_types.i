@@ -22,52 +22,51 @@
 %import apr.i
 
 /* -----------------------------------------------------------------------
-   Create macros to define OUT parameters for "type **" params.
+   Create a typemap to define "type **" as OUT parameters.
 
-   OUT_PARAM(type) : create an OUT param for "type **"
-   OUT_PARAM_S(type, stype) : specify a type and its swig type
+   Note: SWIGTYPE is just a placeholder for "some arbitrary type". This
+         typemap will be applied onto a "real" type.
 */
 
-#define OUT_PARAM(type) \
-	%typemap(ignore) type ** (type *temp) { $target = &temp; } \
-	%typemap(python,argout) type ** { \
-	    $target = t_output_helper($target, SWIG_NewPointerObj(*$source, \
-                           SWIGTYPE_p_##type)); }
-#define OUT_PARAM_S(type, stype) \
-	%typemap(ignore) type ** (type *temp) { $target = (stype **)&temp; } \
-	%typemap(python,argout) type ** { \
-	    $target = t_output_helper($target, SWIG_NewPointerObj(*$source, \
-                           SWIGTYPE_p_##stype)); }
+%typemap(ignore) SWIGTYPE **OUTPARAM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+%typemap(python, argout) SWIGTYPE **OUTPARAM {
+    $result = t_output_helper($result,
+                              SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+}
 
 /* -----------------------------------------------------------------------
-   Define macro for forcing a type to appear in a wrapper file.
+   Define a more refined 'varin' typemap for 'const char *' members. This
+   is used in place of the 'char *' handler defined automatically.
+
+   We need to do the free/malloc/strcpy special because of the const
 */
-#define MAKE_TYPE(type) void _ignore_##type(struct type *arg)
-#define MAKE_PLAIN_TYPE(type) void _ignore_##type(type arg)
+%typemap(memberin) const char * {
+    apr_size_t len = strlen($input) + 1;
+    char *copied;
+    if ($1) free((char *)$1);
+    copied = malloc(len);
+    memcpy(copied, $input, len);
+    $1 = copied;
+}
 
 /* ----------------------------------------------------------------------- */
 
-%typemap(python,except) svn_error_t * {
-    $function
-    if ($source != NULL) {
+%typemap(python,out) svn_error_t * {
+    if ($1 != NULL) {
         PyErr_SetString(PyExc_RuntimeError,
-                        $source->message ? $source->message : "unknown error");
+                        $1->message ? $1->message : "unknown error");
         return NULL;
     }
-}
-%typemap(python,out) svn_error_t * {
-    /* we checked for non-NULL with the 'except' typemap, so "result" will
-       always be NULL at this point. */
     Py_INCREF(Py_None);
-    $target = Py_None;
+    $result = Py_None;
 }
 
 /* ----------------------------------------------------------------------- */
 
 /* 'svn_renum_t *' will always be an OUTPUT parameter */
-%typemap(in) svn_renum_t * = long *OUTPUT;
-%typemap(ignore) svn_revnum_t * = long *OUTPUT;
-%typemap(argout) svn_revnum_t * = long *OUTPUT;
+%apply long *OUTPUT { svn_revnum_t * };
 
 /* ----------------------------------------------------------------------- */
 

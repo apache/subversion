@@ -66,7 +66,7 @@ static PyObject *convert_hash(apr_hash_t *hash,
 static PyObject *convert_to_swigtype(void *value, void *ctx)
 {
   /* ctx is a 'swig_type_info *' */
-  return SWIG_NewPointerObj(value, ctx);
+  return SWIG_NewPointerObj(value, ctx, 0);
 }
 
 static PyObject *convert_svn_string_t(void *value, void *ctx)

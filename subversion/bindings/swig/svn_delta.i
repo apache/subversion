@@ -27,42 +27,37 @@
 /* -----------------------------------------------------------------------
    For these types, "type **" is always an OUT param.
 */
-
-OUT_PARAM(svn_txdelta_stream_t);
-OUT_PARAM(void);
-OUT_PARAM(svn_delta_xml_parser_t);
-OUT_PARAM(svn_txdelta_window_t);
-OUT_PARAM(svn_delta_edit_fns_t);
-
-OUT_PARAM_S(const svn_delta_edit_fns_t, svn_delta_edit_fns_t);
-OUT_PARAM_S(struct svn_pipe_edit_baton, svn_pipe_edit_baton);
+%apply SWIGTYPE **OUTPARAM {
+    svn_txdelta_stream_t **,
+    void **,
+    svn_delta_xml_parser_t **,
+    svn_txdelta_window_t **,
+    svn_delta_edit_fns_t **,
+    struct svn_pipe_edit_baton **
+};
 
 /* -----------------------------------------------------------------------
    all uses of "svn_txdelta_window_handler_t *" are OUT params
 */
 %typemap(ignore) svn_txdelta_window_handler_t * (svn_txdelta_window_handler_t temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 %typemap(python,argout) svn_txdelta_window_handler_t * {
-    $target = t_output_helper($target,
-                              SWIG_NewPointerObj(*$source,
-                                                 SWIGTYPE_svn_txdelta_window_handler_t));
+    $result = t_output_helper(
+        $result,
+        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 
 /* -----------------------------------------------------------------------
    handle the ptr/len params of svn_delta_xml_parsebytes()
 */
-%typemap(python, in) const char *buffer {
-    if (!PyString_Check($source)) {
-        PyErr_SetString(PyExc_TypeError, "not a string");
+%typemap(python, in) (const char *buffer, apr_size_t len) {
+    if (!PyString_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "expecting a string");
         return NULL;
     }
-    $target = PyString_AS_STRING($source);
-}
-
-%typemap(ignore) apr_size_t len { }
-%typemap(python, check) apr_size_t len {
-    $target = PyString_GET_SIZE(obj0);
+    $1 = PyString_AS_STRING($input);
+    $2 = PyString_GET_SIZE($input);
 }
 
 /* ----------------------------------------------------------------------- */

@@ -21,14 +21,12 @@
    the various types in here, as necessary. */
 /* ### actually, we may need to wrap some things, such as apr_initialize() */
 
-%include "typemaps.i"
+%include typemaps.i
 
 /* ----------------------------------------------------------------------- */
 
 /* 'apr_off_t *' will always be an OUTPUT parameter */
-%typemap(in) apr_off_t * = long *OUTPUT;
-%typemap(ignore) apr_off_t * = long *OUTPUT;
-%typemap(argout) apr_off_t * = long *OUTPUT;
+%apply long *OUTPUT { apr_off_t * };
 
 /* ----------------------------------------------------------------------- */
 
@@ -51,20 +49,20 @@ typedef apr_int64_t apr_time_t;
 */
 
 %typemap(python,in) long long {
-    $target = PyLong_AsLongLong($source);
+    $1 = PyLong_AsLongLong($input);
 }
 
 /* 'long long *' will always be an OUTPUT parameter */
 %typemap(ignore) long long * (long long temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 %typemap(python,argout) long long * {
-    $target = t_output_helper($target, PyLong_FromLongLong(*$source));
+    $result = t_output_helper($result, PyLong_FromLongLong(*$1));
 }
 
 /* deal with return a return value */
 %typemap(python,out) long long {
-    $target = t_output_helper($target, PyLong_FromLongLong($source));
+    $result = t_output_helper($result, PyLong_FromLongLong($1));
 }
 
 /* -----------------------------------------------------------------------
@@ -72,8 +70,8 @@ typedef apr_int64_t apr_time_t;
 */
 
 %typemap(python,in) apr_size_t *INOUT (apr_size_t temp) {
-    temp = (apr_size_t) PyInt_AsLong($source);
-    $target = &temp;
+    temp = (apr_size_t) PyInt_AsLong($input);
+    $1 = &temp;
 }
 
 %typemap(argout) apr_size_t *INOUT = unsigned long *INOUT;
@@ -83,7 +81,7 @@ typedef apr_int64_t apr_time_t;
 */
 
 %typemap(ignore) apr_hash_t **OUTPUT (apr_hash_t *temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 
 /* -----------------------------------------------------------------------
@@ -94,8 +92,8 @@ typedef apr_int64_t apr_time_t;
 %typemap(ignore) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
 %typemap(python,argout) apr_hash_t **PROPHASH {
     /* toss prior result, get new result from the hash */
-    Py_DECREF($target);
-    $target = svn_swig_prophash_to_dict(*$source);
+    Py_DECREF($result);
+    $result = svn_swig_prophash_to_dict(*$1);
 }
 
 /* -----------------------------------------------------------------------
@@ -103,13 +101,12 @@ typedef apr_int64_t apr_time_t;
 */
 
 %typemap(ignore) apr_file_t ** (apr_file_t *temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 %typemap(python,argout) apr_file_t ** {
-    $target = t_output_helper(
-        $target,
-        SWIG_NewPointerObj(*$source,
-                           SWIG_TypeQuery("apr_file_t *")));
+    $result = t_output_helper(
+        $result,
+        SWIG_NewPointerObj(*$1, $*1_descriptor), 0);
 }
 
 /* ----------------------------------------------------------------------- */

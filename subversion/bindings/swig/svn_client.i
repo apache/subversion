@@ -17,6 +17,7 @@
  */
 
 %module _client
+%include typemaps.i
 
 %import apr.i
 %import svn_types.i
@@ -45,16 +46,16 @@
 */
 
 %typemap(ignore) apr_array_header_t ** (apr_array_header_t *temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 %typemap(python,argout) apr_array_header_t ** {
     svn_client_proplist_item_t **ppitem;
     int i;
-    int nelts = (*$source)->nelts;
+    int nelts = (*$1)->nelts;
     PyObject *list = PyList_New(i);
     if (list == NULL)
         return NULL;
-    ppitem = (svn_client_proplist_item_t **)(*$source)->elts;
+    ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
     for (i = 0; i < nelts; ++ppitem) {
         PyObject *item = PyTuple_New(2);
         PyObject *name = PyString_FromStringAndSize((*ppitem)->node_name->data,
@@ -73,7 +74,7 @@
 
         PyList_SET_ITEM(list, i, item);
     }
-    $target = t_output_helper($target, list);
+    $result = t_output_helper($result, list);
 }
 
 /* -----------------------------------------------------------------------
@@ -87,9 +88,9 @@
 */
 %typemap(ignore) apr_hash_t **statushash = apr_hash_t **OUTPUT;
 %typemap(python,argout) apr_hash_t **statushash {
-    $target = t_output_helper(
-        $target,
-        svn_swig_convert_hash(*$source, SWIGTYPE_p_svn_wc_status_t));
+    $result = t_output_helper(
+        $result,
+        svn_swig_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
 }
 
 /* ----------------------------------------------------------------------- */

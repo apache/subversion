@@ -27,7 +27,9 @@
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
 */
-OUT_PARAM(svn_ra_plugin_t);
+%apply SWIGTYPE **OUTPARAM {
+    svn_ra_plugin_t **
+};
 
 /* ----------------------------------------------------------------------- */
 

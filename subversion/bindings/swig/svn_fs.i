@@ -35,11 +35,13 @@
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
 */
-OUT_PARAM(svn_fs_txn_t);
-OUT_PARAM(svn_fs_root_t);
-OUT_PARAM(void);
-OUT_PARAM(svn_fs_id_t);
-OUT_PARAM(svn_stream_t);
+%apply SWIGTYPE **OUTPARAM {
+    svn_fs_root_t **,
+    svn_fs_txn_t **,
+    void **,
+    svn_fs_id_t **,
+    svn_stream_t **
+};
 
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
@@ -48,45 +50,43 @@ OUT_PARAM(svn_stream_t);
 /* -----------------------------------------------------------------------
    for the FS, 'int *' will always be an OUTPUT parameter
 */
-%typemap(in) int * = int *OUTPUT;
-%typemap(ignore) int * = int *OUTPUT;
-%typemap(argout) int * = int *OUTPUT;
+%apply int *OUTPUT { int * };
 
 /* -----------------------------------------------------------------------
-   tweak the argument handling for svn_fs_parse_id
-
-   note: the string passed will not have null chars, so strlen() is fine.
+   define the data/len pair of svn_fs_parse_id to be a single argument
 */
 
-%typemap(ignore) apr_size_t len { }
-%typemap(check) apr_size_t len {
-    $target = strlen(arg0);
+%typemap(python, in) (const char *data, apr_size_t len) {
+    if (!PyString_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "expecting a string");
+        return NULL;
+    }
+    $1 = PyString_AS_STRING($input);
+    $2 = PyString_GET_SIZE($input);
 }
 
 /* -----------------------------------------------------------------------
    all uses of "const char **" are returning strings
 */
 
-%typemap(ignore) const char ** = const char **OUTPUT;
-%typemap(argout) const char ** = const char **OUTPUT;
+%apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
    list_transaction's "char ***" is returning a list of strings
 */
 
 %typemap(ignore) char *** (char **temp) {
-    $target = &temp;
+    $1 = &temp;
 }
 %typemap(python, argout) char *** {
-    $target = t_output_helper($target, svn_swig_c_strings_to_list(*$source));
+    $result = t_output_helper($result, svn_swig_c_strings_to_list(*$1));
 }
 
 /* -----------------------------------------------------------------------
    all uses of "apr_hash_t **" are returning property hashes
 */
 
-%typemap(ignore) apr_hash_t ** = apr_hash_t **PROPHASH;
-%typemap(argout) apr_hash_t ** = apr_hash_t **PROPHASH;
+%apply apr_hash_t **PROPHASH { apr_hash_t ** };
 
 /* -----------------------------------------------------------------------
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
@@ -94,18 +94,10 @@ OUT_PARAM(svn_stream_t);
 
 %typemap(ignore) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(python,argout) apr_hash_t **entries_p {
-    $target = t_output_helper(
-        $target,
-        svn_swig_convert_hash(*$source, SWIGTYPE_p_svn_fs_dirent_t));
+    $result = t_output_helper(
+        $result,
+        svn_swig_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
 }
-
-/* -----------------------------------------------------------------------
-   this is a hack to create some needed SWIGTYPE_* values
-*/
-
-MAKE_TYPE(svn_stream_t);
-MAKE_TYPE(svn_txdelta_stream_t);
-MAKE_PLAIN_TYPE(svn_txdelta_window_handler_t);
 
 /* ----------------------------------------------------------------------- */
 
@@ -114,9 +106,4 @@ MAKE_PLAIN_TYPE(svn_txdelta_window_handler_t);
 %header %{
 #include "svn_fs.h"
 #include "swigutil.h"
-
-/* implement the hack for the types */
-MAKE_TYPE_IMPL(svn_stream_t)
-MAKE_TYPE_IMPL(svn_txdelta_stream_t)
-MAKE_PLAIN_TYPE_IMPL_NO_DECL(svn_txdelta_window_handler_t)
 %}
