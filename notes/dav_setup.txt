@@ -9,10 +9,10 @@
 1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
     whereever you wish;  it's an independent project.
 
-      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic login
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
          (password 'anoncvs')
 
-      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co httpd-2.0
+      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
 
 2.  cd httpd-2.0/srclib/, and checkout the "apr" and "apr-util"
     modules into this directory:
@@ -47,7 +47,7 @@
      under /usr/local/apache2/; substitute appropriately if you chose
      some other location.
 
-4.  make depend && make clean && make && make install
+4.  make depend && make && make install
 
 5.  Go back into your subversion working copy and run ./autogen.sh if
     you need to.  Then run
