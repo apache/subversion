@@ -111,9 +111,6 @@ List of 1.1 features/changes
     also show new libraries in ch01 'big picture' diagram and ch08
     library listing.
 
-  * updates no longer create fs transactions (does this need to be
-    documented?  does anyone care other than developers?)
-
   * slightly tweaked 'svn diff' syntax allows things like
     'svn diff -rX:Y URL@Z'.   Probably need to explain 'peg' objects,
     so folks can understand how/when renames are followed by certain
@@ -141,3 +138,9 @@ List of 1.1 features/changes
 
   * Add a note somewhere clarifying that the command line client auto-escapes
     URIs and supports "IRI" syntax.
+
+  * New $Revision$ alias
+
+  * New non-blocking 'svnadmin recover' lock behavior, with --wait option
+
+  * New 'SVNPathAuthz Off' directive
