@@ -66,15 +66,11 @@ Core changes that don't have three +1's yet, or have a veto.  (If you
 make the threshold vote on one of these items, please move it to the
 section for approved changes.)
 
-
-
+  [none pending]
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
-
-  [none pending]
-
 
     * r8139
       Fix authentication bugs. 
