@@ -54,11 +54,13 @@
 #include <apr_tables.h>
 #include <string.h>       /* for strncmp() */
 #include <stdlib.h>       /* for qsort()   */
+#include "svn_string.h"
+#include "svn_path.h"
 #include "svn_hash.h"
 
 
 
-/*** apr_get_sorted_keys() ***/
+/*** apr_hash_sorted_keys() ***/
 
 /* (Should this be a permanent part of APR?)
 
@@ -87,32 +89,35 @@
  */
 
 
-/* Use strncmp() as the qsort comparison function, because this is the
-   same level of detail that apr_hash_t uses for storing keys.  */
-static int
-counted_length_compare (const void *obj1, const void *obj2)
+int
+svn_sort_compare_as_paths (const void *obj1, const void *obj2)
 {
   apr_item_t *item1, *item2;
-  int retval;
-  size_t smaller_size;
+  svn_string_t str1, str2;
 
-  item1 =  *((apr_item_t **) obj1);
-  item2 =  *((apr_item_t **) obj2);
+  item1 = *((apr_item_t **) obj1);
+  item2 = *((apr_item_t **) obj2);
 
-  smaller_size = ((item1->size) < (item2->size)) ? item1->size : item2->size;
-  retval =  strncmp (item1->key, item2->key, smaller_size);
+  str1.data = item1->key;
+  str1.len = item1->size;
+  str1.pool = NULL;
+  str2.data = item2->key;
+  str2.len = item2->size;
+  str2.pool = NULL;
 
-  printf ("%d:  `%s'  `%s'\n", retval, item1->key, item2->key);
-
-  return retval;
+  return svn_path_compare_paths (&str1, &str2, svn_path_local_style);
 }
 
+
+#ifndef apr_hash_sort_keys
 
 /* Grab the keys (and values) in apr_hash HT and return them in an a
    sorted apr_array_header_t ARRAY allocated from POOL.  The array
    will contain pointers of type (apr_item_t *).  */
 apr_array_header_t *
-apr_get_sorted_keys (apr_hash_t *ht, apr_pool_t *pool)
+apr_hash_sorted_keys (apr_hash_t *ht,
+                      int (*comparison_func) (const void *, const void *),
+                      apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary;
@@ -139,11 +144,11 @@ apr_get_sorted_keys (apr_hash_t *ht, apr_pool_t *pool)
     }
   
   /* now quicksort the array.  */
-  qsort (ary->elts, ary->nelts, ary->elt_size, counted_length_compare);
+  qsort (ary->elts, ary->nelts, ary->elt_size, comparison_func);
 
   return ary;
 }
-
+#endif /* apr_hash_sort_keys */
 
 
 
