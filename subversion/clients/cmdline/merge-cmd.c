@@ -124,13 +124,15 @@ svn_cl__merge (apr_getopt_t *os,
     SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor, &trace_edit_baton,
                                               parent_dir, FALSE, TRUE, pool));
 
+  /* ### NOTE:  see issue #748.  We used to pass TARGETPATH into this
+     function, but that argument has been temporarily removed.  All
+     merging action happens in "." now.  */
   err = svn_client_merge (trace_editor, trace_edit_baton,
                           auth_baton,
                           sourcepath1,
                           &(opt_state->start_revision),
                           sourcepath2,
                           &(opt_state->end_revision),
-                          targetpath,
                           opt_state->nonrecursive ? FALSE : TRUE,
                           opt_state->force,
                           pool); 

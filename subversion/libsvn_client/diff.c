@@ -1165,12 +1165,15 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                   const svn_client_revision_t *revision1,
                   const char *path2,
                   const svn_client_revision_t *revision2,
-                  const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
                   apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
+
+  /* ### NOTE: see issue #748.  This used to be an input argument, but
+     now it's just a fixed variable.  This is only temporary. */
+  const char *target_wcpath = ".";
   
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, FALSE, pool));
   if (entry == NULL)
