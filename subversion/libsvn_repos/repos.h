@@ -43,6 +43,7 @@ extern "C" {
 #define SVN_REPOS__DAV_DIR     "dav"     /* DAV sandbox. */
 #define SVN_REPOS__LOCK_DIR    "locks"   /* Lock files live here. */
 #define SVN_REPOS__HOOK_DIR    "hooks"   /* Hook programs. */
+#define SVN_REPOS__CONF_DIR    "conf"    /* Configuration files. */
 
 /* Things for which we keep lockfiles. */
 #define SVN_REPOS__DB_LOCKFILE "db.lock" /* Our Berkeley lockfile. */
@@ -73,6 +74,9 @@ struct svn_repos_t
 
   /* The path to the repository's dav directory. */
   char *dav_path;
+
+  /* The path to the repository's conf directory. */
+  char *conf_path;
 
   /* The path to the repository's hooks directory. */
   char *hook_path;

@@ -122,15 +122,6 @@ if test "$APU_HAVE_OLD_EXPAT" = "yes"; then
   AC_DEFINE(SVN_HAVE_OLD_EXPAT, 1, [Defined if Expat 1.0 or 1.1 was found])
 fi
 
-dnl Define the location of our templates ---------------------
-
-dnl ### I'm not sure of the best way for us to handle config of this value.
-dnl ### we probably want a version number in this path, too.
-dnl ### note that we use 'eval' to fully evaluate the value (prolly not good)
-template_dir="`eval echo ${datadir}/subversion/templates`"
-AC_DEFINE_UNQUOTED(SVN_TEMPLATE_ROOT_DIR, "$template_dir",
-                   [Location of the on-disk and in-repos templates.])
-
 dnl Check for programs ---------------------
 
 dnl Look for a C compiler
