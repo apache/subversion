@@ -171,6 +171,8 @@ a <tt>file:</tt> URL?</a></li>
     uses?</a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
 <li><a href="#baton">What's a 'baton'?</a></li> 
+<li><a href="#def-wedged-repository">What do you mean when you say that
+    repository is 'wedged'?</a></li>
 
 <![CDATA[=========================================================]]>
 
@@ -2114,6 +2116,34 @@ provide context to a function.  In other APIs, they're often called
 developers call the structures "batons" because they're passed around
 quite a bit.</p>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="def-wedged-repository">What do you mean when you say that
+    repository is 'wedged'?</a></h3>
+
+wedged repository: 
+<blockquote>
+A Subversion repository consists of two different internal parts, a
+working compartment and a storage compartment.  A wedged repository is
+a repository where the working compartment is unaccessible for some
+reason, but the storage compartment is intact.  Therefore, a wedged
+repository has not suffered any loss of data, but the working
+compartment has to be corrected before you can access the
+repository. See <a href="#stuck-bdb-repos">this</a> entry for details
+how to do that. 
+</blockquote>
+
+corrupted repository: 
+
+<blockquote> 
+A corrupted Subversion repository is a repository where the storage
+compartment has been damaged, and therefore there is some degree of
+real data loss in the repository.
+</blockquote>
+
+<p>You might also like to check The Jargon File's definition for 
+<a href="http://catb.org/~esr/jargon/html/W/wedged.html">'wedged'</a>.
+</p>
 </div>
 </body>
 </html>
