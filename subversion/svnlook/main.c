@@ -1766,12 +1766,12 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR (svn_cmdline_printf (pool,
                                    _("Owner: %s\n"), lock->owner));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Comment: %s\n"),
-                                   lock->comment ?  lock->comment : "none"));
-      SVN_ERR (svn_cmdline_printf (pool,
                                    _("Created: %s\n"), cr_date));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   _("Expires: %s\n\n"), exp_date));            
+                                   _("Expires: %s\n"), exp_date));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   _("Comment: %s\n\n"),
+                                   lock->comment ?  lock->comment : "none"));
     }
 
   return SVN_NO_ERROR;

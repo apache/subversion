@@ -185,7 +185,6 @@ static svn_opt_subcommand_t
   subcommand_help,
   subcommand_hotcopy,
   subcommand_load,
-  subcommand_lock,
   subcommand_list_dblogs,
   subcommand_list_unused_dblogs,
   subcommand_lslocks,
@@ -350,12 +349,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
       svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
       svnadmin__parent_dir} },
 
-    {"lock", subcommand_lock, {0},
-     N_("usage: svnadmin lock REPOS_PATH PATH_TO_LOCK OWNER\n\n"
-        "Create a lock on PATH (owned by OWNER) in the repository\n"
-        "located at REPOS_PATH.\n"),
-     {0} },
-
     {"lslocks", subcommand_lslocks, {0},
      N_("usage: svnadmin lslocks REPOS_PATH\n\n"
      "Print descriptions of all locks.\n"),
@@ -412,8 +405,6 @@ struct svnadmin_opt_state
 {
   const char *repository_path;
   const char *new_repository_path;                  /* hotcopy dest. path */
-  const char *path_to_lock;                         /* for 'lock' command */
-  const char *lock_owner;                           /* for 'lock' command */
   const char *fs_type;                              /* --fs-type */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
@@ -990,47 +981,6 @@ subcommand_hotcopy (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-
-static svn_error_t *
-subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_lock_t *lock;
-  svn_fs_access_t *access;
- 
-  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs (repos);
-
-  if ((! opt_state->path_to_lock) || (! opt_state->lock_owner))
-    return subcommand_help (NULL, NULL, pool);
-
-  /* Create an access context describing the current user. */
-  SVN_ERR (svn_fs_create_access (&access, opt_state->lock_owner, pool));
-
-  /* Attach the access context to the filesystem. */
-  SVN_ERR (svn_fs_set_access (fs, access));
-
-  /* Create the lock. */
-  SVN_ERR (svn_fs_lock (&lock, fs,
-                        opt_state->path_to_lock,
-                        "lock created by svnadmin",
-                        0,      /* don't steal an existing lock. */
-                        0,      /* no expiration time. */
-                        SVN_INVALID_REVNUM, /* no need for out-of-date check*/
-                        pool));
-  
-  SVN_ERR (svn_cmdline_printf (pool, _("Created lock on '%s', owned by %s.\n"),
-                               lock->path, lock->owner));
-  SVN_ERR (svn_cmdline_printf (pool, _("Lock token is '%s'.\n"),
-                               lock->token));
-  
-  return SVN_NO_ERROR;
-}
-
-
-
 static svn_error_t *
 subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
@@ -1075,12 +1025,12 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR (svn_cmdline_printf (pool,
                                    _("          Owner: %s\n"), lock->owner));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   _("        Comment: %s\n"),
-                                   lock->comment ? lock->comment : "none"));
-      SVN_ERR (svn_cmdline_printf (pool,
                                    _("        Created: %s\n"), cr_date));
       SVN_ERR (svn_cmdline_printf (pool,
-                                   _("        Expires: %s\n\n"), exp_date));
+                                   _("        Expires: %s\n"), exp_date));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   _("        Comment: %s\n\n"),
+                                   lock->comment ? lock->comment : "none"));
     }
   
   return SVN_NO_ERROR;
@@ -1442,32 +1392,6 @@ main (int argc, const char * const *argv)
                                     &(opt_state.new_repository_path), 
                                     pool);
       if(err)
-        {
-          svn_handle_error (err, stderr, 0);
-          svn_opt_subcommand_help (subcommand->name, cmd_table,
-                                   options_table, pool);
-          svn_error_clear (err);
-          svn_pool_destroy (pool);
-          return EXIT_FAILURE;
-        }
-    }
-
-  /* If command is 'lock', the 3rd and 4th args are PATH and OWNER */
-  if (subcommand->cmd_func == subcommand_lock)
-    {
-      if (os->ind < os->argc)
-        {
-          const char *path = os->argv[os->ind++];
-          err = svn_utf_cstring_to_utf8 (&(opt_state.path_to_lock),
-                                         path, pool);
-        }
-      if (os->ind < os->argc)
-        {
-          const char *owner = os->argv[os->ind++];
-          err = svn_utf_cstring_to_utf8 (&(opt_state.lock_owner),
-                                         owner, pool);
-        }
-      if (err)
         {
           svn_handle_error (err, stderr, 0);
           svn_opt_subcommand_help (subcommand->name, cmd_table,
