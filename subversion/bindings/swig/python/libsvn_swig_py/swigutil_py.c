@@ -1181,26 +1181,33 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 /*** Other Wrappers for SVN Functions ***/
 
 
-/* This is very hacky and gross.  */
 apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
 {
   apr_file_t *apr_file = NULL;
+  apr_status_t apr_err;
 
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
-  if (PyString_Check(py_file))
+  if (PyString_Check (py_file))
     {
       /* input is a path -- just open an apr_file_t */
-      apr_file_open(&apr_file, PyString_AS_STRING(py_file),
-                    APR_CREATE | APR_READ | APR_WRITE,
-                    APR_OS_DEFAULT,
-                    pool);
+      char* fname = PyString_AS_STRING (py_file);
+      apr_err = apr_file_open (&apr_file, fname,
+                              APR_CREATE | APR_READ | APR_WRITE,
+                              APR_OS_DEFAULT, pool);
+      if (apr_err)
+        {
+          char buf[256];
+          apr_strerror (apr_err, buf, sizeof(buf));
+          PyErr_Format (PyExc_IOError, "apr_file_open failed: %s: '%s'",
+                        buf, fname);
+          return NULL;
+        }
     }
   else if (PyFile_Check (py_file))
     {
-      apr_status_t status;
       FILE *file;
       apr_os_file_t osfile;
 
@@ -1211,9 +1218,14 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
 #else
       osfile = (apr_os_file_t)fileno(file);
 #endif
-      status = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
-      if (status)
-        return NULL;
+      apr_err = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+      if (apr_err)
+        {
+          char buf[256];
+          apr_strerror (apr_err, buf, sizeof(buf));
+          PyErr_Format (PyExc_IOError, "apr_os_file_put failed: %s", buf);
+          return NULL;
+        }
     }
   return apr_file;
 }
