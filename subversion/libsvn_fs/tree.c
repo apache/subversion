@@ -4047,8 +4047,6 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
    would be doled out in the event that PARENT_PATH was made mutable.
    Return the ID of the copy that last affected PARENT_PATH (and the
    COPY itself, if we've already fetched it).
-
-   NOTE:  All items in the PARENT_PATH chain are assumed to be immutable! 
 */
 static svn_error_t *
 examine_copy_inheritance (const char **copy_id,
