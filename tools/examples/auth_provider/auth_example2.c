@@ -42,7 +42,7 @@
 /* A callback of type svn_client_prompt_t, completely stolen from the
    svn commandline client application. */
 svn_error_t *
-prompt_user (char **result,
+prompt_user (const char **result,
              const char *prompt,
              svn_boolean_t hide,
              void *baton,
@@ -132,7 +132,7 @@ main (int argc, const char * const *argv)
                                  wc_dir, NULL, pool);
 
   svn_auth_get_simple_prompt_provider (&prompt_provider, &prompt_prov_baton,
-                                       &prompt_user, NULL,
+                                       &prompt_user, NULL, 2,
                                        "schmooey", "zoink", /* defaults */
                                        pool);
   

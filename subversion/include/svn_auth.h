@@ -233,7 +233,7 @@ svn_error_t * svn_auth_save_credentials(const char *cred_kind,
  * should not be displayed on the screen.
  */
 typedef svn_error_t *(*svn_auth_prompt_t)
-       (char **info,
+       (const char **info,
         const char *prompt,
         svn_boolean_t hide,
         void *baton,
@@ -243,13 +243,15 @@ typedef svn_error_t *(*svn_auth_prompt_t)
 /** Set @a *provider and @ *provider_baton to an authentication
     provider of type @c svn_auth_cred_simple_t that gets information
     by prompting the user with @a prompt_func and @a prompt_baton. If
-    either @a default_username or @a default_password is non-NULL, the
-    argument will be returned when @c svn_auth_first_credentials is
-    called. */
+    either @a default_username or @a default_password is non-NULL,
+    return the default argument(s) when @c svn_auth_first_credentials
+    is called.  If @c first_credentials() fails, then re-prompt @a
+    retry_limit number of times (via @c next_credentials()). */
 void svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                           void **provider_baton,
                                           svn_auth_prompt_t prompt_func,
                                           void *prompt_baton,
+                                          int retry_limit,
                                           const char *default_username,
                                           const char *default_password,
                                           apr_pool_t *pool);

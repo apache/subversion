@@ -499,7 +499,7 @@ svn_cl__get_log_message (const char **log_msg,
 
       if (! message)
         {
-          char *reply;
+          const char *reply;
           svn_cl__prompt_user (&reply,
                                "\nLog message unchanged or not specified\n"
                                "a)bort, c)ontinue, e)dit\n",

@@ -225,7 +225,7 @@ svn_cl__edit_externally (const char **edited_contents,
    reply will not be echoed to the screen.  BATON is ignored (but
    required by the definition of svn_client_prompt_t.)  */
 svn_error_t *
-svn_cl__prompt_user (char **result,
+svn_cl__prompt_user (const char **result,
                      const char *prompt,
                      svn_boolean_t hide,
                      void *baton,
