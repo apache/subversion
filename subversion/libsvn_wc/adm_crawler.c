@@ -545,7 +545,7 @@ svn_wc_transmit_text_deltas (const char *path,
      Note that since the translation routine doesn't let you choose
      the filename, we have to do one extra copy.  But what the heck,
      we're about to generate an svndiff anyway. */
-  SVN_ERR (svn_wc_translated_file (&tmpf, path, adm_access, pool));
+  SVN_ERR (svn_wc_translated_file (&tmpf, path, adm_access, FALSE, pool));
   tmp_base = svn_wc__text_base_path (path, TRUE, pool);
   SVN_ERR (svn_io_copy_file (tmpf, tmp_base, FALSE, pool));
 

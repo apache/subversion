@@ -297,7 +297,7 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
-                                   pool));
+                                   TRUE, pool));
   
   err = svn_wc__files_contents_same_p (&same, tmp_vfile, base_file, pool);
   *modified_p = (! same);

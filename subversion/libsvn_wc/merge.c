@@ -67,7 +67,7 @@ svn_wc_merge (const char *left,
          contracted and line endings in repository-normal (LF) form.
          This is the file that diff3 will read as the 'mine' file.  */
       SVN_ERR (svn_wc_translated_file (&tmp_target, merge_target, adm_access,
-                                       pool));
+                                       TRUE, pool));
       if (tmp_target == merge_target)  /* contraction didn't happen */
         {
           /* The target is already in repository form, so we just need to
@@ -216,12 +216,12 @@ svn_wc_merge (const char *left,
           SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
           SVN_ERR (svn_wc_copy_and_translate (left, 
                                               left_copy,
-                                              eol, FALSE, keywords,
-                                              TRUE, pool));
+                                              eol, eol ? TRUE : FALSE, 
+                                              keywords, TRUE, pool));
           SVN_ERR (svn_wc_copy_and_translate (right,
                                               right_copy,
-                                              eol, FALSE, keywords,
-                                              TRUE, pool));
+                                              eol, eol ? TRUE : FALSE, 
+                                              keywords, TRUE, pool));
 
           /* Back up MERGE_TARGET verbatim (it's already in expanded form.) */
           SVN_ERR (svn_io_copy_file (merge_target,
@@ -269,8 +269,8 @@ svn_wc_merge (const char *left,
                                          NULL, pool));
           SVN_ERR (svn_wc__get_eol_style (NULL, &eol, merge_target, pool));
           SVN_ERR (svn_wc_copy_and_translate (result_target, merge_target,
-                                              eol, FALSE, keywords, TRUE,
-                                              pool));
+                                              eol, eol ? TRUE : FALSE, 
+                                              keywords, TRUE, pool));
         }
 
       /* Don't forget to clean up tmp_target, result_target, tmp_left,

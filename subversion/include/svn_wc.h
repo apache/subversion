@@ -1640,6 +1640,11 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
  * manner is indicated by VFILE's properties; otherwise, set *XLATED_P
  * to VFILE.
  *
+ * If FORCE_REPAIR is set, the translated file will have any
+ * inconsistent line endings repaired.  This should only be used when
+ * the resultant file is being created for comparison against VFILE's
+ * text base.
+ *
  * Caller is responsible for detecting if they are different (pointer
  * comparison is sufficient), and for removing *XLATED_P if
  * necessary.
@@ -1651,11 +1656,11 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
  * using svn_io_open_unique_file() with SVN_WC__TMP_EXT, and allocate
  * it in POOL.  Also use POOL for any temporary allocation.
  *
- * If an error is returned, the effect on *XLATED_P is undefined.
- */
+ * If an error is returned, the effect on *XLATED_P is undefined.  */
 svn_error_t *svn_wc_translated_file (const char **xlated_p,
                                      const char *vfile,
                                      svn_wc_adm_access_t *adm_access,
+                                     svn_boolean_t force_repair,
                                      apr_pool_t *pool);
 
 

@@ -711,6 +711,7 @@ svn_error_t *
 svn_wc_translated_file (const char **xlated_p,
                         const char *vfile,
                         svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t force_repair,
                         apr_pool_t *pool)
 {
   enum svn_wc__eol_style style;
@@ -768,7 +769,7 @@ svn_wc_translated_file (const char **xlated_p,
           SVN_ERR (svn_wc_copy_and_translate (vfile,
                                               tmp_vfile,
                                               SVN_WC__DEFAULT_EOL_MARKER,
-                                              FALSE,
+                                              force_repair,
                                               keywords,
                                               FALSE,
                                               pool));
@@ -778,7 +779,7 @@ svn_wc_translated_file (const char **xlated_p,
           SVN_ERR (svn_wc_copy_and_translate (vfile,
                                               tmp_vfile,
                                               NULL,
-                                              FALSE,
+                                              force_repair,
                                               keywords,
                                               FALSE,
                                               pool));
@@ -823,7 +824,7 @@ svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
 {
   if (value == NULL)
     {
-      /* property dosen't exist. */
+      /* property doesn't exist. */
       *eol = NULL;
       if (style)
         *style = svn_wc__eol_style_none;
