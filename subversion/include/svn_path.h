@@ -294,9 +294,8 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
 
 
 /** Decompose @a path into an array of <tt>const char *</tt> components, 
- * allocated in @a pool.  @a style indicates the dir separator to split the 
- * string on.  If @a path is absolute, the first component will be a lone dir
- * separator (the root directory).
+ * allocated in @a pool.  If @a path is absolute, the first component will 
+ * be a lone dir separator (the root directory).
  */
 apr_array_header_t *svn_path_decompose (const char *path,
                                         apr_pool_t *pool);
