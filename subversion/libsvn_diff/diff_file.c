@@ -202,7 +202,8 @@ svn_diff__file_datasource_close(void *baton,
 
 static
 svn_error_t *
-svn_diff__file_datasource_get_next_token(void **token, void *baton,
+svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
+                                         void *baton,
                                          svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
@@ -245,6 +246,8 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   file_token->line = curp;
   file_token->length = eol - curp;
+
+  *hash = svn_diff__adler32(0, file_token->line, file_token->length);
 
   file_baton->curp[idx] = eol;
   *token = file_token;
