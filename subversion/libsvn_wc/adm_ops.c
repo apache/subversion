@@ -925,7 +925,7 @@ svn_wc_add (const char *path,
         {
           return svn_error_createf 
             (SVN_ERR_ENTRY_EXISTS, NULL,
-             "'%s' is already under revision control", path);
+             "'%s' is already under version control", path);
         }
       else if (orig_entry->kind != kind)
         {

@@ -73,7 +73,7 @@ svn_client__update_internal (const char *path,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_client_update: '%s' is not under revision control", anchor);
+       "svn_client_update: '%s' is not under version control", anchor);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_ENTRY_MISSING_URL, NULL,

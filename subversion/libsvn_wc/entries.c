@@ -1403,7 +1403,7 @@ fold_scheduling (apr_hash_t *entries,
             return 
               svn_error_createf 
               (SVN_ERR_WC_SCHEDULE_CONFLICT, NULL,
-               "fold_state_changes: Entry '%s' already under revision control",
+               "fold_state_changes: Entry '%s' already under version control",
                name);
         }
       break;
@@ -1730,7 +1730,7 @@ svn_wc_walk_entries (const char *path,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not under revision control.", path);
+                              "'%s' is not under version control.", path);
 
   if (entry->kind == svn_node_file)
     return walk_callbacks->found_entry (path, entry, walk_baton, pool);

@@ -1348,7 +1348,7 @@ Index: COMMITTERS
           <para>The second form exports a clean directory tree from
             the working copy specified by PATH1 into PATH2.  All
             local changes will be preserved, but files not under
-            revision control will not be copied.</para>
+            version control will not be copied.</para>
         </refsect1>
 
         <refsect1>
@@ -2057,7 +2057,7 @@ U  thhgttg.txt
       <refentry>
         <refnamediv>
           <refname>svn mkdir</refname>
-          <refpurpose>Create a new directory under revision control.</refpurpose>
+          <refpurpose>Create a new directory under version control.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>

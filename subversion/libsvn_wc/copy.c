@@ -170,7 +170,7 @@ copy_file_administratively (const char *src_path,
   if (! src_entry)
     return svn_error_createf 
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       "Cannot copy or move '%s' -- it's not under revision control",
+       "Cannot copy or move '%s' -- it's not under version control",
        src_path);
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url)

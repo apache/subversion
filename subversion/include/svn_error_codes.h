@@ -671,7 +671,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
               SVN_ERR_CLIENT_CATEGORY_START + 0,
-              "A path under revision control is needed for this operation")
+              "A path under version control is needed for this operation")
 
   SVN_ERRDEF (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED,
               SVN_ERR_CLIENT_CATEGORY_START + 1,

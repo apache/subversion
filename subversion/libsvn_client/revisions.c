@@ -92,7 +92,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
       if (! ent)
         return svn_error_createf
         (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-         "svn_client__get_revision: '%s' not under revision control", path);
+         "svn_client__get_revision: '%s' not under version control", path);
       
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))

@@ -133,7 +133,7 @@
       <para>After deleting <filename>foo</filename> and committing,
         the file is <emphasis>not</emphasis> totally forgotten by the
         <filename>.svn</filename> directory.  While the file is no
-        longer considered to be under revision control, it is still
+        longer considered to be under version control, it is still
         secretly remembered as having been
         <quote>deleted</quote>.</para>
 
