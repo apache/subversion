@@ -176,8 +176,12 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
     }
 
-  server_group = svn_config_find_group(cfg, requested_host, 
-                                       SVN_CONFIG_SECTION_GROUPS, pool);
+  if (cfg)
+    server_group = svn_config_find_group(cfg, requested_host, 
+                                         SVN_CONFIG_SECTION_GROUPS, pool);
+  else
+    server_group = NULL;
+
   if (server_group)
     {
       svn_config_get(cfg, proxy_host, server_group, 
