@@ -443,7 +443,7 @@ typedef struct svn_lock_t
  * Returns an @c svn_lock_t, allocated in @a pool with all fields initialized
  * to null values.
  *
- * @notes To allow for extending the @c svn_lock_t structure in the future
+ * To allow for extending the @c svn_lock_t structure in the future
  * releases, this function should always be used to allocate the structure.
  */
 svn_lock_t *

@@ -1766,7 +1766,7 @@ svn_client_cat (svn_stream_t *out,
 
 /** Locking commands
  *
- * @defgroup svn_client_locking_funcs
+ * @defgroup svn_client_locking_funcs Client Locking Functions
  * @{
  */
 

@@ -387,7 +387,7 @@ svn_error_t *svn_io_file_create (const char *file,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Lock file at @a lock_file. If @exclusive is TRUE,
+ * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
  * Lock will be automaticaly released when @a pool is cleared or destroyed.
  * Use @a pool for memory allocations.
@@ -399,7 +399,7 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
 /**
  * @since New in 1.1.
  *
- * Lock file at @a lock_file. If @exclusive is TRUE,
+ * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
  *
  * If @a nonblocking is TRUE, do not wait for the lock if it

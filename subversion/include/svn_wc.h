@@ -957,7 +957,7 @@ svn_error_t *svn_wc_check_wc (const char *path,
 
 /** Set @a *has_binary_prop to @c TRUE iff @a path has been marked 
  * with a property indicating that it is non-text (in other words, binary).
- * @a adm_access is an access baton set that contains @path.
+ * @a adm_access is an access baton set that contains @a path.
  */
 svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
                                      const char *path,
@@ -1593,7 +1593,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
 /** @since New in 1.2.
  *
  * Associate @a locks, a hash table mapping <tt>const char*</tt>
- * absolute repository paths to <tt>svn_lock_t</tt objects with an
+ * absolute repository paths to <tt>svn_lock_t</tt> objects with an
  * @a set_locks_baton returned by an earlier call to
  * @c svn_wc_get_status_editor2.  @a repos_root is the repository root URL.
  * Perform all allocations in @a pool.
@@ -2378,7 +2378,7 @@ svn_error_t *svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_get_diff_editor2(), but with @ignore_ancestry
+ * Similar to svn_wc_get_diff_editor2(), but with @a ignore_ancestry
  * always set to @c FALSE.
  */
 svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
@@ -2683,7 +2683,7 @@ svn_wc_relocate (const char *path,
  * unless @a path is a wc root, in which case @a parent_access refers to 
  * @a path itself.
  *
- * If @cancel_func is non-null, call it with @a cancel_baton at
+ * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
  * error (typically @c SVN_ERR_CANCELLED), return that error
  * immediately.

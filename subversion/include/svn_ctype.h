@@ -37,7 +37,7 @@ extern const apr_uint32_t *const svn_ctype_table;
 
 
 /** Check if @a c is in the character class described by @a flags.
- * The @a flags is a bitwise-or combination of @t SVN_CTYPE_* *
+ * The @a flags is a bitwise-or combination of @c SVN_CTYPE_*
  * constants. Uses #svn_ctype_table.
  */
 #define svn_ctype_test(c, flags) \
