@@ -34,3 +34,12 @@ use the one it found in its own source tree.)
 
 Now you can run the GNU install procedure given previously.  Please
 mail dev@subversion.tigris.org if you have any problems.
+
+If you are going to work on the code, you may prefer to run configure
+like this:
+
+   ./configure --enable-maintainer-mode --disable-shared
+
+This will build statically linked binaries, which may save you some
+headache when rebuilding later, as subversion won't try to link with
+shared libraries left over from previous installs.
