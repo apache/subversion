@@ -246,7 +246,9 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       
       /* Nulls count as a match, because null represents the dir itself. */
       if (((entry == NULL) && (baton->entryname == NULL))
-          || ((entry != NULL) && ((strcmp (entry, baton->entryname)) == 0)))
+          || ((entry != NULL)
+              && (baton->entryname != NULL)
+              && ((strcmp (entry, baton->entryname)) == 0)))
         {
           baton->found_it = 1;
 

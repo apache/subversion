@@ -142,15 +142,36 @@ make_dir_baton (svn_string_t *name,
 }
 
 
+/* Avoid the circular prototypes problem. */
+static svn_error_t *decrement_ref_count (struct dir_baton *d);
+
+
 static svn_error_t *
 free_dir_baton (struct dir_baton *dir_baton)
 {
-  /* Do whatever cleanup is needed on PATH with EDIT_BATON. */
+  svn_error_t *err;
+  struct dir_baton *parent = dir_baton->parent_baton;
 
-  /* kff todo fooo working here */
+  /* Bump this dir to the new version. */
+  err = svn_wc__set_versions_entry (dir_baton->path,
+                                    dir_baton->pool,
+                                    NULL,
+                                    dir_baton->edit_baton->target_version,
+                                    NULL);                                    
+  if (err)
+    return err;
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
   apr_destroy_pool (dir_baton->pool);
+
+  /* We've declared this directory done, so decrement its parent's ref
+     count too. */ 
+  if (parent)
+    {
+      err = decrement_ref_count (parent);
+      if (err)
+        return err;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -465,6 +486,8 @@ close_directory (void *dir_baton)
   svn_error_t *err = NULL;
 
   err = decrement_ref_count (this_dir_baton);
+  if (err)
+    return err;
 
   /* kff todo: now that the child is finished, we should make an entry
      in the parent's base-tree (although frankly I'm beginning to
@@ -473,7 +496,7 @@ close_directory (void *dir_baton)
      deduce their existence.  We can still tell when an update of the
      parent is complete, by refcounting.) */
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
