@@ -48,12 +48,6 @@ To be fixed by fitz:
 To be fixed by sussman:
 
 
-  - appA should mention no $Log$ keyword.  Or maybe it should mention
-    what keywords *do* exist as well.
-
-  - in httpd.conf setup, remind people not to put the svn <Location>
-    within an existing DocumentRoot, else the 301 error.
-
   - rewrite whole chapter 4 example to use project-root layout???
 
 

@@ -987,6 +987,19 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
         restart Apache in order to create and network new
         repositories.</para>      
 
+      <para>Be sure that when you define your new
+        <literal>Location</literal>, it doesn't overlap with other
+        exported Locations.  For example, if your main
+        <literal>DocumentRoot</literal> to <filename>/www</filename>,
+        do not export a Subversion repository in <literal>&lt;Location
+        /www/repos&gt;</literal>.  If a request comes in for the URI
+        <filename>/www/repos/foo.c</filename>, Apache won't know
+        whether to look for a file <filename>repos/foo.c</filename> in
+        the <literal>DocumentRoot</literal>, or whether to delegate
+        <command>mod_dav_svn</command> to return
+        <filename>foo.c</filename> from the Subversion
+        repository.</para>
+
       <sidebar>
         <title>Server Names and the COPY Request</title>
         
