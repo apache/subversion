@@ -345,6 +345,13 @@ change the representation pretty much as we please to optimize
 whatever parameter we care about --- storage size, speed, robustness,
 etc.
 
+Representations never share strings.  Every string is represented by
+exactly one representation; every representation represents exactly
+one string.  This is so we can replace a string with deltified version
+of itself, change the representation referring to it, and know that
+we're not messing up any other reps by doing so.
+
+
 A Note For The Near Future: How To Deltify:
 -------------------------------------------
 
