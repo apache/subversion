@@ -170,7 +170,7 @@ void svn_config_set (svn_config_t *cfg,
 
 /** Like @t svn_config_get, but for boolean values.
  *
- * Parses the option as a boolean value. The recoginzed representations
+ * Parses the option as a boolean value. The recognized representations
  * are 'true'/'false', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
  * matter. Returns an error if the option doesn't contain a known string.
  */
