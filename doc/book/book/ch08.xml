@@ -51,9 +51,10 @@ $ svn status -v myfile
       <variablelist>
         
         <varlistentry>
-          <term><option>--diff-cmd</option> <replaceable>CMD</replaceable></term>
+          <term><option>--diff-cmd</option>
+            <replaceable>CMD</replaceable></term>
           <listitem>
-            <para>Specifies the diff command to use to show
+            <para>Specifies an external program to use to show
             differences between files.  When <command>svn
             diff</command> is invoked, it uses Subversion's internal
             diff engine, which provides unified diffs by default.  If
@@ -65,11 +66,28 @@ $ svn status -v myfile
         </varlistentry>
       
         <varlistentry>
+          <term><option>--diff3-cmd</option>
+            <replaceable>CMD</replaceable></term>
+          <listitem>
+            <para>Specifies an external program to use to merge files.</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
           <term><option>--dry-run</option></term>
           <listitem>
             <para>Goes through all the motions of running a command,
               but makes no actual changes&mdash;either on disk or in
               the repository. </para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--editor-cmd</option>
+            <replaceable>CMD</replaceable></term>
+          <listitem>
+            <para>Specifies an external program to use to edit a log message
+              or a property value.</para>
           </listitem>
         </varlistentry>
       
@@ -155,6 +173,13 @@ $ svn status -v myfile
         </varlistentry>
         
         <varlistentry>
+          <term><option>--ignore-ancestry</option></term>
+          <listitem>
+            <para>Ignores ancestry when calculating differences.</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
           <term><option>--incremental</option></term>
           <listitem>
             <para>Prints output in a format suitable for
@@ -171,8 +196,16 @@ $ svn status -v myfile
               on the command line, following this switch. For
               example:</para>
             
-            <para><command>$ svn commit -m "Initial
-                import."</command></para>
+            <screen>
+$ svn commit -m "Initial import."
+            </screen>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--new</option> <replaceable>ARG</replaceable></term>
+          <listitem>
+            <para>Uses ARG as the newer target.</para>
           </listitem>
         </varlistentry>
       
@@ -231,7 +264,15 @@ $ svn status -v myfile
         </varlistentry>
 
         <varlistentry>
-          <term><option>--password</option><replaceable>PASS</replaceable></term>
+          <term><option>--old</option> <replaceable>ARG</replaceable></term>
+          <listitem>
+            <para>Uses ARG as the older target.</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
+          <term><option>--password</option>
+            <replaceable>PASS</replaceable></term>
           <listitem>
             <para>Indicates that you are providing your password for
               authentication on the command line&mdash;otherwise, if
@@ -331,7 +372,8 @@ $ svn log -r 1729:{2/17/02}
         </varlistentry>
         
         <varlistentry>
-          <term><option>--username</option><replaceable>NAME</replaceable></term>
+          <term><option>--username</option>
+            <replaceable>NAME</replaceable></term>
           <listitem>
             <para>Indicates that you are providing your username for
               authentication on the command line&mdash;otherwise, if
@@ -341,7 +383,7 @@ $ svn log -r 1729:{2/17/02}
         </varlistentry>
         
         <varlistentry>
-          <term><option>--verbose</option></term>
+          <term><option>--verbose</option> (<option>-v</option>)</term>
           <listitem>
             <para>Requests that the client print out as much
               information as it can while running any subcommand.
@@ -1801,7 +1843,7 @@ rev 19: ...
 
 ------------------------------------------------------------------------
 rev 27: ...
-            </screen>
+          </screen>
 
           <para>The <option>--incremental</option> switch provides
             similar output control when using the
@@ -2736,7 +2778,7 @@ foo.c.r31
             <varlistentry>
               <term>'D'</term>
               <listitem>
-                <para>Item is scheduled for Addition.</para>
+                <para>Item is scheduled for Deletion.</para>
               </listitem>
             </varlistentry>
 
@@ -2759,7 +2801,7 @@ foo.c.r31
               <term>'I'</term>
               <listitem>
                 <para>Item is being ignored (e.g. with the 
-                  svn:ignore) property</para>
+                  svn:ignore property)</para>
               </listitem>
             </varlistentry>
 
@@ -2910,7 +2952,7 @@ foo.c.r31
           <para>The remaining fields are variable width and
             delimited by spaces.  The working revision is the next
             field if the <option>--show-updates</option> or
-            <option>--verbose</option>switches are passed.</para>
+            <option>--verbose</option> switches are passed.</para>
           
           <para>If the <option>--verbose</option> switch is passed,
             the last committed revision and last committed author
@@ -3854,7 +3896,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
     <!-- ================================================================= -->
     <sect2 id="svn-ch-8-sect-3.2">
       <title><command>svnlook</command> Subcommands</title>
-	
+
       <refentry>
         <refnamediv>
           <refname>svnlook author</refname>
