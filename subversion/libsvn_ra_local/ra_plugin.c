@@ -460,8 +460,12 @@ do_switch (void *session_baton,
   else
     revnum_to_update_to = update_revision;
 
+  /* Make sure the pipe editor is anchored in the same way as the
+     update editor. */
   pipe_anchor = svn_stringbuf_create_from_string (switch_fs_path, 
                                                   sbaton->pool);
+  if (update_target)
+    svn_path_remove_component (pipe_anchor);
   
   /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
      'entry' properties into the stream, whenever {open_root,
