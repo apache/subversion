@@ -173,7 +173,7 @@ static svn_boolean_t search_groups(const char *name,
 
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, and *PROXY_PASSWORD
- * the proxy information for REQUESTED_HOST, allocated in POOL, if
+ * to the proxy information for REQUESTED_HOST, allocated in POOL, if
  * there is any applicable information.  Else set *PROXY_PORT to -1
  * and the rest to NULL.
  *
