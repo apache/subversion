@@ -3357,9 +3357,7 @@ write_final_changed_path_info (apr_off_t *offset_p,
                                const char *txn_id,
                                apr_pool_t *pool)
 {
-  apr_file_t *changes_file;
-  const char *filename, *copyfrom;
-  svn_stream_t *changes_stream;
+  const char *copyfrom;
   apr_hash_t *changed_paths, *copyfrom_cache = apr_hash_make (pool);
   apr_off_t offset;
   apr_hash_index_t *hi;
