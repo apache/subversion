@@ -206,6 +206,7 @@ if ($hostname =~ /\w/)
 push (@output, ("To: $userlist\n"));
 push (@output, ("From: $mail_from\n"));
 push (@output, ("Subject: $subject\n"));
+push (@output, ("Reply-to: dev\@subversion.tigris.org\n"));
 push (@output, ("\n"));
 
 # mail body
