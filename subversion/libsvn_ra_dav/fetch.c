@@ -1532,8 +1532,8 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
   po[0].name = &propname_struct;
-  po[0].type = ne_propset;
-  po[0].value = value->data; /* ### This binary value should be ESCAPED! */
+  po[0].type = value ? ne_propset : ne_propremove;
+  po[0].value = value? value->data : NULL; /* ### ESCAPE binary value!! */
   
   rv = ne_proppatch(ras->sess, baseline->url, po);
   if (rv != NE_OK)

@@ -289,9 +289,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__msg_encoding_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
-    "Remove property PROPNAME on files and directories.\n"
-    "usage: propdel PROPNAME [TARGETS]\n",
-    {'q', 'R'} },
+    "Remove PROPNAME from files, dirs, or revisions.\n"
+    "usage: 1. propdel [WC_TARGETS]\n"
+    "       2. propdel -r REV [URL]\n\n"
+    "First usage removes versioned props in working copy.\n"
+    "Second usage removes unversioned remote prop on repos revision.\n\n",
+    {'q', 'R', 'r'} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"

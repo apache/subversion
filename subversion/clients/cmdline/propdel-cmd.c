@@ -60,19 +60,61 @@ svn_cl__propdel (apr_getopt_t *os,
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
-  /* For each target, remove the property PNAME. */
-  for (i = 0; i < targets->nelts; i++)
+  /* Decide if we're deleting a versioned working copy prop or an
+     unversioned repository revision prop.  The existence of the '-r'
+     flag is the key. */
+  if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
-      const char *target = ((const char **) (targets->elts))[i];
-      SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
-                                   opt_state->recursive, pool));
+      svn_revnum_t rev;
+      const char *URL, *target;
+      svn_client_auth_baton_t *auth_baton;
+
+      auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+
+      /* Either we have a URL target, or an implicit wc-path ('.')
+         which needs to be converted to a URL. */
+      if (targets->nelts <= 0)
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL, pool,
+                                "No URL target available.");
+      target = ((const char **) (targets->elts))[0];
+      SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));  
+      if (URL == NULL)
+        return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL,
+                                pool,
+                                "Either a URL or versioned item is required.");
+
+      /* Let libsvn_client do the real work. */
+      SVN_ERR (svn_client_revprop_set (pname_utf8, NULL,
+                                       URL, &(opt_state->start_revision),
+                                       auth_baton, &rev, pool));
       if (! opt_state->quiet) 
         {
           const char *target_native;
-          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
-          printf ("property `%s' deleted%sfrom '%s'.\n", pname,
-                  opt_state->recursive ? " (recursively) " : " ",
-                  target_native);
+          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
+                                              target, pool));
+          printf ("property `%s' deleted from repository revision '%"
+                  SVN_REVNUM_T_FMT"'\n",
+                  pname, rev);
+        }      
+    }
+
+  else
+    {
+      /* For each target, remove the property PNAME. */
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *target = ((const char **) (targets->elts))[i];
+          SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
+                                       opt_state->recursive, pool));
+          if (! opt_state->quiet) 
+            {
+              const char *target_native;
+              SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
+                                                  target, pool));
+              printf ("property `%s' deleted%sfrom '%s'.\n", pname,
+                      opt_state->recursive ? " (recursively) " : " ",
+                      target_native);
+            }
         }
     }
 
