@@ -510,7 +510,8 @@ typedef struct svn_wc_status_t
    this function can reveal the following things:
 
       svn_wc_status_none : PATH is not versioned, and is either not
-                           present on disk, or is ignored by the
+                           present on disk, or is ignored by svn's
+                           default ignore regular expressions or the
                            svn:ignore property setting for PATH's
                            parent directory.
 
@@ -561,6 +562,7 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_boolean_t descend,
                               svn_boolean_t get_all,
                               svn_boolean_t strict,
+                              svn_boolean_t no_ignore,
                               apr_pool_t *pool);
 
 
