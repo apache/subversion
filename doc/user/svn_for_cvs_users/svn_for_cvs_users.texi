@@ -132,15 +132,15 @@ users to use it early and often:
 
 @itemize @bullet
 @item 'svn status'
-   prints all files that have local modifications; the network is not
-   accessed by default.
+prints all files that have local modifications; the network is not
+accessed by default.
 @itemize @bullet
 @item -u switch
-   add out-of-dateness information from repository 
+add out-of-dateness information from repository 
 @item -v switch
-   show @emph{all} entries under version control
+show @emph{all} entries under version control
 @item -n switch
-    nonrecursive
+nonrecursive
 @end itemize
 @end itemize
 
@@ -299,11 +299,11 @@ a conflict happens during an update, three things happen:
 
 @itemize @bullet
 @item
-   a 'C' is printed during the update
+a 'C' is printed during the update
 @item
-   a reject file ('.rej') is created that contains the conflicting text
+a reject file ('.rej') is created that contains the conflicting text
 @item
-   the file is marked as conflicted in .svn/entries
+the file is marked as conflicted in .svn/entries
 @end itemize
 
 At this point, Subversion will @emph{not} allow you to commit the file

@@ -72,10 +72,10 @@ center on two principles:
 
 @itemize @bullet
 @item
-  Recommending a repository filesystem structure that cleanly divides
-  trunks, branches, and tags;
+Recommending a repository filesystem structure that cleanly divides
+trunks, branches, and tags;
 @item
-  Implementing client behavior that ``hides'' this repository structure
+Implementing client behavior that ``hides'' this repository structure
 from the end user, and allows them to continue using intuitive branch
 and tag commands.
 @end itemize

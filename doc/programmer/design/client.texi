@@ -159,15 +159,15 @@ You can read much more about these files in the file
   @b{Requires:}
   @itemize @minus
   @item
-    a working copy
+a working copy
   @end itemize
 @item
   @b{Provides:}
   @itemize @minus
   @item
-    ability to manipulate the working copy's versioned data
+ability to manipulate the working copy's versioned data
   @item
-    ability to manipulate the working copy's administrative files
+ability to manipulate the working copy's administrative files
   @end itemize
 @end itemize
 
@@ -188,13 +188,13 @@ file for a detailed description:  @file{subversion/include/svn_wc.h}.
   @b{Requires:}
   @itemize @minus
   @item
-    network access to a Subversion server
+network access to a Subversion server
   @end itemize
 @item
   @b{Provides:}
   @itemize @minus
   @item
-    the ability to interact with a repository
+the ability to interact with a repository
   @end itemize
 @end itemize
 
@@ -220,15 +220,15 @@ repositories.
   @b{Requires:}
   @itemize @minus
   @item
-    the working copy management library
+the working copy management library
   @item
-    a repository access library
+a repository access library
   @end itemize
 @item
   @b{Provides:}
   @itemize @minus
   @item
-    all client-side Subversion commands
+all client-side Subversion commands
   @end itemize
 @end itemize
 
