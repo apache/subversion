@@ -598,20 +598,22 @@ $ svn status
 M  integer.c
 </screen>
 
-      <para>The output of <command>svn merge</command> shows that your
-        copy of <filename>integer.c</filename> was patched.  It now
-        contains Sally's change&mdash;the change has been
-        <quote>copied</quote> from the trunk to your working copy of
-        your private branch, and now exists as a local modification.
-        At this point, it's up to you to review the local modification
-        and make sure it works correctly.</para>
+      <para>La salida del comando <command>svn merge</command>
+        muestra que su copia de <filename>integer.c</filename>
+        fue parcheada. Ahora contiene el cambio de Sally&mdash;el
+        cambio ha sido <quote>copiado</quote> desde el tronco a su
+        copia local de la rama privada, y existe ahora como una
+        modificación local. En este punto, es tarea suya revisar
+        la modificación local para asegurarse de que funciona
+        correctamente.</para>
 
-      <para>In another scenario, it's possible that things may not have
-        gone so well, and that <filename>integer.c</filename> may have
-        entered a conflicted state.  You might need to resolve the
-        conflict using standard procedures (see Chapter 3), or if you
-        decide that the merge was a bad idea altogether, simply give up
-        and <command>svn revert</command> the local change.</para>
+      <para>En otra situación, es posible que las cosas no hayan
+        ido tan bien, y que <filename>integer.c</filename>
+        haya entrado en un estado de conflicto. Puede tener que
+        resolver el conflicto usando el procedimiento estándar
+        (vea el tercer capítulo), o si decide que la fusión fue una
+        mala idea, simplemente dé se por vencido y use <command>svn
+        revert</command> para revertir el cambio local.</para>
 
       <para>But assuming that you've reviewed the merged change, you can
         <command>svn commit</command> the change as usual.  At that
