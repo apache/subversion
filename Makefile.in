@@ -120,6 +120,8 @@ local-extraclean: local-distclean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
+install-static: @INSTALL_STATIC_RULES@
+
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
 	$(PYTHON) $(top_srcdir)/build/run_tests.py \
