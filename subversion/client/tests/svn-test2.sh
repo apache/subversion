@@ -15,7 +15,6 @@ check_status()
       echo Oops, problem: ${@-"(no further details)"}
       exit $res
     fi
-    read foo
 }
 
 # Remove the testing tree
