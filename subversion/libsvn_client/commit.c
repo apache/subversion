@@ -229,6 +229,9 @@ import_dir (const svn_delta_editor_t *editor,
       if (apr_hash_get (excludes, abs_path, APR_HASH_KEY_STRING))
         continue;
 
+      if (svn_cstring_match_glob_list (finfo.name, ignores))
+        continue;
+
       /* We only import subdirectories when we're doing a regular
          recursive import. */
       if ((finfo.filetype == APR_DIR) && (! nonrecursive))
@@ -265,9 +268,6 @@ import_dir (const svn_delta_editor_t *editor,
         }
       else if (finfo.filetype == APR_REG)
         {
-          if (svn_cstring_match_glob_list (finfo.name, ignores))
-            continue;
-
           /* Import a file. */
           SVN_ERR (import_file (editor, dir_baton, 
                                 this_path, this_edit_path, ctx, subpool));
