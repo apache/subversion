@@ -1704,18 +1704,46 @@ svn_fs_merge (const char **conflict_p,
               const char *ancestor_path,
               apr_pool_t *pool)
 {
-#if 0
-
   dag_node_t *source, *ancestor;
+  struct get_root_args get_root_args;
   struct merge_args merge_args;
   svn_fs_txn_t *txn;
+  svn_error_t *err;
+  svn_fs_t *fs;
 
   if (! svn_fs_is_txn_root (target_root))
-    return not_txn (to_root);
+    return not_txn (target_root);
 
-  SVN_ERR (get_dag (&source, source_root, source_path, trail));
-  SVN_ERR (get_dag (&ancestor, ancestor_root, ancestor_path, trail));
+  /* Paranoia. */
+  fs = svn_fs_root_fs (ancestor_root);
+  if ((svn_fs_root_fs (source_root) != fs)
+      || (svn_fs_root_fs (target_root) != fs))
+    {
+      return svn_error_create
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Bad merge -- ancestor, source, and target not all in same fs");
+    }
+
+  /* ### kff todo: is there any compelling reason to get the nodes in
+     one db transaction?  Right now we don't; txn_body_get_root() gets
+     one node at a time. */
+
+  /* Get the ancestor node. */
+  get_root_args.root = ancestor_root;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_root, &get_root_args, pool));
+  ancestor = get_root_args.node;
+
+  /* Get the source node. */
+  get_root_args.root = source_root;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_root, &get_root_args, pool));
+  source = get_root_args.node;
   
+  /* Open a txn for the txn root into which we're merging. */
+  SVN_ERR (svn_fs_open_txn (&txn, fs,
+                            svn_fs_txn_root_name (target_root, pool),
+                            pool));
+
+  /* Merge changes between ANCESTOR and SOURCE into TXN. */
   merge_args.source_node = source;
   merge_args.ancestor_node = ancestor;
   merge_args.txn = txn;
@@ -1726,8 +1754,6 @@ svn_fs_merge (const char **conflict_p,
         *conflict_p = merge_args.conflict;
       return err;
     }
-
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }
