@@ -41,24 +41,24 @@
 
 /* helper for svn_repos_dated_revision().
 
-   Set *TIME to the apr_time_t datestamp on revision REV in FS. */
+   Set *TM to the apr_time_t datestamp on revision REV in FS. */
 static svn_error_t *
-get_time (apr_time_t *time,
+get_time (apr_time_t *tm,
           svn_fs_t *fs,
           svn_revnum_t rev,
           apr_pool_t *pool)
 {
-  svn_stringbuf_t *datestamp;
+  svn_stringbuf_t *date_str;
   svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
-                                   strlen(SVN_PROP_REVISION_DATE)};
+                            strlen(SVN_PROP_REVISION_DATE)};
 
-  SVN_ERR (svn_fs_revision_prop (&datestamp, fs, rev, &date_prop, pool));
-  if (! datestamp)    
+  SVN_ERR (svn_fs_revision_prop (&date_str, fs, rev, &date_prop, pool));
+  if (! date_str)    
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "failed to find datestamp on revision %ld", rev);
+       "failed to find tm on revision %ld", rev);
 
-  *time = svn_time_from_string (datestamp);
+  *tm = svn_time_from_string (date_str);
 
   return SVN_NO_ERROR;
 }
@@ -67,7 +67,7 @@ get_time (apr_time_t *time,
 svn_error_t *
 svn_repos_dated_revision (svn_revnum_t *revision,
                           svn_fs_t *fs,
-                          apr_time_t time,
+                          apr_time_t tm,
                           apr_pool_t *pool)
 {
   svn_revnum_t rev_mid, rev_top, rev_bot, rev_latest;
@@ -83,7 +83,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
       rev_mid = (rev_top + rev_bot) / 2;
       SVN_ERR (get_time (&this_time, fs, rev_mid, pool));
       
-      if (this_time > time) /* we've overshot */
+      if (this_time > tm)/* we've overshot */
         {
           apr_time_t previous_time;
 
@@ -95,7 +95,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
 
           /* see if time falls between rev_mid and rev_mid-1: */
           SVN_ERR (get_time (&previous_time, fs, rev_mid - 1, pool));
-          if (previous_time <= time)
+          if (previous_time <= tm)
             {
               *revision = rev_mid - 1;
               break;
@@ -104,7 +104,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
           rev_top = rev_mid - 1;
         }
 
-      else if (this_time < time) /* we've undershot */
+      else if (this_time < tm) /* we've undershot */
         {
           apr_time_t next_time;
 
@@ -116,7 +116,7 @@ svn_repos_dated_revision (svn_revnum_t *revision,
           
           /* see if time falls between rev_mid and rev_mid+1: */
           SVN_ERR (get_time (&next_time, fs, rev_mid + 1, pool));
-          if (next_time > time)
+          if (next_time > tm)
             {
               *revision = rev_mid + 1;
               break;

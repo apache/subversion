@@ -178,12 +178,12 @@ get_latest_revnum (void *session_baton,
 static svn_error_t *
 get_dated_revision (void *session_baton,
                     svn_revnum_t *revision,
-                    apr_time_t time)
+                    apr_time_t tm)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_repos_dated_revision (revision, baton->fs, time, baton->pool));
+  SVN_ERR (svn_repos_dated_revision (revision, baton->fs, tm, baton->pool));
 
   return SVN_NO_ERROR;
 }
