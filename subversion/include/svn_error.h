@@ -99,6 +99,17 @@ typedef enum svn_errno_t {
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,
 
+  /* An error occurred while trying to close a Subversion filesystem.
+     This status code is meant to be returned from APR pool cleanup
+     functions; since that interface doesn't allow us to provide more
+     detailed information, this is all you'll get.  */
+  SVN_ERR_FS_CLEANUP,
+
+  /* You called svn_fs_newfs or svn_fs_open, but the filesystem object
+     you provided already refers to some filesystem.  You should allocate
+     a fresh filesystem object with svn_fs_new, and use that instead.  */
+  SVN_ERR_FS_ALREADY_OPEN,
+
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB,
