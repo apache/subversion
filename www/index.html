@@ -54,7 +54,7 @@ href="/project_license.html">Apache/BSD-style</a> open source license.
 </p>
 
 <p>
-<h2>Subversion 1.0 Features</h2>
+<h2>Subversion's Features</h2>
 <p>
 
 <ul>  <!-- list of features -->
@@ -134,6 +134,19 @@ href="/project_license.html">Apache/BSD-style</a> open source license.
     repository model.</p>
 </li>
 
+
+<li><strong>Choice of database or plain-file repository implementations</strong> 
+  <p>Repositories can be created with either an embedded database
+     back-end (BerkeleyDB) or with normal flat-file back-end, which
+     uses a custom format.</p>
+</li>
+
+<li><strong>Versioning of symbolic links</strong>
+  <p>Unix users can place symbolic links under version control.  The
+     links are recreated in Unix working copies, but not in win32
+     working copies.</p>
+</li>
+
 <li><strong>Efficient handling of binary files</strong>
     <p>Subversion is equally efficient on binary as on text files,
     because it uses a binary diffing algorithm to transmit and store
@@ -145,29 +158,6 @@ href="/project_license.html">Apache/BSD-style</a> open source license.
     designed to be both human readable and automatically parseable;
     scriptability is a high priority.
 </p>
-</li>
-
-</ul>  <!-- end list of features -->
-
-<p>
-<h2>Subversion 1.1 Features</h2>
-<p>
-
-<p>For a more complete list, see <a
-href="svn_1.1_releasenotes.html">the 1.1 release notes</a>.</p>
-
-<ul>  <!-- list of features -->
-
-<li><strong>Non-database repository back-end</strong> 
-  <p>Repositories can be created with either a traditional database
-     back-end (BerkeleyDB) or with normal flat-file back-end, which
-     uses a proprietary binary format.</p>
-</li>
-
-<li><strong>Versioning of symbolic links</strong>
-  <p>Unix users can place symbolic links under version control.  The
-     links are recreated in Unix working copies, but not in win32
-     working copies.</p>
 </li>
 
 <li><strong>Localized messages</strong>
