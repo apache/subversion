@@ -115,7 +115,6 @@ reverse_propchanges (apr_hash_t *baseprops,
     }
 }
 
-
 /*-------------------------------------------------------------------------*/
 
 /* Overall crawler editor baton.
@@ -134,7 +133,7 @@ struct edit_baton {
 
   /* The callbacks and callback argument that implement the file comparison
      functions */
-  const svn_wc_diff_callbacks_t *callbacks;
+  const svn_wc_diff_callbacks2_t *callbacks;
   void *callback_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
@@ -221,6 +220,11 @@ struct file_baton {
   apr_pool_t *pool;
 };
 
+/* Used to wrap svn_diff_wc_callbacks2_t. */
+struct callbacks2_baton {
+  const svn_wc_diff_callbacks_t *callbacks;
+  void *baton;
+};
 
 /* Create a new edit baton. TARGET/ANCHOR are working copy paths that
  * describe the root of the comparison. CALLBACKS/CALLBACK_BATON
@@ -233,7 +237,7 @@ struct file_baton {
 static struct edit_baton *
 make_editor_baton (svn_wc_adm_access_t *anchor,
                    const char *target,
-                   const svn_wc_diff_callbacks_t *callbacks,
+                   const svn_wc_diff_callbacks2_t *callbacks,
                    void *callback_baton,
                    svn_boolean_t recurse,
                    svn_boolean_t ignore_ancestry,
@@ -468,7 +472,11 @@ file_diff (struct dir_baton *dir_baton,
   svn_boolean_t copied = entry->copied;
   svn_wc_adm_access_t *adm_access;
   const char *pristine_mimetype, *working_mimetype;
-  const char *translated;
+  const char *translated = NULL;
+  apr_array_header_t *propchanges = NULL;
+  apr_hash_t *baseprops = NULL;
+
+  assert (! eb->use_text_base);
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
                                 dir_baton->path, pool));
@@ -493,6 +501,23 @@ file_diff (struct dir_baton *dir_baton,
   pristine_copy = svn_wc__text_base_path (path, FALSE, pool);
   empty_file = svn_wc__empty_file_path (path, pool);
 
+  /* Get property diffs if this is not schedule delete. */
+  if (schedule != svn_wc_schedule_delete)
+    {
+      SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
+      if (modified)
+        SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
+                                        adm_access, pool));
+      else
+        propchanges = apr_array_make (pool, 1, sizeof (svn_prop_t));
+    }
+  else
+    {
+      /* Get pristine properties. */
+      SVN_ERR (svn_wc_get_prop_diffs (NULL, &baseprops, path,
+                                      adm_access, pool));
+    }
+
   switch (schedule)
     {
       /* Replace is treated like a delete plus an add: two
@@ -507,69 +532,44 @@ file_diff (struct dir_baton *dir_baton,
       SVN_ERR (get_local_mimetypes (&pristine_mimetype, NULL, NULL,
                                     adm_access, path, pool));
 
-      if (! eb->use_text_base)
-        SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
-                 (NULL, NULL, path, 
-                  pristine_copy, 
-                  empty_file,
-                  pristine_mimetype,
-                  NULL,
-                  dir_baton->edit_baton->callback_baton));
+      SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
+               (NULL, NULL, path, 
+                pristine_copy, 
+                empty_file,
+                pristine_mimetype,
+                NULL,
+                baseprops,
+                dir_baton->edit_baton->callback_baton));
 
       /* Replace will fallthrough! */
       if (schedule == svn_wc_schedule_delete)
         break;
 
     case svn_wc_schedule_add:
-      empty_file = svn_wc__empty_file_path (path, pool);
-
       /* Get svn:mime-type from working props of PATH. */
       SVN_ERR (get_local_mimetypes (NULL, &working_mimetype, NULL,
                                     adm_access, path, pool));
 
-      if (! eb->use_text_base)
-        {
-          SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
-                                           TRUE, pool));
+      SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
+                                       TRUE, pool));
 
-          SVN_ERR (dir_baton->edit_baton->callbacks->file_added
-                   (NULL, NULL, path,
-                    empty_file,
-                    translated,
-                    0, entry->revision,
-                    NULL,
-                    working_mimetype,
-                    dir_baton->edit_baton->callback_baton));
-        }
+      SVN_ERR (dir_baton->edit_baton->callbacks->file_added
+               (NULL, NULL, NULL, path,
+                empty_file,
+                translated,
+                0, entry->revision,
+                NULL,
+                working_mimetype,
+                propchanges, baseprops,
+                dir_baton->edit_baton->callback_baton));
 
-      SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
-      if (modified && (! eb->use_text_base))
-        {
-          apr_array_header_t *propchanges;
-          apr_hash_t *baseprops;
-
-          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
-                                          adm_access, pool));
-
-          SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (NULL, NULL,
-                    path,
-                    propchanges, baseprops,
-                    dir_baton->edit_baton->callback_baton));
-        }
       break;
 
     default:
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
-                                    dir_baton->path, pool));
       SVN_ERR (svn_wc_text_modified_p (&modified, path, FALSE, 
                                        adm_access, pool));
-      if (modified && (! eb->use_text_base))
+      if (modified)
         {
-          svn_error_t *err, *err2 = SVN_NO_ERROR;
-
-          pristine_copy = svn_wc__text_base_path (path, FALSE, pool);   
-
           /* Note that this might be the _second_ time we translate
              the file, as svn_wc_text_modified_p() might have used a
              tmp translated copy too.  But what the heck, diff is
@@ -577,23 +577,29 @@ file_diff (struct dir_baton *dir_baton,
              modularity is liveable. */
           SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
                                            TRUE, pool));
-          
+        }
+
+      if (modified || propchanges->nelts > 0)
+        {
+          svn_error_t *err, *err2 = SVN_NO_ERROR;
+
           /* Get svn:mime-type for both pristine and working file. */
           SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
                                         NULL, adm_access, path, pool));
 
           err = dir_baton->edit_baton->callbacks->file_changed
-            (NULL, NULL,
+            (NULL, NULL, NULL,
              path,
-             pristine_copy, 
+             modified ? pristine_copy : NULL,
              translated,
              entry->revision,
              SVN_INVALID_REVNUM,
              pristine_mimetype,
              working_mimetype,
+             propchanges, baseprops,
              dir_baton->edit_baton->callback_baton);
           
-          if (translated != path)
+          if (translated && translated != path)
             err2 = svn_io_remove_file (translated, pool);
 
           if (err && err2)
@@ -606,30 +612,13 @@ file_diff (struct dir_baton *dir_baton,
           if (err2)
             return err2;
         }
-
-      SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
-      if (modified && (! eb->use_text_base))
-        {
-          apr_array_header_t *propchanges;
-          apr_hash_t *baseprops;
-
-          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
-                                          adm_access, pool));
-
-          SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (NULL, NULL,
-                    path,
-                    propchanges, baseprops,
-                    dir_baton->edit_baton->callback_baton));
-        }
     }
-
   return SVN_NO_ERROR;
 }
 
 /* Called when the directory is closed to compare any elements that have
- * not yet been compared. This identifies local, working copy only
- * changes. At this stage we are dealing with files/directories that do
+ * not yet been compared.  This identifies local, working copy only
+ * changes.  At this stage we are dealing with files/directories that do
  * exist in the working copy.
  *
  * DIR_BATON is the baton for the directory. ADDED forces the directory
@@ -652,6 +641,10 @@ directory_elements_diff (struct dir_baton *dir_baton,
      working copy.) */
   assert (!dir_baton->added);
 
+  /* Everything we do below is useless if we are comparing to BASE. */
+  if (dir_baton->edit_baton->use_text_base)
+    return SVN_NO_ERROR;
+
   /* Determine if this is the anchor directory if the anchor is different
      to the target. When the target is a file, the anchor is the parent
      directory and if this is that directory the non-target entries must be
@@ -672,7 +665,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
 
       SVN_ERR (svn_wc_props_modified_p (&modified, dir_baton->path, adm_access,
                                         dir_baton->pool));
-      if (modified && (! dir_baton->edit_baton->use_text_base))
+      if (modified)
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
@@ -681,7 +674,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
                                           dir_baton->path, adm_access,
                                           dir_baton->pool));
               
-          SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
+          SVN_ERR (dir_baton->edit_baton->callbacks->dir_props_changed
                    (NULL, NULL,
                     dir_baton->path,
                     propchanges, baseprops,
@@ -701,6 +694,8 @@ directory_elements_diff (struct dir_baton *dir_baton,
       const svn_wc_entry_t *entry;
       struct dir_baton *subdir_baton;
       const char *name, *path;
+
+      svn_pool_clear (subpool);
 
       apr_hash_this (hi, &key, NULL, &val);
       name = key;
@@ -757,8 +752,6 @@ directory_elements_diff (struct dir_baton *dir_baton,
         default:
           break;
         }
-
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);
@@ -810,6 +803,7 @@ delete_entry (const char *path,
                                          pb->pool);
   svn_wc_adm_access_t *adm_access;
   const char *working_mimetype, *pristine_mimetype;
+  apr_hash_t *baseprops;
 
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, pb->edit_baton->anchor,
                                       full_path, pool));
@@ -830,25 +824,29 @@ delete_entry (const char *path,
           /* Whenever showing a deletion, we show the text-base vanishing. */
           const char *textbase = svn_wc__text_base_path (full_path,
                                                          FALSE, pool);
-
+          SVN_ERR (svn_wc_get_prop_diffs (NULL, &baseprops, full_path,
+                                          adm_access, pool));
           SVN_ERR (pb->edit_baton->callbacks->file_deleted
                    (NULL, NULL, full_path,
                     textbase,
                     svn_wc__empty_file_path (full_path, pool),
                     pristine_mimetype,
                     NULL,
+                    baseprops,
                     pb->edit_baton->callback_baton));
         }
       else
         {
           /* Or normally, show the working file being added. */
+          /* ### Show the properties as well. */
           SVN_ERR (pb->edit_baton->callbacks->file_added
-                   (NULL, NULL, full_path,
+                   (NULL, NULL, NULL, full_path,
                     svn_wc__empty_file_path (full_path, pool),
                     full_path,
                     0, entry->revision,
                     NULL,
                     working_mimetype,
+                    apr_array_make (pool, 1, sizeof (svn_prop_t)), NULL,
                     pb->edit_baton->callback_baton));
         }
 
@@ -940,7 +938,7 @@ close_directory (void *dir_baton,
       if (! b->edit_baton->reverse_order)
         reverse_propchanges (b->baseprops, b->propchanges, b->pool);
 
-      SVN_ERR (b->edit_baton->callbacks->props_changed
+      SVN_ERR (b->edit_baton->callbacks->dir_props_changed
                (NULL, NULL,
                 b->path,
                 b->propchanges,
@@ -1179,36 +1177,53 @@ close_file (void *file_baton,
          'reverse_order' is TRUE, then we do what the server says:
          show an add. */
       if (eb->reverse_order)
+        /* ### Show the properties as well. */
         SVN_ERR (b->edit_baton->callbacks->file_added
-                 (NULL, NULL, b->path,
+                 (NULL, NULL, NULL, b->path,
                   svn_wc__empty_file_path (b->wc_path, b->pool),
                   temp_file_path,
                   0, 
                   entry ? entry->revision : SVN_INVALID_REVNUM,
                   NULL,
                   pristine_mimetype,
+                  apr_array_make (pool, 1, sizeof (svn_prop_t)), NULL,
                   b->edit_baton->callback_baton));
       else
-      /* Add is required to change working-copy into requested revision, so
-         diff should show this as a delete. Thus compare the repository
-         file against the empty file. */
-        SVN_ERR (b->edit_baton->callbacks->file_deleted
-                 (NULL, NULL, b->path,
-                  temp_file_path,
-                  svn_wc__empty_file_path (b->wc_path, b->pool),
-                  pristine_mimetype,
-                  NULL,
-                  b->edit_baton->callback_baton));
+        {
+          apr_hash_t *props = apr_hash_make (pool);
+          int i;
+
+          /* Convert the propchanges to a hash table. */
+          for (i = 0; i < b->propchanges->nelts; ++i)
+            {
+              const svn_prop_t *prop = &APR_ARRAY_IDX (b->propchanges, i,
+                                                       svn_prop_t);
+              apr_hash_set (props, prop->name, APR_HASH_KEY_STRING,
+                            prop->value);
+            }
+
+          /* Add is required to change working-copy into requested revision, so
+             diff should show this as a delete. Thus compare the repository
+             file against the empty file. */
+          SVN_ERR (b->edit_baton->callbacks->file_deleted
+                   (NULL, NULL, b->path,
+                    temp_file_path,
+                    svn_wc__empty_file_path (b->wc_path, b->pool),
+                    pristine_mimetype,
+                    NULL,
+                    props,
+                    b->edit_baton->callback_baton));
+        }
     }
   else
     {
+      /* Be careful with errors to ensure that the temporary translated
+         file is deleted. */
+      svn_error_t *err1, *err2 = SVN_NO_ERROR;
+      const char *localfile = NULL;
+
       if (b->temp_file) /* A props-only change will not have opened a file */
         {
-          /* Be careful with errors to ensure that the temporary translated
-             file is deleted. */
-          svn_error_t *err1, *err2 = SVN_NO_ERROR;
-          const char *localfile;
-
           if (eb->use_text_base)
             localfile = svn_wc__text_base_path (b->path, FALSE, b->pool);
           else if (b->schedule_delete)
@@ -1218,20 +1233,29 @@ close_file (void *file_baton,
             SVN_ERR (svn_wc_translated_file (&localfile, b->path, adm_access,
                                              TRUE, b->pool));
 
+        }
+      
+      if (b->propchanges->nelts > 0
+          && ! eb->reverse_order)
+        reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+
+      if (localfile || b->propchanges->nelts > 0)
+        {
           err1 = b->edit_baton->callbacks->file_changed
-            (NULL, NULL,
+            (NULL, NULL, NULL,
              b->path,
              eb->reverse_order ? localfile : temp_file_path,
              eb->reverse_order ? temp_file_path : localfile,
              eb->reverse_order ? SVN_INVALID_REVNUM : b->edit_baton->revnum,
              eb->reverse_order ? b->edit_baton->revnum : SVN_INVALID_REVNUM,
              eb->reverse_order ? working_mimetype : pristine_mimetype,
-             eb->reverse_order ? pristine_mimetype: working_mimetype,
+             eb->reverse_order ? pristine_mimetype : working_mimetype,
+             b->propchanges, b->baseprops,
              b->edit_baton->callback_baton);
       
-          if ((! eb->use_text_base) && (! b->schedule_delete))
-            if (localfile != b->path)
-              err2 = svn_io_remove_file (localfile, b->pool);
+          if (localfile && (! eb->use_text_base) && (! b->schedule_delete)
+              && localfile != b->path)
+            err2 = svn_io_remove_file (localfile, b->pool);
 
           if (err1 || err2)
             {
@@ -1239,19 +1263,6 @@ close_file (void *file_baton,
                 svn_error_clear (err2);
               return err1 ? err1 : err2;
             }
-        }
-      
-      if (b->propchanges->nelts > 0)
-        {
-          if (! eb->reverse_order)
-            reverse_propchanges (b->baseprops, b->propchanges, b->pool);
-
-          SVN_ERR (b->edit_baton->callbacks->props_changed
-                   (NULL, NULL,
-                    b->path,
-                    b->propchanges,
-                    b->baseprops,
-                    b->edit_baton->callback_baton));
         }
     }
 
@@ -1333,14 +1344,141 @@ close_edit (void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+/* A diff_callbacks2 function. */
+static svn_error_t *
+file_changed (svn_wc_adm_access_t *adm_access,
+              svn_wc_notify_state_t *contentstate,
+              svn_wc_notify_state_t *propstate,
+              const char *path,
+              const char *tmpfile1,
+              const char *tmpfile2,
+              svn_revnum_t rev1,
+              svn_revnum_t rev2,
+              const char *mimetype1,
+              const char *mimetype2,
+              const apr_array_header_t *propchanges,
+              apr_hash_t *originalprops,
+              void *diff_baton)
+{
+  struct callbacks2_baton *b = diff_baton;
+  if (tmpfile2 != NULL)
+    SVN_ERR (b->callbacks->file_changed (adm_access, contentstate, path,
+                                         tmpfile1, tmpfile2,
+                                         rev1, rev2, mimetype1, mimetype2,
+                                         b->baton));
+  if (propchanges->nelts > 0)
+    SVN_ERR (b->callbacks->props_changed (adm_access, propstate, path,
+                                          propchanges, originalprops,
+                                          b->baton));
+
+  return SVN_NO_ERROR;
+}
+
+/* An diff_callbacks2 function. */
+static svn_error_t *
+file_added (svn_wc_adm_access_t *adm_access,
+            svn_wc_notify_state_t *contentstate,
+            svn_wc_notify_state_t *propstate,
+            const char *path,
+            const char *tmpfile1,
+            const char *tmpfile2,
+            svn_revnum_t rev1,
+            svn_revnum_t rev2,
+            const char *mimetype1,
+            const char *mimetype2,
+            const apr_array_header_t *propchanges,
+            apr_hash_t *originalprops,
+            void *diff_baton)
+{
+  struct callbacks2_baton *b = diff_baton;
+  SVN_ERR (b->callbacks->file_added (adm_access, contentstate, path,
+                                     tmpfile1, tmpfile2, rev1, rev2,
+                                     mimetype1, mimetype2, b->baton));
+  if (propchanges->nelts > 0)
+    SVN_ERR (b->callbacks->props_changed (adm_access, propstate, path,
+                                          propchanges, originalprops,
+                                          b->baton));
+
+  return SVN_NO_ERROR;
+}
+
+/* A diff_callbakcs2 function. */
+static svn_error_t *
+file_deleted (svn_wc_adm_access_t *adm_access,
+              svn_wc_notify_state_t *state,
+              const char *path,
+              const char *tmpfile1,
+              const char *tmpfile2,
+              const char *mimetype1,
+              const char *mimetype2,
+              apr_hash_t *originalprops,
+              void *diff_baton)
+{
+  struct callbacks2_baton *b = diff_baton;
+
+  assert (originalprops);
+
+  return b->callbacks->file_deleted (adm_access, state, path,
+                                     tmpfile1, tmpfile2, mimetype1, mimetype2,
+                                     b->baton);
+}
+  
+/* A diff_callbacks2 function. */
+static svn_error_t *
+dir_added (svn_wc_adm_access_t *adm_access,
+           svn_wc_notify_state_t *state,
+           const char *path,
+           svn_revnum_t rev,
+           void *diff_baton)
+{
+  struct callbacks2_baton *b = diff_baton;
+
+  return b->callbacks->dir_added (adm_access, state, path, rev, b->baton);
+}
+  
+/* A diff_callbacks2 function. */
+static svn_error_t *
+dir_deleted (svn_wc_adm_access_t *adm_access,
+             svn_wc_notify_state_t *state,
+             const char *path,
+             void *diff_baton)
+{
+  struct callbacks2_baton *b = diff_baton;
+
+  return b->callbacks->dir_deleted (adm_access, state, path, b->baton);
+}
+  
+/* A diff_callbacks2 function. */
+static svn_error_t *
+dir_props_changed (svn_wc_adm_access_t *adm_access,
+                   svn_wc_notify_state_t *state,
+                   const char *path,
+                   const apr_array_header_t *propchanges,
+                   apr_hash_t *originalprops,
+                   void *diff_baton)
+{
+  struct callbacks2_baton *b = diff_baton;
+  return b->callbacks->props_changed (adm_access, state, path, propchanges,
+                                      originalprops, b->baton);
+}
+
+static struct svn_wc_diff_callbacks2_t callbacks2_wrapper = {
+  file_changed,
+  file_added,
+  file_deleted,
+  dir_added,
+  dir_deleted,
+  dir_props_changed
+};
+
 /* Public Interface */
 
 
 /* Create a diff editor and baton. */
 svn_error_t *
-svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
+svn_wc_get_diff_editor3 (svn_wc_adm_access_t *anchor,
                          const char *target,
-                         const svn_wc_diff_callbacks_t *callbacks,
+                         const svn_wc_diff_callbacks2_t *callbacks,
                          void *callback_baton,
                          svn_boolean_t recurse,
                          svn_boolean_t ignore_ancestry,
@@ -1386,6 +1524,30 @@ svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
 }
 
 svn_error_t *
+svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
+                         const char *target,
+                         const svn_wc_diff_callbacks_t *callbacks,
+                         void *callback_baton,
+                         svn_boolean_t recurse,
+                         svn_boolean_t ignore_ancestry,
+                         svn_boolean_t use_text_base,
+                         svn_boolean_t reverse_order,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         const svn_delta_editor_t **editor,
+                         void **edit_baton,
+                         apr_pool_t *pool)
+{
+  struct callbacks2_baton *b = apr_pcalloc (pool, sizeof (*b));
+  b->callbacks = callbacks;
+  b->baton = callback_baton;
+  return svn_wc_get_diff_editor3 (anchor, target, &callbacks2_wrapper, b,
+                                  recurse, ignore_ancestry, use_text_base,
+                                  reverse_order, cancel_func, cancel_baton,
+                                  editor, edit_baton, pool);
+}
+
+svn_error_t *
 svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                         const char *target,
                         const svn_wc_diff_callbacks_t *callbacks,
@@ -1408,9 +1570,9 @@ svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
 
 /* Compare working copy against the text-base. */
 svn_error_t *
-svn_wc_diff2 (svn_wc_adm_access_t *anchor,
+svn_wc_diff3 (svn_wc_adm_access_t *anchor,
               const char *target,
-              const svn_wc_diff_callbacks_t *callbacks,
+              const svn_wc_diff_callbacks2_t *callbacks,
               void *callback_baton,
               svn_boolean_t recurse,
               svn_boolean_t ignore_ancestry,
@@ -1442,6 +1604,21 @@ svn_wc_diff2 (svn_wc_adm_access_t *anchor,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_diff2 (svn_wc_adm_access_t *anchor,
+              const char *target,
+              const svn_wc_diff_callbacks_t *callbacks,
+              void *callback_baton,
+              svn_boolean_t recurse,
+              svn_boolean_t ignore_ancestry,
+              apr_pool_t *pool)
+{
+  struct callbacks2_baton *b = apr_pcalloc (pool, sizeof (*b));
+  b->callbacks = callbacks;
+  b->baton = callback_baton;
+  return svn_wc_diff3 (anchor, target, &callbacks2_wrapper, b,
+                       recurse, ignore_ancestry, pool);
+}
 
 svn_error_t *
 svn_wc_diff (svn_wc_adm_access_t *anchor,
