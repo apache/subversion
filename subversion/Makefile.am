@@ -10,9 +10,9 @@ SUBDIRS = libsvn_subr                \
           libsvn_ra_dav              \
           libsvn_client              \
           @FS_BASED_DIRS@            \
-          client                     \
+          tests                      \
           @APACHE_MODULES@           \
-          tests
+          client
 
 DIST_SUBDIRS = client                           \
 	       libsvn_client                    \
