@@ -324,7 +324,10 @@ typedef struct svn_wc_diff_callbacks_t
   
   /* A list of property changes (PROPCHANGES) was applied to PATH.
      The array is a list of (svn_prop_t) structures. 
-     The original list of properties is provided in ORIGINAL_PROPS.
+
+     The original list of properties is provided in ORIGINAL_PROPS,
+     which is a hash of svn_string_t values, keyed on the property
+     name.
 
      ADM_ACCESS will be an access baton for the directory containing PATH,
      or NULL if the diff editor is not using access batons.
@@ -1248,7 +1251,7 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
  */
 
 /* Set *PROPS to a hash table mapping char * names onto
-   svn_stringbuf_t * values for all the wc properties of PATH.
+   svn_string_t * values for all the wc properties of PATH.
    Allocate the table, names, and values in POOL.  If the node has no
    properties, an empty hash is returned. */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
@@ -1353,7 +1356,7 @@ svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
    modifications on PATH, then set *PROPCHANGES to NULL.
 
    If ORIGINAL_PROPS is non-NULL, then set *ORIGINAL_PROPS to
-   hashtable (const char *name -> svn_stringbuf_t *value) that
+   hashtable (const char *name -> const svn_string_t *value) that
    represents the 'pristine' property list of PATH.  This hashtable is
    allocated in POOL, and can be used to compare old and new values of
    properties.
@@ -1365,10 +1368,10 @@ svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
 
 
 
-/* Given two property hashes, deduce the differences between them
-   (from BASEPROPS -> LOCALPROPS).  Return these changes as a series
-   of svn_prop_t structures stored in LOCAL_PROPCHANGES, allocated
-   from POOL.
+/* Given two property hashes (const char *name -> const svn_string_t
+   *value), deduce the differences between them (from BASEPROPS ->
+   LOCALPROPS).  Return these changes as a series of svn_prop_t
+   structures stored in LOCAL_PROPCHANGES, allocated from POOL.
    
    For note, here's a quick little table describing the logic of this
    routine:
@@ -1377,8 +1380,7 @@ svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
    --------        ---------         -----
    value = foo     value = NULL      Deletion occurred.
    value = foo     value = bar       Set occurred (modification)
-   value = NULL    value = baz       Set occurred (creation)
-*/
+   value = NULL value = baz Set occurred (creation) */
 svn_error_t *
 svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
                               apr_hash_t *localprops,

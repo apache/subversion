@@ -74,29 +74,29 @@ test1 (const char **msg,
 
   key = svn_stringbuf_create ("color", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_stringbuf_create ("red", pool));
+                svn_string_create ("red", pool));
   
   key = svn_stringbuf_create ("wine review", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_stringbuf_create (review, pool));
+               svn_string_create (review, pool));
   
   key = svn_stringbuf_create ("price", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_stringbuf_create ("US $6.50", pool));
+               svn_string_create ("US $6.50", pool));
 
   /* Test overwriting: same key both times, but different values. */
   key = svn_stringbuf_create ("twice-used property name", pool);
   apr_hash_set (proplist, key->data, key->len,
-               svn_stringbuf_create ("This is the FIRST value.", pool));
+               svn_string_create ("This is the FIRST value.", pool));
   apr_hash_set (proplist, key->data, key->len,
-               svn_stringbuf_create ("This is the SECOND value.", pool));
+               svn_string_create ("This is the SECOND value.", pool));
 
   /* Dump the hash to a file. */
   apr_file_open (&f, "hashdump.out",
             (APR_WRITE | APR_CREATE),
             APR_OS_DEFAULT, pool);
 
-  result = svn_hash_write (proplist, svn_unpack_bytestring, f, pool);
+  result = svn_hash_write (proplist, f, pool);
 
   apr_file_close (f);
 
@@ -123,7 +123,7 @@ test2 (const char **msg,
 
   apr_file_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
 
-  result = svn_hash_read (new_proplist, svn_pack_bytestring, f, pool);
+  result = svn_hash_read (new_proplist, f, pool);
 
   apr_file_close (f);
 
@@ -168,21 +168,21 @@ test3 (const char **msg,
       const void *key;
       apr_ssize_t keylen;
       void *val;
-      svn_stringbuf_t *orig_str, *new_str;
+      svn_string_t *orig_str, *new_str;
       
       /* Get a key and val. */
       apr_hash_this (this, &key, &keylen, &val);
-      orig_str = (svn_stringbuf_t *) val;
+      orig_str = val;
 
       /* Look up the key in the new hash */
-      new_str = (svn_stringbuf_t *) apr_hash_get (new_proplist, key, keylen);
+      new_str = apr_hash_get (new_proplist, key, keylen);
 
       /* Does the new hash contain the key at all? */
       if (new_str == NULL)
         found_discrepancy = 1;
 
       /* Do the two strings contain identical data? */
-      else if (! svn_stringbuf_compare (orig_str, new_str))
+      else if (! svn_string_compare (orig_str, new_str))
         found_discrepancy = 1;
     }
 

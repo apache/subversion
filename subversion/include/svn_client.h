@@ -121,7 +121,7 @@ typedef struct svn_client_proplist_item_s
   /* The name of the node on which these properties are set. */
   svn_stringbuf_t *node_name;  
 
-  /* A hash of (const char *) property names, and (svn_stringbuf_t *) property
+  /* A hash of (const char *) property names, and (svn_string_t *) property
      values. */
   apr_hash_t *prop_hash;
 
@@ -866,7 +866,7 @@ svn_client_revprop_get (const char *propname,
 /* Returns an apr_array_header_t of svn_client_proplist_item_t's in *PROPS,
    allocated from POOL. Each item will contain the node_name relative to the
    same base as target in item->node_name, and a property hash of 
-   (const char *) property names, and (svn_stringbuf_t *) property values.
+   (const char *) property names, and (svn_string_t *) property values.
 
    If recurse is false, or TARGET is a file, *PROPS will contain only a single
    element.  Otherwise, it will contain one for each versioned entry below
@@ -883,7 +883,7 @@ svn_client_proplist (apr_array_header_t **props,
    actual rev queried in *SET_REV.
 
    The allocated hash maps (const char *) property names to
-   (svn_stringbuf_t *) property values.
+   (svn_string_t *) property values.
 
    Note that unlike its cousin svn_client_proplist(), this routine
    doesn't read a working copy at all; it's a pure network operation

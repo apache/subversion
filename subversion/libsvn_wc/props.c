@@ -76,7 +76,7 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
       const void *key;
       apr_ssize_t klen;
       void *val;
-      svn_stringbuf_t *propval1, *propval2;
+      const svn_string_t *propval1, *propval2;
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
@@ -92,13 +92,13 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
           p->name = key;
           p->value = NULL;
         }
-      else if (! svn_stringbuf_compare (propval1, propval2))
+      else if (! svn_string_compare (propval1, propval2))
         {
           /* Add a set (modification) event to the array */
           svn_prop_t *p = apr_array_push (ary);
           p->name = key;
-          p->value = svn_string_create_from_buf (propval2, pool);
-        }
+          p->value = svn_string_dup (propval2, pool);
+        } 
     }
 
   /* Loop over localprops and examine each key.  This allows us to
@@ -108,21 +108,19 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
       const void *key;
       apr_ssize_t klen;
       void *val;
-      svn_stringbuf_t *propval1, *propval2;
+      const svn_string_t *propval;
 
       /* Get next property */
       apr_hash_this (hi, &key, &klen, &val);
-      propval2 = val;
+      propval = val;
 
       /* Does property name exist in baseprops? */
-      propval1 = apr_hash_get (baseprops, key, klen);
-
-      if (propval1 == NULL)
+      if (NULL == apr_hash_get (baseprops, key, klen))
         {
           /* Add a set (creation) event to the array */
           svn_prop_t *p = apr_array_push (ary);
           p->name = key;
-          p->value = svn_string_create_from_buf (propval2, pool);
+          p->value = svn_string_dup (propval, pool);
         }
     }
 
@@ -246,8 +244,7 @@ svn_wc__load_prop_file (const char *propfile_path,
                                    pool),
                  "load_prop_file: can't open propfile");
 
-      status = svn_hash_read (hash, svn_pack_bytestring,
-                              propfile, pool);
+      status = svn_hash_read (hash, propfile, pool);
       if (status)
         return svn_error_createf (status, 0, NULL, pool,
                                   "load_prop_file:  can't parse `%s'",
@@ -280,8 +277,7 @@ svn_wc__save_prop_file (const char *propfile_path,
                                APR_OS_DEFAULT, pool),
              "save_prop_file: can't open propfile");
 
-  apr_err = svn_hash_write (hash, svn_unpack_bytestring,
-                            prop_tmp, pool);
+  apr_err = svn_hash_write (hash, prop_tmp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "save_prop_file: can't write prop hash to `%s'",
@@ -518,23 +514,18 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       const svn_string_t *conflict_description;
       const svn_prop_t *update_change;
       const svn_prop_t *local_change = NULL;
-      svn_stringbuf_t *value_buf;
+      const svn_string_t *value;
       svn_boolean_t is_normal;
 
-      update_change = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+      update_change = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
       is_normal = svn_wc_is_normal_prop (update_change->name);
+      value = update_change->value 
+              ? svn_string_dup (update_change->value, pool) 
+              : NULL;
 
-      if (update_change->value == NULL)
-        value_buf = NULL;
-      else
-        value_buf = svn_stringbuf_create_from_string (update_change->value,
-                                                      pool);
-
-      /* Apply the update_change to the pristine hash, no
-         questions asked. */
-      apr_hash_set (basehash,
-                    update_change->name, APR_HASH_KEY_STRING,
-                    value_buf);
+      /* Apply the update_change to the pristine hash, no questions
+         asked. */
+      apr_hash_set (basehash, update_change->name, APR_HASH_KEY_STRING, value);
       
       /* We already know that state is at least `modified', so mark
          that, but remember that we may later upgrade to `merged' or
@@ -549,9 +540,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       for (j = 0; j < local_propchanges->nelts; j++)
 
         {
-          local_change = &APR_ARRAY_IDX(local_propchanges, j, svn_prop_t);
-
-          if (strcmp(local_change->name, update_change->name) == 0)
+          local_change = &APR_ARRAY_IDX (local_propchanges, j, svn_prop_t);
+          if (strcmp (local_change->name, update_change->name) == 0)
             {
               found_match = 1;
               break;
@@ -656,7 +646,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
          can safely apply the update_change to our working property hash. */
       apr_hash_set (localhash,
                     update_change->name, APR_HASH_KEY_STRING,
-                    value_buf);
+                    value);
     }
   
   
@@ -892,7 +882,6 @@ svn_wc__wcprop_get (const svn_string_t **value,
 {
   svn_error_t *err;
   apr_hash_t *prophash;
-  svn_stringbuf_t *pvaluebuf;
 
   err = wcprop_list (&prophash, path, pool);
   if (err)
@@ -900,10 +889,7 @@ svn_wc__wcprop_get (const svn_string_t **value,
       svn_error_quick_wrap
       (err, "svn_wc__wcprop_get: failed to load props from disk.");
 
-  /* ### it would be nice if the hash contained svn_string_t values */
-  pvaluebuf = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
-  *value = pvaluebuf ? svn_string_create_from_buf (pvaluebuf, pool) : NULL;
-
+  *value = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
   return SVN_NO_ERROR;
 }
 
@@ -919,10 +905,6 @@ svn_wc__wcprop_set (const char *name,
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
 
-  /* ### be nice to eliminate this... */
-  svn_stringbuf_t *valuebuf
-    = value ? svn_stringbuf_create_from_string (value, pool) : NULL;
-
   err = wcprop_list (&prophash, path, pool);
   if (err)
     return
@@ -931,7 +913,7 @@ svn_wc__wcprop_set (const char *name,
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
-  apr_hash_set (prophash, name, APR_HASH_KEY_STRING, valuebuf);
+  apr_hash_set (prophash, name, APR_HASH_KEY_STRING, value);
 
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
@@ -941,7 +923,7 @@ svn_wc__wcprop_set (const char *name,
                                1, /* we DO want wcprops */
                                pool));
   /* Write. */
-  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp, pool);
+  apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "can't write prop hash for %s", path);
@@ -1001,7 +983,6 @@ svn_wc_prop_get (const svn_string_t **value,
 {
   svn_error_t *err;
   apr_hash_t *prophash;
-  svn_stringbuf_t *pvaluebuf;
 
   /* Boy, this is an easy routine! */
   err = svn_wc_prop_list (&prophash, path, pool);
@@ -1010,9 +991,7 @@ svn_wc_prop_get (const svn_string_t **value,
       svn_error_quick_wrap
       (err, "svn_wc_prop_get: failed to load props from disk.");
 
-  pvaluebuf = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
-  *value = pvaluebuf ? svn_string_create_from_buf (pvaluebuf, pool) : NULL;
-
+  *value = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
   return SVN_NO_ERROR;
 }
 
@@ -1076,9 +1055,6 @@ svn_wc_prop_set (const char *name,
   svn_wc_keywords_t *old_keywords;
   svn_node_kind_t kind;
 
-  /* ### argh */
-  svn_stringbuf_t *valuebuf;
-
   SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   /* Setting an inappropriate property is not allowed, deleting such a
@@ -1120,12 +1096,9 @@ svn_wc_prop_set (const char *name,
     SVN_ERR (svn_wc__get_keywords (&old_keywords, path, adm_access, NULL,
                                    pool));
 
-  /* ### darned stringbuf */
-  valuebuf = value ? svn_stringbuf_create_from_string (value, pool) : NULL;
-
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
-  apr_hash_set (prophash, name, APR_HASH_KEY_STRING, valuebuf);
+  apr_hash_set (prophash, name, APR_HASH_KEY_STRING, value);
   
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
@@ -1135,7 +1108,7 @@ svn_wc_prop_set (const char *name,
                                0, /* not wcprops */
                                pool));
   /* Write. */
-  apr_err = svn_hash_write (prophash, svn_unpack_bytestring, fp, pool);
+  apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "can't write prop hash for %s", path);

@@ -170,14 +170,14 @@ void svn_cl__print_status_list (apr_hash_t *statushash,
                                 apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values
-   (svn_stringbuf_t *).  The names are assumed to be in UTF-8 format;
+   (svn_string_t *).  The names are assumed to be in UTF-8 format;
    the values are either in UTF-8 (the special Subversion props) or
    plain binary values.  */
 svn_error_t *
 svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 /* Print out the property names in a hash that maps property names (char *) 
-   to property values (svn_stringbuf_t *).  The names are assumed to
+   to property values (svn_string_t *).  The names are assumed to
    be in UTF-8 format.  */
 svn_error_t *
 svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
