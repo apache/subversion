@@ -17,7 +17,7 @@ AC_DEFUN(SVN_CONFIG_NICE,[
 
 EOF
 
-  for arg in [$]0 $ac_configure_args; do
+  for arg in [$]0 "[$]@"; do
     echo "\"[$]arg\" \\" >> $1
   done
   echo '"[$]@"' >> $1
