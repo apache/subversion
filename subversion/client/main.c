@@ -147,7 +147,7 @@ main (int argc, const char * const *argv)
   svn_error_t *err;
   apr_pool_t *pool;
   int opt_id;
-  const char *optarg;
+  const char *opt_arg;
   apr_getopt_t *os;
   svn_cl__opt_state_t opt_state;
   const svn_cl__cmd_desc_t *subcommand = NULL;
@@ -184,7 +184,7 @@ main (int argc, const char * const *argv)
   while (1)
     {
       /* Parse the next option. */
-      apr_err = apr_getopt_long (os, options, &opt_id, &optarg);
+      apr_err = apr_getopt_long (os, options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF (apr_err))
         break;
       else if (! APR_STATUS_IS_SUCCESS (apr_err))
@@ -196,10 +196,10 @@ main (int argc, const char * const *argv)
 
       switch (opt_id) {
       case 'm':
-        opt_state.message = svn_string_create (optarg, pool);
+        opt_state.message = svn_string_create (opt_arg, pool);
         break;
       case 'r':
-        opt_state.revision = (svn_revnum_t) atoi (optarg);
+        opt_state.revision = (svn_revnum_t) atoi (opt_arg);
         break;
       case 'v':
         opt_state.version = TRUE;
@@ -208,13 +208,13 @@ main (int argc, const char * const *argv)
         opt_state.help = TRUE;
         break;
       case svn_cl__xml_file_opt:
-        opt_state.xml_file = svn_string_create (optarg, pool);
+        opt_state.xml_file = svn_string_create (opt_arg, pool);
         break;
       case 'd':
-        opt_state.target = svn_string_create (optarg, pool);
+        opt_state.target = svn_string_create (opt_arg, pool);
         break;
       case 'F':
-        err = svn_string_from_file (&(opt_state.filedata), optarg, pool);
+        err = svn_string_from_file (&(opt_state.filedata), opt_arg, pool);
         if (err)
           svn_handle_error (err, stdout, TRUE);
         break;
