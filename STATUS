@@ -113,13 +113,6 @@ Approved changes (further review is welcome, but not required):
       +1: ghudson, jerenkrantz, jszakmeister
       Nominated by: David James <james82@gmail.com>
 
-  * r12718
-    SWIG 1.3.24+ changes were not properly backported.  Makefile.in changes
-    were omitted.  LSWIGPY and LSWIGPL need to be merged so that <1.3.24 can
-    work correctly.
-    Votes:
-      +1: maxb, jszakmeister, philip
-
   * r13683
     Fix FSFS segfault when handling non-existent data representations
     Justification:
