@@ -107,25 +107,25 @@ test_replace_directory (svn_string_t *name,
 
 
 svn_error_t *
-test_finish_directory (void *dir_baton)
+test_finish_directory (void *walk_baton, void *dir_baton)
 {
   if (dir_baton)
     printf ("FINISH_DIR '%s'\n", (char *)((svn_string_t *) dir_baton)->data);
   else 
-    printf ("FINISH_DIR:  null baton!!\n");
+    printf ("FINISH_DIR:  no name!!\n");
 
   return SVN_NO_ERROR;    
 }
 
 
 svn_error_t *
-test_finish_file (void *file_baton)
+test_finish_file (void *walk_baton, void *file_baton)
 {
   if (file_baton)
     printf ("  FINISH_FILE '%s'\n", 
             (char *)((svn_string_t *) file_baton)->data);
   else
-    printf ("FINISH_DIR:  null baton!!\n");
+    printf ("FINISH_DIR:  no name!!\n");
 
   return SVN_NO_ERROR;    
 }
