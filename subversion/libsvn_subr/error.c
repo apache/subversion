@@ -61,6 +61,16 @@ svn_error__locate (const char *file, long line)
 }
 
 
+/* Cleanup function for errors.  svn_error_clear () removes this so
+   errors that are properly handled *don't* hit this code. */
+#if defined(SVN_DEBUG_ERROR)
+static apr_status_t err_abort (void *data)
+{
+  abort();
+}
+#endif
+
+
 static svn_error_t *
 make_error_internal (apr_status_t apr_err,
                      svn_error_t *child)
@@ -71,8 +81,14 @@ make_error_internal (apr_status_t apr_err,
   /* Reuse the child's pool, or create our own. */
   if (child)
     pool = child->pool;
-  else if (apr_pool_create (&pool, NULL))
-    abort ();
+  else
+    {
+      if (apr_pool_create (&pool, NULL))
+        abort ();
+#if defined(SVN_DEBUG_ERROR)
+      apr_pool_cleanup_register(pool, NULL, err_abort, NULL);
+#endif
+    }
 
   /* Create the new error structure */
   new_error = (svn_error_t *) apr_pcalloc (pool, sizeof (*new_error));
@@ -157,6 +173,9 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
     }
 
   /* Destroy the new error chain. */
+#if defined(SVN_DEBUG_ERROR)
+  apr_pool_cleanup_kill (oldpool, NULL, err_abort);
+#endif
   apr_pool_destroy (oldpool);
 }
 
@@ -165,7 +184,12 @@ void
 svn_error_clear (svn_error_t *err)
 {
   if (err)
-    apr_pool_destroy (err->pool);
+    {
+#if defined(SVN_DEBUG_ERROR)
+      apr_pool_cleanup_kill (err->pool, NULL, err_abort);
+#endif
+      apr_pool_destroy (err->pool);
+    }
 }
 
 
