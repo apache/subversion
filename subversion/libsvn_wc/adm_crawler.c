@@ -197,7 +197,8 @@ report_revisions (const char *wc_path,
                               this_url_s->len - dot_entry_url_s->len);
         svn_path_add_component_nts (this_path_s, key);
         svn_path_add_component_nts (this_full_path_s, key);
-        svn_path_add_component_nts (this_url_s, key);
+        svn_path_add_component_nts (this_url_s, 
+                                    svn_path_uri_encode (key, pool));
 
         this_path = this_path_s->data;
         this_full_path = this_full_path_s->data;
@@ -459,7 +460,9 @@ svn_wc_crawl_revisions (const char *path,
           && parent_entry->url 
           && entry->url
           && strcmp (entry->url, 
-                     svn_path_join (parent_entry->url, bname, pool)))
+                     svn_path_join (parent_entry->url, 
+                                    svn_path_uri_encode (bname, pool),
+                                    pool)))
         {
           /* This file is disjoint with respect to its parent
              directory.  Since we are looking at the actual target of

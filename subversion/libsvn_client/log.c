@@ -80,11 +80,8 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   /* Use the passed URL, if there is one.  */
   if (svn_path_is_url (path))
     {
-      /* Set the URL from our first target */
-      URL = svn_path_uri_encode(path, pool);
-
       /* Initialize this array, since we'll be building it below */
-      condensed_targets = apr_array_make (pool, 1, sizeof(const char *));
+      condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
 
       /* The logic here is this: If we get passed one argument, we assume
          it is the full URL to a file/dir we want log info for. If we get

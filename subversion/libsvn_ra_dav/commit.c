@@ -791,7 +791,7 @@ static svn_error_t * commit_add_dir(const char *path,
   else
     {
       svn_string_t bc_url, bc_relative;
-      const char *copy_src;
+      const char *copy_src, *copy_src_decoded;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -799,10 +799,11 @@ static svn_error_t * commit_add_dir(const char *path,
       /* Convert the copyfrom_* url/rev "public" pair into a Baseline
          Collection (BC) URL that represents the revision -- and a
          relative path under that BC.  */
+      copy_src_decoded = svn_path_uri_decode (copyfrom_path, dir_pool);
       SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative, NULL,
                                              parent->cc->ras->sess,
-                                             copyfrom_path,
+                                             copy_src_decoded,
                                              copyfrom_revision,
                                              dir_pool));
 
@@ -812,7 +813,7 @@ static svn_error_t * commit_add_dir(const char *path,
          header given to COPY is simply the wr_url that is already
          part of the child object. */
       copy_src = svn_path_join(bc_url.data, bc_relative.data, dir_pool);
-      copy_src = svn_path_uri_encode(copy_src, dir_pool);
+      copy_src = svn_path_uri_encode (copy_src, dir_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
@@ -979,7 +980,7 @@ static svn_error_t * commit_add_file(const char *path,
   else
     {
       svn_string_t bc_url, bc_relative;
-      const char *copy_src;
+      const char *copy_src, *copy_src_decoded;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -987,10 +988,11 @@ static svn_error_t * commit_add_file(const char *path,
       /* Convert the copyfrom_* url/rev "public" pair into a Baseline
          Collection (BC) URL that represents the revision -- and a
          relative path under that BC.  */
+      copy_src_decoded = svn_path_uri_decode (copyfrom_path, file_pool);
       SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative, NULL,
                                              parent->cc->ras->sess,
-                                             copyfrom_path,
+                                             copy_src_decoded,
                                              copyfrom_revision,
                                              file_pool));
 
@@ -1000,7 +1002,7 @@ static svn_error_t * commit_add_file(const char *path,
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
       copy_src = svn_path_join(bc_url.data, bc_relative.data, file_pool);
-      copy_src = svn_path_uri_encode(copy_src, file_pool);
+      copy_src = svn_path_uri_encode (copy_src, file_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,

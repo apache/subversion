@@ -33,6 +33,7 @@
 #include "svn_ra.h"
 #include "svn_config.h"
 #include "svn_version.h"
+#include "svn_path.h"
 
 #include "ra_dav.h"
 
@@ -319,6 +320,9 @@ svn_ra_dav__open (void **session_baton,
   ne_uri uri = { 0 };
   svn_ra_session_t *ras;
   int is_ssl_session;
+
+  /* ### temporary hack until ra_dav uses uri-encoded urls internally */
+  repos_URL = svn_path_uri_decode (repos_URL, pool);
 
   /* Sanity check the URI */
   if (ne_uri_parse(repos_URL, &uri) 

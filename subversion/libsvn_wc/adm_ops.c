@@ -817,21 +817,23 @@ svn_wc_add (const char *path,
     }  
   else /* scheduling a directory for addition */
     {
-      if (!copyfrom_url)
+      if (! copyfrom_url)
         {
           svn_wc_entry_t *p_entry;
-          const char *p_path;
+          const char *new_url;
 
           /* Get the entry for this directory's parent.  We need to snatch
              the ancestor path out of there. */
           SVN_ERR (svn_wc_entry (&p_entry, parent_dir, FALSE, pool));
   
           /* Derive the parent path for our new addition here. */
-          p_path = svn_path_join (p_entry->url, base_name, pool);
+          new_url = svn_path_join (p_entry->url, 
+                                   svn_path_uri_encode (base_name, pool),
+                                   pool);
   
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR (svn_wc__ensure_adm (path, p_path, 0, pool));
+          SVN_ERR (svn_wc__ensure_adm (path, new_url, 0, pool));
         }
       else
         {
@@ -839,7 +841,8 @@ svn_wc_add (const char *path,
              the admin directory already in existance, then the dir will
              contain the copyfrom settings.  So we need to pass the the
              copyfrom arguments to the ensure call. */
-          SVN_ERR (svn_wc__ensure_adm (path, copyfrom_url, copyfrom_rev, pool));
+          SVN_ERR (svn_wc__ensure_adm (path, copyfrom_url, 
+                                       copyfrom_rev, pool));
         }
       
       /* We're making the same mods we made above, but this time we'll
@@ -865,11 +868,14 @@ svn_wc_add (const char *path,
              this model someday. */
 
           /* Figure out what the new url should be. */
-          const char *url = svn_path_join (parent_entry->url, base_name, pool);
+          const char *new_url 
+            = svn_path_join (parent_entry->url, 
+                             svn_path_uri_encode (base_name, pool),
+                             pool);
 
           /* Change the entry urls recursively (but not the working rev). */
-          SVN_ERR (svn_wc__do_update_cleanup (path, TRUE, /* recursive */
-                                              url, SVN_INVALID_REVNUM, pool));
+          SVN_ERR (svn_wc__do_update_cleanup (path, TRUE, new_url, 
+                                              SVN_INVALID_REVNUM, pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,

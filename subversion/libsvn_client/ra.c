@@ -88,7 +88,8 @@ get_committed_rev (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, item->url))
+          if (! strcmp (relpath, 
+                        svn_path_uri_decode (item->url, pool)))
             {
               /* ### Passing `show_deleted_items' flag, is this right? */
               SVN_ERR (svn_wc_entry (&ent, item->path, TRUE, pool));
@@ -135,7 +136,8 @@ get_wc_prop (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, item->url))
+          if (! strcmp (relpath, 
+                        svn_path_uri_decode (item->url, pool)))
             return svn_wc_get_wc_prop (item->path, name, value, pool);
         }
 
@@ -169,7 +171,8 @@ set_wc_prop (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, item->url))
+          if (! strcmp (relpath, 
+                        svn_path_uri_decode (item->url, pool)))
             return svn_wc_set_wc_prop (item->path, name, value, pool);
         }
 
