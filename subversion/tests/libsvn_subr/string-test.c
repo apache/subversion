@@ -613,10 +613,10 @@ test21 (const char **msg,
 }
 
 static svn_error_t *
-test_string_compare (const char* str1,
-                     const char* str2,
-                     svn_boolean_t msg_only,
-                     apr_pool_t *pool)
+test_stringbuf_unequal (const char* str1,
+                        const char* str2,
+                        svn_boolean_t msg_only,
+                        apr_pool_t *pool)
 {
   if (msg_only)
     return SVN_NO_ERROR;
@@ -624,7 +624,10 @@ test_string_compare (const char* str1,
   a = svn_stringbuf_create (str1, pool);
   b = svn_stringbuf_create (str2, pool);
 
-  return svn_stringbuf_compare (a, b);
+  if (svn_stringbuf_compare (a, b))
+    return fail (pool, "test failed");
+  else
+    return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -634,10 +637,7 @@ test22 (const char **msg,
 {
   *msg = "compare stringbufs; different lengths";
 
-  if (test_string_compare ("abc", "abcd", msg_only, pool) == FALSE)
-    return SVN_NO_ERROR;
-  else
-    return fail (pool, "test failed");
+  return test_stringbuf_unequal ("abc", "abcd", msg_only, pool);
 }
 
 static svn_error_t *
@@ -645,12 +645,9 @@ test23 (const char **msg,
         svn_boolean_t msg_only,
         apr_pool_t *pool)
 {
-  *msg = "compare stringbufs; equal length, different content";
+  *msg = "compare stringbufs; same length, different content";
 
-  if (test_string_compare ("abc", "abb", msg_only, pool) == FALSE)
-    return SVN_NO_ERROR;
-  else
-    return fail (pool, "test failed");
+  return test_stringbuf_unequal ("abc", "abb", msg_only, pool);
 }
 
 /*
