@@ -133,6 +133,15 @@
 (defvar svn-status-hide-unmodified nil "Hide unmodified files in *svn-status* buffer.")
 (defvar svn-status-directory-history nil "List of visited svn working directories.")
 
+;;; group
+(defgroup psvn nil
+  "Subversion interface for emacs."
+  :group 'tools)
+
+(defgroup psvn-faces nil
+  "psvn faces."
+  :group 'psvn)
+
 (defvar svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
   "Remove any trailing ^M in the svn process buffers")
@@ -166,20 +175,23 @@
    (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
    (when (boundp 'temp-directory) temp-directory)                     ;xemacs
    "/tmp/"))
-(defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg"))
+(defvar svn-temp-suffix (make-temp-name "."))
+(defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
 
 ;; faces
 (defface svn-status-marked-face
   '((((type tty) (class color)) (:foreground "green" :weight light))
     (((class color) (background light)) (:foreground "green3"))
     (t (:weight bold)))
-  "Face to highlight the mark for user marked files in svn status buffers")
+  "Face to highlight the mark for user marked files in svn status buffers"
+  :group 'psvn-faces)
 
 (defface svn-status-modified-external-face
   '((((type tty) (class color)) (:foreground "magenta" :weight light))
     (((class color) (background light)) (:foreground "magenta"))
     (t (:weight bold)))
-  "Face to highlight the externaly modified phrase in svn status buffers")
+  "Face to highlight the externaly modified phrase in svn status buffers"
+  :group 'psvn-faces)
 
 ;based on cvs-filename-face
 (defface svn-status-directory-face
@@ -187,7 +199,8 @@
     (((class color) (background light)) (:foreground "blue4"))
     (t (:weight bold)))
   "Face for directories in svn status buffers.
-See `svn-status--line-info->directory-p' for what counts as a directory.")
+See `svn-status--line-info->directory-p' for what counts as a directory."
+  :group 'psvn-faces)
 
 ;based on font-lock-comment-face
 (defface svn-status-filename-face
@@ -195,7 +208,8 @@ See `svn-status--line-info->directory-p' for what counts as a directory.")
       (background light))
      (:foreground "chocolate")))
   "Face for non-directories in svn status buffers.
-See `svn-status--line-info->directory-p' for what counts as a directory.")
+See `svn-status--line-info->directory-p' for what counts as a directory."
+  :group 'psvn-faces)
 
 (defvar svn-highlight t)
 ;; stolen from PCL-CVS
@@ -1553,7 +1567,7 @@ Commands:
     (set-buffer (get-buffer "*svn-property-edit*"))
     (set-buffer-file-coding-system 'undecided-unix nil)
     (write-region (point-min) (point-max)
-                  (concat svn-status-temp-dir "svn-prop-edit.txt") nil 1))
+                  (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix) nil 1))
   (when svn-status-propedit-file-list ; there are files to change properties
     (svn-status-create-arg-file svn-status-temp-arg-file ""
                                 svn-status-propedit-file-list "")
@@ -1561,7 +1575,7 @@ Commands:
     (svn-run-svn async t 'propset "propset"
 		 svn-status-propedit-property-name
                  "--targets" svn-status-temp-arg-file
-                 "-F" (concat svn-status-temp-dir "svn-prop-edit.txt")))
+                 "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix)))
   (set-window-configuration svn-status-pre-propedit-window-configuration))
 
 (defun svn-prop-edit-svn-diff (arg)
@@ -1629,13 +1643,13 @@ Commands:
     (set-buffer (get-buffer "*svn-log-edit*"))
     (set-buffer-file-coding-system 'undecided-unix nil)
     (write-region (point-min) (point-max)
-                  (concat svn-status-temp-dir "svn-log-edit.txt") nil 1))
+                  (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix) nil 1))
   (when svn-status-files-to-commit ; there are files to commit
     (svn-status-create-arg-file svn-status-temp-arg-file ""
                                 svn-status-files-to-commit "")
     (setq svn-status-files-to-commit nil)
     (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
-                 "-F" (concat svn-status-temp-dir "svn-log-edit.txt")))
+                 "-F" (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix)))
   (set-window-configuration svn-status-pre-commit-window-configuration))
 
 (defun svn-log-edit-svn-diff (arg)
