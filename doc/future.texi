@@ -163,3 +163,12 @@ cool idea, and we should leave the door open for it.
 
 Suggested by Jason Robbins; he mentioned this as a nice thing to have
 someday.  It makes repositories easy to transport.
+
+
+@subsection SMTP access
+
+Write a totally independent Network Layer which is an SMTP server on one
+end, and speaks to the Subversion server library on the back end.  It
+would neat to be able to "mail in" commits, or receive working-copy
+updates through e-mail.
+
