@@ -379,7 +379,7 @@ check-clean:
 	rm -rf subversion/tests/clients/cmdline/repositories   \
                subversion/tests/clients/cmdline/working_copies \
                subversion/tests/clients/cmdline/local_tmp      \
-               subversion/tests/libsvn_fs/test-repo-*          \
+               subversion/tests/libsvn_fs_base/test-repo-*     \
                subversion/tests/libsvn_repos/test-repo-*       \
                subversion/tests/libsvn_subr/z                  \
                tests.log
