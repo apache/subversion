@@ -285,6 +285,7 @@ svn_path_is_child (const svn_string_t *path1,
       i++;
     }
   
+  i++;
   return svn_string_ncreate (path2->data + i, (path2->len - i), pool);
 }
 
@@ -329,9 +330,9 @@ svn_path_decompose (const svn_string_t *path,
       oldi++;
     }
 
-  while (i < path->len)
+  while (i <= path->len)
     {
-      if (path->data[i] == dirsep)
+      if ((path->data[i] == dirsep) || (path->data[i] == '\0'))
         {
           store_component (components, path->data + oldi, i - oldi, pool);
           i++;
