@@ -999,7 +999,7 @@ $ svn status
         comando en cuanto <command>svn log</command> detecte que
         la rama fue copiada o renombrada.</para>
 
-        <para>So in our continuing example,</para>
+        <para>Así que en nuestro ejemplo contínuo:</para>
 
 <screen>
 $ svn log --verbose --stop-on-copy \
@@ -1013,13 +1013,15 @@ Changed paths:
 $
 </screen>
         
-        <para>As expected, the final revision printed by this command
-        is the revision in which <filename>my-calc-branch</filename>
-        was created by copying.</para>
+        <para>Como esperábamos, el número final de revisión
+        mostrado por este comando es la revisión en la cual
+        <filename>my-calc-branch</filename> fue creado a raíz de
+        una operación de copiado.</para>
       </tip>
 
 
-      <para>Here's the final merging procedure, then:</para>
+      <para>De nuevo, aquí está el procedimiento final de
+        fusionado:</para>
 
 <screen>
 $ cd calc/trunk
@@ -1046,10 +1048,10 @@ Transmitting file data ...
 Committed revision 406.
 </screen>
 
-      <para>Again, notice that the commit log message very
-        specifically mentions the range of changes that was merged
-        into the trunk.  Always remember to do this, because it's
-        critical information you'll need later on.</para>
+      <para>De nuevo, fíjese que el mensaje de cambios menciona de
+        forma expecífica el rango de cambios que fue fusionado en el
+        tronco. Recuerde siempre hacer esto, porque es información
+        crítica que necesitará más adelante.</para>
 
       <para>For example, suppose you decide to keep working on your
         branch for another week, in order to complete an enhancement
