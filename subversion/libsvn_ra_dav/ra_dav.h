@@ -158,7 +158,7 @@ typedef struct {
 
 /* fetch a bunch of properties from the server. */
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
-                                    svn_ra_session_t *ras,
+                                    ne_session *sess,
                                     const char *url,
                                     int depth,
                                     const char *label,
@@ -167,7 +167,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
 /* fetch a single resource's props from the server. */
 svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
-                                             svn_ra_session_t *ras,
+                                             ne_session *sess,
                                              const char *url,
                                              const char *label,
                                              const ne_propname *which_props,
@@ -175,7 +175,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
 
 /* fetch a single property from a single resource */
 svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
-                                       svn_ra_session_t *ras,
+                                       ne_session *sess,
                                        const char *url,
                                        const char *label,
                                        const ne_propname *propname,
@@ -218,6 +218,7 @@ enum {
   ELEM_delete_entry,
   ELEM_fetch_file,
   ELEM_fetch_props,
+  ELEM_remove_prop,
   ELEM_ignored_set,
   ELEM_merge_response,
   ELEM_merged_set,

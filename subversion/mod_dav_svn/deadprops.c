@@ -45,6 +45,13 @@ struct dav_deadprop_rollback {
 };
 
 
+/* retrieve the "right" string to use as a repos path */
+static const char *get_repos_path (struct dav_resource_private *info)
+{
+  return info->node_id_str ? info->node_id_str : info->repos_path;
+}
+
+
 /* construct the repos-local name for the given DAV property name */
 static void get_repos_propname(dav_db *db, const dav_prop_name *name,
                                svn_string_t *repos_propname)
@@ -101,7 +108,7 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
                                   &propname, db->p);
   else
     serr = svn_fs_node_prop(pvalue, db->resource->info->root.root,
-                            db->resource->info->repos_path,
+                            get_repos_path(db->resource->info),
                             &propname, db->p);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -133,7 +140,7 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                                   &propname, value, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
-                                   db->resource->info->repos_path,
+                                   get_repos_path(db->resource->info),
                                    &propname, value, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -300,7 +307,7 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
                                   &propname, NULL, db->resource->pool);
   else
     serr = svn_fs_change_node_prop(db->resource->info->root.root,
-                                   db->resource->info->repos_path,
+                                   get_repos_path(db->resource->info),
                                    &propname, NULL, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -336,7 +343,7 @@ static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
                                   &propname, db->p);
   else
     serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
-                            db->resource->info->repos_path,
+                            get_repos_path(db->resource->info),
                             &propname, db->p);
 
   /* ### try and dispose of the value? */
@@ -388,7 +395,7 @@ static dav_error *dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
                                           db->resource->info->root.rev, db->p);
       else
         serr = svn_fs_node_proplist(&db->props, db->resource->info->root.root,
-                                    db->resource->info->repos_path, db->p);
+                                    get_repos_path(db->resource->info), db->p);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "could not begin sequencing through "

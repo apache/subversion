@@ -273,7 +273,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
 }
 
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
-                                    svn_ra_session_t *ras,
+                                    ne_session *sess,
                                     const char *url,
                                     int depth,
                                     const char *label,
@@ -287,7 +287,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   pc.pool = pool;
   pc.props = apr_hash_make(pc.pool);
 
-  pc.dph = ne_propfind_create(ras->sess, url, depth);
+  pc.dph = ne_propfind_create(sess, url, depth);
   ne_propfind_set_private(pc.dph, create_private, &pc);
   hip = ne_propfind_get_parser(pc.dph);
   ne_xml_push_handler(hip, neon_descriptions,
@@ -318,9 +318,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
         case NE_CONNECT:
           /* ### need an SVN_ERR here */
           return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
-                                   "Could not connect to server "
-                                   "(%s, port %d).",
-                                   ras->root.host, ras->root.port);
+                                   "Could not connect to server for '%s'",
+                                   url);
         case NE_AUTH:
           return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL, 
                                   pool,
@@ -328,7 +327,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
         default:
           /* ### need an SVN_ERR here */
           return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                                  ne_get_error(ras->sess));
+                                  ne_get_error(sess));
         }
     }
 
@@ -338,7 +337,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 }
 
 svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
-                                             svn_ra_session_t *ras,
+                                             ne_session *sess,
                                              const char *url,
                                              const char *label,
                                              const ne_propname *which_props,
@@ -346,7 +345,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
 {
   apr_hash_t *props;
 
-  SVN_ERR( svn_ra_dav__get_props(&props, ras, url, NE_DEPTH_ZERO,
+  SVN_ERR( svn_ra_dav__get_props(&props, sess, url, NE_DEPTH_ZERO,
                                  label, which_props, pool) );
 
   if (label != NULL)
@@ -379,7 +378,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
 }
 
 svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
-                                       svn_ra_session_t *ras,
+                                       ne_session *sess,
                                        const char *url,
                                        const char *label,
                                        const ne_propname *propname,
@@ -392,7 +391,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   svn_string_t *sv;
 
   props[0] = *propname;
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, url, label, props,
+  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, url, label, props,
                                           pool) );
 
   name = apr_pstrcat(pool, propname->nspace, propname->name, NULL);
