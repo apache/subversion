@@ -3,8 +3,9 @@ dnl Macros to find an Apache installation
 dnl
 dnl This will find either an installed Apache, or an Apache source directory.
 dnl
-dnl Note: if we don't have an installed Apache, then we can't install the
-dnl       mod_dav_svn.so module.
+dnl Note: If we don't have an installed Apache, then we can't install the
+dnl       (dynamic) mod_dav_svn.so module. Similarly, without an Apache
+dnl       source dir, we cannot create static builds of the system.
 dnl
 
 AC_DEFUN(SVN_FIND_APACHE,[
@@ -18,13 +19,8 @@ AC_ARG_WITH(apache,
 		AC_MSG_ERROR(You need to specify a directory with --with-apache)
 	fi
 	if test -r $withval/src/modules/dav/main/mod_dav.h; then
-		APACHE_BASE=$withval
-		APACHE_INCLUDE="$withval/src/include";
-		INCLUDE="$INCLUDE -I$withval/src/include -I$withval/src/os/unix -I$withval/src/modules/dav/main"
+		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/src/include -I$withval/src/os/unix -I$withval/src/modules/dav/main -I$withval/src/lib/apr/include"
 		TARGET=$withval/src/modules/dav/svn
-		if test ! -d $TARGET; then
-			mkdir $TARGET
-		fi	
 		BINNAME=mod_dav_svn.a
 		LIBS="$extra_l"
 		INSTALL_IT="mkdir -p $TARGET; cp $BINNAME mod_dav.c mod_dav.exp Makefile.tmpl Makefile.libdir libdav.module dav_shared_stub.c $extra_copy $TARGET"
@@ -83,7 +79,7 @@ if test -n "$APXS"; then
     INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
 
     APXS_CC="`$APXS -q CC`"
-    INCLUDE="$INCLUDE -I$APXS_INCLUDE"
+    APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
 
     AC_SUBST(APXS)
     AC_SUBST(BINNAME)
@@ -100,6 +96,8 @@ else
     APACHE_MODULES=mod_dav_svn
 fi
 AC_SUBST(APACHE_MODULES)
+AC_SUBST(APACHE_INCLUDES)
+
 
 if test -n "$APXS"; then
   CFLAGS="$CFLAGS `$APXS -q CFLAGS CFLAGS_SHLIB`"

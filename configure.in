@@ -113,7 +113,8 @@ AC_ARG_WITH(maintainer-mode,
     enable_debugging=yes
     if test "$GCC" = "yes"; then
       dnl SVN_DEBUG enables specific features for developer builds
-      CFLAGS="$CFLAGS -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wpointer-arith -DSVN_DEBUG";
+      dnl AP_DEBUG enables specific (Apache) features for developer builds
+      CFLAGS="$CFLAGS -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wpointer-arith -DSVN_DEBUG -DAP_DEBUG";
     fi
   fi
 ])
