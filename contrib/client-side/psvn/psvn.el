@@ -209,6 +209,7 @@ In either case the mark gets the face
 
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
+(defvar svn-log-edit-done-hook nil "Hook run after commiting files via svn.")
 
 (defvar svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
@@ -1929,6 +1930,10 @@ If ARG then prompt for revision to diff against, else compare working copy with 
       (svn-run-svn nil clear-buf 'diff "diff" "-r" revision (svn-status-line-info->filename (car fl)))
       (setq clear-buf nil)
       (setq fl (cdr fl))))
+  (svn-status-diff-mode))
+
+(defun svn-status-diff-mode ()
+  "Show the *svn-process* buffer, using the diff-mode."
   (svn-status-show-process-buffer-internal t)
   (save-excursion
     (set-buffer "*svn-process*")
@@ -2667,7 +2672,6 @@ Commands:
 
 (defun svn-log-edit-done ()
   (interactive)
-  (message "svn-log editing done")
   (save-excursion
     (set-buffer (get-buffer "*svn-log-edit*"))
     (when svn-log-edit-insert-files-to-commit
@@ -2695,8 +2699,10 @@ Commands:
                                   svn-status-files-to-commit "")
       (setq svn-status-files-to-commit nil)
       (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
-                   "-F" svn-status-temp-file-to-remove)))
-    (set-window-configuration svn-status-pre-commit-window-configuration))
+                   "-F" svn-status-temp-file-to-remove)
+      (run-hooks 'svn-log-edit-done-hook))
+    (set-window-configuration svn-status-pre-commit-window-configuration)
+    (message "svn-log editing done")))
 
 (defun svn-log-edit-svn-diff (arg)
   "Show the diff we are about to commit.
@@ -2813,11 +2819,7 @@ When called with a prefix argument, ask the user for the revision."
     (when arg
       (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
     (svn-run-svn nil t 'diff "diff" (concat "-r" rev-arg))
-    (svn-status-show-process-buffer-internal t)
-    (save-excursion
-      (set-buffer "*svn-process*")
-      (diff-mode)
-      (font-lock-fontify-buffer))))
+    (svn-status-diff-mode)))
 
 (defun svn-log-edit-log-entry ()
   "Edit the given log entry."
