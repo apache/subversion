@@ -1209,7 +1209,7 @@ svn_error_t *svn_io_file_lock2 (const char *lock_file,
   apr_err = apr_file_lock (lockfile_handle, locktype);
   if (apr_err)
     {
-      switch (locktype & ~APR_FLOCK_NONBLOCK)
+      switch (locktype & APR_FLOCK_TYPEMASK)
         {
         case APR_FLOCK_SHARED:
           return svn_error_wrap_apr
