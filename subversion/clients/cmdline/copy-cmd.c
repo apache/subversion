@@ -123,6 +123,7 @@ svn_cl__copy (apr_getopt_t *os,
             message ? message : svn_stringbuf_create ("", pool),
             NULL, NULL,                     /* no before_editor */
             trace_editor, trace_edit_baton, /* one after_editor */
+            SVN_CL_NOTIFY(added, opt_state), pool /* notify_baton */,
             pool));
 
   if (commit_info)

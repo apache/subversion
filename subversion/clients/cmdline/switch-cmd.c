@@ -102,6 +102,7 @@ svn_cl__switch (apr_getopt_t *os,
                               opt_state->start_revision,
                               opt_state->start_date,
                               opt_state->nonrecursive ? FALSE : TRUE,
+                              SVN_CL_NOTIFY(restored, opt_state), NULL,
                               pool));
 
   return SVN_NO_ERROR;

@@ -62,7 +62,9 @@ svn_cl__delete (apr_getopt_t *os,
         svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         commit_info = NULL;
         SVN_ERR (svn_client_delete (&commit_info, target, opt_state->force, 
-                                    auth_baton, message, pool));
+                                    auth_baton, message,
+                                    SVN_CL_NOTIFY(deleted, opt_state), NULL,
+                                    pool));
         if (commit_info)
           svn_cl__print_commit_info (commit_info);
       }

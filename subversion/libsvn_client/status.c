@@ -112,6 +112,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
                                    FALSE, /* don't restore missing files */
                                    descend,
+                                   NULL, NULL, /* notification is N/A */
                                    pool));
 
   /* We're done with the RA session. */

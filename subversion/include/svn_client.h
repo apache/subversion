@@ -26,10 +26,6 @@
  * Used By:   Client programs.
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_CLIENT_H
 #define SVN_CLIENT_H
 
@@ -40,6 +36,10 @@ extern "C" {
 #include "svn_string.h"
 #include "svn_error.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* ### TODO:  Multiple Targets
@@ -211,6 +211,12 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
    time TM can be used to implicitly select a revision.  TM cannot be
    used at the same time as REVISION.
 
+   During an update, files may be restored from the text-base if they
+   have been removed from the working copy. When this happens,
+   NOTIFY_RESTORE will be called with NOTIFY_BATON and the (relative)
+   path of the file that has been restored. NOTIFY_RESTORE may be NULL
+   if this information is not required.
+
    If XML_SRC is non-NULL, it is an xml file to update from.  An
    invalid REVISION implies that the revision *must* be present in the
    <delta-pkg> tag, while a valid REVISION will be simply be stored in
@@ -229,6 +235,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_revnum_t revision,
                    apr_time_t tm,
                    svn_boolean_t recurse,
+                   svn_wc_notify_func_t notify_restore,
+                   void *notify_baton,
                    apr_pool_t *pool);
 
 
@@ -247,6 +255,12 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
    be used to implicitly select a revision.  TM cannot be used at the
    same time as REVISION.
 
+   During a switch, files may be restored from the text-base if they
+   have been removed from the working copy. When this happens,
+   NOTIFY_RESTORE will be called with NOTIFY_BATON and the (relative)
+   path of the file that has been restored. NOTIFY_RESTORE may be NULL
+   if this information is not required.
+
    This operation will use the provided memory POOL. */
 svn_error_t *
 svn_client_switch (const svn_delta_edit_fns_t *before_editor,
@@ -259,6 +273,8 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                    svn_revnum_t revision,
                    apr_time_t tm,
                    svn_boolean_t recurse,
+                   svn_wc_notify_func_t notify_restore,
+                   void *notify_baton,
                    apr_pool_t *pool);
 
 
@@ -267,12 +283,18 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
    not.  If RECURSIVE is set, then assuming PATH is a directory, all
    of its contents will be scheduled for addition as well.
 
+   For each item which is added, NOTIFY_ADDED will be called with
+   NOTIFY_BATON and the path of the added item. NOTIFY_ADDED may be
+   NULL if this information is not required.
+
    Important:  this is a *scheduling* operation.  No changes will
    happen to the repository until a commit occurs.  This scheduling
    can be removed with svn_client_revert. */
 svn_error_t *
 svn_client_add (svn_stringbuf_t *path,
                 svn_boolean_t recursive,
+                svn_wc_notify_func_t notify_added,
+                void *notify_baton,
                 apr_pool_t *pool);
 
 /* If PATH is a URL, use the AUTH_BATON and MESSAGE to immediately
@@ -282,12 +304,21 @@ svn_client_add (svn_stringbuf_t *path,
 
    Else, create the directory on disk, and attempt to schedule it for
    addition (using svn_client_add, whose docstring you should
-   read). */
+   read).
+
+   When the directory has been created (successfully) in the working
+   copy, NOTIFY_ADDED will be called with NOTIFY_BATON and the path of
+   the new directory.  If this information is not required, then
+   NOTIFY_ADDED may be NULL. Note that this is only called for items
+   added to the working copy.
+*/
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   svn_stringbuf_t *path,
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *message,
+                  svn_wc_notify_func_t notify_added,
+                  void *notify_baton,
                   apr_pool_t *pool);
                   
 
@@ -301,13 +332,19 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
    PATH simply stops being tracked by the working copy.  This is just
    a *scheduling* operation.  No changes will happen to the repository
    until a commit occurs.  This scheduling can be removed with
-   svn_client_revert. */
+   svn_client_revert.
+
+   For each item deleted, NOTIFY_DELETE will be called with NOTIFY_BATON
+   and the path of the deleted item. NOTIFY_DELETE may be NULL if this
+   information is not required.  */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
                    svn_stringbuf_t *path,
                    svn_boolean_t force,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *message,
+                   svn_wc_notify_func_t notify_delete,
+                   void *notify_baton,
                    apr_pool_t *pool);
 
 
@@ -510,10 +547,16 @@ svn_client_cleanup (svn_stringbuf_t *dir,
 
 /* Restore the pristine version of a working copy PATH, effectively
    undoing any local mods.  If PATH is a directory, and RECURSIVE is
-   TRUE, this will be a recursive operation.  */
+   TRUE, this will be a recursive operation.
+
+   For each item reverted, NOTIFY_REVERT will be called with NOTIFY_BATON
+   and the path of the reverted item. If this information is not required,
+   then NOTIFY_REVERT may be NULL.  */
 svn_error_t *
 svn_client_revert (svn_stringbuf_t *path,
                    svn_boolean_t recursive,
+                   svn_wc_notify_func_t notify_revert,
+                   void *notify_baton,
                    apr_pool_t *pool);
 
 
@@ -540,7 +583,12 @@ svn_client_revert (svn_stringbuf_t *path,
    variant of svn_client_add, where the DST_PATH items are scheduled
    for addition as copies.  No changes will happen to the repository
    until a commit occurs.  This scheduling can be removed with
-   svn_client_revert.  */
+   svn_client_revert.
+
+   For each item added (at the new location), NOTIFY_ADDED will be
+   called with the NOTIFY_BATON and the (new, relative) path of the
+   added item. If this information is not required, then NOTIFY_ADDED
+   may be NULL.  */
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *src_path,
@@ -552,6 +600,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  void *before_edit_baton,
                  const svn_delta_edit_fns_t *after_editor,
                  void *after_edit_baton,
+                 svn_wc_notify_func_t notify_added,
+                 void *notify_baton,
                  apr_pool_t *pool);
 
 
@@ -580,7 +630,13 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 
      - This is a scheduling operation.  No changes will happen to the
        repository until a commit occurs.  This scheduling can be
-       removed with svn_client_revert. */
+       removed with svn_client_revert.
+
+   For each item moved, NOTIFY_DELETE will be called with the
+   NOTIFY_DELETE_BATON and the old (relative) path of the item moved;
+   NOTIFY_ADDED will be called with NOTIFY_ADD_BATON and the new path.
+   If one or both pieces of information is not required, then NOTIFY_DELETE
+   and/or NOTIFY_ADDED may be NULL.  */
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *src_path,
@@ -588,6 +644,10 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
+                 svn_wc_notify_func_t notify_add,
+                 void *notify_add_baton,
+                 svn_wc_notify_func_t notify_delete,
+                 void *notify_delete_baton,
                  apr_pool_t *pool);
 
 
@@ -639,11 +699,12 @@ svn_client_proplist (apr_array_header_t **props,
                      svn_boolean_t recurse,
                      apr_pool_t *pool);
 
-#endif  /* SVN_CLIENT_H */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif  /* SVN_CLIENT_H */
 
 
 /* --------------------------------------------------------------

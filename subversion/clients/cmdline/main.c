@@ -874,10 +874,6 @@ main (int argc, const char * const *argv)
   if (opt_state.help)
     subcommand = svn_cl__get_canonical_command ("help");
 
-  /* If we didn't request silence, initialize the feedback vtable. */
-  if (! opt_state.quiet)
-    svn_cl__init_feedback_vtable (pool);
-
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
   if (subcommand == NULL)

@@ -50,6 +50,25 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/*** Notification/callback handling. ***/
+
+/* In many cases, the WC library will scan a working copy and making
+   changes. The caller usually wants to know when each of these changes
+   have been made, so that it can display some kind of notification to
+   the user.
+
+   These notifications have a standard callback function type, which
+   takes the relative path of the file that was affected, and a caller-
+   supplied baton.
+
+   Note that the callback is a 'void' return -- this is a simple
+   reporting mechanism, rather than an opportunity for the caller to
+   alter the operation of the WC library.
+*/
+typedef void (*svn_wc_notify_func_t) (void *baton, const char *path);
+
+
+
 /*** Asking questions about a working copy. ***/
 
 /* Set *IS_WC to true iff PATH is a valid working copy directory, else
@@ -386,19 +405,34 @@ svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
    DST_BASENAME will be the name of the copied item, and it must not
    exist already.
 
+   For each file or directory copied, NOTIFY_COPIED will be called
+   with its path and the NOTIFY_BATON. NOTIFY_COPIED may be NULL if
+   you are not interested in this information.
+
    Important: this is a variant of svn_wc_add.  No changes will happen
    to the repository until a commit occurs.  This scheduling can be
    removed with svn_client_revert.  */
 svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
                           svn_stringbuf_t *dst_parent,
                           svn_stringbuf_t *dst_basename,
+                          svn_wc_notify_func_t notify_copied,
+                          void *notify_baton,
                           apr_pool_t *pool);
 
 
 /* Schedule PATH for deletion.  This does not actually delete PATH
    from disk nor from the repository.  It is deleted from the
-   repository on commit. */
-svn_error_t *svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool);
+   repository on commit.
+
+   If PATH refers to a directory, then a recursive deletion will occur.
+
+   For each path marked for deletion, NOTIFY_DELETE will be called with
+   the NOTIFY_BATON and that path. The NOTIFY_DELETE callback may be
+   NULL if notification is not needed.  */
+svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
+                            svn_wc_notify_func_t notify_delete,
+                            void *notify_baton,
+                            apr_pool_t *pool);
 
 
 /* Put PATH under version control by adding an entry in its parent,
@@ -410,7 +444,10 @@ svn_error_t *svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool);
 
    If COPYFROM_URL is non-null, it and COPYFROM_REV are used as
    `copyfrom' args.  This is for copy operations, where one wants
-   to schedule PATH for addition with a particular history. 
+   to schedule PATH for addition with a particular history.
+
+   When the PATH has been added, then NOTIFY_ADDED will be called
+   (if it is not NULL) with the NOTIFY_BATON and the path.
 
    ### This function currently does double duty -- it is also
    ### responsible for "switching" a working copy directory over to a
@@ -440,6 +477,8 @@ svn_error_t *svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool);
 svn_error_t *svn_wc_add (svn_stringbuf_t *path,
                          svn_stringbuf_t *copyfrom_url,
                          svn_revnum_t copyfrom_rev,
+                         svn_wc_notify_func_t notify_added,
+                         void *notify_baton,
                          apr_pool_t *pool);
 
 
@@ -588,13 +627,18 @@ svn_wc_crawl_as_copy (svn_stringbuf_t *parent,
    the update!
 
    If RESTORE_FILES is set, then unexpectedly missing working files
-   will be restored from the administrative directory's cache. */
+   will be restored from the administrative directory's cache. For each
+   file restored, the NOTIFY_RESTORE function will be called with the
+   NOTIFY_BATON and the path of the restored file. NOTIFY_RESTORE may
+   be NULL if this notification is not required. */
 svn_error_t *
 svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_boolean_t recurse,
+                        svn_wc_notify_func_t notify_restore,
+                        void *notify_baton,
                         apr_pool_t *pool);
 
 
@@ -839,10 +883,16 @@ svn_wc_cleanup (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
 /* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform
-   necessary allocations in POOL.  */
+   necessary allocations in POOL.
+
+   For each item reverted, NOTIFY_REVERT will be called with NOTIFY_BATON
+   and the path of the reverted item. NOTIFY_REVERT may be NULL if this
+   notification is not needed.  */
 svn_error_t *
 svn_wc_revert (svn_stringbuf_t *path, 
                svn_boolean_t recursive, 
+               svn_wc_notify_func_t notify_revert,
+               void *notify_baton,
                apr_pool_t *pool);
 
 
