@@ -38,6 +38,7 @@
 #include "svn_subst.h"
 #include "svn_opt.h"
 #include "svn_props.h"
+#include "svn_config.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -523,6 +524,7 @@ print_diff_tree (svn_fs_root_t *root,
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
                  svn_boolean_t no_diff_deleted,
+                 apr_hash_t *config,
                  apr_pool_t *pool)
 {
   const char *orig_path = NULL, *new_path = NULL;
@@ -660,7 +662,8 @@ print_diff_tree (svn_fs_root_t *root,
           SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
           SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label, NULL,
                                     abs_path, path, 
-                                    &exitcode, outhandle, NULL, pool));
+                                    &exitcode, outhandle, NULL, config,
+                                    pool));
 
           /* TODO: Handle exit code == 2 (i.e. diff error) here. */
         }
@@ -693,7 +696,7 @@ print_diff_tree (svn_fs_root_t *root,
              (root, base_root, node,
               svn_path_join (path, node->name, subpool),
               svn_path_join (base_path, node->name, subpool),
-              no_diff_deleted,
+              no_diff_deleted, config,
               subpool));
 
     /* Recurse across siblings. */
@@ -705,7 +708,7 @@ print_diff_tree (svn_fs_root_t *root,
                  (root, base_root, node,
                   svn_path_join (path, node->name, subpool),
                   svn_path_join (base_path, node->name, subpool),
-                  no_diff_deleted,
+                  no_diff_deleted, config,
                   pool));
       }
     
@@ -935,9 +938,12 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       svn_node_kind_t kind;
+      apr_hash_t *config;
+
+      SVN_ERR (svn_config_get_config (&config, pool));
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (print_diff_tree (root, base_root, tree, "", "",
-                                c->no_diff_deleted, pool));
+                                c->no_diff_deleted, config, pool));
       SVN_ERR (svn_io_check_path (SVNLOOK_TMPDIR, &kind, pool));
       if (kind == svn_node_dir)
         SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));

@@ -148,6 +148,9 @@ struct diff_cmd_baton {
   */
   svn_revnum_t revnum1;
   svn_revnum_t revnum2;
+
+  /* Client config hash (may be NULL). */
+  apr_hash_t *config;
 };
 
 
@@ -258,7 +261,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
 
   SVN_ERR (svn_io_run_diff (".", args, nargs, label1, label2,
                             tmpfile1, tmpfile2, 
-                            &exitcode, outfile, errfile, subpool));
+                            &exitcode, outfile, errfile, 
+                            diff_cmd_baton->config, subpool));
 
   /* ### todo: Handle exit code == 2 (i.e. errors with diff) here */
   
@@ -417,10 +421,9 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, FALSE,
                                    adm_access, subpool));
   SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
-
                          left_label, right_label, target_label,
-                         merge_b->dry_run, &merge_outcome,
-                         subpool));
+                         merge_b->dry_run, &merge_outcome, 
+                         merge_b->ctx->config, subpool));
 
   /* Philip asks "Why?"  Why does the notification depend on whether the
      file had modifications before the merge?  If the merge didn't change
@@ -497,7 +500,8 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                                     "already exists.", mine);
         SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
                                ".older", ".yours", ".working", /* ###? */
-                               merge_b->dry_run, &merge_outcome, subpool));
+                               merge_b->dry_run, &merge_outcome, 
+                               merge_b->ctx->config, subpool));
         break;      
       }
     default:
@@ -1349,6 +1353,8 @@ svn_client_diff (const apr_array_header_t *options,
   diff_cmd_baton.errfile = errfile;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
+
+  diff_cmd_baton.config = ctx->config;
 
   if ((svn_path_is_url (path1)) != (svn_path_is_url (path2)))
     return svn_error_create

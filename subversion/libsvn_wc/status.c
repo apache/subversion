@@ -41,8 +41,9 @@ svn_wc_get_default_ignores (apr_array_header_t **patterns,
                             apr_hash_t *config,
                             apr_pool_t *pool)
 {
-  svn_config_t *cfg = apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
-                                    APR_HASH_KEY_STRING);
+  svn_config_t *cfg = config ? apr_hash_get (config, 
+                                             SVN_CONFIG_CATEGORY_CONFIG, 
+                                             APR_HASH_KEY_STRING) : NULL;
   const char *val;
 
   /* Check the Subversion run-time configuration for global ignores.

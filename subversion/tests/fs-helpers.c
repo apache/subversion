@@ -120,7 +120,7 @@ svn_test__create_repos (svn_repos_t **repos_p,
                                   "there is already a file named `%s'", name);
     }
 
-  SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, pool));
+  SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, NULL, pool));
   
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 

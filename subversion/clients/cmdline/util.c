@@ -68,6 +68,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                          const char *base_dir /* UTF-8! */,
                          const char *contents /* UTF-8! */,
                          const char *prefix,
+                         apr_hash_t *config,
                          apr_pool_t *pool)
 {
   const char *editor = NULL;
@@ -100,23 +101,22 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 
 #ifdef SVN_CLIENT_EDITOR
   if (! editor)
-    {
-      editor = SVN_CLIENT_EDITOR;
-    }
+    editor = SVN_CLIENT_EDITOR;
 #endif
 
   /* Now, override this editor choice with a selection from our config
      file (using what we have found thus far as the default in case no
      config option exists). */
-  SVN_ERR (svn_config_read_config (&cfg, pool));
+  cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
+                               APR_HASH_KEY_STRING) : NULL;
   svn_config_get (cfg, &editor, "helpers", "editor-cmd", editor);
 
   /* Abort if there is no editor specified */
   if (! editor)
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       "None of the environment variables "
-       "SVN_EDITOR, VISUAL or EDITOR is set.");
+       "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
+       "set, and no 'editor-cmd' run-time configuration option was found.");
 
   /* Convert file contents from UTF-8 */
   SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
@@ -270,6 +270,7 @@ struct log_msg_baton
   const char *message_encoding; /* the locale/encoding of the message. */
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
   const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
+  apr_hash_t *config; /* client configuration hash */
   apr_pool_t *pool; /* a pool. */
 };
 
@@ -277,6 +278,7 @@ struct log_msg_baton
 void *
 svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
                             const char *base_dir /* UTF-8! */,
+                            apr_hash_t *config,
                             apr_pool_t *pool)
 {
   struct log_msg_baton *baton = apr_palloc (pool, sizeof (*baton));
@@ -288,6 +290,7 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
   baton->message_encoding = opt_state->encoding;
   baton->base_dir = base_dir ? base_dir : "";
   baton->tmpfile_left = NULL;
+  baton->config = config;
   baton->pool = pool;
   return baton;
 }
@@ -455,7 +458,7 @@ svn_cl__get_log_message (const char **log_msg,
       /* Use the external edit to get a log message. */
       err = svn_cl__edit_externally (&msg2, &lmb->tmpfile_left,
                                      lmb->base_dir, tmp_message->data, 
-                                     "svn-commit", pool);
+                                     "svn-commit", lmb->config, pool);
 
       /* Clean up the log message into UTF8/LF before giving it to
          libsvn_client. */
