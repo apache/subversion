@@ -356,8 +356,14 @@ Makefile  integer.c  button.c  .svn/
               </row>
               <row>
                 <entry><literal>svn://</literal></entry>
-                <entry>access via custom TCP/IP protocol to an
+                <entry>unauthenticated TCP/IP access via custom protocol to an
                   <literal>svnserve</literal> server</entry>
+              </row>
+              <row>
+                <entry><literal>svn+ssh://</literal></entry>
+                <entry>authenticated, encrypted TCP/IP access via
+                custom protocol to an <literal>svnserve</literal>
+                server</entry>
               </row>
             </tbody>
           </tgroup>
