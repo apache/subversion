@@ -51,11 +51,40 @@
 
 
 
+/* create a new bytestring containing a C string (null-terminated) */
+
+svn_string_t *
+svn_string_create (char *cstring)
+{
+  svn_string_t new_string;
+
+  svn_string_appendbytes (&new_string, cstring, sizeof(cstring));
+
+  return &new_string;
+}
+
+
+/* create a new bytestring containing a specific array of bytes
+   (NOT null-terminated!) */
+
+svn_string_t *
+svn_string_ncreate (char *cstring, size_t size)
+{
+  svn_string_t new_string;
+
+  svn_string_appendbytes (&new_string, cstring, size);
+
+  return &new_string;
+}
+
+
+
 /* set a bytestring to null */
 
 void
 svn_string_setnull (svn_string_t *str)
 {
+  free (str->data);
   str->data = NULL;
   str->len = 0;
 }
@@ -63,49 +92,92 @@ svn_string_setnull (svn_string_t *str)
 
 /* ask if a bytestring is null */
 
-char
+svn_boolean_t
 svn_string_isnull (svn_string_t *str)
 {
-  if ((str->data == NULL) || (str->len <=0))
-    return 1;
+  if ((str->data == NULL) || (str->len <= 0))
+    return TRUE;
   else
-    return 0;
+    return FALSE;
 }
 
 
-/* realloc a bytstring's space */
 
-svn_string_realloc ()
+/* append one bytestring type onto another */
+
+void
+svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr)
 {
+  svn_string_appendbytes (targetstr, appendstr->data, appendstr->len);
 }
 
 
-/* copy a C string into a bytestring */
 
-svn_string_copyCstring ()
+/* append a number of bytes onto a bytestring */
+
+void
+svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
 {
+  size_t total_len;
+  size_t i, position;
+
+  total_len = str->len + count;  /* total size needed */
+
+  /* if we need to realloc our first buffer to hold the concatenation,
+     then make it twice the total size we need. */
+
+  if (total_len >= str->blocksize)
+    {
+      str->blocksize = total_len * 2;
+      str->data = xrealloc (str->blocksize);
+    }
+
+  /* copy one byte at a time */
+
+  position = str->len;
+
+  for (i = 0; i < count; i++)
+    {
+      str->data[position + i] = bytes[i];
+    }
+  str->len = total_len;
 }
 
-
-/* append a C string into a bytestring */
-
-svn_string_appendCstring ()
-{
-}
 
 
 /* duplicate a bytestring */
 
-svn_string_duplicate ()
+svn_string_t *
+svn_string_dup (svn_string_t original_string)
 {
+  return (svn_string_ncreate (original_string->data,
+                              original_string->len));
 }
 
 
-/* append one bytestring onto another */
 
-svn_string_append ()
+/* compare if two bytestrings' data fields are identical,
+   byte-for-byte */
+
+svn_boolean_t
+svn_string_compare (svn_string_t *str1, svn_string_t *str2)
 {
+  int i;
+
+  /* easy way out :)  */
+  if (str1->len != str2->len)
+    return FALSE;
+
+  for (i = 0; i < str1->len ; i++)
+    {
+      if (str1->data[i] != str2->data[i])
+        return FALSE;
+    }
+
+  return TRUE;
 }
+
+
 
 
 /* --------------------------------------------------------------
