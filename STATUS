@@ -138,4 +138,5 @@ Candidate changes:
     Justification:
       Encoding bugs look ugly, especially in Asian languages.  Simple fix.
     Votes:
-      +1: lundblad, nori
+      +1: lundblad, kfogel
+      +0: nori
