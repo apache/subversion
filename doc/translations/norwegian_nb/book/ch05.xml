@@ -405,20 +405,16 @@
           size is a bit smaller.</para>
 
         <para>FSFS has different performance characteristics too.
-          When committing a directory with huge numbers a files, FSFS
-          uses a O(N) algorithm to append entries, while Berkeley DB
+          When committing a directory with a huge number of files, FSFS
+          uses an O(N) algorithm to append entries, while Berkeley DB
           uses an O(N^2) algorithm to rewrite the whole directory.  On
           the other hand, FSFS writes the latest version of a file as
-          a delta against the next oldest version (modulo some
-          tricks), which means that checking out the latest tree is a
-          bit slower than fetching the fulltexts stored in a Berkeley
-          DB HEAD revision.  FSFS also has a much longer delay when
-          finalizing a commit, which might cause clients to time-out
-          when waiting for a response.  This might also lead to
-          scalability problems when a large number of commits are
-          happening simultaneously.  Commit processes may line up
-          waiting for a write lock, rather than doing work in parallel
-          database transactions.</para>
+          a delta against an earlier version, which means that
+          checking out the latest tree is a bit slower than fetching
+          the fulltexts stored in a Berkeley DB HEAD revision.  FSFS
+          also has a longer delay when finalizing a commit, which
+          could in extreme cases cause clients to time-out when
+          waiting for a response.</para>
 
         <para>The most important distinction, however, is FSFS's
           inability to be <quote>wedged</quote> when something goes
