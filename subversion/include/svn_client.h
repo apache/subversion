@@ -128,6 +128,26 @@ void svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 
 
+#if defined(WIN32) || defined(DOXYGEN)
+/**
+ * @since New in 1.2.
+ * @note This function is only available on Windows.
+ *
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_client_get_simmple_provider, except that, when
+ * running on Window 2000 or newer, the provider encrypts the password
+ * before storing it to disk. On earler versions of Windows, the
+ * provider does nothing.
+ */
+void svn_client_get_windows_simple_provider (
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
+#endif /* WIN32 || DOXYGEN */
+
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
