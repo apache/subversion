@@ -249,7 +249,7 @@ svn_repos_link_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  from_path = svn_path_join_many (pool, 
+  from_path = svn_path_join_many (rbaton->pool, 
                                   rbaton->base_path,
                                   rbaton->target ? rbaton->target : path,
                                   rbaton->target ? path : NULL,
@@ -275,7 +275,8 @@ svn_repos_link_path (void *report_baton,
   /* Remove this path/link_path in our hashtable of linked paths. */
   if (! rbaton->linked_paths)
     rbaton->linked_paths = apr_hash_make (rbaton->pool);
-  add_to_path_map (rbaton->linked_paths, from_path, link_path);
+  add_to_path_map (rbaton->linked_paths, from_path, 
+                   link_path ? apr_pstrdup (rbaton->pool, link_path) : NULL);
 
   return SVN_NO_ERROR;
 }
