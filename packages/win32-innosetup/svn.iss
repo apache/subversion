@@ -82,17 +82,17 @@ Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignore
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
 
 ; Debug symbols;
-Source: {#= path_svnclient_pdb}\svn.pdb; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_svnadmin_pdb}\svnadmin.pdb; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_svnlook_pdb}\svnlook.pdb; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_svnserve_pdb}\svnserve.pdb; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_svnversion_pdb}\svnversion.pdb; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_svndumpfilter_pdb}\svndumpfilter.pdb; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnclient_pdb}\svn.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
+Source: {#= path_svnadmin_pdb}\svnadmin.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
+Source: {#= path_svnlook_pdb}\svnlook.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
+Source: {#= path_svnserve_pdb}\svnserve.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
+Source: {#= path_svnversion_pdb}\svnversion.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
+Source: {#= path_svndumpfilter_pdb}\svndumpfilter.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
 
-Source: {#= path_davsvn_pdb}\mod_dav_svn.pdb; DestDir: {app}\httpd; Flags: ignoreversion
-Source: {#= path_authzsvn_pdb}\mod_authz_svn.pdb; DestDir: {app}\httpd; Flags: ignoreversion
+Source: {#= path_davsvn_pdb}\mod_dav_svn.pdb; DestDir: {app}\httpd; Flags: ignoreversion; Components: pdb
+Source: {#= path_authzsvn_pdb}\mod_authz_svn.pdb; DestDir: {app}\httpd; Flags: ignoreversion; Components: pdb
 
-Source: {#= path_iconv_pdb}\*.pdb; DestDir: {app}\iconv; Flags: ignoreversion
+Source: {#= path_iconv_pdb}\*.pdb; DestDir: {app}\iconv; Flags: ignoreversion; Components: pdb
 
 ; Internet Shortcuts ----------------------------------------------------------
 Source: svn.url; DestDir: {app}
@@ -119,8 +119,13 @@ Type: files; Name: {app}\svn.url
 EnableISX=true
 
 [Types]
+Name: standard; Description: Standard installation - Binaries only
+Name: full; Description: Full installation - Binaries and debugging symbols
+Name: custom; Description: Custom Installation; Flags: iscustom
 
 [Components]
+Name: main; Description: Subversion application files; Types: standard custom full
+Name: pdb; Description: Debug Symbol Files; Types: full custom
 
 [Registry]
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: uninsdeletekeyifempty uninsdeletevalue
