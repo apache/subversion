@@ -84,11 +84,12 @@ use Cwd;
 # Repository check/create
 sub init_repo
   {
-    my ( $repo, $create ) = @_;
+    my ( $repo, $create, $no_sync ) = @_;
     if ( $create )
       {
 	rmtree([$repo]) if -e $repo;
 	my $svnadmin_cmd = "svnadmin create $repo";
+        $svnadmin_cmd = "$svnadmin_cmd --bdb-txn-nosync" if $no_sync;
 	system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
       }
     else
@@ -200,7 +201,7 @@ sub status_update_commit
 # Populate a working copy
 sub populate
   {
-    my ( $dir, $dir_width, $file_width, $depth ) = @_;
+    my ( $dir, $dir_width, $file_width, $depth, $pad ) = @_;
     return if not $depth--;
 
     for $nfile ( 1..$file_width )
@@ -211,6 +212,8 @@ sub populate
 	for $line ( 0..9 )
 	  {
 	    print FOO "A$line\n$line\n" or die "write to $filename: $!\n";
+            map { print FOO $_ x 255, "\n"; } ("a", "b", "c", "d")
+              foreach (1..$pad);
 	  }
 	close FOO or die "close $filename: $!\n";
 
@@ -226,7 +229,7 @@ sub populate
 	    my $svn_cmd = "svn mkdir $dirname";
 	    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
 
-	    populate( "$dirname", $dir_width, $file_width, $depth );
+	    populate( "$dirname", $dir_width, $file_width, $depth, $pad );
 	  }
       }
   }
@@ -251,8 +254,8 @@ sub ParseCommandLine
   {
     my %cmd_opts;
     my $usage = "
-usage: stress.pl [-c] [-i num] [-n num] [-s secs] [-x num]
-                 [-D num] [-F num] [-N num] [-R path] [-S path] [-U url]
+usage: stress.pl [-c] [-i num] [-n num] [-s secs] [-x num] [-D num] [-F num]
+                 [-N num] [-P num] [-R path] [-S path] [-U url] [-W]
 where
   -c cause repository creation
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
@@ -262,25 +265,29 @@ where
   -D the number of sub-directories per directory in the tree
   -F the number of files per directory in the tree
   -N the depth of the tree
+  -P the number of 10K blocks with which to pad the file
   -R the path to the repository
   -S the path to the file whose presence stops this script
   -U the URL to the repository (file:///<-R path> by default)
+  -W use --bdb-txn-nosync during repository creation
 ";
 
     # defaults
     $cmd_opts{'D'} = 2;            # number of subdirs per dir
     $cmd_opts{'F'} = 2;            # number of files per dir
     $cmd_opts{'N'} = 2;            # depth
+    $cmd_opts{'P'} = 0;            # padding blocks
     $cmd_opts{'R'} = "repostress"; # repository name
     $cmd_opts{'S'} = "stop";       # path of file to stop the script
     $cmd_opts{'U'} = "none";       # URL
+    $cmd_opts{'W'} = 0;            # create with --bdb-txn-nosync
     $cmd_opts{'c'} = 0;            # create repository
     $cmd_opts{'i'} = 0;            # ID
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'n'} = 200;          # sets of changes
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'ci:n:s:x:D:F:N:R:U:', \%cmd_opts ) or die $usage;
+    getopts( 'ci:n:s:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
 
     # default ID if not set
     $cmd_opts{'i'} = 1 - $cmd_opts{'c'} if not $cmd_opts{'i'};
@@ -293,11 +300,21 @@ where
 ############################################################################
 # Main
 
+# Why the fixed seed?  I use this script for more than stress testing,
+# I also use it to create test repositories.  When creating a test
+# repository, while I don't care exactly which files get modified, I
+# find it useful for the repositories to be reproducible, i.e. to have
+# the same files modified each time.  When using this script for
+# stress testing one could remove this fixed seed and Perl will
+# automatically use a pseudo-random seed.  However it doesn't much
+# matter, the stress testing really depends on the real-time timing
+# differences between mutiple instances of the script, rather than the
+# randomness of the chosen files.
 srand 123456789;
 
 my %cmd_opts = ParseCommandLine();
 
-my $repo = init_repo $cmd_opts{'R'}, $cmd_opts{'c'};
+my $repo = init_repo $cmd_opts{'R'}, $cmd_opts{'c'}, $cmd_opts{'W'};
 
 # Make URL from path if URL not explicitly specified
 $cmd_opts{'U'} = "file://$repo" if $cmd_opts{'U'} eq "none";
@@ -308,7 +325,8 @@ if ( $cmd_opts{'c'} )
   {
     my $svn_cmd = "svn mkdir $wc_dir/trunk";
     system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
-    populate "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'};
+    populate( "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'},
+              $cmd_opts{'P'} );
     status_update_commit $wc_dir, 0 and die "populate checkin failed\n";
   }
 
