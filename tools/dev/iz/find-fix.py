@@ -37,19 +37,25 @@ def summary(datafile, d_start, d_end):
 
   data = load_data(datafile)
 
-  found, fixed = extract(data, d_start, d_end)
+  found, fixed, inval, dup, other = extract(data, 1, d_start, d_end)
 
-  t_found = t_fixed = t_rem = 0
+  t_found = t_fixed = t_inval = t_dup = t_other = t_rem = 0
   for t in _types:
-    print '%12s:  found=%3d  fixed=%3d  remaining=%3d' \
-          % (t, found[t], fixed[t], found[t] - fixed[t])
+    print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
+          'other=%3d  remain=%3d' \
+          % (t, found[t], fixed[t], inval[t], dup[t], other[t],
+             found[t] - (fixed[t] + inval[t] + dup[t] + other[t]))
     t_found = t_found + found[t]
     t_fixed = t_fixed + fixed[t]
-    t_rem = t_rem + found[t] - fixed[t]
+    t_inval = t_inval + inval[t]
+    t_dup   = t_dup   + dup[t]
+    t_other = t_other + other[t]
+    t_rem = t_rem + found[t] - (fixed[t] + inval[t] + dup[t] + other[t])
 
-  print '-' * 55
-  print '%12s:  found=%3d  fixed=%3d  remaining=%3d' \
-        % ('totals', t_found, t_fixed, t_rem)
+  print '-' * 77
+  print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
+        'other=%3d  remain=%3d' \
+        % ('totals', t_found, t_fixed, t_inval, t_dup, t_other, t_rem)
 
 
 def plot(datafile, outbase):
@@ -77,7 +83,7 @@ def plot(datafile, outbase):
   for date in range(t_start, time.time(), ONE_WEEK):
     ### this is quite inefficient, as we could just sort by date, but
     ### I'm being lazy
-    found, fixed = extract(data, date, date + ONE_WEEK - 1)
+    found, fixed = extract(data, None, date, date + ONE_WEEK - 1)
 
     for t in _types:
       per_week, avg, open_issues = plots[t]
@@ -115,13 +121,31 @@ class MovingAverage:
     return reduce(operator.add, self.data)
 
 
-def extract(data, d_start, d_end):
-  "Extract found/fixed counts for each issue type within the data range."
+def extract(data, details, d_start, d_end):
+  """Extract found/fixed counts for each issue type within the data range.
+
+  If DETAILS is false, then return two dictionaries:
+
+    found, fixed
+
+  ...each mapping issue types to the number of issues of that type
+  found or fixed respectively.
+
+  If DETAILS is true, return five dictionaries:
+
+    found, fixed, invalid, duplicate, other
+
+  The first is still the found issues, but the other four break down
+  the resolution into 'FIXED', 'INVALID', 'DUPLICATE', and a grab-bag
+  category for 'WORKSFORME', 'LATER', 'REMIND', and 'WONTFIX'."""
 
   found = { }
   fixed = { }
+  invalid = { }
+  duplicate = { }
+  other = { }  # "WORKSFORME", "LATER", "REMIND", and "WONTFIX"
   for t in _types:
-    found[t] = fixed[t] = 0
+    found[t] = fixed[t] = invalid[t] = duplicate[t] = other[t] = 0
 
   for issue in data:
     # filter out post-1.0 issues
@@ -132,9 +156,22 @@ def extract(data, d_start, d_end):
     if d_start <= issue.created <= d_end:
       found[issue.type] = found[issue.type] + 1
     if d_start <= issue.resolved <= d_end:
-      fixed[issue.type] = fixed[issue.type] + 1
+      if details:
+        if issue.resolution == "FIXED":
+          fixed[issue.type] = fixed[issue.type] + 1
+        elif issue.resolution == "INVALID":
+          invalid[issue.type] = invalid[issue.type] + 1
+        elif issue.resolution == "DUPLICATE":
+          duplicate[issue.type] = duplicate[issue.type] + 1
+        else:
+          other[issue.type] = other[issue.type] + 1
+      else:
+        fixed[issue.type] = fixed[issue.type] + 1
 
-  return found, fixed
+  if details:
+    return found, fixed, invalid, duplicate, other
+  else:
+    return found, fixed
 
 
 def load_data(datafile):
