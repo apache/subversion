@@ -9,6 +9,7 @@ CONTENTS:
   * Dynamic build data
   * Programs used for the Subversion installer and instructions
     - Inno Setup
+    -
     - Perl
     - Packages for converting XML documentation
     - MS HTML Help Workshop
@@ -36,6 +37,11 @@ Introduction
   4.2.5 and "Inno Setup Pre Processor" (ISPP) which works with your downloaded
   version of IS:
     http://www.jrsoftware.org/isdl.php
+
+  UninsHs
+  -------
+  UninsHs-1.6 adds "Modify/Repair/Uninstall" capabilities for the installer.
+    http://www.han-soft.biz/uninshs.php
 
   Perl
   ----
@@ -177,13 +183,22 @@ Programs used for the Subversion Windows installer
   -------
   Inno Setup does not currently edit the systems PATH environment so we need
   svnpath.
-  This C program are used for updating the user's path to include/exclude the
+  This C program is used for updating the user's path to include/exclude the
   Subversion path after installing/un-installing Subversion.
   You can find the sources for this program in the Subversion source tree under
-  packages\win32-innosetup\tools\svnpath
-  
+  packages\win32-innosetup\tools\svnpath.
   Have a look in the file main.c for info on how to compile the program.
- 
+
+  If you don't want to compile it then download it from:
+    http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2728
+  
+  Unzip the file and put the svnpath.exe in the directory
+    packages\win32-innosetup\tools\svnpath
+
+  UninsHs
+  -------
+  Unpack the zipfile and place UninsHs.exe in packages\win32-innosetup
+
   libxml, libxslt and iconv
   -------------------------
   We need to include some documentation and this tools will help us to convert
