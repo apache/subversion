@@ -706,7 +706,7 @@ svn_config_ensure (apr_pool_t *pool)
                                (APR_WRITE | APR_CREATE | APR_EXCL),
                                APR_OS_DEFAULT,
                                pool);
-      
+
       if (! apr_err)
         {
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
