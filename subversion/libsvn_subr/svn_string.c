@@ -1,5 +1,7 @@
 /*
- * svn_string.h:  routines to manipulate bytestrings (svn_stringbuf_t)
+ * svn_string.h:  routines to manipulate counted-length strings
+ *                (svn_stringbuf_t and svn_string_t) and C strings.
+ *                
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -524,6 +526,57 @@ svn_string_compare_stringbuf (const svn_string_t *str1,
   else
     return TRUE;
 }
+
+
+
+/*** C string stuff. ***/
+
+apr_array_header_t *
+svn_cstring_split (const char *input,
+                   char sep_char,
+                   svn_boolean_t chop_whitespace,
+                   apr_pool_t *pool)
+{
+  const char *b = input, *e = input;
+  svn_boolean_t one_last_time = (! *e);
+  apr_array_header_t *substrings = apr_array_make (pool, 1, sizeof (input));
+
+  while (1)
+    {
+      if ((*e == sep_char) || (*e == '\0'))
+        {
+          const char *b2 = b, *e2 = e;
+          
+          if (chop_whitespace)
+            {
+              while (isspace (*b2))
+                b2++;
+
+              if (e2 != b2)
+                {
+                  while (isspace (*(--e2)))
+                    ;
+                  e2++;
+                }
+            }
+
+          *((char **) (apr_array_push (substrings)))
+            = apr_pstrmemdup (pool, b2, e2 - b2);
+
+          b = ++e;
+        }
+      else
+        e++;
+
+      if (one_last_time)
+        break;
+      if (*e == '\0')
+        one_last_time = TRUE;
+    }
+
+  return NULL;
+}
+
 
 
 
