@@ -397,7 +397,7 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
 
    Allocate the editor itself in POOL, but the editor does temporary
    allocations in a subpool of POOL.  */
-svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
+svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_stringbuf_t *path,
                                        svn_boolean_t descend,

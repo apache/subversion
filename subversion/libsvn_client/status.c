@@ -65,8 +65,11 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
-  void *ra_baton, *session, *edit_baton, *report_baton;
-  svn_delta_edit_fns_t *status_editor;
+  void *ra_baton, *session, *report_baton;
+  const svn_delta_editor_t *status_editor;
+  void *status_edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
   const svn_ra_reporter_t *reporter;
   svn_stringbuf_t *anchor, *target, *URL;
   svn_wc_entry_t *entry;
@@ -94,17 +97,21 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
                                         TRUE, TRUE, auth_baton, pool));
 
-
   /* Tell RA to drive a status-editor; this will fill in the
      repos_status_* fields in each status struct. */
-
-  SVN_ERR (svn_wc_get_status_editor (&status_editor, &edit_baton,
+  SVN_ERR (svn_wc_get_status_editor (&status_editor, &status_edit_baton,
                                      path, descend, statushash,
                                      youngest, pool));
+
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         status_editor, status_edit_baton, pool);
+
   SVN_ERR (ra_lib->do_status (session,
                               &reporter, &report_baton,
                               target, descend,
-                              status_editor, edit_baton));
+                              wrap_editor, wrap_edit_baton));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
