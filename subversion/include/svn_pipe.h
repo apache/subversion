@@ -49,11 +49,20 @@ svn_pipe_endpoint(svn_pipe_t **result,
                   apr_file_t *output,
                   apr_pool_t *pool);
 
-/* Close a pipe endpoint */
+/* Close a pipe endpoint, using POOL for all memory allocations. */
 svn_error_t *
-svn_pipe_close(svn_pipe_t *pipe);
+svn_pipe_close(svn_pipe_t *pipe,
+               apr_pool_t *pool);
 
-/* Send LENGTH bytes of DATE down the PIPE using POOL
+/* Write LENGTH bytes of DATA to the PIPE using POOL
+   for all memory allocations. */
+svn_error_t *
+svn_pipe_write(svn_pipe_t *pipe,
+               const char *data,
+               apr_size_t length,
+               apr_pool_t *pool);
+
+/* Send LENGTH bytes of DATA down the PIPE *in a frame* using POOL
    for all memory allocations. */
 svn_error_t *
 svn_pipe_send(svn_pipe_t *pipe,
@@ -61,7 +70,8 @@ svn_pipe_send(svn_pipe_t *pipe,
               apr_size_t length,
               apr_pool_t *pool);
 
-/* Receive a message from the PIPE, storing the contents
+
+/* Receive a *framed message* from the PIPE, storing the contents
    in *DATA and the length in *LENGTH, using POOL for all
    memory allocations. */
 svn_error_t *

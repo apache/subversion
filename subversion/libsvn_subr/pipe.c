@@ -93,17 +93,44 @@ svn_pipe_endpoint(svn_pipe_t **result,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_pipe_close(svn_pipe_t *pipe)
+static svn_error_t *
+close_error(apr_status_t apr_err, apr_pool_t *pool)
 {
-  apr_file_close(pipe->read);
-  apr_file_close(pipe->write);
+  return svn_error_create(apr_err, 0, NULL, pool,
+                            "pipe: shutdown error");
+}
+
+svn_error_t *
+svn_pipe_close(svn_pipe_t *pipe, apr_pool_t *pool)
+{
+  apr_status_t apr_err1, apr_err2, apr_err3;
+
+  apr_err1 = apr_file_close(pipe->read);
+  apr_err2 = apr_file_close(pipe->write);
 
   if (pipe->proc)
-    apr_proc_wait(pipe->proc, NULL, NULL, APR_WAIT);
+    apr_err3 = apr_proc_wait(pipe->proc, NULL, NULL, APR_WAIT);
+
+  if (apr_err1 != APR_SUCCESS)
+    return close_error(apr_err1, pool);
+
+  if (apr_err2 != APR_SUCCESS)
+    return close_error(apr_err2, pool);
+
+  if (apr_err3 != APR_SUCCESS)
+    return close_error(apr_err3, pool);
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+write_error(apr_status_t apr_err, apr_pool_t *pool)
+{
+  return svn_error_create(apr_err, 0, NULL, pool,
+                          "couldn't write data to pipe");
+}
+
 
 svn_error_t *
 svn_pipe_send(svn_pipe_t *pipe,
@@ -116,20 +143,38 @@ svn_pipe_send(svn_pipe_t *pipe,
 
   header = apr_psprintf(pool, "%" APR_SSIZE_T_FMT ":", length);
 
-  if (((apr_err = apr_file_write_full(pipe->write,
-                                      header,
-                                      strlen(header),
-                                      NULL)) != APR_SUCCESS) ||
-      ((apr_err = apr_file_write_full(pipe->write,
-                                      data,
-                                      length,
-                                      NULL)) != APR_SUCCESS) ||
-      ((apr_err = apr_file_flush(pipe->write)) != APR_SUCCESS))
-    return svn_error_create(apr_err, 0, NULL, pool,
-                            "ra_pipe: Couldn't send request");
+  apr_err = apr_file_write_full(pipe->write,
+                                header,
+                                strlen(header),
+                                NULL);
+  if (apr_err != APR_SUCCESS)
+    return write_error(apr_err, pool);
+
+  return svn_pipe_write(pipe, data, length, pool);
+}
+
+
+svn_error_t *
+svn_pipe_write(svn_pipe_t *pipe,
+               const char *data,
+               apr_size_t length,
+               apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_err = apr_file_write_full(pipe->write,
+                                data,
+                                length,
+                                NULL);
+  if (apr_err != APR_SUCCESS)
+    return write_error(apr_err, pool);
+  
+  apr_err = apr_file_flush(pipe->write);
+  if (apr_err != APR_SUCCESS)
+    return write_error(apr_err, pool);
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_pipe_receive(svn_pipe_t *pipe,
