@@ -30,7 +30,6 @@
 
 #include "svn_cmdline.h"
 #include "svn_pools.h"
-#include "svn_path.h"
 #include "cl.h"
 
 
@@ -64,9 +63,7 @@ notify (void *baton,
   const char *path_stdout;
   svn_error_t *err;
 
-  err = svn_cmdline_cstring_from_utf8 (&path_stdout,
-                                       svn_path_local_style (path, nb->pool),
-                                       nb->pool);
+  err = svn_cmdline_path_local_style_from_utf8 (&path_stdout, path, nb->pool);
   if (err)
     {
       printf ("WARNING: error decoding UTF-8 for ?\n");
@@ -78,9 +75,9 @@ notify (void *baton,
     {
     case svn_wc_notify_skip:
       if (content_state == svn_wc_notify_state_missing)
-        printf ("Skipped missing target: %s\n", path_stdout);
+        printf ("Skipped missing target: '%s'\n", path_stdout);
       else
-        printf ("Skipped %s\n", path_stdout);
+        printf ("Skipped '%s'\n", path_stdout);
       break;
 
     case svn_wc_notify_update_delete:
@@ -94,19 +91,19 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_restore:
-      printf ("Restored %s\n", path_stdout);
+      printf ("Restored '%s'\n", path_stdout);
       break;
 
     case svn_wc_notify_revert:
-      printf ("Reverted %s\n", path_stdout);
+      printf ("Reverted '%s'\n", path_stdout);
       break;
 
     case svn_wc_notify_failed_revert:
-      printf ("Failed to revert %s -- try updating instead.\n", path_stdout);
+      printf ("Failed to revert '%s' -- try updating instead.\n", path_stdout);
       break;
 
     case svn_wc_notify_resolved:
-      printf ("Resolved conflicted state of %s\n", path_stdout);
+      printf ("Resolved conflicted state of '%s'\n", path_stdout);
       break;
 
     case svn_wc_notify_add:
@@ -165,7 +162,7 @@ notify (void *baton,
     case svn_wc_notify_update_external:
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
-      printf ("\nFetching external item into %s\n", path_stdout);
+      printf ("\nFetching external item into '%s'\n", path_stdout);
 
       /* Remember that we're now "inside" an externals definition. */
       nb->in_external = TRUE;
@@ -217,7 +214,7 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_status_external:
-      printf ("\nPerforming status on external item at %s\n", path_stdout);
+      printf ("\nPerforming status on external item at '%s'\n", path_stdout);
       break;
 
     case svn_wc_notify_status_completed:

@@ -25,6 +25,7 @@
 #include <apr_strings.h>        /* for apr_snprintf */
 
 #include "svn_cmdline.h"
+#include "svn_path.h"
 #include "utf_impl.h"
 
 
@@ -152,4 +153,15 @@ svn_cmdline_cstring_to_utf8 (const char **dest,
   else
     return svn_utf_cstring_to_utf8_ex(dest, src, input_encoding,
                                       SVN_UTF_CONTOU_XLATE_HANDLE, pool);
+}
+
+
+svn_error_t *
+svn_cmdline_path_local_style_from_utf8 (const char **dest,
+                                        const char *src,
+                                        apr_pool_t *pool)
+{
+  return svn_cmdline_cstring_from_utf8 (dest,
+                                        svn_path_local_style (src, pool),
+                                        pool);
 }

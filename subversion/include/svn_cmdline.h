@@ -37,15 +37,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* ### todo: This function doesn't really belong in this header, but
-   it didn't seem worthwhile to create a new header just for one
-   function, especially since this should probably move to APR as
-   apr_cmdline_init() or whatever anyway.  There's nothing
-   svn-specific in its code, other than SVN_WIN32, which obviously APR
-   has its own way of dealing with.  Thoughts?  (Brane?) */
-/* ### Well, it's not one function any more, so it now has its own
-       header. Besides, everything here is svn-specific. --brane */
-
 /** Set up the locale for character conversion, and initialize APR.
  * If @a error_stream is non-null, print error messages to the stream,
  * using @a progname as the program name. Return @c EXIT_SUCCESS if
@@ -57,24 +48,31 @@ extern "C" {
 int svn_cmdline_init (const char *progname, FILE *error_stream);
 
 
-/** Set @a *dest to a utf8-encoded C string from input-encoded C
- * string @a src; allocate @a *dest in @a pool.
+/** Set @a *dest to an output-encoded C string from UTF-8 C string @a
+ * src; allocate @a *dest in @a pool.
  */
 svn_error_t *svn_cmdline_cstring_from_utf8 (const char **dest,
                                             const char *src,
                                             apr_pool_t *pool);
 
-/** Like svn_utf_cstring_from_utf8_fuzzy, but converts from an
-    input-encoded C string. */
+/** Like svn_utf_cstring_from_utf8_fuzzy, but converts to an
+    output-encoded C string. */
 const char *svn_cmdline_cstring_from_utf8_fuzzy (const char *src,
                                                  apr_pool_t *pool);
 
-/** Set @a *dest to an output-encoded C string from utf8 C string @a
- * src; allocate @a *dest in @a pool.
+/** Set @a *dest to a UTF-8-encoded C string from input-encoded C
+ * string @a src; allocate @a *dest in @a pool.
  */
 svn_error_t * svn_cmdline_cstring_to_utf8 (const char **dest,
                                            const char *src,
                                            apr_pool_t *pool);
+
+/** Set @a *dest to an output-encoded natively-formatted path string
+ * from canonical path @a src; allocate @a *dest in @a pool.
+ */
+svn_error_t *svn_cmdline_path_local_style_from_utf8 (const char **dest,
+                                                     const char *src,
+                                                     apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

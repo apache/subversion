@@ -228,10 +228,8 @@ svn_cl__propedit (apr_getopt_t *os,
                                             ctx->config,
                                             subpool));
           
-          SVN_ERR (svn_cmdline_cstring_from_utf8 (&target_stdout, target, 
-                                                  subpool));
-          if (target_stdout[0] == '\0')
-            target_stdout = ".";
+          SVN_ERR (svn_cmdline_path_local_style_from_utf8 (&target_stdout,
+                                                           target, subpool));
 
           /* ...and re-set the property's value accordingly. */
           if (new_propval)

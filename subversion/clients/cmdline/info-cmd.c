@@ -43,7 +43,7 @@ svn_cl__info_print_time (apr_time_t atime,
   const char *time_stdout;
 
   time_utf8 = svn_time_to_human_cstring (atime, pool);
-  SVN_ERR (svn_utf_cstring_from_utf8 (&time_stdout, time_utf8, pool));
+  SVN_ERR (svn_cmdline_cstring_from_utf8 (&time_stdout, time_utf8, pool));
   printf ("%s: %s\n", desc, time_stdout);
   return SVN_NO_ERROR;
 }
@@ -58,7 +58,7 @@ print_entry (const char *target,
   const char *name_stdout;
 
   /* Get a non-UTF8 version of the target. */
-  SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout, target, pool));
+  SVN_ERR (svn_cmdline_path_local_style_from_utf8 (&name_stdout, target, pool));
   printf ("Path: %s\n", name_stdout);
 
   /* Note: we have to be paranoid about checking that these are
@@ -189,29 +189,29 @@ print_entry (const char *target,
  
   if (text_conflict && entry->conflict_old) 
     {
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
-                                              entry->conflict_old, pool));
+      SVN_ERR (svn_cmdline_path_local_style_from_utf8
+               (&name_stdout, entry->conflict_old, pool));
       printf ("Conflict Previous Base File: %s\n", name_stdout);
     }
  
   if (text_conflict && entry->conflict_wrk) 
     {
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
-                                              entry->conflict_wrk, pool));
+      SVN_ERR (svn_cmdline_path_local_style_from_utf8
+               (&name_stdout, entry->conflict_wrk, pool));
       printf ("Conflict Previous Working File: %s\n", name_stdout);
     }
  
   if (text_conflict && entry->conflict_new) 
     {
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
-                                              entry->conflict_new, pool));
+      SVN_ERR (svn_cmdline_path_local_style_from_utf8
+               (&name_stdout, entry->conflict_new, pool));
       printf ("Conflict Current Base File: %s\n", name_stdout);
     }
  
   if (props_conflict && entry->prejfile) 
     {
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
-                                              entry->prejfile, pool));
+      SVN_ERR (svn_cmdline_path_local_style_from_utf8
+               (&name_stdout, entry->prejfile, pool));
       printf ("Conflict Properties File: %s\n", name_stdout);
     }
  
@@ -284,8 +284,8 @@ svn_cl__info (apr_getopt_t *os,
 
           const char *target_stdout;
           /* Get a non-UTF8 version of the target. */
-          SVN_ERR (svn_cmdline_cstring_from_utf8 (&target_stdout, target,
-                                                  subpool));
+          SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                   (&target_stdout, target, subpool));
 
           printf ("%s:  (Not a versioned resource)\n\n", target_stdout);
           continue;
