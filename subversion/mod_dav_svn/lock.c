@@ -468,7 +468,7 @@ dav_svn_find_lock(dav_lockdb *lockdb,
   svn_error_t *serr;
   dav_error *derr;
   svn_lock_t *slock;
-  dav_lock *dlock;
+  dav_lock *dlock = NULL;
   svn_boolean_t readable = FALSE;
   
   /* If the resource's fs path is unreadable, we don't want to say
@@ -483,21 +483,25 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
-  serr = svn_fs_get_lock_from_token(&slock,
+  serr = svn_fs_get_lock_from_path(&slock,
                                     resource->info->repos->fs,
-                                    locktoken->uuid_str,
+                                    resource->info->repos_path,
                                     resource->pool);
-  if (serr &&
-      ((serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
-       || (serr->apr_err == SVN_ERR_FS_LOCK_EXPIRED)))
-    dlock = NULL;
-  else if (serr)
+  if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to lookup lock via token.",
+                               "Failed to look up lock by path.",
                                resource->pool);
 
   if (slock != NULL)
-    svn_lock_to_dav_lock(&dlock, slock, resource->exists, resource->pool);
+    {
+      /* Sanity check. */
+      if (strcmp(locktoken->uuid_str, slock->token) != 0)
+        return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
+                               "Incoming token doesn't match existing lock.",
+                               resource->pool);
+
+      svn_lock_to_dav_lock(&dlock, slock, resource->exists, resource->pool);
+    }
 
   *lock = dlock;
   return 0;  
@@ -704,6 +708,7 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
          'break' a lock, because info->force will always be FALSE.  An
          svn client, however, can request a 'forced' break.*/
       serr = svn_repos_fs_unlock(resource->info->repos->repos,
+                                 resource->info->repos_path,
                                  token,
                                  info->force,
                                  resource->pool);
@@ -761,11 +766,11 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
-  /* Convert the token into an svn_lock_t. */
-  serr = svn_fs_get_lock_from_token(&slock,
-                                    resource->info->repos->fs,
-                                    token->uuid_str,
-                                    resource->pool);
+  /* Convert the path into an svn_lock_t. */
+  serr = svn_fs_get_lock_from_path(&slock,
+                                   resource->info->repos->fs,
+                                   resource->info->repos_path,
+                                   resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Token doesn't point to a lock.",
@@ -773,8 +778,8 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
 
   /* Sanity check: does the incoming token actually represent the
      current lock on the incoming resource? */
-  if ((! resource->info->repos_path)
-      || (strcmp(resource->info->repos_path, slock->path) != 0))
+  if ((! slock)
+      || (strcmp(token->uuid_str, slock->token) != 0))
     return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Lock refresh request doesn't match existing lock.");

@@ -318,6 +318,7 @@ svn_fs_base__generate_token (const char **token,
 
 struct unlock_args
 {
+  const char *path;
   const char *token;
   svn_boolean_t force;
 };
@@ -336,7 +337,11 @@ txn_body_unlock (void *baton, trail_t *trail)
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, args->token, trail));
-  
+
+  /* Sanity check:  the incoming path should match lock->path. */
+  if (strcmp(args->path, lock->path) != 0)
+    return svn_fs_base__err_no_such_lock (trail->fs, args->path);
+
   /* If not breaking the lock, there better be a username attached to
      the fs. */
   if (!args->force
@@ -359,6 +364,7 @@ txn_body_unlock (void *baton, trail_t *trail)
 
 svn_error_t *
 svn_fs_base__unlock (svn_fs_t *fs,
+                     const char *path,
                      const char *token,
                      svn_boolean_t force,
                      apr_pool_t *pool)
@@ -367,6 +373,7 @@ svn_fs_base__unlock (svn_fs_t *fs,
 
   SVN_ERR (svn_fs_base__check_fs (fs));
 
+  args.path = path;
   args.token = token;
   args.force = force;
   return svn_fs_base__retry_txn (fs, txn_body_unlock, &args, pool);
@@ -450,41 +457,6 @@ svn_fs_base__get_lock_from_path (svn_lock_t **lock,
                                  &args, pool);
   return err;
 }
-
-
-struct lock_get_args
-{
-  svn_lock_t **lock_p;
-  const char *lock_token;
-};
-
-
-static svn_error_t *
-txn_body_get_lock_from_token (void *baton, trail_t *trail)
-{
-  struct lock_get_args *args = baton;
-  
-  return svn_fs_bdb__lock_get (args->lock_p, trail->fs,
-                               args->lock_token, trail);
-}
-
-
-svn_error_t *
-svn_fs_base__get_lock_from_token (svn_lock_t **lock,
-                                  svn_fs_t *fs,
-                                  const char *token,
-                                  apr_pool_t *pool)
-{
-  struct lock_get_args args;
-
-  SVN_ERR (svn_fs_base__check_fs (fs));
-  
-  args.lock_token = token;
-  args.lock_p = lock;
-  return svn_fs_base__retry_txn (fs, txn_body_get_lock_from_token,
-                                 &args, pool);
-}
-
 
 
 svn_error_t *

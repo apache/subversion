@@ -948,6 +948,7 @@ svn_error_t *svn_repos_fs_attach_lock (svn_lock_t *lock,
  * error, it knows that the unlock succeeded anyway.
  */
 svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
+                                  const char *path,
                                   const char *token,
                                   svn_boolean_t force,
                                   apr_pool_t *pool);

@@ -98,98 +98,7 @@ lock_only (const char **msg,
 
 
 
-/* Test that we can fetch a lock using only its token. */
-static svn_error_t *
-lookup_lock_by_token (const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
-  svn_fs_access_t *access;
-  svn_lock_t *mylock, *somelock;
-  
-  *msg = "lookup lock by lock token";
 
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-lookup-lock-by-token", 
-                                    opts->fs_type, pool));
-  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
-
-  /* We are now 'bubba'. */
-  SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
-  SVN_ERR (svn_fs_set_access (fs, access));
-
-  /* Lock /A/D/G/rho. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", "", 0, 0,
-                        SVN_INVALID_REVNUM, pool));
-
-  /* Can we look up the lock by token? */
-  SVN_ERR (svn_fs_get_lock_from_token (&somelock, fs, mylock->token, pool));
-  if ((! somelock) || (strcmp (somelock->token, mylock->token) != 0))
-    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                             "Couldn't look up a lock by token.");
-
-  return SVN_NO_ERROR;
-}
-
-/* Test that we get an error when trying to fetch a lock using a token that doesn't exist. */
-static svn_error_t *
-lookup_nonexistent_token (const char **msg,
-                           svn_boolean_t msg_only,
-                           svn_test_opts_t *opts,
-                           apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  const char *conflict;
-  svn_revnum_t newrev;
-  svn_fs_access_t *access;
-  svn_lock_t *somelock;
-  svn_error_t *err;
-  
-  *msg = "attempt to lookup lock by nonexistent lock token";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-lookup-lock-by-token", 
-                                    opts->fs_type, pool));
-  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-
-  /* Create the greek tree and commit it. */
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
-
-  /* We are now 'bubba'. */
-  SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
-  SVN_ERR (svn_fs_set_access (fs, access));
-
-  /* Try to lookup lock using a nonexistent tokenan we look up the
-     lock by token? */
-  err = svn_fs_get_lock_from_token (&somelock, fs, "some-bogus-lock-token", pool);
-
-  if (err->apr_err != SVN_ERR_FS_BAD_LOCK_TOKEN)
-    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                             "Success in looking up nonexistent lock token.");
-
-  return SVN_NO_ERROR;
-}
 
 /* Test that we can create, fetch, and destroy a lock.  It exercises
    each of the five public fs locking functions.  */
@@ -291,7 +200,7 @@ attach_lock (const char **msg,
                              "Couldn't look up a lock by pathname.");
 
   /* Unlock /A/D/G/rho, and verify that it's gone. */
-  SVN_ERR (svn_fs_unlock (fs, mylock.token, 0, pool));
+  SVN_ERR (svn_fs_unlock (fs, mylock.path, mylock.token, 0, pool));
   SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
@@ -401,14 +310,8 @@ basic_lock (const char **msg,
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Couldn't look up a lock by pathname.");
     
-  /* Can we look up the lock by token? */
-  SVN_ERR (svn_fs_get_lock_from_token (&somelock, fs, mylock->token, pool));
-  if ((! somelock) || (strcmp (somelock->token, mylock->token) != 0))
-    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                             "Couldn't look up a lock by token.");
-
   /* Unlock /A/D/G/rho, and verify that it's gone. */
-  SVN_ERR (svn_fs_unlock (fs, mylock->token, 0, pool));
+  SVN_ERR (svn_fs_unlock (fs, mylock->path, mylock->token, 0, pool));
   SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
@@ -795,7 +698,8 @@ lock_break_steal_refresh (const char **msg,
   /* Become 'hortense' and break bubba's lock, then verify it's gone. */
   SVN_ERR (svn_fs_create_access (&access, "hortense", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
-  SVN_ERR (svn_fs_unlock (fs, mylock->token, 1 /* FORCE BREAK */, pool));
+  SVN_ERR (svn_fs_unlock (fs, mylock->path, mylock->token,
+                          1 /* FORCE BREAK */, pool));
   SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
@@ -910,8 +814,6 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS (lock_only),
-    SVN_TEST_PASS (lookup_lock_by_token),
-    SVN_TEST_PASS (lookup_nonexistent_token),
     SVN_TEST_PASS (lookup_lock_by_path),
     SVN_TEST_PASS (attach_lock),
     SVN_TEST_PASS (get_locks),

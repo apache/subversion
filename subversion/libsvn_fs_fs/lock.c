@@ -645,9 +645,39 @@ svn_fs_fs__generate_token (const char **token,
 }
 
 
+/* Static helper func.
+
+   If TOKEN points to a lock in FS, set *LOCK to an svn_lock_t which
+   represents the lock, allocated in POOL.  If TOKEN doesn't point to
+   a lock, return SVN_ERR_FS_BAD_LOCK_TOKEN.  If TOKEN points to a
+   lock that has expired, then return SVN_ERR_FS_LOCK_EXPIRED.
+*/
+static svn_error_t *
+get_lock_from_token (svn_lock_t **lock_p,
+                     svn_fs_t *fs,
+                     const char *token,
+                     apr_pool_t *pool)
+{
+  svn_lock_t *lock;
+  char *path;
+
+  /* Read lock token from disk */
+  SVN_ERR (read_path_from_lock_token_file(fs, &path, token, pool));
+
+  SVN_ERR (get_lock_from_path (&lock, fs, path, pool));
+
+  /* Get lock back, check for null */
+  if (!lock)
+    return svn_fs_fs__err_no_such_lock (fs, path);
+  *lock_p = lock;
+  return SVN_NO_ERROR;
+}
+
+
 
 svn_error_t *
 svn_fs_fs__unlock (svn_fs_t *fs,
+                   const char *path,
                    const char *token,
                    svn_boolean_t force,
                    apr_pool_t *pool)
@@ -660,8 +690,12 @@ svn_fs_fs__unlock (svn_fs_t *fs,
   
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or
      SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (svn_fs_fs__get_lock_from_token(&existing_lock, fs, token, pool));
+  SVN_ERR (get_lock_from_token(&existing_lock, fs, token, pool));
   
+  /* Sanity check:  the incoming path should match existing_lock->path. */
+  if (strcmp(path, existing_lock->path) != 0)
+    return svn_fs_fs__err_no_such_lock (fs, existing_lock->path);
+
   /* Unless breaking the lock, there better be a username attached to the
      fs. */
   if (!force && (!fs->access_ctx || !fs->access_ctx->username))
@@ -693,27 +727,6 @@ svn_fs_fs__get_lock_from_path (svn_lock_t **lock_p,
 }
 
 
-
-svn_error_t *
-svn_fs_fs__get_lock_from_token (svn_lock_t **lock_p,
-                                svn_fs_t *fs,
-                                const char *token,
-                                apr_pool_t *pool)
-{
-  svn_lock_t *lock;
-  char *path;
-
-  /* Read lock token from disk */
-  SVN_ERR (read_path_from_lock_token_file(fs, &path, token, pool));
-
-  SVN_ERR (get_lock_from_path (&lock, fs, path, pool));
-
-  /* Get lock back, check for null */
-  if (!lock)
-    return svn_fs_fs__err_no_such_lock (fs, path);
-  *lock_p = lock;
-  return SVN_NO_ERROR;
-}
 
 struct dir_walker_baton
 {

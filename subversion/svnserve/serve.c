@@ -592,7 +592,7 @@ static svn_error_t *commit_done(svn_revnum_t new_rev, const char *date,
 
 /* Add the LOCK_TOKENS to the filesystem access context if any. LOCK_TOKENS is
    an array of svn_ra_svn_item_t structs.  Return an error if they are
-   not strings. */
+   not a list of lists. */
 static svn_error_t *add_lock_tokens(apr_array_header_t *lock_tokens,
                                     server_baton_t *sb,
                                     apr_pool_t *pool)
@@ -608,19 +608,28 @@ static svn_error_t *add_lock_tokens(apr_array_header_t *lock_tokens,
 
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
+      const char *token;
+      svn_ra_svn_item_t *token_item;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
                                                svn_ra_svn_item_t);
-      if (item->kind != SVN_RA_SVN_STRING)
+      if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Lock token not a string");
-      SVN_ERR(svn_fs_access_add_lock_token(fs_access, item->u.string->data));
+                                "Lock tokens aren't a list of lists.");
+
+      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
+      if (token_item->kind != SVN_RA_SVN_STRING)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Lock token isn't a string.");
+
+      token = token_item->u.string->data;
+      SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
     }
 
   return SVN_NO_ERROR;
 }
 
 /* Unlock the paths with lock tokens in LOCK_TOKENS, ignoring any errors.
-   LOCK_TOKENS contais svn_ra_svn_item_t elements, assumed to be strings. */
+   LOCK_TOKENS contais svn_ra_svn_item_t elements, assumed to be lists. */
 static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
                                  server_baton_t *sb,
                                  apr_pool_t *pool)
@@ -632,15 +641,33 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
 
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
-      svn_ra_svn_item_t *item;
-
+      svn_ra_svn_item_t *item, *path_item, *token_item;
+      const char *path, *token;
       svn_pool_clear(iterpool);
+
       item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn_item_t);
+      if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Lock tokens aren't a list of lists.");
+
+      path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
+      if (token_item->kind != SVN_RA_SVN_STRING)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Lock path isn't a string.");
+
+      token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
+      if (token_item->kind != SVN_RA_SVN_STRING)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Lock token isn't a string.");
+
+      path = path_item->u.string->data;
+      token = token_item->u.string->data;
+
       /* The lock may have been defunct after the commit, so ignore such
          errors.
          ### What is the best thing to do with other errors (see comment
          ### libsvn_ra_local/ra_plugin.c. */
-      svn_error_clear(svn_repos_fs_unlock(sb->repos, item->u.string->data,
+      svn_error_clear(svn_repos_fs_unlock(sb->repos, path, token,
                                           FALSE, pool));
     }
                                        
@@ -1302,15 +1329,15 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                            apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *token;
+  const char *path, *token;
   svn_boolean_t force;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &token, &force));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccb", &path, &token, &force));
 
   /* Username required unless force was specified. */
   SVN_ERR(must_have_write_access(conn, pool, b, ! force));
 
-  SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, token, force, pool));
+  SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, path, token, force, pool));
 
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
 

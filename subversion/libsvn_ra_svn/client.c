@@ -797,12 +797,14 @@ static svn_error_t *ra_svn_commit2(void *baton,
       iterpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
         {
+          const void *key;
           void *val;
-          const char *token;
+          const char *path, *token;
           svn_pool_clear(iterpool);
-          apr_hash_this(hi, NULL, NULL, &val);
-          token = val;
-          SVN_ERR(svn_ra_svn_write_cstring(conn, iterpool, token));
+          apr_hash_this(hi, &key, NULL, &val);
+          path = key;
+          token = val;          
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cc", path, token));
         }
       svn_pool_destroy(iterpool);
     }
@@ -1383,11 +1385,8 @@ static svn_error_t *ra_svn_unlock(void *session_baton,
   ra_svn_session_baton_t *sess = session_baton;
   svn_ra_svn_conn_t* conn = sess->conn;
 
-  /* Note: path arg isn't used, since svnserve calls
-     svn_repos_fs_unlock(), which doesn't need it.  But
-     ra_dav->unlock() needs the path arg for an http UNLOCK request. */
-
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "cb", token, force));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "ccb",
+                               path, token, force));
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),

@@ -388,6 +388,7 @@ struct deltify_etc_baton
 {
   svn_fs_t *fs;                    /* the fs to deltify in */
   svn_repos_t *repos;              /* repos for unlocking */
+  const char *fs_path;             /* fs-path part of split session URL */
   apr_hash_t *lock_tokens;         /* tokens to unlock, if any */
   apr_pool_t *pool;                /* pool for scratch work */
   svn_commit_callback_t callback;  /* the original callback */
@@ -421,19 +422,21 @@ deltify_etc (svn_revnum_t new_revision,
       for (hi = apr_hash_first (db->pool, db->lock_tokens); hi;
            hi = apr_hash_next (hi))
         {
+          const void *rel_path;
           void *val;
-          const char *token;
+          const char *abs_path, *token;
 
           svn_pool_clear (iterpool);
-          apr_hash_this (hi, NULL, NULL, &val);
+          apr_hash_this (hi, &rel_path, NULL, &val);
           token = val;
+          abs_path = svn_path_join (db->fs_path, rel_path, iterpool);
           /* We may get errors here if the lock was broken or stolen after
              the commit succeeded.  This is fine and should be ignored.
              ### What about the other errors? Collecting them all could mean
              ### a lot of errors for the user. Should we just collect the first
              ### error and continue? */
-          svn_error_clear (svn_repos_fs_unlock (db->repos, token, FALSE,
-                                                iterpool));
+          svn_error_clear (svn_repos_fs_unlock (db->repos, abs_path, token,
+                                                FALSE, iterpool));
         }
       svn_pool_destroy (iterpool);
     }
@@ -473,6 +476,7 @@ svn_ra_local__get_commit_editor2 (void *session_baton,
 
   db->fs = sess->fs;
   db->repos = sess->repos;
+  db->fs_path = sess->fs_path;
   if (! keep_locks)
     db->lock_tokens = lock_tokens;
   else
@@ -1082,15 +1086,11 @@ svn_ra_local__unlock (void *session_baton,
 {
   svn_ra_local__session_baton_t *sess = session_baton;
 
-  /* Note: path arg isn't used, since svn_repos_fs_unlock() doesn't
-     need it.  But ra_dav->unlock() needs the path arg for an http
-     UNLOCK request. */
-
   /* A username is absolutely required to unlock a path. */
   SVN_ERR (get_username (sess, pool));
 
   /* This warrper will call pre- and post-unlock hooks. */
-  SVN_ERR (svn_repos_fs_unlock (sess->repos, token, force, pool));
+  SVN_ERR (svn_repos_fs_unlock (sess->repos, path, token, force, pool));
 
   return SVN_NO_ERROR;
 }

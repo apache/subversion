@@ -1563,7 +1563,7 @@ svn_error_t *svn_fs_generate_token (const char **token,
                                     apr_pool_t *pool);
 
 
-/** Remove lock on the path represented by @a token in @a fs.
+/** Remove the lock on @a path represented by @a token in @a fs.
  *
  * If @a token doesn't point to a lock, return @c SVN_ERR_FS_BAD_LOCK_TOKEN.
  * If @a token points to an expired lock, return @c SVN_ERR_FS_LOCK_EXPIRED.
@@ -1578,6 +1578,7 @@ svn_error_t *svn_fs_generate_token (const char **token,
  * Use @a pool for temporary allocations.
  */
 svn_error_t *svn_fs_unlock (svn_fs_t *fs,
+                            const char *path,
                             const char *token,
                             svn_boolean_t force,
                             apr_pool_t *pool);
@@ -1591,20 +1592,6 @@ svn_error_t *svn_fs_unlock (svn_fs_t *fs,
 svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
                                         svn_fs_t *fs,
                                         const char *path,
-                                        apr_pool_t *pool);
-
-
-/** If @a token points to a lock in @a fs, set @a *lock to an
- * svn_lock_t which represents the lock, allocated in @a pool.
- *  
- * If @a token doesn't point to a lock, return SVN_ERR_FS_BAD_LOCK_TOKEN.
- *
- * If @a token points to a lock that has expired, then return
- * SVN_ERR_FS_LOCK_EXPIRED.
- */
-svn_error_t *svn_fs_get_lock_from_token (svn_lock_t **lock,
-                                        svn_fs_t *fs,
-                                        const char *token,
                                         apr_pool_t *pool);
 
 
