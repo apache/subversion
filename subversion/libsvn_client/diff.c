@@ -157,6 +157,11 @@ struct diff_cmd_baton {
 
   /* Client config hash (may be NULL). */
   apr_hash_t *config;
+
+  /* Set this flag if you want diff_file_changed to output diffs
+     unconditionally, even if the diffs are empty. */
+  svn_boolean_t force_diff_output;
+
 };
 
 
@@ -311,7 +316,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
         }
 
       SVN_ERR (svn_diff_file_diff (&diff, tmpfile1, tmpfile2, subpool));
-      if (svn_diff_contains_diffs (diff))
+      if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_diff_output)
         {
           svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
 
@@ -392,9 +397,20 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
-  return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
-                            diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
-                            mimetype1, mimetype2, diff_baton);
+  /* We want diff_file_changed to unconditionally show diffs, even if
+     the diff is empty (as would be the case if an empty file were
+     added.)  It's important, because 'patch' would still see an empty
+     diff and create an empty file.  It's also important to let the
+     user see that *something* happened. */
+  diff_cmd_baton->force_diff_output = TRUE;
+
+  SVN_ERR (diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
+                              diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
+                              mimetype1, mimetype2, diff_baton));
+  
+  diff_cmd_baton->force_diff_output = FALSE;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
