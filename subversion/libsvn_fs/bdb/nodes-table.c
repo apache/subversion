@@ -36,113 +36,6 @@
 /* Opening/creating the `nodes' table.  */
 
 
-/* Compare two node ID's, according to the rules in `structure'.  
-   We have heirarchical sorting here:
-
-      1.  by node id
-      2.  by copy id
-      3.  by txn id  
-
-   Sorting happens in ascending order. */
-static int
-compare_ids (svn_fs_id_t *a, svn_fs_id_t *b)
-{
-  int cmp;
-
-  /* Compare node ids. */
-  if ((cmp = svn_fs__key_compare (svn_fs__id_node_id (a), 
-                                  svn_fs__id_node_id (b))))
-    return cmp;
-
-  /* Compare copy ids. */
-  if ((cmp = svn_fs__key_compare (svn_fs__id_copy_id (a), 
-                                  svn_fs__id_copy_id (b))))
-    return cmp;
-
-  /* Compare txn ids. */
-  if ((cmp = svn_fs__key_compare (svn_fs__id_txn_id (a), 
-                                  svn_fs__id_txn_id (b))))
-    return cmp;
-
-  /* These appear to be equivalent. */
-  return 0;
-}
-
-
-/* Parse a node revision ID from D.  The ID returned is allocated
-   using `malloc', not in an APR pool.  Return zero if D does not
-   contain a well-formed node revision ID.  */
-static svn_fs_id_t *
-parse_node_revision_dbt (const DBT *d)
-{
-  return svn_fs_parse_id (d->data, d->size, 0);
-}
-
-
-/* The key comparison function for the `nodes' table.
-
-   Strictly speaking, this function only needs to handle strings that
-   we actually use as keys in the table.  However, if we happen to
-   insert garbage keys, and this comparison function doesn't do
-   something consistent with them (i.e., something transitive and
-   reflexive), we can actually corrupt the btree structure.  Which
-   seems unfriendly.
-
-   So this function tries to act as a proper comparison for any two
-   arbitrary byte strings.  Two well-formed node revisions ID's compare
-   according to the rules described in the `structure' file; any
-   malformed key comes before any well-formed key; and two malformed
-   keys come in byte-by-byte order.
-
-   NOTE WELL: this function and its helpers use `malloc' to get space
-   for the parsed node revision ID's.  In general, we try to use pools
-   for everything in Subversion, but in this case it's not practical.
-   Berkeley DB doesn't provide any way to pass a baton through to the
-   btree comparison function.  Even if it did, since Berkeley DB needs
-   to invoke the comparison function at pretty arbitrary times, you'd
-   have to pass the baton to almost every Berkeley DB operation.  You
-   could stuff a pool pointer in a global variable, but then you'd
-   have to make sure the pool was up to date before every Berkeley DB
-   operation; you'd surely forget, leading to crashes...  Using malloc
-   is more maintainable.  Since the comparison function isn't allowed
-   to signal an error anyway, the need for pools isn't quite as urgent
-   as in other code, but we still need to take care.  */
-static int
-compare_nodes_keys (DB *dummy, const DBT *ak, const DBT *bk)
-{
-  svn_fs_id_t *a = parse_node_revision_dbt (ak);
-  svn_fs_id_t *b = parse_node_revision_dbt (bk);
-  int result;
-
-  /* Two well-formed keys are compared by the rules in `structure'.  */
-  if (a && b)
-    result = compare_ids (a, b);
-
-  /* Malformed keys come before well-formed keys.  */
-  else if (a)
-    result = 1;
-  else if (b)
-    result = -1;
-
-  /* Two malformed keys are compared byte-by-byte.  */
-  else
-    result = svn_fs__compare_dbt (ak, bk);
-
-  if (a)
-    {
-      free ((void*)a->node_id);  /* cast to remove const */
-      free (a);
-    }
-  if (b)
-    {
-      free ((void*)b->node_id);  /* cast to remove const */
-      free (b);
-    }
-
-  return result;
-}
-
-
 int
 svn_fs__open_nodes_table (DB **nodes_p,
                           DB_ENV *env,
@@ -151,10 +44,22 @@ svn_fs__open_nodes_table (DB **nodes_p,
   DB *nodes;
 
   DB_ERR (db_create (&nodes, env, 0));
-  DB_ERR (nodes->set_bt_compare (nodes, compare_nodes_keys));
   DB_ERR (nodes->open (nodes, "nodes", 0, DB_BTREE,
                        create ? (DB_CREATE | DB_EXCL) : 0,
                        0666));
+
+  /* Create the `next-id' table entry (use '1' because '0' is
+     reserved for the root directory to use). */
+  if (create)
+  {
+    DBT key, value;
+
+    DB_ERR (nodes->put (nodes, 0,
+                        svn_fs__str_to_dbt (&key, 
+                                            (char *) svn_fs__next_key_key),
+                        svn_fs__str_to_dbt (&value, (char *) "1"),
+                        0));
+  }
 
   *nodes_p = nodes;
   return 0;
@@ -170,65 +75,39 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
                      const char *txn_id,
                      trail_t *trail)
 {
-  int db_err;
-  DBC *cursor = 0;
-  DBT key, value;
-  svn_fs_id_t *id;
-  const char *node_id;
-  char next_key[200];
+  DBT query, result;
   apr_size_t len;
+  char next_key[200];
+  int db_err;
+  const char *next_node_id;
 
   /* TXN_ID is required! */
   assert (txn_id);
 
-  /* Create a database cursor.  */
-  SVN_ERR (DB_WRAP (fs, "choosing new node ID (creating cursor)",
-                    fs->nodes->cursor (fs->nodes, trail->db_txn, &cursor, 0)));
+  /* Get the current value associated with the `next-key' key in the table.  */
+  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+  SVN_ERR (DB_WRAP (fs, "allocating new node ID (getting `next-key')",
+                    fs->nodes->get (fs->nodes, trail->db_txn,
+                                    &query, 
+                                    svn_fs__result_dbt (&result), 
+                                    0)));
+  svn_fs__track_dbt (&result, trail->pool);
 
-  /* Find the last entry in the `nodes' table, and increment its node
-     number.  */
-  db_err = cursor->c_get (cursor,
-                          svn_fs__result_dbt (&key),
-                          svn_fs__nodata_dbt (&value),
-                          DB_LAST);
-  svn_fs__track_dbt (&key, trail->pool);
-  if (db_err)
-    {
-      /* Free the cursor.  Ignore any error value --- the error above
-         is more interesting.  */
-      cursor->c_close (cursor);
+  /* Squirrel away our next node id value. */
+  next_node_id = apr_pstrmemdup (trail->pool, result.data, result.size);
 
-      /* The root directory should always be present, at least, so a
-         NOTFOUND error is badness..  */
-      if (db_err == DB_NOTFOUND)
-        return svn_error_createf
-          (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-           "root directory missing from `nodes' table, in filesystem `%s'",
-           fs->path);
-      
-      return DB_WRAP (fs, "choosing new node ID (finding last entry)", db_err);
-    }
-
-  /* Try to parse the key as a node revision ID.  */
-  id = svn_fs_parse_id (key.data, key.size, trail->pool);
-  if (! id)
-    {
-      cursor->c_close (cursor);
-      return svn_fs__err_corrupt_nodes_key (fs);
-    }
-
-  /* We've got the value; close the cursor.  */
-  SVN_ERR (DB_WRAP (fs, "choosing new node ID (closing cursor)",
-                    cursor->c_close (cursor)));
-
-  /* Given the ID of the last node revision, what's the ID of the
-     first revision of an entirely new node?  */
-  node_id = svn_fs__id_node_id (id);
-  len = strlen (node_id);
-  svn_fs__next_key (node_id, &len, next_key);
+  /* Bump to future key. */
+  len = result.size;
+  svn_fs__next_key (result.data, &len, next_key);
+  db_err = fs->copies->put (fs->nodes, trail->db_txn,
+                            svn_fs__str_to_dbt (&query, 
+                                                (char *) svn_fs__next_key_key),
+                            svn_fs__str_to_dbt (&result, (char *) next_key), 
+                            0);
+  SVN_ERR (DB_WRAP (fs, "bumping next node ID key", db_err));
 
   /* Create and return the new node id. */
-  *id_p = svn_fs__create_id (next_key, "0", txn_id, trail->pool);
+  *id_p = svn_fs__create_id (next_node_id, "0", txn_id, trail->pool);
   return SVN_NO_ERROR;
 }
 

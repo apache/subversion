@@ -380,31 +380,15 @@ The Berkeley DB "nodes" table
 
 The database contains a table called "nodes", which is a btree indexed
 by node revision ID's, mapping them onto REPRESENTATION skels.  Node 0
-is always the root directory, and node revision 0.0.0 is always the
-empty directory.
-
-Since the "nodes" table is a btree, it's efficent to walk over the
-entries in order of increasing or decreasing node ID's.  In fact,
-Berkeley DB lets us provide our own key ordering function, so we can
-arrange the nodes for quick traversal, given our access patterns.
-
-Here's the sort order we use:
-
-   * Nodes are sorted by their node ID.
-
-   * All the revisions of a given node come together, ordered first by
-     their copy ID, and then by their txn ID.
+is always the root directory, and node revision ID 0.0.0 is always the
+empty directory.  We use the value of the key 'next-id' to indicate
+the next unused node ID.
 
 Assuming that we store the most recent revision on every branch as
 fulltext, and all other revisions as deltas, we can retrieve any node
 revision by searching for the last revision of the node, and then
 walking backwards to specific revision we desire, applying deltas as
 we go.
-
-Since we don't want to corrupt our btree, even if we accidentally
-insert garbage keys into the table, we extend our ordering to handle
-arbitrary byte strings: any mis-formed ID comes before any well-formed
-ID, and two mis-formed IDs are compared byte-by-byte.
 
 
 
