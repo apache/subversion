@@ -22,7 +22,6 @@ Ben todo:
      possible, once it exists.
 
 Karl working copy todo:
-   - use apr process api instead of system(), don't use redirection
    - write the log/lock recovery function.
    - with Ben, review locking protocol in wc adm directories for sanity.
    - check apr_open calls, do they assume failure implies null handle?
