@@ -913,11 +913,9 @@ rep_write_get_baton (svn_fs_t *fs,
 
 
 
-/* Write LEN bytes from BUF into the string represented via REP_KEY
-   in FS, starting at OFFSET in that string, as part of TRAIL.
-
-   If the representation is not mutable, return the error
-   SVN_FS_REP_NOT_MUTABLE. */
+/* Write LEN bytes from BUF into the end of the string represented via
+   REP_KEY in FS, as part of TRAIL.  If the representation is not
+   mutable, return the error SVN_FS_REP_NOT_MUTABLE. */
 static svn_error_t *
 rep_write (svn_fs_t *fs,
            const char *rep_key,
@@ -932,14 +930,13 @@ rep_write (svn_fs_t *fs,
 
   if (! rep_is_mutable (rep, txn_id))
     svn_error_createf
-      (SVN_ERR_FS_REP_CHANGED, NULL,
+      (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
        "rep_write: rep \"%s\" is not mutable", rep_key);
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
     {
-      SVN_ERR (svn_fs__bdb_string_append (fs, 
-                                          &(rep->contents.fulltext.string_key), 
-                                          len, buf, trail));
+      SVN_ERR (svn_fs__bdb_string_append
+               (fs, &(rep->contents.fulltext.string_key), len, buf, trail));
     }
   else if (rep->kind == svn_fs__rep_kind_delta)
     {
