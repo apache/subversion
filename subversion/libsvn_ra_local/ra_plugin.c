@@ -343,12 +343,13 @@ static svn_error_t *
 svn_ra_local__rev_prop (void *session_baton,
                         svn_revnum_t rev,
                         const char *name,
-                        svn_string_t **value)
+                        svn_string_t **value,
+                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_fs_revision_prop (value, baton->fs, rev, name, baton->pool));
+  SVN_ERR (svn_fs_revision_prop (value, baton->fs, rev, name, pool));
 
   return SVN_NO_ERROR;
 }

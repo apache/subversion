@@ -1611,7 +1611,8 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
 svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
                                    svn_revnum_t rev,
                                    const char *name,
-                                   svn_string_t **value)
+                                   svn_string_t **value,
+                                   apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
@@ -1638,14 +1639,14 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
                                           ras->url,
                                           rev,
                                           wanted_props,
-                                          ras->pool));
+                                          pool));
 
   /* Build a new property hash, based on the one in the baseline
      resource.  In particular, convert the xml-property-namespaces
      into ones that the client understands.  Strip away the DAV:
      liveprops as well. */
-  filtered_props = apr_hash_make(ras->pool);
-  SVN_ERR (filter_props (filtered_props, baseline, FALSE, ras->pool));
+  filtered_props = apr_hash_make(pool);
+  SVN_ERR (filter_props (filtered_props, baseline, FALSE, pool));
 
   *value = apr_hash_get(filtered_props, name, APR_HASH_KEY_STRING);
 

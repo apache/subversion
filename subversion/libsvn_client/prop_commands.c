@@ -603,7 +603,7 @@ svn_client_revprop_get (const char *propname,
            (set_rev, ra_lib, session, revision, NULL, pool));
 
   /* The actual RA call. */
-  SVN_ERR (ra_lib->rev_prop (session, *set_rev, propname, propval));
+  SVN_ERR (ra_lib->rev_prop (session, *set_rev, propname, propval, pool));
 
   return SVN_NO_ERROR;
 }
