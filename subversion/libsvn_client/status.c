@@ -78,8 +78,9 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
 
   if (strlen (anchor) != strlen (path))
-    /* Using pool cleanup to close it */
-    SVN_ERR (svn_wc_adm_open (&anchor_access, NULL, anchor, FALSE, FALSE,
+    /* Using pool cleanup to close it. This needs to be recursive so that
+       auth data can be stored. */
+    SVN_ERR (svn_wc_adm_open (&anchor_access, NULL, anchor, FALSE, TRUE,
                               pool));
   else
     anchor_access = adm_access;

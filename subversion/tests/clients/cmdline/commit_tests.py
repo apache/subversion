@@ -1462,8 +1462,12 @@ def commit_multiple_wc(sbox):
   # Checkout a second working copy
   wc2_dir = os.path.join(wc_dir, 'A', 'wc2')
   url = svntest.main.current_repo_url
-  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout', url,
-                                                     wc2_dir)
+  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout',
+                                                     '--username',
+                                                     svntest.main.wc_author,
+                                                     '--password',
+                                                     svntest.main.wc_passwd,
+                                                     url, wc2_dir)
   if len (stderr_lines) != 0:
     return 1
 

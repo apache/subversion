@@ -585,27 +585,54 @@ def diff_pure_repository_update_a_file(sbox):
 
   url = svntest.main.current_repo_url
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2', url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd,
+                                                 url)
   if check_update_a_file(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd)
   os.chdir(was_cwd)
   if check_update_a_file(diff_output): return 1
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3', url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd,
+                                                 url)
   if check_add_a_file_in_a_subdir(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd)
   os.chdir(was_cwd)
   if check_add_a_file_in_a_subdir(diff_output): return 1
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5', url)
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd,
+                                                 url)
   if check_update_added_file(diff_output): return 1
 
   os.chdir(wc_dir)
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5',
+                                                 '--username',
+                                                 svntest.main.wc_author,
+                                                 '--password',
+                                                 svntest.main.wc_passwd)
   os.chdir(was_cwd)
   if check_update_added_file(diff_output): return 1
 
