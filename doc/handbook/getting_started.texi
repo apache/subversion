@@ -115,7 +115,7 @@ Subversion has a modular design; it's implemented as a collection of C
 libraries.  Each layer has a well-defined purpose and interface.
 
 If you aren't interested in how Subversion works under the hood, feel
-free to skip this section and move on to the @ref{Installation} and
+free to skip this section and move on to @ref{Installation} and
 @ref{Basics}.
 
 Here's a helpful diagram of Subversion's layers.  Program flow begins at
@@ -232,15 +232,15 @@ copies.
 
 A glance inside the typical .svn directory turns up a bit more than
 usual, however.  The `entries' file contains XML which describes the
-current state of the working copy directory (and which basically serves
-the purposes of CVS's Entries, Root, and Repository files combined).
-But other items present (and not found in CVS) include storage
-locations for the versioned "properties" (the metadata mentioned in
-'Subversion Features' above) and private caches of pristine versions of
-each file.  This latter feature provides the ability to report local
-modifications -- and do reversions -- *without* network access.
-Authentication data is also stored within SVN/, rather than in a single
-.cvspass-like file.
+current state of the working copy directory (and which basically
+serves the purposes of CVS's Entries, Root, and Repository files
+combined).  But other items present (and not found in CVS) include
+storage locations for the versioned "properties" (the metadata
+mentioned in 'Subversion Features' above) and private caches of
+pristine versions of each file.  This latter feature provides the
+ability to report local modifications -- and do reversions --
+@emph{without} network access.  Authentication data is also stored
+within .svn/, rather than in a single .cvspass-like file.
 
 The Subversion "client" library has the broadest responsibility; its job
 is to mingle the functionality of the working-copy library with that of
@@ -275,7 +275,7 @@ from source code.
 @section Basics
 
 
-If you're an existing CVS user, then the first section, @xref{The
+If you're an existing CVS user, then the first section, @ref{The
 Subversion Development Model}, should already be familiar.  You may just
 want to skim it quickly, noting the special definition of "Revision" in
 the second subsection.  At some point, you should probably also read the
@@ -565,11 +565,11 @@ unnecessary delays and friction.
 
 Of course, the merge process needs to be under the users' control.
 Patch is not appropriate for files with rigid formats, like images or
-executables.  Subversion allows users to customize its merging behavior
-on a per-file basis.  You can direct Subversion to refuse to merge
-changes to certain files, and simply present you with the two original
-texts to choose from.  Or, you can direct Subversion to merge using a
-tool which respects the semantics of the file format.
+executables.  Subversion attempts to notice when a file is in a binary
+format, or is of any mime-type other than text/*.  For these
+rigid-format files, Subversion simply presents you with the two
+original texts to choose from.  
+@c ### @xref conflict merging
 
 
 @c ------------------------------------
