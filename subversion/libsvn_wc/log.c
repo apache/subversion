@@ -1279,16 +1279,6 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
     {
       const svn_wc_entry_t *thisdir_entry, *parent_entry;
       svn_wc_entry_t tmp_entry;
-      const char *parent, *bname;
-      svn_wc_adm_access_t *parent_access;
-
-      svn_path_split (svn_wc_adm_access_path (adm_access), &parent,
-                      &bname, pool);
-      SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent,
-                                    pool));
-      SVN_ERR (svn_wc_entry (&parent_entry, parent, parent_access, FALSE,
-                             pool));
-      
       SVN_ERR (svn_wc_entry (&thisdir_entry,
                              svn_wc_adm_access_path (adm_access), adm_access,
                              FALSE, pool));
@@ -1304,17 +1294,29 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 
       /* If revnum of this dir is greater than parent's revnum, then
          recreate 'deleted' entry in parent. */
-      if (thisdir_entry->revision > parent_entry->revision)
-        {
-          tmp_entry.kind = svn_node_dir;
-          tmp_entry.deleted = TRUE;
-          tmp_entry.revision = thisdir_entry->revision;
-          SVN_ERR (svn_wc__entry_modify (parent_access, bname, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_REVISION
-                                         | SVN_WC__ENTRY_MODIFY_KIND
-                                         | SVN_WC__ENTRY_MODIFY_DELETED,
-                                         TRUE, pool));            
-        }
+      {
+        const char *parent, *bname;
+        svn_wc_adm_access_t *parent_access;
+
+        svn_path_split (svn_wc_adm_access_path (adm_access), &parent,
+                        &bname, pool);
+        SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent,
+                                      pool));
+        SVN_ERR (svn_wc_entry (&parent_entry, parent, parent_access, FALSE,
+                               pool));
+        
+        if (thisdir_entry->revision > parent_entry->revision)
+          {
+            tmp_entry.kind = svn_node_dir;
+            tmp_entry.deleted = TRUE;
+            tmp_entry.revision = thisdir_entry->revision;
+            SVN_ERR (svn_wc__entry_modify (parent_access, bname, &tmp_entry,
+                                           SVN_WC__ENTRY_MODIFY_REVISION
+                                           | SVN_WC__ENTRY_MODIFY_KIND
+                                           | SVN_WC__ENTRY_MODIFY_DELETED,
+                                           TRUE, pool));            
+          }
+      }
     }
   else
     {
