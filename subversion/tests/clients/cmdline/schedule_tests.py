@@ -65,9 +65,8 @@ def _tweak_paths(list):
 def add_files(sbox):
   "schedule: add some files"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files, then schedule them for addition
   delta_path = os.path.join(wc_dir, 'delta')
@@ -95,9 +94,8 @@ def add_files(sbox):
 def add_directories(sbox):
   "schedule: add some directories"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some directories, then schedule them for addition
   X_path = os.path.join(wc_dir, 'X')
@@ -125,9 +123,8 @@ def add_directories(sbox):
 def nested_adds(sbox):
   "schedule: add some nested files and directories"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some directories then schedule them for addition
   X_path = os.path.join(wc_dir, 'X')
@@ -213,9 +210,8 @@ def add_executable(sbox):
 def delete_files(sbox):
   "schedule: delete some files"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Schedule some files for deletion
   iota_path = os.path.join(wc_dir, 'iota')
@@ -237,9 +233,8 @@ def delete_files(sbox):
 def delete_dirs(sbox):
   "schedule: delete some directories"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Schedule some directories for deletion (this is recursive!)
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
@@ -505,9 +500,8 @@ def commit_delete_dirs(sbox):
 def unschedule_missing_added(sbox):
   "unschedule addition on missing items"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files and dirs, then schedule them for addition
   file1_path = os.path.join(wc_dir, 'file1')
@@ -554,9 +548,8 @@ def unschedule_missing_added(sbox):
 def delete_missing(sbox):
   "schedule and commit deletion on missing items"
 
+  sbox.build()
   wc_dir = sbox.wc_dir
-
-  svntest.actions.make_repo_and_wc(sbox)
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
@@ -593,8 +586,8 @@ def revert_inside_newly_added_dir(sbox):
   "revert inside a newly added dir"
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
+  
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
