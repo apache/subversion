@@ -3635,9 +3635,10 @@ write_final_current (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__get_write_lock (svn_fs_t *fs,
-                           apr_pool_t *pool)
+/* Get a write lock in FS, creating in in POOL. */
+static svn_error_t *
+get_write_lock (svn_fs_t *fs,
+                apr_pool_t *pool)
 {
   const char *lock_filename;
   svn_node_kind_t kind;
@@ -3656,6 +3657,24 @@ svn_fs_fs__get_write_lock (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__with_write_lock (svn_fs_t *fs,
+                            svn_error_t *(*body)(void *baton,
+                                                 apr_pool_t *pool),
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_error_t *err;
+
+  SVN_ERR (get_write_lock (fs, subpool));
+
+  err = body (baton, subpool);
+
+  svn_pool_destroy (subpool);
+
+  return err;
+}
 
 /* Verify that there registed with FS all the locks necessary to
    permit all the changes associate with TXN_NAME. */
@@ -3734,6 +3753,119 @@ verify_locks (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Baton used for commit_body below. */
+struct commit_baton {
+  svn_revnum_t *new_rev_p;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+};
+
+/* The work-horse for svn_fs_fs__commit, called with the FS write lock. */
+static svn_error_t *
+commit_body (void *baton, apr_pool_t *pool)
+{
+  struct commit_baton *cb = baton;
+  const char *old_rev_filename, *rev_filename, *proto_filename;
+  const char *revprop_filename, *final_revprop;
+  const svn_fs_id_t *root_id, *new_root_id;
+  const char *start_node_id, *start_copy_id;
+  svn_revnum_t old_rev, new_rev;
+  apr_file_t *proto_file;
+  apr_off_t changed_path_offset, offset;
+  char *buf;
+  apr_hash_t *txnprops;
+
+  /* Get the current youngest revision. */
+  SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, cb->fs, pool));
+
+  /* Check to make sure this transaction is based off the most recent
+     revision. */
+  if (cb->txn->base_rev != old_rev)
+    return svn_error_create (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
+                             _("Transaction out of date"));
+
+  /* Locks may have been added (or stolen) between the calling of
+     previous svn_fs.h functions and svn_fs_commit_txn(), so we need
+     to re-examine every changed-path in the txn and re-verify all
+     discovered locks. */
+  SVN_ERR (verify_locks (cb->fs, cb->txn->id, pool));
+
+  /* Get the next node_id and copy_id to use. */
+  SVN_ERR (get_next_revision_ids (&start_node_id, &start_copy_id, cb->fs,
+                                  pool));
+
+  /* We are going to be one better than this puny old revision. */
+  new_rev = old_rev + 1;
+
+  /* Get a write handle on the proto revision file. */
+  proto_filename = path_txn_proto_rev (cb->fs, cb->txn->id, pool);
+  SVN_ERR (svn_io_file_open (&proto_file, proto_filename,
+                             APR_WRITE | APR_APPEND | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
+
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (proto_file, APR_END, &offset, pool));
+
+  /* Write out all the node-revisions and directory contents. */
+  root_id = svn_fs_fs__id_txn_create ("0", "0", cb->txn->id, pool);
+  SVN_ERR (write_final_rev (&new_root_id, proto_file, new_rev, cb->fs, root_id,
+                            start_node_id, start_copy_id, pool));
+
+  /* Write the changed-path information. */
+  SVN_ERR (write_final_changed_path_info (&changed_path_offset, proto_file,
+                                          cb->fs, cb->txn->id, pool));
+
+  /* Write the final line. */
+  buf = apr_psprintf(pool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                     svn_fs_fs__id_offset (new_root_id),
+                     changed_path_offset);
+  SVN_ERR (svn_io_file_write_full (proto_file, buf, strlen (buf), NULL,
+                                   pool));
+
+  SVN_ERR (svn_io_file_flush_to_disk (proto_file, pool));
+  
+  SVN_ERR (svn_io_file_close (proto_file, pool));
+
+  /* Remove any temporary txn props representing 'flags'. */
+  SVN_ERR (svn_fs_fs__txn_proplist (&txnprops, cb->txn, pool));
+  if (txnprops)
+    {
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
+                        APR_HASH_KEY_STRING))
+        SVN_ERR (svn_fs_fs__change_txn_prop 
+                 (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
+                  NULL, pool));
+      
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                        APR_HASH_KEY_STRING))
+        SVN_ERR (svn_fs_fs__change_txn_prop 
+                 (cb->txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                  NULL, pool));
+    }
+
+  /* Move the finished rev file into place. */
+  old_rev_filename = svn_fs_fs__path_rev (cb->fs, old_rev, pool);
+  rev_filename = svn_fs_fs__path_rev (cb->fs, new_rev, pool);
+  SVN_ERR (svn_fs_fs__move_into_place (proto_filename, rev_filename, 
+                                       old_rev_filename, pool));
+
+  /* Move the revprops file into place. */
+  revprop_filename = path_txn_props (cb->fs, cb->txn->id, pool);
+  final_revprop = path_revprops (cb->fs, new_rev, pool);
+  SVN_ERR (svn_fs_fs__move_into_place (revprop_filename, final_revprop, 
+                                       old_rev_filename, pool));
+  
+  /* Update the 'current' file. */
+  SVN_ERR (write_final_current (cb->fs, cb->txn->id, new_rev, start_node_id,
+                                start_copy_id, pool));
+
+  /* Remove this transaction directory. */
+  SVN_ERR (svn_fs_fs__purge_txn (cb->fs, cb->txn->id, pool));
+  
+  *cb->new_rev_p = new_rev;
+  
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__commit (svn_revnum_t *new_rev_p,
@@ -3741,116 +3873,9 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                    svn_fs_txn_t *txn,
                    apr_pool_t *pool)
 {
-  const char *old_rev_filename, *rev_filename, *proto_filename;
-  const char *revprop_filename, *final_revprop;
-  const svn_fs_id_t *root_id, *new_root_id;
-  const char *start_node_id, *start_copy_id;
-  svn_revnum_t old_rev, new_rev;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  apr_file_t *proto_file;
-  apr_off_t changed_path_offset, offset;
-  char *buf;
-  apr_hash_t *txnprops;
+  struct commit_baton cb = { new_rev_p, fs, txn };
 
-  /* First grab a write lock. */
-  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
-
-  /* Get the current youngest revision. */
-  SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, fs, subpool));
-
-  /* Check to make sure this transaction is based off the most recent
-     revision. */
-  if (txn->base_rev != old_rev)
-    {
-      svn_pool_destroy (subpool);
-      return svn_error_create (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                               _("Transaction out of date"));
-    }
-
-  /* Locks may have been added (or stolen) between the calling of
-     previous svn_fs.h functions and svn_fs_commit_txn(), so we need
-     to re-examine every changed-path in the txn and re-verify all
-     discovered locks. */
-  SVN_ERR (verify_locks (fs, txn->id, subpool));
-
-  /* Get the next node_id and copy_id to use. */
-  SVN_ERR (get_next_revision_ids (&start_node_id, &start_copy_id, fs,
-                                  subpool));
-
-  /* We are going to be one better than this puny old revision. */
-  new_rev = old_rev + 1;
-
-  /* Get a write handle on the proto revision file. */
-  proto_filename = path_txn_proto_rev (fs, txn->id, subpool);
-  SVN_ERR (svn_io_file_open (&proto_file, proto_filename,
-                             APR_WRITE | APR_APPEND | APR_BUFFERED,
-                             APR_OS_DEFAULT, subpool));
-
-  offset = 0;
-  SVN_ERR (svn_io_file_seek (proto_file, APR_END, &offset, pool));
-
-  /* Write out all the node-revisions and directory contents. */
-  root_id = svn_fs_fs__id_txn_create ("0", "0", txn->id, subpool);
-  SVN_ERR (write_final_rev (&new_root_id, proto_file, new_rev, fs, root_id,
-                            start_node_id, start_copy_id, subpool));
-
-  /* Write the changed-path information. */
-  SVN_ERR (write_final_changed_path_info (&changed_path_offset, proto_file, fs,
-                                          txn->id, subpool));
-
-  /* Write the final line. */
-  buf = apr_psprintf(subpool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
-                     svn_fs_fs__id_offset (new_root_id),
-                     changed_path_offset);
-  SVN_ERR (svn_io_file_write_full (proto_file, buf, strlen (buf), NULL,
-                                   subpool));
-
-  SVN_ERR (svn_io_file_flush_to_disk (proto_file, subpool));
-  
-  SVN_ERR (svn_io_file_close (proto_file, subpool));
-
-  /* Remove any temporary txn props representing 'flags'. */
-  SVN_ERR (svn_fs_fs__txn_proplist (&txnprops, txn, subpool));
-  if (txnprops)
-    {
-      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
-                        APR_HASH_KEY_STRING))
-        SVN_ERR (svn_fs_fs__change_txn_prop 
-                 (txn, SVN_FS_PROP_TXN_CHECK_OOD,
-                  NULL, subpool));
-      
-      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
-                        APR_HASH_KEY_STRING))
-        SVN_ERR (svn_fs_fs__change_txn_prop 
-                 (txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
-                  NULL, subpool));
-    }
-
-  /* Move the finished rev file into place. */
-  old_rev_filename = svn_fs_fs__path_rev (fs, old_rev, subpool);
-  rev_filename = svn_fs_fs__path_rev (fs, new_rev, subpool);
-  SVN_ERR (svn_fs_fs__move_into_place (proto_filename, rev_filename, 
-                                       old_rev_filename, subpool));
-
-  /* Move the revprops file into place. */
-  revprop_filename = path_txn_props (fs, txn->id, subpool);
-  final_revprop = path_revprops (fs, new_rev, subpool);
-  SVN_ERR (svn_fs_fs__move_into_place (revprop_filename, final_revprop, 
-                                       old_rev_filename, subpool));
-  
-  /* Update the 'current' file. */
-  SVN_ERR (write_final_current (fs, txn->id, new_rev, start_node_id,
-                                start_copy_id, pool));
-
-  /* Remove this transaction directory. */
-  SVN_ERR (svn_fs_fs__purge_txn (fs, txn->id, pool));
-  
-  /* Destroy our subpool and release the lock. */
-  svn_pool_destroy (subpool);
-
-  *new_rev_p = new_rev;
-  
-  return SVN_NO_ERROR;
+  return svn_fs_fs__with_write_lock (fs, commit_body, &cb, pool);
 }
 
 svn_error_t *

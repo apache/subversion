@@ -475,6 +475,32 @@ delete_lock (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Baton used for expire_lock below. */
+struct expire_lock_baton {
+  svn_fs_t *fs;
+  const char *digest_path;
+  svn_lock_t *lock;
+};
+
+/* Remove the lock ELB->lock, stored in ELB->digest_path.
+   Assumes that the write lock is held. */
+static svn_error_t *
+expire_lock (void *baton, apr_pool_t *pool)
+{
+  struct expire_lock_baton *elb = baton;
+  svn_lock_t *lock;
+
+  /* Reread the lock to avoid a race. */
+  SVN_ERR (read_digest_file (NULL, &lock, elb->fs, elb->digest_path, pool));
+  /* If the lock was destroyed, or isn't the same as the lock we are
+     expiring, we don't need to do anything more. */
+  if (! lock || strcmp (elb->lock->token, lock->token) != 0)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (delete_lock (elb->fs, lock, pool));
+  
+  return SVN_NO_ERROR;
+}
 
 /* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
    TRUE if the caller (or one of its callers) has taken out the
@@ -501,25 +527,8 @@ get_lock (svn_lock_t **lock_p,
         SVN_ERR (delete_lock (fs, lock, pool));
       else
         {
-          /* Grab the fs write lock. */
-          apr_pool_t *subpool = svn_pool_create (pool);
-          SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
-          
-          /* Reread the lock to avoid a race. */
-          SVN_ERR (read_digest_file (NULL, &lock, fs, digest_path, pool));
-          if (! lock)
-            {
-              svn_pool_destroy (subpool);
-              return svn_fs_fs__err_no_such_lock (fs, path);
-            }
-
-          /* Check to make sure that the lock that we read the second
-             time around is actually expired. */
-          if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
-            SVN_ERR (delete_lock (fs, lock, pool));
-          
-          /* Destroy our subpool and release the fs write lock. */
-          svn_pool_destroy (subpool);
+          struct expire_lock_baton elb = { fs, digest_path, lock };
+          SVN_ERR (svn_fs_fs__with_write_lock (fs, expire_lock, &elb, pool));
         }
       *lock_p = NULL;
       return svn_fs_fs__err_lock_expired (fs, lock->token); 
@@ -670,6 +679,163 @@ svn_fs_fs__allow_locked_operation (const char *path,
   return SVN_NO_ERROR;
 }
 
+struct lock_baton {
+  svn_lock_t **lock_p;
+  svn_fs_t *fs;
+  const char *path;
+  const char *token;
+  const char *comment;
+  int timeout;
+  svn_revnum_t current_rev;
+  svn_boolean_t steal_lock;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+lock_body (void *baton, apr_pool_t *pool)
+{
+  struct lock_baton *lb = baton;
+  svn_node_kind_t kind;
+  svn_lock_t *existing_lock;
+  svn_lock_t *lock;
+  svn_fs_root_t *root;
+  svn_revnum_t youngest;
+
+  /* Until we implement directory locks someday, we only allow locks
+     on files or non-existent paths. */
+  /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
+     library dependencies, which are not portable. */
+  SVN_ERR (lb->fs->vtable->youngest_rev (&youngest, lb->fs, pool));
+  SVN_ERR (lb->fs->vtable->revision_root (&root, lb->fs, youngest, pool));
+  SVN_ERR (svn_fs_fs__check_path (&kind, root, lb->path, pool));
+  if (kind == svn_node_dir)
+    return svn_fs_fs__err_not_file (lb->fs, lb->path);
+
+  /* While our locking implementation easily supports the locking of
+     nonexistent paths, we deliberately choose not to allow such madness. */
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              _("Path '%s' doesn't exist in HEAD revision"),
+                              lb->path);
+
+  /* We need to have a username attached to the fs. */
+  if (!lb->fs->access_ctx || !lb->fs->access_ctx->username)
+    return svn_fs_fs__err_no_user (lb->fs);
+
+  /* Is the caller attempting to lock an out-of-date working file? */
+  if (SVN_IS_VALID_REVNUM(lb->current_rev))
+    {
+      svn_revnum_t created_rev;
+      SVN_ERR (svn_fs_fs__node_created_rev (&created_rev, root, lb->path,
+                                            pool));
+
+      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
+         apparently somebody is trying to lock something in their
+         working copy, but somebody else has deleted the thing
+         from HEAD.  That counts as being 'out of date'. */     
+      if (! SVN_IS_VALID_REVNUM(created_rev))
+        return svn_error_createf
+          (SVN_ERR_FS_OUT_OF_DATE, NULL,
+           _("Path '%s' doesn't exist in HEAD revision"), lb->path);
+
+      if (lb->current_rev < created_rev)
+        return svn_error_createf
+          (SVN_ERR_FS_OUT_OF_DATE, NULL,
+           _("Lock failed: newer version of '%s' exists"), lb->path);
+    }
+
+  /* If the caller provided a TOKEN, we *really* need to see
+     if a lock already exists with that token, and if so, verify that
+     the lock's path matches PATH.  Otherwise we run the risk of
+     breaking the 1-to-1 mapping of lock tokens to locked paths. */
+  /* ### TODO:  actually do this check.  This is tough, because the
+     schema doesn't supply a lookup-by-token mechanism. */
+
+  /* Is the path already locked?   
+
+     Note that this next function call will automatically ignore any
+     errors about {the path not existing as a key, the path's token
+     not existing as a key, the lock just having been expired}.  And
+     that's totally fine.  Any of these three errors are perfectly
+     acceptable to ignore; it means that the path is now free and
+     clear for locking, because the fsfs funcs just cleared out both
+     of the tables for us.   */
+  SVN_ERR (get_lock_helper (lb->fs, &existing_lock, lb->path, TRUE, pool));
+  if (existing_lock)
+    {
+      if (! lb->steal_lock)
+        {
+          /* Sorry, the path is already locked. */
+          return svn_fs_fs__err_path_locked (lb->fs, existing_lock);
+        }
+      else
+        {
+          /* STEAL_LOCK was passed, so fs_username is "stealing" the
+             lock from lock->owner.  Destroy the existing lock. */
+          SVN_ERR (delete_lock (lb->fs, existing_lock, pool));
+        }          
+    }
+
+  /* Create our new lock, and add it to the tables.
+     Ensure that the lock is created in the correct pool. */
+  lock = svn_lock_create (lb->pool);
+  if (lb->token)
+    lock->token = apr_pstrdup (lb->pool, lb->token);
+  else
+    SVN_ERR (svn_fs_fs__generate_lock_token (&(lock->token), lb->fs,
+                                             lb->pool));
+  lock->path = apr_pstrdup (lb->pool, lb->path);
+  lock->owner = apr_pstrdup (lb->pool, lb->fs->access_ctx->username);
+  lock->comment = apr_pstrdup (lb->pool, lb->comment);
+  lock->creation_date = apr_time_now();
+  if (lb->timeout)
+    lock->expiration_date = lock->creation_date
+      + apr_time_from_sec (lb->timeout);
+
+  SVN_ERR (set_lock (lb->fs, lock, pool));
+  *lb->lock_p = lock;
+
+  return SVN_NO_ERROR;
+}
+
+struct unlock_baton {
+  svn_fs_t *fs;
+  const char *path;
+  const char *token;
+  svn_boolean_t break_lock;
+};
+
+static svn_error_t *
+unlock_body (void *baton, apr_pool_t *pool)
+{
+  struct unlock_baton *ub = baton;
+  svn_lock_t *lock;
+
+  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
+  SVN_ERR (get_lock (&lock, ub->fs, ub->path, TRUE, pool));
+  
+  /* Unless breaking the lock, we do some checks. */
+  if (! ub->break_lock)
+    {
+      /* Sanity check:  the incoming token should match lock->token. */
+      if (strcmp (ub->token, lock->token) != 0)
+        return svn_fs_fs__err_no_such_lock (ub->fs, lock->path);
+
+      /* There better be a username attached to the fs. */
+      if (! (ub->fs->access_ctx && ub->fs->access_ctx->username))
+        return svn_fs_fs__err_no_user (ub->fs);
+
+      /* And that username better be the same as the lock's owner. */
+      if (strcmp (ub->fs->access_ctx->username, lock->owner) != 0)
+        return svn_fs_fs__err_lock_owner_mismatch
+          (ub->fs, ub->fs->access_ctx->username, lock->owner);
+    }  
+
+  /* Remove lock and lock token files. */
+  SVN_ERR (delete_lock (ub->fs, lock, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*** Public API implementations ***/
@@ -685,114 +851,22 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                  svn_boolean_t steal_lock,
                  apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  svn_lock_t *existing_lock;
-  svn_lock_t *lock;
-  svn_fs_root_t *root;
-  svn_revnum_t youngest;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  struct lock_baton lb;
 
   SVN_ERR (svn_fs_fs__check_fs (fs));
   path = svn_fs_fs__canonicalize_abspath (path, pool);
 
-  /* Until we implement directory locks someday, we only allow locks
-     on files or non-existent paths. */
-  /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
-     library dependencies, which are not portable. */
-  SVN_ERR (fs->vtable->youngest_rev (&youngest, fs, pool));
-  SVN_ERR (fs->vtable->revision_root (&root, fs, youngest, pool));
-  SVN_ERR (svn_fs_fs__check_path (&kind, root, path, pool));
-  if (kind == svn_node_dir)
-    return svn_fs_fs__err_not_file (fs, path);
+  lb.lock_p = lock_p;
+  lb.fs = fs;
+  lb.path = path;
+  lb.token = token;
+  lb.comment = comment;
+  lb.timeout = timeout;
+  lb.current_rev = current_rev;
+  lb.steal_lock = steal_lock;
+  lb.pool = pool;
 
-  /* While our locking implementation easily supports the locking of
-     nonexistent paths, we deliberately choose not to allow such madness. */
-  if (kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                              "Path '%s' doesn't exist in HEAD revision",
-                              path);
-
-  /* We need to have a username attached to the fs. */
-  if (!fs->access_ctx || !fs->access_ctx->username)
-    return svn_fs_fs__err_no_user (fs);
-
-  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
-
-  /* Is the caller attempting to lock an out-of-date working file? */
-  if (SVN_IS_VALID_REVNUM(current_rev))
-    {
-      svn_revnum_t created_rev;
-      SVN_ERR (svn_fs_fs__node_created_rev (&created_rev, root, path, pool));
-
-      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
-         apparently somebody is trying to lock something in their
-         working copy, but somebody else has deleted the thing
-         from HEAD.  That counts as being 'out of date'. */     
-      if (! SVN_IS_VALID_REVNUM(created_rev))
-        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                  "Path '%s' doesn't exist in HEAD revision.",
-                                  path);
-
-      if (current_rev < created_rev)
-        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                  "Lock failed: newer version of '%s' exists.",
-                                  path);
-    }
-
-  /* If the caller provided a TOKEN, we *really* need to see
-     if a lock already exists with that token, and if so, verify that
-     the lock's path matches PATH.  Otherwise we run the risk of
-     breaking the 1-to-1 mapping of lock tokens to locked paths. */
-  /* ### TODO:  actually do this check.  This is tough, because the
-     schema doesn't supply a lookup-by-token mechanism.
-  if (token)
-    {
-    }
-  */
-
-  /* Is the path already locked?   
-
-     Note that this next function call will automatically ignore any
-     errors about {the path not existing as a key, the path's token
-     not existing as a key, the lock just having been expired}.  And
-     that's totally fine.  Any of these three errors are perfectly
-     acceptable to ignore; it means that the path is now free and
-     clear for locking, because the fsfs funcs just cleared out both
-     of the tables for us.   */
-  SVN_ERR (get_lock_helper (fs, &existing_lock, path, TRUE, pool));
-  if (existing_lock)
-    {
-      if (! steal_lock)
-        {
-          /* Sorry, the path is already locked. */
-          return svn_fs_fs__err_path_locked (fs, existing_lock);
-        }
-      else
-        {
-          /* STEAL_LOCK was passed, so fs_username is "stealing" the
-             lock from lock->owner.  Destroy the existing lock. */
-          SVN_ERR (delete_lock (fs, existing_lock, pool));
-        }          
-    }
-
-  /* Create our new lock, and add it to the tables. */    
-  lock = svn_lock_create (pool);
-  if (token)
-    lock->token = apr_pstrdup (pool, token);
-  else
-    SVN_ERR (svn_fs_fs__generate_lock_token (&(lock->token), fs, pool));
-  lock->path = apr_pstrdup (pool, path);
-  lock->owner = apr_pstrdup (pool, fs->access_ctx->username);
-  lock->comment = apr_pstrdup (pool, comment);
-  lock->creation_date = apr_time_now();
-  if (timeout)
-    lock->expiration_date = lock->creation_date + apr_time_from_sec (timeout);
-
-  SVN_ERR (set_lock (fs, lock, pool));
-  *lock_p = lock;
-
-  /* Destroy our subpool and release the fs write lock. */
-  svn_pool_destroy (subpool);
+  SVN_ERR (svn_fs_fs__with_write_lock (fs, lock_body, &lb, pool));
 
   return SVN_NO_ERROR;
 }
@@ -827,40 +901,17 @@ svn_fs_fs__unlock (svn_fs_t *fs,
                    svn_boolean_t break_lock,
                    apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_lock_t *lock;
+  struct unlock_baton ub;
 
   SVN_ERR (svn_fs_fs__check_fs (fs));
   path = svn_fs_fs__canonicalize_abspath (path, pool);
 
-  SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
+  ub.fs = fs;
+  ub.path = path;
+  ub.token = token;
+  ub.break_lock = break_lock;
 
-  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (get_lock (&lock, fs, path, TRUE, pool));
-  
-  /* Unless breaking the lock, we do some checks. */
-  if (! break_lock)
-    {
-      /* Sanity check:  the incoming token should match lock->token. */
-      if (strcmp (token, lock->token) != 0)
-        return svn_fs_fs__err_no_such_lock (fs, lock->path);
-
-      /* There better be a username attached to the fs. */
-      if (! (fs->access_ctx && fs->access_ctx->username))
-        return svn_fs_fs__err_no_user (fs);
-
-      /* And that username better be the same as the lock's owner. */
-      if (strcmp (fs->access_ctx->username, lock->owner) != 0)
-        return svn_fs_fs__err_lock_owner_mismatch (fs, 
-                                                   fs->access_ctx->username,
-                                                   lock->owner);
-    }  
-
-  /* Remove lock and lock token files. */
-  SVN_ERR (delete_lock (fs, lock, pool));
-
-  /* Destroy our subpool and release the fs write lock. */
-  svn_pool_destroy (subpool);
+  SVN_ERR (svn_fs_fs__with_write_lock (fs, unlock_body, &ub, pool));
 
   return SVN_NO_ERROR;
 }
