@@ -466,7 +466,6 @@ directory_elements_diff (struct dir_baton *dir_baton,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_boolean_t in_anchor_not_target;
-  svn_boolean_t modified;
 
   /* This directory should have been been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
@@ -483,6 +482,29 @@ directory_elements_diff (struct dir_baton *dir_baton,
     (dir_baton->edit_baton->target
      && !svn_path_compare_paths (dir_baton->path,
                                  dir_baton->edit_baton->anchor));
+
+  /* Check for property mods on this directory. */
+  if (!in_anchor_not_target)
+    {
+      svn_boolean_t modified;
+
+      SVN_ERR (svn_wc_props_modified_p (&modified, dir_baton->path,
+                                        dir_baton->pool));
+      if (modified)
+        {
+          apr_array_header_t *propchanges;
+          apr_hash_t *baseprops;
+
+          SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
+                                          dir_baton->path->data,
+                                          dir_baton->pool));
+              
+          SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
+                   (dir_baton->path->data,
+                    propchanges, baseprops,
+                    dir_baton->edit_baton->diff_cmd_baton));
+        }
+    }
 
   SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path, dir_baton->pool));
 
@@ -534,23 +556,6 @@ directory_elements_diff (struct dir_baton *dir_baton,
                  deleted. We need to show deletion diffs for these
                  files. If it was a file we need to show a deletion diff
                  for that file. */
-            }
-
-            /* Check for property mods on this directory. */
-          SVN_ERR (svn_wc_props_modified_p (&modified, path,
-                                            dir_baton->pool));
-          if (modified)
-            {
-              apr_array_header_t *propchanges;
-              apr_hash_t *baseprops;
-
-              SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
-                                              path->data, dir_baton->pool));
-              
-              SVN_ERR (dir_baton->edit_baton->diff_callbacks->props_changed
-                       (path->data,
-                        propchanges, baseprops,
-                        dir_baton->edit_baton->diff_cmd_baton));
             }
 
           /* Check the subdir if in the anchor (the subdir is the target), or
