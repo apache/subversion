@@ -849,10 +849,9 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
 {
   svn_ra_dav_resource_t *rsrc;
   apr_hash_index_t *hi;
-  int len;
   apr_hash_t *resources;
   const char *final_url;
-  char *stripped_final_url;
+  int final_url_n_components;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
@@ -888,13 +887,9 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                                      final_url, NE_DEPTH_ONE,
                                      NULL, NULL /* all props */, pool) );
       
-      /* Clean up any trailing slashes on final_url, creating
-         stripped_final_url */
-      stripped_final_url = apr_pstrdup(pool, final_url);
-      len = strlen(final_url);
-      if (len > 1 && final_url[len - 1] == '/')
-        stripped_final_url[len - 1] = '\0';
-      
+      /* Count the number of path components in final_url. */
+      final_url_n_components = svn_path_component_count(final_url);
+
       /* Now we have a hash that maps a bunch of url children to resource
          objects.  Each resource object contains the properties of the
          child.   Parse these resources into svn_dirent_t structs. */
@@ -915,8 +910,11 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           childname =  key;
           resource = val;
           
-          /* Skip the effective '.' entry that comes back from NE_DEPTH_ONE */
-          if (strcmp(resource->url, stripped_final_url) == 0)
+          /* Skip the effective '.' entry that comes back from NE_DEPTH_ONE.
+             The children must have one more component then final_url.
+             Note that we can't just strcmp the URLs because of URL encoding
+             differences (i.e. %3c vs. %3C etc.) */
+          if (svn_path_component_count(childname) == final_url_n_components)
             continue;
           
           entry = apr_pcalloc (pool, sizeof(*entry));
