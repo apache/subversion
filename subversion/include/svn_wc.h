@@ -71,11 +71,11 @@
 
 
 
-/* Where you see arguments of the form
+/* Where you see an argument like
  * 
- *   (apr_array_header_t *) paths
+ *   apr_array_header_t *paths
  *
- * that means an array of (svn_string_t *) types, each one of which is
+ * it means an array of (svn_string_t *) types, each one of which is
  * a file or directory path.  This is so we can do atomic operations
  * on any random set of files and directories.
  */
