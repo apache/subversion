@@ -345,7 +345,7 @@ commit_item_array_to_list(const apr_array_header_t *array)
 }
 
 
-static svn_error_t * convert_python_error(apr_pool_t *pool)
+static svn_error_t * convert_python_error(void)
 {
   return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
                           "the Python callback raised an exception");
@@ -399,7 +399,7 @@ static svn_error_t * close_baton(void *baton, const char *method)
                                     ib->baton ? (char *)"(O)" : NULL,
                                     ib->baton)) == NULL)
     {
-      err = convert_python_error(ib->pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -437,7 +437,7 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_target_revision",
                                     (char *)"l", target_revision)) == NULL)
     {
-      err = convert_python_error(ib->pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -466,7 +466,7 @@ static svn_error_t * thunk_open_root(void *edit_baton,
                                     (char *)"lO&", base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error(dir_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -495,7 +495,7 @@ static svn_error_t * thunk_delete_entry(const char *path,
                                     (char *)"slOO&", path, revision, ib->baton,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -527,7 +527,7 @@ static svn_error_t * thunk_add_directory(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error(dir_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -558,7 +558,7 @@ static svn_error_t * thunk_open_directory(const char *path,
                                     base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error(dir_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -588,7 +588,7 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
                                     value->data, value->len,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -626,7 +626,7 @@ static svn_error_t * thunk_add_file(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      err = convert_python_error(file_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -658,7 +658,7 @@ static svn_error_t * thunk_open_file(const char *path,
                                     base_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      err = convert_python_error(file_pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -701,7 +701,7 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 
   if (result == NULL)
     {
-      err = convert_python_error(hb->pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -733,7 +733,7 @@ thunk_apply_textdelta(void *file_baton,
                                     (char *)"(Oss)", ib->baton,
                                     base_checksum, result_checksum)) == NULL)
     {
-      err = convert_python_error(ib->pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -780,7 +780,7 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
                                     value->data, value->len,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -887,23 +887,46 @@ void svn_swig_py_notify_func(void *baton,
   PyObject *function = baton;
   PyObject *result;
 
-  if (function != NULL && function != Py_None)
+  if (function == NULL || function == Py_None)
+    return;
+
+  acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"(siisiii)", 
+                                      path, action, kind,
+                                      mime_type,
+                                      content_state, prop_state, 
+                                      revision)) != NULL)
     {
-      acquire_py_lock();
-
-      if ((result = PyObject_CallFunction(function, 
-                                          (char *)"(siisiii)", 
-                                          path, action, kind,
-                                          mime_type,
-                                          content_state, prop_state, 
-                                          revision)) != NULL)
-        {
-          Py_XDECREF(result);
-        }
-
-      release_py_lock();
+      Py_XDECREF(result);
     }
+  release_py_lock();
 }
+
+svn_error_t *
+svn_swig_py_cancel_func(void *cancel_baton)
+{
+  PyObject *function = cancel_baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return SVN_NO_ERROR;
+
+  acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, NULL)) != NULL)
+    {
+      err = convert_python_error();
+      goto finished;
+    }
+
+  Py_DECREF(result);
+
+ finished:
+  release_py_lock();
+  return err;
+}
+
 
 svn_error_t *
 svn_swig_py_get_commit_log_func(const char **log_msg,
@@ -944,7 +967,7 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
                                       make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(cmt_items);
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 
@@ -967,7 +990,7 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
      
   Py_DECREF(result);
   PyErr_SetString(PyExc_TypeError, "not a string");
-  err = convert_python_error(pool);
+  err = convert_python_error();
 
  finished:
   release_py_lock();
@@ -1014,7 +1037,7 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
                                       make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(chpaths);
-      err = convert_python_error(pool);
+      err = convert_python_error();
       goto finished;
     }
 

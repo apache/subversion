@@ -787,6 +787,14 @@ void svn_swig_java_notify_func(void *baton,
     /* TODO: svn_swig_java_notify_func is not implemented yet */
 }
 
+/* a cancel function that executes a Java method on an object which is
+   passed in via the cancel_baton argument */
+svn_error_t *svn_swig_java_cancel_func(void *cancel_baton)
+{
+    /* TODO: svn_swig_java_cancel_func is not implemented yet */
+    return SVN_NO_ERROR;
+}
+
 /* thunked commit log fetcher */
 svn_error_t *svn_swig_java_get_commit_log_func (const char **log_msg,
                                               const char **tmp_file,

@@ -93,6 +93,10 @@ void svn_swig_java_notify_func(void *baton,
                                svn_wc_notify_state_t prop_state,
                                svn_revnum_t revision);
 
+/* a cancel function that executes a Java method on an object passed
+   in via the cancel_baton argument. */
+svn_error_t *svn_swig_java_cancel_func(void *cancel_baton);
+
 /* thunked commit log fetcher */
 svn_error_t *svn_swig_java_get_commit_log_func(const char **log_msg,
                                               const char **tmp_file,
