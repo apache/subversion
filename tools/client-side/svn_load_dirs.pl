@@ -208,7 +208,7 @@ chdir($temp_dir) or
 # fixed directory name.
 my $checkout_dir_name = 'ZZZ';
 print "Checking out $repos_base_uri into $temp_dir/$checkout_dir_name\n";
-read_from_process('svn', 'co', $repos_base_uri, '-d', $checkout_dir_name);
+read_from_process('svn', 'co', $repos_base_uri, $checkout_dir_name);
 
 # Change into the top level directory of the repository and record the
 # absolute path to this location because the script will come back
