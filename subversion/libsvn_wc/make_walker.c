@@ -96,8 +96,9 @@ maybe_prepend_dest (svn_string_t **name,
 
   if (wb->dest_dir && (svn_path_isempty (parent, SVN_PATH_LOCAL_STYLE)))
     {
-      *name = svn_path_add_component (wb->dest_dir, *name,
-                                      SVN_PATH_LOCAL_STYLE, wb->pool);
+      svn_string_t *new = svn_string_dup (wb->dest_dir, wb->pool);
+      svn_path_add_component (new, *name, SVN_PATH_LOCAL_STYLE, wb->pool);
+      *name = new;
     }
 }
 
@@ -177,8 +178,8 @@ add_directory (svn_string_t *name,
   /* kff todo: fooo this apparently didn't work. */
   maybe_prepend_dest (&name, wb, path_so_far);
 
-  npath = svn_path_add_component (path_so_far, name,
-                                  SVN_PATH_LOCAL_STYLE, wb->pool);
+  npath = svn_string_dup (path_so_far, wb->pool);
+  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
 
   printf ("%s/    (ancestor == %s, %d)\n",
           npath->data, ancestor_path->data, (int) ancestor_version);
@@ -267,8 +268,9 @@ add_file (svn_string_t *name,
   /* fooo working here -- don't forget to set *file_baton! */
 
   maybe_prepend_dest (&name, wb, path_so_far);
-  npath = svn_path_add_component (path_so_far, name,
-                                  SVN_PATH_LOCAL_STYLE, wb->pool);
+
+  npath = svn_string_dup (path_so_far, wb->pool);
+  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
   printf ("%s\n   ", npath->data);
 
   return SVN_NO_ERROR;
@@ -433,8 +435,8 @@ svn_wc_apply_delta (void *delta_src,
   telescoping_path = svn_string_create ("", pool);
 
   /* ... and walk! */
-  err = svn_delta_parse (read_fn, delta_src,
-                         &change_walker, &w_baton, telescoping_path, pool);
+  err = svn_XML_parse (read_fn, delta_src,
+                       &change_walker, &w_baton, telescoping_path, pool);
 
   return err;
 }
