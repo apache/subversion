@@ -186,6 +186,40 @@ reopen_trivial_transaction (const char **msg)
 }
 
 
+static int
+list_live_transactions (const char **msg)
+{
+  svn_fs_t *fs;
+  char **txn_list;
+
+  *msg = "list active transactions";
+
+  /* Open the FS. */
+  fs = svn_fs_new (pool);
+  if (fs == NULL)
+    return fail();
+
+  if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
+    return fail();
+
+  /* Get the list of transactions. */
+  if (SVN_NO_ERROR != svn_fs_list_transactions (&txn_list, fs, pool))
+    return fail();
+
+  /* Check the list. It should have exactly one entry, "0". */
+  if (txn_list[0] == NULL
+      || txn_list[1] != NULL
+      || strcmp (txn_list[0], "0") != 0)
+    return fail();
+
+  /* Close the FS. */
+  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
+    return fail();
+
+  return 0;
+}
+
+
 
 /* The test table.  */
 
@@ -195,6 +229,7 @@ int (*test_funcs[]) (const char **msg) = {
   open_berkeley_filesystem,
   trivial_transaction,
   reopen_trivial_transaction,
+  list_live_transactions,
   0
 };
 
