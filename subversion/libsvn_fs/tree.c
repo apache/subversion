@@ -3509,7 +3509,6 @@ find_relevant_copies (apr_hash_t *revs,
           dag_node_t *node;
           const char *dst_path;
           const char *remainder;
-          svn_revnum_t *copy_rev;
 
           /* Figure out the destination path of the copy operation. */
           SVN_ERR (svn_fs__dag_get_node (&node, fs, copy->dst_noderev_id, 
@@ -3532,6 +3531,11 @@ find_relevant_copies (apr_hash_t *revs,
 
           if (remainder)
             {
+              const char *txn_id = svn_fs__id_txn_id (copy->dst_noderev_id);
+              svn_revnum_t *rev;
+              struct node_id_args nid_args;
+              const svn_fs_id_t *src_id;
+
               /* If we get here, then our current path is the
                  destination of, or the child of the destination of, a
                  copy.  We will translate its previous path under the
@@ -3540,20 +3544,25 @@ find_relevant_copies (apr_hash_t *revs,
                  about, and carry on. */
               cur_path = svn_path_join (copy->src_path, remainder, 
                                         trail->pool);
-              copy_rev = apr_palloc (apr_hash_pool_get (revs), 
-                                     sizeof (*copy_rev));
-              SVN_ERR (svn_fs__txn_get_revision 
-                       (copy_rev, fs, 
-                        svn_fs__id_txn_id (copy->dst_noderev_id), trail));
-              if (SVN_IS_VALID_REVNUM (*copy_rev))
-                apr_hash_set (revs, (void *)copy_rev, 
-                              sizeof (copy_rev), (void *)1);
+              rev = apr_palloc (apr_hash_pool_get (revs), sizeof (*rev));
+              SVN_ERR (svn_fs__txn_get_revision (rev, fs, txn_id, trail));
+              if (SVN_IS_VALID_REVNUM (*rev))
+                apr_hash_set (revs, (void *)rev, sizeof (rev), (void *)1);
+
+              /* Jump back to the copy-id of the copy source. */
+              nid_args.root = make_txn_root (fs, txn_id, trail->pool);
+              nid_args.path = cur_path;
+              nid_args.id_p = &src_id;
+              SVN_ERR (txn_body_node_id (&nid_args, trail));
+              strcpy (cur_id, svn_fs__id_copy_id (src_id));
+            }
+          else
+            {
+              svn_fs__prev_key (cur_id, &len, cur_id);
+              if (len == 0)
+                abort();
             }
         }
-
-      svn_fs__prev_key (cur_id, &len, cur_id);
-      if (len == 0)
-        abort();
     }
 
   /* Sanity check.  We should have been able to been able to walk back
