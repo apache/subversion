@@ -393,7 +393,7 @@ $ svn log -r 1729:{2/17/02}
             </screen>
 
             <para>When adding a directory, the default behavior of
-              svn add is to recurse:</para>
+              <command>svn add</command> is to recurse:</para>
             
             <screen>
   $ svn add testdir
@@ -428,7 +428,8 @@ $ svn log -r 1729:{2/17/02}
             <title>Description</title>
             
             <para>Outputs the contents of the specified files or URLs.
-              For listing the contents of directories, see svn list.</para>
+              For listing the contents of directories, see <command>svn
+              list</command>.</para>
           </refsect1>
 
           <refsect1>
@@ -631,8 +632,8 @@ working-copies
           <refsect1>
             <title>Examples</title>
 
-            <para>Well, there's not much to the examples here as svn
-              cleanup generates no output.  If you pass no PATH, '.'
+            <para>Well, there's not much to the examples here as <command>svn
+              cleanup</command> generates no output.  If you pass no PATH, '.'
               is used.</para>
 
             <screen>
@@ -888,8 +889,8 @@ Committed revision 9.
 
             <tip>
               <para>This is the easiest way to 'tag' a revision in
-                your repository&mdash;just svn copy that revision
-                (usually HEAD) into your tags directory.</para>
+                your repository&mdash;just <command>svn copy</command>
+                that revision (usually HEAD) into your tags directory.</para>
             </tip>
 
             <screen>
@@ -1103,7 +1104,7 @@ D         over-there
             <title>Examples</title>
 
             <para>Compare BASE and your working copy (One of the most
-              popular uses of svn diff):</para>
+              popular uses of <command>svn diff</command>):</para>
 
             <screen>
 $ svn diff COMMITTERS 
@@ -1633,8 +1634,8 @@ _      24     harry       0 Jan 18 11:27 examples/
             <title>Examples</title>
 
             <para>You can see the log messages for all the paths that
-              changed in your working copy by running svn log from the
-              top:</para>
+              changed in your working copy by running <command>svn
+              log</command> from the top:</para>
 
             <screen>
 $ svn log
@@ -1771,8 +1772,9 @@ rev 27: ...
 
 
             <warning>
-              <para>If you run svn log on a specific path and provide
-                a specific revision and get no output at all</para>
+              <para>If you run <command>svn log</command> on a specific
+                path and provide a specific revision and get no output
+                at all</para>
 
               <screen>
 $ svn log -r 20 http://svn.red-bean.com/untouched.txt
@@ -2544,10 +2546,11 @@ $ svn status
             </screen>
 
             <warning>
-              <para>If you provide no targets to svn revert, it will
-                do nothing&mdash;to protect you from accidentally
-                losing changes in your working copy, svn revert
-                requires you to provide at least one target.</para>
+              <para>If you provide no targets to <command>svn
+                revert</command>, it will do nothing&mdash;to protect
+                you from accidentally losing changes in your working
+                copy, <command>svn revert</command> requires you to
+                provide at least one target.</para>
             </warning>
 
           </refsect1>
@@ -2625,11 +2628,11 @@ foo.c.r31
 
             <warning>
               <para>You <emphasis>can</emphasis> just remove the
-                conflict files and commit, but svn resolve fixes up
-                some bookkeeping data in the working copy
-                administrative area in addition to removing the
-                conflict files, so we recommend that you use this
-                command.</para>
+                conflict files and commit, but <command>svn
+                resolve</command> fixes up some bookkeeping data
+                in the working copy administrative area in addition
+                to removing the conflict files, so we recommend that
+                you use this command.</para>
             </warning>
 
           </refsect1>
@@ -2931,8 +2934,8 @@ A  +         965       687      harry   wc/qax.c
 Head revision:   981
             </screen>
 
-            <para>For many more examples of svn status, see <xref
-                linkend="svn-ch-3-sect-4.3.1"/>.</para>
+            <para>For many more examples of <command>svn status</command>,
+              see <xref linkend="svn-ch-3-sect-4.3.1"/>.</para>
 
           </refsect1>
         </refentry>
@@ -3686,8 +3689,9 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
         holds the repository, it takes paths as targets and not
         URLs.</para>
 
-      <para>If no revision or transaction is specified, svnlook defaults
-        to the youngest (most recent) revision of the repository.</para>
+      <para>If no revision or transaction is specified,
+        <command>svnlook</command> defaults to the youngest (most
+        recent) revision of the repository.</para>
       
       <sect2 id="svn-ch-8-sect-3.1">
         <title>Switches</title>
@@ -3704,11 +3708,11 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
           <varlistentry>
             <term><option>--no-diff-deleted</option></term>
             <listitem>
-              <para>Prevents svnlook from printing differences for
-                deleted files.  The default behavior when a file is
-                deleted in a transaction/revision is to print the same
-                differences that you would see if you had left the
-                file but removed all the content.</para>
+              <para>Prevents <command>svnlook</command> from printing
+                differences for deleted files.  The default behavior
+                when a file is deleted in a transaction/revision is
+                to print the same differences that you would see if
+                you had left the file but removed all the content.</para>
             </listitem>
           </varlistentry>
 
