@@ -192,8 +192,7 @@ def dump_move_dir_modify_child(sbox):
 
 def dump_quiet(sbox):
   "test 'svnadmin dump --quiet'"
-  if sbox.build():
-    return 1
+  sbox.build()
 
   output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
   if svntest.actions.compare_and_display_lines(
