@@ -131,7 +131,14 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 # The default prefix for the Subject: header
 subject_prefix =
 
-# The default From: and To: addresses for commit messages
+# The default From: and To: addresses for commit messages.  If the
+# from_addr is not specified or it is specified but there is no text
+# after the `=', then the revision's author is used as the from
+# address.  If the revision author is not specified, such as when a
+# commit is done without requiring authentication and authorization,
+# then the string 'no_author' is used.  You can specify a default
+# from_addr here and if you want to have a particular for_repos group
+# use the author as the from address, you can use "from_addr =".
 from_addr = invalid@example.com
 to_addr = invalid@example.com
 
@@ -155,6 +162,8 @@ suppress_deletes = yes
 # subject_prefix = [commit]
 # # override the default, sending these elsewhere
 # to_addr = www-commits@example.com
+# # use the revision author as the from address
+# from_addr =
 #
 # [another-example]
 # # commits to personal repositories should go to that person
