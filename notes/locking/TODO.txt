@@ -7,10 +7,8 @@ MUST HAVE
 
 * svn update removes defunct locks
   - Send lock tokens over ra_dav (sussman)
-  - WC stuff (lundblad)
-  - Client changes  (ask lundblad?)
 
-* svn status -u shows lock info from repos.  (lundblad?)
+* svn status -u shows lock info from repos.  (lundblad)
 
 * research future ra_dav shim removal plan:  will it work? (sussman)
 
