@@ -284,9 +284,9 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
     if (granted_access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
         /* Check access on entries below the current repos path */
         granted_access = parse_authz_sections(cfg,
-					      repos_name, original_repos_path,
-					      user, required_access,
-					      pool);
+                                              repos_name, original_repos_path,
+                                              user, required_access,
+                                              pool);
     }
 
     return granted_access;
