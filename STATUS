@@ -42,13 +42,6 @@ Candidate changes:
       +1: lundblad, jaa
       +0: philip
 
-  * r11592
-    Improve the speed of many WC operations by removing a redundant stat.
-    Justification:
-      Simple fix that shows 60% speed up of "svn st" on my box
-    Votes:
-      +1: brane, philip, lundblad
-
   * r11439, r11669
     Fix slow "svn st" where the targets are files by not locking the whole
     anchor tree.

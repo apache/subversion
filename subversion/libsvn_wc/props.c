@@ -844,18 +844,8 @@ svn_wc_prop_list (apr_hash_t **props,
   /* Construct a path to the relevant property file */
   SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
 
-  /* Does the property file exist? */
-  SVN_ERR (svn_io_check_path (prop_path, &pkind, pool));
-  
-  if (pkind == svn_node_none)
-    /* No property file exists.  Just go home, with an empty hash. */
-    return SVN_NO_ERROR;
-  
-  /* else... */
-
-  SVN_ERR (svn_wc__load_prop_file (prop_path, *props, pool));
-
-  return SVN_NO_ERROR;
+  /* svn_wc__load_prop_file checks if the prop file exists */
+  return svn_wc__load_prop_file (prop_path, *props, pool);
 }
 
 
