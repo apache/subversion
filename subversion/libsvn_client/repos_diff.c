@@ -216,10 +216,11 @@ static apr_status_t
 temp_file_plain_cleanup_handler (void *arg)
 {
   struct temp_file_cleanup_s *s = arg;
+  apr_pool_t *pool = apr_pool_parent_get (s->pool);
 
   /* Note to UTF-8 watchers: this is ok because the path is already in
      native encoding. */ 
-  return apr_file_remove (s->path, s->pool);
+  return apr_file_remove (s->path, pool);
 }
 
 /* An apr pool cleanup handler, this removes a cleanup handler.

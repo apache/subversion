@@ -795,12 +795,13 @@ temp_file_cleanup_handler (void *arg)
 {
   struct file_baton *b = arg;
   svn_error_t *err;
+  apr_pool_t *pool = apr_pool_parent_get (b->pool);
 
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path
-    = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
+    = svn_wc__text_base_path (b->wc_path, TRUE, pool);
 
-  err = svn_io_remove_file (temp_file_path, b->pool);
+  err = svn_io_remove_file (temp_file_path, pool);
 
   return (err? err->apr_err : APR_SUCCESS);
 }
