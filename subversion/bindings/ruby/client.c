@@ -432,8 +432,14 @@ cl_import (int argc, VALUE *argv, VALUE self)
     VALUE obj;
     obj = rb_ary_new2 (3);
     rb_ary_store (obj, 0, INT2NUM (committed_rev));
-    rb_ary_store (obj, 1, rb_str_new2 (committed_date));
-    rb_ary_store (obj, 2, rb_str_new2 (committed_author));
+    rb_ary_store (obj, 1,
+                  committed_date
+                  ? rb_str_new2 (committed_date)
+                  : Qnil);
+    rb_ary_store (obj, 2,
+                  committed_author
+                  ? rb_str_new2 (committed_author)
+                  : Qnil);
     return obj;
   }
 }
@@ -500,8 +506,14 @@ cl_commit (int argc, VALUE *argv, VALUE self)
     VALUE obj;
     obj = rb_ary_new2 (3);
     rb_ary_store (obj, 0, INT2NUM (committed_rev));
-    rb_ary_store (obj, 1, rb_str_new2 (committed_date));
-    rb_ary_store (obj, 2, rb_str_new2 (committed_author));
+    rb_ary_store (obj, 1,
+                  committed_date
+                  ? rb_str_new2 (committed_date)
+                  : Qnil);
+    rb_ary_store (obj, 2,
+                  committed_author
+                  ? rb_str_new2 (committed_author)
+                  : Qnil);
     return obj;
   }
 }
