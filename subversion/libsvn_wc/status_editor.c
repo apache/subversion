@@ -630,27 +630,8 @@ close_file (void *file_baton)
 static svn_error_t *
 close_edit (void *edit_baton)
 {
-  struct edit_baton *eb = edit_baton;
-  apr_hash_index_t *hi;
-
-  /* Loop through the statushash, set the REPOS_REV field in each. (We
-     got the youngest revision way back in editor->set_target_revision.)  */
-  for (hi = apr_hash_first (eb->pool, eb->statushash); 
-       hi; 
-       hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      apr_ssize_t klen;
-      svn_wc_status_t *status;
-      
-      apr_hash_this (hi, &key, &klen, &val);
-      status = (svn_wc_status_t *) val;
-      status->repos_rev = *(eb->youngest_revision);
-    }
-  
   /* The edit is over, free its pool. */
-  svn_pool_destroy (eb->pool);
+  svn_pool_destroy (((struct edit_baton *) edit_baton)->pool);
     
   return SVN_NO_ERROR;
 }

@@ -103,8 +103,8 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
     return SVN_NO_ERROR;
 
 
-  /* Tell RA to drive a status-editor;  this will fill in the
-     repos_status_ fields and repos_rev fields in each status struct. */
+  /* Tell RA to drive a status-editor; this will fill in the
+     repos_status_* fields in each status struct. */
 
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &edit_baton,
                                      path, descend, statushash,
