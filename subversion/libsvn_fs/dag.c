@@ -153,6 +153,31 @@ int svn_fs__dag_is_copy (dag_node_t *node)
 }
 
 
+int svn_fs__dag_is_mutable (dag_node_t *node)
+{
+  /* The node "header" is the first element of a node-revision skel,
+     itself a list. */
+  skel_t *header = node->contents->children;
+  
+  /* The 3nd element of the header, IF it exists, is the header's
+     first `flag'.  It could be NULL.  */
+  skel_t *flag = header->children->next->next;
+  
+  while (flag)
+    {
+      /* If current flag is a list... */
+      if (flag->children)
+        if (! memcmp (flag->children->data, "mutable", flag->children->len))
+          return TRUE;
+
+      /* Move to next header flag. */
+      flag = flag->next;
+    }
+  
+  /* Reached the end of the header skel, no mutable flag was found. */
+  return FALSE;
+}
+
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail)
