@@ -52,7 +52,7 @@ svn_cl__switch (apr_getopt_t *os,
      switch to ("switch_url"). */
   SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
                                          FALSE, pool));
-  if ((targets->nelts < 0) || (targets->nelts > 2))
+  if ((targets->nelts < 1) || (targets->nelts > 2))
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
 
   /* Get the required SWITCH_URL and the optional TARGET arguments. */
