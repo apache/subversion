@@ -334,7 +334,10 @@ assemble_status (svn_wc_status_t **status,
       SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, adm_access,
                                         pool));
 
-      SVN_ERR (svn_wc__get_special (&wc_special, path, adm_access, pool));
+      if (has_props)
+        SVN_ERR (svn_wc__get_special (&wc_special, path, adm_access, pool));
+      else
+        wc_special = FALSE;
 
       /* If the entry is a file, check for textual modifications */
       if ((entry->kind == svn_node_file)
