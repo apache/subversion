@@ -99,6 +99,30 @@ extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
 svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
 
 
+
+
+/* A pdelta parser object.  */
+typedef struct svn_pdelta_chunk_parser_t
+{
+  /* Once this parser has enough data buffered to create a propchange
+     "chunk", it passes the window to the caller's consumer routine.  */
+  svn_prop_change_chunk_handler_t *consumer_func;
+  void *consumer_baton;
+
+  /* Pool to create subpools from; each developing chunk will live in
+     a subpool */
+  apr_pool_t *pool;
+
+  /* The current subpool which contains our current chunk */
+  apr_pool_t *subpool;
+
+  /* The actual parser data buffer, living within subpool. */
+  svn_string_t *buffer;
+
+} svn_pdelta_chunk_parser_t;
+
+
+
 /* Return a property delta parser. */
 svn_pdelta_chunk_parser_t *
 svn_make_pdelta_chunk_parser (svn_prop_change_chunk_handler_t *handler, 
