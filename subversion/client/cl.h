@@ -21,6 +21,7 @@
 
 /*** Includes. ***/
 #include <apr_tables.h>
+#include <apr_getopt.h>
 
 #include "svn_wc.h"
 #include "svn_string.h"
@@ -62,8 +63,8 @@ typedef struct svn_cl__opt_state_t
  * (with the exception of svn_cl__help, which will oftentime be passed
  * an empty array of targets. That is, all duplicates are removed, and
  * all paths are made relative to the working copy root directory). */
-typedef svn_error_t *(svn_cl__cmd_proc_t) (svn_cl__opt_state_t *opt_state,
-                                           apr_array_header_t *targets,
+typedef svn_error_t *(svn_cl__cmd_proc_t) (apr_getopt_t *os,
+                                           svn_cl__opt_state_t *opt_state,
                                            apr_pool_t *pool);
 
 
@@ -81,11 +82,6 @@ typedef struct svn_cl__cmd_desc_t
 
   /* The function this command invokes.  NULL if alias. */
   svn_cl__cmd_proc_t *cmd_func;
-
-  /* The number of non-filename arguments the command takes. (e.g. 2
-   * for propset, 1 for propget, 0 for most other commands). -1 means
-   * "just give me all of the arguments" */
-  int num_args;
 
   /* A brief string describing this command, for usage messages. */
   const char *help;
@@ -107,7 +103,33 @@ svn_cl__cmd_proc_t
   svn_cl__diff,
   svn_cl__update;
 
-void svn_cl__push_implicit_dot_target(apr_array_header_t *targets, apr_pool_t *pool);
+void svn_cl__push_svn_string (apr_array_header_t *array,
+                              const char *str,
+                              apr_pool_t *pool);
+
+apr_array_header_t*
+svn_cl__args_to_target_array (apr_getopt_t *os,
+                              apr_pool_t *pool);
+
+void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
+                                       apr_pool_t *pool);
+
+svn_error_t *
+svn_cl__parse_num_args (apr_getopt_t *os,
+                        svn_cl__opt_state_t *opt_state,
+                        const char *subcommand,
+                        int num_args,
+                        apr_pool_t *pool);
+
+svn_error_t *
+svn_cl__parse_all_args (apr_getopt_t *os,
+                        svn_cl__opt_state_t *opt_state,
+                        const char *subcommand,
+                        apr_pool_t *pool);
+
+void
+svn_cl__subcommand_help (const char *subcommand,
+                         apr_pool_t *pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/

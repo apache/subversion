@@ -230,6 +230,13 @@ typedef enum svn_errno_t {
      error internally.  */
   SVN_ERR_TEST_FAILED,
 
+  /* BEGIN Client errors */
+
+  /* Generic arg parsing error */
+  SVN_ERR_CL_ARG_PARSING_ERROR,
+
+  /* END Client errors */
+  
 
   /* simple placeholder to mark the highest SVN error. subtle benny: we don't
      have to worry about trailing commas (on errors above) as we add them */

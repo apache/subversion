@@ -30,41 +30,52 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__propset (svn_cl__opt_state_t *opt_state,
-                 apr_array_header_t *targets,
+svn_cl__propset (apr_getopt_t *os,
+                 svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  svn_string_t *name  = ((svn_string_t **) (opt_state->args->elts))[0];
-  svn_string_t *value = ((svn_string_t **) (opt_state->args->elts))[1];
+  svn_string_t *propname;
+  svn_string_t *propval;
   svn_error_t *err;
+  apr_array_header_t *targets;
   int i;
 
-  if (! strcmp (value->data, ""))
-    /* The user wants to delete the property. */
-    value = NULL;
+  /* PROPNAME and PROPVAL expected as first 2 arguments */
+  err = svn_cl__parse_num_args (os, opt_state,
+                                "propset", 2, pool);
 
-  if (targets->nelts)
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
-        err = svn_wc_prop_set (name, value, target, pool);
-        if (err)
-          return err;
+  if (err)
+    return err;
 
-        /* fitz todo: make these print out only when VERBOSE */
-        if (value)
-          printf ("property `%s' set on %s.\n",
-                  name->data, target->data);
-        else
-          printf ("property `%s' deleted from %s\n", 
-                  name->data, target->data);
-      }
-  else
+  propname  = ((svn_string_t **) (opt_state->args->elts))[0];
+  propval = ((svn_string_t **) (opt_state->args->elts))[1];
+
+  if (! strcmp (propval->data, ""))
     {
-      fprintf (stderr, "svn propset: arguments required\n");
-      err = svn_cl__help (opt_state, targets, pool);
+      /* The user wants to delete the property. */
+      propval = NULL;
+    }
+
+  /* suck up all the remaining arguments into a targets array */
+  targets = svn_cl__args_to_target_array (os, pool);
+
+  /* Add "." if user passed 0 file arguments */
+  svn_cl__push_implicit_dot_target(targets, pool);
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      err = svn_wc_prop_set (propname, propval, target, pool);
       if (err)
         return err;
+
+      /* fitz todo: make these print out only when VERBOSE */
+      if (propval)
+        printf ("property `%s' set on %s.\n",
+                propname->data, target->data);
+      else
+        printf ("property `%s' deleted from %s\n", 
+                propname->data, target->data);
     }
 
   return SVN_NO_ERROR;

@@ -30,14 +30,19 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__checkout (svn_cl__opt_state_t *opt_state,
-                  apr_array_header_t *targets,
+svn_cl__checkout (apr_getopt_t *os,
+                  svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
   svn_error_t *err;
   int i;
+
+  err = svn_cl__parse_all_args (os, opt_state, "checkout", pool);
+
+  if (err)
+    return err;
 
   /* TODO Fixme: This only works for one repo checkout at a shot.  In
      CVS, when we checkout one project and give it a destination

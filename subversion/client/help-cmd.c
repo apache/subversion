@@ -95,29 +95,29 @@ print_generic_help (apr_pool_t *pool)
 
 
 /* Print either generic help, or command-specific help for each
- * command in ARGV.  OPT_STATE is unused and may be null.
+ * command in os->args.  OPT_STATE is unused and may be null.
+ * If OS is null then generic help will always be printed.
  * 
  * Unlike all the other command routines, ``help'' has its own
  * option processing.  Of course, it does not accept any options :-),
  * just command line args.
  */
 svn_error_t *
-svn_cl__help (svn_cl__opt_state_t *opt_state,
-              apr_array_header_t *targets,
+svn_cl__help (apr_getopt_t *os,
+              svn_cl__opt_state_t *opt_state,
               apr_pool_t *pool)
 {
+  apr_array_header_t *targets;
   int i;
 
-  if (targets->nelts)
+  if (os)
+    targets = svn_cl__args_to_target_array (os, pool);
+
+  if (os && targets->nelts)
     for (i = 0; i < targets->nelts; i++)
       {
         svn_string_t *this = (((svn_string_t **) (targets)->elts))[i];
-        const svn_cl__cmd_desc_t *cmd
-          = svn_cl__get_canonical_command (this->data);
-        if (cmd)
-          print_command_info (cmd, TRUE, pool);
-        else
-          fprintf (stderr, "\"%s\": unknown command.\n\n", this->data);
+	svn_cl__subcommand_help (this->data, pool);
       }
   else
     print_generic_help (pool);
@@ -125,6 +125,22 @@ svn_cl__help (svn_cl__opt_state_t *opt_state,
   return SVN_NO_ERROR;
 }
 
+/* Helper function that will print the usage test of a subcommand
+ * given the subcommand name as a char*. This function is also
+ * used by subcommands that need to print a usage message */
+
+void
+svn_cl__subcommand_help (const char* subcommand,
+                         apr_pool_t *pool)
+{
+  const svn_cl__cmd_desc_t *cmd =
+    svn_cl__get_canonical_command (subcommand);
+    
+  if (cmd)
+    print_command_info (cmd, TRUE, pool);
+  else
+    fprintf (stderr, "\"%s\": unknown command.\n\n", subcommand);
+}
 
 
 /* 

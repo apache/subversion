@@ -30,30 +30,43 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__propget (svn_cl__opt_state_t *opt_state,
-                 apr_array_header_t *targets,
+svn_cl__propget (apr_getopt_t *os,
+                 svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  svn_string_t *name  = ((svn_string_t **) (opt_state->args->elts))[0];
+  svn_string_t *propname;
   apr_hash_t *prop_hash = apr_hash_make (pool);
   svn_error_t *err;
+  apr_array_header_t *targets;
   int i;
+
+  /* PROPNAME is first argument */
+  err = svn_cl__parse_num_args (os, opt_state,
+                                "propget", 1, pool);
+
+  if (err)
+    return err;
+
+  propname = ((svn_string_t **) (opt_state->args->elts))[0];
+
+  /* suck up all the remaining arguments into a targets array */
+  targets = svn_cl__args_to_target_array (os, pool);
 
   /* Add "." if user passed 0 file arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_string_t *value;
+      svn_string_t *propval;
       svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
-      err = svn_wc_prop_get (&value, name, target, pool);
+      err = svn_wc_prop_get (&propval, propname, target, pool);
       if (err)
         return err;
 
       /* kff todo: this seems like an odd way to do this... */
 
-      apr_hash_set (prop_hash, name->data, name->len,
-                    value);
+      apr_hash_set (prop_hash, propname->data, propname->len,
+                    propval);
       svn_cl__print_prop_hash (prop_hash, pool);
     }
 
