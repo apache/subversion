@@ -247,13 +247,14 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 
 enum svn_wc_status_kind
 {
-    svn_wc_status_none = 1,  /* Among other things, indicates not under vc. */
-    svn_wc_status_added,
-    svn_wc_status_deleted,
-    svn_wc_status_replaced,
-    svn_wc_status_modified,
-    svn_wc_status_merged,
-    svn_wc_status_conflicted
+    svn_wc_status_none = 1,   /* foo.c not under version control */
+    svn_wc_status_added,      /* "svn add foo.c", but not yet "svn ci foo.c" */
+    svn_wc_status_absent,     /* just "rm foo.c", not "svn rm foo.c" */
+    svn_wc_status_deleted,    /* "svn rm foo.c", but not yet "svn ci foo.c" */
+    svn_wc_status_replaced,   /* foo.c was deleted and then re-added */
+    svn_wc_status_modified,   /* foo.c's text or props have been modified */
+    svn_wc_status_merged,     /* local mods received repos mods */
+    svn_wc_status_conflicted  /* local mods received conflicting repos mods */
 };
 
 /* Structure for holding the "status" of a working copy item. 

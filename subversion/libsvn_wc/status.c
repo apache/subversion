@@ -32,7 +32,8 @@
 
 
 
-/* Fill in *STATUS with ENTRY, creating the status struct in POOL.
+/* Fill in *STATUS for PATH, whose entry data is in ENTRY.  Allocate
+   *STATUS in POOL. 
 
    ENTRY may be null, for non-versioned entities.
    Else, ENTRY's pool must not be shorter-lived than STATUS's, since
@@ -56,7 +57,7 @@ assemble_status (svn_wc_status_t **status,
   svn_boolean_t prop_exists = FALSE;
   svn_wc_status_t *stat;
   svn_stringbuf_t *prop_path;
-  enum svn_node_kind prop_kind;
+  enum svn_node_kind prop_kind, path_kind;
 
   if (! entry)
     {
@@ -96,20 +97,25 @@ assemble_status (svn_wc_status_t **status,
       if (err) return err;
     }
   
+  /* Check for absence first.  Note that svn_wc_text_modified_p()
+     claims there are no modifications if file is simply absent;
+     instead, we use svn_io_check_path() to discover absence. */
+  err = svn_io_check_path (path, &path_kind, pool);
+  if (err) return err;
+
   /* If filtering and there are no local mods, return a NULL pointer. */
-  if (! get_all)
-    if ((! text_modified_p) && (! prop_modified_p))
-      {
-        *status = NULL;
-        return SVN_NO_ERROR;
-      }
-  
+  if ((path_kind != svn_node_none)
+      && (! get_all)
+      && (! text_modified_p)
+      && (! prop_modified_p))
+    {
+      *status = NULL;
+      return SVN_NO_ERROR;
+    }
   
   /* If we get here, then we know that either
-     
-        - GET_ALL is set,  or
-        - GET_ALL is zero, but we found that ENTRY has local mods.
-
+       - GET_ALL is set,  or
+       - GET_ALL is zero, but we found that ENTRY has local mods.
   */
 
   /* Make a status structure */
@@ -133,9 +139,13 @@ assemble_status (svn_wc_status_t **status,
      we then show that `M' in the first column?  Ponder,
      ponder.  */
   
-  /* Mark `M' in status structure based on tests above. */
-  if (text_modified_p)
+  /* Mark `M' or `?' in status structure based on tests above. */
+
+  if (path_kind == svn_node_none)
+    stat->text_status = svn_wc_status_absent;
+  else if (text_modified_p)
     stat->text_status = svn_wc_status_modified;
+
   if (prop_modified_p)
     stat->prop_status = svn_wc_status_modified;      
   
@@ -281,9 +291,10 @@ svn_wc_statuses (apr_hash_t *statushash,
 
   /* Read the appropriate entries file */
   
-  /* If path points to only one file, return just one status structure
-     in the STATUSHASH */
-  if (kind == svn_node_file)
+  /* If path points to just one file, or at least to just one
+     non-directory, store just one status structure in the
+     STATUSHASH and return. */
+  if ((kind == svn_node_file) || (kind == svn_node_none))
     {
       svn_stringbuf_t *dirpath, *basename;
 
@@ -392,7 +403,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                                                 descend, get_all, pool)); 
                     }
                 }
-              else if (kind == svn_node_file)
+              else if ((kind == svn_node_file) || (kind == svn_node_none))
                 {
                   /* File entries are ... just fine! */
                   SVN_ERR (add_status_structure (statushash, fullpath,

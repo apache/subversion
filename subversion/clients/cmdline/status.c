@@ -30,10 +30,10 @@
 
 
 
-/* Edit the foud-byte string STR_STATUS, based on the contents of
-   TEXT_STATUS, PROP_STATUS, and LOCKED.  PROP_TIME is used to
-   determine if properties exist in the first place (when prop_status
-   is 'none') */
+/* Fill in the first three characters of STR_STATUS with status code
+   characters, based on TEXT_STATUS, PROP_STATUS, and LOCKED.
+   PROP_TIME is used to determine if properties exist in the first
+   place (when prop_status is 'none').  */
 static void
 generate_status_codes (char *str_status,
                        enum svn_wc_status_kind text_status,
@@ -50,6 +50,9 @@ generate_status_codes (char *str_status,
       break;
     case svn_wc_status_added:
       text_statuschar = 'A';
+      break;
+    case svn_wc_status_absent:
+      text_statuschar = '?';
       break;
     case svn_wc_status_deleted:
       text_statuschar = 'D';
