@@ -66,10 +66,14 @@ svn_cl__propset (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      SVN_ERR (svn_wc_prop_set (propname, propval, target, pool));
+      SVN_ERR (svn_client_propset(propname, propval, target,
+                                  opt_state->recursive, pool));
 
       if (! opt_state->quiet)
-        printf ("property `%s' set on %s\n", propname->data, target->data);
+        printf ("property `%s' set %s on '%s'\n",
+                propname->data,
+                opt_state->recursive ? "(recursively)" : "",
+                target->data);
     }
 
   return SVN_NO_ERROR;

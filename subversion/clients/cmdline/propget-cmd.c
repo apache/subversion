@@ -33,13 +33,20 @@
 
 /*** Code. ***/
 
+static int
+print_prop(void *propname, const char *filename, const char *propval)
+{
+  const char *pn = propname;
+  printf("%s - %s : %s\n", filename, pn, propval);
+  return 1;
+}
+
 svn_error_t *
 svn_cl__propget (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
   svn_stringbuf_t *propname;
-  svn_error_t *err;
   apr_array_header_t *targets;
   int i;
 
@@ -57,18 +64,13 @@ svn_cl__propget (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *propval;
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      apr_hash_t *prop_hash = apr_hash_make (pool);
-      err = svn_wc_prop_get (&propval, propname, target, pool);
-      if (err)
-        return err;
+      apr_table_t *props;
 
-      /* kff todo: this seems like an odd way to do this... */
+      SVN_ERR (svn_client_propget (&props, propname, target,
+                                   opt_state->recursive, pool));
 
-      apr_hash_set (prop_hash, propname->data, propname->len,
-                    propval);
-      svn_cl__print_prop_hash (prop_hash, pool);
+      apr_table_do(&print_prop,propname->data, props, NULL); 
     }
 
   return SVN_NO_ERROR;

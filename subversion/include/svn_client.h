@@ -108,6 +108,20 @@ typedef struct svn_client_auth_baton_t
 } svn_client_auth_baton_t;
 
 
+/* This is a structure which stores a filename and a hash of property
+   names and values. */
+
+typedef struct
+{
+  /* The name of the node on which these properties are set. */
+  svn_stringbuf_t *node_name;  
+
+  /* A hash of (const char *) property names, and (svn_stringbuf_t *) property
+     values. */
+  apr_hash_t *prop_hash;
+
+} svn_client_proplist_item_t;
+
 
 /* Names of files that contain authentication information.
 
@@ -386,6 +400,45 @@ svn_client_copy (svn_stringbuf_t *src_path,
                  svn_stringbuf_t *dst_path,
                  apr_pool_t *pool);
 
+/* Set PROPNAME to PROPVAL on TARGET.  If RECURSE is true, then PROPNAME
+   will be set on recursively on TARGET and all children.  If RECURSE is false,
+   and TARGET is a directory, PROPNAME will be set on _only_ TARGET.
+ 
+   Use POOL for all memory allocation. */
+svn_error_t *
+svn_client_propset (svn_stringbuf_t *propname,
+                    svn_stringbuf_t *propval,
+                    svn_stringbuf_t *target,
+                    svn_boolean_t recurse,
+                    apr_pool_t *pool);
+
+/* Returns an apr_table_t of filenames and property values, in *PROPS, 
+   allocated in POOL.  If TARGET is a file or RECURSE is false, there will
+   be only a single element, with key TARGET, and value the value of PROPNAME
+   in TARGET.  If recurse is true and TARGET is a directory, the *PROPS will
+   contain a list of node names and property values for TARGET and all of 
+   its children.  The nodenames will be of rooted from the same place as 
+   TARGET. */
+svn_error_t *
+svn_client_propget (apr_table_t **props,
+                    svn_stringbuf_t *propname,
+                    svn_stringbuf_t *target,
+                    svn_boolean_t recurse,
+                    apr_pool_t *pool);
+
+/* Returns an apr_array_header_t of svn_client_proplist_itme_t's in *PROPS,
+   allocated from POOL. Each item will contain the node_name relative to the
+   same base as target in item->node_name, and a property hash of (const char *)
+   property names, and (svn_stringbuf_t *) property values.
+
+   If recurse is false, or TARGET is a file, *PROPS will contain only a single
+   element.  Otherwise, it will contain one for each versioned entry below
+   (and including) TARGET. */
+svn_error_t *
+svn_client_proplist (apr_array_header_t **props,
+                     svn_stringbuf_t *target, 
+                     svn_boolean_t recurse,
+                     apr_pool_t *pool);
 
 #endif  /* SVN_CLIENT_H */
 
