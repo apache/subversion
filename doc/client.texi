@@ -275,11 +275,11 @@ Return all properties (names and values) of file or directory
 Return all properties (names and values) of directory entry @emph{path},
 in a hash table.
 
-@item str_t *wc_get_node_propnames (path)
+@item proplist_t wc_get_node_propnames (path)
 
 Return all property names for file or directory @emph{path}.
 
-@item str_t *wc_get_dirent_propnames (path)
+@item proplist_t wc_get_dirent_propnames (path)
 
 Return all property names for a directory entry.
 
@@ -318,7 +318,7 @@ library.
 @item proplist_t ra_get_ver_proplist (repos, user, ver)
  Return all properties (names and values) of @emph{ver}.
  @c todo: say this somewhere: proplist_t is probably a hash table.
-@item proplist_t *ra_get_ver_propnames (repos, user, ver)
+@item proplist_t ra_get_ver_propnames (repos, user, ver)
  Return all property keys for a @emph{ver}.
 @end table
 
@@ -341,9 +341,9 @@ library.
 @item proplist_t ra_get_dirent_proplist (repos, user, ver, path)
  Return all properties (names and values) of directory entry @emph{path}
  in @emph{repos}.
-@item str_t *ra_get_node_propnames (repos, user, ver, path)
+@item proplist_t ra_get_node_propnames (repos, user, ver, path)
  Return all property names for @emph{path} in @emph{repos}.
-@item str_t *ra_get_dirent_propnames (repos, user, ver, path)
+@item proplist_t ra_get_dirent_propnames (repos, user, ver, path)
  Return all property names for directory entry @emph{path} in @emph{repos}
 @end table
 
