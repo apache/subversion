@@ -54,6 +54,8 @@ dnl AC_PROG_RANLIB
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 AM_PROG_LIBTOOL
 
+dnl find Apache
+SVN_FIND_APACHE
 
 
 dnl Check for libraries --------------------
