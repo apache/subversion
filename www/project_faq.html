@@ -63,6 +63,8 @@
     and why?</a></li>
 <li><a href="#adm-dir">I don't like the ".svn" directory name, and
     prefer "SVN" or something else.  How do I change it?</a></li>
+<li><a href="#case-change">I checked in a file but had the wrong case in the filename.
+    How do I change it?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -352,8 +354,7 @@ name="more-information"> information?</a></h3>
 <p>Please send your questions or concerns to the Subversion Users <a
 href="mailto:users@subversion.tigris.org">mailing list</a>.  Alternatively,
 several Subversion users and developers can usually be contacted via IRC on
-channel #svn on <a
-href="http://www.openprojects.net">irc.openprojects.net</a>.</p>
+channel #svn on <a href="http://www.freenode.net">irc.freenode.net</a>.</p>
 
 <![CDATA[=========================================================]]>
 
@@ -974,6 +975,25 @@ to
 
 <p>
 then recompile your client.
+</p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="case-change">I checked in a file but had the wrong case in the filename.
+    How do I change it?</h3>
+
+<p>If you're adding files on an operating system with a case-insensitive
+filesystem (such as Windows), you might find you accidentally add a file
+with the wrong case. You can correct this by copying the file somewhere
+temporary, deleting the file from Subversion, then adding the copy with
+the correct case, or by performing a move operation with Subversion URLs.
+Using URLs is recommended, because it will preserve history for the file,
+and will take effect immediately.</p>
+
+<p>For example, to rename <tt>file.java</tt> to <tt>File.java</tt>, do:
+<pre>
+svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java
+</pre>
 </p>
 
 <![CDATA[=========================================================]]>
