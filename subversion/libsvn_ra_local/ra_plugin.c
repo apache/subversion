@@ -633,15 +633,16 @@ svn_ra_local__get_log (void *session_baton,
       (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
-  return svn_repos_get_logs (sbaton->repos,
-                             abs_paths,
-                             start,
-                             end,
-                             discover_changed_paths,
-                             strict_node_history,
-                             receiver,
-                             receiver_baton,
-                             sbaton->pool);
+  return svn_repos_get_logs2 (sbaton->repos,
+                              abs_paths,
+                              start,
+                              end,
+                              discover_changed_paths,
+                              strict_node_history,
+                              NULL, NULL,
+                              receiver,
+                              receiver_baton,
+                              sbaton->pool);
 }
 
 

@@ -208,6 +208,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   dav_error *derr = NULL;
   apr_xml_elem *child;
   struct log_receiver_baton lrb;
+  dav_svn_authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
   int ns;
@@ -273,6 +274,11 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
       /* else unknown element; skip it */
     }
 
+  /* Build authz read baton */
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
+
+  /* Build log receiver baton */
   lrb.bb = apr_brigade_create(resource->pool,  /* not the subpool! */
                               output->c->bucket_alloc);
   lrb.output = output;
@@ -284,15 +290,17 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs(repos->repos,
-                            paths,
-                            start,
-                            end,
-                            discover_changed_paths,
-                            strict_node_history,
-                            log_receiver,
-                            &lrb,
-                            resource->pool);
+  serr = svn_repos_get_logs2(repos->repos,
+                             paths,
+                             start,
+                             end,
+                             discover_changed_paths,
+                             strict_node_history,
+                             dav_svn_authz_read,
+                             &arb,
+                             log_receiver,
+                             &lrb,
+                             resource->pool);
   if (serr)
     {
       derr = dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message,

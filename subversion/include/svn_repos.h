@@ -577,11 +577,40 @@ typedef svn_error_t *(*svn_repos_history_func_t) (void *baton,
                                                   svn_revnum_t revision,
                                                   apr_pool_t *pool);
 
-/** Call @a history_func (with @a history_baton) for each interesting
+/**
+ * @since New in 1.1.
+ *
+ * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
  * youngest of @a end and @ start to the oldest.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
+ *
+ * If @a authz_read_func is non-NULL, then use it (and @a
+ * authz_read_baton) to verify that @a path in @a end is readable; if
+ * not, return SVN_ERR_AUTHZ_UNREADABLE.  Also verify the readability
+ * of every ancestral path/revision pair before pushing them at @a
+ * history_func.  If a pair is deemed unreadable, then do not send
+ * them; instead, immmediately stop traversing history and return
+ * SVN_NO_ERROR.
+ */
+svn_error_t *
+svn_repos_history2 (svn_fs_t *fs,
+                    const char *path,
+                    svn_repos_history_func_t history_func,
+                    void *history_baton,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    svn_boolean_t cross_copies,
+                    apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_repos_history(), but with @a authz_read_func and
+ * @a authz_read_baton always set to NULL.
  */
 svn_error_t *
 svn_repos_history (svn_fs_t *fs,
@@ -592,6 +621,7 @@ svn_repos_history (svn_fs_t *fs,
                    svn_revnum_t end,
                    svn_boolean_t cross_copies,
                    apr_pool_t *pool);
+
 
 /**
  * @since New in 1.1.
@@ -666,9 +696,36 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  * If @a start or @a end is a non-existent revision, return the error
  * @c SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a receiver.
  *
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of each changed-path in each revision about to be "pushed" at
+ * @a receiver.  If a revision has all unreadable changed-paths, then
+ * don't push the revision at all.  If a revision has a mixture of
+ * readable and unreadable changed-paths, then silently omit the
+ * unreadable changed-paths when pushing the revision.
+ *
  * See also the documentation for @c svn_log_message_receiver_t.
  *
  * Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_repos_get_logs2 (svn_repos_t *repos,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool);
+
+/** 
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Same as to svn_repos_dump_fs2(), but with @a authz_read_func and
+ * @a authz_read_baton always set to NULL.
  */
 svn_error_t *
 svn_repos_get_logs (svn_repos_t *repos,
@@ -680,6 +737,7 @@ svn_repos_get_logs (svn_repos_t *repos,
                     svn_log_message_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool);
+
 
 
 /* ---------------------------------------------------------------*/
