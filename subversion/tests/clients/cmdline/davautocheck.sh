@@ -1,6 +1,42 @@
 #!/bin/sh
 # -*- mode: shell-script; -*-
 # $Id$
+
+# This script simplifies preparation of environment for Subversion client
+# communicating with a server via DAV protocol. The prerequisites of such
+# testing are:
+#   - Subversion built using --enable-shared --enable-dso --enable-apsx options,
+#   - Working Apache 2 HTTPD Server reachable through PATH,
+#   - Modules dav_module and log_config_module compiled as DSO or built into
+#     Apache HTTPD Server executable.
+# The basic intension of this script is to be able to perform "make check"
+# operation over DAV without any configuration efforts whatsoever, provided
+# that conditions above are met.
+#
+# The script will find Apache and all necessary modules including mod_dav_svn,
+# create a temporary directory in subversion/tests/clients/cmdline, create
+# Apache 2 configuration file in this directory, start Apache 2 on a random
+# port number higher than 1024, and execute Subversion command-line client
+# test suites against this instance of HTTPD. Every vital configuration
+# parameter is checked before the tests start. The script will ask questions
+# about browsing Apache error log (default is "no") and about deleting
+# temporary directory (default "yes") and pause for 32 seconds before proceeding
+# with the default. HTTPD access log is also created in the temporary directory.
+#
+# Run this script without parameters to execute the full battery of tests:
+#   subversion/tests/clients/cmdline/davautocheck.sh
+# Run this script with the name of a test suite to run this suite:
+#   subversion/tests/clients/cmdline/davautocheck.sh basic
+# Run this script with the test suite name and test number to execute just this
+# test:
+#   subversion/tests/clients/cmdline/davautocheck.sh basic 4
+#
+# If the temporary directory is not deleted, it can be reused for further manual
+# DAV protocol interoperation testing. HTTPD must be started by specifying
+# configuration file on the command line:
+#   httpd -f subversion/tests/clients/cmdline/<httpd-...>/cfg
+
+SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
 function say() {
@@ -35,12 +71,12 @@ function get_loadmodule_config() {
   return 1
 }
 
-pushd $(dirname $0) >/dev/null
+pushd $SCRIPTDIR/../../../../ >/dev/null
 ABS_BUILDDIR=$(pwd)
 popd >/dev/null
 
 [ -x "$ABS_BUILDDIR/configure" ] \
-  || fail "can't operate if not located in the root of Subversion's tree"
+  || fail "Can't find the root of Subversion's tree"
 
 MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
 
@@ -76,7 +112,7 @@ LOAD_MOD_LOG_CONFIG=$(get_loadmodule_config mod_log_config) \
   || fail "log_config module not found"
 
 HTTPD_PORT=$(($RANDOM+1024))
-HTTPD_ROOT="$ABS_BUILDDIR/httpd-$(date '+%Y%m%d-%H%M%S')"
+HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/clients/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
 HTTPD_LOG="$HTTPD_ROOT/log"

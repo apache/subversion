@@ -60,9 +60,12 @@ typedef struct {
   svn_stringbuf_t *cdata_accum;              /* stringbuffer for CDATA */
 } neon_shim_baton_t;
 
-/* Finds a given element in the table of elements. If element is not found
- * tries to find and return `unknown' element. If that is not found, returns
- * NULL pointer. Uses a single loop to save CPU cycles. */
+/** Find a given element in the table of elements.
+ *
+ * The table of XML elements @a table is searched until element identified by
+ * namespace @a nspace and name @a name is found. If no elements are found,
+ * tries to find and return element identified by @c ELEM_unknown. If that is
+ * not found, returns NULL pointer. */
 static const svn_ra_dav__xml_elm_t *lookup_elem(
                                           const svn_ra_dav__xml_elm_t *table,
                                           const char *nspace,
@@ -78,16 +81,22 @@ static const svn_ra_dav__xml_elm_t *lookup_elem(
           && strcmp(elem->name, name) == 0)
         return elem;
 
-      /* Maybe this element is defined as `unknown'? */
+      /* Use a single loop to save CPU cycles.
+       *
+       * Maybe this element is defined as `unknown'? */
       if (elem->id == ELEM_unknown)
         elem_unknown = elem;
     }
 
+  /* ELEM_unknown position in the table or NULL */
   return elem_unknown;
 }
 
-/* From Neon 0.24 ne_xml.h
- * -----------------------
+/* (Neon 0.24) Start element parsing.
+ *
+ * Calls "old-style" API callbacks validate_cb and startelm_cb to emulate
+ * Neon 0.23 parser. @a userdata is a @c neon_shim_baton_t instance.
+ * ---- ne_xml.h ----
  * The startelm callback may return:
  *   <0 =>  abort the parse (NE_XML_ABORT)
  *    0 =>  decline this element  (NE_XML_DECLINE)
@@ -125,7 +134,7 @@ static int shim_startelm(void *userdata, int parent_state, const char *nspace,
   else
     baton->cdata_accum = svn_stringbuf_create("", baton->pool);
 
-  /* `parent' parameter in the pre-Neon 0.24 interface was a parent's element
+  /* @a parent in the pre-Neon 0.24 interface was a parent's element
    * id but now it's the status returned by parent's startelm(), so we need to
    * bridge this by returning this element's id as a status.
    * We also need to ensure that element ids start with 1, because
@@ -134,7 +143,11 @@ static int shim_startelm(void *userdata, int parent_state, const char *nspace,
   return elem->id;
 }
 
-/* Neon 0.24: may return non-zero to abort the parse */
+/** (Neon 0.24) Collect element's contents.
+ *
+ * Collects element's contents into @a userdata string buffer. @a userdata is a
+ * @c neon_shim_baton_t instance.
+ * May return non-zero to abort the parse. */
 static int shim_cdata(void *userdata, int state, const char *cdata, size_t len)
 {
   const neon_shim_baton_t *baton = userdata;
@@ -143,7 +156,11 @@ static int shim_cdata(void *userdata, int state, const char *cdata, size_t len)
   return 0; /* no error */
 }
 
-/* Neon 0.24: may return non-zero to abort the parse */
+/** (Neon 0.24) Finish parsing element.
+ *
+ * Calls "old-style" endelm_cb callback. @a userdata is a @c neon_shim_baton_t
+ * instance.
+ * May return non-zero to abort the parse. */
 static int shim_endelm(void *userdata, int state, const char *nspace,
                        const char *name)
 {

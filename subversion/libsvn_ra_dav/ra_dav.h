@@ -49,6 +49,7 @@ extern "C" {
 #define SVN_RA_DAV__XML_VALID   NE_XML_VALID
 #define SVN_RA_DAV__XML_INVALID NE_XML_INVALID
 #define SVN_RA_DAV__XML_DECLINE NE_XML_DECLINE
+
 #define SVN_RA_DAV__XML_CDATA   NE_XML_CDATA
 #define SVN_RA_DAV__XML_COLLECT NE_XML_COLLECT
 
@@ -65,33 +66,85 @@ typedef ne_xml_endelm_cb   svn_ra_dav__xml_endelm_cb;
 #define SVN_RA_DAV__XML_VALID   (0)
 #define SVN_RA_DAV__XML_INVALID (-1)
 #define SVN_RA_DAV__XML_DECLINE (-2)
+
 #define SVN_RA_DAV__XML_CDATA   (1<<1)
 #define SVN_RA_DAV__XML_COLLECT ((1<<2) | SVN_RA_DAV__XML_CDATA)
 
 typedef int svn_ra_dav__xml_elmid;
 
+/** XML element */
 typedef struct {
-  const char *nspace;        /* XML namespace */
-  const char *name;          /* XML tag name */
-  svn_ra_dav__xml_elmid id;  /* tag id */
-  unsigned int flags;        /* processing flags for this namespace:tag */
+  /** XML namespace. */
+  const char *nspace;
+
+  /** XML tag name. */
+  const char *name;
+
+  /** XML tag id to be passed to a handler. */
+  svn_ra_dav__xml_elmid id;
+
+  /** Processing flags for this namespace:tag.
+   *
+   * 0 (zero)                - regular element, may have children,
+   * SVN_RA_DAV__XML_CDATA   - child-less element,
+   * SVN_RA_DAV__XML_COLLECT - complete contents of such element must be
+   *                           collected as CDATA, includes *_CDATA flag. */
+  unsigned int flags;
+
 } svn_ra_dav__xml_elm_t;
 
+
+/** (Neon 0.23) Validate a new child element.
+ *
+ * Callback for @c svn_ra_dav__xml_push_handler. @a parent and @a child
+ * are element ids found in the array of elements, @a userdata is a user
+ * baton. Returns:
+ * SVN_RA_DAV__XML_VALID   - this is a valid element processed by this
+ *                           handler;
+ * SVN_RA_DAV__XML_INVALID - this is not a valid element, parsing should
+ *                           stop;
+ * SVN_RA_DAV__XML_DECLINE - this handler doesn't know about this element,
+ *                           someone else may handle it. */
 typedef int svn_ra_dav__xml_validate_cb(void *userdata,
                                         svn_ra_dav__xml_elmid parent,
                                         svn_ra_dav__xml_elmid child);
 
+/** (Neon 0.23) Start parsing a new child element.
+ *
+ * Callback for @c svn_ra_dav__xml_push_handler. @a userdata is a user
+ * baton. @elm is a member of elements array, and @a atts is an array
+ * of name-value XML attributes.
+ * See @c svn_ra_dav__xml_validate_cb for return values. */
 typedef int svn_ra_dav__xml_startelm_cb(void *userdata,
                                         const svn_ra_dav__xml_elm_t *elm,
                                         const char **atts);
 
+/** (Neon 0.23) Finish parsing a child element.
+ *
+ * Callback for @c svn_ra_dav__xml_push_handler. @a userdata is a user
+ * baton. @elm is a member of elements array, and @a cdata is the contents
+ * of the element.
+ * See @c svn_ra_dav__xml_validate_cb for return values. */
 typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
                                       const svn_ra_dav__xml_elm_t *elm,
                                       const char *cdata);
 
 #endif /* Neon version */
 
-/* Push an XML handler onto Neon's handler stack */
+/** Push an XML handler onto Neon's handler stack.
+ *
+ * Parser @a p uses a stack of handlers to process XML. The handler is
+ * composed of validation callback @a validate_cb, start-element
+ * callback @a startelm_cb, and end-element callback @a endelm_cb, which
+ * collectively handle elements supplied in an array @a elements. Parser
+ * passes given user baton @a userdata to all callbacks.
+ * This is a new function on top of ne_xml_push_handler, adds memory pool
+ * @a pool as the last parameter. This parameter is not used with Neon
+ * 0.23.9, but will be with Neon 0.24. When Neon 0.24 is used, ra_dav
+ * receives calls from the new interface and performs functions described
+ * above by itself, using @a elements and calling callbacks according to
+ * 0.23 interface.
+ */
 void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
                                   const svn_ra_dav__xml_elm_t *elements,
                                   svn_ra_dav__xml_validate_cb validate_cb,
