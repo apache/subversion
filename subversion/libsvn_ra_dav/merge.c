@@ -213,7 +213,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
       /* ### shouldn't have happened. we told the server "don't merge" */
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,
-                               _("Protocol error: we told the server to not "
+                               _("Protocol error: we told the server not to "
                                  "auto-merge any resources, but it said that "
                                  "'%s' was merged"), mc->href->data);
     }

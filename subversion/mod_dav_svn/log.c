@@ -309,7 +309,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   if ((serr = maybe_send_header(&lrb)))
     {
       derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error beginning REPORT reponse.",
+                                 "Error beginning REPORT response.",
                                  resource->pool);
       goto cleanup;
     }
@@ -317,7 +317,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   if ((serr = send_xml(&lrb, "</S:log-report>" DEBUG_CR)))
     {
       derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error ending REPORT reponse.",
+                                 "Error ending REPORT response.",
                                  resource->pool);
       goto cleanup;
     }

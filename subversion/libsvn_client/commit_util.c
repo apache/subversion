@@ -643,8 +643,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
         return svn_error_createf 
           (SVN_ERR_ILLEGAL_TARGET, NULL, 
            _("Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
-             "for addition.  Perhaps you're committing a target that this\n"
-             "inside of an unversioned (or not-yet-versioned) directory?"),
+             "for addition.  Perhaps you're committing a target that is\n"
+             "inside an unversioned (or not-yet-versioned) directory?"),
            target);
 
       /* Handle our TARGET. */
