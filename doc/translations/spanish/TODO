@@ -1,5 +1,6 @@
-Mandar mensajes periódicos a la lista de correo indicando el estado
-de la traducción y buscando revisores.
+Mejorar el script que envía un informe de estado con un porcentaje
+estimado para completar la traducción. Automatizar envío del mismo
+una vez se verifique que funciona relativamente bien.
 
 Estandarizar el uso de nombres como Harry o Sally. No me acuerdo
 cuáles se usaban en la literatura Española, pero no son esos. El
