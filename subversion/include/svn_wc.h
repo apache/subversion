@@ -44,7 +44,6 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
-#include "svn_cancel.h"
 
 #ifdef __cplusplus
 extern "C" {
