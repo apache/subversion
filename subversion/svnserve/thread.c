@@ -58,9 +58,6 @@ static apr_thread_mutex_t *thread_req_lock;
 /* The trigger for queue events. Associated with thread_queue_lock. */
 static apr_thread_cond_t *thread_req_event;
 
-/* The number of currently running threads. Protected by thread_req_lock. */
-static int thread_count = 0;
-
 /* The number of idle threads. Protected by thread_req_lock. */
 static int thread_idle_count = 0;
 
@@ -121,7 +118,6 @@ static void *APR_THREAD_FUNC thread_main(apr_thread_t *tid, void *data)
               && APR_STATUS_IS_TIMEUP(status))
             {
               /* That's it, time to die. */
-              --thread_count;
               apr_thread_mutex_unlock(thread_req_lock);
               svn_pool_destroy(thread_pool);
               return NULL;
