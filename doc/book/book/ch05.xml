@@ -1539,7 +1539,7 @@ $
         repository, reading the new value from a provided file.</para>
           
       <screen>
-$ echo "Here is the new, correct log message" > newlog.txt
+$ echo "Here is the new, correct log message" &gt; newlog.txt
 $ svnadmin setlog myrepos newlog.txt -r 388
 </screen>
       
@@ -2020,8 +2020,8 @@ $ svnadmin dump myrepos | svnadmin load newrepos
         dumped.</para>
 
       <screen>
-$ svnadmin dump myrepos --revision 23 > rev-23.dumpfile
-$ svnadmin dump myrepos --revision 100:200 > revs-100-200.dumpfile
+$ svnadmin dump myrepos --revision 23 &gt; rev-23.dumpfile
+$ svnadmin dump myrepos --revision 100:200 &gt; revs-100-200.dumpfile
 </screen>
 
       <para>As Subversion dumps each new revision, it outputs only
