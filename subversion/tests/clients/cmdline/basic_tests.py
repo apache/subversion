@@ -536,6 +536,9 @@ test_list = [ None,
               basic_conflict,
               basic_cleanup,
               basic_revert,
+              ### todo: more tests needed:
+              ### test "svn rm http://some_url"
+              ### not sure this file is the right place, though.
              ]
 
 if __name__ == '__main__':
