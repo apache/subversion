@@ -245,9 +245,8 @@ which in turn map entry names to other unique keys:
 
 Both file and directory dictionaries store metadata under special keys
 whose names start with "/", so they can always be distinguished from
-entries.  For example, search for "//mutable" and "//sym_names" in
-cvs2svn.py (the double slash is just for easily readable debugging
-output).
+entries.  For example, search for "/mutable" and "/sym_names" in
+cvs2svn.py.
 
 The repository mirror allows cvs2svn to remember what paths exist in
 what revisions.  For each path, it records what tags and branches can
