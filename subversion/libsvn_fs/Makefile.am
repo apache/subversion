@@ -4,3 +4,6 @@
 lib_LTLIBRARIES = libsvn_fs.la
 libsvn_fs_la_SOURCES = fs.c err.c
 INCLUDES = -I../include -I../../apr/include -I../../expat-lite
+
+## Make libtool be quiet
+LIBTOOL = @LIBTOOL@ --silent

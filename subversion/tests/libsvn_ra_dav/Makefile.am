@@ -18,6 +18,9 @@ ra_dav_test_LDADD = ../libsvn_ra_dav.la      \
                     ../../../apr/libapr.a
 
 
+## Make libtool be quiet
+LIBTOOL = @LIBTOOL@ --silent
+
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)

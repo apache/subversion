@@ -16,6 +16,9 @@ checkout_test_LDADD = ../libsvn_wc.la                          \
                       ../../../expat-lite/libexpat.la
 
 
+## Make libtool be quiet
+LIBTOOL = @LIBTOOL@ --silent
+
 ## Automatic test scripts to run for `make check`
 
 TESTS = checkout-test.sh

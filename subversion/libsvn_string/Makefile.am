@@ -19,3 +19,6 @@ INCLUDES = -I../include -I../../apr/include
 ## Build *this* directory first, *then* the test subdirectory!
 SUBDIRS = . tests
 
+
+## Make libtool be quiet
+LIBTOOL = @LIBTOOL@ --silent

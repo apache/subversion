@@ -13,3 +13,6 @@ libmod_dav_svn_la_SOURCES = mod_dav_svn.c deadprops.c liveprops.c repos.c \
 INCLUDES = -I../include $(APACHE_INCLUDES)
 
 SUBDIRS = . tests
+
+## Make libtool be quiet
+LIBTOOL = @LIBTOOL@ --silent

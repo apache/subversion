@@ -8,7 +8,5 @@ CFLAGS = -pthread
 INCLUDES = -I../../apr/include
 
 
-
-
-
-
+## Make libtool be quiet
+LIBTOOL = @LIBTOOL@ --silent
