@@ -532,7 +532,6 @@ svn_txdelta_apply (svn_stream_t *source,
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct apply_baton *ab;
-  assert (pool != NULL);
 
   ab = apr_palloc (subpool, sizeof (*ab));
   ab->source = source;
