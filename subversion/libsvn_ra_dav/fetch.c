@@ -218,19 +218,15 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   svn_error_t *err;
   svn_error_t *err2;
   svn_string_t *name;
-  svn_string_t *ancestor_path;  /* ### bogus */
   void *file_baton;
   int rv;
   const char *vsn_url;
-
-  /* ### */
-  ancestor_path = svn_string_create("### ancestor_path ###", pool);
 
   printf("fetching and saving %s\n", rsrc->url);
 
   name = my_basename(rsrc->url, pool);
   err = (*editor->add_file)(name, dir_baton,
-                            /* ### NULL */ ancestor_path, SVN_INVALID_REVNUM,
+                            NULL, SVN_INVALID_REVNUM,
                             &file_baton);
   if (err)
     return svn_error_quick_wrap(err, "could not add a file");
@@ -418,7 +414,6 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   int recurse = 1;      /* ### until it gets passed to us */
 
   svn_error_t *err;
-  svn_string_t *ancestor_path;  /* ### bogus */
   void *root_baton;
   svn_string_t *act_url_name;
   svn_string_t *vsn_url_name;
@@ -456,9 +451,6 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   subdir->rsrc->url = bc_root;
 
   PUSH_SUBDIR(subdirs, subdir);
-
-  /* ### */
-  ancestor_path = svn_string_create("### ancestor_path ###", ras->pool);
 
   /* ### damn. gotta build a string. */
   act_url_name = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL, ras->pool);
@@ -501,7 +493,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           
           printf("adding directory: %s\n", name->data);
           err = (*editor->add_directory) (name, parent_baton,
-                                          /* ### NULL */ ancestor_path, SVN_INVALID_REVNUM,
+                                          NULL, SVN_INVALID_REVNUM,
                                           &this_baton);
           if (err)
             return svn_error_quick_wrap(err, "could not add directory");
