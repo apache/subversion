@@ -18,7 +18,6 @@ libsvn_fs_la_SOURCES =				\
                         id.h                    \
                         node-rev.c              \
                         node-rev.h              \
-                        node.h                  \
 			nodes-table.c		\
 			nodes-table.h		\
 			rev-table.c		\
