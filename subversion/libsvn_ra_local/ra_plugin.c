@@ -55,16 +55,20 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
     {
       char *path;
       apr_size_t ignored_len;
-      void *ignored_val;
+      void *val;
       svn_stringbuf_t path_str;
+      enum svn_recurse_kind r;
 
-      apr_hash_this (hi, (void *) &path, &ignored_len, &ignored_val);
+      apr_hash_this (hi, (void *) &path, &ignored_len, &val);
 
       /* Oh yes, the flogging ritual, how could I forget. */
       path_str.data = path;
       path_str.len = strlen (path);
+      r = (enum svn_recurse_kind) val;
 
-      SVN_ERR (closer->close_func (closer->close_baton, &path_str, new_rev));
+      SVN_ERR (closer->close_func (closer->close_baton, &path_str, 
+                                   (r == svn_recursive) ? TRUE : FALSE,
+                                   new_rev));
     }
 
   return SVN_NO_ERROR;

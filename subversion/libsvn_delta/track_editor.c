@@ -65,8 +65,8 @@ struct edit_baton
   /* These are defined only if the caller wants close_edit() to bump
      revisions */
   svn_revnum_t new_rev;
-  svn_error_t *(*bump_func) (void *baton, svn_stringbuf_t *path,
-                             svn_revnum_t new_rev);
+  svn_bump_func_t bump_func;
+
   void *bump_baton;
 };
 
@@ -124,8 +124,18 @@ add_directory (svn_stringbuf_t *name,
                                      child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
 
-  apr_hash_set (parent_d->edit_baton->committed_targets,
-                child_d->path->data, APR_HASH_KEY_STRING, (void *) 1);
+  /* If this was an add-with-history (copy), then indicate in the
+     hash-value that this dir needs to be RECURSIVELY bumped after the
+     commit completes. */
+  if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
+    apr_hash_set (parent_d->edit_baton->committed_targets,
+                  child_d->path->data, APR_HASH_KEY_STRING,
+                  (void *) svn_recursive);
+  else
+    apr_hash_set (parent_d->edit_baton->committed_targets,
+                  child_d->path->data, APR_HASH_KEY_STRING,
+                  (void *) svn_nonrecursive);
+
 
   *child_baton = child_d;
 
@@ -173,7 +183,8 @@ add_file (svn_stringbuf_t *name,
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
 
   apr_hash_set (parent_d->edit_baton->committed_targets,
-                child_fb->path->data, APR_HASH_KEY_STRING, (void *) 1);
+                child_fb->path->data, APR_HASH_KEY_STRING,
+                (void *) svn_nonrecursive);
 
   *file_baton = child_fb;
 
@@ -211,7 +222,7 @@ delete_entry (svn_stringbuf_t *name,
   svn_path_add_component (path, name, svn_path_local_style);
   
   apr_hash_set (parent_d->edit_baton->committed_targets,
-                path->data, APR_HASH_KEY_STRING, (void *) 1);
+                path->data, APR_HASH_KEY_STRING, (void *) svn_nonrecursive);
 
   return SVN_NO_ERROR;
 }
@@ -225,7 +236,8 @@ change_dir_prop (void *dir_baton,
   struct dir_baton *db = dir_baton;
 
   apr_hash_set (db->edit_baton->committed_targets,
-                db->path->data, APR_HASH_KEY_STRING, (void *) 1);
+                db->path->data, APR_HASH_KEY_STRING,
+                (void *) svn_nonrecursive);
 
   return SVN_NO_ERROR;
 }
@@ -239,7 +251,8 @@ change_file_prop (void *file_baton,
   struct file_baton *fb = file_baton;
 
   apr_hash_set (fb->parent_dir_baton->edit_baton->committed_targets,
-                fb->path->data, APR_HASH_KEY_STRING, (void *) 1);
+                fb->path->data, APR_HASH_KEY_STRING,
+                (void *) svn_nonrecursive);
   
   return SVN_NO_ERROR;
 }
@@ -261,7 +274,8 @@ apply_textdelta (void *file_baton,
   struct file_baton *fb = file_baton;
   
   apr_hash_set (fb->parent_dir_baton->edit_baton->committed_targets,
-                fb->path->data, APR_HASH_KEY_STRING, (void *) 1);
+                fb->path->data, APR_HASH_KEY_STRING,
+                (void *) svn_nonrecursive);
   
   *handler = window_handler;
   *handler_baton = NULL;
@@ -285,17 +299,21 @@ close_edit (void *edit_baton)
        hi = apr_hash_next (hi))
     {
       char *path;
-      void *ignored_val;
+      void *val;
       apr_size_t ignored_len;
       svn_stringbuf_t path_str;
+      enum svn_recurse_kind r;
 
-      apr_hash_this (hi, (void *) &path, &ignored_len, &ignored_val);
+      apr_hash_this (hi, (void *) &path, &ignored_len, &val);
 
       /* Sigh. */
       path_str.data = path;
       path_str.len = strlen (path);
+      r = (enum svn_recurse_kind) val;
 
-      SVN_ERR (eb->bump_func (eb->bump_baton, &path_str, eb->new_rev));
+      SVN_ERR (eb->bump_func (eb->bump_baton, &path_str,
+                              (r == svn_recursive) ? TRUE : FALSE,
+                              eb->new_rev));
     }
 
   return SVN_NO_ERROR;
@@ -311,10 +329,7 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    apr_pool_t *pool,
                                    apr_hash_t *committed_targets,
                                    svn_revnum_t new_rev,
-                                   svn_error_t *(*bump_func) 
-                                     (void *baton,
-                                      svn_stringbuf_t *path,
-                                      svn_revnum_t new_rev),
+                                   svn_bump_func_t bump_func,
                                    void *bump_baton)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));

@@ -632,11 +632,12 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 /* A function type that can be used for bumping revision numbers. */
 typedef svn_error_t * (*svn_bump_func_t) (void *baton,
                                           svn_stringbuf_t *path,
+                                          svn_boolean_t recurse,
                                           svn_revnum_t new_rev);
 
 /* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
-   committed.  Store each commited path in HASH, with some undefined
-   non-null value.  HASH is initialized already.
+   committed.  Store each commited path in HASH, with (char *) keys
+   and a value of (void * svn_recurse_kind). HASH is initialized already.
 
    The arguments {NEW_REV, BUMP_FUNC, BUMP_BATON} are an optional set
    of args;  if specified, then close_edit() will use them to bump

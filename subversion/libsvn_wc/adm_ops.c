@@ -161,7 +161,8 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
                 || (! current_entry_name))
                && (current_entry->revision != revision)
                && (current_entry->schedule != svn_wc_schedule_add))
-        SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, revision));
+        SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, FALSE,
+                                      revision));
       
       /* If entry is a dir (and not `.', and not scheduled for
          addition), then recurse into it. */
@@ -183,6 +184,7 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
 svn_error_t *
 svn_wc_set_revision (void *baton,
                      svn_stringbuf_t *target,
+                     svn_boolean_t recurse,
                      svn_revnum_t new_revnum)
 {
   svn_error_t *err;
@@ -286,6 +288,35 @@ svn_wc_set_revision (void *baton,
             
   /* The client's commit routine will take care of removing all
      locks en masse. */
+
+  /* ### Someday perhaps we can make this routine truly recursive,
+     instead of calling svn_wc_get_version_controlled_paths().  :-) */
+  if (recurse)
+    {
+      /* The caller wants us to bump ALL children of this directory. */
+      apr_hash_index_t *hi;
+      apr_hash_t *path_list = apr_hash_make (pool);
+
+      /* Fetch a list of all version-controlled paths below us. */
+      SVN_ERR (svn_wc_get_version_controlled_paths (path_list, target, pool));
+
+      /* Loop over this list, calling self: */
+      for (hi = apr_hash_first (pool, path_list); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          apr_size_t keylen;
+          void *val;
+          const char *child_path;
+          svn_stringbuf_t *child_path_str;
+          
+          apr_hash_this (hi, &key, &keylen, &val);
+          child_path = (const char *) key;         
+          child_path_str = svn_stringbuf_create (child_path, pool);
+
+          SVN_ERR (svn_wc_set_revision (baton, child_path_str, FALSE,
+                                        new_revnum));
+        }
+    }
 
   return SVN_NO_ERROR;
 }

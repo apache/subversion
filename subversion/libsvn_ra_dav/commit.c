@@ -624,23 +624,62 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
   resource_baton_t *child;
   int code;
 
-  /* ### no support for ancestor right now. that will use COPY */
-
   /* check out the parent resource so that we can create the new collection
      as one of its children. */
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
+  /* create a child object that contains all the resource urls */
   child = apr_pcalloc(pool, sizeof(*child));
   child->cc = parent->cc;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc, name->data, 1) );
 
-  /* create the new collection */
-  SVN_ERR( simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
-                          &code) );
-  if (code != 201)
+  if (! copyfrom_path)
     {
-      /* ### need to be more sophisticated with reporting the failure */
-      /* ### need error */
+      /* This a new directory with no history, so just create a new,
+         empty collection */
+      SVN_ERR( simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
+                              &code) );
+      if (code != 201)
+        {
+          /* ### need to be more sophisticated with reporting the failure */
+          /* ### need error */
+        }
+    }
+  else
+    {
+      svn_string_t bc_url, bc_relative;
+      svn_stringbuf_t *src_url;
+      int status;
+
+      /* This add has history, so we need to do a COPY. */
+      
+      /* Convert the copyfrom_* url/rev "public" pair into a Baseline
+         Collection (BC) URL that represents the revision -- and a
+         relative path under that BC.  */
+      SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
+                                             &bc_url, &bc_relative, NULL,
+                                             parent->cc->ras->sess,
+                                             copyfrom_path->data,
+                                             copyfrom_revision,
+                                             pool));
+
+
+      /* Combine the BC-URL and relative path; this is the main
+         "source" argument to the COPY request.  The "Destination:"
+         header given to COPY is simply the wr_url that is already
+         part of the child object. */
+      src_url = svn_stringbuf_create(bc_url.data, pool);
+      svn_path_add_component_nts(src_url, bc_relative.data,
+                                 svn_path_url_style);
+
+      /* Have neon do the COPY. */
+      status = ne_copy(parent->cc->ras->sess,
+                       1,                   /* overwrite */
+                       NE_DEPTH_INFINITE,   /* always copy dirs deeply */
+                       src_url->data,       /* source URI */
+                       child->rsrc->wr_url); /* dest URI */
+
+      /* ### check error code?!? */
     }
 
   *child_baton = child;
@@ -717,7 +756,7 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
   ** collection.
   **
   ** If the file was copied from elsewhere, then we will use the COPY
-  ** method to copy from [### where?] into the working collection.
+  ** method to copy into the working collection.
   */
 
   /* Do the parent CHECKOUT first */
@@ -749,7 +788,7 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
       /* Convert the copyfrom_* url/rev "public" pair into a Baseline
          Collection (BC) URL that represents the revision -- and a
          relative path under that BC.  */
-      SVN_ERR( svn_ra_dav__get_baseline_info(FALSE,
+      SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative, NULL,
                                              parent->cc->ras->sess,
                                              copyfrom_path->data,
@@ -771,6 +810,8 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
                        NE_DEPTH_ZERO,       /* for a file, does it care? */
                        src_url->data,       /* source URI */
                        file->rsrc->wr_url); /* dest URI */
+
+      /* ### check error code?!? */
     }
 
   /* return the file_baton */

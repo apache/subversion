@@ -97,6 +97,14 @@ typedef int svn_boolean_t;
 #endif /* FALSE */
 
 
+/* An enum to indicate whether recursion is needed. */
+enum svn_recurse_kind
+{
+  svn_nonrecursive = 1,
+  svn_recursive
+};
+
+
 
 /* Defines for reserved ("svn:") property names.  */
 

@@ -56,9 +56,10 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
 /* A function type for "cleaning up" after a commit.  The client layer
    supplies this routine to an RA layer.  RA calls this routine on
    each PATH that was committed, allowing the client to bump revision
-   numbers. */
+   numbers, possibly recursively. */
 typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
                                                     svn_stringbuf_t *path,
+                                                    svn_boolean_t recurse,
                                                     svn_revnum_t new_rev);
 
 /* A function type for retrieving the youngest revision from a repos.   */
