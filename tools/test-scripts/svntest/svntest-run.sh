@@ -16,7 +16,7 @@ REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 # Prime and initialize the log file
 $CP_F "$LOG_FILE_PREFIX.$BUILD_TYPE" $LOG_FILE
 echo >> $LOG_FILE
-echo "TEST: Revision $REV on $TEST" >> $LOG_FILE
+echo "TEST: $REVPREFIX$REV on $TEST" >> $LOG_FILE
 echo >> $LOG_FILE
 
 # Check the build type
