@@ -20,10 +20,42 @@
 
 #include <string.h>
 #include <assert.h>
+
+#include "svn_private_config.h"         /* for SVN_HAVE_OLD_EXPAT */
 #include "svn_pools.h"
 #include "svn_xml.h"
 
+#ifdef SVN_HAVE_OLD_EXPAT
+#include "xmlparse.h"
+#else
+#include "expat.h"
+#endif
 
+#ifdef XML_UNICODE
+#error Expat is unusable -- it has been compiled for wide characters
+#endif
+
+/* The private internals for a parser object. */
+struct svn_xml_parser_t
+{
+  /** the expat parser */
+  XML_Parser parser;
+
+  /** the SVN callbacks to call from the Expat callbacks */
+  svn_xml_start_elem start_handler;
+  svn_xml_end_elem end_handler;
+  svn_xml_char_data data_handler;
+
+  /** the user's baton for private data */
+  void *baton;
+
+  /** if non-@c NULL, an error happened while parsing */
+  svn_error_t *error;
+
+  /** where this object is allocated, so we can free it easily */
+  apr_pool_t *pool;
+
+};
 
 
 /*** XML escaping. ***/
@@ -96,18 +128,44 @@ svn_xml_escape_cstring (svn_stringbuf_t **outstr,
                         const char *string,
                         apr_pool_t *pool)
 {
-  xml_escape (outstr, string, (apr_size_t) strlen (string), pool);
+  xml_escape (outstr, string, strlen (string), pool);
 }
 
+
+
+/*** Map from the Expat callback types to the SVN XML types. ***/
+
+static void expat_start_handler(void *userData,
+                                const XML_Char *name,
+                                const XML_Char **atts)
+{
+  svn_xml_parser_t *svn_parser = userData;
+
+  (*svn_parser->start_handler)(svn_parser->baton, name, atts);
+}
+
+static void expat_end_handler(void *userData, const XML_Char *name)
+{
+  svn_xml_parser_t *svn_parser = userData;
+
+  (*svn_parser->end_handler)(svn_parser->baton, name);
+}
+
+static void expat_data_handler(void *userData, const XML_Char *s, int len)
+{
+  svn_xml_parser_t *svn_parser = userData;
+
+  (*svn_parser->data_handler)(svn_parser->baton, s, (apr_size_t)len);
+}
 
 
 /*** Making a parser. ***/
 
 svn_xml_parser_t *
-svn_xml_make_parser (void *userData,
-                     XML_StartElementHandler start_handler,
-                     XML_EndElementHandler end_handler,
-                     XML_CharacterDataHandler data_handler,
+svn_xml_make_parser (void *baton,
+                     svn_xml_start_elem start_handler,
+                     svn_xml_end_elem end_handler,
+                     svn_xml_char_data data_handler,
                      apr_pool_t *pool)
 {
   svn_xml_parser_t *svn_parser;
@@ -115,16 +173,27 @@ svn_xml_make_parser (void *userData,
 
   XML_Parser parser = XML_ParserCreate (NULL);
 
-  XML_SetUserData (parser, userData);
-  XML_SetElementHandler (parser, start_handler, end_handler); 
-  XML_SetCharacterDataHandler (parser, data_handler);
+  XML_SetElementHandler (parser,
+                         start_handler ? expat_start_handler : NULL,
+                         end_handler ? expat_end_handler : NULL);
+  XML_SetCharacterDataHandler (parser,
+                               data_handler ? expat_data_handler : NULL);
 
+  /* ### we probably don't want this pool; or at least we should pass it
+     ### to the callbacks and clear it periodically.  */
   subpool = svn_pool_create (pool);
 
   svn_parser = apr_pcalloc (subpool, sizeof (*svn_parser));
 
   svn_parser->parser = parser;
-  svn_parser->pool   = subpool;
+  svn_parser->start_handler = start_handler;
+  svn_parser->end_handler = end_handler;
+  svn_parser->data_handler = data_handler;
+  svn_parser->baton = baton;
+  svn_parser->pool = subpool;
+
+  /* store our parser info as the UserData in the Expat parser */
+  XML_SetUserData (parser, svn_parser);
 
   return svn_parser;
 }
