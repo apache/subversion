@@ -47,10 +47,23 @@ main (int argc, char *argv[])
   /* Get the generic dumb editor */
   err = svn_test_get_editor (&my_editor, &my_edit_baton,
                              rootdir, 59, globalpool);
+  if (err)
+    {
+      svn_handle_error (err, stderr, 0);
+      apr_destroy_pool (globalpool);
+      exit (err->apr_err);
+    }
+
 
   /* Call the crawler */
   err = svn_wc_crawl_local_mods (rootdir, my_editor, my_edit_baton,
                                  globalpool);
+  if (err)
+    {
+      svn_handle_error (err, stderr, 0);
+      apr_destroy_pool (globalpool);
+      exit (err->apr_err);
+    }
 
   /* Close the edit */
   err = my_editor->close_edit (my_edit_baton);
