@@ -164,7 +164,7 @@ svn_error_t *svn_fs_set_berkeley_errcall (svn_fs_t *fs,
  * database files, log files, shared memory segments, etc.  @a path should
  * refer to a file or directory created by @c svn_fs_create_berkeley.
  */
-svn_error_t *svn_fs_delete_berkeley (const char *PATH, apr_pool_t *pool);
+svn_error_t *svn_fs_delete_berkeley (const char *path, apr_pool_t *pool);
 
 
 /** Perform any necessary non-catastrophic recovery on a Berkeley
@@ -777,6 +777,18 @@ svn_error_t *svn_fs_node_created_rev (svn_revnum_t *revision,
                                       svn_fs_root_t *root,
                                       const char *path,
                                       apr_pool_t *pool);
+
+/** Set @a *created_path to the path at with @a path under @root was
+ * created.  Use @a pool for all allocations.  Callers may use this
+ * function in conjunction with svn_fs_node_created_rev() perform a
+ * reverse lookup of the mapping of (path, revision) -> node-id that
+ * svn_fs_node_id() performs.
+ */
+svn_error_t *svn_fs_node_created_path (const char **created_path,
+                                       svn_fs_root_t *root,
+                                       const char *path,
+                                       apr_pool_t *pool);
+
 
 /** Set @a *value_p to the value of the property named @a propname of 
  * @a path in @a root.  If the node has no property by that name, set 
