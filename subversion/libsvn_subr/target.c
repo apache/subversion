@@ -79,8 +79,6 @@ svn_path_condense_targets (const char **pbasedir,
           *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
                                                      absolute, 
                                                      pool);
-          if (! *pbasedir)
-            *pbasedir = "";
         }
       
       if (pcondensed_targets != NULL)
@@ -117,7 +115,7 @@ svn_path_condense_targets (const char **pbasedir,
                       ancestor = svn_path_get_longest_ancestor 
                         (abs_targets_i, abs_targets_j, pool);
                       
-                      if (! ancestor)
+                      if (*ancestor == '\0')
                         continue;
                       
                       if (strcmp (ancestor, abs_targets_i) == 0)
