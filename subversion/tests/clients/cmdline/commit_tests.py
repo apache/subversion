@@ -1421,7 +1421,7 @@ def failed_commit(sbox):
   wc_dir = sbox.wc_dir
 
   # Make the other working copy
-  other_wc_dir = wc_dir + '.other'
+  other_wc_dir = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc_dir)
 
   # Make different changes in the two working copies
@@ -1542,7 +1542,7 @@ def commit_out_of_date_deletions(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Change omega's text, and make a propchange to A/C directory

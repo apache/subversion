@@ -20,7 +20,8 @@ def run_tests(test_list):
   # Remove repository files created by the tests.
   print '  - removing repositories left over from previous test runs'
   for name in os.listdir('.'):
-    if name[:10] != 'test-repo-': continue
+    if name[:10] != 'test-repo-':
+      continue
     shutil.rmtree(name)
 
   # Run the tests
@@ -29,7 +30,8 @@ def run_tests(test_list):
     print '  - running all sub-tests in', test_pgm
     sys.stdout.flush()
     sys.stderr.flush()
-    if os.spawnv(os.P_WAIT, _dir + test_pgm + _exe, [test_pgm]):
+    if os.spawnv(os.P_WAIT, _dir + test_pgm + _exe,
+                 [test_pgm] + sys.argv[1:]):
       errors = 1
   return errors
 

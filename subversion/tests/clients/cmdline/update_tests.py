@@ -107,7 +107,7 @@ def update_binary_file(sbox):
     return 1
 
   # Make a backup copy of the working copy.
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
   theta_backup_path = os.path.join(wc_backup, 'A', 'theta')
 
@@ -481,7 +481,7 @@ def receive_overlapping_same_change(sbox):
   svntest.main.file_append(iota_path, "\nA change to iota.\n")
 
   # Duplicate locally modified wc, giving us the "other" wc.
-  other_wc = wc_dir + '-other'
+  other_wc = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc)
   other_iota_path = os.path.join(other_wc, 'iota')
 
@@ -547,7 +547,7 @@ def update_to_revert_text_conflicts(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files which will be committed
@@ -944,7 +944,7 @@ def prop_update_on_scheduled_delete(sbox):
     return 1
 
   wc_dir = sbox.wc_dir
-  other_wc = wc_dir + '-other'
+  other_wc = sbox.add_wc_path('other')
 
   # Make the "other" working copy.
   svntest.actions.duplicate_dir(wc_dir, other_wc)

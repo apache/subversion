@@ -99,6 +99,9 @@ svn_test__create_fs (svn_fs_t **fs_p,
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
 
+  /* Register this fs for cleanup. */
+  svn_test_add_dir_cleanup (name);
+
   return SVN_NO_ERROR;
 }
 
@@ -134,6 +137,9 @@ svn_test__create_repos (svn_repos_t **repos_p,
   /* Provide a handler for Berkeley DB error messages.  */
   SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
                                         berkeley_error_handler));
+
+  /* Register this repo for cleanup. */
+  svn_test_add_dir_cleanup (name);
 
   return SVN_NO_ERROR;
 }

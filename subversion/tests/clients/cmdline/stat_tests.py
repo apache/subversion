@@ -75,7 +75,7 @@ def status_update_with_nested_adds(sbox):
   wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
-  wc_backup = wc_dir + 'backup'
+  wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
   
   # Create newdir and newfile
@@ -372,7 +372,7 @@ def status_file_needs_update(sbox):
     return 1
 
   wc_dir = sbox.wc_dir
-  other_wc = wc_dir + '-other'
+  other_wc = sbox.add_wc_path('other')
 
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
@@ -438,7 +438,7 @@ def status_uninvited_parent_directory(sbox):
     return 1
 
   wc_dir = sbox.wc_dir
-  other_wc = wc_dir + '-other'
+  other_wc = sbox.add_wc_path('other')
 
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
@@ -467,7 +467,7 @@ def status_uninvited_parent_directory(sbox):
   saw_uninvited_parent_dir = 0
   for line in out:
     # The "/?" is just to allow for an optional trailing slash.
-    if re.match("\\s+\\*.*-other/?$", line):
+    if re.match("\\s+\\*.*\.other/?$", line):
       saw_uninvited_parent_dir = 1
 
   return saw_uninvited_parent_dir

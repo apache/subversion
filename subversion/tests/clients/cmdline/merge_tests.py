@@ -138,7 +138,7 @@ def textual_merges_galore(sbox):
     return 1
 
   # Make the "other" working copy
-  other_wc = wc_dir + '.other'
+  other_wc = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
   # Now commit some more mods from the original working copy, to
@@ -1035,7 +1035,7 @@ def merge_with_implicit_target (sbox):
     return 1
 
   # Make the "other" working copy
-  other_wc = wc_dir + '.other'
+  other_wc = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
   # Try the merge without an explicit target; it should succeed.
