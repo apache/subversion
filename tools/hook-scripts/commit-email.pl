@@ -1,20 +1,89 @@
 #!/usr/bin/perl -w
 
-### commit-email.pl: send a commit email for commit NEW-REVISION in
-### REPOSITORY to some email addresses.  Usage:
-###
-###    commit-email.pl REPOSITORY NEW-REVISION [EMAIL-ADDR ...]
-###
+# ====================================================================
+# commit-email.pl: send a commit email for commit REVISION in
+# repository REPOS to some email addresses.
+#
+# Usage: commit-email.pl REPOS REVISION [OPTIONS] [EMAIL-ADDR ...]
+#
+# Options:
+#    -h hostname       :  Hostname to append to author for 'From:'
+#    -l logfile        :  File to while mail contents should be 
+#                         appended
+#    -s subject_prefix :  Subject line prefix
+#    
+# ====================================================================
+# Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
 
 use strict;
 
+######################################################################
+#  CONFIGURATION SECTION
+######################################################################
+
+# sendmail path
+my $sendmail = "/usr/sbin/sendmail";
+
+# svnlook path
+my $svnlook = "/usr/local/bin/svnlook";
+
+######################################################################
+
+# get the REPOS from the arguments
 my $repos = shift @ARGV;
+
+# get the REVISION from the arguments
 my $rev = shift @ARGV;
-my @users = @ARGV;
+
+# initialize the EMAIL_ADDRS to the remaining arguments
+my @email_addrs = @ARGV;
+
+# now, we see if there are any options included in the argument list
+my $logfile = '';
+my $hostname = '';
+my $subject_prefix = '';
+while (scalar @email_addrs)
+{
+    my $option = shift @email_addrs;
+    if ($option eq '-h')
+    {
+        # found a hostname option
+        $hostname = shift @email_addrs;
+    }
+    elsif ($option eq '-l')
+    {
+        # found a logfile option
+        $logfile = shift @email_addrs;
+    }
+    elsif ($option eq '-s')
+    {
+        # found a subject prefix option
+        $subject_prefix = shift @email_addrs;
+    }
+    else
+    {
+        # not an option, put it back!
+        unshift @email_addrs, ($option);
+        last;
+    }
+}
+
 my @svnlooklines = ();
+my @output = ();
 
 # get the auther, date, and log from svnlook
-open (INPUT, "svnlook $repos rev $rev info |") 
+open (INPUT, "$svnlook $repos rev $rev info |") 
     or die ("Error running svnlook (info)");
 @svnlooklines = <INPUT>;
 close (INPUT);
@@ -26,7 +95,7 @@ chomp $author;
 chomp $date;
 
 # figure out what directories have changed (using svnlook)
-open (INPUT, "svnlook $repos rev $rev dirs-changed |")
+open (INPUT, "$svnlook $repos rev $rev dirs-changed |")
     or die ("Error running svnlook (changed)");
 my @dirschanged = <INPUT>;
 chomp @dirschanged;
@@ -39,7 +108,7 @@ grep
 close (INPUT);
 
 # figure out what's changed (using svnlook)
-open (INPUT, "svnlook $repos rev $rev changed |") 
+open (INPUT, "$svnlook $repos rev $rev changed |") 
     or die ("Error running svnlook (changed)");
 @svnlooklines = <INPUT>;
 close (INPUT);
@@ -64,41 +133,72 @@ foreach my $line (@svnlooklines)
 }
 
 # get the diff from svnlook
-open (INPUT, "svnlook $repos rev $rev diff |") 
+open (INPUT, "$svnlook $repos rev $rev diff |") 
     or die ("Error running svnlook (diff)");
 my @difflines = <INPUT>;
 close (INPUT);
 
-
-# open a pipe to 'mail'
+# mail headers
 my $dirlist = join (' ', @dirschanged);
-my $userlist = join (' ', @users); 
-open (MAILER, "| mail -s 'commit: revision $rev - $dirlist' $userlist") 
-    or die ("Error opening a pipe to your mailer");
+my $userlist = join (' ', @email_addrs); 
+my $subject = "commit: revision $rev - $dirlist";
+if ($subject_prefix =~ /\w/)
+{
+    $subject = "$subject_prefix $subject";
+}
+my $mail_from = $author;
+if ($hostname =~ /\w/)
+{
+    $mail_from = "$mail_from\@$hostname";
+}
+push (@output, ("To: $userlist\n"));
+push (@output, ("From: $mail_from\n"));
+push (@output, ("Subject: $subject\n"));
+push (@output, ("\n"));
 
-print MAILER "Author: $author\nDate: $date\nNew Revision: $rev\n\n";
+# mail body
+push (@output, ("Author: $author\n"));
+push (@output, ("Date: $date\n"));
+push (@output, ("New Revision: $rev\n"));
+push (@output, ("\n"));
 if (scalar @adds)
 {
     @adds = sort @adds;
-    print MAILER "Added:\n";
-    print MAILER @adds;
+    push (@output, ("Added:\n"));
+    push (@output, (@adds));
 }
 if (scalar @dels)
 {
     @dels = sort @dels;
-    print MAILER "Removed:\n";
-    print MAILER @dels;
+    push (@output, ("Removed:\n"));
+    push (@output, (@dels));
 }
 if (scalar @mods)
 {
     @mods = sort @mods;
-    print MAILER "Modified:\n";
-    print MAILER @mods;
+    push (@output, ("Modified:\n"));
+    push (@output, (@mods));
 }
-print MAILER "Log:\n", @log, "\n";
-print MAILER @difflines;
+push (@output, ("Log:\n"));
+push (@output, (@log));
+push (@output, ("\n"));
+push (@output, (@difflines));
 
-close (MAILER);
 
+# dump output to logfile (if its name is not empty)
+if ($logfile =~ /\w/)
+{
+    open (LOGFILE, ">> $logfile") 
+        or die ("Error opening '$logfile' for append");
+    print LOGFILE @output;
+    close LOGFILE;
+}
 
-
+# open a pipe to 'sendmail'
+if (($sendmail =~ /\w/) and ($userlist =~ /\w/))
+{
+    open (SENDMAIL, "| $sendmail $userlist") 
+        or die ("Error opening a pipe to sendmail");
+    print SENDMAIL @output;
+    close SENDMAIL;
+}
