@@ -62,8 +62,10 @@ while (<SOURCE>)
   $_ = &escape_html ($_);
 
   # Convert "*foo*" to real italics: "<i>foo</i>"
-  # todo: make this work for multiple words, not too hard really...
-  $_ =~ s/\*([a-zA-Z0-9]+)\*/<i>$1<\/i>/g;
+  $_ =~ s/^\*([^*\s]+)/<i>$1/g;
+  $_ =~ s/(\s)\*([^*\s]+)/$1<i>$2/g;
+  $_ =~ s/([^*\s]+)\*$/$1<\/i>/g;
+  $_ =~ s/([^*\s]+)\*([\s\W])/$1<\/i>$2/g;
 
   if ($num_stars == 1)
   {
