@@ -86,7 +86,7 @@ locate_key (apr_size_t *length,
   DBT result;
 
   svn_fs_base__trail_debug (trail, "strings", "cursor");
-  SVN_ERR (BDB_WRAP (fs, "creating cursor for reading a string",
+  SVN_ERR (BDB_WRAP (fs, _("creating cursor for reading a string"),
                      bfd->strings->cursor (bfd->strings, trail->db_txn,
                                            cursor, 0)));
 
