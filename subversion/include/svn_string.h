@@ -65,18 +65,14 @@ svn_string_t * svn_string_create (char *cstring,
 svn_string_t * svn_string_ncreate (char *bytes, size_t size, 
                                    ap_pool_t *pool);
 
-/* Set a bytestring to NULL */
+/* Set/get  a bytestring empty */
 
-void svn_string_setnull (svn_string_t *str);
+void svn_string_setempty (svn_string_t *str);
+svn_boolean_t svn_string_isempty (svn_string_t *str);
 
 /* Fill bytestring with a character */
 
 void svn_string_fillchar (svn_string_t *str, unsigned char c);
-
-/* Is bytestring NULL or empty? */
-
-svn_boolean_t svn_string_isnull (svn_string_t *str);
-svn_boolean_t svn_string_isempty (svn_string_t *str);
 
 /* Append either a string of bytes or an svn_string_t onto a
    svn_string_t.  reallocs() if necessary. */
@@ -99,7 +95,7 @@ svn_boolean_t svn_string_compare (svn_string_t *str1, svn_string_t *str2);
 
 /* convenience routine */
 
-void svn_string_print (svn_string_t *str);
+void svn_string_print (svn_string_t *str, FILE *stream);
 
 #endif  /* __SVN_STRING_H__ */
 

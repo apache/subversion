@@ -84,13 +84,17 @@ svn_string_t *
 svn_string_create (char *cstring, ap_pool_t *pool)
 {
   svn_string_t *new_string;
-  
-  new_string = (svn_string_t *) ap_palloc (pool, sizeof(svn_string_t)); 
-  new_string->data = NULL;
-  new_string->len = 0;
-  new_string->blocksize = 0;
-  svn_string_appendbytes (new_string, cstring, strlen(cstring), pool);
+  size_t l = strlen (cstring);
 
+  /* this alloc gives us memory filled with zeros, yum. */
+  new_string = (svn_string_t *) ap_palloc (pool, sizeof(svn_string_t)); 
+
+  new_string->data = (char *) ap_palloc (pool, l);
+  new_string->len = l;
+  new_string->blocksize = l;
+
+  strcpy (new_string->data, cstring);
+  
   return new_string;
 }
 
@@ -103,27 +107,21 @@ svn_string_ncreate (char *bytes, size_t size, ap_pool_t *pool)
 {
   svn_string_t *new_string;
 
+  /* this alloc gives us memory filled with zeros, yum. */
   new_string = (svn_string_t *) ap_palloc (pool, sizeof(svn_string_t)); 
-  new_string->data = NULL;
-  new_string->len = 0;
-  new_string->blocksize = 0;
 
-  svn_string_appendbytes (new_string, bytes, size, pool);
+  new_string->data = (char *) ap_palloc (pool, size);
+  new_string->len = size;
+  new_string->blocksize = size;
+
+  memcpy (new_string->data, bytes, size);
 
   return new_string;
 }
 
 
 
-/* set a bytestring to null */
 
-void
-svn_string_setnull (svn_string_t *str)
-{
-  str->data = NULL;
-  str->len = 0;
-  str->blocksize = 0;
-}
 
 
 /* overwrite bytestring with a character */
@@ -135,27 +133,19 @@ svn_string_fillchar (svn_string_t *str, unsigned char c)
   if (str->len > str->blocksize)
     str->len = str->blocksize;
 
-  if (c == 0) 
-    {
-      bzero (str->data, str->len);  /* for speed */
-    }
-  else
-    { 
-      memset (str->data,  (int) c, str->len);
-    }
+  memset (str->data,  (int) c, str->len);
 }
 
 
 
-/* Ask if a bytestring is null */
+/* set a bytestring to empty */
 
-svn_boolean_t
-svn_string_isnull (svn_string_t *str)
+void
+svn_string_setempty (svn_string_t *str)
 {
-  if (str->data == NULL)
-    return TRUE;
-  else
-    return FALSE;
+  str->data = NULL;
+  str->len = 0;
+  str->blocksize = 0;
 }
 
 
@@ -164,7 +154,7 @@ svn_string_isnull (svn_string_t *str)
 svn_boolean_t
 svn_string_isempty (svn_string_t *str)
 {
-  if (str->len <= 0)
+  if (str->len == 0)
     return TRUE;
   else
     return FALSE;
@@ -249,23 +239,14 @@ svn_string_compare (svn_string_t *str1, svn_string_t *str2)
    contains ASCII.  */
 
 void
-svn_string_print (svn_string_t *str)
+svn_string_print (svn_string_t *str, FILE *stream)
 {
-  size_t i = 0;
-
   if (str->len >= 0) 
     {
-      printf("String blocksize: %d, length: %d\n", 
-             str->blocksize, str->len);
-      while (i < str->len) 
-        {
-          if (putchar (str->data[i]) == EOF)
-            {
-              fprintf(stderr, "putchar() error at position %d !\n", i);
-            }
-          i++;
-        }
-      putchar('\n');
+      fprintf (stream, "String blocksize: %d, length: %d\n", 
+               str->blocksize, str->len);
+      fwrite (str->data, 1, str->len, stream);
+      fprintf (stream, "\n");
     }
 }
 
