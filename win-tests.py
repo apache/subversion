@@ -33,7 +33,8 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
                 'subversion/tests/clients/cmdline/merge_tests.py',
                 'subversion/tests/clients/cmdline/stat_tests.py',
                 'subversion/tests/clients/cmdline/trans_tests.py',
-                'subversion/tests/clients/cmdline/svnadmin_tests.py']
+                'subversion/tests/clients/cmdline/svnadmin_tests.py',
+                'subversion/tests/clients/cmdline/svnlook_tests.py']
 
 
 import os, sys, string, shutil, traceback
