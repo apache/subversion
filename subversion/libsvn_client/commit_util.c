@@ -228,13 +228,13 @@ harvest_committables (apr_hash_t *committables,
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_SPECIAL, path, adm_access,
                             pool));
 
-  if ((entry->kind == svn_node_file)
-      && (! propval)
-      && (is_special))
+  if ((((! propval) && (is_special)) ||
+          ((propval) && (! is_special))) &&
+      (kind != svn_node_none))
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-         _("Entry '%s' has been replaced by a special file"), path);
+         _("Entry '%s' has unexpectedly changed special status"), path);
     }
 
   /* Get a fully populated entry for PATH if we can, and check for

@@ -244,6 +244,106 @@ def copy_tree_with_symlink(sbox):
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
 
+def replace_symlink_with_file(sbox):
+  "replace a special file with a non-special file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new special file and commit it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  linktarget_path = os.path.join(wc_dir, 'linktarget')
+  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  os.symlink('linktarget', newfile_path)
+  svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    'linktarget' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+
+  # Now replace the symlink with a normal file and try to commit, we
+  # should get an error
+  os.remove(newfile_path);
+  svntest.main.file_append(newfile_path, "text of actual file");
+
+  # Does status show the obstruction?
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [ "~      newfile\n" ], [], 'st')
+
+  # And does a commit fail?
+  os.chdir(was_cwd)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
+                                                    'log msg', wc_dir)
+
+  regex = 'svn: Commit failed'
+  for line in stderr_lines:
+    if re.match(regex, line):
+      break
+  else:
+    raise svntest.Failure
+
+
+def remove_symlink(sbox):
+  "remove a symlink"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Commit a symlink
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  linktarget_path = os.path.join(wc_dir, 'linktarget')
+  svntest.main.file_append(linktarget_path, 'this is just a link target')
+  os.symlink('linktarget', newfile_path)
+  svntest.main.run_svn(None, 'add', newfile_path, linktarget_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    'linktarget' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  
+  # Now remove it
+  svntest.actions.run_and_verify_svn("", None, [], 'rm', newfile_path)
+
+  # Commit and verify that it worked
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Deleting'),
+    })
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'linktarget' : Item(status='  ', wc_rev=2, repos_rev=3),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  
 
 ########################################################################
 # Run the tests
@@ -255,6 +355,8 @@ test_list = [ None,
               Skip(replace_file_with_symlink, (os.name != 'posix')),
               Skip(import_export_symlink, (os.name != 'posix')),
               Skip(copy_tree_with_symlink, (os.name != 'posix')),
+              Skip(replace_symlink_with_file, (os.name != 'posix')),
+              Skip(remove_symlink, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
