@@ -22,12 +22,23 @@
 
 static void dav_svn_get_vsn_options(apr_pool_t *p, ap_text_header *phdr)
 {
+  /* Note: we append pieces with care for Web Folders's 63-char limit
+     on the DAV: header */
+
+  ap_text_append(p, phdr,
+                 "version-control,checkout,version-history,working-resource");
+  ap_text_append(p, phdr,
+                 "merge,baseline,activity,version-controlled-collection");
+
+  /* ### fork-control? */
 }
 
 static dav_error *dav_svn_get_option(const dav_resource *resource,
                                      const ap_xml_elem *elem,
                                      ap_text_header *option)
 {
+  /* ### DAV:version-history-collection-set */
+  /* ### DAV:activity-collection-set */
   return NULL;
 }
 
@@ -112,6 +123,18 @@ static dav_error *dav_svn_remove_label(const dav_resource *resource,
                        "Removing labels is not yet implemented.");
 }
 
+static int dav_svn_can_be_activity(const dav_resource *resource)
+{
+  return 0;
+}
+
+static dav_error *dav_svn_make_activity(dav_resource *resource)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "Creating activities is not yet implemented.");
+}
+
+
 const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_get_vsn_options,
   dav_svn_get_option,
@@ -129,6 +152,8 @@ const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_remove_label,
   NULL,                 /* can_be_workspace */
   NULL,                 /* make_workspace */
+  dav_svn_can_be_activity,
+  dav_svn_make_activity,
 };
 
 
