@@ -68,7 +68,7 @@ DBT *svn_fs__set_dbt (DBT *dbt, void *data, u_int32_t size);
    then owns the data block, and is responsible for making sure it
    gets freed.  
 
-   Use this with svn_fs__track_dbt:
+   You can use this with svn_fs__track_dbt:
 
        svn_fs__result_dbt (&foo);
        ... some Berkeley DB operation that puts data in foo ...
