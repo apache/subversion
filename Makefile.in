@@ -125,7 +125,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@logfile=`pwd`/tests.log ; \
 	echo > $$logfile ; \
 	failed=no ; \
-	$(PYTHON) $(top_srcdir)/pycheck.py ; \
+	$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
 	list='$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@'; for prog in $$list; do \
 	    progbase=`echo $$prog | sed 's?.*/??'` ; \
 	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
