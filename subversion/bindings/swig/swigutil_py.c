@@ -432,12 +432,26 @@ commit_item_array_to_list(const apr_array_header_t *array)
     return NULL;
 }
 
+
 
-static svn_error_t *convert_python_error(void)
+/*** Callback Errors ***/
+
+/* Return a Subversion error about a failed callback. */
+static svn_error_t *callback_exception_error(void)
 {
   return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
-                          "The Python callback raised an exception");
+                          "Python callback raised an exception");
 }
+
+/* Raise a TypeError exception with MESSAGE, and return a Subversion
+   error about an invalid return from a callback. */
+static svn_error_t *callback_bad_return_error(const char *message)
+{
+  PyErr_SetString(PyExc_TypeError, message);
+  return svn_error_create(APR_EGENERAL, NULL,
+                          "Python callback returned an invalid object");
+}
+
 
 
 /*** Editor Wrapping ***/
@@ -482,7 +496,7 @@ static svn_error_t *close_baton(void *baton,
                                     ib->baton ? (char *)"(O)" : NULL,
                                     ib->baton)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -520,7 +534,7 @@ static svn_error_t *set_target_revision(void *edit_baton,
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_target_revision",
                                     (char *)"l", target_revision)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -549,7 +563,7 @@ static svn_error_t *open_root(void *edit_baton,
                                     (char *)"lO&", base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -578,7 +592,7 @@ static svn_error_t *delete_entry(const char *path,
                                     (char *)"slOO&", path, revision, ib->baton,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -610,7 +624,7 @@ static svn_error_t *add_directory(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -641,7 +655,7 @@ static svn_error_t *open_directory(const char *path,
                                     base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -672,7 +686,7 @@ static svn_error_t *change_dir_prop(void *dir_baton,
                                     value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -710,7 +724,7 @@ static svn_error_t *add_file(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -742,7 +756,7 @@ static svn_error_t *open_file(const char *path,
                                     base_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -785,7 +799,7 @@ static svn_error_t *window_handler(svn_txdelta_window_t *window,
 
   if (result == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -815,7 +829,7 @@ static svn_error_t *apply_textdelta(void *file_baton,
                                     (char *)"(Os)", ib->baton,
                                     base_checksum)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -862,7 +876,7 @@ static svn_error_t *change_file_prop(void *file_baton,
                                     value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -890,7 +904,7 @@ static svn_error_t *close_file(void *file_baton,
                                     (char *)"(Os)", ib->baton,
                                     text_checksum)) == NULL)
     {
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -995,7 +1009,6 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
 }
 
 
-/* Thunked version of svn_wc_notify_func_t callback type. */
 void svn_swig_py_notify_func(void *baton,
                              const char *path,
                              svn_wc_notify_action_t action,
@@ -1007,6 +1020,7 @@ void svn_swig_py_notify_func(void *baton,
 {
   PyObject *function = baton;
   PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
 
   if (function == NULL || function == Py_None)
     return;
@@ -1017,37 +1031,59 @@ void svn_swig_py_notify_func(void *baton,
                                       path, action, kind,
                                       mime_type,
                                       content_state, prop_state, 
-                                      revision)) != NULL)
+                                      revision)) == NULL)
     {
-      Py_XDECREF(result);
+      err = callback_exception_error();
     }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  /* Our error has no place to go. :-( */
+  if (err)
+    svn_error_clear(err);
+
   svn_swig_py_release_py_lock();
 }
 
 
-/* Thunked version of svn_wc_status_func_t callback type. */
 void svn_swig_py_status_func(void *baton,
                              const char *path,
                              svn_wc_status_t *status)
 {
   PyObject *function = baton;
   PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
 
   if (function == NULL || function == Py_None)
     return;
 
   svn_swig_py_acquire_py_lock();
-  /* ### shouldn't we set an exception if this fails? */
   if ((result = PyObject_CallFunction(function, (char *)"sO&", path,
-                                      make_ob_status, status)) != NULL)
+                                      make_ob_status, status)) == NULL)
     {
+      err = callback_exception_error();
+    }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
       Py_DECREF(result);
     }
+
+  /* Our error has no place to go. :-( */
+  if (err)
+    svn_error_clear(err);
+    
   svn_swig_py_release_py_lock();
 }
 
 
-/* Thunked version of svn_wc_cancel_func_t callback type. */
 svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
 {
   PyObject *function = cancel_baton;
@@ -1058,21 +1094,33 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
     return SVN_NO_ERROR;
 
   svn_swig_py_acquire_py_lock();
-  if ((result = PyObject_CallFunction(function, NULL)) != NULL)
+  if ((result = PyObject_CallFunction(function, NULL)) == NULL)
     {
-      err = convert_python_error();
-      goto finished;
+      err = callback_exception_error();
     }
-
-  Py_DECREF(result);
-
- finished:
+  else
+    {
+      if (PyInt_Check(result))
+        {
+          if (PyInt_AsLong(result))
+            err = svn_error_create(SVN_ERR_CANCELLED, 0, NULL);
+        }
+      else if (PyLong_Check(result))
+        {
+          if (PyLong_AsLong(result))
+            err = svn_error_create(SVN_ERR_CANCELLED, 0, NULL);
+        }
+      else if (result != Py_None)
+        {
+          err = callback_bad_return_error("Not an integer or None");
+        }
+      Py_DECREF(result);
+    }
   svn_swig_py_release_py_lock();
   return err;
 }
 
 
-/* Thunked version of svn_client_get_commit_log_t callback type. */
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
                                              apr_array_header_t *commit_items,
@@ -1104,14 +1152,13 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
       Py_INCREF(Py_None);
     }
 
-  /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"OO&",
                                       cmt_items,
                                       make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(cmt_items);
-      err = convert_python_error();
+      err = callback_exception_error();
       goto finished;
     }
 
@@ -1122,19 +1169,18 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
       Py_DECREF(result);
       *log_msg = NULL;
       err = SVN_NO_ERROR;
-      goto finished;
     }
   else if (PyString_Check(result)) 
     {
       *log_msg = apr_pstrdup(pool, PyString_AS_STRING(result));
       Py_DECREF(result);
       err = SVN_NO_ERROR;
-      goto finished;
     }
-     
-  Py_DECREF(result);
-  PyErr_SetString(PyExc_TypeError, "not a string");
-  err = convert_python_error();
+  else
+    {
+      Py_DECREF(result);
+      err = callback_bad_return_error("Not a string");
+    }
 
  finished:
   svn_swig_py_release_py_lock();
@@ -1142,7 +1188,6 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
 }
 
 
-/* Thunked version of svn_repos_authz_func_t callback type. */
 svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
                                           svn_fs_root_t *root,
                                           const char *path,
@@ -1162,28 +1207,25 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"O&sO&", 
                                       make_ob_fs_root, root,
-                                      path, make_ob_pool, pool)) != NULL)
+                                      path, make_ob_pool, pool)) == NULL)
     {
-      if (result != Py_None)
-        {
-          if (PyInt_Check(result))
-            *allowed = PyInt_AsLong(result);
-          else if (PyLong_Check(result))
-            *allowed = PyLong_AsLong(result);
-          else
-            err = convert_python_error();
-        }
-      Py_DECREF(result);
-      goto finished;
+      err = callback_exception_error();
     }
-  
- finished:
+  else
+    {
+      if (PyInt_Check(result))
+        *allowed = PyInt_AsLong(result);
+      else if (PyLong_Check(result))
+        *allowed = PyLong_AsLong(result);
+      else
+        err = callback_bad_return_error("Not an integer");
+      Py_DECREF(result);
+    }
   svn_swig_py_release_py_lock();
   return err;
 }
 
 
-/* Thunked version of svn_repos_history_func_t callback type. */
 svn_error_t *svn_swig_py_repos_history_func(void *baton,
                                             const char *path,
                                             svn_revnum_t revision,
@@ -1200,21 +1242,21 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"slO&", 
                                       path, revision, 
-                                      make_ob_pool, pool)) != NULL)
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
     {
       if (result != Py_None)
-        err = convert_python_error();
+        err = callback_bad_return_error("Not None");
       Py_DECREF(result);
-      goto finished;
     }
-  
- finished:
   svn_swig_py_release_py_lock();
   return err;
 }
 
 
-/* Thunked version of svn_log_message_receiver_t callback type. */
 svn_error_t *svn_swig_py_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,
                                       svn_revnum_t rev,
@@ -1227,7 +1269,7 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
   PyObject *result;
   swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
   PyObject *chpaths;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
  
   if ((receiver == NULL) || (receiver == Py_None))
     return SVN_NO_ERROR;
@@ -1244,23 +1286,21 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
       Py_INCREF(Py_None);
     }
 
-  /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallFunction(receiver, 
                                       (char *)"OlsssO&", 
                                       chpaths, rev, author, date, msg, 
                                       make_ob_pool, pool)) == NULL)
     {
-      Py_DECREF(chpaths);
-      err = convert_python_error();
-      goto finished;
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
     }
 
-  /* there is no return value, so just toss this object (probably Py_None) */
-  Py_DECREF(result);
   Py_DECREF(chpaths);
-  err = SVN_NO_ERROR;
-
- finished:
   svn_swig_py_release_py_lock();
   return err;
 }
