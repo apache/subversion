@@ -496,7 +496,7 @@ svn_wc_crawl_revisions (const char *path,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  err = reporter->finish_report (report_baton);
+  SVN_ERR (reporter->finish_report (report_baton));
 
  abort_report:
   if (err)
