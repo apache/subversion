@@ -87,11 +87,7 @@ analogous to CVS/ sudirs:
        properties               /* Properties for this directory */
        delta-here               /* Uncommitted changes logged here */
        lock                     /* Optional, tells others this dir is busy */
-       doing/                   /* What this dir is doing right now */
-          action                    /* Tells the action in progress */
-          files                     /* Files involved in the action */
-          started                   /* Action started iff exists */
-          finished                  /* Action finished iff exists */
+       pending                  /* Actions pending here (for rollback) */
        tmp                      /* Local tmp space is preferable to /tmp */
        text-base/               /* Pristine repos versions of the files... */
             foo.c
@@ -235,22 +231,66 @@ analogous to CVS/ sudirs:
    race-condition protection, due to the way locking is called.  We'll
    see, though.
 
-`doing'
+`pending'
 
-   This directory records the start and end of every action, for
-   interrupt-safe operations.  The `action' files says what exactly is
-   happening now (just enough information to know how inconsistent the
-   local state is, for example, that text-base is being updated, and
-   how).  Before the wc library starts doing an action, it always
-   announces what it's about to do in this directory; when it's done,
-   it then creates a `finished' file, then cleans up the other files,
-   including the `started' file, and only *then* removes the
-   `finished' file.
+   This file (XML format) holds a "stack" of adm actions that are
+   about to be done.  After each action is done, its entry on the
+   stack is removed.
 
-   A lock always exists on the adm subdir during the entire time of
-   activity in doing/.
+   In the event of a crash, the recovery routines simply read over the
+   file and do the actions; the original code makes sure the file gets
+   set up in a way such that this interpretation leads to the right
+   result.  (Since the crash could have occurred between the doing of
+   the action and the removal of its entry from the stack, it is not
+   an error for the first item on the recovery stack to be undoable
+   due to a missing file or whatever -- in that case, it is presumed
+   to have been completed and just removed.  This means, however, that
+   one can *never* add an entry to the stack until all files whose
+   existence it depends on have been successfully created).
 
-   More details to come.  kff todo: xml format?
+   Soon there will be a general explanation/algorithm for using the
+   pending stack; for now, this example gives the flavor:
+
+   To do a fresh checkout of `iota' in directory `.'
+
+      1. add_file() produces the new ./SVN/tmp/SVN/versions, which
+         probably is the same as the original `versions' file since
+         `iota' is likely to be the same version as its parent
+         directory.  (But not necessarily...)
+
+      2. apply_textdelta() hands window_handler() to its caller.
+
+      3. window_handler() is invoked N times, constructing
+         ./SVN/tmp/text-base/iota
+
+      4. finish_file() is called.  First, it constructs a
+         ./SVN/tmp/pending file looking something like this: 
+
+            <mv src="SVN/tmp/text-base/iota" dst="SVN/text-base/iota">
+            <mv src="SVN/tmp/SVN/versions" dst="SVN/versions">
+            <merge src="SVN/text-base/iota" dst="iota">
+
+         Then it does the operations in the `pending' file (probably
+         by simply reading the pending file with the same routine
+         that would be used in a recovery!), removing each entry
+         immediately on finishing that task (i.e., before moving on to
+         the next entry).  Yes, it does this in a tmpy way. :-)
+
+         When all done, remove the `pending' file.
+
+   To recover from a crash:
+
+      1. Look for a pending file.  
+
+           A. If none, just "rm -r tmp/*".
+
+           B. Else if `pending' is present, loop over it doing each
+              operation.  It is permissible for the `src' file of the
+              first entry to not exist, since that means a crash
+              occurred between doing the operation and writing out the
+              tmp file.  Just toss that entry, then.
+
+              When done, remove the pending file.
 
 `tmp'
 
