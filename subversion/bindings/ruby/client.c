@@ -17,13 +17,24 @@
 
 #include <svn_pools.h>
 #include <svn_client.h>
+#include <svn_path.h>
 
 #include "svn_ruby.h"
-#include "delta_editor.h"
 #include "wc.h"
 #include "log.h"
 #include "util.h"
 #include "error.h"
+
+static svn_error_t *
+cl_log_message_func (const char **log_msg,
+                     apr_array_header_t *commit_items,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  *log_msg = apr_pstrdup (pool, baton);
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 cl_prompt (char **info,
@@ -119,81 +130,31 @@ cl_new (int argc, VALUE *argv, VALUE class)
   return obj;
 }
 
-/* Parse args of type [DeltaEditor, DeltaEditor, xmlSrc] */
-static void
-cl_get_parse_arg (VALUE args,
-                  const svn_delta_edit_fns_t **before_editor,
-                  void **before_edit_baton,
-                  const svn_delta_edit_fns_t **after_editor,
-                  void *after_edit_baton,
-                  char **xml_src)
-{
-  long len = RARRAY (args)->len;
-  int i = 0;
-
-  if (len > 3)
-    rb_raise (rb_eArgError, "wrong # of arguments (%d)",
-              3 + RARRAY (args)->len);
-  else if (len == 0)
-    return;
-
-  if (BUILTIN_TYPE (RARRAY (args)->ptr[len - 1]) == T_STRING)
-    {
-      *xml_src = StringValuePtr (RARRAY (args)->ptr[len - 1]);
-      if (len-- == 1)
-        return;
-    }
-  else if (len == 3)
-    rb_raise (rb_eTypeError, "last argument must be string");
-
-  if (i < len)
-    svn_ruby_delta_editor (before_editor, before_edit_baton,
-                           RARRAY (args)->ptr[i++]);
-  if (i < len)
-    svn_ruby_delta_editor (after_editor, after_edit_baton,
-                           RARRAY (args)->ptr[i++]);
-}
-
 static VALUE
 cl_checkout (int argc, VALUE *argv, VALUE self)
 {
   VALUE aURL, aPath, aRevOrTime, rest;
-  const svn_delta_edit_fns_t *before_editor = NULL;
-  void *before_edit_baton = NULL;
-  const svn_delta_edit_fns_t *after_editor = NULL;
-  void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
-  svn_stringbuf_t *URL, *path;
   svn_opt_revision_t revision;
-  apr_time_t tm = 0;
-  svn_stringbuf_t *xml_src;
   apr_pool_t *pool;
   svn_error_t *err;
-  char *xml = NULL;
 
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aRevOrTime, &rest);
   Check_Type (aURL, T_STRING);
   Check_Type (aPath, T_STRING);
   revision = parse_revision (aRevOrTime);
-  cl_get_parse_arg (rest, &before_editor, &before_edit_baton,
-                    &after_editor, &after_edit_baton, &xml);
   
   pool = svn_pool_create (NULL);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
-  URL = svn_stringbuf_create (StringValuePtr (aURL), pool);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  if (xml)
-    xml_src = svn_stringbuf_create (xml, pool);
-  else
-    xml_src = NULL;
 
-  /* ### This interface has changed.  It no longer takes before and
-     after editors; instead, it takes a notify_func/baton.  I'm not
-     sure how to adjust this, so I'm leaving it as is.  -kff */
-  err = svn_client_checkout (before_editor, before_edit_baton,
-                             after_editor, after_edit_baton,
-                             auth_baton, URL, path, &revision,
-                             TRUE, xml_src, pool);
+  /* XXX svn_path_canonicalize_nts doesn't do a very good job of making a 
+   * canonical path,  it would be nice if we could find a better way to do 
+   * that, so we could pass relative paths to this function. */
+
+  err = svn_client_checkout (NULL, NULL, auth_baton, StringValuePtr(aURL),
+                             svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                        pool),
+                             &revision, TRUE, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -207,39 +168,22 @@ static VALUE
 cl_update (int argc, VALUE *argv, VALUE self)
 {
   VALUE aPath, aRevOrTime, recurse, rest;
-  const svn_delta_edit_fns_t *before_editor = NULL;
-  void *before_edit_baton = NULL;
-  const svn_delta_edit_fns_t *after_editor = NULL;
-  void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
-  svn_stringbuf_t *path;
   svn_opt_revision_t revision;
-  apr_time_t tm = 0;
-  svn_stringbuf_t *xml_src;
   apr_pool_t *pool;
   svn_error_t *err;
-  char *xml = NULL;
 
   rb_scan_args (argc, argv, "3*", &aPath, &aRevOrTime, &recurse, &rest);
   Check_Type (aPath, T_STRING);
   revision = parse_revision (aRevOrTime);
 
-  cl_get_parse_arg (rest, &before_editor, &before_edit_baton,
-                    &after_editor, &after_edit_baton, &xml);
-
   pool = svn_pool_create (NULL);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  if (xml)
-    xml_src = svn_stringbuf_create (xml, pool);
-  else
-    xml_src = NULL;
 
-  err = svn_client_update (before_editor, before_edit_baton,
-                           after_editor, after_edit_baton,
-                           auth_baton, path, xml_src,
-                           &revision, RTEST (recurse),
-                           NULL, NULL, pool);
+  err = svn_client_update (auth_baton,
+                           svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                      pool),
+                           &revision, RTEST (recurse), NULL, NULL, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -252,15 +196,15 @@ cl_update (int argc, VALUE *argv, VALUE self)
 static VALUE
 cl_add (VALUE class, VALUE aPath, VALUE recursive)
 {
-  svn_stringbuf_t *path;
   apr_pool_t *pool;
   svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
 
-  err = svn_client_add (path, RTEST (recursive), NULL, NULL, pool);
+  err = svn_client_add (svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                   pool), 
+                        RTEST (recursive), NULL, NULL, pool);
 
   apr_pool_destroy (pool);
 
@@ -275,7 +219,7 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
 {
   VALUE aPath, aMessage;
   svn_client_commit_info_t *commit_info;
-  svn_stringbuf_t *path, *message;
+  const char *message;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
   svn_error_t *err;
@@ -284,18 +228,21 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
   Check_Type (aPath, T_STRING);
   if (aMessage != Qnil)
     Check_Type (aMessage, T_STRING);
+
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
+
   if (aMessage == Qnil)
     message = NULL;
   else
-    message = svn_stringbuf_ncreate (StringValuePtr (aMessage),
-                                     RSTRING (aMessage)->len, pool);
+    message = StringValuePtr (aMessage);
 
-  err = svn_client_mkdir (&commit_info, path, auth_baton, message,
+  err = svn_client_mkdir (&commit_info,
+                          svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                     pool),
+                          auth_baton, cl_log_message_func, (void *) message,
                           NULL, NULL, pool);
-
   if (err)
     {
       apr_pool_destroy (pool);
@@ -313,9 +260,9 @@ static VALUE
 cl_delete (int argc, VALUE *argv, VALUE self)
 {
   VALUE aPath, force, aMessage;
-  svn_client_commit_info_t *commit_info;
-  svn_stringbuf_t *path, *message;
+  svn_client_commit_info_t *commit_info = NULL;
   svn_client_auth_baton_t *auth_baton;
+  const char * message;
   apr_pool_t *pool;
   svn_error_t *err;
 
@@ -324,79 +271,38 @@ cl_delete (int argc, VALUE *argv, VALUE self)
   if (aMessage != Qnil)
     Check_Type (aMessage, T_STRING);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
+
   if (aMessage == Qnil)
     message = NULL;
   else
-    message = svn_stringbuf_create (StringValuePtr (aMessage), pool);
+    message = StringValuePtr (aMessage);
 
-  err = svn_client_delete (&commit_info, path, RTEST (force), auth_baton,
-                           message, NULL, NULL, pool);
-
+  err = svn_client_delete (&commit_info,
+                           svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                      pool),
+                           NULL,
+                           RTEST (force), auth_baton, cl_log_message_func,
+                           (void *) message, NULL, NULL, pool);
   if (err)
     {
       apr_pool_destroy (pool);
       svn_ruby_raise (err);
     }
 
-  {
-    VALUE obj = commit_info_to_array (commit_info);
-    apr_pool_destroy (pool);
-    return obj;
-  }
-}
-
-/* Parse arg [logMsg, beforeEditor, afterEditor, [xmlFile, revision]] */
-static void
-cl_put_parse_arg (VALUE args,
-                  const svn_delta_edit_fns_t **before_editor,
-                  void **before_edit_baton,
-                  const svn_delta_edit_fns_t **after_editor,
-                  void *after_edit_baton,
-                  char **log_msg,
-                  char **xml_src,
-                  svn_revnum_t *revision)
-{
-  long len = RARRAY (args)->len;
-  int i = 0;
-
-  if (len > 5)
-    rb_raise (rb_eArgError, "wrong # of optional arguments (%d)",
-              RARRAY (args)->len);
-
-  if (len == 0)
-    return;
-
-  /* Parse [xmlFile, revision] part. */
-  if (len >= 2)
+  /* if we were called on a url, there will be commit info, otherwise, we 
+   * were called on a working copy, so we should just return true, since 
+   * we succeeded. */
+  if (commit_info)
     {
-      if (BUILTIN_TYPE (RARRAY (args)->ptr[len - 2]) == T_STRING)
-        {
-          *xml_src = StringValuePtr (RARRAY (args)->ptr[len - 2]);
-          *revision = NUM2LONG (RARRAY (args)->ptr[len - 1]);
-          len = len - 2;
-        }
-      if (len == 0)
-        return;
+      VALUE obj = commit_info_to_array (commit_info);
+      apr_pool_destroy (pool);
+      return obj;
     }
-
-  /* Parse [logMsg, beforeEditor, afterEditor part. */
-  if (BUILTIN_TYPE (RARRAY (args)->ptr[0]) == T_STRING)
+  else 
     {
-      *log_msg = StringValuePtr (RARRAY (args)->ptr[0]);
-      i++;
-    }
-  if (i < len)
-    {
-      svn_ruby_delta_editor (before_editor, before_edit_baton,
-                             RARRAY (args)->ptr[i]);
-      i++;
-    }
-  if (i < len)
-    {
-      svn_ruby_delta_editor (after_editor, after_edit_baton,
-                             RARRAY (args)->ptr[i]);
+      return Qtrue;
     }
 }
 
@@ -405,50 +311,27 @@ cl_import (int argc, VALUE *argv, VALUE self)
 {
   VALUE aURL, aPath, aEntry, rest;
   svn_client_commit_info_t *commit_info;
-  const svn_delta_edit_fns_t *before_editor = NULL;
-  void *before_edit_baton = NULL;
-  const svn_delta_edit_fns_t *after_editor = NULL;
-  void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
-  svn_stringbuf_t *URL, *path, *new_entry;
-  svn_stringbuf_t *log_msg;
-  svn_stringbuf_t *xml_dst;
   svn_revnum_t revision = SVN_INVALID_REVNUM;
   apr_pool_t *pool;
   svn_error_t *err;
-  char *log = NULL;
-  char *xml = NULL;
 
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aEntry, &rest);
   Check_Type (aURL, T_STRING);
   Check_Type (aPath, T_STRING);
   if (aEntry != Qnil)
     Check_Type (aEntry, T_STRING);
-  cl_put_parse_arg (rest, &before_editor, &before_edit_baton,
-                    &after_editor, &after_edit_baton, &log, &xml, &revision);
   
   pool = svn_pool_create (NULL);
-  Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
-  URL = svn_stringbuf_create (StringValuePtr (aURL), pool);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  if (aEntry == Qnil)
-    new_entry = NULL;
-  else
-    new_entry = svn_stringbuf_create (StringValuePtr (aEntry), pool);
-  if (xml)
-    xml_dst = svn_stringbuf_create (xml, pool);
-  else
-    xml_dst = NULL;
-  if (log)
-    log_msg = svn_stringbuf_create (log, pool);
-  else
-    log_msg = NULL;
 
-  err = svn_client_import (&commit_info,
-                           before_editor, before_edit_baton,
-                           after_editor, after_edit_baton,
-                           auth_baton, path, URL, new_entry,
-                           log_msg, xml_dst, revision, pool);
+  Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+
+  /* XXX it'd be nice if we could specify a log message */
+  err = svn_client_import (&commit_info, NULL, NULL, auth_baton, 
+                           svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                        pool),
+                           StringValuePtr (aURL), StringValuePtr (aEntry),
+                           cl_log_message_func, NULL, revision, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -466,27 +349,17 @@ cl_commit (int argc, VALUE *argv, VALUE self)
 {
   VALUE aTargets, rest;
   svn_client_commit_info_t *commit_info;
-  const svn_delta_edit_fns_t *before_editor = NULL;
-  void *before_edit_baton = NULL;
-  const svn_delta_edit_fns_t *after_editor = NULL;
-  void *after_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
   apr_array_header_t *targets;
-  svn_stringbuf_t *log_msg;
-  svn_stringbuf_t *xml_dst;
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
   apr_pool_t *pool;
   svn_error_t *err;
   char *log = NULL;
-  char *xml = NULL;
   int i;
 
   rb_scan_args (argc, argv, "1*", &aTargets, &rest);
   Check_Type (aTargets, T_ARRAY);
   for (i = 0; i < RARRAY (aTargets)->len; i++)
     Check_Type (RARRAY (aTargets)->ptr[i], T_STRING);
-  cl_put_parse_arg (rest, &before_editor, &before_edit_baton,
-                    &after_editor, &after_edit_baton, &log, &xml, &revision);
   
   pool = svn_pool_create (NULL);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
@@ -496,22 +369,10 @@ cl_commit (int argc, VALUE *argv, VALUE self)
     (*((svn_stringbuf_t **) apr_array_push (targets))) =
       svn_stringbuf_create (StringValuePtr (RARRAY (aTargets)->ptr[i]), pool);
 
-  if (xml)
-    xml_dst = svn_stringbuf_create (xml, pool);
-  else
-    xml_dst = NULL;
-  if (log)
-    log_msg = svn_stringbuf_create (log, pool);
-  else
-    log_msg = NULL;
+  /* XXX need to get a log from somewhere */
 
-  /* ### The svn_client_commit() interface has changed, but I'm not
-     sure how to update this code.  -kff */
-  err = svn_client_commit (&commit_info,
-                           before_editor, before_edit_baton,
-                           after_editor, after_edit_baton,
-                           auth_baton, targets,
-                           log_msg, xml_dst, revision, pool);
+  err = svn_client_commit (&commit_info, NULL, NULL, auth_baton, targets, 
+                           cl_log_message_func, log, FALSE, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -525,12 +386,15 @@ cl_commit (int argc, VALUE *argv, VALUE self)
   }
 }
 
+#if 0
+/* this compiles, but it's #if 0'd out because it uses stuff from wc.c, which 
+ * does not build, and thus causes the module to have unresolved symbols, 
+ * making it rather difficult to test things. */
 static VALUE
 cl_status (VALUE self, VALUE aPath,
-           VALUE descend, VALUE get_all, VALUE update)
+           VALUE descend, VALUE get_all, VALUE update, VALUE no_ignore)
 {
   apr_hash_t *statushash;
-  svn_stringbuf_t *path;
   svn_revnum_t youngest;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
@@ -540,11 +404,12 @@ cl_status (VALUE self, VALUE aPath,
   Check_Type (aPath, T_STRING);
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
 
-  err = svn_client_status (&statushash, &youngest, path, auth_baton,
-                           RTEST (descend), RTEST (get_all),
-                           RTEST (update), pool);
+  err = svn_client_status (&statushash, &youngest,
+                           svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                      pool),
+                           auth_baton, RTEST (descend), RTEST (get_all),
+                           RTEST (update), RTEST (no_ignore), pool);
 
   if (err)
     {
@@ -562,22 +427,25 @@ cl_status (VALUE self, VALUE aPath,
     obj = svn_ruby_wc_to_statuses (statushash, pool);
   return obj;
 }
+#endif
 
 static VALUE
 cl_log (int argc, VALUE *argv, VALUE self)
 {
   svn_client_auth_baton_t *auth_baton;
 
-  VALUE aStart, aEnd, discover_changed_paths;
+  VALUE aStart, aEnd, discover_changed_paths, strict_node_history;
   apr_array_header_t *paths;
   svn_error_t *err;
   svn_ruby_log_receiver_baton_t baton;
   svn_opt_revision_t start, end;
+  apr_pool_t *pool = svn_pool_create (NULL);
 
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
   svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
-                         &discover_changed_paths, &baton, NULL);
+                         &discover_changed_paths, &strict_node_history, 
+                         &baton, pool);
 
   start = parse_revision (aStart);
   end = parse_revision (aEnd);
@@ -585,11 +453,12 @@ cl_log (int argc, VALUE *argv, VALUE self)
   err = svn_client_log (auth_baton,
                         paths, &start, &end,
                         RTEST (discover_changed_paths),
+                        RTEST (strict_node_history),
                         svn_ruby_log_receiver,
-                        (void *)&baton,
-                        baton.pool);
+                        &baton,
+                        pool);
 
-  apr_pool_destroy (baton.pool);
+  svn_pool_destroy (pool);
   if (err)
     svn_ruby_raise (err);
 
@@ -599,7 +468,6 @@ cl_log (int argc, VALUE *argv, VALUE self)
 static VALUE
 cl_cleanup (VALUE class, VALUE aPath)
 {
-  svn_stringbuf_t *path;
   apr_pool_t *pool;
 
   svn_error_t *err;
@@ -607,8 +475,10 @@ cl_cleanup (VALUE class, VALUE aPath)
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_client_cleanup (path, pool);
+
+  err = svn_client_cleanup (svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                       pool),
+                            pool);
 
   apr_pool_destroy (pool);
   if (err)
@@ -620,7 +490,6 @@ cl_cleanup (VALUE class, VALUE aPath)
 static VALUE
 cl_revert (VALUE class, VALUE aPath, VALUE recursive)
 {
-  svn_stringbuf_t *path;
   apr_pool_t *pool;
 
   svn_error_t *err;
@@ -628,8 +497,10 @@ cl_revert (VALUE class, VALUE aPath, VALUE recursive)
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_client_revert (path, RTEST (recursive), NULL, NULL, pool);
+
+  err = svn_client_revert (svn_path_canonicalize_nts (StringValuePtr (aPath),
+                                                      pool),
+                           RTEST (recursive), NULL, NULL, pool);
 
   apr_pool_destroy (pool);
   if (err)
@@ -642,20 +513,16 @@ cl_revert (VALUE class, VALUE aPath, VALUE recursive)
 static VALUE
 cl_copy (int argc, VALUE *argv, VALUE self)
 {
-  VALUE srcPath, srcRev, dstPath, aMessage, beforeEditor, afterEditor;
+  VALUE srcPath, srcRev, dstPath, aMessage;
   svn_client_commit_info_t *commit_info;
-  svn_stringbuf_t *src_path, *dst_path, *message;
+  const char *message;
   svn_client_auth_baton_t *auth_baton;
   svn_opt_revision_t src_revision;
-  const svn_delta_edit_fns_t *before_editor = NULL;
-  void *before_edit_baton = NULL;
-  const svn_delta_edit_fns_t *after_editor = NULL;
-  void *after_edit_baton = NULL;
   apr_pool_t *pool;
   svn_error_t *err;
 
-  rb_scan_args (argc, argv, "33", &srcPath, &srcRev, &dstPath,
-                &aMessage, &beforeEditor, &afterEditor);
+  rb_scan_args (argc, argv, "31", &srcPath, &srcRev, &dstPath,
+                &aMessage);
   Check_Type (srcPath, T_STRING);
   Check_Type (dstPath, T_STRING);
   if (aMessage != Qnil)
@@ -663,23 +530,17 @@ cl_copy (int argc, VALUE *argv, VALUE self)
 
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
   src_revision = parse_revision (srcRev);
-  if (beforeEditor != Qnil)
-      svn_ruby_delta_editor (&before_editor, &before_edit_baton, beforeEditor);
-  if (afterEditor != Qnil)
-      svn_ruby_delta_editor (&after_editor, &after_edit_baton, afterEditor);
   pool = svn_pool_create (NULL);
-  src_path = svn_stringbuf_create (StringValuePtr (srcPath), pool);
-  dst_path = svn_stringbuf_create (StringValuePtr (dstPath), pool);
+
   if (aMessage == Qnil)
     message = NULL;
   else
-    message = svn_stringbuf_ncreate (StringValuePtr (aMessage),
-				     RSTRING (aMessage)->len, pool);
-  err = svn_client_copy (&commit_info, src_path, &src_revision, dst_path,
-			 auth_baton, message,
-			 before_editor, before_edit_baton,
-			 after_editor, after_edit_baton, NULL, NULL, pool);
+    message = StringValuePtr (aMessage);
 
+  err = svn_client_copy (&commit_info, StringValuePtr (srcPath), &src_revision,
+                         StringValuePtr (dstPath), NULL, auth_baton, 
+                         cl_log_message_func, (char *) message, NULL, NULL, 
+                         pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -692,6 +553,8 @@ cl_copy (int argc, VALUE *argv, VALUE self)
     return obj;
   }
 }
+
+/* XXX need a method to access svn_client_move... */
 
 static VALUE
 cl_propset (VALUE class, VALUE name, VALUE val, VALUE aTarget, VALUE recurse)
@@ -783,6 +646,8 @@ cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
   }
 }
 
+/* XXX need revprop versions of the prop methods */
+
 void svn_ruby_init_client (void)
 {
   VALUE cSvnClient;
@@ -796,7 +661,7 @@ void svn_ruby_init_client (void)
   rb_define_method (cSvnClient, "delete", cl_delete, -1);
   rb_define_method (cSvnClient, "import", cl_import, -1);
   rb_define_method (cSvnClient, "commit", cl_commit, -1);
-  rb_define_method (cSvnClient, "status", cl_status, 4);
+  /* rb_define_method (cSvnClient, "status", cl_status, 5); */
   rb_define_method (cSvnClient, "log", cl_log, -1);
   rb_define_singleton_method (cSvnClient, "cleanup", cl_cleanup, 1);
   rb_define_singleton_method (cSvnClient, "revert", cl_revert, 2);
