@@ -1487,6 +1487,52 @@ def url_to_non_existent_url_path(sbox):
                                      '-m', 'fooogle')
 
 
+
+# Test for a copying (URL to URL) an old rev of a deleted file in a
+# deleted directory.
+def non_existent_url_to_url(sbox):
+  "svn cp oldrev-of-deleted-URL URL"
+
+  sbox.build()
+
+  adg_url = os.path.join(svntest.main.current_repo_url, 'A/D/G')
+  pi_url = os.path.join(svntest.main.current_repo_url, 'A/D/G/pi')
+  new_url = os.path.join(svntest.main.current_repo_url, 'newfile')
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'delete',
+                                     adg_url, '-m', '')
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+                                     '-r', '1', pi_url, new_url,
+                                     '-m', '')
+
+def old_dir_url_to_url(sbox):
+  "test URL to URL copying edge case"
+
+  sbox.build()
+
+  adg_url = os.path.join(svntest.main.current_repo_url, 'A/D/G')
+  pi_url = os.path.join(svntest.main.current_repo_url, 'A/D/G/pi')
+  iota_url = os.path.join(svntest.main.current_repo_url, 'iota')
+  new_url = os.path.join(svntest.main.current_repo_url, 'newfile')
+
+  # Delete a directory
+  svntest.actions.run_and_verify_svn(None, None, None, 'delete',
+                                     adg_url, '-m', '')
+
+  # Copy a file to where the directory used to be
+  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+                                     iota_url, adg_url,
+                                     '-m', '')
+
+  # Try copying a file that was in the deleted directory that is now a
+  # file
+  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+                                     '-r', '1', pi_url, new_url,
+                                     '-m', '')
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1518,6 +1564,8 @@ test_list = [ None,
               double_uri_escaping_1814,
               wc_to_wc_copy_deleted,
               url_to_non_existent_url_path,
+              non_existent_url_to_url,
+              old_dir_url_to_url,
              ]
 
 if __name__ == '__main__':
