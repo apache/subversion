@@ -1,21 +1,25 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- originated from English revision 10817 -->
 <appendix id="svn-ap-a">
-  <title>Subversion for CVS Users</title>
+  <title>Subversion para usuarios de CVS</title>
 
   <simplesect>
 
-    <para>This appendix is a guide for CVS users new to Subversion.
-      It's essentially a list of differences between the two systems
-      as <quote>viewed from 10,000 feet</quote>. For each section, we
-      provide backreferences to relevant chapters when
-      possible.</para>
+    <para>Este apéndice es una guía para usuarios de CVS nuevos en
+      Subversion. Es esencial una lista de diferencias entre los dos
+      sistemas <quote>visto desde 10,000 pies de alto</quote><!--TODO:
+      viewed from 10,000 feet-->. Para cada sección, proporcionaremos
+      cuando sea posible enlaces<!--TODO:backreferences--> a los
+      capítulos relevantes.</para>
 
-    <para>Although the goal of Subversion is to take over the current
-      and future CVS user base, some new features and design changes
-      were required to fix certain <quote>broken</quote> behaviors
-      that CVS had.  This means that, as a CVS user, you may need to
-      break habits&mdash;ones that you forgot were odd to begin
-      with.</para>
+    <para>Aunque el fín de Subversion es <!--TODO:is to take over the current
+      and future CVS user base-->asumir el control de la base actual
+      y futura de los usuarios de CVS, algunas nuevas características
+      y cambios de diseño fueron requeridos para arreglar ciertos
+      comportamientos <quote>rotos</quote> que tenía CVS. Esto
+      significa que, como usuario de CVS, puede necesitar romper
+      hábitos&mdash;unos que usted olvidó...<!--TODO:ones that you
+      forgot were odd to begin with-->.</para>
 
   </simplesect>
 
