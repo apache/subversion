@@ -262,7 +262,7 @@ svn_io_open_unique_file (apr_file_t **f,
 svn_error_t *
 svn_io_create_unique_link (const char **unique_name_p,
                            const char *path,
-                           const char *dest,
+                           const char *dest,  /* native, not UTF-8 */
                            const char *suffix,
                            apr_pool_t *pool)
 {
@@ -354,17 +354,20 @@ svn_io_read_link (svn_string_t **dest,
                   apr_pool_t *pool)
 {
 #ifdef HAVE_READLINK  
+  const char *path_apr;
   char buf[1024];
   int rv;
   
+  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
   do {
-    rv = readlink (path, buf, sizeof(buf));
+    rv = readlink (path_apr, buf, sizeof(buf) - 1);
   } while (rv == -1 && APR_STATUS_IS_EINTR (apr_get_os_error ()));
 
   if (rv == -1)
     return svn_error_wrap_apr
       (apr_get_os_error (), _("Can't read contents of link"));
 
+  /* Note: returning non-UTF-8 here */
   *dest = svn_string_ncreate (buf, rv, pool);
   
   return SVN_NO_ERROR;

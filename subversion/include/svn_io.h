@@ -135,6 +135,8 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
  *
  * Like svn_io_open_unique_file, except that instead of creating a
  * file, a symlink is generated that references the path @a dest.
+ *
+ * Note: @a dest is not in UTF-8, it is in the native encoding.
  */
 svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
                                         const char *path,
@@ -148,6 +150,8 @@ svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
  *
  * Set @a dest to the path that the symlink at @a path references.
  * Allocate the string from @a pool.
+ *
+ * Note: @a dest is not in UTF-8, it is in the native encoding.
  */
 svn_error_t *svn_io_read_link (svn_string_t **dest,
                                const char *path,
