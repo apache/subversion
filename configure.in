@@ -256,8 +256,8 @@ else
 	PYTHON=$PYTHON2
 fi
 
-AC_PATH_PROG(CHECKMAKEINFO, makeinfo, none)
-if test "$CHECKMAKEINFO" = "none"; then
+AC_PATH_PROG(MAKEINFO, makeinfo, [echo cannot run makeinfo])
+if test "MAKEINFO" = "echo cannot run makeinfo"; then
         dnl we won't install/make any info pages then
 	INSTALL_INFO=""
 else

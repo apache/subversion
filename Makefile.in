@@ -32,7 +32,7 @@ srcdir = @srcdir@
 infodir = @infodir@
 
 ### should search for these...
-MAKEINFO = makeinfo
+MAKEINFO = @MAKEINFO@
 TEXI2DVI = texi2dvi
 DVIPS = dvips
 DVIPDF = dvipdf
