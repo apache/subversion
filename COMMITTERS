@@ -9,59 +9,59 @@ directly.
 
 Blanket commit access:
 
-            jimb   Jim Blandy <jimb@redhat.com>
-         sussman   Ben Collins-Sussman <sussman@collab.net>
-          kfogel   Karl Fogel <kfogel@collab.net>
-          gstein   Greg Stein <gstein@lyra.org>
-           brane   Branko Cibej <brane@xbc.nu>
-             joe   Joe Orton <joe@light.plus.com>
-         ghudson   Greg Hudson <ghudson@mit.edu>
-            fitz   Brian Fitzpatrick <fitz@red-bean.com>
-          daniel   Daniel Stenberg <daniel@haxx.se>
-        cmpilato   C. Michael Pilato <cmpilato@collab.net>
-           kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
-          philip   Philip Martin <philip@codematters.co.uk>
-     jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
-          rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
-        bcollins   Ben Collins <bcollins@debian.org>
-           blair   Blair Zajac <blair@orcaware.com>
-         striker   Sander Striker <striker@apache.org>
-           naked   Nuutti Kotivuori <naked@iki.fi>
-         dwhedon   David Kimdon <David_Kimdon@alumni.hmc.edu>
-             dlr   Daniel Rall <dlr@finemaltcoding.com>
-           kraai   Matt Kraai <kraai@alumni.cmu.edu>
-             mbk   Mark Benedetto King <mbk@lowlatency.com>
-             epg   Eric Gillespie <epg@pretzelnet.org>
-          bdenny   Brian Denny <brian@briandenny.net>
-             jaa   Jani Averbach <jaa@iki.fi>
-      julianfoad   Julian Foad <julianfoad@btopenworld.com>
+          jimb   Jim Blandy <jimb@redhat.com>
+       sussman   Ben Collins-Sussman <sussman@collab.net>
+        kfogel   Karl Fogel <kfogel@collab.net>
+        gstein   Greg Stein <gstein@lyra.org>
+         brane   Branko Cibej <brane@xbc.nu>
+           joe   Joe Orton <joe@light.plus.com>
+       ghudson   Greg Hudson <ghudson@mit.edu>
+          fitz   Brian Fitzpatrick <fitz@red-bean.com>
+        daniel   Daniel Stenberg <daniel@haxx.se>
+      cmpilato   C. Michael Pilato <cmpilato@collab.net>
+         kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
+        philip   Philip Martin <philip@codematters.co.uk>
+   jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
+        rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
+      bcollins   Ben Collins <bcollins@debian.org>
+         blair   Blair Zajac <blair@orcaware.com>
+       striker   Sander Striker <striker@apache.org>
+         naked   Nuutti Kotivuori <naked@iki.fi>
+       dwhedon   David Kimdon <David_Kimdon@alumni.hmc.edu>
+           dlr   Daniel Rall <dlr@finemaltcoding.com>
+         kraai   Matt Kraai <kraai@alumni.cmu.edu>
+           mbk   Mark Benedetto King <mbk@lowlatency.com>
+           epg   Eric Gillespie <epg@pretzelnet.org>
+        bdenny   Brian Denny <brian@briandenny.net>
+           jaa   Jani Averbach <jaa@iki.fi>
+    julianfoad   Julian Foad <julianfoad@btopenworld.com>
 
 Commit access for specific areas:
 
-            xela   Alexander Mueller <alex@littleblue.de>      (Java bindings)
-         yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
-           david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
-        rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
-        kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
-             nsd   Nick Duffek <nick@duffek.com>               (doc)
-         fmatias   Féliciano Matias <feliciano.matias@free.fr> (French docs)
-        dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (Russian docs)
-          xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
-        josander   Jostein Andersen <jostein@josander.net>     (innosetup)
-        ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
-        niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
-          morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
-          zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
-          mmacek   Marko Macek <Marko.Macek@gmx.net>           (cvs2svn branch)
-            mass   David Waite <mass@akuma.org>                (certs branch)
-        jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
-          knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
-          mprice   Michael Price <michael.price@computer.org>  (releases)
-             pll   Paul lussier <pll@lanminds.com>             (releases)
-       gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
-             kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
-         patrick   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
-             djh   D.J. Heap <dj@shadyvale.net>                (Win32 build)
-            rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
-           clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
-      jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
+          xela   Alexander Mueller <alex@littleblue.de>      (Java bindings)
+       yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
+         david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
+      rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
+      kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
+           nsd   Nick Duffek <nick@duffek.com>               (doc)
+       fmatias   Féliciano Matias <feliciano.matias@free.fr> (French docs)
+      dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (Russian docs)
+        xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
+      josander   Jostein Andersen <jostein@josander.net>     (innosetup, docs)
+      ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
+      niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
+        morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
+        zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
+        mmacek   Marko Macek <Marko.Macek@gmx.net>           (cvs2svn branch)
+          mass   David Waite <mass@akuma.org>                (certs branch)
+      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
+        knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
+        mprice   Michael Price <michael.price@computer.org>  (releases)
+           pll   Paul lussier <pll@lanminds.com>             (releases)
+     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
+       patrick   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
+           djh   D.J. Heap <dj@shadyvale.net>                (Win32 build)
+          rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
+         clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
+    jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
