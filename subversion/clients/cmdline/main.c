@@ -206,7 +206,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
-    N_("Duplicate something in working copy or repository, remembering"
+    N_("Duplicate something in working copy or repository, remembering "
        "history.\n"
        "usage: copy SRC DST\n"
        "\n"
@@ -282,7 +282,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  2. Exports a clean directory tree from the working copy specified "
        "by\n"
-       "     PATH1, at revision REV if it is given, otherwise at BASE, into\n"
+       "     PATH1, at revision REV if it is given, otherwise at WORKING, "
+       "into\n"
        "     PATH2.  If PATH2 is omitted, the last component of the "
        "PATH1 is used\n"
        "     for the local directory name. If REV is not specified,"

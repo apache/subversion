@@ -1917,7 +1917,7 @@ main (int argc, const char * const *argv)
           subcommand = svn_opt_get_canonical_subcommand (cmd_table, first_arg);
           if (subcommand == NULL)
             {
-              fprintf (stderr, _("unknown command: '%s'\n"), first_arg);
+              fprintf (stderr, _("Unknown command: '%s'\n"), first_arg);
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
