@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.5 $ of this document.)
+              ($Revision: 1.6 $ of this document.)
 
 * Introduction
 
@@ -607,7 +607,7 @@ Well, right now, if you don't want to do it, you have to search
 through the documentation to turn it off. :-)
 
 Seriously, I'm by no means sure that off is better, I just lean that
-way because I've been screwed several times in the past by not turning
+way because I've been nailed several times in the past by not turning
 it off when I should have (not talking about binary files, I mean text
 files that happened to have text that matched keywords, but I didn't
 want that text to be expanded).
