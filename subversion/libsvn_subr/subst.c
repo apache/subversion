@@ -716,15 +716,15 @@ svn_subst_copy_and_translate (const char *src,
   if (! (eol_str || keywords))
     return svn_io_copy_file (src, dst, FALSE, pool);
 
-  /* Else, translate.  For atomicity, we translate to a tmp file and
+  /* Open source file. */
+  SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
+
+  /* For atomicity, we translate to a tmp file and
      then rename the tmp file over the real destination. */
 
   SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
                                     ".tmp", FALSE, pool));
-
-  /* Open source file. */
-  SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
-                             APR_OS_DEFAULT, pool));
 
   /* Now convert our two open files into streams. */
   src_stream = svn_stream_from_aprfile (s, pool);
@@ -747,7 +747,7 @@ svn_subst_copy_and_translate (const char *src,
       svn_error_clear (svn_io_remove_file (dst_tmp, pool));
       return
         svn_error_createf (err->apr_err, err,
-                           "file translation failed when copying '%s' to '%s'",
+                           "File translation failed when copying '%s' to '%s'",
                            src, dst);
     }
 
