@@ -172,8 +172,6 @@ static svn_error_t *ra_svn_change_dir_prop(void *dir_baton, const char *name,
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-dir-prop", "cc(?s)",
                                b->token, name, value));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -200,8 +198,6 @@ static svn_error_t *ra_svn_add_file(const char *path,
          || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-file", "ccc(?cr)", path,
                                b->token, token, copy_path, copy_rev));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   *file_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
 }
@@ -217,8 +213,6 @@ static svn_error_t *ra_svn_open_file(const char *path,
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "open-file", "ccc(?r)",
                                path, b->token, token, rev));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   *file_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
 }
@@ -285,8 +279,6 @@ static svn_error_t *ra_svn_change_file_prop(void *file_baton,
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-file-prop", "cc(?s)",
                                b->token, name, value));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -378,7 +370,8 @@ static ra_svn_token_entry_t *store_token(ra_svn_driver_state_t *ds,
   entry->err = NULL;
   entry->pool = pool;
   apr_hash_set(ds->tokens, entry->token, APR_HASH_KEY_STRING, entry);
-  apr_pool_cleanup_register(pool, entry, clear_token_err, NULL);
+  apr_pool_cleanup_register(pool, entry, clear_token_err,
+                            apr_pool_cleanup_null);
   return entry;
 }
 

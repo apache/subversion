@@ -114,12 +114,6 @@ static int parse_url(const char *url, const char **tunnel, const char **user,
   return 0;
 }
 
-/* A pool cleanup handler to close a socket. */
-static apr_status_t cleanup_socket(void *arg)
-{
-  return apr_socket_close(arg);
-}
-
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
                                     apr_socket_t **sock, apr_pool_t *pool)
 {
@@ -140,9 +134,6 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_createf(status, NULL, "Can't connect to host '%s'",
                              hostname);
-
-  apr_pool_cleanup_register(pool, *sock, cleanup_socket,
-                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
@@ -188,12 +179,6 @@ static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
 
 /* --- REPORTER IMPLEMENTATION --- */
 
-/* ### These routines need to flush because the caller might fork a
- * child process, triggering a double-flushing bug in the child (see
- * the comment in ra_svn_open).  It's kind of sad, because our
- * buffering isn't nearly as effective this way.
- */
-
 static svn_error_t *ra_svn_set_path(void *baton, const char *path,
                                     svn_revnum_t rev,
                                     svn_boolean_t start_empty,
@@ -203,7 +188,6 @@ static svn_error_t *ra_svn_set_path(void *baton, const char *path,
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb", path, rev,
                                start_empty));
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -213,7 +197,6 @@ static svn_error_t *ra_svn_delete_path(void *baton, const char *path,
   ra_svn_reporter_baton_t *b = baton;
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "delete-path", "c", path));
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
     
@@ -227,7 +210,6 @@ static svn_error_t *ra_svn_link_path(void *baton, const char *path,
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb", path, url,
                                rev, start_empty));
-  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -247,7 +229,6 @@ static svn_error_t *ra_svn_abort_report(void *baton)
   ra_svn_reporter_baton_t *b = baton;
 
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, "abort-report", ""));
-  SVN_ERR(svn_ra_svn_flush(b->conn, b->pool));
   return SVN_NO_ERROR;
 }
 
@@ -357,20 +338,6 @@ static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
   return FALSE;
 }
 
-/* A pool cleanup handler to close a file. */
-static apr_status_t cleanup_file(void *arg)
-{
-  return apr_file_close(arg);
-}
-
-/* A pool cleanup handler to wait for a process. */
-static apr_status_t cleanup_process(void *arg)
-{
-  while (apr_proc_wait(arg, NULL, NULL, APR_WAIT) == APR_CHILD_NOTDONE)
-    ;
-  return APR_SUCCESS;
-}
-
 static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 const svn_ra_callbacks_t *callbacks,
                                 void *callback_baton,
@@ -401,23 +368,24 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
       conn->proc = proc;
 
-      /* Wait for the process after closing the files by registering
-       * the process cleanup before the file ones, as they are
-       * executed in LIFO order.  */
-      apr_pool_cleanup_register(pool, proc, cleanup_process,
-                                apr_pool_cleanup_null);
+      /* Arrange for the tunnel agent to get a SIGKILL on pool
+       * cleanup.  This is a little extreme, but the alternatives
+       * weren't working out:
+       *   - Closing the pipes and waiting for the process to die
+       *     was prone to mysterious hangs which are difficult to
+       *     diagnose (e.g. svnserve dumps core due to unrelated bug;
+       *     sshd goes into zombie state; ssh connection is never
+       *     closed; ssh never terminates).
+       *   - Killing the tunnel agent with SIGTERM leads to unsightly
+       *     stderr output from ssh.
+       */
+      apr_pool_note_subprocess(pool, proc, APR_KILL_ALWAYS);
 
-      /* APR pipe objects don't have a child cleanup handler.  Set one
-       * up so child processes don't hold open the tunnel agent's
-       * input and output.  Unfortunately, the child cleanup handler
-       * will flush the child process's write buffer (APR gives no way
-       * to avoid that); this means we have to be careful not to leave
-       * stuff lying around in the write buffer between ra_lib
-       * calls.
-       *
-       * Also close the files when the pool is destroyed.  */
-      apr_pool_cleanup_register(pool, proc->in, cleanup_file, cleanup_file);
-      apr_pool_cleanup_register(pool, proc->out, cleanup_file, cleanup_file);
+      /* APR pipe objects inherit by default.  But we don't want the
+       * tunnel agent's pipes held open by future child processes
+       * (such as other ra_svn sessions), so turn that off. */
+      apr_file_inherit_unset(proc->in);
+      apr_file_inherit_unset(proc->out);
 
       /* Guard against dotfile output to stdout on the server. */
       svn_ra_svn_skip_leading_garbage(conn, pool);
@@ -718,8 +686,6 @@ static svn_error_t *ra_svn_update(void *sess,
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cb", rev, target,
                                recurse));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
@@ -744,8 +710,6 @@ static svn_error_t *ra_svn_switch(void *sess,
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc", rev, target,
                                recurse, switch_url));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
@@ -768,8 +732,6 @@ static svn_error_t *ra_svn_status(void *sess,
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb", target, recurse));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * status_editor upon finish_report(). */
@@ -796,8 +758,6 @@ static svn_error_t *ra_svn_diff(void *sess,
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbc", rev, target,
                                recurse, ignore_ancestry, versus_url));
-  /* ### Must flush in case child process forks; see comment in ra_svn_open. */
-  SVN_ERR(svn_ra_svn_flush(conn, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * diff_editor upon finish_report(). */
