@@ -165,10 +165,10 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                          receiver,
                          receiver_baton);
   
-  /* Special case: If there have been no commits, we'll get in error
-   * if request log for a revision higher than 0.  But the default
-   * behavior of "svn log" is to give revisions HEAD through 1, on
-   * the assumption that HEAD >= 1.
+  /* Special case: If there have been no commits, we'll get an error
+   * for requesting log of a revision higher than 0.  But the
+   * default behavior of "svn log" is to give revisions HEAD through
+   * 1, on the assumption that HEAD >= 1.
    *
    * So if we got that error for that reason, and it looks like the
    * user was just depending on the defaults (rather than explicitly
