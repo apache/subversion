@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 #
-#  client_test.py: an automated test suite for the 'svn' binary
+#  svn_test_main.py: a shared, automated test suite for Subversion
 #
-#  usage:   ./client-test.py [test-num]
-#         (or supply no arguments to run all tests.)
-# 
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
 #    
@@ -18,11 +15,32 @@
 # newer version instead, at your option.
 #
 ######################################################################
+#
+#  HOW TO USE THIS MODULE:
+#
+#  Write a new python script that
+#
+#     1) imports this module
+#
+#     2) contains a number of related 'test' routines.  (Each test
+#        routine should take no arguments, and return a 0 on success or
+#        non-zero on failure.  Each test should also contain a short
+#        docstring.)
+#
+#     3) places all the tests into a list that begins with None.
+#
+#     4) calls svn_test_main.client_test() on the list.
+#
+#  Also, your tests will probably want to use some of the common
+#  routines in the 'Utilities' section below.
 
-import sys   # for argv
+#####################################################################
+# Global stuff
+
+import sys   # for argv[]
 import os    # for system()
 
-# Set this to the location of the svn binary
+# Global:  set this to the location of the svn binary
 svn_binary = '../../../client/svn'
 
 ######################################################################
@@ -36,76 +54,46 @@ def run_svn(*varargs):
     command = command + " " + `arg`
   return os.system(command)
 
-  
-  
 
-#  -- put shared routines here --
-
-
-######################################################################
-# Tests
-#
-#   Each test must return 0 on success or non-zero on failure.
-
-def test1():
-  "Test if foo is bar."
-
-  pass
-  return 1
-
-def test2():
-  "Test that the sky is blue."
-
-  pass
-  return 0
-
-
-##  List all tests here:
-client_tests = [ None,
-                 test1,
-                 test2 ]
+#  -- put more shared routines here --
 
 ######################################################################
 # Main functions
 
-# Func to run one test.
-def run_test(n):
-  "Run the Nth client test, return the result."
+# Func to run one test in the list.
+def run_test(n, test_list):
+  "Run the Nth client test in TEST_LIST, return the result."
 
-  if (n < 1) or (n > len(client_tests) - 1):
+  if (n < 1) or (n > len(test_list) - 1):
     print "There is no test", `n` + ".\n"
     return 1
   # Run the test.
-  error = client_tests[n]()
+  error = test_list[n]()
   if error:
     print "FAIL:",
   else:
     print "PASS:",
-  print sys.argv[0], n, ":", client_tests[n].__doc__
+  print sys.argv[0], n, ":", test_list[n].__doc__
   return error
 
 
 # Main func
-def client_test():
-  "Main routine to run client tests."
+def client_test(test_list):
+  "Main routine to run all tests in TEST_LIST."
 
-  testnum = 0  
+  testnum = 0
   # Parse commandline arg, run one test
   if (len(sys.argv) > 1):
     testnum = int(sys.argv[1])
-    return run_test(testnum)
+    return run_test(testnum, test_list)
 
   # or run all the tests if no arg.
   else:
     got_error = 0
-    for n in range(len(client_tests)):
+    for n in range(len(test_list)):
       if n:
-        got_error = run_test(n)
+        got_error = run_test(n, test_list)
     return got_error
-
-
-# Run the main func.
-client_test()
 
 
 
