@@ -264,6 +264,7 @@ static svn_revnum_t
 get_revision_from_hash (apr_hash_t *hash, svn_string_t *path,
                         apr_pool_t *pool)
 {
+  void *val;
   svn_string_t *path_copy;
   svn_revnum_t revision = SVN_INVALID_REVNUM;
 
@@ -271,10 +272,13 @@ get_revision_from_hash (apr_hash_t *hash, svn_string_t *path,
     return SVN_INVALID_REVNUM;
 
   /* See if this path has a revision assigned in the hash. */
-  revision = *((svn_revnum_t *)apr_hash_get 
-               (hash, path_copy->data, APR_HASH_KEY_STRING));
-  if (SVN_IS_VALID_REVNUM(revision))
-    return revision;
+  val = apr_hash_get (hash, path->data, APR_HASH_KEY_STRING);
+  if (val)
+    {
+      revision = *((svn_revnum_t *) val);
+      if (SVN_IS_VALID_REVNUM(revision))
+        return revision;      
+    }
 
   /* Make a copy of our path that we can hack on. */
   path_copy = svn_string_dup (path, pool);
@@ -285,9 +289,12 @@ get_revision_from_hash (apr_hash_t *hash, svn_string_t *path,
   while ((! SVN_IS_VALID_REVNUM(revision)) 
          && (! svn_path_is_empty (path_copy, svn_path_repos_style)))
     {
+      void *v;
       svn_path_remove_component (path_copy, svn_path_repos_style);
-      revision = *((svn_revnum_t *)apr_hash_get 
-                   (hash, path_copy->data, APR_HASH_KEY_STRING));
+
+      v = apr_hash_get (hash, path_copy->data, APR_HASH_KEY_STRING);
+      if (val)
+        revision = *((svn_revnum_t *) v);
     }
   
   return revision;
