@@ -281,7 +281,7 @@
 	To provide a quick test of whether a <code>PROPPATCH</code> is
 	allowed against the target resource, the client will issue the
 	<code>PROPPATCH</code> with a <code>DAV:remove</code> element
-	for a custom, predefine Subversion property (which will never
+	for a custom, predefined Subversion property (which will never
 	exist). This will "exercise" the access rights for property
 	changes. At commit time, the property-delta will be mapped
 	into a complete <code>PROPPATCH</code>.
@@ -413,28 +413,213 @@
 
     <h2>URL Layout</h2>
     <p>
-      ...
-      /$svn/act/  hold activity info
-      /$svn/wr/   hold working resources
-      /$svn/ver/  hold version resources
-      /$svn/his/  hold history resources
+      The Subversion server exposes projects at user-defined URLs. For
+      example, the "foo" project might be located at
+      <code>http://www.example.com/foo/</code>. However, the server
+      also requires a number of other resources to be exposed for
+      proper operation. These additional resources can be specified on 
+      a per-project basis, but will typically be defined on a
+      server-wide basis. The <code>SVNAuxLocation</code> directive is
+      used to define the location of these auxilliary resources:
+      </p>
+    <blockquote>
+<pre>&lt;Location /example&gt;
+    DAV subversion
+    SVNPath /home/svn-projects/example
+    SVNAuxLocation /$svn
+&lt;/Location&gt;</pre>
+    </blockquote>
+    <p>
+      Underneath the location specified by
+      <code>SVNAuxLocation</code>, we will expose several
+      collections. Assuming we use the example of <code>/$svn</code>,
+      the collections are:
     </p>
+    <dl>
+      <dt><code>/$svn/act/</code></dt>
+      <dd>
+	This area is where activity resources are created. The client
+	will pick a unique name within this collection and issue a
+	<code>MKACTIVITY</code> for that URL. The client will then use 
+	the activity in further interactions.
+	<p>
+	  No methods are allowed on the <code>/$svn/act/</code> URL.
+	</p>
+	<p>
+	  Only a subset of methods are allowed on the activities
+	  within the collection. They are: <code>PROPFIND</code>,
+	  <code>MERGE</code>, and <code>DELETE</code>.
+	</p>
+	<p>
+	  Per the Delta-V specification, all activity resources will
+	  have a <code>DAV:resourcetype</code> of
+	  <code>DAV:activity</code>.
+	</p>
+      </dd>
+      
+      <dt><code>/$svn/his/</code></dt>
+      <dd>
+	This collection contains the version history resources for
+	files and directories in a project. Its internal layout is
+	completely server-defined. Clients will receive URLs into this 
+	collection (or a subcollection) from various responses.
+	<p>
+	  No methods are allowed on the <code>/$svn/his/</code> URL.
+	</p>
+	<p>
+	  Internally, the URL namespace is laid out with URLs of the
+	  following form:
+	</p>
+	<blockquote>
+	  <code>/$svn/his/<var>project-id</var>/<var>node-id</var>/<var>version</var></code>
+	</blockquote>
+	<p>
+	  The <var>project-id</var> is a unique identifier assigned to
+	  each Subversion project that is located within this history
+	  URL namespace. The <var>node-id</var> is an internal value
+	  that Subversion uses to reference individual files and
+	  directories. The <var>version</var> portion is used to refer 
+	  to specific versions of a resource.
+	</p>
+	<p>
+	  The <code>DAV:resourcetype</code> of the <var>node-id</var>
+	  collection is <code>DAV:version-history</code>. The resource 
+	  which includes the version is a <code>DAV:???</code> (this
+	  has not been defined in the Delta-V spec)
+	</p>
+      </dd>
+
+      <dt><code>/$svn/ver/</code></dt>
+      <dd>
+	This collection contains resources for each version of a
+	project. This resource can then be used for storing and
+	fetching information about a version as a whole (rather than
+	from a particular file or directory).
+	<p>
+	  No methods are allowed on the <code>/$svn/ver/</code> URL.
+	</p>
+	<p>
+	  The layout of this collection is internal to the server. For 
+	  reference purposes here (and to describe the
+	  implementation), it is laid out as:
+	</p>
+	<blockquote>
+	  <code>/$svn/ver/<var>project-id</var>/<var>version</var></code>
+	</blockquote>
+	<p>
+	  <code>PROPFIND</code> and <code>PROPPATCH</code> are allowed 
+	  against these URLs, but all other methods are illegal.
+	</p>
+	<p>
+	  All version resources (for the files and directories in a
+	  project) have a live property with a URL referring to the
+	  whole-project version resource. This property is named
+	  <code>SVN:project-version</code> (???, TBD) and is
+	  constructed according to:
+	</p>
+	<blockquote>
+	  <code>&lt;!ELEMENT project-version (href)&gt;</code>
+	</blockquote>
+	<p>
+	  The <code>DAV:resourcetype</code> of the project version
+	  resources is <code>SVN:project-version</code> (???, TBD).
+	</p>
+      </dd>
+
+      <dt><code>/$svn/wr/</code></dt>
+      <dd>
+	This collection contains working resources for the resources
+	that have been checked out with the <code>CHECKOUT</code>
+	method. The form and construction of this collection is
+	server-defined, but is also well-defined so that clients may
+	interact properly with versioned collections that have been
+	checked out.
+	<p>
+	  No methods are allowed on the <code>/$svn/wr/</code> URL.
+	</p>
+	<p>
+	  The <code>DAV:resourcetype</code> of the working resources
+	  is <code>DAV:???</code> (this has not been defined in the
+	  Delta-V spec)
+	</p>
+      </dd>
+    </dl>
 
     <h2>Property Management (and History/Log Reporting)</h2>
 
     <h2>Fetching Status and Updates</h2>
 
     <h2>Tags and Branches</h2>
+    <p>
+      The current Subversion design specification is not entirely
+      clear on how tagging and branching will be performed. For the
+      most part, all branching will be handled by copying source trees 
+      to another location in the repository.
+    </p>
+    <p>
+      <small>
+	Note: the copies are actually by reference, rather than a
+	complete duplication of the source.
+      </small>
+    </p>
+    <p>
+      Copies are handled just like a regular commit. An activity is
+      created with <code>MKACTIVITY</code>, a working resource is
+      created via <code>CHECKOUT</code> (for the target directory),
+      and then a <code>COPY</code> is performed. The activity is then
+      merged back into the repository with a <code>MERGE</code>
+      request.
+    </p>
+    <p>
+      <i>Note: we may be able to simplify all of this by simply
+	assuming that <code>DAV:auto-version</code> is set and doing a 
+	single <code>COPY</code> operation to the target area. Some
+	investigation/thought is needed here.</i>
+    </p>
+    <h3>Tags/Labels</h3>
+    <p>
+      Subversion does not have any specific design yet for tagging or
+      labeling specific versions of the repository. Presumably, this
+      would be performed by the client through some kind of property
+      operation.
+    </p>
+    <p>
+      Whatever the client/server ends up using for its design, all
+      labeling requests will be mapped into <code>PROPFIND</code> and
+      <code>LABEL</code> requests. The former for label discovery
+      (read the <code>DAV:label-name-set</code> property), and the
+      latter for applying, changing, and removing labels from
+      versions.
+    </p>
+    <p>
+      As mentioned before, we expose properties for the abstract
+      concept of a version. Those resources could be used for applying
+      label information to the entire repository, rather than on a
+      per-file basis. The exact needs here will be dependent upon the
+      model chosen by the server to represent the different types of
+      labels and how they can be applied to the
+      repository. Nevertheless, the mapping should be straight
+      forward.
+    </p>
 
     <h2>Server Requirements</h2>
     <p>
       <code>DAV:repository-report</code>
       <br>
       Retain activity information. Activities have user-specified
-      names, mapping to the server-side records. Advanced CHECKOUT to
-      associate an activity with the working resource. COPY into a
+      names, mapping to the server-side records.
+      <br>
+      Advanced CHECKOUT to
+      associate an activity with the working resource.
+      <br>
+      COPY into a
       checked-out collection must create new working resources
-      (recursively). Add SVN:test-proppatch (live) property.
+      (recursively).
+      <br>
+      Add SVN:test-proppatch (live) property.
+      <br>
+      <var>project-id</var> must be generated and kept permanently
+      with a Subversion project.
     </p>
     <p>
       Discuss timeouts and auto-purge of activities (and the related
@@ -445,7 +630,7 @@
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Mon Aug 14 18:48:43 PDT 2000
+Last modified: Mon Aug 14 21:14:22 PDT 2000
 <!-- hhmts end -->
   </body>
 </html>
