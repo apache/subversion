@@ -99,6 +99,10 @@ SOURCE=.\diff.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\diff_file.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\svndiff.c
 # End Source File
 # Begin Source File
