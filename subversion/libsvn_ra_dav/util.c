@@ -344,6 +344,8 @@ svn_ra_dav__request_dispatch(int *code,
                              ne_session *session,
                              const char *method,
                              const char *url,
+                             int okay_1,
+                             int okay_2,
                              apr_pool_t *pool)
 {
   ne_xml_parser *error_parser;
@@ -378,18 +380,20 @@ svn_ra_dav__request_dispatch(int *code,
       return svn_ra_dav__convert_error(session, msg, rv, pool);
     }
 
+  /* If the status code was one of the two that we expected, then go
+     ahead and return now. IGNORE any marshalled error. */
+  if (*code == okay_1 || *code == okay_2)
+    return SVN_NO_ERROR;
+
   /* next, check to see if a <D:error> was discovered */
   if (pc->err != NULL)
     return pc->err;
-  
-  if ((*code < 200) || (*code >= 300))
-    /* Bad http status, but error-parser didn't build an svn_error_t
-       for some reason.  Return a generic error instead.*/
-    return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
-                             "%s of %s returned status code %d (%s)",
-                             method, url, *code, code_desc);
 
-  return SVN_NO_ERROR;
+  /* Bad http status, but error-parser didn't build an svn_error_t
+     for some reason.  Return a generic error instead. */
+  return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+                           "%s of %s returned status code %d (%s)",
+                           method, url, *code, code_desc);
 }
 
 

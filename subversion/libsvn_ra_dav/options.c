@@ -39,7 +39,7 @@ static const struct ne_xml_elm options_elements[] =
 };
 
 typedef struct {
-  const svn_string_t *activity_url;
+  const svn_string_t *activity_coll;
   apr_pool_t *pool;
 
 } options_ctx_t;
@@ -89,16 +89,17 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
 
   if (elm->id == NE_ELM_href)
     {
-      oc->activity_url = svn_string_create(cdata, oc->pool);
+      oc->activity_coll = svn_string_create(cdata, oc->pool);
     }
 
   return 0;
 }
 
-svn_error_t * svn_ra_dav__get_activity_url(const svn_string_t **activity_url,
-                                           svn_ra_session_t *ras,
-                                           const char *url,
-                                           apr_pool_t *pool)
+svn_error_t * svn_ra_dav__get_activity_collection(
+  const svn_string_t **activity_coll,
+  svn_ra_session_t *ras,
+  const char *url,
+  apr_pool_t *pool)
 {
   options_ctx_t oc = { 0 };
 
@@ -119,7 +120,7 @@ svn_error_t * svn_ra_dav__get_activity_url(const svn_string_t **activity_url,
                                       start_element, end_element, &oc,
                                       pool) );
 
-  if (oc.activity_url == NULL)
+  if (oc.activity_coll == NULL)
     {
       /* ### error */
       return svn_error_create(SVN_ERR_RA_OPTIONS_REQUEST_FAILED,
@@ -130,7 +131,7 @@ svn_error_t * svn_ra_dav__get_activity_url(const svn_string_t **activity_url,
                               "the URL is not WebDAV-enabled.)");
     }
 
-  *activity_url = oc.activity_url;
+  *activity_coll = oc.activity_coll;
 
   return SVN_NO_ERROR;
 }

@@ -173,8 +173,6 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_RA_HOSTNAME_LOOKUP, "RaHostnameLookup");
   define_error (SVN_ERR_RA_CREATING_REQUEST, "RaCreatingRequest");
   define_error (SVN_ERR_RA_REQUEST_FAILED, "RaRequestFailed");
-  define_error (SVN_ERR_RA_MKACTIVITY_FAILED, "RaMkactivityFailed");
-  define_error (SVN_ERR_RA_DELETE_FAILED, "RaDeleteFailed");
   define_error (SVN_ERR_RA_PROPS_NOT_FOUND, "RaPropsNotFound");
   define_error (SVN_ERR_RA_NOT_VERSIONED_RESOURCE, "RaNotVersionedResource");
   define_error (SVN_ERR_RA_BAD_REVISION_REPORT, "RaBadRevisionReport");
