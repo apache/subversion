@@ -1031,8 +1031,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
-                   svn_boolean_t tunnel, svn_boolean_t read_only,
+svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                    apr_pool_t *pool)
 {
   svn_error_t *err, *io_err;
@@ -1043,8 +1042,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   svn_boolean_t success;
   svn_ra_svn_item_t *item, *first;
 
-  b.tunnel = tunnel;
-  b.read_only = read_only;
+  b.tunnel = params->tunnel;
+  b.read_only = params->read_only;
   b.user = NULL;
   b.cfg = NULL;  /* Ugly; can drop when we remove v1 support. */
   b.pwdb = NULL; /* Likewise */
@@ -1078,7 +1077,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
       if (!success)
         return svn_ra_svn_flush(conn, pool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "c", &client_url));
-      err = find_repos(client_url, root, &b, pool);
+      err = find_repos(client_url, params->root, &b, pool);
       if (!err && current_access(&b) == NO_ACCESS)
         err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                "Not authorized for access");
@@ -1097,7 +1096,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nlc", &ver,
                                      &caplist, &client_url));
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
-      err = find_repos(client_url, root, &b, pool);
+      err = find_repos(client_url, params->root, &b, pool);
       if (!err)
         {
           SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS));
