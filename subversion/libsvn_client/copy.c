@@ -268,12 +268,11 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                      const svn_opt_revision_t *src_revision, 
                      const char *dst_url, 
                      svn_client_ctx_t *ctx,
-                     const char *message,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
 {
   apr_array_header_t *paths = apr_array_make (pool, 2, sizeof (const char *));
-  const char *top_url, *src_rel, *dst_rel;
+  const char *top_url, *src_rel, *dst_rel, *message;
   svn_revnum_t youngest;
   void *ra_baton, *sess;
   svn_ra_plugin_t *ra_lib;
@@ -570,10 +569,9 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   const char *src_path, 
                   const char *dst_url, 
                   svn_client_ctx_t *ctx,
-                  const char *message,
                   apr_pool_t *pool)
 {
-  const char *anchor, *target, *base_name;
+  const char *anchor, *target, *base_name, *message;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_delta_editor_t *editor;
@@ -1062,8 +1060,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
   else if ((! src_is_url) && (dst_is_url))
     {
       SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
-                                 ctx, message, 
-                                 pool));
+                                 ctx, pool));
     }
   else if ((src_is_url) && (! dst_is_url))
     {
@@ -1074,8 +1071,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
   else
     {
       SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
-                                    dst_path, ctx, message, is_move,
-                                    pool));
+                                    dst_path, ctx, is_move, pool));
     }
 
   return SVN_NO_ERROR;
