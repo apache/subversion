@@ -93,13 +93,6 @@ Candidate changes:
       +1: sussman, cmpilato
       +0: breser
 
-  * r10461
-    Fix bug in XML directory listing in mod_dav_svn.
-    Justification:
-      One-liner that is good for pathnames with non-ASCII chars.
-    Votes:
-      +1: lundblad, sussman, breser
-
   * r10473
     Fix OS X build.
     Justification: Should work out of the tarball.
