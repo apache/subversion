@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Delta"
+#elif defined(SWIGRUBY)
+%module "svn::ext::delta"
 #else
 %module delta
 #endif

@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Wc"
+#elif defined(SWIGRUBY)
+%module "svn::ext::wc"
 #else
 %module wc
 #endif

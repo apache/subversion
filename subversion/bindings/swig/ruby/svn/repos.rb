@@ -1,7 +1,7 @@
 require "English"
 require "svn/error"
 require "svn/util"
-require "svn/ext/_repos"
+require "svn/ext/repos"
 
 module Svn
   module Repos

@@ -2,7 +2,7 @@ require "English"
 require "tempfile"
 require "svn/error"
 require "svn/util"
-require "svn/ext/_fs"
+require "svn/ext/fs"
 require "svn/repos"
 
 module Svn

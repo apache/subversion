@@ -1,7 +1,7 @@
 require "English"
 require "svn/error"
 require "svn/util"
-require "svn/ext/_delta"
+require "svn/ext/delta"
 
 module Svn
   module Delta

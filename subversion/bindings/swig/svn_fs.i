@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Fs"
+#elif defined(SWIGRUBY)
+%module "svn::ext::fs"
 #else
 %module fs
 #endif

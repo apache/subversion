@@ -500,7 +500,9 @@ class TargetSWIG(TargetLib):
     oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
 
     ### we should really extract the %module line
-    libname = iname[:4] != 'svn_' and ('_' + iname[:-2]) or iname[3:-2]
+    libname = iname[:4] != 'svn_' and (iname[:-2]) or iname[4:-2]
+    if self.lang != "ruby":
+      libname = '_' + libname
     libfile = libname + self.gen_obj._extension_map['lib', 'target']
 
     self.name = self.lang + libname

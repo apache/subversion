@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Repos"
+#elif defined(SWIGRUBY)
+%module "svn::ext::repos"
 #else
 %module repos
 #endif

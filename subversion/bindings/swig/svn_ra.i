@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Ra"
+#elif defined(SWIGRUBY)
+%module "svn::ext::ra"
 #else
 %module ra
 #endif

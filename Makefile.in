@@ -183,12 +183,8 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
 RUN_SWIG_PY = $(SWIG) $(SWIG_NORUNTIME_FLAG) -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_RB = $(SWIG) -ruby $(SWIG_INCLUDES) $(SWIG_RB_INCLUDES) -o $@
 RUN_SWIG_JAVA = cd ${SWIG_BUILD_DIR}/java/org/tigris/subversion/swig && $(SWIG) $(SWIG_NORUNTIME_FLAG) -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
-RUN_SWIG_RB = \
-	$(SWIG) -ruby \
-	  -prefix svn::ext:: \
-	  -feature _`$(RUBY) -e "print File.basename('$*').sub(/^svn_/, '')"` \
-	  $(SWIG_INCLUDES) $(SWIG_RB_INCLUDES) -o $@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@

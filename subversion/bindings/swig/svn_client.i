@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Client"
+#elif defined(SWIGRUBY)
+%module "svn::ext::client"
 #else
 %module client
 #endif

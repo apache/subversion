@@ -1,7 +1,7 @@
 require "English"
 require "svn/error"
 require "svn/util"
-require "svn/ext/_client"
+require "svn/ext/client"
 
 module Svn
   module Client

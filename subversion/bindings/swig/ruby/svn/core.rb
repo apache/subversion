@@ -2,7 +2,7 @@ require "English"
 require "stringio"
 require "svn/error"
 require "svn/util"
-require "svn/ext/_core"
+require "svn/ext/core"
 
 module Svn
   module Core

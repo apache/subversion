@@ -1,7 +1,7 @@
 require "English"
 require "svn/error"
 require "svn/util"
-require "svn/ext/_wc"
+require "svn/ext/wc"
 
 module Svn
   module Wc
