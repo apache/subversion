@@ -35,11 +35,13 @@ Please either remove that subdir or don't use the --with-neon option.])
       else
         neon_config="$withval/bin/neon-config"
       fi
+
+      SVN_SEARCH_NEON()
     fi
   ],
   [
-    AC_MSG_CHECKING([neon library version])
     if test -d $abs_srcdir/neon ; then
+      AC_MSG_CHECKING([neon library version])
       NEON_VERSION=`$abs_srcdir/ac-helpers/get-neon-ver.sh $abs_srcdir/neon`
       AC_MSG_RESULT([$NEON_VERSION])
       if test "$NEON_WANTED" != "$NEON_VERSION"; then
@@ -84,41 +86,48 @@ dnl Configure neon --------------------------
     else
       # no --with-neon switch, and no neon subdir, look in PATH
       AC_PATH_PROG(neon_config,neon-config)
-      if test "$neon_config" != ""; then
-        NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
-        AC_MSG_RESULT([$NEON_VERSION])
-
-        if test "$NEON_WANTED" != "$NEON_VERSION"; then
-          echo "You have neon version $NEON_VERSION,"
-          echo "but Subversion needs neon $NEON_WANTED."
-          SVN_DOWNLOAD_NEON()
-        else
-          changequote(<<, >>)dnl
-          SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
-          NEON_LIBS=`$neon_config --libs | sed -e 's/-lneon//g'`
-          CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
-          changequote([, ])dnl
-          NEON_LIBS="$NEON_LIBS "`$neon_config --prefix `"/lib/libneon.la"
-        fi
-      else
-        # no neon subdir, no neon-config in PATH
-        AC_MSG_RESULT([nothing])
-        echo "No suitable neon can be found."
-        SVN_DOWNLOAD_NEON()
-      fi
+      SVN_SEARCH_NEON()
     fi
-
-    # neon should not add -I/usr/include to --cflags; remove this when it doesn't.
-    # Leaving it in means a system DB3 etc could be picked up.
-    SVN_NEON_INCLUDES=`echo $SVN_NEON_INCLUDES | sed -e "s|-I/usr/include ||g" \
-                         -e "s|-I/usr/include$||g"`
 
   ])
   
+  # neon should not add -I/usr/include to --cflags; remove this when it doesn't.
+  # Leaving it in means a system DB3 etc could be picked up.
+  SVN_NEON_INCLUDES=`echo $SVN_NEON_INCLUDES | sed -e "s|-I/usr/include ||g" \
+                     -e "s|-I/usr/include$||g"`
+
   AC_SUBST(SVN_NEON_INCLUDES)
   AC_SUBST(NEON_LIBS)
 ])
 
+dnl SVN_SEARCH_NEON()
+dnl neon-config found, gather relevant information from it
+AC_DEFUN(SVN_SEARCH_NEON,
+[
+  if test "$neon_config" != ""; then
+    AC_MSG_CHECKING([neon library version])
+    NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
+    AC_MSG_RESULT([$NEON_VERSION])
+
+    if test "$NEON_WANTED" != "$NEON_VERSION"; then
+      echo "You have neon version $NEON_VERSION,"
+      echo "but Subversion needs neon $NEON_WANTED."
+      SVN_DOWNLOAD_NEON()
+    else
+      changequote(<<, >>)dnl
+      SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
+      NEON_LIBS=`$neon_config --libs | sed -e 's/-lneon//g'`
+      CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
+      changequote([, ])dnl
+      NEON_LIBS="$NEON_LIBS "`$neon_config --prefix `"/lib/libneon.la"
+    fi
+  else
+    # no neon subdir, no neon-config in PATH
+    AC_MSG_RESULT([nothing])
+    echo "No suitable neon can be found."
+    SVN_DOWNLOAD_NEON()
+  fi
+])
 
 dnl SVN_DOWNLOAD_NEON()
 dnl no neon found, print out a message telling the user what to do
