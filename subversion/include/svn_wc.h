@@ -107,15 +107,30 @@ svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
                                        apr_pool_t *pool);
 
 
-
-
 /*
- * Return an editor for effecting changes in a working copy, including
- * creating the working copy (i.e., update and checkout).
+ * Return an editor for updating a working copy.
  * 
- * If DEST is non-null, the editor will ensure its existence as a
- * directory (i.e., it is created if it does not already exist), and
- * it will be prepended to every path the delta causes to be touched.
+ * DEST is the local path to the working copy.
+ *
+ * TARGET_VERSION is the repository version that results from this set
+ * of changes.
+ *
+ * EDITOR, EDIT_BATON, and DIR_BATON are all returned by reference,
+ * and the latter two should be used as parameters to editor
+ * functions.
+ */
+svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
+                                       svn_vernum_t target_version,
+                                       const svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
+                                       apr_pool_t *pool);
+
+
+/* Like svn_wc_get_update_editor(), except that:
+ *
+ * DEST will be created as a working copy, if it does not exist
+ * already.  It is not an error for it to exist; if it does, checkout
+ * just behaves like update.
  *
  * It is the caller's job to make sure that DEST is not some other
  * working copy, or that if it is, it will not be damaged by the
@@ -126,24 +141,19 @@ svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
  * REPOS is the repository string to be recorded in this working
  * copy.
  *
- * VERSION is the repository version that results from this set of
- * changes.
- *
- * EDITOR, EDIT_BATON, and DIR_BATON are all returned by reference,
- * and the latter two must be used as parameters to editor functions.
- *
  * kff todo: Actually, REPOS is one of several possible non-delta-ish
  * things that may be needed by a editor when creating new
  * administrative subdirs.  Other things might be username and/or auth
  * info, which aren't necessarily included in the repository string.
  * Thinking more on this question...
  */
-svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
-                                       svn_string_t *repos,
-                                       svn_vernum_t version,
-                                       const svn_delta_edit_fns_t **editor,
-                                       void **edit_baton,
-                                       apr_pool_t *pool);
+svn_error_t *svn_wc_get_checkout_editor (svn_string_t *dest,
+                                         svn_string_t *repos,
+                                         svn_string_t *ancestor_path,
+                                         svn_vernum_t target_version,
+                                         const svn_delta_edit_fns_t **editor,
+                                         void **edit_baton,
+                                         apr_pool_t *pool);
 
 
 
