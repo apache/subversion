@@ -786,12 +786,12 @@ Committed revision 406.
         everything "new" on your branch since the last time you
         merged.</para>
 
-      <para>The first step is to run <command>svn log</command> on
-        your private branch, and look for a log message about the last
-        time you merged:</para>
+      <para>The first step is to run <command>svn log</command> on the
+        trunk, and look for a log message about the last time you
+        merged from the branch:</para>
 
       <screen>
-$ cd my-calc-branch
+$ cd trunk/calc
 $ svn log
 &hellip;
 ------------------------------------------------------------------------

@@ -1890,7 +1890,11 @@ $ svnadmin dump myrepos &gt; dumpfile
       <para>At the end of the process, you will have a single file
         (<filename>dumpfile</filename> in the previous example) that
         contains all the data stored in your repository in the
-        requested range of revisions.</para>
+        requested range of revisions.  Note that <command>svnadmin
+        dump</command> is reading revision trees from the repository
+        just like any other "reader" process would (<command>svn
+        checkout</command>, for example.)  So it's safe to run this
+        command at any time.</para>
 
       <para>The other subcommand in the pair, <command>svnadmin
         load</command>, parses the standard input stream as a
