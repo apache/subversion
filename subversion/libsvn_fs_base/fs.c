@@ -796,6 +796,10 @@ svn_fs_base__clean_logs(const char *live_path,
 }
 
 
+/* ### There -must- be a more elegant way to do a compile-time check
+       for BDB 4.2 or later.  We're doing this because apparently
+       env->get_flags() doesn't exist in earlier versions of BDB.  */
+#ifdef DB_LOG_AUTOREMOVE
 
 /* Open the BDB environment at PATH and compare its configuration
    flags with FLAGS.  If every flag in FLAGS is set in the
@@ -829,6 +833,7 @@ check_env_flags (svn_boolean_t *match,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 static svn_error_t *
