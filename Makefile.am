@@ -13,3 +13,8 @@ ChangeLog: changelog
 changelog:
 	cvs2cl.pl -r -S -U ./AUTHORS subversion doc www \
                                      `find . -type f -maxdepth 1`
+
+
+## Include these extra files when building `dist' target
+
+EXTRA_DIST = subversion/LICENSE subversion/include
