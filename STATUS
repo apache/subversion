@@ -34,9 +34,3 @@ Candidate changes:
     Votes:
       +1: jpieper, ghudson, epg
 
-  * r10296
-    Initialize README.txt file in repositories with language that
-    doesn't make BDB vs FSFS assumptions.
-    Justification: Simple doc fix
-    Votes:
-      +1: ghudson, sussman, maxb

@@ -891,12 +891,17 @@ create_repos_structure (svn_repos_t *repos,
       APR_EOL_STR
       "to avoid corrupting the repository."
       APR_EOL_STR
+      /* ### It would be preferable to conditionalize the mention of
+         DB_CONFIG below, since it's pointless if this is an FSFS
+         repository, but we don't currently have an clear API for
+         determining the fs type.  Hence, the conditional is in the
+         English, not the code :-). */
       APR_EOL_STR
-      "The directory \""
+      "If the directory \""
       SVN_REPOS__DB_DIR
-      "\" contains a Berkeley DB environment."
+      "\" contains a Berkeley DB environment,"
       APR_EOL_STR
-      "You may need to tweak the values in \""
+      "you may need to tweak the values in \""
       SVN_REPOS__DB_DIR
       "/DB_CONFIG\" to match the"
       APR_EOL_STR
