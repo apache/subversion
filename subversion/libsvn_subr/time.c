@@ -149,48 +149,57 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
   apr_time_exp_t exploded_time;
   apr_status_t apr_err;
   char wday[4], month[4];
+  const char *c = data;
 
-  /* First try the new timestamp format. */
-  if (sscanf (data,
-              timestamp_format,
-              &exploded_time.tm_year,
-              &exploded_time.tm_mon,
-              &exploded_time.tm_mday,
-              &exploded_time.tm_hour,
-              &exploded_time.tm_min,
-              &exploded_time.tm_sec,
-              &exploded_time.tm_usec) == 7)
-    {
-      exploded_time.tm_year -= 1900;
-      exploded_time.tm_mon -= 1;
-      exploded_time.tm_wday = 0;
-      exploded_time.tm_yday = 0;
-      exploded_time.tm_isdst = 0;
-      exploded_time.tm_gmtoff = 0;
-      
-      apr_err = apr_implode_gmt (when, &exploded_time);
-      if(apr_err != APR_SUCCESS)
-        {
-          return svn_error_createf (SVN_ERR_BAD_DATE, apr_err, NULL,
-                                    "Date conversion failed.");
-        }
-      
-      return SVN_NO_ERROR;
-    }
-  /* Then try the compatibility option. */
-  else if (sscanf (data,
-                   old_timestamp_format,
-                   wday,
-                   &exploded_time.tm_mday,
-                   month,
-                   &exploded_time.tm_year,
-                   &exploded_time.tm_hour,
-                   &exploded_time.tm_min,
-                   &exploded_time.tm_sec,
-                   &exploded_time.tm_usec,
-                   &exploded_time.tm_yday,
-                   &exploded_time.tm_isdst,
-                   &exploded_time.tm_gmtoff) == 11)
+  /* Open-code parsing of the new timestamp format, as this
+     is a hot path for reading the entries file.  This format looks
+     like:  "2001-08-31T04:24:14.966996Z"  */
+  exploded_time.tm_year = strtol(c, (char**)&c, 10);
+  if (*c++ != '-') goto fail;
+  exploded_time.tm_mon = strtol(c, (char**)&c, 10);
+  if (*c++ != '-') goto fail;
+  exploded_time.tm_mday = strtol(c, (char**)&c, 10);
+  if (*c++ != 'T') goto fail;
+  exploded_time.tm_hour = strtol(c, (char**)&c, 10);
+  if (*c++ != ':') goto fail;
+  exploded_time.tm_min = strtol(c, (char**)&c, 10);
+  if (*c++ != ':') goto fail;
+  exploded_time.tm_sec = strtol(c, (char**)&c, 10);
+  if (*c++ != '.') goto fail;
+  exploded_time.tm_usec = strtol(c, (char**)&c, 10);
+  if (*c++ != 'Z') goto fail;
+
+  exploded_time.tm_year  -= 1900;
+  exploded_time.tm_mon   -= 1;
+  exploded_time.tm_wday   = 0;
+  exploded_time.tm_yday   = 0;
+  exploded_time.tm_isdst  = 0;
+  exploded_time.tm_gmtoff = 0;
+
+  apr_err = apr_implode_gmt(when, &exploded_time);
+  if (apr_err == APR_SUCCESS)
+    return SVN_NO_ERROR;
+
+  return svn_error_createf(SVN_ERR_BAD_DATE, apr_err, NULL,
+                           "Date conversion failed.");
+
+ fail:
+  /* Try the compatibility option.  This does not need to be fast,
+     as this format is no longer generated and the client will convert
+     an old-format entries file the first time it reads it.  */
+  if (sscanf(data,
+             old_timestamp_format,
+             wday,
+             &exploded_time.tm_mday,
+             month,
+             &exploded_time.tm_year,
+             &exploded_time.tm_hour,
+             &exploded_time.tm_min,
+             &exploded_time.tm_sec,
+             &exploded_time.tm_usec,
+             &exploded_time.tm_yday,
+             &exploded_time.tm_isdst,
+             &exploded_time.tm_gmtoff) == 11)
     {
       exploded_time.tm_year -= 1900;
       exploded_time.tm_yday -= 1;
