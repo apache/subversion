@@ -36,7 +36,7 @@ Candidate changes:
     without this fix.
     Votes:
       +1: dlr
-      +0: breser
+      +1: breser
 
   * r9089
     Fix broken build of python swig bindings on win32. 
@@ -69,7 +69,7 @@ Candidate changes:
     Justification: Hard to use svn:executable in shared working copies
                    without it.
     Votes:
-      +1: philip, dlr
+      +1: philip, dlr, breser
 
   * r8949, r9084
     Use subpools when processing multiple update and commit targets. (#1635)
