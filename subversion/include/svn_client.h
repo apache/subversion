@@ -169,10 +169,12 @@ typedef struct svn_client_commit_info_t
 /* The commit candidate structure. */
 typedef struct svn_client_commit_item_t
 {
-  svn_stringbuf_t *path;      /* absolute working-copy path of item */
-  svn_stringbuf_t *url;       /* commit url for this item */
-  svn_wc_entry_t *entry;      /* entry for this item */
-  apr_byte_t state_flags;     /* state flags */
+  svn_stringbuf_t *path;         /* absolute working-copy path of item */
+  svn_node_kind_t kind;          /* node kind (dir, file) */
+  svn_stringbuf_t *url;          /* commit url for this item */
+  svn_revnum_t revision;         /* revision (copyfrom-rev if _IS_COPY) */
+  svn_stringbuf_t *copyfrom_url; /* copyfrom-url */
+  apr_byte_t state_flags;        /* state flags */
 
 } svn_client_commit_item_t;
 

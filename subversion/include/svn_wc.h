@@ -604,21 +604,6 @@ svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  apr_pool_t *pool);
 
 
-/* Perform a commit crawl of a single working copy path (which is a
-   PARENT directory plus a NAME'd entry in that directory) as if that
-   path was scheduled to be added to the repository as a copy of
-   PARENT+NAME's URL (with a new name of COPY_NAME).
-
-   Use EDITOR/EDIT_BATON to accomplish this task, and POOL for all
-   necessary allocations.  */
-svn_error_t *
-svn_wc_crawl_as_copy (svn_stringbuf_t *parent,
-                      svn_stringbuf_t *name,
-                      svn_stringbuf_t *copy_name,
-                      const svn_delta_edit_fns_t *editor,
-                      void *edit_baton,
-                      apr_pool_t *pool);
-
 /* Do a depth-first crawl in a working copy, beginning at PATH.
    Communicate the `state' of the working copy's revisions to
    REPORTER/REPORT_BATON.  Obviously, if PATH is a file instead of a
@@ -1216,10 +1201,14 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
 /*** Text/Prop Deltas Using an Editor ***/
 
 
-/* Given a PATH (with ENTRY and FILE_BATON) representing a file with
-   local textual modifications, transmit those modifications using
-   EDITOR, closing the FILE BATON after the textual mod has been
-   transmitted.  Use POOL for all allocations.  
+/* Given a PATH (with FILE_BATON) representing a file with local
+   textual modifications, transmit those modifications using EDITOR,
+   closing the FILE BATON after the textual mod has been transmitted.
+   Use POOL for all allocations.
+
+   If FULLTEXT, the text of the file will be sent through the editor
+   interface as full-text, else a diff between the file and its
+   current text-base will be transmitted.
 
    If a temporary file remains after this function is finished, the
    path to that file is returned in *TEMPFILE (so the caller can clean
@@ -1228,7 +1217,7 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
    This in intended to be suitable for use with both infix and postfix
    text-delta styled editor drivers.  */
 svn_error_t *svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
-                                          svn_wc_entry_t *entry,
+                                          svn_boolean_t fulltext,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,
                                           svn_stringbuf_t **tempfile,

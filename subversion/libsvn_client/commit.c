@@ -770,7 +770,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
-          if ((item->entry->kind == svn_node_dir)
+          if ((item->kind == svn_node_dir)
               && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
               && (! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
             {
@@ -780,7 +780,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                     goto cleanup;
                 }
 
-              if (item->entry->revision != head)
+              if (item->revision != head)
                 {             
                   cmt_err = svn_error_createf 
                     (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL, pool,
@@ -828,8 +828,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           svn_boolean_t recurse = FALSE;
           
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
-              && (item->entry->kind == svn_node_dir)
-              && (item->entry->copyfrom_url))
+              && (item->kind == svn_node_dir)
+              && (item->copyfrom_url))
             recurse = TRUE;
 
           if ((bump_err = svn_wc_process_committed (item->path, recurse,
@@ -881,26 +881,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                committed_date, pool);
 
   return reconcile_errors (cmt_err, unlock_err, bump_err, cleanup_err, pool);
-}
-
-
-svn_client_commit_info_t *
-svn_client__make_commit_info (svn_revnum_t revision,
-                              const char *author,
-                              const char *date,
-                              apr_pool_t *pool)
-{
-  svn_client_commit_info_t *info;
-
-  if (date || author || SVN_IS_VALID_REVNUM (revision))
-    {
-      info = apr_palloc (pool, sizeof (*info));
-      info->date = date ? apr_pstrdup (pool, date) : NULL;
-      info->author = author ? apr_pstrdup (pool, author) : NULL;
-      info->revision = revision;
-      return info;
-    }
-  return NULL;
 }
 
 

@@ -313,6 +313,20 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                   apr_pool_t *pool);
 
 
+/* Recursively crawl the working copy path TARGET, harvesting
+   commit_items into a COMMITABLES hash (see the docstring for
+   svn_client__harvest_committables for what that really means, and
+   for the relevance of LOCKED_DIRS) as if every entry at or below
+   TARGET was to be committed as a set of adds (mostly with history)
+   to a new repository URL (NEW_URL). */
+svn_error_t *
+svn_client__get_copy_committables (apr_hash_t **committables,
+                                   apr_hash_t **locked_dirs,
+                                   svn_stringbuf_t *new_url,
+                                   svn_stringbuf_t *target,
+                                   apr_pool_t *pool);
+               
+
 /* A qsort()-compatible sort routine for sorting an array of
    svn_client_commit_item_t's by their URL member. */
 int svn_client__sort_commit_item_urls (const void *a, const void *b);
@@ -357,7 +371,6 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        apr_hash_t **tempfiles,
                        apr_pool_t *pool);
 
-               
 
 
 #endif /* CLIENT_H */
