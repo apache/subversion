@@ -135,6 +135,13 @@ typedef struct {
 
   apr_file_t *tmpfile;
 
+  /* Pool initialized when the report_baton is created, and meant for
+     quick scratchwork.  This is like a loop pool, but since the loop
+     that drives ra_dav callbacks is in the wrong scope for us to use
+     the normal loop pool idiom, we must resort to this.  Always clear
+     this pool right after using it; only YOU can prevent forest fires. */ 
+  apr_pool_t *scratch_pool;
+
   svn_boolean_t fetch_content;
   svn_boolean_t fetch_props;
 
@@ -2198,7 +2205,8 @@ static int end_element(void *userdata, int state,
                                                     rb->current_wcprop_path,
                                                     SVN_RA_DAV__LP_VSN_URL,
                                                     &href_val,
-                                                    rb->ras->pool) );
+                                                    rb->scratch_pool) );
+          svn_pool_clear(rb->scratch_pool);
         }
       /* else we're setting a wcprop in the context of an editor drive. */
       else if (rb->file_baton == NULL)
@@ -2455,6 +2463,7 @@ make_reporter (void *session_baton,
 
   rb = apr_pcalloc(pool, sizeof(*rb));
   rb->ras = ras;
+  rb->scratch_pool = svn_pool_create(pool);
   rb->editor = editor;
   rb->edit_baton = edit_baton;
   rb->fetch_content = fetch_content;
