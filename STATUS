@@ -93,3 +93,9 @@ Candidate changes:
     filesystem per connection.
     Votes:
       +1: striker
+
+  * r8933
+    Comply with our license per clause 3.
+    Justification: Avoids any problems with downstream packagers having to
+    work to comply with our license.
+    Votes:
