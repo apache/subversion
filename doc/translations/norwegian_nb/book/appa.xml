@@ -86,7 +86,7 @@
     <para>
       La oss snakke mer om det siste punktet.
       Versjonskontroll av kataloger er et vanskelig problem.
-      Fordi vi &#248;nsker &#229; tillate kopier som inneholder blandede revisjoner, er det lagt innt begrensninger i hvor langt vi kan g&#229; n&#229;r det gjelder &#229; misbruke denne modellen.
+      Fordi vi &#248;nsker &#229; tillate kopier som inneholder blandede revisjoner, er det lagt inn begrensninger i hvor langt vi kan g&#229; n&#229;r det gjelder &#229; misbruke denne modellen.
     </para>
 
     
@@ -340,7 +340,7 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
     <title>Metadata-egenskaper</title>
 
     <para>
-      En ny funksjon i Subversion lar deg legge til vilk&#229;rlige metadata (eller<quote>egenskaper</quote>) til filer og katalgoer.
+      En ny funksjon i Subversion lar deg legge til vilk&#229;rlige metadata (eller <quote>egenskaper</quote>) til filer og katalgoer.
       Egenskaper er vilk&#229;rlige navn/verdi-par koblet til filer og kataloger i arbeidskopien din.
     </para>
     
@@ -474,7 +474,7 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       Et slikt verkt&#248;y er cvs2svn (<systemitem class="url">http://cvs2svn.tigris.org/</systemitem>), et Pythonskript originalt laget av medlemmer fra Subversions utviklermilj&#248;.
       Andre inkluderer et programtillegg av Chia-liang Kao til verkt&#248;yet VCP (<systemitem class="url">http://svn.clkao.org/revml/branches/svn-perl/</systemitem>) og Lev Serebryakovs RefineCVS (<systemitem class="url">http://lev.serebryakov.spb.ru/refinecvs/</systemitem>).
       Disse verkt&#248;yene er komplette i varierende grad, og kan komme til &#229; gj&#248;re helt forskjellige vurderinger om hvordan historien til CVS-depotet skal behandles.
-      Uansett hvilket verkt&#248;y du bestemmer deg for &#229; bruke, v&#230;r n&#248;ye med &#229; utf&#248;re s&#229; mye verifisering som du kan p&#229; konverteringsresultatet&#8212;n&#229;r alt kommer til alt, du har jobbet hardt for &#229; lage denne historien!
+      Uansett hvilket verkt&#248;y du bestemmer deg for &#229; bruke, v&#230;r n&#248;ye med &#229; utf&#248;re s&#229; mye verifisering som du kan p&#229; konverteringsresultatet&#8212;n&#229;r alt kommer til alt har du jobbet hardt for &#229; lage denne historien!
     </para>
 
     <para>
