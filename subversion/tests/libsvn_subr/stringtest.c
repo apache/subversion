@@ -307,6 +307,24 @@ test11 (const char **msg)
 }
 
 
+static int
+test12 (const char **msg)
+{
+  svn_string_t *s;
+  
+  *msg = "formatting strings from varargs";
+
+  s = svn_string_createf (pool, 
+                          "This %s is used in test %d.",
+                          "string",
+                          12);
+  
+  if (strcmp (s->data, "This string is used in test 12.") == 0)
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
 
 /*
    ====================================================================
@@ -330,6 +348,7 @@ int (*test_funcs[])(const char **msg) =
   test9,
   test10,
   test11,
+  test12,
   NULL
 };
 
