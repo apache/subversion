@@ -25,6 +25,8 @@
 #include "svn_fs.h"
 
 
+#define DAV_SVN_DEFAULT_VCC_NAME        "default"
+
 /* dav_svn_repos
  *
  * Record information about the repository that a resource belongs to.
@@ -80,10 +82,14 @@ typedef struct {
 ** but merely that mod_dav doesn't have a standard name for them.
 */
 enum dav_svn_private_restype {
-    DAV_SVN_RESTYPE_VER_COLLECTION,
-    DAV_SVN_RESTYPE_HIS_COLLECTION,
-    DAV_SVN_RESTYPE_WRK_COLLECTION,
-    DAV_SVN_RESTYPE_ACT_COLLECTION
+  DAV_SVN_RESTYPE_ROOT_COLLECTION,      /* .../$svn/     */
+  DAV_SVN_RESTYPE_VER_COLLECTION,       /* .../$svn/ver/ */
+  DAV_SVN_RESTYPE_HIS_COLLECTION,       /* .../$svn/his/ */
+  DAV_SVN_RESTYPE_WRK_COLLECTION,       /* .../$svn/wrk/ */
+  DAV_SVN_RESTYPE_ACT_COLLECTION,       /* .../$svn/act/ */
+  DAV_SVN_RESTYPE_VCC_COLLECTION,       /* .../$svn/vcc/ */
+  DAV_SVN_RESTYPE_BC_COLLECTION,        /* .../$svn/bc/  */
+  DAV_SVN_RESTYPE_VCC                   /* .../$svn/vcc/NAME */
 };
 
 
@@ -132,7 +138,7 @@ struct dav_resource_private {
   /* The FS repository path to this resource, with a leading "/". Note
      that this is "/" the root. This value will be NULL for resources
      that have no corresponding resource within the repository (such as
-     the PRIVATE resources). */
+     the PRIVATE resources, or Baselines). */
   const char *repos_path;
 
   /* the FS repository this resource is associated with */
@@ -141,7 +147,10 @@ struct dav_resource_private {
   /* what FS root this resource occurs within */
   dav_svn_root root;
 
-  /* for VERSION resources: the node ID */
+  /* for VERSION resources: the node ID. may be NULL if the resource was
+     fetched via a Baseline (so use root.rev and repos_path). if the
+     VERSION refers to a Baseline (.baselined==1), then repos_path will
+     also be NULL. */
   const svn_fs_id_t *node_id;
 
   /* for PRIVATE resources: the private resource type */
@@ -218,6 +227,20 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                                               const char *activity_id,
                                               const char *txn_name,
                                               const char *repos_path);
+
+
+enum dav_svn_build_what {
+  DAV_SVN_BUILD_URI_BC,         /* a Baseline Collection */
+  DAV_SVN_BUILD_URI_VERSION,    /* a Version Resource */
+  DAV_SVN_BUILD_URI_BASELINE,   /* a Baseline */
+  DAV_SVN_BUILD_URI_VCC         /* a Version Controlled Configuration */
+};
+
+const char *dav_svn_build_uri(const dav_resource *resource,
+                              enum dav_svn_build_what what,
+                              svn_revnum_t revision,
+                              const char *path,
+                              apr_pool_t *pool);
 
 
 #endif /* DAV_SVN_H */

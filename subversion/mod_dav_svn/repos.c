@@ -63,11 +63,15 @@ typedef struct {
 
 
 static int dav_svn_parse_version_uri(dav_resource_combined *comb,
-                                     const char *path)
+                                     const char *path,
+                                     const char *label,
+                                     int use_checked_in)
 {
   const char *slash;
 
   /* format: NODE_ID/REPOS_PATH */
+
+  /* ### what to do with LABEL and USE_CHECKED_IN ?? */
 
   comb->res.type = DAV_RESOURCE_TYPE_VERSION;
   comb->res.versioned = TRUE;
@@ -85,9 +89,13 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
 }
 
 static int dav_svn_parse_history_uri(dav_resource_combined *comb,
-                                     const char *path)
+                                     const char *path,
+                                     const char *label,
+                                     int use_checked_in)
 {
   /* format: ??? */
+
+  /* ### what to do with LABEL and USE_CHECKED_IN ?? */
 
   comb->res.type = DAV_RESOURCE_TYPE_HISTORY;
 
@@ -98,12 +106,15 @@ static int dav_svn_parse_history_uri(dav_resource_combined *comb,
 }
 
 static int dav_svn_parse_working_uri(dav_resource_combined *comb,
-                                     const char *path)
+                                     const char *path,
+                                     const char *label,
+                                     int use_checked_in)
 {
   const char *slash;
 
   /* format: ACTIVITY_ID/REPOS_PATH */
 
+  /* ### what to do with LABEL and USE_CHECKED_IN ?? */
   /* ### working baselines? */
 
   comb->res.type = DAV_RESOURCE_TYPE_WORKING;
@@ -121,13 +132,110 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
 }
 
 static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
-                                      const char *path)
+                                      const char *path,
+                                      const char *label,
+                                      int use_checked_in)
 {
   /* format: ACTIVITY_ID */
+
+  /* ### what to do with LABEL and USE_CHECKED_IN ?? */
 
   comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
 
   comb->priv.root.activity_id = path;
+
+  return FALSE;
+}
+
+static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
+                                 const char *path,
+                                 const char *label,
+                                 int use_checked_in)
+{
+  /* format: "default" (a singleton) */
+
+  if (strcmp(path, DAV_SVN_DEFAULT_VCC_NAME) != 0)
+    return TRUE;
+
+  if (label == NULL && !use_checked_in)
+    {
+      /* Version Controlled Configuration (baseline selector) */
+
+      /* ### mod_dav has a proper model for these. technically, they are
+         ### version-controlled resources (REGULAR), but that just monkeys
+         ### up a lot of stuff for us. use a PRIVATE for now. */
+
+      comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;   /* _REGULAR */
+      comb->priv.restype = DAV_SVN_RESTYPE_VCC;
+
+      comb->res.exists = TRUE;
+      comb->res.versioned = TRUE;
+      comb->res.baselined = TRUE;
+
+      /* NOTE: comb->priv.repos_path == NULL */
+    }
+  else
+    {
+      /* a specific Version Resource; in this case, a Baseline */
+
+      int revnum;
+
+      if (label != NULL)
+        {
+          revnum = atoi(label); /* assume slash terminates conversion */
+          if (!SVN_IS_VALID_REVNUM(revnum))
+            return TRUE;        /* ### be nice to get better feedback */
+        }
+      else /* use_checked_in */
+        {
+          /* use the DAV:checked-in value of the VCC. this is always the
+             "latest" (or "youngest") revision. */
+
+          /* signal dav_svn_prep_version to look it up */
+          revnum = SVN_INVALID_REVNUM;
+        }
+
+      comb->res.type = DAV_RESOURCE_TYPE_VERSION;
+
+      /* exists? collection? need to wait for now */
+      comb->res.versioned = TRUE;
+      comb->res.baselined = TRUE;
+
+      /* which baseline (revision tree) to access */
+      comb->priv.root.rev = revnum;
+
+      /* NOTE: comb->priv.repos_path == NULL */
+    }
+
+  return FALSE;
+}
+
+static int dav_svn_parse_baseline_coll_uri(dav_resource_combined *comb,
+                                           const char *path,
+                                           const char *label,
+                                           int use_checked_in)
+{
+  const char *slash;
+  int revnum;
+
+  /* format: REVISION/REPOS_PATH */
+
+  /* ### what to do with LABEL and USE_CHECKED_IN ?? */
+
+  if ((slash = ap_strchr_c(path, '/')) == NULL || slash == path)
+    return TRUE;
+
+  revnum = atoi(path);  /* assume slash terminates conversion */
+  if (!SVN_IS_VALID_REVNUM(revnum))
+    return TRUE;        /* ### be nice to get better feedback */
+
+  /* ### mod_dav doesn't have a proper model for these. they are standard
+     ### VCRs, but we need some additional semantics attached to them.
+     ### need to figure out a way to label them as special. */
+
+  comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
+  comb->priv.root.rev = revnum;
+  comb->priv.repos_path = slash;
 
   return FALSE;
 }
@@ -148,7 +256,8 @@ static const struct special_defn
    * PATH does not contain a leading slash. Given "/root/$svn/xxx/the/path"
    * as the request URI, the PATH variable will be "the/path"
    */
-  int (*parse)(dav_resource_combined *comb, const char *path);
+  int (*parse)(dav_resource_combined *comb, const char *path,
+               const char *label, int use_checked_in);
 
   /* The private resource type for the /$svn/xxx/ collection. */
   enum dav_svn_private_restype restype;
@@ -159,6 +268,8 @@ static const struct special_defn
   { "his", dav_svn_parse_history_uri, DAV_SVN_RESTYPE_HIS_COLLECTION },
   { "wrk", dav_svn_parse_working_uri, DAV_SVN_RESTYPE_WRK_COLLECTION },
   { "act", dav_svn_parse_activity_uri, DAV_SVN_RESTYPE_ACT_COLLECTION },
+  { "vcc", dav_svn_parse_vcc_uri, DAV_SVN_RESTYPE_VCC_COLLECTION },
+  { "bc", dav_svn_parse_baseline_coll_uri, DAV_SVN_RESTYPE_BC_COLLECTION },
 
   { NULL } /* sentinel */
 };
@@ -182,8 +293,10 @@ static const struct special_defn
  */
 static int dav_svn_parse_uri(dav_resource_combined *comb,
                              const char *uri,
-                             const char *special_uri)
+                             const char *label,
+                             int use_checked_in)
 {
+  const char *special_uri = comb->priv.repos->special_uri;
   apr_size_t len1;
   apr_size_t len2;
   char ch;
@@ -198,6 +311,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
         {
           /* URI was "/root/$svn". It exists, but has restricted usage. */
           comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+          comb->priv.restype = DAV_SVN_RESTYPE_ROOT_COLLECTION;
         }
       else
         {
@@ -219,14 +333,14 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
                          has restricted usage. */
                       comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
 
-                      /* ### store the DEFN info. we will probably want to
-                         ### allow PROPFIND in "/root/$svn/act/" and will
-                         ### need to know this refers to the activities
-                         ### collection. */
+                      /* store the resource type so that we can PROPFIND
+                         on this collection. */
+                      comb->priv.restype = defn->restype;
                     }
                   else if (uri[len3] == '/')
                     {
-                      if ((*defn->parse)(comb, uri + len3 + 1))
+                      if ((*defn->parse)(comb, uri + len3 + 1, label,
+                                         use_checked_in))
                         return TRUE;
                     }
                   else
@@ -264,20 +378,19 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
   dav_svn_repos *repos = comb->priv.repos;
   svn_error_t *serr;
 
-  /* ### note that we won't *always* go for the head... if this resource
-     ### corresponds to a Version Resource, then we have a specific
-     ### version to ask for.
-
-     ### the above comment is wrong. we're not here for VRs. but are
-     ### there cases where we have a REGULAR resource, but for a different
-     ### root? investigate
-  */
-  serr = svn_fs_youngest_rev(&comb->priv.root.rev, repos->fs, pool);
-  if (serr != NULL)
+  /* A REGULAR resource might have a specific revision already (e.g. if it
+     is part of a baseline collection). However, if it doesn't, then we
+     will assume that we need the youngest revision.
+     ### other cases besides a BC? */
+  if (comb->priv.root.rev == SVN_INVALID_REVNUM)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not determine the proper "
-                                 "revision to access");
+      serr = svn_fs_youngest_rev(&comb->priv.root.rev, repos->fs, pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not determine the proper "
+                                     "revision to access");
+        }
     }
 
   /* get the root of the tree */
@@ -318,8 +431,54 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
 
 static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
 {
-  /* ### look up the object, set .exists and .collection flags */
-  comb->res.exists = TRUE;
+  svn_error_t *serr;
+
+  if (comb->priv.node_id != NULL)
+    {
+      /* we are accessing the Version Resource by ID */
+
+      /* ### what to do. open the "ID root" and validate the resource. */
+      comb->res.exists = TRUE;
+
+      /* ### revise the URI to the "canonical" URI? necessary? */
+    }
+  else
+    {
+      /* we are accessing the Version Resource by REV/PATH */
+
+      /* ### assert: .baselined = TRUE */
+
+      /* if we don't have a revision, then assume the youngest */
+      if (!SVN_IS_VALID_REVNUM(comb->priv.root.rev))
+        {
+          serr = svn_fs_youngest_rev(&comb->priv.root.rev,
+                                     comb->priv.repos->fs,
+                                     comb->res.pool);
+          if (serr != NULL)
+            {
+              /* ### might not be a baseline */
+
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "Could not fetch 'youngest' revision "
+                                         "to enable accessing the latest "
+                                         "baseline resource.");
+            }
+        }
+
+      /* ### baselines have no repos_path, and we don't need to open
+         ### a root (yet). we just needed to ensure that we have the proper
+         ### revision number. */
+
+      /* ### we should probably check that the revision is valid */
+      comb->res.exists = TRUE;
+
+      /* Set up the proper URI. Most likely, we arrived here via a VCC,
+         so the URI will be incorrect. Set the canonical form. */
+      /* ### assuming a baseline */
+      comb->res.uri = dav_svn_build_uri(&comb->res, DAV_SVN_BUILD_URI_BASELINE,
+                                        comb->priv.root.rev, NULL,
+                                        comb->res.pool);
+    }
 
   return NULL;
 }
@@ -384,7 +543,8 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
         }
 
       /* ### verify that the parent exists. needed for PUT, MKCOL, COPY. */
-      /* ### actually, mod_dav validates that (via get_parent_resource) */
+      /* ### actually, mod_dav validates that (via get_parent_resource).
+         ### so are we done? */
       comb->res.exists = FALSE;
     }
   else
@@ -408,6 +568,12 @@ static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
 
 static dav_error * dav_svn_prep_private(dav_resource_combined *comb)
 {
+  if (comb->priv.restype == DAV_SVN_RESTYPE_VCC)
+    {
+      /* ### what to do */
+    }
+  /* else nothing to do (### for now) */
+
   return NULL;
 }
 
@@ -471,11 +637,11 @@ static dav_resource *dav_svn_create_private_resource(
   /* ### can/should we leverage dav_svn_prep_resource */
 
   comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
-  comb->res.exists = 1;
-  comb->res.collection = 1;     /* ### always true? */
-  comb->res.versioned = 0;
-  comb->res.baselined = 0;
-  comb->res.working = 0;
+
+  comb->res.exists = TRUE;
+  comb->res.collection = TRUE;                  /* ### always true? */
+  /* versioned = baselined = working = FALSE */
+
   comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
                               path->data, NULL);
   comb->res.info = &comb->priv;
@@ -552,12 +718,21 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      will almost always be the case since root_path does not have a trailing
      slash. However, if the root is "/", then the slash will be removed
      from <relative>. Backing up a character will put the leading slash
-     back. */
-  if (*relative != '/')
-      --relative;
+     back.
+
+     Watch out for the empty string! This can happen when URI == ROOT_PATH.
+     We simply turn the path into "/" for this case. */
+  if (*relative == '\0')
+    relative = "/";
+  else if (*relative != '/')
+    --relative;
+  /* ### need a better name... it isn't "relative" because of the leading
+     ### slash. something about SVN-private-path */
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
+  /* ### that comment no longer applies. we're creating a string with its
+     ### own lifetime now. so WHY are we using a string? hmm... */
   comb->priv.uri_path = svn_string_create(relative, r->pool);
 
   /* initialize this until we put something real here */
@@ -593,10 +768,13 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     }
 
 
-  /* Figure out the type of the resource */
+  /* Figure out the type of the resource. Note that we have a PARSE step
+     which is separate from a PREP step. This is because the PARSE can
+     map multiple URLs to the same resource type. The PREP operates on
+     the type of the resource. */
 
   /* skip over the leading "/" in the relative URI */
-  if (dav_svn_parse_uri(comb, relative + 1, repos->special_uri))
+  if (dav_svn_parse_uri(comb, relative + 1, label, use_checked_in))
     goto malformed_URI;
 
 #ifdef SVN_DEBUG
@@ -878,7 +1056,13 @@ const char * dav_svn_getetag(const dav_resource *resource)
   svn_fs_id_t *id;      /* ### want const here */
   svn_string_t *idstr;
 
-  if (!resource->exists)
+  /* if the resource doesn't exist, isn't a simple REGULAR or VERSION
+     resource, or it is a Baseline, then it has no etag. */
+  /* ### we should assign etags to all resources at some point */
+  if (!resource->exists
+      || (resource->type != DAV_RESOURCE_TYPE_REGULAR
+          && resource->type != DAV_RESOURCE_TYPE_VERSION)
+      || (resource->type == DAV_RESOURCE_TYPE_VERSION && resource->baselined))
     return "";
 
   /* ### what kind of etag to return for collections, activities, etc? */
@@ -1060,6 +1244,14 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   if (depth == 0 || !isdir)
     return NULL;
 
+  /* ### need to allow more walking in the future */
+  if (params->root->type != DAV_RESOURCE_TYPE_REGULAR)
+    {
+      return dav_new_error(params->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "Walking the resource hierarchy can only be done "
+                           "on 'regular' resources [at this time].");
+    }
+
   /* assert: collection resource. isdir == TRUE */
 
   /* append "/" to the path, in preparation for appending child names */
@@ -1068,8 +1260,8 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   /* NOTE: the URI should already have a trailing "/" */
 
   /* all of the children exist. also initialize the collection flag. */
-  ctx->res.exists = 1;
-  ctx->res.collection = 0;
+  ctx->res.exists = TRUE;
+  ctx->res.collection = FALSE;
 
   /* remember these values so we can chop back to them after each time
      we append a child name to the path/uri */
@@ -1133,7 +1325,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       else
         {
           /* this resource is a collection */
-          ctx->res.collection = 1;
+          ctx->res.collection = TRUE;
 
           /* append a slash to the URI (the path doesn't need it yet) */
           svn_string_appendcstr(ctx->uri, "/");
@@ -1161,14 +1353,6 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
 {
   dav_svn_walker_context ctx = { 0 };
   dav_error *err;
-
-  /* ### need to allow more walking in the future */
-  if (params->root->type != DAV_RESOURCE_TYPE_REGULAR)
-    {
-      return dav_new_error(params->pool, HTTP_METHOD_NOT_ALLOWED, 0,
-                           "Walking the resource hierarchy can only be done "
-                           "on 'regular' resources [at this time].");
-    }
 
   ctx.params = params;
 
@@ -1230,11 +1414,11 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
   comb = apr_pcalloc(base->pool, sizeof(*comb));
 
   comb->res.type = DAV_RESOURCE_TYPE_WORKING;
-  comb->res.exists = 1;         /* ### not necessarily true */
-  comb->res.collection = 0;     /* ### not necessarily true */
-  comb->res.versioned = 1;
-  comb->res.baselined = 0;      /* ### not necessarily true */
-  comb->res.working = 1;
+  comb->res.exists = TRUE;      /* ### not necessarily correct */
+  comb->res.versioned = TRUE;
+  comb->res.working = TRUE;
+  /* collection = baselined = FALSE.   ### not necessarily correct */
+
   comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
                               path->data, NULL);
   comb->res.info = &comb->priv;
