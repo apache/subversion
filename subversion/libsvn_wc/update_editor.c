@@ -1783,7 +1783,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           if (is_locally_modified)
             *content_state = svn_wc_notify_state_merged;
           else
-            *content_state = svn_wc_notify_state_modified;
+            *content_state = svn_wc_notify_state_changed;
         }
       else
         *content_state = svn_wc_notify_state_unchanged;

@@ -833,9 +833,9 @@ do_item_commit (const char *url,
           (*notify_func) (notify_baton, path, svn_wc_notify_commit_modified,
                           item->kind,
                           NULL,
-                          (tmod ? svn_wc_notify_state_modified
+                          (tmod ? svn_wc_notify_state_changed
                                 : svn_wc_notify_state_unchanged),
-                          (pmod ? svn_wc_notify_state_modified
+                          (pmod ? svn_wc_notify_state_changed
                                 : svn_wc_notify_state_unchanged),
                           SVN_INVALID_REVNUM);
         }

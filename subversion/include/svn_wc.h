@@ -202,7 +202,7 @@ typedef enum svn_wc_notify_state_t
   svn_wc_notify_state_inapplicable = 0,
   svn_wc_notify_state_unknown,     /* Notifier doesn't know or isn't saying. */
   svn_wc_notify_state_unchanged,   /* The state did not change. */
-  svn_wc_notify_state_modified,    /* Pristine state was modified. */
+  svn_wc_notify_state_changed,     /* Pristine state was modified. */
   svn_wc_notify_state_merged,      /* Modified state had mods merged in. */
   svn_wc_notify_state_conflicted   /* Modified state got conflicting mods. */
 } svn_wc_notify_state_t;

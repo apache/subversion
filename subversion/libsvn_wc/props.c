@@ -514,7 +514,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
          propchanges, we wouldn't yet know if they are "normal" props,
          as opposed wc or entry props.  */ 
       if (local_propchanges->nelts > 0)
-        *state = svn_wc_notify_state_modified;
+        *state = svn_wc_notify_state_changed;
       else
         *state = svn_wc_notify_state_unchanged;
     }
@@ -544,7 +544,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
          that, but remember that we may later upgrade to `merged' or
          even `conflicted'. */
       if (state && is_normal)
-        *state = svn_wc_notify_state_modified;
+        *state = svn_wc_notify_state_changed;
 
       /* Now, does the update_change conflict with some local change?  */
       
