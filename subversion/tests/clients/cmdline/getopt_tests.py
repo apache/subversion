@@ -97,8 +97,8 @@ def process_lines(lines):
 def run_one_test(sbox, basename, *varargs):
   "run svn with args and compare against the specified output files"
 
-  if sbox.build():
-    return 1
+  ### no need to use sbox.build() -- we don't need a repos or working copy
+  ### for these tests.
 
   exp_stdout, exp_stderr = load_expected_output(basename)
 
