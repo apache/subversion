@@ -269,8 +269,8 @@ typedef struct svn_client_ctx_t
   /** log message callback baton */
   void *log_msg_baton;
 
-  /** a hash mapping of <tt>const char *</> configuration file names to
-   * @c svn_config_t *'s.  for example, the '~/.subversion/config' file's 
+  /** a hash mapping of <tt>const char *</tt> configuration file names to
+   * @c svn_config_t *'s, for example, the '~/.subversion/config' file's 
    * contents should have the key "config".
    */
   apr_hash_t *config;
