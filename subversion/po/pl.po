@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-06 22:04+0200\n"
-"PO-Revision-Date: 2004-09-07 08:45+0200\n"
+"PO-Revision-Date: 2004-09-10 16:13+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3251,7 +3251,6 @@ msgstr "Błędny nagłówek w pliku wersji"
 
 #: libsvn_fs_fs/fs_fs.c:480 libsvn_fs_fs/fs_fs.c:494 libsvn_fs_fs/fs_fs.c:501
 #: libsvn_fs_fs/fs_fs.c:508 libsvn_fs_fs/fs_fs.c:516 libsvn_fs_fs/fs_fs.c:524
-#, fuzzy
 msgid "Malformed text rep offset line in node-rev"
 msgstr "Błędny offset reprezentacji w node-rev"
 
@@ -3272,7 +3271,6 @@ msgid "Malformed copyfrom line in node-rev"
 msgstr "Błędna linia copyfrom w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2924
-#, fuzzy
 msgid "Attempted to write to non-transaction"
 msgstr "Próba zapisu node-rev o stałym ID"
 
@@ -3880,12 +3878,10 @@ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
 msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_svn."
 
 #: libsvn_ra_svn/editor.c:384 libsvn_ra_svn/editorp.c:419
-#, fuzzy
 msgid "Invalid file or dir token during edit"
 msgstr "Niewłaściwy żeton pliku lub katalogu"
 
 #: libsvn_ra_svn/editor.c:608
-#, fuzzy
 msgid "Non-string as part of text delta"
 msgstr "Teksty różnic muszą być typu STRING"
 
@@ -3907,7 +3903,6 @@ msgid "Unknown command '%s'"
 msgstr "Nieznane polecenie: '%s'"
 
 #: libsvn_ra_svn/marshal.c:78
-#, fuzzy
 msgid "Capability entry is not a word"
 msgstr "Pole określające możliwości serwera bądź klienta musi być typu WORD"
 
@@ -5146,12 +5141,12 @@ msgstr ""
 "Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
 
 #: svnadmin/main.c:688
-#, fuzzy
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
 msgstr ""
-"Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
+"Nie powiodło się założenie blokady na repozytorium; możliwe, że \n"
+"procesy takie jak httpd, svnserver lub svn blokują dostęp."
 
 #: svnadmin/main.c:693
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
@@ -5207,7 +5202,6 @@ msgid "Invalid copy source path '%s'"
 msgstr "Błędna składnia ścieżki '%s'"
 
 #: svndumpfilter/main.c:414
-#, fuzzy
 msgid "Node with dropped parent sneaked in"
 msgstr "Wkradł się obiekt, którego przodek został wcześniej opuszczony"
 
@@ -5242,12 +5236,11 @@ msgid "Don't filter revision properties."
 msgstr "Nie filtruj atrybutów wersji."
 
 #: svndumpfilter/main.c:724
-#, fuzzy
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
 msgstr ""
-"Filtruj ze zrzutu węzły wyłączając podane prefiksy.\n"
+"Filtruj węzły wyłączając podane prefiksy.\n"
 "użycie: svndumpfilter exclude PREFIKS_ŚCIEŻKI...\n"
 
 #: svndumpfilter/main.c:730
