@@ -193,7 +193,8 @@ $ ls repos
 dav/  db/  format  hooks/  locks/  README.txt
 </screen>
       
-    <para>With the exception of the <filename>README.txt</filename> file,
+    <para>With the exception of the <filename>README.txt</filename> and
+      <filename>format</filename> files,
       the repository directory is a collection of subdirectories.  As
       in other areas of the Subversion design, modularity is given
       high regard, and hierarchical organization is preferred to
@@ -310,7 +311,7 @@ pre-commit.tmpl
         files.</para>
           
       <para>Currently there are five true hooks implemented by the
-        Subversion repository.</para>
+        Subversion repository:</para>
 
       <variablelist>
         <varlistentry>
@@ -339,7 +340,7 @@ pre-commit.tmpl
               arguments to this program: the path to the repository,
               and the name of the transaction being committed.  If the
               program returns a non-zero exit value, the commit is
-              aborted and transaction is removed.</para>
+              aborted and the transaction is removed.</para>
 
             <para>The Subversion distribution includes some access
               control scripts (located in the
@@ -406,7 +407,7 @@ pre-commit.tmpl
               arguments to this hook: the path to the repository, the
               revision on which the to-be-modified property exists, the
               authenticated username of the person making the change,
-              and name of the property itself.</para>
+              and the name of the property itself.</para>
           </listitem>
         </varlistentry>
 
@@ -414,7 +415,7 @@ pre-commit.tmpl
           <term><filename>post-revprop-change</filename></term>
           <listitem>
             <para>As mentioned earlier, this hook is the counterpart
-              of <filename>pre-revprop-change</filename> hook.  In
+              of the <filename>pre-revprop-change</filename> hook.  In
               fact, for the sake of paranoia this script will not run
               unless the <filename>pre-revprop-change</filename> hook
               exists.  When both of these hooks are present, the
@@ -424,7 +425,7 @@ pre-commit.tmpl
               of the changed property.  The repository passes four
               arguments to this hook: the path to the repository, the
               revision on which the property exists, the authenticated
-              username of the person making the change, and name of
+              username of the person making the change, and the name of
               the property itself.</para>
 
             <para>The Subversion distribution includes a
@@ -880,7 +881,7 @@ Available subcommands:
             <term><literal>lstxns</literal></term>
             <listitem>
               <para>List the names of uncommitted Subversion
-                transactions which currently exist in the repository.</para>
+                transactions that currently exist in the repository.</para>
             </listitem>
           </varlistentry>
 
@@ -889,7 +890,7 @@ Available subcommands:
             <listitem>
               <para>Perform recovery steps on a repository that is in
                 need of such, generally after a fatal error has
-                occurred which prevented a process from cleanly
+                occurred that prevented a process from cleanly
                 shutting down its communication with the repository.</para>
             </listitem>
           </varlistentry>
@@ -932,7 +933,7 @@ Available subcommands:
           interface to the repository.  The
           <command>svnshell.py</command> Python script (located in
           <filename>tools/examples/</filename> in the source tree)
-          uses Subversion's language bindings (so you have to have
+          uses Subversion's language bindings (so you must have
           those properly compiled and installed in order for this
           script to work) to connect to the repository and filesystem
           libraries.</para>
@@ -1055,8 +1056,8 @@ $
           of Berkeley's database tools (you can see the documentation
           for these tools at SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).  For
-          day-to-day Subversion use, these tools are unnecessary,
-          however, they do provide some important functionality that
+          day-to-day Subversion use, these tools are unnecessary.
+          However, they do provide some important functionality that
           is currently not provided by Subversion itself.</para>
   
         <para>For example, because Subversion uses Berkeley DB's
@@ -1182,7 +1183,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         command (see <xref linkend="svn-ch-8"/>).  However, because of
         the potential to lose information forever, Subversion
         repositories are not, by default, configured to allow changes
-        to unversioned properties&mdash; except by an
+        to unversioned properties&mdash;except by an
         administrator.</para>
 
       <para>If a log message needs to be changed by an administrator,
@@ -1209,7 +1210,7 @@ $ svnadmin setlog myrepos newlog.txt -r 388
 
       <para>Another common use of <command>svnadmin</command> is to
         query the repository for outstanding&mdash;possibly
-        dead&mdash;Subversion transactions.  In the event that commit
+        dead&mdash;Subversion transactions.  In the event that a commit
         should fail, the transaction is usually cleaned up.  That is,
         the transaction itself is removed from the repository, and any
         data associated with (and only with) that transaction is
@@ -1700,7 +1701,7 @@ rename("$last_dumped.tmp", $last_dumped)
         RAM and crashed hard drives are but a taste of the evil that
         Fate is poised to unleash on even the most conscientious
         administrator.  And so we arrive at a very important
-        topic&mdash;how to make backup copies your repository
+        topic&mdash;how to make backup copies of your repository
         data.</para>
 
       <para>There are generally two types of backup methods available
@@ -1717,11 +1718,11 @@ rename("$last_dumped.tmp", $last_dumped)
         the Berkeley database environment).  Now, unless you
         temporarily disable all other access to your repository,
         simply doing a recursive directory copy runs the risk of
-        generating a defunct backup, since someone might be currently
+        generating a faulty backup, since someone might be currently
         writing to the database.</para>
 
       <para>Fortunately, Sleepycat's Berkeley DB documents describe a
-        certain order in which database files can be copied which will
+        certain order in which database files can be copied that will
         guarantee a valid backup copy.  And better still, you don't
         have to implement that algorithm yourself, because the
         Subversion development team has already done so.  The
@@ -1869,14 +1870,14 @@ rename("$last_dumped.tmp", $last_dumped)
         likely that somewhere along the way a mistake will be made.
         If you are not already familiar with Apache's logging
         subsystem, you should become aware of it.  In your
-        <filename>httpd.conf</filename> file are directives which
+        <filename>httpd.conf</filename> file are directives that
         specify the on-disk locations of the access and error logs
         generated by Apache (the <literal>CustomLog</literal> and
         <literal>ErrorLog</literal> directives, respectively).
         Subversion's mod_dav_svn uses Apache's error logging interface
         as well.  You can always browse the contents of those files
         for information that might reveal the source of a problem
-        which is not clearly noticeable otherwise.</para>
+        that is not clearly noticeable otherwise.</para>
 
       <sect3 id="svn-ch-5-sect-4.1.1">            
         <title>What You Need for HTTP-based Repository Access</title>
@@ -1910,7 +1911,7 @@ rename("$last_dumped.tmp", $last_dumped)
           compiling <command>httpd</command> and Subversion from
           source code, or by installing pre-built binary packages of
           them on your system.  For the most up-to-date information on
-          how to compile Subversion for use with Apache HTTP Server,
+          how to compile Subversion for use with the Apache HTTP Server,
           as well as how to compile and configure Apache itself for
           this purpose, see the <filename>INSTALL</filename> file in
           the top level of the Subversion source code tree.</para>
@@ -2023,7 +2024,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
           that satisfies Subversion's requirements without messing up
           any previously existing web page or script installations.
           This might mean changing the permissions on your Subversion
-          repository to match those in use by other things the Apache
+          repository to match those in use by other things that Apache
           serves for you, or it could mean using the
           <literal>User</literal> and <literal>Group</literal>
           directives in <filename>httpd.conf</filename> to specify
@@ -2114,7 +2115,7 @@ $
 </screen>
 
         <para>Now, at this stage, if you were to restart Apache, any
-          Subversion operations which required authentication would
+          Subversion operations that required authentication would
           harvest a username and password from the Subversion client,
           which would either provide previously cached values for
           these things, or prompt the user for the information.  All
@@ -2133,7 +2134,7 @@ $
         <para>Sometimes you don't need to run such a tight ship.  The
           repository at <systemitem
           class="url">http://svn.collab.net/repos/svn</systemitem>
-          which holds the Subversion source code, for example, allows
+          that holds the Subversion source code, for example, allows
           anyone in the world to perform read-only repository tasks
           (like checking out working copies and browsing the
           repository with a web browser), but restricts all write
@@ -2349,7 +2350,7 @@ ServerName svn.red-bean.com
 
           <listitem><para>In this scenario, the svn client uses a
           custom <literal>svn+ssh://</literal> URL schema; this
-          initiates a local Secure Shell (SSH) process which connects
+          initiates a local Secure Shell (SSH) process that connects
           to the server and authenticates itself.  The user must have
           some sort of system account on the server for this to
           happen.  After authentication is complete, the SSH process
@@ -2408,14 +2409,14 @@ $ svnserve
           as that user.</para>
 
         <para>Of course, this first method is only available on
-          machines which have an <command>inetd</command> (or
+          machines that have an <command>inetd</command> (or
           <command>inetd</command>-like) daemon.  This will generally
           be limited to Unix platforms.  The alternative is to run
           <command>svnserve</command> as a standalone daemon.  When
           started with the <option>-d</option> option,
           <command>svnserve</command> will immediately detach from the
           current shell process, and will execute as a background
-          process which runs indefinitely, again waiting for incoming
+          process that runs indefinitely, again waiting for incoming
           requests on port 3690.</para>
 
         <screen>
@@ -2511,7 +2512,7 @@ Password:
         program can be overridden, however, in one of two ways.  You
         can either set the <literal>SVN_SSH</literal> environment
         variable to the new name, or you can set the value of the
-        <literal>ssh</literal> variable with in the
+        <literal>ssh</literal> variable within the
         <literal>[tunnels]</literal> section of your client's run-time
         <filename>config</filename> file.</para>
 
@@ -2638,7 +2639,7 @@ ssh = ssh -l username
     <title>Repository Permissions</title>
 
     <para>You've seen how a repository can be accessed in many
-      different ways.  But is it possible&mdash;or safe&mdash; for
+      different ways.  But is it possible&mdash;or safe&mdash;for
       your repository to be accessed by multiple repository access
       methods simultaneously?  The answer is yes, provided you use a
       bit of foresight.</para>
@@ -2676,7 +2677,7 @@ ssh = ssh -l username
       repository user into a new <literal>svn</literal> group, and
       make the repository wholly owned by that group.  But even that's
       not enough, because a process may write to the database files
-      using an unfriendly umask&mdash;one which prevents access by
+      using an unfriendly umask&mdash;one that prevents access by
       other users.</para>
 
     <para>So the next step beyond setting up a common group for
@@ -2708,7 +2709,7 @@ ssh = ssh -l username
       <literal>http://</literal> or <literal>svn://</literal> URLs.
       And to maintain multiple server processes for your Subversion
       repositories is likely to be more of a headache than necessary.
-      We recommend you choose the server which best meets your needs
+      We recommend you choose the server that best meets your needs
       and stick with it!</para>
 
   </sect1>
@@ -2756,7 +2757,7 @@ ssh = ssh -l username
        maintenance.  A single repository means that there is one set
        of hook scripts, one thing to routinely backup, one thing to
        dump and load if Subversion releases an incompatible new
-       version, and so on.  Also, you can easily move data between
+       version, and so on.  Also, you can move data between
        projects easily, and without losing any historical versioning
        information.</para>
 
@@ -2790,9 +2791,9 @@ ssh = ssh -l username
        <filename>branches</filename>, which is a directory in which to
        create various named branches of the main development line.</para>
 
-     <para>The first is to place each project in a subdirectory of the
-       root filesystem directory, with <filename>trunk</filename> and
-       <filename>branches</filename> directories immediately under
+     <para>The first approach is to place each project in a subdirectory
+       of the root filesystem directory, with <filename>trunk</filename>
+       and <filename>branches</filename> directories immediately under
        each project directory, as demonstrated in Figure 5-1.</para>
 
       <figure id="svn-ch5-sect5.1-dia1">
@@ -2800,7 +2801,7 @@ ssh = ssh -l username
         <graphic fileref="images/ch05dia1.png"/>
       </figure>
 
-     <para>The second is do the reverse&mdash;to have the
+     <para>The second is to do the reverse&mdash;to have the
        <filename>trunk</filename> and <filename>branches</filename>
        directories immediately in the top level of the filesystem,
        each with subdirectories for all the projects in the
@@ -2833,7 +2834,7 @@ ssh = ssh -l username
         your skeletal repository layout, one-by-one.  A quicker way to
         accomplish the same task is to use the <command>svn
         import</command> command (see <xref
-        linkend="svn-ch-3-sect-7.3"/>.  By first creating the layout
+        linkend="svn-ch-3-sect-7.3"/>).  By first creating the layout
         in a temporary location on your drive, you can import the
         whole layout tree into the repository in a single
         commit:</para>
