@@ -522,7 +522,6 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
   SVN_ERR (DB_WRAP (fs, "checking for next node branch",
                     last_key_before (fs->nodes, db_txn,
                                      svn_fs__id_to_dbt (&key, new_id, pool))));
-  svn_fs__track_dbt (&key, pool);
 
   {
     svn_fs_id_t *last_branch_id = svn_fs_parse_id (key.data, key.size, pool);
