@@ -569,17 +569,17 @@ print_ids_tree (svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create (pool);
-  full_path = svn_stringbuf_dup (path, pool);
+  full_path = svn_stringbuf_dup (path, subpool);
   svn_path_add_component_nts (full_path, tmp_node->name);
-  print_ids_tree (tmp_node, root, full_path, indentation + 1, pool);
+  print_ids_tree (tmp_node, root, full_path, indentation + 1, subpool);
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
       svn_path_add_component_nts (full_path, tmp_node->name);
-      print_ids_tree (tmp_node, root, full_path, indentation + 1, pool);
+      print_ids_tree (tmp_node, root, full_path, indentation + 1, subpool);
     }
-  svn_pool_create (subpool);
+  svn_pool_destroy (subpool);
 
   return;
 }
