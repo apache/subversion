@@ -1448,24 +1448,33 @@ as well as in the upcoming release; but also, it gives the developers
 something concrete to vote on for inclusion in the release line.
 
 A change needs three +1 votes from full committers, and no vetoes, to
-go into the 1.0-stablization branch.  We use the StatusSummary field
-in the issue tracker for recording votes.  If there is one vote total,
-put "votes:1", if two, then "votes:2", etc.  Only full committers
-should change the vote number.
+go into the 1.0-stablization branch.  We use the STATUS file in the
+top level of the release branch for recording votes.  Each item is a
+short identifying string (a revision number, an issue number, etc), a
+brief description of the change, an at-most-one-line justification of
+why it should be in 1.0, ending with the votes themselves.  For
+example:
 
-If an issue is being considered for inclusion in 1.0, and it gets
-fixed on trunk, please do not close the issue.  Leave it open in the
-"1.0" milestone until committers have had a chance to vote (or veto)
-it.  When it becomes clear that it's not going into 1.0, then we can
-close it, or if it's not yet fixed, move it to a later milestone.
+   * r98765 (issue #56789)
+     Use an opaque type for svn_ra_get_ansible(), instead of void *.
+     Justification: API stability
+     See mailing list thread http://...
 
-If considering a committed trunk revision for inclusion in 1.0, but
-there's no corresponding issue, then open an issue just about the
-merging of the change.  (But remember, the issue tracker is for
-recording the results of discussions, not for the discussions
-themselves.  Use the dev mailing list to talk about the reasons
-for/against including a particular change in 1.0.)
+     Votes for merging into 1.0:
+       +1 ghudson
+       +1 bliss
 
-Obviously trivial and risk-free changes, such as spelling fixes and
-most documentation changes, do not need to be voted on.  They can be
-merged from trunk without discussion; just use your judgement.
+We don't use the issue tracker for voting, for various reasons.  A
+file is more browseable than the issue tracker, it allows the votes to
+be grouped together for easy counting, it automatically limits the
+vote to committers, and it versions the votes in case people change
+their minds.  Also, it separates the question of whether something
+should be fixed from whether that fix should go into 1.0.  An issue is
+about recording the existence of a bug, feature request, whatever, and
+getting the change into the main development line.  The STATUS file is
+about whether that change should go into the release line as well --
+which is why the STATUS file for a release lives on its branch, not on
+the trunk.
+
+The STATUS file is not the place for discussion; use the dev mailing
+list for that, and have the file point to the thread.
