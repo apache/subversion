@@ -913,7 +913,7 @@ svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
     IO *io;
     int simple_type = 1;
 
-    if (obj == &PL_sv_undef) {
+    if (!SvOK (obj)) {
         *stream = NULL;
         return SVN_NO_ERROR;
     }
