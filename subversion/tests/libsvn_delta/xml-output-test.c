@@ -72,7 +72,7 @@ write_to_file (void *baton, const char *data, apr_size_t *len,
 int main(int argc, char **argv)
 {
   apr_pool_t *pool;
-  svn_delta_edit_fns_t *editor;
+  const svn_delta_edit_fns_t *editor;
   svn_txdelta_window_handler_t *handler;
   svn_txdelta_window_t window;
   void *edit_baton, *root_baton, *dir_baton, *file_baton, *handler_baton;
@@ -104,8 +104,8 @@ int main(int argc, char **argv)
   editor->replace_file (baz_string, dir_baton, NULL, 0, &file_baton);
   editor->change_file_prop (file_baton, bbb_string, ccc_string);
   editor->change_file_prop (file_baton, aaa_string, NULL);
+  editor->change_dir_prop (dir_baton, ccc_string, bbb_string);
   editor->close_directory (dir_baton);
-  editor->change_dir_prop (root_baton, ccc_string, bbb_string);
   editor->close_directory (root_baton);
   editor->apply_textdelta (file_baton, &handler, &handler_baton);
   handler (NULL, handler_baton);
