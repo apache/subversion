@@ -1450,8 +1450,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   /* ### should we perform an OPTIONS to validate the server we're about
      ### to talk to? */
 
-  /* ### SUSSMAN TODO: Handle lock_tokens and keep_locks. */
-
   /*
   ** Create an Activity. This corresponds directly to an FS transaction.
   ** We will check out all further resources within the context of this
