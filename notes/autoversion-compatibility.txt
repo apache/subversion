@@ -1,0 +1,142 @@
+
+Here's the status of how well SVNAutoversioning works against various
+DAV clients.  Feel free to update this as we learn more.
+
+First, a general note: the one big feature we're lacking is support
+for the LOCK and UNLOCK dav requests.  This pretty much means that you
+won't be able to open a file (in write mode) directly from the dav
+share; every client tries to LOCK in that case.
+
+The workaround, for now, is to copy (or drag) the file out of the
+share, edit it, then copy (or drag) it back.
+
+
+The basic set of tests
+======================
+
+1. Add new file     (PUT)
+2. Add new folder   (MKCOL)
+3. Rename a file    (MOVE)
+4. Rename a folder  (MOVE)
+5. Copy a file      (COPY)
+6. Copy a folder    (COPY)
+7. Delete a file    (DELETE)
+8. Delete a folder  (DELETE)
+9. Open remote file directly  (LOCK)
+10. Copy/drag remote file to local disk (GET)
+11. Copy/drag local file back on top of remote file. 
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+
+
+Nautilus 2.X  (tested by sussman and ttimo)
+============
+
+1. Add new file     (PUT)
+
+   Check:  but it does two PUTS instead of one.  First it PUTs an
+   empty file, then PUTs data into it.  So we get two new revisions.
+
+2. Add new folder   (MKCOL)
+
+   Check.
+
+3. Rename a file    (MOVE)
+
+   Check.
+
+4. Rename a folder  (MOVE)
+
+   Check.
+
+5. Copy a file      (COPY)
+
+   Can't figure out how to make Nautilus issue a COPY command.  If I
+   control-drag to copy, or if I right-click to copy/paste, it still
+   ends up doing two PUTs, just like in test #1.
+
+6. Copy a folder    (COPY)
+
+   If I right-click to copy/paste, it creates *N* new revisions:  one
+   MKCOL, followed by two PUTs per file, ugh.
+
+7. Delete a file    (DELETE)
+
+   Check.
+
+8. Delete a folder  (DELETE)
+
+   Ugh.  It creates N new revisions by issuing a separate DELETE
+   request for every item in the subtree, then finishing with a DELETE
+   on the dir itself.  Isn't just the final DELETE needed?  We should
+   send a patch to Nautilus.
+
+9. Open remote file directly  (LOCK)
+
+   Opens file as read-only, but it never tries to just GET.  I wonder
+   if this dav implementation is simply feature-incomplete.  Maybe it
+   just opens files as read-only no matter what...?
+
+10. Copy/drag remote file to local disk (GET)
+
+   Check.
+
+11. Copy/drag local file back on top of remote file. 
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+   DELETEs old file, PUTs twice.  Yucky.
+
+
+
+
+Win32 WebFolders (on Win2K-sp3)  (tested by sussman)
+================
+
+This works pretty well:  the details needs to be filled in below.
+
+1. Add new file     (PUT)
+2. Add new folder   (MKCOL)
+3. Rename a file    (MOVE)
+4. Rename a folder  (MOVE)
+5. Copy a file      (COPY)
+6. Copy a folder    (COPY)
+7. Delete a file    (DELETE)
+8. Delete a folder  (DELETE)
+9. Open remote file directly  (LOCK)
+10. Copy/drag remote file to local disk (GET)
+11. Copy/drag local file back on top of remote file. 
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+
+
+
+OS X   (fitz/thom/sabi/sussman)
+====
+
+NOTE: Apparently OS X's dav client is extremely sensitive; it won't
+write to any dav server that doesn't set environment variables in a
+specific way.  If you mount a DAV share in OS X and it appears
+read-only (when it shouldn't), then then you need to add this line to
+Apache2's httpd.conf:
+
+  BrowserMatch "^WebDAVFS/1.*" redirect-carefully
+
+This sets the 'redirect-carefully' env. variable to 1, whenever an OS
+X client connects.
+
+There's an Apple issue on this:
+  
+ http://docs.info.apple.com/article.html?artnum=107047&SaveKCWindowURL=http%3A%2F%2Fkbase.info.apple.com%2Fcgi-bin%2FWebObjects%2Fkbase.woa%2Fwa%2FSaveKCToHomePage&searchMode=Assisted&kbhost=kbase.info.apple.com&showButton=false&randomValue=100&showSurvey=false&sessionID=anonymous|160773135
+
+Unfortunately, I've not yet been able to make this work.  OS X still
+mounts the share as read-only even when I add this directive.
+
+
+Linux davfs2   (hadaka)
+============
+
+Apparently this doesn't work at all.  This client always attempts to
+LOCK before any kind of write operation (PUT, PROPPATCH, etc.).  
+Talk about paranoid!
+
+
