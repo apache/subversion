@@ -59,6 +59,15 @@
 #include <stdio.h>
 
 
+#define RETURN_IF_ERROR(err) if ((err)) {return (err);}
+
+#define SVN_SUCCESS 0
+
+/* svn_error_t constructor */
+
+#define SVN_FATAL     1    /* Use instead of TRUE or 1, for readability. */
+#define SVN_NON_FATAL 0    /* Use instead of FALSE or 0, for readability. */
+
 
 /* 
    Theoretically, this is the header file where we can define our own

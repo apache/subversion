@@ -82,7 +82,7 @@
   
 */
   
-char
+svn_error_t *
 svn_internal_authorization (svn_string_t *repos,
                             svn_user_t *user,
                             svr_action_t requested_action,
@@ -97,18 +97,21 @@ svn_internal_authorization (svn_string_t *repos,
      libsvn_fs, and not call svn_svr_read(); svn_svr_read() checks for
      authorization, which would put us in an infinte loop! */
 
+  return SVN_SUCCESS;
 }
 
 
 /* The routine called by the server, which causes the plugin to
    register itself */
 
-void
+svn_error_t *
 plugin_security_init (svn_svr_policies_t *policy,
                       ap_dso_handle_t *dso,
                       ap_pool_t *pool)
 {
-  /* First:  create a plugin_security object */
+  svn_error_t *err;
+
+  /* First:  create an instance of this plugin */
   svn_svr_plugin_t *newplugin = 
     (svn_svr_plugin_t *) ap_palloc (pool, sizeof(svn_svr_plugin_t));
 
@@ -122,7 +125,10 @@ plugin_security_init (svn_svr_policies_t *policy,
   newplugin->conflict_resolve_hook = NULL;
 
   /* Finally, register the new plugin in the server's global policy struct */
-  svn_svr_register_plugin (policy, newplugin);
+  err = svn_svr_register_plugin (policy, newplugin);
+  RETURN_IF_ERROR(err);
+
+  return SVN_SUCCESS;
 }
 
 
