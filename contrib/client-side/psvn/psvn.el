@@ -578,7 +578,7 @@ The results are used to build the `svn-status-info' variable."
           ;; the above message appears for the main listing plus once for each svn:externals entry
           (unless svn-status-head-revision
             (setq svn-status-head-revision (match-string 1))))
-         ((looking-at "Performing status on external item at '\(.*\)'")
+         ((looking-at "Performing status on external item at '\\(.*\\)'")
           ;; The *next* line has info about the directory named in svn:externals
           ;; [ie the directory in (match-string 1)]
           ;; we should parse it, and merge the info with what we have already know
@@ -1293,6 +1293,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
             "\n")))
 
 (defun svn-status-update-buffer ()
+  "Update the *svn-status* buffer, using `svn-status-info'."
   (interactive)
   ;(message (format "buffer-name: %s" (buffer-name)))
   (unless (string= (buffer-name) "*svn-status*")
