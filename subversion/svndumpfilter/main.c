@@ -591,7 +591,7 @@ close_revision (void *revision_baton)
      information to the header string.  */
   if (rb->has_props)
     {
-      for (hi = apr_hash_first (hash_pool, rb->props); 
+      for (hi = apr_hash_first (subpool, rb->props); 
            hi; 
            hi = apr_hash_next (hi))
         {
@@ -838,6 +838,7 @@ do_filter (apr_getopt_t *os,
   if (! opt_state->quiet)
     {
       apr_pool_t *subpool = svn_pool_create (pool);
+
       SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
                                     "%s %sprefixes:\n",
                                     do_exclude ? "Excluding" : "Including",
