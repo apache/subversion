@@ -1,98 +1,27 @@
-This file tracks the status of changes proposed for inclusion in 1.0.
-Each candidate consists of a short identifying block (e.g., a revision
-number, maybe an issue number), a brief description of the change, an
-at-most-one-line justification of why it should be in 1.0, perhaps
-some notes/concerns, and finally the votes.  The notes and concerns
-are meant to be brief summaries to help a reader get oriented; please
-don't use the STATUS file for actual discussion, use the dev@ list or
-irc instead.
+This file tracks the status of releases in the 1.0.x line.
 
-Here's an example, probably as complex as an entry would ever get:
+See "Stabilizing and maintaining releases" in trunk/HACKING for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
 
-   * r98765 (issue #56789)
-     Make commit editor take a closure object for future mindreading.
-     Justification: API stability, as prep for future enhancement.
-     Notes: There was consensus on the desirability of this feature in
-       the near future; see thread at http://... (Message-Id:
-       blahblahblah).
-     Concerns: Vetoed by jerenkrantz due to privacy concerns with the
-       implementation; see thread at http://... (Message-Id: blahblahblah)
-     Votes:
-       +1: ghudson, bliss
-       +0: cmpilato
-       -0: gstein
-       -1: jerenkrantz
+Status of 1.0.0:
+================
 
-A change needs three +1 votes from full committers (or partial committers
-with access to the involved paths), and no vetoes, to go into the release.
+Release 1.0.0 is already frozen; subversion-0.37.0.tar.gz is the
+candidate tarball, and that code will become 1.0.0 on February 23rd,
+2004, after four weeks of soak time.  If you find a bug that you think
+is important enough to delay 1.0.0, please start a dev@ list thread
+and mention the thread below.
 
-If you cast a veto (i.e. -1), please state the reason in the concerns
-field, and include a url / message-id for the list discussion if any.
-You can go back and add the link later if the thread isn't available
-at the time you commit the veto.
-
-Voting +1 on a change doesn't just mean you approve of it in principle.
-It means you have thoroughly reviewed the change, and find it correct
-and as nondisruptive as possible.  When it is committed to the release
-branch, the log message will include the names of all who voted for
-it, as well as the original author and the person making the commit.
-All of these people are considered equally answerable for bugs.
-
-If you've reviewed a patch, and like it but have some reservations,
-you can write "+1 (concept)" and then ask questions on the list about
-your concerns.  You can write "+0" if you like the general idea but
-haven't reviewed the patch carefully.  Neither of these votes counts
-toward the total, but they can be useful for tracking down people who
-are following the change and might be willing to spend more time on
-it.
-
-There is a somewhat looser system for the bindings and tools areas,
-because they are not core code, and because there are usually fewer
-experts available to review changes there.  A change to bindings or
-tools can go in with a +1 from a full committer or a partial committer
-for that area, at least one "+0" or "concept +1" from any other
-committer, and no vetoes.  We trust people to use their judgment and
-not review changes if they don't have some competence to do so.  The
-goal is to ensure there are at least two pairs of eyes on the change,
-without demanding that every reviewer have the same amount of
-expertise as the area maintainer.  This way one can review for general
-sanity, accurate comments, obvious mistakes, etc, without being forced
-to assert "Yes, I understand these changes in every detail and have
-tested them."
-
--*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
-
-Core changes that don't have three +1's yet, or have a veto.  (If you
-make the threshold vote on one of these items, please move it to the
-section for approved changes.)
+Candidate changes:
 
   [none pending]
 
-Core changes that already have three +1 votes and no vetos.  (If you
-veto something below, or remove a threshold vote, please move it to
-the section for unapproved changes.)
+
+Status of 1.0.1:
+================
+
+Candidate changes:
 
   [none pending]
 
--*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
-
-These changes are to Subversion bindings.  Many are dependent on
-specific "core" changes in the previous section, so we're planning to
-finalize this list (and its votes) after we know the core changes,
-that is, after Thursday, Jan. 8th 2004.
-
-Bindings changes that affect the build system:
-
-  [none pending]
-     
-Bindings changes that don't affect the build system:
-
-  [none pending]
-
--*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
-
-These changes are to Subversion tools that do not use the bindings.
-As such, they may be updated independently of any "core" or API
-changes.
-
-  [none pending]
