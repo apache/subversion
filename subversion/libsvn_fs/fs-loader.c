@@ -22,6 +22,13 @@
 #include <apr_hash.h>
 #include <apr_dso.h>
 
+#ifndef WIN32
+/* Required for the sgid code in svn_fs_create */
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 #include "svn_types.h"
 #include "svn_version.h"
 #include "svn_pools.h"
@@ -233,8 +240,25 @@ svn_fs_create (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
     fs_type = DEFAULT_FS_TYPE;
   SVN_ERR (get_library_vtable (&vtable, fs_type, pool));
 
-  /* Create the FS directory and write out the fsap-name file. */
+  /* Create the FS directory. */
   SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+
+#ifndef WIN32
+  /* Set the sgid bit on the directory, to ensure that group ownership
+     of new files and directories will be inherited from the parent
+     rather than determined by the primary gid.  APR provides no
+     mechanism for setting this bit, so we do it the Unix way.  If we
+     fail, don't sweat it; such a failure probably indicates the
+     filesystem doesn't support that bit. */
+  {
+    struct stat st;
+
+    if (stat (path, &st) == 0)
+      chmod (path, (st.st_mode & ~S_IFMT) | S_ISGID);
+  }
+#endif
+
+  /* Write out the fsap-name file. */
   SVN_ERR (write_fs_type (path, fs_type, pool));
 
   /* Perform the actual creation. */
