@@ -927,7 +927,7 @@ $ svn status
 
       <tip>
         <para>A nice way of finding the revision in which a branch was
-          created (the "base" of the branch) is to use the
+          created (the <quote>base</quote> of the branch) is to use the
           <option>--stop-on-copy</option> option to <command>svn
           log</command>.  The log subcommand will normally show every
           change ever made to the branch, including tracing back

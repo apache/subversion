@@ -157,8 +157,8 @@
         stores everything in a Berkeley DB database; the other kind
         stores data in ordinary flat files, using a custom
         format.  Because Subversion developers often refer to a
-        repository as "The [Versioned] Filesystem", they have adopted
-        the habit of referring to the latter type of repository as
+        repository as <quote>The [Versioned] Filesystem</quote>, they have
+        adopted the habit of referring to the latter type of repository as
         <firstterm>FSFS</firstterm>: that is, it's a versioned
         filesystem implementation that uses the native OS filesystem
         to store data.</para>
