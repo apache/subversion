@@ -728,8 +728,12 @@ static svn_error_t * commit_delete_entry(const char *path,
       if (token)
         {
           const char *token_header_val;
-          token_header_val = apr_psprintf(pool, "(<%s>)", token);
+          const char *token_uri;
 
+          token_uri = svn_path_url_add_component(parent->cc->ras->url,
+                                                 path, pool);
+          token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
+                                          token_uri, token);
           extra_headers = apr_hash_make(pool);
           apr_hash_set(extra_headers, "If", APR_HASH_KEY_STRING,
                        token_header_val);
@@ -1254,7 +1258,12 @@ static svn_error_t * commit_close_file(void *file_baton,
       if (file->token)
         {
           const char *token_header_val;
-          token_header_val = apr_psprintf(pool, "(<%s>)", file->token);
+          const char *token_uri;
+
+          token_uri = svn_path_url_add_component(cc->ras->url,
+                                                 file->rsrc->url, pool);
+          token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
+                                          token_uri, file->token);
           ne_add_request_header(req, "If", token_header_val);
         }
 
