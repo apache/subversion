@@ -866,7 +866,6 @@ svn_path_get_absolute(const char **pabsolute,
   char *buffer;
   apr_status_t apr_err;
   const char *path_apr;
-  const char *pabsolute_buff;
 
   SVN_ERR (svn_path_cstring_from_utf8
            (&path_apr, svn_path_canonicalize (relative, pool), pool));
@@ -882,8 +881,8 @@ svn_path_get_absolute(const char **pabsolute,
                              "Couldn't determine absolute path of %s.", 
                              relative);
 
-  SVN_ERR (svn_path_cstring_to_utf8 (&pabsolute_buff, buffer, pool));
-  *pabsolute = svn_path_canonicalize(pabsolute_buff, pool);
+  SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
+  *pabsolute = svn_path_canonicalize (*pabsolute, pool);
   return SVN_NO_ERROR;
 }
 
