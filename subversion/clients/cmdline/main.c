@@ -248,11 +248,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "import", svn_cl__import, {0},
     "Commit an unversioned file or tree into the repository.\n"
-    "usage: import URL [PATH [NEW_ENTRY_IN_REPOS]]\n\n"
+    "usage: import [PATH] URL\n\n"
     "  Recursively commit a copy of PATH to URL.\n"
-    "  If no third arg, copy top-level contents of PATH into URL\n"
-    "  directly.  Otherwise, create NEW_ENTRY underneath URL and\n"
-    "  begin copy there.\n",
+    "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
+    "  as necessary in the repository.\n",
     {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS,
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },
  

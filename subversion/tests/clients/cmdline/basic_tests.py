@@ -1143,12 +1143,12 @@ def basic_import(sbox):
   svntest.main.file_append(new_path, "some text")
 
   # import new files into repository
-  url = svntest.main.current_repo_url
+  url = os.path.join(svntest.main.current_repo_url, "dirA/dirB/new_file")
   output, errput =   svntest.actions.run_and_verify_svn(
     'Cannot change node kind', None, [], 'import',
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
-    '-m', 'Log message for new import', url, new_path, 'new_file')
+    '-m', 'Log message for new import', new_path, url)
 
   lastline = string.strip(output.pop())
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
@@ -1163,19 +1163,23 @@ def basic_import(sbox):
   # Create expected disk tree for the update (disregarding props)
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'new_file' : Item('some text'),
+    'dirA/dirB/new_file' : Item('some text'),
     })
 
   # Create expected status tree for the update (disregarding props).
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'new_file' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dirA'                : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dirA/dirB'           : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dirA/dirB/new_file'  : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
   # Create expected output tree for the update.
   expected_output = svntest.wc.State(wc_dir, {
-    'new_file' : Item(status='A '),
+    'dirA'               : Item(status='A '),
+    'dirA/dirB'          : Item(status='A '),
+    'dirA/dirB/new_file' : Item(status='A '),
   })
 
   # do update and check three ways
@@ -1221,7 +1225,7 @@ def basic_import_executable(sbox):
     None, None, [], 'import',
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
-    '-m', 'Log message for new import', url, xt_path)
+    '-m', 'Log message for new import', xt_path, url)
 
   lastline = string.strip(output.pop())
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
@@ -1483,7 +1487,7 @@ def basic_import_ignores(sbox):
   open(foo_o_path, 'w')
 
   # import new dir into repository
-  url = svntest.main.current_repo_url
+  url = os.path.join(svntest.main.current_repo_url, 'dir')
 
 
   output, errput = svntest.actions.run_and_verify_svn(
@@ -1491,7 +1495,7 @@ def basic_import_ignores(sbox):
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import',
-    url, dir_path, 'dir')
+    dir_path, url)
 
   lastline = string.strip(output.pop())
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")

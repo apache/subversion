@@ -1972,11 +1972,9 @@ M      ./somedir/foo.c
       <para>The import command is a quick way to move an unversioned
         tree of files into a repository.</para>
 
-      <para>There are two ways to use this command:</para>
-
       <screen>
 $ svnadmin create /usr/local/svn/newrepos
-$ svn import file:///usr/local/svn/newrepos mytree
+$ svn import mytree file:///usr/local/svn/newrepos/fooproject
 Adding  mytree/foo.c
 Adding  mytree/bar.c
 Adding  mytree/subdir
@@ -1986,32 +1984,8 @@ Committed revision 1.
       </screen>
 
       <para>The above example places the contents of directory
-        <filename>mytree</filename> directly into the root of the
-        repository:</para>
-
-      <screen>
-/foo.c
-/bar.c
-/subdir
-/subdir/quux.h
-      </screen>
-
-      <para>If you give <command>svn import</command> a third
-        argument, it will use the argument as the name of a new
-        subdirectory to create within the URL.</para>
-
-      <screen>
-$ svnadmin create /usr/local/svn/newrepos
-$ svn import file:///usr/local/svn/newrepos mytree fooproject
-Adding  mytree/foo.c
-Adding  mytree/bar.c
-Adding  mytree/subdir
-Adding  mytree/subdir/quux.h
-Transmitting file data....
-Committed revision 1.
-      </screen>
-
-      <para>The repository would now look like this:</para>
+        <filename>mytree</filename> under the directory
+        <filename>fooproject</filename> in the repository:</para>
 
       <screen>
 /fooproject/foo.c

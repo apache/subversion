@@ -573,24 +573,18 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  * head, authenticating with the authentication baton cached in @a ctx, 
  * and using @a ctx->log_msg_func/@a ctx->log_msg_baton to get a log message 
  * for the (implied) commit.  Set @a *commit_info to the results of the 
- * commit, allocated in @a pool.
- *
- * @a new_entry is the new entry created in the repository directory
- * identified by @a url.  @a new_entry may be null (see below), but may 
- * not be the empty string.
+ * commit, allocated in @a pool.  If some components of @a url do not exist
+ * then create parent directories as necessary.
  *
  * If @a path is a directory, the contents of that directory are
- * imported, under a new directory named @a new_entry under @a url; or 
- * if @a new_entry is null, then the contents of @a path are imported 
- * directly into the directory identified by @a url.  Note that the 
+ * imported directly into the directory identified by @a url.  Note that the
  * directory @a path itself is not imported -- that is, the basename of 
  * @a path is not part of the import.
  *
- * If @a path is a file, that file is imported as @a new_entry (which may
- * not be @c NULL).
+ * If @a path is a file, then the dirname of @a url is the directory
+ * receiving the import.  The basename of @a url is the filename in the
+ * repository.  In this case if @a url already exists, return error.
  *
- * In all cases, if @a new_entry already exists in @a url, return error.
- * 
  * If @a ctx->notify_func is non-null, then call @a ctx->notify_func with 
  * @a ctx->notify_baton as the import progresses, with any of the following 
  * actions: @c svn_wc_notify_commit_added,
@@ -614,7 +608,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 const char *path,
                                 const char *url,
-                                const char *new_entry,
                                 svn_boolean_t nonrecursive,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);

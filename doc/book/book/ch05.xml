@@ -2735,7 +2735,7 @@ $ mkdir projectB
 $ mkdir projectB/trunk
 $ mkdir projectB/branches
 &hellip;
-$ svn import file:///path/to/repos . --message 'Initial repository layout'
+$ svn import file:///path/to/repos --message 'Initial repository layout'
 Adding         projectA
 Adding         projectA/trunk
 Adding         projectA/branches

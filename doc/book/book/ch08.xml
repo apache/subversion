@@ -1306,18 +1306,15 @@ Exported revision 15.
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
-            <programlisting>svn import URL [PATH [NEW_ENTRY_IN_REPOS]]</programlisting>
+            <programlisting>svn import [PATH] URL</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
 
             <para>Recursively commit a copy of <literal>PATH</literal>
-              to <literal>URL</literal>.  If there is no third
-              argument, copy the top-level contents of
-              <literal>PATH</literal> into <literal>URL</literal>
-              directly.  Otherwise, create
-              <literal>NEW_ENTRY</literal> underneath
-              <literal>URL</literal> and begin copy there.</para>
+              to <literal>URL</literal>.  If <literal>PATH</literal>
+              is omitted '.' is assumed.  Parent directories are created
+              in the repository as necessary.</para>
           </refsect1>
 
           <refsect1>
@@ -1358,7 +1355,7 @@ Exported revision 15.
               root of your repository:</para>
 
             <screen>
-$ svn import -m "New import" http://svn.red-bean.com/repos/test myproj
+$ svn import -m "New import" myproj http://svn.red-bean.com/repos/test
 Adding         myproj/sample.txt
 ...
 Transmitting file data .........
@@ -1367,12 +1364,11 @@ Committed revision 16.
 
             <para>This imports the local directory 'myproj' into
               'trunk/vendors' in your repository.  The directory
-              'trunk/vendors' must exist before you import into
-              it&mdash;<command>svn import</command> will not
+              'trunk/vendors' need not exist before you import into
+              it&mdash;<command>svn import</command> will
               recursively create directories for you:</para>
-
             <screen>
-$ svn import -m "New import" http://svn.red-bean.com/repos/test myproj trunk/vendors/myproj
+$ svn import -m "New import" myproj http://svn.red-bean.com/repos/test/trunk/vendors/myproj
 Adding         myproj/sample.txt
 ...
 Transmitting file data .........
