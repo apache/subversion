@@ -152,6 +152,17 @@ void svn_handle_warning (void *data, const char *fmt, ...);
   } while (0)
 
 
+/* A statement macro, very similar to SVN_ERR. This macro will wrap the
+   error with the specified text before returning the error. */
+
+#define SVN_ERR_W(expr, wrap_msg)                           \
+  do {                                                      \
+    svn_error_t *svn_err__temp = (expr);                    \
+    if (svn_err__temp)                                      \
+      return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
+  } while (0)
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
