@@ -30,22 +30,22 @@ with a couple of milestones between each stage:
    'V:encoding="base64"' attribute and the property value
    base64-encoded.  during this interim period, clients will be to get
    binary properties from the server, but will not be able to commit
-   new or modified binary properties.  (0.22 milestone)
+   new or modified binary properties.  (0.21 milestone)
 
    (3) clients starts to transmit non-XML-safe properties with the
    'V:encoding="base64"' attribute and the property value
-   base64-encoded.  this is the moment of full support.  (0.24
+   base64-encoded.  this is the moment of full support.  (0.22
    milestone)
 
 All the code for full support will be in place, but disabled
 functionality will be wrapped in SVN_DAV_FEATURE_BINARY_PROPS
 #defines.
 
-When stage 2 is ready to go into 0.22, we just remove the #defines
+When stage 2 is ready to go into 0.21, we just remove the #defines
 from the code in mod_dav_svn, commit, and reset this issue to have a
 0.24 milestone.
 
-When stage 3 is ready to go into 0.24, we just remove the #defines
+When stage 3 is ready to go into 0.22, we just remove the #defines
 from the code in libsvn_ra_dav, lose the #define itself from
 svn_dav.h, commit, and close this issue.
 ---------------
