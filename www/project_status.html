@@ -3,7 +3,7 @@
 <center>
 <img src="subversion.jpg">
 <h2>Weekly Status</h2>
-Last updated:  10 March 2001
+Last updated:  Friday 16 March 2001
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -36,9 +36,9 @@ Last updated:  10 March 2001
     <td align="left">Versioning Filesystem</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=280 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>70%</font></td>
-          <td width=120 bgcolor="FF0000">&nbsp;</td>
+          <td width=320 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>80%</font></td>
+          <td width=80 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -58,9 +58,9 @@ Last updated:  10 March 2001
     <td align="left">Client Libraries</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=220 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>55%</font></td>
-          <td width=180 bgcolor="FF0000">&nbsp;</td>
+          <td width=260 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>65%</font></td>
+          <td width=140 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -95,19 +95,23 @@ Last updated:  10 March 2001
 
 <h3>Last Week's Activities</h3>
 
-This week, we continued to flesh out repository filesystem
-functionality.  We also started revamping client-side code in
-preparation to directly link with the filesystem.  If all goes well,
-then in the upcoming week should see "first contact" between the two
-halves; instead of XML, the client will be sending commits into a
-<i>real</i> repository!
+<p>
+
+Checkouts and commits are working now.  The client can connect to the
+repository layer (via the <tt>ra_local</tt> library, not the network),
+check out a tree, and commit changes, including: file modifications,
+file adds, file deletes, dir adds, and dir deletes.  Copies work on
+the repository side, but still need further tweaks in the client.
 
 <p>
 
-After that, the plan is to get updates working, which is a a bit more
-complicated than commits.  Once the client and repository are
-interacting correctly, we'll making our final "push" toward Milestone
-2:  inserting Greg Stein's DAV layer into the system.
+Next week, we'll parallelize: Greg Stein will make the above happen
+over the network, while the client/filesystem team works on updates.
+Updates are a matter of getting the client to report its "working copy
+state" to the server, and having the server send back an appropriate
+delta to bring that working copy up-to-date.
+
+<p>
 
 
 <!----------------------------------------------------------------->
