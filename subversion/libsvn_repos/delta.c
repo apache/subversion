@@ -176,6 +176,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   svn_stringbuf_t *tgt_parent_dir, *tgt_entry;
   svn_stringbuf_t *src_fullpath, *tgt_fullpath;
   svn_fs_id_t *src_id, *tgt_id;
+  svn_error_t *err;
   int distance;
 
   /* SRC_PARENT_DIR must be valid. */
@@ -248,10 +249,27 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
     svn_path_add_component (src_fullpath, src_entry, svn_path_repos_style);
 
   /* Get the node ids for the source and target paths. */
-  SVN_ERR (svn_fs_node_id (&src_id, src_root, src_fullpath->data, pool));
   SVN_ERR (svn_fs_node_id (&tgt_id, tgt_root, tgt_fullpath->data, pool));
-  
-  if (src_entry && src_entry->len > 0)
+  err = svn_fs_node_id (&src_id, src_root, src_fullpath->data, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          /* The target has been deleted from our working copy. Add
+             back a new one. */
+          SVN_ERR (add_file_or_dir (&c, root_baton,
+                                    0,
+                                    0,
+                                    tgt_parent_dir,
+                                    tgt_entry,
+                                    pool));
+        }
+      else
+        {
+          return err;
+        }
+    }
+  else if (src_entry && src_entry->len > 0)
     {
       /* Use the distance between the node ids to determine the best
          way to update the requested entry. */

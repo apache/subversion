@@ -71,6 +71,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   void *report_baton;
   svn_wc_entry_t *entry;
   svn_stringbuf_t *URL;
+  svn_stringbuf_t *base_dir = path;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path != NULL);
@@ -81,20 +82,50 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control",
-       path->data);
+       "svn_client_update: %s is not under revision control", path->data);
   if (entry->existence == svn_wc_existence_deleted)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "entry '%s' has already been deleted", path->data);
+       "svn_client_update: entry '%s' has been deleted", path->data);
 
-  URL = svn_stringbuf_create (entry->ancestor->data, pool);
+  /* Copy our entry's ancestry information into URL. */
+  if (entry->ancestor)
+    {
+      URL = svn_stringbuf_create (entry->ancestor->data, pool);
+    }
+
+  /* We found no ancestry information for our entry, so we'll see if
+     we can derive the ancestry from the entry's working copy
+     parent. */
+  else
+    {
+      svn_wc_entry_t *par_entry;
+      svn_stringbuf_t *basename;
+
+      svn_path_split (path, &base_dir, &basename, svn_path_local_style, pool);
+      if (svn_stringbuf_isempty (base_dir))
+        svn_stringbuf_set (base_dir, ".");
+
+      SVN_ERR (svn_wc_entry (&par_entry, base_dir, pool));
+      if (! par_entry)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+           "svn_client_update: %s is not under revision control",
+           base_dir->data);
+      if (par_entry->existence == svn_wc_existence_deleted)
+        return svn_error_createf
+          (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+           "entry '%s' has already been deleted", base_dir->data);
+
+      URL = svn_stringbuf_dup (par_entry->ancestor, pool);
+      svn_path_add_component (URL, basename, svn_path_url_style);
+    }
 
   /* The following is an ugly kludge.  In order to let the RA layer
      know the difference between updating entry 'Z' in dir 'X/Y' and
      updating entry '.' in 'X/Y/Z', we'll append a '.' to the URL. */
   if (svn_path_is_thisdir (path, svn_path_repos_style))
-     svn_path_add_component (URL, path, svn_path_repos_style);
+     svn_path_add_component (URL, path, svn_path_url_style);
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision
@@ -116,7 +147,6 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
-      svn_stringbuf_t *base_dir = path;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

@@ -1764,12 +1764,21 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
   svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+  svn_boolean_t missing = FALSE;
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   base_rev = entry->revision;
+  if (base_rev == SVN_INVALID_REVNUM)
+    {
+      svn_stringbuf_t *parent_name = svn_stringbuf_dup (path, pool);
+      svn_wc_entry_t *parent_entry;
+      svn_path_remove_component (parent_name, svn_path_local_style);
+      SVN_ERR (svn_wc_entry (&parent_entry, parent_name, pool));
+      base_rev = parent_entry->revision;
+    }
 
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
@@ -1778,7 +1787,30 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                                svn_stringbuf_create ("", pool),
                                base_rev));
 
-  if (entry->kind == svn_node_dir)
+  if (entry->existence != svn_wc_existence_deleted
+      && entry->schedule != svn_wc_schedule_delete)
+    {
+      apr_finfo_t info;
+      apr_status_t apr_err;
+      apr_err = apr_stat (&info, path->data, APR_FINFO_MIN, pool);
+      if (APR_STATUS_IS_ENOENT(apr_err))
+        {
+          missing = TRUE;
+          err = reporter->delete_path (report_baton,
+                                       svn_stringbuf_create ("", pool));
+          if (err)
+            {
+              /* Clean up the fs transaction. */
+              svn_error_t *fserr;
+              fserr = reporter->abort_report (report_baton);
+              if (fserr)
+                return svn_error_quick_wrap (fserr, "Error aborting report.");
+              else
+                return err;
+            }
+        }
+    }
+  if (!missing && entry->kind == svn_node_dir)
     {
       /* Recursively crawl ROOT_DIRECTORY and report differing
          revisions. */
@@ -1797,7 +1829,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
             return err;
         }
     }
-  else if ((entry->kind == svn_node_file) 
+  else if (!missing && (entry->kind == svn_node_file) 
            && (entry->revision != base_rev))
     {
       /* If this entry is a file node, we just want to report that

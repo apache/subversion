@@ -1685,16 +1685,21 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
 
 /* THE GOAL
 
-   Note the following actions, where W is a working copy directory, N
-   is a non-working copy directory, and X is the thing we wish to
-   update:
+   Note the following actions, where X is the thing we wish to update,
+   P is a directory whose repository URL is the parent of
+   X's repository URL, N is directory whose repository URL is *not*
+   the parent directory of X (including the case where N is not a
+   versioned resource at all):
 
       1.  `svn up .' from inside X.
-      2.  `svn up ...W/X' from anywhere.
+      2.  `svn up ...P/X' from anywhere.
       3.  `svn up ...N/X' from anywhere.
 
-   And consider the four cases for X's type in the working copy and
-   repository (file or dir):
+   For the purposes of the discussion, in the '...N/X' situation, X is
+   said to be a "working copy (WC) root" directory.
+
+   Now consider the four cases for X's type (file/dir) in the working
+   copy vs. the repository:
 
       A.  dir in working copy, dir in repos.
       B.  dir in working copy, file in repos.
@@ -1704,41 +1709,35 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
    Here are the results we expect for each combination of the above:
 
       1A. Successfully update X.
-      2A. Successfully update X.
-      3A. Successfully update X.
-
       1B. Error (you don't want to remove your current working
           directory out from underneath the application).
+      1C. N/A (you can't be "inside X" if X is a file).
+      1D. N/A (you can't be "inside X" if X is a file).
+
+      2A. Successfully update X.
       2B. Successfully update X.
+      2C. Successfully update X.
+      2D. Successfully update X.
+
+      3A. Successfully update X.
       3B. Error (you can't create a versioned file X inside a
           non-versioned directory).
-
-      1C. N/A (you can't be "inside X" if X is a file).
-      2C. Successfully update X.
-      3C. N/A (you can't have a versioned file X in a non-versioned 
-          directory).
-
-      1D. N/A (you can be "inside X" if X is a file).
-      2D. Successfully update X.
-      3D. N/A (you can't have a versioned file X in a non-versioned 
-          directory).
+      3C. N/A (you can't have a versioned file X in directory that is
+          not its repository parent).
+      3D. N/A (you can't have a versioned file X in directory that is
+          not its repository parent).
 
    To summarize, case 2 always succeeds, and cases 1 and 3 always fail
-   *except* when the target is a dir that remains a dir after the
-   update.
+   (or can't occur) *except* when the target is a dir that remains a
+   dir after the update.
 
    ACCOMPLISHING THE GOAL
 
-   Given a path to be updated, conditionally split that path into a
-   parent directory and an entry in that directory.
-
-   Why do we bother with this?
-
-   First of all, updates are accomplished by driving an editor, and an
-   editor is "rooted" on a directory.  So, in order to update a file,
-   we need to break off the basename of the file, rooting the editor
-   in that file's parent directory (and then updating only that file,
-   not the other stuff in its parent directory).
+   Updates are accomplished by driving an editor, and an editor is
+   "rooted" on a directory.  So, in order to update a file, we need to
+   break off the basename of the file, rooting the editor in that
+   file's parent directory, and then updating only that file, not the
+   other stuff in its parent directory.
 
    Secondly, we look at the case where we wish to update a directory.
    This is typically trivial.  However, one problematic case, exists
@@ -1749,6 +1748,17 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
    would be like having an editor now anchored on a file, which is
    disallowed).
 
+   All that remains is to have a function with the knowledge required
+   to properly decide where to root our editor, and what to act upon
+   with that now-rooted editor.  Given a path to be updated, this
+   function should conditionally split that path into an "anchor" and
+   a "target", where the "anchor" is the directory at which the update
+   editor is rooted (meaning, editor->replace_root() is called with
+   this directory in mind), and the "target" is the actual intended
+   subject of the update.
+
+   svn_wc_get_actual_target() is that function.
+
    So, what are the conditions?
 
    Well, any time X is '.' (implying it is a directory), we won't lop
@@ -1756,104 +1766,101 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
    X.
 
    Any time we are trying to update some path ...N/X, we again will
-   not lop off a basename.  We can't root an editor at ...N because
-   our editor only understands how to function inside a working copy,
-   and N does not represent a working copy directory.  We root at X,
-   and update X.
+   not lop off a basename.  We can't root an editor at ...N with X as
+   a target, either because ...N isn't a versioned resource at all
+   (and our editors only care about versioned resources) or because X
+   is X is not a child of ...N in the repository.  We root at X, and
+   update X.
 
    We will, however, lop off a basename when we are updating a path
    ...W/X, rooting our editor at ...W and updating X.  This case
    provides enough information to us to be able to gracefully handle
    the above changed-type cases that might occur.
 
-   These conditions apply whether X is a file or directory.  */
+   These conditions apply whether X is a file or directory.
 
-/* As it turns out, commits need to have a similar check in place,
+   ---
+
+   As it turns out, commits need to have a similar check in place,
    too, specifically for the case where a single directory is being
    committed (we have to anchor at that directory's parent in case the
    directory itself needs to be modified) */
 svn_error_t *
 svn_wc_get_actual_target (svn_stringbuf_t *path,
-                          svn_stringbuf_t **parent_dir,
-                          svn_stringbuf_t **entry,
+                          svn_stringbuf_t **anchor,
+                          svn_stringbuf_t **target,
                           apr_pool_t *pool)
 {
-  svn_stringbuf_t *dirname, *basename;
-  svn_boolean_t is_wc;
+  svn_stringbuf_t *parent, *basename, *expected_url;
+  svn_wc_entry_t *p_entry, *entry;
+  svn_error_t *err;
 
-  /* Case I:  If PATH is the current working directory, do not lop off
-     a basename.  Trivial.  */
+  /* Get our ancestry (this doubles as a sanity check).  */
+  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (! entry)
+    return svn_error_createf 
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "svn_wc_get_actual_target: %s is not a versioned resource", path->data);
+
+  /* Go ahead and initialize our return values to the most common
+     (code-wise) values. */
+  *anchor = svn_stringbuf_dup (path, pool);
+  *target = NULL;
+
+
+  /*** Case I: If PATH is the current working directory, do not lop
+       off a basename.  Trivial.  */
   if (svn_path_is_empty (path, svn_path_local_style))
+    return SVN_NO_ERROR;
+
+
+  /*** Case II: If we cannot get an entry for PATH's parent, then PATH
+       is a "WC root".  Do not lop off a basename. */
+  svn_path_split (path, &parent, &basename, svn_path_local_style, pool);
+  if (svn_path_is_empty (parent, svn_path_local_style))
+    svn_stringbuf_set (parent, ".");
+  err = svn_wc_entry (&p_entry, parent, pool);
+  if (err || ! p_entry)
+    return SVN_NO_ERROR;
+  
+  /* If the parent directory has no ancestry information, something is
+     messed up.  Bail with an error. */
+  if (! p_entry->ancestor)
+    return svn_error_createf 
+      (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0, NULL, pool,
+       "svn_wc_get_actual_target: %s has no ancestry information.", 
+       parent->data);
+
+
+  /*** Case III: PATH's entry has no ancestry information.  This should
+       only happen when PATH is a versioned directory, deleted from
+       disk, but with an entry still in its parent's entries file.
+       Split PATH into an anchor and target. */
+  if (! entry->ancestor)
     {
-      *parent_dir = svn_stringbuf_dup (path, pool);
-      *entry = NULL;
+      *anchor = parent;
+      if (svn_path_is_empty (parent, svn_path_local_style))
+        svn_stringbuf_set (*anchor, ".");
+      *target = basename;
       return SVN_NO_ERROR;
     }
 
-  /* See if PATH's parent directory is versioned.  TODO: This should
-     probably also make sure that the parent directory is versioned in
-     the same repository as PATH!  */
-  svn_path_split (path, &dirname, &basename, svn_path_local_style, pool);
-  if (svn_path_is_empty (dirname, svn_path_local_style))
-    svn_stringbuf_set (dirname, ".");
-  SVN_ERR (svn_wc_check_wc (dirname, &is_wc, pool));
 
-  if (! is_wc)
-    {
-      /* Case II: If PATH is an entry of a non-versioned directory, do
-         not lop off a basename.  */
-      *parent_dir = svn_stringbuf_dup (path, pool);
-      *entry = NULL;
-    }
-  else
-    {
-      svn_wc_entry_t *p_entry;
-      svn_wc_entry_t *my_entry;
+  /*** Case IV: PATH's parent in the WC is not its parent in the
+       repository, making PATH a WC root.  Do not lop off a basename. */
+  expected_url = svn_stringbuf_dup (p_entry->ancestor, pool);
+  svn_path_add_component (expected_url, basename, svn_path_url_style);
+  if (! svn_stringbuf_compare (expected_url, entry->ancestor))
+    return SVN_NO_ERROR;
 
-      /* PATH is an entry of a versioned directory.  Let's see if it
-         really is our parent. */
 
-      /* Get our parent's ancestry. */
-      SVN_ERR (svn_wc_entry (&p_entry, dirname, pool));
-      if (! p_entry)
-        return svn_error_createf 
-          (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-           "svn_wc_get_actual_target: Error get parent's entry");
-
-      /* Get our ancestry. */
-      SVN_ERR (svn_wc_entry (&my_entry, path, pool));
-      if (! my_entry)
-        return svn_error_createf 
-          (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-           "svn_wc_get_actual_target: Error get parent's entry");
-
-      if (p_entry->ancestor && my_entry->ancestor)
-        {
-          svn_stringbuf_t *my_ancestry = svn_stringbuf_dup (p_entry->ancestor, 
-                                                            pool);
-
-          svn_path_add_component (my_ancestry, basename, svn_path_url_style);
-          
-          if (svn_stringbuf_compare (my_ancestry, my_entry->ancestor))
-            {
-              /* Case III: If PATH is an entry of a versioned directory, lop
-                 off its basename. */
-              *parent_dir = dirname;
-              if (svn_path_is_empty (dirname, svn_path_local_style))
-                svn_stringbuf_set (*parent_dir, ".");
-              *entry = basename;
-            }
-          else
-            {
-              /* Case IV: If PATH is an entry of a versioned
-                 directory in the working copy, but is not an entry of
-                 the same parent in the repository, do NOT lop off a
-                 basename. */
-              *parent_dir = svn_stringbuf_dup (path, pool);
-              *entry = NULL;
-            }
-        }
-    }
+  /*** Case V: PATH's parent in the WC is also its parent in the
+       repository.  PATH is not a WC root.  Split it into an anchor
+       and target.  */
+  *anchor = parent;
+  if (svn_path_is_empty (parent, svn_path_local_style))
+    svn_stringbuf_set (*anchor, ".");
+  *target = basename;
 
   return SVN_NO_ERROR;
 }
