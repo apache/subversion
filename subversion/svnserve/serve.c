@@ -1194,20 +1194,24 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   const char *path;
   const char *comment;
+  const char *full_path;
   svn_boolean_t force;
   svn_lock_t *l;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)b", &path, &comment,
                                  &force));
-  path = svn_path_canonicalize(path, pool);
+
+  full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
+                            pool);
 
   SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
 
-  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, path, comment, force, 0, pool));
+  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, comment, force, 0,
+                                pool));
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(w(!", "success"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
   SVN_ERR(write_lock(conn, pool, l));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
 
   return SVN_NO_ERROR;
 }
@@ -1235,19 +1239,22 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   const char *path;
+  const char *full_path;
   svn_lock_t *l;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", path));
-  path = svn_path_canonicalize(path, pool);
+
+  full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
+                            pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
-  SVN_CMD_ERR(svn_fs_get_lock_from_path(&l, b->fs, path, pool));
+  SVN_CMD_ERR(svn_fs_get_lock_from_path(&l, b->fs, full_path, pool));
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(w((!", "success"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   if (l)
     SVN_ERR(write_lock(conn, pool, l));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)))"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   return SVN_NO_ERROR;
 }
@@ -1257,6 +1264,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   const char *path;
+  const char *full_path;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
   const void *key;
@@ -1264,20 +1272,22 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_lock_t *l;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
-  path = svn_path_canonicalize(path, pool);
+
+  full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
+                            pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   
-  SVN_CMD_ERR(svn_fs_get_locks(&locks, b->fs, path, pool));
+  SVN_CMD_ERR(svn_fs_get_locks(&locks, b->fs, full_path, pool));
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(w((!", "success"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &key, NULL, &val);
       l = val;
       SVN_ERR(write_lock(conn, pool, l));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
 
   return SVN_NO_ERROR;
 }
