@@ -189,9 +189,15 @@ svn_error_t *svn_repos_recover (const char *path, apr_pool_t *pool);
  *
  * If @a nonblocking is TRUE, an error of type EWOULDBLOCK is
  * returned if the lock is not immediately available.
+ *
+ * If @a start_callback is not NULL, it will be called with @a
+ * start_callback_baton as argument before the recovery starts, but
+ * after the exclusive lock has been acquired.
  */
 svn_error_t *svn_repos_recover2 (const char *path,
                                  svn_boolean_t nonblocking,
+                                 svn_error_t *(*start_callback) (void *baton),
+                                 void *start_callback_baton,
                                  apr_pool_t *pool);
 
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),
