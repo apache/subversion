@@ -1635,35 +1635,40 @@ crawl_dir (apr_array_header_t *files,
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.1">
-      <title>Join the Community</title>
+      <title>Únase a la comunidad</title>
       
-      <para>The first step in community participation is to find a way
-        to stay on top of the latest happenings.  To do this most
-        effectively, you will want to subscribe to the main developer
-        discussion list (<email>dev@subversion.tigris.org</email>) and
-        commit mail list (<email>svn@subversion.tigris.org</email>).
-        By following these lists even loosely, you will have access
-        to important design discussions, be able to see actual changes
-        to Subversion source code as they occur, and be able to
-        witness peer reviews of those changes and proposed changes.
-        These email based discussion lists are the primary
-        communication media for Subversion development.  See the
-        Mailing Lists section of the website for other
-        Subversion-related lists you might be interested in.</para>
+      <para>El primer paso para participar en la comunidad es
+        encontrar un modo de estar al día de los últimos
+        eventos. Para hacer esto de la manera más efectiva,
+        querrá apuntarse a la lista principal de discusión de
+        desarrolladores (<email>dev@subversion.tigris.org</email>)
+        y la lista de cambios enviados al servidor
+        (<email>svn@subversion.tigris.org</email>).  Siguiendo estas
+        listas incluso desde lejos, tendrá acceso a importantes
+        discusiones de diseño, será capaz de ver los cambios en
+        el código de Subversion a medida que ocurren, y presenciar
+        revisiones de otras personas de esos cambios y propuestos
+        cambios. Estas listas de discusión basadas en email son
+        el medio de comunicación principal para el desarrollo de
+        Subversion. Vea la sección de listas de correo en la página
+        web para ver otras listas relacionadas con Subversion en
+        las que pueda estar interesado.</para>
 
-      <para>But how do you know what needs to be done?  It is quite
-        common for a programmer to have the greatest intentions of
-        helping out with the development, yet be unable to find a good
-        starting point.  After all, not many folks come to the
-        community having already decided on a particular itch they
-        would like to scratch.  But by watching the developer
-        discussion lists, you might see mentions of existing bugs or
-        feature requests fly by that particularly interest you.  Also,
-        a great place to look for outstanding, unclaimed tasks is the
-        Issue Tracking database on the Subversion website.  There you
-        will find the current list of known bugs and feature requests.
-        If you want to start with something small, look for issues
-        marked as <quote>bite-sized</quote>.</para>
+      <para>¿Pero cómo puede saber qué es lo que debe hacerse? Es
+        bastante habitual para un programador tener la mejor de las
+        intenciones de ayudar con el desarrollo, pero ser incapaz
+        de encontrar un buen punto de partida. Después de todo, no
+        todas las personas vienen a la comunidad habiendo decidido
+        qué detalle en particular quieren modificar.  Pero observando
+        las listas de discusión de los desarrolladores, puede llegar
+        a ver mencionados fallos existentes o peticiones relacionadas
+        con algo que le interese particularmente. También, otro buen
+        lugar para buscar tareas pendientes no asignadas es la base
+        de datos de tareas <!-- Traducción de issue tracking? -->
+        en la página web de Subversion.  Ahí encontrará una
+        lista actualizada de fallos conocidos y peticiones de
+        características. Si quiere comenzar con algo pequeño,
+        busque tareas marcadas con <quote>bite-sized</quote>.</para>
       
     </sect2>
     
