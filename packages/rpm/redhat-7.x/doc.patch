@@ -14,7 +14,7 @@
  
  book-version:
 -	@if $(SVNVERSION) . > /dev/null; then \
- 	echo '<!ENTITY svn.version "Draft Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
+-	echo '<!ENTITY svn.version "Draft Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE).tmp; \
 -	else \
 -	echo '<!ENTITY svn.version "Draft">' > $(BOOK_VERSION_SOURCE).tmp; \
 -	fi
@@ -23,6 +23,7 @@
 -	else \
 -	mv $(BOOK_VERSION_SOURCE).tmp $(BOOK_VERSION_SOURCE); \
 -	fi
++	echo '<!ENTITY svn.version "Draft Revision '`echo $(SVNVERSION)`'">' > $(BOOK_VERSION_SOURCE);
  
  book-html: $(BOOK_HTML_TARGET)
  
