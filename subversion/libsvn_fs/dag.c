@@ -961,6 +961,92 @@ svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
 }
 
 
+
+/* svn_fs__dag_get_contents():
+
+   Right now, we *always* hold an entire node-revision skel in
+   memory.  Someday this routine will evolve to incrementally read
+   large file contents from disk. 
+*/
+
+/* Local typedef for __dag_get_contents */
+typedef struct file_content_baton_t
+{
+  /* Yum, the entre contents of the file in RAM.  This is all
+     allocated in trail->pool (the trail passed to */
+  skel_t *text;
+  
+  /* How many bytes have been read already. */
+  apr_size_t offset;
+
+} file_content_baton_t;
+
+
+/* Helper func of type svn_read_func_t, used to read the CONTENTS
+   stream in __dag_get_contents below. */
+static svn_error_t *
+read_file_contents (void *baton, char *buffer, apr_size_t *len)
+{
+  file_content_baton_t *fbaton = (file_content_baton_t *) baton;
+
+  /* To be perfectly clear... :) */
+  apr_size_t want_len = *len;
+  apr_size_t len_remaining = (fbaton->text->len) - (fbaton->offset);
+  apr_size_t min_len = want_len <= len_remaining ? want_len : len_remaining;
+
+  /* Sanity check */
+  if (! fbaton->text->is_atom)
+    abort();
+
+  memcpy (buffer, (fbaton->text->data + fbaton->offset), min_len);
+  fbaton->offset += min_len;
+  *len = min_len;
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
+                                       dag_node_t *file,
+                                       trail_t *trail)
+{ 
+  skel_t *node_rev;
+  file_content_baton_t *baton;
+
+  /* Make sure our node is a file. */
+  if (! svn_fs__dag_is_file (file))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+       "Attempted to get textual contents of a *non*-file node.");
+  
+  /* Build a read baton in trail->pool. */
+  baton = apr_pcalloc (trail->pool, sizeof(*baton));
+  baton->offset = 0;
+
+  /* Go get a fresh node-revision for FILE. */
+  SVN_ERR (get_node_revision (&node_rev, file, trail));
+  
+  /* This node-rev *might* be allocated in node's pool, or it *might*
+     be allocated in trail's pool, depending on mutability.  However,
+     because this routine promises to allocate the stream in trail's
+     pool, the only *safe* thing to do is dup the skel there. */
+  baton->text = svn_fs__copy_skel (node_rev->children->next, trail->pool);
+
+  /* Create a stream object in trail->pool, and make it use our read
+     func and baton. */
+  *contents = svn_stream_create (baton, trail->pool);
+  svn_stream_set_read (*contents, read_file_contents);
+
+  /* Note that we're not registering any `close' func, because there's
+     nothing to cleanup outside of our trail.  When the trail is
+     freed, the stream/baton will be too. */ 
+
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 svn_fs__dag_set_contents (dag_node_t *file,
                           svn_string_t *contents,
