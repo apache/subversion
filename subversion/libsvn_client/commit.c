@@ -295,18 +295,19 @@ import_dir (const svn_delta_editor_t *editor,
 
   /* Check that the loop exited cleanly. */
   if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
-    return svn_error_createf
-      (err->apr_err, err,
-       "error during import of '%s'", path);
-
+    {
+      return svn_error_createf
+        (err->apr_err, err, "error during import of '%s'", path);
+    }
   /* Yes, it exited cleanly, so close the dir. */
-  else if ((apr_err = apr_dir_close (dir)))
-    return svn_error_createf
-      (apr_err, NULL, "error closing dir '%s'", path);
+  else
+    {
+      svn_error_clear (err);
+      if ((apr_err = apr_dir_close (dir)))
+        return svn_error_createf
+          (apr_err, NULL, "error closing dir '%s'", path);
+    }
 
-  /* We're not going to use this error, so clear it. */
-  svn_error_clear (err);
-      
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
