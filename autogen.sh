@@ -6,10 +6,10 @@
 if [ ! -d apr ]; then
   echo "You don't have an apr/ subdirectory here.  Please get one:"
   echo ""
-  echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvs login"
+  echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login"
   echo "      (password 'anoncvs')"
   echo ""
-  echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvs co apr"
+  echo "   cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr"
   echo ""
   echo "Run that right here in the top-level of the Subversion tree."
   echo ""
