@@ -45,7 +45,7 @@ svn_cl__propedit (apr_getopt_t *os,
 
   /* Validate the input and get the property's name (and a UTF-8
      version of that name). */
-  SVN_ERR (svn_cl__parse_num_args (&args, os, opt_state, "propedit", 1, pool));
+  SVN_ERR (svn_cl__parse_num_args (&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
   SVN_ERR (svn_utf_cstring_to_utf8 (pname, &pname_utf8, pool));
 

@@ -81,7 +81,7 @@ svn_cl__help (apr_getopt_t *os,
   int i;
 
   if (os)
-    SVN_ERR (svn_cl__parse_all_args (&targets, os, opt_state, "help", pool));
+    SVN_ERR (svn_cl__parse_all_args (&targets, os, pool));
 
   if (targets && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)

@@ -46,7 +46,7 @@ svn_cl__propget (apr_getopt_t *os,
 
   /* PNAME is first argument (and PNAME_UTF8 will be a UTF-8 version
      thereof) */
-  SVN_ERR (svn_cl__parse_num_args (&args, os, opt_state, "propget", 1, pool));
+  SVN_ERR (svn_cl__parse_num_args (&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
   SVN_ERR (svn_utf_cstring_to_utf8 (pname, &pname_utf8, pool));
   is_svn_prop = svn_prop_is_svn_prop (pname_utf8);
