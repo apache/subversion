@@ -17,17 +17,6 @@ folded in if some other change warrants a resoak, but will be moved to
 
 Candidate changes:
 
-  * r10994 (fixes issue #2054)
-    Fix FSFS history code in the presence of multiple copies along a
-    path within the same rev.
-    Justification:
-     Small, safe change.
-    Notes:
-     Not worth a resoak on its own.
-    Votes:
-      +1: ghudson, kfogel, maxb, breser
-
-
   * r10560
     Sync with APR 1.0 find_apr.m4 and find_apu.m4 files.
     Justification:
