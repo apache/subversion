@@ -240,6 +240,25 @@ void svn_handle_error (svn_error_t *error, FILE *stream);
 void svn_handle_warning (void *data, char *fmt, ...);
 
 
+/* A statement macro for checking error return values.
+   Evaluate EXPR.  If it yields an error, return that error from the
+   current function.  Otherwise, continue.
+
+   The `do { ... } while (0)' wrapper has no semantic effect, but it
+   makes this macro syntactically equivalent to the expression
+   statement it resembles.  Without it, statements like
+
+     if (a)
+       SVN_ERR (some operation);
+     else
+       foo;
+
+   would not mean what they appear to.  */
+
+#define SVN_ERR(expr) \
+  do { svn_error_t *svn_err = (expr); if (svn_err) return svn_err; } while (0)
+
+
 #endif   /* SVN_ERROR_H */
 
 
