@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.17 $ of this document.)
+              ($Revision: 1.18 $ of this document.)
 
 * Introduction
 
@@ -198,7 +198,7 @@ do the diff and send it back.  But that's for the future.
 
 ** The basic repository structure
 
-[This design is drawn from Jim Blandy's "Subversion" spec, with a few
+[This design is drawn from Jim Blandy's "Subversion" spec, with minor
 optimizations from Ben and Karl.]
 
 Suppose we have a new project, at version 1, looking like this (pardon
@@ -224,10 +224,9 @@ In the diagrams that follow, lines with arrowheads represent backward
 time-flow (that is, the regression of versions), and any other lines
 represent parent-to-child connections in a directory hierarchy.  Boxes
 are "nodes".  A node is either a file or a directory -- a letter in
-the upper left indicates which kind, and next to the letter is the
-node's name.  The name is printed just as a reminder in these
-diagrams; in actual implementation, a node's name would probably only
-be stored in its parent, not in the node itself.
+the upper left indicates which kind.  A node's name is stored in the
+node's parent, not in the node itself, for reasons that will become
+obvious.
 
 A file node has a byte-string for its content, whereas directory nodes
 have a list of dir_entries, eaching pointing to another node.
@@ -243,11 +242,11 @@ the project:
 
                     (<--- myproj's version array ---> )
        ______________________________________________________
-      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+      |___1_______2________3________4________5_________6_____---->
           |
           |
        ___|_____
-      |D myproj |
+      |D        |
       |         |
       |   A     |                 /* Two dir_entries, `A' and `B'. */
       |    \    |
@@ -257,28 +256,28 @@ the project:
        |       \
        |        \
     ___|____     \ ________
-   |D  B    |     |D  A    |
+   |D       |     |D       |
    |        |     |        |
-   |  subB  |     | subA   |      /* One dir_entry, `subA'. */
+   |        |     | subA   |      /* One dir_entry, `subA'. */
    |________|     |___\____|
                        \
                         \
                       ___\____
-                     |D subA  |
+                     |D       |
                      |        |
                      | fish   |   /* One dir_entry, `fish'. */
                      |___\____|
                           \
                            \
                          ___\____
-                        |D fish  |
+                        |D       |
                         |        |
                         | foo    |  /* One dir_entry, `foo'. */
                         |___\____|
                              \
                               \
                             ___\____
-                           |F foo   |
+                           |F       |
                            |        |
                            |        |   /* (Contents of foo not shown.) */
                            |________|
@@ -299,15 +298,14 @@ diff program that can handle binary data!)
 
 The new node is not connected to anything yet, it's just hanging out
 there in space:
-
                          ________
                         |F       |
-                        | foo    |
+                        |        |
                         |        |
                         |________|
 
-It doesn't even say what version it belongs to; we'll get to that in a
-moment.
+It doesn't even know what version it belongs to; we'll get to that in
+a moment.
 
 Next, link the new node into the tree, where the previous node was,
 and create a "cross-link" (I forgot to tell you, nodes have a
@@ -320,11 +318,11 @@ node:
                 the file `foo').
 
        ______________________________________________________
-      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+      |___1_______2________3________4________5_________6_____---->
           |
           |
        ___|_____
-      |D myproj |
+      |D        |
       |         |
       |   A     |
       |    \    |
@@ -334,28 +332,28 @@ node:
        |       \
        |        \
     ___|____     \ ________
-   |D  B    |     |D  A    |
-   |        |     |        |
-   |  subB  |     | subA   |
-   |________|     |___\____|
-                       \
-                        \
-                      ___\____
-                     |D subA  |
-                     |        |
-                     | fish   |
-                     |___\____|
-                          \
-                           \
-                         ___\____
-                        |D fish  |
-                        |        |
-                        | foo    |
-                        |___\____|
-                             \
-                              \
+   |D       |     |D       |
+   |        |     |        |                         
+   |        |     | subA   |                         
+   |________|     |___\____|                         
+                       \                             
+                        \                            
+                      ___\____                       
+                     |D       |                      
+                     |        |                      
+                     | fish   |                      
+                     |___\____|                      
+                          \                          
+                           \                         
+                         ___\____                    
+                        |D       |                   
+                        |        |                   
+                        | foo    |                   
+                        |___\____|                   
+                             \                       
+                              \                      
                             ___\____            ________
-                           |F foo   |          |F foo   |
+                           |F       |          |F       |
                            |        |          |        |
                            |  (1)------------->|        |
                            |        |          |        |
@@ -376,15 +374,14 @@ new version at the top of the repository, thus making it externally
 visible.  That's done by making entry 2 in the version array point to
 something:
 
-
       Figure 3: The `myproj' repository, after commit of version 2. 
 
        ______________________________________________________
-      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
+      |___1_______2________3________4________5_________6_____---->
           |       |
           |      /
        ___|_____/
-      |D myproj |
+      |D        |
       |         |
       |   A     |
       |    \    |
@@ -394,28 +391,28 @@ something:
        |       \
        |        \
     ___|____     \ ________
-   |D  B    |     |D  A    |
+   |D       |     |D       |
    |        |     |        |
-   |  subB  |     | subA   |
+   |        |     | subA   |
    |________|     |___\____|
                        \
                         \
                       ___\____
-                     |D subA  |
+                     |D       |
                      |        |
                      | fish   |
                      |___\____|
-                          \
-                           \
-                         ___\____
-                        |D fish  |
-                        |        |
-                        | foo    |
-                        |___\____|
-                             \
-                              \
+                          \ 
+                           \                         
+                         ___\____                    
+                        |D       |                   
+                        |        |                   
+                        | foo    |                   
+                        |___\____|                   
+                             \                       
+                              \                      
                             ___\____            ________
-                           |F foo   |          |F foo   |
+                           |F       |          |F       |
                            |        |          |        |
                            |  (1)------------->|        |
                            |        |          |        |
@@ -426,14 +423,14 @@ something:
 
 Version 2 points to exactly the same root node as version 1, because
 that directory hasn't changed at all.  Nor has its child, nor has
-anything until you get all the way down to foo.
+anything until you get all the way down to foo.      
 
 That's why nodes don't store version numbers -- the exact same node
-may appear in many different versions.
+may appear in many different versions.               
 
-Here's how to retrieve foo:N, in general:
+Here's how to retrieve foo:N, in general:            
 
-   1. Go to the version table, find version N.
+   1. Go to the version table, find version N.       
 
    2. Walk down the tree in the obvious way, starting from the root
       node N points to.  As you walk, anytime you get to a node with a
@@ -441,22 +438,22 @@ Here's how to retrieve foo:N, in general:
       (Follow this rule even when you get to a node for `foo'.)
 
    3. When you have nowhere else to go, this is the droid you're
-      looking for.
+      looking for.                                   
 
 Now watch what happens when we add a new file `bar' into `fish'
 (i.e., bar will be a sibling of `foo').  Here's the new tree, the
-intermediate steps not being shown:
+intermediate steps not being shown:                  
 
       Figure 4: The `myproj' repository, after commit of version 3
                 (the addition of a sibling to `fish/foo').
 
        ______________________________________________________
-      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
-          |       |       /
-          |      /       /
-       ___|_____/       /
-      |D myproj |______/
-      |         |
+      |___1_______2________3________4________5_________6_____---->
+          |       |       /                          
+          |      /       /                           
+       ___|_____/       /                            
+      |D        |______/                             
+      |         |                                    
       |   A     |
       |    \    |
       |   B \   | 
@@ -465,35 +462,35 @@ intermediate steps not being shown:
        |       \
        |        \
     ___|____     \ ________
-   |D  B    |     |D  A    |
+   |D       |     |D       |
    |        |     |        |
-   |  subB  |     | subA   |
+   |        |     | subA   |
    |________|     |___\____|
                        \
                         \
                       ___\____
-                     |D subA  |
+                     |D       |
                      |        |
                      | fish   |
                      |___\____|
-                          \
+                          \ 
                            \
                          ___\____        ________
-                        |D fish  |      |D fish  |
+                        |D       |      |D       |
                         |        |      |        |
                         |  (2)--------->|        |
                         |        |      |  foo   |
                         |        |      |___/____|
-                        |        |         /    ________
-                        |        |        /    |F  bar  |
-                        | bar -----------/-----|        |
-                        |        |      /      |        |
-                        | foo    |     /       |        |
-                        |___\____|    /        |________|
+       ________         |        |         /
+      |F       |        |        |        /
+      |        |----------bar    |       /
+      |        |        |        |      /
+      |________|        | foo    |     /
+                        |___\____|    /
                              \       /
                               \     /
                              __\___/_            ________
-                            |F  foo  |          |F  foo  |
+                            |F       |          |F       |
                             |        |          |        |
                             |  (1)------------->|        |
                             |        |          |        |
@@ -504,11 +501,11 @@ intermediate steps not being shown:
 
 Trace various retrievals in the above structure, and you will see that
 
-   + fish:2 and fish:1 are the same node, which they should be.
+   + fish:2 and fish:1 are the same node, as they should be.
 
    + But fish:3 is different from them, which is also as it should be.
 
-   + foo:3 and foo:2 are the same node, which they should be.
+   + foo:3 and foo:2 are the same node, as they should be.
 
    + But foo:1 is different from them, which is also as it should be.
 
@@ -520,29 +517,29 @@ Whether fish:2 is stored as some sort of diff from fish:3 is an
 implementation detail.  We could do it that way, but it may not be
 necessary, since new directory nodes would only be created when a new
 file or directory is added to the project, or a name is changed.  Most
-commits tend to be edits to existing files.
+commits tend to be edits to existing files.       
 
-Just to drive the point mercilessly home, and explore the theoretical
-limits of ASCII diagrams, here is myproj:4 (a commit which added a
-README to the project's top level directory):
+Just to drive the point mercilessly home, and to explore the
+theoretical limits of ASCII diagrams, here is myproj:4, in which a
+README was added to the project's top level directory:
 
       Figure 5: The `myproj' repository, with new top-level README:
 
        ______________________________________________________
-      |__ 1 _____ 2 ______ 3 ______ 4 ______ 5 _______ 6 ____---->
-          |      /       /         /
-          |     /       /         /
+      |___1_______2________3________4________5_________6_____---->
+          |      /       /         /              
+          |     /       /         /               
       ____|____/       /         /               _________
-     |D myproj |______/         /               |D myproj |
+     |D        |______/         /               |D        |
      |         |               /                |         |
      |   (3)------------------/---------------->|         |
      |         |             /             _____|__ B     |
-     | README  |____________/             /     |         |
-     |      |  |                         /      |   A     |
+     | README  |            /             /     |         |
+     |      |  |___________/             /      |   A     |
      |   B  |  |            ____________/       |___|_____|
      |  /   |__|_________  /                        |
      | /  A    |         \/       _________         |
-     |_|___\___|         /\      |F README |        |
+     |_|___\___|         /\      |F        |        |
        |    \_______    /  \_____|         |        |
        |            |  /         |         |        |
        |            | /          |         |        |
@@ -553,49 +550,101 @@ README to the project's top level directory):
        |  |         |                               |
        |  |         |                               |
     ___|__|_       _|______                         |
-   |D  B    |     |D  A    |                        |
+   |D       |     |D       |                        |
    |        |     |        |________________________|
-   |  subB  |     | subA   |
+   |        |     | subA   |
    |________|     |___\____|
                        \
                         \
                       ___\____
-                     |D subA  |
+                     |D       |
                      |        |
                      | fish   |
                      |___\____|
                           \
                            \
                          ___\____        ________
-                        |D fish  |      |D fish  |
+                        |D       |      |D       |
                         |        |      |        |
                         |  (2)--------->|        |
                         |        |      |  foo   |
                         |        |      |___/____|
-                        |        |         /    ________
-                        |        |        /    |F  bar  |
-                        | bar -----------/-----|        |
-                        |        |      /      |        |
-                        | foo    |     /       |        |
-                        |___\____|    /        |________|
+       ________         |        |         /
+      |F       |        |        |        /
+      |        |----------bar    |       /
+      |        |        |        |      /
+      |________|        | foo    |     /
+                        |___\____|    /
                              \       /
                               \     /
                              __\___/_            ________
-                            |F  foo  |          |F  foo  |
+                            |F       |          |F       |
                             |        |          |        |
                             |  (1)------------->|        |
                             |        |          |        |
                             | full   |          | diffy  |
                             |contents|          |contents|
                             |________|          |________|
+     
+     
+There, wasn't that pretty?  I knew you would.          
 
 
-** How branches work in this design
+** How renames work
+
+Exactly how you think they do.
+
+To rename an entity, you make a new node for its parent directory.  In
+this new node, the entity's dir_entry has the new name, but still
+points to the same node as the old dir_entry.  That's why a name is
+stored in the parent, not in the thing being named.
+
+** How copies (tags and branches) work
+
+Branches and tags are both implemented in terms of "copies".  Copying
+a project is constant-time and constant-space -- you just make a new
+name that points back to the original project.  All copies are
+automatically tags; and once you start committing on a copy, it
+becomes a branch as well.
+
+The big principle to keep in mind with branches is that they *never*
+affect the original project -- that project's data structure remains
+untouched, it does not even know there's a branch attached to it.  As
+you'll see below, this forces us to do a little more node duplication
+than some other schemes might, but it wins overall because it allows
+users to tag and branch projects to which they don't have write
+access.  (Try *that* with CVS!)
+
+Let's make a copy of myproj, called `herproj', based at version 5
+(that happens to be the most recent version, but of course a branch
+might sprout off any version in myproj's history):
+
+            ______________________________________________________
+  herproj  |___5_______6________7________8________9_________10____---->
+
+[In progress fooo]
+
+            ______________________________________________________
+  myproj   |___1_______2________3________4________5_________6_____---->
+
+
 
   [Still writing this up, although we know how it works.  The basic
   thing to note is how tags are totally constant space, but once you
   start committing on a tag it becomes a branch and line-of-ancestry
   copying is forced.] 
+
+
+** How is meta-data stored
+
+Each node has a property list (key->value, key->value).  Among the
+things we can store in the property list are file permissions, data
+type override (text, binary, whatever), whether or not to do
+platform-specific line-end conversions, etc.
+
+It might be good to have two plists, actually: `inv_props', and
+`user_props'.  Inversion only uses the ones in inv_props, and promises
+a "store-and-ignore" policy for user_props.
 
 ** Other miscellaneous design goals
 
@@ -643,6 +692,10 @@ most things can be done with just 1.
 
 *** Minimize database turnarounds
 
+[Note: we're no longer sure there will even be a database, but the
+concerns below apply to whatever static block of sludge the repository
+data is stored in, be it Oracle, Berkeley DBM, or flat files on disk.]
+
 We need to make sure that traversing tree structures does not require
 N separate database accesses, where N is proportional to the depth or
 breadth of the traversal.  For example, if retrieving an old version
@@ -680,91 +733,92 @@ anything, then remove it -- it's not helpful if it only demonstrates
 the ease of implementing that operation well.  Currently this list is
 a brain dump; there's no reason it can't be shortened.)
 
-*** Commit from an up-to-date wcopy
+  + Commit from an up-to-date wcopy
 
-*** Commit from non-up-to-date wcopy, with the modified files not-up-to-date
+  + Commit from non-up-to-date wcopy, with the modified files not-up-to-date
 
-*** Commit from non-up-to-date wcopy, with the modified files up-to-date
+  + Commit from non-up-to-date wcopy, with the modified files up-to-date
 
-*** Updating to most recent version(s), with no conflicts
+  + Updating to most recent version(s), with no conflicts
 
-*** Updating to most recent version(s), with conflicts
+  + Updating to most recent version(s), with conflicts
 
-*** Party A commits while Party B's commit is in progress, but no conflicts
+  + Party A commits while Party B's commit is in progress, but no conflicts
 
-In this context, "conflicts" means the same entities were changed,
-even if the changes are non-overlapping.
+    In this context, "conflicts" means the same entities were changed,
+    even if the changes are non-overlapping.
 
-*** Party A commits while Party B's commit is in progress, with conflicts
+  + Party A commits while Party B's commit is in progress, with conflicts
 
-In this context, "conflicts" means the same entities were changed,
-even if the changes are non-overlapping.
+    In this context, "conflicts" means the same entities were changed,
+    even if the changes are non-overlapping.
 
-Conflicts can mean changing the same file, or adding the same file, or
-one person modifying it while the other wants to delete it, or
-whatever.  (I don't think it will matter in the end, as the
-implementation is mainly concerned with the idea that someone wants to
-do something with a non-up-to-date file).
+    Conflicts can mean changing the same file, or adding the same
+    file, or one person modifying it while the other wants to delete
+    it, or whatever.  (I don't think it will matter in the end, as the
+    implementation is mainly concerned with the idea that someone
+    wants to do something with a non-up-to-date file).
 
-*** Add a new entity (directory or file)
+  + Add a new entity (directory or file)
 
-*** Add a new entity (directory or file) from a non-up-to-date wcopy
+  + Add a new entity (directory or file) from a non-up-to-date wcopy
 
-Both with current directory up-to-date, and not.  (First determine
-what desired behavior is!)
+    Both with current directory up-to-date, and not.  (First determine
+    what desired behavior is!)
 
-*** Rename an entity
+  + Rename an entity
 
-*** Retrieve an old version of an entity that has been renamed
+  + Retrieve an old version of an entity that has been renamed
 
-*** Remove an entity
+  + Remove an entity
 
-*** Resurrect an entity
+  + Resurrect an entity
 
-*** Move an entity to a new directory (may be different from rename)
+  + Move an entity to a new directory (may be different from rename)
 
-*** Diff two particular versions of a file
+  + Diff two particular versions of a file
 
-*** Diff a working (uncommitted) version against an old version of a file
+  + Diff a working (uncommitted) version against an old version of a file
 
-*** Retrieve version X of a file
+  + Retrieve version X of a file
 
-*** Retrieve version X of a directory tree 
+  + Retrieve version X of a directory tree 
 
-*** Show annotations of both modified and old versions of files.
+  + Show annotations of both modified and old versions of files.
 
-(Golly, we need some word other than "annotations".  To me it implies
-that one has added log messages to individual lines, or something like
-that, not that CVS is showing you who did what and when.)
+    (Golly, we need some word other than "annotations".  To me it
+    implies that one has added log messages to individual lines, or
+    something like that, not that CVS is showing you who did what and
+    when.)
 
-*** Show annotations of a directory, similarly.
+  + Show annotations of a directory, similarly.
 
-Who created the file, and who last committed to it.
+    Who created the file, and who last committed to it.
 
-Should this be a wish-list item, though?  CVS doesn't do it, but then
-again, CVS doesn't do directories either...
+    Should this be a wish-list item, though?  CVS doesn't do it, but
+    then again, CVS doesn't do directories either...
 
-*** Make a branch
+  + Make a branch
 
-*** Make a tag (same as making a branch, in all proposed designs)
+  + Make a tag (same as making a branch, in all proposed designs)
 
-*** Merge a branch into trunk
+  + Merge a branch into trunk
 
-Not talking about the user interface to branch merging, here, but
-rather internal implementation: how the system discovers what is the
-same vs what needs merging, what conflicts, etc.
+    Not talking about the user interface to branch merging, here, but
+    rather internal implementation: how the system discovers what is
+    the same vs what needs merging, what conflicts, etc.
 
-*** Merge a branch into trunk again
+  + Merge a branch into trunk again
 
-*** Merge a branch into another branch
+  + Merge a branch into another branch
 
-Is this fundamentally different from merging into trunk?  Is the trunk
-"special" in any way, implementation-wise, or is it just the first
-branch?
+    Is this fundamentally different from merging into trunk?  Is the
+    trunk "special" in any way, implementation-wise, or is it just the
+    first branch?
 
-*** Change a previously committed log message
+  + Change a previously committed log message
 
-*** more to come...
+  + more to come...
 
 
 * Meta-implementation
