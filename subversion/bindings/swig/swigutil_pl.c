@@ -1152,7 +1152,7 @@ void svn_swig_pl_status_func(void *baton,
 
 /* Thunked version of svn_client_blame_receiver_t callback type. */
 svn_error_t *svn_swig_pl_blame_func (void *baton,
-		                     apr_off_t line_no,
+		                     apr_int64_t line_no,
 				     svn_revnum_t revision,
 				     const char *author,
 				     const char *date,
@@ -1163,7 +1163,7 @@ svn_error_t *svn_swig_pl_blame_func (void *baton,
     svn_error_t *ret_val = SVN_NO_ERROR;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
  
-    svn_swig_pl_callback_thunk (CALL_SV, baton, &result, "UlsssS",
+    svn_swig_pl_callback_thunk (CALL_SV, baton, &result, "LlsssS",
 		                line_no, revision, author, date, line,
 				pool, poolinfo);
 

@@ -327,7 +327,7 @@ typedef svn_error_t *
  */
 typedef svn_error_t *
 (*svn_client_blame_receiver_t) (void *baton,
-                                apr_off_t line_no,
+                                apr_int64_t line_no,
                                 svn_revnum_t revision,
                                 const char *author,
                                 const char *date,

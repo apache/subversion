@@ -282,28 +282,25 @@ $current_rev++;
 is($ci_import->revision,$current_rev,
    "commit info revision equals $current_rev");
 
-SKIP: {
-    skip 'Blame API is broken with perl on 32-bit archs', 7;
-    is($ctx->blame("$reposurl/foo",'HEAD','HEAD', sub {
-                                                  my ($line_no,$rev,$author,
-                                                      $date, $line,$pool) = @_;
-                                                  is($line_no,0,
-                                                     'line_no param is zero');
-                                                  is($rev,$current_rev,
-                                                   'rev param is current rev');
-                                                  is($author,$username,
-                                                   'author param is expected' .
-                                                   'value');
-                                                  ok($date,'date is defined');
-                                                  is($line,'foobar',
-                                                     'line is expected value');
-                                                  isa_ok($pool,'_p_apr_pool_t',
-                                                         'pool param is ' .
-                                                         '_p_apr_pool_t');
-                                                }),
+is($ctx->blame("$reposurl/foo",'HEAD','HEAD', sub {
+                                              my ($line_no,$rev,$author,
+                                                  $date, $line,$pool) = @_;
+                                              is($line_no,0,
+                                                 'line_no param is zero');
+                                              is($rev,$current_rev,
+                                                 'rev param is current rev');
+                                              is($author,$username,
+                                                 'author param is expected' .
+                                                 'value');
+                                              ok($date,'date is defined');
+                                              is($line,'foobar',
+                                                 'line is expected value');
+                                              isa_ok($pool,'_p_apr_pool_t',
+                                                     'pool param is ' .
+                                                     '_p_apr_pool_t');
+                                            }),
    undef,
    'blame returns undef');
-}
 
 ok(open(CAT, "+>$testpath/cattest"),'open file for cat ouput');
 is($ctx->cat(\*CAT, "$reposurl/foo", 'HEAD'),undef,
