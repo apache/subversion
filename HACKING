@@ -29,6 +29,7 @@ TABLE OF CONTENTS
    * Commit access
    * The Configuration/Build System Under Unix
    * How to create a distribution tarball
+   * Release numbering
 
 
 
@@ -874,3 +875,11 @@ Pretty simple -- do this under Unix:
 These guidelines may get stricter when we have a real user base; for
 now, a distribution is just a bootstrap mechanism to obtain a working
 copy.
+
+
+
+Release numbering
+=================
+
+Please see http://apr.apache.org/versioning.html -- Subversion uses
+the same guidelines.
