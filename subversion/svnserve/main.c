@@ -97,7 +97,7 @@ static void usage(const char *progname)
   if (!progname)
     progname = "svnserve";
 
-  fprintf (stderr, "Type '%s --help' for usage.\n", progname);
+  fprintf(stderr, "Type '%s --help' for usage.\n", progname);
   exit(1);
 }
 
@@ -105,16 +105,16 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  puts ("Usage: svnserve [options]\n"
-        "\n"
-        "Valid options:");
+  puts("Usage: svnserve [options]\n"
+       "\n"
+       "Valid options:");
   for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
     {
       const char *optstr;
-      svn_opt_format_option (&optstr, svnserve__options + i, TRUE, pool);
-      fprintf (stdout, "  %s\n", optstr);
+      svn_opt_format_option(&optstr, svnserve__options + i, TRUE, pool);
+      fprintf(stdout, "  %s\n", optstr);
     }
-  fprintf (stdout, "\n");
+  fprintf(stdout, "\n");
   exit(1);
 }
 
@@ -188,7 +188,7 @@ int main(int argc, const char *const *argv)
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
 
   /* Initialize the app. */
-  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */
@@ -198,7 +198,7 @@ int main(int argc, const char *const *argv)
 
   while (1)
     {
-      status = apr_getopt_long (os, svnserve__options, &opt, &arg);
+      status = apr_getopt_long(os, svnserve__options, &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
