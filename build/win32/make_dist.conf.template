@@ -1,0 +1,10 @@
+[DEFAULT]
+aprrel = Release
+svnrel = Release
+bdbver = 42
+
+[tools]
+doxygen = doxygen.exe
+nmake = C:/Software/Microsoft Visual Studio/VC98/Bin/NMAKE.EXE
+jar = C:/Software/j2sdk1.4.2/bin/jar.exe
+zip = zip.exe
