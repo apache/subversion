@@ -29,7 +29,7 @@
 
 //DO YOU WANT TO DEBUG THIS CODE?
 //JUST UNCOMMENT THE FOLLOWING LINE
-#define SVN_JNI_DATE__DEBUG
+//#define SVN_JNI_DATE__DEBUG
 
 jobject 
 date__create(JNIEnv *env, jboolean *hasException, jlong time)
