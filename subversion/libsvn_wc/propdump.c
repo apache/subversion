@@ -155,7 +155,7 @@ num_into_string (char *buf, int num, int base)
 
     /* Ascii numerology. */
     if (i > 9)
-      i += (('A' - '9') - 1);
+      i += ('A' - ('9' + 1));
 
     *p++ = '0' + i;   /* '0' + num  ==>  ascii value of num */
     num /= base;
