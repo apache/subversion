@@ -567,8 +567,8 @@ while (defined (my $load_dir = &get_next_load_dir))
                 my $source_path = $_;
                 my $dest_path   = "$wc_import_dir_cwd/$_";
 
-                my $source_type = &file_type($source_path);
-                my $dest_type   = &file_type($dest_path);
+                my ($source_type) = &file_info($source_path);
+                my ($dest_type)   = &file_info($dest_path);
 
                 # Fail if the destination type exists but is of a
                 # different type of file than the source type.
@@ -873,8 +873,8 @@ while (defined (my $load_dir = &get_next_load_dir))
         my $source_path = $_;
         my $dest_path   = "$wc_import_dir_cwd/$_";
 
-        my $source_type = &file_type($source_path);
-        my $dest_type   = &file_type($dest_path);
+        my ($source_type, $source_is_exe) = &file_info($source_path);
+        my ($dest_type)                   = &file_info($dest_path);
 
         return if ($source_type ne 'd' and $source_type ne 'f');
 
@@ -964,6 +964,17 @@ while (defined (my $load_dir = &get_next_load_dir))
                     last if $property->{control} eq 'break';
                   }
               }
+          }
+
+        # Add svn:executable to files that have their executable bit
+        # set.
+        if ($source_is_exe)
+          {
+            print "Adding to '$source_path' property 'svn:executable' with ",
+                  "value ''.\n";
+            my $property = {name => 'svn:executable', value => ''};
+            push (@{$add_files{$source_path}{properties}},
+                  $property);
           }
 
         # Now make sure the file or directory in the source directory
@@ -1356,16 +1367,20 @@ sub get_tag_dir
   $load_tag;
 }
 
-sub file_type
+# Return a two element array.  The first element is a single character
+# that represents the type of object the path points to.  The second
+# is a boolean (1 for true, '' for false) if the path points to a file
+# and if the file is executable.
+sub file_info
 {
-  lstat(shift) or return '0';
-  -b _ and return 'b';
-  -c _ and return 'c';
-  -d _ and return 'd';
-  -f _ and return 'f';
-  -l _ and return 'l';
-  -p _ and return 'p';
-  -S _ and return 'S';
+  lstat(shift) or return ('0', '');
+  -b _ and return ('b', '');
+  -c _ and return ('c', '');
+  -d _ and return ('d', '');
+  -f _ and return ('f', -x _);
+  -l _ and return ('l', '');
+  -p _ and return ('p', '');
+  -S _ and return ('S', '');
   return '?';
 }
 
@@ -1467,9 +1482,9 @@ sub recursive_ls_and_hash
     {
       s#^\./##;
       return if $_ eq '.';
-      my $file_type = &file_type($_);
+      my ($file_type) = &file_info($_);
       my $file_digest;
-      if ($file_type eq 'f' or (stat($_) and -f _))
+      if ($file_type eq 'f' or ($file_type eq 'l' and stat($_) and -f _))
         {
           $file_digest = &digest_hash_file($_);
         }
