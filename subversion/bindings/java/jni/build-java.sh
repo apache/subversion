@@ -20,6 +20,3 @@ javah -o tests/nativewrapper.h NativeWrapper
 # third step: give some extra information
 echo "to run the tests, start them with:"
 echo "run-tests.sh"
-
-
-
