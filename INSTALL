@@ -26,10 +26,25 @@ then you must reverse the order of the "make check" and "make install"
 steps, because the shared libraries must be installed before "make
 check" will work.
 
+Note that if you commonly build with the -jN option to make, the make step
+above may fail, because we don't ensure that third party libraries in our
+source tree will finish building before subversion itself.  If you want
+to use -jN, use the following instead:
+
+   $ ./configure --enable-maintainer-mode --disable-shared
+   $ make -jN external-all
+   $ make -jN local-all
+   $ make check
+   # make install
+
 
 PREREQUISITES:
 
 1. Berkeley DB 3.3.11
+
+   Berkely DB is needed to build a Subversion server.  If you are only 
+   interested in building a Subversion client, you don't need it.  If
+   you wish to build a server, read the rest of this section.
 
    You'll need Berkeley DB 3.3.11 or higher installed on your system.
    You can get it from:
