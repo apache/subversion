@@ -129,12 +129,14 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
-    "usage: svn checkout REPOS_URL [DESTINATION]\n"
+    "usage: svn checkout REPOS_URL [REPOS_URL...] [DESTINATION]\n"
     "  Note: If DESTINATION is omitted, the basename of the REPOS_URL will\n"
-    "  be used as the destination.\n",
+    "  be used as the destination. If multiple URLs are given each will be\n"
+    "  checked out into a sub-directory of DESTINATION, with the name of the\n"
+    "  sub-directory being the basename of the URL.\n",
     {'r', 'D', 'q', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__xml_file_opt, svn_cl__force_opt }  },
+     svn_cl__xml_file_opt }  },
 
   { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"

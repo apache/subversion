@@ -28,51 +28,33 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "cl.h"
 
 
 /*** Code. ***/
 
-/* FITZ's WISHLIST : A WORD ABOUT CHECKOUT
+/* 
+  This is what it does
 
-   This only works for one repo checkout at a shot.  In CVS, when we
-   checkout one project and give it a destination directory, it dumps
-   it in the directory. If you check out more than one, it dumps each
-   project into its own directory *inside* the one that you specified
-   with the -d flag. So, for example, we have project A:
+  - case 1: one URL
+    $ svn co http://host/repos/module
+    checkout into ./module/
+  
+  - case 2: one URL and explicit path
+    $ svn co http://host/repos/module path
+    checkout into ./path/
+  
+  - case 3: multiple URLs
+    $ svn co http://host1/repos1/module1 http://host2/repos2/module2
+    checkout into ./module1/ and ./module2/
+  
+  - case 4: multiple URLs and explicit path
+    $ svn co http://host1/repos1/module1 http://host2/repos2/module2 path
+    checkout into ./path/module1/ and ./path/module2/
 
-       A/one_mississippi.txt
-       A/two_mississippi.txt
-       A/three_mississippi.txt
-     
-   And project B:
-
-       B/cat
-       B/dog
-       B/pig
-
-   If I do 'cvs -d :pserver:fitz@subversion.tigris.org:/cvs co -d foo A', 
-   I get the following:
-
-       foo/one_mississippi.txt
-       foo/two_mississippi.txt
-       foo/three_mississippi.txt
-
-   But if I do this 'cvs -d :pserver:fitz@subversion.tigris.org:/cvs
-   co -d foo A B', I get the following:
-
-       foo/A/one_mississippi.txt
-       foo/A/two_mississippi.txt
-       foo/A/three_mississippi.txt
-       foo/B/cat
-       foo/B/dog
-       foo/B/pig
-      
-  Makes sense, right? Right. Note that we have no provision for this
-  right now and we need to support it. My vote is that we stop
-  iterating over targets here and just pass the args into
-  svn_client_checkout and let it decide what to do based on
-  (args->nelts == 1) or (args->nelts > 1). -Fitz */
+  Is this the same as CVS?  Does it matter if it is not?
+*/
 
 
 svn_error_t *
@@ -80,63 +62,80 @@ svn_cl__checkout (apr_getopt_t *os,
                   svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
+  apr_pool_t *subpool;
   svn_client_auth_baton_t *auth_baton;
   apr_array_header_t *targets;
   const char *local_dir;
   const char *repos_url;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
+  int i;
 
   SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
                                          FALSE, pool));
 
   /* If there are no targets at all, then let's just give the user a
      friendly help message, rather than silently exiting.  */
-  if ((targets->nelts < 1) || (targets->nelts > 2))
+  if (targets->nelts < 1)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool,
                              "" /* message is unused */);
-  
-  /* Get the required REPOS_URL, and the optional LOCAL_DIR arguments. */
-  if (targets->nelts == 1)
+
+  /* Add a path if the user only specified URLs */
+  local_dir = ((const char **) (targets->elts))[targets->nelts-1];
+  if (svn_path_is_url (local_dir))
     {
-      repos_url = ((const char **) (targets->elts))[0];
-      local_dir = svn_path_basename (repos_url, pool);
+      if (targets->nelts == 1)
+        local_dir = svn_path_basename (((const char **) (targets->elts))[0],
+                                       pool);
+      else
+        local_dir = ".";
+      (*((const char **) apr_array_push (targets))) = local_dir;
     }
-  else
-    {
-      repos_url = ((const char **) (targets->elts))[0];
-      local_dir = ((const char **) (targets->elts))[1];
-      if (svn_path_is_url (local_dir) && (! opt_state->force))
-        return svn_error_create 
-          (SVN_ERR_WC_NOT_DIRECTORY, 0, 0, pool,
-           "Checkout directory appears to be a URL.  If this what you "
-           "really wanted to do, please use the --force flag.");
-    }
-
-  /* Validate the REPOS_URL */
-  if (! svn_path_is_url (repos_url))
-    return svn_error_createf 
-      (SVN_ERR_BAD_URL, 0, NULL, pool, 
-       "`%s' does not appear to be a URL", repos_url);
-
-  /* Canonicalize the URL. */
-  repos_url = svn_path_canonicalize_nts (repos_url, pool);
-
-  /* Put commandline auth info into a baton for libsvn_client.  */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, pool); 
 
-  SVN_ERR (svn_client_checkout (notify_func,
-                                notify_baton,
-                                auth_baton,
-                                repos_url,
-                                local_dir,
-                                &(opt_state->start_revision),
-                                opt_state->nonrecursive ? FALSE : TRUE,
-                                opt_state->xml_file,
-                                pool));
+  subpool = svn_pool_create (pool);
+  for (i = 0; i < targets->nelts - 1; ++i)
+    {
+      const char *target_dir;
+
+      /* Validate the REPOS_URL */
+      repos_url = ((const char **) (targets->elts))[i];
+      if (! svn_path_is_url (repos_url))
+        return svn_error_createf 
+          (SVN_ERR_BAD_URL, 0, NULL, subpool, 
+           "`%s' does not appear to be a URL", repos_url);
+
+      repos_url = svn_path_canonicalize_nts (repos_url, subpool);
+
+      /* Use sub-directory of destination if checking-out multiple URLs */
+      if (targets->nelts == 2)
+        target_dir = local_dir;
+      else
+        target_dir = svn_path_join (local_dir,
+                                    svn_path_basename (repos_url, subpool),
+                                    subpool);
+
+      /* ### BUG?  Need a new auth_baton each time, allocating once from
+         ### pool doesn't work. Even when allocated from pool the
+         ### auth_baton appears to allocate username and password from the
+         ### subpool, so when the subpool is cleared nasty things
+         ### happen. */
+      auth_baton = svn_cl__make_auth_baton (opt_state, subpool);
+
+      SVN_ERR (svn_client_checkout (notify_func,
+                                    notify_baton,
+                                    auth_baton,
+                                    repos_url,
+                                    target_dir,
+                                    &(opt_state->start_revision),
+                                    opt_state->nonrecursive ? FALSE : TRUE,
+                                    opt_state->xml_file,
+                                    subpool));
+      svn_pool_clear (subpool);
+    }
+  svn_pool_destroy (subpool);
   
   return SVN_NO_ERROR;
 }
