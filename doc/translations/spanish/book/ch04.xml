@@ -699,18 +699,19 @@ done
         </listitem>
       </orderedlist>
 
-      <para>If you are merging a directory and haven't specified a
-        target path, <command>svn merge</command> assumes the first case
-        above and tries to apply the changes into your current
-        directory.  If you are merging a file, and that file (or a file
-        by the same name) exists in your current working directory,
-        <command>svn merge</command> assumes the second case and tries
-        to apply the changes to a local file with the same name.</para>
+      <para>Si está fusionando un directorio y no ha especificado una
+        ruta destino, <command>svn merge</command> asume el
+        primer caso mencionado e intenta aplicar los cambios en su
+        directorio actual.  Si está fusionando un fichero, y ese
+        fichero (o un fichero con el mismo nombre) existe en su
+        directorio actual de trabajo, <command>svn merge</command>
+        asume el segundo caso mencionado e intenta aplicar los
+        cambios al fichero local de mismo nombre.</para>
       
-      <para>If you want changes applied somewhere else, you'll
-        need to say so.  For example, if you're sitting in the parent
-        directory of your working copy, you'll have to specify the
-        target directory to receive the changes: </para>
+      <para>Si quiere aplicar los cambios en otro lugar, tendrá que
+        especificarlo. Por ejemplo, si todavía está en el directorio
+        padre de su copia local, tendrá que especificar el directorio
+        destino para recibir los cambios:</para>
       
 <screen>
 $ svn merge -r 343:344 http://svn.example.com/repos/calc/trunk my-calc-branch
