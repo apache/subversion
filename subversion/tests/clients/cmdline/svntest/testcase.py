@@ -53,11 +53,11 @@ class _Predicate:
   def skip_text(self):
     return self.text[2]
 
-  def run_text(self, error=0):
-    return self.text[error]
+  def run_text(self, result=0):
+    return self.text[result]
 
-  def convert_error(self, error):
-    return error
+  def convert_result(self, result):
+    return result
 
 
 class TestCase:
@@ -92,14 +92,18 @@ class TestCase:
     self._check_name()
 
   def run(self, args):
-    error = 0
+    """Run self.pred on ARGS, return the result.  The return value is
+        - 0 if the test was successful
+        - 1 if it errored in a way that indicates test failure
+        - 2 if the test skipped
+        """
+    result = 0
     if self.pred.cond:
       print self.pred.skip_text(),
     else:
       try:
         rc = apply(self.pred.func, args)
         if rc is not None:
-          error = rc
           raise SVNTestStatusCodeError
       except SVNTestStatusCodeError, ex:
         print "STYLE ERROR in",
@@ -107,9 +111,9 @@ class TestCase:
         print ex.__doc__
         sys.exit(255)
       except svntest.Skip, ex:
-        error = 2
+        result = 2
       except svntest.Failure, ex:
-        error = 1
+        result = 1
         # We captured Failure and its subclasses. We don't want to print
         # anything for plain old Failure since that just indicates test
         # failure, rather than relevant information. However, if there
@@ -129,14 +133,14 @@ class TestCase:
         self._print_name()
         raise
       except:
-        error = 1
+        result = 1
         print 'UNEXPECTED EXCEPTION:'
         traceback.print_exc(file=sys.stdout)
-      print self.pred.run_text(error),
-      error = self.pred.convert_error(error)
+      print self.pred.run_text(result),
+      result = self.pred.convert_result(result)
     self._print_name()
     sys.stdout.flush()
-    return error
+    return result
 
 
 class XFail(_Predicate):
@@ -148,10 +152,10 @@ class XFail(_Predicate):
     self.text[1] = 'XFAIL:'
     if self.text[3] == '':
       self.text[3] = 'XFAIL'
-  def convert_error(self, error):
+  def convert_result(self, result):
     # Conditions are reversed here: a failure expected, therefore it
     # isn't an error; a pass is an error.
-    return not error
+    return not result
 
 class Skip(_Predicate):
   "A test that will be skipped when a condition is true."

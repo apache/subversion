@@ -516,7 +516,8 @@ def _internal_run_tests(test_list, testnum=None):
 
   if testnum is None:
     for n in range(1, len(test_list)):
-      if run_one_test(n, test_list):
+      # 1 is the only return code that indicates actual test failure.
+      if run_one_test(n, test_list) == 1:
         exit_code = 1
   else:
     exit_code = run_one_test(testnum, test_list)
