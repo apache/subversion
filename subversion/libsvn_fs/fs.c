@@ -382,12 +382,12 @@ svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 }
 
 
-
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
   apr_status_t apr_err;
   svn_error_t *svn_err;
+  const char *path_apr;
   const char *path_native;
 
   SVN_ERR (check_bdb_version (fs->pool));
@@ -395,10 +395,10 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, fs->path, fs->pool));
 
   /* Create the directory for the new Berkeley DB environment.  */
-  apr_err = apr_dir_make (path_native, APR_OS_DEFAULT, fs->pool);
+  apr_err = apr_dir_make (path_apr, APR_OS_DEFAULT, fs->pool);
   if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, 0,
                               "creating Berkeley DB environment dir `%s'",
@@ -469,6 +469,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
   svn_err = BDB_WRAP (fs, "creating environment",
                      fs->env->open (fs->env, path_native,
                                     (DB_CREATE
@@ -534,12 +535,12 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   /* Initialize paths. */
   fs->path = apr_pstrdup (fs->pool, path);
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
   svn_err = BDB_WRAP (fs, "opening environment",
                      fs->env->open (fs->env, path_native,
                                     (DB_CREATE
@@ -599,8 +600,6 @@ svn_fs_berkeley_recover (const char *path,
   DB_ENV *env;
   const char *path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-
   db_err = db_env_create (&env, 0);
   if (db_err)
     return svn_fs__bdb_dberr (db_err);
@@ -615,6 +614,8 @@ svn_fs_berkeley_recover (const char *path,
      leave the region around, the application that should create it
      will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   db_err = env->open (env, path_native, (DB_RECOVER | DB_CREATE
                                          | DB_INIT_LOCK | DB_INIT_LOG
                                          | DB_INIT_MPOOL | DB_INIT_TXN
@@ -643,13 +644,13 @@ svn_fs_delete_berkeley (const char *path,
   DB_ENV *env;
   const char *path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-
   /* First, use the Berkeley DB library function to remove any shared
      memory segments.  */
   db_err = db_env_create (&env, 0);
   if (db_err)
     return svn_fs__bdb_dberr (db_err);
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   db_err = env->remove (env, path_native, DB_FORCE);
   if (db_err)
     return svn_fs__bdb_dberr (db_err);

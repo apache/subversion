@@ -846,7 +846,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   svn_error_t *err;
   apr_status_t apr_err;
   const char *client_path, *full_path, *candidate;
-  const char *client_path_native, *root_native;
+  const char *client_path_apr, *root_apr;
   char *buffer;
 
   /* Decode any escaped characters in the URL. */
@@ -861,25 +861,24 @@ static svn_error_t *find_repos(const char *url, const char *root,
   client_path = strchr(url + 6, '/');
   client_path = (client_path == NULL) ? "" : client_path + 1;
 
-  SVN_ERR(svn_utf_cstring_from_utf8(&client_path_native,
-                                    svn_path_canonicalize(client_path, pool),
-                                    pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&client_path_apr,
+                                     svn_path_canonicalize(client_path, pool),
+                                     pool));
 
-  SVN_ERR(svn_utf_cstring_from_utf8(&root_native,
-                                    svn_path_canonicalize(root, pool),
-                                    pool));
+  SVN_ERR(svn_path_cstring_from_utf8(&root_apr,
+                                     svn_path_canonicalize(root, pool),
+                                     pool));
 
   /* Join the server-configured root with the client path. */
-  apr_err = apr_filepath_merge(&buffer, root_native, client_path_native,
+  apr_err = apr_filepath_merge(&buffer, root_apr, client_path_apr,
                                APR_FILEPATH_SECUREROOT, pool);
 
   if(apr_err)
     return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
                             "Couldn't determine repository path.");
-  
-  SVN_ERR(svn_utf_cstring_to_utf8(&full_path,
-                                  svn_path_canonicalize (buffer, pool),
-                                  NULL, pool));
+
+  SVN_ERR(svn_path_cstring_to_utf8(&full_path, buffer, pool));
+  full_path = svn_path_canonicalize(full_path, pool);
 
   /* Search for a repository in the full path. */
   candidate = full_path;
