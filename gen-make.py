@@ -35,12 +35,12 @@ def main(fname, oname=None):
 
     bldtype = parser.get(target, 'type')
     if bldtype == 'exe':
-      tpath = os.path.join(path, target)
+      tfile = target
       objext = '.o'
       if not install_type:
         install_type = 'bin'
     elif bldtype == 'lib':
-      tpath = os.path.join(path, target + '.la')
+      tfile = target + '.la'
       objext = '.lo'
       if not install_type:
         install_type = 'lib'
@@ -49,6 +49,7 @@ def main(fname, oname=None):
       errors = 1
       continue
 
+    tpath = os.path.join(path, tfile)
     build_targets[target] = tpath
     build_dirs[path] = None
 
@@ -71,6 +72,7 @@ def main(fname, oname=None):
         print 'ERROR: unknown file extension on', src
         errors = 1
 
+    retreat = _retreat_dots(path)
     libs = [ ]
     deps[target] = [ ]
     for lib in string.split(parser.get(target, 'libs')):
@@ -84,24 +86,28 @@ def main(fname, oname=None):
           # strip "lib" from the front so we have -lsvn_foo
           if lib[:3] == 'lib':
             lib = lib[3:]
-          libs.append('-L%s -l%s' % (os.path.join(dep_path, '.libs'), lib))
+          libs.append('-L%s -l%s'
+                      % (retreat + os.path.join(dep_path, '.libs'), lib))
         else:
           # linking executables can refer to .la files
-          libs.append(os.path.join(dep_path, lib + '.la'))
+          libs.append(retreat + os.path.join(dep_path, lib + '.la'))
       else:
         # something we don't know, so just include it directly
         libs.append(lib)
 
-    objvarname = string.replace(target, '-', '_') + '_OBJECTS'
+    targ_varname = string.replace(target, '-', '_')
     ldflags = parser.get(target, 'link-flags')
     objstr = string.join(objects)
+    objnames = string.join(map(os.path.basename, objects))
     libstr = string.join(libs)
-    ofile.write('%s = %s\n'
-                '%s: $(%s)\n'
-                '\t$(LINK) %s $(%s) %s $(LIBS)\n\n'
-                % (objvarname, objstr,
-                   tpath, objvarname,
-                   ldflags, objvarname, libstr))
+    ofile.write('%s_DEPS = %s\n'
+                '%s_OBJECTS = %s\n'
+                '%s: $(%s_DEPS)\n'
+                '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
+                % (targ_varname, objstr,
+                   targ_varname, objnames,
+                   tpath, targ_varname,
+                   path, tfile, ldflags, targ_varname, libstr))
 
     custom = parser.get(target, 'custom')
     if custom == 'apache-mod':
@@ -271,6 +277,11 @@ def _collect_paths(pats, path=None):
       continue
     result.extend(files)
   return result, errors
+
+def _retreat_dots(path):
+  "Given a relative directory, return ../ paths to retreat to the origin."
+  parts = string.split(path, os.sep)
+  return (os.pardir + os.sep) * len(parts)
 
 if __name__ == '__main__':
   main(sys.argv[1])
