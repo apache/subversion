@@ -167,17 +167,14 @@ void svn_txdelta_free_window (svn_txdelta_window_t *window);
 /* Set *STREAM to a pointer to a delta stream that will turn the byte
    string from SOURCE into the byte stream from TARGET.
 
-   SOURCE_FN and TARGET_FN are both `read'-like functions; see the
-   description of `svn_read_fn_t'.  When we call
-   `svn_txdelta_next_window' on *STREAM, it will call upon SOURCE_FN
-   and TARGET_FN to gather as much data as it needs.
+   SOURCE and TARGET are both readable generic streams.  When we call
+   `svn_txdelta_next_window' on *STREAM, it will read from SOURCE and
+   TARGET to gather as much data as it needs.
 
    Do any necessary allocation in a sub-pool of POOL.  */
 void svn_txdelta (svn_txdelta_stream_t **stream,
-                  svn_read_fn_t *source_fn,
-                  void *source_baton,
-                  svn_read_fn_t *target_fn,
-                  void *target_baton,
+                  svn_stream_t *source,
+                  svn_stream_t *target,
                   apr_pool_t *pool);
 
 

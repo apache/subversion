@@ -20,18 +20,6 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 
-static svn_error_t*
-read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
-{
-  FILE *stream = baton;
-  if (!stream || feof (stream) || ferror (stream))
-    *len = 0;
-  else
-    *len = fread (buffer, 1, *len, stream);
-  return SVN_NO_ERROR;
-}
-
-
 static apr_off_t
 print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
 {
@@ -143,8 +131,8 @@ main (int argc, char **argv)
 
   apr_initialize();
   svn_txdelta (&stream,
-               read_from_file, source_file,
-               read_from_file, target_file,
+               svn_stream_from_stdio (source_file, NULL),
+               svn_stream_from_stdio (target_file, NULL),
                NULL);
 
   do {
