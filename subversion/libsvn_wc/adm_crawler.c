@@ -1119,7 +1119,7 @@ report_single_mod (const char *name,
          sure that all the directory's children are also marked for
          deletion.  If not, we're in a screwy state. */
       if ((entry->kind == svn_node_dir) 
-          && (! entry->existence == svn_wc_existence_deleted))
+          && (entry->existence != svn_wc_existence_deleted))
         SVN_ERR (verify_tree_deletion (full_path, entry->schedule, 
                                        (*stack)->pool));
 
