@@ -887,8 +887,8 @@ main (int argc, const char * const *argv)
 
     /* Fetch our two existing authentication providers, and order them
        in an array. */
-    svn_wc_get_simple_wc_provider (&(wc_provider->vtable),
-                                   &(wc_provider->provider_baton), pool);
+    svn_wc_get_simple_provider (&(wc_provider->vtable),
+                                &(wc_provider->provider_baton), pool);
 
     svn_client_get_simple_prompt_provider (&(prompt_provider->vtable),
                                            &(prompt_provider->provider_baton),

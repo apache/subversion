@@ -24,8 +24,8 @@
 
 /* Since this provider is solely responsible for reading/writing the
    files in .svn/auth/, then it gets to name the files as well.  */
-#define SVN_AUTH_SIMPLE_WC_USERNAME            "username"
-#define SVN_AUTH_SIMPLE_WC_PASSWORD            "password"
+#define SVN_WC__AUTHFILE_USERNAME            "username"
+#define SVN_WC__AUTHFILE_PASSWORD            "password"
 
 
 typedef struct
@@ -34,7 +34,7 @@ typedef struct
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
   
-} simple_wc_provider_baton_t;
+} simple_provider_baton_t;
 
 
 static svn_error_t *
@@ -44,7 +44,7 @@ simple_wc_first_creds (void **credentials,
                        apr_hash_t *parameters,
                        apr_pool_t *pool)
 {
-  simple_wc_provider_baton_t *pb = provider_baton;
+  simple_provider_baton_t *pb = provider_baton;
   svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
   svn_error_t *err = NULL;
   svn_stringbuf_t *susername, *spassword;
@@ -71,11 +71,11 @@ simple_wc_first_creds (void **credentials,
     }
 
   if (! default_username)
-    err = svn_wc_get_auth_file (pb->base_dir, SVN_AUTH_SIMPLE_WC_USERNAME,
+    err = svn_wc_get_auth_file (pb->base_dir, SVN_WC__AUTHFILE_USERNAME,
                                 &susername, pool);
   
   if (! default_password)
-    err = svn_wc_get_auth_file (pb->base_dir, SVN_AUTH_SIMPLE_WC_PASSWORD,
+    err = svn_wc_get_auth_file (pb->base_dir, SVN_WC__AUTHFILE_PASSWORD,
                                 &spassword, pool);  
   if (err)
     {
@@ -137,11 +137,11 @@ svn_wc_save_simple_creds (svn_boolean_t *saved,
 
   /* Do a recursive store of username and password. */
   SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE,
-                                 SVN_AUTH_SIMPLE_WC_USERNAME, 
+                                 SVN_WC__AUTHFILE_USERNAME, 
                                  svn_stringbuf_create (creds->username, pool),
                                  pool));
   SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE,
-                                 SVN_AUTH_SIMPLE_WC_PASSWORD,
+                                 SVN_WC__AUTHFILE_PASSWORD,
                                  svn_stringbuf_create (creds->password, pool),
                                  pool));
 
@@ -162,7 +162,7 @@ simple_wc_save_creds (svn_boolean_t *saved,
                       apr_pool_t *pool)
 {
   svn_auth_cred_simple_t *creds = credentials;
-  simple_wc_provider_baton_t *pb = provider_baton;
+  simple_provider_baton_t *pb = provider_baton;
 
   *saved = FALSE;
   if (pb->base_dir)
@@ -174,11 +174,11 @@ simple_wc_save_creds (svn_boolean_t *saved,
 
 /* Public API */
 void
-svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
-                               void **provider_baton,
-                               apr_pool_t *pool)
+svn_wc_get_simple_provider (const svn_auth_provider_t **provider,
+                            void **provider_baton,
+                            apr_pool_t *pool)
 {
-  simple_wc_provider_baton_t *pb = apr_pcalloc (pool, sizeof (*pb));
+  simple_provider_baton_t *pb = apr_pcalloc (pool, sizeof (*pb));
   svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
 
   prov->cred_kind = SVN_AUTH_CRED_SIMPLE;
