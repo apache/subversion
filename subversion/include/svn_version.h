@@ -55,8 +55,8 @@ extern "C" {
    Typical values are "alpha", "beta", "prerelease", ...
    This symbol may be #undef'd for major releases; for development
    snapshots, it should be the number of the snapshot's revision. */
-/* #undef SVN_VER_TAG */
-#define SVN_VER_TAG        "r196"
+#undef SVN_VER_TAG
+/* #define SVN_VER_TAG        "r196" */
 
 
 
