@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 
 package SVN::Core;
 use SVN::Base qw(Core svn_);

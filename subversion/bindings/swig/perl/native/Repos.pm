@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 
 package SVN::Repos;
 use SVN::Base qw(Repos svn_repos_);

@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 
 package SVN::Fs;
 use SVN::Base qw(Fs svn_fs_);

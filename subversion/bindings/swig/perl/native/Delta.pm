@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 
 package SVN::Delta;
 use SVN::Base qw(Delta svn_delta_);
