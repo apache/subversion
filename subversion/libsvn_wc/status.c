@@ -92,12 +92,6 @@ struct edit_baton
 
   /* Repository locks, if set. */
   apr_hash_t *repos_locks;
-
-  /* If non-NULL, a hash mapping absolute repos paths (const char*) to a hash
-     containing "lock children". Those hash tables are mappings from
-     const char* names to a non-NULL value.  (See
-     svn_wc_status_set_eprepos_locks.) */
-  apr_hash_t *repos_lock_children;
 };
 
 
@@ -913,9 +907,6 @@ get_dir_status (struct edit_baton *eb,
                                  cancel_baton, iterpool));
     }
   
-  /* ### lundblad TODO Loop over lock children for this path and add
-     children that haven't already been added. */
-
   /* Destroy our subpools. */
   svn_pool_destroy (subpool);
 
@@ -1794,61 +1785,9 @@ svn_wc_status_set_repos_locks (void *edit_baton,
                                apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create (pool);
 
   eb->repos_locks = locks;
   eb->repos_root = apr_pstrdup (pool, repos_root);
-
-  /* We need to quickly get the children of a path which have a lock or
-     have descendants that are locked.  So, we create a hash table with,
-     for each path in locks, a hash table with the children in the lock tree.
-     We also store this information for each ancestor to a lock path.
-  */
-
-  eb->repos_lock_children = apr_hash_make (pool);
-
-  for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      const char *path;
-
-      apr_pool_clear (iterpool);
-      apr_hash_this (hi, &key, NULL, NULL);
-      path = key;
-
-      while (path[0] == '/' && path[1] != '\0')
-        {
-          const char *dir_path, *base_name;
-          apr_hash_t *children;
-
-          svn_path_split (path, &dir_path, &base_name, iterpool);
-
-          children = apr_hash_get (eb->repos_lock_children, dir_path,
-                                   APR_HASH_KEY_STRING);
-          if (! children)
-            {
-              children = apr_hash_make (pool);
-              apr_hash_set (eb->repos_lock_children,
-                            apr_pstrdup (pool, dir_path),
-                            APR_HASH_KEY_STRING, children);
-            }
-          else
-            {
-              /* If this child already exists, our anestors exist, so we stop
-                 here. */
-              if (apr_hash_get (children, base_name, APR_HASH_KEY_STRING))
-                break;
-            }
-
-          /* Copy base_name to pool with correct life time. */
-          base_name = apr_pstrdup (pool, base_name);
-          apr_hash_set (children, base_name, APR_HASH_KEY_STRING, (void*)1);
-
-          /* Continue with path's parent. */
-          path = dir_path;
-        }
-    }
 
   return SVN_NO_ERROR;
 }

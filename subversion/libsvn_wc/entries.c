@@ -1731,7 +1731,10 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->cmt_author = apr_pstrdup (pool, entry->cmt_author);
   if (entry->lock_token)
     dupentry->lock_token = apr_pstrdup (pool, entry->lock_token);
-  /* ### Rest of lock fields. */
+  if (entry->lock_owner)
+    dupentry->lock_owner = apr_pstrdup (pool, entry->lock_owner);
+  if (entry->lock_comment)
+    dupentry->lock_comment = apr_pstrdup (pool, entry->lock_comment);
 
   return dupentry;
 }
