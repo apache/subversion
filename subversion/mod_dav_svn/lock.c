@@ -35,8 +35,8 @@
 /* Every provider needs to define an opaque locktoken type. */
 struct dav_locktoken
 {
-  const char *uuid;
-
+  /* This is identical to the 'token' field of an svn_lock_t. */
+  const char *uuid_str;
 };
 
 
@@ -45,17 +45,18 @@ struct dav_locktoken
 static const char *
 dav_svn_get_supportedlock(const dav_resource *resource)
 {
-  /* ### we only support locks of scope "exclusive" and of type
-     "write".  but what sort of string does mod_dav expect from us?
-     the docs don't say.  something like
+  /* This is imitating what mod_dav_fs is doing.  Note that unlike
+     mod_dav_fs, however, we don't support "shared" locks.  */
 
-     <D:lockscope><D:exclusive/></D:lockscope>
-     <D:locktype><D:write/></D:locktype>
-
-     ??
-  */
-
-  return "";  /* temporary: just to suppress compile warnings */
+  /* ### it seems awfully weird to me that a provider knows that
+     mod_dav is going to use D=DAV for xml namespaces... */
+  static const char supported[] = DEBUG_CR
+    "<D:lockentry>" DEBUG_CR
+    "<D:lockscope><D:exclusive/></D:lockscope>" DEBUG_CR
+    "<D:locktype><D:write/></D:locktype>" DEBUG_CR
+    "</D:lockentry>" DEBUG_CR
+    
+  return supported;
 }
 
 
@@ -68,10 +69,21 @@ dav_svn_parse_locktoken(apr_pool_t *pool,
                         const char *char_token,
                         dav_locktoken **locktoken_p)
 {
-  /* ### okay, so we need to be able convert a locktoken URI into just
-     a lock token.  this means just pulling the UUID out of the URI. */
+  dav_locktoken *token;
+  
+  /* Imitating mod_dav_fs again.  Hilariously, it also defines a
+     locktoken just to be an apr uuid string!  */
 
-  return 0;  /* temporary: just to suppress compile warnings */
+  if (ap_strstr_c(char_token, "opaquelocktoken:") != char_token) 
+    return dav_new_error(pool, HTTP_BAD_REQUEST,
+                         DAV_ERR_LOCK_UNK_STATE_TOKEN,
+                         "Client supplied lock token in unknown format.");
+
+  char_token += 16;
+  token = apr_pstrdup(pool, char_token);
+  
+  *locktoken_p = token;
+  return 0;
 }
 
 
@@ -85,9 +97,10 @@ static const char *
 dav_svn_format_locktoken(apr_pool_t *p,
                          const dav_locktoken *locktoken)
 {
-  /* ### and do the reverse:  take a token UUID and embed it into a URI. */
+  /* Imitating mod_dav_fs again.  Hilariously, it also defines a
+     locktoken just to be an apr uuid string!  */
 
-  return "";  /* temporary: just to suppress compile warnings */
+  return apr_pstrcat(p, "opaquelocktoken:", locktoken->uuid_str, NULL);
 }
 
 
@@ -133,21 +146,9 @@ dav_svn_open_lockdb(request_rec *r,
                     int force,
                     dav_lockdb **lockdb)
 {
-  /* ### mod_dav.h recommends this be a 'lazy' db open, that this call
-     should be a cheap no-op if possible.  we don't really have a
-     separate database to open anyway, other than the original opening
-     of the fs way back in get_resource().  */
+  /* ### create a lockdb context... ?? */
 
-  /* ### and no, we don't need to pay attention to the httpd.conf
-     DAVLockDB directive.  our locks are stored in the repository. */
-
-  /* ### I think this function is going to do nothing but create a
-     lockdb structure as 'context' for other funcs in this vtable.
-     There's no dav_resource to verify here.  If you look at
-     deadprops.c, the only thing we might want to do is get the
-     authz_read callback 'ready to go' in the lockdb. */
-
-  return 0;  /* temporary: just to suppress compile warnings */
+  return 0;
 }
 
 
@@ -156,7 +157,7 @@ dav_svn_open_lockdb(request_rec *r,
 static void
 dav_svn_close_lockdb(dav_lockdb *lockdb)
 {
-  /* ### free the lockdb struct, that's it. */
+  /* ### free the lockdb context... ?? */
 
   return;
 }
