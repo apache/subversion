@@ -103,7 +103,7 @@ svn_client_propset (svn_stringbuf_t *propname,
 
 /* Helper for svn_client_propget. */
 static svn_error_t *
-recursive_propget (apr_table_t *prop_table,
+recursive_propget (apr_hash_t *props,
                    svn_stringbuf_t *propname,
                    svn_stringbuf_t *target,
                    apr_pool_t *pool)
@@ -141,7 +141,7 @@ recursive_propget (apr_table_t *prop_table,
         {
           if (current_entry->kind == svn_node_dir && current_entry_name)
             {
-              SVN_ERR (recursive_propget (prop_table, propname,
+              SVN_ERR (recursive_propget (props, propname,
                                           full_entry_path, pool));
             }
           else
@@ -150,9 +150,8 @@ recursive_propget (apr_table_t *prop_table,
               SVN_ERR (svn_wc_prop_get (&propval, propname, full_entry_path,
                                         pool));
               if (propval)
-                apr_table_set (prop_table,
-                               full_entry_path->data,
-                               propval->data);
+                apr_hash_set (props, full_entry_path->data, APR_HASH_KEY_STRING,
+                              svn_string_create_from_buf (propval, pool));
             }
         }
     }
@@ -160,13 +159,13 @@ recursive_propget (apr_table_t *prop_table,
 }
 
 svn_error_t *
-svn_client_propget (apr_table_t **props,
+svn_client_propget (apr_hash_t **props,
                     svn_stringbuf_t *propname,
                     svn_stringbuf_t *target,
                     svn_boolean_t recurse,
                     apr_pool_t *pool)
 {
-  apr_table_t *prop_table = apr_table_make (pool, 5);
+  apr_hash_t *prop_hash = apr_hash_make (pool);
   svn_wc_entry_t *node;
 
   SVN_ERR (svn_wc_entry(&node, target, pool));
@@ -178,17 +177,18 @@ svn_client_propget (apr_table_t **props,
 
   if (recurse && node->kind == svn_node_dir)
     {
-      SVN_ERR (recursive_propget (prop_table, propname, target, pool));
+      SVN_ERR (recursive_propget (prop_hash, propname, target, pool));
     }
   else
     {
       svn_stringbuf_t *propval;
       SVN_ERR (svn_wc_prop_get (&propval, propname, target, pool));
       if (propval)
-        apr_table_set(prop_table, target->data, propval->data);
+          apr_hash_set(prop_hash, target->data, APR_HASH_KEY_STRING,
+                       svn_string_create_from_buf (propval, pool));
     }
 
-  *props = prop_table;
+  *props = prop_hash;
   return SVN_NO_ERROR;
 }
 

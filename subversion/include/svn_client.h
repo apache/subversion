@@ -455,15 +455,22 @@ svn_client_propset (svn_stringbuf_t *propname,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
-/* Returns an apr_table_t of filenames and property values, in *PROPS, 
-   allocated in POOL.  If TARGET is a file or RECURSE is false, there will
-   be only a single element, with key TARGET, and value the value of PROPNAME
-   in TARGET.  If recurse is true and TARGET is a directory, the *PROPS will
-   contain a list of node names and property values for TARGET and all of 
-   its children.  The nodenames will be of rooted from the same place as 
-   TARGET. */
+/* Set *PROPS to a hash table whose keys are `char *' paths,
+   prefixed by TARGET, of items in the working copy on which 
+   property PROPNAME is set, and whose values are `svn_string_t *'
+   representing the property value for PROPNAME at that path.
+   Allocate *PROPS, its keys, and its values in POOL.
+             
+   Don't store any path, not even TARGET, if it does not have a
+   property named PROPNAME.
+
+   If TARGET is a file or RECURSE is false, *PROPS will have
+   at most one element.
+
+   If error, don't touch *PROPS, otherwise *PROPS is a hash table even if
+   empty. */
 svn_error_t *
-svn_client_propget (apr_table_t **props,
+svn_client_propget (apr_hash_t **props,
                     svn_stringbuf_t *propname,
                     svn_stringbuf_t *target,
                     svn_boolean_t recurse,
