@@ -82,6 +82,7 @@ Commit access for specific areas:
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
+       nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
 
   Translation:
 
