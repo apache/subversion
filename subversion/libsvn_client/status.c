@@ -149,6 +149,8 @@ svn_client_status (apr_hash_t **statushash,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
+                   svn_wc_notify_func_t notify_func,
+                   void *notify_baton,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -162,7 +164,8 @@ svn_client_status (apr_hash_t **statushash,
      These structures contain nothing but information found in the
      working copy. */
   SVN_ERR (svn_wc_statuses (hash, path, adm_access,
-                            descend, get_all, no_ignore, pool));
+                            descend, get_all, no_ignore,
+                            notify_func, notify_baton, pool));
 
   if (update)    
     {

@@ -315,6 +315,8 @@ add_status_structure (apr_hash_t *statushash,
                       const svn_wc_entry_t *parent_entry,
                       svn_node_kind_t path_kind,
                       svn_boolean_t get_all,
+                      svn_wc_notify_func_t notify_func,
+                      void *notify_baton,
                       apr_pool_t *pool)
 {
   svn_wc_status_t *statstruct;
@@ -322,7 +324,18 @@ add_status_structure (apr_hash_t *statushash,
   SVN_ERR (assemble_status (&statstruct, path, adm_access, entry, parent_entry,
                             path_kind, get_all, pool));
   if (statstruct)
-    apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
+    {
+      apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
+      if (notify_func != NULL)
+        (*notify_func) (notify_baton, path, svn_wc_notify_status,
+                        statstruct->entry ? 
+                         statstruct->entry->kind : svn_node_unknown,
+                        NULL,
+                        svn_wc_notify_state_inapplicable,
+                        svn_wc_notify_state_inapplicable,
+                        SVN_INVALID_REVNUM);
+
+    }
   
   return SVN_NO_ERROR;
 }
@@ -339,6 +352,8 @@ add_unversioned_items (const char *path,
                        apr_hash_t *entries,
                        apr_hash_t *statushash,
                        apr_array_header_t *ignores,
+                       svn_wc_notify_func_t notify_func,
+                       void *notify_baton,
                        apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -423,6 +438,8 @@ add_unversioned_items (const char *path,
                                          NULL,
                                          *path_kind,
                                          FALSE,
+                                         notify_func,
+                                         notify_baton,
                                          pool));
         }
     }
@@ -484,6 +501,8 @@ get_dir_status (apr_hash_t *statushash,
                 svn_boolean_t descend,
                 svn_boolean_t get_all,
                 svn_boolean_t no_ignore,
+                svn_wc_notify_func_t notify_func,
+                void *notify_baton,
                 apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -500,7 +519,7 @@ get_dir_status (apr_hash_t *statushash,
 
   /* Add the unversioned items to the status output. */
   SVN_ERR (add_unversioned_items (path, adm_access, entries, statushash,
-                                  ignores, pool));
+                                  ignores, notify_func, notify_baton, pool));
 
   SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, pool));
 
@@ -536,7 +555,8 @@ get_dir_status (apr_hash_t *statushash,
           if (! status)
             SVN_ERR (add_status_structure (statushash, fullpath, adm_access,
                                            entry, parent_entry, svn_node_dir,
-                                           get_all, pool));
+                                           get_all, notify_func, notify_baton,
+                                           pool));
         }
       else
         {
@@ -565,7 +585,8 @@ get_dir_status (apr_hash_t *statushash,
 
               SVN_ERR (add_status_structure 
                        (statushash, fullpath, adm_access, fullpath_entry, 
-                        dir_entry, fullpath_kind, get_all, pool));
+                        dir_entry, fullpath_kind, get_all,
+                        notify_func, notify_baton, pool));
 
               /* Descend only if the subdirectory is a working copy
                  directory (and DESCEND is non-zero ofcourse)  */
@@ -577,7 +598,8 @@ get_dir_status (apr_hash_t *statushash,
                                                 fullpath, pool));
                   SVN_ERR (get_dir_status (statushash, fullpath, dir_entry,
                                            dir_access, descend, get_all,
-                                           no_ignore, pool));
+                                           no_ignore, notify_func,
+                                           notify_baton, pool));
                 }
             }
           else if ((fullpath_kind == svn_node_file) 
@@ -586,7 +608,8 @@ get_dir_status (apr_hash_t *statushash,
               /* File entries are ... just fine! */
               SVN_ERR (add_status_structure 
                        (statushash, fullpath, adm_access, entry, dir_entry,
-                        fullpath_kind, get_all, pool));
+                        fullpath_kind, get_all, notify_func, notify_baton,
+                        pool));
             }
         }
     }
@@ -601,6 +624,8 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_boolean_t descend,
                  svn_boolean_t get_all,
                  svn_boolean_t no_ignore,
+                 svn_wc_notify_func_t notify_func,
+                 void *notify_baton,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -630,7 +655,8 @@ svn_wc_statuses (apr_hash_t *statushash,
          we're ignoring the GET_ALL flag and unconditionally fetching
          the status structure. */
       SVN_ERR (add_status_structure (statushash, path, adm_access, entry,
-                                     parent_entry, kind, TRUE, pool));
+                                     parent_entry, kind, TRUE,
+                                     notify_func, notify_baton, pool));
     }
 
   /* Fill the hash with a status structure for *each* entry in PATH */
@@ -663,7 +689,9 @@ svn_wc_statuses (apr_hash_t *statushash,
         parent_entry = NULL;
 
       SVN_ERR (get_dir_status(statushash, path, parent_entry, adm_access,
-                              descend, get_all, no_ignore, pool));
+                              descend, get_all, no_ignore,
+                              notify_func, notify_baton,
+                              pool));
     }
 
   return SVN_NO_ERROR;

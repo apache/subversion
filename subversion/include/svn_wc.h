@@ -178,6 +178,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_restore,
   svn_wc_notify_revert,
   svn_wc_notify_resolve,
+  svn_wc_notify_status,
 
   /* The update actions are also used for checkouts, switches, and merges. */
   svn_wc_notify_update_delete,     /* Got a delete in an update. */
@@ -716,6 +717,8 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_boolean_t descend,
                               svn_boolean_t get_all,
                               svn_boolean_t no_ignore,
+                              svn_wc_notify_func_t notify_func,
+                              void *notify_baton,
                               apr_pool_t *pool);
 
 
