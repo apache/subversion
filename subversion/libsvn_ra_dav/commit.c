@@ -168,12 +168,9 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
 
   if (rv != NE_OK)
     {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               ras->pool,
-                               "The server request failed (neon:%d http:%d) "
-                               "(%s %s)",
-                               rv, *code, method, url_str->data);
+      const char *msg = apr_pstrcat(ras->pool, method, " failed", NULL);
+
+      return svn_ra_dav__convert_error(ras->sess, msg, rv, ras->pool);
     }
 
   return NULL;
