@@ -26,37 +26,23 @@ What's left to do:
               
        * modifying python tests to run over RA_DAV (sussman will do.)
 
-* Mime-types:  (cmpilato -- working on)
 
-    Working on heuristic to determine if an added file is binary or
-    not; will record this via a property.  This will (later) affect
-    keyword substitution and line endings.  It will also affect
-    whether we can safely run 'diff' and 'patch' under the hood when
-    receiving updates to the file.
-
-    Also: Mike Pilato is keeping track of the "spec" for keyword
-    substitution, newline conversion, and mime type stuff.  He's
-    writing a document based on Branko's original proposal and
-    incorporating feedback from the rest of the list.  For M3, we're
-    just addressing the question of text vs binary, that's all we need
-    for now.
-
-* DB_RUN_RECOVERY:  (kfogel, with gstein on guru duty)
-
-  In progress; see "Karl M3 stack" in STACK for details.
-
-* Make a tarball dist.  (kfogel -- working)
+* Make a tarball dist.  (kfogel -- in progress)
 
   Make sure "make dist" works, establish release process, do a
   release. :-)  lucas@collab.net has volunteered to review the release
   procedure doc.
 
+
+* New material on Web site (kfogel)
+    - post instructions for downloading tarball, building
+    - especially, put dav_setup.txt up!
+    - basic subversion checkout instructions
+    - update status page
+    - Put the old CVS ChangeLog up
+
+
 * Backup system for commits in the new svn repository.  (kfogel)
 
   Commit diffs should be backed up, so we don't lose data if there's
   an fs bug.  Set up a system.
-
-* Filesystem deltification optimization (kfogel, maybe cmpilato)
-
-   Karl is worried about speed of our deltification right now; we may
-   optimize it, if time permits.
