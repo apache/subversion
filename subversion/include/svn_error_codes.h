@@ -136,7 +136,7 @@ SVN_ERROR_START
               "Path is not a working copy file")
 
   SVN_ERRDEF (SVN_ERR_WC_BAD_ADM_LOG,
-              "Logfile is corrupted")
+              "Problem running log")
 
   SVN_ERRDEF (SVN_ERR_WC_PATH_NOT_FOUND,
               "Can't find a working copy path")
