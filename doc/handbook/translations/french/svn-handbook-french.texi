@@ -18,8 +18,8 @@
 @c  documentation and/or other materials provided with the distribution.
 @c  
 @c  3. The end-user documentation included with the redistribution, if
-@c  any, must include the following acknowledgment: "This product includes
-@c  software developed by CollabNet (http://www.Collab.Net/)."
+@c  any, must include the following acknowledgment: ``This product includes
+@c  software developed by CollabNet (uref{http://www.Collab.Net/}).''
 @c  Alternately, this acknowledgment may appear in the software itself, if
 @c  and wherever such third-party acknowledgments normally appear.
 @c  
@@ -27,8 +27,8 @@
 @c  products derived from this software without prior written
 @c  permission. For written permission, please contact info@collab.net.
 @c  
-@c  5. Products derived from this software may not use the "Tigris" name
-@c  nor may "Tigris" appear in their names without prior written
+@c  5. Products derived from this software may not use the ``Tigris'' name
+@c  nor may ``Tigris'' appear in their names without prior written
 @c  permission of CollabNet.
 @c  
 @c  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -73,8 +73,16 @@
 
 @c %**start of header
 @setfilename svn-handbook-french.info
-@settitle Guide de Subversion
+@settitle Le guide de Subversion
 @setchapternewpage odd
+
+@c for dvi, ps, ... print on A4 format.
+@afourpaper
+@c doesn't work
+@c @documentlanguage fr
+
+@c use for html output
+@documentencoding ISO-8859-1
 @c %**end of header
 
 @paragraphindent 0
@@ -90,39 +98,45 @@
 
 @c -----------------------------------------------------------------
 @titlepage
-@title @titlefont{The Subversion Handbook}
-@author Subversion Development Project @url{http://subversion.tigris.org}
+@title @titlefont{Le guide de Subversion}
+@author Subversion Development Project @uref{http://subversion.tigris.org/}
 
 @page
 @vskip 0pt plus 1filll
 Copyright @copyright{} 2002 CollabNet, Inc. @*
 See @ref{License} for details. @*
 First version: June 2002. @*
-$LastChangedDate: 2002-07-23 01:24:41 -0400 (mar, 23 jui 2002) $
+$LastChangedDate: 2002-07-30 04:23:44 -0400 (mar, 30 jui 2002) $
 
 @end titlepage
 @c -----------------------------------------------------------------
 
-@c @summarycontents
-@c @contents
+@summarycontents
+@contents
 
+@ifnottex
 @node Top
 @top
 
-@ifinfo
 Ce manuel est un guide du système de contrôle de version Subverion.
 
-Ndt: C'est la traduction du manual en anglais de la révision 2610
-(pré 0.13.3 ?).
-Je n'ai pas fait cette traduction pour devenir un "fork" de la version
-anglaise. Ainsi, beaucoups d'erreurs/manquements de la version anglais
-sont dans cette traduction. Les corrections seront faites (peut-être)
-lorsque la version anglaise sera corrigée. Ceci est pour des raisons
-évidentes de maintenance de cette traduction.
-Je ne suis pas très satisfait de la traduction dans les parties très
+Ndt: C'est la traduction du manual en anglais de la révision 2752
+(post version 0.14.0).
+Je n'ai pas fait cette traduction pour devenir un ``fork'' de la version
+anglaise. Ainsi, les erreurs/manques de la version anglaise sont dans
+cette traduction. Les corrections seront faites (peut-être) lorsque la
+version anglaise sera corrigée. Ceci pour des raisons évidentes de
+maintenance de cette traduction.
+Je ne suis pas très satisfait de la traduction des parties très
 techniques. J'espère néanmoins qu'elle vous sera utile.
 
-@end ifinfo
+@end ifnottex
+
+@iftex
+Ndt: La version dvi et ps n'a pas d'accents. C'est une limitation de
+makeinfo qui ne permet pas d'avoir simplement les accents dans les version
+info/html et dans les version dvi/ps.
+@end iftex
 
 @c Here is our logical table of contents.
 
