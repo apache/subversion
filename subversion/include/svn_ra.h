@@ -123,7 +123,7 @@ typedef struct svn_ra_plugin_t
      RA returns an *EDITOR and *EDIT_BATON capable of transmitting a
      commit to the repository, which is then driven by the client.
 
-     The client must supply three functions to the RA layer, each of
+     The client may supply three functions to the RA layer, each of
      which requires the CLOSE_BATON:
 
        * The GET_FUNC will be used by the RA layer to fetch any WC
@@ -134,6 +134,8 @@ typedef struct svn_ra_plugin_t
 
        * The CLOSE_FUNC will be used by the RA layer to bump the
          revisions of each committed item, after the commit completes.
+
+     Any of these functions may be null.
           
   */
   svn_error_t *(*get_commit_editor) (void *session_baton,

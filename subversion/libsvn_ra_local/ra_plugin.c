@@ -44,7 +44,8 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
       svn_string_t *target;
       target = (((svn_string_t **)(closer->target_array)->elts)[i]);
 
-      SVN_ERR (closer->close_func (closer->close_baton, target, new_rev));
+      if (closer->close_func)
+        SVN_ERR (closer->close_func (closer->close_baton, target, new_rev));
     }    
 
   return SVN_NO_ERROR;
