@@ -1,7 +1,48 @@
 Version 0.14.4 [Alpha Interim 4] (released DD MMMM 2002, revision RRRR)
 
+ User-visible changes:
+ * new working-copy entry-caching: speeds many ops up to 5x (#749)
+ * new 'svnadmin recover', instead of db_recover
+ * client can now view & change server-side revision props (e.g. log messages)
+ * new --non-interactive switch for commandline client
+ * new --incremental option to 'svn log'
+ * new -r {date} syntax for specifying dated revs; works over network too.
+ * automatically set svn:executable prop when adding or importing (#870)
+ * initial $EDITOR text now ignores all log data below special token
+ * consistify behavior of text & prop columns in 'svn status' output.
+ * .svn/auth/* files now chmod 700, to stop scaring people.  :-)
+ * improved labels in 'svn diff' output (#936)
+ * run-time adjustable neon timeout in newly renamed 'servers' config file
+ * big improvements to cvs2svn script:  bugfixes and basic branch/tag support
+ * new python access-control hook script
+ * no more implicit dot-target for 'svn propedit' or 'svn propset' (#924)
+ * Win32 improvements:
+    - use system-wide config-file/registry
+    - run-time configurable diff/diff3 binary locations (#668)
+ * remove obsolete --xml-file support
+ * Handbook is now ported to Docbook, 2 new chapters.
+
  Developer-visible changes:
- * use neon 0.23.5, fix XML entity derefs, SSL server certs, HP-UX build, etc.
+ * abstracted option/help-parsing code, now shared between svn and svnadmin
+ * require apache 2.0.42
+ * use neon 0.23.5: fix XML entity derefs, SSL server certs, HP-UX build, etc.
+ * support Berkeley DB 4.0 *or* 4.1
+ * many SWIG binding improvements:
+    - better overall coverage of apr and libsvn_* library symbols
+    - new 'make swig-py-ext' and 'make swig-py-ext' targets
+ * nearly finish conversion of all editor/drivers to "new" style (#737)
+ * new predicate-logic system added to automated-test system ("skip" support)
+ * more work on mailer.py
+ * no more lost commit messages (#761)
+ * eradication of misused stringbufs, obsolete code removal (#909)
+ * mem-leak fixes in libsvn_fs (#860)
+ * improved atomicity of working-file translations (#914)
+ * improve ./configure --help output (#949)
+ * MANY bugfixes, especially for entry-locks (#931, #932, #847, #938),
+   merges (#880, ), auth storage (#934); also #921 (svnadmin
+   segfault), #907 (xml quoting), #918 (post-commit processing), #935
+   (path canonicalization), #779 (diff errors)
+
 
 Version 0.14.3 [Alpha Interim 3] (released 20 Sept 2002, revision 3200)
 
