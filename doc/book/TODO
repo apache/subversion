@@ -45,9 +45,12 @@ To be fixed by cmpilato:
      not overwritten by a tarball explode wouldn't be missing, they'd
      be untouched).
 
-  - document the --ignore-externals option (added 'update',
-    'checkout', 'export', and 'status').  Don't forget the reference
-    section.
+   - document the --ignore-externals option (added 'update',
+     'checkout', 'export', and 'status').  Don't forget the reference
+     section.
+
+   - document the --use-[pre|post]-commit-hook option to 'svnadmin
+     load'.  Don't forget the reference section.
 
 --------------------------------------------------------------
 

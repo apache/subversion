@@ -673,14 +673,14 @@ close_directory (void *dir_baton,
       apr_hash_this (hi, &key, NULL, NULL);
       path = key;
 
+      svn_pool_clear (subpool);
+
       /* By sending 'svn_node_unknown', the Node-kind: header simply won't
          be written out.  No big deal at all, really.  The loader
          shouldn't care.  */
       SVN_ERR (dump_node (eb, path,
                           svn_node_unknown, svn_node_action_delete,
                           FALSE, NULL, SVN_INVALID_REVNUM, subpool));
-
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);
@@ -968,6 +968,8 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
       svn_fs_root_t *to_root;
       svn_boolean_t use_deltas_for_rev;
 
+      svn_pool_clear (subpool);
+
       /* Check for cancellation. */
       if (cancel_func)
         SVN_ERR (cancel_func (cancel_baton));
@@ -1038,8 +1040,6 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
         }
 
     loop_end:
-      /* Reuse all memory consumed by the dump of this one revision. */
-      svn_pool_clear (subpool);
       SVN_ERR (svn_stream_printf (feedback_stream, pool,
                                   _("* %s revision %ld.\n"),
                                   dumping ? "Dumped" : "Verified", to_rev));

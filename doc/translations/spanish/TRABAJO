@@ -49,7 +49,7 @@ Ficheros en proceso de traducción:
 ----------------------------------
 ch05.xml: dbrouard
 ch06.xml: Federico Edelman
-ch08.xml: gradha
+ch07.xml: gradha
 appa.xml: ruben
 
 
@@ -61,6 +61,7 @@ ch00.xml: gradha
 ch01.xml: ruben
 ch03.xml: ruben
 ch04.xml: gradha
+ch08.xml: gradha
 
 
 Ficheros revisados sin verificar el original:

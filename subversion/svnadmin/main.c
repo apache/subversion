@@ -209,6 +209,8 @@ enum
     svnadmin__bdb_log_keep,
     svnadmin__config_dir,
     svnadmin__bypass_hooks,
+    svnadmin__use_pre_commit_hook,
+    svnadmin__use_post_commit_hook,
     svnadmin__clean_logs,
     svnadmin__wait
   };
@@ -270,6 +272,12 @@ static const apr_getopt_option_t options_table[] =
     {"clean-logs", svnadmin__clean_logs, 0,
      N_("remove redundant log files from source repository")},
 
+    {"use-pre-commit-hook", svnadmin__use_pre_commit_hook, 0,
+     N_("call pre-commit hook before committing revisions")},
+
+    {"use-post-commit-hook", svnadmin__use_post_commit_hook, 0,
+     N_("call post-commit hook after committing revisions")},
+    
     {"wait", svnadmin__wait, 0,
      N_("wait instead of exit if the repository is in\n"
         "                             use by another process")},
@@ -339,6 +347,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
         "one specified in the stream.  Progress feedback is sent to"
         " stdout.\n"),
      {'q', svnadmin__ignore_uuid, svnadmin__force_uuid, 
+      svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
       svnadmin__parent_dir} },
 
     {"lock", subcommand_lock, {0},
@@ -411,6 +420,8 @@ struct svnadmin_opt_state
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t use_deltas;                         /* --deltas */
+  svn_boolean_t use_pre_commit_hook;                /* --use-pre-commit-hook */
+  svn_boolean_t use_post_commit_hook;               /* --use-post-commit-hook */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   svn_boolean_t bdb_log_keep;                       /* --bdb-log-keep */
@@ -668,9 +679,11 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_stream_set_write (stdout_stream, recode_write);
     }
   
-  SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
-                              opt_state->uuid_action, opt_state->parent_dir,
-                              check_cancel, NULL, pool));
+  SVN_ERR (svn_repos_load_fs2 (repos, stdin_stream, stdout_stream,
+                               opt_state->uuid_action, opt_state->parent_dir,
+                               opt_state->use_pre_commit_hook,
+                               opt_state->use_post_commit_hook,
+                               check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -842,6 +855,8 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       const char *txn_name_utf8;
       svn_error_t *err;
 
+      svn_pool_clear (subpool);
+
       SVN_ERR (svn_utf_cstring_to_utf8 (&txn_name_utf8, txn_name, subpool));
 
       /* Try to open the txn.  If that succeeds, try to abort it. */
@@ -873,9 +888,9 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
             (svn_cmdline_printf (subpool, _("Transaction '%s' removed.\n"),
                                  txn_name));
         }
-
-      svn_pool_clear (subpool);
     }
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1317,6 +1332,12 @@ main (int argc, const char * const *argv)
           }
         opt_state.parent_dir 
           = svn_path_internal_style (opt_state.parent_dir, pool);
+        break;
+      case svnadmin__use_pre_commit_hook:
+        opt_state.use_pre_commit_hook = TRUE;
+        break;
+      case svnadmin__use_post_commit_hook:
+        opt_state.use_post_commit_hook = TRUE;
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;

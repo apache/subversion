@@ -1849,7 +1849,8 @@ pre-commit.tmpl
         <para><command>svnlook</command> har en <!-- &#164; -->likefrem 
           syntaks:</para>
             
-        <!-- &#164; Legg inn norsk versjon --><screen>
+        <!-- &#164; Legg inn norsk versjon -->
+        <screen>
 $ svnlook help
 general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS &amp; OPTIONS ...]
 Note: any subcommand which takes the '--revision' and '--transaction'
@@ -2933,6 +2934,7 @@ $ svnadmin create spreadsheet; svnadmin load spreadsheet &lt; ss-dumpfile
 $
 </screen>
 
+        <!-- @ENGLISH {{{
         <para>Both of <command>svndumpfilter</command>'s subcommands
           accept options for deciding how to deal with
           <quote>empty</quote> revisions.  If a given revision
@@ -2941,27 +2943,48 @@ $
           unwanted.  So to give the user control over what to do with
           those revisions, <command>svndumpfilter</command> provides
           the following command-line options:</para>
+        @ENGLISH }}} -->
+        <para>Begge delkommandoene til <command>svndumpfilter</command> 
+          godtar valg for &#229; bestemme hva de skal gj&#248;re med 
+          <quote>tomme</quote> revisjoner.
+          Hvis en gitt revisjon bare inneholdt forandringer i stier som 
+          ble filtrert bort kan denne revisjonen som n&#229; er tom bli 
+          betraktet som uinteressant eller til og med u&#248;nsket.
+          S&#229; for &#229; gi brukeren kontroll over hva som skal gj&#248;res med 
+          disse revisjonene, har <command>svndumpfilter</command> disse 
+          kommandolinjevalgene:</para>
 
         <variablelist>
           <varlistentry>
             <term><option>--drop-empty-revs</option></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Do not generate empty revisions at all&mdash;just
                 omit them.</para>
+              @ENGLISH }}} -->
+              <para>Ikke lag tomme revisjoner i det hele tatt &#8212; utelat 
+                dem.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><option>--renumber-revs</option></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>If empty revisions are dropped (using the
-                <option>--drop-empty-revs</option> option), change the
+                <option>-&#64738;-drop-empty-revs</option> option), change the
                 revision numbers of the remaining revisions so that
                 there are no gaps in the numeric sequence.</para>
+              @ENGLISH }}} -->
+              <para>Hvis tomme revisjoner er droppet (ved bruk av valget 
+                <option>--drop-empty-revs</option>), forandres 
+                revisjonsnumrene p&#229; de gjenv&#230;rende revisjonene s&#229; det 
+                ikke blir mellomrom i den numeriske sekvensen.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><option>--preserve-revprops</option></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>If empty revisions are not dropped, preserve the
                 revision properties (log message, author, date, custom
                 properties, etc.) for those empty revisions.
@@ -2969,10 +2992,20 @@ $
                 original datestamp, and a generated log message that
                 indicates that this revision was emptied by
                 <command>svndumpfilter</command>.</para>
+              @ENGLISH }}} -->
+              <para>Hvis tomme revisjoner ikke droppes, ta vare p&#229; 
+                revisjonsegenskaper (loggmelding, forfatter, dato, 
+                egendefinerte egenskaper og s&#229; videre) for disse tomme 
+                revisjonene.
+                Eller vil tomme revisjoner bare inneholde det originale 
+                tidspunktet og en generert loggmelding som indikerer at 
+                denne revisjonen ble t&#248;mt av 
+                <command>svndumpfilter</command>.</para>
             </listitem>
           </varlistentry>
         </variablelist>
         
+        <!-- @ENGLISH {{{
         <para>While <command>svndumpfilter</command> can be very
           useful, and a huge timesaver, there are unfortunately a
           couple of gotchas.  First, this utility is overly sensitive
@@ -2980,13 +3013,31 @@ $
           dump file are specified with or without leading slashes.
           You'll want to look at the <literal>Node-path</literal> and
           <literal>Copyfrom-path</literal> headers.</para>
+        @ENGLISH }}} -->
+        <para>Selv om <command>svndumpfilter</command> kan v&#230;re veldig 
+          nyttig og sparer masse tid, er det dessverre et par ting &#229; 
+          passe p&#229;.
+          For det f&#248;rste er dette verkt&#248;yet overf&#248;lsom for <!-- &#164; Finn 
+          et mer brukervennlig ord for &#171;semantikk&#187; -->sti-semantikk.
+          Legg merke til om stiene i dumpfilen er spesifisert med eller 
+          uten skr&#229;streker i starten.
+          Dette vil du se i <literal>Node-path</literal> og 
+          <literal>Copyfrom-path</literal> i headerne.</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 &hellip;
 Node-path: spreadsheet/Makefile
 &hellip;
 </screen>
+        @ENGLISH }}} -->
+        <screen>
+&#8230;
+Node-path: spreadsheet/Makefile
+&#8230;
+</screen>
 
+        <!-- @ENGLISH {{{
         <para>If the paths have leading slashes, you should
           include leading slashes in the paths you pass to
           <command>svndumpfilter include</command> and
@@ -3001,7 +3052,23 @@ Node-path: spreadsheet/Makefile
           </footnote>
           you should probably normalize those paths so they all
           have, or lack, leading slashes.</para>
+        @ENGLISH }}} -->
+        <para>Hvis stiene har innledende skr&#229;streker, skal du ogs&#229; ha 
+          innledende skr&#229;streker i stiene som du leverer til 
+          <command>svndumpfilter include</command> og 
+          <command>svndumpfilter exclude</command> (og hvis de ikke har 
+          det, skal du ikke gj&#248;re det).
+          Videre, hvis dumpfilen din har inkonsekvent bruk av innledende 
+          skr&#229;streker av en eller annen grunn,<footnote>
+          <para>Selv om <command>svnadmin dump</command> har en 
+            konsekvent regel om innledende skr&#229;streker &#8212; &#229; ikke 
+            inkludere dme &#8212; kan det v&#230;re at andre programmer som 
+            genererer dumpdata ikke er like 
+            konsekvente.</para></footnote>
+          b&#248;r du normalisere disse stiene s&#229; de alle enten har eller 
+          mangler innledende skr&#229;streker.</para>
 
+        <!-- @ENGLISH {{{
         <para>Also, copied paths can give you some trouble.
           Subversion supports copy operations in the repository, where
           a new path is created by copying some already existing path.
@@ -3020,12 +3087,33 @@ Node-path: spreadsheet/Makefile
           readily available.  If you suspect that you have any copies
           of this sort in your repository, you might want to rethink
           your set of included/excluded paths.</para>
+        @ENGLISH }}} -->
+        <para>I tillegg kan kopierte stier gi deg litt tr&#248;bbel.
+          Subversion st&#248;tter kopioperasjoner i depotet, der en ny sti 
+          blir opprettet ved &#229; kopiere en allerede eksisterende sti.
+          Det er mulig at p&#229; et eller annet punkt i livsl&#248;pet til 
+          depotet blir en fil eller katalog kopiert fra en plass som 
+          <command>svndumpfilter</command> utelater, til en plass som 
+          den inkluderer.
+          For &#229; gj&#248;re dumpdataene <!-- &#164; self-sufficient -->selvforsynt, 
+          m&#229; <command>svndumpfilter</command> vise tilleggingen av den 
+          nye stien &#8212; inkludert innholdet av alle filer opprettet av 
+          kopieringen &#8212; og ikke vise denne tilleggingen som en kopiering 
+          fra en kilde som ikke eksisterer i den filtrerte 
+          dumpdatastr&#248;mmen.
+          Men fordi dumpformatet i Subversion bare viser hva som ble 
+          forandret i hver revisjon, kan det v&#230;re at innholdet i kilden 
+          for kopien ikke er <!-- &#164; readily --> tilgjengelig.
+          Hvis du har mistanke om at du har denslags kopier i depotet 
+          ditt, vil du kanskje tenke gjennom valget ditt av 
+          inkluderte/utelatte stier p&#229; nytt.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-5-sect-3.1.4">
         <title>svnshell.py</title>
 
+        <!-- @ENGLISH {{{
         <para>The Subversion source tree also comes with a shell-like
           interface to the repository.  The
           <command>svnshell.py</command> Python script (located in
@@ -3034,7 +3122,17 @@ Node-path: spreadsheet/Makefile
           those properly compiled and installed in order for this
           script to work) to connect to the repository and filesystem
           libraries.</para>
+        @ENGLISH }}} -->
+        <para>Kildekodetreet til Subversion kommer ogs&#229; med et 
+          skall-lignende grensesnitt til depotet.
+          Python-skriptet <command>svnshell.py</command> (lokalisert i 
+          <filename>tools/examples/</filename> i kildekodetreet) bruker 
+          Subversions <!-- &#164; Det h&#818;&#248;&#818;r&#818;e&#818;s&#818; riktig ut, men er det det? 
+          -->spr&#229;kbindinger (s&#229; du m&#229; ha disse skikkelig kompilert og 
+          installert for at dette skriptet skal virke) for &#229; koble seg 
+          til depot- og filsystembibliotekene.</para>
 
+        <!-- @ENGLISH {{{
         <para>Once started, the program behaves similarly to a shell
           program, allowing you to browse the various directories in
           your repository.  Initially, you are
@@ -3043,7 +3141,18 @@ Node-path: spreadsheet/Makefile
           presented with a command prompt.  You can use the
           <literal>help</literal> command at any time to display a
           list of available commands and what they do.</para>
+        @ENGLISH }}} -->
+        <para>N&#229;r det er startet, oppf&#248;rer programmet som likt et skall 
+          og lar deg bla gjennom de forskjellige katalogene i depotet 
+          ditt.
+          I starten er du <quote>plassert</quote> i rotkatalogen for 
+          <literal>HEAD</literal>-revisjonen i depotet, og du f&#229;r en 
+          kommandolinje.
+          Du kan bruke <literal>help</literal>-kommandoen til enhver tid 
+          for &#229; vise en liste over tilgjengelige kommandoer og hva de 
+          gj&#248;r.</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnshell.py /path/to/repos
 &lt;rev: 2 /&gt;$  help
@@ -3058,7 +3167,25 @@ Available commands:
   youngest     : list the youngest browsable revision number
 &lt;rev: 2 /&gt;$
 </screen>
+        @ENGLISH }}} -->
+        <!-- &#164; Den der b&#248;r virkelig fornorskes, men det tar vi seinere. 
+        Eller kan vi det? Det er jo ikke noe i18n-opplegg p&#229; svnshell.py 
+        for &#248;yeblikket. Hm. --><screen>
+$ svnshell.py /sti/til/depot
+&lt;rev: 2 /&gt;$  help
+Available commands:
+  cat FILE     : dump the contents of FILE
+  cd DIR       : change the current working directory to DIR
+  exit         : exit the shell
+  ls [PATH]    : list the contents of the current directory
+  lstxns       : list the transactions available for browsing
+  setrev REV   : set the current revision to browse
+  settxn TXN   : set the current transaction to browse
+  youngest     : list the youngest browsable revision number
+&lt;rev: 2 /&gt;$
+</screen>
 
+        <!-- @ENGLISH {{{
         <para>Navigating the directory structure of your repository is
           done in the same way you would navigate a regular Unix or
           Windows shell&mdash;using the <literal>cd</literal> command.
@@ -3073,9 +3200,28 @@ Available commands:
           display the contents of the current directory, and you can
           use the <literal>cat</literal> command to display the
           contents of a file.</para>
+        @ENGLISH }}} -->
+        <para>Navigering i katalogstrukturen til depotet ditt gj&#248;res p&#229; 
+          samme m&#229;ten som du gj&#248;r i et vanlig Unix- eller Windowsskall &#8212; 
+          ved &#229; bruke kommandoen <literal>cd</literal>.
+          Kommandolinjeprompten vil til enhver tid vise deg hvilken 
+          revisjon (inneholder forstavelsen <literal>rev:</literal>) 
+          eller transaksjon (inneholder forstavelsen 
+          <literal>txn:</literal>) du unders&#248;ker for &#248;yeblikket, og 
+          stiplasseringen i denne revisjonen eller transaksjonen.
+          Du kan forandre din n&#229;v&#230;rende revisjon eller transaksjon med 
+          henholdsvis <literal>setrev</literal>- og 
+          <literal>settxn</literal>-kommandoen.
+          Som i et Unixskall kan du bruke kommandoen 
+          <literal>ls</literal> for &#229; vise innholdet av den n&#229;v&#230;rende 
+          katalogen, og du kan bruke <literal>cat</literal>-kommandoen 
+          for &#229; vise innholdet av en fil.</para>
 
         <example id="svn-ch-8-sect-3.1.3-ex-1">
+          <!-- @ENGLISH {{{
           <title>Using svnshell to Navigate the Repository</title>
+          @ENGLISH }}} -->
+          <title>Bruk av svnshell for &#229; navigere i depotet</title>
 
           <screen>
 &lt;rev: 2 /&gt;$ ls
@@ -3111,13 +3257,23 @@ $
 </screen>
         </example>
 
+        <!-- @ENGLISH {{{
         <para>As you can see in the previous example, multiple
           commands may be specified at a single command prompt,
           separated by a semicolon.  Also, the shell understands the
           notions of relative and absolute paths, and will properly
           handle the <literal>.</literal> and
           <literal>..</literal> special path components.</para>
+        @ENGLISH }}} -->
+        <para>Som du ser i det forrige eksempelet kan flere kommandoer 
+          bli spesifisert p&#229; en enkelt kommandolinje, separert med et 
+          semikolon.
+          I tillegg forst&#229;r skallet <!-- &#164; notions of --> relative og 
+          absolutte stier og vil behandle stikomponentene 
+          <literal>.</literal> og <literal>..</literal> p&#229; en skikkelig 
+          m&#229;te.</para>
 
+        <!-- @ENGLISH {{{
         <para>The <literal>youngest</literal> command displays the
           youngest revision.  This is useful for determining the range
           of valid revisions you can use as arguments to the
@@ -3130,20 +3286,52 @@ $
           browsable transactions is the same list that
           <command>svnadmin lstxns</command> returns, and the same
           list that is valid for use with <command>svnlook</command>'s
-          <option>--transaction</option> option.</para>
+          <option>-&#64738;-transaction</option> option.</para>
+        @ENGLISH }}} -->
+        <para><literal>youngest</literal>-kommandoen viser den yngste 
+          revisjonen.
+          Dette er nyttig for &#229; ansl&#229; omr&#229;det av gyldige revisjoner du 
+          kan bruke som argumenter til 
+          <literal>setrev</literal>-kommandoen &#8212; du har lov til &#229; bla 
+          gjennom alle revisjonene (husk at de benevnes med heltall) 
+          mellom 0 til og med den yngste.
+          &#197; ansl&#229; de gyldige transaksjonene som du kan bla gjennom er 
+          ikke like <!-- &#164; &#171;Nydelig&#187; blir fors&#229;vidt ikke helt korrekt. 
+          Sjekkes ut n&#229;r jeg kommer p&#229; en maskin med skikkelig python. 
+          -->enkelt.
+          Bruk <command>lstxns</command>-kommandoen for &#229; liste 
+          transaksjonene som du kan bla gjennom.
+          Listen med transaksjoner som du kan bla gjennom er den samme 
+          som <command>svnadmin lstxns</command> returnerer, og den 
+          samme listen som er gyldig for bruk sammen med 
+          <command>svnlook</command>-valget 
+          <option>--transaction</option>.</para>
 
+        <!-- @ENGLISH {{{
         <para>Once you've finished using the shell, you can exit
           cleanly by using the <command>exit</command> command.
           Alternatively, you can supply an end-of-file
           character&mdash;Control-D (though some Win32 Python
           distributions use the Windows Control-Z convention
           instead).</para>
+        @ENGLISH }}} -->
+        <para>N&#229;r du er ferdig med &#229; bruke skallet, kan du trygt 
+          avslutte ved &#229; bruke <command>exit</command>-kommandoen.
+          Alternativt kan du skrive et filslutt-tegn &#8212; Ctrl-d (<!-- &#164; 
+          &#171;though&#187; &#8594; &#171;selv om&#187;. svnshell.py sjekker for EOF i linje 46. 
+          Betyr det at CTRL-d brukes uansett, eller varierer det med 
+          CTRL-z ? -->selv om noen Win32-distribusjoner av Python bruker 
+          Windows-varianten Ctrl-z istedenfor).</para>
 
       </sect3>
 
       <sect3 id="svn-ch-5-sect-3.1.5">
+        <!-- @ENGLISH {{{
         <title>Berkeley DB Utilities</title>
+        @ENGLISH }}} -->
+        <title>Berkeley DB-verkt&#248;y</title>
 
+        <!-- @ENGLISH {{{
         <para>If you're using a Berkeley DB repository, then all of
           your versioned filesystem's structure and data live in a set
           of database tables within the <filename>db</filename>
@@ -3153,7 +3341,17 @@ $
           tools (you can see the documentation for these tools at
           SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).</para>
+        @ENGLISH }}} -->
+        <para>Hvis du bruker et Berkeley DB-depot, vil alle strukturer 
+          og data v&#230;re i et sett med databasetabeller i katalogen 
+          <filename>db</filename> i depotet ditt.
+          Denne underkatalogen er en vanlig Berkeley DB milj&#248;katalog, og 
+          kan derfor bli brukt i forbindelse med alle Berkeley 
+          databaseverkt&#248;y (du kan se dokumentasjonen for disse 
+          verkt&#248;yene p&#229; SleepyCats hjemmeside, <systemitem 
+          class="url">http://www.sleepycat.com/</systemitem>).</para>
 
+        <!-- @ENGLISH {{{
         <para>For day-to-day Subversion use, these tools are
           unnecessary.  Most of the functionality typically needed for
           Subversion repositories has been duplicated in the
@@ -3164,7 +3362,20 @@ $
           <command>db_archive</command> command, and <command>svnadmin
           recover</command> reflects the common use-cases of the
           <command>db_recover</command> utility.</para>
+        @ENGLISH }}} -->
+        <para>For daglig Subversionbruk er disse verkt&#248;yene un&#248;dvendige.
+          Mesteparten av funksjonaliteten som vanligvis er n&#248;dvendig for 
+          Subversiondepot er blitt duplisert i 
+          <command>svnadmin</command>-verkt&#248;yet.
+          For eksempel, <command>svnadmin list-unused-dblogs</command> 
+          og <command>svnadmin list-dblogs</command> utf&#248;rer en <!-- &#164; 
+          subset -->del av hva Berkeley-kommandoen 
+          <command>db_archive</command> gj&#248;r, og <command>svnadmin 
+          recover</command> gjenspeiler de vanlige <!-- &#164; use-cases 
+          -->bruksm&#229;ter for 
+          <command>db_recover</command>-programmet.</para>
             
+        <!-- @ENGLISH {{{
         <para>There are still a few Berkeley DB utilities that you
           might find useful.  The <command>db_dump</command> and
           <command>db_load</command> programs write and read,
@@ -3177,37 +3388,78 @@ $
           utility can provide useful information about the status of
           your Berkeley DB environment, including detailed statistics
           about the locking and storage subsystems.</para>
+        @ENGLISH }}} -->
+        <para>Det er fortsatt noen f&#229; Berkeley DB-programmer som du kan 
+          finne nyttige.
+          Programmene <command>db_dump</command> og 
+          <command>db_load</command> skriver og leser <!-- &#164; Blir det 
+          rar setning hvis h. st&#229;r her? -->henholdsvis et tilpasset 
+          filformat som beskriver n&#248;kler og verdier i en Berkeley 
+          DB-database.
+          Siden Berkeley DB-databaser ikke er portable p&#229; kryss av 
+          maskinarkitekturer, er dette formatet en nyttig m&#229;te &#229; 
+          overf&#248;re disse databasene fra maskin til maskin, uavhengig av 
+          arkitektur eller operativsystem.
+          I tillegg kan programmet <command>db_stat</command> gi deg 
+          nyttig informasjon om statusen til Berkeley DB-milj&#248;et, 
+          inkludert detaljert statistikk om undersystemer som tar seg av 
+          l&#229;sing og lagring.</para>
 
       </sect3>
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.2">
+      <!-- @ENGLISH {{{
       <title>Repository Cleanup</title>
+      @ENGLISH }}} -->
+      <title><!-- &#164; Er det ikke noe i samme gata en annen plass i boka? 
+        -->Depotvedlikehold</title>
             
+      <!-- @ENGLISH {{{
       <para>Your Subversion repository will generally require very
         little attention once it is configured to your liking.
         However, there are times when some manual assistance from an
         administrator might be in order.  The
         <command>svnadmin</command> utility provides some helpful
         functionality to assist you in performing such tasks as</para>
+      @ENGLISH }}} -->
+      <para>Subversiondepotet ditt vil vanligvis kreve veldig lite 
+        tilsyn n&#229;r det er konfigurert s&#229;nn som du vil ha det.
+        Det er imidlertid enkelte ganger en administrator m&#229; tr&#229; til med 
+        manuell assistanse.
+        Verkt&#248;yet <command>svnadmin</command> gir nyttig funksjonalitet 
+        for &#229; hjelpe deg med &#229; utf&#248;re oppgaver som</para>
 
       <itemizedlist>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>modifying commit log messages,</para>
+          @ENGLISH }}} -->
+          <para>modifisere loggmeldinger</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>removing dead transactions,</para>
+          @ENGLISH }}} -->
+          <para>fjerne d&#248;de transaksjoner</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>recovering <quote>wedged</quote> repositories, and</para>
+          @ENGLISH }}} -->
+          <para>gjenopprette <quote>fastkilte</quote> depot, og</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>migrating repository contents to a different
             repository.</para>
+          @ENGLISH }}} -->
+          <para>flytte depotinnholdet til et annet depot.</para>
         </listitem>
       </itemizedlist>
 
+      <!-- @ENGLISH {{{
       <para>Perhaps the most commonly used of
         <command>svnadmin</command>'s subcommands is
         <literal>setlog</literal>.  When a transaction is committed to
@@ -3217,7 +3469,18 @@ $
         revision itself.  In other words, the repository remembers
         only the latest value of the property, and discards previous
         ones.</para>
+      @ENGLISH }}} -->
+      <para>Den delkommandoen som kanskje blir brukt mest i 
+        <command>svnadmin</command> er <literal>setlog</literal>.
+        N&#229;r en transaksjon er lagt inn i depotet og forfremmet til en 
+        revisjon, blir den beskrivende loggmeldingen assosiert med denne 
+        nye revisjonen <!-- &#164; &#171;(and provided by the user)&#187; Hva menes det 
+        her? --> lagret som en uversjonert egenskap vedlagt selve 
+        revisjonen.
+        Med andre ord, depotet husker bare den seneste verdien til 
+        egenskapen, og forkaster tidligere versjoner.</para>
 
+      <!-- @ENGLISH {{{
       <para>Sometimes a user will have an error in her log message (a
         misspelling or some misinformation, perhaps).  If the
         repository is configured (using the
@@ -3231,18 +3494,48 @@ $
         the potential to lose information forever, Subversion
         repositories are not, by default, configured to allow changes
         to unversioned properties&mdash;except by an administrator.</para>
+      @ENGLISH }}} -->
+      <para>Noen ganger skjer det at det blir feil i en loggmelding (en 
+        skrivefeil eller kanskje noe feilinformasjon).
+        Hvis depotet er satt opp (ved bruk av p&#229;hakningene
+        <literal>pre-rev-prop-change</literal> og 
+        <literal>post-revprop-change</literal>; se <xref 
+        linkend="svn-ch-5-sect-2.1"/>) til &#229; akseptere forandringer i 
+        denne loggmeldingen etter at innleggingen er ferdig, kan 
+        brukeren <quote>fikse</quote> loggmeldingen <!-- remotely -->fra 
+        en annen maskin ved bruk av <command>svn</command>-programmets 
+        <literal>propset</literal>-kommando (se <xref 
+        linkend="svn-ch-9"/>).
+        Men fordi det her er en potensiell sjanse for &#229; miste 
+        informasjon for alltid, er standard oppsett p&#229; et 
+        Subversiondepot &#229; ikke godta forandringer til uversjonerte 
+        egenskaper &#8212; unntatt av en administrator.</para>
 
+      <!-- @ENGLISH {{{
       <para>If a log message needs to be changed by an administrator,
         this can be done using <command>svnadmin setlog</command>.
         This command changes the log message (the
         <literal>svn:log</literal> property) on a given revision of a
         repository, reading the new value from a provided file.</para>
+      @ENGLISH }}} -->
+      <para>Hvis en loggmelding m&#229; forandres av en administrator, kan 
+        dette gj&#248;res ved &#229; bruke <command>svnadmin setlog</command>.
+        Denne kommandoen forandrer loggmeldingen 
+        (<literal>svn:log</literal>-egenskapen) p&#229; en gitt revisjoen i 
+        et depot, ved &#229; lese den nye verdien fra en fil.</para>
           
+      <!-- @ENGLISH {{{
       <screen>
 $ echo "Here is the new, correct log message" &gt; newlog.txt
 $ svnadmin setlog myrepos newlog.txt -r 388
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ echo "Her er den nye, korrekte loggmeldingen" &gt; nylogg.txt
+$ svnadmin setlog mittdepot nylogg.txt -r 388
+</screen>
       
+      <!-- @ENGLISH {{{
       <para>The <command>svnadmin setlog</command> command alone is
         still bound by the same protections against modifying
         unversioned properties as a remote client is&mdash;the
@@ -3250,18 +3543,38 @@ $ svnadmin setlog myrepos newlog.txt -r 388
         <literal>post-revprop-change</literal> hooks are still
         triggered, and therefore must be setup to accept changes of
         this nature.  But an administrator can get around these
-        protections by passing the <option>--bypass-hooks</option>
+        protections by passing the <option>-&#64738;-bypass-hooks</option>
         option to the <command>svnadmin setlog</command> command.</para>
+      @ENGLISH }}} -->
+      <para>Kommandoen <command>svnadmin setlog</command> alene er 
+        fortsatt bundet av den samme beskyttelsen mot &#229; modifisere 
+        uversjonerte egenskaper som en klient <!-- 
+        &#171;remote&#187;-problematikken igjen -->p&#229; en annen maskin er &#8212; 
+        p&#229;hakningsskriptene <literal>pre-revprop-change</literal> og 
+        <literal>post-revprop-change</literal> blir fortsatt aktivisert 
+        og m&#229; derfor settes opp til &#229; godta denne typen forandringer.
+        Men en administrator kan g&#229; rundt denne beskyttelsen ved &#229; angi 
+        valget <option>--bypass-hooks</option> til <command>svnadmin 
+        setlog</command>-kommandoen.</para>
  
       <warning>
+        <!-- @ENGLISH {{{
         <para>Remember, though, that by bypassing the hooks, you are
           likely avoiding such things as email notifications of
           property changes, backup systems which track unversioned
           property changes, and so on.  In other words, be very
           careful about what you are changing, and how you change
           it.</para>
+        @ENGLISH }}} -->
+        <para>Men husk at ved &#229; omg&#229; p&#229;hakningsskriptene unng&#229;r du ogs&#229; 
+          utf&#248;ring av ting som meldinger via email om forandringer i 
+          egenskaper, backupsystemer som f&#248;lger med p&#229; 
+          egenskapsforandringer og s&#229; videre.
+          Med andre ord, v&#230;r meget forsiktig med hva du forandrer og 
+          hvordan du forandrer det.</para>
       </warning>
 
+      <!-- @ENGLISH {{{
       <para>Another common use of <command>svnadmin</command> is to
         query the repository for outstanding&mdash;possibly
         dead&mdash;Subversion transactions.  In the event that a commit
@@ -3275,11 +3588,35 @@ $ svnadmin setlog myrepos newlog.txt -r 388
         failure might have occurred in the middle of an operation, etc.
         Regardless of the reason, these dead transactions serve only
         to clutter the repository and consume resources.</para>
+      @ENGLISH }}} -->
+      <para>En annen vanlig m&#229;te &#229; bruke <command>svnadmin</command> p&#229; 
+        er &#229; sp&#248;rre depotet om utest&#229;ende &#8212; muligens d&#248;de &#8212; 
+        Subversiontransaksjoner.
+        Hvis en innlegging feiler, blir transaksjonen vanligvis ryddet 
+        opp i.
+        Det vil si, selve transaksjonen blir fjernet fra depotet, og 
+        alle dataene assosiert med (og bare med) denne transaksjonen 
+        blir fjernet i samme slengen.
+        Men enkelte ganger kan det skje en feil p&#229; en m&#229;te som gj&#248;r at 
+        oppryddingen av transaksjonen aldri skjer.
+        Dette kan skje av flere grunner:
+        Kanskje ble klientoperasjonen uelegant avsluttet av brukeren, 
+        eller en nettverksfeil kan ha skjedd midt i en operasjon og s&#229; 
+        videre.
+        Uansett grunnen, disse d&#248;de transaksjonene er bare skrot i 
+        depotet og tar opp ressurser.</para>
 
+      <!-- @ENGLISH {{{
       <para>You can use <command>svnadmin</command>'s
         <literal>lstxns</literal> command to list the names of the
         currently outstanding transactions.</para>
+      @ENGLISH }}} -->
+      <para>Du kan bruke <command>svnadmin</command>s 
+        <literal>lstxns</literal>-kommando for &#229; liste navnene p&#229; 
+        utest&#229;ende transaksjoner som ligger i depotet for 
+        &#248;yeblikket.</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ svnadmin lstxns myrepos
 19
@@ -3287,10 +3624,19 @@ $ svnadmin lstxns myrepos
 a45
 $
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ svnadmin lstxns mittdepot
+19
+3a1
+a45
+$
+</screen>
 
+      <!-- @ENGLISH {{{
       <para>Each item in the resultant output can then be used with
         <command>svnlook</command> (and its
-        <option>--transaction</option> option) to determine who
+        <option>-&#64738;-transaction</option> option) to determine who
         created the transaction, when it was created, what types of
         changes were made in the transaction&mdash;in other words,
         whether or not the transaction is a safe candidate for
@@ -3299,22 +3645,54 @@ $
         cleanup of the transaction.  In fact, the
         <literal>rmtxns</literal> subcommand can take its input
         directly from the output of <literal>lstxns</literal>!</para>
+      @ENGLISH }}} -->
+      <para>Hvert element i de resulterende utdataene kan deretter bli 
+        brukt sammen med <command>svnlook</command> (og dens valg 
+        <option>--transaction</option>) for &#229; finne ut hvem som lagde 
+        transaksjonen, n&#229;r den ble laget, hvilke typer forandringer som 
+        ble gjort i transaksjonen &#8212; med andre ord, om transaksjonen er 
+        eller ikke er en trygg kandidat for sletting!
+        Hvis den er det, kan transaksjonens navn leveres til 
+        <command>svnadmin rmtxns</command> som vil utf&#248;re fjerning av 
+        transaksjonen.
+        <literal>rmtxns</literal>-delkommandoen kan faktisk motta 
+        dataene direkte fra det som <literal>lstxns</literal> 
+        genererer!</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ svnadmin rmtxns myrepos `svnadmin lstxns myrepos`
 $
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ svnadmin rmtxns mittdepot `svnadmin lstxns mittdepot`
+$
+</screen>
 
+      <!-- @ENGLISH {{{
       <para>If you use these two subcommands like this, you should
         consider making your repository temporarily inaccessible to
         clients.  That way, no one can begin a legitimate transaction
         before you start your cleanup.  The following is a little bit
         of shell-scripting that can quickly generate information about
         each outstanding transaction in your repository:</para>
+      @ENGLISH }}} -->
+      <para>Hvis du bruker disse to delkommandoene som dette, b&#248;r du 
+        vurdere &#229; gj&#248;re depotet midlertidig utilgjengelig for klienter.
+        P&#229; denne m&#229;ten kan ingen starte p&#229; en legitim transaksjon f&#248;r du 
+        starter p&#229; opprenskningen.
+        Det f&#248;lgende er en skallsnutt som raskt kan generere informasjon 
+        om hver utest&#229;ende transaksjon i depotet ditt:</para>
 
       <example id="svn-ch-5-sect-3.2-ex-1">
+        <!-- @ENGLISH {{{
         <title>txn-info.sh (Reporting Outstanding Transactions)</title>
+        @ENGLISH }}} -->
+        <title>txn-info.sh (Rapporterer utest&#229;ende 
+          transaksjoner)</title>
 
+        <!-- @ENGLISH {{{
         <programlisting>
 #!/bin/sh
 
@@ -3331,37 +3709,86 @@ if [ "x$REPOS" = x ] ; then
 fi
 
 for TXN in `${SVNADMIN} lstxns ${REPOS}`; do 
-  echo "---[ Transaction ${TXN} ]-------------------------------------------"
+  echo "-&#64738;-&#64738;-[ Transaction ${TXN} ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-"
+  ${SVNLOOK} info "${REPOS}" -&#64738;-transaction "${TXN}"
+done
+</programlisting>
+        @ENGLISH }}} -->
+        <programlisting>
+#!/bin/sh
+
+### Generer informasjon om alle utest&#229;ende transaksjoner i et 
+### Subversiondepot.
+
+SVNADMIN=/usr/local/bin/svnadmin
+SVNLOOK=/usr/local/bin/svnlook
+
+REPOS="${1}"
+if [ "x$REPOS" = x ] ; then
+  echo "bruk: $0 STI_TIL_DEPOT"
+  exit
+fi
+
+for TXN in `${SVNADMIN} lstxns ${REPOS}`; do 
+  echo "---[ Transaksjon ${TXN} ]-------------------------------------------"
   ${SVNLOOK} info "${REPOS}" --transaction "${TXN}"
 done
 </programlisting>
       </example>
 
+      <!-- @ENGLISH {{{
       <para>You can run the previous script using
         <command>/path/to/txn-info.sh /path/to/repos</command>.  The
         output is basically a concatenation of several chunks of
         <command>svnlook info</command> output (see <xref
         linkend="svn-ch-5-sect-3.1.1"/>), and will look something
         like:</para>
+      @ENGLISH }}} -->
+      <para>Du kan kj&#248;re det foreg&#229;ende skriptet ved &#229; bruke 
+        <command>/sti/til/txn-info.sh /sti/til/depot</command>.
+        Utdataene er hovedsaklig flere biter av utdataene fra 
+        <command>svnlook info</command> som er satt sammen (se <xref 
+        linkend="svn-ch-5-sect-3.1.1"/>), og vil se ut som noe i denne 
+        retningen:</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ txn-info.sh myrepos
----[ Transaction 19 ]-------------------------------------------
+-&#64738;-&#64738;-[ Transaction 19 ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
 sally
 2001-09-04 11:57:19 -0500 (Tue, 04 Sep 2001)
 0
----[ Transaction 3a1 ]-------------------------------------------
+-&#64738;-&#64738;-[ Transaction 3a1 ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
 harry
 2001-09-10 16:50:30 -0500 (Mon, 10 Sep 2001)
 39
 Trying to commit over a faulty network.
----[ Transaction a45 ]-------------------------------------------
+-&#64738;-&#64738;-[ Transaction a45 ]-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
+sally
+2001-09-12 11:09:28 -0500 (Wed, 12 Sep 2001)
+0
+$
+</screen>
+      @ENGLISH }}} -->
+      <screen>
+$ txn-info.sh mittdepot
+---[ Transaksjon 19 ]-------------------------------------------
+sally
+2001-09-04 11:57:19 -0500 (Tue, 04 Sep 2001)
+0
+---[ Transaksjon 3a1 ]-------------------------------------------
+harry
+2001-09-10 16:50:30 -0500 (Mon, 10 Sep 2001)
+39
+Pr&#248;ver &#229; legge inn over et skr&#248;pelig nettverk.
+---[ Transaksjon a45 ]-------------------------------------------
 sally
 2001-09-12 11:09:28 -0500 (Wed, 12 Sep 2001)
 0
 $
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>Usually, if you see a dead transaction that has no log
         message attached to it, this is the result of a failed update
         (or update-like) operation.  These operations use Subversion
@@ -3373,7 +3800,23 @@ $
         datestamp can provide interesting information&mdash;for
         example, how likely is it that an operation begun nine months
         ago is still active?</para>
+      @ENGLISH }}} -->
+      <para>Vanligvis, hvis du ser en d&#248;d transaksjon som ikke har noen 
+        loggmelding vedlagt, er dette et resultat av en 
+        oppdateringsoperasjon (eller noe i likhet med en oppdatering) 
+        som har feilet.
+        Disse operasjonene bruker Subversiontransaksjoner under panseret 
+        for &#229; <!-- &#164; -->simulere tilstanden til en arbeidskopi.
+        Siden de aldri er ment &#229; bli lagt inn i depotet, krever ikke 
+        Subversion en loggmelding for disse transaksjonene.
+        Transaksjoner som har loggmeldinger vedlagt er omtrent helt 
+        sikkert mislykkede innlegginger av en eller annen type.
+        I tillegg kan tidspunktet til en transaksjon bidra med 
+        interessant informasjon &#8212; for eksempel, hvor sannsynlig er det 
+        at en operasjon som begynte for ni m&#229;neder siden fortsatt er 
+        aktiv?</para>
 
+      <!-- @ENGLISH {{{
       <para>In short, transaction cleanup decisions need not be made
         unwisely.  Various sources of information&mdash;including
         Apache's error and access logs, the logs of successful
@@ -3382,13 +3825,27 @@ $
         simply communicate with a seemingly dead transaction's owner
         (via email, for example) to verify that the transaction is, in
         fact, in a zombie state.</para>
+      @ENGLISH }}} -->
+      <para>Kort sagt er det ikke n&#248;dvendig &#229; foreta ukloke beslutninger 
+        ang&#229;ende fjerning av transaksjoner.
+        Forskjellige kilder til informasjon &#8212; inkludert Apaches feil- og 
+        tilgangslogg, loggene med gjennomf&#248;rte Subversioninnlegginger og 
+        s&#229; videre &#8212; kan bli tatt med i beslutningsprosessen.
+        Til sist kan administratoren rett og slett kommunisere med 
+        eieren av en tilsynelatende d&#248;d transaksjon (via email, for 
+        eksempel) for &#229; fastsl&#229; om transaksjonen faktisk er i en 
+        zombietilstand.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.3">
+      <!-- @ENGLISH {{{
       <title>Managing Disk Space</title>
+      @ENGLISH }}} -->
+      <title>Passe p&#229; diskplassen</title>
 
+        <!-- @ENGLISH {{{
         <para>While the cost of storage has dropped incredibly in the
           past few years, disk usage is still a valid concern for
           administrators seeking to version large amounts of data.
@@ -3401,7 +3858,24 @@ $
           backed up, and which can be safely removed.  This section is
           specific to Berkeley DB;  FSFS repositories have no extra
           data that be cleaned up or reclaimed.</para>
+        @ENGLISH }}} -->
+        <para>Selv om prisen p&#229; datalagring har stupt de siste &#229;rene, er 
+          bruken av diskplass fortsatt noe administratorer m&#229; tenke p&#229; 
+          hvis de vil versjonere store mengder data.
+          Hver eneste ekstra byte konsumert av det aktive depotet er en 
+          byte som m&#229; tas backup av utenfor maskinen, kanskje flere 
+          ganger som del av roterende backuper.
+          Hvis du bruker et Berkeley DB-depot, er den prim&#230;re 
+          lagringsmekanismen et komplekst databasesystem og det er 
+          nyttig &#229; vite hvilke deler av dataene som m&#229; forbli p&#229; den 
+          aktive <!-- &#164; Ja, hallo, vi er da ikke ekstremister. -->siten, 
+          hvilke som det m&#229; tas sikkerhetskopi av, og hva som trygt kan 
+          fjernes.
+          Denne seksjonen er spesifikk til Berkeley DB, FSFS-depot har 
+          ingen ekstra data som kan ryddes opp i eller <!-- &#164; -->brukes 
+          om igjen.</para>
 
+        <!-- @ENGLISH {{{
         <para>Until recently, the largest offender of disk space usage
           with respect to Subversion repositories was the log files to
           which Berkeley DB performs its pre-writes before modifying
@@ -3411,7 +3885,19 @@ $
           at any given time some state, the log files contain all the
           many changes along the way between states.  As such, they
           can start to accumulate quite rapidly.</para>
+        @ENGLISH }}} -->
+        <para>Inntil nylig var de st&#248;rste synderene n&#229;r det gjelder 
+          diskplass brukt av Subversiondepot <!-- &#164; Sm&#229;tung setning? 
+          -->loggfilene der Berkeley DB utf&#248;rer sine forh&#229;ndsskrivinger 
+          f&#248;r de aktuelle databasefilene modifiseres.
+          Disse filene inneholder alle operasjonene som blir utf&#248;rt 
+          langs ruten &#229; forandre databasen fra en tilstand til en annen 
+          &#8212; mens databasefilene avspeiler til enhver tid en viss 
+          tilstand, inneholder loggfilene alle de mange sm&#229;forandringene 
+          langs veien mellom tilstander.
+          Og derfor kan disse &#248;ke i omfang ganske fort.</para>
 
+        <!-- @ENGLISH {{{
         <para>Fortunately, beginning with the 4.2 release of Berkeley
           DB, the database environment has the ability to remove its
           own unused log files without any external procedures.  Any
@@ -3419,7 +3905,7 @@ $
           which is compiled against Berkeley DB version 4.2 or greater
           will be configured for this automatic log file removal.  If
           you don't want this feature enabled, simply pass the
-          <option>--bdb-log-keep</option> option to the
+          <option>-&#64738;-bdb-log-keep</option> option to the
           <command>svnadmin create</command> command.  If you forget
           to do this, or change your mind at a later time, simple edit
           the <filename>DB_CONFIG</filename> file found in your
@@ -3430,7 +3916,28 @@ $
           force the configuration changes to take effect.  See <xref
           linkend="svn-ch-5-sect-2.2"/> for more information about
           database configuration.</para>
+        @ENGLISH }}} -->
+        <para>Heldigvis, fra og med 4.2-versjonen av Berkeley DB har 
+          databasemilj&#248;et muligheten til &#229; fjerne sine egne ubrukte 
+          loggfiler uten eksterne prosedyrer.
+          Ethvert depot som er laget med en <command>svnadmin</command> 
+          som er kompilert mot Berkeley DB 4.2 eller st&#248;rre vil bli 
+          konfigurert for denne automatiske slettingen av loggfiler.
+          Hvis du ikke vil ha denne funksjonaliteten aktivisert, kan du 
+          ganske enkelt angi valget <option>--bdb-log-keep</option> til 
+          <command>svnadmin create</command>-kommandoen.
+          Hvis du glemmer &#229; gj&#248;re dette, eller forandrer mening p&#229; et 
+          senere tidspunkt, kan du redigere filen 
+          <filename>DB_CONFIG</filename> som ligger i katalogen 
+          <filename>db</filename> i depotet.
+          Du kommenterer bort linjen som inneholder direktivet 
+          <literal>set_flags DB_LOG_AUTOREMOVE</literal> og kj&#248;rer 
+          deretter <command>svnadmin recover</command> p&#229; depotet ditt 
+          for &#229; aktivisere forandringene i konfigrasjonen.
+          Se <xref linkend="svn-ch-5-sect-2.2"/> for mer informasjon om 
+          databasekonfigurasjon.</para>
 
+        <!-- @ENGLISH {{{
         <para>Without some sort of automatic log file removal in
           place, log files will accumulate as you use your repository.
           This is actually somewhat of a feature of the database
@@ -3442,7 +3949,21 @@ $
           to conserve space.  Use the <command>svnadmin
           list-unused-dblogs</command> command to list the unused
           log files:</para>
+        @ENGLISH }}} -->
+        <para>Uten noen form for automatisk sletting av loggfiler p&#229; 
+          plass, vil loggfilene samle seg opp etterhvert som du bruker 
+          depotet.
+          Dette er faktisk en form for God Ting i databasesystemet &#8212; du 
+          vil v&#230;re i stand til &#229; gjenopprette hele databasen ved bruk av 
+          loggfilene alene, s&#229; disse filene kan v&#230;re nyttige for 
+          gjenoppretting etter en katastrofe.
+          Men vanligvis vil du arkivere loggfilene som ikke lenger er i 
+          bruk av Berkeley DB og deretter fjerne dem fra disken for &#229; 
+          spare plass.
+          Bruk kommandoen <command>svnadmin list-unused-dblogs</command> 
+          for &#229; liste ut de ubrukte loggfilene:</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ svnadmin list-unused-dblogs /path/to/repos
 /path/to/repos/log.0000000031
@@ -3452,7 +3973,18 @@ $ svnadmin list-unused-dblogs /path/to/repos
 $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 ## disk space reclaimed!
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ svnadmin list-unused-dblogs /sti/til/depot
+/sti/til/depot//log.0000000031
+/sti/til/depot//log.0000000032
+/sti/til/depot//log.0000000033
 
+$ svnadmin list-unused-dblogs /sti/til/depot | xargs rm
+## diskplassen er frigjort!
+</screen>
+
+        <!-- @ENGLISH {{{
         <para>To keep the size of the repository as small as possible,
           Subversion uses <firstterm>deltification</firstterm> (or,
           <quote>deltified storage</quote>) within the repository
@@ -3472,8 +4004,29 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
           the contents of versioned files&mdash;is stored at a much
           smaller size than the original <quote>fulltext</quote>
           representation of that data.</para>
+        @ENGLISH }}} -->
+        <para>For &#229; holde st&#248;rrelsen p&#229; depotet s&#229; liten som mulig, 
+          bruker Subversion <firstterm>deltifisering</firstterm> (eller 
+          <quote>deltifisert lagring</quote>) inne i selve depotet.
+          Deltifisering involverer &#229; kode representasjonen av en porsjon 
+          data som en samling av forskjeller mot en annen porsjon data.
+          Hvis de to delene med data er veldig like, resulterer denne 
+          deltifiseringen i sparing av lagringsplass for den 
+          deltifiserte porsjonen &#8212; istedenfor &#229; ta opp plass lik 
+          st&#248;rrelsen av de originale dataene, brukes n&#229; nok plass for &#229; 
+          si: <quote>Jeg ser ut akkurat som de dataene der borte, 
+          unntatt de f&#248;lgende forandringene</quote>.
+          Mer spesifikt, hver gang en ny versjon av en fil blir lagt inn 
+          i depotet, koder Subversion den forrige versjonen (egentlig 
+          flere tidligere versjoner) som en delta mot den nye versjonen.
+          Resultatet er at mesteparten av depotdataene som har en 
+          tendens til &#229; forandre seg i st&#248;rrelse &#8212; innholdet av 
+          versjonerte filer &#8212; blir lagret med en mye mindre datamengde 
+          enn den originale <quote>fulltekst</quote>-representasjonen av 
+          disse dataene.</para>
 
         <note>
+          <!-- @ENGLISH {{{
           <para>Because all of the Subversion repository data that is
             subject to deltification is stored in a single Berkeley DB
             database file, reducing the size of the stored values will
@@ -3484,20 +4037,43 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
             while deltification doesn't produce immediate space
             savings, it can drastically slow future growth of the
             database.</para>
+          @ENGLISH }}} -->
+          <para>Fordi alle Subversions depotdata som blir deltifisert 
+            blir lagret i en enkelt Berkeley DB-databasefil, vil ikke 
+            n&#248;dvendigvis det &#229; redusere st&#248;rrelsen p&#229; de lagrede 
+            verdiene n&#248;dvendigvis redusere st&#248;rrelsen p&#229; selve 
+            databasefilen.
+            Berkeley DB vil imidlertid ha interne poster med ubrukte 
+            omr&#229;der i databasefilen, og vil bruke disse omr&#229;dene f&#248;rst 
+            f&#248;r den &#248;ker st&#248;rrelsen p&#229; databasefilen.
+            S&#229; selv om deltifisering ikke medf&#248;rer &#248;yeblikkelig sparing 
+            av diskplass, kan det redusere fremtidig &#248;kning i 
+            databasest&#248;rrelsen ganske drastisk.</para>
         </note>
 
     </sect2>
         
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.4">
+      <!-- @ENGLISH {{{
       <title>Repository Recovery</title>
+      @ENGLISH }}} -->
+      <title>Depotgjenoppretting</title>
 
+      <!-- @ENGLISH {{{
       <para>As mentioned in <xref linkend="svn-ch-5-sect-1.3.1"/>, a
         Berkeley DB repository can sometimes be left in frozen state
         if not closed properly.  When this happens, an administrator
         needs to rewind the database back into a consistent
         state.</para>
+      @ENGLISH }}} -->
+      <para>Som nevnt i <xref linkend="svn-ch-5-sect-1.3.1"/>, kan et 
+        Berkeley DB-depot noen ganger bli etterlatt i en frosset 
+        tilstand hvis den ikke blir skikkelig lukket.
+        N&#229;r dette skjer, m&#229; en administrator rulle databasen tilbake i 
+        funksjonell stand.</para>
 
+      <!-- @ENGLISH {{{
       <para>In order to protect the data in your repository, Berkeley
         DB uses a locking mechanism.  This mechanism ensures that
         portions of the database are not simultaneously modified by
@@ -3510,7 +4086,23 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         data.  Other processes are forced to wait until that lock is
         removed before they are permitted to continue accessing that
         section of the database.</para>
+      @ENGLISH }}} -->
+      <para>For &#229; beskytte dataene i depotet ditt, bruker Berkeley DB en 
+        l&#229;semekanisme.
+        Denne mekanismen forsikrer at deler av databasen ikke blir 
+        oppdatert samtidig av flere sin aksesserer databasen, og at hver 
+        prosess ser dataene i den korrekte tilstanden som da disse 
+        dataene ble lest fra databasen.
+        N&#229;r en prosess m&#229; forandre noe i databasem sjekker den f&#248;rst om 
+        det eksisterer en l&#229;s p&#229; m&#229;ldataene.
+        Hvis dataene ikke er l&#229;st, l&#229;ser denne prosessen dataene, gj&#248;r 
+        forandringene som den &#248;nsker &#229; gj&#248;re, og l&#229;ser deretter opp 
+        dataene.
+        Andre prosesser blir tvunget til &#229; vente inntil denne l&#229;sen er 
+        fjernet f&#248;r de f&#229;r lov til &#229; fortsette med tilgangen til denne 
+        seksjonen av databasen.</para>
 
+      <!-- @ENGLISH {{{
       <para>In the course of using your Subversion repository, fatal
         errors (such as running out of disk space or available memory)
         or interruptions can prevent a process from having the chance to
@@ -3519,7 +4111,18 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         When this happens, any attempts to access the repository hang
         indefinitely (since each new accessor is waiting for a lock to
         go away&mdash;which isn't going to happen).</para>
+      @ENGLISH }}} -->
+      <para>Under bruk av Subversiondepotet kan fatale feil (som &#229; g&#229; 
+        tom for diskplass eller tilgjengelig hukommelse) eller 
+        avbrytelser forhindre en prosess fra &#229; fjerne l&#229;sene som den har 
+        plassert i databasen.
+        Resultatet er at det bakenforliggende databasesystemet blir 
+        <quote>fastkilt</quote>.
+        N&#229;r dette skjer, vil ethvert fors&#248;k p&#229; &#229; aksessere depotet henge 
+        til evig tid (siden hver ny tilgang vil vente p&#229; at en l&#229;s skal 
+        forsvinne &#8212; noe som ikke kommer til &#229; skje).</para>
 
+      <!-- @ENGLISH {{{
       <para>First, if this happens to your repository, don't panic.
         The Berkeley DB filesystem takes advantage of database
         transactions and checkpoints and pre-write journaling to
@@ -3532,30 +4135,66 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         off-site backups of the repository data in some fashion, but
         don't call your system administrator to restore a backup tape
         just yet.</para>
+      @ENGLISH }}} -->
+      <para>For det f&#248;rste, hvis dette skjer med depotet ditt, ingen 
+        panikk.
+        Berkeley DB-filsystemet benytter seg av databasetransaksjoner og 
+        sjekkpunkter og forh&#229;ndsskriver journaler for &#229; forsikre at bare 
+        de mest katastrofale hendelser<footnote>
+        <para>Som for eksempel:
+          Harddisk + kjempemagnet = krise.</para></footnote>
+        kan &#248;delegge databasen permanent.
+        En tilstrekkelig paranoid depotadministrator vil ta 
+        sikkerhetskopier av depotet til en annen maskin p&#229; en eller 
+        annen m&#229;te, men ikke f&#229; systemadministratoren din til &#229; hente 
+        tilbake det som er p&#229; backuptapen helt enda.</para>
 
+      <!-- @ENGLISH {{{
       <para>Secondly, use the following recipe to attempt to
         <quote>unwedge</quote> your repository:</para>
+      @ENGLISH }}} -->
+      <para>For det andre, bruk den f&#248;lgende oppskriften for &#229; fors&#248;ke &#229; 
+        <!-- &#164; --><quote>fjerne fastkilingen</quote> av depotet:</para>
    
       <orderedlist>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Make sure that there are no processes accessing (or
             attempting to access) the repository.  For networked
             repositories, this means shutting down the Apache HTTP
             Server, too.</para>
+          @ENGLISH }}} -->
+          <para>Sjekk at det ikker er noen prosesser som aksesserer 
+            (eller fors&#248;ker &#229; f&#229; tilgang) til depotet.
+            For depot p&#229; nettverket betyr dette at Apache HTTP ogs&#229; m&#229; 
+            kj&#248;res ned.</para>
         </listitem>
         <listitem> 
+          <!-- @ENGLISH {{{
           <para>Become the user who owns and manages the repository.
             This is important, as recovering a repository while
             running as the wrong user can tweak the permissions of the
             repository's files in such a way that your repository will
             still be inaccessible even after it is 
             <quote>unwedged</quote>.</para>
+          @ENGLISH }}} -->
+          <para>Bli brukeren som eier og vedlikeholder depotet.
+            Dette er viktig fordi en gjenoppretting av depotet med gal 
+            bruker kan forandre rettighetene p&#229; filene i depotet s&#229; det 
+            fortsatt vil v&#230;re utilgjengelig etter at det er 
+            <quote>reparert</quote>.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Run the command <command>svnadmin recover
             /path/to/repos</command>.  You should see output like
             this:</para>
+          @ENGLISH }}} -->
+          <para>Kj&#248;r kommandoen <command>svnadmin recover 
+            /sti/til/depot</command>.
+            Du vil n&#229; se noe i likhet med dette:</para>
               
+          <!-- &#164; Bruke norske meldinger en gang i tida? -->
           <screen>
 Repository lock acquired.
 Please wait; recovering the repository may take some time...
@@ -3563,13 +4202,21 @@ Please wait; recovering the repository may take some time...
 Recovery completed.
 The latest repos revision is 19.
 </screen>
+          <!-- @ENGLISH {{{
           <para>This command may take many minutes to complete.</para>
+          @ENGLISH }}} -->
+          <para>Denne kommandoen kan ta flere minutter &#229; 
+            fullf&#248;re.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Restart the Subversion server.</para>
+          @ENGLISH }}} -->
+          <para>Start Subversiontjeneren p&#229; nytt.</para>
         </listitem>
       </orderedlist>
             
+      <!-- @ENGLISH {{{
       <para>This procedure fixes almost every case of repository
         lock-up.  Make sure that you run this command as the user that
         owns and manages the database, not just as
@@ -3580,7 +4227,21 @@ The latest repos revision is 19.
         are owned by <literal>root</literal>, which means that even
         after you restore connectivity to your repository, regular
         users will be unable to access it.</para>
+      @ENGLISH }}} -->
+      <para>Denne prosedyren reparerer nesten ethvert tilfelle av l&#229;ste 
+        databaser.
+        V&#230;r sikker p&#229; at du kj&#248;rer denne kommandoen som brukeren som 
+        eier og vedlikeholder databasen, ikke bare som 
+        <literal>root</literal>.
+        Deler av gjenopprettingsprosessen kan f&#248;re til at diverse 
+        databasefiler blir opprettet p&#229; nytt (delte omr&#229;der av 
+        hukommelsen, for eksempel).
+        Gjenoppretting som <literal>root</literal> vil lage disse filene 
+        som om de er eid av <literal>root</literal>, noe som betyr at 
+        til og med etter at du setter opp forbindelsen til databasen 
+        igjen, klarer ikke vanlige brukere &#229; f&#229; tilgang til den.</para>
 
+      <!-- @ENGLISH {{{
       <para>If the previous procedure, for some reason, does not
         successfully unwedge your repository, you should do two
         things.  First, move your broken repository out of the way and
@@ -3589,13 +4250,27 @@ The latest repos revision is 19.
         <email>users@subversion.tigris.org</email>) describing your
         problem in detail.  Data integrity is an extremely high
         priority to the Subversion developers.</para>
+      @ENGLISH }}} -->
+      <para>Hvis den nevnte prosedyren av en eller annen grunn ikke 
+        klarer &#229; reparere depotet ditt, skal du gj&#248;re to ting.
+        F&#248;rst flytter du det &#248;delagte depotet ut av veien og legger inn 
+        den siste sikkerhetskopien av den.
+        Deretter, send en email til Subversionbrukerlisten (p&#229; 
+        <email>users@subversion.tigris.org</email>) der du beskriver 
+        problemet i detalj.
+        Dataintegritet har ekstremt h&#248;y prioritet for 
+        Subversionutviklerne.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.5">
+      <!-- @ENGLISH {{{
       <title>Migrating a Repository</title>
+      @ENGLISH }}} -->
+      <title>Flytte et depot</title>
     
+      <!-- @ENGLISH {{{
       <para>A Subversion filesystem has its data spread throughout
         various database tables in a fashion generally understood by
         (and of interest to) only the Subversion developers
@@ -3605,7 +4280,17 @@ The latest repos revision is 19.
         a mechanism, implemented in a pair of
         <command>svnadmin</command> subcommands:
         <literal>dump</literal> and <literal>load</literal>.</para>
+      @ENGLISH }}} -->
+      <para>Et Subversionfilsystem har dataene sine spredt over flere 
+        databasetabeller p&#229; en m&#229;te generelt bare forst&#229;tt av (og av 
+        interesse for) selve Subversionutviklerne.
+        Ting kan imidlertid skje som gj&#248;r at alt eller litt av disse 
+        dataene m&#229; samles i et enkeltst&#229;ende, portabelt flatt filformat.
+        Subversion har en slik mekanisme, implementert som et par 
+        <command>svnadmin</command>-delkommandoer:
+        <literal>dump</literal> og <literal>load</literal>.</para>
 
+      <!-- @ENGLISH {{{
       <para>The most common reason to dump and load a Subversion
         repository is due to changes in Subversion itself.  As
         Subversion matures, there are times when certain changes made
@@ -3615,27 +4300,58 @@ The latest repos revision is 19.
         DB repository to a new OS or CPU architecture, or to switch
         between Berkeley DB and FSFS back-ends.  The recommended
         course of action is relatively simple:</para>
+      @ENGLISH }}} -->
+      <para>Den vanligste grunnen til &#229; dumpe og laste et 
+        Subversiondepot er p&#229; grunn av forandringer i selve Subversion.
+        Etterhvert som Subversion modnes, skjer det noen ganger at det 
+        blir gjort forandringer i det bakenforliggende databaseoppsettet 
+        som f&#248;rer til at Subversion blir inkompatibel med tidligere 
+        versjoner av depotet.
+        Andre grunner for dumping og lasting kan v&#230;re &#229; flytte et 
+        Berkeley DB-depot til et annet operativsystem eller 
+        CPU-arkitektur, eller for &#229; bytte mellom Berkeley DB- og 
+        FSFS-lagringsformat.
+        Den anbefalte m&#229;ten &#229; gj&#248;re dette p&#229; er relativt enkel:</para>
   
       <orderedlist>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Using your <emphasis>current</emphasis> version of
             <command>svnadmin</command>, dump your repositories to
             dump files.</para>
+          @ENGLISH }}} -->
+          <para>Bruk din <emphasis>n&#229;v&#230;rende</emphasis> versjon av 
+            <command>svnadmin</command>, dump depotene dine til 
+            dumpfiler.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Upgrade to the new version of Subversion.</para>
+          @ENGLISH }}} -->
+          <para>Oppgrader til den nye versjonen av Subversion.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Move your old repositories out of the way, and create
             new empty ones in their place using your
             <emphasis>new</emphasis> <command>svnadmin</command>.</para>
+          @ENGLISH }}} -->
+          <para>Flytt de gamle depotene ut av veien, og opprett nye p&#229; 
+            plassen deres ved &#229; bruke den <emphasis>nye</emphasis> 
+            versjonen av <command>svnadmin</command>.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Again using your <emphasis>new</emphasis>
             <command>svnadmin</command>, load your dump files into
             their respective, just-created repositories.</para>
+          @ENGLISH }}} -->
+          <para>S&#229; laster du dumpfilene inn i de respektive nyopprettede 
+            depotene ved &#229; bruke den <emphasis>nye</emphasis> versjonen 
+            av <command>svnadmin</command>.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Be sure to copy any customizations from your old
             repositories to the new ones, including
             <filename>DB_CONFIG</filename> files and hook scripts.
@@ -3643,15 +4359,31 @@ The latest repos revision is 19.
             new release of Subversion to see if any changes since your
             last upgrade affect those hooks or configuration
             options.</para>
+          @ENGLISH }}} -->
+          <para>Pass p&#229; &#229; kopiere alle egne tilpasninger fra de gamle 
+            depotene til de nye, inkludert 
+            <filename>DB_CONFIG</filename>-filer og p&#229;hakningsskript.
+            Det kan v&#230;re lurt &#229; lese hva som er forandret i den nye 
+            versjonen av Subversjon for &#229; se om noen forandringer siden 
+            din siste oppgradering forandrer disse p&#229;hakningsskriptene 
+            eller valg i oppsettet.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>If the migration process made your repository
             accessible at a different URL (e.g. moved to a different
             computer, or is being accessed via a different schema),
             then you'll probably want to tell your users to run
-            <command>svn switch --relocate</command> on their existing
+            <command>svn switch -&#64738;-relocate</command> on their existing
             working copies.  See <xref
             linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
+          @ENGLISH }}} -->
+          <para>Hvis flytteprosessen gj&#248;r depotet ditt tilgjengelig p&#229; 
+            en annen URL (for eksempel flyttet til en annen maskin eller 
+            blir aksessert p&#229; en annen m&#229;te), b&#248;r du be alle brukerne 
+            dine om &#229; kj&#248;re <command>svn switch --relocate</command> p&#229; 
+            sine eksisterende arbeidskopier.
+            Se <xref linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
         </listitem>
       </orderedlist>
 

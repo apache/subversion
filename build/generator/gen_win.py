@@ -770,7 +770,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkley DB library and version"
-    for lib in ("libdb42", "libdb41", "libdb40"):
+    for lib in ("libdb43", "libdb42", "libdb41", "libdb40"):
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
         sys.stderr.write("Found %s.lib in %s\n" % (lib, path))

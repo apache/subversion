@@ -1,7 +1,3 @@
-Convendría echarle un vistazo a la lista de correo de aspell para
-preguntar por mejoras, tipo cómo mantener texto inglés y español
-mezclado, y que aspell no se líe (¿múltiples diccionarios?).
-
 Mejorar el script que envía un informe de estado con un porcentaje
 estimado para completar la traducción. Automatizar envío del mismo
 una vez se verifique que funciona relativamente bien.

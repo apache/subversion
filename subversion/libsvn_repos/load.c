@@ -24,10 +24,10 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "repos.h"
 #include "svn_private_config.h"
 
 #include <apr_lib.h>
-
 
 
 /*----------------------------------------------------------------------*/
@@ -40,6 +40,8 @@ struct parse_baton
   svn_fs_t *fs;
 
   svn_boolean_t use_history;
+  svn_boolean_t use_pre_commit_hook;
+  svn_boolean_t use_post_commit_hook;
   svn_stream_t *outstream;
   enum svn_repos_load_uuid uuid_action;
   const char *parent_dir;
@@ -1183,15 +1185,37 @@ close_revision (void *baton)
   new_rev = old_rev + 1;
   *old_rev = rb->rev;
 
-  err = svn_fs_commit_txn (&conflict_msg, &(*new_rev), rb->txn, rb->pool);
+  /* Run the pre-commit hook, if so commanded. */
+  if (pb->use_pre_commit_hook)
+    {
+      const char *txn_name;
+      err = svn_fs_txn_name (&txn_name, rb->txn, rb->pool);
+      if (! err)
+        err = svn_repos__hooks_pre_commit (pb->repos, txn_name, rb->pool);
+      if (err)
+        {
+          svn_error_clear (svn_fs_abort_txn (rb->txn, rb->pool));
+          return err;
+        }
+    }
 
-  if (err)
+  /* Commit. */
+  if ((err = svn_fs_commit_txn (&conflict_msg, new_rev, rb->txn, rb->pool)))
     {
       svn_error_clear (svn_fs_abort_txn (rb->txn, rb->pool));
       if (conflict_msg)
         return svn_error_quick_wrap (err, conflict_msg);
       else
         return err;
+    }
+
+  /* Run post-commit hook, if so commanded.  */
+  if (pb->use_post_commit_hook)
+    {
+      if ((err = svn_repos__hooks_post_commit (pb->repos, *new_rev, rb->pool)))
+        return svn_error_create
+          (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
+           _("Commit succeeded, but post-commit hook failed"));
     }
 
   /* After a successful commit, must record the dump-rev -> in-repos-rev
@@ -1300,18 +1324,21 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
 
 
 svn_error_t *
-svn_repos_load_fs (svn_repos_t *repos,
-                   svn_stream_t *dumpstream,
-                   svn_stream_t *feedback_stream,
-                   enum svn_repos_load_uuid uuid_action,
-                   const char *parent_dir,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *pool)
+svn_repos_load_fs2 (svn_repos_t *repos,
+                    svn_stream_t *dumpstream,
+                    svn_stream_t *feedback_stream,
+                    enum svn_repos_load_uuid uuid_action,
+                    const char *parent_dir,
+                    svn_boolean_t use_pre_commit_hook,
+                    svn_boolean_t use_post_commit_hook,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns2_t *parser;
   void *parse_baton;
-  
+  struct parse_baton *pb;
+
   /* This is really simple. */  
 
   SVN_ERR (svn_repos_get_fs_build_parser2 (&parser, &parse_baton,
@@ -1322,8 +1349,30 @@ svn_repos_load_fs (svn_repos_t *repos,
                                            parent_dir,
                                            pool));
 
+  /* Heh.  We know this is a parse_baton.  This file made it.  So
+     cast away, and set our hook booleans.  */
+  pb = parse_baton;
+  pb->use_pre_commit_hook = use_pre_commit_hook;
+  pb->use_post_commit_hook = use_post_commit_hook;
+
   SVN_ERR (svn_repos_parse_dumpstream2 (dumpstream, parser, parse_baton,
                                         cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_load_fs (svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_stream_t *feedback_stream,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_load_fs2 (repos, dumpstream, feedback_stream, 
+                             uuid_action, parent_dir, FALSE, FALSE,
+                             cancel_func, cancel_baton, pool);
 }

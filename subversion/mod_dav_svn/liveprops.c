@@ -692,8 +692,8 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
 
     for (spec = dav_svn_props; spec->name != NULL; ++spec)
       {
-        (void) dav_svn_insert_prop(resource, spec->propid, what, phdr);
         svn_pool_clear(subpool);
+        (void) dav_svn_insert_prop(resource, spec->propid, what, phdr);
       }
 
     resource->info->pool = pool;

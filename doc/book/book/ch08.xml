@@ -1603,9 +1603,10 @@ A  subversion/build.conf
             potential costs of undoing changes that are
             dangerous.</para>
         </footnote>
-        The HACKING file is an invaluable resource when it comes to 
-        making sure that your proposed changes earn the praises they
-        deserve without being rejected on technicalities.</para>
+        The <filename>HACKING</filename> file is an invaluable
+        resource when it comes to making sure that your proposed
+        changes earn the praises they deserve without being rejected
+        on technicalities.</para>
 
     </sect2>
 

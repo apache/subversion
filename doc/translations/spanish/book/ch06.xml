@@ -20,8 +20,11 @@
       perhaps, all over the world.</para>-->
 
     <para>Esta sección describe como publicar su repositorio Subversion
-      para ser accedido por clientes remotos.<!--TODO: Es correcta la simplificación del término "...outside its host machine for use by remote clients"--> Cubriremos los tipos
-      de mecanismos de servidor disponibles actualmente <!--TODO: Es correcto? "...currently available server mechanisms"-->, debatiendo la configuración
+      para ser accedido por clientes remotos.
+      <!--TODO: Es correcta la simplificación del término "...outside its host
+      machine for use by remote clients"--> Cubriremos los tipos
+      de mecanismos de servidor disponibles actualmente <!--TODO: Es correcto?
+      "...currently available server mechanisms"-->, debatiendo la configuración
       y uso de cada uno de éstos. Después de que haya leído está sección,
       usted debería estar capacitado para decidir que tipo de configuración
       de red es la apropiada para sus necesidades, y comprender como realizar
@@ -354,7 +357,7 @@
         checkout</command>.</para>-->
 
       <para>Si la solicitud de red del cliente escribe datos nuevos
-        en el repositorio (ej: <command>svn commit</command>), un nuevo
+        en el repositorio (por ejemplo: <command>svn commit</command>), un nuevo
         árbol de revisión es creado. Si la solicitud del cliente fue
         autenticada, el nombre del usuario es guardado como valor de la
         propiedad <literal>svn:author</literal> en la nueva revisión
@@ -552,7 +555,7 @@ END
             nunca emita una demanda de autenticación. Cuando los usuarios pasen
             la opción <option>--username</option> y <option>--pasword</option>
             al cliente, ellos se sorprenderán al ver que éstos nunca son
-            utilizados, ej: a pesar de aparecer una nueva revisión, ha sido enviada
+            utilizados, es decir, a pesar de aparecer una nueva revisión, ha sido enviada
             anónimamente!<!--TODO: new revisions still appear to have been commited anonymously!--></para></footnote>
         
       Típicamente, estas opciones son utilizadas cuando:
@@ -668,9 +671,21 @@ END
   <!-- ================================================================= -->
   <sect1 id="svn-ch-6-sect-3">
     
-    <title>svnserve, a custom server</title>
+    <title>svnserve, un servidor personalizado</title>
+    <!--REMOVE:<title>svnserve, a custom server</title>-->
 
-    <para>The <command>svnserve</command> program is a lightweight
+    <para>El programa <command>svnserve</command> es un servidor ligero,
+      capaz de hablar a clientes sobre TCP/IP utilizando un
+      protocolo stateful <!--TODO: stateful? matiene el estado de la
+      interaccion o sesion. como se traduece?--> personalizado.
+      Los clientes contactan un servidor <command>svnserve</command>
+      utilizando URLs que comienzan con el esquema <literal>svn://</literal>
+      o <literal>svn+ssh://</literal>. Esta sección explica las
+      diferentes maneras de ejecutar un <command>svnserve</command>, cómo
+      los clientes se autentican ellos mismos con el servidor, y cómo
+      se configura un control de acceso apropiado a su repositorio.</para>
+
+    <!--REMOVE:<para>The <command>svnserve</command> program is a lightweight
       server, capable of speaking to clients over TCP/IP using a
       custom, stateful protocol.  Clients contact an
       <command>svnserve</command> server by using URLs that begin with
@@ -678,24 +693,44 @@ END
       schema.  This section will explain the different ways of running
       <command>svnserve</command>, how clients authenticate themselves
       to the server, and how to configure appropriate access control
-      to your repositories.</para>
+      to your repositories.</para>-->
 
     <sect2 id="svn-ch-6-sect-3.1">
-      <title>Invoking the Server</title>
+      <title>Invocando el Servidor</title>
+      <!--REMOVE:<title>Invoking the Server</title>-->
 
-      <para>There a few different ways to invoke the
+      <para>Existen unas cuantas maneras diferentes de invocar
+        el programa <command>svnserve</command>. Si se lo invoca
+        sin argumentos, usted no verá nada más que un mensaje de
+        ayuda. No obstante, si planea que <command>inetd</command>
+        dispare el proceso, puede pasar la opción <option>-i</option>
+        (<option>--inetd</option>):</para>
+        
+      <!--REMOVE:<para>There a few different ways to invoke the
         <command>svnserve</command> program.  If invoked with no
         options, you'll see nothing but a help message.  However, if
         you're planning to have <command>inetd</command> launch the
         process, then you can pass the <option>-i</option>
-        (<option>--inetd</option>) option:</para>
+        (<option>-inetd</option>) option:</para>-->
 
 <screen>
 $ svnserve -i
 ( success ( 1 2 ( ANONYMOUS ) ( edit-pipeline ) ) )
 </screen>
 
-      <para>When invoked with the <option>--inetd</option> option,
+      <para>Cuando es invocado con la opción <option>--inetd</option>,
+        <command>svnserve</command> intenta comunicarse con un
+        cliente Subversion a través de <emphasis>stdin</emphasis> y
+        <emphasis>stdout</emphasis> utilizando un protocolo
+        personalizado. Este es un comportamiento estándar de los
+        programas que son ejecutados a través de <command>inetd</command>.
+        El IANA <!--TODO: se agrega alguna nota sobre el IANA?-->
+        ha reservado el puerto 3690 para el protocolo
+        Subversion, por lo tanto en un sistema tipo Unix usted puede
+        agregar líneas a <filename>/etc/services</filename> como éstas
+        (si es que no existen todavía):</para>
+        
+      <!--REMOVE:<para>When invoked with the <option>-inetd</option> option,
         <command>svnserve</command> attempts to speak with a
         Subversion client via <emphasis>stdin</emphasis> and
         <emphasis>stdout</emphasis> using a custom protocol.  This is
@@ -703,42 +738,80 @@ $ svnserve -i
         <command>inetd</command>.  The IANA has reserved port 3690
         for the Subversion protocol, so on a Unix-like system you can
         add lines to <filename>/etc/services</filename> like these (if
-        they don't already exist):</para>
+        they don't already exist):</para>-->
 
 <screen>
 svn           3690/tcp   # Subversion
 svn           3690/udp   # Subversion
 </screen>
 
-      <para>And if your system is using a classic Unix-like
-        <command>inetd</command> daemon, you can add this line to
+      <para>Y si su sistema utiliza un demonio <command>inetd</command>
+        tipo Unix clásico, puede agregar esta línea a
         <filename>/etc/inetd.conf</filename>:</para>
+      
+      <!--REMOVE:<para>And if your system is using a classic Unix-like
+        <command>inetd</command> daemon, you can add this line to
+        <filename>/etc/inetd.conf</filename>:</para>-->
 
 <screen>
 svn stream tcp nowait svnowner /usr/local/bin/svnserve svnserve -i
 </screen>
 
-      <para>Make sure <quote>svnowner</quote> is a user which has
+      <para>Asegúrese que <quote>svnowner</quote> es un usuario que
+       posee permisos apropiados para acceder a su repositorio.
+       Ahora, cuando una conexión cliente ingrese a su servidor en
+       el puerto 3690, <command>inetd</command> disparará un proceso
+       <command>svnserve</command> para servirlo.</para>
+       
+      <!--REMOVE:<para>Make sure <quote>svnowner</quote> is a user which has
         appropriate permissions to access your repositories.  Now, when
         a client connection comes into your server on port 3690,
         <command>inetd</command> will spawn an
-        <command>svnserve</command> process to service it.  </para>
+        <command>svnserve</command> process to service it.  </para>-->
 
-      <para>A second option is to run <command>svnserve</command> as a
+      <para>Una segunda opción es ejecutar <command>svnserve</command>
+        un proceso <quote>demonio</quote> independiente. Para esto,
+        utilice la opción <option>-d</option>:</para>
+      
+      <!--REMOVE:<para>A second option is to run <command>svnserve</command> as a
         standalone <quote>daemon</quote> process.  Use the
-        <option>-d</option> option for this:</para>
+        <option>-d</option> option for this:</para>-->
 
         <screen>
 $ svnserve -d
 $               # svnserve is now running, listening on port 3690
 </screen>
 
-      <para>When running <command>svnserve</command> in daemon mode,
-        you can use the <option>--listen-port=</option> and
-        <option>--listen-host=</option> options to customize the exact
-        port and hostname to <quote>bind</quote> to.</para>
+      <para>Cuando <command>svnserve</command> ejecute en modo demonio,
+        usted puede utilizar las opciones <option>--listen-port=</option>
+        y <option>--listen-host=</option> para personalizar el puerto
+        y nombre exacto en el cual <quote>escuchará</quote>.
+        <!--TODO: port and hostname to <quote>bind</quote>--></para>
+      
+      <!--REMOVE:<para>When running <command>svnserve</command> in daemon mode,
+        you can use the <option>-listen-port=</option> and
+        <option>-listen-host=</option> options to customize the exact
+        port and hostname to <quote>bind</quote> to.</para>-->
 
-      <para>There's still a third way to invoke
+      <para>Aún queda una tercera forma de invocar a <command>svnserve</command>,
+        y esa es en <quote>modo túnel</quote>, con la opción <option>-t</option>.
+        Este modo supone que un programa de servicio remoto tal como
+        <command>RSH</command> o <command>SSH</command> ha autenticado un
+        cliente exitosamente y ahora está invocando un proceso privado
+        <command>svnserve</command> <emphasis>como tal usuario</emphasis>.
+        El programa <command>svnserve</command> se comporta normalmente
+        (comunicándose a través de <emphasis>stdin</emphasis> y
+        <emphasis>stdout</emphasis>), y asume que el tráfico está siendo
+        redirigido automáticamente a través de algún tipo de túnel
+        de vuelta al cliente. Cuando <command>svnserve</command> es
+        invocado por un agente túnel como éste, está seguro que el usuario
+        autenticado posee acceso total de lectura y escritura a los archivos
+        de la base de datos del repositorio. (Ver <xref
+        linkend="svn-ch-6-sidebar-1"/>.) Esencialmente es lo mismo que
+        un usuario local accediendo al repositorio a través de
+        las URLs <literal>file:///</literal>.</para>
+                
+      <!--REMOVE: <para>There's still a third way to invoke
         <command>svnserve</command>, and that's in <quote>tunnel
         mode</quote>, with the <option>-t</option> option.  This mode
         assumes that a remote-service program such as
@@ -755,19 +828,40 @@ $               # svnserve is now running, listening on port 3690
         repository database files. (See <xref
         linkend="svn-ch-6-sidebar-1"/>.)  It's essentially the same as
         a local user accessing the repository via
-        <literal>file:///</literal> URLs. </para>
+        <literal>file:///</literal> URLs. </para>-->
 
       <sidebar id="svn-ch-6-sidebar-1">
-        <title>Servers and Permissions:  A Word of Warning</title>        
+        <title>Servidores y Permisos:  Una Palabra de Avertencia</title>        
+        <!--REMOVE:<title>Servers and Permissions:  A Word of Warning</title>-->
 
-        <para>First, remember that a Subversion repository is a
+        <para>Primero, recuerde que un repositorio Subversion es una
+          colección de archivos de la base de datos BerkeleyDB; cualquier
+          proceso que acceda al repositorio en forma directa necesita tener
+          permisos apropiados de lectura y escritura sobre el repositorio
+          entero. Si usted no es cuidadoso, puede causarle grandes
+          dolores de cabeza. Siéntase seguro de haber leído <xref
+          linkend="svn-ch-6-sect-5"/>.</para>
+          
+        <!--REMOVE: <para>First, remember that a Subversion repository is a
           collection of BerkeleyDB database files; any process which
           accesses the repository directly needs to have proper read
           and write permissions on the entire repository.  If you're
           not careful, this can lead to a number of headaches.  Be
-          sure to read <xref linkend="svn-ch-6-sect-5"/>.</para>
+          sure to read <xref linkend="svn-ch-6-sect-5"/>.</para>-->
 
-      <para>Secondly, when configuring <command>svnserve</command>, Apache
+      <para>En segundo lugar, cuando configure <command>svnserve</command>,
+        Apache <command>httpd</command>, o cualquier otro proceso servidor,
+        tenga en mente que podrá no querer ejecutar el proceso de servidor
+        como el usuario <literal>root</literal> (o como cualquier otro usuario
+        que tenga permisos ilimitados). Dependiendo con el propietario y los
+        permisos del repositorio con los que lo haya exportado, con
+        frecuencia es prudente utilizar un usuario diferente&mdash;quizas
+        personzalizado&mdash;. Por ejemplo, muchos administradores crean un
+        usuario llamado <literal>svn</literal>, otorgándole la propiedad y
+        derechos exclusivos sobre los repositorios de Subversion exportados,
+        y únicamente se ejecutará los procesos de servidor con ese usuario.</para>
+      
+      <!--REMOVE:<para>Secondly, when configuring <command>svnserve</command>, Apache
           <command>httpd</command>, or any other server process, keep in
           mind that you might not want to launch the server process as
           the user <literal>root</literal> (or as any other user with
@@ -777,11 +871,23 @@ $               # svnserve is now running, listening on port 3690
           For example, many administrators create a new user named
           <literal>svn</literal>, grant that user exclusive ownership
           and rights to the exported Subversion repositories, and only
-          run their server processes as that user.</para>
+          run their server processes as that user.</para>-->
       </sidebar>
 
-
-      <para>Once the <command>svnserve</command> program is running,
+      <para>Una vez el programa <command>svnserve</command> se esté
+        ejecutando, hace que cada repositorio en su sistema se
+        encuentre disponibles a la red. Un cliente necesita especificar
+        una ruta <emphasis>absoluta</emphasis> en la URL del repositorio.
+        Por ejemplo, si un repositorio se encuentra localizado en
+        <filename>/usr/local/repositories/project1</filename>, el cliente
+        accederá a través de <systemitem
+        class="url">svn://host.example.com/usr/local/repositories/project1
+        </systemitem>. Para incrementar la seguridad, usted puede pasar
+        la opción <option>-r</option> a <command>svnserve</command>,
+        que limita a exportar sólo los repositorios debajo de esa
+        ruta:</para>
+        
+      <!--REMOVE:<para>Once the <command>svnserve</command> program is running,
         it makes every repository on your system available to the
         network.  A client needs to specify an
         <emphasis>absolute</emphasis> path in the repository URL.  For
@@ -792,18 +898,25 @@ $               # svnserve is now running, listening on port 3690
         </systemitem>.  To increase security, you can pass the
         <option>-r</option> option to <command>svnserve</command>,
         which restricts it to exporting only repositories below that
-        path:</para>
+        path:</para>-->
       
 <screen>
 $ svnserve -d -r /usr/local/repositories
 &hellip;
 </screen>
 
-      <para>Using the <option>-r</option> option effectively
+      <para>En efecto, utilizando la opción <option>-r</option>
+        modifica la ubicación que el programa tratará como raíz del
+        espacio de sistema de archivos remoto. En consencuencia,
+        los clientes utilizarán URLs que tengan la porción que
+        le ha sido removida de la ruta, dejando URLs mucho más cortas
+        (y mucho menos reveladoras):</para>
+      
+      <!--REMOVE:<para>Using the <option>-r</option> option effectively
         modifies the location that the program treats as the root of
         the remote filesystem space.  Clients then use URLs that
         have that path portion removed from them, leaving much
-        shorter (and much less revealing) URLs:</para>
+        shorter (and much less revealing) URLs:</para>-->
       
 <screen>
 $ svn checkout svn://host.example.com/project1
@@ -813,11 +926,42 @@ $ svn checkout svn://host.example.com/project1
     </sect2>
 
     <sect2 id="svn-ch-6-sect-3.2">
-      <title>Built-in authentication and authorization</title>
+      <title>Autenticación y autorización integradas</title>
+      <!--REMOVE:<title>Built-in authentication and authorization</title>-->
 
-      <para>When a client connects to an <command>svnserve</command>
-        process, the following things happen:</para>
+      <para>Cuando un cliente se conecta a un proceso
+      <command>svnserve</command>, las siguientes cosas suceden:</para>
+      
+      <!--REMOVE:<para>When a client connects to an <command>svnserve</command>
+        process, the following things happen:</para>-->
 
+      <itemizedlist>
+        <listitem><para>El cliente selecciona un repositorio
+          específico.</para></listitem>
+
+        <listitem><para>El servidor procesa el archivo
+        <filename>conf/svnserve.conf</filename> del repositorio, y comienza
+        a poner en ejecución cualquier política de autenticación y autorización
+        definida en éste.</para></listitem>
+
+        <listitem><para>Dependiendo de la situación y las políticas de autorización,</para>
+
+          <itemizedlist>
+            <listitem><para>se le puede permitir al cliente realizar pedidos de forma anónima,
+              y sin haber recibido la demanda de autenticación, O</para></listitem>
+
+            <listitem><para>el cliente puede ser consultado por la autenticación
+              en cualquier momento, O</para></listitem>
+
+            <listitem><para>si opera en el <quote>modo túnel</quote>, el cliente
+              se anuncia a sí mismo que ya ha sido autenticado externamente.
+              </para></listitem>
+          </itemizedlist>
+        </listitem>
+
+      </itemizedlist>
+
+      <!--REMOVE:
       <itemizedlist>
         <listitem><para>The client selects a specific
         repository.</para></listitem>
@@ -845,6 +989,7 @@ $ svn checkout svn://host.example.com/project1
         </listitem>
 
       </itemizedlist>
+      -->
 
       <para>At the time of writing, the server only knows how to send
         a CRAM-MD5 <footnote><para>See RFC 2195.</para></footnote>

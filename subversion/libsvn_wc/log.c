@@ -1470,6 +1470,8 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
         }
     }
 
+  svn_pool_destroy (iterpool);
+
   return SVN_NO_ERROR;
 }
 

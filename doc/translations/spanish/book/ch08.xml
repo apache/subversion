@@ -10,21 +10,21 @@
       una compañía de desarrollo de software con sede en California.
       La comunidad que se ha formado alrededor del desarrollo
       de Subversion siempre da la bienvenida a nuevos miembros
-      que pueden conar su tiempo y atención al proyecto. A los
+      que pueden donar su tiempo y atención al proyecto. A los
       voluntarios se les anima a ayudar de cualquier modo, ya sea
       encontrando y diagnosticando fallos, refinando el código fuente
       existente, o implementando por nuevas características.</para>
     
     <para>Este capítulo es para aquellos que desean asistir en
       la evolución continua de Subversion ensuciándose las manos
-      con el código fuente.  Cubriremos algunos detalles íntimos
-      del software, ese tipo de conocimiento técnico específico
-      necesario por aquellos que desarrollan Subversion&mdash;o
-      herramientas completamente nuevas basadas en las librerías
-      de Subversion.  Si no prevee participar con el software a
-      tal nivel, siéntase libre de ignorar este capítulo con la
-      certeza de que su experiencia como usuario de Subversion no
-      se verá afectada.</para>
+      con el código fuente.  Cubriremos algunos detalles íntimos del
+      software, ese tipo de conocimiento técnico específico necesario
+      por aquellos que desarrollan Subversion&mdash;o herramientas
+      completamente nuevas basadas en las librerías de Subversion.
+      Si no tiene previsto participar con el software a tal nivel,
+      sientase libre de ignorar este capítulo con la certeza de
+      que su experiencia como usuario de Subversion no se verá
+      afectada.</para>
 
   </simplesect>
 
@@ -153,7 +153,7 @@
     <sect2 id="svn-ch-8-sect-1.1">
       <title>Capa de repositorio</title>
 
-      <para>Cuando nos referimos a la capa de respositorio de
+      <para>Cuando nos referimos a la capa de repositorio de
         Subversion, en general estamos hablando de dos
         librerías&mdash;la librería de repositorio, y la librería
         del sistema de ficheros. Estas librerías proporcionan
@@ -245,7 +245,7 @@
           o nada</quote>&mdash;o bien todas las acciones del
           conjunto son completadas con éxito, o todas son tratadas
           como si <emphasis>ninguna</emphasis> de ellas hubiese
-          ocurrido&mdash;y de un modo que no intefieran con otros
+          ocurrido&mdash;y de un modo que no interfieran con otros
           procesos que actúan sobre los datos.</para>
 
         <para>Las transacciones de base de datos generalmente
@@ -971,8 +971,9 @@ The following repository access (RA) modules are available:
         (i18n<footnote><para>N.T.: Forma breve de referirse
         a la palabra internacionalización, en inglés
         <quote>internationalization</quote>, que comienza con una
-        <quote>i</quote>, seguida de 18 carácteres y terminada en
-        <quote>n</quote>.</para> </footnote>). Después de todo,
+        <quote>i</quote>, <!-- TODO estilo en los tiempos verbales,
+        mezclar no es bueno-->seguida de 18 carácteres y terminada
+        en <quote>n</quote>.</para> </footnote>). Después de todo,
         aunque <quote>remotas</quote> pueda significar <quote>de
         un lado a otro de la oficina</quote>, podría significar
         perfectamente <quote>de un lado a otro del globo.</quote>.
@@ -1714,117 +1715,129 @@ A  build.conf
 &hellip;
 </screen>
 
-      <para>The above command will checkout the bleeding-edge, latest
-        version of the Subversion source code into a subdirectory
-        named <filename>subversion</filename> in your current working
-        directory.  Obviously, you can adjust that last argument as
-        you see fit.  Regardless of what you call the new working copy
-        directory, though, after this operation completes, you will
-        now have the Subversion source code.  Of course, you will
-        still need to fetch a few helper libraries (apr, apr-util,
-        etc.)&mdash;see the <filename>INSTALL</filename> file in the
-        top level of the working copy for details.</para>
+      <para>El comando anterior obtendrá la ultima y más reciente
+        versión del código de Subversion en un subdirectorio
+        llamado <filename>subversion</filename> en su directorio
+        actual. Obviamente, puede ajustar ese último parámetro
+        como desee. Ignorando cómo llame al directorio de la copia
+        local, una vez esta operación haya terminado, dispondrá
+        del código fuente de Subversion. Por supuesto, todavía
+        tendrá que obtener las librerías de apoyo (apr, apr-util,
+        etc.)&mdash;vea el fichero <filename>INSTALL</filename> en el
+        directorio raíz de su copia local para más detalles.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.3">
-      <title>Become Familiar with Community Policies</title>
+      <title>Familiaricese con las reglas de la comunidad</title>
       
-      <para>Now that you have a working copy containing the latest
-        Subversion source code, you will most certainly want to take a
-        cruise through the <filename>HACKING</filename> file in that
-        working copy's top-level directory.  The
-        <filename>HACKING</filename> file contains general
-        instructions for contributing to Subversion, including how to
-        properly format your source code for consistency with the rest
-        of the codebase, how to describe your proposed changes with an
-        effective change log message, how to test your changes, and so
-        on.  Commit privileges on the Subversion source repository are
-        earned&mdash;a government by meritocracy.
+      <para>Ahora que tiene una copia local con la última versión del código fuente
+        de Subversion, seguramente querrá leer el fichero
+        <filename>HACKING</filename> en el directorio raíz de esa
+        copia local. El fichero <filename>HACKING</filename> contiene
+        instrucciones generales para contribuir con Subversion,
+        incluyendo cómo formatear correctamente su código fuente para
+        mantener la consistencia con el resto del código existente,
+        cómo describir sus cambios propuestos con un mensaje de
+        cambios efectivo, cómo verificar sus cambios, y demás. Los
+        privilegios para hacer cambios en el repositorio del código
+        fuente de Subversion se ganan&mdash;un gobierno basado en
+        la meritocracia.
         <footnote>
-          <para>While this may superficially appear as some sort of
-            elitism, this <quote>earn your commit privileges</quote>
-            notion is about efficiency&mdash;whether it costs more in
-            time and effort to review and apply someone else's changes
-            that are likely to be safe and useful, versus the
-            potential costs of undoing changes that are
-            dangerous.</para>
+          <para>Aunque esto pueda parecer superficialmente como una
+            forma de elitismo, esta noción de <quote>ganarse
+            su privilegio de escritura</quote> es una cuestión
+            de eficiencia&mdash;es calcular si cuesta más
+            tiempo y esfuerzo revisar y aplicar los cambios
+            de otra persona que pueden ser seguros y útiles,
+            versus el coste potencial de deshacer cambios que son
+            peligrosos.<!--TODO seguro que mi profesora me pegaría
+            por este estilo... mirar original--></para>
         </footnote>
-        The HACKING file is an invaluable resource when it comes to 
-        making sure that your proposed changes earn the praises they
-        deserve without being rejected on technicalities.</para>
+        El fichero <filename>HACKING</filename> es un recurso de
+        valor incalculable cuando llega la hora de asegurarse que
+        sus cambios propuestos se ganan las alabanzas que merecen
+        sin ser rechazados por detalles técnicos.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.4">
-      <title>Make and Test Your Changes</title>
+      <title>Realizando y verificando sus cambios</title>
       
-      <para>With the code and community policy understanding in hand,
-        you are ready to make your changes.  It is best to try to make
-        smaller but related sets of changes, even tackling larger
-        tasks in stages, instead of making huge, sweeping
-        modifications.  Your proposed changes will be easier to
-        understand (and therefore easier to review) if you disturb
-        the fewest lines of code possible to accomplish your task
-        properly.  After making each set of proposed changes, your
-        Subversion tree should be in a state in which the software
-        compiles with no warnings.</para>
+      <para>Habiendo entendido las reglas del código fuente y
+        la comunidad, está preparado para realizar sus cambios. Lo
+        mejor es intentar hacer cambios pequeños pero relacionados,
+        incluso separando tareas grandes en fases, en lugar de
+        hacer enormes modificaciones demoledoras. <!-- TODO estilo:
+        sweeping != demoledoras -->  Los cambios que proponga
+        serán más fáciles de entender (y por lo tanto, revisar)
+        si distribuye el menor número de lineas de código posible
+        para realizar la tarea correctamente. Tras realizar cada
+        conjunto de cambios propuestos, su árbol Subversion debe
+        estar en un estado en el cual el software compila sin ningún
+        mensaje de aviso.</para>
 
-      <para>Subversion has a fairly thorough
+      <para>Subversion cuenta con una suite de tests de regresión bastante
+        detallados
         <footnote>
-          <para>You might want to grab some popcorn.
-            <quote>Thorough</quote>, in this instance, translates to
-            somewhere in the neighborhood of thirty minutes of
-            non-interactive machine churn.</para>
-        </footnote>
-        regression test suite, and your proposed changes are expected
-        to not cause any of those tests to fail.  By running
-        <command>make check</command> (in Unix) from the top of the
-        source tree, you can sanity-check your changes.  The fastest
-        way to get your code contributions rejected (other than
-        failing to supply a good log message) is to submit changes
-        that cause failure in the test suite.</para>
+          <para>Quizás quiera coger palomitas.
+            <quote>Detallados</quote>, en este caso, se traduce
+            en aproximadamente treinta minutos de computación no
+            interactiva.</para>
+        </footnote>, y se espera que los cambios que propone no
+        harán que alguno de esos tests falle. Puede verificar sus
+        cambios ejecutando <command>make check</command> (bajo
+        Unix) desde el directorio raíz del código fuente. La forma
+        más rápida para conseguir que sus contribuciones de código
+        sean rechazadas (aparte de no proporcionar un buen mensaje
+        de cambios) es proponer cambios que provocan fallos en
+        la suite de tests<!-- TODO quizás cambiar test suite por
+        unidades de verificación?-->.</para>
 
       <!-- ### TODO: Describe building and testing on Windows. -->
 
-      <para>In the best-case scenario, you will have actually added
-        appropriate tests to that test suite which verify that your
-        proposed changes work as expected.  In fact,
-        sometimes the best contribution a person can make is solely
-        the addition of new tests.  You can write regression tests for
-        functionality that currently works in Subversion as a way to
-        protect against future changes that might trigger failure in
-        those areas.  Also, you can write new tests that demonstrate
-        known failures.  For this purpose, the Subversion test suite
-        allows you to specify that a given test is expected to fail
-        (called an <literal>XFAIL</literal>), and so long as
-        Subversion fails in the way that was expected, a test result
-        of <literal>XFAIL</literal> itself is considered a success.
-        Ultimately, the better the test suite, the less time wasted on
-        diagnosing potentially obscure regression bugs.</para>
+      <para>En el mejor de los casos, usted habrá añadido nuevos
+        tests a la suite de tests, los cuales verifican que sus
+        cambios propuestos funcionan como espera. De hecho, a
+        veces la mejor contribución que puede hacer una persona es
+        añadir nuevos tests. Puede escribir tests de regresión para
+        funcionalidades que actualmente funcionan en Subversion
+        a modo de protección contra cambios futuros que puedan
+        provocar un fallo en esas áreas. Además, puede escribir
+        nuevos tests que demuestran fallos conocidos.  Para este
+        propósito, la suite de tests de Subversion le permite
+        especificar que un test específico tiene como objetivo
+        fallar (llamado <literal>XFAIL</literal>), así que mientras
+        Subversion falle del modo que usted espera, el resultado
+        del test <literal>XFAIL</literal> es considerado un éxito.
+        En última instancia, cuanto mejor sea la suite de tests,
+        menos tiempo se perderá diagnosticando potenciales fallos
+        de regresión esquivos.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-6.5">
-      <title>Donate Your Changes</title>
+      <title>Donar sus cambios</title>
       
-      <para>After making your modifications to the source code,
-        compose a clear and concise log message to describe those
-        changes and the reasons for them.  Then, send an email to the
-        developers list containing your log message and the output of
-        <command>svn diff</command> (from the top of your Subversion
-        working copy).  If the community members consider your changes
-        acceptable, someone who has commit privileges (permission to
-        make new revisions in the Subversion source repository) will
-        add your changes to the public source code tree.  Recall that
-        permission to directly commit changes to the repository is
-        granted on merit&mdash;if you demonstrate comprehension of
-        Subversion, programming competency, and a <quote>team
-        spirit</quote>, you will likely be awarded that
-        permission.</para>
+      <para>Tras realizar sus modificaciones al código fuente,
+        componga un mensaje de cambios claro y conciso que los
+        describa y la razón de éstos. Entonces, envíe un email
+        a la lista de desarrolladores con su mensaje de cambios
+        y la salida del comando <command>svn diff</command>
+        (realizado desde el directorio raíz de su copia local de
+        Subversion).  Si los miembros de la comunidad consideran
+        aceptables sus cambios, alguien con privilegios de escritura
+        (permiso para crear nuevas revisiones en el repositorio
+        de código fuente de Subversion) añadirá sus cambios al
+        árbol público de código fuente. Recuerde que el permiso
+        para realizar cambios directamente en el repositorio se
+        obtiene por méritos&mdash;si demuestra comprensión de
+        Subversion, competencia programando, y un <quote>espíritu
+        de equipo</quote>, es probable que se le recompense con
+        este permiso.</para>
 
     </sect2>
   </sect1>

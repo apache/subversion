@@ -16,7 +16,7 @@ Blanket commit access:
          brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
-          fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
+          fitz   Brian W. Fitzpatrick <fitz@collab.net>
         daniel   Daniel Stenberg <daniel@haxx.se>
       cmpilato   C. Michael Pilato <cmpilato@collab.net>
          kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
@@ -45,40 +45,47 @@ Blanket commit access:
 
 Commit access for specific areas:
 
-          xela   Alexander Müller <alex@littleblue.de>       (Java bindings)
-       yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
+  Bindings:
+
+        morten   Morten Ludvigsen <morten@2ps.dk>            (Swig-Java b.)
+      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (Swig-Java b.)
+        knacke   Kai Nacke <kai.nacke@redstar.de>            (Swig-Java b.)
+       pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
+          rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
+         clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
+
+  Packages:
+
          david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
-      rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
+
+  Miscellaneous:
+
       kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
            nsd   Nick Duffek <nick@duffek.com>               (doc)
-       fmatias   Féliciano Matias <feliciano.matias@free.fr> (doc: fr)
-      dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (doc: ru)
-        xsteve   Stefan Reichör <stefan@xsteve.at>           (psvn)
+        xsteve   Stefan Reichör <stefan@xsteve.at>           (psvn.el)
       josander   Jostein Andersen <jostein@josander.net>     (various)
-      ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
-        morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
-        mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
-          mass   David Waite <mass@akuma.org>                (certs branch)
-      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
-        knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
         mprice   Michael Price <mprice@atl.lmco.com>         (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
-     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
-           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
-       pmayweg   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
-          rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
-         clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
+     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
-      sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
+       mthelen   Michael W Thelen <mike@pietdepsi.com>       (doc)
+  jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (chk-case-insens)
+      martinto   Martin Tomes <lists@tomes.org>              (chk-case-insens)
+        danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
+   archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
+       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
+
+  Translation:
+
+       fmatias   Féliciano Matias <feliciano.matias@free.fr> (doc: fr)
+      dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (doc: ru)
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
         luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
-       mthelen   Michael W Thelen <mike@pietdepsi.com>       (doc)
-  jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (hook script)
-      martinto   Martin Tomes <lists@tomes.org>              (hook script)
     khmarbaise   Karl Heinz Marbaise <khmarbaise@gmx.de>     (doc: de)
       oyvindmo   Øyvind Møll <svn@moll.no>                   (doc, po: nb)
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (doc, po: nb)
@@ -96,14 +103,21 @@ Commit access for specific areas:
         gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
          ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
       dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
-        danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
-   archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
-       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl branch)
+  
+  Subprojects that are complete or abandoned:
+
+          xela   Alexander Müller <alex@littleblue.de>       (Java JNI b.)
+       yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Non-SWIG Ruby b.)
+        mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
+          mass   David Waite <mass@akuma.org>                (certs branch)
+      sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
+      ballbach   Michael Ballbach <ballbach@rten.net>        (Old Mandrake RPM)
 
 Committers who have asked to be listed as dormant:
 
         bdenny   Brian Denny <brian@briandenny.net>
+      rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
 
 ## Local Variables:
 ## coding:utf-8

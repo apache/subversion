@@ -322,7 +322,7 @@ get_uton_xlate_handle_node (xlate_handle_node_t **ret, apr_pool_t *pool)
 
 /* Copy LEN bytes of SRC, converting non-ASCII and zero bytes to ?\nnn
    sequences, allocating the result in POOL. */
-const char *
+static const char *
 fuzzy_escape (const char *src, apr_size_t len, apr_pool_t *pool)
 {
   const char *src_orig = src, *src_end = src + len;

@@ -36,11 +36,11 @@
 /*** Hook drivers. ***/
 
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
-   program that is to be run.  If CHECK_EXITCODE is TRUE then the hook's
+   program that is to be run.  If READ_ERRSTREAM is TRUE then the hook's
    exit status will be checked, and if an error occurred the hook's stderr
    output will be added to the returned error.
 
-   If CHECK_EXITCODE is FALSE the hook's exit status will be ignored.
+   If READ_ERRSTREAM is FALSE the hook's exit status will be ignored.
 
    If STDIN_HANDLE is non-null, pass it as the hook's stdin, else pass
    no stdin to the hook. */
@@ -48,7 +48,7 @@ static svn_error_t *
 run_hook_cmd (const char *name,
               const char *cmd,
               const char **args,
-              svn_boolean_t check_exitcode,
+              svn_boolean_t read_errstream,
               apr_file_t *stdin_handle,
               apr_pool_t *pool)
 {
@@ -90,20 +90,30 @@ run_hook_cmd (const char *name,
         (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to run '%s' hook"), cmd);
     }
 
-  if (!err && check_exitcode)
+  if (!err)
     {
       /* Command failed. */
       if (! APR_PROC_CHECK_EXIT (exitwhy) || exitcode != 0)
         {
           svn_stringbuf_t *error;
 
-          /* Read the file's contents into a stringbuf, allocated in POOL. */
-          SVN_ERR (svn_stringbuf_from_aprfile (&error, read_errhandle, pool));
-
-          err = svn_error_createf
-              (SVN_ERR_REPOS_HOOK_FAILURE, err,
-               _("'%s' hook failed with error output:\n%s"),
-               name, error->data);
+          if (read_errstream)
+            {
+              /* Read the file's contents into a stringbuf, allocated
+                 in POOL. */
+              SVN_ERR (svn_stringbuf_from_aprfile (&error, read_errhandle, 
+                                                   pool));
+              err = svn_error_createf
+                (SVN_ERR_REPOS_HOOK_FAILURE, err,
+                 _("'%s' hook failed with error output:\n%s"),
+                 name, error->data);
+            }
+          else
+            {
+              err = svn_error_createf
+                (SVN_ERR_REPOS_HOOK_FAILURE, err,
+                 _("'%s' hook failed; no error output available"), name);
+            }
         }
     }
 

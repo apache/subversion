@@ -445,6 +445,8 @@ complete_directory (struct edit_baton *eb,
         }
     }
 
+  svn_pool_destroy (subpool);
+
   /* An atomic write of the whole entries file. */
   SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
 
