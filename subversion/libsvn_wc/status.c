@@ -50,7 +50,7 @@ svn_wc_get_default_ignores (apr_array_header_t **patterns,
      If no configuration value exists, we fall back to our defaults. */
   svn_config_get (cfg, &val, SVN_CONFIG_SECTION_MISCELLANY, 
                   SVN_CONFIG_OPTION_GLOBAL_IGNORES,
-                  "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*");
+                  SVN_CONFIG_DEFAULT_GLOBAL_IGNORES);
   *patterns = apr_array_make (pool, 16, sizeof (const char *));
 
   /* Split the patterns on whitespace, and stuff them into *PATTERNS. */

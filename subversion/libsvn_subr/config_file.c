@@ -953,7 +953,7 @@ svn_config_ensure (apr_pool_t *pool)
         "# [miscellany]\n"
         "### Set global-ignores to a set of whitespace-delimited globs\n"
         "###   which Subversion will ignore in its `status' output.\n"
-        "# global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*\n"
+        "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES "\n"
         "### Set log-encoding to the default encoding for log messages\n"
         "# log-encoding = latin1\n"
         "\n"
