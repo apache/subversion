@@ -35,7 +35,7 @@ class Generator(gen_win.WinGeneratorBase):
         config_type=2
       elif isinstance(target, gen_base.TargetSWIG):
         config_type=2
-        target.output_name = os.path.basename(target.fname)  
+        target.output_name = os.path.basename(target.filename)  
       else:
         #LIB
         config_type=4

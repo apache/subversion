@@ -36,7 +36,7 @@ class Generator(gen_win.WinGeneratorBase):
       elif isinstance(target, gen_base.TargetSWIG):
         targtype = "Win32 (x86) Dynamic-Link Library"
         targval = "0x0102"
-        target.output_name = os.path.basename(target.fname)
+        target.output_name = os.path.basename(target.filename)
       else:
         targtype = "Win32 (x86) Static Library"
         targval = "0x0104"
