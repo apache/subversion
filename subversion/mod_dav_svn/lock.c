@@ -38,7 +38,6 @@
 struct dav_lockdb_private
 {
   /* These represent 'custom' request hearders only sent by svn clients: */
-  svn_boolean_t svn_client;
   svn_boolean_t lock_steal;
   svn_boolean_t lock_break;
   svn_revnum_t working_revnum;
@@ -157,6 +156,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
                      const dav_lock *dlock,
                      const char *path,
                      dav_lockdb_private *info,
+                     svn_boolean_t is_svn_client,
                      apr_pool_t *pool)
 {
   svn_lock_t *lock;
@@ -187,7 +187,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
      DAV clients! */
   if (dlock->owner)
     {
-      if (info->svn_client)
+      if (is_svn_client)
         {
           /* mod_dav has forcibly xml-escaped the comment before
              handing it to us; we need to xml-unescape it (and remove
@@ -360,21 +360,18 @@ dav_svn_open_lockdb(request_rec *r,
 
   info->r = r;
 
+  /* Is this an svn client? */
+
   /* Check to see if an svn client sent any custom X-SVN-* headers in
      the request. */
   svn_client_options = apr_table_get(r->headers_in, SVN_DAV_OPTIONS_HEADER);
   if (svn_client_options)
     {
-      /* Was the LOCK request sent by an svn client? */
-      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_SVN_CLIENT_LOCK))
-        info->svn_client = TRUE;
-
       /* 'svn [lock | unlock] --force' */
       if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_LOCK_BREAK))
         info->lock_break = TRUE;
       if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_LOCK_STEAL))
         info->lock_steal = TRUE;
-
     }
 
   /* 'svn lock' wants to make svn_fs_lock() do an out-of-dateness check. */
@@ -723,7 +720,8 @@ dav_svn_append_locks(dav_lockdb *lockdb,
 
   /* Convert the dav_lock into an svn_lock_t. */  
   derr = dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
-                              info, resource->pool);
+                              info, resource->info->repos->is_svn_client,
+                              resource->pool);
   if (derr)
     return derr;
 
