@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.8 $ of this document.)
+              ($Revision: 1.9 $ of this document.)
 
 * Introduction
 
@@ -124,6 +124,9 @@ If you start committing on the copy, then it's a branch.  Voila!
 
 By default, inversion uses per-project namespaces for copies, to avoid
 cross-project name conflicts.
+
+This should also get us CVS "vendor branching" (since we'll have real
+rename and directory support).
 
 [Thanks to Jim Blandy <jimb@red-bean.com> for pointing out that
 `copy' is a clean way to get both tagging and branching.]
@@ -463,21 +466,150 @@ A look at its table description below will make things clearer...
                    example.
 
 
+* Evaluating the Design
+
+The design of Inversion is still in progress; there are known problems
+with the above design, and potential solutions.  However, I'm
+concentrating on other stuff until we the rest of the full-time
+Inversion people are on board to bounce ideas with.  The design will
+finalize within a couple of weeks of the core team being assembled.
+
+** Concerns
+
+There are certain properties which we would like any implementation to
+have.  I'm listing them here instead of in the "Requirements" section,
+because they aren't really features, they're more like principles.
+
+*** Network turnarounds
+
+The CVS client/server protocol goes to great effort to make sure that
+the client and server need only a minimum of exchanges per operationn.
+I believe it is "theoretically" possible to never need more than 2
+turnarounds (i.e., client asks server preliminary questions, server
+responds, client then does the real request, server responds), and
+most things can be done with just 1.
+
+*** Database turnarounds
+
+We need to make sure that traversing tree structures does not require
+N separate database accesses, where N is proportional to the depth or
+breadth of the traversal.  For example, if retrieving an old version
+requires chaining down from the present version, and each link on the
+chain is another database access, that's bad.  Database accesses
+should be thought of like network turnarounds -- one hopes to arrange
+things so that any operation requires only a (small) constant number
+of them, not N.
+
+*** Times should be proportional to change size, not project size
+
+The time to complete any operation should be proportional to the size
+of the change that operation relates to, not the total amount of data
+in the project or in the repository.  Committing three files should
+take roughly the same amount of time in a project with ten files as in
+a project with forty thousand.  Same with diffing three files, etc.
+
+An exception is made for recency: retrieving an old version may take
+longer than retrieving a recent one, because old versions will take
+longer to construct.  This is a tradeoff of using diff-based storage,
+and has worked out pretty well in practice.
+
+** Scenarios 
+
+Each scenario should be mentally played out for a given design,
+analyzing for performance and scalability issues (particularly in
+network traffic, storage, and db accesses).
+
+If you spot a weakness in a design, add a scenario here that
+highlights it: even if that particular design gets tossed, the
+scenario will probably reveal similar weaknesses in other designs.
+
+(On the other hand, if a scenario never reveals weaknesses in
+anything, then remove it -- it's not helpful if it only demonstrates
+the ease of implementing that operation well.  Currently this list is
+a brain dump; there's no reason it can't be shortened.)
+
+*** Commit from an up-to-date wcopy
+
+*** Commit from non-up-to-date wcopy, with the modified files not-up-to-date
+
+*** Commit from non-up-to-date wcopy, with the modified files up-to-date
+
+*** Updating to most recent version(s), with no conflicts
+
+*** Updating to most recent version(s), with conflicts
+
+*** Party A commits while Party B's commit is in progress, but no conflicts
+
+*** Party A commits while Party B's commit is in progress, with conflicts
+
+Also, vary on the nature of the conflicts: did they add the same file,
+or both modify a pre-existing file?
+
+*** Add a new entity (directory or file)
+
+*** Add a new entity (directory or file) from a non-up-to-date wcopy
+
+Both with current directory up-to-date, and not.  (First determine
+what desired behavior is!)
+
+*** Rename an entity
+
+*** Retrieve an old version of an entity that has been renamed
+
+*** Remove an entity
+
+*** Resurrect an entity
+
+*** Move an entity to a new directory (may be different from rename)
+
+*** Diff two particular versions of a file
+
+*** Diff a working (uncommitted) version against an old version of a file
+
+*** Retrieve version X of a file
+
+*** Retrieve version X of a directory tree 
+
+*** Show annotations of both modified and old versions of files.
+
+(Golly, we need some word other than "annotations".  To me it implies
+that one has added log messages to individual lines, or something like
+that, not that CVS is showing you who did what and when.)
+
+*** Show annotations of a directory, similarly.
+
+Who created the file, and who last committed to it.
+
+Should this be a wish-list item, though?  CVS doesn't do it, but then
+again, CVS doesn't do directories either...
+
+*** Make a branch
+
+*** Make a tag (same as making a branch, in all proposed designs)
+
+*** Merge a branch into trunk
+
+Not talking about the user interface to branch merging, here, but
+rather internal implementation: how the system discovers what is the
+same vs what needs merging, what conflicts, etc.
+
+*** Merge a branch into trunk again
+
+*** Merge a branch into another branch
+
+Is this fundamentally different from merging into trunk?  Is the trunk
+"special" in any way, implementation-wise, or is it just the first
+branch?
+
+*** Change a previously committed log message
+
+** more to come...
+
+
 * Meta-implementation
 
 This section describes the process of implementing Inversion -- what
 order we do things in, and how.
-
-The design needs to be evaluated across common operations, such as:
-updating a project, updating *part* of a project, committing from
-an up-to-date-working copy, committing from a non-up-to-date working
-copy where the locally modified files are up-to-date, the same but
-where the locally modified files are not up-to-date, the same but with
-conflicts, tagging/branching, ... etc.  I am accumulating a list of
-such operations; contributions welcome.
-
-For each such operation, we need to step through what would happen in
-the repository, so we'll discover bottlenecks in the design.
 
 Once the design is ready, the parallizable parts of the software
 should be determined, and tasks divvied up.  At this point or very
@@ -806,3 +938,7 @@ chunks.  Unless it's a serious hit, though, I think we should try to
 stay in the database.  I mean, why use it unless we're going to use
 it?  The only reason I can see to implement an extra level of
 indirection here would be if it gave us some big performance boost.
+
+* Wish List
+
+put blue-sky requests here...
