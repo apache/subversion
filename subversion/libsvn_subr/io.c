@@ -970,11 +970,6 @@ svn_string_from_file (svn_stringbuf_t **result,
   apr_status_t apr_err;
   apr_file_t *f = NULL;
 
-  /* If user passed '-', use stdin. We could use apr_file_open_stdin here, and
-   * in fact, it does work. Problem is that if the same command invokes the
-   * editor, stdin is crap, and the editor acts funny (if not die outright). I
-   * wanted to just disallow stdin reading and invoking the editor, but there's
-   * no easy callback for that right now.  */
   if (filename[0] == '-' && filename[1] == '\0')
     return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,

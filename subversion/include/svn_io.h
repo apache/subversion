@@ -376,7 +376,17 @@ svn_stream_readline (svn_stream_t *stream,
                      apr_pool_t *pool);
 
 /* Sets *RESULT to a string containing the contents of FILENAME, a
-   utf8-encoded path. */
+   utf8-encoded path. 
+
+   If FILENAME is "-", return the error SVN_ERR_UNSUPPORTED_FEATURE
+   and don't touch *RESULT.
+
+   ### Someday, "-" will fill *RESULT from stdin.  The problem right
+   now is that if the same command invokes the editor, stdin is crap,
+   and the editor acts funny or dies outright.  One solution is to
+   disallow stdin reading and invoking the editor, but how to do that
+   reliably?
+*/
 svn_error_t *svn_string_from_file (svn_stringbuf_t **result, 
                                    const char *filename, 
                                    apr_pool_t *pool);
