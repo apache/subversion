@@ -25,5 +25,12 @@ Candidate changes:
     Votes:
       +1: lundblad, maxb
 
+  * r13961
+    Fix Ruby install.
+    Justification:
+      Broken otherwise.
+    Votes:
+      +1: epg
+
 Approved changes (further review is welcome, but not required):
 
