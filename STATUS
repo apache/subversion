@@ -158,6 +158,16 @@ Candidate changes:
     Votes:
       +1: ringstrom, philip
 
+  * r13358
+    Fix a case where merge breaks the wc.
+    Justification:
+      We shouldn't be breaking the wc with merges.
+    Branch:
+      1.1.x-r13358 (1.1.x@13358 1.1.x-r13358@HEAD)
+    Votes:
+      +1: breser
+
+
 Approved changes (further review is welcome, but not required):
 
   * r12489
@@ -185,12 +195,3 @@ Approved changes (further review is welcome, but not required):
       Regression from 1.0, move/copy can fail in some non-UTF-8 locales.
     Votes:
       +1: philip, lundblad, maxb
-
-  * r13358
-    Fix a case where merge breaks the wc.
-    Justification:
-      We shouldn't be breaking the wc with merges.
-    Branch:
-      1.1.x-r13358
-    Votes:
-      +1: breser
