@@ -153,14 +153,16 @@ typedef struct
 
   /* representation key for this node's properties.  may be -1 if
      there are no properties.  */
-  apr_off_t prop_offset;
   svn_revnum_t prop_revision;
+  apr_off_t prop_offset;
+  apr_size_t prop_size;
+  apr_size_t prop_expanded_size;
 
   /* representation key for this node's text data (files) or entries
      list (dirs).  may be -1 if there are no contents.  */
+  svn_revnum_t data_revision;
   apr_off_t data_offset;
   apr_size_t data_size; /* size of svndiff data */
-  svn_revnum_t data_revision;
   apr_size_t data_expanded_size; /* fulltext size of data */
 
   /* representation key for this node's text-data-in-progess (files

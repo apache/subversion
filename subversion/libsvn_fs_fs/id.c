@@ -146,21 +146,39 @@ svn_fs_parse_id (const char *data,
   str = apr_strtok (NULL, ".", &last_str);
   if (str == NULL) return NULL;
   id->copy_id = str;
+
+  /* Txn/Rev Id */
+  str = apr_strtok (NULL, ".", &last_str);
+  if ((str == NULL) || (*str == '\0'))
+    return NULL;
+
+  if (str[0] == 'r')
+    {
+      char *local_str, *local_last_str;
+      /* This is a revision type ID */
+      local_str = apr_strtok (str + 1, "/", &local_last_str);
+      if (local_str == NULL)
+        return NULL;
+      id->rev = atoi (local_str);
+
+      local_str = apr_strtok (NULL, "/", &local_last_str);
+      if (local_str == NULL)
+        return NULL;
+      id->offset = apr_atoi64 (local_str);
+      
+      id->txn_id = NULL;
+    }
+  else if (str[0] == 't')
+    {
+      /* This is a transaction type ID */
+      id->txn_id = str + 1;
+      id->rev = SVN_INVALID_REVNUM;
+    }
+  else
+    {
+      return NULL;
+    }
   
-  /* Txn Id */
-  str = apr_strtok (NULL, ".", &last_str);
-  if (str == NULL) return NULL;
-  id->txn_id = str;
-
-  /* Revision */
-  str = apr_strtok (NULL, ".", &last_str);
-  if (str == NULL) return NULL;
-  id->rev = atoi (str);
-
-  str = apr_strtok (NULL, ".", &last_str);
-  if (str == NULL) return NULL;
-  id->offset = apr_atoi64 (str);
-
   /* Return our ID */
   return id;
 }
@@ -170,10 +188,21 @@ svn_string_t *
 svn_fs_unparse_id (const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  return svn_string_createf (pool, "%s.%s.%s.%" SVN_REVNUM_T_FMT
-                             ".%" APR_SIZE_T_FMT,
-                             id->node_id, id->copy_id, id->txn_id,
-                             id->rev, id->offset);
+  const char *txn_rev_id;
+
+  if (id->txn_id)
+    {
+      txn_rev_id = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT "/%"
+                                 APR_SIZE_T_FMT, id->rev, id->offset);
+    }
+  else
+    {
+      txn_rev_id = id->txn_id;
+    }
+  return svn_string_createf (pool, "%s.%s.%c%s",
+                             id->node_id, id->copy_id,
+                             (id->txn_id ? 't' : 'r'),
+                             txn_rev_id);
 }
 
 
