@@ -45,6 +45,10 @@
 #  define SVN_CLIENT_PATCH "X:/path/to/patch.exe"
 #endif
 
+/* Path separator for local filesystem */
+#ifndef SVN_PATH_LOCAL_SEPARATOR
+#  define SVN_PATH_LOCAL_SEPARATOR '\\'
+#endif
 
 #endif /* CONFIG_HW */
 
