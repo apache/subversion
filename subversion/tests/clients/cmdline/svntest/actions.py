@@ -77,7 +77,7 @@ def guarantee_greek_repository(path):
     ### tree manually from the greek_state.
     output_list = []
     for greek_path in main.greek_state.desc.keys():
-      output_list.append([ os.path.join('.', greek_path),
+      output_list.append([ os.path.join(main.greek_dump_dir, greek_path),
                            None, {}, {'verb' : 'Adding'}])
     expected_output_tree = tree.build_generic_tree(output_list)
 
