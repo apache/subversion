@@ -48,89 +48,34 @@ const char svn_cl__help_footer[] =
     "For additional information, see http://subversion.tigris.org\n";
 
 
-static svn_error_t *
-print_version_info (svn_boolean_t quiet, apr_pool_t *pool)
-{
-  void *ra_baton;
-  svn_stringbuf_t *descriptions;
-  const char *descriptions_native;
-  static const char info[] =
-    "Copyright (C) 2000-2002 CollabNet.\n"
-    "Subversion is open source software, see http://subversion.tigris.org/\n";
-
-  if (quiet)
-    {
-      printf ("%s\n", SVN_VER_NUMBER);
-      return SVN_NO_ERROR;
-    }
-
-  printf ("Subversion Client, version %s\n", SVN_VERSION);
-  printf ("   compiled %s, %s\n\n", __DATE__, __TIME__);
-  printf ("%s\n", info);
-
-  printf ("The following repository access (RA) modules are available:\n\n");
-
-  /* Get a hash full of all available RA libraries.  */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-
-  /* Get a descriptive list of them. */
-  SVN_ERR (svn_ra_print_ra_libraries (&descriptions, ra_baton, pool));
-
-  SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (&descriptions_native,
-                                                descriptions, pool));
-
-  printf ("%s\n", descriptions_native);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Print either generic help, or command-specific help for each
- * command in os->args.  OPT_STATE is only examined for the
- * '--version' switch.  If OS is null then generic help will always be
- * printed.
- * 
- * Unlike all the other command routines, ``help'' has its own
- * option processing.
- *
- * This implements the `svn_opt_subcommand_t' interface.
- *
- * ### todo: this should really be abstracted into svn_opt_help or
- * something, since all the command line programs want to offer help
- * in the same format... But one step at a time.
- */
+/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__help (apr_getopt_t *os,
               void *baton,
               apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = baton;
-  apr_array_header_t *targets = NULL;
-  int i;
 
-  if (os)
-    SVN_ERR (svn_cl__parse_all_args (&targets, os, pool));
+  void *ra_baton;
+  const char *ra_desc_start
+    = "The following repository access (RA) modules are available:\n\n";
+  svn_stringbuf_t *ra_desc_body, *ra_desc_all;
 
-  if (targets && targets->nelts)  /* help on subcommand(s) requested */
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_opt_subcommand_help (((const char **) (targets->elts))[i],
-                                 svn_cl__cmd_table,
-                                 svn_cl__options,
-                                 pool);
-      }
-  else if (opt_state && opt_state->version)  /* just --version */
-    SVN_ERR (print_version_info (opt_state->quiet, pool));
-  else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
-    svn_opt_print_generic_help (svn_cl__help_header,
-                                svn_cl__cmd_table,
-                                svn_cl__options,
-                                svn_cl__help_footer,
-                                pool,
-                                stdout);
-  else                                       /* unknown option or cmd */
-    fprintf (stderr, "Type `svn help' for help on Subversion usage.\n");
+  ra_desc_all = svn_stringbuf_create (ra_desc_start, pool);
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_print_ra_libraries (&ra_desc_body, ra_baton, pool));
+  svn_stringbuf_appendstr (ra_desc_all, ra_desc_body);
+
+  SVN_ERR (svn_opt_print_help (os,
+                               "svn",   /* ### erm, derive somehow? */
+                               opt_state ? opt_state->version : FALSE,
+                               opt_state ? opt_state->quiet : FALSE,
+                               ra_desc_all->data,
+                               svn_cl__help_header,
+                               svn_cl__cmd_table,
+                               svn_cl__options,
+                               svn_cl__help_footer,
+                               pool));
 
   return SVN_NO_ERROR;
 }

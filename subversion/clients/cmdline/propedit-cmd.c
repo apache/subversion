@@ -47,16 +47,19 @@ svn_cl__propedit (apr_getopt_t *os,
 
   /* Validate the input and get the property's name (and a UTF-8
      version of that name). */
-  SVN_ERR (svn_cl__parse_num_args (&args, os, 1, pool));
+  SVN_ERR (svn_opt_parse_num_args (&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* Add "." if user passed 0 file arguments */
-  svn_cl__push_implicit_dot_target (targets, pool);
+  svn_opt_push_implicit_dot_target (targets, pool);
 
   /* For each target, edit the property PNAME. */
   for (i = 0; i < targets->nelts; i++)

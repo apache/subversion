@@ -44,11 +44,14 @@ svn_cl__proplist (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
 
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* Add "." if user passed 0 arguments */
-  svn_cl__push_implicit_dot_target (targets, pool);
+  svn_opt_push_implicit_dot_target (targets, pool);
 
   for (i = 0; i < targets->nelts; i++)
     {

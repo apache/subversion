@@ -125,7 +125,10 @@ svn_cl__ls (apr_getopt_t *os,
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* Give me arguments or give me death! */

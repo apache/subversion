@@ -73,7 +73,10 @@ svn_cl__checkout (apr_getopt_t *os,
   void *notify_baton = NULL;
   int i;
 
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* If there are no targets at all, then let's just give the user a

@@ -67,7 +67,10 @@ svn_cl__merge (apr_getopt_t *os,
       using_alternate_syntax = TRUE;
     }
 
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state,
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          TRUE, /* extract @rev revisions */
                                          pool));
 

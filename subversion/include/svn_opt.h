@@ -147,7 +147,7 @@ svn_opt_subcommand_help (const char *subcommand,
 
 
 
-/*** Parsing revisions and dates. ***/
+/*** Parsing revision and date options. ***/
 
 /* Various ways of specifying revisions. 
  *   
@@ -234,6 +234,93 @@ svn_opt_parse_date (svn_opt_revision_t *start_revision,
                     svn_opt_revision_t *end_revision,
                     const char *arg, apr_pool_t *pool);
 
+
+
+/*** Parsing arguments. ***/
+
+/* Pull remaining target arguments from OS into *TARGETS_P, including
+   targets stored in KNOWN_TARGETS (which might come from, for
+   example, the "--targets" command line option), converting them to
+   UTF-8.  Allocate *TARGETS_P and its elements in POOL.
+
+   If EXTRACT_REVISIONS is set, then this function will attempt to
+   look for trailing "@rev" syntax on the paths.  If one @rev is
+   found, it will overwrite the value of *START_REVISION.  If a second
+   one is found, it will overwrite *END_REVISION.  (Extra revisions
+   beyond that are ignored.)  */
+svn_error_t *
+svn_opt_args_to_target_array (apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              svn_opt_revision_t *start_revision,
+                              svn_opt_revision_t *end_revision,
+                              svn_boolean_t extract_revisions,
+                              apr_pool_t *pool);
+
+
+/* If no targets exist in *TARGETS, add `.' as the lone target.
+ *
+ * (Some commands take an implicit "." string argument when invoked
+ * with no arguments. Those commands make use of this function to
+ * add "." to the target array if the user passes no args.)
+ */
+void svn_opt_push_implicit_dot_target (apr_array_header_t *targets,
+                                       apr_pool_t *pool);
+
+
+/* Parse NUM_ARGS non-target arguments from the list of arguments in
+   OS->argv, return them as `const char *' in *ARGS_P, without doing
+   any UTF-8 conversion.  Allocate *ARGS_P and its values in POOL. */
+svn_error_t *
+svn_opt_parse_num_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
+                        int num_args,
+                        apr_pool_t *pool);
+
+
+/* Parse all remaining arguments from OS->argv, return them as
+   `const char *' in *ARGS_P, without doing any UTF-8 conversion.
+   Allocate *ARGS_P and its values in POOL. */
+svn_error_t *
+svn_opt_parse_all_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
+                        apr_pool_t *pool);
+
+
+/* Print either generic help, or command-specific help for PGM_NAME.
+ * If there are arguments in OS, then try printing help for them as
+ * though they are subcommands, using  CMD_TABLE and OPTION_TABLE for
+ * option information.
+ *
+ * If OS is null, or there are no targets in OS, then:
+ *
+ *    - If PRINT_VERSION is true, then print version info, in brief
+ *      form if QUIET is also true; if QUIET is false, then if
+ *      VERSION_FOOTER is non-null, print it following the version
+ *      information.
+ *
+ *    - Else if PRINT_VERSION is not true, then print generic help,
+ *      via svn_opt_print_generic_help with the HEADER, CMD_TABLE,
+ *      OPTION_TABLE, and FOOTER arguments.
+ *
+ * Use POOL for temporary allocations.
+ *
+ * Notes: The reason this function handles both version printing and
+ * general usage help is that a confused user might put both the
+ * --version flag *and* subcommand arguments on a help command line.
+ * The logic for handling such a situation should be in one place.
+ */
+svn_error_t *
+svn_opt_print_help (apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const char *footer,
+                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

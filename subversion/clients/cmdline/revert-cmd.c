@@ -47,7 +47,10 @@ svn_cl__revert (apr_getopt_t *os,
   void *notify_baton = NULL;
   apr_pool_t *subpool;
 
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* Revert has no implicit dot-target `.', so don't you put that code here! */
