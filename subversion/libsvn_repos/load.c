@@ -182,6 +182,16 @@ parse_property_block (svn_stream_t *stream,
 
       /* Read a key length line.  (Actually, it might be PROPS_END). */
       SVN_ERR (svn_stream_readline (stream, &strbuf, pool));
+
+      if (strbuf == NULL)
+        {
+          /* We could just use stream_ran_dry() or stream_malformed(),
+             but better to give a non-generic property block error. */ 
+          return svn_error_create
+            (SVN_ERR_STREAM_MALFORMED_DATA, 0, NULL, pool,
+             "incomplete or unterminated property block");
+        }
+
       content_length -= (strbuf->len + 1); /* +1 because we read a \n too. */
       buf = strbuf->data;
 
@@ -366,8 +376,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
   SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
   if (linebuf == NULL)
-    return svn_error_create
-      (SVN_ERR_BAD_INPUT, 0, NULL, pool, "empty or incomplete input data");
+    return stream_ran_dry (pool);
     
   /* The first two lines of the stream are the dumpfile-format version
      number, and a blank line. */
