@@ -62,7 +62,7 @@ LIB32=link.exe -lib
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "Debug"
-# PROP Intermediate_Dir "Debug\obj"
+# PROP Intermediate_Dir "Debug\obj\bdb"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
 # ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\xml\expat\lib" /I "..\..\db4-win32\include" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS" /D alloca=_alloca /FD /GZ /c
@@ -85,17 +85,152 @@ LIB32=link.exe -lib
 # Begin Group "Source Files"
 
 # PROP Default_Filter ".c"
+# Begin Group "util"
+
+# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=".\bdb\copies-table.c"
+SOURCE=.\util\fs_skels.c
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\util"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\util"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
-SOURCE=.\dag.c
+SOURCE=.\util\skel.c
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\util"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\util"
+
+!ENDIF 
+
+# End Source File
+# End Group
+# Begin Group "bdb"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=".\bdb\copies-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\bdb\dbt.c
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\nodes-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\reps-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\rev-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\strings-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\txn-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE=.\dag.c
 # End Source File
 # Begin Source File
 
@@ -111,10 +246,6 @@ SOURCE=.\fs.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\util\fs_skels.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\id.c
 # End Source File
 # Begin Source File
@@ -127,31 +258,11 @@ SOURCE=".\node-rev.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\bdb\nodes-table.c"
-# End Source File
-# Begin Source File
-
 SOURCE=".\reps-strings.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\bdb\reps-table.c"
-# End Source File
-# Begin Source File
-
-SOURCE=".\bdb\rev-table.c"
-# End Source File
-# Begin Source File
-
 SOURCE=".\revs-txns.c"
-# End Source File
-# Begin Source File
-
-SOURCE=.\util\skel.c
-# End Source File
-# Begin Source File
-
-SOURCE=".\bdb\strings-table.c"
 # End Source File
 # Begin Source File
 
@@ -163,27 +274,131 @@ SOURCE=.\tree.c
 # End Source File
 # Begin Source File
 
-SOURCE=".\bdb\txn-table.c"
-# End Source File
-# Begin Source File
-
 SOURCE=.\txn.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter ".h"
+# Begin Group "hdr - util"
+
+# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=".\bdb\copies-table.h"
+SOURCE=.\util\fs_skels.h
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\util"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\util"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
-SOURCE=.\dag.h
+SOURCE=.\util\skel.h
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\util"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\util"
+
+!ENDIF 
+
+# End Source File
+# End Group
+# Begin Group "hdr - bdb"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=".\bdb\copies-table.h"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\bdb\dbt.h
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\nodes-table.h"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\reps-table.h"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\strings-table.h"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\txn-table.h"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE=.\dag.h
 # End Source File
 # Begin Source File
 
@@ -192,10 +407,6 @@ SOURCE=.\err.h
 # Begin Source File
 
 SOURCE=.\fs.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\util\fs_skels.h
 # End Source File
 # Begin Source File
 
@@ -211,15 +422,7 @@ SOURCE=".\node-rev.h"
 # End Source File
 # Begin Source File
 
-SOURCE=".\bdb\nodes-table.h"
-# End Source File
-# Begin Source File
-
 SOURCE=".\reps-strings.h"
-# End Source File
-# Begin Source File
-
-SOURCE=".\bdb\reps-table.h"
 # End Source File
 # Begin Source File
 
@@ -231,23 +434,11 @@ SOURCE=".\revs-txns.h"
 # End Source File
 # Begin Source File
 
-SOURCE=.\util\skel.h
-# End Source File
-# Begin Source File
-
-SOURCE=".\bdb\strings-table.h"
-# End Source File
-# Begin Source File
-
 SOURCE=.\trail.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\tree.h
-# End Source File
-# Begin Source File
-
-SOURCE=".\bdb\txn-table.h"
 # End Source File
 # Begin Source File
 
