@@ -651,6 +651,11 @@ if test "$do_javahl_build" = "yes"; then
     dnl On Darwin, JNI libs must be installed as .jnilib
     INSTALL_EXTRA_JAVAHL_LIB='ln -sf $(libdir)/libsvnjavahl-1.dylib $(libdir)/libsvnjavahl-1.jnilib'
   fi
+  # This segment (and the rest of r10800) is very likely unnecessary
+  # with libtool 1.5, which automatically adds libstdc++ as a
+  # dependency to the C++ libraries it builds.  So at some future time
+  # when autogen.sh requires libtool 1.5 or higher, we can get rid of
+  # it.
   AC_MSG_CHECKING([for additional flags to link C++ libraries])
   if test "x$ac_compiler_gnu" = "xyes"; then
     LT_CXX_LIBADD="-lstdc++"
