@@ -124,26 +124,31 @@ svn_cl__propedit (apr_getopt_t *os,
             if (opt_state->encoding)
               return svn_error_create 
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                 "Bad encoding option: prop's value isn't stored as UTF8");
+                 _("Bad encoding option: prop's value isn't stored as UTF8"));
           
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
                                            &rev, opt_state->force, ctx, pool));
 
-          printf (_("Set new value for property '%s' on revision %ld\n"),
-                  pname, rev);
+          SVN_ERR
+            (svn_cmdline_printf
+             (pool,
+              _("Set new value for property '%s' on revision %ld\n"),
+              pname_utf8, rev));
         }
       else
         {
-          printf (_("No changes to property '%s' on revision %ld"), pname, rev);
+          SVN_ERR (svn_cmdline_printf
+                   (pool, _("No changes to property '%s' on revision %ld"),
+                    pname_utf8, rev));
         }
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
       return svn_error_createf
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-         "Cannot specify revision for editing versioned property '%s'",
-         pname);
+         _("Cannot specify revision for editing versioned property '%s'"),
+         pname_utf8);
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
@@ -168,7 +173,7 @@ svn_cl__propedit (apr_getopt_t *os,
         {
           return svn_error_create
             (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-             "Explicit target argument required");
+             _("Explicit target argument required"));
         }
 
       /* For each target, edit the property PNAME. */
@@ -179,7 +184,7 @@ svn_cl__propedit (apr_getopt_t *os,
           svn_string_t *propval;
           const char *new_propval;
           const char *base_dir = target;
-          const char *target_stdout;
+          const char *target_local;
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
           
@@ -193,8 +198,8 @@ svn_cl__propedit (apr_getopt_t *os,
                  instead of NULL to svn_client_propget() below. */
               return svn_error_createf
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                 "Editing property on non-local target '%s' "
-                 "not yet supported", target);
+                 _("Editing property on non-local target '%s' "
+                 "not yet supported"), target);
             }
 
           /* Fetch the current property. */
@@ -216,7 +221,7 @@ svn_cl__propedit (apr_getopt_t *os,
           if (! entry)
             return svn_error_createf
               (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-               "'%s' does not appear to be a working copy path", target);
+               _("'%s' does not appear to be a working copy path"), target);
           if (entry->kind == svn_node_file)
             svn_path_split (target, &base_dir, NULL, subpool);
           
@@ -230,8 +235,7 @@ svn_cl__propedit (apr_getopt_t *os,
                                             ctx->config,
                                             subpool));
           
-          SVN_ERR (svn_cmdline_path_local_style_from_utf8 (&target_stdout,
-                                                           target, subpool));
+          target_local = svn_path_local_style (target, subpool);
 
           /* ...and re-set the property's value accordingly. */
           if (new_propval)
@@ -253,13 +257,17 @@ svn_cl__propedit (apr_getopt_t *os,
               
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, subpool));
-              printf (_("Set new value for property '%s' on '%s'\n"),
-                      pname, target_stdout);
+              SVN_ERR
+                (svn_cmdline_printf
+                 (subpool, _("Set new value for property '%s' on '%s'\n"),
+                  pname_utf8, target));
             }
           else
             {
-              printf (_("No changes to property '%s' on '%s'\n"),
-                      pname, target_stdout);
+              SVN_ERR
+                (svn_cmdline_printf
+                 (subpool, _("No changes to property '%s' on '%s'\n"),
+                  pname_utf8, target_local));
             }
         }
       svn_pool_destroy (subpool);

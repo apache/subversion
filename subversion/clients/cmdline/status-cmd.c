@@ -42,6 +42,9 @@ struct status_baton
   svn_boolean_t show_last_committed;
   svn_boolean_t skip_unrecognized;
   apr_pool_t *pool;
+
+  svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
+                                     errors while printing to stdout */
 };
 
 
@@ -52,8 +55,22 @@ print_status (void *baton,
               svn_wc_status_t *status)
 {
   struct status_baton *sb = baton;
-  svn_cl__print_status (path, status, sb->detailed, sb->show_last_committed,
-                        sb->skip_unrecognized, sb->pool);
+  svn_error_t *err;
+  
+  err = svn_cl__print_status (path, status, sb->detailed,
+                              sb->show_last_committed,
+                              sb->skip_unrecognized, sb->pool);
+
+  if (err)
+    {
+      /* Print if it is the first error. */
+      if (!sb->had_print_error)
+        {
+          sb->had_print_error = TRUE;
+          svn_handle_error (err, stderr, FALSE);
+        }
+      svn_error_clear (err);
+    }
 }
 
 
@@ -88,6 +105,8 @@ svn_cl__status (apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, pool);
 
   subpool = svn_pool_create (pool);
+
+  sb.had_print_error = FALSE;
 
   for (i = 0; i < targets->nelts; i++)
     {
