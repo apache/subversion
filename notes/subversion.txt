@@ -2,26 +2,31 @@
 
      Subversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.41 $ of this document.)
+              ($Revision: 1.42 $ of this document.)
 
 * Introduction
 
 This document describes Subversion, a replacement for CVS.  We may
-sometimes call it "Svn", to save space.  It will be described largely
-in terms of how it differs, or doesn't differ, from CVS; if you don't
-already know CVS, this document will be pretty unreadable.
+sometimes call it "svn", to save space.  It will be described largely
+in terms of how it differs, or doesn't differ, from CVS, so you should
+already know CVS to read this.
 
-Where you see the word "version", it means the same thing "revision"
-does in the CVS documentation.  Everyone always ends up saying
-"version" anyway, then correcting themselves, so let's just give up
-already.  Besides, it's shorter to type.
+Where you see the word "version", it means the same thing as
+"revision" in the CVS world.  Everyone always ends up saying "version"
+anyway, then correcting themselves, so let's just give up already.
+Besides, it's easier to type.
 
 "Project" and "Repository" also mean what you think they do -- a
 repository is a place where multiple projects are stored.  Sometimes I
 might slip and say "repository" where I should have said "project",
 because CVS uses the r-word for both.  Bear with me.
 
-* Requirements
+This document is written in plain text Emacs outline-mode (i.e.,
+"subversion.txt"), not in html.  The html incarnation is generated
+from subversion.txt by a script.  So if you want to patch this
+document, and you have the html, get subversion.txt and modify that.
+
+* Goals
 
 ** All CVS features are supported.
 
@@ -58,7 +63,7 @@ ones.
 
    Note: Well, it may be useful to give users access to individual
    files' or directories' "commit count" (same as the per-file
-   "revision number" in CVS).
+   "revision number" in CVS).  We'll see.
 
 Commits are atomic -- either the entire commit succeeded, or the
 entire commit failed.  No one can ever retrieve a project tree in an
@@ -71,19 +76,18 @@ inconsistent state.
 Historically, binary files have been problematic in CVS for two
 unrelated reasons: keyword expansion, and line-end conversion.
 
-Keyword expansion is, for example, when CVS expands "$ Revision$" into
-"$ Revision 1.1$", and each successive commit updates that to the next
-revision number.  There are a number of keywords in CVS: "$ Author$",
-"$ Date$", and so on.
+Keyword expansion is when CVS expands "$ Revision$" into "$ Revision
+1.1$", for example.  There are a number of keywords in CVS: "$
+Author$", "$ Date$", and so on.
 
-  (Note: the examples above contain an extra space to prevent keyword
-   expansion from happening to them!) 
+  (Note: the examples above contain an extra space, to 
+   prevent keyword expansion from happening to them!) 
 
 Line-end conversion is when CVS gives plaintext files in the working
 copy the appropriate line-ending conventions (LF, CRLF, or CR) for
 that platform (the repository always stores text files in Unix LF
 format).  Line-end conversion requires knowing that the file is
-plaintext, of course -- doing it on an image file or other binary
+plaintext, of course -- doing it to an image file or other binary
 would only mess things up.
 
 Both keyword substitution and line-end conversion are possible only
@@ -98,10 +102,10 @@ determine whether a file is plain text or not?
 
 Experience with CVS suggests that assuming text unless told otherwise
 is a losing strategy -- people frequently forget to mark images and
-other opaque formats as binary, and then have to spend time figuring
-out why CVS mangled their data.
+other opaque formats as binary, then later they wonder why CVS mangled
+their data.
 
-So, Subversion assumes files are binary, unless they have a standard
+So Subversion assumes files are binary, unless they have a standard
 text extension (.c, .h, .pl, .html, .txt, and so on), or if a user
 explicitly marks the file as being texty.  In addition to a
 pre-defined list of text extensions, each project can have a custom
@@ -123,17 +127,17 @@ that defaulting to `on' would be all that bad either... thoughts?)
 
 By the way, any of the above properties attached to a file are really
 attached to a particular version, and each new version inherits from
-the previous version except when told otherwise.  Thus type changes
-are recorded like any other historical data (in practice, the type
-will probably be stored in the entity's property list, see
-implementation discussions farther down).
+the previous version except when told otherwise.  Thus, changes to
+file type are recorded like any other historical data (in
+implementation, the type will probably be stored in the entity's
+property list; see implementation discussions farther down).
 
 ** I18N/Multilingual support.
 
 Subversion has I18N support -- commands, user messages, and errors can
-be customized to the appropriate human language at build-time.  Also,
-there will be I18N support for the *names* as well as the contents of
-versioned entities.
+be customized to the appropriate human language at build-time (or run
+time, if that's not much harder).  Also, there will be I18N support
+for the *names* as well as the contents of versioned entities.
 
 For purposes of keyword expansion and line-end conversion, Subversion
 also understands the UTF-* encodings (but this may be after the first
@@ -144,11 +148,6 @@ non-UTF-8 text files with a few "meta" characters, this might at worst
 result in some number of bytes after the meta character being
 ignored... no big loss, except when a keyword code or line-end falls
 within the lost bytes, but that probably wouldn't happen too often...)
-
-*** User-visible messages
-
-Subversion can be localized so that its messages print out in a
-build-time-configured language.
 
 ** Branching and tagging are constant-time operations in Subversion.
 
@@ -168,14 +167,22 @@ CVS tag.
 
 If you start committing on the clone, then it's a branch.  Voila!
 
-This should also get us CVS "vendor branching" (since we'll have real
-rename and directory support).
+This also gets us CVS "vendor branching" for free (since we'll have
+real rename and directory support).
 
-(But note that it will be supported and normal to define the clone's
-name inside the original project's namespace, because people mentally
-think of tags and branches as being "inside" the project, not as being
-fully independent top-level objects themselves.  And we certainly
-don't want cross-project name conflicts in tags and branches!)
+Note that from the user's point of view, nothing is necessarily
+changing here -- people still create branches and tags they way they
+used to.  The above just describes how we're going to implement it.
+
+(Well, some interface change will be needed, because clones imply free
+branch-point tagging, and the user will need a way to specify whether
+a given clone name refers to root or tip.)
+
+Clone names are defined inside the parent project's namespace by
+default, since people normally think of tags and branches as being
+"on" a particular project, not as being fully independent top-level
+objects themselves.  (And we certainly don't want cross-project name
+conflicts in tags and branches!)
 
 [Thanks to Jim Blandy <jimb@red-bean.com> for pointing out that
 `clone' is a clean way to get both tagging and branching.]
@@ -195,19 +202,20 @@ merge will only get the changes from <Branch A, Previous Tip> to
 <Branch A, Current Tip>, *not* from <Branch A, Version
 N> to <Branch A, Current Tip>.
 
-This will require a more complete specification, of course, but
-above is the general idea.  Note that per-object merge records will
-need to be maintained on the server side, since people often need to
-merge project subsets.
+In other words, a diff set is an identifiable unit, and a project can
+remember whether or not it has absorbed a given diff set before.  All
+that's needed is a good way to uniquely identify diff sets; we think
+we have such a way, though we're going to hash out the details before
+writing it up.
 
 (There are some theoretical problems with remembering merge sources --
 knowing where the merged data came from implies some sort of universal
-repository registry.  However, our first goal is to make sure that
-multiple merges from branches made *in the same repository as the
-original project* compound gracefully.  Remembering merges from remote
-sources is more difficult, due to the difficulty of distinguishing
-remote sources, but there are good "90%" solutions that will work in
-practice).
+repository registry (in the DNS?).  However, our first goal is to make
+sure that multiple merges from branches made *in the same repository
+as the original project* compound gracefully.  Remembering merges from
+remote sources is more difficult, due to the difficulty of
+distinguishing remote sources, but there are good "90%" solutions that
+will work in practice).
 
 ** Subversion has flexible log message policy
 
@@ -222,6 +230,19 @@ only*, though I have doubts about even the usefulness of that.
 (CVS tries to require log messages, but fails: we've all seen empty
 log messages in CVS, where the user committed with deliberately empty
 quotes, so let's please stop the madness now.)
+
+** Support for plug-in client-side diff programs
+
+There is no need for Subversion to have every possible diff mechanism
+built in (or even any mechanism built in).  Instead, it invokes the
+appropriate client-side diff'er on the two versions of the file(s)
+locally.  For text files, the appropriate diff'er is the system `diff'
+program, or maybe "emacs -f ediff".  For image files, it might be some
+fancy visual comparison product.
+
+Probably basic text diffing should be built into the client, but that
+doesn't obviate the need to for clients to be able to specify
+alternate (or additional) difference viewers even for text.
 
 ** Conflicts are handled as in CVS, but a little better
 
@@ -241,40 +262,32 @@ Thus, in a text conflict, the user has three files to choose from
 CVS provides the first two, but doesn't directly provide the third.
 It's true that one could retrieve the repository version from the
 repository (using update -p or whatever), but it's more convenient to
-have it right at hand.  When the conflict has been resolved and the
-working copy is being committed, Subversion can automatically remove
-the two pristine files.
+have it readily at hand.  When the conflict has been resolved and the
+working copy is committed, Subversion can automatically remove the two
+pristine files.
+
+A general solution is to allow plug-in merge resolution tools on the
+client side; we may even offer that interface in the first release,
+since it's not particularly complex (it's basically like the
+client-side diff interface).
 
 *** Content knowledge allows better conflict resolution strategies
 
 Certain kinds of conflicts can be resolved without human intervention.
-For example, files in the format of /etc/passwd just need to keep
-lines unique on username and/or user ID.  But when merging new
-repository data into a modified working copy of such a file, it's
-possible to get a textual conflict even with no "semantic conflict".
+For example, files like /etc/passwd just need to keep lines unique by
+username and user ID.  
 
-If the Subversion client knew something about the format of passwd
-files, then it could merge in the new lines without creating a
-conflict.
+Right now, merging new repository data into a modified working copy of
+a passwd file can result in a textual conflict even when there's no
+"semantic conflict".  But if the Subversion client knew something
+about the format of passwd files, then it could merge without flagging
+a conflict.
 
-A similar rule could be used for ChangeLogs, based on the date in the
+A similar rule could be used for ChangeLogs, based on the dates in the
 header lines.  And so on.
 
 These features may not be in the first release of Subversion, but let's
 keep them in mind.
-
-** Support for plug-in client-side diff programs
-
-There is no need for Subversion to have every possible diff mechanism
-built in (or even any mechanism built in).  Instead, it invokes the
-appropriate client-side diff'er on the two versions of the file(s)
-locally.  For text files, the appropriate diff'er is the system `diff'
-program, or maybe "emacs -f ediff".  For image files, it might be some
-fancy visual comparison product.
-
-Probably basic text diffing should be built into the client, but that
-doesn't obviate the need to for clients to be able to specify
-alternate (or additional) difference viewers even for text.
 
 ** Multisite / Local Repository
 
@@ -305,8 +318,8 @@ Subversion we should probably do the same.
 This is one that people request a lot: the ability to commit changes
 first to a local "working repository" (not visible to the rest of the
 world), and then commit what's in the working repository to the real
-repository (with the several commits being then folded into one
-commit, usually).
+repository (with the several commits maybe being folded into one
+commit).
 
 Why do people want this?  I think mostly it's the psychological
 comfort of making a snapshot whenever one reaches a good stopping
@@ -324,7 +337,8 @@ but frankly I could never understand them very well...)
 
 For now, similar effects are achievable without involving the version
 control system, so this feature is not a priority for the first
-release of Subversion.
+release of Subversion.  Unless someone can explain a clear way to
+implement it, and another reason why it's important to support it.
 
 * Design
 
@@ -339,17 +353,17 @@ responsible for everything you read below :-) ).]
 Suppose we have a new project, at version 1, looking like this (pardon
 the CVS syntax):
 
-   prompt$ inv checkout myproj
+   prompt$ svn checkout myproj
    U myproj/
    U myproj/B
    U myproj/A
    U myproj/A/subA
    U myproj/A/subA/fish
-   U myproj/A/subA/fish/foo
+   U myproj/A/subA/fish/tuna
    prompt$
 
-(Only the file `foo' is a regular file, everything else in myproj is a
-directory so far).
+(Only the file `tuna' is a regular file, everything else in myproj is
+a directory so far).
 
 Let's see what this looks like as an abstract data structure in the
 repository, and how that structure works in various operations (such
@@ -363,8 +377,8 @@ represent backwards time-flow (the regression of versions), and any
 other kind of path represents a parent-to-child connection in a
 directory hierarchy.  Boxes are "nodes".  A node is either a file or a
 directory -- a letter in the upper left indicates which kind.  A
-node's name is stored in the node's parent, not in the node itself,
-for reasons that will become obvious.
+node's name is stored only in its parent, for reasons that will become
+obvious.
 
 A file node has a byte-string for its content, whereas directory nodes
 have a list of dir_entries, eaching pointing to another node.
@@ -410,29 +424,29 @@ the project:
                          ___\____
                         |D       |
                         |        |
-                        | foo    |  /* One dir_entry, `foo'. */
+                        | tuna   |  /* One dir_entry, `tuna'. */
                         |___\____|
                              \
                               \
                             ___\____
                            |F       |
                            |        |
-                           |        |   /* (Contents of foo not shown.) */
+                           |        |   /* (Contents of tuna not shown.) */
                            |________|
 
 
-What happens when we modify `foo' and commit?  First, we make a new
-`foo' node, containing the diff from version 2 of foo to version 1.
+What happens when we modify `tuna' and commit?  First, we make a new
+`tuna' node, containing the diff from version 2 of tuna to version 1.
 Let's use ":N" to express version relationships; so, this diff is the
 result of:
 
-   diff foo:2 foo:1
+   diff tuna:2 tuna:1
 
 Note the the order there: this is a reverse diff.  The idea is that
-foo:2 will hold the full text of this new version, and foo:1 will
+tuna:2 will hold the full text of this new version, and tuna:1 will
 become a diff.  This is done to save space, it does not affect the
-semantics of the implementation.  (Also note that we're assuming a
-diff program that can handle binary data!)
+semantics of the repository.  (Also note that we're assuming a diff
+program that can handle binary data!)
 
 The new node is not connected to anything yet, it's just hanging out
 there in space:
@@ -453,7 +467,7 @@ node:
 
       Figure 2: The `myproj' repository, in an intermediate state
                 during the commit of version 2 (a modification to
-                the file `foo').
+                the file `tuna').
 
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...etc...
@@ -486,7 +500,7 @@ node:
                          ___\____                    
                         |D       |                   
                         |        |                   
-                        | foo    |                   
+                        | tuna   |                   
                         |___\____|                   
                              \                       
                               \                      
@@ -500,13 +514,14 @@ node:
                            |________|          |________|
 
 
-A back-link is a version number attached to a pointer into the past.
-The version number tells you the version of what the links points to,
-not what it points from.  So if you're looking for FILE:N, and when
-you get a node for that file you find a back-link pointing to a
-version >=N, then you know you must follow that link.
+A back-link is a version number pointing into the past.  The version
+number tells you the version of the destination node, *not* the node
+holding the back-link.  So if you're looking for FILE:N, and when you
+get a node for that file you find a back-link pointing to a version N
+or higher, then you know you must follow that link farther back to get
+to version N.
 
-But I digress.  Right now, we're learning how to commit foo:2, and
+But I digress.  Right now, we're learning how to commit tuna:2, and
 there's one more step needed to complete that commit -- register the
 new version at the top of the repository, thus making it externally
 visible.  That's done by making entry 2 in the version array point to
@@ -545,7 +560,7 @@ something:
                          ___\____                    
                         |D       |                   
                         |        |                   
-                        | foo    |                   
+                        | tuna   |                   
                         |___\____|                   
                              \                       
                               \                      
@@ -561,12 +576,12 @@ something:
 
 Version 2 points to exactly the same root node as version 1, because
 that directory hasn't changed at all.  Nor has its child, nor has
-anything until you get all the way down to foo.      
+anything until you get all the way down to tuna.
 
 That's why nodes don't store version numbers -- the exact same node
 may appear in many different versions.               
 
-Here's how to retrieve foo:N, in general:            
+So, the general recipe for retrieving `foo:N' is:
 
    1. Go to the version table, find version N.       
 
@@ -578,12 +593,12 @@ Here's how to retrieve foo:N, in general:
    3. When you have nowhere else to go, this is the droid you're
       looking for.                                   
 
-Now watch what happens when we add a new file `bar' into `fish'
-(i.e., bar will be a sibling of `foo').  Here's the new tree, the
-intermediate steps not being shown:                  
+Now watch what happens when we add a new file `cod into `fish' (i.e.,
+cod will be a sibling of `tuna').  Here's the new tree, the
+intermediate steps not being shown:
 
       Figure 4: The `myproj' repository, after commit of version 3
-                (the addition of a sibling to `fish/foo').
+                (the addition of a sibling to `fish/tuna').
 
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...etc...
@@ -617,13 +632,13 @@ intermediate steps not being shown:
                         |D       |      |D       |
                         |        |      |        |
                         |  (2)--------->|        |
-                        |        |      |  foo   |
+                        |        |      |  tuna  |
                         |        |      |___/____|
                         |        |         /
                         |        |        /
-                        | bar    |       /
+                        | cod    |       /
                         /        |      /
-                       /| foo    |     /
+                       /| tuna   |     /
                       / |___\____|    /
                      /       \       /
                     /         \     /
@@ -643,13 +658,15 @@ Trace various retrievals in the above structure, and you will see that
 
    + But fish:3 is different from them, which is also as it should be.
 
-   + foo:3 and foo:2 are the same node, as they should be.
+   + tuna:3 and tuna:2 are the same node, as they should be.
 
-   + But foo:1 is different from them, which is also as it should be.
+   + But tuna:1 is different from them, which is also as it should be.
 
-Thus, the traversal cost of retrieving version N of something is equal
-to its depth in the tree plus the number of changes it or its
-ancestors have undergone.  Unchanged entities cost nothing.
+fooo
+
+Thus, the traversal cost of retrieving blah:N is equal to blah's depth
+in the tree, plus the number of changes it or its ancestors have
+undergone.  Unchanged entities cost nothing.
 
 Whether fish:2 is stored as some sort of diff from fish:3 is an
 implementation detail.  We could do it that way, but it may not be
@@ -705,13 +722,13 @@ README was added to the project's top level directory:
                         |D       |      |D       |
                         |        |      |        |
                         |  (2)--------->|        |
-                        |        |      |  foo   |
+                        |        |      |  tuna  |
                         |        |      |___/____|
                         |        |         /
                         |        |        /
-                        | bar    |       /
+                        | cod    |       /
                         /        |      /
-                       /| foo    |     /
+                       /| tuna   |     /
                       / |___\____|    /
                      /       \       /
                     /         \     /
@@ -740,9 +757,9 @@ These two issues are not directly related, but they must be
 synchronized with each other.  This is complex, so instead of
 specifying the sequence of events formally right away, let's run
 through an example without locking first.  Here's how to commit a new
-version of foo:
+version of tuna:
 
-  Step 1: Create the new node for foo:2.
+  Step 1: Create the new node for tuna:2.
 
             ________
            |F       |
@@ -755,9 +772,9 @@ version of foo:
   problem (except that a cleanup thread might, at its leisure, delete
   the unreachable node).
 
-  The new node has the full contents of foo:2.
+  The new node has the full contents of tuna:2.
 
-  Step 2: Create the back-link from foo:2 to foo:1.
+  Step 2: Create the back-link from tuna:2 to tuna:1.
 
             ________                ________
            |F       |              |F       |
@@ -767,20 +784,20 @@ version of foo:
 
 
   Again, the repository doesn't yet know that the new node even
-  exists.  The back-link is a pointer from foo:2 to foo:1, not the
-  other way around, so foo:1 isn't even aware of the link.
+  exists.  The back-link is a pointer from tuna:2 to tuna:1, not the
+  other way around, so tuna:1 isn't even aware of the link.
 
   Both nodes have the full contents of their respective version; no
   diffs have been made yet.
 
-  Step 3: Change the link in the parent node to point to the new foo:2
-  node (which in turn points to foo:1).
+  Step 3: Change the link in the parent node to point to the new tuna:2
+  node (which in turn points to tuna:1).
 
               \
             ___\____                    
            |D       |                   
            |        |                   
-           | foo    |                   
+           | tuna   |                   
            |___\____|                   
                 \                       
                  \                      
@@ -795,14 +812,14 @@ version of foo:
 
   The repository is still in a mostly sane state.  If the machine
   crashes now, there's this slightly weird situation in which a node
-  for foo:2 is present in the tree, but the version `myproj:2' doesn't
+  for tuna:2 is present in the tree, but the version `myproj:2' doesn't
   exist yet.
 
   However, if you follow the three-step algorithm for retrieving
-  FILE:N, you'll see that you still reach foo:1 just fine -- it's as
-  though foo:2 isn't there.  Another way to look at it is that version
-  2 of the project does not exist yet, therefore you can't ask for it;
-  if you ask for the head version, you'll get version 1.
+  FILE:N, you'll see that you still reach tuna:1 just fine -- it's as
+  though tuna:2 isn't there.  Another way to look at it is that
+  version 2 of the project does not exist yet, therefore you can't ask
+  for it; if you ask for the head version, you'll get version 1.
 
   Step 3: Hook up version 2 to the root node.
 
@@ -820,7 +837,7 @@ version of foo:
              /     \
             |       \
 
-You'll notice that nowhere in there did we give foo:1 diffy contents.
+You'll notice that nowhere in there did we give tuna:1 diffy contents.
 A separate thread gambols about the repository, taking care of such
 mundane tasks.  There's no reason to slow up commits with it.  (Of
 course, there's a "diff-bit" on each node, saying whether its contents
@@ -930,7 +947,7 @@ an entry for the removed child.
 Suppose you removed `foo' several versions ago and now you want it
 back.  When the user the working copy types
 
-       $ inv resurrect foo
+       $ svn resurrect foo
 
 what happens?
 
@@ -950,7 +967,7 @@ wants?
 By default, the server assumes the user meant the most recent foo.
 But the user could ask for one at a specific version:
 
-   $ inv resurrect foo:5
+   $ svn resurrect foo:5
 
 In that case, the server follows backlinks until it gets to the
 directory belonging to version 5, and then looks for an dir_entry
@@ -959,7 +976,7 @@ pointing to foo.
 Or, the user might first need to know how many different entities have
 been named `foo' here, before choosing one to resurrect:
 
-   $ inv resurrect -l foo
+   $ svn resurrect -l foo
    /* created    removed       versions    entity_name    entity_id  */
    2000-08-01   2000-10-14       1-5           foo           1729
    2000-12-15   2001-05-29       7-12          foo           1952
@@ -977,7 +994,7 @@ obvious.
 Now the user decides to resurrect the middle foo.  Usually she would
 want it at its latest revision, in this case 12:
 
-   $ inv resurrect foo:12
+   $ svn resurrect foo:12
 
 Please note: the examples here were meant only to illustrate various
 resurrection scenarios, and should not be taken as client
@@ -1022,21 +1039,21 @@ later.)
 Right after xproj is created, it has no nodes of its own -- every
 request is referred to myproj's repository.
 
-When you commit a change to `foo', here's what happens:
+When you commit a change to `tuna', here's what happens:
 
-In order to commit a new version of foo, we'd have to change foo's
-parent node to refer to the new foo node.  But we can't -- we don't
-have write access to myproj!  So we have to make a local copy of foo's
-parent.  But that leaves the parent's parent, over in myproj, still
-pointing at myproj's version of the parent...
+In order to commit a new version of tuna, we'd have to change tuna's
+parent node to refer to the new tuna node.  But we can't -- we don't
+have write access to myproj!  So we have to make a local copy of
+tuna's parent.  But that leaves the parent's parent, over in myproj,
+still pointing at myproj's version of the parent...
 
 You can see where this is going, I'm sure.
 
 The problem bubbles right up to the top, requiring us to create a root
-node locally.  All its dir_entries that are not ancestors of foo just
+node locally.  All its dir_entries that are not ancestors of tuna just
 refer back to nodes in myproj; those that are ancestors refer to new
 local copies of nodes along the line of ancestry, all the way down to
-foo:
+tuna:
 
             ______________________________________________________
   myproj   |___1_______2________3________4________5_________6_____...etc...
@@ -1078,7 +1095,7 @@ foo:
                                       ___\____
                                      |D       |
                                      |        |
-                                     | foo    |
+                                     | tuna   |
                                      |___\____|
                                           \
                                            \
@@ -1104,7 +1121,7 @@ The exact method by which local entries "point back" to the original
 project is not settled yet.  It might be some general URL-like syntax
 that we can use in all sorts of circumstances, like
 
-   user@inv.hostname.domain:repositoryname:myproj:5:/A/subA/fish/foo
+   user@svn.hostname.domain:repositoryname:myproj:5:/A/subA/fish/tuna
 
 (This will come in handy later, when we need a way to get unique
 labels for the diffy chromosome chunks in partial merging... but more
@@ -1164,10 +1181,10 @@ things we can store in the property list are file permissions, data
 type override (text, binary, whatever), whether or not to do
 platform-specific line-end conversions, etc.
 
-It might be good to have two plists, actually: `inv_props', and
-`user_props'.  Subversion only uses the ones in inv_props, and promises
-a "store-and-ignore" policy for user_props.  And users should never
-store anything in inv_props, only Subversion handles that.
+It might be good to have two plists, actually: `svn_props', and
+`user_props'.  Subversion only uses the ones in svn_props, and
+promises a "store-and-ignore" policy for user_props.  And users should
+never store anything in svn_props, only Subversion handles that.
 
 *** A closer look at the `node' data structure (and friends)
 
@@ -1188,7 +1205,7 @@ store anything in inv_props, only Subversion handles that.
                                         about pointer vs node_id.) */
       int type;                      /* File, directory, symlink, etc */
       BOOL diffy;                    /* Holds full text or diff? */
-      plist *inv_props;              /* Properties managed by Subversion. */
+      plist *svn_props;              /* Properties managed by Subversion. */
       plist *usr_props;              /* Properties ignored by Subversion. */
 
       /* I think we might need parent pointers to do multiple hard
@@ -1441,314 +1458,17 @@ Bourne shell script (we can at least learn this lesson from CVS!).
 Authentication questions will be put off until most of the software is
 working, since they probably don't affect the rest of the design much.
 
-* Jason's comments
-
-     Please note that these comments are based on an older
-     incarnation of the design.  I haven't gone over them yet
-     to see which ones still apply.  -kff
-
-
---------------------8-<-------cut-here---------8-<-----------------------
-
->From: Jason Elliot Robbins <jrobbins@collab.net>
->Subject: Subversion feature outline (was: for meeting w/ Rational)
->To: kfogel@red-bean.com
->cc: jrobbins@collab.net, npm@collab.net, brian@collab.net, jon@collab.net
->Date: Thu, 02 Mar 2000 19:02:47 -0800
->
->Hi Karl,
->
->Here are some comments I came up with while reading your Subversion
->document on my last plane trip.  Overall this document looks like a
->good start, but there is a lot to work out.
->
->When would you like to put this document on the subversion.tigris.org
->web site?
->
->
->Here are my comments:
->
->I know this is long, the best comments are 1, 7, 12, 14, and 17.
->
->1. We should plan for web integration.  That could mean a lot of
->things.  One idea off the top of my head is to actually use a URL for
->the CVSROOT: I would make it an actual http:// scheme, rather than
->some new svn: scheme, so that there is a clear place to host a web
->page with instructions about that repository.  Alternatively, we could
->use a new scheme like svn:argouml.tigris.org, so long as the CVSROOT
->is very memorable to people who know the web address. Right now the
->maping between projects (e.g., www.webmacro.org, or java.tigris.org)
->and their CVSROOT varies a lot from site to site.  It would be nice to
->make this a no brainer.
-
-Well, I'm not so sure... The reason this mapping (www<-->repository)
-varies so much is political, not technical.
-
-For example, it so happens that the hostname argouml.tigris.org hosts
-one repository with one project in it, so there would be no ambiguity
-in referencing that project by the hostname.  But there are many
-servers that host multiple projects, and not all of those projects
-have their own domains.  In many (most?) cases, the repository server
-is on a different host from the Web server.  Or: sometimes people want
-to deliberately associate their project with an organization, so they
-don't want a strong link between the project's name and its Web
-address.
-
-Also, as far as I can tell, people don't really have trouble figuring
-out a project's web site given a working copy, or vice-versa.  They
-may have trouble *using* CVS to get the working copy, but that's a
-different matter...
-
-I think it's actually not our place to make assumptions about how
-people want to present their project to the world.  It *is* our place
-to make sure that our system provides no obstacles to whatever method
-a user chooses to make her project web-visible, but "no obstacles"
-doesn't mean special support for anything in particular.
-
-If someone wants to keep their project's web pages in the project's
-source tree, and point their web server at the right place, there's
-nothing stopping them from doing that.  If they arrange it so the
-names are the same, that's great -- and if they don't, there might be
-a reason for that.
-
-Hmmm, I can go into greater detail on this if you want; my hands are
-tired of typing right now so I'll leave this question here.
-
->2. I would like to make the difficult things in CVS easier in Svn.  I
->think you mention that you would like to make things like moving files
->and directories, etc. easier.  Actually, the second paragraph in
->Meta-implementation is definately the right idea.  Looking at all the
->multi-step proceedures outlined in your CVS book and making them one
->step in Svn would be great.
-
-Oh gosh you bet! :-)
-
->3. The concept of assigning a new version number to every file
->everytime there is a commit is rather foreign to me.  Is this used in
->other vc systems?  Are other people familiar with this practice?  Does
->that mean that it would be very awkward to verbally tell someone to
->check out a certain version (e.g., version 2378812, instead of 4.7)?
->Would it be possible to tell at a glance how many versions a file has
->gone through?
-
-I don't know; I don't know; no I don't think so; and yes. :-)
-
-Perhaps we could make a distinction between a file's commit count and
-its project's commit count -- i.e., two kinds of version numbers,
-treated equally; which one you use depends on circumstances.  Let's
-mull on that.  I do worry about the potential for confusion, though...
-
-How big do project version numbers get?  Well, to give you an idea,
-the entire CVS tree (dating from 3 Dec 1994) has 4254 commits.  4254
-isn't such a bad version number -- I wouldn't mind having to deal with
-a few more digits than that, personally.
-
-I don't think of it as assigning a new version number to every file on
-every commit -- that's not what's happening inside anyway.  Instead, I
-think of it as a single version number for every *commit*, and a
-commit involves certain files.  As for files not involved in that
-commit, if you ask for one of them at that version number, you'll just
-get the most recent version not exceeding the one in question.
-
-[My table description may seem not match what I'm saying here, but
-that table desc is just a draft and will be updated.]
-
->4. Why make keyword expansion off by default.   If I want to do it I
->will have to search through the documentation to find the right
->option.  I realize that it might mess up binary files, is there
->another way to make that safe.
-
-Well, right now, if you don't want to do it, you have to search
-through the documentation to turn it off. :-)
-
-Seriously, I'm by no means sure that off is better, I just lean that
-way because I've been nailed several times in the past by not turning
-it off when I should have (not talking about binary files, I mean text
-files that happened to have text that matched keywords, but I didn't
-want that text to be expanded).
-
-[todo: more to say here, fingers falling off, will respond more
-later.]
-
->7. How about the idea of "local branches" that are stored on a
->developer's working machine in addition to the local working copy of
->the checked out files.  This is basically a fraction of the total
->repository stored on each client.  The local reposiroty would be
->filled in on demand, e.g., if you do a diff against an old version,
->that version would be stored in your local repository.  Developers
->could also commit to the local branch several times before eventually
->merging into the central servers main branch.  If local branches are
->accessable via the internet then we could basically do away with
->patches.  If a developer does work that he wants to contribute back to
->an open source project, he could just email the URL of his local
->server.  Also, the concept of local branches could be generalized to
->build a higherachy of servers with the global project home server at
->the top and various mirrors in the middle, LAN servers near the
->bottom, and each developers' local server at the bottom.  This has the
->advantage that every developer can have commit access to some
->repository, we get a range of trust rather than a boolean permisssion
->to commit to the central server or not.
-
-Sure!
-
-I think what we have to do is design this in such a way that it
-doesn't take any special support from us to create this concept.
-That is, if one knows the client/server protocol, one can implement
-local branches without us changing anything.
-
-So, we should think about this as we go, but I don't think we should
-actually make it part of the first release.  We should just try to
-have a design that doesn't make this feature impossible.
-
-[There are some "theoretical" problems that come up in schemes like
-this, having to do with conflict resolution of course, which we have
-to think through.  So we may have to back down from this idea to an
-arbitrary degree... I hope not too much though, 'cause it's neat.]
-
->8. I would like to have some kind of plug-in permission system.  I am
->wary of yet another set of user account records and permissions.  We
->have found that half the tools we want to integrate into tigris has its
->own user account system, and that makes a lot of duplicate data that
->needs to be kept in synch.
-
-Yeah, some way of saying "default to the system users and access
-methods on this host", and then you can add subversion-only users as
-necessary. (?)
-
->9. Some of the data in your tables is not as normalized as it cood
->be.  I know this may not be a priority, but here are some that I
->noticed.: the names of entities and their states could be in separate
->tables.  Line mods could be a table of line ranges rather than text, I
->guess it depends on what format you were thinking of for that text
->field, but it seems like you might do a lot of parsing.  The names of
->properties in key value pairs could be stored in a properties names
->table.
-
-Yup, thanks.  Still a draft, we'll normalize.
-
->10.  I am a little concerned about storing the parent container
->referenace and a basename.  I would like to have permissions limited
->to a given scope that matches the complete path.  For example, I would
->like to grant a particular developer the ability to commit
->.*/dist/.*\.html but not any .java files or any file not in a
->subdirectory of some dir named named api.  You have some of this in
->your ACCESSES table.  For the sourcexchange.com web site we developed
->a much more general permission scheme that you can read about at
->http://joist.tigris.org. 
-
-I'll look into this.
-
->11. I would like to see some audit mechanism.  I think in this version
->of the document you left off the basic ability to see who did each
->commit.   More generally, we should consider the repositiory
->administrator role in all its glory.  I dont want to require a lot of
->administration work, but whatever needs to be done should be put under
->the same "evaluation across operations" as we do for developer
->operations.
-
-Oops... the problem referred to in your second sentence is due to an
-error in transferring my tables from paper to disk.  Fixed now. :-)
-
-In general, yes, I think I see what you mean about admin role.
-
->12.  It would be nice if the server could be installed without root
->access.  This would allow a lot more people to set up servers for
->their local work group etc.  As a student, I never had root access to
->a big machine, and a lto of people working on OS are students.  Some
->small local server is also important to the local branch idea.  Apache
->can be installed without having root access, and so can ezmlm mailing
->lists, I really like that power for everyone.  The security
->implications are good and it would surely simplify installation.
-
-No reason why this can't happen.  Nothing in the design as it stands
-right now requires root, AFAIK.
-
->13. We should consider the following levels of internet connectivity:
->high speed, low speed, disconnected (e.g., laptops and modems), flaky
->connection.  Low speed constant connections (e.g., in distant
->contries) might benefit from background filling in of their local
->repository history.  Flaky connections might benefit from a resume
->capability (I guess that comes for free in CVS, but we need to make
->sure there are never any remaining lock files left on either end).
-
-Well, we will make sure that locking can handle connections broken at
-any point, by doing things carefully ("carefully" in the same sense as
-a filesystem that guarantees mv to be atomic even if the power goes
-out).
-
->14. Would you consider implementing Subversion in Java.  The advantage
->is that it runs on all platforms, and JDBC connects to all database,
->and RMI would make the client-server implementation easier.  Web
->integration with java servles would certainly be easier.  Speed is
->somewhat of an issue, but java is pretty fast now and a lot of the
->speed will be determined by the database rather than our code.  I am
->not concerned about CPU-bound speed problems because processors are
->getting insanely fast and we can have fast machines in our racks.
->Speed could be a problem for small (student) projects that dont have
->good machines, but then again "small project" implies that they
->probably dont have that many concurrent accesses anyway.  I think
->selling subversion as "version control that you actually want to use"
->trumps speed claims anyway, we should make it easy in use and easy to
->enhance.  Java would also give us no-brainer internationalization
->support.  
-
-In my experience (not nearly as great as yours) Java is the least
-portable language: it is unusual in requiring *both* a compiler and a
-run-time, and naturally I've had problems with both.  Maybe things are
-different now...
-
-I do think (as a political thing) that when people hear Java they
-shudder in anticipation of the problems they're going to have getting
-the thing running.  Even though they may be wrong, this reaction is
-something to take into account.
-
-I mean, I guess I can't say "No, I wouldn't even consider implementing
-this in Java", but I certainly do lean against
-it... Internationalization support would be nice, but is it that hard
-in other languages, even C?
-
->15. Compression.  It would be great if the protocol batched up all the
->files that need to be transfered for a given transaction and then
->compressed the whole set of files using a standard zip algorithm or
->something.  Typically compressing many similar files can give better
->results than compressing each indepently.  This is assuming
->dictionary-based compression, I think.
-
-Good idea!
-
->16. What is the import/export format for this?  Would I just do a
->mysqldump? Should there be an XML file format for versions and log
->entries and such?
-
-Dunno. :)
-
->17. It would be nice to have scripts executed for any possible
->action.  CVS has scripts that run on many actions, e.g., commit and
->tagging.    Actually, if we use java it would be possible to define a
->sandbox to run these scripts safely.  That would allow developers to
->upload "subversion agents" that are .class files invoked whenever an
->action is taken on the server and do some kind of testing or
->notification on behalf of that particular developer.  This could be a
->good hook for integrating Subversion with a server-farm build system,
->implementing the hierarchy of servers described in suggestion #7.
-
-Yeah; one of the things I want to do is go over the commit process
-step-by-step and figure out every possible place where we can give
-users a hook to run a script.  CVS offers a few good places; we can
-offer more, I think.
-
->18.  You have specified that the contents of the source files should
->be in the database.  An alternative woulf be to just have the name of
->some file in the file system.  Could you explore/explain that tradeoff?
-
-Yes -- we'll do whichever is better. :-)
-
-Seriously, I don't know how various databases perform with big text
-chunks.  Unless it's a serious hit, though, I think we should try to
-stay in the database.  I mean, why use it unless we're going to use
-it?  The only reason I can see to implement an extra level of
-indirection here would be if it gave us some big performance boost.
-
 * Wish List
 
-put blue-sky requests here...
+Put blue-sky requests here...
+
+   + Digital signatures.
+     A few people have mentioned cryptographic signing of changes.
+     It's a cool idea, and we should leave the door open for it.  BUT,
+     it isn't a priority for the first release(s), because change
+     history can never be lost -- therefore, any change can be backed
+     out.  So the risk is not of someone damaging the project, but of
+     someone damaging the project and no one else *noticing*.  That
+     would have to be a pretty lax project. :-)
+
+   + 
