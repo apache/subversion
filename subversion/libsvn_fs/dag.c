@@ -345,7 +345,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   const char *copy_id;
   svn_fs_id_t *root_id = svn_fs_parse_id ("0.0.0", 5, trail->pool);
   
-  /* Create empty root directory with node revision 0.0. */
+  /* Create empty root directory with node revision 0.0.0. */
   memset (&noderev, 0, sizeof (noderev));
   noderev.kind = svn_node_dir;
   SVN_ERR (svn_fs__put_node_revision (fs, root_id, &noderev, trail));
