@@ -108,8 +108,8 @@ svn_client_checkout (const char *URL,
                                  recurse,
                                  checkout_editor,
                                  checkout_edit_baton);
-      /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (apr_time_from_sec(1));
+      /* Sleep to ensure timestamp integrity. */
+      svn_sleep_for_timestamps ();
       
       if (err)
         return err;

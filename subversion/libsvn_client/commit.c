@@ -966,8 +966,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if ((cleanup_err = ra_lib->close (session)))
     goto cleanup;
 
-  /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (apr_time_from_sec(1));
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps ();
 
  cleanup:
   /* Abort the commit if it is still in progress. */
