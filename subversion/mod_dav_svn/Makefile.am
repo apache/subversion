@@ -10,6 +10,15 @@ lib_LTLIBRARIES = libmod_dav_svn.la
 libmod_dav_svn_la_SOURCES = mod_dav_svn.c deadprops.c liveprops.c repos.c \
 				version.c util.c
 
+### this is a hack, but we can't pass libsvn_fs.la (et al) to libtool when
+### shared libs are being built. libtool barfs on us. we need to upgrade
+### to libtool 1.4 when it gets released
+libmod_dav_svn_la_LIBADD = -L../libsvn_fs/.libs -lsvn_fs \
+			   -L../libsvn_subr/.libs -lsvn_subr
+
+## we don't need the .so version stuff for an Apache module, so avoid them
+LDFLAGS = -avoid-version
+
 INCLUDES = -I../include $(APACHE_INCLUDES)
 
 SUBDIRS = . tests
@@ -41,6 +50,7 @@ install-libLTLIBRARIES: libmod_dav_svn.la-a
 	done
 else
 
-install-libLTLIBRARIES: libmod_dav_svn.la-a
+install-libLTLIBRARIES: libmod_dav_svn.la
+	$(APXS) -i -a -n dav_svn libmod_dav_svn.la
 
 endif
