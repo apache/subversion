@@ -42,8 +42,9 @@ struct notify_baton
 static void 
 notify_added (void *baton, const char *path)
 {
-  /* the pool (BATON) is typically the global pool; don't keep filling it */
   struct notify_baton *nb = (struct notify_baton *) baton;
+
+  /* the pool (BATON) is typically the global pool; don't keep filling it */
   apr_pool_t *subpool = svn_pool_create (nb->pool);
 
   svn_stringbuf_t *spath = svn_stringbuf_create (path, subpool);
@@ -97,7 +98,7 @@ notify_commit_postfix_txdelta (void *baton,
 {
   struct notify_baton *nb = (struct notify_baton *) baton;
   
-  if (nb->sent_first_txdelta == FALSE)
+  if (! nb->sent_first_txdelta)
     {
       printf ("Transmitting file data ");
       nb->sent_first_txdelta = TRUE;
@@ -108,9 +109,10 @@ notify_commit_postfix_txdelta (void *baton,
 }
 
 
-void svn_cl__notify_func (void *baton, 
-                          svn_wc_notify_action_t action, 
-                          const char *path)
+void 
+svn_cl__notify_func (void *baton, 
+                     svn_wc_notify_action_t action, 
+                     const char *path)
 {
   switch (action)
     {
@@ -164,14 +166,15 @@ void svn_cl__notify_func (void *baton,
 }
 
 
-void *svn_cl__make_notify_baton (apr_pool_t *pool)
+void *
+svn_cl__make_notify_baton (apr_pool_t *pool)
 {
-  struct notify_baton *nb = apr_pcalloc (pool, sizeof(*nb));
+  struct notify_baton *nb = apr_palloc (pool, sizeof(*nb));
 
   nb->pool = pool;
   nb->sent_first_txdelta = 0;
 
-  return (void *)nb;
+  return nb;
 }
 
 

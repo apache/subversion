@@ -78,7 +78,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_commit_added,
   svn_wc_notify_commit_deleted,
   svn_wc_notify_commit_replaced,
-  svn_wc_notify_commit_postfix_txdelta,
+  svn_wc_notify_commit_postfix_txdelta
 } svn_wc_notify_action_t;
 
 typedef void (*svn_wc_notify_func_t) (void *baton, 
