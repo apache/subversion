@@ -11,7 +11,7 @@ dnl
 AC_DEFUN(SVN_LIB_APR,
 [
   APR_WANTED_REGEX="$1"
-  APR_WANTED_REXEX_TOO="$2"
+  APR_WANTED_REGEX_TOO="$2"
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
