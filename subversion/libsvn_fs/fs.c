@@ -336,10 +336,33 @@ svn_fs_conf_dir (svn_fs_t *fs)
 
 
 const char *
+svn_fs_lock_dir (svn_fs_t *fs)
+{
+  return fs->lock_path;
+}
+
+
+const char *
+svn_fs_db_lockfile (svn_fs_t *fs)
+{
+  return apr_psprintf (fs->pool, "%s/%s",
+                       fs->lock_path,
+                       SVN_FS__REPOS_DB_LOCKFILE);
+}
+
+
+const char *
+svn_fs_hook_dir (svn_fs_t *fs)
+{
+  return fs->hook_path;
+}
+
+
+const char *
 svn_fs_start_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_psprintf (fs->pool, "%s/%s",
-                       fs->conf_path,
+                       fs->hook_path,
                        SVN_FS__REPOS_HOOK_START_COMMIT);
 }
 
@@ -348,7 +371,7 @@ const char *
 svn_fs_pre_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_psprintf (fs->pool, "%s/%s",
-                       fs->conf_path,
+                       fs->hook_path,
                        SVN_FS__REPOS_HOOK_PRE_COMMIT);
 }
 
@@ -357,7 +380,7 @@ const char *
 svn_fs_post_commit_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_psprintf (fs->pool, "%s/%s",
-                       fs->conf_path,
+                       fs->hook_path,
                        SVN_FS__REPOS_HOOK_POST_COMMIT);
 }
 
@@ -366,7 +389,7 @@ const char *
 svn_fs_read_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_psprintf (fs->pool, "%s/%s",
-                       fs->conf_path,
+                       fs->hook_path,
                        SVN_FS__REPOS_HOOK_READ_SENTINEL);
 }
 
@@ -375,28 +398,73 @@ const char *
 svn_fs_write_sentinel_hook (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_psprintf (fs->pool, "%s/%s",
-                       fs->conf_path,
+                       fs->hook_path,
                        SVN_FS__REPOS_HOOK_WRITE_SENTINEL);
 }
 
 
 static svn_error_t *
-create_conf (svn_fs_t *fs, const char *path)
+create_locks (svn_fs_t *fs, const char *path)
+{
+  apr_file_t *f = NULL;
+  apr_size_t written;
+  apr_status_t apr_err;
+  const char *contents;
+  const char *lockfile_path;
+
+  /* Create the locks directory. */
+  fs->lock_path = apr_psprintf (fs->pool, "%s/%s",
+                                path, SVN_FS__REPOS_LOCK_DIR);
+  apr_err = apr_dir_make (fs->lock_path, APR_OS_DEFAULT, fs->pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf (apr_err, 0, 0, fs->pool,
+                              "creating lock dir `%s'", fs->lock_path);
+
+  /* Create the DB lockfile under that directory. */
+  lockfile_path = apr_psprintf (fs->pool, "%s", svn_fs_db_lockfile (fs));
+  
+  apr_err = apr_file_open (&f, lockfile_path,
+                           (APR_WRITE | APR_CREATE | APR_EXCL),
+                           APR_OS_DEFAULT,
+                           fs->pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                              "creating lock file `%s'", lockfile_path);
+  
+  /* ### todo: more explanation here. */
+  contents = "DB lock file.\n";
+  
+  apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                              "writing lock file `%s'", lockfile_path);
+  
+  apr_err = apr_file_close (f);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                              "closing lock file `%s'", lockfile_path);
+  
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+create_hooks (svn_fs_t *fs, const char *path)
 {
   const char *this_path, *contents;
   apr_status_t apr_err;
   apr_file_t *f;
   apr_size_t written;
 
-  /* Create the conf directory. */
-  fs->conf_path = apr_psprintf (fs->pool, "%s/%s",
-                                path, SVN_FS__REPOS_CONF_DIR);
-  apr_err = apr_dir_make (fs->conf_path, APR_OS_DEFAULT, fs->pool);
+  /* Create the hook directory. */
+  fs->hook_path = apr_psprintf (fs->pool, "%s/%s",
+                                path, SVN_FS__REPOS_HOOK_DIR);
+  apr_err = apr_dir_make (fs->hook_path, APR_OS_DEFAULT, fs->pool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf (apr_err, 0, 0, fs->pool,
-                              "creating conf directory `%s'", fs->conf_path);
+                              "creating hook directory `%s'", fs->hook_path);
 
-  /* Write a default template for each standard conf file. */
+  /* Write a default template for each standard hook file. */
 
   /* Start-commit hooks. */
   {
@@ -410,7 +478,7 @@ create_conf (svn_fs_t *fs, const char *path)
                              fs->pool);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating conf file `%s'", this_path);
+                                "creating hook file `%s'", this_path);
     
     contents = 
       "START-COMMIT HOOK\n"
@@ -434,12 +502,12 @@ create_conf (svn_fs_t *fs, const char *path)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing conf file `%s'", this_path);
+                                "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing conf file `%s'", this_path);
+                                "closing hook file `%s'", this_path);
   }  /* end start-commit hooks */
 
   /* Pre-commit hooks. */
@@ -454,7 +522,7 @@ create_conf (svn_fs_t *fs, const char *path)
                              fs->pool);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating conf file `%s'", this_path);
+                                "creating hook file `%s'", this_path);
 
     contents =
       "PRE-COMMIT HOOK\n"
@@ -478,12 +546,12 @@ create_conf (svn_fs_t *fs, const char *path)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing conf file `%s'", this_path);
+                                "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing conf file `%s'", this_path);
+                                "closing hook file `%s'", this_path);
   }  /* end pre-commit hooks */
 
   /* Post-commit hooks. */
@@ -498,7 +566,7 @@ create_conf (svn_fs_t *fs, const char *path)
                              fs->pool);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating conf file `%s'", this_path);
+                                "creating hook file `%s'", this_path);
     
     contents =
       "POST-COMMIT HOOK\n"
@@ -522,12 +590,12 @@ create_conf (svn_fs_t *fs, const char *path)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing conf file `%s'", this_path);
+                                "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing conf file `%s'", this_path);
+                                "closing hook file `%s'", this_path);
   } /* end post-commit hooks */
 
   /* Read sentinels. */
@@ -542,7 +610,7 @@ create_conf (svn_fs_t *fs, const char *path)
                              fs->pool);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating conf file `%s'", this_path);
+                                "creating hook file `%s'", this_path);
     
     contents =
       "READ-SENTINEL\n"
@@ -554,12 +622,12 @@ create_conf (svn_fs_t *fs, const char *path)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing conf file `%s'", this_path);
+                                "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing conf file `%s'", this_path);
+                                "closing hook file `%s'", this_path);
   }  /* end read sentinels */
 
   /* Write sentinels. */
@@ -574,7 +642,7 @@ create_conf (svn_fs_t *fs, const char *path)
                              fs->pool);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "creating conf file `%s'", this_path);
+                                "creating hook file `%s'", this_path);
     
     contents =
       "WRITE-SENTINEL\n"
@@ -586,12 +654,12 @@ create_conf (svn_fs_t *fs, const char *path)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "writing conf file `%s'", this_path);
+                                "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
-                                "closing conf file `%s'", this_path);
+                                "closing hook file `%s'", this_path);
   }  /* end write sentinels */
 
   return SVN_NO_ERROR;
@@ -639,7 +707,18 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                               "creating DAV sandbox dir `%s'", fs->dav_path);
 
   /* Create the conf directory.  */
-  SVN_ERR (create_conf (fs, path));
+  fs->conf_path = apr_psprintf (fs->pool, "%s/%s",
+                               path, SVN_FS__REPOS_CONF_DIR);
+  apr_err = apr_dir_make (fs->conf_path, APR_OS_DEFAULT, fs->pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf (apr_err, 0, 0, fs->pool,
+                              "creating conf dir `%s'", fs->conf_path);
+
+  /* Create the lock directory.  */
+  SVN_ERR (create_locks (fs, path));
+
+  /* Create the hooks directory.  */
+  SVN_ERR (create_hooks (fs, path));
 
   /* Create the directory for the new Berkeley DB environment.  */
   fs->env_path = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);

@@ -24,14 +24,8 @@ The source file arrangement here is:
                     working copy, so that svn_fs_dir_delta() can drive
                     an update.
 
-  ?hooks.c:         hook system, called by "cooperative" users of the fs.
-                    [not yet implemented]
+  hooks.c:          hook system, called by "cooperative" users of the fs.
 
-  ?lock.c:          cross-process read/write lock manager, to temporarily
+  lock.c:           cross-process read/write lock manager, to temporarily
                     suspend all db3 access when DB_RUN_RECOVERY is
                     returned.
-                    [not yet implemented]
-
-
-
-

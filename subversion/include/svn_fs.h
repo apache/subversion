@@ -546,6 +546,13 @@ const char *svn_fs_repository (svn_fs_t *fs);
 /* Return the path to FS's configuration directory. */
 const char *svn_fs_conf_dir (svn_fs_t *fs);
 
+/* Return path to FS's lock directory or db lockfile, respectively. */
+const char *svn_fs_lock_dir (svn_fs_t *fs);
+const char *svn_fs_db_lockfile (svn_fs_t *fs);
+
+/* Return the path to FS's hook directory. */
+const char *svn_fs_hook_dir (svn_fs_t *fs);
+
 /* Return the path to FS's start-commit hook program, allocated in
    POOL. */
 const char *svn_fs_start_commit_hook (svn_fs_t *fs, apr_pool_t *pool);

@@ -136,19 +136,19 @@ def get_admin_name():
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."
 
-  return os.path.join(repo_dir, "conf", "start-commit")
+  return os.path.join(repo_dir, "hooks", "start-commit")
 
 
 def get_pre_commit_hook_path(repo_dir):
   "Return the path of the pre-commit-hook conf file in REPO_DIR."
 
-  return os.path.join(repo_dir, "conf", "pre-commit")
+  return os.path.join(repo_dir, "hooks", "pre-commit")
 
 
 def get_post_commit_hook_path(repo_dir):
   "Return the path of the post-commit-hook conf file in REPO_DIR."
 
-  return os.path.join(repo_dir, "conf", "post-commit")
+  return os.path.join(repo_dir, "hooks", "post-commit")
 
 
 
