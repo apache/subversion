@@ -232,9 +232,11 @@ report_revisions (svn_wc_adm_access_t *adm_access,
         svn_path_add_component (this_url_s, 
                                     svn_path_uri_encode (key, child_subpool));
 
-        this_path = this_path_s->data;
-        this_full_path = this_full_path_s->data;
-        this_url = this_url_s->data;
+        this_path = apr_pstrmemdup (subpool, this_path_s->data,
+                                    this_path_s->len);
+        this_full_path = apr_pstrmemdup (subpool, this_full_path_s->data,
+                                         this_full_path_s->len);
+        this_url = apr_pstrmemdup (subpool, this_url_s->data, this_url_s->len);
       }
       
       /* The Big Tests: */
