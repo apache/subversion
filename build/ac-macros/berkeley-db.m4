@@ -42,20 +42,25 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl      for headers in HEADER and libraries in LIB.
 
   AC_ARG_WITH(berkeley-db,
-  [  --with-berkeley-db=PATH Find the Berkeley DB header and library in
-                          `PATH/include' and `PATH/lib'.  If PATH is of the
-                          form `HEADER:LIB', then search for header files in
-                          HEADER, and the library in LIB.  If you omit the
-                          `=PATH' part completely, the configure script will
-                          search for Berkeley DB in a number of standard
-                          places.
-
+  [  --with-berkeley-db=PATH
                           The Subversion Berkeley DB based filesystem library 
                           requires Berkeley DB $db_version or newer.  If you
                           specify `--without-berkeley-db', that library will
                           not be built.  Otherwise, the configure script builds
                           that library if and only if APR-UTIL is linked
-                          against a new enough version of Berkeley DB.],
+                          against a new enough version of Berkeley DB.
+
+                          If and only if you are building APR-UTIL as part of
+                          the Subversion build process, you may help APR-UTIL
+                          to find the correct Berkeley DB installation by
+                          passing a PATH to this option, to cause APR-UTIL to
+                          look for the Berkeley DB header and library in
+                          `PATH/include' and `PATH/lib'.  If PATH is of the
+                          form `HEADER:LIB', then search for header files in
+                          HEADER, and the library in LIB.  If you omit the
+                          `=PATH' part completely, the configure script will
+                          search for Berkeley DB in a number of standard
+                          places.],
   [
     if test "$withval" = "no"; then
       status=skip
