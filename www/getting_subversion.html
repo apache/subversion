@@ -1,0 +1,110 @@
+<TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
+
+<TR>
+<TD WIDTH="100%" BGCOLOR="#CCCC99"><STRONG><font color="#000033"
+FACE="Arial, Helvetica, sans-serif">
+Getting Subversion
+</font></STRONG></TD>
+</TR>
+
+
+<TR>
+<TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
+
+
+<p>
+
+To install Subversion for the first time, you may be able to get a
+pre-built binary package for your operating system; visit the <a
+href="project_packages.html">Packaged Distributions</a> page to see if
+this option is available for you.  If not, or if you prefer to build
+from a source release, then:
+
+<ol>
+
+   <li><p>Download the latest tarball distribution from the <a
+   href="http://subversion.tigris.org/servlets/ProjectDownloadList?folderID=260">Downloads
+   Page</a>.</p></li>
+
+   <li><p>Build and install it according to the instructions in the
+   <a href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a>
+   file in the top level of the distribution.  You will end up with a
+   'svn' binary in the subversion/clients/cmdline/ directory (or
+   installed in /usr/local/bin/, if you ran 'make install'.)</p></li>
+
+</ol>
+
+<p> Now you have the latest released version of Subversion installed.
+Read the <a href="http://svnbook.red-bean.com">Subversion Book</a> to
+learn how to use Subversion, and to see how it differs from CVS.
+
+<p>If you want stability, you can stop here, and just upgrade as new
+releases come out.  If you prefer to stay current with Subversion
+development, then use your newly-installed Subversion client to check
+out a working copy of the master sources:</p>
+
+<pre>
+   $ svn co http://svn.collab.net/repos/svn/trunk subversion
+</pre>
+
+<p>That will get you a new working copy directory named
+<code>subversion/</code>, containing the latest sources.  (If you're
+behind a proxy or have problems with the checkout, see the <a
+href="project_faq.html#proxy">proxy faq</a>.)  Read the <a
+href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a> file
+for instructions on building in the working copy, which differs
+slightly from building a released tarball.
+
+<p>See the <a
+href="http://subversion.tigris.org/inconveniences.html">Warnings and
+Inconveniences Page</a> for the most annoying bugs and their
+workarounds; see the <a
+href="http://subversion.tigris.org/project_issues.html">Issue
+Tracker</a> for a complete list of known bugs, and instructions on
+filing new bugs.</p>
+
+</td>
+</tr>
+</TABLE>
+<br>
+
+<p>
+
+<TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
+
+<TR>
+<TD WIDTH="100%" BGCOLOR="#CCCC99"><STRONG><font color="#000033"
+FACE="Arial, Helvetica, sans-serif">
+Contributing To The Project
+</font></STRONG></TD>
+</TR>
+
+<TR>
+<TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
+
+<p>To contribute to Subversion:</p>
+
+     <ul>
+
+     <li><p>Join the developer community mailing lists: (see the <a
+      href="/servlets/ProjectMailingListList">Mailing Lists</a>
+      page.)</p></li>
+
+     <li><p>The Subversion project more-or-less abides by the <a
+      href="http://apr.apache.org/guidelines.html">guidelines</a> used
+      by the Apache <a href="http://apr.apache.org/">APR project</a>.
+      Please review these.</p></li>
+
+     <li><p>After checking out a copy of the source as described
+      above, read the file <a
+      href="http://svn.collab.net/repos/svn/trunk/HACKING">
+      HACKING</a> at the top of the tree.  It describes coding and
+      logging conventions, as well as how to build from a working
+      copy.</p></li>
+
+     </ul>
+<br>
+</td>
+</tr>
+</TABLE>
+<BR>
