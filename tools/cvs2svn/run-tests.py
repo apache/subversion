@@ -613,7 +613,6 @@ def simple_tags():
     '/tags/T_ALL_INITIAL_FILES_BUT_ONE/partial-prune': 'D',
     '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubB': 'D',
     }:
-    print "KFF: ", rev
     raise svntest.Failure
 
   rev = 17
@@ -622,7 +621,6 @@ def simple_tags():
   if not logs[rev].changed_paths == {
     '/branches/vendorbranch/proj (from /trunk/proj:16)': 'A',
     }:
-    print "KFF: ", rev
     raise svntest.Failure
 
   rev = 16
@@ -644,7 +642,6 @@ def simple_tags():
     '/trunk/proj/sub3': 'A',
     '/trunk/proj/sub3/default': 'A',
     }:
-    print "KFF: ", rev
     raise svntest.Failure
 
 
