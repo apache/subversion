@@ -1183,6 +1183,33 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
                             apr_pool_t *pool);
 
 
+
+/*** Text/Prop Deltas Using an Editor ***/
+
+
+/* Given a PATH (with ENTRY and FILE_BATON) representing a file with
+   local textual modifications, transmit those modifications using
+   EDITOR, closing the FILE BATON after the textual mod has been
+   transmitted.  Use POOL for all allocations.  This in intended to be
+   suitable for use with both infix and postfix text-delta styled
+   editor drivers.  */
+svn_error_t *svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
+                                          svn_wc_entry_t *entry,
+                                          const svn_delta_editor_t *editor,
+                                          void *file_baton,
+                                          apr_pool_t *pool);
+
+
+/* Given a PATH of a given node KIND, transmit all local property
+   modifications using the appropriate EDITOR method (in conjunction
+   with BATON).  Use POOL for all allocations.  */
+svn_error_t *svn_wc_transmit_prop_deltas (svn_stringbuf_t *path,
+                                          svn_node_kind_t kind,
+                                          const svn_delta_editor_t *editor,
+                                          void *baton,
+                                          apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
