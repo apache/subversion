@@ -44,7 +44,7 @@ typedef long int svn_revnum_t;
 
 /* This is never a valid revision number.  (Actually, anything less
    than 0 is never a valid revision number.) */
-#define SVN_INVALID_REVNUM -1
+#define SVN_INVALID_REVNUM (-1)
 
 
 /* YABT:  Yet Another Boolean Type */
