@@ -49,16 +49,22 @@ How to Run the Scripts
                ./basic_tests.py --url http://localhost
                ./basic_tests.py 3 --url http://newton.collab.net
 
+     pass the URL to 'make check' from the top of the build dir
+
+               make check BASE_URL=http://localhost
+
+
      ASSUMPTIONS MADE BY THIS MODE:
 
        - an svn-aware httpd is running locally on port 80.
 
-       - httpd.conf has a DAV Location '/repositories/current-repo'
-         that maps to the 'repositories/current-repo' symlink right
-         below these tests.
+       - httpd.conf has a DAV Location '/repositories' that maps (with
+         SVNParentPath) to the 'repositories' directory right below
+         these tests.
 
-       - httpd.conf has a DAV Location '/local_tmp/repos' that maps to
-         the master 'local_tmp/repos' right below these tests.
+       - httpd.conf has a DAV Location '/local_tmp/repos' that maps
+         (with SVNPath) to the master 'local_tmp/repos' right below
+         these tests.
 
 
 

@@ -24,6 +24,8 @@
 #include <http_core.h>  /* for ap_construct_url */
 #include <mod_dav.h>
 
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
 
@@ -928,19 +930,32 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     {
       /* SVNParentPath was used: assume the first component of
          'relative' is the name of a repository. */
-      const char *magic_component;
-      int i;
-      apr_size_t len = strlen(relative);
+      const char *magic_component, *magic_end;
 
-      for (i = 1; i < len; i++)
+      /* A repository name is required here.
+         Remember that 'relative' always starts with a "/". */
+      if (relative[1] == '\0')
         {
-          if (relative[i] == '/')
-            break;
+          /* ### are SVN_ERR_APMOD codes within the right numeric space? */
+          return dav_new_error(r->pool, HTTP_FORBIDDEN,
+                               SVN_ERR_APMOD_MALFORMED_URI,
+                               "The URI does not contain the name "
+                               "of a repository.");
         }
 
-      magic_component = apr_pstrndup(r->pool, relative + 1, i - 1);
+      magic_end = strchr(relative + 1, '/');
+      if (!magic_end)
+        {
+          magic_component = relative + 1;
+          true_relative_path = "/";
+        }
+      else
+        {
+          magic_component = apr_pstrndup(r->pool, relative + 1,
+                                         magic_end - relative - 1);
+          true_relative_path = magic_end;
+        }
 
-      true_relative_path = relative + i;
       true_root_path = svn_path_join (root_path, magic_component, r->pool);
       true_fs_path = svn_path_join (fs_parent_path, magic_component, r->pool);
     }

@@ -9,19 +9,22 @@ class TestHarness:
   '''Test harness for Subversion tests.
   '''
 
-  def __init__(self, abs_srcdir, abs_builddir, python, shell, logfile):
+  def __init__(self, abs_srcdir, abs_builddir, python, shell, logfile,
+               base_url = None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
     PYTHON is the name of the python interpreter.
     SHELL is the name of the shell.
     LOGFILE is the name of the log file.
+    BASE_URL is the base url for DAV tests.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
     self.python = python
     self.shell = shell
     self.logfile = logfile
+    self.base_url = base_url
     self.log = None
 
   def run(self, list):
@@ -67,6 +70,9 @@ class TestHarness:
       progname = self.python
       cmdline = [quote(progname),
                  quote(os.path.join(self.srcdir, prog))]
+      if self.base_url is not None:
+        cmdline.append('--url')
+        cmdline.append(quote(self.base_url))
     elif progbase[-3:] == '.sh':
       progname = self.shell
       cmdline = [quote(progname),
@@ -125,19 +131,31 @@ class TestHarness:
 def main():
   '''Argument parsing and test driver.
 
-  Usage: run-tests.py <abs_srcdir> <abs_builddir> <python> <shell> <prog ...>
+  Usage: run-tests.py [--url <base_url>] <abs_srcdir> <abs_builddir>
+                      <python> <shell> <prog ...>
 
-  The first four parameters are passed unchanged to the TestHarness
-  constuctor.  All other parameters are names of test programs.
+  The optional base_url and the first four parameters and  are passed
+  unchanged to the TestHarness constuctor.  All other parameters
+  are names of test programs.
   '''
-  if len(sys.argv) < 6:
+  if len(sys.argv) < 6 \
+     or sys.argv[1] == '--url' and len(sys.argv) < 8:
     print 'Usage: run-tests.py <abs_srcdir> <abs_builddir>' \
-          '<python> <shell> <prog ...>'
+          '<python> <shell> [--url <base_url>] <prog ...>'
     sys.exit(2)
 
-  th = TestHarness(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4],
-                   os.path.abspath('tests.log'))
-  failed = th.run(sys.argv[5:])
+  if sys.argv[1] == '--url':
+    base_index = 2
+    base_url = sys.argv[2]
+  else:
+    base_index = 0
+    base_url = None
+
+  th = TestHarness(sys.argv[base_index+1], sys.argv[base_index+2],
+                   sys.argv[base_index+3], sys.argv[base_index+4],
+                   os.path.abspath('tests.log'), base_url)
+
+  failed = th.run(sys.argv[base_index+5:])
   if failed:
     sys.exit(1)
 

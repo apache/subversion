@@ -124,7 +124,12 @@ install-static: @INSTALL_STATIC_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
-	$(PYTHON) $(top_srcdir)/build/run_tests.py \
+	if test "$(BASE_URL)" != ""; then \
+	    base_url="--url $(BASE_URL)"; \
+	else \
+	    base_url=""; \
+	fi; \
+	$(PYTHON) $(top_srcdir)/build/run_tests.py $$base_url \
 		'$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
 		$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
