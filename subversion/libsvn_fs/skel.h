@@ -14,7 +14,8 @@
 #ifndef SVN_LIBSVN_FS_SKEL_H
 #define SVN_LIBSVN_FS_SKEL_H
 
-#include "apr.h"
+#include "svn_string.h"
+#include "apr_pools.h"
 
 
 /* What is a skel?  */
