@@ -1128,6 +1128,9 @@ expand_keyword (svn_io_keywords_t *keywords,
 
   SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (path, pool), pool));
   
+  if (! entry)
+    return SVN_NO_ERROR;
+
   if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
       || (! strcmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
