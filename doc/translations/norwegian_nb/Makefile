@@ -94,11 +94,12 @@ book-html-chunk: $(BOOK_HTML_CHUNK_TARGET)
 $(BOOK_HTML_CHUNK_TARGET): $(BOOK_ALL_SOURCE) $(BOOK_VERSION_SOURCE) \
                            $(BOOK_DIR)/styles.css $(BOOK_IMAGES)
 	mkdir -p $(BOOK_HTML_CHUNK_DIR)
+	mkdir -p $(BOOK_HTML_CHUNK_DIR)/images
 	$(XSLTPROC) $(BOOK_HTML_XSLTPROC_OPTS) \
            --output $(BOOK_HTML_CHUNK_DIR)/ \
 	   $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
 	cp $(BOOK_DIR)/styles.css $(BOOK_HTML_CHUNK_DIR)
-	cp $(BOOK_IMAGES) $(BOOK_HTML_CHUNK_DIR)
+	cp $(BOOK_IMAGES) $(BOOK_HTML_CHUNK_DIR)/images
 
 book-pdf: $(BOOK_PDF_TARGET)
 
