@@ -127,7 +127,7 @@ Version 0.21.0 (released 15 Apr 2003, revision 5639, branches/release-0.21)
 
  User-visible changes:
  * SSL client and server certificate verification
- * authentification info now stored in ~/.subversion/auth/
+ * authentication info now stored in ~/.subversion/auth/
  * svn diff on a copied file only shows local mods, not the whole file
  * svn propget now takes a --strict option to control output
  * svnadmin load now takes a --parent-dir option
