@@ -4,16 +4,21 @@
 
 
 # Run tests to ensure that our build requirements are met
-VERSION_CHECK=""
+RELEASE_MODE=""
 NEON_CHECK_CONTROL=""
+SKIP_DEPS=""
 while test $# != 0; do
   case "$1" in
     --release)
-      VERSION_CHECK="$1"
+      RELEASE_MODE="$1"
       shift
       ;;
     --disable-neon-version-check)
       NEON_CHECK_CONTROL="$1"
+      shift
+      ;;
+    -s)
+      SKIP_DEPS="yes"
       shift
       ;;
     --)         # end of option parsing
@@ -29,7 +34,7 @@ done
 # ### we don't want to copy the fancy option parsing loop there. For the
 # ### same reason, all parameters should be quoted, so that buildcheck.sh
 # ### sees an empty arg rather than missing one.
-./build/buildcheck.sh "$VERSION_CHECK" "$NEON_CHECK_CONTROL" || exit 1
+./build/buildcheck.sh "$RELEASE_MODE" "$NEON_CHECK_CONTROL" || exit 1
 
 ### temporary cleanup during transition to libtool 1.4
 (cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
@@ -94,16 +99,30 @@ if test "${OK}" != "OK" ; then
   exit 1
 fi
 
-if test "$1" = "-s"; then
+if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
-  ./gen-make.py -s build.conf ;
+  ./gen-make.py -s build.conf || gen_failed=1
+
+  ### if apr and apr-util are not subdirs, then this fails. only do it
+  ### for the release (from dist.sh; for now)
+  if test -n "$RELEASE_MODE"; then
+    echo "Creating MSVC files (no dependencies)..."
+    ./gen-make.py -t dsp -s build.conf || gen_failed=1
+  fi
 else
   echo "Creating build-outputs.mk..."
-  ./gen-make.py build.conf ;
+  ./gen-make.py build.conf || gen_failed=1
+
+  ### if apr and apr-util are not subdirs, then this fails. only do it
+  ### for the release (from dist.sh; for now)
+  if test -n "$RELEASE_MODE"; then
+    echo "Creating MSVC files..."
+    ./gen-make.py -t dsp -s build.conf || gen_failed=1
+  fi
 fi
 
-if test "$?" != "0"; then
-  echo "gen-make.py failed"
+if test -n "$gen_failed"; then
+  echo "ERROR: gen-make.py failed"
   exit 1
 fi
 

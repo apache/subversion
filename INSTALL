@@ -649,6 +649,13 @@ II.   INSTALLATION
       and all the import libraries to <SVN>\db4-win32\lib. Again, the
       DLLs should be somewhere in your path.
 
+      *** THESE BUILD INSTRUCTIONS ARE A BIT OUT OF DATE.
+      ***
+      ***   instead, see subversion_msvc.dsw in the root directory,
+      ***   and svn_config.dsp. the former references the individual
+      ***   .dsp files for building Subversion. svn_config.dsp is a
+      ***   small project to get some files prepared before building.
+
       The workspace `subversion.dsw' at the top of the source tree
       includes all the necessary projects. Right now, only static
       libraries are built. The "__build__" project (active by default)
