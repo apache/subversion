@@ -681,6 +681,50 @@ svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  apr_pool_t *pool);
 
 
+
+/*** Traversal info. ***/
+
+/* Traversal information is information gathered by a working copy
+ * crawl or update.  For example, the before and after values of the
+ * svn:externals property are important after an update, and since
+ * we're traversing the working tree anyway (a complete traversal
+ * during the initial crawl, and a traversal of changed paths during
+ * the checkout/update/switch), it makes sense to gather the
+ * property's values then instead of making a second pass.
+ */
+typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
+
+
+/* Return a new, empty traversal info object, allocated in POOL. */
+svn_wc_traversal_info_t *svn_wc_init_traversal_info (apr_pool_t *pool);
+
+
+/* Set *EXTERNALS_OLD and *EXTERNALS_NEW to hash tables representing
+ * changes to values of the svn:externals property on directories
+ * traversed by TRAVERSAL_INFO.
+ *
+ * TRAVERSAL_INFO is obtained from svn_wc_init_traversal_info, but is
+ * only useful after it has been passed through another function, such
+ * as svn_wc_crawl_revisions, svn_wc_get_update_editor,
+ * svn_wc_get_checkout_editor, svn_wc_get_switch_editor, etc.
+ *
+ * Each hash maps `const char *' directory names onto `const char *'
+ * values of the externals property for that directory.  The dir names
+ * are full paths -- that is, anchor plus target, not target alone.
+ * The values are not parsed, they are simply copied raw, and are
+ * never null: directories that acquired or lost the property are
+ * simply omitted from the appropriate table.  Directories whose value
+ * of the property did not change show the same value in each hash.
+ *
+ * The hashes, keys, and values have the same lifetime as TRAVERSAL_INFO.
+ */
+void svn_wc_edited_externals (apr_hash_t **externals_old,
+                              apr_hash_t **externals_new,
+                              svn_wc_traversal_info_t *traversal_info);
+
+
+
+
 /* Do a depth-first crawl in a working copy, beginning at PATH.
    Communicate the `state' of the working copy's revisions to
    REPORTER/REPORT_BATON.  Obviously, if PATH is a file instead of a
@@ -698,7 +742,11 @@ svn_error_t *svn_wc_set_wc_prop (const char *path,
    will be restored from the administrative directory's cache. For each
    file restored, the NOTIFY_FUNC function will be called with the
    NOTIFY_BATON and the path of the restored file. NOTIFY_FUNC may
-   be NULL if this notification is not required. */
+   be NULL if this notification is not required.
+
+   If TRAVERSAL_INFO is non-null, then record pre-update traversal
+   state in it.  (Caller should obtain TRAVERSAL_INFO from
+   svn_wc_init_traversal_info.)  */
 svn_error_t *
 svn_wc_crawl_revisions (const char *path,
                         const svn_ra_reporter_t *reporter,
@@ -707,6 +755,7 @@ svn_wc_crawl_revisions (const char *path,
                         svn_boolean_t recurse,
                         svn_wc_notify_func_t notify_func,
                         void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool);
 
 
@@ -745,16 +794,11 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
 
 /*** Update and update-like functionality. ***/
 
-typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
-
-
 /* Set *EDITOR and *EDIT_BATON to an editor and baton for updating a
  * working copy.
  *
- * If TI_P is non-null, set *TI_P for use by post-update accessor
- * functions, such as svn_wc_edited_externals().  *TI_P has the same
- * lifetime as POOL, but is useable only after (*EDITOR)->close_edit
- * has been called.
+ * If TI is non-null, record traversal info in TI, for use by
+ * post-traversal accessors such as svn_wc_edited_externals().
  * 
  * ANCHOR is the local path to the working copy which will be used as
  * the root of our editor.  TARGET is the entry in ANCHOR that will
@@ -774,7 +818,7 @@ svn_error_t *svn_wc_get_update_editor (const char *anchor,
                                        void *notify_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
-                                       svn_wc_traversal_info_t **ti_p,
+                                       svn_wc_traversal_info_t *ti,
                                        apr_pool_t *pool);
 
 
@@ -804,7 +848,7 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
                                          void *notify_baton,
                                          const svn_delta_editor_t **editor,
                                          void **edit_baton,
-                                         svn_wc_traversal_info_t **ti_p,
+                                         svn_wc_traversal_info_t *ti,
                                          apr_pool_t *pool);
 
 
@@ -815,10 +859,8 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * within the same repository that the working copy already comes
  * from.)  SWITCH_URL must not be NULL.
  *
- * If TI_P is non-null, set *TI_P for use by post-update accessor
- * functions, such as svn_wc_edited_externals().  *TI_P has the same
- * lifetime as POOL, but is useable only after (*EDITOR)->close_edit
- * has been called.
+ * If TI is non-null, record traversal info in TI, for use by
+ * post-traversal accessors such as svn_wc_edited_externals().
  * 
  * ANCHOR is the local path to the working copy which will be used as
  * the root of our editor.  TARGET is the entry in ANCHOR that will
@@ -839,30 +881,8 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
                                        void *notify_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
-                                       svn_wc_traversal_info_t **ti_p,
+                                       svn_wc_traversal_info_t *ti,
                                        apr_pool_t *pool);
-
-
-/* Set *EXTERNALS_OLD and *EXTERNALS_NEW to hash tables representing
- * changes to values of the svn:externals property on directories
- * traversed by TRAVERSAL_INFO.
- *
- * TRAVERSAL_INFO is obtained from svn_wc_get_update_editor(),
- * svn_wc_get_checkout_editor(), or svn_wc_get_switch_editor().
- *
- * Each hash maps `const char *' directory names onto `const char *'
- * values of the externals property for that directory.  The dir names
- * are full paths -- that is, anchor plus target, not target alone.
- * The values are not parsed, they are simply copied raw, and are
- * never null: directories that acquired or lost the property are
- * simply omitted from the appropriate table.  Directories whose value
- * of the property did not change are not included in either hash.
- *
- * The hashes, keys, and values have the same lifetime as TRAVERSAL_INFO.
- */
-void svn_wc_edited_externals (apr_hash_t **externals_old,
-                              apr_hash_t **externals_new,
-                              svn_wc_traversal_info_t *traversal_info);
 
 
 /* Given a FILE_PATH already under version control, fully "install" a

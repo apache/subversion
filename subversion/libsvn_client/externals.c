@@ -187,6 +187,9 @@ struct handle_external_item_change_baton
   void *notify_baton;
   svn_client_auth_baton_t *auth_baton;
 
+  /* If set, then run update on items that didn't change. */
+  svn_boolean_t update_unchanged;
+
   apr_pool_t *pool;
 };
 
@@ -378,6 +381,11 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
     }
   else if (! compare_external_items (new_item, old_item))
     {
+      /* ### Better yet, compare_external_items should report the
+         nature of the difference.  That way, when it's just a change
+         in the "-r REV" portion, for example, we could do an update
+         here instead of a relegation followed by full checkout. */
+
       SVN_ERR (relegate_external
                (svn_path_join (ib->parent_dir, old_item->target_dir, ib->pool),
                 ib->pool));
@@ -390,6 +398,20 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 &(new_item->revision),
                 TRUE, /* recurse */
                 NULL,
+                ib->pool));
+    }
+  else if (ib->update_unchanged)
+    {
+      /* Exact same item is present in both hashes, and caller wants
+         to update such unchanged items. */
+
+      SVN_ERR (svn_client_update
+               (ib->auth_baton,
+                svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool),
+                NULL,
+                &(new_item->revision),
+                TRUE, /* recurse */
+                ib->notify_func, ib->notify_baton,
                 ib->pool));
     }
 
@@ -408,6 +430,7 @@ struct handle_externals_desc_change_baton
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
   svn_client_auth_baton_t *auth_baton;
+  svn_boolean_t update_unchanged;
 
   apr_pool_t *pool;
 };
@@ -454,11 +477,12 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
 
 
 svn_error_t *
-svn_client__handle_externals_changes (svn_wc_traversal_info_t *traversal_info,
-                                      svn_wc_notify_func_t notify_func,
-                                      void *notify_baton,
-                                      svn_client_auth_baton_t *auth_baton,
-                                      apr_pool_t *pool)
+svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
+                              svn_wc_notify_func_t notify_func,
+                              void *notify_baton,
+                              svn_client_auth_baton_t *auth_baton,
+                              svn_boolean_t update_unchanged,
+                              apr_pool_t *pool)
 {
   apr_hash_t *externals_old, *externals_new;
   struct handle_externals_desc_change_baton cb;
@@ -470,6 +494,7 @@ svn_client__handle_externals_changes (svn_wc_traversal_info_t *traversal_info,
   cb.notify_func       = notify_func;
   cb.notify_baton      = notify_baton;
   cb.auth_baton        = auth_baton;
+  cb.update_unchanged  = update_unchanged;
   cb.pool              = pool;
 
   SVN_ERR (svn_hash_diff (externals_old, externals_new,

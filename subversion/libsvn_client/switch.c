@@ -124,7 +124,8 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       void *switch_edit_baton;
       const svn_delta_edit_fns_t *wrapped_old_editor;
       void *wrapped_old_edit_baton;
-      svn_wc_traversal_info_t *traversal_info;
+      svn_wc_traversal_info_t *traversal_info
+        = svn_wc_init_traversal_info (pool);
 
       /* Open an RA session to 'source' URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
@@ -140,7 +141,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                          revnum, switch_url, recurse,
                                          notify_func, notify_baton,
                                          &switch_editor, &switch_edit_baton,
-                                         &traversal_info, pool));
+                                         traversal_info, pool));
 
       /* ### todo:  This is a TEMPORARY wrapper around our editor so we
          can use it with an old driver. */
@@ -159,19 +160,25 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
-         update_editor will be driven by svn_repos_dir_delta. */ 
+         update_editor will be driven by svn_repos_dir_delta. 
+
+         We pass NULL for traversal_info because this is a switch, not
+         an update, and therefore we don't want to handle any
+         externals except the ones directly affected by the switch. */ 
       err = svn_wc_crawl_revisions (path, reporter, report_baton,
                                     TRUE, recurse,
                                     notify_func, notify_baton,
+                                    NULL, /* no traversal info */
                                     pool);
 
       /* We handle externals after the switch is complete, so that
          handling external items (and any errors therefrom) doesn't
          delay the primary operation.  */
-      SVN_ERR (svn_client__handle_externals_changes
+      SVN_ERR (svn_client__handle_externals
                (traversal_info,
                 notify_func, notify_baton,
                 auth_baton,
+                FALSE,
                 pool));
     }
   

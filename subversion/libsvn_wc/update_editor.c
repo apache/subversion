@@ -52,24 +52,6 @@
 
 /*** batons ***/
 
-struct svn_wc_traversal_info_t
-{
-  /* The pool in which this structure and everything inside it is
-     allocated. */
-  apr_pool_t *pool;
-
-  /* The before and after values of the SVN_PROP_EXTERNALS property,
-   * for each directory on which that property changed.  These have
-   * the same layout as those returned by svn_wc_edited_externals(). 
-   *
-   * The hashes, their keys, and their values are allocated in the
-   * above pool.
-   */
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
-};
-
-
 struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
@@ -823,9 +805,12 @@ close_directory (void *dir_baton)
                                       (APR_WRITE | APR_CREATE), /* not excl */
                                       db->pool));
 
-      /* If the SVN_PROP_EXTERNALS property on this directory changed,
-         then record before and after for the change. */
+      /* If recording traversal info, then see if the
+         SVN_PROP_EXTERNALS property on this directory changed,
+         and record before and after for the change. */
+      if (db->edit_baton->traversal_info)
       {
+        svn_wc_traversal_info_t *ti = db->edit_baton->traversal_info;
         const svn_prop_t *change = externals_prop_changed (db->propchanges);
 
         if (change)
@@ -842,10 +827,14 @@ close_directory (void *dir_baton)
             else if (new_val_s && old_val_s
                      && (svn_string_compare (old_val_s, new_val_s)))
               ; /* Value did not change... so do nothing. */
-            else
+            else  /* something changed, record the change */
               {
-                svn_wc_traversal_info_t *ti
-                  = db->edit_baton->traversal_info;
+                /* We can't assume that ti came pre-loaded with the
+                   old values of the svn:externals property.  Yes,
+                   most callers will have already initialized ti by
+                   sending it through svn_wc_crawl_revisions, but we
+                   shouldn't count on that here -- so we set both the
+                   old and new values again. */
 
                 if (old_val_s)
                     apr_hash_set (ti->externals_old,
@@ -1907,7 +1896,7 @@ make_editor (const char *anchor,
              void *notify_baton,
              const svn_delta_editor_t **editor,
              void **edit_baton,
-             svn_wc_traversal_info_t **traversal_info,
+             svn_wc_traversal_info_t *traversal_info,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
@@ -1929,18 +1918,7 @@ make_editor (const char *anchor,
   eb->recurse         = recurse;
   eb->notify_func     = notify_func;
   eb->notify_baton    = notify_baton;
-
-  if (traversal_info)
-    {
-      /* Use the highest pool for the traversal info. */
-      svn_wc_traversal_info_t *ti = apr_palloc (pool, sizeof (*ti));
-      
-      ti->pool           = pool;
-      ti->externals_old  = apr_hash_make (ti->pool);
-      ti->externals_new  = apr_hash_make (ti->pool);
-      
-      *traversal_info = eb->traversal_info = ti;
-    }
+  eb->traversal_info  = traversal_info;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -1973,7 +1951,7 @@ svn_wc_get_update_editor (const char *anchor,
                           void *notify_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_wc_traversal_info_t **traversal_info,
+                          svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
   return make_editor (anchor, target, target_revision, 
@@ -1992,7 +1970,7 @@ svn_wc_get_checkout_editor (const char *dest,
                             void *notify_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            svn_wc_traversal_info_t **traversal_info,
+                            svn_wc_traversal_info_t *traversal_info,
                             apr_pool_t *pool)
 {
   return make_editor (dest, NULL, target_revision, 
@@ -2013,7 +1991,7 @@ svn_wc_get_switch_editor (const char *anchor,
                           void *notify_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_wc_traversal_info_t **traversal_info,
+                          svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
   assert (switch_url);
@@ -2023,6 +2001,19 @@ svn_wc_get_switch_editor (const char *anchor,
                       recurse, notify_func, notify_baton,
                       editor, edit_baton,
                       traversal_info, pool);
+}
+
+
+svn_wc_traversal_info_t *
+svn_wc_init_traversal_info (apr_pool_t *pool)
+{
+  svn_wc_traversal_info_t *ti = apr_palloc (pool, sizeof (*ti));
+  
+  ti->pool           = pool;
+  ti->externals_old  = apr_hash_make (pool);
+  ti->externals_new  = apr_hash_make (pool);
+  
+  return ti;
 }
 
 

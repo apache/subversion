@@ -931,7 +931,7 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_wc_crawl_revisions (path2, reporter, report_baton,
                                        FALSE, recurse,
                                        NULL, NULL, /* notification is N/A */
-                                       pool));
+                                       NULL, pool));
     }
   
   /* Last use-case:  comparing path1@rev1 and path2@rev2, where both revs

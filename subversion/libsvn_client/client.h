@@ -412,12 +412,17 @@ svn_client__do_commit (const char *base_url,
        need access to the original auth-obtaining callbacks that
        produced auth baton in the first place.  Hmmm. ###
 
+   If UPDATE_UNCHANGED, then run svn_client_update() on any external
+   items that are the same in both the before and after traversal
+   info.
+
    Use POOL for temporary allocation. */
-svn_error_t *svn_client__handle_externals_changes
+svn_error_t *svn_client__handle_externals
    (svn_wc_traversal_info_t *traversal_info,
     svn_wc_notify_func_t notify_func,
     void *notify_baton,
     svn_client_auth_baton_t *auth_baton,
+    svn_boolean_t update_unchanged,
     apr_pool_t *pool);
 
 
