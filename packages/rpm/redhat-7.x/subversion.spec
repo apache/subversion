@@ -43,7 +43,6 @@ BuildPreReq: perl >= 5.8.0
 BuildPreReq: python2
 BuildPreReq: python2-devel
 BuildPreReq: swig >= %{swig_version}
-BuildPreReq: swig-runtime >= %{swig_version}
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
@@ -87,8 +86,8 @@ the Apache directories and configuration.
 %package perl
 Group: Utilities/System
 Summary: Allows Perl scripts to directly use Subversion repositories.
-Requires: swig-runtime >= %{swig_version}
-Requires: perl
+Requires: swig >= %{swig_version}
+Requires: perl >= 5.8.0
 %description perl
 Provides Perl (SWIG) support for Subversion.
 %endif
@@ -96,7 +95,7 @@ Provides Perl (SWIG) support for Subversion.
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: swig-runtime >= %{swig_version}
+Requires: swig >= %{swig_version}
 Requires: python2
 Obsoletes: subversion-cvs2svn
 %description python
@@ -110,6 +109,8 @@ Tools for Subversion.
 
 %changelog
 * Sun Jan 18 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8372
+- Switched to the Redhat way of doing the "swig" package where it is not
+  separated into "swig" and "swig-runtime".
 - Added subversion-perl package to support Perl (SWIG) bindings.
   *** Note: Made it conditional as RedHat 7.x doesn't have the
             required perl-5.8.0.
@@ -302,6 +303,9 @@ Tools for Subversion.
 * Thu Sep 27 2001 David Summers <david@summersoft.fay.ar.us>
 - Release M3-r117: Initial Version.
 
+%define perl_vendorarch %(eval "`perl -V:installvendorarch`"; echo $installvendorarch)
+%define perl_version %(eval "`perl -V:version`"; echo $version)
+
 %prep
 %setup -q
 
@@ -433,6 +437,8 @@ make install-swig-pl-lib DESTDIR=$RPM_BUILD_ROOT
 (cd subversion/bindings/swig/perl
 make PREFIX=$RPM_BUILD_ROOT/%{_prefix} install
 )
+# Clean up unneeded files for package installation
+rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
 %endif
 
 # Copy svnadmin.static to destination
@@ -548,8 +554,8 @@ rm -rf $RPM_BUILD_ROOT
 %if %{perl_bindings}
 %files perl
 %defattr(-,root,root)
-/usr/lib/perl5/vendor_perl/5.8.0/i386-linux-thread-multi/SVN
-/usr/lib/perl5/vendor_perl/5.8.0/i386-linux-thread-multi/auto/SVN
+%{perl_vendorarch}/SVN
+%{perl_vendorarch}/auto/SVN
 /usr/lib/libsvn_swig_perl*so*
 /usr/share/man/man3/SVN*
 %endif
