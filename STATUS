@@ -67,3 +67,10 @@ Candidate changes:
       Shouldn't fail to compile due to syntax errors.
     Votes:
       +1: breser
+
+  * r11222 (Issue 2071)
+    DAV breaks with usernames containing <>.
+    Justification:
+      Shouldn't be failing due to unescaped data.
+    Votes:
+      :1: breser
