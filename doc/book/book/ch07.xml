@@ -34,11 +34,7 @@
       refresher, we recommend that you check out <xref
       linkend="svn-ch-2" /> and <xref linkend="svn-ch-3" />.  Once
       you've mastered the basics and consumed this chapter, you'll be
-      a Subversion power-user&mdash;or we'll refund your money!
-      <footnote>
-        <para>This offer applies only to those who, like most folks,
-          pay nothing for Subversion.</para>
-      </footnote>
+      a Subversion power-user!
     </para>
 
   </simplesect>
@@ -574,8 +570,8 @@ collabnet = svn.collab.net
                 the Subversion client's ability to automatically set
                 properties on files when they are added or imported.
                 It contains any number of key-value pairs in the
-                format <literal>REGEX = PROPNAME=PROPVALUE</literal>
-                where <literal>REGEX</literal> is a regular expression
+                format <literal>PATTERN = PROPNAME=PROPVALUE</literal>
+                where <literal>PATTERN</literal> is a file pattern
                 that matches a set of filenames and the rest of the
                 line is the property and its value.  Multiple matches
                 on a file will result in multiple propsets for that
@@ -1034,7 +1030,7 @@ $
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-2.3">
       
-     <title>Special properties</title>
+      <title>Special Properties</title>
 
       <para>Subversion has no particular policy regarding
         properties&mdash;you can use them for any purpose.  Subversion
@@ -1093,7 +1089,7 @@ $
           many purposes in Subversion.  Besides being a
           general-purpose storage location for a file's Multipurpose
           Internet Mail Extensions (MIME) classification, the value of
-          this property determines several behavioral characteristics
+          this property determines some behavioral characteristics
           of Subversion itself.</para>
 
         <para>For example, if a file's
@@ -1118,22 +1114,7 @@ $
           against failed attempts at performing contextual merges on
           files that simply cannot be contextually merged.</para>
 
-        <para>Subversion assists users by running a binary-detection
-          algorithm in the <command>svn import</command> and
-          <command>svn add</command> subcommands.  These subcommands
-          use a heuristic to guess at a file's
-          <quote>binary-ness</quote>, and then set the
-          <literal>svn:mime-type</literal> property to
-          <literal>application/octet-stream</literal> (the generic
-          <quote>this is a collection of bytes</quote> MIME type) on
-          any files that are deemed binary.  If Subversion guesses
-          wrong, or if you wish to set the
-          <literal>svn:mime-type</literal> property to something more
-          accurate&mdash;perhaps <literal>image/png</literal> or
-          <literal>application/x-shockwave-flash</literal>&mdash;you
-          can always remove or hand-edit the property.</para>
-
-        <para>Finally, if the <literal>svn:mime-type</literal>
+        <para>Also, if the <literal>svn:mime-type</literal>
           property is set, then the Subversion Apache module will use
           its value to populate the <literal>Content-type:</literal>
           HTTP header when responding to GET requests.  This gives a
@@ -1646,6 +1627,60 @@ Cumulus clouds are appearing more frequently as summer approaches.
 
       </sect3>
     </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-7-sect-2.4">
+      <title>Automatic Property Setting</title>
+
+      <para>Properties are a powerful feature of Subversion, acting as
+        key components of many Subversion features discussed elsewhere
+        in this and other chapters&mdash;textual diff and merge
+        support, keyword substitution, newline translation, etc.  But
+        to get the full benefit of properties, they must be set on the
+        right files and directories.  Unfortunately, that can be a
+        step easily forgotten in the routine of things, especially
+        since failing to set a property doesn't usually result in an
+        obvious error condition (at least compared to, say, failing to
+        add a file to version control).  To help your properties get
+        applied to the places that need them, Subversion provides a
+        couple of simple but useful features.</para>
+
+      <para>Whenever you introduce a file to version control using the
+        <command>svn add</command> or <command>svn import</command>
+        commands, Subversion runs a very basic heuristic to determine
+        if that file consists of human-readable or non-human-readable
+        content.  If the latter is the decision made, Subversion will
+        automatically set the <literal>svn:mime-type</literal>
+        property on that file to
+        <literal>application/octet-stream</literal> (the generic
+        <quote>this is a collection of bytes</quote> MIME type).  Of
+        course, if Subversion guesses incorrectly, or if you wish to
+        set the <literal>svn:mime-type</literal> property to something
+        more precise&mdash;perhaps <literal>image/png</literal> or
+        <literal>application/x-shockwave-flash</literal>&mdash;you can
+        always remove or edit that property.</para>
+
+      <para>Subversion also provides the auto-props feature, which
+        allows you to create mappings of filename patterns to property
+        names and values.  These mappings are made in your runtime
+        configuration area.  They again affect adds and imports, and
+        not only can override any default MIME type decision made by
+        Subversion during those operations, they can also set
+        additional Subversion or custom properties, too.  For example,
+        you might create a mapping that says that any time you add
+        JPEG files&mdash;ones that match the pattern
+        <literal>*.jpg</literal>&mdash;Subversion should automatically
+        set the <literal>svn:mime-type</literal> property on those
+        files to <literal>image/jpeg</literal>.  Or perhaps any files
+        that match <literal>*.cpp</literal> should have
+        <literal>svn:eol-style</literal> set to
+        <literal>native</literal>, and <literal>svn:keywords</literal>
+        set to <literal>Id</literal>.  Auto-prop support is perhaps
+        the handiest property related tool in the Subversion toolbox.
+        See <xref linkend="svn-ch-7-sect-1.3.2"/> for more about
+        configuring that support.</para>
+
+    </sect2>     
   </sect1>
 
   <!-- ******************************************************************* -->
@@ -1671,7 +1706,10 @@ Cumulus clouds are appearing more frequently as summer approaches.
       URL&mdash;and possibly a particular revision&mdash;of a
       versioned resource.  In Subversion, you declare externals
       definitions in groups using the <literal>svn:externals</literal>
-      property.  This property may be set on any versioned directory,
+      property.  You can create or modify this property using
+      <command>svn propset</command> or <command>svn
+      propedit</command> (see <xref linkend="svn-ch-7-sect-2.1"/>).  
+      It can be set on any versioned directory,
       and its value is a multi-line table of subdirectories (relative
       to the versioned directory on which the property is set) and
       fully qualified, absolute Subversion repository URLs.</para>
@@ -1736,13 +1774,16 @@ Fetching external item into calc/third-party/skins
 
     <para>The support that exists for externals definitions in
       Subversion today can be a little misleading, though.  The
-      auxiliary working copies created via the externals definition
-      support are still disconnected from the primary working copy.
-      And Subversion still only truly operates on non-disjoint working
-      copies.  So, for example, if you want to commit changes that
-      you've made in one or more of the auxiliary working copies, you
-      must run <command>svn commit</command> explicitly on those
-      working copies, not on the primary working copy.</para>
+      working copies created via the externals definition support are
+      still disconnected from the primary working copy (on whose
+      versioned directories the <literal>svn:externals</literal>
+      property was actually set).  And Subversion still only truly
+      operates on non-disjoint working copies.  So, for example, if
+      you want to commit changes that you've made in one or more of
+      those external working copies, you must run <command>svn
+      commit</command> explicitly on those working
+      copies&mdash;committing on the primary working copy will not
+      recurse into any external ones.</para>
 
     <para>Also, since the definitions themselves use absolute URLs,
       moving or copying a directory to which they are attached will
@@ -1863,10 +1904,15 @@ Fetching external item into calc/third-party/skins
         calculator program that links against a third-party complex
         number arithmetic library, libcomplex.  We'll begin with the
         initial creation of the vendor branch, and the import of the
-        first vendor drop.</para>
+        first vendor drop.  We'll call our vendor branch directory
+        <filename>libcomplex</filename>, and our code drops will go
+        into a subdirectory of our vendor branch called
+        <filename>current</filename>.  And since <command>svn
+        import</command> creates all the intermediate parent
+        directories it needs, we can actually accomplish both of these
+        steps with a single command.</para>
 
       <screen>
-&hellip;
 $ svn import /path/to/libcomplex-1.0 \
              http://svn.example.com/repos/vendor/libcomplex/current \
              -m 'importing initial 1.0 vendor drop'
@@ -1876,8 +1922,12 @@ $ svn import /path/to/libcomplex-1.0 \
       <para>We now have the current version of the libcomplex source
         code in <filename>/vendor/libcomplex/current</filename>.  Now,
         we tag that version (see <xref linkend="svn-ch-4-sect-6" />)
-        and then copy it into the main development branch so we can
-        make our customizations to it.</para>
+        and then copy it into the main development branch.  Our copy
+        will create a new directory called
+        <filename>libcomplex</filename> in our existing
+        <filename>calc</filename> project directory.  It is in this
+        copied version of the vendor data that we will make our
+        customizations.</para>
     
       <screen>
 $ svn copy http://svn.example.com/repos/vendor/libcomplex/current  \
@@ -1903,20 +1953,46 @@ $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
       <para>A few weeks later, the developers of libcomplex release a
         new version of their library&mdash;version 1.1&mdash;which
         contains some features and functionality that we really want.
-        But we'd like to upgrade to this new version without losing
-        our customizations to the existing version.  As you might have
-        guessed, what we essentially would like to do is to replace
-        our current baseline version of libcomplex 1.0 with a copy of
-        libcomplex 1.1, and then re-apply the custom modifications we
-        previously made to that library to the new version.</para>
+        We'd like to upgrade to this new version, but without losing
+        the customizations we made to the existing version.  What we
+        essentially would like to do is to replace our current
+        baseline version of libcomplex 1.0 with a copy of libcomplex
+        1.1, and then re-apply the custom modifications we previously
+        made to that library to the new version.  But we actually
+        approach the problem from the other direction, applying the
+        changes made to libcomplex between versions 1.0 and 1.1 to our
+        modified copy of it.</para>
       
       <para>To perform this upgrade, we checkout a copy of our vendor
-        branch, and replace the <literal>current</literal> version
-        with the new libcomplex 1.1 source code.  After committing
-        this change, our <literal>current</literal> branch now
-        contains the new vendor drop.  We tag the new version, and
-        then merge the differences between the tag of the previous
-        version and the new current version into our main development
+        branch, and replace the code in the
+        <filename>current</filename> directory with the new libcomplex
+        1.1 source code.  We quite literally copy new files on top of
+        existing files, perhaps exploding the libcomplex 1.1 release
+        tarball atop our existing files and directories.  The goal
+        here is to make our <filename>current</filename> directory
+        contain only the libcomplex 1.1 code, and to ensure that all
+        that code is under version control.  Oh, and we want to do
+        this with as little version control history disturbance as
+        possible.</para>
+
+      <para>After replacing the 1.0 code with 1.1 code, <command>svn
+        status</command> will show files with local modifications as
+        well as, perhaps, some unversioned or missing files.  If we
+        did what we were supposed to do, the unversioned files are
+        only those new files introduced in the 1.1 release of
+        libcomplex&mdash;we run <command>svn add</command> on those to
+        get them under version control.  The missing files are files
+        that were in 1.0 but not in 1.1, and on those paths we run
+        <command>svn remove</command>.  Finally, once our
+        <filename>current</filename> working copy contains only the
+        libcomplex 1.1 code, we commit the changes we made to get it
+        looking that way.</para>
+
+      <para>Our <filename>current</filename> branch now contains the
+        new vendor drop.  We tag the new version (in the same way we
+        previously tagged the version 1.0 vendor drop), and then merge
+        the differences between the tag of the previous version and
+        the new current version into our main development
         branch.</para>
 
       <screen>
@@ -1931,11 +2007,12 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
 
       <para>In the trivial use-case, the new version of our
         third-party tool would look, from a files-and-directories
-        point of view, just like the previous version.  In other
-        words, none of the libcomplex source files would have been
-        deleted, renamed or moved to different locations&mdash;in
-        short, in a perfect world, our modifications would apply
-        cleanly to the new version of the library, with absolutely no
+        point of view, just like the previous version.  None of the
+        libcomplex source files would have been deleted, renamed or
+        moved to different locations&mdash;the new version would
+        contain only textual modifications against the previous one.
+        In a perfect world, our modifications would apply cleanly to
+        the new version of the library, with absolutely no
         complications or conflicts.</para>
 
      <para>But things aren't always that simple, and in fact it is

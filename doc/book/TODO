@@ -31,44 +31,8 @@ To be fixed by cmpilato:
 
 ch05: 
 
-  - in 'importing initial data' section, reiterate exactly what it
-    means to run 'cd /some/path; svn import . URL' versus 'svn import
-    /some/path URL': namely, nothing.  but several users have expected
-    /some/path to be created in the latter example.
-
   - from Tatiana: "we need some text between the two headings on page
     79: Repository Maintenance and an Administrator's Toolkit"
-
-
-ch07:
-
-  - don't promise to refund money, even if it's a joke.  :-)
-
-  - the section which introduces properties needs to describe the
-    autoprops feature briefly, and xref the section which documents
-    the exact options in the run-time 'config' file.
-
-  - folks have been confused by the vendor branches stuff.  everyone
-    asks how to "replace the current version with the new libcomplex
-    1.1 source code"?  that needs to be shown or explained.
-
-  - in this example:
-
-    svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
-             http://svn.example.com/repos/calc/libcomplex        \
-             -m 'bringing libcomplex-1.0 into the main branch'
-
-    ...make it clear that '/calc' exists, but '/calc/libcomplex'
-    doesn't yet exist.  some people think that the command is going to
-    create /calc/libcomplex/1.0/, rather than create
-    /calc/libcomplex/.
-
-  - svn:externals explanation:  demonstrate how to actually set this
-    property, using 'propedit' or 'propset -F'.
-
-  - svn:externals explanation:  people don't know what we mean by
-    "primary" vs. "auxiliary" working copy.  please define better.
-
 
 --------------------------------------------------------------
 

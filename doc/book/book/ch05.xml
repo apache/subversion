@@ -2451,6 +2451,17 @@ $ rm -rf tmpdir
 $
 </screen>
 
+      <para>You can verify the results of the import by running the
+        <command>svn list</command> command:</para>
+
+      <screen>
+$ svn list --verbose file:///path/to/repos
+      1 harry               May 08 21:48 projectA/
+      1 harry               May 08 21:48 projectB/
+&hellip;
+$
+</screen>
+
       <para>Once you have your skeletal layout in place, you can begin
         importing actual project data into your repository, if any
         such data exists yet.  Once again, there are several ways to
