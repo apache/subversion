@@ -528,6 +528,149 @@ def deleted_dir_lock(sbox):
                                      '-m', '', parent_dir)
 
 #----------------------------------------------------------------------
+# III.c : Lock a file and check the output of 'svn stat' from the same
+# working copy and another.
+def lock_status(sbox):
+  "verify status of lock in working copy"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+   # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.main.file_append(file_path, "This is a spreadsheet\n")
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+
+  svntest.main.run_svn(None, 'lock', 
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path) 
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)  
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak(fname, wc_rev=2)
+  expected_status.tweak(fname, writelocked='K')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Verify status again after modifying the file
+  svntest.main.file_append(file_path, "check stat output after mod")
+
+  expected_status.tweak(fname, status='M ')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Verify status of lock from another working copy
+  svntest.main.run_svn(None, 'update', wc_b)
+  expected_status = svntest.actions.get_virginal_state(wc_b, 2)
+  expected_status.tweak(fname, writelocked='O')
+
+  svntest.actions.run_and_verify_status(wc_b, expected_status)
+
+#----------------------------------------------------------------------
+# III.c : Steal lock on a file from another working copy with 'svn lock
+# --force', and check the status of lock in the repository from the 
+# working copy in which the file was initially locked.
+def stolen_lock_status (sbox):
+  "verify status of stolen lock"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
+  svntest.main.file_append(file_path, "This is a spreadsheet\n")
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+
+  svntest.main.run_svn(None, 'lock',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak(fname, wc_rev=2)
+  expected_status.tweak(fname, writelocked='K')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Forcibly lock same file (steal lock) from another working copy
+  svntest.main.run_svn(None, 'update', wc_b)
+  svntest.main.run_svn(None, 'lock',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', '--force', file_path_b)
+ 
+  # Verify status from working copy where file was initially locked
+  expected_status.tweak(fname, writelocked='T')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+# III.c : Break lock from another working copy with 'svn unlock --force'
+# and verify the status of the lock in the repository with 'svn stat -u'
+# from the working copy in the file was initially locked
+def broken_lock_status (sbox):
+  "verify status of broken lock"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  # lock a file as wc_author
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
+  svntest.main.file_append(file_path, "This is a spreadsheet\n")
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+  svntest.main.run_svn(None, 'lock',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak(fname, wc_rev=2)
+  expected_status.tweak(fname, writelocked='K')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Forcibly unlock the same file (break lock) from another working copy
+  svntest.main.run_svn(None, 'update', wc_b)
+  svntest.main.run_svn(None, 'unlock',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '--force', file_path_b)
+
+  # Verify status from working copy where file was initially locked
+  expected_status.tweak(fname, writelocked='B')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+
 
 ########################################################################
 # Run the tests
@@ -545,6 +688,9 @@ test_list = [ None,
               deleted_path_lock,
               lock_unlock,
               deleted_dir_lock,
+              lock_status,
+              stolen_lock_status,
+              broken_lock_status,
              ]
 
 if __name__ == '__main__':
