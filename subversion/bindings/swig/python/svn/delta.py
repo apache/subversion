@@ -44,7 +44,7 @@ class Editor:
                copyfrom_path, copyfrom_revision, file_pool):
     return None
 
-  def open_file(self, path, parent_baton, base_revisoin, file_pool):
+  def open_file(self, path, parent_baton, base_revision, file_pool):
     return None
 
   def apply_textdelta(self, file_baton):
