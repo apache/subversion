@@ -2,8 +2,11 @@
 @rem **************************************************************************
 cd ..\..\subversion\po
 [for pofiles]echo Running msgfmt on [pofiles.po]...
-msgfmt.exe -o [pofiles.mo] [pofiles.po]
+python ..\..\build\strip-po-charset.py [pofiles.po] [pofiles.spo]
 if not errorlevel 0 goto err
+msgfmt.exe -o [pofiles.mo] [pofiles.spo]
+if not errorlevel 0 goto err
+del [pofiles.spo]
 [end]
 goto end
 @rem **************************************************************************

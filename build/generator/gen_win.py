@@ -143,7 +143,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if self.enable_nls:
       for po in os.listdir(os.path.join('subversion', 'po')):
         if fnmatch.fnmatch(po, '*.po'):
-          pofiles.append(POFile(po, po[:-2] + 'mo'))
+          pofiles.append(POFile(po[:-3]))
     
     data = {'pofiles': pofiles}
     self.write_with_template(os.path.join('build', 'win32', 'build_locale.bat'),
@@ -706,6 +706,7 @@ FILTER_PROJECTS = 2
 
 class POFile:
   "Item class for holding po file info"
-  def __init__(self, po, mo):
-    self.po = po
-    self.mo = mo
+  def __init__(self, base):
+    self.po = base + '.po'
+    self.spo = base + '.spo'
+    self.mo = base + '.mo'
