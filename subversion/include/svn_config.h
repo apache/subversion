@@ -127,12 +127,12 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
  * Find the value of a (@a section, @a option) pair in @a cfg, set @a 
  * *valuep to the value.
  *
- * If @a cfg is @c NULL, just sets @a *valuep to @a default_value.
+ * If @a cfg is @c NULL, just sets @a *valuep to @a default_value. If
+ * the value does not exist, expand and return @a default_value.
  *
- * If the value does not exist, return @a default_value.  Otherwise, the
- * value returned in @a valuep remains valid at least until the next
- * operation that invalidates variable expansions.  @a default_value may
- * be the same as @a *valuep.
+ * The returned value will be valid at least until the next call to @t
+ * svn_config_get, or for the lifetime of @a default_value. It is
+ * safest to consume the returned value immediately.
  *
  * This function may change @a cfg by expanding option values.
  */
