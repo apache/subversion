@@ -416,7 +416,7 @@ static void record_prop_change(apr_pool_t *pool,
 {
   if (value)
     {
-      svn_stringbuf_t *escaped;
+      svn_stringbuf_t *escaped = NULL;
 
       /* changed/new property */
       if (r->prop_changes == NULL)
