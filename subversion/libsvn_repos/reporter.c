@@ -52,7 +52,7 @@ typedef struct svn_repos_report_baton_t
   /* The fs path that will be the 'target' of dir_delta.
      In the case of 'svn switch', this is probably distinct from BASE_PATH.
      In the case of 'svn update', this is should be identical to BASE_PATH */
-  const char *switch_path;
+  const char *tgt_path;
 
   /* Whether or not to recurse into the directories */
   svn_boolean_t recurse;
@@ -194,7 +194,7 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->target ? rbaton->target->data : NULL,
                                 rbaton->path_rev_hash,
                                 rev_root, 
-                                rbaton->switch_path,
+                                rbaton->tgt_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
                                 rbaton->text_deltas,
@@ -233,7 +233,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_repos_t *repos,
                         const char *fs_base,
                         const char *target,
-                        const char *switch_path,
+                        const char *tgt_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
@@ -258,7 +258,7 @@ svn_repos_begin_report (void **report_baton,
   rbaton->username = apr_pstrdup (pool, username);
   rbaton->base_path = apr_pstrdup (pool, fs_base);
   rbaton->target = target ? svn_stringbuf_create (target, pool) : NULL;
-  rbaton->switch_path = apr_pstrdup (pool, switch_path);
+  rbaton->tgt_path = apr_pstrdup (pool, tgt_path);
 
   /* Hand reporter back to client. */
   *report_baton = rbaton;

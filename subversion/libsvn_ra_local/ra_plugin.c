@@ -393,12 +393,14 @@ do_update (void *session_baton,
   /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
      'entry' properties into the stream, whenever {open_root,
      open_file, open_dir, add_file, add_dir} are called.  */
-  SVN_ERR (svn_ra_local__get_update_pipe_editor (&pipe_editor,
-                                                 &pipe_edit_baton,
-                                                 update_editor,
-                                                 update_baton,
-                                                 sbaton,
-                                                 sbaton->pool));
+  SVN_ERR (svn_ra_local__get_update_pipe_editor 
+           (&pipe_editor,
+            &pipe_edit_baton,
+            update_editor,
+            update_baton,
+            sbaton,
+            svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool),
+            sbaton->pool));
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
@@ -460,12 +462,14 @@ do_switch (void *session_baton,
   /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
      'entry' properties into the stream, whenever {open_root,
      open_file, open_dir, add_file, add_dir} are called.  */
-  SVN_ERR (svn_ra_local__get_update_pipe_editor (&pipe_editor,
-                                                 &pipe_edit_baton,
-                                                 update_editor,
-                                                 update_baton,
-                                                 sbaton,
-                                                 sbaton->pool));
+  SVN_ERR (svn_ra_local__get_update_pipe_editor 
+           (&pipe_editor,
+            &pipe_edit_baton,
+            update_editor,
+            update_baton,
+            sbaton,
+            svn_stringbuf_create_from_string (switch_fs_path, sbaton->pool),
+            sbaton->pool));
 
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;

@@ -259,7 +259,21 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
     svn_path_add_component_nts (src_fullpath, src_entry);
 
   /* Get the node ids for the source and target paths. */
-  SVN_ERR (svn_fs_node_id (&tgt_id, tgt_root, tgt_path, pool));
+  err = svn_fs_node_id (&tgt_id, tgt_root, tgt_path, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          /* Caller thinks that target still exists, but it doesn't.
+             So just delete the target and go home.  */
+          SVN_ERR (delete (&c, root_baton, src_entry, pool));
+          goto cleanup;
+        }
+      else
+        {
+          return err;
+        }
+    }
   err = svn_fs_node_id (&src_id, src_root, src_fullpath->data, pool);
   if (err)
     {
@@ -318,6 +332,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                            src_fullpath->data, tgt_path,
                            pool));
     }
+
+ cleanup:
 
   /* Make sure we close the root directory we opened above. */
   SVN_ERR (editor->close_directory (root_baton));
