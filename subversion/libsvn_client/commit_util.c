@@ -533,8 +533,10 @@ svn_client__get_copy_committables (apr_hash_t **committables,
 
 int svn_client__sort_commit_item_urls (const void *a, const void *b)
 {
-  svn_client_commit_item_t *item1 = *((svn_client_commit_item_t **) a);
-  svn_client_commit_item_t *item2 = *((svn_client_commit_item_t **) b);
+  const svn_client_commit_item_t *item1
+    = *((const svn_client_commit_item_t **) a);
+  const svn_client_commit_item_t *item2
+    = *((const svn_client_commit_item_t **) b);
   return svn_path_compare_paths_nts (item1->url, item2->url);
 }
 

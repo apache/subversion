@@ -62,15 +62,14 @@ svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
       void *val;
       const char *name;
       svn_wc_entry_t *current_entry;
       const char *child_path;
 
-      apr_hash_this (hi, &key, &keylen, &val);
-      name = (const char *) key;
-      current_entry = (svn_wc_entry_t *) val;
+      apr_hash_this (hi, &key, NULL, &val);
+      name = key;
+      current_entry = val;
 
       /* Ignore the "this dir" entry. */
       if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))

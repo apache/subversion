@@ -278,16 +278,15 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t klen;
       void *val;
       const char *entryname;
       enum svn_node_kind *entrykind;
       const char *src_target;
 
       /* Get next entry and its kind */
-      apr_hash_this (hi, &key, &klen, &val);
-      entryname = (char *) key;
-      entrykind = (enum svn_node_kind *) val;
+      apr_hash_this (hi, &key, NULL, &val);
+      entryname = key;
+      entrykind = val;
 
       /* Telescope the entryname onto the source dir. */
       src_target = svn_path_join (src, entryname, subpool);

@@ -58,14 +58,13 @@ svn_client_propset (const char *propname,
         {
           const void *key;
           const char *keystring;
-          apr_ssize_t klen;
           void * val;
           const char *current_entry_name;
           svn_stringbuf_t *full_entry_path = svn_stringbuf_create (target,
                                                                    pool);
           svn_wc_entry_t *current_entry;
 
-          apr_hash_this (hi, &key, &klen, &val);
+          apr_hash_this (hi, &key, NULL, &val);
           keystring = key;
           current_entry = val;
         
@@ -227,13 +226,12 @@ recursive_proplist (apr_array_header_t *props,
     {
       const void *key;
       const char *keystring;
-      apr_ssize_t klen;
       void * val;
       const char *current_entry_name;
       const char *full_entry_path;
       svn_wc_entry_t *current_entry;
 
-      apr_hash_this (hi, &key, &klen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       keystring = key;
       current_entry = val;
     
@@ -288,5 +286,5 @@ svn_client_proplist (apr_array_header_t **props,
 
 /* 
  * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

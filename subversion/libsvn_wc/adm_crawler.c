@@ -154,7 +154,7 @@ report_revisions (const char *wc_path,
 
       /* Get the next entry */
       apr_hash_this (hi, &key, &klen, &val);
-      current_entry = (svn_wc_entry_t *) val;
+      current_entry = val;
 
       /* Compute the name of the entry.  Skip THIS_DIR altogether. */
       if (! strcmp (key, SVN_WC_ENTRY_THIS_DIR))
