@@ -30,12 +30,21 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
+/* The format number of this filesystem.
+   This is independent of the repository format number, and
+   independent of any other FS back ends. */
+#define SVN_FS_FS__FORMAT_NUMBER   1
+
 typedef struct
 {
   /* A cache of the last directory opened within the filesystem. */
   svn_fs_id_t *dir_cache_id;
   apr_hash_t *dir_cache;
   apr_pool_t *dir_cache_pool;
+
+  /* The format number of this FS. */
+  int format;
+  
 } fs_fs_data_t;
 
 

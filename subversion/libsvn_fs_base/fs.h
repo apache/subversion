@@ -33,6 +33,11 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
+/* The format number of this filesystem.
+   This is independent of the repository format number, and
+   independent of any other FS back ends. */
+#define SVN_FS_BASE__FORMAT_NUMBER   1
+
 #define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
 typedef struct
 {
@@ -81,6 +86,10 @@ typedef struct
 
   /* A baton for collecting detailed errors from Berkeley DB. */
   bdb_errcall_baton_t *errcall_baton;
+
+  /* The format number of this FS. */
+  int format;
+
 } base_fs_data_t;
 
 

@@ -538,6 +538,9 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__deltify
 };
 
+/* Where the format number is stored. */
+#define FORMAT_FILE   "format"
+
 static svn_error_t *
 base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -612,6 +615,12 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   svn_err = svn_fs_base__dag_init_fs (fs);
   if (svn_err) goto error;
 
+  /* This filesystem is ready.  Stamp it with a format number. */
+  svn_err = svn_io_write_version_file
+    (svn_path_join (fs->path, FORMAT_FILE, pool),
+     SVN_FS_BASE__FORMAT_NUMBER, pool);
+  if (svn_err) goto error;
+
   return SVN_NO_ERROR;
 
 error:
@@ -623,12 +632,32 @@ error:
 /* Gaining access to an existing Berkeley DB-based filesystem.  */
 
 
+/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
+   number is not the same as the format number supported by this
+   Subversion. */
+static svn_error_t *
+check_format (svn_fs_t *fs)
+{
+  int format = ((base_fs_data_t *) fs->fsap_data)->format;
+
+  if (format != SVN_FS_BASE__FORMAT_NUMBER)
+    {
+      return svn_error_createf 
+        (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+         _("Expected FS format '%d'; found format '%d'"), 
+         SVN_FS_BASE__FORMAT_NUMBER, format);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   svn_error_t *svn_err;
   const char *path_native;
   base_fs_data_t *bfd;
+  int format;
 
   SVN_ERR (check_already_open (fs));
 
@@ -690,6 +719,26 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, FALSE));
   if (svn_err) goto error;
+
+  /* Read the FS format number. */
+  svn_err = svn_io_read_version_file
+    (&format, svn_path_join (fs->path, FORMAT_FILE, pool), pool);
+  if (svn_err && APR_STATUS_IS_ENOENT (svn_err->apr_err))
+    {
+      /* Pre-1.2 filesystems did not have a format file (you could say
+         they were format "0"), so they get upgraded on the fly. */
+      svn_error_clear (svn_err);
+      format = SVN_FS_BASE__FORMAT_NUMBER;
+      svn_err = svn_io_write_version_file
+        (svn_path_join (fs->path, FORMAT_FILE, pool), format, pool);
+      if (svn_err) goto error;
+    }
+  else if (svn_err)
+    goto error;
+  
+  /* Now we've got a format number no matter what. */
+  ((base_fs_data_t *) fs->fsap_data)->format = format;
+  SVN_ERR (check_format (fs));
 
   return SVN_NO_ERROR;
 
