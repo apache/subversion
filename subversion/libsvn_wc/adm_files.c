@@ -924,8 +924,8 @@ check_adm_exists (svn_boolean_t *exists,
   svn_error_t *err = NULL;
   enum svn_node_kind kind;
   svn_boolean_t dir_exists = FALSE, wc_exists = FALSE;
-  apr_file_t *f = NULL;
   const char *tmp_path;
+  apr_finfo_t finfo;
 
   /** Step 1: check that the directory exists. **/
 
@@ -963,7 +963,9 @@ check_adm_exists (svn_boolean_t *exists,
   /** The directory exists, but is it a valid working copy yet?
       Try step 2: checking that SVN_WC__ADM_README exists. **/
 
-  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README, APR_READ, pool);
+  err = svn_io_stat (&finfo, svn_path_join (tmp_path, SVN_WC__ADM_README, pool),
+                     APR_FINFO_MIN, pool);
+
   if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
     return err;
   else if (err)
@@ -973,8 +975,6 @@ check_adm_exists (svn_boolean_t *exists,
     }
   else
     wc_exists = TRUE;
-
-  SVN_ERR (svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool));
 
   /** Step 3: now check that repos and ancestry are correct **/
 
