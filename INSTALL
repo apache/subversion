@@ -115,7 +115,7 @@ I.    BUILD REQUIREMENTS
       or the other of these programs, and only one is required.
 
 
-      5.  Neon library 0.18.2
+      5.  Neon library 0.18.5
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet. Although in theory you could have
@@ -127,10 +127,10 @@ I.    BUILD REQUIREMENTS
       want Subversion to build it. The source code is included with the
       latest Subversion tarball, and it can also be obtained from:
 
-          http://www.webdav.org/neon/neon-0.18.2.tar.gz
+          http://www.webdav.org/neon/neon-0.18.5.tar.gz
 
       Unpack the archive using tar/gunzip and rename the resulting
-      directory from "./neon-0.18.2/" to "./neon/".
+      directory from "./neon-0.18.5/" to "./neon/".
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
@@ -237,7 +237,7 @@ II.   INSTALLATION OF SUBVERSION
           apr*.i386.rpm (Version 0.2002.01.19 or greater)
           db*.i386.rpm  (Version 4.0.14 or greater)
           expat         (Comes with RedHat)
-          neon          (Version 0.18.2 or greater)
+          neon          (Version 0.18.5 or greater)
 
       After downloading, install it (as root user):
 
