@@ -287,6 +287,7 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
 
   else if (strcmp (name, "new") == 0)
     {
+      svn_error_t *err;
       /* Found a new svn_edit_t */
       /* Build a new edit struct */
       svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
@@ -301,14 +302,15 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       }
 
       /* Now drop this edit at the end of our delta */
-      svn_error_t *err = svn_append_to_delta (my_digger->delta,
-                                              new_edit,
-                                              svn_XML_edit);
+      err = svn_append_to_delta (my_digger->delta,
+                                 new_edit,
+                                 svn_XML_edit);
       /* TODO: check error */
     }
 
   else if (strcmp (name, "replace"))
     {
+      svn_error_t *err;
       /* Found a new svn_edit_t */
       /* Build a new edit struct */
       svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
@@ -323,15 +325,16 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       }
 
       /* Now drop this edit at the end of our delta */
-      svn_error_t *err = svn_append_to_delta (my_digger->delta,
-                                              new_edit,
-                                              svn_XML_edit);
+      err = svn_append_to_delta (my_digger->delta,
+                                 new_edit,
+                                 svn_XML_edit);
       /* TODO: check error */
 
     }
 
   else if (strcmp (name, "delete"))
     {
+      svn_error_t *err;
       /* Found a new svn_edit_t */
       /* Build a new edit struct */
       svn_edit_t *new_edit = svn_delta_edit_create (my_digger->pool);
@@ -346,34 +349,116 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       }
 
       /* Now drop this edit at the end of our delta */
-      svn_error_t *err = svn_append_to_delta (my_digger->delta,
-                                              new_edit,
-                                              svn_XML_edit);
+      err = svn_append_to_delta (my_digger->delta,
+                                 new_edit,
+                                 svn_XML_edit);
       /* TODO: check error */
 
     }
 
   else if (strcmp (name, "file"))
     {
+      svn_error_t *err;
       /* Found a new svn_edit_content_t */
       /* Build a edit_content_t */
-      /* Build an ancestor out of **attrs */
+      svn_edit_t *new_edit_content = 
+        svn_delta_edit_content_create (my_digger->pool);
+      new_edit_content->kind = file_type;
+      
+      /* Build an ancestor object out of **atts */
+      while (*atts)
+        {
+          char *attr_name = *atts++;
+          char *attr_value = *atts++;
+          svn_ancestor_t *annie = svn_delta_ancestor_create (my_digger->pool);
+
+          if (strcmp (attr_name, "ancestor") == 0)
+            {
+              annie->path = svn_string_create (attr_value, my_digger->pool);
+            }
+          else if (strcmp (attr_name, "ver") == 0)
+            {
+              annie->version = atoi(attr_value);
+            }
+          else if (strcmp (attr_name, "new") == 0)
+            {
+              annie->new = TRUE;
+            }
+          else
+            {
+              /* TODO: unknown tag attribute, return error */
+            }
+        }
+
+      new_edit_content->ancestor = annie;
+
+      /* Drop the edit_content object on the end of the delta */
+      err = svn_append_to_delta (my_digger->delta,
+                                 new_edit_content,
+                                 svn_XML_editcontent);
+
+      /* TODO:  check for error */
     }
 
   else if (strcmp (name, "dir"))
     {
+      svn_error_t *err;
       /* Found a new svn_edit_content_t */
       /* Build a edit_content_t */
-      /* Build an ancestor out of **attrs */
-      /* call (*dir_handler) (svn_delta_digger_t *digger, 
-                              svn_ancestor_t *ancestor); */
+      svn_edit_t *new_edit_content = 
+        svn_delta_edit_content_create (my_digger->pool);
+      new_edit_content->kind = directory_type;
+      
+      /* Build an ancestor object out of **atts */
+      while (*atts)
+        {
+          char *attr_name = *atts++;
+          char *attr_value = *atts++;
+          svn_ancestor_t *annie = svn_delta_ancestor_create (my_digger->pool);
+
+          if (strcmp (attr_name, "ancestor") == 0)
+            {
+              annie->path = svn_string_create (attr_value, my_digger->pool);
+            }
+          else if (strcmp (attr_name, "ver") == 0)
+            {
+              annie->version = atoi(attr_value);
+            }
+          else if (strcmp (attr_name, "new") == 0)
+            {
+              annie->new = TRUE;
+            }
+          else
+            {
+              /* TODO: unknown tag attribute, return error */
+            }
+        }
+
+      new_edit_content->ancestor = annie;
+
+      /* Drop the edit_content object on the end of the delta */
+      err = svn_append_to_delta (my_digger->delta,
+                                 new_edit_content,
+                                 svn_XML_editcontent);
+
+      /* TODO:  check for error */
+
+      /* Call the "directory" callback in the digger struct; this
+         allows the client to possibly create new subdirs on-the-fly,
+         for example. */
+      err = (* (my_digger->dir_handler)) (my_digger, annie);
+
+      /* TODO: check for error */
     }
 
   else
     {
+      svn_error_t *err;
       /* Found some unrecognized tag, so PUNT to the caller's
          default handler. */
-      (* (my_digger->unknown_elt_handler)) (my_digger, name, atts);
+      err = (* (my_digger->unknown_elt_handler)) (my_digger, name, atts);
+
+      /* TODO: check for error */
     }
 
 
