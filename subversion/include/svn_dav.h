@@ -66,6 +66,12 @@ extern "C" {
 #define SVN_DAV_PROP_NS_DAV "http://subversion.tigris.org/xmlns/dav/"
 
 
+/* Remove this #define to disable support for older (broken) svn_dav
+   property namespaces (like "svn:" and "svn:custom:").  Once this
+   #define is removed, please remove the code that it enabled in
+   mod_dav_svn and libsvn_ra_dav.  Thank you.  */
+#define SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+
 
 #ifdef __cplusplus
 }

@@ -140,8 +140,11 @@ static const ne_propname fetch_props[] =
   { NULL }
 };
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
 static const ne_propname log_message_prop = { SVN_PROP_PREFIX, "log" };
-
+#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+static const ne_propname log_message_prop = { SVN_DAV_PROP_NS_SVN, "log" };
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     const char *url, int *code,
@@ -630,10 +633,19 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
    * doesn't really do anything clever. */
   body = ne_buffer_create();
 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   ne_buffer_zappend(body,
                     "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
                     "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:C=\""
-                    SVN_PROP_CUSTOM_PREFIX "\" xmlns:S=\"svn:\">");
+                    SVN_PROP_CUSTOM_PREFIX "\" xmlns:S=\""
+                    SVN_PROP_PREFIX "\">");
+#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  ne_buffer_zappend(body,
+                    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
+                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:C=\""
+                    SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
+                    SVN_DAV_PROP_NS_SVN "\">");
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
   if (rb->prop_changes != NULL)
     {
