@@ -40,7 +40,8 @@ svn_client_resolve (svn_stringbuf_t *path,
                     void *notify_baton,
                     apr_pool_t *pool)
 {
-  return svn_wc_resolve_conflict (path, notify_func, notify_baton, pool);
+  return svn_wc_resolve_conflict (path, TRUE, TRUE, notify_func, notify_baton,
+                                  pool);
 }
 
 

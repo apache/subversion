@@ -528,8 +528,10 @@ svn_error_t *svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
                                                   apr_pool_t *pool);
 
 
-/* Assuming PATH is under version control and in a state of conflict,
-   then take PATH *out* of this state.
+/* Assuming PATH is under version control and in a state of conflict, then
+   take PATH *out* of this state.  If RESOLVE_TEXT is set then any text
+   conflict is resolved, if RESOLVE_PROPS is set then any property
+   conflicts are resolved.
 
    Needless to say, this function doesn't touch conflict markers or
    anything of that sort -- only a human can semantically resolve a
@@ -542,10 +544,16 @@ svn_error_t *svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
 
    If PATH is not under version control, return SVN_ERR_ENTRY_NOT_FOUND.  
    If PATH isn't in a state of conflict to begin with, do nothing, and
-   return SVN_NO_ERROR.  If PATH was successfully taken out of a state
-   of conflict, report this information to NOTIFY_FUNC (if non-NULL.)
+   return SVN_NO_ERROR.
+
+   If PATH was successfully taken out of a state of conflict, report this
+   information to NOTIFY_FUNC (if non-NULL.)  If only text or only property
+   conflict resolution was requested, and it was successful, then success
+   gets reported.
  */
 svn_error_t *svn_wc_resolve_conflict (svn_stringbuf_t *path,
+                                      svn_boolean_t resolve_text,
+                                      svn_boolean_t resolve_props,
                                       svn_wc_notify_func_t notify_func,
                                       void *notify_baton,
                                       apr_pool_t *pool);

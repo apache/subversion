@@ -352,21 +352,26 @@ def update_conflict_props(sbox):
 
   wc_dir = sbox.wc_dir
 
-  # Add a property to a file
+  # Add a property to a file and a directory
   mu_path = os.path.join(wc_dir, 'A', 'mu') 
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', mu_path)
+  A_path = os.path.join(wc_dir, 'A')
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', A_path)
 
-  # Commit the file
+  # Commit the file and directory
   svntest.main.run_svn(None, 'ci', '-m', '"logmsg"', wc_dir)
 
   # Update to rev 1
   svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
 
-  # Add a conflicting property
+  # Add conflicting properties
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'beep!', mu_path)
+  svntest.main.run_svn(None, 'propset', 'foo', 'baz', A_path)
 
   # Create expected output tree for an update of the wc_backup.
   output_list = [ [mu_path,
+                   None, {}, {'status' : '_C'}],
+                  [A_path,
                    None, {}, {'status' : '_C'}] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
@@ -378,11 +383,11 @@ def update_conflict_props(sbox):
   # Create expected status tree for the update.
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
   for item in status_list:
-    if (item[0] == mu_path):
+    if (item[0] == mu_path) or (item[0] == A_path):
       item[3]['status'] = '_C'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
-  extra_files = ['mu.*\.prej']
+  extra_files = ['mu.*\.prej', 'dir_conflicts.*\.prej']
   # Do the update and check the results in three ways... INCLUDING PROPS
   if svntest.actions.run_and_verify_update(wc_dir,
                                            expected_output_tree,
@@ -394,7 +399,20 @@ def update_conflict_props(sbox):
     return 1
 
   if len(extra_files) != 0:
-    print "didn't get conflict file mu .prej"
+    print "didn't get expected conflict files"
+    return 1
+
+  # Resolve the conflicts
+  svntest.main.run_svn(None, 'resolve', mu_path)
+  svntest.main.run_svn(None, 'resolve', A_path)
+
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if (item[0] == mu_path) or (item[0] == A_path):
+      item[3]['status'] = '_M'
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
     return 1
 
 ########################################################################

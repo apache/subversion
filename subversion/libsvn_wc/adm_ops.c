@@ -1455,13 +1455,16 @@ attempt_deletion (svn_stringbuf_t *parent_dir,
 
 svn_error_t *
 svn_wc_resolve_conflict (svn_stringbuf_t *path,
+                         svn_boolean_t resolve_text,
+                         svn_boolean_t resolve_props,
                          svn_wc_notify_func_t notify_func,
                          void *notify_baton,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *parent, *basename;
+  svn_stringbuf_t *conflict_dir, *basename;
   svn_boolean_t text_conflict, prop_conflict;
   svn_wc_entry_t *entry = NULL;
+  apr_uint32_t modify_flags = 0;
 
   /* Feh, ignoring the return value here.  We just want to know
      whether we got the entry or not. */
@@ -1470,32 +1473,61 @@ svn_wc_resolve_conflict (svn_stringbuf_t *path,
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "Not under version control: '%s'", path->data);
 
-  svn_path_split (path, &parent, &basename, pool);
+  if (entry->kind == svn_node_dir)
+    conflict_dir = path;
+  else
+    svn_path_split (path, &conflict_dir, &basename, pool);
 
   /* Sanity check: see if libsvn_wc thinks this item is in a state of
-     conflict at all.   If not, just go home.*/
+     conflict that we have asked to resolve.   If not, just go home.*/
   SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                parent, entry, pool));
-  if ((! text_conflict) && (! prop_conflict))
+                                conflict_dir, entry, pool));
+  if (!(resolve_text && text_conflict) && !(resolve_props && prop_conflict))
     return SVN_NO_ERROR;
 
   /* Yes indeed, being able to map a function over a list would be nice. */
-  if (entry->conflict_old)
-    SVN_ERR (attempt_deletion (parent, entry->conflict_old, pool));
-  if (entry->conflict_new)
-    SVN_ERR (attempt_deletion (parent, entry->conflict_new, pool));
-  if (entry->conflict_wrk)
-    SVN_ERR (attempt_deletion (parent, entry->conflict_wrk, pool));
-  if (entry->prejfile)
-    SVN_ERR (attempt_deletion (parent, entry->prejfile, pool));
+  if (resolve_text && text_conflict && entry->conflict_old)
+    {
+      SVN_ERR (attempt_deletion (conflict_dir, entry->conflict_old, pool));
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+      entry->conflict_old = NULL;
+    }
+  if (resolve_text && text_conflict && entry->conflict_new)
+    {
+      SVN_ERR (attempt_deletion (conflict_dir, entry->conflict_new, pool));
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+      entry->conflict_new = NULL;
+    }
+  if (resolve_text && text_conflict && entry->conflict_wrk)
+    {
+      SVN_ERR (attempt_deletion (conflict_dir, entry->conflict_wrk, pool));
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+      entry->conflict_wrk = NULL;
+    }
+  if (resolve_props && prop_conflict && entry->prejfile)
+    {
+      SVN_ERR (attempt_deletion (conflict_dir, entry->prejfile, pool));
+      modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+      entry->prejfile = NULL;
+    }
+
+  /* Although removing the files is sufficient to indicate that the
+     conflict is resolved, if we update the entry as well future checks
+     for conflict state will will be more efficient. */
+  if (entry->kind == svn_node_dir)
+    SVN_ERR (svn_wc__entry_modify (path, NULL, entry, modify_flags, pool));
+  else
+    SVN_ERR (svn_wc__entry_modify (conflict_dir, basename, entry, modify_flags,
+                                   pool));
 
   if (notify_func)
     {
       /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
-         state of conflict.  If not, report the successful resolution.  */     
+         state of conflict that we have asked to resolve.  If not, report
+         the successful resolution.  */     
       SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                    parent, entry, pool));
-      if ((! text_conflict) && (! prop_conflict))
+                                    conflict_dir, entry, pool));
+      if (!(resolve_text && text_conflict) && !(resolve_props && prop_conflict))
         (*notify_func) (notify_baton, svn_wc_notify_resolve, path->data);
     }
           
