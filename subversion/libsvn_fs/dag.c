@@ -175,16 +175,19 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
   if (err)
     return err;
 
+  /* Oh, give me a clone... */
   if (svn_fs_id_eq (root_id, base_root_id))  /* root as yet uncloned */
     {
       skel_t *base_skel;
 
-      /* Get the skel for the base node. */
+      /* Of my own flesh and bone...
+         (Get the skel for the base node.) */
       err = svn_fs__get_node_revision (&base_skel, fs, base_root_id, trail);
       if (err)
         return err;
 
-      /* Create the new, mutable root node. */
+      /* With its Y-chromosome changed to X
+         (Create the new, mutable root node.) */
       err = svn_fs__create_successor
         (&root_id, fs, base_root_id, base_skel, trail);
       if (err)
@@ -206,6 +209,14 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
   root_node->contents = root_skel;
   root_node->pool = trail->pool;
   
+  /* ... And when it is grown
+   *      Then my own little clone
+   *        Will be of the opposite sex!
+   *
+   * (Sung to the tune of "Home, Home on the Range", with thanks to
+   * Randall Garrett and Isaac Asimov.)
+   */
+
   *root_p = root_node;
   return SVN_NO_ERROR;
 }
