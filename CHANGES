@@ -1,4 +1,4 @@
-Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision >3016)
+Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision >3021)
 
  User-visible changes:
  * fs schema change, see issue #842. **NOTE: repos dump/load cycle required!**
@@ -11,8 +11,10 @@ Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision >3016)
  Developer-visible changes:
  * test suite now does XFAIL and XPASS
  * test suite over DAV now uses SVNParentPath, no longer depends on symlinks
+ * DAV tests now work on Windows
  * upgrade to neon 0.22.0
- * server sends new prop namespaces, client understands old & new, issue #840
+ * 'make install' notices the $(DESTDIR) parameter
+ * new dav prop namespaces, but old still sent for compat; see issue #840
  * error code space reorganized, see issue #702
  * many cleanups to path handling
  * more use of access batons in libsvn_wc, see issue #749
