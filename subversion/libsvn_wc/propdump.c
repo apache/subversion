@@ -63,12 +63,12 @@
  *    red
  *    N 11
  *    wine review
- *    V 372
+ *    V 376
  *    A forthright entrance, yet coquettish on the tongue, its deceptively
  *    fruity exterior hides the warm mahagony undercurrent that is the
  *    hallmark of Chateau Fraisant-Pitre.  Connoisseurs of the region will
  *    be pleased to note the familiar, subtle hints of mulberries and
- *    carburator fluid.  A confident finish, marred only by a barely
+ *    carburator fluid.  Its confident finish is marred only by a barely
  *    detectable suggestion of rancid squid ink.
  *    N 5 
  *    price
@@ -329,7 +329,7 @@ main ()
     "fruity exterior hides the warm mahagony undercurrent that is the\n"
     "hallmark of Chateau Fraisant-Pitre.  Connoisseurs of the region will\n"
     "be pleased to note the familiar, subtle hints of mulberries and\n"
-    "carburator fluid.  A confident finish, marred only by a barely\n"
+    "carburator fluid.  Its confident finish is marred only by a barely\n"
     "detectable suggestion of rancid squid ink.";
 
   ap_initialize ();
