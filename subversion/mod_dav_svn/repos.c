@@ -1389,6 +1389,12 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   if (depth == 0 || !isdir)
     return NULL;
 
+  /* ### for now, let's say that working resources have no children. of
+     ### course, this isn't true (or "right") for working collections, but
+     ### we don't actually need to do a walk right now. */
+  if (params->root->type == DAV_RESOURCE_TYPE_WORKING)
+    return NULL;
+
   /* ### need to allow more walking in the future */
   if (params->root->type != DAV_RESOURCE_TYPE_REGULAR)
     {
