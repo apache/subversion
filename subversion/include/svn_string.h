@@ -87,33 +87,91 @@ typedef struct
 
 
 
+/* svn_string_t functions. */
+
 /* Create a new bytestring containing a C string (null-terminated), or
    containing a generic string of bytes (NON-null-terminated) */
-svn_stringbuf_t * svn_stringbuf_create (const char *cstring, 
-                                     apr_pool_t *pool);
-svn_stringbuf_t * svn_stringbuf_ncreate (const char *bytes,
-                                      const apr_size_t size, 
-                                      apr_pool_t *pool);
+svn_string_t *svn_string_create (const char *cstring, 
+                                 apr_pool_t *pool);
+svn_string_t *svn_string_ncreate (const char *bytes,
+                                  const apr_size_t size, 
+                                  apr_pool_t *pool);
+
+/* Create a new string with the contents of the given stringbuf */
+svn_string_t *svn_string_create_from_buf (const svn_stringbuf_t *strbuf,
+                                          apr_pool_t *pool);
+
+/* Create a new bytestring by formatting CSTRING (null-terminated)
+   from varargs, which are as appropriate for apr_psprintf. */
+svn_string_t *svn_string_createf (apr_pool_t *pool,
+                                  const char *fmt,
+                                  ...)
+       __attribute__ ((format (printf, 2, 3)));
+
+/* Create a new bytestring by formatting CSTRING (null-terminated)
+   from a va_list (see svn_stringbuf_createf). */
+svn_string_t *svn_string_createv (apr_pool_t *pool,
+                                  const char *fmt,
+                                  va_list ap)
+       __attribute__ ((format (printf, 2, 0)));
+
+/* Return true if a bytestring is empty (has length zero). */
+svn_boolean_t svn_string_isempty (const svn_string_t *str);
+
+/* Return a duplicate of ORIGNAL_STRING. */
+svn_string_t *svn_string_dup (const svn_string_t *original_string,
+                              apr_pool_t *pool);
+
+/* Return TRUE iff STR1 and STR2 have identical length and data. */
+svn_boolean_t svn_string_compare (const svn_string_t *str1, 
+                                  const svn_string_t *str2);
+
+/** convenience routines **/
+
+/* Return offset of first non-whitespace character in STR, or -1 if none. */
+apr_size_t svn_string_first_non_whitespace (const svn_string_t *str);
+
+/* Strips whitespace from both sides of STR (modified in place). */
+void svn_string_strip_whitespace (svn_string_t *str);
+
+/* Return position of last occurrence of CHAR in STR, or return
+   STR->len if no occurrence. */ 
+apr_size_t svn_string_find_char_backward (const svn_string_t *str, char ch);
+
+
+/* svn_stringbuf_t functions. */
+
+/* Create a new bytestring containing a C string (null-terminated), or
+   containing a generic string of bytes (NON-null-terminated) */
+svn_stringbuf_t *svn_stringbuf_create (const char *cstring, 
+                                       apr_pool_t *pool);
+svn_stringbuf_t *svn_stringbuf_ncreate (const char *bytes,
+                                        const apr_size_t size, 
+                                        apr_pool_t *pool);
+
+/* Create a new stringbuf with the contents of the given string */
+svn_stringbuf_t *svn_stringbuf_create_from_string (const svn_string_t *str,
+                                                   apr_pool_t *pool);
 
 /* Create a new bytestring by formatting CSTRING (null-terminated)
    from varargs, which are as appropriate for apr_psprintf. */
 svn_stringbuf_t *svn_stringbuf_createf (apr_pool_t *pool,
-                                     const char *fmt,
-                                     ...)
+                                        const char *fmt,
+                                        ...)
        __attribute__ ((format (printf, 2, 3)));
 
 /* Create a new bytestring by formatting CSTRING (null-terminated)
    from a va_list (see svn_stringbuf_createf). */
 svn_stringbuf_t *svn_stringbuf_createv (apr_pool_t *pool,
-                                     const char *fmt,
-                                     va_list ap)
+                                        const char *fmt,
+                                        va_list ap)
        __attribute__ ((format (printf, 2, 0)));
 
 /* Make sure that the string STR has at least MINIMUM_SIZE bytes of
    space available in the memory block.  (MINIMUM_SIZE should include
    space for the terminating null character.)  */
 void svn_stringbuf_ensure (svn_stringbuf_t *str,
-                        apr_size_t minimum_size);
+                           apr_size_t minimum_size);
 
 /* Set a bytestring STR to VALUE */
 void svn_stringbuf_set (svn_stringbuf_t *str, const char *value);
@@ -134,21 +192,21 @@ void svn_stringbuf_fillchar (svn_stringbuf_t *str, const unsigned char c);
    onto TARGETSTR.  reallocs() if necessary.  TARGETSTR is affected,
    nothing else is. */
 void svn_stringbuf_appendbytes (svn_stringbuf_t *targetstr,
-                             const char *bytes, 
-                             const apr_size_t count);
+                                const char *bytes, 
+                                const apr_size_t count);
 void svn_stringbuf_appendstr (svn_stringbuf_t *targetstr, 
-                           const svn_stringbuf_t *appendstr);
+                              const svn_stringbuf_t *appendstr);
 void svn_stringbuf_appendcstr (svn_stringbuf_t *targetstr,
-                            const char *cstr);
+                               const char *cstr);
 
 /* Return a duplicate of ORIGNAL_STRING. */
 svn_stringbuf_t *svn_stringbuf_dup (const svn_stringbuf_t *original_string,
-                                 apr_pool_t *pool);
+                                    apr_pool_t *pool);
 
 
 /* Return TRUE iff STR1 and STR2 have identical length and data. */
 svn_boolean_t svn_stringbuf_compare (const svn_stringbuf_t *str1, 
-                                  const svn_stringbuf_t *str2);
+                                     const svn_stringbuf_t *str2);
 
 /** convenience routines **/
 
@@ -160,7 +218,8 @@ void svn_stringbuf_strip_whitespace (svn_stringbuf_t *str);
 
 /* Return position of last occurrence of CHAR in STR, or return
    STR->len if no occurrence. */ 
-apr_size_t svn_stringbuf_find_char_backward (const svn_stringbuf_t *str, char ch);
+apr_size_t svn_stringbuf_find_char_backward (const svn_stringbuf_t *str, 
+                                             char ch);
 
 /* Chop STR back to CHAR, inclusive.  Returns number of chars
    chopped, so if no such CHAR in STR, chops nothing and returns 0. */
