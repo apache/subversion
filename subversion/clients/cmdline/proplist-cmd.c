@@ -97,11 +97,25 @@ svn_cl__proplist (apr_getopt_t *os,
           const char *target = ((const char **) (targets->elts))[i];
           apr_array_header_t *props;
           int j;
-          
-          SVN_ERR (svn_client_proplist (&props, target, 
-                                        &(opt_state->start_revision),
-                                        opt_state->recursive, ctx, pool));
-          
+          svn_error_t *err;
+
+          err = svn_client_proplist (&props, target,
+                               &(opt_state->start_revision),
+                               opt_state->recursive, ctx, pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+                {
+                  if (!opt_state->quiet)
+                    {
+                      svn_handle_warning (stderr, err);
+                    }
+                  continue;
+                }
+              else
+                  return err;
+            }
+
           for (j = 0; j < props->nelts; ++j)
             {
               svn_client_proplist_item_t *item 

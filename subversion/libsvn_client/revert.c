@@ -49,28 +49,32 @@ svn_client_revert (const char *path,
      don't know if path is a directory.  It gets a bit messy. */
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recursive,
                                   pool));
-  SVN_ERR (svn_wc_is_wc_root (&wc_root, path, adm_access, pool));
+  if ((err = svn_wc_is_wc_root (&wc_root, path, adm_access, pool)))
+    goto out;
   if (! wc_root)
     {
       const svn_wc_entry_t *entry;
-      SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+      if ((err = svn_wc_entry (&entry, path, adm_access, FALSE, pool)))
+        goto out;
 
       if (entry->kind == svn_node_dir)
         {
           svn_node_kind_t kind;
 
-          SVN_ERR (svn_io_check_path (path, &kind, pool));
+          if ((err = svn_io_check_path (path, &kind, pool)))
+            goto out;
           if (kind == svn_node_dir)
             {
               /* While we could add the parent to the access baton set, there
                  is no way to close such a set. */
               svn_wc_adm_access_t *dir_access;
-              SVN_ERR (svn_wc_adm_close (adm_access));
-              SVN_ERR (svn_wc_adm_open (&adm_access, NULL,
-                                        svn_path_dirname (path, pool),
-                                        TRUE, FALSE, pool));
-              SVN_ERR (svn_wc_adm_open (&dir_access, adm_access, path,
-                                        TRUE, recursive, pool));
+              if ((err = svn_wc_adm_close (adm_access))
+                  || (err = svn_wc_adm_open (&adm_access, NULL,
+                                             svn_path_dirname (path, pool),
+                                             TRUE, FALSE, pool))
+                  || (err = svn_wc_adm_open (&dir_access, adm_access, path,
+                                          TRUE, recursive, pool)))
+                goto out;
             }
         }
     }
@@ -79,6 +83,8 @@ svn_client_revert (const char *path,
                        ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func, ctx->notify_baton,
                        pool);
+
+  out:
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
