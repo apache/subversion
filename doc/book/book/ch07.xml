@@ -18,7 +18,7 @@
     <para>But the Subversion feature set doesn't stop at "common
       version control operations".</para>
 
-    <para>This chapter highlights some of Subversion's features which
+    <para>This chapter highlights some of Subversion's features that
       aren't quite so regularly used.  In it, we will discuss
       Subversion's property (or <quote>metadata</quote>) support, and
       how to modify Subversion's default behaviors by tweaking its
@@ -59,7 +59,7 @@
 
     <para>The Subversion <firstterm>configuration area</firstterm> is
       a two-tiered hierarchy of option names and their values.
-      Usually, this boils down to a special directory which contains
+      Usually, this boils down to a special directory that contains
       <firstterm>configuration files</firstterm> (the first tier),
       which are just text files in standard INI format (with
       <quote>sections</quote> providing the second tier).  These files
@@ -93,12 +93,12 @@
 
       <para>In addition to the per-user configuration area, Subversion
         also recognizes the existence of a system-wide configuration
-        area.  The gives system administrators the ability to
+        area.  This gives system administrators the ability to
         establish defaults for all users on a given machine.  Note
         that the system-wide configuration area does not alone dictate
         mandatory policy&mdash;the settings in the per-user
         configuration area override those in the system-wide one, and
-        command-line arguments supplied to <command>svn</command>
+        command-line arguments supplied to the <command>svn</command>
         program have the final word on behavior.  On Unix-like
         platforms, the system-wide configuration area is expected to be
         the <filename>/etc/subversion</filename> directory; on Windows
@@ -120,7 +120,7 @@
         To change a certain behavior, you need only to load the
         appropriate configuration file into a text editor, and modify
         the desired option value.  If at any time you wish to have the
-        default settings restore to one or more of the configuration
+        default settings restored to one or more of the configuration
         files, you can simply delete the file, and run some innocuous
         <command>svn</command> command, such as <command>svn
         --version</command>, and the missing file will be recreated in
@@ -246,7 +246,7 @@ REGEDIT4
       </example>
 
       <para>The previous example shows the contents of a
-        <filename>.reg</filename> file which contains some of most
+        <filename>.reg</filename> file which contains some of the most
         commonly used configuration options and their default values.
         Note the presence of both system-wide (for network
         proxy-related options) and per-user settings (editor programs
@@ -263,7 +263,7 @@ REGEDIT4
       <title>Configuration Options</title>
       
       <para>In this section, we will discuss the specific
-        run-time configuration options which are currently supported
+        run-time configuration options that are currently supported
         by Subversion.</para>
 
       <sect3 id="svn-ch-7-sect-1.3.1">
@@ -278,7 +278,7 @@ REGEDIT4
           this section are the names of other sections in the file;
           their values are <firstterm>globs</firstterm>&mdash;textual
           tokens which possibly contain wildcard
-          characters&mdash;which are compared against the hostnames of
+          characters&mdash;that are compared against the hostnames of
           the machine to which Subversion requests are sent.</para>
 
         <programlisting>
@@ -302,7 +302,7 @@ collabnet = svn.collab.net
           configuration settings.</para>
 
         <para>The <literal>global</literal> section contains the
-          settings which are meant for all of the servers not matched
+          settings that are meant for all of the servers not matched
           by one of the globs under the <literal>groups</literal>
           section.  The options available in this section are
           exactly the same as those valid for the other server
@@ -371,7 +371,7 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>neon-debug-mask</literal></term>
             <listitem>
-              <para>This is an integer mask which the underlying HTTP
+              <para>This is an integer mask that the underlying HTTP
                 library, Neon, uses for choosing what type of
                 debugging output to yield.  The default value is
                 <literal>0</literal>, which will silence all debugging
@@ -395,6 +395,8 @@ collabnet = svn.collab.net
                 which to tunnel SVN protocol requests.</para>
             </listitem>
           </varlistentry>
+	  <!-- ###TODO add entries for other options shown in .REG file
+	  example, e.g., ssl-trust-default-ca, etc. -->
         </variablelist>
 
       </sect3>
@@ -448,7 +450,7 @@ collabnet = svn.collab.net
                 This program is also used with the <command>svn
                 propedit</command> command&mdash;a temporary file is
                 populated with the current value of the property the
-                user wishes to edit, and the edits take places right
+                user wishes to edit, and the edits take place right
                 in the editor program (see <xref
                 linkend="svn-ch-7-sect-2" />).  This option's default
                 value is empty.  If the option is not set, Subversion
@@ -531,6 +533,8 @@ collabnet = svn.collab.net
                 />.</para>
             </listitem>
           </varlistentry>
+	  <!-- ###TODO add description of other options shown in example
+	   registry file, e.g., log-encoding, etc. -->
         </variablelist>
       </sect3>
     </sect2>
@@ -648,7 +652,7 @@ collabnet = svn.collab.net
         add or modify file and directory properties.  For properties
         with short, human-readable values, perhaps the simplest way to
         add a new property is to specify the property name and value
-        on the command-line of <command>propset</command>
+        on the command-line of the <command>propset</command>
         subcommand.</para>
 
       <screen>
@@ -715,7 +719,7 @@ $
         the <command>svn</command> program supplies two subcommands
         for displaying the names and values of properties stored on
         files and directories.  The <command>svn proplist</command>
-        command will list the names of properties which exist on a
+        command will list the names of properties that exist on a
         path.  Once you know the names of the properties on the node,
         you can request their values individually using <command>svn
         propget</command>.  This command will, given a path (or set of
@@ -732,7 +736,7 @@ $ svn propget copyright calc/button.c
 </screen>
 
       <para>There's even a variation of the
-        <command>proplist</command> command which will list both the
+        <command>proplist</command> command that will list both the
         name and value of all of the properties.  Simply supply the
         <option>--verbose</option> (<option>-v</option>) option.</para>
 
@@ -783,7 +787,7 @@ Properties on 'calc/button.c':
 $
 </screen>
 
-      <para>Now that you are now familiar with all of the
+      <para>Now that you are familiar with all of the
         property-related <command>svn</command> subcommands, let's see
         how property modifications affect the usual Subversion
         workflow.  As we mentioned earlier, file and directory
@@ -934,7 +938,7 @@ $
       <para>Subversion has no particular policy regarding
         properties&mdash;you can use them for any purpose.  Subversion
         asks only that you not use property names that begin with the
-        prefix <literal>svn:</literal>.  That's the namespace that its
+        prefix <literal>svn:</literal>.  That's the namespace that it
         sets aside for its own use.  In fact, Subversion defines
         certain properties that have magical effects on the files and
         directories to which they are attached.  In this section,
@@ -948,7 +952,7 @@ $
           to control a versioned file's filesystem-level execute
           permission bit in a semi-automated way.  This property has
           no defined values&mdash;its mere presence indicates a desire
-          the execute permission bit to be kept enabled by Subversion.
+          that the execute permission bit be kept enabled by Subversion.
           Removing this property will restore full control of the
           execute bit back to the operating system.</para>
 
@@ -1031,7 +1035,7 @@ $
         <para>Finally, if the <literal>svn:mime-type</literal>
           property is set, then the Subversion Apache module will use
           its value to populate the <literal>Content-type:</literal>
-          HTTP header when responding to GET request.  This gives a
+          HTTP header when responding to GET requests.  This gives a
           crucial clue about how to display a file when perusing
           your repository with a web browser.</para>
 
@@ -1093,7 +1097,7 @@ $
             is very similar in syntax and function to the CVS
             <filename>.cvsignore</filename> file.  In fact, if you are
             migrating a CVS working copy to Subversion, you can
-            directly migrate the ignore patterns by the
+            directly migrate the ignore patterns by using the
             <filename>.cvsignore</filename> file as input file to the
             <command>svn propset</command> command:</para>
        
@@ -1104,7 +1108,7 @@ $
 </screen>        
 
           <para>There are, however, some differences in the ways that
-            CVS and Subversion handle ignore patters.  The two systems
+            CVS and Subversion handle ignore patterns.  The two systems
             use the ignore patterns at some different times, and there
             are slight discrepancies in what the ignore patterns apply
             to.  Also, Subversion does not recognize the use of the
@@ -1116,7 +1120,7 @@ $
         <para>For this purpose, the <literal>svn:ignore</literal>
           property is the solution.  Its value is a multi-line
           collection of file patterns, one pattern per line.  The
-          property is set on the directory in which your wish the
+          property is set on the directory in which you wish the
           patterns to be applied.
           <footnote>
             <para>The patterns are strictly for that
@@ -1282,7 +1286,7 @@ I      calc/debug_log.3.gz
           <varlistentry>
             <term><literal>Id</literal></term>
             <listitem>
-              <para>This keyword is compressed combination of the
+              <para>This keyword is a compressed combination of the
                 other keywords.  Its substitution looks something like
                 <literal>$Id: calc.c 148 2002-07-28 21:30:43Z sally
                 $</literal>, and is interpreted to mean that the file
@@ -1397,9 +1401,9 @@ Cumulus clouds are appearing more frequently as summer approaches.
 
         <para>Unless otherwise noted using a versioned file's
           <literal>svn:mime-type</literal> property, Subversion
-          assumes that file contains human-readable data.  Generally
+          assumes the file contains human-readable data.  Generally
           speaking, Subversion only uses this knowledge to determine
-          if contextual differences reports for that file are
+          if contextual difference reports for that file are
           possible.  Otherwise, to Subversion, bytes are bytes.</para>
         
         <para>This means that by default, Subversion doesn't pay any
@@ -1459,7 +1463,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
           that bug really fixed?  On what line was a syntax error
           introduced?</para>
 
-        <para>The solution this problem is the
+        <para>The solution to this problem is the
           <literal>svn:eol-style</literal> property.  When this
           property is set to a valid value, Subversion uses it to
           determine what special processing to perform on the file so
@@ -1681,7 +1685,7 @@ Fetching external item into calc/third-party/skins
 
     <para>The solution to this problem is to use <firstterm>vendor
       branches</firstterm>.  A vendor branch is a directory tree in
-      your own version control system which contains information
+      your own version control system that contains information
       provided by a third-party entity, or vendor.  Each version of
       the vendor's data that you decide to absorb into your project is
       called a <firstterm>vendor drop</firstterm>.</para> 
@@ -1816,7 +1820,7 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-4.2">
-      <title><command>svn-load-dirs.pl</command></title>
+      <title><command>svn_load_dirs.pl</command></title>
 
       <para>Vendor drops that contain more than a few deletes,
         additions and moves complicate the process of upgrading to
@@ -1859,7 +1863,7 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
       <para><command>svn_load_dirs.pl</command> takes three mandatory
         arguments.  The first argument is the URL to the base
         Subversion directory to work in.  This argument is followed by
-        the URL&mdash;relative the first argument&mdash;into which the
+        the URL&mdash;relative to the first argument&mdash;into which the
         current vendor drop will be imported.  Finally, the third
         argument is the local directory to import.  Using our previous
         example, a typical run of <command>svn_load_dirs.pl</command>
@@ -1907,7 +1911,7 @@ $ svn_load_dirs.pl -t libcomplex-1.1                                   \
         repository.  This configuration file is specified to
         <command>svn_load_dirs.pl</command> using the
         <option>-p</option> command-line option.  Each line of the
-        configuration files is a whitespace-delimited set of two or
+        configuration file is a whitespace-delimited set of two or
         four values: a Perl-style regular expression to match the
         added path against, a control keyword (either
         <literal>break</literal> or <literal>cont</literal>), and then
