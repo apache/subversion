@@ -215,9 +215,9 @@
             <literal>REPORT</literal>, which allows the client and
             server to perform customized data exchanges.  The client
             sends a <literal>REPORT</literal> request with a
-            properly-labeled xml body full of custom data; assuming
+            properly-labeled XML body full of custom data; assuming
             the server understands the specific report-type, it
-            responds with an equally custom xml body.  This technique
+            responds with an equally custom XML body.  This technique
             is very similar to XML-RPC.</para>
           </listitem>
         </varlistentry>

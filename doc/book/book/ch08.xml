@@ -424,7 +424,7 @@ $ svn log -r 1729:{2/17/02}
         <varlistentry>
           <term><option>--xml</option></term>
           <listitem>
-            <para>Prints output in xml format.</para>
+            <para>Prints output in XML format.</para>
           </listitem>
         </varlistentry>
         
@@ -997,6 +997,7 @@ Committed revision 7.
 
           <screen>
 $ svn copy foo.txt bar.txt
+A         bar.txt
 $ svn status
 A  +   bar.txt
           </screen>
