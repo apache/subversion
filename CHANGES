@@ -1,4 +1,4 @@
-Version 0.24.2 (released 18 June 2003, revision XXXX, branches/release-0.24.2)
+Version 0.24.2 (released 18 June 2003, revision 6284, branches/release-0.24.2)
 
  User-visible changes:
  * fix 'svn export' potential segfault
