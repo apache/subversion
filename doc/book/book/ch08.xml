@@ -3522,7 +3522,7 @@ Updated to revision 30.
       <refentry>
         <refnamediv>
           <refname>svnadmin list-unused-dblogs</refname>
-          <refpurpose>Ask Berkeley DB which logfiles can be safely
+          <refpurpose>Ask Berkeley DB which log files can be safely
           deleted.</refpurpose>
         </refnamediv>
         <refsect1>
@@ -3534,7 +3534,7 @@ Updated to revision 30.
 
             <para>Berkeley DB creates logs of all changes to the
             repository, which allow it to recover in the face of
-            catastrophe.  Over time, the logfiles accumulate, although
+            catastrophe.  Over time, the log files accumulate, although
             most are no longer used and can be deleted to reclaim disk
             space. See <xref linkend="svn-ch-5-sect-3.1.4"/> for more
             information. </para>
@@ -3543,7 +3543,7 @@ Updated to revision 30.
         <refsect1>
           <title>Examples</title>
           
-          <para>Remove all unused logfiles from a repository:</para>
+          <para>Remove all unused log files from a repository:</para>
 
         <screen>
 $ svnadmin list-unused-dblogs /path/to/repos

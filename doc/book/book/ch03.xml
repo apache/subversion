@@ -2009,12 +2009,12 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
       <para>When Subversion modifies your working copy (or any
         information within <filename>.svn</filename>), it tries to do
         so as safely as possible.  Before changing anything, it writes
-        its intentions to a logfile, executes the commands in the
-        logfile, then removes the logfile (this is similar in design
+        its intentions to a log file, executes the commands in the
+        log file, then removes the log file (this is similar in design
         to a journaled filesystem).  If a Subversion operation is
         interrupted (if you hit Control-C, or if the machine crashes,
-        for example), the logfiles remain on disk.  By re-executing
-        the logfiles, Subversion can complete the previously started
+        for example), the log files remain on disk.  By re-executing
+        the log files, Subversion can complete the previously started
         operation, and your working copy can get itself back into a
         consistent state.</para>
 
