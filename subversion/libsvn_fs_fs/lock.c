@@ -543,7 +543,10 @@ get_lock (svn_lock_t **lock_p,
          been filed to track this.
       else
         {
-          struct expire_lock_baton elb = { fs, digest_path, lock };
+          struct expire_lock_baton elb;
+          elb.fs = fs;
+          elb.digest_path = digest_path;
+          elb.lock = lock;
           SVN_ERR (svn_fs_fs__with_write_lock (fs, expire_lock, &elb, pool));
         }
       */

@@ -9,13 +9,6 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r13954
-    Remove GCCisms.
-    Justification:
-      We are C89, nothing else.
-    Votes:
-      +1: lundblad, maxb, epg
-
   * r13961, r13981
     Make Ruby bindings install to the correct location.
     Justification:
