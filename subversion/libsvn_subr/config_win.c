@@ -35,6 +35,7 @@
 
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_utf.h"
 
 svn_error_t *
