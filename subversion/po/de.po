@@ -163,7 +163,7 @@ msgstr "Projektarchiv: %s\n"
 #: clients/cmdline/info-cmd.c:76
 #, c-format
 msgid "Repository UUID: %s\n"
-msgstr "Projektarchiv UUID: %s\n"
+msgstr "UUID des Projektarchivs: %s\n"
 
 #: clients/cmdline/info-cmd.c:80
 #, c-format
@@ -1924,7 +1924,7 @@ msgstr "Versuch, mit nicht leerem Abwicklungsstapel zu entsperren"
 
 #: include/svn_error_codes.h:290
 msgid "Attempted to lock an already-locked dir"
-msgstr "Versuch, ein bereits gesperrtes Verzeichnis zu sperren"
+msgstr "Versuch, ein bereits gesperrtes Verzeichnis erneut zu sperren"
 
 #: include/svn_error_codes.h:294
 msgid "Working copy not locked"
@@ -2036,7 +2036,7 @@ msgstr "Verzeichnis des Dateisystems hat keinen solchen Eintrag"
 
 #: include/svn_error_codes.h:404
 msgid "Filesystem has no such representation"
-msgstr "Dateisystem hat keine solche Repräsentation"
+msgstr "Dateisystem hat keine solche Darstellung"
 
 #: include/svn_error_codes.h:408
 msgid "Filesystem has no such string"
@@ -2060,7 +2060,7 @@ msgstr "Dateisystem hat keine solche Knoten-Rev-Id"
 
 #: include/svn_error_codes.h:428
 msgid "String does not represent a node or node-rev-id"
-msgstr "String repräsentiert keinen Knoten oder Knoten-Rev-Id"
+msgstr "Zeichenkette repräsentiert keinen Knoten oder Knoten-Rev-Id"
 
 #: include/svn_error_codes.h:432
 msgid "Name does not refer to a filesystem directory"
@@ -2100,11 +2100,11 @@ msgstr "Konflikt beim Zusammenführen während der Übertragung"
 
 #: include/svn_error_codes.h:468
 msgid "A representation vanished or changed between reads"
-msgstr "Eine Repräsentation ist zwischen Lesezugriffen verschwunden oder hat sich verändert"
+msgstr "Eine Darstellung ist zwischen Lesezugriffen verschwunden oder hat sich verändert"
 
 #: include/svn_error_codes.h:472
 msgid "Tried to change an immutable representation"
-msgstr "Versuch, eine nicht veränderliche Repräsentation zu ändern"
+msgstr "Versuch, eine nicht veränderliche Darstellung zu ändern"
 
 #: include/svn_error_codes.h:476
 msgid "Malformed skeleton data"
@@ -3136,7 +3136,7 @@ msgstr "Korrupte Revision für Knoten '%s' in Dateisystem '%s'"
 #: libsvn_fs_fs/err.c:84
 #, c-format
 msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-msgstr "Korrupter Klondatensatz für '%s' in Transaktion '%s' in Dateisystem '%s'"
+msgstr "Korrupter Klondatensatz für '%s' in Transaktion '%s' des Dateisystems '%s'"
 
 #: libsvn_fs_fs/err.c:93
 #, c-format
@@ -3237,7 +3237,7 @@ msgstr "Versuch, in eine Nicht-Transaktion zu schreiben"
 
 #: libsvn_fs_fs/fs_fs.c:863
 msgid "Malformed representation header"
-msgstr "Fehlerhaft Repräsentationskopf."
+msgstr "Fehlerhafter Darstellungskopf."
 
 #: libsvn_fs_fs/fs_fs.c:887
 msgid "Missing node-id in node-rev"
@@ -4497,8 +4497,8 @@ msgid ""
 "     actual:  %s\n"
 msgstr ""
 "Prüfsummenfehler ist Anzeichen für beschädigte Textbasis: '%s'\n"
-"      erwartet:  %s\n"
-"   tatsächlich:  %s\n"
+"   Erwartet:    %s\n"
+"   Tatsächlich: %s\n"
 
 #: libsvn_wc/translate.c:131
 #, c-format
