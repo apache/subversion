@@ -262,6 +262,9 @@ parse_content_block (svn_stream_t *stream,
             }
         }
       
+      if (text_stream != NULL)
+        SVN_ERR (svn_stream_close (text_stream));
+
     } /* done slurping all the fulltext */
     
   /* Everything good, mission complete. */
@@ -639,8 +642,12 @@ static svn_error_t *
 set_fulltext (svn_stream_t **stream,
               void *node_baton)
 {
-  *stream = NULL;
-  return SVN_NO_ERROR;
+  struct node_baton *nb = node_baton;
+  struct revision_baton *rb = nb->rb;
+
+  return svn_fs_apply_text (stream,
+                            rb->txn_root, nb->path,
+                            nb->pool);
 }
 
 
