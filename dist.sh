@@ -4,7 +4,7 @@
 # How to build a Subversion distribution tarball:
 #
 # Run this script in the top-level of a configured working copy that
-# has apr/ and neon/ subdirs, and you'll end up with
+# has apr, apr-util, and neon subdirs, and you'll end up with
 # subversion-rXXX.tar.gz in that top-level directory.
 #
 # Unless specified otherwise (with a single REVISION argument to this
@@ -16,7 +16,7 @@
 #   - the documentation will be produced by running "make doc" 
 #     on your working copy's revisions of the doc master files, and
 #
-#   - since the APR tree included is basically copied from your working 
+#   - since the APR and APRUTIL trees are basically copied from your working 
 #     copy, 
 #
 # it's probably simplest if you just make sure your working copy is at
@@ -82,20 +82,29 @@ echo "Removed and recreated ${DIST_SANDBOX}"
 ### Export the dist tree, clean it up.
 echo "Checking out revision ${VERSION} of Subversion into sandbox..."
 (cd ${DIST_SANDBOX} && \
- svn co -r ${VERSION} http://svn.collab.net/repos/svn/trunk \
+ svn co -q -r ${VERSION} http://svn.collab.net/repos/svn/trunk \
         -d ${DISTNAME} --username none --password none)
 echo "Removing all .svn/ dirs from the checkout..."
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svn -print`
 
-### Ship with (relatively) clean APR and neon working copies
+### Ship with (relatively) clean APR, APRUTIL, and neon working copies
 ### inside the tarball, just to make people's lives easier.
 echo "Copying apr into sandbox, making clean..."
 cp -r apr ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make distclean)
+(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make extraclean)
 # Defang the APR working copy.
 echo "Removing all CVS/ and .cvsignore files from apr..."
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
+
+echo "Copying apr-util into sandbox, making clean..."
+cp -r apr-util ${DIST_SANDBOX}/${DISTNAME}
+(cd ${DIST_SANDBOX}/${DISTNAME}/apr-util && make extraclean)
+# Defang the APRUTIL working copy.
+echo "Removing all CVS/ and .cvsignore files from apr-util..."
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name CVS -type d -print`
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name .cvsignore -print`
+
 # Clean most of neon.
 echo "Coping neon into sandbox, making clean..."
 cp -r neon ${DIST_SANDBOX}/${DISTNAME}
@@ -106,6 +115,14 @@ cp -r neon ${DIST_SANDBOX}/${DISTNAME}
 # something to do with @NEONOBJS@ in neon/src/Makefile.in?
 echo "Cleaning *.o in neon..."
 rm -f ${DIST_SANDBOX}/${DISTNAME}/neon/src/*.o
+
+# Remove any config.nice files that may have been left behind. They aren't
+# cleaned by anything.
+files="`find ${DIST_SANDBOX}/${DISTNAME} -name config.nice -print`"
+if test -n "$files"; then
+  echo "Removing: $files"
+  rm -rf $files
+fi
 
 ### Run autogen.sh in the dist, so we ship with a configure script.
 # First make sure autogen.sh is executable, because, as Mike Pilato
@@ -132,7 +149,7 @@ done
 cat > ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS <<EOF
 The old CVS ChangeLog is kept at 
 
-     http://subversion.tigris.org
+     http://subversion.tigris.org/
 
 If you want to see changes since Subversion went self-hosting,
 you probably want to use the "svn log" command -- and if it 
@@ -141,7 +158,7 @@ EOF
 
 ### Make the tarball.
 echo "Rolling ${DISTNAME}.tar.gz ..."
-(cd ${DIST_SANDBOX} && tar zcvpf ${DISTNAME}.tar.gz ${DISTNAME})
+(cd ${DIST_SANDBOX} && tar zcpf ${DISTNAME}.tar.gz ${DISTNAME})
 
 ### Copy it upstairs and clean up.
 echo "Copying tarball out, removing sandbox..."
