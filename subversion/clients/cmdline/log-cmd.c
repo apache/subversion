@@ -75,17 +75,31 @@ num_lines (const char *msg)
 }
 
 
+/* Baton for log_message_receiver(). */
+struct log_receiver_baton
+{
+  svn_boolean_t quiet;  /* Don't print log message body nor line count. */
+};
+
+
 /* The separator between log messages. */
 #define SEP_STRING \
   "------------------------------------------------------------------------\n"
 
 
-/* This implements `svn_log_message_receiver_t', printing the logs in
- * a human-readable and machine-parseable format.  BATON is ignored.
+/* Implement `svn_log_message_receiver_t', printing the logs in
+ * a human-readable and machine-parseable format.  
  *
- * Here is an example of the output:
+ * BATON is of type `struct log_receiver_baton'.
  *
- * $ svn log -r 1847:1846
+ * First, print a header line.  Then if CHANGED_PATHS is non-null,
+ * print all affected paths in a list headed "Changed paths:\n",
+ * immediately following the header line.  Then print a newline
+ * followed by the message body, unless BATON->quiet is true.
+ *
+ * Here are some examples of the output:
+ *
+ * $ svn log -r1847:1846
  * ------------------------------------------------------------------------
  * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26 | 7 lines
  * 
@@ -102,7 +116,53 @@ num_lines (const char *msg)
  * imagine an example log message here
  * ------------------------------------------------------------------------
  * 
- * And so on.
+ * Or:
+ *
+ * $ svn log -r1847:1846 -v
+ * ------------------------------------------------------------------------
+ * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26 | 7 lines
+ * Changed paths:
+ *    M /trunk/subversion/libsvn_repos/delta.c
+ * 
+ * Fix for Issue #694.
+ * 
+ * * subversion/libsvn_repos/delta.c
+ *   (delta_files): Rework the logic in this function to only call
+ * send_text_deltas if there are deltas to send, and within that case,
+ * only use a real delta stream if the caller wants real text deltas.
+ * 
+ * ------------------------------------------------------------------------
+ * rev 1846:  whoever | Wed 1 May 2002 15:23:41 | 1 line
+ * Changed paths:
+ *    M /trunk/notes/fs_dumprestore.txt
+ *    M /trunk/subversion/libsvn_repos/dump.c
+ *   
+ * imagine an example log message here
+ * ------------------------------------------------------------------------
+ * 
+ * Or:
+ *
+ * $ svn log -r1847:1846 -q
+ * ------------------------------------------------------------------------
+ * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26
+ * ------------------------------------------------------------------------
+ * rev 1846:  whoever | Wed 1 May 2002 15:23:41
+ * ------------------------------------------------------------------------
+ *
+ * Or:
+ *
+ * $ svn log -r1847:1846 -qv
+ * ------------------------------------------------------------------------
+ * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26
+ * Changed paths:
+ *    M /trunk/subversion/libsvn_repos/delta.c
+ * ------------------------------------------------------------------------
+ * rev 1846:  whoever | Wed 1 May 2002 15:23:41
+ * Changed paths:
+ *    M /trunk/notes/fs_dumprestore.txt
+ *    M /trunk/subversion/libsvn_repos/dump.c
+ * ------------------------------------------------------------------------
+ *
  */
 static svn_error_t *
 log_message_receiver (void *baton,
@@ -113,6 +173,7 @@ log_message_receiver (void *baton,
                       const char *msg,
                       apr_pool_t *pool)
 {
+  struct log_receiver_baton *lb = baton;
   const char *author_native, *date_native, *msg_native;
   svn_error_t *err;
 
@@ -154,21 +215,31 @@ log_message_receiver (void *baton,
   else if (err)
     return err;
 
-  if (msg == NULL)
-    msg = "";
+  if (! lb->quiet)
+    {
+      if (msg == NULL)
+        msg = "";
 
-  {
-    /* Convert log message from UTF8/LF to native locale and eol-style. */
-    svn_string_t *logmsg = svn_string_create (msg, pool);
-    svn_subst_detranslate_string (&logmsg, logmsg, pool);
-    msg_native = logmsg->data;
-  }
+      {
+        /* Convert log message from UTF8/LF to native locale and eol-style. */
+        svn_string_t *logmsg = svn_string_create (msg, pool);
+        svn_subst_detranslate_string (&logmsg, logmsg, pool);
+        msg_native = logmsg->data;
+      }
+    }
 
   printf (SEP_STRING);
 
-  lines = num_lines (msg_native);
-  printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
-          rev, author_native, date_native, lines, (lines > 1) ? "s" : "");
+  printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s",
+          rev, author_native, date_native);
+
+  if (! lb->quiet)
+    {
+      lines = num_lines (msg_native);
+      printf (" | %d line%s", lines, (lines > 1) ? "s" : "");
+    }
+
+  printf ("\n");
 
   if (changed_paths)
     {
@@ -179,17 +250,6 @@ log_message_receiver (void *baton,
       sorted_paths = apr_hash_sorted_keys (changed_paths,
                                            svn_sort_compare_items_as_paths, 
                                            pool);
-
-      /* Note: This is the only place we need a pool, and therefore
-         one might think we could just get it via
-         apr_hash_pool_get().  However, that accessor will never be
-         able to qualify its hash table parameter with `const',
-         because it is a read/write accessor defined by
-         APR_POOL_DECLARE_ACCESSOR().  Since I still hold out hopes of
-         one day being able to constify `changed_paths' -- only some
-         bizarre facts about apr_hash_first() currently prevent it --
-         might as well just have the baton w/ pool ready right now, so
-         it doesn't become an issue later. */
 
       printf ("Changed paths:\n");
       for (i = 0; i < sorted_paths->nelts; i++)
@@ -216,8 +276,12 @@ log_message_receiver (void *baton,
           printf ("   %c %s%s\n", log_item->action, path_native, copy_data);
         }
     }
-  printf ("\n");  /* A blank line always precedes the log message. */
-  printf ("%s\n", msg_native);
+
+  if (! lb->quiet)
+    {
+      printf ("\n");  /* A blank line always precedes the log message. */
+      printf ("%s\n", msg_native);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -381,6 +445,7 @@ svn_cl__log (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
+  struct log_receiver_baton lb;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -467,6 +532,15 @@ svn_cl__log (apr_getopt_t *os,
     }
   else  /* default output format */
     {
+      lb.quiet = opt_state->quiet;
+
+      /* ### Ideally, we'd also pass the `quiet' flag through to the
+       * repository code, so we wouldn't waste bandwith sending the
+       * log message bodies back only to have the client ignore them.
+       * However, that's an implementation detail; as far as the user
+       * is concerned, the result of 'svn log --quiet' is the same
+       * either way.
+       */
       SVN_ERR (svn_client_log (auth_baton,
                                targets,
                                &(opt_state->start_revision),
@@ -474,7 +548,7 @@ svn_cl__log (apr_getopt_t *os,
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver,
-                               NULL,  /* no baton necessary */
+                               &lb,
                                pool));
 
       if (! opt_state->incremental)

@@ -262,7 +262,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Print the log messages for local PATHs, or for PATHs under\n"
     "  URL, if URL is given.  If URL is given by itself, then print log\n"
     "  messages for everything under it.  With -v, also print all affected\n"
-    "  paths with each log message.\n"
+    "  paths with each log message.  With -q, don't print the log message\n"
+    "  body itself (note that this is compatible with -v).\n"
     "\n"
     "  Each log message is printed just once, even if more than one of the\n"
     "  affected paths for that revision were explicitly requested.  Logs\n"
@@ -273,7 +274,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    svn log foo.c\n"
     "    svn log http://www.example.com/repo/project/foo.c\n"
     "    svn log http://www.example.com/repo/project foo.c bar.c\n",
-    {'r', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
+    {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
      svn_cl__non_interactive_opt, svn_cl__strict_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt} },
