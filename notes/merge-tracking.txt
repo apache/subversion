@@ -16,14 +16,13 @@ to document these problems here so we don't forget them.]
 
 A.  Solve the "repeated merge" problem at the level of whole changesets.
 
-    * Track which changesets have been applied where, so users can
+      Track which changesets have been applied where, so users can
       repeatedly merge branchA to branchB without having to remember
-      the last range of revisions ported.
-
-    * Track any "changeset cherry-picking" done by users, so we don't
+      the last range of revisions ported.  This would also track
+      "changeset cherry-picking" done by users, so we don't
       accidentally re-merge changesets that are already applied.
 
-    * This is the problem that svk and arch claim to have already
+      This is the problem that svk and arch claim to have already
       solved, what they're calling "star-merge".  Need to investigate
       how they're doing it, might be a good precedent to imitate.
 
@@ -37,6 +36,11 @@ B.  Make 'hunks' of contextually-merged text sensitive to ancestry.
       the merging of particular lines of development.  Jack Repenning
       has a great example of this from Clearcase, which we can draw in
       this space.  See diagram at the bottom for an explanation.
+
+      See ../www/variance-adjusted-patching.html for an extended
+      discussion of how to implement this by composing diffs; see
+      svn_diff_diff4() for an implementation of same.  We may be
+      closer to ancestry-sensitive merging than we think.
 
 C.  'svn merge' needs to track renames better.  
 
@@ -54,6 +58,9 @@ C.  'svn merge' needs to track renames better.
      change and (probably) a libsvn_wc rewrite.
 
      It's not clear what it would take to solve problem #1.
+
+     See http://www.contactor.se/~dast/svn/archive-2004-07/0084.shtml
+     about our rename woes and the relationship to merge tracking.
 
 
 ---------------------------------------------
