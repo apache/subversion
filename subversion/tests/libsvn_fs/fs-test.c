@@ -5486,6 +5486,76 @@ create_within_copy (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+/* Test the skip delta support by commiting so many changes to a file
+ * that some of its older revisions become reachable by skip deltas,
+ * then try retrieving those revisions.
+ */
+static svn_error_t *
+skip_deltas (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  apr_pool_t *subpool;
+  svn_revnum_t youngest_rev = 0;
+  const char *one_line = "This is a line in file 'f'.\n";
+  svn_stringbuf_t *f = svn_stringbuf_create (one_line, pool); 
+
+  *msg = "test skip deltas";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-skip-deltas", pool));
+
+  /* Create the file. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "f", pool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Now, commit changes to the file 128 times. */
+  subpool = svn_pool_create (pool);
+  while (youngest_rev <= 128)
+    {
+      /* Append another line to the ever-growing file contents. */
+      svn_stringbuf_appendcstr (f, one_line); 
+
+      /* Commit the new contents. */
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+      SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, subpool));
+      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+      SVN_ERR (svn_fs_close_txn (txn));
+
+      svn_pool_clear (subpool);
+    }
+
+  /* Now go back and check revision 1. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, pool));
+  SVN_ERR (svn_test__get_file_contents (rev_root, "f", &f, pool));
+  if (strcmp (one_line, f->data) != 0)
+    {
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, NULL,
+         "wrong contents for revision 1 of file 'f'.\n"
+         "Expected:\n"
+         "   '%s'\n"
+         "Got:\n"
+         "   '%s'\n",
+         one_line, f->data);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5529,5 +5599,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (canonicalize_abspath),
     SVN_TEST_PASS (branch_test),
     SVN_TEST_PASS (verify_checksum),
+    SVN_TEST_PASS (skip_deltas),
     SVN_TEST_NULL
   };

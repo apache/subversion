@@ -1387,91 +1387,22 @@ struct deltify_committed_args
 };
 
 
-/* Redeltify predecessor node-revisions of the one we added.  The idea
-   is to require at most 2*lg(N) deltas to be applied to get to any
-   node-revision in a chain of N predecessors.  We do this using a
-   technique derived from skip lists:
-
-     Always redeltify the immediate parent
-     If the number of predecessors is divisible by 2, deltify
-      the revision two predecessors back
-     If the number of predecessors is divisible by 4, deltify
-      the revision four predecessors back
-     etc.
-
-   That's the theory, anyway.  Unfortunately, if we strictly follow
-   that theory we get a bunch of overhead up front and no great
-   benefit until the number of predecessors gets large.  So, stop at
-   redeltifying the parent if the number of predecessors is less than
-   32, and also skip the second level (redeltifying two predecessors
-   back), since that doesn't help much.  Also, don't redeltify the
-   oldest node-revision; it's potentially expensive and doesn't help
-   retrieve any other revision.  (Retrieving the oldest node-revision
-   will still be fast, just not as blindingly so.)  */
-static svn_error_t *
-txn_deltify (dag_node_t *node, 
-             int pred_count, 
-             int props_only, 
-             trail_t *trail)
-{
-  int nlevels, lev, count;
-  dag_node_t *prednode;
-  svn_fs_t *fs;
-
-  /* Decide how many predecessors to redeltify.  To save overhead,
-     don't redeltify anything but the immediate parent if there are
-     less than 32 predecessors. */
-  nlevels = 1;
-  if (pred_count >= 32)
-    {
-      while (pred_count % 2 == 0)
-        {
-          pred_count /= 2;
-          nlevels++;
-        }
-
-      /* Don't redeltify the oldest revision. */
-      if (1 << (nlevels - 1) == pred_count)
-        nlevels--;
-    }
-
-  /* Redeltify the desired number of predecessors. */
-  count = 0;
-  prednode = node;
-  fs = svn_fs__dag_get_fs (node);
-  for (lev = 0; lev < nlevels; lev++)
-    {
-      /* To save overhead, skip the second level (that is, never
-         redeltify the node-revision two predecessors back). */
-      if (lev == 1)
-        continue;
-
-      /* Note that COUNT is not reset between levels, and neither is
-         PREDNODE; we just keep counting from where we were up to
-         where we're supposed to get. */
-      while (count < (1 << lev))
-        {
-          const svn_fs_id_t *pred_id;
-
-          SVN_ERR (svn_fs__dag_get_predecessor_id (&pred_id, prednode, trail));
-          if (pred_id == NULL)
-            return svn_error_create (SVN_ERR_FS_CORRUPT, 0,
-                                     "faulty predecessor count");
-          SVN_ERR (svn_fs__dag_get_node (&prednode, fs, pred_id, trail));
-          count++;
-        }
-      SVN_ERR (svn_fs__dag_deltify (prednode, node, props_only, trail));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 struct txn_deltify_args
 {
   svn_fs_t *fs;
-  svn_fs_root_t *root;
-  const char *path;
+
+  /* The target is what we're deltifying. */
+  const svn_fs_id_t *tgt_id;
+
+  /* The base is what we're deltifying against.  It's not necessarily
+     the "next" revision of the node; skip deltas mean we sometimes
+     deltify against a successor many generations away. */
+  const svn_fs_id_t *base_id;
+
+  /* We only deltify props for directories.
+     ### Didn't we try removing this horrid little optimization once?
+     ### What was the result?  I would have thought that skip deltas
+     ### mean directory undeltification is cheap enough now. */
   int is_dir;
 };
 
@@ -1480,22 +1411,68 @@ static svn_error_t *
 txn_body_txn_deltify (void *baton, trail_t *trail)
 {
   struct txn_deltify_args *args = baton;
-  svn_fs__node_revision_t *noderev;
-  dag_node_t *node;
+  dag_node_t *tgt_node, *base_node;
 
-  /* Get the node and node revision. */
-  SVN_ERR (get_dag (&node, args->root, args->path, trail));
-  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, args->fs, 
-                                          svn_fs__dag_get_id (node), trail));
-
-  /* If this node has a predecesser, deltify it. */
-  if (noderev->predecessor_id)
-    SVN_ERR (txn_deltify (node, noderev->predecessor_count, 
-                          args->is_dir, trail));
+  SVN_ERR (svn_fs__dag_get_node (&tgt_node, args->fs, args->tgt_id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&base_node, args->fs, args->base_id, trail));
+  SVN_ERR (svn_fs__dag_deltify (tgt_node, base_node, args->is_dir, trail));
 
   return SVN_NO_ERROR;
 }
 
+
+struct txn_pred_count_args
+{
+  svn_fs_t *fs;
+  const svn_fs_id_t *id;
+  int pred_count;
+};
+
+
+static svn_error_t *
+txn_body_pred_count (void *baton, trail_t *trail)
+{
+  svn_fs__node_revision_t *noderev;
+  struct txn_pred_count_args *args = baton;
+
+  SVN_ERR (svn_fs__bdb_get_node_revision
+           (&noderev, args->fs, args->id, trail));
+
+  args->pred_count = noderev->predecessor_count;
+
+  return SVN_NO_ERROR;
+}
+
+
+struct txn_pred_id_args
+{
+  svn_fs_t *fs;
+
+  /* The node id of for we want the predecessor. */
+  const svn_fs_id_t *id;
+
+  /* The returned predecessor id. */
+  const svn_fs_id_t *pred_id;
+
+  /* The pool in which to allocate pred_id. */
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+txn_body_pred_id (void *baton, trail_t *trail)
+{
+  svn_fs__node_revision_t *nr;
+  struct txn_pred_id_args *args = baton;
+
+  SVN_ERR (svn_fs__bdb_get_node_revision (&nr, args->fs, args->id, trail));
+  if (nr->predecessor_id)
+    args->pred_id = svn_fs__id_copy (nr->predecessor_id, args->pool);
+  else
+    args->pred_id = NULL;
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
@@ -1549,13 +1526,103 @@ deltify_mutable (svn_fs_t *fs,
 
       svn_pool_destroy (subpool);
     }
+  
+  /* Finally, deltify old data against this node. */
+  {
+    /* Redeltify predecessor node-revisions of the one we added.  The
+       idea is to require at most 2*lg(N) deltas to be applied to get
+       to any node-revision in a chain of N predecessors.  We do this
+       using a technique derived from skip lists:
+       
+          - Always redeltify the immediate parent
 
-  /* Finally, do the deltification. */
-  td_args.fs = fs;
-  td_args.root = root;
-  td_args.path = path;
-  td_args.is_dir = is_dir;
-  SVN_ERR (svn_fs__retry (fs, txn_body_txn_deltify, &td_args, 1, pool));
+          - If the number of predecessors is divisible by 2, 
+              redeltify the revision two predecessors back
+
+          - If the number of predecessors is divisible by 4,
+              redeltify the revision four predecessors back
+
+       ... and so on.
+
+       That's the theory, anyway.  Unfortunately, if we strictly
+       follow that theory we get a bunch of overhead up front and no
+       great benefit until the number of predecessors gets large.  So,
+       stop at redeltifying the parent if the number of predecessors
+       is less than 32, and also skip the second level (redeltifying
+       two predecessors back), since that doesn't help much.  Also,
+       don't redeltify the oldest node-revision; it's potentially
+       expensive and doesn't help retrieve any other revision.
+       (Retrieving the oldest node-revision will still be fast, just
+       not as blindingly so.)  */
+
+    int pred_count, nlevels, lev, count;
+    const svn_fs_id_t *pred_id;
+    struct txn_pred_count_args tpc_args;
+    
+    tpc_args.fs = fs;
+    tpc_args.id = id;
+    SVN_ERR (svn_fs__retry (fs, txn_body_pred_count, &tpc_args, 1, pool));
+    pred_count = tpc_args.pred_count;
+
+    /* If nothing to deltify, then we're done. */
+    if (pred_count == 0)
+      return SVN_NO_ERROR;
+
+    /* Decide how many predecessors to redeltify.  To save overhead,
+       don't redeltify anything but the immediate predecessor if there
+       are less than 32 predecessors. */
+    nlevels = 1;
+    if (pred_count >= 32)
+      {
+        while (pred_count % 2 == 0)
+          {
+            pred_count /= 2;
+            nlevels++;
+          }
+        
+        /* Don't redeltify the oldest revision. */
+        if (1 << (nlevels - 1) == pred_count)
+          nlevels--;
+      }
+    
+    /* Redeltify the desired number of predecessors. */
+    count = 0;
+    pred_id = id;
+    for (lev = 0; lev < nlevels; lev++)
+      {
+        /* To save overhead, skip the second level (that is, never
+           redeltify the node-revision two predecessors back). */
+        if (lev == 1)
+          continue;
+        
+        /* Note that COUNT is not reset between levels, and neither is
+           PREDNODE; we just keep counting from where we were up to
+           where we're supposed to get. */
+        while (count < (1 << lev))
+          {
+            struct txn_pred_id_args tpi_args;
+
+            tpi_args.fs = fs;
+            tpi_args.id = pred_id;
+            tpi_args.pool = pool;
+            SVN_ERR (svn_fs__retry (fs, txn_body_pred_id, &tpi_args, 1, pool));
+            pred_id = tpi_args.pred_id;
+
+            if (pred_id == NULL)
+              return svn_error_create (SVN_ERR_FS_CORRUPT, 0,
+                                       "faulty predecessor count");
+
+            count++;
+          }
+
+        /* Finally, do the deltification. */
+        td_args.fs = fs;
+        td_args.tgt_id = pred_id;
+        td_args.base_id = id;
+        td_args.is_dir = is_dir;
+        SVN_ERR (svn_fs__retry (fs, txn_body_txn_deltify, &td_args, 1, pool));
+      }
+  }
 
   return SVN_NO_ERROR;
 }
