@@ -3268,8 +3268,9 @@ $ svn status
             <varlistentry>
               <term>'~'</term>
               <listitem>
-                <para>Item is versioned as a directory, but has
-                  been replaced by a file, or vice versa.</para>
+                <para>Item is versioned as one kind of object (file,
+                  directory, link), but has been replaced by different
+                  kind of object.</para>
               </listitem>
             </varlistentry>
 
