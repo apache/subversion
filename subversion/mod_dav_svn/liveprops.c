@@ -293,7 +293,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     case DAV_PROPID_getcontentlength:
       {
-        apr_off_t len = 0;
+        svn_filesize_t len = 0;
         
         /* our property, but not defined on collection resources */
         if (resource->collection || resource->baselined)
@@ -307,7 +307,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             break;
           }
 
-        value = apr_psprintf(p, "%" APR_OFF_T_FMT, len);
+        value = apr_psprintf(p, "%" SVN_FILESIZE_T_FMT, len);
         break;
       }
 

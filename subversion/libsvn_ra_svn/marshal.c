@@ -236,9 +236,7 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn_write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      apr_uint64_t number)
 {
-  /* ### An APR_UINT64_T_FMT would be nice here... as it stands, we'll
-   * get malformed data for number >= 2^63. */
-  return writebuf_printf(conn, pool, "%" APR_INT64_T_FMT " ", number);
+  return writebuf_printf(conn, pool, "%" APR_UINT64_T_FMT " ", number);
 }
 
 svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,

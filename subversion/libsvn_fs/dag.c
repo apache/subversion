@@ -1250,7 +1250,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
 
 
 svn_error_t *
-svn_fs__dag_file_length (apr_size_t *length,
+svn_fs__dag_file_length (svn_filesize_t *length,
                          dag_node_t *file,
                          trail_t *trail)
 { 

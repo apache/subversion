@@ -108,6 +108,20 @@ typedef long int svn_revnum_t;
 /** In @c printf()-style functions, format revision numbers using this. */
 #define SVN_REVNUM_T_FMT "ld"
 
+
+/** The size of a file in the Subversion FS. */
+typedef apr_uint64_t svn_filesize_t;
+
+/** The 'official' invalid file size constant. **/
+#define SVN_INVALID_FILESIZE ((svn_filesize_t) -1)
+
+/** In @c printf()-style functions, format file sizes using this. */
+#define SVN_FILESIZE_T_FMT APR_UINT64_T_FMT
+
+/* FIXME: Have to fiddle with APR to define this function */
+#define apr_atoui64(X) ((apr_uint64_t) apr_atoi64(X))
+
+
 /** YABT:  Yet Another Boolean Type */
 typedef int svn_boolean_t;
 
@@ -137,7 +151,7 @@ typedef struct svn_dirent
   svn_node_kind_t kind;
 
   /** length of file text, or 0 for directories */
-  apr_off_t size;
+  svn_filesize_t size;
 
   /** does the node have props? */
   svn_boolean_t has_props;
@@ -284,12 +298,15 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 /** The maximum amount we (ideally) hold in memory at a time when
  * processing a stream of data.
  *
- * The maximum amount we (ideally) hold in memory at a time when
- * processing a stream of data.  For example, when copying data from 
- * one stream to another, do it in blocks of this size; also, the 
- * standard size of one svndiff window; etc.
+ * For example, when copying data from one stream to another, do it in
+ * blocks of this size; also, the standard size of one svndiff window;
+ * etc.
  */
 #define SVN_STREAM_CHUNK_SIZE 102400
+
+/** The maximum amount we can ever hold in memory. */
+/* FIXME: Should this be the same as SVN_STREAM_CHUNK_SIZE? */
+#define SVN_MAX_OBJECT_SIZE (((apr_size_t) -1) / 2)
 
 
 

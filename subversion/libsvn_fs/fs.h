@@ -160,7 +160,7 @@ typedef struct
   apr_byte_t version;
 
   /* starting offset of the data represented by this chunk */
-  apr_size_t offset;
+  svn_filesize_t offset;
 
   /* string-key to which this representation points. */
   const char *string_key; 

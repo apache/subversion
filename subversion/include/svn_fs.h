@@ -1176,7 +1176,7 @@ svn_error_t *svn_fs_revision_link (svn_fs_root_t *from_root,
  * Set @a *length_p to the length of the file @a path in @a root, in bytes.  Do
  * any necessary temporary allocation in @a pool.
  */
-svn_error_t *svn_fs_file_length (apr_off_t *length_p,
+svn_error_t *svn_fs_file_length (svn_filesize_t *length_p,
                                  svn_fs_root_t *root,
                                  const char *path,
                                  apr_pool_t *pool);

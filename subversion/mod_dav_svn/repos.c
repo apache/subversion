@@ -1649,7 +1649,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
                                        const dav_resource *resource)
 {
   svn_error_t *serr;
-  apr_off_t length;
+  svn_filesize_t length;
   const char *mimetype = NULL;
   
   if (!resource->exists)
@@ -1738,7 +1738,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "could not fetch the resource length");
         }
-      ap_set_content_length(r, length);
+      ap_set_content_length(r, (apr_off_t) length);
     }
 
   /* set the discovered MIME type */
