@@ -67,7 +67,7 @@ do_test_num (const char *progname, int test_num)
   /* Check our array bounds! */
   if ((test_num > array_size) || (test_num <= 0))
     {
-      printf ("FAIL: %s: THERE IS NO TEST NUMBER %2d", progname, test_num);
+      printf ("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
       return 1;  /* BAIL, this test number doesn't exist. */
     }
 
