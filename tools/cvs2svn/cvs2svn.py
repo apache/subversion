@@ -14,6 +14,7 @@ import string
 import getopt
 import statcache
 import stat
+import math
 
 from svn import fs, util, delta, repos
 
@@ -22,7 +23,9 @@ trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
 branch_tag = re.compile('^[0-9.]+\\.0\\.[0-9]+$')
 vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
+SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
+DUMPFILE = 'cvs2svn-load'  # The "dumpfile" we create to load into the repos
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
@@ -263,6 +266,62 @@ class RevInfoParser(rcsparse.Sink):
 
     rcsparse.Parser().parse(rcsfile, self)
 
+
+def make_revision(dumpfile, props, revision):
+  'Write a revision, with properties, to the dumpfile.'
+  # A revision typically looks like this:
+  # 
+  #   Revision-number: 1
+  #   Prop-content-length: 129
+  #   Content-length: 129
+  #   
+  #   K 7
+  #   svn:log
+  #   V 27
+  #   Log message for revision 1.
+  #   K 10
+  #   svn:author
+  #   V 7
+  #   jrandom
+  #   K 8
+  #   svn:date
+  #   V 27
+  #   2003-04-22T22:57:58.132837Z
+  #   PROPS-END
+  #
+  # Notice that the length headers count everything -- not just the
+  # length of the data but also the lengths of the lengths, including
+  # the 'K ' or 'V ' prefixes.
+  #
+  # The reason there are both Prop-content-length and Content-length
+  # is that the former includes just props, while the latter includes
+  # everything.  That's the generic header form for any entity in a
+  # dumpfile.  But since revisions only have props, the two lengths
+  # are always the same for revisions.
+
+  # Calculate the total length of the props section.
+  total_len = 0
+  for pname in props.keys():
+    klen = len(pname) + 1
+    klen_len = int(math.ceil(math.log10(klen))) + 1
+    plen = len(props[pname]) + 1
+    plen_len = int(math.ceil(math.log10(plen))) + 1
+    total_len += (klen + klen_len + plen + plen_len)
+
+  # Print the revision header and props
+  dumpfile.write('Revision-number: %d\n' % revision)
+  dumpfile.write('Prop-content-length: %d\n' % total_len)
+  dumpfile.write('Content-length: %d\n' % total_len)
+  dumpfile.write('\n')
+  for pname in props.keys():
+    dumpfile.write('K %d\n' % len(pname))
+    dumpfile.write('%s\n' % pname)
+    dumpfile.write('V %d\n' % len(props[pname]))
+    dumpfile.write('%s\n' % props[pname])
+  dumpfile.write('PROPS-END\n')
+  dumpfile.write('\n')
+
+
 class Commit:
   def __init__(self):
     self.files = { }
@@ -317,7 +376,7 @@ class Commit:
 
     return author, log, date
 
-  def commit(self, t_fs, ctx):
+  def commit(self, dumpfile, ctx):
     # commit this transaction
     seconds = self.t_max - self.t_min
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
@@ -341,9 +400,9 @@ class Commit:
     # create a pool for the entire commit
     c_pool = util.svn_pool_create(ctx.pool)
 
-    rev = fs.youngest_rev(t_fs, c_pool)
-    txn = fs.begin_txn(t_fs, rev, c_pool)
-    root = fs.txn_root(txn, c_pool)
+    # rev = fs.youngest_rev(t_fs, c_pool)
+    # txn = fs.begin_txn(t_fs, rev, c_pool)
+    # root = fs.txn_root(txn, c_pool)
 
     lastcommit = (None, None)
 
@@ -357,156 +416,156 @@ class Commit:
       # the ,v from the file name
       rel_name = relative_name(ctx.cvsroot, f[:-2])
       repos_path = branch_path(ctx, br) + rel_name
-      #print 'DEBUG:', repos_path
 
       print '    changing %s : %s' % (r, repos_path)
 
-      make_path(fs, root, repos_path, f_pool)
+      # get the metadata for this commit
+      author, log, date = self.get_metadata(c_pool)
+      props = { 'svn:author' : unicode(author, ctx.encoding).encode('utf8'),
+                'svn:log' : unicode(log, ctx.encoding).encode('utf8'),
+                'svn:date' : date }
+      make_revision(dumpfile, props, ctx.revision + 1)
 
-      if fs.check_path(root, repos_path, f_pool) == util.svn_node_none:
-        created_file = 1
-        fs.make_file(root, repos_path, f_pool)
-      else:
-        created_file = 0
+      print '    new revision:', ctx.revision
 
-      handler, baton = fs.apply_textdelta(root, repos_path, None, None, f_pool)
+      dumpfile.write('ABOUT TO CHANGE:\n')
+      dumpfile.write('rel_name: %s\nrepos_path: %s\n\n'
+                      % (rel_name, repos_path))
 
-      # figure out the real file path for "co"
-      try:
-        f_st = statcache.stat(f)
-      except os.error:
-        dirname, fname = os.path.split(f)
-        f = os.path.join(dirname, 'Attic', fname)
-        f_st = statcache.stat(f)
-
-      pipe = os.popen('co -q -p%s \'%s\'' % (r, f), 'r', 102400)
-
-      # if we just made the file, we can send it in one big hunk, rather
-      # than streaming it in.
-      ### we should watch out for file sizes here; we don't want to yank
-      ### in HUGE files...
-      if created_file:
-        delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
-        if f_st[0] & stat.S_IXUSR:
-          fs.change_node_prop(root, repos_path, "svn:executable", "", f_pool)
-      else:
-        # open an SVN stream onto the pipe
-        stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
-
-        # Get the current file contents from the repo, or, if we have
-        # multiple CVS revisions to the same file being done in this
-        # single commit, then get the contents of the previous
-        # revision from co, or else the delta won't be correct because
-        # the contents in the repo won't have changed yet.
-        if repos_path == lastcommit[0]:
-          infile2 = os.popen("co -q -p%s \'%s\'"
-                             % (lastcommit[1], f), "r", 102400)
-          stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
-        else:
-          stream1 = fs.file_contents(root, repos_path, f_pool)
-
-        txstream = delta.svn_txdelta(stream1, stream2, f_pool)
-        delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
-
-        # shut down the previous-rev pipe, if we opened it
-        infile2 = None
-
-      # shut down the current-rev pipe
-      pipe.close()
-
-      # wipe the pool. this will get rid of the pipe streams and the delta
-      # stream, and anything the FS may have done.
-      util.svn_pool_clear(f_pool)
-
-      # remember what we just did, for the next iteration
-      lastcommit = (repos_path, r)
-
-      for to_tag in tags:
-        to_tag_path = get_tag_path(ctx, to_tag) + rel_name
-        do_copies.append((repos_path, to_tag_path, 1))
-      for to_branch in branches:
-        to_branch_path = branch_path(ctx, to_branch) + rel_name
-        do_copies.append((repos_path, to_branch_path, 2))
-
-    for f, r, br, tags, branches in self.deletes:
-      # compute a repository path. ensure we have a leading "/" and drop
-      # the ,v from the file name
-      rel_name = relative_name(ctx.cvsroot, f[:-2])
-      repos_path = branch_path(ctx, br) + rel_name
-
-      print '    deleting %s : %s' % (r, repos_path)
-
-      # If the file was initially added on a branch, the first mainline
-      # revision will be marked dead, and thus, attempts to delete it will
-      # fail, since it doesn't really exist.
-      if r != '1.1':
-        ### need to discriminate between OS paths and FS paths
-        fs.delete(root, repos_path, f_pool)
-
-      for to_branch in branches:
-        to_branch_path = branch_path(ctx, to_branch) + rel_name
-        print "file", f, "created on branch", to_branch, \
-              "rev", r, "path", to_branch_path
-
-      # wipe the pool, in case the delete loads it up
-      util.svn_pool_clear(f_pool)
-
-    # get the metadata for this commit
-    author, log, date = self.get_metadata(c_pool)
-
-    # convert locale encoded strings to unicode objects
-    l = unicode(log, ctx.encoding)
-    a = unicode(author, ctx.encoding)
-
-    # put UTF-8 encoded unicode-"strings" into svn filesystem
-    fs.change_txn_prop(txn, 'svn:author', a.encode('utf8'), c_pool)
-    fs.change_txn_prop(txn, 'svn:log', l.encode('utf8'), c_pool)
-
-    conflicts, new_rev = fs.commit_txn(txn)
-    if conflicts:
-      # our commit processing should never generate a conflict. if we *do*
-      # see something, then we've got some badness going on. punt.
-      print 'Exiting due to conflicts:', str(conflicts)
-      sys.exit(1)
-    print '    new revision:', new_rev
-
-    # set the time to the proper (past) time
-    fs.change_rev_prop(t_fs, new_rev, 'svn:date', date, c_pool)
-
-    if len(do_copies) > 0:
-      # make a new transaction for the tags
-      rev = fs.youngest_rev(t_fs, c_pool)
-      txn = fs.begin_txn(t_fs, rev, c_pool)
-      root = fs.txn_root(txn, c_pool)
-
-      for c_from, c_to, c_type in do_copies:
-        print "copying", c_from, "to", c_to
-
-        t_root = fs.revision_root(t_fs, rev, f_pool)
-        make_path(fs, root, c_to, f_pool)
-        fs.copy(t_root, c_from, root, c_to, f_pool)
-
-        # clear the pool after each copy
-        util.svn_pool_clear(f_pool)
-
-      log_msg = "%d copies to tags/branches\n" % (len(do_copies))
-      fs.change_txn_prop(txn, 'svn:author', "cvs2svn", c_pool)
-      fs.change_txn_prop(txn, 'svn:log', log_msg, c_pool)
-
-      conflicts, new_rev = fs.commit_txn(txn)
-      if conflicts:
-        # our commit processing should never generate a conflict. if we *do*
-        # see something, then we've got some badness going on. punt.
-        print 'Exiting due to conflicts:', str(conflicts)
-        sys.exit(1)
-      print '    new revision:', new_rev
-
-      # FIXME: we don't set a date here
-      # gstein sez: tags don't have dates, so no biggy. commits to
-      #             branches have dates, tho.
-
+#      make_path(fs, root, repos_path, f_pool)
+#
+#      if fs.check_path(root, repos_path, f_pool) == util.svn_node_none:
+#        created_file = 1
+#        fs.make_file(root, repos_path, f_pool)
+#      else:
+#        created_file = 0
+#
+#      handler, baton = fs.apply_textdelta(root, repos_path, None, None, f_pool)
+#
+#      # figure out the real file path for "co"
+#      try:
+#        f_st = statcache.stat(f)
+#      except os.error:
+#        dirname, fname = os.path.split(f)
+#        f = os.path.join(dirname, 'Attic', fname)
+#        f_st = statcache.stat(f)
+#
+#      pipe = os.popen('co -q -p%s \'%s\'' % (r, f), 'r', 102400)
+#
+#      # if we just made the file, we can send it in one big hunk, rather
+#      # than streaming it in.
+#      ### we should watch out for file sizes here; we don't want to yank
+#      ### in HUGE files...
+#      if created_file:
+#        delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
+#        if f_st[0] & stat.S_IXUSR:
+#          fs.change_node_prop(root, repos_path, "svn:executable", "", f_pool)
+#      else:
+#        # open an SVN stream onto the pipe
+#        stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
+#
+#        # Get the current file contents from the repo, or, if we have
+#        # multiple CVS revisions to the same file being done in this
+#        # single commit, then get the contents of the previous
+#        # revision from co, or else the delta won't be correct because
+#        # the contents in the repo won't have changed yet.
+#        if repos_path == lastcommit[0]:
+#          infile2 = os.popen("co -q -p%s \'%s\'"
+#                             % (lastcommit[1], f), "r", 102400)
+#          stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
+#        else:
+#          stream1 = fs.file_contents(root, repos_path, f_pool)
+#
+#        txstream = delta.svn_txdelta(stream1, stream2, f_pool)
+#        delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
+#
+#        # shut down the previous-rev pipe, if we opened it
+#        infile2 = None
+#
+#      # shut down the current-rev pipe
+#      pipe.close()
+#
+#      # wipe the pool. this will get rid of the pipe streams and the delta
+#      # stream, and anything the FS may have done.
+#      util.svn_pool_clear(f_pool)
+#
+#      # remember what we just did, for the next iteration
+#      lastcommit = (repos_path, r)
+#
+#      for to_tag in tags:
+#        to_tag_path = get_tag_path(ctx, to_tag) + rel_name
+#        do_copies.append((repos_path, to_tag_path, 1))
+#      for to_branch in branches:
+#        to_branch_path = branch_path(ctx, to_branch) + rel_name
+#        do_copies.append((repos_path, to_branch_path, 2))
+#
+#    for f, r, br, tags, branches in self.deletes:
+#      # compute a repository path. ensure we have a leading "/" and drop
+#      # the ,v from the file name
+#      rel_name = relative_name(ctx.cvsroot, f[:-2])
+#      repos_path = branch_path(ctx, br) + rel_name
+#
+#      print '    deleting %s : %s' % (r, repos_path)
+#
+#      # If the file was initially added on a branch, the first mainline
+#      # revision will be marked dead, and thus, attempts to delete it will
+#      # fail, since it doesn't really exist.
+#      if r != '1.1':
+#        ### need to discriminate between OS paths and FS paths
+#        fs.delete(root, repos_path, f_pool)
+#
+#      for to_branch in branches:
+#        to_branch_path = branch_path(ctx, to_branch) + rel_name
+#        print "file", f, "created on branch", to_branch, \
+#              "rev", r, "path", to_branch_path
+#
+#      # wipe the pool, in case the delete loads it up
+#      util.svn_pool_clear(f_pool)
+#
+#    if len(do_copies) > 0:
+#      # make a new transaction for the tags
+#      rev = fs.youngest_rev(t_fs, c_pool)
+#      txn = fs.begin_txn(t_fs, rev, c_pool)
+#      root = fs.txn_root(txn, c_pool)
+#
+#      for c_from, c_to, c_type in do_copies:
+#        print "copying", c_from, "to", c_to
+#
+#        t_root = fs.revision_root(t_fs, rev, f_pool)
+#        make_path(fs, root, c_to, f_pool)
+#        fs.copy(t_root, c_from, root, c_to, f_pool)
+#
+#        # clear the pool after each copy
+#        util.svn_pool_clear(f_pool)
+#
+#      log_msg = "%d copies to tags/branches\n" % (len(do_copies))
+#      fs.change_txn_prop(txn, 'svn:author', "cvs2svn", c_pool)
+#      fs.change_txn_prop(txn, 'svn:log', log_msg, c_pool)
+#
+#      conflicts, new_rev = fs.commit_txn(txn)
+#      if conflicts:
+#        # our commit processing should never generate a conflict. if we *do*
+#        # see something, then we've got some badness going on. punt.
+#        print 'Exiting due to conflicts:', str(conflicts)
+#        sys.exit(1)
+#      print '    new revision:', new_rev
+#
+#      # FIXME: we don't set a date here
+#      # gstein sez: tags don't have dates, so no biggy. commits to
+#      #             branches have dates, tho.
+#    
     # done with the commit and file pools
     util.svn_pool_destroy(c_pool)
+
+def start_dumpfile(dumpfile):
+  "Initialize a dumpfile with the standard headers, return the open file."
+  f = open(dumpfile, 'w')
+  f.write('SVN-fs-dump-format-version: 2\n')
+  f.write('\n')
+  # The source cvs repository doesn't have a UUID, hmm, what to do?
+  f.write('UUID: ????????-????-????-????-????????????\n')
+  f.write('\n')
+  return f
 
 def read_resync(fname):
   "Read the .resync file into memory."
@@ -634,11 +693,7 @@ def pass4(ctx):
   # create the target repository
   if not ctx.dry_run:
     if ctx.create_repos:
-      t_repos = repos.svn_repos_create(ctx.target, None, None,
-                                       None, None, ctx.pool)
-    else:
-      t_repos = repos.svn_repos_open(ctx.target, ctx.pool)
-    t_fs = repos.svn_repos_fs(t_repos)
+      os.system('%s create %s' % (ctx.svnadmin, ctx.target))
   else:
     t_fs = t_repos = None
 
@@ -657,6 +712,9 @@ def pass4(ctx):
   # is used only for printing statistics, it does not affect the
   # results in the repository.
   count = 0
+
+  # Get the dumpfile handle.
+  dumpfile = start_dumpfile(ctx.dumpfile)
 
   # process the logfiles, creating the target
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
@@ -690,7 +748,7 @@ def pass4(ctx):
     # part of any of them.  Sort them into time-order, then commit 'em.
     process.sort()
     for t_max, c in process:
-      c.commit(t_fs, ctx)
+      c.commit(dumpfile, ctx)
     count = count + len(process)
 
     # Add this item into the set of still-available commits.
@@ -707,8 +765,10 @@ def pass4(ctx):
       process.append((c.t_max, c))
     process.sort()
     for t_max, c in process:
-      c.commit(t_fs, ctx)
+      c.commit(dumpfile, ctx)
     count = count + len(process)
+
+  dumpfile.close()
 
   if ctx.verbose:
     print count, 'commits processed.'
@@ -749,6 +809,8 @@ def usage(ctx):
   print '  -s PATH          path for SVN repos.'
   print '  -p NUM           start at pass NUM of %d.' % len(_passes)
   print '  --create         create a new SVN repository'
+  print '  --dumpfile=PATH  name of intermediate svn dumpfile'
+  print '  --svnadmin=PATH  path to the svnadmin program'
   print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
   # print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
   # print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
@@ -761,6 +823,8 @@ def main():
   ctx.cvsroot = None
   ctx.target = SVNROOT
   ctx.log_fname_base = DATAFILE
+  ctx.dumpfile = DUMPFILE
+  ctx.revision = 0   ### later we make take a --start-revision option
   ctx.verbose = 0
   ctx.dry_run = 0
   ctx.create_repos = 0
@@ -796,6 +860,10 @@ def main():
       ctx.target = value
     elif opt == '--create':
       ctx.create_repos = 1
+    elif opt == '--dumpfile':
+      ctx.dumpfile = value
+    elif opt == '--svnadmin':
+      ctx.svnadmin = value
     elif opt == '--trunk':
       ctx.trunk_base = value
     elif opt == '--branches':
