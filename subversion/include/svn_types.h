@@ -42,7 +42,7 @@ extern "C" {
  * Defined here, rather than in svn_error.h, to avoid a recursive #include 
  * situation.
  */
-typedef struct svn_error
+typedef struct svn_error_t
 {
   /** APR error value, possibly SVN_ custom err */
   apr_status_t apr_err;
@@ -51,7 +51,7 @@ typedef struct svn_error
   const char *message;
 
   /** ptr to the error we "wrap" */
-  struct svn_error *child;
+  struct svn_error_t *child;
 
   /** The pool holding this error and any child errors it wraps */
   apr_pool_t *pool;
@@ -151,7 +151,7 @@ enum svn_recurse_kind
 
 
 /** A general subversion directory entry. */
-typedef struct svn_dirent
+typedef struct svn_dirent_t
 {
   /** node kind */
   svn_node_kind_t kind;

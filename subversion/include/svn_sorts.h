@@ -37,7 +37,7 @@ extern "C" {
 /** This structure is used to hold a key/value from a hash table.
  * NOTE: Private. For use by Subversion's own code only. See issue #1644.
  */
-typedef struct {
+typedef struct svn_sort__item_t {
   /** pointer to the key */
   const void *key;
 

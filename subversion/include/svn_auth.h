@@ -82,7 +82,7 @@ typedef struct svn_auth_iterstate_t svn_auth_iterstate_t;
 
 
 /** The main authentication "provider" vtable. */
-typedef struct
+typedef struct svn_auth_provider_t
 {
   /** The kind of credentials this provider knows how to retrieve. */
   const char *cred_kind;
@@ -139,7 +139,7 @@ typedef struct
 
 /** A provider object, ready to be put into an array and given to
     @c svn_auth_open. */
-typedef struct
+typedef struct svn_auth_provider_object_t
 {
   const svn_auth_provider_t *vtable;
   void *provider_baton;
@@ -161,7 +161,7 @@ typedef struct
 #define SVN_AUTH_CRED_SIMPLE "svn.simple"
 
 /** @c SVN_AUTH_CRED_SIMPLE credentials. */
-typedef struct
+typedef struct svn_auth_cred_simple_t
 {
   /** Username */
   const char *username;
@@ -185,7 +185,7 @@ typedef struct
 #define SVN_AUTH_CRED_USERNAME "svn.username"
 
 /** @c SVN_AUTH_CRED_USERNAME credentials. */
-typedef struct
+typedef struct svn_auth_cred_username_t
 {
   /** Username */
   const char *username;
@@ -211,7 +211,7 @@ typedef struct
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT "svn.ssl.client-cert"
 
 /** @c SVN_AUTH_CRED_SSL_CLIENT_CERT credentials. */
-typedef struct
+typedef struct svn_auth_cred_ssl_client_cert_t
 {
   /** Full paths to the certificate file */
   const char *cert_file;
@@ -240,7 +240,7 @@ typedef struct
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
 
 /** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_PW crentials. */
-typedef struct
+typedef struct svn_auth_cred_ssl_client_cert_pw_t
 {
   /** Certificate password */
   const char *password;
@@ -271,7 +271,8 @@ typedef struct
 /** SSL server certificate information used by @c
  * SVN_AUTH_CRED_SSL_SERVER_TRUST providers.
  */
-typedef struct {
+typedef struct svn_auth_ssl_server_cert_info_t 
+{
   /** Primary CN */
   const char *hostname;
   /** ASCII fingerprint */
@@ -287,7 +288,7 @@ typedef struct {
 } svn_auth_ssl_server_cert_info_t;
 
 /** @c SVN_AUTH_CRED_SSL_SERVER_TRUST credentials. */
-typedef struct
+typedef struct svn_auth_cred_ssl_server_trust_t
 {
   /** Indicates if the credentials may be saved (to disk). For example, a
    * GUI prompt implementation with a checkbox to accept the certificate

@@ -110,7 +110,8 @@ enum svn_delta_action {
 };
 
 /** A single text delta instruction.  */
-typedef struct svn_txdelta_op_t {
+typedef struct svn_txdelta_op_t
+{
   enum svn_delta_action action_code;
   apr_size_t offset;
   apr_size_t length;
@@ -135,7 +136,8 @@ typedef struct svn_txdelta_op_t {
  * property allows us to apply deltas to non-seekable source streams
  * without making a full copy of the source stream.
  */
-typedef struct svn_txdelta_window_t {
+typedef struct svn_txdelta_window_t
+{
 
   /** The offset of the source view for this window.  */
   svn_filesize_t sview_offset;
@@ -531,7 +533,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * function returns an error, the edit is dead; the only further
  * operation which may be called on the editor is abort_edit.
  */
-typedef struct
+typedef struct svn_delta_editor_t
 {
   /** Set the target revision for this edit to @a target_revision.  This
    * call, if used, should precede all other editor calls.

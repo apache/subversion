@@ -940,7 +940,8 @@ svn_error_t *svn_fs_merge (const char **conflict_p,
 
 
 /** The type of a Subversion directory entry.  */
-typedef struct svn_fs_dirent_t {
+typedef struct svn_fs_dirent_t
+{
 
   /** The name of this directory entry.  */
   const char *name;

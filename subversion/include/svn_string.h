@@ -80,7 +80,7 @@ extern "C" {
 
 
 /** A simple counted string. */
-typedef struct
+typedef struct svn_string_t
 {
   const char *data;
   apr_size_t len;
@@ -88,7 +88,7 @@ typedef struct
 
 /** A buffered string, capable of appending without an allocation and copy 
  * for each append. */
-typedef struct
+typedef struct svn_stringbuf_t
 {
   /** a pool from which this string was originally allocated, and is not 
    * necessarily specific to this string.  This is used only for allocating 
