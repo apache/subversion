@@ -690,7 +690,7 @@ log_do_committed (struct log_runner *loggy,
 
           SVN_ERR (svn_wc_entry (&parent_entry, parent, loggy->pool));
 
-          if (parent_entry->revision != atoi(revstr))
+          if ((parent_entry->revision != atoi(revstr)) && (! entry->copied))
             {
               /* Mark item's existence as "deleted" */
 
