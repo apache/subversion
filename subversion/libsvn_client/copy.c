@@ -839,6 +839,21 @@ repos_to_wc_copy (const char *src_url,
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, dst_path, TRUE, FALSE,
                                   pool));
 
+  /* We've already checked for physical obstruction by a working file.
+     But there could also be logical obstruction by an entry whose
+     working file happens to be missing.*/ 
+  {
+    const svn_wc_entry_t *ent;
+
+    SVN_ERR (svn_wc_entry (&ent, dst_path, adm_access, FALSE, pool));
+    if (ent && (ent->kind != svn_node_dir))
+      return svn_error_createf
+        (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+         "there is already an entry for '%s'\n"
+         "     (though the working file is missing)",
+         dst_path);
+  }
+
   /* Decide whether the two repositories are the same or not. */
   { 
     svn_error_t *src_err, *dst_err;

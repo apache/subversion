@@ -1248,6 +1248,45 @@ def revision_kinds_local_source(sbox):
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
 
+#-------------------------------------------------------------
+# Regression test for issue 1581.
+
+def copy_over_missing_file(sbox):
+  "copy over a missing file"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota_url = svntest.main.current_repo_url + "/iota"
+
+  # Make the target missing.
+  os.remove(mu_path)
+
+  # Try both wc->wc copy and repos->wc copy, expect failures:
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                     'cp', iota_path, mu_path)
+
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                    'cp', iota_url, mu_path)
+
+  # Make sure that the working copy is not corrupted:
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  # Technically, we should expect "Restored" for A/mu, but apparently
+  # our output tree constructor doesn't know how to handle that, so we
+  # just pass an empty dictionary below.  It doesn't matter so much,
+  # because the bug we're testing for would leave a bogus logfile in
+  # the .svn/ area after the copy; subsequent updates would fail in a
+  # much more dramatic way than merely not matching expected output.
+  expected_output = svntest.wc.State(wc_dir, {})
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+  
+
+
 ########################################################################
 # Run the tests
 
@@ -1274,6 +1313,7 @@ test_list = [ None,
               diff_repos_to_wc_copy,
               repos_to_wc_copy_eol_keywords,
               revision_kinds_local_source,
+              copy_over_missing_file,
              ]
 
 if __name__ == '__main__':
