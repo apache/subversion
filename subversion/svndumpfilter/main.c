@@ -781,9 +781,16 @@ parse_baton_initialize (struct parse_baton_t **pb,
   baton->dropped_nodes = apr_hash_make (pool);
   baton->renumber_history = apr_hash_make (pool);
 
+  /* This is non-ideal: We should pass through the version of the
+   * input dumpstream.  However, our API currently doesn't allow that.
+   * Hardcoding version 2 is acceptable because:
+   *   - We currently do not accept version 3 or greater.
+   *   - Dumpstream version 1 is so ancient as to be ignorable
+   *     (0.17.x and earlier)
+   */
   SVN_ERR (svn_stream_printf (baton->out_stream, pool,
                               SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                              SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+                              2));
 
   *pb = baton;
   return SVN_NO_ERROR;
