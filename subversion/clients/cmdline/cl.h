@@ -77,6 +77,8 @@ typedef struct svn_cl__opt_state_t
   /* Here begin authentication args;  add more as needed. */
   svn_stringbuf_t *auth_username;
   svn_stringbuf_t *auth_password;
+  /* Extension arguments (eg arguments to be passed into GNU diff) */
+  svn_stringbuf_t *extensions;
 } svn_cl__opt_state_t;
 
 
@@ -152,6 +154,10 @@ apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
                               apr_pool_t *pool);
 
+/* Separates a list of whitespace separated values into an apr_array_header_t */
+apr_array_header_t*
+svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool);
+
 void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
                                        apr_pool_t *pool);
 
@@ -189,11 +195,14 @@ void svn_cl__print_status_list (apr_hash_t *statushash,
 void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 /* Print a context diff showing local changes made to PATH */
-svn_error_t *svn_cl__print_file_diff (svn_stringbuf_t *path, apr_pool_t *pool);
+svn_error_t *svn_cl__print_file_diff (svn_stringbuf_t *path,
+                                      apr_array_header_t *options,
+                                      apr_pool_t *pool);
 
 /* Print diffs showing all local changes within the directory PATH, if 
  * RECURSE is TRUE, then recurse into subdirectories. */
 svn_error_t *svn_cl__print_dir_diff (svn_stringbuf_t *path,
+                                     apr_array_header_t *options,
                                      svn_boolean_t recurse,
                                      apr_pool_t *pool);
 

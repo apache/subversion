@@ -41,10 +41,12 @@ svn_cl__diff (apr_getopt_t *os,
 {
   svn_error_t *err;
   apr_array_header_t *targets;
+  apr_array_header_t *options;
   svn_boolean_t recurse = TRUE;
   int i;
 
-  targets = svn_cl__args_to_target_array (os, pool);
+  options = svn_cl__stringlist_to_array(opt_state->extensions, pool);
+  targets = svn_cl__args_to_target_array(os, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
@@ -65,10 +67,10 @@ svn_cl__diff (apr_getopt_t *os,
       switch (kind) 
         {
         case svn_node_file:
-          err = svn_cl__print_file_diff (target, pool);
+          err = svn_cl__print_file_diff (target, options, pool);
           break;
         case svn_node_dir:
-          err = svn_cl__print_dir_diff (target, recurse, pool);
+          err = svn_cl__print_dir_diff (target, options, recurse, pool);
           break;
         case svn_node_unknown:
           err = svn_error_createf (0, 0, NULL, pool,
@@ -76,7 +78,7 @@ svn_cl__diff (apr_getopt_t *os,
                                   target->data);
           break;                                  
         case svn_node_none:
-          err = svn_error_createf (APR_ENOENT, 0, NULL, pool, 
+          err = svn_error_createf (APR_ENOENT, 0, NULL, pool,
                                    "Target `%s' not found.", target->data);
           break;
         }

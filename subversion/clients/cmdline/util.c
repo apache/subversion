@@ -25,6 +25,7 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include <apr_strings.h>
@@ -174,6 +175,36 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
   return targets;
 }
 
+/* Convert a whitespace separated list of items into an apr_array_header_t */
+apr_array_header_t*
+svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
+{
+  apr_array_header_t *array = NULL;
+  if (buffer != NULL)
+    {
+      int start = 0, end = 0;
+      svn_stringbuf_t *item;
+      array = apr_array_make(pool, DEFAULT_ARRAY_SIZE,
+                             sizeof(svn_stringbuf_t *));
+      while (end < buffer->len)
+        {
+          while (isspace(buffer->data[start]))
+                start++; 
+
+          end = start;
+
+          while (end < buffer->len && !isspace(buffer->data[end]))
+              end++;
+
+          item  = svn_stringbuf_ncreate(&buffer->data[start],
+                                          end - start, pool);
+          *((svn_stringbuf_t**)apr_array_push(array)) = item;
+
+          start = end;
+        }
+    }
+  return array;
+} 
 
 /* Return the canonical command table entry for CMD (which may be the
  * entry for CMD itself, or some other entry if CMD is an alias).
