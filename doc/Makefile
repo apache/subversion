@@ -4,6 +4,11 @@ default: html
 
 all: txt info html dvi ps pdf
 
+www: all
+	cp -f ./svn-design.html ../../www
+	cp -f ./svn-design.ps ../../www
+	cp -f ./svn-design.pdf ../../www
+
 txt: 
 	makeinfo --no-headers --no-validate svn-design.texi > svn-design.txt
 
