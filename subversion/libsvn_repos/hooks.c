@@ -446,7 +446,7 @@ array_join (apr_array_header_t *strings,
             const char *separator,
             apr_pool_t *pool)
 {
-  const char *new_str = "";
+  char *new_str = "";
   int i;
   
   for (i = 0; i < strings->nelts; i++)

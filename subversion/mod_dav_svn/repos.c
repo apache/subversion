@@ -563,19 +563,6 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
 
-  if (comb->res.exists == FALSE)
-    {
-      /* ### HACK: r->path_info normally contains the relative URI
-         that apache hands down to mod_dav for processing.  But if
-         r->path_info isn't empty, then mod_dav is unable to
-         distinguish between a 'null' resource and a 'lock-null'
-         resource.  See the huge comment about this inside
-         dav_get_resource_state().  Until we fix mod_dav, we're stuck
-         using this fake-out to get lock-null resources properly
-         noticed. */
-      comb->priv.r->path_info = (char *) "";
-    }
-
   return NULL;
 }
 

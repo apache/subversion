@@ -116,8 +116,13 @@ txn_body_lock (void *baton, trail_t *trail)
      on files or non-existent paths. */
   if (kind == svn_node_dir)
     return svn_fs_base__err_not_file (trail->fs, args->path);
+
+  /* While our locking implementation easily supports the locking of
+     nonexistent paths, we deliberately choose not to allow such madness. */
   if (kind == svn_node_none)
-    kind = svn_node_file;    /* pretend, so the name can be reserved */
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              "Path '%s' doesn't exist in HEAD revision",
+                              args->path);
 
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
@@ -138,12 +143,12 @@ txn_body_lock (void *baton, trail_t *trail)
          from HEAD.  That counts as being 'out of date'. */     
       if (! SVN_IS_VALID_REVNUM(created_rev))
         return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                  "Path '%s' doesn't exist in HEAD revision.",
+                                  "Path '%s' doesn't exist in HEAD revision",
                                   args->path);
 
       if (args->current_rev < created_rev)
         return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                  "Lock failed: newer version of '%s' exists.",
+                                  "Lock failed: newer version of '%s' exists",
                                   args->path);
     }
 
@@ -239,6 +244,13 @@ txn_body_attach_lock (void *baton, trail_t *trail)
   if (kind == svn_node_dir)
     return svn_fs_base__err_not_file (trail->fs, lock->path);
 
+  /* While our locking implementation easily supports the locking of
+     nonexistent paths, we deliberately choose not to allow such madness. */
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              "Path '%s' doesn't exist in HEAD revision",
+                              lock->path);
+
   /* There better be a username in the incoming lock. */
   if (! lock->owner)
     {
@@ -261,7 +273,7 @@ txn_body_attach_lock (void *baton, trail_t *trail)
          from HEAD.  That counts as being 'out of date'. */     
       if (! SVN_IS_VALID_REVNUM(created_rev))
         return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                  "Path '%s' doesn't exist in HEAD revision.",
+                                  "Path '%s' doesn't exist in HEAD revision",
                                   lock->path);
 
       if (args->current_rev < created_rev)

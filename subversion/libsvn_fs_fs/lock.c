@@ -211,7 +211,7 @@ write_digest_file (apr_hash_t *children,
       for (hi = apr_hash_first(pool, children); hi; hi = apr_hash_next(hi)) 
         {
           const void *key;
-          apr_size_t klen;
+          apr_ssize_t klen;
           apr_hash_this (hi, &key, &klen, NULL);
           svn_stringbuf_appendbytes (children_list, key, klen);
           svn_stringbuf_appendbytes (children_list, "\n", 1);
@@ -677,6 +677,13 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   if (kind == svn_node_dir)
     return svn_fs_fs__err_not_file (fs, path);
 
+  /* While our locking implementation easily supports the locking of
+     nonexistent paths, we deliberately choose not to allow such madness. */
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              "Path '%s' doesn't exist in HEAD revision",
+                              path);
+
   /* We need to have a username attached to the fs. */
   if (!fs->access_ctx || !fs->access_ctx->username)
     return svn_fs_fs__err_no_user (fs);
@@ -768,6 +775,13 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
   SVN_ERR (svn_fs_fs__check_path (&kind, root, lock->path, pool));
   if (kind == svn_node_dir)
     return svn_fs_fs__err_not_file (fs, lock->path);
+
+  /* While our locking implementation easily supports the locking of
+     nonexistent paths, we deliberately choose not to allow such madness. */
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              "Path '%s' doesn't exist in HEAD revision",
+                              lock->path);
 
   /* There better be a username in the incoming lock. */
   if (! lock->owner)

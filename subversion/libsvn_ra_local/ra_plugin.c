@@ -1090,8 +1090,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
 
       /* This wrapper will call pre- and post-lock hooks. */
       err = svn_repos_fs_lock (&lock, sess->repos, abs_path, comment, force,
-                               0 /* no timeout */, *revnum,
-                               0 /* disallow lock-nulls */,  pool);
+                               0 /* no timeout */, *revnum, pool);
 
       if (err && !svn_error_is_lock_error (err))
         return err;

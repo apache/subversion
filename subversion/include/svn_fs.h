@@ -1480,13 +1480,6 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * date, then the act of fetching/reading it might cause it to
  * automatically expire, returning either nothing or an expiration
  * error (depending on the API).
- *
- * Note while locks are metadata, they're not the kind of metadata
- * that's attached to versioned objects (like properties).  The
- * filesystem keeps a private list of locked paths, one which exists
- * outside the filesystem itself.  In fact, it's possible to lock a
- * non-existent path!  (Some generic DAV clients depend on this; but
- * in general, Subversion clients aren't exposed to this feature.)
  */
 
 

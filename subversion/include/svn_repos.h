@@ -951,11 +951,6 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * hooks before and after the locking action.  Use @a pool for any
  * necessary allocations.
  *
- * If ALLOW_NONEXISTENT is true, then PATH need not exist in the
- * filesystem.  (svn_fs_lock() allows locks to be created on
- * nonexistent paths, but this feature is generally unexposed to
- * Subversion clients.)
- *
  * If the pre-lock hook or svn_fs_lock() fails, throw the original
  * error to caller.  If an error occurs when running the post-lock
  * hook, return the original error wrapped with
@@ -969,7 +964,6 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 svn_boolean_t force,
                                 long int timeout,
                                 svn_revnum_t current_rev,
-                                svn_boolean_t allow_nonexistent,
                                 apr_pool_t *pool);
 
 
@@ -979,11 +973,6 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
  * Like @c svn_fs_attach_lock(), but invoke the @a repos's pre- and
  * post-lock hooks before and after the locking action.  Use @a pool
  * for any necessary allocations.
- *
- * If ALLOW_NONEXISTENT is true, then PATH need not exist in the
- * filesystem.  (svn_fs_lock() allows locks to be created on
- * nonexistent paths, but this feature is generally unexposed to
- * Subversion clients.)
  *
  * If the pre-lock hook or svn_fs_attach_lock() fails, throw the
  * original error to caller.  If an error occurs when running the
@@ -995,7 +984,6 @@ svn_error_t *svn_repos_fs_attach_lock (svn_lock_t *lock,
                                        svn_repos_t *repos,
                                        svn_boolean_t force,
                                        svn_revnum_t current_rev,
-                                       svn_boolean_t allow_nonexistent,
                                        apr_pool_t *pool);
 
 
