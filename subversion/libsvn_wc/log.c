@@ -33,6 +33,7 @@
 #include "wc.h"
 #include "log.h"
 #include "adm_files.h"
+#include "entries.h"
 
 
 /*** Userdata for the callbacks. ***/

@@ -30,8 +30,8 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "adm_ops.h"
+#include "entries.h"
 
-/*------------------------------------------------------------------*/
 
 /** Overview **/
 
@@ -1140,7 +1140,6 @@ fold_entry (apr_hash_t *entries,
 }
 
 
-/* kff todo: we shouldn't have this function in the interface, probably. */
 void
 svn_wc__entry_remove (apr_hash_t *entries,
                       svn_stringbuf_t *name)
@@ -1451,14 +1450,6 @@ svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 }
 
 
-
-
-/* Helper for svn_wc__do_update_cleanup and recursively_tweak_entries.
-
-   Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
-   make this the entry's new url.  If NEW_REV is valid, make this the
-   entry's working revision.  (This is purely an in-memory operation.)
-*/
 svn_error_t *
 svn_wc__tweak_entry (apr_hash_t *entries,
                      const svn_stringbuf_t *name,
@@ -1483,9 +1474,6 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 
   return SVN_NO_ERROR;
 }
-
-
-
 
 
 
