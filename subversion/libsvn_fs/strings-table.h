@@ -21,6 +21,10 @@
 
 
 
+/* Special strings-table keys for commonly used strings.  */
+
+
+
 /* This interface provides raw access to the `strings' table.  It does
    not deal with deltification, undeltification, or skels.  It just
    reads and writes strings of bytes. */
@@ -104,6 +108,13 @@ svn_error_t *svn_fs__string_delete (svn_fs_t *fs,
                                     trail_t *trail);
 
 
+/* Copy the contents of the string referred to by KEY in FS into a new
+ * record, returning the new record's key in *NEW_KEY.  All
+ * allocations (including *NEW_KEY) occur in TRAIL->pool.  */
+svn_error_t *svn_fs__string_copy (svn_fs_t *fs,
+                                  const char **new_key,
+                                  const char *key,
+                                  trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_STRINGS_TABLE_H */

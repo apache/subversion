@@ -67,6 +67,37 @@ svn_error_t *svn_fs__delete_rep (svn_fs_t *fs,
                                  trail_t *trail);
 
 
+
+/* Set STRKEY->data to the strings-table key pointed to by REP in FS,
+   as part of TRAIL.  */
+svn_error_t *svn_fs__string_key_from_rep (const char **strkey,
+                                          skel_t *rep);
+
+
+/* Set STR->data to the fulltext string for REP in FS, and STR->len to
+   the string's length, as part of TRAIL.  The data is allocated in
+   TRAIL->pool.  */
+svn_error_t *svn_fs__string_from_rep (svn_string_t *str,
+                                      svn_fs_t *fs,
+                                      skel_t *rep,
+                                      trail_t *trail);
+
+
+/* Return non-zero if representation skel REP is mutable.  */
+int svn_fs__rep_is_mutable (skel_t *rep);
+
+
+/* Get a key to a mutable version of the representation pointed to by
+   KEY in FS, and store it in *NEW_KEY.  If KEY is already mutable,
+   *NEW_KEY will be set to KEY, else NEW_KEY will be allocated in
+   TRAIL->pool.  */
+svn_error_t *svn_fs__get_mutable_rep (const char **new_key,
+                                      const char *key,
+                                      svn_fs_t *fs, 
+                                      trail_t *trail);
+
+/* stabilize_rep */
+
 #endif /* SVN_LIBSVN_FS_REPS_TABLE_H */
 
 
