@@ -47,7 +47,7 @@ example, "svn --help".)
 
 Here are some options:
 
-  -? -h -H --help  Like CVS: get general or cmd-specific help.
+  -? -h -H --help  Help.
   -q               Quiet.  (CVS has two levels of this, but that's overkill?)
   -v VERSION       Like "cvs cmd -r REV"
   --version        Print program name, version, and url.
