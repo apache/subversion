@@ -1209,7 +1209,10 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/** Read and parse dumpfile-formatted @a dumpstream, reconstructing
+/** 
+ * @since New in 1.2.
+ *
+ * Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos, handling uuids
  * in accordance with @a uuid_action.
  *
@@ -1233,9 +1236,32 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
+ * If @a use_pre_commit_hook is set, call the repository's pre-commit
+ * hook before committing each loaded revision.  
+ *
+ * If @a use_post_commit_hook is set, call the repository's
+ * post-commit hook after committing each loaded revision.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
+ */
+svn_error_t *svn_repos_load_fs2 (svn_repos_t *repos,
+                                 svn_stream_t *dumpstream,
+                                 svn_stream_t *feedback_stream,
+                                 enum svn_repos_load_uuid uuid_action,
+                                 const char *parent_dir,
+                                 svn_boolean_t use_pre_commit_hook,
+                                 svn_boolean_t use_post_commit_hook,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_repos_load_fs2, but with @a use_pre_commit_hook and
+ * @a use_post_commit_hook always @c FALSE.
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,

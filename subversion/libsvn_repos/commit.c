@@ -558,7 +558,18 @@ close_edit (void *edit_baton,
       svn_error_clear (svn_fs_abort_txn (eb->txn, pool));
       return err;
     }
-
+  else if (err)
+    {
+      /* ### TODO: ra_local is the only RA layer that currently
+         understands SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  And as of
+         at least r12960, svn_repos_fs_commit_txn() would never return
+         that anyway.  If someone who knows ra_svn better can add
+         handling for this special case, this whole "else if" block
+         can go away (again).  */ 
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  
   /* Pass new revision information to the caller's callback. */
   {
     svn_string_t *date, *author;
