@@ -204,6 +204,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
       client_creds = creds;
       if (client_creds)
         {
+#if 0 /* FIXME: Neon SSL API change */
           if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
             {
               ne_ssl_load_pem(sess, client_creds->cert_file,
@@ -213,6 +214,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
             {
               ne_ssl_load_pkcs12(sess, client_creds->cert_file);
             }
+#endif
         }
     }
   apr_pool_destroy(pool);
@@ -602,6 +604,7 @@ svn_ra_dav__open (void **session_baton,
 
   if (is_ssl_session)
     {
+#if 0 /* FIXME: Neon SSL API change */
       const char *authorities_file;
       authorities_file = svn_config_get_server_setting(
             cfg, server_group,
@@ -627,6 +630,7 @@ svn_ra_dav__open (void **session_baton,
          a password is needed for the key. */
       ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
       ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
+#endif
     }
 
 

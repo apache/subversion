@@ -34,6 +34,8 @@
 
 
 
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
+
 void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
                                   const svn_ra_dav__xml_elm_t *elements,
                                   svn_ra_dav__xml_validate_cb validate_cb,
@@ -45,6 +47,145 @@ void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
   ne_xml_push_handler(p, elements, validate_cb, startelm_cb, endelm_cb,
                       userdata);
 }
+
+#else /* Neon 0.24 */
+
+typedef struct {
+  apr_pool_t *pool;                          /* pool on which this is alloc-d */
+  void *original_userdata;                   /* userdata for callbacks */
+  const svn_ra_dav__xml_elm_t *elements;     /* old-style elements table */
+  svn_ra_dav__xml_validate_cb *validate_cb;  /* old-style validate callback */
+  svn_ra_dav__xml_startelm_cb *startelm_cb;  /* old-style startelm callback */
+  svn_ra_dav__xml_endelm_cb *endelm_cb;      /* old-style endelm callback */
+  svn_stringbuf_t *cdata_accum;              /* stringbuffer for CDATA */
+} neon_shim_baton_t;
+
+/* Finds a given element in the table of elements. If element is not found
+ * tries to find and return `unknown' element. If that is not found, returns
+ * NULL pointer. Uses a single loop to save CPU cycles. */
+static const svn_ra_dav__xml_elm_t *lookup_elem(
+                                          const svn_ra_dav__xml_elm_t *table,
+                                          const char *nspace,
+                                          const char *name)
+{
+  /* placeholder for `unknown' element if it's present */
+  const svn_ra_dav__xml_elm_t *elem_unknown = NULL;
+  const svn_ra_dav__xml_elm_t *elem;
+
+  for(elem = table; elem->nspace; ++elem)
+    {
+      if (strcmp(elem->nspace, nspace) == 0
+          && strcmp(elem->name, name) == 0)
+        return elem;
+
+      /* Maybe this element is defined as `unknown'? */
+      if (elem->id == ELEM_unknown)
+        elem_unknown = elem;
+    }
+
+  return elem_unknown;
+}
+
+/* From Neon 0.24 ne_xml.h
+ * -----------------------
+ * The startelm callback may return:
+ *   <0 =>  abort the parse (NE_XML_ABORT)
+ *    0 =>  decline this element  (NE_XML_DECLINE)
+ *   >0 =>  accept this element; value is state for this element.
+ * The 'parent' integer is the state returned by the handler of the
+ * parent element. */
+static int shim_startelm(void *userdata, int parent_state, const char *nspace,
+                         const char *name, const char **attrs)
+{
+  neon_shim_baton_t *baton = userdata;
+  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace, name);
+  int rc;
+
+  if (!elem)
+    return NE_XML_ABORT;
+
+  /* TODO: explore an option of keeping element pointer in the baton
+   * to cut one loop in endelm */
+
+  /* 'parent' here actually means a parent element's id as opposed
+   * to 'parent' parameter passed to the startelm() function */
+  rc = baton->validate_cb(baton->original_userdata, parent_state, elem->id);
+  if (rc != SVN_RA_DAV__XML_VALID) {
+    return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
+  }
+
+  rc = baton->startelm_cb(baton->original_userdata, elem, attrs);
+  if (rc != SVN_RA_DAV__XML_VALID) {
+    return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
+  }
+
+  if (baton->cdata_accum != NULL)
+    svn_stringbuf_setempty(baton->cdata_accum);
+  else
+    baton->cdata_accum = svn_stringbuf_create("", baton->pool);
+
+  /* `parent' parameter in the pre-Neon 0.24 interface was a parent's element
+   * id but now it's the status returned by parent's startelm(), so we need to
+   * bridge this by returning this element's id as a status.
+   * We also need to ensure that element ids start with 1, because
+   * zero is `decline'. See ra_dav.h definition of ELEM_* values.
+   */
+  return elem->id;
+}
+
+/* Neon 0.24: may return non-zero to abort the parse */
+static int shim_cdata(void *userdata, int state, const char *cdata, size_t len)
+{
+  const neon_shim_baton_t *baton = userdata;
+
+  svn_stringbuf_appendbytes(baton->cdata_accum, cdata, len);
+  return 0; /* no error */
+}
+
+/* Neon 0.24: may return non-zero to abort the parse */
+static int shim_endelm(void *userdata, int state, const char *nspace,
+                       const char *name)
+{
+  const neon_shim_baton_t *baton = userdata;
+  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace, name);
+  int rc;
+
+  if (!elem)
+    return -1; /* shouldn't be here if startelm didn't abort the parse */
+
+  /* TODO: ask Neon to create a whitespace-suppressing parser */
+  svn_stringbuf_strip_whitespace(baton->cdata_accum);
+
+  rc = baton->endelm_cb(baton->original_userdata,
+                        elem,
+                        baton->cdata_accum->data);
+  if (rc != SVN_RA_DAV__XML_VALID) {
+    return -1; /* abort the parse */
+  }
+  return 0; /* no error */
+}
+
+void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
+                                  const svn_ra_dav__xml_elm_t *elements,
+                                  svn_ra_dav__xml_validate_cb validate_cb,
+                                  svn_ra_dav__xml_startelm_cb startelm_cb,
+                                  svn_ra_dav__xml_endelm_cb endelm_cb, 
+                                  void *userdata,
+                                  apr_pool_t *pool)
+{
+  neon_shim_baton_t *baton = apr_pcalloc(pool, sizeof(neon_shim_baton_t));
+  baton->pool = pool;
+  baton->original_userdata = userdata;
+  baton->elements = elements;
+  baton->validate_cb = validate_cb;
+  baton->startelm_cb = startelm_cb;
+  baton->endelm_cb = endelm_cb;
+  baton->cdata_accum = NULL; /* don't create until startelm is called */
+
+  ne_xml_push_handler(p, shim_startelm, shim_cdata, shim_endelm, baton);
+}
+
+#endif /* Neon version */
 
 
 

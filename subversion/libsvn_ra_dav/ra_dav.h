@@ -44,6 +44,8 @@ extern "C" {
 
 /* Rename these types and constants to abstract from Neon */
 
+#ifdef NE_XML_VALID /* Neon 0.23.9 */
+
 #define SVN_RA_DAV__XML_VALID   NE_XML_VALID
 #define SVN_RA_DAV__XML_INVALID NE_XML_INVALID
 #define SVN_RA_DAV__XML_DECLINE NE_XML_DECLINE
@@ -56,6 +58,39 @@ typedef ne_xml_validate_cb svn_ra_dav__xml_validate_cb;
 typedef ne_xml_startelm_cb svn_ra_dav__xml_startelm_cb;
 typedef ne_xml_endelm_cb   svn_ra_dav__xml_endelm_cb;
 
+#else /* Neon 0.24 (definitions repeated after Neon 0.23.9) */
+
+#define SVN_RA_DAV__NEED_NEON_SHIM
+
+#define SVN_RA_DAV__XML_VALID   (0)
+#define SVN_RA_DAV__XML_INVALID (-1)
+#define SVN_RA_DAV__XML_DECLINE (-2)
+#define SVN_RA_DAV__XML_CDATA   (1<<1)
+#define SVN_RA_DAV__XML_COLLECT ((1<<2) | SVN_RA_DAV__XML_CDATA)
+
+typedef int svn_ra_dav__xml_elmid;
+
+typedef struct {
+  const char *nspace;        /* XML namespace */
+  const char *name;          /* XML tag name */
+  svn_ra_dav__xml_elmid id;  /* tag id */
+  unsigned int flags;        /* processing flags for this namespace:tag */
+} svn_ra_dav__xml_elm_t;
+
+typedef int svn_ra_dav__xml_validate_cb(void *userdata,
+                                        svn_ra_dav__xml_elmid parent,
+                                        svn_ra_dav__xml_elmid child);
+
+typedef int svn_ra_dav__xml_startelm_cb(void *userdata,
+                                        const svn_ra_dav__xml_elm_t *elm,
+                                        const char **atts);
+
+typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
+                                      const svn_ra_dav__xml_elm_t *elm,
+                                      const char *cdata);
+
+#endif /* Neon version */
+
 /* Push an XML handler onto Neon's handler stack */
 void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
                                   const svn_ra_dav__xml_elm_t *elements,
@@ -64,6 +99,7 @@ void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
                                   svn_ra_dav__xml_endelm_cb endelm_cb,
                                   void *userdata,
                                   apr_pool_t *pool);
+
 
 
 typedef struct {
@@ -466,23 +502,9 @@ svn_ra_dav__parsed_request(ne_session *sess,
   
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
-/*
-NE_ELM_unknown -1
-NE_ELM_root 0
-NE_ELM_UNUSED (100)
-NE_ELM_207_first (NE_ELM_UNUSED)
-NE_ELM_multistatus (NE_ELM_207_first)
-NE_ELM_response (NE_ELM_207_first + 1)
-NE_ELM_responsedescription (NE_ELM_207_first + 2)
-NE_ELM_href (NE_ELM_207_first + 3)
-NE_ELM_propstat (NE_ELM_207_first + 4)
-NE_ELM_prop (NE_ELM_207_first + 5)
-NE_ELM_status (NE_ELM_207_first + 6)
-NE_ELM_207_UNUSED (NE_ELM_UNUSED + 100)
-NE_ELM_PROPS_UNUSED (NE_ELM_207_UNUSED + 100)
- */
 enum {
   /* Redefine Neon elements */
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
   ELEM_unknown = NE_ELM_unknown,
   ELEM_root = NE_ELM_root,
   ELEM_UNUSED = NE_ELM_UNUSED,
@@ -496,6 +518,27 @@ enum {
   ELEM_status = NE_ELM_status,
   ELEM_207_UNUSED = NE_ELM_207_UNUSED,
   ELEM_PROPS_UNUSED = NE_ELM_PROPS_UNUSED,
+#else /* Neon 0.24 (definitions repeated after Neon 0.23.9, except `unknown') */
+  /* With the new API, we need to be able to use element id also as a return
+   * value from the new `startelm' callback, hence all element ids must be
+   * positive. Root element id is the only id that is not positive, it's zero.
+   * `Root state' is never returned by a callback, it's only passed into it.
+   * Therefore, negative element ids are forbidden from now on. */
+  ELEM_unknown = 1, /* was (-1), see above why it's (1) now */
+  ELEM_root = NE_XML_STATEROOT, /* (0) */
+  ELEM_UNUSED = 100,
+  ELEM_207_first = ELEM_UNUSED,
+  ELEM_multistatus = ELEM_207_first,
+  ELEM_response = ELEM_207_first + 1,
+  ELEM_responsedescription = ELEM_207_first + 2,
+  ELEM_href = ELEM_207_first + 3,
+  ELEM_propstat = ELEM_207_first + 4,
+  ELEM_prop = ELEM_207_first + 5, /* `prop' tag in the DAV namespace */
+  ELEM_status = ELEM_207_first + 6,
+  ELEM_207_UNUSED = ELEM_UNUSED + 100,
+  ELEM_PROPS_UNUSED = ELEM_207_UNUSED + 100,
+#endif /* Neon version */
+
   /* DAV elements */
   ELEM_activity_coll_set = ELEM_207_UNUSED,
   ELEM_baseline,
