@@ -620,20 +620,6 @@ svn_error_t *svn_fs_revisions_changed (apr_array_header_t **revs,
                                        apr_pool_t *pool);
 
 
-/* Allocate and return an array *PATHS of const char * paths that were
-   modified in REVS in FS.  *REVS is an array of svn_revnum_t
-   revisions.  
-
-   NOTE: This function uses node-id ancestry alone to determine
-   modifiedness, and therefore does NOT claim that in any of the
-   returned revisions file contents changed, properties changed,
-   directory entries lists changed, etc.  */
-svn_error_t *svn_fs_paths_changed (apr_array_header_t **paths,
-                                   svn_fs_t *fs,
-                                   const apr_array_header_t *revs,
-                                   apr_pool_t *pool);
-
-
 /* Set *IS_DIR to non-zero iff PATH in ROOT is a directory.
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_is_dir (int *is_dir,

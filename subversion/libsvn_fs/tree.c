@@ -3283,73 +3283,6 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
 }
 
 
-struct paths_changed_args
-{
-  apr_hash_t *paths;
-  svn_fs_root_t *root;
-};
-
-
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
-svn_error_t *
-svn_fs_paths_changed (apr_array_header_t **paths,
-                      svn_fs_t *fs,
-                      const apr_array_header_t *revs,
-                      apr_pool_t *pool)
-{
-#if 0
-  struct paths_changed_args args;
-  svn_fs_t *fs = svn_fs_root_fs (root);
-  int i;
-  apr_hash_t *all_paths = apr_hash_make (pool);
-  apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_index_t *hi;
-
-  /* Get a root for each revision in REVS, then find out what paths
-     changed under that root. */
-  for (i = 0; i < revs->nelts; i++)
-    {
-      args.paths = all_paths;
-      SVN_ERR (svn_fs_revision_root (&(args.root), fs, 
-                                     APR_ARRAY_IDX (revs, i, svn_revnum_t), 
-                                     subpool));
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_paths_changed,
-                                  &args, subpool));
-      svn_pool_clear (subpool);
-    }
-
-  /* Destroy all memory used, except the paths hash. */
-  svn_pool_destroy (subpool);
-  
-  /* Now build the return array from the keys in the hash table.  The
-     items in the array will share storage with the keys in the hash,
-     but that's alright since the hash keys are alloced in POOL. */
-  *paths = apr_array_make (pool, apr_hash_count (all_paths), 
-                           sizeof (const char *));
-  for (hi = apr_hash_first (pool, all_revs); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      const char *path;
-
-      apr_hash_this (hi, &key, NULL, NULL);
-      path = key;
-      (*((const char **) apr_array_push (*paths))) = path;
-    }
-
-  /* Now sort the array */
-  qsort ((*revs)->elts, (*revs)->nelts, (*revs)->elt_size, 
-         svn_sort_compare_XXX);
-
-#endif /* 0 */
-  abort ();
-
-  /* Return the array. */
-  return SVN_NO_ERROR;
-}
-
-
-
 
 /* Creating transaction and revision root nodes.  */
 
