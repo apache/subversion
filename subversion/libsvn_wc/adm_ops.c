@@ -251,7 +251,7 @@ svn_wc_process_committed (const char *path,
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   svn_wc_adm_access_path (adm_access),
                                   SVN_WC__ADM_LOG,
-                                  (APR_WRITE | APR_APPEND | APR_CREATE),
+                                  (APR_WRITE | APR_CREATE),
                                   pool));
 
   base_name = svn_path_is_child (svn_wc_adm_access_path (adm_access), path,

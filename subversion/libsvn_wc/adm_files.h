@@ -113,8 +113,8 @@ svn_error_t *svn_wc__prop_base_path (const char **prop_path,
  *
  * When you open a file for writing with svn_wc__open_foo(), the file
  * is actually opened in the corresponding location in the tmp/
- * directory (and if you're appending as well, then the tmp file
- * starts out as a copy of the original file). 
+ * directory.  Opening with APR_APPEND is not supported.  You are
+ * guaranteed to be the owner of the new file.
  *
  * Somehow, this tmp file must eventually get renamed to its real
  * destination in the adm area.  You can do it either by passing the
