@@ -1,0 +1,168 @@
+@node Architecture
+@chapter Architecture
+
+Subversion is conceptually divided into a number of seperable layers.
+
+Assuming that the interface (API) of each layer is well-defined, it is
+easy to customize the system; new client apps, new network protocols,
+new servers, and new database back-ends are possible.
+
+(Insert Fancy Postscript diagram "architecture.dia" here!)
+
+@menu
+* Client Layer::                   
+* Network Layer::  
+* Server Layer::
+@end menu
+
+@c ------------------------------------------------------------------
+@node Client Layer
+@section Client Layer
+
+The Subversion client is a binary application (either command-line or
+GUI) which links to two shared libraries.
+
+The first shared library provides an API for managing the client's
+"working copy" of a project:
+
+@itemize *
+@item
+        remove_file (path)
+@item
+        rename_file (path)
+@item
+        patch_file (path, context_diff)
+@item
+        diff_files (path, path)
+@item
+        ? specific bookkeeping routines for files in SVN/ ?
+@end itemize
+
+The second shared library provides an API for requests that involve
+talking to a subversion server.  The first two functions involve
+opening a connection to a server through a particular protocol.
+However, most of the API matches the high-level semeantics given by
+the main SVN library:
+
+@itemize *
+@item
+        server_connect (protocol_method)
+@item
+        server_close ()
+@item
+        request_version ()
+@item
+        request_text_read (path)
+@item
+        request_prop_read (path, propname)
+@item
+        request_update (base_version)
+@item
+        request_import (path)
+@item
+        request_commit (delta)
+@item
+        request_branch_create (path, branch_name)
+@item
+        request_tag_create (path, tag_name)
+@end itemize
+        
+@c ------------------------------------------------------------------
+@node Network Layer
+@section Network Layer
+
+The network layer's job is to move the Subversion high-level semantics
+over a wire.  (See previous section.)
+
+On the client side, a network library translates these semantics into
+a set of either HTTP 1.1 or WebDAV method extensions.
+
+The information is sent over a network to an Apache server.  Apache is
+used for the following reasons:
+
+@itemize *
+@item
+      time-tested and extremely stable
+@item
+      built-in load-balancing
+@item
+      built-in proxy and firewall support
+@item
+      built-in authentication and encryption
+@item
+      allows client-side caching
+@end itemize
+
+Ultimately, the general suspicion is that any attempt to write a
+dedicated "subversion server" (and "subversion protocol") would
+eventually end up evolving towards Apache's already-existing feature
+set.  However, Subversion's layered architecture certainly doesn't
+@emph{prevent} anyone from writing a totally new network layer!
+
+Depending on whether DAV or HTTP 1.1 is used, an appropriate Apache
+module will translate the requests back into Subversion semantics.
+
+
+@c ------------------------------------------------------------------
+@node Server Layer
+@section Server Layer
+
+
+The back-end of Subversion consists of two libraries: the "Main"
+Subversion library and the Subversion Filesystem.
+
+The Main Subversion library provides an API representing high-level
+version-control concepts (specifically, the semantics that the client
+originally wanted):
+
+@itemize *
+@item
+        client_connect (username)
+@item
+        client_close ()
+@item
+        latest_version ()
+@item
+        text_read (path)
+@item
+        prop_read (path, propname)
+@item
+        update (base_version)
+@item
+        import (path)
+@item
+        commit (delta)
+@item
+        branch_create (path, branch_name)
+@item
+        tag_create (path, tag_name)
+@end itemize
+
+These routines make calls directly into the Subversion Filesystem
+library.  The Subversion Filesystem defines a simple, abstract
+UNIX-like filesystem with a twist: write () calls are versioned and
+atomic, and no data is ever deleted!  (See the "Subversion Filesystem"
+section.)  Here are some atomic filesystem calls:
+
+@itemize *
+@item
+        latest ()
+@item
+        read (version, path)
+@item
+        read_node_prop (version, path, propname)
+@item
+        read_version_prop (version, propname)
+@item
+        delta (from_version, from_path, to_version, to_path)
+@item
+        submit (delta)
+@item
+        write (delta, token)
+@item
+        abandon (token)
+@end itemize        
+
+These filesystem calls can then talk to disk, either through a set of
+Berkeley DBM files, or a more powerful SQL server.
+

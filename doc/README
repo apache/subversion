@@ -1,0 +1,10 @@
+
+Design documentation for Subversion is here.
+
+
+
+You'll want to get 
+
+   ftp://ftp.gnu.org/pub/gnu/texinfo/texinfo-4.0.tar.gz
+
+and use the up-to-date `makeinfo' found therein.
