@@ -16,14 +16,14 @@ Candidate changes:
       also correctly sets the locale path now, making locale stuff
       work as well.
     Votes:
-      +1: jszakmeister
+      +1: jszakmeister, dionisos
 
   * r11527
     Fix blame calculation algorithm.
     Justification:
       Correctness issue.
     Votes:
-      +1: mbk, jpieper
+      +1: mbk, jpieper, dionisos
 
 Status of 1.1.2:
 ================
