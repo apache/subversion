@@ -639,7 +639,7 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
                   apr_pool_t *pool);
 
 
-/* Wrapper for @c apr_stat().
+/** Wrapper for @c apr_stat().
  *
  * Wrapper for @c apr_stat(), which see.  @a fname is utf8-encoded.
  */
