@@ -778,7 +778,10 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
       if (len <= relative_len)
         return svn_error_create(APR_EGENERAL, NULL,
                                 "Impossibly long relative url.");
-      len = len - relative_len - 1;
+
+      /* Don't strip off the extra '/' unless there is a relative path */
+      if (relative_len)
+        len = len - relative_len - 1;
       ras->repos_root = apr_pstrmemdup(ras->pool, ras->url, len);
     }
 
