@@ -1876,31 +1876,34 @@ txn_body_copy (void *baton,
                              NULL, trail->pool,
                              "copy from mutable tree not currently supported");
 
-  /* Make sure that the from_path exists in the from_root */
+  /* Build up the parent path from FROM_PATH, making sure that it
+     exists in FROM_ROOT */
   SVN_ERR (open_path (&from_parent_path, from_root, from_path, 
                       0, trail));
 
-  /* Make sure that the to_path does NOT exist in the to_root */
+  /* Build up the parent path from TO_PATH in TO_ROOT.  If the last
+     component does not exist, it's not that big a deal.  We'll just
+     make one there. */
   SVN_ERR (open_path (&to_parent_path, to_root, to_path, 
                       open_path_last_optional, trail));
-  if (to_parent_path->node)
-    return already_exists (to_root, to_path);
 
   if (svn_fs_is_revision_root (from_root))
     {
       /* Copying a file or directory from a revision root.  This is a
          trivial referencing operation. */
 
-      /* Make sure that this node and all parents are mutable.  */
+      /* Make sure that this node's parents are mutable.  */
       SVN_ERR (make_path_mutable (to_root, to_parent_path->parent, 
                                   to_path, trail));
 
-      /* Copying a file or directory from a revision root.  This is a
-         trivial referencing operation. */
-      SVN_ERR (svn_fs__dag_link (to_parent_path->parent->node,
-                                 from_parent_path->node,
-                                 to_parent_path->entry,
-                                 trail));
+      /* Now, set the entry with this name in the parent to the id of
+         the node we are copying.  If the destination parent has no
+         entry of this name, we'll just create one. */
+      SVN_ERR (svn_fs__dag_set_entry 
+               (to_parent_path->parent->node,
+                from_parent_path->entry,
+                (svn_fs_id_t *)svn_fs__dag_get_id (from_parent_path->node),
+                trail));
     }
   else
     {

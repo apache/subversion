@@ -206,11 +206,7 @@ replace_directory (svn_string_t *name,
   if (base_revision != pb->base_rev)
     {
       svn_fs_root_t *other_root;
-      /* First we have to remove the subtree in our current txn. */
-      SVN_ERR (svn_fs_delete_tree (eb->txn_root, new_dirb->path->data,
-                                   eb->pool));
 
-      /* Now copy in the subtree from the other revision. */
       SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
                                      base_revision, eb->pool));
       SVN_ERR (svn_fs_copy (other_root, new_dirb->path->data,
@@ -343,10 +339,7 @@ replace_file (svn_string_t *name,
   if (base_revision != pb->base_rev)
     {
       svn_fs_root_t *other_root;
-      /* First we have to remove the file in our current txn. */
-      SVN_ERR (svn_fs_delete (eb->txn_root, new_fb->path->data, eb->pool));
 
-      /* Now copy in the file from the other revision. */
       SVN_ERR (svn_fs_revision_root (&other_root, eb->fs,
                                      base_revision, eb->pool));
       SVN_ERR (svn_fs_copy (other_root, new_fb->path->data,
