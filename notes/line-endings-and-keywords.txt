@@ -262,3 +262,5 @@ Here are some example values of the property:
 
 Unrecognized words are ignored; absence of the property is the same as
 an empty value or a value with no valid keywords in it.
+
+Keywords (long and short forms) are case-sensitive, as in CVS.
