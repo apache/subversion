@@ -153,10 +153,10 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             break;
           }
         
-        if (committed_date)
-          value = apr_xml_quote_string(p, committed_date->data, 1);
-        else
-          value = NULL;
+        if (committed_date == NULL)
+          return DAV_PROP_INSERT_NOTDEF;
+
+        value = apr_xml_quote_string(p, committed_date->data, 1);
         break;
       }
 
@@ -189,10 +189,10 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             break;
           }
 
-        if (last_author)
-          value = apr_xml_quote_string(p, last_author->data, 1);
-        else
-          value = NULL;
+        if (last_author == NULL)
+          return DAV_PROP_INSERT_NOTDEF;
+
+        value = apr_xml_quote_string(p, last_author->data, 1);
         break;
       }
 
