@@ -405,13 +405,55 @@ am not sure yet.
 Scenarios.
 ----------
 
-Each of these scenarios examines the meeting of two changes.  If the 
+* Scenario 1:
+
+  Client edits foo/bar.c, meanwhile in repos foo/ has been renamed to
+  baz/.  Client commits.
+
+  RESULT: success.  The only "meeting" of changes is indirect (change
+  to child of foo/) vs direct (rename of foo/ to baz/).  Table 1 shows
+  that this intersection does not conflict, so the server accepts the
+  change.  Afterwards, repository:baz/bar.c matches wc:foo/bar.c
+
+  If the client did an update inside foo/, changes to foo/* (baz/* in
+  the repository) would show up, but foo/ would not be renamed.  If
+  the client updated from above foo/, then foo/ would be renamed to
+  baz/ in the working copy.
+
+  --------------------------
+  Mirror image of Scenario 1
+  --------------------------
+
+  Client renames foo/ to baz/ locally.  Meanwhile, in the repository,
+  there has been a change to foo/bar.c.
+
+  If the client updates (either in baz/ or above it), baz/bar.c will
+  be updated to the latest repository version of foo/bar.c.
+
+  If the client commits the rename, that will succeed too, and Version
+  N of foo/bar.c in the repository will be the same as Version N+1 of
+  baz/bar.c.
+
+  Here's an interesting question: what happens if some third client,
+  who is way behind the times and has *none* of the above commits, now
+  runs update inside foo/?  She should get the change to foo/bar.c,
+  even though that change is found as baz/bar.c in the repository.
+
+  (This is not really a question about what should happen, but rather
+  about how the filesystem ensures that what should happen does...)
+
+* Scenario 2:
+
+  
+fooo
 
 
+
+
+From Jim's original scenario:
 
 /dir1/file1
       file2
       dir2/file3
            file4
       dir3/file5
-
