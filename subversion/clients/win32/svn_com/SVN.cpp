@@ -48,7 +48,7 @@ CSVNWorkingCopy::check_wc(BSTR bstrDir, VARIANT_BOOL *pfIsValid)
 	HRESULT hr;
 	svn_error_t *error;
 	svn_boolean_t is_wc;
-	svn_string_t *path;
+	svn_stringbuf_t *path;
 
 	if (pfIsValid == NULL)
 		return E_POINTER;
@@ -278,7 +278,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	apr_hash_t *hash;
 	svn_error_t *error;
 	svn_wc_status_t *status;
-	svn_string_t *path;
+	svn_stringbuf_t *path;
 	apr_hash_index_t *hi;
 	SAFEARRAY *psa;
 	SAFEARRAYBOUND rgsBound;
@@ -317,7 +317,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 		if (FAILED(hr))
 			goto Cleanup;
 		// This is what we want since the hash key is an absolute path.
-		pszKey = ((svn_string_t *)apr_hash_get (status->entry->attributes, 
+		pszKey = ((svn_stringbuf_t *)apr_hash_get (status->entry->attributes, 
 							   (const void *)SVN_WC_ENTRY_ATTR_NAME,
 							   strlen(SVN_WC_ENTRY_ATTR_NAME)))->data;
 		// SVN_WC_ENTRY_THIS_DIR is ".", we don't care about its status.
