@@ -1339,12 +1339,17 @@ fold_scheduling (apr_hash_t *entries,
 
 
         case svn_wc_schedule_delete:
-          /* Not-yet-versioned item being deleted, Just remove
-             the entry. Check that we are not trying to remove
-             the SVN_WC_ENTRY_THIS_DIR entry as that would
+          /* Not-yet-versioned item being deleted.  If the original
+             entry was not marked as "deleted", then remove the entry.
+             Else, return the entry to a 'normal' state, preserving
+             the "deleted" flag.  Check that we are not trying to
+             remove the SVN_WC_ENTRY_THIS_DIR entry as that would
              leave the entries file in an invalid state. */
           assert (entry != this_dir_entry);
-          apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
+          if (! entry->deleted)
+            apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
+          else
+            *schedule = svn_wc_schedule_normal;
           return SVN_NO_ERROR;
         }
       break;
