@@ -27,7 +27,8 @@ Candidate changes:
     Note: r10388 is wrong if it goes into 1.1, but I don't want to change it
       before I know if this is accepted...
     Votes:
-      +1 lundblad, sussman
+      +1: lundblad, sussman
+      +1: kfogel (with the obvious tweak to r10388, on both trunk and branch)
       -0 breser (I'm still not sure this belongs in 1.1.0, but I don't see
                  anything technically wrong with it).
 
