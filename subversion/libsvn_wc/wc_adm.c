@@ -114,7 +114,7 @@ chop_admin_name (svn_string_t *path)
 
 /* Make the working copy administrative directory. */
 static svn_error_t *
-make_adm_subdir (svn_string_t *path, apr_pool_t *pool)
+make_administrative_subdir (svn_string_t *path, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
@@ -137,19 +137,9 @@ make_adm_subdir (svn_string_t *path, apr_pool_t *pool)
  *
  * In directory PATH, create SVN/THING, with type TYPE indicating file
  * or directory (see enum below).
- *
- * If file, and RETURN_FILE is non-null, then *RETURN_FILE will be set
- * to an open handle on the thing.
- *
- * If not file type, but RETURN_FILE is non-null, then return an
- * error, because the caller is probably making a mistake.
  */ 
 static svn_error_t *
-create_adm_thing (svn_string_t *path,
-                  char *thing,
-                  int type,
-                  apr_file_t **return_file,
-                  apr_pool_t *pool)
+make_adm_thing (svn_string_t *path, char *thing, int type, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   apr_file_t *f = NULL;
@@ -165,19 +155,12 @@ create_adm_thing (svn_string_t *path,
                           pool);
 
       if (apr_err)
-        {
-          err = svn_create_error (apr_err, 0, path->data, NULL, pool);
-          goto leave_town;
-        }
-      else
-        {
-          if (return_file)
-            *return_file = f;
-          else
-            apr_err = apr_close (f);
-          if (apr_err)
-            err = svn_create_error (apr_err, 0, path->data, NULL, pool);
-        }
+        err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+      /* Else creation succeeded, so close immediately. */
+      apr_err = apr_close (f);
+      if (apr_err)
+        err = svn_create_error (apr_err, 0, path->data, NULL, pool);
     }
   else if (type == svn_directory_kind)
     {
@@ -194,12 +177,62 @@ create_adm_thing (svn_string_t *path,
   /* Restore path to its original state no matter what. */
   chop_admin_name (path);
 
-  leave_town:
   return err;
 }
-                       
 
-/* Remove path/SVN/thing; really only used for lock files right now. */
+
+/* Open the administrative file FNAME. *HANDLE must be NULL, as with
+   apr_open(). */
+static svn_error_t *
+open_adm_file (apr_file_t **handle,
+               svn_string_t *path,
+               char *fname,
+               apr_int32_t flags,
+               apr_pool_t *pool)
+{
+  svn_error_t *err = NULL;
+  apr_status_t apr_err = 0;
+
+  extend_with_admin_name (path, fname, pool);
+
+  apr_err = apr_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
+
+  if (apr_err)
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path);
+
+  return err;
+}
+
+
+/* Open the administrative file FNAME.  *HANDLE must be NULL, as with
+   apr_open(). */
+static svn_error_t *
+close_adm_file (apr_file_t *fp,
+                svn_string_t *path,
+                char *fname,
+                apr_pool_t *pool)
+{
+  svn_error_t *err = NULL;
+  apr_status_t apr_err = 0;
+
+  extend_with_admin_name (path, fname, pool);
+
+  apr_err = apr_close (fp);
+
+  if (apr_err)
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path);
+
+  return err;
+}
+
+
+/* Remove path/SVN/thing. */
 static svn_error_t *
 remove_adm_thing (svn_string_t *path,
                   char *thing,
@@ -221,29 +254,30 @@ remove_adm_thing (svn_string_t *path,
 }
 
 
+
 /* Initialize the `versions' file in the administrative subdir. */
 static svn_error_t *
 adm_init_versions (svn_string_t *path,
+                   svn_string_t *ancestor_path,
                    svn_vernum_t ancestor_version,
                    apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   apr_file_t *v = NULL;
-  apr_status_t apr_err = 0;
 
-  err = create_adm_thing (path, SVN_WC__ADM_VERSIONS, svn_file_kind, &v, pool);
+  err = make_adm_thing (path, SVN_WC__ADM_VERSIONS, svn_file_kind, pool);
   if (err)
     return err;
 
-  apr_fprintf (v, ". %ld %s\n", ancestor_version, path->data);
+  err = open_adm_file (&v, path, SVN_WC__ADM_VERSIONS, APR_WRITE, pool);
+  if (err)
+    return err;
 
-  apr_err = apr_close (v);
-  if (apr_err)
-    {
-      svn_string_t *new = svn_string_dup (path, pool);
-      extend_with_admin_name (new, SVN_WC__ADM_VERSIONS, pool);
-      return svn_create_error (apr_err, 0, new->data, NULL, pool);
-    }
+  apr_fprintf (v, ". %ld %s\n", ancestor_version, ancestor_path->data);
+
+  err = close_adm_file (v, path, SVN_WC__ADM_VERSIONS, pool);
+  if (err)
+    return err;
 
   return 0;
 }
@@ -266,7 +300,7 @@ svn_wc__set_up_new_dir (svn_string_t *path,
     return svn_create_error (apr_err, 0, path->data, NULL, pool);
 
   /* Make `SVN/'. */
-  err = make_adm_subdir (path, pool);
+  err = make_administrative_subdir (path, pool);
   if (err)
     return err;
 
@@ -275,16 +309,31 @@ svn_wc__set_up_new_dir (svn_string_t *path,
   if (err)
     return err;
 
-  /* Make `SVN/versions'. */
-  err = adm_init_versions (path, ancestor_version, pool);
+  /* Make `SVN/doing-co'. */      /* kff todo: should init_adm.. do this? */
+  err = make_adm_thing (path, SVN_WC__ADM_DOING_CHECKOUT, svn_file_kind, pool);
   if (err)
     return err;
 
   /* Make `SVN/versions'. */
-  err = adm_init_versions (path, ancestor_version, pool);
+  err = adm_init_versions (path, ancestor_path, ancestor_version, pool);
   if (err)
     return err;
 
+  /* Make `SVN/text-base/'. */
+  err = make_adm_thing (path, SVN_WC__ADM_TEXT_BASE, svn_directory_kind, pool);
+  if (err)
+    return err;
+
+  /* Make `SVN/prop-base/' */
+  err = make_adm_thing (path, SVN_WC__ADM_PROP_BASE, svn_directory_kind, pool);
+  if (err)
+    return err;
+
+  /* Make `SVN/tmp/' */
+  err = make_adm_thing (path, SVN_WC__ADM_TMP, svn_directory_kind, pool);
+  if (err)
+    return err;
+  
   /* kff todo: to be continued. */
 
   return 0;
@@ -297,10 +346,28 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
 
-  /* kff todo: fooo, in progress */
-  err = create_adm_thing (path, SVN_WC__ADM_LOCK, svn_file_kind, NULL, pool);
-  if (err)
-    return err;
+  /* kff todo: hmmm, feel kind of bad about this -- we're allocating
+     another error for every time we try and fail to get a lock.  But
+     it's not that much memory, and it happens rarely, and the number
+     of retries is likely to be very small.  Really cannot get used to
+     this pool stuff. :-) */
+
+  do {
+    err = make_adm_thing (path, SVN_WC__ADM_LOCK, svn_file_kind, pool);
+    if (err)
+      {
+        if ((err->apr_err == APR_EEXIST) && wait)
+          {
+            apr_sleep (1000);  /* micro-seconds */
+            wait--;
+            continue;
+          }
+        else
+          return err;
+      }
+    else
+      return 0;
+  } while (wait > 0);
 
   return 0;
 }
