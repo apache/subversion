@@ -71,8 +71,9 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
 
 static int
-test1()
+test1 (const char **msg)
 {
+  *msg = "make svn_string_t from cstring";
   a = svn_string_create (phrase_1, pool);
   
   /* Test that length, data, and null-termination are correct. */
@@ -84,24 +85,27 @@ test1()
 
 
 static int
-test2()
+test2 (const char **msg)
 {
-    b = svn_string_ncreate (phrase_2, 16, pool);
-
-    /* Test that length, data, and null-termination are correct. */
-    if ((b->len == 16) && ((strncmp (b->data, phrase_2, 16)) == 0))
-      return 0;  /* PASS */
-    else
-      return 1;  /* FAIL */
+  *msg = "make svn_string_t from substring of cstring";
+  b = svn_string_ncreate (phrase_2, 16, pool);
+  
+  /* Test that length, data, and null-termination are correct. */
+  if ((b->len == 16) && ((strncmp (b->data, phrase_2, 16)) == 0))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
 }
 
 
 static int
-test3()
+test3 (const char **msg)
 {
   char *tmp;
   size_t old_len;
   
+  *msg = "append svn_string_t to svn_string_t";
+
   a = svn_string_create (phrase_1, pool);
   b = svn_string_ncreate (phrase_2, 16, pool);
 
@@ -120,11 +124,13 @@ test3()
 
 
 static int
-test4()
+test4 (const char **msg)
 {
   a = svn_string_create (phrase_1, pool);
   svn_string_appendcstr (a, "new bytes to append", pool);
   
+  *msg = "append C string to svn_string_t";
+
   /* Test that length, data, and null-termination are correct. */
   if (svn_string_compare 
       (a, svn_string_create ("hello, new bytes to append", pool)))
@@ -135,11 +141,13 @@ test4()
 
 
 static int
-test5()
+test5 (const char **msg)
 {
   a = svn_string_create (phrase_1, pool);
   svn_string_appendbytes (a, "new bytes to append", 9, pool);
   
+  *msg = "append bytes, then compare two strings";
+
   /* Test that length, data, and null-termination are correct. */
   if (svn_string_compare 
       (a, svn_string_create ("hello, new bytes", pool)))
@@ -150,11 +158,13 @@ test5()
 
 
 static int
-test6()
+test6 (const char **msg)
 {
   a = svn_string_create (phrase_1, pool);
   b = svn_string_create (phrase_2, pool);
   c = svn_string_dup (a, pool);
+
+  *msg = "dup two strings, then compare";
 
   /* Test that length, data, and null-termination are correct. */
   if ((svn_string_compare (a, c)) && (! svn_string_compare (b, c)))
@@ -165,10 +175,12 @@ test6()
 
 
 static int
-test7()
+test7 (const char **msg)
 {
   char *tmp;
   size_t tmp_len;
+
+  *msg = "chopping a string";
 
   c = svn_string_create (phrase_2, pool);
 
@@ -188,10 +200,12 @@ test7()
 
 
 static int
-test8()
+test8 (const char **msg)
 {
   c = svn_string_create (phrase_2, pool);  
   
+  *msg = "emptying a string";
+
   svn_string_setempty (c);
   
   if ((c->len == 0) && (c->data[0] == '\0'))
@@ -202,9 +216,11 @@ test8()
 
 
 static int
-test9()
+test9 (const char **msg)
 {
   a = svn_string_create (phrase_1, pool);
+
+  *msg = "fill string with hashmarks";
 
   svn_string_fillchar (a, '#');
 
@@ -219,7 +235,7 @@ test9()
 
 
 static int
-test10()
+test10 (const char **msg)
 {
   svn_string_t *s;
   
@@ -231,6 +247,8 @@ test10()
   int chopped_okay_2 = 0;
   int chopped_okay_3 = 0;
   
+  *msg = "chop_back_to_char";
+
   s = svn_string_create ("chop from slash/you'll never see this", pool);
 
   num_chopped_1 = svn_string_chop_back_to_char (s, '/');
@@ -254,8 +272,8 @@ test10()
 }
 
 
-static int 
-test11()
+static int
+test11 (const char **msg)
 {
   svn_string_t *s, *t;
   size_t len_1 = 0;
@@ -263,6 +281,8 @@ test11()
   size_t block_len_1 = 0;
   size_t block_len_2 = 0;
   
+  *msg = "block initialization and growth";
+
   s = svn_string_create ("a small string", pool);
   len_1       = (s->len);
   block_len_1 = (s->blocksize);
@@ -289,13 +309,13 @@ test11()
 
 /*
    ====================================================================
-   If you add a new test to this file, update these two arrays.
+   If you add a new test to this file, update this array.
 
    (These globals are required by our included main())
 */
 
 /* An array of all test functions */
-int (*test_funcs[])() = 
+int (*test_funcs[])(const char **msg) =
 {
   NULL,
   test1,
@@ -309,25 +329,6 @@ int (*test_funcs[])() =
   test9,
   test10,
   test11,
-  NULL
-};
-
-
-/* Descriptions of each test we can run */
-char *descriptions[] = 
-{
-  NULL,
-  "1: make svn_string_t from cstring",
-  "2: make svn_string_t from substring of cstring",
-  "3: append svn_string_t to svn_string_t",
-  "4: append C string to svn_string_t",
-  "5: append bytes, then compare two strings",
-  "6: dup two strings, then compare",
-  "7: chopping a string",
-  "8: emptying a string",
-  "9: fill string with hashmarks",
-  "10: chop_back_to_char",
-  "11: block initialization and growth",
   NULL
 };
 
