@@ -494,18 +494,16 @@ svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
    entry name which fails to meet these requirements, a filesystem
    function returns an SVN_ERR_FS_PATH_SYNTAX error.
 
-   A directory path is a sequence of one or more directory entry
-   names, separated by slash characters (U+002f).  Sequences of two or
-   more consecutive slash characters are treated as if they were a
-   single slash.  If a path ends with a slash, it refers to the same
-   node it would without the slash, but that node must be a directory,
-   or else the function returns an SVN_ERR_FS_NOT_DIRECTORY error.
+   A directory path is a sequence of zero or more directory entry
+   names, separated by slash characters (U+002f), and possibly ending
+   with slash characters.  Sequences of two or more consecutive slash
+   characters are treated as if they were a single slash.  If a path
+   ends with a slash, it refers to the same node it would without the
+   slash, but that node must be a directory, or else the function
+   returns an SVN_ERR_FS_NOT_DIRECTORY error.
 
-   Paths may not start with a slash.  All directory paths in
-   Subversion are relative; all functions that expect a path as an
-   argument also expect a directory the path should be interpreted
-   relative to.  If a function receives a path that begins with a
-   slash, it will return an SVN_ERR_FS_PATH_SYNTAX error.  */
+   A path consisting of the empty string, or a string containing only
+   slashes, refers to the root directory.  */
 
 
 
