@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-10-05 09:38+0200\n"
-"PO-Revision-Date: 2004-10-05 09:51+0200\n"
+"PO-Revision-Date: 2004-10-05 22:30+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -742,7 +742,7 @@ msgid ""
 "  as necessary in the repository.\n"
 msgstr ""
 "Umieść w repozytorium plik lub katalog dotychczas nie podlegający\n"
-"zarządzaniu wesjami.\n"
+"zarządzaniu wersjami.\n"
 "Wykorzystanie: import [ŚCIEŻKA] URL\n"
 "\n"
 "  Rekurencyjnie zatwierdź kopiowanie ŚCIEŻKI do URL. Jeśli ŚCIEŻKA nie\n"
@@ -947,7 +947,7 @@ msgid ""
 "    URL -> URL:  complete server-side rename.\n"
 msgstr ""
 "Przenieś obiekt w nowe miejsce i/lub zmień jego nazwę.\n"
-"Wykorzytanie:\n"
+"Wykorzystanie:\n"
 "    move ŹRÓDŁO CEL\n"
 "\n"
 "  Uwaga: to polecenie jest równoważnie wykonaniu 'copy' a następnie\n"
@@ -972,7 +972,7 @@ msgid ""
 "  1. Removes versioned props in working copy.\n"
 "  2. Removes unversioned remote prop on repos revision.\n"
 msgstr ""
-"Usunięcie atrybutu z plikow, katalogów lub wersji.\n"
+"Usunięcie atrybutu z plików, katalogów lub wersji.\n"
 "Wykorzystanie:\n"
 "    1. propdel ATRYBUT [ŚCIEŻKA...]\n"
 "    2. propdel ATRYBUT --revprop -r WERSJA [URL]\n"
@@ -1151,7 +1151,7 @@ msgstr ""
 "Wykorzystanie: resolved ŚCIEŻKA...\n"
 "\n"
 "  Uwaga: to polecenie nie rozwikłuje konfliktów ani nie usuwa\n"
-"  znaczników wkazujących miejsca wystąpienia konfliktów. Służy ono\n"
+"  znaczników wskazujących miejsca wystąpienia konfliktów. Służy ono\n"
 "  jedynie do usunięcia plików z informacjami o konflikcie i przywraca\n"
 "  możliwość zatwierdzenia zmian. Powinno być używane po ręcznym\n"
 "  rozwikłaniu konfliktu.\n"
@@ -1589,12 +1589,12 @@ msgstr "Wysyłanie       %s\n"
 #: clients/cmdline/notify.c:317
 #, c-format
 msgid "Adding  (bin)  %s\n"
-msgstr "Dodanie  (bin) %s\n"
+msgstr "Dodawanie  (bin) %s\n"
 
 #: clients/cmdline/notify.c:324
 #, c-format
 msgid "Adding         %s\n"
-msgstr "Dodanie        %s\n"
+msgstr "Dodawanie        %s\n"
 
 #: clients/cmdline/notify.c:331
 #, c-format
@@ -2142,7 +2142,7 @@ msgstr "System plików nie zawiera węzła o podanym identyfikatorze wersji"
 
 #: include/svn_error_codes.h:428
 msgid "String does not represent a node or node-rev-id"
-msgstr "Napis nie zawiera identyfikatora węzła lub wersji węzłą"
+msgstr "Napis nie zawiera identyfikatora węzła lub wersji węzła"
 
 #: include/svn_error_codes.h:432
 msgid "Name does not refer to a filesystem directory"
@@ -2219,8 +2219,7 @@ msgstr "Nieznany typ systemu plików"
 
 #: include/svn_error_codes.h:507
 msgid "The repository is locked, perhaps for db recovery"
-msgstr ""
-"Repozytorium jest zablokowane, być może ze wględu na odtwarzanie bazy danych"
+msgstr "Repozytorium jest zablokowane, być może ze względu na odtwarzanie bazy danych"
 
 #: include/svn_error_codes.h:511
 msgid "A repository hook failed"
@@ -2413,7 +2412,7 @@ msgstr "Błąd wejścia/wyjścia"
 
 #: include/svn_error_codes.h:730
 msgid "A path under version control is needed for this operation"
-msgstr "To polecenie wymaga ścieżki podlegajacej zarządzaniu wersjami "
+msgstr "To polecenie wymaga ścieżki podlegającej zarządzaniu wersjami "
 
 #: include/svn_error_codes.h:734
 msgid "Repository access is needed for this operation"
@@ -2507,7 +2506,7 @@ msgstr "Nielegalny obiekt dla podanej operacji"
 
 #: include/svn_error_codes.h:828
 msgid "MD5 checksum is missing"
-msgstr "Niezgodnosć sumy kontrolnej MD5"
+msgstr "Niezgodność sumy kontrolnej MD5"
 
 #: include/svn_error_codes.h:832
 msgid "Directory needs to be empty but is not"
@@ -2539,7 +2538,7 @@ msgstr "Nie ma takiego atrybutu"
 
 #: include/svn_error_codes.h:860
 msgid "No auth file path available"
-msgstr "Brak ścieżki do pliku uwierzytelniajacego"
+msgstr "Brak ścieżki do pliku uwierzytelniającego"
 
 #: include/svn_error_codes.h:865
 msgid "Incompatible library version"
@@ -2584,7 +2583,7 @@ msgstr "Opis zmian zawiera jakiś błąd"
 #: libsvn_client/add.c:348
 #, c-format
 msgid "Error during recursive add of '%s'"
-msgstr "Bład podczas rekursywnego dodawania '%s'"
+msgstr "Błąd podczas rekursywnego dodawania '%s'"
 
 #: libsvn_client/add.c:358
 #, c-format
@@ -2594,7 +2593,7 @@ msgstr "Nie można zamknąć katalogu '%s'"
 #: libsvn_client/blame.c:389 libsvn_client/blame.c:766
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
-msgstr "Nie można okreslić odpowiedzialności za plik binarny '%s'"
+msgstr "Nie można określić odpowiedzialności za plik binarny '%s'"
 
 #: libsvn_client/blame.c:549
 msgid "Start revision must precede end revision"
@@ -2667,7 +2666,7 @@ msgstr "Ścieżka '%s' już istnieje"
 #: libsvn_client/commit.c:688
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
-msgstr "'%s' to nazwa zastrzeżona i nie może zostać zaimportowany"
+msgstr "'%s' to nazwa zastrzeżona i nie może zostać zaimportowana"
 
 #: libsvn_client/commit.c:766 libsvn_client/copy.c:541
 msgid "Commit failed (details follow):"
@@ -3193,7 +3192,7 @@ msgstr "Obiekt systemu plików nie jest otwarty"
 #: libsvn_fs_fs/err.c:61
 #, c-format
 msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-msgstr "Uskodzona wersja obiektu '%s' w systemie plików '%s'"
+msgstr "Uszkodzona wersja obiektu '%s' w systemie plików '%s'"
 
 #: libsvn_fs_fs/err.c:84
 #, c-format
@@ -5285,7 +5284,7 @@ msgstr ""
 "\n"
 "Wypisuje listę wszystkich logów Berkeley DB.\n"
 "\n"
-"UWAGA: zmodyfikowanie lub skasowanie logów bądących jeszcze w użyciu\n"
+"UWAGA: zmodyfikowanie lub skasowanie logów będących jeszcze w użyciu\n"
 "spowoduje uszkodzenie repozytorium.\n"
 
 #: svnadmin/main.c:325
@@ -5647,7 +5646,7 @@ msgid ""
 "\n"
 "Print the author.\n"
 msgstr ""
-"Wykorzystanie: svnlook author ŚCIEŻKA_W_REP\n"
+"Użycie: svnlook author ŚCIEŻKA_W_REP\n"
 "\n"
 "Podaje autora.\n"
 
@@ -5668,7 +5667,7 @@ msgid ""
 "\n"
 "Print the paths that were changed.\n"
 msgstr ""
-"wykorzytanie: svnlook changed KATALOG_REP\n"
+"wykorzystanie: svnlook changed KATALOG_REP\n"
 "\n"
 "Wypisuje ścieżki do obiektów, które zostały zmienione.\n"
 
@@ -5930,7 +5929,7 @@ msgid ""
 "Type 'svnlook help %s' for usage.\n"
 msgstr ""
 "polecenie '%s' nie obsługuje opcji '%s'\n"
-"Użyj 'svnlook help %s' by uzyskać więcj informacji\n"
+"Użyj 'svnlook help %s' by uzyskać więcej informacji\n"
 
 #: svnversion/main.c:126
 msgid ""
@@ -5973,13 +5972,12 @@ msgstr ""
 "    4168\n"
 "\n"
 "  Wynik będzie pojedynczym numerem jeśli kopia robocza zawiera\n"
-"  pojedynczą wesję, nie modyfikowaną i nie repozycjonowaną poleceniem\n"
+"  pojedynczą wersję, nie modyfikowaną i nie repozycjonowaną poleceniem\n"
 "  switch. W bardziej złożonych wypadkach numer może mieć następującą\n"
 "  postać:\n"
 "\n"
 "   4123:4168     kopia robocza zawiera więcej niż jedną wersję\n"
-"   4168M         kopia robocza jest zmodyfikowana w stosunku do "
-"repozytorium\n"
+"   4168M         kopia robocza jest zmodyfikowana w stosunku do repozytorium\n"
 "   4123S         kopia robocza jest repozycjonowana\n"
 "   4123:4168MS   wszystkie te efekty równocześnie\n"
 "\n"
