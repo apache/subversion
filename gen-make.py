@@ -26,40 +26,52 @@ def main(fname, oname=None, skip_depends=0):
   ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
   errors = 0
+  targets = { }
   groups = { }
-  target_deps = { }
   build_targets = { }
   install = { }
   test_progs = [ ]
   file_deps = [ ]
   target_dirs = { }
 
-  targets = _filter_targets(parser.sections())
-  for target in targets:
-    path = parser.get(target, 'path')
-    target_dirs[path] = None
+  target_names = _filter_targets(parser.sections())
 
-    install_type = parser.get(target, 'install')
-
-    bldtype = parser.get(target, 'type')
-    if bldtype == 'exe':
-      tfile = target
-      objext = '.o'
-      if not install_type:
-        install_type = 'bin'
-    elif bldtype == 'lib':
-      tfile = target + '.la'
-      objext = '.lo'
-      if not install_type:
-        install_type = 'lib'
-    elif bldtype == 'doc':
-      pass
-    else:
-      print 'ERROR: unknown build type:', bldtype
+  # PASS 1: collect the targets and some basic info
+  for target in target_names:
+    try:
+      target_ob = Target(target,
+                         parser.get(target, 'path'),
+                         parser.get(target, 'install'),
+                         parser.get(target, 'type'))
+    except GenMakeError, e:
+      print e
       errors = 1
       continue
 
-    tpath = os.path.join(path, tfile)
+    targets[target] = target_ob
+
+    group = parser.get(target, 'group')
+    if groups.has_key(group):
+      groups[group].append(target_ob.output)
+    else:
+      groups[group] = [ target_ob.output ]
+
+  if errors:
+    sys.exit(1)
+
+  # PASS 2: generate the outputs
+  for target in target_names:
+    target_ob = targets[target]
+
+    path = target_ob.path
+    install_type = target_ob.install
+    bldtype = target_ob.type
+    objext = target_ob.objext
+
+    tpath = target_ob.output
+    tfile = os.path.basename(tpath)
+
+    target_dirs[path] = None
     build_targets[target] = tpath
 
     if install.has_key(install_type):
@@ -89,11 +101,14 @@ def main(fname, oname=None, skip_depends=0):
 
     retreat = _retreat_dots(path)
     libs = [ ]
-    target_deps[target] = [ ]
+    deps = [ ]
     for lib in string.split(parser.get(target, 'libs')):
-      if lib in targets:
-        target_deps[target].append(lib)
-        dep_path = parser.get(lib, 'path')
+      if lib in target_names:
+        tlib = targets[lib]
+        target_ob.deps.append(tlib)
+        deps.append(tlib.output)
+
+        dep_path = tlib.path
         if bldtype == 'lib':
           # we need to hack around a libtool problem: it cannot record a
           # dependency of one shared lib on another shared lib.
@@ -119,7 +134,7 @@ def main(fname, oname=None, skip_depends=0):
                 '%s_OBJECTS = %s\n'
                 '%s: $(%s_DEPS)\n'
                 '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-                % (targ_varname, objstr, string.join(target_deps[target]),
+                % (targ_varname, objstr, string.join(deps),
                    targ_varname, objnames,
                    tpath, targ_varname,
                    path, tfile, ldflags, targ_varname, libstr))
@@ -134,17 +149,8 @@ def main(fname, oname=None, skip_depends=0):
                       % (src[:-2], objext, src))
       ofile.write('\n')
 
-    group = parser.get(target, 'group')
-    if groups.has_key(group):
-      groups[group].append(target)
-    else:
-      groups[group] = [ target ]
-
-  for group in groups.keys():
-    group_deps = _sort_deps(groups[group], target_deps)
-    for i in range(len(group_deps)):
-      group_deps[i] = build_targets[group_deps[i]]
-    ofile.write('%s: %s\n\n' % (group, string.join(group_deps)))
+  for g_name, g_targets in groups.items():
+    ofile.write('%s: %s\n\n' % (g_name, string.join(g_targets)))
 
   ofile.write('CLEAN_DIRS = %s\n' % string.join(target_dirs.keys()))
 
@@ -167,8 +173,8 @@ def main(fname, oname=None, skip_depends=0):
           la_tweaked[file + '-a'] = None
 
       for t in inst_targets:
-        for dep in target_deps[t]:
-          bt = build_targets[dep]
+        for dep in targets[t].deps:
+          bt = dep.output
           if bt[-3:] == '.la':
             la_tweaked[bt + '-a'] = None
       la_tweaked = la_tweaked.keys()
@@ -262,6 +268,34 @@ def main(fname, oname=None, skip_depends=0):
   if errors:
     sys.exit(1)
 
+class Target:
+  def __init__(self, name, path, install, type):
+    self.name = name
+    self.deps = [ ]	# dependencies (list of other Target objects)
+    self.path = path
+    self.type = type
+
+    if type == 'exe':
+      tfile = name
+      self.objext = '.o'
+      if not install:
+        install = 'bin'
+    elif type == 'lib':
+      tfile = name + '.la'
+      self.objext = '.lo'
+      if not install:
+        install = 'lib'
+    elif type == 'doc':
+      pass
+    else:
+      raise GenMakeError('ERROR: unknown build type: ' + type)
+
+    self.install = install
+    self.output = os.path.join(path, tfile)
+
+class GenMakeError(Exception):
+  pass
+
 _cfg_defaults = {
   'sources' : '',
   'link-flags' : '',
@@ -295,29 +329,6 @@ def _filter_clean_files(fname):
   "Filter files which have a suffix handled by the standard 'clean' rule."
   # for now, we only look for .la which keeps this code simple.
   return fname[-3:] != '.la'
-
-def _sort_deps(targets, deps):
-  "Sort targets based on dependencies specified in deps."
-
-  # each target gets a numeric sort order value
-  order = { }
-  for i in range(len(targets)):
-    order[targets[i]] = i
-
-  # for each target, make sure its dependencies have a lower value
-  for t in targets:
-    thisval = order[t]
-    for dep in deps[t]:
-      if order.get(dep, -1) > thisval:
-        order[t] = order[dep]
-        order[dep] = thisval
-        thisval = order[t]
-
-  targets = targets[:]
-  def sortfunc(a, b, order=order):
-    return cmp(order[a], order[b])
-  targets.sort(sortfunc)
-  return targets
 
 def _collect_paths(pats, path=None):
   errors = 0
