@@ -1,5 +1,23 @@
 #!/bin/sh
 
+#
+# USAGE: ./dist.sh [VERSION [NAME [REPOS-PATH]]]
+#
+#   Create a distribution tarball, labelling it with the given version. If
+#   the version is not supplied, the HEAD version will be used.
+#
+#   If NAME is supplied, it will be used in the version string. From CVS
+#   trees, this is 'dev build'. By default, this will be 'r<VERSION>'.
+#   Note that you can use '' or 'HEAD' for the VERSION to be able to
+#   supply a name in the second argument.
+#
+#   If REPOS-PATH is supplied, the tarball will be constructed from the
+#   root located at that path (e.g. /branches/foo). If REPOS-PATH is not
+#   supplied, then /trunk will be used.
+#
+#   Note: the leading slash on REPOS-PATH will be inserted if not present.
+#
+
 ##########################################################################
 # How to build a Subversion distribution tarball:
 #
@@ -32,16 +50,30 @@ DIST_SANDBOX=.dist_sandbox
 WC_VERSION=`svn st -vn doc/README | awk '{print $2}'`
 
 ### The "REV" part of ${DISTNAME}-rREV.tar.gz
-if test "X$1" != X; then
-  VERSION=$1
+if test -z "$1" || test "$1" = "HEAD"; then
+  VERSION="`svn st -vu README | tail -1 | awk '{print $3}'`"
 else
-  VERSION=`svn st -vu README | tail -1 | awk '{print $3}'`
+  VERSION="$1"
+fi
+
+RELEASE_NAME="$2"
+if test -z "$RELEASE_NAME"; then
+  RELEASE_NAME="r$VERSION"
+fi
+
+REPOS_PATH="$3"
+if test -z "$REPOS_PATH"; then
+  REPOS_PATH="trunk"
+else
+  # remove any leading slashes
+  REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
 ### The tarball's basename, also the name of the subdirectory into which
 ### it should unpack.
-DISTNAME=subversion-r${VERSION}
+DISTNAME=subversion-${RELEASE_NAME}
 echo "Distribution will be named: ${DISTNAME}"
+echo "     constructed from path: /${REPOS_PATH}"
 
 ### Warn the user if their working copy looks to be out of sync with
 ### their requested (or default) revision
@@ -82,7 +114,7 @@ echo "Removed and recreated ${DIST_SANDBOX}"
 ### Export the dist tree, clean it up.
 echo "Checking out revision ${VERSION} of Subversion into sandbox..."
 (cd ${DIST_SANDBOX} && \
- svn co -q -r ${VERSION} http://svn.collab.net/repos/svn/trunk \
+ svn co -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
         -d ${DISTNAME} --username none --password none)
 echo "Removing all .svn/ dirs from the checkout..."
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svn -print`
@@ -157,13 +189,12 @@ does not do what you need, please send in a patch!
 EOF
 
 ### Give this release a unique name, to help us interpret bug reports
+vsn_file="${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h"
 sed -e \
- "s/#define *SVN_VER_TAG *\"dev build\"/#define SVN_VER_TAG \"r${VERSION}\"/" \
-  < ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h              \
-  > ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h.tmp
+ "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
+  < "$vsn_file" > "${vsn_file}.tmp"
 
-mv ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h.tmp \
-   ${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h
+mv "${vsn_file}.tmp" "$vsn_file"
 
 
 ### Make the tarball.
