@@ -204,7 +204,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
       svn_string_appendstr (msg, filename, pool);
 
       /* Declare this a fatal error! */
-      svn_handle_error (svn_create_error (result, TRUE, msg, pool));
+      svn_handle_error (svn_create_error (result, SVN_FATAL, msg, pool));
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
@@ -213,7 +213,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
       /* hoo boy, look at this yummy syntax: */
       svn_handle_error 
         (svn_create_error 
-         (result, TRUE, 
+         (result, SVN_FATAL, 
           svn_string_create ("svn_parse(): fatal: can't create scratchpool",
                              pool), pool));
     }
@@ -270,7 +270,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                 svn_string_appendstr (msg, currentline, pool);
                 
                 svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, FALSE, 
+                                  (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
                                    msg, pool));
                 break;
               }
@@ -314,7 +314,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                 svn_string_appendstr (msg, currentline, pool);
                 
                 svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, FALSE, 
+                                  (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
                                    msg, pool));
                 break;
               }
@@ -359,7 +359,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
       svn_string_appendstr (msg, filename, pool);
       
       /* Not fatal, just annoying */
-      svn_handle_error (svn_create_error (result, FALSE, msg, pool));
+      svn_handle_error (svn_create_error (result, SVN_NON_FATAL, msg, pool));
     }
   
   ap_destroy_pool (scratchpool);

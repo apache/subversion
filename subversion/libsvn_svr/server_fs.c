@@ -230,7 +230,7 @@ svn_svr_latest (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -266,7 +266,7 @@ svn_svr_get_ver_prop (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -303,7 +303,7 @@ svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -343,7 +343,7 @@ svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -391,7 +391,7 @@ svn_svr_read (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -431,7 +431,7 @@ svn_svr_get_node_prop (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -470,7 +470,7 @@ svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -509,7 +509,7 @@ svn_svr_get_node_proplist (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -548,7 +548,7 @@ svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -586,7 +586,7 @@ svn_svr_get_node_propnames (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -624,7 +624,7 @@ svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -674,7 +674,7 @@ svn_svr_submit (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -719,7 +719,7 @@ svn_svr_write (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -761,7 +761,7 @@ svn_svr_abandon (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -816,7 +816,7 @@ svn_svr_get_delta (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
@@ -861,7 +861,7 @@ svn_svr_get_diff (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          FALSE,
+                                          SVN_NON_FATAL,
                                           policy->pool));
       return FALSE;
     }
