@@ -35,7 +35,7 @@ SVN::Client - Subversion client functions
       print "Enter authentication info for realm: $realm\n";
       print "Username: ";
       my $username = <>;
-      chop($username);
+      chomp($username);
       $cred->username($username);
       print "Password: ";
       my $password = <>;
