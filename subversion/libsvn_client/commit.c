@@ -40,6 +40,7 @@
 #include "svn_io.h"
 #include "svn_md5.h"
 #include "svn_time.h"
+#include "svn_sorts.h"
 
 #include "client.h"
 
@@ -828,14 +829,6 @@ have_processed_parent (apr_array_header_t *commit_items,
   return FALSE;
 }
 
-/* qsort-ready comparison function. */
-static int compare_paths (const void *a, const void *b)
-{
-  const char *item1 = *((const char * const *) a);
-  const char *item2 = *((const char * const *) b);
-
-  return svn_path_compare_paths (item1, item2);
-}
 
 /* Remove redundancies by removing duplicates from NONRECURSIVE_TARGETS,
  * and removing any target that either is, a decendant of, a path in
@@ -1192,9 +1185,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
       /* Sort the paths in a depth-last directory-ish order. */
       qsort (dirs_to_lock->elts, dirs_to_lock->nelts,
-             dirs_to_lock->elt_size, compare_paths);
+             dirs_to_lock->elt_size, svn_sort_compare_paths);
       qsort (dirs_to_lock_recursive->elts, dirs_to_lock_recursive->nelts,
-             dirs_to_lock_recursive->elt_size, compare_paths);
+             dirs_to_lock_recursive->elt_size, svn_sort_compare_paths);
 
       /* Remove any duplicates */
       SVN_ERR (svn_path_remove_redundancies (&unique_dirs_to_lock,

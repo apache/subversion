@@ -103,6 +103,17 @@ svn_sort_compare_revisions (const void *a, const void *b)
 }
 
 
+int 
+svn_sort_compare_paths (const void *a, const void *b)
+{
+  const char *item1 = *((const char * const *) a);
+  const char *item2 = *((const char * const *) b);
+
+  return svn_path_compare_paths (item1, item2);
+}
+
+
+
 apr_array_header_t *
 svn_sort__hash (apr_hash_t *ht,
                 int (*comparison_func) (const svn_sort__item_t *,

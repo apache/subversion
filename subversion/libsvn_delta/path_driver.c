@@ -25,6 +25,7 @@
 #include "svn_delta.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_sorts.h"
 
 
 /*** Helper functions. ***/
@@ -121,15 +122,6 @@ count_components (const char *path)
 }
 
 
-/* qsort-ready comparison function. */
-static int compare_paths (const void *a, const void *b)
-{
-  const char *item1 = *((const char * const *) a);
-  const char *item2 = *((const char * const *) b);
-  return svn_path_compare_paths (item1, item2);
-}
-
-
 
 /*** Public interfaces ***/
 svn_error_t *
@@ -155,7 +147,7 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
     return SVN_NO_ERROR;
 
   /* Sort the paths in a depth-first directory-ish order. */
-  qsort (paths->elts, paths->nelts, paths->elt_size, compare_paths);
+  qsort (paths->elts, paths->nelts, paths->elt_size, svn_sort_compare_paths);
 
   /* If the root of the edit is also a target path, we want to call
      the callback function to let the user open the root directory and
