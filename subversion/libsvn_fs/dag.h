@@ -179,6 +179,16 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
                                const char *name,
                                trail_t *trail);
 
+/* Open the node identified by PATH under ROOT, as part of TRAIL. Set
+   *CHILD_P to the new node and *PARENT_P to its parent, allocated in
+   TRAIL->pool. PATH is a slash-separated directory path with. If PATH
+   is empty, *PARENT_P will be NULL and *CHILD_P will be ROOT. */
+svn_error_t *svn_fs__dag_open_path (dag_node_t **child_p,
+                                    dag_node_t **parent_p,
+                                    dag_node_t *root,
+                                    const char *path,
+                                    trail_t *trail);
+
 
 /* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
    PARENT must be mutable.  NAME must be a single path component; it
