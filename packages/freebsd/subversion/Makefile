@@ -12,7 +12,7 @@ MASTER_SITES=	http://www.tigris.org/files/15/38/
 MAINTAINER=	rooneg@electricjellyfish.net
 
 LIB_DEPENDS=	db4:${PORTSDIR}/databases/db4 \
-		neon.18:${PORTSDIR}/www/neon \
+		neon.19:${PORTSDIR}/www/neon \
 		expat:${PORTSDIR}/textproc/expat \
 		apr:${PORTSDIR}/devel/apr-snapshot
 
@@ -50,9 +50,5 @@ post-configure:
 	# make sure we don't install the swig stuff, even if it was found
 	@${PERL} -pi -e 's/install-swig-py-lib//g' ${WRKSRC}/Makefile
 	@${PERL} -pi -e 's/swig-py-lib//g' ${WRKSRC}/Makefile
-
-	# something's wrong with neon, and libneon.la doesn't appear to be
-	# getting installed, so we have to hack the makefile to find it.
-	@${PERL} -pi -e 's/libneon.la/libneon.a/g' ${WRKSRC}/Makefile
 
 .include <bsd.port.mk>
