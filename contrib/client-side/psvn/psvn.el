@@ -79,6 +79,7 @@
 ;; P C-i - svn-status-property-edit-svn-ignore
 ;; P k   - svn-status-property-set-keyword-list
 ;; P y   - svn-status-property-set-eol-style
+;; P x   - svn-status-property-set-executable
 ;; h     - svn-status-use-history
 ;; q     - svn-status-bury-buffer
 
@@ -780,6 +781,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-property-map (kbd "TAB") 'svn-status-property-edit-svn-ignore)
   (define-key svn-status-mode-property-map (kbd "k") 'svn-status-property-set-keyword-list)
   (define-key svn-status-mode-property-map (kbd "y") 'svn-status-property-set-eol-style)
+  (define-key svn-status-mode-property-map (kbd "x") 'svn-status-property-set-executable)
   (define-key svn-status-mode-property-map (kbd "p") 'svn-status-property-parse)
   ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
   (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
@@ -827,8 +829,9 @@ A and B must be line-info's."
      ["svn:ignore File Extension..." svn-status-property-ignore-file-extension t]
      ["Edit svn:ignore Property" svn-status-property-edit-svn-ignore t]
      "---"
-     ["Set svn:keywords List" svn-status-property-set-keyword-list t]
-     ["Set svn:eol-style" svn-status-property-set-eol-style t]
+     ["Edit svn:keywords List" svn-status-property-set-keyword-list t]
+     ["Select svn:eol-style" svn-status-property-set-eol-style t]
+     ["Set svn:executable" svn-status-property-set-executable t]
      )
     ("Options"
      ["Save Options" svn-status-save-state t]
@@ -2389,6 +2392,11 @@ When called with a prefix argument, it is possible to enter a new property."
    (completing-read "Set svn:eol-style for the marked files: "
                     (mapcar 'list '("native" "CRLF" "LF" "CR"))
                     nil t)))
+
+(defun svn-status-property-set-executable ()
+  "Set the svn:executable property on the marked files."
+  (interactive)
+  (svn-status-property-set-property (svn-status-marked-files) "svn:executable" "*"))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-prop-edit-mode:
