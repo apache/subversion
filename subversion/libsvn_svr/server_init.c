@@ -103,14 +103,51 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
     }
 
 
-  /* Now walk through our Uberhash... */
+  /* Now walk through our Uberhash, just as we do in svn_uberhash_print(). */
   {
     ap_hash_index_t *hash_index;
     void *key, *val;
     size_t keylen;
+    char *cstr;
 
+    for (hash_index = ap_hash_first (configdata); /* get first hash entry */
+         hash_index;                              /* NULL if out of entries */
+         hash_index = ap_hash_next (hash_index))  /* get next hash entry */
+      {
+        /* Retrieve key and val from current hash entry */
+        ap_hash_this (hash_index, &key, &keylen, &val);
 
-        
+        /* Figure out which `section' of svn.conf we're looking at */
+
+        if (svn_string_compare_2cstring ((svn_string_t *) key,
+                                         "repos_aliases"))
+          {
+            printf ("neato!  found the repos_aliases section.\n");
+          }
+
+        else if (svn_string_compare_2cstring ((svn_string_t *) key,
+                                              "plugins"))
+          {
+            printf ("neato!  found the plugins section.\n");
+          }
+
+        else if (svn_string_compare_2cstring ((svn_string_t *) key,
+                                              "security"))
+          {
+            printf ("neato!  found the security section.\n");
+          }
+
+        else
+          {
+            svn_string_t *msg = 
+              svn_string_create ("svr_init(): warning: unknown section: ", 
+                                 pool);
+            svn_string_appendstr (msg, (svn_string_t *) key, pool);
+            svn_handle_error (svn_create_error 
+                              (SVN_ERR_UNRECOGNIZED_SECTION, FALSE,
+                               msg, pool));            
+          }
+      }    
     /* store any repository aliases, */
     
     /* store any  general security policies, */
