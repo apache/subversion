@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="tests_libsvn_delta_diff4" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="tests_libsvn_diff_diff_diff3" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=tests_libsvn_delta_diff4 - Win32 Debug
+CFG=tests_libsvn_diff_diff_diff3 - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "diff4_test.mak".
+!MESSAGE NMAKE /f "diff3_test.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "diff4_test.mak" CFG="tests_libsvn_delta_diff4 - Win32 Debug"
+!MESSAGE NMAKE /f "diff3_test.mak" CFG="tests_libsvn_diff_diff_diff3 - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "tests_libsvn_delta_diff4 - Win32 Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "tests_libsvn_delta_diff4 - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "tests_libsvn_diff_diff_diff3 - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "tests_libsvn_diff_diff_diff3 - Win32 Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=tests_libsvn_delta_diff4 - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "tests_libsvn_delta_diff4 - Win32 Release"
+!IF  "$(CFG)" == "tests_libsvn_diff_diff_diff3 - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -51,9 +51,9 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 ..\..\libsvn_delta\Release\libsvn_delta.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\..\apr\LibR\apr.lib ..\..\..\apr-util\LibR\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibR\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /machine:I386 /out:"Release/diff4-test.exe"
+# ADD LINK32 ..\..\libsvn_diff\Release\libsvn_diff.lib ..\..\tests\Release\libsvn_tests_main.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\..\apr\LibR\apr.lib ..\..\..\apr-util\LibR\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibR\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /machine:I386 /out:"Release/diff-diff3-test.exe"
 
-!ELSEIF  "$(CFG)" == "tests_libsvn_delta_diff4 - Win32 Debug"
+!ELSEIF  "$(CFG)" == "tests_libsvn_diff_diff_diff3 - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -76,21 +76,21 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ..\..\libsvn_delta\Debug\libsvn_delta.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\..\apr\LibD\apr.lib ..\..\..\apr-util\LibD\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibD\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/diff4-test.exe" /pdbtype:sept
+# ADD LINK32 ..\..\libsvn_diff\Debug\libsvn_diff.lib ..\..\tests\Debug\libsvn_tests_main.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\..\apr\LibD\apr.lib ..\..\..\apr-util\LibD\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibD\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/diff-diff3-test.exe" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no
 
 !ENDIF 
 
 # Begin Target
 
-# Name "tests_libsvn_delta_diff4 - Win32 Release"
-# Name "tests_libsvn_delta_diff4 - Win32 Debug"
+# Name "tests_libsvn_diff_diff_diff3 - Win32 Release"
+# Name "tests_libsvn_diff_diff_diff3 - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=".\diff4-test.c"
+SOURCE=".\diff-diff3-test.c"
 # End Source File
 # End Group
 # End Target
