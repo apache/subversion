@@ -181,10 +181,10 @@ svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
 }
 
 
-/* This implements 'svn_auth_ssl_server_prompt_func_t'. */
+/* This implements 'svn_auth_ssl_server_trust_prompt_func_t'. */
 svn_error_t *
-svn_cl__auth_ssl_server_prompt (
-  svn_auth_cred_server_ssl_t **cred_p,
+svn_cl__auth_ssl_server_trust_prompt (
+  svn_auth_cred_ssl_server_trust_t **cred_p,
   void *baton,
   int failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
@@ -262,14 +262,14 @@ svn_cl__auth_ssl_server_prompt (
 }
 
 
-/* This implements 'svn_auth_ssl_client_prompt_func_t'. */
+/* This implements 'svn_auth_ssl_client_cert_prompt_func_t'. */
 svn_error_t *
-svn_cl__auth_ssl_client_prompt (svn_auth_cred_client_ssl_t **cred_p,
-                                void *baton,
-                                apr_pool_t *pool)
+svn_cl__auth_ssl_client_cert_prompt (svn_auth_cred_ssl_client_cert_t **cred_p,
+                                     void *baton,
+                                     apr_pool_t *pool)
 {
   const char *cert_file = NULL;
-  svn_auth_cred_client_ssl_t *cred;
+  svn_auth_cred_ssl_client_cert_t *cred;
 
   SVN_ERR (prompt (&cert_file, "client certificate filename: ", FALSE, pool));
 
@@ -281,11 +281,12 @@ svn_cl__auth_ssl_client_prompt (svn_auth_cred_client_ssl_t **cred_p,
 }
 
 
-/* This implements 'svn_auth_ssl_pw_prompt_func_t'. */
+/* This implements 'svn_auth_ssl_client_cert_pw_prompt_func_t'. */
 svn_error_t *
-svn_cl__auth_ssl_pw_prompt (svn_auth_cred_client_ssl_pass_t **cred_p,
-                            void *baton,
-                            apr_pool_t *pool)
+svn_cl__auth_ssl_client_cert_pw_prompt (
+  svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+  void *baton,
+  apr_pool_t *pool)
 {
   
   const char *result;
@@ -294,7 +295,8 @@ svn_cl__auth_ssl_pw_prompt (svn_auth_cred_client_ssl_pass_t **cred_p,
 
   if (result && result[0])
     {
-      svn_auth_cred_client_ssl_pass_t *ret = apr_pcalloc (pool, sizeof (*ret));
+      svn_auth_cred_ssl_client_cert_pw_t *ret =
+        apr_pcalloc (pool, sizeof (*ret));
       ret->password = result;
       *cred_p = ret;
     }

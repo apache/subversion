@@ -117,7 +117,7 @@ server_ssl_callback(void *userdata,
                     const ne_ssl_certificate *cert)
 {
   svn_ra_session_t *ras = userdata;
-  svn_auth_cred_server_ssl_t *server_creds = NULL;
+  svn_auth_cred_ssl_server_trust_t *server_creds = NULL;
   void *creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
@@ -157,7 +157,7 @@ server_ssl_callback(void *userdata,
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
-                                     SVN_AUTH_CRED_SERVER_SSL,
+                                     SVN_AUTH_CRED_SSL_SERVER_TRUST,
                                      realmstring,
                                      ras->callbacks->auth_baton,
                                      pool);
@@ -194,14 +194,14 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
 {
   svn_ra_session_t *ras = userdata;
   void *creds;
-  svn_auth_cred_client_ssl_pass_t *pw_creds = NULL;
+  svn_auth_cred_ssl_client_cert_pw_t *pw_creds = NULL;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
-                                     SVN_AUTH_CRED_CLIENT_PASS_SSL,
+                                     SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
                                      "none", /* ### fix? */
                                      ras->callbacks->auth_baton,
                                      pool);
@@ -229,13 +229,13 @@ client_ssl_callback(void *userdata, ne_session *sess,
 {
   svn_ra_session_t *ras = userdata;
   void *creds;
-  svn_auth_cred_client_ssl_t *client_creds;
+  svn_auth_cred_ssl_client_cert_t *client_creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
-                                     SVN_AUTH_CRED_CLIENT_SSL,
+                                     SVN_AUTH_CRED_SSL_CLIENT_CERT,
                                      "none", /* ### fix? */
                                      ras->callbacks->auth_baton,
                                      pool);
