@@ -102,8 +102,10 @@ svn_client_ls (apr_hash_t **dirents,
                                         ctx, pool));
 
   /* Resolve REVISION into a real revnum. */
-  SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
-                                            revision, NULL, pool));
+  SVN_ERR (svn_client__get_revision_number
+           (&rev, ra_lib, session, revision, 
+            (path_or_url == url) ? NULL : path_or_url, pool));
+
   if (! SVN_IS_VALID_REVNUM (rev))
     SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
 

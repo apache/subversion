@@ -1350,6 +1350,13 @@ def basic_ls(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A'))
 
+  svntest.actions.run_and_verify_svn('ls working copy directory with -r BASE',
+                                     ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+                                     None, 'ls', '-r', 'BASE',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     os.path.join(wc_dir, 'A'))
+
   svntest.actions.run_and_verify_svn('ls a single file',
                                      ['mu\n'],
                                      None, 'ls',
