@@ -1,5 +1,6 @@
 #!/bin/sh
 
+export PATH=/usr/local/bin:/usr/bin:/bin
 
 BIN=/bin
 USRBIN=/usr/bin
@@ -49,6 +50,7 @@ $SVN revert --recursive subversion/po 2>>$error_log >>$output_log || \
     ###TODO: mail your output!
     exit 1
 }
+revision="`$SVNVERSION subversion/po`"
 
 if test -e "$root_path/Makefile" ; then
     # prevent switches or anything from breaking the update
@@ -67,7 +69,6 @@ $MAKE locale-gnu-po-update 2>>$error_log >>$output_log || \
 }
 
 
-revision="`$SVNVERSION . | $SED -e 's/M//'`"
 
 $SENDMAIL -t <<EOF
 From: $mail_from
