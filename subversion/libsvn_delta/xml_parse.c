@@ -98,34 +98,6 @@ static char *svn_delta__tagmap[] =
 
 
 
-/* Return the value associated with NAME in expat attribute array ATTS,
-   else return NULL.  (There could never be a NULL attribute value in
-   the XML, although the empty string is possible.)
-   
-   ATTS is an array of c-strings: even-numbered indexes are names,
-   odd-numbers hold values.  If all is right, it should end on an
-   even-numbered index pointing to NULL.
-*/
-/* kff todo: caller is responsible for flagging errors now; make sure
-   calling code is adjusted accordingly. */
-static const char *
-get_attribute_value (const char **atts, char *name)
-{
-  while (atts && (*atts))
-    {
-      if (strcmp (atts[0], name) == 0)
-        return atts[1];
-      else
-        atts += 2; /* continue looping */
-    }
-
-  /* Else no such attribute name seen. */
-  return NULL;
-}
-
-
-
-
 /* The way to officially bail out of expat. 
    
    Store ERROR in DIGGER and set all expat callbacks to NULL. (To
@@ -506,10 +478,10 @@ do_directory_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = get_attribute_value (atts, "ancestor");
+  ancestor = get_attribute_value ("ancestor", atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = get_attribute_value (atts, "ver");
+  ver = get_attribute_value ("ver", atts);
   if (ver)
     youngest_frame->ancestor_version = atoi (ver);
 
@@ -604,10 +576,10 @@ do_file_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = get_attribute_value (atts, "ancestor");
+  ancestor = get_attribute_value ("ancestor", atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = get_attribute_value (atts, "ver");
+  ver = get_attribute_value ("ver", atts);
   if (ver)
     youngest_frame->ancestor_version = atoi (ver);
 
@@ -950,17 +922,17 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     }
 
   /* Set "name" field in frame, if there's any such attribute in ATTS */
-  value = get_attribute_value (atts, "name");
+  value = get_attribute_value ("name", atts);
   if (value)
     new_frame->name = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor path in frame, if there's any such attribute in ATTS */
-  value = get_attribute_value (atts, "ancestor");
+  value = get_attribute_value ("ancestor", atts);
   if (value)
     new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor version in frame, if there's any such attribute in ATTS */
-  value = get_attribute_value (atts, "ver");
+  value = get_attribute_value ("ver", atts);
   if (value)
     new_frame->ancestor_version = atoi (value);
 
