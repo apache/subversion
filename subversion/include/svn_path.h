@@ -66,12 +66,6 @@
  *
  ***/
 
-/* kff todo: hey, it looks like APR may handle some parts of path
-   portability for us, and we just get to use `/' everywhere.  Check
-   up on this. */
-
-#define SVN_PATH_REPOS_SEPARATOR '/'
-
 enum svn_path_style {
   svn_path_local_style = 1,  /* parse path using local (client) conventions */
   svn_path_repos_style,      /* parse path using repository conventions */
@@ -131,6 +125,13 @@ int svn_path_isempty (const svn_string_t *path, enum svn_path_style style);
    (At some future point, this may make other semantically inoperative
    transformations.) */
 void svn_path_canonicalize (svn_string_t *path,
+                            enum svn_path_style style);
+
+
+/* Return an integer greater than, equal to, or less than 0, according
+   as PATH1 is greater than, equal to, or less than PATH2. */
+int svn_path_compare_paths (const svn_string_t *path1,
+                            const svn_string_t *path2,
                             enum svn_path_style style);
 
 

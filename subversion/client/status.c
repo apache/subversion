@@ -68,7 +68,9 @@ svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool)
   apr_array_header_t *statusarray;
 
   /* Convert the unordered hash to an ordered, sorted array */
-  statusarray = apr_get_sorted_keys (statushash, pool);
+  statusarray = apr_hash_sorted_keys (statushash,
+                                      svn_sort_compare_as_paths,
+                                      pool);
 
   /* Loop over array, printing each name/status-structure */
   for (i = 0; i < statusarray->nelts; i++)

@@ -49,12 +49,16 @@
 
 
 
+#include <string.h>
 #include "svn_string.h"
 #include "svn_path.h"
 
 
 
-/*** A path manipulation library. ***/
+/* kff todo: hey, it looks like APR may handle some parts of path
+   portability for us, and we just get to use `/' everywhere.  Check
+   up on this. */
+#define SVN_PATH__REPOS_SEPARATOR '/'
 
 void
 svn_path_canonicalize (svn_string_t *path, enum svn_path_style style)
@@ -68,7 +72,7 @@ svn_path_canonicalize (svn_string_t *path, enum svn_path_style style)
      libsvn_string. */
 
   while ((path->len > 0)
-         && (path->data[(path->len - 1)] == SVN_PATH_REPOS_SEPARATOR))
+         && (path->data[(path->len - 1)] == SVN_PATH__REPOS_SEPARATOR))
     {
       path->data[(path->len - 1)] = '\0';
       path->len--;
@@ -84,7 +88,7 @@ add_component_internal (svn_string_t *path,
 {
   /* kff todo: `style' ignored presently. */
 
-  char dirsep = SVN_PATH_REPOS_SEPARATOR;
+  char dirsep = SVN_PATH__REPOS_SEPARATOR;
 
   if (! svn_string_isempty (path))
     svn_string_appendbytes (path, &dirsep, sizeof (dirsep));
@@ -122,7 +126,7 @@ svn_path_remove_component (svn_string_t *path, enum svn_path_style style)
 
   svn_path_canonicalize (path, style);
 
-  if (! svn_string_chop_back_to_char (path, SVN_PATH_REPOS_SEPARATOR))
+  if (! svn_string_chop_back_to_char (path, SVN_PATH__REPOS_SEPARATOR))
     svn_string_setempty (path);
 }
 
@@ -145,7 +149,7 @@ svn_path_last_component (svn_string_t *path,
      carefully. */
   svn_path_canonicalize (path, style);
 
-  i = svn_string_find_char_backward (path, SVN_PATH_REPOS_SEPARATOR);
+  i = svn_string_find_char_backward (path, SVN_PATH__REPOS_SEPARATOR);
 
   if (i < path->len)
     {
@@ -179,13 +183,38 @@ svn_path_isempty (const svn_string_t *path, enum svn_path_style style)
 
   char buf[3];
   buf[0] = '.';
-  buf[0] = SVN_PATH_REPOS_SEPARATOR;
+  buf[0] = SVN_PATH__REPOS_SEPARATOR;
   buf[0] = '\0';
 
   return ((path == NULL)
           || (svn_string_isempty (path))
           || (strcmp (path->data, buf) == 0));
 }
+
+
+int svn_path_compare_paths (const svn_string_t *path1,
+                            const svn_string_t *path2,
+                            enum svn_path_style style)
+{
+  /* FIXME: this does not get the right results for status report
+     ordering.  There we want a dir to appear right before the files
+     in it, and then all subdirs at the end, each right before the
+     stuff in it, etc...  That cannot be done in a pure two-at-a-time
+     manner, it needs a holistic appreciation of the data. */
+
+  size_t min_len = ((path1->len) < (path2->len)) ? path1->len : path2->len;
+  size_t i;
+  
+  /* Skip past common prefix. */
+  for (i = 0; (i < min_len) && (path1->data[i] == path2->data[i]); i++)
+    ;
+
+  if ((path1->len == path2->len) && (i >= min_len))
+    return 0;
+  else
+    return strncmp (path1->data + i, path2->data + i, min_len);
+}
+
 
 
 
