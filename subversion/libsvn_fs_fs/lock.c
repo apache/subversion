@@ -68,7 +68,6 @@ merge_paths (char **result,
   return SVN_NO_ERROR;
 }
 
-/* ###TODO Take just the lock and grab lock->path*/
 static svn_error_t *
 abs_path_to_lock_file (char **abs_path,
                        svn_fs_t *fs,
@@ -83,7 +82,6 @@ abs_path_to_lock_file (char **abs_path,
 }
 
 
-/* ###TODO Take just the lock and grab lock->token*/
 static svn_error_t *
 abs_path_to_lock_token_file (char **abs_path,
                              svn_fs_t *fs,
