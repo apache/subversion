@@ -88,3 +88,9 @@ Candidate changes:
       +0: sussman (not yet reviewed)
       +1: breser
 
+  * r10144
+    Fix a crash caused by a race when getting status.
+    Justification: Don't ever crash.  Requested by the TSVN folks
+                   because the crash kills the whole Windows desktop.
+    Votes:
+      +1: bliss
