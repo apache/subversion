@@ -80,9 +80,3 @@ Candidate changes:
     This fix doesn't try to fix the ipv6 issue, just the SIGSEGV.
     Votes:
       +1: dwhedon, jerenkrantz
-
-  * r8892
-    Finish Issue #1588 - mod_authz_svn should work with SVNParentPath.
-    Notes: No API changes.
-    Votes:
-      +1: striker, jerenkrantz, jszakmeister

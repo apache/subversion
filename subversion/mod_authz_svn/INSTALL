@@ -93,6 +93,10 @@ II.   Configuration
         <user> = [rw|r]
         * = [rw|r]
 
+        [<repository name>:<path in repository>]
+        @<group> = [rw|r]
+        <user> = [rw|r]
+        * = [rw|r]
 
       An example (line continued lines are supposed to be on one line):
 
@@ -136,3 +140,18 @@ II.   Configuration
         # Just for demonstration
         * =
         @subversion = rw
+
+        # In case of SVNParentPath we can specify which repository we are
+        # referring to.  If no matching repository qualified section is found,
+        # the general unqualified section is tried.
+        #
+        # NOTE: This will work in the case of using SVNPath aswell, only the
+        # repository name (the last element of the url) will always be the
+        # same.
+        [dark:/]
+        * =
+        @dark = rw
+
+        [light:/]
+        @light = rw
+
