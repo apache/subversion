@@ -306,6 +306,7 @@ add_dir_recursive (const char *dirname,
     }
   else  /* Yes, it exited cleanly, so close the dir. */
     {
+      svn_error_clear (err);
       apr_status_t apr_err = apr_dir_close (dir);
       if (apr_err)
         return svn_error_createf

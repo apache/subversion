@@ -715,11 +715,12 @@ main (int argc, const char * const *argv)
       case 'r':
         if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
           {
-            svn_handle_error (svn_error_create
-                              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               "Multiple revision arguments encountered; "
-                               "try '-r M:N' instead of '-r M -r N'"),
-                              stderr, FALSE);
+            err = svn_error_create
+              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+               "Multiple revision arguments encountered; "
+               "try '-r M:N' instead of '-r M -r N'");
+            svn_handle_error (err, stderr, FALSE);
+            svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -728,14 +729,13 @@ main (int argc, const char * const *argv)
                                     opt_arg, pool) != 0)
           {
             err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
-            if (err)
-              svn_handle_error (err, stderr, FALSE);
-            else
-              svn_handle_error (svn_error_createf
-                                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 "Syntax error in revision argument '%s'",
-                                 utf8_opt_arg),
-                                stderr, FALSE);
+            if (! err)
+              err = svn_error_createf
+                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                 "Syntax error in revision argument '%s'",
+                 utf8_opt_arg);
+            svn_handle_error (err, stderr, FALSE);
+            svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -764,6 +764,7 @@ main (int argc, const char * const *argv)
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
+            svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -802,6 +803,7 @@ main (int argc, const char * const *argv)
           if (err)
             {
               svn_handle_error (err, stdout, FALSE);
+              svn_error_clear (err);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
             }
@@ -837,6 +839,7 @@ main (int argc, const char * const *argv)
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
+            svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -847,6 +850,7 @@ main (int argc, const char * const *argv)
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
+            svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -883,6 +887,7 @@ main (int argc, const char * const *argv)
                                        pool);
         if (err) {
           svn_handle_error (err, stderr, FALSE);
+          svn_error_clear (err);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -914,6 +919,7 @@ main (int argc, const char * const *argv)
                                     "--auto-props and --no-auto-props are "
                                     "mutually exclusive.");
             svn_handle_error (err, stderr, FALSE);
+            svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -926,6 +932,7 @@ main (int argc, const char * const *argv)
                                     "--auto-props and --no-auto-props are "
                                     "mutually exclusive.");
             svn_handle_error (err, stderr, FALSE);
+            svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -952,6 +959,7 @@ main (int argc, const char * const *argv)
   if (err)
     {
       svn_handle_error (err, stderr, 0);
+      svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }
@@ -1029,11 +1037,12 @@ main (int argc, const char * const *argv)
          probably not what the user intended. */
       if (log_under_version_control && (! opt_state.force_log))
         {
-          svn_handle_error
-            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
-                               "Log message file is a versioned file; "
-                               "use '--force-log' to override."),
-             stderr, FALSE);
+          err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
+                                  NULL,
+                                  "Log message file is a versioned file; "
+                                  "use '--force-log' to override.");
+          svn_handle_error (err, stderr, FALSE);
+          svn_error_clear (err);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1042,12 +1051,12 @@ main (int argc, const char * const *argv)
          not intend that. */
       if (log_is_pathname && !opt_state.force_log)
         {
-          svn_handle_error
-            (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
-                               "The log message is a pathname "
-                               "(was -F intended?); use '--force-log' "
-                               "to override."),
-             stderr, FALSE);
+          err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
+                                  "The log message is a pathname "
+                                  "(was -F intended?); use '--force-log' "
+                                  "to override.");
+          svn_handle_error (err, stderr, FALSE);
+          svn_error_clear (err);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -1059,7 +1068,8 @@ main (int argc, const char * const *argv)
 
   if ((err = svn_config_get_config (&(ctx.config), opt_state.config_dir, pool)))
     {
-      svn_handle_error (err, stderr, 0);
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }
@@ -1206,7 +1216,7 @@ main (int argc, const char * const *argv)
         svn_opt_subcommand_help (subcommand->name, svn_cl__cmd_table,
                                  svn_cl__options, pool);
       else
-        svn_handle_error (err, stderr, 0);
+        svn_handle_error (err, stderr, FALSE);
 
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */
