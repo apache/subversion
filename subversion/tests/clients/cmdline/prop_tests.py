@@ -740,15 +740,11 @@ def revprop_change(sbox):
 
 #----------------------------------------------------------------------
 
-class _PropError:
-  pass
-
 def prop_value_conversions(sbox):
   "some svn: properties should be converted"
 
   # Bootstrap
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
@@ -820,50 +816,44 @@ def prop_value_conversions(sbox):
       print "svn pg", name, "output does not match expected."
       print "Expected standard output: ", exp_out, "\n"
       print "Actual standard output: ", out, "\n"
-      raise _PropError()
+      raise svntest.Failure
 
-  try:
-    # Check svn:mime-type
-    check_prop('svn:mime-type', iota_path, ['text/html\n'])
-    check_prop('svn:mime-type', mu_path, ['text/html\n'])
+  # Check svn:mime-type
+  check_prop('svn:mime-type', iota_path, ['text/html\n'])
+  check_prop('svn:mime-type', mu_path, ['text/html\n'])
 
-    # Check svn:eol-style
-    check_prop('svn:eol-style', iota_path, ['native\n'])
-    check_prop('svn:eol-style', mu_path, ['native\n'])
+  # Check svn:eol-style
+  check_prop('svn:eol-style', iota_path, ['native\n'])
+  check_prop('svn:eol-style', mu_path, ['native\n'])
 
-    # Check svn:ignore
-    check_prop('svn:ignore', A_path,
-               ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
-    check_prop('svn:ignore', B_path,
-               ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
+  # Check svn:ignore
+  check_prop('svn:ignore', A_path,
+             ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
+  check_prop('svn:ignore', B_path,
+             ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
 
-    # Check svn:externals
-    check_prop('svn:externals', A_path,
-               ['foo http://foo.com/repos'+os.linesep, '\n'])
-    check_prop('svn:externals', B_path,
-               ['foo http://foo.com/repos'+os.linesep, '\n'])
+  # Check svn:externals
+  check_prop('svn:externals', A_path,
+             ['foo http://foo.com/repos'+os.linesep, '\n'])
+  check_prop('svn:externals', B_path,
+             ['foo http://foo.com/repos'+os.linesep, '\n'])
 
-    # Check svn:keywords
-    check_prop('svn:keywords', iota_path, ['Rev Date\n'])
-    check_prop('svn:keywords', mu_path, ['Rev  Date\n'])
+  # Check svn:keywords
+  check_prop('svn:keywords', iota_path, ['Rev Date\n'])
+  check_prop('svn:keywords', mu_path, ['Rev  Date\n'])
 
-    # Check svn:executable
-    check_prop('svn:executable', iota_path, ['*\n'])
-    check_prop('svn:executable', lambda_path, ['*\n'])
-    check_prop('svn:executable', mu_path, ['*\n'])
+  # Check svn:executable
+  check_prop('svn:executable', iota_path, ['*\n'])
+  check_prop('svn:executable', lambda_path, ['*\n'])
+  check_prop('svn:executable', mu_path, ['*\n'])
 
-    # Check other props
-    check_prop('svn:some-prop', lambda_path, ['bar\n'])
-    check_prop('svn:some-prop', mu_path, [' bar baz\n'])
-    check_prop('svn:some-prop', iota_path, ['bar'+os.linesep, '\n'])
-    check_prop('some-prop', lambda_path, ['bar\n'])
-    check_prop('some-prop', mu_path,[' bar baz\n'])
-    check_prop('some-prop', iota_path, ['bar\n', '\n'])
-  except _PropError:
-    return 1
-
-  return 0
-
+  # Check other props
+  check_prop('svn:some-prop', lambda_path, ['bar\n'])
+  check_prop('svn:some-prop', mu_path, [' bar baz\n'])
+  check_prop('svn:some-prop', iota_path, ['bar'+os.linesep, '\n'])
+  check_prop('some-prop', lambda_path, ['bar\n'])
+  check_prop('some-prop', mu_path,[' bar baz\n'])
+  check_prop('some-prop', iota_path, ['bar\n', '\n'])
 
 
 ########################################################################

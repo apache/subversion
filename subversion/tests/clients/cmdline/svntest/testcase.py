@@ -76,29 +76,38 @@ class TestCase:
           str(self.index) + ":", self.pred.func.__doc__
 
   def run(self, args):
+    error = 0
     if self.pred.cond:
-      error = 0
       print self.pred.skip_text(),
     else:
-      error = 1
       try:
-        error = apply(self.pred.func, args)
-      except svntest.main.SVNTreeUnequal:
-        print "caught an SVNTreeUnequal exception, returning error instead"
+        # FIXME: Remove this return code check after all tests
+        # have # been converted to throw exceptions instead of
+        # returning error codes.
+        rc = apply(self.pred.func, args)
+        if rc is not None:
+          error = rc
+          print 'WARNING: Test driver returned a status code'
+      except svntest.Failure, ex:
+        error = 1
+        if len(ex.args):
+          print 'EXCEPTION:', str(ex)
       except KeyboardInterrupt:
-        print "Interrupted"
+        print 'Interrupted'
         sys.exit(0)
       except SystemExit, ex:
-        print "Caught SystemExit(%d), skipping cleanup" % ex.code
+        print 'EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code
         print ex.code and 'FAIL: ' or 'PASS: ',
         self._print_name()
         raise
       except:
-        print "caught unexpected exception"
+        error = 1
+        print 'UNEXPECTED EXCEPTION:'
         traceback.print_exc(file=sys.stdout)
       print self.pred.run_text(error),
       error = self.pred.convert_error(error)
     self._print_name()
+    sys.stdout.flush()
     return error
 
 

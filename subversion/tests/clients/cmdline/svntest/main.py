@@ -25,6 +25,7 @@ import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
 
+from svntest import Failure
 from svntest import testcase
 from svntest import wc
 
@@ -53,16 +54,24 @@ from svntest import wc
 
 
 # Exception raised if you screw up in the tree module.
-class SVNTreeError(Exception): pass
+class SVNTreeError(Failure):
+  def __init__(self):
+    Failure.__init__(self, self.__class__)
 
 # Exception raised if two trees are unequal
-class SVNTreeUnequal(Exception): pass
+class SVNTreeUnequal(Failure):
+  def __init__(self):
+    Failure.__init__(self, self.__class__)
 
 # Exception raised if one node is file and other is dir
-class SVNTypeMismatch(Exception): pass
+class SVNTypeMismatch(Failure):
+  def __init__(self):
+    Failure.__init__(self, self.__class__)
 
 # Exception raised if get_child is passed a file.
-class SVNTreeIsNotDirectory(Exception): pass
+class SVNTreeIsNotDirectory(Failure):
+  def __init__(self):
+    Failure.__init__(self, self.__class__)
 
 # Windows specifics
 if sys.platform == 'win32':
@@ -368,7 +377,8 @@ class Sandbox:
     self.repo_dir = os.path.join(general_repo_dir, self.name)
 
   def build(self):
-    return actions.make_repo_and_wc(self)
+    if actions.make_repo_and_wc(self):
+      raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
 
 ######################################################################
