@@ -98,9 +98,8 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
    move this file into PATH, or to append the conflicts to the file's
    already-existing .prej file in PATH.
 
-   If MERGED is non-null, set *MERGED to true if there were local
-   propchanges before this call, or false if the local props were
-   unmodified.
+   If STATE is non-null, set *STATE to the state of the local properties
+   after the merge.
 
    Any conflicts are also returned in a hash that maps (const char *)
    propnames -> conflicting (const svn_prop_t *) ptrs from the PROPCHANGES
@@ -108,7 +107,7 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
    conflicts occurred, then *CONFLICTS is simply allocated as an empty
    hash.
 */
-svn_error_t *svn_wc__merge_prop_diffs (svn_boolean_t *merged,
+svn_error_t *svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                        apr_hash_t **conflicts,
                                        const char *path,
                                        const char *name,

@@ -105,7 +105,8 @@ struct diff_cmd_baton {
    two temporary files.   The path is the "true" label to use in the
    diff output, and the revnums are ignored. */
 static svn_error_t *
-diff_file_changed (const char *path,
+diff_file_changed (svn_wc_notify_state_t *state,
+                   const char *path,
                    const char *tmpfile1,
                    const char *tmpfile2,
                    svn_revnum_t rev1,
@@ -149,6 +150,9 @@ diff_file_changed (const char *path,
      to need to write a diff plug-in mechanism that makes use of the
      two paths, instead of just blindly running SVN_CLIENT_DIFF.  */
 
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
   /* Destroy the subpool. */
   svn_pool_destroy (subpool);
 
@@ -164,7 +168,7 @@ diff_file_added (const char *path,
                  const char *tmpfile2,
                  void *diff_baton)
 {
-  return diff_file_changed (path, tmpfile1, tmpfile2, 
+  return diff_file_changed (NULL, path, tmpfile1, tmpfile2, 
                             SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                             diff_baton);
 }
@@ -175,7 +179,7 @@ diff_file_deleted (const char *path,
                    const char *tmpfile2,
                    void *diff_baton)
 {
-  return diff_file_changed (path, tmpfile1, tmpfile2, 
+  return diff_file_changed (NULL, path, tmpfile1, tmpfile2, 
                             SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                             diff_baton);
 }
@@ -200,7 +204,8 @@ diff_dir_deleted (const char *path,
 }
   
 static svn_error_t *
-diff_props_changed (const char *path,
+diff_props_changed (svn_wc_notify_state_t *state,
+                    const char *path,
                     const apr_array_header_t *propchanges,
                     apr_hash_t *original_props,
                     void *diff_baton)
@@ -220,12 +225,15 @@ diff_props_changed (const char *path,
                                  diff_cmd_baton->outfile,
                                  subpool));
 
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
 /* The main callback table for 'svn diff'.  */
-static const svn_diff_callbacks_t 
+static const svn_wc_diff_callbacks_t 
 diff_callbacks =
   {
     diff_file_changed,
@@ -249,7 +257,8 @@ struct merge_cmd_baton {
 
 
 static svn_error_t *
-merge_file_changed (const char *mine,
+merge_file_changed (svn_wc_notify_state_t *state,
+                    const char *mine,
                     const char *older,
                     const char *yours,
                     svn_revnum_t older_rev,
@@ -264,17 +273,39 @@ merge_file_changed (const char *mine,
   const char *right_label = apr_psprintf (subpool, ".r%" SVN_REVNUM_T_FMT,
                                           yours_rev);
   svn_error_t *err;
+  svn_boolean_t has_local_mods = FALSE;
 
   /* This callback is essentially no more than a wrapper around
      svn_wc_merge().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
+  SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, subpool));
+
   err = svn_wc_merge (older, yours, mine,
                       left_label, right_label, target_label,
                       subpool);
-  if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-    return err;  
+
+  if (err && (err->apr_err == SVN_ERR_WC_CONFLICT))
+    {
+      if (state)
+        *state = svn_wc_notify_state_conflicted;
+    }
+  else if (err)
+    return err;
+  else if (has_local_mods && state)
+    *state = svn_wc_notify_state_merged;
+  else if (state)
+    {
+      /* It's possible that the merged changes were already present,
+         so that the file still is not modified w.r.t. text base.
+         Therefore we test again, in order to report state accurately. */ 
+      SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, subpool));
+      if (has_local_mods)
+        *state = svn_wc_notify_state_modified;
+      else
+        *state = svn_wc_notify_state_unchanged;
+    }
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -448,7 +479,8 @@ merge_dir_deleted (const char *path,
 }
   
 static svn_error_t *
-merge_props_changed (const char *path,
+merge_props_changed (svn_wc_notify_state_t *state,
+                     const char *path,
                      const apr_array_header_t *propchanges,
                      apr_hash_t *original_props,
                      void *baton)
@@ -464,14 +496,14 @@ merge_props_changed (const char *path,
   /* We only want to merge "regular" version properties:  by
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (regular_props)
-    SVN_ERR (svn_wc_merge_prop_diffs (path, regular_props, subpool));
+    SVN_ERR (svn_wc_merge_prop_diffs (state, path, regular_props, subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
 /* The main callback table for 'svn merge'.  */
-static const svn_diff_callbacks_t 
+static const svn_wc_diff_callbacks_t 
 merge_callbacks =
   {
     merge_file_changed,
@@ -548,8 +580,8 @@ convert_to_url (const char **url,
 /* PATH1, PATH2, and TARGET_WCPATH all better be directories.   For
    the single file case, the caller do the merging manually. */
 static svn_error_t *
-do_merge (const svn_delta_editor_t *after_editor,
-          void *after_edit_baton,
+do_merge (svn_wc_notify_func_t notify_func,
+          void *notify_baton,
           svn_client_auth_baton_t *auth_baton,
           const char *path1,
           const svn_client_revision_t *revision1,
@@ -557,7 +589,7 @@ do_merge (const svn_delta_editor_t *after_editor,
           const svn_client_revision_t *revision2,
           const char *target_wcpath,
           svn_boolean_t recurse,
-          const svn_diff_callbacks_t *callbacks,
+          const svn_wc_diff_callbacks_t *callbacks,
           void *callback_baton,
           apr_pool_t *pool)
 {
@@ -568,8 +600,8 @@ do_merge (const svn_delta_editor_t *after_editor,
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   const svn_delta_edit_fns_t *diff_editor;
-  const svn_delta_editor_t *composed_editor, *new_diff_editor;
-  void *diff_edit_baton, *composed_edit_baton, *new_diff_edit_baton;
+  const svn_delta_editor_t *new_diff_editor;
+  void *diff_edit_baton, *new_diff_edit_baton;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
   if ((revision1->kind == svn_client_revision_unspecified)
@@ -612,25 +644,15 @@ do_merge (const svn_delta_editor_t *after_editor,
                                         recurse,
                                         ra_lib, session2,
                                         start_revnum,
+                                        notify_func,
+                                        notify_baton,
                                         &new_diff_editor,
                                         &new_diff_edit_baton,
                                         pool));
 
-  if (after_editor)
-    {
-      svn_delta_compose_editors (&composed_editor, &composed_edit_baton,
-                                 new_diff_editor, new_diff_edit_baton,
-                                 after_editor, after_edit_baton, pool);
-    }
-  else
-    {
-      composed_editor = new_diff_editor;
-      composed_edit_baton = new_diff_edit_baton;
-    }
-  
   /* ### Make composed editor look "old" style.  Remove someday. */
   svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
-                         composed_editor, composed_edit_baton, pool);
+                         new_diff_editor, new_diff_edit_baton, pool);
   
   SVN_ERR (ra_lib->do_switch (session,
                               &reporter, &report_baton,
@@ -655,8 +677,8 @@ do_merge (const svn_delta_editor_t *after_editor,
 
 /* The single-file, simplified version of do_merge. */
 static svn_error_t *
-do_single_file_merge (const svn_delta_editor_t *after_editor,
-                      void *after_edit_baton,
+do_single_file_merge (svn_wc_notify_func_t notify_func,
+                      void *notify_baton,
                       svn_client_auth_baton_t *auth_baton,
                       const char *path1,
                       const svn_client_revision_t *revision1,
@@ -676,6 +698,7 @@ do_single_file_merge (const svn_delta_editor_t *after_editor,
   apr_array_header_t *propchanges;
   void *ra_baton, *session1, *session2;
   svn_ra_plugin_t *ra_lib;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
@@ -741,28 +764,12 @@ do_single_file_merge (const svn_delta_editor_t *after_editor,
   /* Deduce property diffs, and merge those too. */
   SVN_ERR (svn_wc_get_local_propchanges (&propchanges,
                                          props1, props2, pool));
-  SVN_ERR (svn_wc_merge_prop_diffs (target_wcpath,
+  SVN_ERR (svn_wc_merge_prop_diffs (&prop_state, target_wcpath,
                                     propchanges, pool));
 
-  /* Let's be nice and give feedback via the 'after' editor, just like
-     the recursive-directory do_merge() routine would do, by virtue of
-     being driven by dir_delta().  ### someday we'll use only the
-     notification vtable for this, instead of a trace editor. */
-  if (after_editor)
+  if (notify_func)
     {
-      void *root_baton, *file_baton, *handler_baton;
-      const char *parent, *base_name;
-      svn_txdelta_window_handler_t handler;
-      svn_path_split_nts (target_wcpath, &parent, &base_name, pool);
-
-      SVN_ERR (after_editor->open_root (after_edit_baton,
-                                        SVN_INVALID_REVNUM, pool,
-                                        &root_baton));
-      SVN_ERR (after_editor->open_file (base_name, root_baton,
-                                        SVN_INVALID_REVNUM, pool,
-                                        &file_baton));
-      SVN_ERR (after_editor->apply_textdelta (file_baton, 
-                                              &handler, &handler_baton));
+      /* First check that regular props changed. */
       if (propchanges->nelts > 0)
         {
           apr_array_header_t *entry_props, *wc_props, *regular_props;
@@ -772,16 +779,18 @@ do_single_file_merge (const svn_delta_editor_t *after_editor,
                                          &regular_props,
                                          pool));
 
-          /* ### this is so silly; we just want the trace-update editor
-             to print a UU or _U here.... it ignores the prop. */
-          if (regular_props->nelts > 0)
-            SVN_ERR (after_editor->change_file_prop 
-                     (file_baton, 
-                      "foo", 
-                      svn_string_create ("foo", pool), pool));         
+          if (regular_props->nelts == 0)
+            prop_state = svn_wc_notify_state_unchanged;
         }
-      SVN_ERR (after_editor->close_file (file_baton));
-      SVN_ERR (after_editor->close_edit (after_edit_baton));
+
+      (*notify_func) (notify_baton,
+                      target_wcpath,
+                      svn_wc_notify_update_update,
+                      svn_node_file,
+                      NULL,
+                      svn_wc_notify_state_unknown, /* ### discover this! */
+                      prop_state,
+                      SVN_INVALID_REVNUM);
     }
 
   return SVN_NO_ERROR;
@@ -825,7 +834,7 @@ do_diff (const apr_array_header_t *options,
          const char *path2,
          const svn_client_revision_t *revision2,
          svn_boolean_t recurse,
-         const svn_diff_callbacks_t *callbacks,
+         const svn_wc_diff_callbacks_t *callbacks,
          void *callback_baton,
          apr_pool_t *pool)
 {
@@ -1041,6 +1050,8 @@ do_diff (const apr_array_header_t *options,
                                             recurse,
                                             ra_lib, session2,
                                             start_revnum,
+                                            NULL, /* no notify_func */
+                                            NULL, /* no notify_baton */
                                             &new_diff_editor,
                                             &new_diff_edit_baton,
                                             pool));
@@ -1158,8 +1169,8 @@ svn_client_diff (const apr_array_header_t *options,
 
 
 svn_error_t *
-svn_client_merge (const svn_delta_editor_t *after_editor,
-                  void *after_edit_baton,
+svn_client_merge (svn_wc_notify_func_t notify_func,
+                  void *notify_baton,
                   svn_client_auth_baton_t *auth_baton,
                   const char *path1,
                   const svn_client_revision_t *revision1,
@@ -1186,7 +1197,8 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
      PATH2 are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
-      SVN_ERR (do_single_file_merge (after_editor, after_edit_baton, 
+      SVN_ERR (do_single_file_merge (notify_func,
+                                     notify_baton,
                                      auth_baton,
                                      path1, revision1,
                                      path2, revision2,
@@ -1202,7 +1214,8 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
       merge_cmd_baton.force = force;
       merge_cmd_baton.pool = pool;
 
-      SVN_ERR (do_merge (after_editor, after_edit_baton,
+      SVN_ERR (do_merge (notify_func,
+                         notify_baton,
                          auth_baton,
                          path1,
                          revision1,

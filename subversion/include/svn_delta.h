@@ -856,58 +856,7 @@ svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
                                        apr_pool_t *pool);
 
 
-
 
-
-/* A callback vtable invoked by our diff-editors, as they receive
-   diffs from the server.  'svn diff' and 'svn merge' both implement
-   their own versions of this table. */
-typedef struct svn_diff_callbacks_t
-{
-  /* A file PATH has changed.  The changes can be seen by comparing
-     TMPFILE1 and TMPFILE2, which represent REV1 and REV2 of the file,
-     respectively. */
-  svn_error_t *(*file_changed) (const char *path,
-                                const char *tmpfile1,
-                                const char *tmpfile2,
-                                svn_revnum_t rev1,
-                                svn_revnum_t rev2,
-                                void *diff_baton);
-
-  /* A file PATH was added.  The contents can be seen by comparing
-     TMPFILE1 and TMPFILE2. */
-  svn_error_t *(*file_added) (const char *path,
-                              const char *tmpfile1,
-                              const char *tmpfile2,
-                              void *diff_baton);
-  
-  /* A file PATH was deleted.  The [loss of] contents can be seen by
-     comparing TMPFILE1 and TMPFILE2. */
-  svn_error_t *(*file_deleted) (const char *path,
-                                const char *tmpfile1,
-                                const char *tmpfile2,
-                                void *diff_baton);
-  
-  /* A directory PATH was added. */
-  svn_error_t *(*dir_added) (const char *path,
-                             void *diff_baton);
-  
-  /* A directory PATH was deleted. */
-  svn_error_t *(*dir_deleted) (const char *path,
-                               void *diff_baton);
-  
-  /* A list of property changes (PROPCHANGES) was applied to PATH.
-     The array is a list of (svn_prop_t) structures. 
-     The original list of properties is provided in ORIGINAL_PROPS. */
-  svn_error_t *(*props_changed) (const char *path,
-                                 const apr_array_header_t *propchanges,
-                                 apr_hash_t *original_props,
-                                 void *diff_baton);
-
-} svn_diff_callbacks_t;
-
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -125,7 +125,7 @@ struct edit_baton {
 
   /* The callbacks and callback argument that implement the file comparison
      functions */
-  const svn_diff_callbacks_t *callbacks;
+  const svn_wc_diff_callbacks_t *callbacks;
   void *callback_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
@@ -211,7 +211,7 @@ struct file_baton {
 static struct edit_baton *
 make_editor_baton (const char *anchor,
                    const char *target,
-                   const svn_diff_callbacks_t *callbacks,
+                   const svn_wc_diff_callbacks_t *callbacks,
                    void *callback_baton,
                    svn_boolean_t recurse,
                    apr_pool_t *pool)
@@ -403,7 +403,8 @@ file_diff (struct dir_baton *dir_baton,
                                           dir_baton->pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (path,
+                   (NULL,
+                    path,
                     propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
         }
@@ -428,7 +429,8 @@ file_diff (struct dir_baton *dir_baton,
                                            dir_baton->pool));
           
           err = dir_baton->edit_baton->callbacks->file_changed
-            (path,
+            (NULL,
+             path,
              pristine_copy, 
              translated,
              entry->revision,
@@ -452,7 +454,8 @@ file_diff (struct dir_baton *dir_baton,
                                           dir_baton->pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (path,
+                   (NULL,
+                    path,
                     propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
         }
@@ -510,7 +513,8 @@ directory_elements_diff (struct dir_baton *dir_baton,
                                           dir_baton->pool));
               
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
-                   (dir_baton->path,
+                   (NULL,
+                    dir_baton->path,
                     propchanges, baseprops,
                     dir_baton->edit_baton->callback_baton));
         }
@@ -726,7 +730,8 @@ close_directory (void *dir_baton)
     {
       reverse_propchanges (b->baseprops, b->propchanges, b->pool);
       SVN_ERR (b->edit_baton->callbacks->props_changed
-               (b->path,
+               (NULL,
+                b->path,
                 b->propchanges,
                 b->baseprops,
                 b->edit_baton->callback_baton));
@@ -919,7 +924,8 @@ close_file (void *file_baton)
       SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
 
       err1 = b->edit_baton->callbacks->file_changed
-        (b->path,
+        (NULL,
+         b->path,
          temp_file_path,
          translated,
          0,       /* non-existent revision */
@@ -936,7 +942,8 @@ close_file (void *file_baton)
         {
           reverse_propchanges (b->baseprops, b->propchanges, b->pool);
           SVN_ERR (b->edit_baton->callbacks->props_changed
-                   (b->path,
+                   (NULL,
+                    b->path,
                     b->propchanges,
                     b->baseprops,
                     b->edit_baton->callback_baton));
@@ -1049,7 +1056,7 @@ close_edit (void *edit_baton)
 svn_error_t *
 svn_wc_get_diff_editor (const char *anchor,
                         const char *target,
-                        const svn_diff_callbacks_t *callbacks,
+                        const svn_wc_diff_callbacks_t *callbacks,
                         void *callback_baton,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t **editor,
@@ -1087,7 +1094,7 @@ svn_wc_get_diff_editor (const char *anchor,
 svn_error_t *
 svn_wc_diff (const char *anchor,
              const char *target,
-             const svn_diff_callbacks_t *callbacks,
+             const svn_wc_diff_callbacks_t *callbacks,
              void *callback_baton,
              svn_boolean_t recurse,
              apr_pool_t *pool)
