@@ -1431,9 +1431,8 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
 
 
 
-/* Helper for svn_wc_resolve_conflict;  deliberately ignores errors
-   from apr_file_remove().  */
-static void 
+/* Helper for svn_wc_resolve_conflict */
+static svn_error_t *
 attempt_deletion (svn_stringbuf_t *parent_dir,
                   svn_stringbuf_t *basename,
                   apr_pool_t *pool)
@@ -1441,7 +1440,7 @@ attempt_deletion (svn_stringbuf_t *parent_dir,
   svn_stringbuf_t *full_path = svn_stringbuf_dup (parent_dir, pool);
   svn_path_add_component (full_path, basename);
  
-  apr_file_remove (full_path->data, pool);
+  return remove_file_if_present (full_path, pool);
 }
 
 
@@ -1484,13 +1483,13 @@ svn_wc_resolve_conflict (svn_stringbuf_t *path,
   
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (old)
-    attempt_deletion (parent, old, pool);
+    SVN_ERR (attempt_deletion (parent, old, pool));
   if (new)
-    attempt_deletion (parent, new, pool);
+    SVN_ERR (attempt_deletion (parent, new, pool));
   if (work)
-    attempt_deletion (parent, work, pool);
+    SVN_ERR (attempt_deletion (parent, work, pool));
   if (prej)
-    attempt_deletion (parent, prej, pool);
+    SVN_ERR (attempt_deletion (parent, prej, pool));
 
   if (notify_func)
     {
