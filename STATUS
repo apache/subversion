@@ -51,3 +51,12 @@ Candidate changes:
       Merge without conflicts (at r10652).
     Votes:
       +1: dionisos
+
+  * r10674
+    Make ./configure behave nicer in the presence of old Apache.
+    Justification:
+      Tiny patch. If a user has an old apache on their system, but didn't ask
+      us to use it, we shouldn't abort ./configure, just don't use it.
+    Votes:
+      +1: maxb 
+
