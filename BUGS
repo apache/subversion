@@ -11,9 +11,8 @@ all outstanding bugs -- we use an online issue tracker for that, see
 
 (the latter links to a fairly user-friendly list of all open bugs).
 
-If you're about to report a bug, please first read the section
-entitled "How To Report A Bug" below.  It's very easy to write a
-useless bug report, but only the useful ones are... well, useful. :-)
+If you're about to report a bug, please take a look at the guidelines
+in the section "How To Report A Bug" below.
 
 Where To Report A Bug:
 ======================
@@ -43,19 +42,19 @@ caused smoke to pour out of your monitor, then you can trust your
 judgement.  But if you're not sure, go ahead and ask on the mailing
 list, currently dev@subversion.tigris.org.
 
-Once you've established that it's a bug, the *most important* thing
-you can do is come up with a simple description and reproduction
-recipe.  For example, if the bug you initially encounter involves five
+Once you've established that it's a bug, the most important thing you
+can do is come up with a simple description and reproduction recipe.
+For example, if the bug, as you initially found it, involves five
 files over ten commits, try to make it happen with just one file and
 one commit.  The simpler the reproduction recipe, the more likely a
-developer is to successfully reproduce the bug and fix it.  
+developer is to successfully reproduce the bug and fix it.
 
-A reproduction recipe is not a prose description of what you did to
-make the bug happen.  It is a literal transcript of the exact series
-of commands you ran, and their output.  If there are files involved,
-give the contents of the files.  The very best thing is to package
-your reproduction recipe as a script, that really helps a lot, and
-we'll thank you for it.
+When you write up the reproduction recipe, don't just write a prose
+description of what you did to make the bug happen.  Instead, give a
+literal transcript of the exact series of commands you ran, and their
+output.  If there are files involved, give the contents of the files.
+The very best thing is to package your reproduction recipe as a
+script, that helps us a lot.
 
   [Quick sanity check: you *are* running the most recent version of
   Subversion, right? :-) Possibly the bug has already been fixed; you
@@ -63,9 +62,9 @@ we'll thank you for it.
   Subversion development tree.  Also, make sure your APR tree is
   up-to-date.]
 
-In addition to a secure reproduction recipe, we'll also need a
-complete description of the environment in which you reproduced the
-bug.  Things which are important:
+In addition to the reproduction recipe, we'll also need a complete
+description of the environment in which you reproduced the bug.
+That means:
 
    - Your operating system
    - The release and/or revision of Subversion
@@ -83,5 +82,5 @@ obvious to someone else, so it's best to avoid a guessing game.
 
 Follow that with the environment description, and the reproduction
 recipe.  If you also want to include speculation as to the cause, and
-a patch to fix the bug, that's great!  See the HACKING file for more
-information about writing patches.
+even a patch to fix the bug, that's great!  See the HACKING file for
+more information about writing patches.
