@@ -114,6 +114,14 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   const char *revpath = NULL;
 
+  /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
+     then this whole callback does nothing. */
+  if (! dav_svn_get_pathauthz_flag(arb->r))
+    {
+      *allowed = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Our ultimate goal here is to create a Version Resource (VR) url,
      which is a url that represents a path within a revision.  We then
      send a subrequest to apache, so that any installed authz modules

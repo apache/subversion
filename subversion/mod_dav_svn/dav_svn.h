@@ -261,6 +261,10 @@ const char *dav_svn_get_fs_parent_path(request_rec *r);
 /* for the repository referred to by this request, is autoversioning active? */
 svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r);
 
+/* for the repository referred to by this request, are subrequests active? */
+svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r);
+
+
 /* SPECIAL URI
 
    SVN needs to create many types of "pseudo resources" -- resources
