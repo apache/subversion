@@ -754,7 +754,7 @@ rep_read_get_baton (svn_fs_t *fs,
 /*** Retrieving data. ***/
 
 svn_error_t *
-svn_fs__rep_contents_size (apr_size_t *size,
+svn_fs__rep_contents_size (apr_size_t *size_p,
                            svn_fs_t *fs,
                            const char *rep,
                            trail_t *trail)
@@ -769,19 +769,44 @@ svn_fs__rep_contents_size (apr_size_t *size,
 
       const char *str_key;
       SVN_ERR (string_key (&str_key, rep_skel, trail->pool));
-      SVN_ERR (svn_fs__string_size (size, fs, str_key, trail));
+      SVN_ERR (svn_fs__string_size (size_p, fs, str_key, trail));
     }
   else  /* rep is delta */
     {
-      /* Get the size by reading it from the rep skel. */
-      char *size_str;
-      int isize;
+      /* Get the size by finding the last window pkg in the delta and
+         adding its offset to its size.  This way, we won't even be
+         messed up by overlapping windows, as long as the window pkgs
+         are still ordered. */
 
+      skel_t *pkg_skel = rep_skel->children->next;
+      skel_t *window_skel;
+      char *offset_str, *size_str;
+      int offset, size;
+
+      assert (pkg_skel != NULL);
+
+      /* Skip to the last window pkg in this delta. */
+      while (pkg_skel->next)
+        pkg_skel = pkg_skel->next;
+
+      /* The offset is the first member of a window pkg. */
+      offset_str = apr_pstrndup (trail->pool,
+                                 pkg_skel->children->data,
+                                 pkg_skel->children->len);
+
+      /* Get the skel for the window sublist. */
+      window_skel = pkg_skel->children->next;
+      assert (pkg_skel != NULL);
+
+      /* The window's reconstructed size is the second element. */
       size_str = apr_pstrndup (trail->pool,
-                               rep_skel->children->next->next->next->data,
-                               rep_skel->children->next->next->next->len);
-      isize = atoi (size_str);
-      *size = (apr_size_t) isize;
+                               window_skel->children->next->data,
+                               window_skel->children->next->len);
+
+      offset = atoi (offset_str);
+      size = atoi (size_str);
+
+      *size_p = (apr_size_t) (offset + size);
     }
 
   return SVN_NO_ERROR;
