@@ -1123,13 +1123,15 @@ report_local_mods (svn_stringbuf_t *path,
    Look at each entry and check if its revision is different than
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  If an
-   unversioned object is discovered, print `?' next to it.  */
+   unversioned object is discovered, report it to the client using
+   FBTABLE. */
 static svn_error_t *
 report_revisions (svn_stringbuf_t *wc_path,
                   svn_stringbuf_t *dir_path,
                   svn_revnum_t dir_rev,
                   const svn_ra_reporter_t *reporter,
                   void *report_baton,
+                  svn_pool_feedback_t *fbtable,
                   apr_pool_t *pool)
 {
   apr_hash_t *entries, *dirents;
@@ -1163,13 +1165,19 @@ report_revisions (svn_stringbuf_t *wc_path,
         /* and we're not looking at SVN... */
         if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
           {
+            apr_status_t status;
+
             current_entry_name = svn_string_create (keystring, subpool);
             printable_path = svn_string_dup (full_path, subpool);
             svn_path_add_component (printable_path, current_entry_name,
                                     svn_path_local_style);
             
-            /* ### REMOVE THIS:  We should write to a feedback stream! */
-            printf("?  %s\n", printable_path->data);
+            status = fbtable->report_unversioned_item (printable_path->data);
+            if (status)
+              return 
+                svn_error_createf (status, 0, NULL, subpool,
+                                   "error while reporting unversioned '%s'",
+                                   printable_path->data);
           }
     }
 
@@ -1261,7 +1269,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                 SVN_ERR (report_revisions (wc_path,
                                            full_entry_path,
                                            subdir_entry->revision,
-                                           reporter, report_baton,
+                                           reporter, report_baton, fbtable,
                                            subpool));
               }
             } /* end directory case */
@@ -1552,6 +1560,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
   svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
+  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
@@ -1573,7 +1582,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
       err = report_revisions (path,
                               svn_string_create ("", pool),
                               base_rev,
-                              reporter, report_baton, pool);
+                              reporter, report_baton, fbtable, pool);
       if (err)
         {
           /* Clean up the fs transaction. */
