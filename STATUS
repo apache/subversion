@@ -144,7 +144,7 @@ Candidate changes:
     Justification:
       consuming all memory is bad
     Votes:
-      +1: epg
+      +1: epg, ghudson
 
   * r13358
     Fix a case where merge breaks the wc.
