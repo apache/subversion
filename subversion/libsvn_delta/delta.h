@@ -246,7 +246,7 @@ typedef struct svn_delta_digger_t
 
   /* A similar parser, used to break up large pdelta changes into
      chunks. */
-  svn_pdelta_chunk_parser_t *chunk_parser;
+  svn_pdelta_chunk_parser_t *pdelta_chunk_parser;
 
 } svn_delta_digger_t;
 

@@ -98,7 +98,7 @@ main (int argc, char **argv)
 
   if ((argc < 2) || (argc > 3))
     {
-      fprintf (stderr, "usage: %s DELTA_SRC_FILE [TARGET_NAME]", argv[0]);
+      fprintf (stderr, "usage: %s DELTA_SRC_FILE [TARGET_NAME]\n", argv[0]);
       return 1;
     }
   else

@@ -612,9 +612,9 @@ do_begin_propdelta (svn_delta_digger_t *digger)
 
   /* Now create a pdelta_chunk parser based on the consumer/baton we
      got. */
-  digger->chunk_parser = svn_make_pdelta_chunk_parser (chunk_consumer,
-                                                       consumer_baton,
-                                                       digger->pool);
+  digger->pdelta_chunk_parser = svn_make_pdelta_chunk_parser (chunk_consumer,
+                                                              consumer_baton,
+                                                              digger->pool);
   return SVN_NO_ERROR;
 }
 
@@ -633,8 +633,11 @@ do_finish_textdelta (svn_delta_digger_t *digger)
   /* Now call the walker callback, if it exists */
   if (digger->walker->finish_textdelta)
     {
-      err = digger->walker->finish_textdelta (digger->walk_baton,
-                                              digger->dir_baton);
+      err = digger->walker->finish_textdelta
+        (digger->walk_baton,
+         digger->dir_baton,
+         digger->vcdiff_parser->consumer_baton);
+
       if (err)
         return err;
     }
@@ -649,16 +652,24 @@ static svn_error_t *
 do_finish_propdelta (svn_delta_digger_t *digger)
 {
   svn_error_t *err;
+  void *cbaton = NULL;
 
   /* First, don't forget to flush out any remaining bytes sitting in
      the buffer of our prop-chunk parser!  */
-  /* err = svn_prop_chunk_flush_buffer (my_digger->chunk_parser); */
+  /* err = svn_prop_chunk_flush_buffer (digger->pdelta_chunk_parser); */
+
+  if (digger->pdelta_chunk_parser
+      && digger->pdelta_chunk_parser->consumer_baton)
+    {
+      cbaton = digger->pdelta_chunk_parser->consumer_baton;
+    }
 
   /* Now call the walker callback, if it exists */
   if (digger->walker->finish_propdelta)
     {
       err = digger->walker->finish_propdelta (digger->walk_baton,
-                                              digger->dir_baton);
+                                              digger->dir_baton,
+                                              cbaton);
       if (err)
         return err;
     }

@@ -319,12 +319,12 @@ begin_textdelta (void *walk_baton, void *parent_baton,
 
 
 static svn_error_t *
-finish_textdelta (void *walk_baton, void *parent_baton)
+finish_textdelta (void *walk_baton, void *parent_baton, void *handler_baton)
 {
 #if 0   /* kff todo */
   /* This doesn't work.  We need a way to get the window_handler's
      handler_baton in here, because that's the apr_file_t pointer. */
-  apr_file_t *f = (apr_file_t *) child_baton;
+  apr_file_t *f = (apr_file_t *) handler_baton;
   apr_err = apr_close (f);
   
   if (apr_err)
