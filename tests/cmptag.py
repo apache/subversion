@@ -34,9 +34,6 @@ def check_tags(cvs_repo, module, tags):
         print "        checking tag %s -> %s" % (tag, path)
         check_tag(cvs_repo, module, tag, "svn-repo.tmp", path);
     os.system("rm -rf svn-repo.tmp");
+    os.system("rm -rf cvs2svn-data.*");
+    os.system("rm test.log");
 
-
-#check_tags("testcvs", "test1", 
-#           [
-#             ( None, "/trunk" )
-#           ]);
