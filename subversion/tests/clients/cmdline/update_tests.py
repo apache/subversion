@@ -1180,7 +1180,52 @@ def new_dir_with_spaces(sbox):
                                         expected_disk,
                                         expected_status)  
 
+def non_recursive_update(sbox):
+  "non-recursive update"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Commit a change to A/mu and A/D/G/rho
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(mu_path, "new")
+  svntest.main.file_append(rho_path, "new")
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Update back to revision 1
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(status='U '),
+    'A/D/G/rho' : Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=1)
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
+
+  # Non-recursive update of A should change A/mu but not A/D/G/rho
+  A_path = os.path.join(wc_dir, 'A')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(status='U '),
+    })
+  expected_status.tweak('A', 'A/mu', wc_rev=2)
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.new")
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, 0,
+                                        '-N', A_path)
 
 ########################################################################
 # Run the tests
@@ -1204,6 +1249,7 @@ test_list = [ None,
               update_deleted_missing_dir,
               XFail(another_hudson_problem),
               new_dir_with_spaces,
+              non_recursive_update,
              ]
 
 if __name__ == '__main__':
