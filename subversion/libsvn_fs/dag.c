@@ -41,12 +41,18 @@ struct dag_node_t
   /* The node revision ID for this dag node, allocated in POOL.  */
   svn_fs_id_t *id;
 
-  /* The node's NODE-REVISION skel.  
-     jimb todo: the contents of mutable nodes could be changed by
-     other processes, so we should fetch them afresh within each
-     trail. 
-     jimb todo: What pool is this allocated in?  Chaos!  */
-  skel_t *contents;
+  /* The node's NODE-REVISION skel, or zero if we haven't read it in
+     yet.  This is allocated either in this node's POOL, if the node
+     is immutable, or in some trail's pool, if the node is mutable.
+     For mutable nodes, this must be reset to zero as soon as the
+     trail in which we read it is completed.  Otherwise, we will end
+     up with out-of-date content here.
+
+     If you're willing to respect all the rules above, you can munge
+     this yourself, but you're probably better off just calling
+     `get_node_revision_cached' and `set_node_revision_cached', which
+     take care of things for you.  */
+ skel_t *node_revision;
 
 };
 
@@ -97,6 +103,101 @@ svn_error_t *
 svn_fs__dag_init_fs (svn_fs_t *fs)
 {
   return svn_fs__retry_txn (fs, txn_body_dag_init_fs, fs, fs->pool);
+}
+
+
+
+/* Getting and setting the NODE-REVISION skel for a dag node.  */
+
+
+/* This function and its friends should be moved to a page above here,
+   making this declaration unnecessary.  */
+static int has_mutable_flag (skel_t *node_content);
+
+
+/* Clear NODE's cache of its node revision.  */
+static void
+uncache_node_revision (void *baton)
+{
+  dag_node_t *node = baton;
+
+  node->node_revision = 0;
+}
+
+
+/* Set NODE's node revision cache to SKEL, as part of TRAIL.
+   SKEL must be allocated in TRAIL->pool.  */
+static void
+cache_node_revision (dag_node_t *node,
+                     skel_t *skel,
+                     trail_t *trail)
+{
+  if (has_mutable_flag (skel))
+    {
+      /* Mutable nodes might have other processes change their
+         contents, so we must throw away this skel once the trail is
+         complete.  */
+      svn_fs__record_completion (trail, uncache_node_revision, node);
+      node->node_revision = skel;
+    }
+  else
+    {
+      /* For immutable nodes, we can cache the contents permanently,
+         but we need to copy them over into the node's own pool.  */
+      node->node_revision = svn_fs__copy_skel (skel, node->pool);
+    }
+}
+                     
+
+/* Set *SKEL_P to the cached NODE-REVISION skel for NODE, as part of
+   TRAIL.  If NODE is immutable, the skel is allocated in NODE->pool.
+   If NODE is mutable, the skel is allocated in TRAIL->pool, and the
+   cache will be cleared as soon as TRAIL completes.
+
+   If you plan to change the contents of NODE, be careful!  We're
+   handing you a pointer directly to our cached skel, not your own
+   copy.  If you change the skel as part of some operation, but then
+   some Berkeley DB function deadlocks or gets an error, you'll need
+   to back out your skel changes, or else the cache will reflect
+   changes that never got committed.  It's probably best not to change
+   the skel structure at all.  */
+static svn_error_t *
+get_node_revision_cached (skel_t **skel_p,
+                          dag_node_t *node,
+                          trail_t *trail)
+{
+  skel_t *node_revision;
+
+  /* If we've already got a copy, there's no need to read it in.  */
+  if (! node->node_revision)
+    {
+      /* Read it in, and cache it.  */
+      SVN_ERR (svn_fs__get_node_revision (&node_revision, node->fs, node->id,
+                                          trail));
+      cache_node_revision (node, node_revision, trail);
+    }
+          
+  /* Now NODE->node_revision is set.  */
+  *skel_p = node->node_revision;
+  return SVN_NO_ERROR;
+}
+
+
+/* Set the NODE-REVISION skel of NODE to SKEL as part of TRAIL, and
+   keep NODE's cache up to date.  SKEL must be allocated in
+   TRAIL->pool.  */
+static svn_error_t *
+set_node_revision_cached (dag_node_t *node,
+                          skel_t *skel,
+                          trail_t *trail)
+{
+  /* Write it out.  */
+  SVN_ERR (svn_fs__put_node_revision (node->fs, node->id, skel, trail));
+
+  /* Since the write succeeded, update the cache.  */
+  cache_node_revision (node, skel, trail);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -812,22 +913,15 @@ dag_node_t *svn_fs__dag_dup (dag_node_t *node,
                              trail_t *trail)
 {
   /* Allocate our new node. */
-  dag_node_t *new_node = apr_pcalloc (trail->pool, sizeof
-                                      (*new_node));
-  /* Allocate a new fs structure, then copy the contents from our old
-     one.  Not sure if this level of copying needs to extend deeper
-     than this memcpy for the fs. */
-  new_node->fs = apr_pcalloc (trail->pool, sizeof (*(node->fs)));
-  memcpy (new_node->fs, node->fs, sizeof (*(node->fs)));
+  dag_node_t *new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
 
-  /* Copy our node's id. */
-  new_node->id = svn_fs_copy_id (node->id, trail->pool);
-
-  /* Copy the contents skel over. */
-  new_node->contents = svn_fs__copy_skel (node->contents, trail->pool);
-
-  /* Finally, update our pool reference. */
+  new_node->fs = node->fs;
   new_node->pool = trail->pool;
+  new_node->id = svn_fs_copy_id (node->id, node->pool);
+  
+  /* Leave new_node->node_revision zero for now, so it'll get read in.
+     We can get fancy and duplicate node's cache later.  */
+
   return new_node;
 }
 
