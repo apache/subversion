@@ -1009,15 +1009,15 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
                                   apr_hash_t *proplist,
                                   apr_pool_t *pool)
 {
-  apr_file_t *revprop_file;
+  const char *final_path = path_revprops (fs, rev, pool);
+  const char *tmp_path;
+  apr_file_t *f;
 
-  SVN_ERR (svn_io_file_open (&revprop_file, path_revprops (fs, rev, pool),
-                             APR_WRITE | APR_TRUNCATE | APR_CREATE,
-                             APR_OS_DEFAULT, pool));
-  
-  SVN_ERR (svn_hash_write (proplist, revprop_file, pool));
-
-  SVN_ERR (svn_io_file_close (revprop_file, pool));
+  SVN_ERR (svn_io_open_unique_file
+           (&f, &tmp_path, final_path, ".tmp", FALSE, pool));
+  SVN_ERR (svn_hash_write (proplist, f, pool));
+  SVN_ERR (svn_io_file_close (f, pool));
+  SVN_ERR (svn_io_file_rename (tmp_path, final_path, pool));
   
   return SVN_NO_ERROR;
 }  
