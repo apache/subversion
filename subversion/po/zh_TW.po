@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-12 22:05+0800\n"
+"POT-Creation-Date: 2004-09-20 00:19+0800\n"
 "PO-Revision-Date: 2004-09-12 22:05+0800\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
@@ -1661,7 +1661,7 @@ msgstr "無法寫入至 '%s'"
 
 # as-is
 #: clients/cmdline/util.c:187 clients/cmdline/util.c:211
-#: libsvn_fs_fs/fs_fs.c:3330
+#: libsvn_fs_fs/fs_fs.c:3334 libsvn_subr/io.c:2135
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Can't stat '%s'"
@@ -3098,7 +3098,7 @@ msgstr "node-rev 中的 copyroot 列有缺陷"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "node-rev 中的 copyfrom 列有缺陷"
 
-#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2924
+#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2928
 msgid "Attempted to write to non-transaction"
 msgstr "企圖寫至非異動"
 
@@ -3200,25 +3200,25 @@ msgstr "next-id 檔案損毀"
 msgid "Invalid change type"
 msgstr "無效的更動類型"
 
-#: libsvn_fs_fs/fs_fs.c:2943
+#: libsvn_fs_fs/fs_fs.c:2947
 msgid "Can't set text contents of a directory"
 msgstr "無法設定目錄的文字內容"
 
-#: libsvn_fs_fs/fs_fs.c:3033 libsvn_fs_fs/fs_fs.c:3038
-#: libsvn_fs_fs/fs_fs.c:3045
+#: libsvn_fs_fs/fs_fs.c:3037 libsvn_fs_fs/fs_fs.c:3042
+#: libsvn_fs_fs/fs_fs.c:3049
 msgid "Corrupt current file"
 msgstr "目前檔案損毀"
 
-#: libsvn_fs_fs/fs_fs.c:3333
+#: libsvn_fs_fs/fs_fs.c:3337
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "無法 chmod '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3466
+#: libsvn_fs_fs/fs_fs.c:3470
 msgid "Transaction out of date"
 msgstr "異動過時"
 
-#: libsvn_fs_fs/fs_fs.c:3705
+#: libsvn_fs_fs/fs_fs.c:3709
 msgid "No such transaction"
 msgstr "無此異動"
 
@@ -3577,7 +3577,6 @@ msgstr "無法連線至主機 '%s'"
 
 # as-is
 #: libsvn_ra_svn/client.c:173
-#, fuzzy
 msgid "Proplist element not a list"
 msgstr "Proplist element not a list"
 
@@ -3641,7 +3640,6 @@ msgid "Server requires minimum version %d"
 msgstr "伺服器最低要求的版號為 %d"
 
 #: libsvn_ra_svn/client.c:641
-#, fuzzy
 msgid "impossibly long repository root from server"
 msgstr "伺服器回傳的檔案庫根路徑長得太誇張"
 
@@ -3855,6 +3853,284 @@ msgstr "無效的結束修訂版 %ld"
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
 msgstr "無法自 APR 將錯誤訊息重新編碼"
+
+#: libsvn_subr/io.c:127
+#, c-format
+msgid "Can't check path '%s'"
+msgstr "無法檢查路徑 '%s'"
+
+#: libsvn_subr/io.c:245 libsvn_subr/io.c:330
+#, c-format
+msgid "Can't open '%s'"
+msgstr "無法開啟 '%s'"
+
+#: libsvn_subr/io.c:259 libsvn_subr/io.c:343
+#, c-format
+msgid "Unable to make name for '%s'"
+msgstr "無法為 '%s' 產生名稱"
+
+#: libsvn_subr/io.c:346 libsvn_subr/io.c:373 libsvn_subr/io.c:401
+msgid "Symbolic links are not supported on this platform"
+msgstr "本平台不支援符號連結"
+
+#: libsvn_subr/io.c:366
+msgid "Can't read contents of link"
+msgstr "無法讀取連線的內容"
+
+#: libsvn_subr/io.c:1204
+#, c-format
+msgid "Can't get shared lock on file '%s'"
+msgstr "無法取得檔案 '%s' 的共享鎖定"
+
+#: libsvn_subr/io.c:1207
+#, c-format
+msgid "Can't get exclusive lock on file '%s'"
+msgstr "無法取得檔案 '%s' 的獨佔鎖定"
+
+# as-is
+#: libsvn_subr/io.c:1237
+#, c-format
+msgid "Can't flush file '%s'"
+msgstr "無法清空檔案 '%s'"
+
+#: libsvn_subr/io.c:1238
+msgid "Can't flush stream"
+msgstr "無法清空串流"
+
+#: libsvn_subr/io.c:1250 libsvn_subr/io.c:1267
+msgid "Can't flush file to disk"
+msgstr "無法將檔案清空至磁碟"
+
+# as-is
+#: libsvn_subr/io.c:1288
+msgid "Reading from stdin is currently broken, so disabled"
+msgstr "Reading from stdin is currently broken, so disabled"
+
+#: libsvn_subr/io.c:1309
+msgid "Can't get file name"
+msgstr "無法取得檔案名稱"
+
+# as-is
+#: libsvn_subr/io.c:1377
+#, c-format
+msgid "Can't remove file '%s'"
+msgstr "無法移除檔案 '%s'"
+
+# as-is
+#: libsvn_subr/io.c:1405
+#, c-format
+msgid "Can't rewind directory '%s'"
+msgstr "Can't rewind directory '%s'"
+
+#: libsvn_subr/io.c:1440 libsvn_subr/io.c:2277 libsvn_subr/io.c:2364
+#, c-format
+msgid "Can't open directory '%s'"
+msgstr "無法開啟目錄 '%s'"
+
+#: libsvn_subr/io.c:1476 libsvn_subr/io.c:1493
+#, c-format
+msgid "Can't remove '%s'"
+msgstr "無法移除 '%s'"
+
+#: libsvn_subr/io.c:1484 libsvn_subr/io.c:1552
+#, c-format
+msgid "Can't read directory '%s'"
+msgstr "無法讀取目錄 '%s'"
+
+#: libsvn_subr/io.c:1488 libsvn_subr/io.c:1556 libsvn_subr/io.c:2424
+#, c-format
+msgid "Error closing directory '%s'"
+msgstr "無法關閉目錄 '%s'"
+
+# as-is
+#: libsvn_subr/io.c:1586
+#, c-format
+msgid "Can't create process '%s' attributes"
+msgstr "Can't create process '%s' attributes"
+
+# as-is
+#: libsvn_subr/io.c:1592
+#, c-format
+msgid "Can't set process '%s' cmdtype"
+msgstr "Can't set process '%s' cmdtype"
+
+# as-is
+#: libsvn_subr/io.c:1604
+#, c-format
+msgid "Can't set process '%s' directory"
+msgstr "Can't set process '%s' directory"
+
+# as-is
+#: libsvn_subr/io.c:1617
+#, c-format
+msgid "Can't set process '%s' child input"
+msgstr "Can't set process '%s' child input"
+
+# as-is
+#: libsvn_subr/io.c:1624
+#, c-format
+msgid "Can't set process '%s' child outfile"
+msgstr "Can't set process '%s' child outfile"
+
+# as-is
+#: libsvn_subr/io.c:1631
+#, c-format
+msgid "Can't set process '%s' child errfile"
+msgstr "Can't set process '%s' child errfile"
+
+#: libsvn_subr/io.c:1655
+#, c-format
+msgid "Can't start process '%s'"
+msgstr "無法啟動行程 '%s'"
+
+#: libsvn_subr/io.c:1663
+#, c-format
+msgid "Error waiting for process '%s'"
+msgstr "等待行程 '%s' 時發生錯誤"
+
+#: libsvn_subr/io.c:1671
+#, c-format
+msgid "Process '%s' failed (exitwhy %d)"
+msgstr "行程 '%s' 失敗 (exitwhy %d)"
+
+#: libsvn_subr/io.c:1678
+#, c-format
+msgid "Process '%s' returned error exitcode %d"
+msgstr "行程 '%s' 傳回錯誤結束代碼 %d"
+
+#: libsvn_subr/io.c:1766
+#, c-format
+msgid "'%s' returned %d"
+msgstr "'%s' 傳回 %d"
+
+#: libsvn_subr/io.c:1867
+#, c-format
+msgid ""
+"Error running '%s':  exitcode was %d, args were:\n"
+"in directory '%s', basenames:\n"
+"%s\n"
+"%s\n"
+"%s"
+msgstr ""
+"執行 '%s' 發生錯誤:  結束代碼為 %d, 參數為:\n"
+"於目錄 '%s' 中, 主檔名:\n"
+"%s\n"
+"%s\n"
+"%s"
+
+#: libsvn_subr/io.c:1897
+#, c-format
+msgid "Can't detect MIME type of non-file '%s'"
+msgstr "無法偵測非檔案的 '%s' 的 MIME 類別"
+
+#: libsvn_subr/io.c:1964
+#, c-format
+msgid "Can't open file '%s'"
+msgstr "無法開啟檔案 '%s'"
+
+#: libsvn_subr/io.c:1998
+#, c-format
+msgid "Can't close file '%s'"
+msgstr "無法關閉檔案 '%s'"
+
+#: libsvn_subr/io.c:1999
+msgid "Can't close stream"
+msgstr "無法開啟串流"
+
+#: libsvn_subr/io.c:2009 libsvn_subr/io.c:2033 libsvn_subr/io.c:2046
+#, c-format
+msgid "Can't read file '%s'"
+msgstr "無法讀取檔案 '%s'"
+
+#: libsvn_subr/io.c:2010 libsvn_subr/io.c:2034 libsvn_subr/io.c:2047
+msgid "Can't read stream"
+msgstr "無法讀取串流"
+
+#: libsvn_subr/io.c:2021
+#, c-format
+msgid "Can't get attribute information from file '%s'"
+msgstr "無法自檔案 '%s' 取得屬性資訊"
+
+#: libsvn_subr/io.c:2022
+msgid "Can't get attribute information from stream"
+msgstr "無法自串流取得屬性資訊"
+
+#: libsvn_subr/io.c:2058
+#, c-format
+msgid "Can't set position pointer in file '%s'"
+msgstr "無法於檔案 '%s' 中設定位置指標"
+
+#: libsvn_subr/io.c:2059
+msgid "Can't set position pointer in stream"
+msgstr "無法於串流中設定位置指標"
+
+#: libsvn_subr/io.c:2070 libsvn_subr/io.c:2083
+#, c-format
+msgid "Can't write to file '%s'"
+msgstr "無法寫入至檔案 '%s'"
+
+#: libsvn_subr/io.c:2071 libsvn_subr/io.c:2084
+msgid "Can't write to stream"
+msgstr "無法寫入至串流"
+
+#: libsvn_subr/io.c:2156
+#, c-format
+msgid "Can't move '%s' to '%s'"
+msgstr "無法搬移 '%s' 至 '%s'"
+
+#: libsvn_subr/io.c:2195
+#, c-format
+msgid "Can't create directory '%s'"
+msgstr "無法建立目錄 '%s'"
+
+#: libsvn_subr/io.c:2205
+#, c-format
+msgid "Can't hide directory '%s'"
+msgstr "無法隱藏目錄 '%s'"
+
+#: libsvn_subr/io.c:2218
+#, c-format
+msgid "Can't stat directory '%s'"
+msgstr "無法 stat 目錄 '%s'"
+
+#: libsvn_subr/io.c:2234
+#, c-format
+msgid "Can't stat new directory '%s'"
+msgstr "無法 stat 新目錄 '%s'"
+
+#: libsvn_subr/io.c:2294
+#, c-format
+msgid "Can't remove directory '%s'"
+msgstr "無法移除目錄 '%s'"
+
+#: libsvn_subr/io.c:2312
+msgid "Can't read directory"
+msgstr "無法讀取目錄 '%s'"
+
+#: libsvn_subr/io.c:2381
+#, c-format
+msgid "Can't read directory entry in '%s'"
+msgstr "無法於 '%s' 中讀取目錄項目"
+
+#: libsvn_subr/io.c:2505
+#, c-format
+msgid "Can't check directory '%s'"
+msgstr "無法檢查目錄 '%s'"
+
+#: libsvn_subr/io.c:2526
+#, c-format
+msgid "Version %d is not non-negative"
+msgstr "版號 %d 不是非負數"
+
+#: libsvn_subr/io.c:2573
+#, c-format
+msgid "Reading '%s'"
+msgstr "讀取 '%s' 中"
+
+#: libsvn_subr/io.c:2588
+#, c-format
+msgid "First line of '%s' contains non-digit"
+msgstr "'%s' 的第一行包含非數字字元"
 
 #: libsvn_subr/opt.c:148
 msgid ""
@@ -4816,7 +5092,6 @@ msgid ""
 "this if you've been getting errors indicating that recovery\n"
 "ought to be run.  Recovery requires exclusive access and will\n"
 "exit if the repository is in use by another process.\n"
-"\n"
 msgstr ""
 "用法: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -4826,7 +5101,6 @@ msgstr ""
 "警告: 只有在你絕對確定你是唯一存取檔案庫的人時, 才執行本命令.\n"
 "本命令必須有獨佔的存取權, 如果檔案庫被其它行程所佔用, 它會馬\n"
 "上結束\n"
-"\n"
 
 #: svnadmin/main.c:353
 msgid ""
@@ -5025,7 +5299,6 @@ msgstr ""
 "用法: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:799
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
@@ -5460,10 +5733,11 @@ msgid "last changed rather than current revisions"
 msgstr "最近一次更動的, 而不是目前的修訂版"
 
 #: svnversion/main.c:287
-msgid "exported\n"
-msgstr "已匯出\n"
+#, c-format
+msgid "exported%s"
+msgstr "已匯出%s"
 
-#: svnversion/main.c:295
+#: svnversion/main.c:296
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' 未納入版本控制, 並未匯出\n"
