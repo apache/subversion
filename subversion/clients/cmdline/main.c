@@ -79,21 +79,21 @@ const apr_getopt_option_t svn_cl__options[] =
 
 /*** Command dispatch. ***/
 
+/* The maximum number of aliases a subcommand can have. */
+#define SVN_CL__MAX_ALIASES 3
+
 
 /* One element of the command dispatch table. */
 typedef struct svn_cl__cmd_desc_t
 {
-  /* The name of this command.  Might be a full name, such as
-     "commit", or a short name, such as "ci". */
+  /* The full name of this command. */
   const char *name;
 
-  /* If name is a short synonym, such as "ci", then is_alias
-     is set `TRUE'.  If it is the base command entry, then `FALSE'.
-     The alias entries will always immediately follow the base entry. */
-  svn_boolean_t is_alias;
-
-  /* The function this command invokes.  NULL if alias. */
+  /* The function this command invokes. */
   svn_cl__cmd_proc_t *cmd_func;
+
+  /* A list of alias names for this command. */
+  const char *aliases[SVN_CL__MAX_ALIASES];
 
   /* A brief string describing this command, for usage messages. */
   const char *help;
@@ -106,43 +106,32 @@ typedef struct svn_cl__cmd_desc_t
 
 
 
-/* Map names to command routine, etc. 
- *
- * Canonical name entries must come immediately before their aliases.
- * For example, "add" must be the first of the add commands listed,
- * followed immediately by its aliases "ad" and "new".
- *
- * Alias entries should have null or 0 for every field except `name'
- * and `is_alias'.  The canonical entry will be used for everything
- * else.
+/* Our array of available subcommands.
  *
  * The entire list must be terminated with a entry of nulls.
  */
 const svn_cl__cmd_desc_t svn_cl__cmd_table[] = 
 {
-  { "add",        FALSE, svn_cl__add,
+  { "add", svn_cl__add, {"ad", "new"},
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: svn add [OPTIONS] [TARGETS]\n", 
     {svn_cl__recursive_opt} },
-  { "ad",         TRUE, NULL, NULL, {0} },
-  { "new",        TRUE, NULL, NULL, {0} },
 
-  { "checkout",   FALSE, svn_cl__checkout,
+  { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
     "usage: svn checkout REPOS_URL\n",    
     {'d', 'r', 'D', 'q', 'n',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt }  },
-  { "co",         TRUE, NULL, NULL, {0} },
 
-  { "cleanup",    FALSE, svn_cl__cleanup,
+  { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"
     "unfinished operations, etc.\n"
     "usage: svn cleanup [TARGETS]\n",
     {0} },
   
-  { "commit",     FALSE, svn_cl__commit,
+  { "commit", svn_cl__commit, {"ci"},
     "Send changes from your working copy to the repository.\n"
     "usage: svn commit [TARGETS]\n\n"
     "   Be sure to use one of -m or -F to send a log message;\n"
@@ -150,9 +139,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     {'m', 'F', 'q', 
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r'} },
-  { "ci",         TRUE, NULL, NULL, {0} },
   
-  { "copy",       FALSE, svn_cl__copy,
+  { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
     "usage: svn copy SRC DST.\n\n"
     "  SRC and DST can each be either a working copy (WC) path or URL:\n"
@@ -161,9 +149,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
     {'m', 'F', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
-  { "cp",         TRUE, NULL, NULL, {0} },
   
-  { "delete",     FALSE, svn_cl__delete,
+  { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
     "usage: svn delete [TARGET | URL]\n\n"
     "    If run on a working-copy TARGET, item is scheduled for deletion\n"
@@ -172,52 +159,46 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    repository via an immediate commit.\n",
     {svn_cl__force_opt, 'm', 'F',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
-  { "del",        TRUE, NULL, NULL, {0} },
-  { "remove",     TRUE, NULL, NULL, {0} },
-  { "rm",         TRUE, NULL, NULL, {0} },
   
-  { "diff",       FALSE, svn_cl__diff,
+  { "diff", svn_cl__diff, {"di"},
     "Display local changes in the working copy, or changes between the\n"
     "working copy and the repository if a revision is given.\n"
     "usage: svn diff [-r REV] [TARGETS]\n",
     {'r', 'D', 'x', 'n',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
-  { "di",         TRUE, NULL, NULL, {0} },
   
-  { "help",       FALSE, svn_cl__help,
+  { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n",
     {svn_cl__version_opt} },
-  { "?",          TRUE, NULL, NULL, {0} },
-  { "h",          TRUE, NULL, NULL, {0} },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
      support them explicitly. */
   
-  { "import",     FALSE, svn_cl__import,
+  { "import", svn_cl__import, {0},
     "Commit an unversioned file or tree into the repository.\n"
     "usage: svn import REPOS_URL [PATH] [NEW_ENTRY_IN_REPOS]\n\n"
     "    Recursively commit a copy of PATH to REPOS_URL.\n"
     "    If no 3rd arg, copy top-level contents of PATH into REPOS_URL\n"
-    "    directly. Otherwise, create 3rd arg underneath REPOS_URL and\n"
+    "    directly.  Otherwise, create NEW_ENTRY underneath REPOS_URL and\n"
     "    begin copy there.  (-r is only needed if importing to --xml-file)\n",
     {'F', 'm', 'q', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r'} },
   
-  { "log",        FALSE, svn_cl__log,
+  { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: svn log [PATH1 [PATH2] ...] \n",
     {'r', 'v', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
-  { "mkdir",      FALSE, svn_cl__mkdir,
+  { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
     "usage: mkdir [NEW_DIR | REPOS_URL].\n\n"
     "    Either create NEW_DIR in working copy scheduled for addition,\n"
     "    or create REPOS_URL via immediate commit.\n",
     {'m', 'F', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
 
-  { "move",       FALSE, svn_cl__move,
+  { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
     "usage: move SRC DST.\n\n"
     "  NOTE:  this command is equivalent to a 'copy' and 'delete'.\n\n"
@@ -225,53 +206,41 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
     {'m', 'F', 'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
-  { "mv",         TRUE, NULL, NULL, {0} },
-  { "rename",     TRUE, NULL, NULL, {0} },
-  { "ren",        TRUE, NULL, NULL, {0} },
   
-  { "propdel",    FALSE, svn_cl__propdel, 
+  { "propdel", svn_cl__propdel, {"pdel"},
     "Remove property PROPNAME on files and directories.\n"
     "usage: propdel PROPNAME [TARGETS]\n",
     {'q', svn_cl__recursive_opt} },
-  { "pdel",       TRUE, NULL, NULL, {0} },
   
-  { "propedit",    FALSE, svn_cl__propedit, 
+  { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
     "usage: propedit PROPNAME [TARGETS]\n",
     {0} },
-  { "pedit",       TRUE, NULL, NULL, {0} },
-  { "pe",          TRUE, NULL, NULL, {0} },
   
-  { "propget",    FALSE, svn_cl__propget,
+  { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of property PROPNAME on files or directories.\n"
     "usage: propget PROPNAME [TARGETS]\n",
     {svn_cl__recursive_opt} },
-  { "pget",       TRUE, NULL, NULL, {0} },
-  { "pg",         TRUE, NULL, NULL, {0} },
   
-  { "proplist",   FALSE, svn_cl__proplist,
+  { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties attached to files or directories.\n"
     "usage: proplist [TARGETS]\n",
     {svn_cl__recursive_opt} },
-  { "plist",      TRUE, NULL, NULL, {0} },
-  { "pl",         TRUE, NULL, NULL, {0} },
   
-  { "propset",    FALSE, svn_cl__propset, 
+  { "propset", svn_cl__propset, {"pset", "ps"},
     "Set property PROPNAME to PROPVAL on files or directories.\n"
     "usage: propset PROPNAME PROPVAL [TARGETS]\n\n"
     "    Use -F (instead of PROPVAL) to get the value from a file.\n",
     {'F', 'q', svn_cl__recursive_opt} },
-  { "pset",       TRUE, NULL, NULL, {0} },
-  { "ps",         TRUE, NULL, NULL, {0} },
   
-  { "revert",     FALSE, svn_cl__revert,
+  { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
     "usage: revert [TARGETS]\n\n"
     "    Note:  this routine does not require network access, and will\n"
     "    remove any .rej produced when a file is in a state of conflict.\n",
     {svn_cl__recursive_opt} },
   
-  { "status",     FALSE, svn_cl__status,
+  { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"
     "usage: svn status [TARGETS]\n\n"
     "   With no args, print only locally modified files (no network access).\n"
@@ -284,36 +253,31 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    M                    965       687        joe      ./buildcheck.sh\n",
     { 'u', 'v', 'n', 'q',
       svn_cl__auth_username_opt, svn_cl__auth_password_opt } },
-  { "stat",       TRUE, NULL, NULL, {0} },
-  { "st",         TRUE, NULL, NULL, {0} },
   
-  { "switch",     FALSE, svn_cl__switch,
+  { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
     "usage: switch [TARGET] REPOS_URL\n\n" /* ### should args be reversed? */
     "   Note:  this is the way to move a working copy to a new branch.\n",
     {'r'} },
-  { "sw",         TRUE, NULL, NULL, {0} },
  
-  { "update",     FALSE, svn_cl__update,
+  { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n\n"
     "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
     "  Else synchronize working copy to revision given by -r or -D.\n",
     {'r', 'D', 'n', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__xml_file_opt} },
-  { "up",         TRUE, NULL, NULL, {0} },
 
-  { NULL,         FALSE, NULL, NULL, {0} }
+  { NULL, NULL, {0}, NULL, {0} }
 };
 
 
 
 
 /* Return the entry in svn_cl__cmd_table whose name matches CMD_NAME,
- * or null if none.  CMD_NAME may be an alias, in which case the alias
- * entry will be returned (so caller may need to canonicalize result).  */
+ * or NULL if none.  CMD_NAME may be an alias. */
 static const svn_cl__cmd_desc_t *
-get_cmd_table_entry (const char *cmd_name)
+svn_cl__get_canonical_command (const char *cmd_name)
 {
   int i = 0;
 
@@ -321,29 +285,22 @@ get_cmd_table_entry (const char *cmd_name)
     return NULL;
 
   while (svn_cl__cmd_table[i].name) {
+    int j;
     if (strcmp (cmd_name, svn_cl__cmd_table[i].name) == 0)
       return svn_cl__cmd_table + i;
+    for (j = 0; 
+         (j < SVN_CL__MAX_ALIASES) && svn_cl__cmd_table[i].aliases[j]; 
+         j++)
+      if (strcmp (cmd_name, svn_cl__cmd_table[i].aliases[j]) == 0)
+        return svn_cl__cmd_table + i;
+
     i++;
   }
 
-  /* Else command not found. */
+  /* If we get here, there was no matching command name or alias. */
   return NULL;
 }
 
-
-static const svn_cl__cmd_desc_t *
-svn_cl__get_canonical_command (const char *cmd)
-{
-  const svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
-
-  if (cmd_desc == NULL)
-    return NULL;
-
-  while (cmd_desc->is_alias)
-    cmd_desc--;
-
-  return cmd_desc;
-}
 
 
 
@@ -423,18 +380,21 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
                     apr_pool_t *pool,
                     FILE *stream)
 {
-  const svn_cl__cmd_desc_t *this_cmd
+  const svn_cl__cmd_desc_t *canonical_cmd
     = svn_cl__get_canonical_command (cmd_desc->name);
-  const svn_cl__cmd_desc_t *canonical_cmd = this_cmd;
   svn_boolean_t first_time;
+  int i;
 
   /* Print the canonical command name. */
   fputs (canonical_cmd->name, stream);
 
   /* Print the list of aliases. */
   first_time = TRUE;
-  for (this_cmd++; (this_cmd->name && this_cmd->is_alias); this_cmd++) 
+  for (i = 0; i < SVN_CL__MAX_ALIASES; i++) 
     {
+      if (canonical_cmd->aliases[i] == NULL)
+        break;
+
       if (first_time) {
         fprintf (stream, " (");
         first_time = FALSE;
@@ -442,7 +402,7 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
       else
         fprintf (stream, ", ");
       
-      fprintf (stream, "%s", this_cmd->name);
+      fprintf (stream, "%s", canonical_cmd->aliases[i]);
     }
 
   if (! first_time)
@@ -450,7 +410,6 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
   
   if (help)
     {
-      int i;
       const apr_getopt_option_t *option;
 
       fprintf (stream, ": %s\n", canonical_cmd->help);
@@ -505,13 +464,9 @@ svn_cl__print_generic_help (apr_pool_t *pool, FILE *stream)
   fprintf (stream, "%s", usage);
   while (svn_cl__cmd_table[i].name) 
     {
-      /*  for (i = 0; i < max; i++) */
-      if (! svn_cl__cmd_table[i].is_alias)
-        {
-          fprintf (stream, "   ");
-          print_command_info (svn_cl__cmd_table + i, FALSE, pool, stream);
-          fprintf (stream, "\n");
-        }
+      fprintf (stream, "   ");
+      print_command_info (svn_cl__cmd_table + i, FALSE, pool, stream);
+      fprintf (stream, "\n");
       i++;
     }
 
