@@ -73,7 +73,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   const char *cmd;
   apr_file_t *tmp_file;
   const char *tmpfile_name;
-  const char *contents_native, *tmpfile_native, *base_dir_native;
+  const char *contents_native, *tmpfile_native;
+  const char *tmpfile_apr, *base_dir_apr;
   apr_status_t apr_err, apr_err2;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
@@ -120,12 +121,13 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       return svn_error_create
         (apr_err, NULL, "failed to get current working directory");
     }
-  SVN_ERR (svn_utf_cstring_from_utf8 (&base_dir_native, base_dir, pool));
 
   /* APR doesn't like "" directories */
-  if (base_dir_native[0] == '\0')
-    base_dir_native = ".";
-  apr_err = apr_filepath_set (base_dir_native, pool);
+  if (base_dir[0] == '\0')
+    base_dir_apr = ".";
+  else
+    SVN_ERR (svn_path_cstring_from_utf8 (&base_dir_apr, base_dir, pool));
+  apr_err = apr_filepath_set (base_dir_apr, pool);
   if (apr_err)
     {
       return svn_error_createf
@@ -162,13 +164,13 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  err = svn_utf_cstring_from_utf8 (&tmpfile_native, tmpfile_name, pool);
+  err = svn_path_cstring_from_utf8 (&tmpfile_apr, tmpfile_name, pool);
   if (err)
     goto cleanup;
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_err = apr_stat (&finfo_before, tmpfile_native, 
+  apr_err = apr_stat (&finfo_before, tmpfile_apr,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
@@ -178,6 +180,9 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     }
 
   /* Now, run the editor command line.  */
+  err = svn_utf_cstring_from_utf8 (&tmpfile_native, tmpfile_name, pool);
+  if (err)
+    goto cleanup;
   cmd = apr_psprintf (pool, "%s %s", editor, tmpfile_native);
   sys_err = system (cmd);
   if (sys_err != 0)
@@ -190,7 +195,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     }
   
   /* Get information about the temporary file after the assumed editing. */
-  apr_err = apr_stat (&finfo_after, tmpfile_native, 
+  apr_err = apr_stat (&finfo_after, tmpfile_apr,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
@@ -285,8 +290,6 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
                          svn_error_t *commit_err)
 {
   struct log_msg_baton *lmb = log_msg_baton;
-  const char *native;
-  svn_error_t *conv_err;
 
   /* If there was no tmpfile left, or there is no log message baton,
      return COMMIT_ERR. */
@@ -302,12 +305,12 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
      chain.  Then return COMMIT_ERR.  If the conversion from UTF-8 to
      native encoding fails, we have to compose that error with the
      commit error chain, too. */
-  conv_err = svn_utf_cstring_from_utf8 (&native, lmb->tmpfile_left, lmb->pool);
-  svn_error_compose (commit_err, svn_error_createf 
-                     (commit_err->apr_err, conv_err,
-                      "Your commit message was left in a temporary file:\n"
-                      "   %s", 
-                      conv_err ? "(see the following error)" : native));
+  svn_error_compose
+    (commit_err,
+     svn_error_create (commit_err->apr_err,
+                       svn_error_createf (commit_err->apr_err, NULL,
+                                          "   '%s'", lmb->tmpfile_left),
+                       "Your commit message was left in a temporary file:"));
   return commit_err;
 }
 
