@@ -54,3 +54,12 @@ Candidate changes:
       repositories.
     Votes:
       +1: ghudson
+
+  * r10546
+    Improve 'svn commit' errormsg when inconsistent line-endings are found.
+    Justification:
+      Without this, the mysterious error "Commit failed (details follow)",
+      with no following details, is produced. Trivial fix for serious UI wart.
+    Votes:
+      +1: maxb
+
