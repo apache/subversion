@@ -1844,7 +1844,7 @@ svn_io_run_diff3 (const char *dir,
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR (svn_io_run_cmd (dir, diff3_utf8, args, 
                            exitcode, NULL, 
-                           FALSE, /* clean environment */
+                           TRUE, /* keep environment */
                            NULL, merged, NULL,
                            pool));
 
