@@ -95,8 +95,11 @@ Each node in our generic trees have these fields:
 The contents of this directory:
 
 
-* basic_tests.py:        tests: client operations using ra_local.
+* basic_tests.py:        tests: general client operations using ra_local.
 
+* commit_tests.py:       tests: fancy commit cases and scenarios, as
+                                well as regression tests. (uses ra_local)
+ 
 * svntest/               subversion test framework, as a python package.
 
     * main.py:               global vars, utility routines.
