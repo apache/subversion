@@ -34,7 +34,7 @@ Candidate changes:
     Add documentation of working directory to hook templates.
     Justification: Hook writers need to know, and experimenting is no fun.
     Votes:
-      +1: kfogel, sussman
+      +1: kfogel, sussman, dlr
 
 Status of 1.0.1:
 ================
