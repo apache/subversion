@@ -4,6 +4,20 @@ use warnings;
 package SVN::Fs;
 use SVN::Base qw(Fs svn_fs_);
 
+=head1 NAME
+
+SVN::Fs - Subversion filesystem functions
+
+=head1 DESCRIPTION
+
+SVN::Fs wraps the functions in svn_fs.h.
+
+=head2 METHODS
+
+Please consult the svn_fs.h section in the Subversion API.
+
+=cut
+
 package _p_svn_fs_t;
 
 our @methods = qw/youngest_rev revision_root revision_prop revision_proplist
