@@ -934,15 +934,15 @@ The following repository access (RA) modules are available:
       <para>Además de proporcionar implemntaciones consistentes de
         llamadas de sistema que difieren entre sistemas operativos,
         <footnote>
-          <para>Subversion uses ANSI system calls and datatypes
-            as much as possible.</para>
+          <para>Subversion usa llamadas de sistema y tipos de datos
+            ANSI siempre que es posible.</para>
         </footnote> APR le da a Subversion acceso inmediato a muchos
         tipos de datos, como arrays dinámicos o tablas hash<!--
         TODO picadillo? -->.  Subversion usa en gran medida estos
         tipos a lo largo del código fuente. Pero quizás el tipo de
         datos APR más usado, encontrado en casi todo prototipo de la
         API de Subversion, es <literal>apr_pool_t</literal>&mdash;el
-        grupo de memoria de APR.  Subversion usa internamente grupos
+        área de memoria de APR.  Subversion usa internamente áreas
         de memoria para todas las peticiones de reserva de memoria
         que necesita (excepto cuando una librería externa requiere
         un esquema de gestión de memoria diferente para los datos
@@ -951,49 +951,59 @@ The following repository access (RA) modules are available:
             librerías.</para>
         </footnote> y aunque una persona que programa usando las
         APIs de Subversion no está obligada a hacer lo mismo, tiene
-        que proporcionar grupos de memoria a las funciones de la API
+        que proporcionar áreas de memoria a las funciones de la API
         que los necesitan. Esto significa que los usuarios de la API
         de Subversion también tienen que enlazar con APR, y deben
         llamar <function>apr_initialize()</function> para iniciar el
-        subsistema APR, y entonces adquirir un grupo de memoria para
-        usarlo con las llamadas de la API de Subversion. Vea <xref
+        subsistema APR, y entonces adquirir un área de memoria para
+        usarla con las llamadas de la API de Subversion. Vea <xref
         linkend="svn-ch-8-sect-5"/> para más información.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-2.2">
-      <title>URL and Path Requirements</title>
+      <title>Requisitos de URL y ruta</title>
 
-      <para>With remote version control operation as the whole point
-        of Subversion's existence, it makes sense that some attention
-        has been paid to internationalization (i18n) support.  After
-        all, while <quote>remote</quote> might mean <quote>across the
-        office</quote>, it could just as well mean <quote>across the
-        globe.</quote> To facilitate this, all of Subversion's public
-        interfaces that accept path arguments expect those paths to be
-        canonicalized, and encoded in UTF-8.  This means, for example,
-        that any new client binary that drives the libsvn_client
-        interface needs to first convert paths from the
-        locale-specific encoding to UTF-8 before passing those paths
-        to the Subversion libraries, and then re-convert any resultant
-        output paths from Subversion back into the locale's encoding
-        before using those paths for non-Subversion purposes.
-        Fortunately, Subversion provides a suite of functions (see
-        <filename>subversion/include/svn_utf.h</filename>) that can be
-        used by any program to do these conversions.</para>
+      <para>Con operaciones de control de versiones remotas como
+        razón de la existencia de Subversion, tiene sentido
+        prestar atención al soporte de internacionalización
+        (i18n<footnote><para>N.T.: Forma breve de referirse
+        a la palabra internacionalización, en inglés
+        <quote>internationalization</quote>, que comienza con una
+        <quote>i</quote>, seguida de 18 carácteres y terminada en
+        <quote>n</quote>.</para> </footnote>). Después de todo,
+        aunque <quote>remotas</quote> pueda significar <quote>de
+        un lado a otro de la oficina</quote>, podría significar
+        perfectamente <quote>de un lado a otro del globo.</quote>.
+        Para facilitar esto, todas las interfaces públicas de
+        Subversion que aceptan parámetros de rutas esperan que éstas
+        sean canónicas, y codificadas en UTF-8.  Esto significa,
+        por ejemplo, que cualquier nuevo cliente binario que use
+        la interfaz libsvn_client necesita convertir primero las
+        rutas de la codificación específica local a UTF-8 antes
+        de pasarlas a las librerías de Subversion, y entonces
+        reconvertir cualquier resultado generado por Subversion de
+        nuevo en la codificación local antes de usar esas rutas con
+        propósitos no relacionados con Subversion. Afortunadamente,
+        Subversion proporciona un conjunto de funciones (vea
+        <filename>subversion/include/svn_utf.h</filename>) que
+        pueden ser usadas por cualquier programa para realizar
+        estas conversiones.</para>
 
-      <para>Also, Subversion APIs require all URL parameters to be
-        properly URI-encoded.  So, instead of passing <systemitem
-        class="url">file:///home/username/My File.txt</systemitem> as
-        the URL of a file named <literal>My File.txt</literal>, you
-        need to pass <systemitem
-        class="url">file:///home/username/My%20File.txt</systemitem>.
-        Again, Subversion supplies helper functions that your
-        application can
-        use&mdash;<function>svn_path_uri_encode</function> and
-        <function>svn_path_uri_decode</function>, for URI encoding and
-        decoding, respectively.</para>
+      <para>Además, las APIs de Subversion requieren que todos los
+        parámetros con URLs estén codificados correctamente
+        como URIs. Así, que en lugar de pasar <systemitem
+        class="url">file:///home/nombreusuario/Mi
+        fichero.txt</systemitem> como la
+        URL de un fichero llamado <literal>Mi
+        fichero.txt</literal>, usted necesita pasar <systemitem
+        class="url">file:///home/nombreusuario/Mi%20fichero.txt</systemitem>.
+        De nuevo, Subversion proporciona
+        funciones de ayuda que su aplicación puede
+        usar&mdash;<function>svn_path_uri_encode</function> y
+        <function>svn_path_uri_decode</function>, para codificar
+        y decodificar URIs, respectivamente.</para>
     </sect2>
 
     <!-- ***************************************************************** -->
