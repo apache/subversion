@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-08-10 16:32:51 $
+              Last updated:  $Date: 2001-08-10 19:46:41 $
 
 
 TABLE OF CONTENTS
@@ -603,9 +603,9 @@ Note that you will need at *least* Apache 2.0a9 for this, and
 preferably the latest CVS version. To fetch the Apache 2.0 CVS tree,
 you can use:
 
-$ cvs -d :pserver:anoncvs@apache.org:/home/cvspublic login
+$ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
  (password 'anoncvs')
-$ cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co httpd-2.0
+$ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
 
 When Apache 2.0 is installed, it creates a Perl script named "apxs"
 which is used by external (third-party) modules to discover
