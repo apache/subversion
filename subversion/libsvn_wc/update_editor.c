@@ -534,7 +534,7 @@ delete_entry (const char *path,
   const char *basename;
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
-  SVN_ERR (svn_wc__lock (pb->path, 0, pool));
+  SVN_ERR (svn_wc_lock (pb->path, 0, pool));
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   pb->path,
                                   SVN_WC__ADM_LOG,
@@ -572,7 +572,7 @@ delete_entry (const char *path,
                                    pool));
     
   SVN_ERR (svn_wc__run_log (pb->path, pool));
-  SVN_ERR (svn_wc__unlock (pb->path, pool));
+  SVN_ERR (svn_wc_unlock (pb->path, pool));
   return SVN_NO_ERROR;
 }
 
@@ -754,7 +754,7 @@ close_directory (void *dir_baton)
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
       /* Lock down the administrative area */
-      SVN_ERR (svn_wc__lock (db->path, 0, db->pool));
+      SVN_ERR (svn_wc_lock (db->path, 0, db->pool));
       
       /* Open log file */
       SVN_ERR (svn_wc__open_adm_file (&log_fp,
@@ -832,7 +832,7 @@ close_directory (void *dir_baton)
       SVN_ERR (svn_wc__run_log (db->path, db->pool));
 
       /* Unlock, we're done modifying directory props. */
-      SVN_ERR (svn_wc__unlock (db->path, db->pool));
+      SVN_ERR (svn_wc_unlock (db->path, db->pool));
     }
 
 
@@ -1091,7 +1091,7 @@ svn_wc_install_file (const char *file_path,
   /* Lock the parent directory while we change things.  If for some
      reason the parent isn't under version control, this function will
      bomb out.  */
-  SVN_ERR (svn_wc__lock (parent_dir, 0, pool));
+  SVN_ERR (svn_wc_lock (parent_dir, 0, pool));
 
   /*
      When this function is called on file F, we assume the following
@@ -1514,7 +1514,7 @@ svn_wc_install_file (const char *file_path,
     }
 
   /* Unlock the parent dir, we're done with this file installation. */
-  SVN_ERR (svn_wc__unlock (parent_dir, pool));
+  SVN_ERR (svn_wc_unlock (parent_dir, pool));
 
   return SVN_NO_ERROR;
 }

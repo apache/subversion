@@ -705,17 +705,43 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   {
     apr_hash_t *committables, *locked_dirs;
     apr_array_header_t *array;
+    svn_error_t *err2;
+    apr_hash_index_t *hi;
+
+    /* Crawl the working copy for commit items. */
+    err = svn_client__harvest_committables (&committables, 
+                                            &locked_dirs,
+                                            base_dir,
+                                            condensed_targets, 
+                                            pool);
+    /* Perform the commit. */
+    if ((! err) && ((array = apr_hash_get (committables, 
+                                           SVN_CLIENT__SINGLE_REPOS_NAME, 
+                                           APR_HASH_KEY_STRING))))
+      err = svn_client__do_commit (array, NULL, NULL, FALSE,
+                                   NULL, NULL, pool);
     
-    SVN_ERR (svn_client__harvest_committables (&committables, 
-                                               &locked_dirs,
-                                               base_dir,
-                                               condensed_targets, 
-                                               pool));
+    /* Clean up any locks. */
+    for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
+      {
+        const void *key;
+        apr_ssize_t keylen;
+        void *val;
+
+        apr_hash_this (hi, &key, &keylen, &val);
+        if ((err2 = svn_wc_unlock (svn_stringbuf_ncreate ((const char *)key,
+                                                          keylen, pool),
+                                   pool)))
+          {
+            if (err)
+              svn_error_compose (err2, err);
+            else
+              return err2;
+          }
+      }
     
-    if ((array = apr_hash_get (committables, SVN_CLIENT__SINGLE_REPOS_NAME, 
-                               APR_HASH_KEY_STRING)))
-      SVN_ERR (svn_client__do_commit (array, NULL, NULL, FALSE,
-                                      NULL, NULL, pool));
+    if (err)
+      return err;
   }
 #endif /* 0 */
 

@@ -1210,7 +1210,7 @@ init_adm (svn_stringbuf_t *path,
   /* Lock it immediately.  Theoretically, no compliant wc library
      would ever consider this an adm area until a README file were
      present... but locking it is still appropriately paranoid. */
-  SVN_ERR (svn_wc__lock (path, 0, pool));
+  SVN_ERR (svn_wc_lock (path, 0, pool));
 
 
   /** Make subdirectories. ***/
@@ -1266,7 +1266,7 @@ init_adm (svn_stringbuf_t *path,
 
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */
-  SVN_ERR (svn_wc__unlock (path, pool));
+  SVN_ERR (svn_wc_unlock (path, pool));
 
   /* Else no problems, we're outta here. */
   return SVN_NO_ERROR;
@@ -1292,7 +1292,7 @@ svn_wc__adm_destroy (svn_stringbuf_t *path, apr_pool_t *pool)
   /* Try to lock the admin directory, hoping that this function will
      eject an error if we're already locked (which is fine, cause if
      it is already locked, we certainly don't want to blow it away. */
-  SVN_ERR (svn_wc__lock (path, 0, pool));
+  SVN_ERR (svn_wc_lock (path, 0, pool));
 
   /* Well, I think the coast is clear for blowing away this directory
      (which should also remove the lock file we created above) */
@@ -1321,9 +1321,9 @@ svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, apr_pool_t *pool)
   apr_status_t apr_err;
 
   /* Lock the admin area if it's not already locked. */
-  SVN_ERR (svn_wc__locked (&was_locked, path, pool));
+  SVN_ERR (svn_wc_locked (&was_locked, path, pool));
   if (! was_locked)
-    SVN_ERR (svn_wc__lock (path, 0, pool));
+    SVN_ERR (svn_wc_lock (path, 0, pool));
 
   /* Get the path to the tmp area, and blow it away. */
   tmp_path = svn_stringbuf_dup (path, pool);
@@ -1341,7 +1341,7 @@ svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, apr_pool_t *pool)
   /* Unlock the admin area if it wasn't locked when we entered this
      function. */
   if (! was_locked)
-    SVN_ERR (svn_wc__unlock (path, pool));
+    SVN_ERR (svn_wc_unlock (path, pool));
 
   return SVN_NO_ERROR;
 }

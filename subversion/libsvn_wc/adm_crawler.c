@@ -153,20 +153,12 @@ remove_all_locks (apr_hash_t *locks, apr_pool_t *pool)
       const void *key;
       void *val;
       apr_ssize_t klen;
-      svn_stringbuf_t *unlock_path;
-      
+
       apr_hash_this (hi, &key, &klen, &val);
-      unlock_path = svn_stringbuf_create ((char *)key, pool);
-      
-      err = svn_wc__unlock (unlock_path, pool);
-      if (err) 
-        {
-          char *message =
-            apr_psprintf (pool,
-                          "remove_all_locks:  couldn't unlock %s",
-                          unlock_path->data);
-          return svn_error_quick_wrap (err, message);
-        }          
+      if ((err = svn_wc_unlock 
+           (svn_stringbuf_create ((const char *)key, pool), pool)))
+        return svn_error_quick_wrap 
+          (err, apr_psprintf (pool, "couldn't unlock %s", (const char *)key));
     }
 
   return SVN_NO_ERROR;
@@ -258,14 +250,12 @@ do_lock (svn_stringbuf_t *path, apr_hash_t *locks, apr_pool_t *pool)
   if (apr_hash_get (locks, path->data, APR_HASH_KEY_STRING) != NULL)
     return SVN_NO_ERROR;
 
-  err = svn_wc__lock (path, 0, pool);
-  if (err)
+  if ((err = svn_wc_lock (path, 0, pool)))
     {
       /* Couldn't lock: */
       
       /* Remove _all_ previous commit locks */
-      err2 = remove_all_locks (locks, pool);
-      if (err2) 
+      if ((err2 = remove_all_locks (locks, pool)))
         {
           /* If this also errored, put the original error inside it. */
           err2->child = err;
