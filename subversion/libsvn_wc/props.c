@@ -164,7 +164,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
      (After all, if they affect different property names, how can they
      possibly conflict?)  But still, let's make this routine
      `complete' by checking anyway. */
-  if (strcmp(local->name, update->name) == 0)
+  if (strcmp(local->name, update->name) != 0)
     return FALSE;  /* no conflict */
 
   /* If one change wants to delete a property and the other wants to
