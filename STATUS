@@ -42,9 +42,9 @@ Candidate changes:
     Do not turn /s in URLS to \s on Windows. 
     Justification: The paths are for URLS they should be copyable for use on
     repo URLS.
-    Votes (on both):
-      +1: breser, sussman
-    Votes (on just 9104):
+    Notes: In r9393, kfogel reformatted a bit of r9197, but is not
+           nominating r9393 for 1.0.x, as it's not functionally important. 
+    Votes:
       +1: breser, sussman, kfogel
 
   * r9212, r9231
