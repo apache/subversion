@@ -39,11 +39,12 @@ int
 main (int argc, char *argv[])
 {
   apr_pool_t *globalpool;
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
+  const svn_delta_edit_fns_t *wrap_editor;
   svn_error_t *err;
   apr_file_t *file = NULL;
   apr_status_t status;
-  void *edit_baton;
+  void *edit_baton, *wrap_edit_baton;
   svn_stream_t *out_stream;
 
 
@@ -76,18 +77,20 @@ main (int argc, char *argv[])
   /* Grab the "test" editor and baton */
   err = svn_test_get_editor (&editor, 
                              &edit_baton,
-                             svn_stringbuf_create ("DELTAPARSE-TEST", 
-                                                globalpool),
+                             "DELTAPARSE-TEST",
                              out_stream, 
                              3, 
                              TRUE,
-                             svn_stringbuf_create (BASE_PATH, globalpool),
+                             BASE_PATH,
                              globalpool);
-  
+
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton,
+                         editor, edit_baton, globalpool);
+
   /* Fire up the XML parser */
   err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (file, globalpool),
-                                  editor,
-                                  edit_baton,
+                                  wrap_editor,
+                                  wrap_edit_baton,
                                   BASE_PATH,
                                   37,    /* random base revision */
                                   globalpool);

@@ -168,13 +168,13 @@ apr_uint32_t svn_test_rand (apr_uint32_t *seed);
 /*
  * This is implemented in tests/libsvn_test_editor.la
  */
-svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
+svn_error_t *svn_test_get_editor (const svn_delta_editor_t **editor,
                                   void **edit_baton,
-                                  svn_stringbuf_t *editor_name,
+                                  const char *editor_name,
                                   svn_stream_t *out_stream,
                                   int indentation,
                                   svn_boolean_t verbose,
-                                  svn_stringbuf_t *path,
+                                  const char *path,
                                   apr_pool_t *pool);
 
 #ifdef __cplusplus
