@@ -128,6 +128,15 @@ server_ssl_callback(void *userdata,
   char fingerprint[NE_SSL_DIGESTLEN];
   char valid_from[NE_SSL_VDATELEN], valid_until[NE_SSL_VDATELEN];
 
+  /* The following is a quick hack to prevent alternate CN hostname
+   * spoofing. It will be replaced by a better more secure solution
+   * shortly. */
+  if ((failures & NE_SSL_UNTRUSTED) &&
+      strcmp(ne_ssl_cert_identity(cert), ras->root.host) != 0)
+    {
+      failures |= NE_SSL_IDMISMATCH;
+    }
+
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                          (void*)failures);
