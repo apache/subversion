@@ -755,21 +755,23 @@ U   my-calc-branch/integer.c
           merge</command>, o de una modificación manual de los
           ficheros.</para>
 
-        <para>What does this mean to you, the user?  It means that
-          until the day Subversion grows this feature, you'll have to
-          track merge information yourself.  The best place to do this
-          is in the commit log-message.  As demonstrated in the
-          earlier example, it's recommended that your log-message
-          mention a specific revision number (or range of revisions)
-          that are being merged into your branch.  Later on, you can
-          run <command>svn log</command> to review which changes your
-          branch already contains.  This will allow you to carefully
-          construct a subsequent <command>svn merge</command> command
-          that won't be redundant with previously ported
-          changes.</para>
+        <para>¿Qué significa esto para usted, el usuario? Significa
+          que hasta que llegue el día que Subversion desarrolle
+          esta característica, tendrá que gestionar usted mismo la
+          información de fusionado.  El mejor lugar para hacerlo
+          es en el informe de cambios cuando envía cambios al
+          repositorio. Tal y como se demostró en el ejemplo
+          anterior, es recomendable que su informe de cambios
+          mencione el número de revisión específico (o rango de
+          revisiones) que está siendo fusionado en su rama. Más
+          tarde, puede ejecutar <command>svn log</command> para
+          revisar qué cambios contiene ya su rama. Esto le permitirá
+          construir con cuidado siguientes comandos <command>svn
+          merge</command> que no serán redundantes con cambios
+          previamente portados.</para>
 
-        <para>In the next section, we'll show some examples of this
-          technique in action.</para>
+        <para>En la siguiente sección, le mostraremos algunos
+          ejemplos de esta técnica en acción.</para>
 
       </sect3>
       
