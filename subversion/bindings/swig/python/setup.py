@@ -32,6 +32,8 @@ def _do_usage():
         "search DIR for includes (multiple instances allowed)"
   print "   -L dir    " + \
         "search DIR for libraries (multiple instances allowed)"
+  print "   -S dir    " + \
+        "the DIR for the source of the subversion swig bindings"
   print "   -s path   " + \
         "use the swig binary found at PATH"
   sys.exit(0)
@@ -52,13 +54,15 @@ if len(sys.argv) < 2:
 # all the options that we allow (which is FAR less than the set of
 # distutils options).  If we find that people actually care, we can
 # revisit this.
-options, leftovers = getopt.getopt(sys.argv[1:], "I:L:s:",
+options, leftovers = getopt.getopt(sys.argv[1:], "I:L:S:s:",
                                    ["prefix=", "install-dir="])
 for option in options:
   if option[0] == '-I':
     include_dirs.append(option[1])
   if option[0] == '-L':
     library_dirs.append(option[1])
+  if option[0] == '-S':
+    source_dir = option[1]
   if option[0] == '-s':
     swig_location = option[1]
 
