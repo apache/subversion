@@ -310,6 +310,11 @@ int main(int argc, const char *const *argv)
   apr_signal(SIGCHLD, sigchld_handler);
 #endif
 
+#ifdef SIGPIPE
+  /* Disable SIGPIPE generation for the platforms that have it. */
+  apr_signal(SIGPIPE, SIG_IGN);
+#endif
+
   while (1)
     {
       /* Non-standard pool handling.  The main thread never blocks to join
