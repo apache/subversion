@@ -152,7 +152,7 @@ in the form of a dumped hash map mapping property names to property
 values.
 
 The marshalling syntax for node-revs is a series of fields terminated
-by a blank line.  Fields havethe syntax "<name>: <value>\n", where
+by a blank line.  Fields have the syntax "<name>: <value>\n", where
 <name> is a symbolic field name (each symbolic name is used only once
 in a given node-rev) and <value> is the value data.  Unrecognized
 fields are ignored, for extensibility.  The following fields are
@@ -212,7 +212,7 @@ Transaction layout
 
 A transaction directory has the following layout:
 
-  rev                        Protype rev file with new text reps
+  rev                        Prototype rev file with new text reps
   props                      Transaction props
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
