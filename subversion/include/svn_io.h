@@ -153,8 +153,8 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
       \r\n
       \n\r
 */
-svn_error_t *svn_io_convert_eol (svn_stringbuf_t *src,
-                                 svn_stringbuf_t *dst,
+svn_error_t *svn_io_convert_eol (const char *src,
+                                 const char *dst,
                                  const char *eol_str,
                                  svn_boolean_t repair,
                                  apr_pool_t *pool);
