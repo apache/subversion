@@ -83,8 +83,8 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
   const char *pathname;
   apr_datum_t key;
   apr_datum_t value;
-  const char *txn_name;
   svn_fs_txn_t *txn;
+  const char *txn_name;
   svn_error_t *serr;
 
   /* gstein sez: If the activity ID is not in the database, return a
@@ -118,24 +118,34 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
      so don't try to clean it up. */
   if (*txn_name)
     {
-
       /* Now, we attempt to delete TXN_NAME from the Subversion
-         repository. */
+         repository.  If we fail only because the transaction doesn't
+         exist, don't sweat it (but then, also don't try to remove it). */
       if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool)))
         {
-          err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                    "could not open transaction.", 
-                                    repos->pool);
-          goto cleanup;
+          if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
+            {
+              svn_error_clear(serr);
+              serr = SVN_NO_ERROR;
+            }
+          else
+            {
+              err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not open transaction.", 
+                                        repos->pool);
+              goto cleanup;
+            }
         }
-
-      serr = svn_fs_abort_txn(txn, repos->pool);
-      if (serr)
+      else
         {
-          err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                    "could not abort transaction.", 
-                                    repos->pool);
-          goto cleanup;
+          serr = svn_fs_abort_txn(txn, repos->pool);
+          if (serr)
+            {
+              err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not abort transaction.", 
+                                        repos->pool);
+              goto cleanup;
+            }
         }
     }
   
