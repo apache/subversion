@@ -48,8 +48,8 @@ svn_client_cleanup (const char *dir,
   svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                   SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
-  err = svn_wc_cleanup (dir, NULL, diff3_cmd,
-                        ctx->cancel_func, ctx->cancel_baton, pool);
+  err = svn_wc_cleanup2 (dir, diff3_cmd, ctx->cancel_func, ctx->cancel_baton,
+                         pool);
   svn_sleep_for_timestamps ();
   return err;
 }

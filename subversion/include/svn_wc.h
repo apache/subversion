@@ -2234,7 +2234,10 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
                                             apr_pool_t *pool);
 
 
-/** Recurse from @a path, cleaning up unfinished log business.  Perform
+/**
+ * @since New in 1.2.
+ *
+ * Recurse from @a path, cleaning up unfinished log business.  Perform
  * necessary allocations in @a pool.  Any working copy locks under @a path 
  * will be taken over and then cleared by this function.  If @a diff3_cmd
  * is non-null, then use it as the diff3 command for any merging; otherwise,
@@ -2246,6 +2249,19 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
  * If @a cancel_func is non-null, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ */
+svn_error_t *
+svn_wc_cleanup2 (const char *path,
+                 const char *diff3_cmd,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_cleanup2(). @a optional_adm_access is an historic
+ * relic and not used, it may be NULL.
  */
 svn_error_t *
 svn_wc_cleanup (const char *path,

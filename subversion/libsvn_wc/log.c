@@ -1456,6 +1456,16 @@ svn_wc_cleanup (const char *path,
                 void *cancel_baton,
                 apr_pool_t *pool)
 {
+  return svn_wc_cleanup2 (path, diff3_cmd, cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_cleanup2 (const char *path,
+                 const char *diff3_cmd,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool)
+{
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
   svn_node_kind_t kind;
@@ -1478,8 +1488,7 @@ svn_wc_cleanup (const char *path,
        svn_path_local_style (path, pool));
 
   /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 
-                                         path, pool));
+  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, NULL, path, pool));
 
   /* Recurse on versioned elements first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
@@ -1502,17 +1511,15 @@ svn_wc_cleanup (const char *path,
           /* Sub-directories */
           SVN_ERR (svn_io_check_path (entry_path, &kind, subpool));
           if (kind == svn_node_dir)
-            /* ### I'd like to pass subpool and close the batons as we go
-               ### but we probably need 2.0 for such a behaviour change */
-            SVN_ERR (svn_wc_cleanup (entry_path, adm_access, diff3_cmd,
-                                     cancel_func, cancel_baton, pool));
+            SVN_ERR (svn_wc_cleanup2 (entry_path, diff3_cmd,
+                                      cancel_func, cancel_baton, subpool));
         }
       else
         {
           /* "." and things that are not directories, check for mods to
              trigger the timestamp repair mechanism.  Since this rewrites
              the entries file for each timestamp fixed it has the potential
-             to be slow, perhaps we need something more sopisticated? */
+             to be slow, perhaps we need something more sophisticated? */
           svn_boolean_t modified;
           SVN_ERR (svn_wc_props_modified_p (&modified, entry_path,
                                             adm_access, subpool));
@@ -1545,8 +1552,7 @@ svn_wc_cleanup (const char *path,
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
     SVN_ERR (svn_wc__adm_cleanup_tmp_area (adm_access, pool));
 
-  if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }

@@ -410,8 +410,7 @@ copy_dir_administratively (const char *src_path,
      because the source directory was locked.  Running cleanup will remove
      the locks, even though this directory has not yet been added to the
      parent. */
-  SVN_ERR (svn_wc_cleanup (dst_path, NULL, NULL, cancel_func, cancel_baton,
-                           pool));
+  SVN_ERR (svn_wc_cleanup2 (dst_path, NULL, cancel_func, cancel_baton, pool));
 
   /* Remove all wcprops in the directory, because they're all bogus now.
      After the commit, ra_dav should regenerate them and re-store them as
