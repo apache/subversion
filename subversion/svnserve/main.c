@@ -28,6 +28,8 @@
 #include <apr_signal.h>
 #include <apr_thread_proc.h>
 
+#include <locale.h>
+
 #include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_string.h"
@@ -400,6 +402,14 @@ int main(int argc, const char *const *argv)
     }
 
   apr_socket_listen(sock, 7);
+
+  /* svn_cmdline_init() sets up the locale, but when we serve clients, we
+     always want the "C" locale. */
+  if (!setlocale (LC_ALL, "C"))
+    {
+      fprintf(stderr, "Can't set locale back to the \"C\" locale\n");
+      exit(1);
+    }
 
 #if APR_HAS_FORK
   if (run_mode != run_mode_listen_once && !foreground)
