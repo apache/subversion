@@ -229,7 +229,7 @@ REGEDIT4
 "#diff3-has-program-arg"=""
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\miscellany]
-"#global-ignores"="*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
+"#global-ignores"="*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#* .DS_Store"
 "#log-encoding"=""
 "#use-commit-times"=""
 "#template-root"=""
@@ -548,7 +548,7 @@ collabnet = svn.collab.net
                 files and directories that Subversion should not
                 display unless they are versioned.  The default value
                 is <literal>*.o *.lo *.la #*# .*.rej *.rej .*~ *~
-                .#*</literal>.</para>
+                .#* .DS_Store</literal>.</para>
 
               <para>You can override this option for a single instance
                 of the <command>svn status</command> command by using
