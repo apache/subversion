@@ -13,8 +13,15 @@ _seperator = '------------------------------------------------------------\n'
 
 def parse_trails_log(infile):
   trails = []
+  lineno = 0
   for line in infile.readlines():
     m = _re_trail.match(line)
+
+    lineno = lineno + 1
+
+    if not m:
+      sys.stderr.write('Invalid input, line %u:\n%s\n' % (lineno, line))
+      sys.exit(1)
 
     txn = int(m.group('txn'))
     if not txn:
@@ -25,7 +32,10 @@ def parse_trails_log(infile):
                 int(m.group('lineno')))
     trail = _re_table_op.findall(m.group('ops'))
     trail.reverse()
-    
+
+    if not trail:
+      sys.stderr.write('Warning!  Empty trail at line %u:\n%s' % (lineno, line))
+
     trails.append((txn_body, trail))
 
   return trails
@@ -97,6 +107,11 @@ def output_trail_length_frequencies(trails, outfile):
 
 def output_trail(outfile, trail, column = 0):
   ### Output the trail itself, in it's own column
+
+  if len(trail) == 0:
+    outfile.write('<empty>\n')
+    return
+
   line = str(trail[0])
   for op in trail[1:]:
     op_str = str(op)
