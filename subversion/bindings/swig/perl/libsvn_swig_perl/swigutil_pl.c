@@ -173,7 +173,7 @@ static SV *convert_to_swig_type (void *ptr, swig_type_info *tinfo)
 
 static SV *convert_int(int value, void *dummy)
 {
-    return newSViv (value);
+    return sv_2mortal(newSViv (value));
 }
 
 /* c -> perl hash convertors */
@@ -198,7 +198,7 @@ static SV *convert_hash (apr_hash_t *hash, element_converter_t converter_func,
 	SvREFCNT_inc(obj);
     }
     
-    return newRV_inc((SV*)hv);
+    return sv_2mortal(newRV_noinc((SV*)hv));
 }
 
 SV *svn_swig_pl_prophash_to_hash (apr_hash_t *hash)
@@ -226,7 +226,7 @@ static SV *convert_array(const apr_array_header_t *array,
 	av_push (list, item);
 	SvREFCNT_inc (item);
     }
-    return newRV_inc((SV*)list);
+    return sv_2mortal(newRV_noinc((SV*)list));
 }
 
 SV *svn_swig_pl_array_to_list(const apr_array_header_t *array)
