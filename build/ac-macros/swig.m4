@@ -101,7 +101,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/mandrake-9.0/subversion.spec
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/redhat-8.x/subversion.spec
-    if test "$SWIG_VERSION" -ge "103019"; then
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103019"; then
         SWIG_SUITABLE=yes
         AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
                         ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
