@@ -51,7 +51,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__prop_find( int argc, char** argv, apr_pool_t* pool )
+svn_cl__propfind( int argc, char** argv, apr_pool_t* pool )
 {
   svn_revnum_t revision = SVN_INVALID_REVNUM;
   svn_string_t *xml_file = NULL;
@@ -61,7 +61,7 @@ svn_cl__prop_find( int argc, char** argv, apr_pool_t* pool )
   svn_error_t *err = NULL;
   apr_hash_t *prop_hash;
 
-  svn_cl__parse_options (argc, argv, PROP_FIND_COMMAND,
+  svn_cl__parse_options (argc, argv, PROPFIND_COMMAND,
                  &xml_file, &target, &revision, &ancestor_path, &force,
                  pool);
 

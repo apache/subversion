@@ -77,7 +77,7 @@ typedef enum {
   CHECKOUT_COMMAND,
   DELETE_COMMAND,
   HELP_COMMAND,
-  PROP_FIND_COMMAND,
+  PROPFIND_COMMAND,
   STATUS_COMMAND,
   UPDATE_COMMAND
 } svn_cl__te_command;
@@ -88,7 +88,7 @@ svn_cl__t_cmd_proc
   svn_cl__checkout,
   svn_cl__delete,
   svn_cl__help,
-  svn_cl__prop_find,
+  svn_cl__propfind,
   svn_cl__status,
   svn_cl__update;
 
