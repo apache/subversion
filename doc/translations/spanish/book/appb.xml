@@ -1,32 +1,39 @@
 <!-- originated from English revision 10817 -->
   <appendix id="svn-ap-b">
-    <title>Troubleshooting</title>
+    <title>Solución de problemas</title>
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-b-sect-1">
-    <title>Common Problems</title>
+    <title>Problemas comunes</title>
     
-    <para>There are a number of problems you may run into in the
-      course of installing and using Subversion.  Some of these will
-      be resolved once you get a better idea of how Subversion does
-      things, while others are caused because you're used to the way
-      that other version control systems work.  Still other problems
-      might be unsolvable due to bugs in some of the operating systems
-      that Subversion runs on (considering the wide array of OS'es
-      that Subversion runs on, it's amazing that we don't encounter
-      many more of these).</para>
+    <para>Hay un número de problemas que usted puede encontrar<!--TODO:
+      you may run into--> en el transcurso de instalar y usar Subversion.
+      Álgunos de estos serán resueltos una vez que usted tenga una mejor
+      idea de cómo hace las cosas Subversion, mientras que otros son
+      <!--TODO:you're used to the way that other version control systems
+      work--> causados porque usted está acostumbrado a la manera de
+      funcionar de otros sistemas de control de versiones. <!--TODO:
+      Still-->Otros problemas pueden ser insalvables<!--TODO:unsolvable-->
+      debido a fallos en alguno de los sistemas operativos donde
+      Subversion funciona (considerando la amplia gama de SO donde
+      Subversion funciona, es asombroso que no encontramos
+      demasiados<!--TODO:many more--> de éstos).</para>
+      
 
-    <para>The following list has been compiled over the course of
-      years of Subversion usage.  If you can't find the problem you're
-      having here, look at the most up-to-date version of the FAQ on
-      Subversion's main website.  If you're still stuck, then send
-      mail to <email>users@subversion.tigris.org</email> with a
-      detailed description of the problem you're having.
-      <footnote><para>Remember that the amount of detail you provide
-      about your setup and your problem is directly proportional to
-      the likelihood of getting an answer from the mailing list.
+    <para>La siguiente lista ha sido completada en el transcurso de años
+      <!--TODO:has been compiled over the course of years-->de usar
+      Subversion. Si no puede encontrar aqui el problema que está teniendo,
+      mire la versión más actualizada del FAQ en el website principal de
+      Subversion. Si todavía está atascado<!--TODO:if you're still stuck-->,
+      entonces envíe un mail a <email>users@subversion.tigris.org</email>
+      con una descripción detallada del problema que está teniendo.
+      <footnote><para>Recuerde que la cantidad de detalle que provea sobre
+      su configuración<!--TODO:setup--> y su problema es directamente
+      proporcional a la probabilidad de conseguir una respuesta de la
+      lista de correo<!--TODO:mailing list-->.
+
       You're encouraged to include everything short of what you had
       for breakfast and your mother's maiden name.  </para>
       </footnote> </para>
