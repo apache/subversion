@@ -58,6 +58,29 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 }
 
 
+/* A routine which knows how to consume a propchange object for a file */
+svn_error_t *
+my_fileprop_handler (svn_propchange_t *propchange, void *baton)
+{
+  printf ("GOT FILE-PROPCHANGE: name = %s, value = %s, ", 
+          propchange->name->data, propchange->value->data);
+  
+  switch (propchange->kind)
+    {
+    case svn_prop_set:
+      printf ("kind = svn_prop_set\n");
+    case svn_prop_delete:
+      printf ("kind = svn_prop_delete\n");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+
 
 /* A bunch of dummy callback routines.  */
 
@@ -126,6 +149,29 @@ test_begin_textdelta (void *walk_baton, void *parent_baton,
 
   return SVN_NO_ERROR;
 }
+
+
+
+svn_error_t *
+test_begin_propdelta (void *walk_baton, void *parent_baton,
+                      svn_propchange_location_t location,
+                      svn_propchange_handler_t **handler,
+                      void **baton)
+{
+  /* Set the value of HANDLER iff we're talking about the beginning of
+     a *file* pdelta. */
+
+  if (location == svn_prop_file)
+    *handler      = my_fileprop_handler;
+  else
+    *handler      = NULL;
+
+  *baton = NULL;
+  
+  return SVN_NO_ERROR;
+}
+
+
 
 
 svn_error_t *
@@ -217,7 +263,7 @@ int main()
   my_walker.add_file           = test_add_file;
   my_walker.replace_file       = test_replace_file;
   my_walker.begin_textdelta    = test_begin_textdelta;
-  my_walker.begin_propdelta    = NULL;
+  my_walker.begin_propdelta    = test_begin_propdelta;
   my_walker.finish_textdelta   = NULL;
   my_walker.finish_propdelta   = NULL;
 
