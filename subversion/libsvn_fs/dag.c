@@ -29,6 +29,7 @@
 #include "fs.h"
 #include "nodes-table.h"
 #include "node-rev.h"
+#include "key-gen.h"
 #include "txn-table.h"
 #include "rev-table.h"
 #include "copies-table.h"
@@ -108,19 +109,6 @@ svn_fs_t *
 svn_fs__dag_get_fs (dag_node_t *node)
 {
   return node->fs;
-}
-
-
-static int 
-same_keys (const char *key1, const char *key2)
-{
-  if (! (key1 || key2))
-    return 1;
-  if (key1 && (! key2))
-    return 0;
-  if ((! key1) && key2)
-    return 0;
-  return (! strcmp (key1, key2));
 }
 
 
@@ -532,7 +520,7 @@ set_entry (dag_node_t *parent,
      the parent didn't refer to any rep yet or because it referred to
      an immutable one, we must make the parent refer to the mutable
      rep we just created. */
-  if (! same_keys (rep_key, mutable_rep_key))
+  if (! svn_fs__same_keys (rep_key, mutable_rep_key))
     {
       svn_fs__node_revision_t *new_noderev = 
         copy_node_revision (parent_noderev, trail->pool);
@@ -733,7 +721,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
      this isn't a NOOP)  */
   SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key,
                                     fs, txn_id, trail));
-  if (! same_keys (mutable_rep_key, rep_key))
+  if (! svn_fs__same_keys (mutable_rep_key, rep_key))
     {
       noderev->prop_key = mutable_rep_key;
       SVN_ERR (svn_fs__put_node_revision (fs, node->id, noderev, trail));
@@ -971,7 +959,7 @@ delete_entry (dag_node_t *parent,
      immutable version.  */
   SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key,
                                     fs, txn_id, trail));
-  if (! same_keys (mutable_rep_key, rep_key))
+  if (! svn_fs__same_keys (mutable_rep_key, rep_key))
     {
       svn_fs__node_revision_t *new_noderev =
         copy_node_revision (parent_noderev, trail->pool);
@@ -1604,11 +1592,13 @@ svn_fs__things_different (int *props_changed,
 
   /* Compare property keys. */
   if (props_changed != NULL)
-    *props_changed = (! same_keys (noderev1->prop_key, noderev2->prop_key));
+    *props_changed = (! svn_fs__same_keys (noderev1->prop_key, 
+                                           noderev2->prop_key));
 
   /* Compare contents keys. */
   if (contents_changed != NULL)
-    *contents_changed = (! same_keys (noderev1->data_key, noderev2->data_key));
+    *contents_changed = (! svn_fs__same_keys (noderev1->data_key, 
+                                              noderev2->data_key));
   
   return SVN_NO_ERROR;
 }
