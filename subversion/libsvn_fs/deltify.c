@@ -286,8 +286,9 @@ deltify_undeltify (svn_fs_t *fs,
 struct deltify_args {
   svn_fs_t *fs;
   svn_fs_root_t *root;
-  int recursive;
   const char *path;
+  svn_fs_id_t *id;
+  int recursive;
 };
 
 
@@ -295,19 +296,15 @@ static svn_error_t *
 txn_body_deltify (void *baton, trail_t *trail)
 {
   struct deltify_args *args = baton;
-  svn_fs_id_t *id;
   int is_dir = 0;
   dag_node_t *node;
 
-  /* Get the ID of the target, which is the node we're changing. */
-  SVN_ERR (svn_fs_node_id (&id, args->root, args->path, trail->pool));
-
   /* Use the ID to determine if the target here is a directory. */
-  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
   is_dir = svn_fs__dag_is_directory (node);
 
   /* Perform the deltification step. */
-  SVN_ERR (deltify_undeltify (args->fs, args->root, args->path, id,
+  SVN_ERR (deltify_undeltify (args->fs, args->root, args->path, args->id,
                               1, args->recursive, trail));
 
   return SVN_NO_ERROR;
@@ -318,19 +315,15 @@ static svn_error_t *
 txn_body_undeltify (void *baton, trail_t *trail)
 {
   struct deltify_args *args = baton;
-  svn_fs_id_t *id;
   int is_dir = 0;
   dag_node_t *node;
 
-  /* Get the ID of the target, which is the node we're changing. */
-  SVN_ERR (svn_fs_node_id (&id, args->root, args->path, trail->pool));
-
   /* Use the ID to determine if the target here is a directory. */
-  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
   is_dir = svn_fs__dag_is_directory (node);
 
   /* Perform the un-deltification step. */
-  SVN_ERR (deltify_undeltify (args->fs, args->root, args->path, id,
+  SVN_ERR (deltify_undeltify (args->fs, args->root, args->path, args->id,
                               0, args->recursive, trail));
 
   return SVN_NO_ERROR;
@@ -357,6 +350,9 @@ svn_fs_deltify (svn_fs_root_t *root,
   args.recursive = recursive;
   args.path = path;
 
+  /* Get the ID of the target, which is the node we're changing. */
+  SVN_ERR (svn_fs_node_id (&(args.id), root, path, pool));
+
   SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_deltify, &args, pool));
   return SVN_NO_ERROR;
 }
@@ -380,6 +376,9 @@ svn_fs_undeltify (svn_fs_root_t *root,
   args.root = root;
   args.recursive = recursive;
   args.path = path;
+
+  /* Get the ID of the target, which is the node we're changing. */
+  SVN_ERR (svn_fs_node_id (&(args.id), root, path, pool));
 
   SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_undeltify, &args, pool));
   return SVN_NO_ERROR;

@@ -2738,6 +2738,84 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 
 
 
+/* Determining the revisions in which a given path was changed. */
+
+struct revisions_changed_args
+{
+  apr_array_header_t **revs;
+  svn_fs_t *fs;
+  svn_fs_id_t *id;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+txn_body_revisions_changed (void *baton, trail_t *trail)
+{
+  struct revisions_changed_args *args = baton;
+  apr_array_header_t *array;
+  dag_node_t *node;
+  svn_fs_id_t *tmp_id;
+  svn_revnum_t revision;
+
+  /* Allocate an array for holding revision numbers. */
+  array = apr_array_make (args->pool, 4, sizeof (svn_revnum_t));
+
+  /* Loop, from ID, through its predecessors, until it ceases to
+     exist. */
+  tmp_id = svn_fs_copy_id (args->id, args->pool);
+  do
+    {
+      int len = svn_fs_id_length (tmp_id);
+
+      /* Get the dag node for this id. */
+      SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
+
+      /* Now get the revision from the dag. */
+      SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
+
+      /* And put the revision into our array. */
+      (*((svn_revnum_t *) apr_array_push (array))) = revision;
+
+      /* Hack up TMP_ID so that it represents its own predecessor. */
+      tmp_id[len - 1]--;
+      if (tmp_id[len - 1] == 0)
+        tmp_id[len - 2] = -1;
+    }
+  while (tmp_id[0] != -1);
+
+  /* Now make the array "go live". */
+  *(args->revs) = array;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_revisions_changed (apr_array_header_t **revs,
+                          svn_fs_t *fs,
+                          svn_fs_root_t *root,
+                          const char *path,
+                          apr_pool_t *pool)
+{
+  struct revisions_changed_args args;
+
+  /* Populate the baton. */
+  args.revs = revs;
+  args.fs = fs;
+  args.pool = pool;
+
+  /* Get the node-id for PATH under ROOT. */
+  SVN_ERR (svn_fs_node_id (&(args.id), root, path, pool));
+
+  /* Call the real function under the umbrella of a trail. */
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed, &args, pool));
+
+  /* Return the array. */
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* Creating transaction and revision root nodes.  */
 
 

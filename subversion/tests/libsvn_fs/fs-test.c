@@ -5566,6 +5566,234 @@ check_related (const char **msg,
 }
 
 
+static const char *
+print_chrevs (const apr_array_header_t *revs_got,
+              const svn_revnum_t num_revs_expected,
+              const svn_revnum_t *revs_expected,
+              apr_pool_t *pool)
+{
+  int i;
+  const char *outstr;
+  svn_revnum_t rev;
+
+  outstr = apr_psprintf (pool, "Got: { ");
+  if (revs_got)
+    {
+      for (i = 0; i < revs_got->nelts; i++)
+        {
+          rev = ((svn_revnum_t *)revs_got->elts)[i];
+          outstr = apr_pstrcat (pool, 
+                                outstr,
+                                apr_psprintf (pool, "%ld ", (long int)rev),
+                                NULL);
+        }
+    }
+  outstr = apr_pstrcat (pool, outstr, "}  Expected: { ", NULL);
+  for (i = 0; i < num_revs_expected; i++)
+    {
+      outstr = apr_pstrcat (pool, 
+                            outstr,
+                            apr_psprintf (pool, "%ld ", 
+                                          (long int)revs_expected[i]),
+                            NULL);
+    }
+  return apr_pstrcat (pool, outstr, "}", NULL);
+}
+
+static svn_error_t *
+revisions_changed (const char **msg,
+                   svn_boolean_t msg_only,
+                   apr_pool_t *pool)
+{ 
+  apr_pool_t *spool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  
+  *msg = "test svn_fs_revisions_changed";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-revisions-changed", pool));
+
+  /*** Testing Algorithm ***
+
+     1.  Create a greek tree in revision 1.
+     2.  Make a series of new revisions, changing a file here and file
+         there.
+     3.  Loop over each path in each revision, verifying that we get
+         the right revisions-changed array back from the filesystem.
+  */
+
+  /* Created the greek tree in revision 1. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 2 - mu, alpha, omega */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/mu", "2", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/B/E/alpha", "2", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/H/omega", "2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 3 - iota, lambda, psi, omega */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "iota", "3", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/B/lambda", "3", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/H/psi", "3", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/H/omega", "3", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 4 - iota, beta, gamma, pi, rho */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "iota", "4", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/B/E/beta", "4", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/gamma", "4", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G/pi", "4", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G/rho", "4", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 5 - mu, alpha, tau, chi */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/mu", "5", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/B/E/alpha", "5", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G/tau", "5", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/H/chi", "5", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Now, it's time to verify our results. */
+  {
+    int j;
+    const char *greek_paths[21] = { 
+      /*  0 */ "",
+      /*  1 */ "iota",
+      /*  2 */ "A",
+      /*  3 */ "A/mu",
+      /*  4 */ "A/B",
+      /*  5 */ "A/B/lambda",
+      /*  6 */ "A/B/E",
+      /*  7 */ "A/B/E/alpha",
+      /*  8 */ "A/B/E/beta",
+      /*  9 */ "A/B/F",
+      /* 10 */ "A/C",
+      /* 11 */ "A/D",
+      /* 12 */ "A/D/gamma",
+      /* 13 */ "A/D/G",
+      /* 14 */ "A/D/G/pi",
+      /* 15 */ "A/D/G/rho",
+      /* 16 */ "A/D/G/tau",
+      /* 17 */ "A/D/H",
+      /* 18 */ "A/D/H/chi",
+      /* 19 */ "A/D/H/psi",
+      /* 20 */ "A/D/H/omega",
+    };
+
+    /* Number of, and list of, changed revisions for each path.  Note
+       that for now, bubble-up in directories causes the directory to
+       appear changed though no entries were added or removed, and no
+       property mods occured. */
+    static const svn_revnum_t chrevs[21][7] = {
+      /* path,    num,    revisions changed... */
+      /*  0 */ {    6,    5, 4, 3, 2, 1, 0},
+      /*  1 */ {    3,    4, 3, 1 },
+      /*  2 */ {    5,    5, 4, 3, 2, 1 },
+      /*  3 */ {    3,    5, 2, 1 },
+      /*  4 */ {    5,    5, 4, 3, 2, 1 },
+      /*  5 */ {    2,    3, 1 },
+      /*  6 */ {    4,    5, 4, 2, 1 },
+      /*  7 */ {    3,    5, 2, 1 },
+      /*  8 */ {    2,    4, 1 },
+      /*  9 */ {    1,    1 },
+      /* 10 */ {    1,    1 },
+      /* 11 */ {    5,    5, 4, 3, 2, 1 },
+      /* 12 */ {    2,    4, 1 },
+      /* 13 */ {    3,    5, 4, 1 },
+      /* 14 */ {    2,    4, 1 },
+      /* 15 */ {    2,    4, 1 },
+      /* 16 */ {    2,    5, 1 },
+      /* 17 */ {    4,    5, 3, 2, 1 },
+      /* 18 */ {    2,    5, 1 },
+      /* 19 */ {    2,    3, 1 },
+      /* 20 */ {    3,    3, 2, 1 }
+    };
+    
+    apr_array_header_t *revs;
+
+    /* Get a revision root. */
+    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
+        
+    /* Now, for each path in the revision root, get its
+       changed-revisions array and compare the array to the static
+       results above.  */
+
+    /* ### todo:  For now, we aren't checking the root node.  That's
+       because there is an inconsistency in the filesystem ID code.
+       IDs are expected to never end in ".0", yet the first node ever
+       created in each filesystem is always "0.0"!!  */
+    for (j = 1; j < 21; j++)
+      {
+        int i;
+        const char *path = greek_paths[j];
+        const svn_revnum_t num_revs = chrevs[j][0];
+        
+        SVN_ERR (svn_fs_revisions_changed (&revs, fs, rev_root,
+                                           path, spool));
+
+        /* Are we at least looking at the right number of returned
+           revisions? */
+        if ((! revs) || (revs->nelts != num_revs))
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, spool,
+             "Changed revisions differ from expected for `%s'\n%s",
+             path, print_chrevs (revs, num_revs, &(chrevs[j][1]), spool));
+
+        /* Do the revisions lists match up exactly? */
+        for (i = 0; i < num_revs; i++)
+          {
+            svn_revnum_t rev = ((svn_revnum_t *)revs->elts)[i];
+            if (rev != chrevs[j][i + 1])
+              return svn_error_createf
+                (SVN_ERR_FS_GENERAL, 0, NULL, spool,
+                 "Changed revisions differ from expected for `%s'\n%s",
+                 path, print_chrevs (revs, num_revs, &(chrevs[j][1]), spool));
+          }
+        
+        /* Clear the per-iteration subpool. */
+        svn_pool_clear (spool);
+      }
+  }
+
+  /* Destroy the subpool. */
+  svn_pool_destroy (spool);
+
+  /* Close the filesystem. */
+  svn_fs_close_fs (fs);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5608,6 +5836,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   undeltify_deltify,
   test_node_created_rev,
   check_related,
+  revisions_changed,
   0
 };
 

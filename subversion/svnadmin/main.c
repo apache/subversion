@@ -26,6 +26,7 @@ typedef enum svnadmin_cmd_t
   svnadmin_cmd_create,
   svnadmin_cmd_createtxn,
   svnadmin_cmd_deltify,
+  svnadmin_cmd_lscr,
   svnadmin_cmd_lsrevs,
   svnadmin_cmd_lstxns,
   svnadmin_cmd_recover,
@@ -124,6 +125,13 @@ usage (const char *progname, int exit_code)
      "      a directory, perform a recursive deltification of the\n"
      "      tree starting at PATH.\n"
      "\n"
+     "   lscr      REPOS_PATH PATH\n"
+     "      Print, one-per-line and youngest-to-eldest, the revisions in\n"
+     "      which PATH was modified.\n"
+     "      (For directories, this is, for now, almost guaranteed to be\n"
+     "      uninteresting.  Also, PATH must exist in the HEAD of the\n"
+     "      repository.)\n"
+     "\n"
      "   lsrevs    REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      If no revision is given, all revision trees are printed.\n"
      "      If just LOWER_REV is given, that revision tree is printed.\n"
@@ -148,7 +156,7 @@ usage (const char *progname, int exit_code)
      "      (Careful!  Revision props are not historied, so this command\n"
      "       will -permanently- overwrite the previous log message.)\n"
      "\n"
-     "   shell  REPOS_PATH\n"
+     "   shell     REPOS_PATH\n"
      "      Enter interactive shell for exploring the repository.\n"
      "\n"
      "   undeltify REPOS_PATH REVISION PATH\n"
@@ -177,6 +185,8 @@ parse_command (const char *command)
     return svnadmin_cmd_create;
   else if (! strcmp (command, "youngest"))
     return svnadmin_cmd_youngest;
+  else if (! strcmp (command, "lscr"))
+    return svnadmin_cmd_lscr;
   else if (! strcmp (command, "lstxns"))
     return svnadmin_cmd_lstxns;
   else if (! strcmp (command, "lsrevs"))
@@ -257,6 +267,33 @@ main (int argc, const char * const *argv)
         fs = svn_repos_fs (repos);
         svn_fs_youngest_rev (&youngest_rev, fs, pool);
         printf ("%ld\n", (long int) youngest_rev);
+      }
+      break;
+
+    case svnadmin_cmd_lscr:
+      {
+        svn_revnum_t youngest_rev;
+        svn_fs_root_t *rev_root;
+        apr_array_header_t *rev_list;
+        int i;
+
+        if (argc != 4)
+          {
+            usage (argv[0], 1);
+            return EXIT_FAILURE;
+          }
+
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+        svn_fs_youngest_rev (&youngest_rev, fs, pool);
+        INT_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
+        INT_ERR (svn_fs_revisions_changed (&rev_list, fs, rev_root,
+                                           argv[3], pool));
+        for (i = 0; i < rev_list->nelts; i++)
+          {
+            svn_revnum_t this_rev = ((svn_revnum_t *)rev_list->elts)[i];
+            printf ("%ld\n", (long int)this_rev);
+          }
       }
       break;
 
@@ -454,9 +491,8 @@ main (int argc, const char * const *argv)
 
         if (argc != 5)
           {
-            printf ("Error: `%s' requires exactly 3 arguments.\n",
-                    is_deltify ? "deltify" : "undeltify");
-            exit(1);
+            usage (argv[0], 1);
+            return EXIT_FAILURE;
           }
 
         /* get revision and path from argv[] */
