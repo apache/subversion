@@ -37,6 +37,15 @@ extern "C" {
    reads and writes strings of bytes. */
 
 
+/* Open a `strings' table in ENV.  If CREATE is non-zero, create
+ * one if it doesn't exist.  Set *STRINGS_P to the new table.  
+ * Return a Berkeley DB error code.
+ */
+int svn_fs__bdb_open_strings_table (DB **strings_p,
+                                    DB_ENV *env,
+                                    int create);
+
+
 /* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part
  * of TRAIL.
  * 

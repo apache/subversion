@@ -249,9 +249,9 @@ static void bdb_print_fs_stats(svn_fs_t *fs)
    they like.  */
 
 apr_status_t
-bdb_cleanup_fs_apr (void *data)
+svn_fs__bdb_cleanup_fs_apr (void *data)
 {
-  svn_fs_t *fs = (svn_fs_t *) data;
+  svn_fs_t *fs = data;
   svn_error_t *err;
 
   bdb_print_fs_stats(fs);
@@ -273,9 +273,9 @@ bdb_cleanup_fs_apr (void *data)
 
 /* This will be a static function after a vtable patch. */
 svn_error_t *
-bdb_set_berkeley_errcall (svn_fs_t *fs,
-                          void (*db_errcall_fcn) (const char *errpfx,
-                                                  char *msg))
+svn_fs__bdb_set_berkeley_errcall (svn_fs_t *fs,
+                                  void (*db_errcall_fcn) (const char *errpfx,
+                                                          char *msg))
 {
   SVN_ERR (svn_fs__check_fs (fs));
   fs->env->set_errcall(fs->env, db_errcall_fcn);
@@ -305,19 +305,19 @@ bdb_allocate_env (svn_fs_t *fs)
 
 /* This will be a static function after a vtable patch. */
 svn_error_t *
-bdb_create_fs (svn_fs_t *fs, const char *path, void *cfg)
+svn_fs__bdb_create_fs (svn_fs_t *fs, const char *path, void *cfg)
 {
   apr_status_t apr_err;
   svn_error_t *svn_err;
   const char *path_apr;
   const char *path_native;
 
-  SVN_ERR (check_bdb_version(fs->pool));
+  SVN_ERR (check_bdb_version (fs->pool));
   SVN_ERR (bdb_check_already_open (fs));
 
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_apr, fs->path, fs->pool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, fs->path, fs->pool));
 
   /* Create the directory for the new Berkeley DB environment.  */
   apr_err = apr_dir_make (path_apr, APR_OS_DEFAULT, fs->pool);
@@ -421,10 +421,10 @@ bdb_create_fs (svn_fs_t *fs, const char *path, void *cfg)
     svn_err = BDB_WRAP (fs, "creating environment",
                         fs->env->open (fs->env, path_native,
                                        (DB_CREATE
-                                       | DB_INIT_LOCK
-                                       | DB_INIT_LOG
-                                       | DB_INIT_MPOOL
-                                       | DB_INIT_TXN),
+                                        | DB_INIT_LOCK
+                                        | DB_INIT_LOG
+                                        | DB_INIT_MPOOL
+                                        | DB_INIT_TXN),
                                        0666));
     if (svn_err) goto error;
 
@@ -455,7 +455,7 @@ bdb_create_fs (svn_fs_t *fs, const char *path, void *cfg)
     if (svn_err) goto error;
     svn_err = BDB_WRAP (fs, "creating `strings' table",
                         svn_fs__bdb_open_strings_table (&fs->strings,
-                                                        fs->env, 1));
+                                                          fs->env, 1));
     if (svn_err) goto error;
     svn_err = BDB_WRAP (fs, "creating `uuids' table",
                         svn_fs__bdb_open_uuids_table (&fs->uuids,
@@ -480,7 +480,7 @@ error:
 
 /* This will be a static function after a vtable patch. */
 svn_error_t *
-bdb_open_fs (svn_fs_t *fs, const char *path)
+svn_fs__bdb_open_fs (svn_fs_t *fs, const char *path)
 {
   svn_error_t *svn_err;
   const char *path_native;
@@ -499,10 +499,10 @@ bdb_open_fs (svn_fs_t *fs, const char *path)
   svn_err = BDB_WRAP (fs, "opening environment",
                       fs->env->open (fs->env, path_native,
                                      (DB_CREATE
-                                     | DB_INIT_LOCK
-                                     | DB_INIT_LOG
-                                     | DB_INIT_MPOOL
-                                     | DB_INIT_TXN),
+                                      | DB_INIT_LOCK
+                                      | DB_INIT_LOG
+                                      | DB_INIT_MPOOL
+                                      | DB_INIT_TXN),
                                      0666));
   if (svn_err) goto error;
 
@@ -544,7 +544,6 @@ bdb_open_fs (svn_fs_t *fs, const char *path)
 
  error:
   (void) bdb_cleanup_fs (fs);
-
   return svn_err;
 }
 
@@ -553,7 +552,7 @@ bdb_open_fs (svn_fs_t *fs, const char *path)
 
 /* This will be a static function after a vtable patch. */
 svn_error_t *
-bdb_recover_fs (const char *path, apr_pool_t *pool)
+svn_fs__bdb_recover_fs (const char *path, apr_pool_t *pool)
 {
   int db_err;
   DB_ENV *env;
@@ -594,7 +593,7 @@ bdb_recover_fs (const char *path, apr_pool_t *pool)
 
 /* This will be a static function after a vtable patch. */
 svn_error_t *
-bdb_delete_fs (const char *path, apr_pool_t *pool)
+svn_fs__bdb_delete_fs (const char *path, apr_pool_t *pool)
 {
   int db_err;
   DB_ENV *env;

@@ -23,7 +23,6 @@
 #include "dbt.h"
 #include "../trail.h"
 #include "../key-gen.h"
-#include "bdb-fs.h"
 #include "bdb-err.h"
 #include "reps-table.h"
 #include "strings-table.h"

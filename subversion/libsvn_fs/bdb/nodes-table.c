@@ -29,7 +29,6 @@
 #include "../trail.h"
 #include "../key-gen.h"
 #include "../id.h"
-#include "bdb-fs.h"
 #include "bdb-err.h"
 #include "nodes-table.h"
 

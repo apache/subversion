@@ -68,7 +68,7 @@ default_warning_func (void *baton, svn_error_t *err)
 static apr_status_t
 cleanup_fs_apr (void *data)
 {
-  return bdb_cleanup_fs_apr(data);
+  return svn_fs__bdb_cleanup_fs_apr(data);
 }
 
 
@@ -114,7 +114,7 @@ svn_fs_set_berkeley_errcall (svn_fs_t *fs,
                              void (*db_errcall_fcn) (const char *errpfx,
                                                      char *msg))
 {
-  return bdb_set_berkeley_errcall (fs, db_errcall_fcn);
+  return svn_fs__bdb_set_berkeley_errcall (fs, db_errcall_fcn);
 }
 
 
@@ -128,7 +128,7 @@ svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
-  return bdb_create_fs (fs, path, NULL);
+  return svn_fs__bdb_create_fs (fs, path, NULL);
 }
 
 
@@ -137,7 +137,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 svn_error_t *
 svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 {
-  return bdb_open_fs (fs, path);
+  return svn_fs__bdb_open_fs (fs, path);
 }
 
 
@@ -148,7 +148,7 @@ svn_error_t *
 svn_fs_berkeley_recover (const char *path,
                          apr_pool_t *pool)
 {
-  return bdb_recover_fs (path, pool);
+  return svn_fs__bdb_recover_fs (path, pool);
 }
 
 
@@ -158,7 +158,7 @@ svn_error_t *
 svn_fs_delete_berkeley (const char *path,
                         apr_pool_t *pool)
 {
-  return bdb_delete_fs (path, pool);
+  return svn_fs__bdb_delete_fs (path, pool);
 }
 
 

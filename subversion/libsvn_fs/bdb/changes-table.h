@@ -30,6 +30,14 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Open a `changes' table in ENV.  If CREATE is non-zero, create one
+   if it doesn't exist.  Set *CHANGES_P to the new table.  Return a
+   Berkeley DB error code.  */
+int svn_fs__bdb_open_changes_table (DB **changes_p,
+                                    DB_ENV *env,
+                                    int create);
+
+
 /* Add CHANGE as a record to the `changes' table in FS as part of
    TRAIL, keyed on KEY.  
 
