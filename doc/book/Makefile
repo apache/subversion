@@ -32,6 +32,13 @@ XSL_HTML_CHUNK = $(XSL_DIR)/html/chunk.xsl
 
 RUN_FOP = ${BOOK_TOP}/tools/bin/run-fop.sh
 
+# Book xsltproc options for HTML output
+BOOK_HTML_XSLTPROC_OPTS = --stringparam html.stylesheet styles.css
+
+# Book xsltproc options for PDF and PostScript output
+# BOOK_PDF_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
+# BOOK_PS_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
+
 all: all-html all-pdf all-ps
 
 install: install-book install-misc-docs
@@ -57,26 +64,27 @@ clean: book-clean misc-docs-clean
 book-html: $(BOOK_HTML_TARGET)
 
 $(BOOK_HTML_TARGET): $(BOOK_ALL_SOURCE)
-	$(XSLTPROC) --stringparam html.stylesheet "styles.css" \
-           $(XSL_HTML) $(BOOK_XML_SOURCE) > $(BOOK_HTML_TARGET)
+	$(XSLTPROC) $(BOOK_HTML_XSLTPROC_OPTS) \
+           --output $(BOOK_HTML_TARGET) $(XSL_HTML) $(BOOK_XML_SOURCE)
 
 ## This trailing slash is essential that xsltproc will output pages to the dir
 book-html-chunk: $(BOOK_ALL_SOURCE)
 	mkdir -p $(BOOK_HTML_CHUNK_DIR)
-	$(XSLTPROC) -o $(BOOK_HTML_CHUNK_DIR)/ $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
+	$(XSLTPROC) --output $(BOOK_HTML_CHUNK_DIR)/ \
+           $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
 
 book-pdf: $(BOOK_PDF_TARGET)
 
 book-ps: $(BOOK_PS_TARGET)
 
 $(BOOK_PDF_TARGET): $(BOOK_ALL_SOURCE)
-#	$(XSLTPROC) --output $(BOOK_FO_TARGET) --stringparam  page.height 9in \
-#     --stringparam  page.width 6.4in $(XSL_FO) $(BOOK_XML_SOURCE)
-	$(XSLTPROC) $(XSL_FO) $(BOOK_XML_SOURCE) > $(BOOK_FO_TARGET)
+	$(XSLTPROC) $(BOOK_PDF_XSLTPROC_OPTS) \
+	   --output $(BOOK_FO_TARGET) $(XSL_FO) $(BOOK_XML_SOURCE)
 	$(RUN_FOP) $(BOOK_TOP) -fo $(BOOK_FO_TARGET) -pdf $(BOOK_PDF_TARGET)
 
 $(BOOK_PS_TARGET): $(BOOK_ALL_SOURCE)
-	$(XSLTPROC) $(XSL_FO) $(BOOK_XML_SOURCE) > $(BOOK_FO_TARGET)
+	$(XSLTPROC) $(BOOK_PS_XSLTPROC_OPTS) \
+	   --output $(BOOK_FO_TARGET) $(XSL_FO) $(BOOK_XML_SOURCE)
 	$(RUN_FOP) $(BOOK_TOP) -fo $(BOOK_FO_TARGET) -ps $(BOOK_PS_TARGET)
 
 $(BOOK_INSTALL_DIR):
