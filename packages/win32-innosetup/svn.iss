@@ -24,8 +24,10 @@ DefaultDirName={pf}\Subversion
 DefaultGroupName=Subversion
 LicenseFile={#= path_setup_in}\subversion\SubversionLicense.txt
 OutputDir={#= path_setup_out}
-OutputBaseFilename=svn-setup
-Compression=none
+OutputBaseFilename=svn-{#= svn_version}-setup
+Compression=lzma/max
+InternalCompressLevel=max
+SolidCompression=true
 AppCopyright={#= svn_cpr}
 UninstallDisplayIcon={app}\svn.exe
 UninstallDisplayName=Subversion {#= svn_version}-r{#= svn_release} (Uninstall)
@@ -33,15 +35,17 @@ AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 InfoAfterFile=Post.txt
 InfoBeforeFile=Pre.rtf
-DisableStartupPrompt=true
-UseSetupLdr=false
-InternalCompressLevel=0
+DisableStartupPrompt=false
+UseSetupLdr=true
 AppVersion={#= svn_version}-r{#= svn_release}
+VersionInfoVersion={#= svn_version}
+VersionInfoDescription=Subversion-{#= svn_version} Windows Setup
 WizardImageFile=images\wiz-164x314x24.bmp
 WizardSmallImageFile=images\wiz-55x55x24.bmp
 RestartIfNeededByRun=false
 ShowTasksTreeLines=true
 AllowNoIcons=true
+ShowLanguageDialog=no
 
 [Tasks]
 Name: desktopicon; Description: Create &desktop icon for the Subversion documentation; GroupDescription: Desktop icons:
@@ -76,7 +80,6 @@ Source: missing_shfolderdll.html; DestDir: {app}\doc; Check: ShFolderDllNotFound
 ; httpd modules
 Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
 Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
-
 
 ;Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion

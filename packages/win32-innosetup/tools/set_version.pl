@@ -26,9 +26,6 @@ require 'cmn.pl';
 ################################################################################
 # FUNCTION DECLARATIONS
 sub Main;
-sub Mk7zConf;
-sub Mk7zSfxBat;
-sub Path7Zip;
 sub PathSetupOut;
 sub PathSvn;
 sub SetVerSvnIss;
@@ -56,123 +53,17 @@ sub Main
       {
         $g_AutoRun="y";
       }
-    
+
     my ($SvnVersion, $SvnRelease) = &SetVersion;
     my $PathSetupOut = &PathSetupOut;
-    my ($Path7Zip_exe, $Path7Zip_sfx) = &Path7Zip;
-
-
 
     if (! $g_AutoRun)
       {
         print "Setting version $SvnVersion and release $SvnRelease on...\n";
       }
-    
-    #Make mk7zsfx.bat and 7z.conf in $PathSetupOut
-    &Mk7zSfxBat($Path7Zip_exe, $Path7Zip_sfx, $SvnVersion,
-                 $SvnRelease, $PathSetupOut);
-    &Mk7zConf($SvnVersion, $SvnRelease, $PathSetupOut);
-    
+
     #Set version info on svn.iss
     &SetVerSvnIss($SvnVersion, $SvnRelease);
-}
-
-#-------------------------------------------------------------------------------
-# FUNCTION   Mk7zConf
-# DOES       Making the 7z.conf file
-sub Mk7zConf
-{
-    my ($SvnVersion, $SvnRelease, $PathSetupOut) = @_;
-    my $Mk7zConf_cnt='';
-    my $DirOrig = getcwd;
-    my %Values =
-		  (
-        tv_version  => $SvnVersion,
-        tv_release  => $SvnRelease
-      );
-
-    $Mk7zConf_cnt = &cmn_Template("../templates/7z.conf", \%Values);
-
-    if (! $g_AutoRun)
-      {
-        print "  7z.conf in the Inno output directory.\n";
-      }
-
-    chdir ".."; #In case the path is relative
-
-    open (FH_MKSEVZCONF, ">" . "$PathSetupOut/7z.conf") ||
-      die "ERROR: Could not open $PathSetupOut\\7z.conf\n";
-		    print FH_MKSEVZCONF $Mk7zConf_cnt;
-	  close (FH_MKSEVZCONF);
-
-    chdir $DirOrig;
-}
-
-#-------------------------------------------------------------------------------
-# FUNCTION   Main
-# DOES       Making the mk7zsfx.bat file
-sub Mk7zSfxBat
-{
-    my ($Path7Zip_exe, $Path7Zip_sfx, $SvnVersion,
-        $SvnRelease, $PathSetupOut) = @_;
-    my $Mk7zSfxBat_cnt='';
-    my $DirOrig = getcwd;
-    my %Values =
-		  (
-				tv_7zip_exe => $Path7Zip_exe,
-				tv_7zip_sfx => $Path7Zip_sfx,
-        tv_version  => $SvnVersion,
-        tv_release  => $SvnRelease
-      );
-
-
-    $Mk7zSfxBat_cnt = &cmn_Template("../templates/mk7zsfx.bat", \%Values);
-
-    chdir ".."; #In case the paths is relative
-
-    if (! $g_AutoRun)
-      {
-        print "  mk7zsfx.bat in the Inno output directory.\n";
-      }
-
-    open (FH_MKSFXBAT, ">" . "$PathSetupOut/mk7zsfx.bat") ||
-      die "ERROR: Could not open $PathSetupOut\\mk7zsfx.bat\n";
-		    print FH_MKSFXBAT $Mk7zSfxBat_cnt;
-	  close (FH_MKSFXBAT);
-
-    chdir $DirOrig;
-}
-#-------------------------------------------------------------------------
-# FUNCTION Path7Zip
-# DOES     Finding and returning the paths of 7z.exe and 7zS.sfx
-sub Path7Zip
-{
-    my $Path7Zip_exe='';
-    my $Path7Zip_sfx='';
-    my $Path7Zip= &cmn_RegGetValue('HKLM/SOFTWARE/7-ZIP', 'Path');
-
-    print "Checking for 7-zip.." if (! $g_AutoRun);
-
-    if (-e "$Path7Zip/7z.exe")
-      {
-          $Path7Zip_exe = "\"$Path7Zip\\7z.exe\"";
-      }
-
-    if (-e "$Path7Zip/7zS.sfx")
-      {
-          $Path7Zip_sfx = "\"$Path7Zip\\7zS.sfx\"";
-      }
-
-    if ($Path7Zip_exe && $Path7Zip_exe)
-      {
-         print "ok. Found in $Path7Zip\n" if (! $g_AutoRun);
-      }
-    else
-      {
-        die "ERROR: Could not find 7-zip. Make sure it's installed correctly\n";
-      }
-
-    return ($Path7Zip_exe, $Path7Zip_sfx);
 }
 
 #-------------------------------------------------------------------------------
@@ -322,7 +213,7 @@ sub SvnVersion
     ($SvnVersion, $SvnRelease) = split (/\(/, $1);
 
     $SvnVersion =~ s/^\s+//;
-	  $SvnVersion =~ s/\s+$//;
+	   $SvnVersion =~ s/\s+$//;
     $SvnRelease =~ s/r//;
     $SvnRelease =~ s/dev build/_dev-build/;
 
