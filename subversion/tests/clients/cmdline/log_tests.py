@@ -415,7 +415,7 @@ def log_to_revision_zero(sbox):
   "'svn log -v -r 1:0 wc_root'"
   sbox.build()
 
-  # This used to the segfault the server.
+  # This used to segfault the server.
   
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'log', '-v',
@@ -423,7 +423,7 @@ def log_to_revision_zero(sbox):
 
 #----------------------------------------------------------------------
 def log_with_path_args(sbox):
-  "'svn log', no args, top of wc"
+  "'svn log', with args, top of wc"
 
   guarantee_repos_and_wc(sbox)
 

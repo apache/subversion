@@ -1185,7 +1185,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
  * exist already.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
- * various points during the deletion.  If it returns an error
+ * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
  * For each file or directory copied, @a notify_func will be called
@@ -1218,7 +1218,7 @@ svn_error_t *svn_wc_copy (const char *src,
  * these get deleted by the update following the commit.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
- * various points during the deletion.  If it returns an error
+ * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
  * For each path marked for deletion, @a notify_func will be called with
@@ -1248,7 +1248,7 @@ svn_error_t *svn_wc_delete (const char *path,
  * to schedule @a path for addition with a particular history.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
- * various points during the deletion.  If it returns an error
+ * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  *
  * When the @a path has been added, then @a notify_func will be called

@@ -219,7 +219,7 @@ svn_path_split_if_file(const char *path,
  *
  *   - Set @a *pcommon to the absolute path of the path or URL common to
  *     all of the targets.  If the targets have no common prefix, or
- *     are a mix of URLs and local paths, set @a *pbasename to the
+ *     are a mix of URLs and local paths, set @a *pcommon to the
  *     empty string.
  *
  *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
@@ -238,10 +238,10 @@ svn_path_split_if_file(const char *path,
  *     to an array containing zero elements.  Else if
  *     @a pcondensed_targets is null, leave it alone.
  *
- * If there are no items in @a targets, set @a *pbasename and (if
+ * If there are no items in @a targets, set @a *pcommon and (if
  * applicable) @a *pcondensed_targets to @c NULL.
  *
- * NOTE: There is no guarantee that @a *pbasename is within a working
+ * NOTE: There is no guarantee that @a *pcommon is within a working
  * copy.  */
 svn_error_t *
 svn_path_condense_targets (const char **pcommon,

@@ -590,7 +590,7 @@ def delete_subdir(sbox):
   expected_status.remove('A/B/F')
   expected_status.tweak('', 'iota', wc_rev=1)
 
-  # XFails with a 'directory not locked' error for A/B/F
+  # Used to fail with a 'directory not locked' error for A/B/F
   svntest.actions.run_and_verify_switch(wc_dir, A_path, A2_url,
                                         expected_output,
                                         expected_disk,
