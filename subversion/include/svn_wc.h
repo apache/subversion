@@ -58,7 +58,7 @@ extern "C" {
    the user.
 
    These notifications have a standard callback function type, which
-   takes the relative path of the file that was affected, and a caller-
+   takes the path of the file that was affected, and a caller-
    supplied baton.
 
    Note that the callback is a 'void' return -- this is a simple
@@ -73,8 +73,12 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_restore,
   svn_wc_notify_revert,
   svn_wc_notify_resolve,
-  svn_wc_notify_update
-  
+  svn_wc_notify_update,
+  svn_wc_notify_commit_modified,
+  svn_wc_notify_commit_added,
+  svn_wc_notify_commit_deleted,
+  svn_wc_notify_commit_replaced,
+  svn_wc_notify_commit_postfix_txdelta,
 } svn_wc_notify_action_t;
 
 typedef void (*svn_wc_notify_func_t) (void *baton, 

@@ -583,7 +583,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    const svn_delta_editor_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_editor_t *after_editor,
-                   void *after_edit_baton, 
+                   void *after_edit_baton,
+                   svn_wc_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,
@@ -696,9 +698,19 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                          editor, edit_baton, 
                          after_editor, after_edit_baton, pool);
 
-  /* Perform the commit. */
-  cmt_err = svn_client__do_commit (base_url, commit_items, 
-                                   editor, edit_baton, NULL, NULL, pool);
+
+  {
+    /* Calculate a display_dir. */
+    svn_stringbuf_t *display_dir = svn_stringbuf_create (".", pool);
+    if ((cmt_err = svn_path_get_absolute (&display_dir, display_dir, pool)))
+      goto cleanup;
+
+    /* Perform the commit. */
+    cmt_err = svn_client__do_commit (base_url, commit_items, 
+                                     editor, edit_baton, 
+                                     notify_func, notify_baton, display_dir,
+                                     NULL, NULL, pool);
+  }
 
   /* Unlock the locked directories. */
   if (! ((unlock_err = unlock_dirs (locked_dirs, pool))))
