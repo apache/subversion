@@ -70,8 +70,8 @@ struct edit_baton
 
 /* Look up the key PATH in EDIT_BATON->STATUSHASH.
 
-   If the value doesn't yet exist, create a new status struct using
-   EDIT_BATON->HASHPOOL.
+   If the value doesn't yet exist, then iff CREATE_IF_ABSENT is true,
+   create a new status struct using EDIT_BATON->HASHPOOL.
 
    Set the status structure's "network" fields to REPOS_TEXT_STATUS,
    REPOS_PROP_STATUS.  If either of these fields is 0, it will be
@@ -79,6 +79,7 @@ struct edit_baton
 static svn_error_t *
 tweak_statushash (void *edit_baton,
                   const char *path,
+                  svn_boolean_t create_if_absent,
                   svn_boolean_t is_dir,
                   enum svn_wc_status_kind repos_text_status,
                   enum svn_wc_status_kind repos_prop_status)
@@ -114,8 +115,8 @@ tweak_statushash (void *edit_baton,
   /* Is PATH already a hash-key? */
   statstruct = (svn_wc_status_t *) apr_hash_get (statushash, path,
                                                  APR_HASH_KEY_STRING);
-  /* If not, make it so. */
-  if (! statstruct)
+  /* If not, maybe make it. */
+  if ((! statstruct) && create_if_absent)
     {
       /* Need a path with the same lifetime as the hash */
       const char *path_dup = apr_pstrdup (pool, path);
@@ -137,11 +138,14 @@ tweak_statushash (void *edit_baton,
       apr_hash_set (statushash, path_dup, APR_HASH_KEY_STRING, statstruct);
     }
 
-  /* Tweak the structure's repos fields. */
-  if (repos_text_status)
-    statstruct->repos_text_status = repos_text_status;
-  if (repos_prop_status)
-    statstruct->repos_prop_status = repos_prop_status;
+  if (statstruct)
+    {
+      /* Tweak the structure's repos fields. */
+      if (repos_text_status)
+        statstruct->repos_text_status = repos_text_status;
+      if (repos_prop_status)
+        statstruct->repos_prop_status = repos_prop_status;
+    }
   
   return SVN_NO_ERROR;
 }
@@ -342,12 +346,12 @@ delete_entry (const char *path,
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   if (apr_hash_get (entries, name, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               full_path, kind == svn_node_dir,
+                               full_path, TRUE, kind == svn_node_dir,
                                svn_wc_status_deleted, 0));
 
   /* Mark the parent dir regardless -- it lost an entry. */
   SVN_ERR (tweak_statushash (db->edit_baton,
-                             db->path, kind == svn_node_dir,
+                             db->path, TRUE, kind == svn_node_dir,
                              svn_wc_status_modified, 0));
 
   return SVN_NO_ERROR;
@@ -418,14 +422,14 @@ close_directory (void *dir_baton,
   /* If this directory was added, add the directory to the status hash. */
   if (db->added)
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               db->path, TRUE,
+                               db->path, TRUE, TRUE,
                                svn_wc_status_added,
                                db->prop_changed ? svn_wc_status_added : 0));
 
   /* Else, mark the existing directory in the statushash. */
   else
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               db->path, TRUE,
+                               db->path, FALSE, TRUE,
                                db->text_changed ? svn_wc_status_modified : 0,
                                db->prop_changed ? svn_wc_status_modified : 0));
   
@@ -516,13 +520,13 @@ close_file (void *file_baton,
   /* If this is a new file, add it to the statushash. */
   if (fb->added)
     SVN_ERR (tweak_statushash (fb->edit_baton,
-                               fb->path, FALSE,
+                               fb->path, TRUE, FALSE,
                                svn_wc_status_added, 
                                fb->prop_changed ? svn_wc_status_added : 0));
   /* Else, mark the existing file in the statushash. */
   else
     SVN_ERR (tweak_statushash (fb->edit_baton,
-                               fb->path, FALSE,
+                               fb->path, FALSE, FALSE,
                                fb->text_changed ? svn_wc_status_modified : 0,
                                fb->prop_changed ? svn_wc_status_modified : 0));
 
