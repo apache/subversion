@@ -29,7 +29,7 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 /* ### should move these report names to a public header to share with

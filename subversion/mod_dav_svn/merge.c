@@ -27,7 +27,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 
-#include "dav_svn.h"
+#include "mod_dav_svn.h"
 
 
 /* #################################################################
