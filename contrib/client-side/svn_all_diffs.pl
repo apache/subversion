@@ -18,10 +18,11 @@ my $opt_print_log_message;
 GetOptions('log' => \$opt_print_log_message)
   or &usage;
 
-&usage("$0: too few arguments") if @ARGV < 1;
 &usage("$0: too many arguments") if @ARGV > 1;
 
-my $file_or_dir = shift;
+# If there is no file or directory specified on the command line, use
+# the current working directory as a default path.
+my $file_or_dir = @ARGV ? shift : '.';
 
 unless (-e $file_or_dir)
   {
@@ -90,7 +91,7 @@ exit 0;
 sub usage
 {
   warn "@_\n" if @_;
-  die "usage: $0 file_or_dir\n";
+  die "usage: $0 [file_or_dir]\n";
 }
 
 sub print_revision
