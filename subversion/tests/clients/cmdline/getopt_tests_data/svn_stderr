@@ -28,7 +28,6 @@ Available subcommands:
    propset (pset, ps)
    revert
    resolve
-   rollback
    status (stat, st)
    switch (sw)
    update (up)
