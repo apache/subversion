@@ -88,7 +88,15 @@ section for approved changes.)
       -1: kfogel (see mailing list thread foo, meaning, I'll put the
             URL and Message-ID here as soon as I've got them. :-) )
 
-     
+
+   * Issue #1693
+     Improved signal handling for svnadmin, svnlook and svn
+     Justification: Avoids uncontrolled termination resulting in
+        wedged repositories. API change. Low risk.
+     Votes:
+      +1: bliss
+
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
