@@ -23,7 +23,6 @@
 #include "dbt.h"
 #include "../err.h"
 #include "../fs.h"
-#include "../key-gen.h"
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
