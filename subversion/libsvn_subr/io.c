@@ -2119,6 +2119,8 @@ svn_error_t *
 svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit,
                          apr_pool_t *pool)
 {
+  const char *name;
+  svn_error_t *err;
   apr_size_t i;
   char c;
 
@@ -2141,8 +2143,18 @@ svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit,
       }
   }
 
-  /* todo: make a custom error "SVN_LENGTH_TOO_LONG" or something? */
-  return svn_error_create (SVN_WARNING, NULL, NULL);
+  err = file_name_get (&name, file, pool);
+  if (err)
+    name = NULL;
+  svn_error_clear (err);
+
+  if (name)
+    return svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
+                              _("Can't read length line in file '%s'"),
+                              svn_path_local_style (name, pool));
+  else
+    return svn_error_create (SVN_ERR_MALFORMED_FILE, NULL,
+                             _("Can't read length line in stream"));
 }
 
 
