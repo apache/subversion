@@ -303,10 +303,7 @@ generate_delta_tree (svn_repos_node_t **tree,
                                   base_root, root, pool, edit_pool));
 
   /* Drive our editor. */
-  SVN_ERR (svn_repos_dir_delta (base_root, "", NULL, root, "",
-                                editor, edit_baton, 
-                                FALSE, TRUE, FALSE, 
-                                use_copy_history, FALSE, edit_pool));
+  SVN_ERR (svn_repos_replay (root, editor, edit_baton, edit_pool));
 
   /* Return the tree we just built. */
   *tree = svn_repos_node_from_baton (edit_baton);

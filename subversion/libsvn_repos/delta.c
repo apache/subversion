@@ -52,7 +52,6 @@ struct context {
   svn_boolean_t text_deltas;
   svn_boolean_t recurse;
   svn_boolean_t entry_props;
-  svn_boolean_t use_copy_history;
   svn_boolean_t ignore_ancestry;
 };
 
@@ -183,7 +182,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
-                     svn_boolean_t use_copy_history,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool)
 {
@@ -253,7 +251,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.text_deltas = text_deltas;
   c.recurse = recurse;
   c.entry_props = entry_props;
-  c.use_copy_history = use_copy_history;
   c.ignore_ancestry = ignore_ancestry;
 
   /* Set the global target revision. */
@@ -713,8 +710,6 @@ add_file_or_dir (struct context *c, void *dir_baton,
 {
   int is_dir;
   const char *t_fullpath;
-  svn_revnum_t copied_from_revision = SVN_INVALID_REVNUM;
-  const char *copied_from_path = NULL;
   struct context *context = c;
 
   assert (target_parent && target_entry);
@@ -725,33 +720,14 @@ add_file_or_dir (struct context *c, void *dir_baton,
   /* Is the target a file or a directory?  */
   SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, t_fullpath, pool));
 
-  if (c->use_copy_history)
-    {
-      SVN_ERR (svn_fs_copied_from (&copied_from_revision,
-                                   &copied_from_path,
-                                   c->target_root,
-                                   t_fullpath,
-                                   pool));
-    }
-
-  if ((SVN_IS_VALID_REVNUM (copied_from_revision)) && copied_from_path)
-    {
-      context = apr_palloc (pool, sizeof (*context));
-      *context = *c;
-      SVN_ERR (svn_fs_revision_root (&(context->source_root),
-                                     svn_fs_root_fs (context->target_root),
-                                     copied_from_revision, pool));
-    }
-
   if (is_dir)
     {
       void *subdir_baton;
 
       SVN_ERR (context->editor->add_directory 
                (edit_path (c, t_fullpath), dir_baton,
-                copied_from_path, copied_from_revision, pool, &subdir_baton));
-      SVN_ERR (delta_dirs (context, subdir_baton,
-                           copied_from_path, t_fullpath, pool));
+                NULL, SVN_INVALID_REVNUM, pool, &subdir_baton));
+      SVN_ERR (delta_dirs (context, subdir_baton, NULL, t_fullpath, pool));
       SVN_ERR (context->editor->close_directory (subdir_baton, pool));
     }
   else
@@ -761,9 +737,8 @@ add_file_or_dir (struct context *c, void *dir_baton,
 
       SVN_ERR (context->editor->add_file 
                (edit_path (c, t_fullpath), dir_baton,
-                copied_from_path, copied_from_revision, pool, &file_baton));
-      SVN_ERR (delta_files (context, file_baton,
-                            copied_from_path, t_fullpath, pool));
+                NULL, SVN_INVALID_REVNUM, pool, &file_baton));
+      SVN_ERR (delta_files (context, file_baton, NULL, t_fullpath, pool));
       SVN_ERR (svn_fs_file_md5_checksum (digest, context->target_root,
                                          t_fullpath, pool));
       SVN_ERR (context->editor->close_file
