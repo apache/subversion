@@ -1457,19 +1457,18 @@ svn_fs_fs__rep_contents_dir (apr_hash_t **entries_p,
       return SVN_NO_ERROR;
     }
 
-  /* Discard the current cached directory, if we have one. */
-  if (ffd->dir_cache_id)
-    {
-      svn_pool_clear (ffd->dir_cache_pool);
-      ffd->dir_cache_id = NULL;
-    }
-
   /* Read in the directory hash. */
   entries = apr_hash_make (pool);
   SVN_ERR (get_dir_contents (entries, fs, noderev, pool));
 
   /* Prepare to cache this directory. */
-  ffd->dir_cache_pool = svn_pool_create (fs->pool);
+  if (ffd->dir_cache_id)
+    {
+      svn_pool_clear (ffd->dir_cache_pool);
+      ffd->dir_cache_id = NULL;
+    }
+  else
+    ffd->dir_cache_pool = svn_pool_create (fs->pool);
   ffd->dir_cache = apr_hash_make (ffd->dir_cache_pool);
 
   /* Translate the string dir entries into real entries in the dir cache. */
