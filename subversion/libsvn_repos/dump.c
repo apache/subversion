@@ -26,6 +26,8 @@
 #include "svn_time.h"
 
 
+#define ARE_VALID_COPY_ARGS(p,r) ((p && SVN_IS_VALID_REVNUM (r)) ? 1 : 0)
+
 /*----------------------------------------------------------------------*/
 
 /** A variant of our hash-writing routine in libsvn_subr;  this one
@@ -34,9 +36,8 @@
 
 static void
 write_hash_to_stringbuf (apr_hash_t *hash, 
-                         apr_size_t (*unpack_func) 
-                         (char **unpacked_data,
-                          void *val),
+                         apr_size_t (*unpack_func) (char **unpacked_data, 
+                                                    void *val),
                          svn_stringbuf_t **strbuf,
                          apr_pool_t *pool)
 {
@@ -119,9 +120,22 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
-  const char *path;        /* the absolute path to this directory */
+
+  /* is this directory a new addition to this revision? */
   svn_boolean_t added;
+  
+  /* has this directory been written to the output stream? */
   svn_boolean_t written_out;
+
+  /* the absolute path to this directory */
+  const char *path;
+
+  /* the comparison path and revision of this directory.  if both of
+     these are valid, use them as a source against which to compare
+     the directory instead of the default comparison source of PATH in
+     the previous revision. */
+  const char *cmp_path;
+  svn_revnum_t cmp_rev;
 
   /* hash of paths that need to be deleted, though some -might- be
      replaced.  maps const char * paths to this dir_baton.  (they're
@@ -134,8 +148,22 @@ struct dir_baton
 };
 
 
+/* Make a directory baton to represent the directory was path
+   (relative to EDIT_BATON's path) is PATH.  
+
+   CMP_PATH/CMP_REV are the path/revision against which this directory
+   should be compared for changes.  If either is omitted (NULL for the
+   path, SVN_INVALID_REVNUM for the rev), just compare this directory
+   PATH against itself in the previous revision.
+   
+   PARENT_DIR_BATON is the directory baton of this directory's parent,
+   or NULL if this is the top-level directory of the edit.  ADDED
+   indicated if this directory is newly added in this revision.
+   Perform all allocations in POOL.  */
 static struct dir_baton *
 make_dir_baton (const char *path,
+                const char *cmp_path,
+                svn_revnum_t cmp_rev,
                 void *edit_baton,
                 void *parent_dir_baton,
                 svn_boolean_t added,
@@ -159,6 +187,8 @@ make_dir_baton (const char *path,
   new_db->edit_baton = eb;
   new_db->parent_dir_baton = pb;
   new_db->path = full_path;
+  new_db->cmp_path = cmp_path ? apr_pstrdup (pool, cmp_path) : NULL;
+  new_db->cmp_rev = cmp_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
   new_db->deleted_entries = apr_hash_make (pool);
@@ -175,15 +205,19 @@ make_dir_baton (const char *path,
    ACTION describes what is happening to the node (see enum svn_node_action).
    Write record to writable EB->STREAM, using EB->BUFFER to write in chunks.
 
-   If copy-history is available, it is in COPYFROM_PATH/REV.
+   If the node was itself copied, IS_COPY is TRUE and the
+   path/revision of the copy source are in CMP_PATH/CMP_REV.  If
+   IS_COPY is FALSE, yet CMP_PATH/CMP_REV are valid, this node is part
+   of a copied subtree.
   */
 static svn_error_t *
 dump_node (struct edit_baton *eb,
            const char *path,    /* an absolute path. */
            enum svn_node_kind kind,
            enum svn_node_action action,
-           const char *copyfrom_path,
-           svn_revnum_t copyfrom_rev,
+           svn_boolean_t is_copy,
+           const char *cmp_path,
+           svn_revnum_t cmp_rev,
            apr_pool_t *pool)
 {
   svn_stringbuf_t *propstring;
@@ -191,6 +225,8 @@ dump_node (struct edit_baton *eb,
   apr_off_t textlen;
   apr_size_t content_length = 0, len;
   svn_boolean_t must_dump_text = FALSE, must_dump_props = FALSE;
+  const char *compare_path = path;
+  svn_revnum_t compare_rev = eb->current_rev - 1;
 
   /* Write out metadata headers for this file node. */
   SVN_ERR (svn_stream_printf (eb->stream, pool,
@@ -202,10 +238,17 @@ dump_node (struct edit_baton *eb,
   else if (kind == svn_node_dir)
     SVN_ERR (svn_stream_printf (eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
-  
+
+  /* Validate the comparison path/rev. */
+  if (ARE_VALID_COPY_ARGS (cmp_path, cmp_rev))
+    {
+      compare_path = cmp_path;
+      compare_rev = cmp_rev;
+    }
+
   if (action == svn_node_action_change)
     {
-      svn_fs_root_t *prev_root;
+      svn_fs_root_t *compare_root;
       int text_changed = 0, props_changed = 0;
 
       SVN_ERR (svn_stream_printf (eb->stream, pool,
@@ -213,16 +256,16 @@ dump_node (struct edit_baton *eb,
                                   ": change\n"));
 
       /* either the text or props changed, or possibly both. */
-      SVN_ERR (svn_fs_revision_root (&prev_root, 
+      SVN_ERR (svn_fs_revision_root (&compare_root, 
                                      svn_fs_root_fs (eb->fs_root),
-                                     (eb->current_rev - 1), pool));
+                                     compare_rev, pool));
       
       SVN_ERR (svn_fs_props_changed (&props_changed,
-                                     prev_root, path,
+                                     compare_root, compare_path,
                                      eb->fs_root, path, pool));
       if (kind == svn_node_file)
         SVN_ERR (svn_fs_contents_changed (&text_changed,
-                                          prev_root, path,
+                                          compare_root, compare_path,
                                           eb->fs_root, path, pool));
       if (props_changed)
         must_dump_props = TRUE;
@@ -231,7 +274,7 @@ dump_node (struct edit_baton *eb,
     }
   else if (action == svn_node_action_replace)
     {
-      if (copyfrom_path == NULL)
+      if (! is_copy)
         {
           /* a simple delete+add, implied by a single 'replace' action. */
           SVN_ERR (svn_stream_printf (eb->stream, pool,
@@ -254,7 +297,7 @@ dump_node (struct edit_baton *eb,
 
           /* recurse:  print an additional add-with-history record. */
           SVN_ERR (dump_node (eb, path, kind, svn_node_action_add,
-                              copyfrom_path, copyfrom_rev, pool));
+                              is_copy, compare_path, compare_rev, pool));
 
           /* we can leave this routine quietly now, don't need to dump
              any content;  that was already done in the second record. */
@@ -279,7 +322,7 @@ dump_node (struct edit_baton *eb,
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
-      if (copyfrom_path == NULL)
+      if (! is_copy)
         {
           /* For a simple 'add', we need to dump both props and text. */
           must_dump_text = TRUE;
@@ -290,34 +333,34 @@ dump_node (struct edit_baton *eb,
           svn_fs_root_t *src_root;
           int text_changed = 0, props_changed = 0;
 
-          if ((copyfrom_rev < eb->oldest_dumped_rev)
+          if ((cmp_rev < eb->oldest_dumped_rev)
               && eb->feedback_stream)
             svn_stream_printf 
               (eb->feedback_stream, pool,
-               "WARNING: copyfrom_rev %" SVN_REVNUM_T_FMT
+               "WARNING: cmp_rev %" SVN_REVNUM_T_FMT
                " is older than oldest dumped rev %" SVN_REVNUM_T_FMT 
                "\n... loading this dump into an empty repository will fail.\n",
-               copyfrom_rev, eb->oldest_dumped_rev);
+               cmp_rev, eb->oldest_dumped_rev);
 
           SVN_ERR (svn_stream_printf (eb->stream, pool,
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
                                       ": %" SVN_REVNUM_T_FMT "\n"
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
                                       ": %s\n",                  
-                                      copyfrom_rev, copyfrom_path));
+                                      cmp_rev, cmp_path));
 
           SVN_ERR (svn_fs_revision_root (&src_root, 
                                          svn_fs_root_fs (eb->fs_root),
-                                         copyfrom_rev, pool));
+                                         compare_rev, pool));
 
           /* Need to decide if the copied node had any extra textual or
              property mods as well.  */
           SVN_ERR (svn_fs_props_changed (&props_changed,
-                                         src_root, copyfrom_path,
+                                         src_root, compare_path,
                                          eb->fs_root, path, pool));
           if (kind == svn_node_file)
             SVN_ERR (svn_fs_contents_changed (&text_changed,
-                                              src_root, copyfrom_path,
+                                              src_root, compare_path,
                                               eb->fs_root, path, pool));
           if (props_changed)
             must_dump_props = TRUE;
@@ -428,7 +471,8 @@ open_root (void *edit_baton,
            apr_pool_t *pool,
            void **root_baton)
 {
-  *root_baton = make_dir_baton (NULL, edit_baton, NULL, FALSE, pool);
+  *root_baton = make_dir_baton (NULL, NULL, SVN_INVALID_REVNUM, 
+                                edit_baton, NULL, FALSE, pool);
   return SVN_NO_ERROR;
 }
 
@@ -453,25 +497,34 @@ static svn_error_t *
 add_directory (const char *path,
                void *parent_baton,
                const char *copyfrom_path,
-               svn_revnum_t copyfrom_revision,
+               svn_revnum_t copyfrom_rev,
                apr_pool_t *pool,
                void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  struct dir_baton *new_db = make_dir_baton (path, eb, pb, TRUE, pool);
   void *val;
+  svn_boolean_t is_copy = FALSE;
+  struct dir_baton *new_db 
+    = make_dir_baton (path, copyfrom_path, copyfrom_rev, eb, pb, TRUE, pool);
 
   /* This might be a replacement -- is the path already deleted? */
   val = apr_hash_get (pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
+  /* Detect an add-with-history. */
+  is_copy = ARE_VALID_COPY_ARGS (copyfrom_path, copyfrom_rev) ? TRUE : FALSE;
+
+  /* Dump the node. */
   SVN_ERR (dump_node (eb, path, 
                       svn_node_dir,
                       val ? svn_node_action_replace : svn_node_action_add,
-                      copyfrom_path, copyfrom_revision, pool));
+                      is_copy,
+                      is_copy ? copyfrom_path : NULL, 
+                      is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
+                      pool));
 
   if (val)
-    /* delete the path, it's now been dumped. */
+    /* Delete the path, it's now been dumped. */
     apr_hash_set (pb->deleted_entries, path, APR_HASH_KEY_STRING, NULL);
   
   new_db->written_out = TRUE;
@@ -490,8 +543,20 @@ open_directory (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  struct dir_baton *new_db = make_dir_baton (path, eb, pb, FALSE, pool);
+  struct dir_baton *new_db;
+  const char *cmp_path = NULL;
+  svn_revnum_t cmp_rev = SVN_INVALID_REVNUM;
 
+  /* If the parent directory has explicit comparison path and rev,
+     record the same for this one. */
+  if (pb && ARE_VALID_COPY_ARGS (pb->cmp_path, pb->cmp_rev))
+    {
+      cmp_path = svn_path_join (pb->cmp_path, 
+                                svn_path_basename (path, pool), pool);
+      cmp_rev = pb->cmp_rev;
+    }
+        
+  new_db = make_dir_baton (path, cmp_path, cmp_rev, eb, pb, FALSE, pool);
   *child_baton = new_db;
   return SVN_NO_ERROR;
 }
@@ -520,7 +585,7 @@ close_directory (void *dir_baton)
          shouldn't care.  */
       SVN_ERR (dump_node (eb, path,
                           svn_node_unknown, svn_node_action_delete,
-                          NULL, SVN_INVALID_REVNUM, subpool));
+                          FALSE, NULL, SVN_INVALID_REVNUM, subpool));
 
       svn_pool_clear (subpool);
     }
@@ -534,21 +599,29 @@ static svn_error_t *
 add_file (const char *path,
           void *parent_baton,
           const char *copyfrom_path,
-          svn_revnum_t copyfrom_revision,
+          svn_revnum_t copyfrom_rev,
           apr_pool_t *pool,
           void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   void *val;
+  svn_boolean_t is_copy = FALSE;
 
   /* This might be a replacement -- is the path already deleted? */
   val = apr_hash_get (pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
+  /* Detect add-with-history. */
+  is_copy = ARE_VALID_COPY_ARGS (copyfrom_path, copyfrom_rev) ? TRUE : FALSE;
+
+  /* Dump the node. */
   SVN_ERR (dump_node (eb, path, 
                       svn_node_file,
                       val ? svn_node_action_replace : svn_node_action_add,
-                      copyfrom_path, copyfrom_revision, pool));
+                      is_copy,
+                      is_copy ? copyfrom_path : NULL, 
+                      is_copy ? copyfrom_rev : SVN_INVALID_REVNUM, 
+                      pool));
 
   if (val)
     /* delete the path, it's now been dumped. */
@@ -568,10 +641,21 @@ open_file (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
+  const char *cmp_path = NULL;
+  svn_revnum_t cmp_rev = SVN_INVALID_REVNUM;
+  
+  /* If the parent directory has explicit comparison path and rev,
+     record the same for this one. */
+  if (pb && ARE_VALID_COPY_ARGS (pb->cmp_path, pb->cmp_rev))
+    {
+      cmp_path = svn_path_join (pb->cmp_path, 
+                                svn_path_basename (path, pool), pool);
+      cmp_rev = pb->cmp_rev;
+    }
 
   SVN_ERR (dump_node (eb, path, 
                       svn_node_file, svn_node_action_change, 
-                      NULL, SVN_INVALID_REVNUM, pool));
+                      FALSE, cmp_path, cmp_rev, pool));
 
   *file_baton = NULL;  /* muhahahaha again */
   return SVN_NO_ERROR;
@@ -594,7 +678,7 @@ change_dir_prop (void *parent_baton,
     {
       SVN_ERR (dump_node (eb, db->path, 
                           svn_node_dir, svn_node_action_change, 
-                          NULL, SVN_INVALID_REVNUM, pool));
+                          FALSE, db->cmp_path, db->cmp_rev, pool));
       db->written_out = TRUE;
     }
   return SVN_NO_ERROR;
