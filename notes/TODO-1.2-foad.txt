@@ -1,0 +1,194 @@
+> From: Julian Foad <julianfoad@btopenworld.com>
+> Subject: Review of APIs new in 1.2
+> To: dev@subversion.tigris.org
+> Date: Thu, 24 Mar 2005 01:21:47 +0000
+> Reply-To: dev@subversion.tigris.org
+> 
+> Here is a quick review of the public APIs marked "@since New in 1.2"
+> in r13616, and of the doc strings of the APIs deprecated by them.
+> 
+> 
+> svn_client_checkout2
+> svn_client_update2
+> svn_client_diff2
+> svn_client_diff_peg2
+> svn_client_propset2
+> svn_client_propget2
+> svn_client_proplist2
+> svn_client_export3
+> svn_client_ls2
+> svn_client_info
+> svn_ra_do_update
+> svn_ra_do_switch
+> svn_ra_do_status
+> svn_ra_do_diff
+> svn_wc_process_committed2
+> svn_wc_crawl_revisions2
+> svn_wc_get_update_editor2
+> svn_wc_get_diff_editor3
+> svn_wc_diff3
+>    Enhancement: Ought to use "depth" instead of "recurse".
+>
+> svn_client_status2
+> svn_wc_get_status_editor2
+> svn_wc_resolved_conflict2
+>    Enhancement: Ought to use "depth" instead of "descend" or "recursive".
+>    Maybe "descend" and "recursive" ought to be renamed to "recurse"
+>    for consistency.
+> 
+> svn_client_commit2
+>    Enhancement: Ought to use "depth" instead of "nonrecursive".
+>    Maybe "nonrecursive" should be renamed to "recurse", and its sense
+>    inverted, for consistency.
+> 
+> svn_client_update2
+>    Enhancement: Ought to update all targets from the same repository to the
+> same revision.
+> 
+> svn_client_checkout
+>    Bug: doesn't mention svn_client_checkout2's "ignore_externals" argument.
+> 
+> svn_client_update
+>    Bug: doesn't mention svn_client_update2's "ignore_externals" argument.
+> 
+> svn_client_propset
+>    Bug: doesn't mention svn_client_propset2's "ctx" argument.
+> 
+> svn_client_export2
+>    Bug: doesn't mention svn_client_export3's "ignore_externals" argument.
+>    Bug: doesn't mention svn_client_export3's "recurse" argument.
+> 
+> svn_repos_get_logs2
+>    Bug: Needs to say how it relates to svn_repos_get_logs3.
+> 
+> svn_client_diff2
+> svn_client_diff_peg2
+> svn_client_move2
+> svn_client_propset2
+> svn_client_export3
+> svn_client_lock
+> svn_client_unlock
+> svn_fs_lock
+> svn_fs_attach_lock
+> svn_fs_unlock
+> svn_ra_lock
+> svn_ra_unlock
+> svn_repos_fs_lock
+> svn_repos_fs_attach_lock
+> svn_repos_fs_unlock
+> svn_wc_prop_set2
+>    Bug: parameter "force" needs a better name (and, in some cases,
+>    description?).  In some cases, such as svn_fs_unlock, it feels like
+>    the name "force" is good enough and can have no other interpretation,
+>    but I think that's an illusion and it should be renamed anyway.
+> 
+> svn_cmdline_init2
+>    I'm not terribly happy with this.  I don't think it makes clear
+>    what "server mode" is and why.
+> 
+> svn_error_is_lock_error
+> svn_error_is_unlock_error
+>    Someone raised a concern about whether these belong in svn_error.h.
+> 
+> SVN_ERR_FS_PATH_LOCKED
+> SVN_ERR_FS_NO_LOCK_TOKEN
+>    Need to clarify the difference between these, or merge them.
+> 
+> SVN_ERR_REPOS_UNSUPPORTED_VERSION
+> SVN_ERR_FS_UNSUPPORTED_FORMAT
+>    Why has the error number changed?  Isn't that an ABI violation if
+>    we are now returning a different number for semantically the same
+>    error?  Shouldn't the new name be added, equal to the old name, and
+>    the default message be changed to
+>    the new one?
+> 
+> SVN_ERR_FS_OUT_OF_DATE
+>    It is not clear that this necessarily refers to a locking-related
+>    error (as svn_error_is_lock_error thinks it does).
+> 
+> svn_fs_create_access
+>    No need to say "username must be non-NULL".
+> 
+> svn_fs_attach_lock
+>    Contradiction: "@a lock->owner must be filled in with an
+>    authenticated username.  If not, ...".  Change "must" to "may".
+> 
+> svn_fs_lock
+> svn_fs_attach_lock
+>    Contradiction: "If @a lock->path is already locked, then return @c
+>    SVN_ERR_FS_PATH_LOCKED. If @a force is true, then steal the existing
+>    lock anyway, ...".  Change to "... unless @a force is true, in which
+>    case ..." or some such.
+> 
+> svn_fs_unlock
+>    Contradiction.  Before "return @c SVN_ERR_FS_LOCK_OWNER_MISMATCH",
+>    add "and @a force is false,".
+> 
+> svn_ra_lock_callback_t
+>    Clarification: change "do_lock should be" to "do_lock is".
+> 
+> svn_fs_lock
+> svn_repos_fs_lock
+>    Use of type "long int" is not generally helpful in a public
+>    interface. Plain "int" would be better.
+> 
+> svn_repos_fs_get_locks
+>    Bug: Says "Like @c svn_fs_get_locks" but it isn't much like it; it
+>    returns the result in a completely different, undocumented way.
+> 
+> svn_cstring_count_newlines
+>    Bug: Needs to mention "LF" in the list of newline types.
+> 
+> svn_fs.h
+>    Each time a group of new things is preceded by "@since New in
+>    1.2.", it ought probably to have Doxygen group markers around it, else
+>    it is not clear what items the "@since" refers to.
+> 
+> svn_fs_begin_txn2
+>    There's a nastily formatted note.  Just make it plain text or "@warning".
+>    The description of "flags" is a tiny bit vague; it should state
+>    explicitly that the argument is to be composed from the mentioned
+>    constants.
+> 
+> svn_lock_t
+>    Bug: The "@since" above it needs to be part of its Doxygen comment.
+> 
+> svn_error_is_lock_error
+> svn_error_is_unlock_error
+> SVN_ERR_* (in svn_error_codes.h) (maybe)
+> SVN_FS_TXN_CHECK_OOD
+> SVN_FS_TXN_CHECK_LOCKS
+>    Bug: The comment should be a Doxygen comment (starting "/**").
+> 
+> svn_wc_adm_open_anchor
+>    Bug: Mis-use of "@c" where "@a" is meant in doc string.
+> 
+> svn_wc_adm_open2
+> svn_wc_adm_open
+> svn_wc_adm_probe_open2
+> svn_wc_adm_probe_open
+> svn_wc_adm_probe_try2
+> svn_wc_adm_probe_try
+>    Bug: Bogus doc strings.  (Note that "@a" should only be used for
+>    arguments of _this_ function.)
+> 
+> svn_wc_notify_t
+> svn_wc_notify_func2_t
+>    The documentation for the structure fields should be in the
+>    structure definition rather than in the function's doc string.  Or, at
+>    least, the structure doc string should refer to the function for
+>    details.
+>    Bug: The "err" field is not documented.
+> 
+> svn_wc_status_set_repos_locks
+>    Typo: unclosed tag "</tt"; also "an" -> "a" on the same line.
+>    Typo: argument "set_Locks_baton" -> "set_locks_baton".
+> 
+> svn_ctype.h
+>    Not reviewed.
+> 
+> svn_ra_reporter2_t
+>    Not reviewed.
+> 
+> svn_wc_diff_callbacks2_t
+>    Not reviewed.
