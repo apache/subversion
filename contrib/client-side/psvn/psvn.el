@@ -281,6 +281,7 @@ Else return TEXT unchanged."
 ; emacs 20
 (unless (fboundp 'point-at-eol) (defalias 'point-at-eol 'line-end-position))
 (unless (fboundp 'point-at-bol) (defalias 'point-at-bol 'line-beginning-position))
+(unless (functionp 'read-directory-name) (defalias 'read-directory-name 'read-file-name))
 
 (eval-when-compile
   (if (not (fboundp 'gethash))
@@ -292,8 +293,8 @@ Else return TEXT unchanged."
 (defun svn-status (dir &optional arg)
   "Examine the status of Subversion working copy in directory DIR.
 If ARG then pass the -u argument to `svn status'."
-  (interactive (list (read-file-name "SVN status directory: "
-                                     nil default-directory nil)))
+  (interactive (list (read-directory-name "SVN status directory: "
+                                          nil default-directory nil)))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
   (if (not (file-exists-p (concat dir "/.svn/")))
@@ -1477,9 +1478,8 @@ itself) before running mv."
                                            (svn-status-line-info->filename (car marked-files)))
                                    (svn-status-directory-containing-point t)))
       ;;multiple files selected, so prompt for existing directory to mv them into.
-      ;;another place to use a putative `read-directory-name'
-      (setq dest (read-file-name (format "Move %d files to directory: " num-of-files)
-                                 (svn-status-directory-containing-point t) nil t))
+      (setq dest (read-directory-name (format "Move %d files to directory: " num-of-files)
+                                      (svn-status-directory-containing-point t) nil t))
       (unless (file-directory-p dest)
         (error "%s is not a directory" dest)))
     (when (string= dest "")
