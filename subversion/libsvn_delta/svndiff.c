@@ -391,6 +391,7 @@ write_handler (void *baton,
   const unsigned char *p, *end;
   apr_off_t val, sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
+  apr_size_t buflen = *len;
   svn_txdelta_op_t *op;
   int ninst;
 
@@ -398,18 +399,18 @@ write_handler (void *baton,
   if (db->header_bytes < 4)
     {
       apr_size_t nheader = 4 - db->header_bytes;
-      if (nheader > *len)
-        nheader = *len;
+      if (nheader > buflen)
+        nheader = buflen;
       if (memcmp (buffer, "SVN\0" + db->header_bytes, nheader) != 0)
         return svn_error_create (SVN_ERR_SVNDIFF_INVALID_HEADER, 
                                  0, NULL, "svndiff has invalid header");
-      *len -= nheader;
+      buflen -= nheader;
       buffer += nheader;
       db->header_bytes += nheader;
     }
 
   /* Concatenate the old with the new.  */
-  svn_stringbuf_appendbytes (db->buffer, buffer, *len);
+  svn_stringbuf_appendbytes (db->buffer, buffer, buflen);
 
   /* We have a buffer of svndiff data that might be good for:
 
