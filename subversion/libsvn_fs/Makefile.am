@@ -2,16 +2,19 @@
 ## Which is, in turn, processed by configure to produce the file `Makefile'.
 
 lib_LTLIBRARIES = libsvn_fs.la
-libsvn_fs_la_SOURCES = convert-size.c		\
-		       dbt.c			\
-		       err.c			\
-		       fs.c			\
-		       id.c			\
-		       nodes-table.c		\
-		       skel.c			\
-		       trail.c			\
-		       tree.c			\
-		       txn.c
+libsvn_fs_la_SOURCES =				\
+			clones-table.c		\
+			convert-size.c		\
+			dbt.c			\
+			err.c			\
+			fs.c			\
+			id.c			\
+			nodes-table.c		\
+			skel.c			\
+			trail.c			\
+			tree.c			\
+			txn.c			\
+			txn-table.c
 
 # Set aside for the moment:
 #		       delta.c			\

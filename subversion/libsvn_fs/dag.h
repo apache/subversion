@@ -36,6 +36,15 @@
 
 
 
+/* Initializing a filesystem.  */
+
+
+/* Given a filesystem FS, which contains all the necessary tables,
+   create the initial revision 0, and the initial root directory.  */
+svn_error_t *svn_fs__dag_init_fs (svn_fs_t *fs);
+
+
+
 /* References to nodes in DAG filesystems.  */
 
 typedef struct dag_node_t dag_node_t;

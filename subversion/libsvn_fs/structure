@@ -373,7 +373,7 @@ The Berkeley DB `transactions' table records unfinished transactions.
 Every key in this table is a transaction ID, and every value is a skel
 of the form:
 
-    (ROOT-ID BASE-ROOT-ID)
+    ("transaction" ROOT-ID BASE-ROOT-ID)
 
 where ROOT-ID is the node revision ID of the transaction's root
 directory, and BASE-ROOT-ID is the node revision ID of the root of the
@@ -384,9 +384,7 @@ always has one entry whose key is `next-id', and whose value is the
 lowest transaction ID that has never yet been used.  We use this entry
 to allocate ID's for new transactions.
 
-The `transactions' table is a btree, sorting keys in order of
-increasing numerical value.  The `next-id' key comes after all
-transaction ID's.
+The `transactions' table is a btree, with no particular sort order.
 
 
 Cloning
@@ -403,14 +401,11 @@ must be able to find the clones created by B in order to correctly
 make its own changes to the node.
 
 The Berkeley DB `clones' table provides enough information to do this
-tracking.  Every key in `clones' is a skel of the form:
-
-    (TXN BASE-PATH)
-
-where TXN is the ID of a transaction, and BASE-PATH is the path of
-some node revision in the revision tree on which TXN is based.  Each
-value associated with one of these keys is a skel of one of the
-following forms:
+tracking.  Every key in `clones' is a string consisting of the ID of
+the transaction TXN, a space, and BASE-PATH, the path of some node
+revision in the revision tree on which TXN is based.  Each value
+associated with one of these keys is a skel of one of the following
+forms:
 
     (cloned CLONE)
         This means that the named node has been cloned in TXN; CLONE
@@ -596,7 +591,7 @@ Berkeley DB tables
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION,
                                 "next-id" -> TXN)
-               "clones" : btree((TXN BASE-PATH) -> CLONE)
+               "clones" : btree(CLONE-KEY -> CLONE)
 
 
 Syntactic elements
@@ -627,13 +622,14 @@ Filesystem revisions:
 
 Transactions:
 
-            TRANSACTION ::= (ROOT-ID BASE-ROOT-ID) ;
+            TRANSACTION ::= ("transaction" ROOT-ID BASE-ROOT-ID) ;
                 ROOT-ID ::= node.id ;
            BASE-ROOT-ID ::= node.id ;
 
 
 Clones:
 
+	      CLONE-KEY ::= TXN ' ' BASE-PATH
                   CLONE ::= ("cloned" CLONE-ID)
                           | ("moved" PARENT-CLONE-ID ENTRY-NAME);
                CLONE-ID ::= node.id ;

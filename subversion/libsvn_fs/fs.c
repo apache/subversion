@@ -11,9 +11,6 @@
  * ====================================================================
  */
 
-
-/* Header files.  */
-
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
@@ -29,6 +26,9 @@
 #include "fs.h"
 #include "err.h"
 #include "nodes-table.h"
+#include "clones-table.h"
+#include "txn-table.h"
+#include "dag.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -90,8 +90,8 @@ cleanup_fs (svn_fs_t *fs)
     return 0;
 
   /* Close the databases.  */
-  SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->clones, "clones"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
 
   /* Checkpoint any changes.  */
@@ -243,6 +243,8 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (check_already_open (fs));
 
+  fs->env_path = apr_pstrdup (fs->pool, path);
+
   /* Create the directory for the new environment.  */
   if (mkdir (path, 0777) < 0)
     return svn_error_createf (errno, 0, 0, fs->pool,
@@ -267,8 +269,15 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   svn_err = DB_WRAP (fs, "creating `nodes' table",
 		     svn_fs__open_nodes_table (&fs->nodes, fs->env, 1));
   if (svn_err) goto error;
-
-  fs->env_path = apr_pstrdup (fs->pool, path);
+  svn_err = DB_WRAP (fs, "creating `clones' table",
+		     svn_fs__open_clones_table (&fs->clones, fs->env, 1));
+  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "creating `transactions' table",
+		     svn_fs__open_transactions_table (&fs->transactions,
+						      fs->env, 1));
+  if (svn_err) goto error;
+  svn_err = svn_fs__dag_init_fs (fs);
+  if (svn_err) goto error;
 
   return 0;
 
@@ -304,6 +313,14 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   /* Open the various databases.  */
   svn_err = DB_WRAP (fs, "opening `nodes' table",
 		     svn_fs__open_nodes_table (&fs->nodes, fs->env, 0));
+  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "opening `clones' table",
+		     svn_fs__open_clones_table (&fs->clones, fs->env, 0));
+  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "opening `transactions' table",
+		     svn_fs__open_transactions_table (&fs->transactions,
+						      fs->env, 0));
+  if (svn_err) goto error;
 
   return 0;
   

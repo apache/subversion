@@ -103,6 +103,10 @@ svn_error_t *svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id);
 /* SVN_ERR_FS_CORRUPT: a key in FS's `nodes' table is bogus.  */
 svn_error_t *svn_fs__err_corrupt_nodes_key (svn_fs_t *fs);
 
+/* SVN_ERR_FS_CORRUPT: the `next-id' value is the `transactions' table
+   is bogus.  */
+svn_error_t *svn_fs__err_corrupt_next_txn_id (svn_fs_t *fs);
+
 /* SVN_ERR_FS_NOT_MUTABLE: the caller attempted to change a node revision
    which is not mutable.  */
 svn_error_t *svn_fs__err_not_mutable (svn_fs_t *fs, const svn_fs_id_t *id);

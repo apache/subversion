@@ -1,14 +1,20 @@
 noinst_PROGRAMS = skel-test
 
+COMMON_LIBS = 						\
+		../libsvn_fs.la				\
+		../../tests-common/libsvn_tests_main.la	\
+		../../libsvn_subr/libsvn_subr.la	\
+		../../../apr/libapr.a			\
+		../../../expat-lite/libexpat.la		\
+		-ldb
+
 # Tests for the `skeleton' library.
 skel_test_SOURCES = skel-test.c
-skel_test_LDADD = ../libsvn_fs.la				\
-		  ../../tests-common/libsvn_tests_main.la	\
-		  ../../libsvn_subr/libsvn_subr.la		\
-		  ../../../apr/libapr.a                         \
-		  ../../../expat-lite/libexpat.la               \
-		  -ldb
+skel_test_LDADD = ${COMMON_LIBS}
 
+# Tests for the filesystem.
+# fs_test_SOURCES = fs-test.c
+# fs_test_LDADD = ${COMMON_LIBS}
 
 INCLUDES = -I .. -I ../../include -I ../../../apr/include
 
