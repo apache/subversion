@@ -2,6 +2,8 @@
 
 #
 # USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
+#                  [-apr PATH-TO-APR ] [-apu PATH-TO-APR-UTIL] 
+#                  [-neon PATH-TO-NEON ] [-alpha|-beta BETA_NUM]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The REVISION or REVISION-SVN will be used in the version string.
@@ -13,16 +15,37 @@
 #
 #   from the top-level of a branches/0.24.2 working copy will create
 #   the 0.24.2 release tarball. Make sure you have apr, apr-util,
-#   and neon subdirectories and that the working copy is configured
-#   before running this script in the top-level directory.
+#   and neon subdirectories in your current working directory or
+#   specify the path to them with the -apr, -apu or -neon options.
+#   For example:
+#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x \
+#        -apr -neon ~/in-tree-libraries/neon-0.24.7 \
+#        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
+#        -apu ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
 #
+#   When building a beta tarball pass -beta NUM where num is the beta
+#   number.  For example:
+#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -beta 1
+# 
+#   Alpha versions can be specified with just -alpha but take no
+#   number parameter since they are not intended for public release.
+#   For example:
+#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -alpha
+#
+#   If neither an -beta option with a number or an -alpha option
+#   are specified, it will build a release tarball.
+
 
 # A quick and dirty usage message
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
-[-rs REVISION-SVN ] [-pr REPOS-PATH]
+[-rs REVISION-SVN ] [-pr REPOS-PATH] \
+[-alpha|-beta BETA_NUM] [-apr APR_PATH ] \
+[-apu APR_UTIL_PATH] [-neon NEON_PATH ]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
-           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0"
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -alpha
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -beta 1"
 
 # Let's check and set all the arguments
 ARG_PREV=""
@@ -32,11 +55,15 @@ do
   if [ "$ARG_PREV" ]; then
 
     case $ARG_PREV in
-       -v) VERSION="$ARG" ;;
-       -r) REVISION="$ARG" ;;
-      -rs) REVISION_SVN="$ARG" ;;
-      -pr) REPOS_PATH="$ARG" ;;
-        *) ARG_PREV=$ARG ;;
+         -v)  VERSION="$ARG" ;;
+         -r)  REVISION="$ARG" ;;
+        -rs)  REVISION_SVN="$ARG" ;;
+        -pr)  REPOS_PATH="$ARG" ;;
+       -apr)  APR_PATH="$ARG" ;;
+       -apu)  APU_PATH="$ARG" ;;
+      -neon)  NEON_PATH="$ARG" ;;
+      -beta)  BETA="$ARG" ;;
+          *)  ARG_PREV=$ARG ;;
     esac
 
     ARG_PREV=""
@@ -44,8 +71,12 @@ do
   else
 
     case $ARG in
-      -v|-r|-rs|-pr)
+      -v|-r|-rs|-pr|-beta|-apr|-apu|-neon)
         ARG_PREV=$ARG
+        ;;
+      -alpha)
+        ALPHA="1"
+        ARG_PREV=""
         ;;
       *)
         echo " $USAGE"
@@ -59,23 +90,49 @@ if [ -z "$REVISION_SVN" ]; then
   REVISION_SVN=$REVISION
 fi
 
+if [ -n "$ALPHA" ] && [ -n "$BETA" ] ; then
+  echo " $USAGE"
+  exit 1
+elif [ -n "$ALPHA" ] ; then
+  VER_TAG="Alpha"
+  VER_NUMTAG="-alpha" 
+elif [ -n "$BETA" ] ; then
+  VER_TAG="Beta $BETA"
+  VER_NUMTAG="-beta$BETA"
+else
+  VER_TAG="r$REVISION_SVN"
+  VER_NUMTAG=""
+fi
+  
 if [ -z "$VERSION" ] || [ -z "$REVISION" ] ; then
   echo " $USAGE"
   exit 1
 fi
 
-if [ ! -d apr ]; then
-  echo "ERROR: an 'apr' subdirectory must be present."
+if [ -z "$APR_PATH" ]; then
+  APR_PATH='apr'
+fi
+
+if [ -z "$APU_PATH" ]; then
+  APU_PATH='apu'
+fi
+
+if [ -z "$NEON_PATH" ]; then
+  NEON_PATH='neon'
+fi
+
+if [ ! -d "$APR_PATH" ]; then
+  echo "ERROR: '$APR_PATH' does not exist."
   exit 1
 fi
 
-if [ ! -d apr-util ]; then
-  echo "ERROR: an 'apr-util' subdirectory must be present."
+if [ ! -d "$APU_PATH" ]; then
+  echo "ERROR: '$APU_PATH' does not exist."
   exit 1
 fi
 
-if [ ! -d neon ]; then
-  echo "ERROR: a 'neon' subdirectory must be present."
+if [ ! -d "$NEON_PATH" ]; then
+  echo "ERROR: '$NEON_PATH' does not exist."
   exit 1
 fi
 
@@ -85,7 +142,7 @@ else
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
-DISTNAME="subversion-$VERSION"
+DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
 
@@ -100,21 +157,26 @@ echo "Removed and recreated $DIST_SANDBOX"
 
 echo "Exporting revision $REVISION of Subversion into sandbox..."
 (cd "$DIST_SANDBOX" && \
- svn export -q -r "$REVISION" "http://svn.collab.net/repos/svn/$REPOS_PATH" \
+ ${SVN:-svn} export -q -r "$REVISION" \
+     "http://svn.collab.net/repos/svn/$REPOS_PATH" \
      "$DISTNAME" --username none --password none)
 
-for pkg in apr-util apr ; do
-  echo "Copying $pkg into sandbox, making extraclean..."
-  cp -r "$pkg" "$DISTPATH"
-  (cd "$DISTPATH/$pkg" && make extraclean)
+echo "Copying $APR_PATH into sandbox, making extraclean..."
+cp -r "$APR_PATH" "$DISTPATH/apr"
+(cd "$DISTPATH/apr" && make extraclean)
+echo "Removing all CVS/ and .cvsignore files from apr..."
+find "$DISTPATH/apr" -name CVS -type d -print | xargs rm -fr
+find "$DISTPATH/apr" -name .cvsignore -print | xargs rm -f
 
-  echo "Removing all CVS/ and .cvsignore files from $pkg..."
-  find "$DISTPATH/$pkg" -name CVS -type d -print | xargs rm -fr
-  find "$DISTPATH/$pkg" -name .cvsignore -print | xargs rm -f
-done
+echo "Copying $APU_PATH into sandbox, making extraclean..."
+cp -r "$APU_PATH" "$DISTPATH/apr-util"
+(cd "$DISTPATH/apr-util" && make extraclean)
+echo "Removing all CVS/ and .cvsignore files from apr-util..."
+find "$DISTPATH/apr-util" -name CVS -type d -print | xargs rm -fr
+find "$DISTPATH/apr-util" -name .cvsignore -print | xargs rm -f
 
 echo "Coping neon into sandbox, making clean..."
-cp -r neon "$DISTPATH"
+cp -r "$NEON_PATH" "$DISTPATH/neon"
 (cd "$DISTPATH/neon" && make distclean)
 echo "Cleaning *.o in neon..."
 find "$DISTPATH/neon/src" -name '*.o' -print | xargs rm -f
@@ -155,9 +217,9 @@ sed \
  -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
  -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
  -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_patch/" \
- -e "/#define *SVN_VER_TAG/s/dev build/r$REVISION_SVN/" \
- -e '/#define *SVN_VER_NUMTAG/s/".*"/""/' \
- -e "/#define *SVN_VER_REVISION/s/0/$REVISION_SVN/" \
+ -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
+ -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
+ -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_SVN/" \
   < "$vsn_file" > "$vsn_file.tmp"
 
 mv -f "$vsn_file.tmp" "$vsn_file"
@@ -169,19 +231,22 @@ cp "$vsn_file" "svn_version.h.dist"
 # Platforms without a tar that understands the GNU tar extension will not
 # be able to extract the resulting tar file.  Use pax to produce POSIX.1
 # tar files.
-echo "Rolling $DISTNAME.tar.gz ..."
-(cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") | \
-  gzip -9c > "$DISTNAME.tar.gz"
-echo "Rolling $DISTNAME.tar.bz2 ..."
-(cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") | \
-  bzip2 -9c > "$DISTNAME.tar.bz2"
+echo "Rolling $DISTNAME.tar ..."
+(cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
+  "$DISTNAME.tar"
+
+echo "Compressing to $DISTNAME.tar.bz2 ..."
+bzip2 -9k "$DISTNAME.tar"
+
+echo "Compressing to $DISTNAME.tar.gz ..."
+gzip -9 "$DISTNAME.tar"
 
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
 
 echo ""
 echo "Done:"
-ls -l "$DISTNAME.tar.gz"
-ls -l "$DISTNAME.tar.bz2"
+ls -l "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
 echo ""
+md5sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
 
