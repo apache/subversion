@@ -105,40 +105,46 @@ usage (const char *progname, int exit_code)
      "\n"
      "Subcommands are: \n"
      "\n"
-     "  create    REPOS_PATH\n"
-     "                Create a new, empty repository at REPOS_PATH."
+     "   create    REPOS_PATH\n"
+     "      Create a new, empty repository at REPOS_PATH.\n"
      "\n"
-     "  createtxn REPOS_PATH BASE_REV\n"
-     "                Create a new transaction based on BASE_REV."
+     "   createtxn REPOS_PATH BASE_REV\n"
+     "      Create a new transaction based on BASE_REV.\n"
      "\n"
-     "  lstxns    REPOS_PATH\n"
-     "                Print all txns and their trees.\n"
+     "   deltify   REPOS_PATH REVISION PATH\n"
+     "      Offer the repository a chance to deltify the storage\n"
+     "      associated with PATH in REVISION.  If PATH represents\n"
+     "      a directory, perform a recursive deltification of the\n"
+     "      tree starting at PATH.\n"
      "\n"
-     "  lsrevs    REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
+     "   lstxns    REPOS_PATH\n"
+     "      Print all txns and their trees.\n"
+     "\n"
+     "   lsrevs    REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      If no revision is given, all revision trees are printed.\n"
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "\n"
-     "  recover   REPOS_PATH\n"
+     "   recover   REPOS_PATH\n"
      "      Run the Berkeley DB recovery procedure on a repository.  Do\n"
      "      this if you've been getting errors indicating that recovery\n"
      "      ought to be run.\n"
      "\n"
-     "  rmtxns    REPOS_PATH TXN_NAME [...]\n"
-     "                Delete the transaction(s) named TXN_NAME."
+     "   rmtxns    REPOS_PATH TXN_NAME [...]\n"
+     "      Delete the transaction(s) named TXN_NAME.\n"
      "\n"
-     "  setlog    REPOS_PATH REVNUM FILE\n"
+     "   setlog    REPOS_PATH REVNUM FILE\n"
      "      Set the log-message on revision REVNUM to the contents of FILE.\n"
      "      (Careful!  Revision props are not historied, so this command\n"
      "       will -permanently- overwrite the previous log message.)\n"
      "\n"
-     "  undeltify REPOS_PATH REVISION PATH\n"
+     "   undeltify REPOS_PATH REVISION PATH\n"
      "      Undeltify (ensure fulltext storage for) PATH in REVISION.\n"
      "      If PATH represents a directory, perform a recursive\n"
      "      undeltification of the tree starting at PATH.\n"
      "\n"
-     "  youngest  REPOS_PATH\n"
-     "                Print the latest revision number."
+     "   youngest  REPOS_PATH\n"
+     "      Print the latest revision number.\n"
      "\n"
      "Printing a tree shows its structure, node ids, and file sizes.\n"
      "\n",
@@ -160,6 +166,7 @@ main (int argc, const char * const *argv)
   int               /* commands */
     is_create = 0,
     is_createtxn = 0,
+    is_deltify = 0,
     is_lsrevs = 0,
     is_lstxn = 0,
     is_recover = 0,
@@ -190,6 +197,7 @@ main (int argc, const char * const *argv)
          || (is_createtxn = strcmp(argv[1], "createtxn") == 0)
          || (is_setlog = strcmp(argv[1], "setlog") == 0)
          || (is_undeltify = strcmp(argv[1], "undeltify") == 0)
+         || (is_deltify = strcmp(argv[1], "deltify") == 0)
          || (is_recover = strcmp(argv[1], "recover") == 0)))
     {
       usage (argv[0], 1);
@@ -422,7 +430,7 @@ main (int argc, const char * const *argv)
                                     pool);
       if (err) goto error;
     }
-  else if (is_undeltify)
+  else if ((is_deltify) || (is_undeltify))
     {
       svn_revnum_t the_rev;
       int is_dir = 0;
@@ -431,7 +439,8 @@ main (int argc, const char * const *argv)
 
       if (argc != 5)
         {
-          printf ("Error: `undeltify' requires exactly 3 arguments.\n");
+          printf ("Error: `%s' requires exactly 3 arguments.\n",
+                  is_deltify ? "deltify" : "undeltify");
           exit(1);
         }
 
@@ -452,8 +461,12 @@ main (int argc, const char * const *argv)
       err = svn_fs_is_dir (&is_dir, rev_root, node, pool);
       if (err) goto error;
 
-      /* do the undeltification */
-      err = svn_fs_undeltify (rev_root, node, is_dir ? TRUE : FALSE, pool);
+      /* do the (un-)deltification */
+      if (is_deltify)
+        err = svn_fs_deltify (rev_root, node, is_dir ? TRUE : FALSE, pool);
+      else
+        err = svn_fs_undeltify (rev_root, node, is_dir ? TRUE : FALSE, pool);
+        
       if (err) goto error;
     }
   else if (is_recover)

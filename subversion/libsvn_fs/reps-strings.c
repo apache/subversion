@@ -39,7 +39,7 @@
 
 
 
-/* Local prototypes. */
+/*** Local prototypes. ***/
 
 static svn_error_t *rep_read_range (svn_fs_t *fs,
                                     const char *rep_key,
@@ -50,7 +50,10 @@ static svn_error_t *rep_read_range (svn_fs_t *fs,
 
 
 
-/* Helper function.  Is representation a `fulltext' type?  */
+/*** Helper Functions ***/
+
+
+/* Is representation a `fulltext' type?  */
 static int
 rep_is_fulltext (skel_t *rep)
 {
@@ -58,10 +61,73 @@ rep_is_fulltext (skel_t *rep)
 }
 
 
+/* Is representation a `delta' type?  */
 static int
 rep_is_delta (skel_t *rep)
 {
   return svn_fs__matches_atom (rep->children->children, "delta");
+}
+
+
+static int
+rep_is_mutable (skel_t *rep)
+{
+  /* The node "header" is the first element of a rep skel. */
+  skel_t *header = rep->children;
+  
+  /* The 2nd element of the header, IF it exists, is the header's
+     first `flag'.  It could be NULL.  */
+  skel_t *flag = header->children->next;
+  
+  while (flag)
+    {
+      if (svn_fs__matches_atom (flag, "mutable"))
+        return TRUE;
+
+      flag = flag->next;
+    }
+  
+  /* Reached the end of the header skel, no mutable flag was found. */
+  return FALSE;
+}
+
+
+/* Add the "mutable" flag to representation REP.  Allocate the flag in
+   POOL; it is advisable that POOL be at least as long-lived as the
+   pool REP is allocated in.  If the mutability flag is already set,
+   this function does nothing.  */
+static void
+rep_set_mutable_flag (skel_t *rep, apr_pool_t *pool)
+{
+  if (! rep_is_mutable (rep))
+    svn_fs__append (svn_fs__str_atom ("mutable", pool), rep->children);
+    
+  return;
+}
+
+
+/* Return a `fulltext' rep skel which references the string STR_KEY,
+   performing allocations in POOL.  If MUTABLE is non-zero, make the
+   representation mutable.  If non-NULL, STR_KEY will be copied into
+   an allocation of POOL.  */
+static skel_t *
+make_fulltext_rep_skel (const char *str_key, 
+                        int mutable,
+                        apr_pool_t *pool)
+
+{
+  skel_t *rep_skel = svn_fs__make_empty_list (pool);
+  skel_t *header = svn_fs__make_empty_list (pool);
+
+  if (mutable)
+    svn_fs__prepend (svn_fs__str_atom ("mutable", pool), header);
+
+  svn_fs__prepend (svn_fs__str_atom ("fulltext", pool), header);
+  svn_fs__prepend (str_key ? svn_fs__str_atom (str_key, pool)
+                           : svn_fs__mem_atom (0, 0, pool), rep_skel);
+  svn_fs__prepend (header, rep_skel);
+
+  return rep_skel;
 }
 
 
@@ -124,11 +190,11 @@ delta_string_keys (apr_array_header_t **keys, skel_t *rep, apr_pool_t *pool)
 }
 
 
-/* Delete the strings associated with KEYS in FS as part of TRAIL.  */
+/* Delete the strings associated with array KEYS in FS as part of TRAIL.  */
 static svn_error_t *
 delete_strings (apr_array_header_t *keys, 
-                      svn_fs_t *fs, 
-                      trail_t *trail)
+                svn_fs_t *fs, 
+                trail_t *trail)
 {
   int i;
   const char *str_key;
@@ -320,25 +386,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       return SVN_NO_ERROR;
     }
 
-  /* If this window is irrelevant because it reconstructs text that is
-     entirely before the range we're interested in, then ignore it. */
-  if ((wb->cur_offset + window->tview_len - 1) < wb->req_offset)
-    {
-      wb->cur_offset += window->tview_len;
-      return SVN_NO_ERROR;
-    }
-
-  /* If this window is irrelevant because it reconstructs text that is
-     entirely after the range we're interested in, and yet we don't
-     think we're done, then something is mighty fishy indeed. */
-  if (wb->cur_offset > (wb->req_offset + wb->len_req))
-    {
-      return svn_error_createf
-        (SVN_ERR_FS_CORRUPT, 0, NULL, wb->pool,
-         "window_handler: delta data skipped range, base rep is \"%s\"", 
-         wb->base_rep);
-    }
-
   /** Otherwise, handle the window. **/
   
   /* Get the range of source text that's relevant to us. */
@@ -380,7 +427,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
           Case 1 and Case 2 and fairly simple to deal with.  Case 1 is
           super-trivial.  Case 2 can be treated like a special Case 1
-          because the "overlapped" came from a previous window(s).
+          because the "overlapped" portion came from a previous window(s).
 
           Case 3 is the weird one.  In this case, we have some amount
           of data coming out of the window op handling that needs to
@@ -405,12 +452,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
     /* ### todo: this is the core of the naive algorithm, and is what
        has to go when we have a true delta combiner. */
-    SVN_ERR (rep_read_range (wb->fs,
-                             wb->base_rep,
-                             sbuf,
-                             window->sview_offset,
-                             &slen,
-                             wb->trail));
+    SVN_ERR (rep_read_range (wb->fs, wb->base_rep, sbuf,
+                             window->sview_offset, &slen, wb->trail));
 
     /* Now we can loop over the window ops, doing them.  I think this
        makes more sense than trying to use the functions in
@@ -510,11 +553,14 @@ rep_read_range (svn_fs_t *fs,
                 trail_t *trail)
 {
   skel_t *rep;
-  const char *str_key;
         
+  /* Read in our REP. */
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
   if (rep_is_fulltext (rep))
     {
+      /* Get the string key associated with REP, and read the
+         requested range from that string. */
+      const char *str_key;
       SVN_ERR (fulltext_string_key (&str_key, rep, trail->pool));
       SVN_ERR (svn_fs__string_read (fs, str_key, buf, offset, len, trail));
     }
@@ -522,25 +568,25 @@ rep_read_range (svn_fs_t *fs,
     {
       svn_stream_t *wstream;
       struct window_handler_baton_t wb;
+      skel_t *this_window;
       char chunk[4096];      /* chunk of svndiff data */
       apr_size_t off;        /* offset into svndiff data */
       apr_size_t amt;        /* how much svndiff data to/was read */
       const char *base_rep;  /* representation this delta is based against */
       
-      /* ### todo: This portion WILL change as a result of the new
-         `delta' representation scheme. */
-
       /* Extract the base rep key from this rep. */
       base_rep = apr_pstrndup (trail->pool,
                                rep->children->next->data,
                                rep->children->next->len);
 
+      /* Initialize THIS_WINDOW to the first (OFFSET WINDOW) skel. */
+      this_window = rep->children->next;
+      assert (this_window != NULL);
+
       /* Initialize the window handler baton. */
       wb.fs            = fs;
       wb.buf           = buf;
       wb.req_offset    = offset;
-      wb.cur_offset    = 0;
-      wb.base_rep      = base_rep;
       wb.len_req       = *len;
       wb.len_read      = 0;
       wb.done          = FALSE;
@@ -551,14 +597,75 @@ rep_read_range (svn_fs_t *fs,
       wstream = svn_txdelta_parse_svndiff (window_handler, &wb, 
                                            FALSE, trail->pool);
 
-      /* Run through the svndiff data, at least as far as necessary. */
-      off = 0;
-      do {
-        amt = sizeof (chunk);
-        SVN_ERR (svn_fs__string_read (fs, str_key, chunk, off, &amt, trail));
-        off += amt;
-        SVN_ERR (svn_stream_write (wstream, chunk, &amt));
-      } while ((wb.done == FALSE) && (amt != 0));
+      /* First things first:  send the "SVN\0" header through the
+         stream. */
+      chunk[0] = 'S';
+      chunk[1] = 'V';
+      chunk[2] = 'N';
+      chunk[3] = '\0';
+      amt = 4;
+      SVN_ERR (svn_stream_write (wstream, chunk, &amt));
+      
+      /* Now, for each window, decide if the window is relevant.  That
+         is, do we need to use to recostruct data in the range
+         requested by the caller?  */
+      do
+        {
+          skel_t *wnd_skel = this_window->children->next;
+          apr_size_t this_off, this_len;
+          const char *str_key;
+
+          /* Get the offset and size of this window from the skel. */
+          this_off = atoi (apr_pstrndup (trail->pool,
+                                         this_window->children->data,
+                                         this_window->children->len));
+          this_len = atoi (apr_pstrndup (trail->pool,
+                                         wnd_skel->children->next->data,
+                                         wnd_skel->children->next->len));
+
+          /* If this window is irrelevant because it reconstructs text
+             that is entirely before the range we're interested in,
+             then ignore it. */
+          if ((this_off + this_len - 1) < offset)
+            {
+              this_window = this_window->next;
+              continue;
+            }
+
+          /* If this window is irrelevant because it reconstructs text
+             that is entirely after the range we're interested in,
+             we're definitely done. */
+          if (this_off > (offset + *len))
+            break;
+
+          /* Get this string key which holds this window's data. 
+             ### todo: make sure this is an `svndiff' DIFF skel here. */
+          str_key = apr_pstrndup (trail->pool,
+                                  wnd_skel->children->children->next->data,
+                                  wnd_skel->children->children->next->len);
+
+          /* Finish initializing our baton with window-specific
+             stuff. */
+          wb.cur_offset = this_off;
+          wb.base_rep = 
+            apr_pstrndup (trail->pool,
+                          wnd_skel->children->next->next->next->data,
+                          wnd_skel->children->next->next->next->len);
+
+          /* Run through the svndiff data, at least as far as necessary. */
+          off = 0;
+          do {
+            amt = sizeof (chunk);
+            SVN_ERR (svn_fs__string_read (fs, str_key, chunk, 
+                                          off, &amt, trail));
+            off += amt;
+            SVN_ERR (svn_stream_write (wstream, chunk, &amt));
+
+          } while ((wb.done == FALSE) && (amt != 0));
+
+          this_window = this_window->next;
+        }
+      while ((this_window) && (wb.done == FALSE));
 
       /* Close the stream.  We should not get an error for closing the
          stream early because we explicitly told the stream handlers
@@ -575,71 +682,6 @@ rep_read_range (svn_fs_t *fs,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-
-/*** Helper Functions ***/
-
-static int
-rep_is_mutable (skel_t *rep)
-{
-  /* The node "header" is the first element of a rep skel. */
-  skel_t *header = rep->children;
-  
-  /* The 2nd element of the header, IF it exists, is the header's
-     first `flag'.  It could be NULL.  */
-  skel_t *flag = header->children->next;
-  
-  while (flag)
-    {
-      if (svn_fs__matches_atom (flag, "mutable"))
-        return TRUE;
-
-      flag = flag->next;
-    }
-  
-  /* Reached the end of the header skel, no mutable flag was found. */
-  return FALSE;
-}
-
-
-/* Add the "mutable" flag to representation REP.  Allocate the flag in
-   POOL; it is advisable that POOL be at least as long-lived as the
-   pool REP is allocated in.  If the mutability flag is already set,
-   this function does nothing.  */
-static void
-rep_set_mutable_flag (skel_t *rep, apr_pool_t *pool)
-{
-  if (! rep_is_mutable (rep))
-    svn_fs__append (svn_fs__str_atom ("mutable", pool), rep->children);
-    
-  return;
-}
-
-
-/* Return a `fulltext' rep skel which references the string STR_KEY,
-   performing allocations in POOL.  If MUTABLE is non-zero, make the
-   representation mutable.  If non-NULL, STR_KEY will be copied into
-   an allocation of POOL.  */
-static skel_t *
-make_fulltext_rep_skel (const char *str_key, 
-                        int mutable,
-                        apr_pool_t *pool)
-
-{
-  skel_t *rep_skel = svn_fs__make_empty_list (pool);
-  skel_t *header = svn_fs__make_empty_list (pool);
-
-  if (mutable)
-    svn_fs__prepend (svn_fs__str_atom ("mutable", pool), header);
-
-  svn_fs__prepend (svn_fs__str_atom ("fulltext", pool), header);
-  svn_fs__prepend (str_key ? svn_fs__str_atom (str_key, pool)
-                           : svn_fs__mem_atom (0, 0, pool), rep_skel);
-  svn_fs__prepend (header, rep_skel);
-
-  return rep_skel;
 }
 
 
@@ -1278,19 +1320,12 @@ static svn_error_t *
 write_string (void *baton, const char *data, apr_size_t *len)
 {
   struct write_string_baton *wb = baton;
-
-  SVN_ERR (svn_fs__string_append (wb->fs,
-                                  &(wb->key),
-                                  *len,
-                                  data,
-                                  wb->trail));
-
-  return SVN_NO_ERROR;
+  return svn_fs__string_append (wb->fs, &(wb->key), *len, data, wb->trail);
 }
 
 
 /* Baton for svn_write_fn_t write_string_set(). */
-struct write_string_set_baton
+struct write_svndiff_strings_baton
 {
   /* The fs where lives the string we're writing. */
   svn_fs_t *fs;
@@ -1304,37 +1339,61 @@ struct write_string_set_baton
      string-in-progress. */
   apr_size_t size;
 
+  /* The amount of svndiff header information we've written thus far
+     to the strings table. */
+  apr_size_t header_read;
+
   /* The trail we're writing in. */
   trail_t *trail;
+
 };
 
 
-/* Function of type `svn_write_fn_t', for writing to a string;
-   BATON is `struct write_string_set_baton *'.
+/* Function of type `svn_write_fn_t', for writing to a collection of
+   strings; BATON is `struct write_string_set_baton *'.
 
    On the first call, BATON->key is null.  A new string key in
    BATON->fs is chosen and stored in BATON->key; each call appends
    *LEN bytes from DATA onto the string.  *LEN is never changed; if
    the write fails to write all *LEN bytes, an error is returned.
    BATON->size is used to track the total amount of data written via
-   this handler, and must be reset by the caller to 0 when appropriate.  
-*/
+   this handler, and must be reset by the caller to 0 when appropriate.  */
 static svn_error_t *
-write_string_set (void *baton, const char *data, apr_size_t *len)
+write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
 {
-  struct write_string_set_baton *wb = baton;
+  struct write_svndiff_strings_baton *wb = baton;
+  const char *buf = data;
+  apr_size_t nheader = 0;
 
-  SVN_ERR (svn_fs__string_append (wb->fs,
-                                  &(wb->key),
-                                  *len,
-                                  data,
-                                  wb->trail));
+  /* If we haven't stripped all the header information from this
+     stream yet, keep stripping.  If someone sends a first window
+     through here that's shorter than 4 bytes long, this will probably
+     cause a nuclear reactor meltdown somewhere in the American
+     midwest.  */
+  if (wb->header_read < 4)
+    {
+      nheader = 4 - wb->header_read;
+      *len -= nheader;
+      buf += nheader;
+      wb->header_read += nheader;
+    }
 
+  /* Append to the current string we're writing (or create a new one
+     if WB->key is NULL). */
+  SVN_ERR (svn_fs__string_append (wb->fs, &(wb->key), *len, buf, wb->trail));
+
+  /* Make sure we (still) have a key. */
   if (wb->key == NULL)
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, wb->trail->pool,
                              "write_string_set: Failed to get new string key");
 
+  /* Restore *LEN to the value it *would* have been were it not for
+     header stripping. */
+  *len += nheader;
+
+  /* Increment our running total of bytes written to this string. */
   wb->size += *len;
+
   return SVN_NO_ERROR;
 }
 
@@ -1368,7 +1427,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
 
   /* stream to write new (deltified) target data and its baton */
   svn_stream_t *new_target_stream;
-  struct write_string_set_baton new_target_baton;
+  struct write_svndiff_strings_baton new_target_baton;
   
   /* window handler/baton for writing to above stream */
   svn_txdelta_window_handler_t new_target_handler;
@@ -1385,8 +1444,8 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   /* The total amount of diff data written while deltifying. */
   apr_size_t diffsize = 0;
 
-  /* TARGET's original string key */
-  const char *orig_str_key;
+  /* TARGET's original string keys */
+  apr_array_header_t *orig_str_keys;
   
   /* MD5 digest */
   const unsigned char *digest; 
@@ -1404,8 +1463,9 @@ svn_fs__rep_deltify (svn_fs_t *fs,
      window to its own string in the `strings' table. */
   new_target_baton.fs = fs;
   new_target_baton.trail = trail;
+  new_target_baton.header_read = 0;
   new_target_stream = svn_stream_create (&new_target_baton, trail->pool);
-  svn_stream_set_write (new_target_stream, write_string_set);
+  svn_stream_set_write (new_target_stream, write_svndiff_strings);
 
   /* Get streams to our source and target text data. */
   source_stream = svn_fs__rep_contents_read_stream (fs, source, 0,
@@ -1464,17 +1524,40 @@ svn_fs__rep_deltify (svn_fs_t *fs,
      always returns the fulltext size, whereas we need to know the
      actual amount of storage used by this representation.  Check the
      size of the new string.  If it is larger than the old one, this
-     whole deltafication might not be such a bright idea. */
+     whole deltafication might not be such a bright idea.  While we're
+     at it, we might as well figure out all the strings current used
+     by REP so we can potentially delete them later. */
   {
     skel_t *old_rep;
-    apr_size_t old_size;
+    apr_size_t old_size = 0;
+    const char *str_key;
 
     SVN_ERR (svn_fs__read_rep (&old_rep, fs, target, trail));
-    SVN_ERR (rep_storage_size (&old_size, fs, old_rep, trail));
+    if (rep_is_fulltext (old_rep))
+      {
+        SVN_ERR (fulltext_string_key (&str_key, old_rep, trail->pool));
+        SVN_ERR (svn_fs__string_size (&old_size, fs, str_key, trail));
+        orig_str_keys = apr_array_make (trail->pool, 1, sizeof (str_key));
+        (*((const char **)(apr_array_push (orig_str_keys)))) = str_key;
+      }
+    else
+      {
+        int i;
+        apr_size_t my_size;
+        
+        SVN_ERR (delta_string_keys (&orig_str_keys, old_rep, trail->pool));
+        for (i = 0; i < orig_str_keys->nelts; i++)
+          {
+            str_key = ((const char **)(orig_str_keys->elts))[i];
+            SVN_ERR (svn_fs__string_size (&my_size, fs, str_key, trail));
+            old_size += my_size;
+          }
+      }
+
+    /* If the new data is NOT an space optimization, destroy the
+       string(s) we created, and get outta here. */
     if (diffsize >= old_size)
       {
-        /* The new data is NOT an space optimization, so let's destroy
-           the string(s) we created, and get outta here. */
         int i;
         for (i = 0; i < windows->nelts; i++)
           {
@@ -1538,7 +1621,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
 
     /* Write out the new representation. */
     SVN_ERR (svn_fs__write_rep (fs, target, rep, trail));
-    SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
+    SVN_ERR (delete_strings (orig_str_keys, fs, trail));
   }
 #endif /* ! DELTIFYING */
 
