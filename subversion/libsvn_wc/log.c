@@ -62,8 +62,8 @@
 struct log_runner
 {
   apr_pool_t *pool;
+  svn_xml_parser_t *parser;
   svn_string_t *path;  /* the dir in which this is all happening */
-  svn_error_t *error;
 };
 
 
@@ -143,69 +143,60 @@ set_version (svn_string_t *path,
 }
 
 
-/* Set an error for later reference. */
+/* FMT must contain one "%s", which will be expanded to the path. */
 static void
-set_error (struct log_runner *loggy)
+signal_error (struct log_runner *loggy, const char *fmt)
 {
-  loggy->error = svn_error_create (SVN_ERR_WC_BAD_ADM_LOG,
-                                   0,
-                                   NULL,
-                                   loggy->pool,
-                                   loggy->path->data);
+  svn_xml_signal_bailout 
+    (loggy->parser, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                       0,
+                                       NULL
+                                       loggy->pool,
+                                       fmt,
+                                       loggy->path->data,
+                                       NULL));
 }
 
 
 static void
-start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
+start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
   struct log_runner *loggy = (struct log_runner *) userData;
+  svn_error_t *err = NULL;
+  const char *name = svn_xml_get_attr_value ("name", atts);
 
-  /* Here is a sample log file:
-   *
-   *    <merge-text
-   *       name="iota"
-   *       saved-mods="kff todo"/>
-   *    <replace-text-base
-   *       name="iota"/>
-   *    <set-version
-   *       name="iota"
-   *       version="1"/>
-   */
-
-  if (strcmp (name, "merge-text") == 0)
+  if (! name)
     {
-      const char *name = svn_xml_get_attr_value ("name", atts);
-      const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
-
-      if (! name)  /* note that saved_mods is allowed to be NULL */
-        set_error (loggy);
-      else
-        loggy->error = merge_text (loggy->path, name, saved_mods, loggy->pool);
-    }
-  else if (strcmp (name, "replace-text-base") == 0)
-    {
-      const char *name = svn_xml_get_attr_value ("name", atts);
-
-      if (! name)
-        set_error (loggy);
-      else
-        loggy->error = replace_text_base (loggy->path, name, loggy->pool);
-    }
-  else if (strcmp (name, "set-version") == 0)
-    {
-      const char *name = svn_xml_get_attr_value ("name", atts);
-      const char *verstr = svn_xml_get_attr_value ("version", atts);
-
-      if ((! name) || (! verstr))
-        set_error (loggy);
-      else
-        loggy->error = set_version (loggy->path,
-                                    name,
-                                    atoi (verstr),
-                                    loggy->pool);
+      /* Everything has a name attribute, so check for that first. */
+      signal_error (loggy->parser, "missing name attr in %s");
     }
   else
-      set_error (loggy);
+    {
+      if (strcmp (eltname, "merge-text") == 0)
+        {
+          const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
+          /* Note that saved_mods is allowed to be null. */
+          err = merge_text (loggy->path, name, saved_mods, loggy->pool);
+        }
+      else if (strcmp (eltname, "replace-text-base") == 0)
+        {
+          err = replace_text_base (loggy->path, name, loggy->pool);
+        }
+      else if (strcmp (eltname, "set-version") == 0)
+        {
+          const char *verstr = svn_xml_get_attr_value ("version", atts);
+          
+          if (! verstr)
+            signal_error (loggy->parser, "missing version attr in %s");
+          else
+            err = set_version (loggy->path, name, atoi (verstr), loggy->pool);
+        }
+      else
+        signal_error (loggy->parser, "unrecognized element in %s");
+    }
+      
+ if (err)
+   svn_xml_signal_bailout (loggy->parser, err);
 }
 
 
@@ -215,9 +206,9 @@ start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
 svn_error_t *
 svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
+  svn_error_t *err;
   apr_status_t apr_err;
-  XML_Parser parser;
+  svn_xml_parser_t *parser;
   struct log_runner *logress = apr_palloc (pool, sizeof (*logress));
   char buf[BUFSIZ];
   apr_ssize_t buf_len;
@@ -231,11 +222,13 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   logress->path = path;
   logress->pool = pool;
 
-  parser = svn_xml_make_parser (logress, start_handler, NULL, NULL);
+  parser = svn_xml_make_parser (logress, start_handler, NULL, NULL, pool);
   
-  /* Start the log off with a pointless opening element tag. */
-  if (! XML_Parse (parser, log_start, strlen (log_start), 0))
-    goto expat_error;
+  /* Expat wants everything wrapped in a top-level form, so start with
+     a ghost open tag. */
+  err = svn_xml_parse (parser, log_start, strlen (log_start), 0);
+  if (err)
+    return err;
 
   /* Parse the log file's contents. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_LOG, APR_READ, pool);
@@ -244,55 +237,43 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   
   do {
     buf_len = sizeof (buf);
-    apr_err = apr_read (f, buf, &buf_len);
 
-    if (! XML_Parse (parser, buf, buf_len, 0))
+    apr_err = apr_read (f, buf, &buf_len);
+    if (apr_err && (apr_err != APR_EOF))
       {
         apr_close (f);
-        goto expat_error;
+        return svn_error_createf (apr_error, 0, NULL, pool,
+                                 "error reading adm log file in %s",
+                                  path->data);
       }
-    
+
+    err = svn_xml_parse (parser, buf, buf_len, 0);
+    if (err)
+      {
+        apr_close (f);
+        return err;
+      }
+
     if (apr_err == APR_EOF)
       {
+        /* Not an error, just means we're done. */
         apr_close (f);
         break;
       }
-
-    if (logress->error)
-      {
-        err = logress->error;
-        goto any_error;
-      }
-
   } while (apr_err == APR_SUCCESS);
 
+  /* Pacify Expat with a pointless closing element tag. */
+  err = svn_xml_parse (parser, log_end, sizeof (log_end), 0);
+  if (err)
+    return err;
 
-  /* End the log with a pointless closing element tag. */
-  if (! XML_Parse (parser, log_end, sizeof (log_end), 0))
-    goto expat_error;
+  err = svn_xml_parse (parser, NULL, 0, 1);
+  if (err)
+    return err;
 
-  /* Apparently, Expat returns 0 on fatal error *except* for the
-     final call, at which time it always returns 0.  Ben, does this
-     match your experience? */
-  if (XML_Parse (parser, NULL, 0, 1) != 0)
-    {
-    expat_error:
-      /* Uh oh, expat *itself* choked somehow! */
-      err = svn_error_createf
-        (SVN_ERR_MALFORMED_XML, 0, NULL, pool, 
-         "%s at line %d",
-         XML_ErrorString (XML_GetErrorCode (parser)),
-         XML_GetCurrentLineNumber (parser));
-      
-    any_error:
-      /* Kill the expat parser and return its error */
-      XML_ParserFree (parser);      
-      return err;
-    }
+  svn_xml_free_parser (parser);
 
   err = svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOG, NULL);
-
-  XML_ParserFree (parser);
 
   return err;
 }
