@@ -320,13 +320,13 @@ main (int argc, const char * const *argv)
         }
     }
   
-  /* If we made it this far, then we definitely have the subcommand, so call it. */
-
+  /* If we made it this far, then we definitely have the subcommand,
+     so call it. */
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_CL_ARG_PARSING_ERROR)
-        svn_handle_error (err, stdout, 0);
+        svn_handle_error (err, stderr, 0);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }
