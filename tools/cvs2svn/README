@@ -2,11 +2,11 @@ This is a python script which converts a CVS repository to an SVN Repository.
 
 It works by:
 
-  * using the rcsparse/ module to directly read the CVS repository
+  - using the rcsparse/ module to directly read the CVS repository
       and deduce commits,
-  * creating a bunch of temporary scratchwork on disk,
-  * replaying all of the commits into an SVN dumpfile,
-  * loading the dumpfile into an SVN repository.
+  - creating a bunch of temporary scratchwork on disk,
+  - replaying all of the commits into either a full SVN dumpfile (in
+      --dump-only mode), or into an SVN repository.
 
 It works reasonably well, with two big caveats:
 
@@ -58,9 +58,10 @@ svn repository.  Your Mileage May Vary.
      $ cvs2svn.py --dump-only --dumpfile DUMPFILE CVSREPOS
 
   Note that cvs2svn.py will create a bunch of temporary files in the
-  current directory.  This is normal.  You can remove them after the
-  run is complete; cvs2svn (currently) won't remove them, it leaves
-  them for possible debugging.
+  current directory.  This is normal.  If the entire conversion is
+  successful, however, those tempfiles are removed for you.  If the
+  conversion is not successful, or if you specify the --skip-cleanup
+  option, cvs2svn leaves those temporary files for possible debugging.
 
   To see more options, run:
 

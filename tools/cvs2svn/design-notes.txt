@@ -1,10 +1,9 @@
                        How cvs2svn.py Works
                       =====================
 
-A cvs2svn run consists of 5 passes.  Every pass but the last saves its
-data to a file on disk, so that a) we don't hold huge amounts of state
-in memory, and b) the conversion process is resumable.  The final pass
-makes the actual Subversion commits.
+A cvs2svn run consists of five passes.  The first three passes save
+their data to files on disk, so that a) we don't hold huge amounts of
+state in memory, and b) the conversion process is resumable.
 
 Pass 1:
 =======
@@ -169,10 +168,19 @@ seeing that the log digest is different, and reseparates the commits.
 Pass 4:
 =======
 
-Walk through cvs2svn-data.s-revs and print the commits to a Subversion
-dumpfile (a file intended for 'svnadmin load').  The dumpfile is the
-data's last static stage: last chance to check over the data, run it
-through svndumpfilter, move the dumpfile to another machine, etc.
+In --dump-only mode, the result of this pass is a Subversion
+repository dumpfile (suitable for input to 'svnadmin load').  The
+dumpfile is the data's last static stage: last chance to check over
+the data, run it through svndumpfilter, move the dumpfile to another
+machine, etc.
+
+However, when not in --dump-only mode, no full dumpfile is created for
+subsequent load into a Subversion repository.  Instead, miniature
+dumpfiles represent a single revision are created, loaded into the
+repository, and then removed.
+
+In both modes, the dumpfile revisions are created by walking through
+cvs2svn-data.s-revs.
 
                   ===============================
                       Branches and Tags Plan.
@@ -315,7 +323,7 @@ marked as copied.
 Pass 5:
 =======
 
-Load the dumpfile into Subversion.  Voilà.
+Unless we're skipping cleanup, remove all our intermediate files.
 
 
 
