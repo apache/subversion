@@ -44,6 +44,14 @@ extern "C" {
 /* If this file is being included outside of a wrapper file, then need to
    create stubs for some of the SWIG types. */
 
+/* XXX: this has to be set by configure and also swig -swiglib needs
+   to be added to include paths.
+*/
+
+#if SWIG_VERSION >= 0x010320
+#include "perl5/precommon.swg"
+#endif
+
 /* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
    the prototypes and type definitions. */
 #ifndef SWIGEXPORT
@@ -69,6 +77,8 @@ SV *svn_swig_pl_convert_hash (apr_hash_t *hash, swig_type_info *tinfo);
 const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
                                                        apr_pool_t *pool);
 
+const apr_hash_t *svn_swig_pl_strings_to_hash(SV *source,
+                                              apr_pool_t *pool);
 const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
 					   apr_pool_t *pool);
 const apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,

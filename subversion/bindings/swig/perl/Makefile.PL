@@ -40,7 +40,8 @@ WriteMakefile(%config, NAME => 'SVN::_Core', C => ['core.c'],
 	      PM => {map { ("$_.pm" => "\$(INST_LIBDIR)/$_.pm") }
 		     map { perlish $_ }
 		     ('base', 'core', @modules)},
-	      clean => { FILES => "*.hi Makefile.[a-z]* *.c *.bs" }
+	      clean => { FILES => "*.hi *.c *.bs".
+                         join(' Makefile.','',@modules) }
 	     );
 
 for (@modules) {
