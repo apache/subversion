@@ -196,10 +196,11 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
 
 
-/* Set *ENTRY to an entry for PATH, allocated in POOL.
- * If SHOW_DELETED is set, return the entry even if it in 'deleted' state.
- * If PATH is not under revision control, or if entry is 'deleted' and
- * SHOW_DELETED is false, then set *ENTRY to NULL.
+/* Set *ENTRY to an entry for PATH, allocated in POOL.  If
+ * SHOW_DELETED is set, return the entry even if it in 'deleted'
+ * state.  If PATH is not under revision control, or if entry is
+ * 'deleted', not scheduled for re-addition, and SHOW_DELETED is
+ * false, then set *ENTRY to NULL.
  *
  * Note that it is possible for PATH to be absent from disk but still
  * under revision control; and conversely, it is possible for PATH to
@@ -214,8 +215,8 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
 /* Parse the `entries' file for PATH and return a hash ENTRIES, whose
    keys are (const char *) entry names and values are (svn_wc_entry_t *). 
    
-   Entries that are in a 'deleted' state are not returned in the hash,
-   unless SHOW_DELETED is set.
+   Entries that are in a 'deleted' state (and not scheduled for
+   re-addition) are not returned in the hash, unless SHOW_DELETED is set.
 
    Important note: only the entry structures representing files and
    SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry
