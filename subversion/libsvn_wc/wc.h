@@ -358,6 +358,8 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
                                    apr_pool_t *pool);
 
 
+/* Set this to use the new entiers interface while it's being developed. */
+#define BRAVE_NEW_INTERFACE 0
 #ifdef BRAVE_NEW_INTERFACE
 
 /* A data structure representing an entry from the `entries' file. */
