@@ -353,7 +353,7 @@ class RepositoryMirror:
     self.nodes_db = anydbm.open(self.nodes_db_file, 'n')
 
     # A key that could never be a real directory entry.
-    self.mutable_flag = "/mutable/"
+    self.mutable_flag = "//mutable"
     # This could represent a new mutable directory or file.
     self.empty_mutable_thang = { self.mutable_flag : 1 }
 
@@ -419,9 +419,12 @@ class RepositoryMirror:
     print "parent_dir_key: %s, val:" % parent_dir_key, parent_dir
 
 
-  def change_path(self, path, intermediate_dir_func=None):
+  def change_path(self, path, tags, branches, intermediate_dir_func=None):
     """Record a change to PATH.  PATH may not have a leading slash.
     Return None if PATH already existed, or 1 if created it.
+
+    TAGS are any tags that sprout from this revision of PATH, BRANCHES
+    are any branches that sprout from this revision of PATH.
 
     If INTERMEDIATE_DIR_FUNC is not None, then invoke it once on
     each full path to each missing intermediate directory in PATH, in
@@ -429,6 +432,11 @@ class RepositoryMirror:
 
     components = string.split(path, '/')
     path_so_far = None
+
+    # print "KFF change_path: '%s'" % path
+    # print "    revision:  '%d'" % self.youngest
+    # print "    tags:      ", tags
+    # print "    branches:  ", branches
 
     parent_dir_key = self.revs_db[str(self.youngest)]
     parent_dir = marshal.loads(self.nodes_db[parent_dir_key])
@@ -493,9 +501,13 @@ class RepositoryMirror:
 
     return retval
 
-  def delete_path(self, path, prune=None):
+  def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
     Return the deleted path, or None if PATH does not exist.
+
+    TAGS are any tags that sprout from this revision of PATH, BRANCHES
+    are any branches that sprout from this revision of PATH.  (I can't
+    imagine that there are any of either, what to do if there are?)
 
     If PRUNE is not None, then delete the highest possible directory,
     which means the returned path may differ from PATH.  In other
@@ -509,6 +521,11 @@ class RepositoryMirror:
 
     components = string.split(path, '/')
     path_so_far = None
+
+    # print "KFF change_path: '%s'" % path
+    # print "    revision:  '%d'" % self.youngest
+    # print "    tags:      ", tags
+    # print "    branches:  ", branches
 
     # Start out assuming that we will delete it.  The for-loop may
     # change this to None, if it turns out we can't even reach the
@@ -726,7 +743,8 @@ class Dump:
                         "\n"
                         "\n" % path)
 
-  def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file):
+  def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file,
+                         tags, branches):
 
     # figure out the real file path for "co"
     try:
@@ -758,7 +776,7 @@ class Dump:
     # to determine if this path exists in head yet.  But that wouldn't
     # be perfectly reliable, both because of 'cvs commit -r', and also
     # the possibility of file resurrection.
-    if self.repos_mirror.change_path(svn_path, self.add_dir):
+    if self.repos_mirror.change_path(svn_path, tags, branches, self.add_dir):
       action = 'add'
     else:
       action = 'change'
@@ -815,12 +833,13 @@ class Dump:
     # This record is done.
     self.dumpfile.write('\n')
 
-  def delete_path(self, svn_path, prune=None):
+  def delete_path(self, svn_path, tags, branches, prune=None):
     """If SVN_PATH exists in the head mirror, output its deletion and
     return the path actually deleted; else return None.  (The path
     deleted can differ from SVN_PATH because of pruning, but only if
     PRUNE is true.)"""
-    deleted_path = self.repos_mirror.delete_path(svn_path, prune)
+    deleted_path = self.repos_mirror.delete_path(svn_path, tags, branches,
+                                                 prune)
     if deleted_path:
       print '    (deleted %s)' % deleted_path
       self.dumpfile.write('Node-path: %s\n'
@@ -1017,7 +1036,8 @@ class Commit:
         svn_rev = dump.start_revision(props)
       tag_tracker.track_names(svn_path, svn_rev, tags)
       branch_tracker.track_names(svn_path, svn_rev, branches)
-      dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
+      dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file,
+                              tags, branches)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
@@ -1041,7 +1061,7 @@ class Commit:
         ### regardless of whether cvs2svn creates such revisions.
         tag_tracker.track_names(svn_path, svn_rev, tags)
         branch_tracker.track_names(svn_path, svn_rev, branches)
-        dump.delete_path(svn_path, ctx.prune)
+        dump.delete_path(svn_path, tags, branches, ctx.prune)
 
     if svn_rev != SVN_INVALID_REVNUM:
       print '    new revision:', svn_rev
