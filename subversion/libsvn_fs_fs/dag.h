@@ -19,6 +19,7 @@
 #define SVN_LIBSVN_FS_DAG_H
 
 #include "svn_fs.h"
+#include "fs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -527,6 +528,12 @@ svn_error_t *svn_fs__dag_get_copyfrom_rev (svn_revnum_t *rev,
 svn_error_t *svn_fs__dag_get_copyfrom_path (const char **path,
                                             dag_node_t *node,
                                             apr_pool_t *pool);
+
+/* Set *COPY_KIND to the copykind associated with NODE.  Get any
+   temporary allocations from POOL. */
+svn_error_t *svn_fs__dag_get_copy_kind (svn_fs__copy_kind_t *copy_kind,
+                                        dag_node_t *node,
+                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
