@@ -466,7 +466,7 @@ void
 svn_fs__prepend (skel_t *skel, skel_t *list_skel)
 {
   skel->next = list_skel->children;
-  list_skel->children = skel->next;
+  list_skel->children = skel;
 }
 
 
