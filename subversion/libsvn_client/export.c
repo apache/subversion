@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include <apr_file_io.h>
+#include <apr_md5.h>
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -31,6 +32,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
+#include "svn_md5.h"
 #include "client.h"
 
 
@@ -192,7 +194,7 @@ svn_client_export (const char *from,
 {
   if (svn_path_is_url (from))
     {
-#if 0 /* new export-editor */
+#if 1 /* new export-editor */
       const char *URL;
       svn_revnum_t revnum;
       void *ra_baton, *session;
@@ -274,6 +276,10 @@ struct file_baton
   const char *path;
   const char *tmppath;
   apr_hash_t *props;
+
+  /* The MD5 digest of the file's fulltext.  This is all zeros until
+     the last textdelta window handler call returns. */
+  unsigned char text_digest[MD5_DIGESTSIZE];
 };
 
 
@@ -419,7 +425,7 @@ apply_textdelta (void *file_baton,
 
   svn_txdelta_apply (svn_stream_empty (pool),
                      svn_stream_from_aprfile (tmp_file, pool),
-                     NULL, NULL, pool,
+                     fb->text_digest, NULL, pool,
                      &hb->apply_handler, &hb->apply_baton);
   
   *handler_baton = hb;
@@ -467,6 +473,23 @@ close_file (void *file_baton,
                                  SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
   executable_value = apr_hash_get (fb->props,
                                    SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING);
+
+  if (text_checksum)
+    {
+      const char *actual_checksum
+        = svn_md5_digest_to_cstring (fb->text_digest, pool);
+
+      if (actual_checksum && (strcmp (text_checksum, actual_checksum) != 0))
+        {
+          return svn_error_createf
+            (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+             "close_file: checksum mismatch for resulting fulltext\n"
+             "(%s):\n"
+             "   expected checksum:  %s\n"
+             "   actual checksum:    %s\n",
+             fb->path, text_checksum, actual_checksum);
+        }
+    }
 
   if (! eol_value)
     {
@@ -528,8 +551,13 @@ svn_client__get_export_editor (const svn_delta_editor_t **editor,
   export_editor->close_file = close_file;
   export_editor->change_file_prop = change_file_prop;
 
-  *edit_baton = eb;
-  *editor = export_editor;
+  SVN_ERR (svn_delta_get_cancellation_editor (ctx->cancel_func,
+                                              ctx->cancel_baton,
+                                              export_editor,
+                                              eb,
+                                              editor,
+                                              edit_baton,
+                                              pool));
   
   return SVN_NO_ERROR;
 }
