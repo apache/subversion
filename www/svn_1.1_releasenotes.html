@@ -19,10 +19,12 @@
 <h2>(and State of the Project)</h2>
 </center>
 
-<p>The <a href="http://svnbook.red-bean.com">Subversion book</a>
-hasn't been forked/updated yet to cover new Subversion 1.1 features,
-so here are some brief release notes.  Once the book is updated, these
-will no longer be necessary.</p>
+<p>The <a href="http://svnbook.red-bean.com">Subversion book site</a>
+has now been forked, and a separate <a
+href="http://svnbook.red-bean.com/svnbook-1.1/index.html">Subversion
+1.1 book</a> documents most of <a
+href="http://svnbook.red-bean.com/svnbook-1.1/pr02s07.html">the new
+1.1 features</a>.  Still, here are some brief release notes.</p>
 
 <h3>Overview</h3>
 
@@ -64,7 +66,9 @@ new features and fixes many smaller bugs.</p>
 
 <h3>New Major Features</h3>
 
-<h4>Non-database repositories</h4>
+<h4>Non-database repositories  (<em>new server feature</em>)</h4>
+
+<p>
 
 <p>It's now possible to create repositories that don't use a
    BerkeleyDB database.  Instead, these new repositories store data in
@@ -90,7 +94,7 @@ new features and fixes many smaller bugs.</p>
     fsfs.</p>
 
 
-<h4>Symlink versioning</h4>
+<h4>Symlink versioning (<em>new client feature</em>)</h4>
 
 <p>This feature allows unix users to place symlinks under version
     control.  (Note: this is <em>not</em> about creating links
@@ -107,7 +111,7 @@ new features and fixes many smaller bugs.</p>
     system.)</p>
 
 
-<h4>Client follows renames</h4>
+<h4>Client follows renames  (<em>new client feature</em>)</h4>
 
 <p>Subversion makes a lot of noise about the way branches (copies) of
     files and directories maintain historical connections to their
@@ -121,7 +125,8 @@ new features and fixes many smaller bugs.</p>
     and directories.</p>
 
 
-<h4>Commandline auto-escaping of URI and IRIs</h4>
+<h4>Commandline auto-escaping of URI and IRIs (<em>new client
+feature</em>)</h4>
 
 <p>In the 1.0 commandline client, users had to escape URLs manually.
     The client only accepted "legally correct" URLs, such as</p>
@@ -140,7 +145,7 @@ new features and fixes many smaller bugs.</p>
 
 
 
-<h4>Localized messages</h4>
+<h4>Localized messages  (<em>new client feature</em>)</h4>
 
 <p>Subversion 1.1 is now using gettext() to display translated error,
    informational, and help messages to the user.  We currently have
@@ -162,13 +167,14 @@ new features and fixes many smaller bugs.</p>
 
 <dl>
 
-<dt><h4>Speed optimizations:</h4></dt>
+<dt><h4>Speed optimizations: (<em>requires both new client and
+server</em>)</h4></dt>
 <dd>Faster <tt>checkout</tt>, <tt>update</tt>, <tt>status</tt>, and
       <tt>blame</tt> commands.</dd>
 
 <p>
 
-<dt><h4>Shareable working copies:</h4></dt>
+<dt><h4>Shareable working copies:  (<em>client fix</em>)</h4></dt>
 
 <dd>There have been historical problems with permissions when multiple
 users share a working copy.  We believe these problems to be fixed
@@ -179,7 +185,7 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1509">issue
 <p>
 
 
-<dt><h4>New 'store-passwords' runtime variable:</h4></dt>
+<dt><h4>New 'store-passwords' runtime variable:  (<em>new client feature</em>)</h4></dt>
 
 <dd>The previous <tt>store-auth-creds</tt> runtime variable still
 works, but many users were unhappy with it.  It disables <b>all</b>
