@@ -1989,14 +1989,14 @@ $
     <para>By now you should have a basic understanding of how to
       create, configure, and maintain Subversion repositories.  We've
       introduced you to the various tools that will assist you with
-      this task.  We've covered some of the basic Apache configuration
-      steps necessary for making your repository accessible over a
-      network.  And throughout the chapter, we've noted common
+      this task.  Throughout the chapter, we've noted common
       administration pitfalls, and suggestions for avoiding
       them.</para>
 
     <para>All that remains is for you to decide what exciting data to
-      store in your repository.</para>
+      store in your repository, and finally, how to make it available
+      over a network.  The next chapter is all about
+      networking.</para>
 
   </sect1>
 </chapter>
