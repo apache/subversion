@@ -4712,7 +4712,7 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
       /* Update the MD5 calculation with the data we just read.  */
       apr_md5_update (&context, buf, len);
       
-    } while (len);  /* Continue until we're told that no bytes were read. */
+    } while (len == sizeof (buf));  /* Continue until a short read. */
 
   /* Finalize MD5 calculation. */
   apr_md5_final (digest, &context);
