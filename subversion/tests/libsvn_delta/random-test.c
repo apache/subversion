@@ -290,9 +290,10 @@ random_test (const char **msg,
 
 
 static svn_error_t *
-random_combine_test (const char **msg,
-                     svn_boolean_t msg_only,
-                     apr_pool_t *pool)
+do_random_combine_test (const char **msg,
+                        svn_boolean_t msg_only,
+                        apr_pool_t *pool,
+                        unsigned long *last_seed)
 {
   static char msg_buff[256];
 
@@ -315,7 +316,7 @@ random_combine_test (const char **msg,
   for (i = 0; i < iterations; i++)
     {
       /* Generate source and target for the delta and its application.  */
-      unsigned long subseed_base = myrand (&seed);
+      unsigned long subseed_base = myrand ((*last_seed = seed, &seed));
       FILE *source = generate_random_file (maxlen, subseed_base, &seed,
                                            random_bytes, bytes_range,
                                            dump_files);
@@ -407,6 +408,18 @@ random_combine_test (const char **msg,
     }
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+random_combine_test (const char **msg,
+                     svn_boolean_t msg_only,
+                     apr_pool_t *pool)
+{
+  unsigned long seed;
+  svn_error_t *err = do_random_combine_test (msg, msg_only, pool, &seed);
+  if (!msg_only)
+    printf("SEED: Last seen = %lu\n", seed);
+  return err;
 }
 
 
