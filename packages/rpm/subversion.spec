@@ -155,6 +155,17 @@ if [ "`grep -i svnpath $CONF`"x = "x" ]; then
 #<Location /svn/repos>
 #   DAV svn
 #   SVNPath /home/svnroot
+#
+#   # Limit write permission to list of valid users.
+#   <LimitExcept GET PROPFIND OPTIONS REPORT>
+#      # Require SSL connection for password protection.
+#      # SSLRequiredSSL
+#
+#      AuthType Basic
+#      AuthName "Authorization Realm"
+#      AuthUserFile /absolute/path/to/passwdfile
+#      Require valid-user
+#   </LimitExcept>
 #</Location>
 # End Subversion server configuration - Please don't delete this line.
 EOF
