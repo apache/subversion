@@ -636,6 +636,9 @@ class TargetJavaHeaders(TargetJava):
       class_path = os.path.split(src[:-5])
 
       class_header = os.path.join(self.headers, class_path[1] + '.h')
+      class_header_win = os.path.join(self.headers, 
+                                      self.package.replace(".", "_")
+                                      + "_" + class_path[1] + '.h')
       class_pkg_list = string.split(self.package, '.')
       class_pkg = ''
       for dir in class_pkg_list:
@@ -643,8 +646,10 @@ class TargetJavaHeaders(TargetJava):
       class_file = ObjectFile(os.path.join(self.classes, class_pkg,
                                             class_path[1] + self.objext))
       class_file.source_generated = 1
+      class_file.class_name = class_path[1]
       hfile = HeaderFile(class_header, self.package + '.' + class_path[1],
                          self.compile_cmd)
+      hfile.filename_win = class_header_win
       hfile.source_generated = 1
       graph.add(DT_OBJECT, hfile, class_file)
       self.deps.append(hfile)
@@ -689,21 +694,20 @@ class TargetJavaClasses(TargetJava):
         # adjustment.  To this effect, take "target_ob.classes" into
         # account.
         dirs = string.split(objname, '/')
-        i = len(dirs) - 2  # Last element is the .class file name.
-        while i >= 0:
-          if dirs[i] in self.packages:
-            # Java package root found.
-            objname = os.path.join(self.classes, string.join(dirs[i:], os.sep))
+        sourcedirs = dirs[:-1]  # Last element is the .class file name.
+        while sourcedirs:
+          if sourcedirs.pop() in self.packages:
+            sourcepath = os.path.join(*sourcedirs)
+            objname = os.path.join(self.classes, *dirs[len(sourcedirs):])
             break
-          i = i - 1
-        if i < 0:
-          raise GenError('Unable to find Java package root in path "' +
-                         objname + '"')
+        else:
+          raise GenError('Unable to find Java package root in path "%s"' % objname)
       else:
         raise GenError('ERROR: unknown file extension on "' + src + '"')
 
       ofile = ObjectFile(objname, self.compile_cmd)
       sfile = SourceFile(src, reldir)
+      sfile.sourcepath = sourcepath
 
       # object depends upon source
       graph.add(DT_OBJECT, ofile, sfile)

@@ -245,53 +245,36 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if not isinstance(target, gen_base.TargetProject):
       cbuild = None
       ctarget = None
-      for src, reldir in self.get_win_sources(target):
-        rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
+      for source, object, reldir in self.get_win_sources(target):
+        rsrc = string.replace(os.path.join(rootpath, str(source)), os.sep, '\\')
 
         if isinstance(target, gen_base.TargetJavaHeaders):
-          dirs = string.split(rsrc, '\\')
-          classname = target.package + "." + string.split(dirs[-1],".")[0]
-
           classes = os.path.join(rootpath, target.classes)
           if self.junit_path is not None:
             classes = "%s;%s" % (classes, self.junit_path)
 
           headers = os.path.join(rootpath, target.headers)
+          classname = target.package + "." + source.class_name
 
           cbuild = "javah -verbose -force -classpath %s -d %s %s" \
                    % (self.quote(classes), self.quote(headers), classname)
 
+          ctarget = os.path.join(rootpath, object.filename_win)
+
           ### why are we reseting this value here?
           target.path = "../" + target.headers
 
-          classesdir = os.path.join(rootpath, target.classes)
-          classpart = rsrc[len(classesdir)+1:]
-          headername = string.split(classpart,".")[0]+".h"
-          headername = string.replace(headername,"\\","_")
-          ctarget = os.path.join(rootpath, target.headers, headername)
-
         elif isinstance(target, gen_base.TargetJavaClasses):
-          dirs = string.split(rsrc, '/')
-          sourcedirs = dirs[:-1]  # Last element is the .java file name.
-          while sourcedirs:
-            if sourcedirs.pop() in target.packages:
-              # Java package root found.
-              sourcepath = os.path.join(*sourcedirs)
-              break
-          else:
-            raise gen_base.GenError('Unable to find Java package root in path "%s"' % rsrc)
-
           classes = targetdir = os.path.join(rootpath, target.classes)
           if self.junit_path is not None:
             classes = "%s;%s" % (classes, self.junit_path)
 
+          sourcepath = os.path.join(rootpath, source.sourcepath)
+
           cbuild = "javac -g -classpath %s -d %s -sourcepath %s $(InputPath)" \
                    % tuple(map(self.quote, (classes, targetdir, sourcepath)))
 
-          ctarget = os.path.join(rootpath, target.classes,
-                                 *dirs[len(sourcedirs):-1] + 
-                                 [dirs[-1][:-5] + target.objext]
-                                 )
+          ctarget = os.path.join(rootpath, object.filename)
 
           ### why are we reseting this value here?
           target.path = "../" + target.classes
@@ -714,9 +697,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
             reldir = src.reldir
         else:
           reldir = ''
-        sources[str(src), reldir] = None
+        sources[src] = src, obj, reldir
 
-    return sources.keys()
+    return sources.values()
 
   def write_file_if_changed(self, fname, new_contents):
     """Rewrite the file if new_contents are different than its current content.
