@@ -16,7 +16,7 @@ done
 
 
 # Run a quick test to ensure that our autoconf and libtool verison are ok
-./buildcheck.sh || exit 1
+./build/buildcheck.sh || exit 1
 
 ### temporary cleanup during transition to libtool 1.4
 (cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
