@@ -1310,7 +1310,7 @@ close_directory (void *dir_baton,
     }
 
   /* Run the log. */
-  SVN_ERR (svn_wc__run_log (adm_access, NULL, db->pool));
+  SVN_ERR (svn_wc__run_log (adm_access, db->edit_baton->diff3_cmd, db->pool));
   db->log_number = 0;
   
   /* We're done with this directory, so remove one reference from the
@@ -2158,7 +2158,7 @@ install_file (svn_wc_notify_state_t *content_state,
                                      svn_path_join (base, base_name, pool),
                                      adm_access,
                                      oldrev_str, newrev_str, ".mine",
-                                     TRUE, &merge_outcome, diff3_cmd,
+                                     TRUE, &merge_outcome, NULL,
                                      pool));
               
             } /* end: working file exists and has mods */
