@@ -512,6 +512,7 @@ svn_wc_crawl_revisions (const char *path,
           if (APR_STATUS_IS_ENOENT(err->apr_err))
             missing = TRUE;
           svn_error_clear (err);
+          err = NULL;
         }
     }
 

@@ -158,6 +158,17 @@ def status_missing_file(sbox):
     for line in output:
       if not re.match("! +iota", line):
         raise svntest.Failure
+
+    # This invocation is for issue #2127.
+    output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'status', '-u', 'iota')
+    found_it = 0
+    for line in output:
+      if re.match("! +1 +iota", line):
+        found_it = 1
+    if not found_it:
+      raise svntest.Failure
+
   finally:
     os.chdir(was_cwd)
 
