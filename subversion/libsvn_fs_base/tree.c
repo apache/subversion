@@ -1634,6 +1634,8 @@ deltify_mutable (svn_fs_t *fs,
     int pred_count, nlevels, lev, count;
     const svn_fs_id_t *pred_id;
     struct txn_pred_count_args tpc_args;
+    apr_pool_t *subpools[2];
+    int active_subpool = 0;
 
     tpc_args.id = id;
     SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_pred_count, &tpc_args,
@@ -1664,6 +1666,13 @@ deltify_mutable (svn_fs_t *fs,
     /* Redeltify the desired number of predecessors. */
     count = 0;
     pred_id = id;
+
+    /* We need to use two alternating pools because the id used in the
+       call to txn_body_pred_id is allocated by the previous inner
+       loop iteration.  If we would clear the pool each iteration we
+       would free the previous result.  */
+    subpools[0] = svn_pool_create (pool);
+    subpools[1] = svn_pool_create (pool);
     for (lev = 0; lev < nlevels; lev++)
       {
         /* To save overhead, skip the second level (that is, never
@@ -1678,10 +1687,13 @@ deltify_mutable (svn_fs_t *fs,
           {
             struct txn_pred_id_args tpi_args;
 
+            active_subpool = !active_subpool;
+            svn_pool_clear (subpools[active_subpool]);
+
             tpi_args.id = pred_id;
-            tpi_args.pool = pool;
-            SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_pred_id,
-                                             &tpi_args, pool));
+            tpi_args.pool = subpools[active_subpool];
+            SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_pred_id, &tpi_args,
+                                             subpools[active_subpool]));
             pred_id = tpi_args.pred_id;
 
             if (pred_id == NULL)
@@ -1696,8 +1708,11 @@ deltify_mutable (svn_fs_t *fs,
         td_args.base_id = id;
         td_args.is_dir = (kind == svn_node_dir);
         SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_txn_deltify, &td_args,
-                                         pool));
+                                         subpools[active_subpool]));
+
       }
+    svn_pool_destroy (subpools[0]);
+    svn_pool_destroy (subpools[1]);
   }
 
   return SVN_NO_ERROR;
