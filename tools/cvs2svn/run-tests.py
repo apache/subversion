@@ -99,7 +99,10 @@ def run_cvs2svn(error_re, *varargs):
   If ERROR_RE is not None, it is a string regular expression that must
   match some line of the error output; if it matches, return None,
   else return 1."""
-  return run_program(cvs2svn, error_re, *varargs)
+  if sys.platform == "win32":
+    return run_program("python", error_re, cvs2svn, *varargs)
+  else:
+    return run_program(cvs2svn, error_re, *varargs)
 
 
 def run_svn(*varargs):
@@ -111,8 +114,20 @@ def run_svn(*varargs):
 
 def repos_to_url(path_to_svn_repos):
   """This does what you think it does."""
-  return 'file://%s' % os.path.abspath(path_to_svn_repos)
+  rpath = os.path.abspath(path_to_svn_repos)
+  if rpath[0] != '/':
+    rpath = '/' + rpath
+  return 'file://%s' % string.replace(rpath, os.sep, '/')
 
+if hasattr(time, 'strptime'):
+  def svn_strptime(timestr):
+    return time.strptime(timestr, '%Y-%m-%d %H:%M:%S')
+else:
+  _re_rev_date = re.compile('([0-9]{4})-([0-9][0-9])-([0-9][0-9]) '
+                            '([0-9][0-9]):([0-9][0-9]):([0-9][0-9])')
+  def svn_strptime(timestr):
+    matches = _re_rev_date.match(timestr).groups()
+    return tuple(map(int, matches)) + (0, 1, 0)
 
 class Log:
   def __init__(self, revision, author, date):
@@ -126,7 +141,7 @@ class Log:
     #
     # and time.mktime() converts from localtime, it all works out very
     # happily.
-    self.date = time.mktime(time.strptime(date[0:19], "%Y-%m-%d %H:%M:%S"))
+    self.date = time.mktime(svn_strptime(date[0:19]))
 
     # The changed paths will be accumulated later, as log data is read.
     # Keys here are paths such as '/trunk/foo/bar', values are letter
