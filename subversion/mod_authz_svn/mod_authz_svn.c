@@ -301,6 +301,15 @@ static int req_check_access(request_rec *r,
         return HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    /* Ignore the URI passed to MERGE, like mod_dav_svn does.
+     * See issue #1821.
+     * XXX: When we start accepting a broader range of DeltaV MERGE
+     * XXX: requests, this should be revisited.
+     */
+    if (r->method_number == M_MERGE) {
+        repos_path = NULL;
+    }
+
     if (repos_path)
         repos_path = svn_path_join("/", repos_path, r->pool);
 
