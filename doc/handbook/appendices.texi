@@ -1,6 +1,46 @@
-@node License
-@chapter License
+@node Appendices
+@chapter Appendices
 
+A number of other useful documents relevant to Subversion.
+
+@menu
+* SVN for CVS users::                    
+* Compiling and installing::            
+* Command reference::           
+* Contributing::                     
+* Links:: 
+* License::
+@end menu
+
+@c ------------------------------------------------------------------
+@node SVN for CVS users
+@section SVN for CVS users
+
+
+
+@c ------------------------------------------------------------------
+@node Compiling and installing
+@section Compiling and installing
+
+
+@c ------------------------------------------------------------------
+@node Command reference
+@section Command reference
+
+
+@c ------------------------------------------------------------------
+@node Contributing
+@section Contributing
+
+
+@c ------------------------------------------------------------------
+@node Links
+@section Links
+
+
+@c ------------------------------------------------------------------
+@node License
+@section License
 
 Copyright @copyright{} 2002 Collab.Net.  All rights reserved.
 
@@ -52,3 +92,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 This software consists of voluntary contributions made by many
 individuals on behalf of CollabNet.
+
+
+
+
+
+
