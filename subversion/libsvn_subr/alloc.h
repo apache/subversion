@@ -50,7 +50,7 @@
 
 void *svn_malloc (size_t len);
 void *svn_realloc (void *old, size_t new_len);
-void *slurp_file (const char *file, size_t *len);
+void *svn_slurp_file (const char *file, size_t *len);
 
 
 

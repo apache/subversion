@@ -109,7 +109,7 @@ svn_realloc (void *old, size_t new_len)
 
 /* Slurp entire contents of FILE into a buffer, recording length in LEN. */
 void *
-slurp_file (const char *file, size_t *len)
+svn_slurp_file (const char *file, size_t *len)
 {
   struct stat s;
   FILE *fp;
