@@ -48,6 +48,10 @@
   subversion functions. 
 */
 
+#if defined(WITH_THREAD) && !APR_HAS_THREADS
+#error The python bindings require threads. APR was compiled without threads.
+#endif
+
 #ifdef WITH_THREAD
 static apr_threadkey_t *_saved_thread_key = NULL;
 static apr_pool_t *_saved_thread_pool = NULL;
