@@ -1261,17 +1261,14 @@ def diff_file_urls(sbox):
   sbox.build()
 
   iota_path = os.path.join(sbox.wc_dir, 'iota')
-  iota_url = svntest.main.current_repo_url + 'iota'
+  iota_url = svntest.main.current_repo_url + '/iota'
   iota_copy_path = os.path.join(sbox.wc_dir, 'A', 'iota')
   iota_copy_url = svntest.main.current_repo_url + '/A/iota'
   iota_copy2_url = svntest.main.current_repo_url + '/A/iota2'
 
-  # Put some Make a new file, with text, and commit its addition.
+  # Put some different text into iota, and commit.
   os.remove(iota_path)
   svntest.main.file_append(iota_path, "foo\nbar\nsnafu\n")
-
-  out, err = svntest.main.run_svn(None, 'add', iota_path)
-  if err: raise svntest.Failure
   
   out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', iota_path)
   if err: raise svntest.Failure
@@ -1297,14 +1294,20 @@ def diff_file_urls(sbox):
   if err: raise svntest.Failure
 
   # Finally, do a diff between the first and second copies of iota,
-  # and verify that we got the expected lines
+  # and verify that we got the expected lines.  And then do it in reverse!
   out, err = svntest.main.run_svn(None, 'diff', iota_copy_url, iota_copy2_url)
+  if err: raise svntest.Failure
+
+  verify_expected_output(out, "+bar")
+  verify_expected_output(out, "-abcdefg")
+  verify_expected_output(out, "-opqrstuv")
+
+  out, err = svntest.main.run_svn(None, 'diff', iota_copy2_url, iota_copy_url)
   if err: raise svntest.Failure
 
   verify_expected_output(out, "-bar")
   verify_expected_output(out, "+abcdefg")
-  verify_expected_output(out, "+nopqrstuv")
-
+  verify_expected_output(out, "+opqrstuv")
   
 ########################################################################
 #Run the tests
@@ -1329,7 +1332,7 @@ test_list = [ None,
               diff_deleted_in_head,
               diff_targets,
               diff_branches,
-              XFail(diff_file_urls)
+              XFail(diff_file_urls),
               ]
 
 if __name__ == '__main__':
