@@ -175,7 +175,7 @@ def create_txn(sbox):
 
   # Look for it by running 'lstxn'.
   tree_list = get_txns(repo_dir)
-  if tree_list != ['1']:
+  if tree_list != ['2']:
     return 1
 
   return 0
@@ -201,15 +201,15 @@ def remove_txn(sbox):
 
   # Look for them by running 'lstxn'.
   tree_list = get_txns(repo_dir)
-  if tree_list != ['1', '2', '3', '4', '5']:
+  if tree_list != ['2', '3', '4', '5', '6']:
     return 1
 
   # Remove the 2nd and 4th transactions.
-  svntest.main.run_svnadmin("rmtxns", repo_dir, "2", "4")
+  svntest.main.run_svnadmin("rmtxns", repo_dir, "3", "5")
 
   # Examine the list of transactions again.
   tree_list = get_txns(repo_dir)
-  if tree_list != ['1', '3', '5']:
+  if tree_list != ['2', '4', '6']:
     return 1
 
   return 0
