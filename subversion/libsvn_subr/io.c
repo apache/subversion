@@ -1678,7 +1678,7 @@ svn_io_detect_mimetype (const char **mimetype,
                         const char *file,
                         apr_pool_t *pool)
 {
-  static const char *generic_binary = "application/octet-stream";
+  static const char * const generic_binary = "application/octet-stream";
 
   enum svn_node_kind kind;
   apr_file_t *fh;
