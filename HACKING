@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-04-26 20:00:24 $
+              Last updated:  $Date: 2001-05-08 13:42:11 $
 
 
 TABLE OF CONTENTS
@@ -142,8 +142,8 @@ built. The "__build__" project (active by default) builds all the
 libraries and programs.. The "__check__" project builds the test
 drivers.
 
-You will have to edit the file config.hw to set the correct paths for
-diff and patch.
+You will have to edit the file svn_private_config.hw to set the
+correct paths for diff and patch.
 
 
 Coding Style
