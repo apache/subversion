@@ -904,7 +904,8 @@ svn_ra_local_init (int abi_version,
                    apr_pool_t *pool,
                    apr_hash_t *hash)
 {
-  if (abi_version != 1)
+  if (abi_version < 1
+      || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
                               "Unsupported RA plugin ABI version (%d) "
                               "for ra_local.", abi_version);
