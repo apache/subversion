@@ -276,9 +276,11 @@ svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
    CONFIG is a hash of svn_config_t * items keyed on a configuration
    category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
 
-   If AS_TEXT is true, convert CONTENTS to ENCODING and native eol-style before
-   editing and back to UTF-8/LF afterwards.  If ENCODING is NULL, use the
-   native encoding.
+   If AS_TEXT is TRUE, recode CONTENTS and convert to native eol-style before
+   editing and back again afterwards.  In this case, ENCODING determines the
+   encoding used during editing.  If non-NULL, use the named encoding, else
+   use the system encoding.  If AS_TEXT is FALSE, don't do any translation.
+   In that case, ENCODING is ignored.
 
    Use POOL for all allocations.  Use PREFIX as the prefix for the
    temporary file used by the editor.
