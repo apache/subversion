@@ -98,23 +98,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
         *revnum = ent->revision;
       else
         {
-          /* ### todo: This whole svn_wc_entry_t thing is a mess, with
-             some kinds of data being "first class", in that they get
-             fields directly in the structure, while other kinds need
-             manual retrieval (augh!) from the hash.  There are now
-             several places in Subversion like this, where we grab the
-             value from the entry's attribute hash, and convert it
-             from string to revnum.  Wouldn't it be nice to make some
-             sort of accessor layer to svn_wc_entry_t?  Or would that
-             just be adding more bureaucracy?  Perhaps the committed
-             rev should simply be invited into the first class lounge,
-             where it can enjoy free martinis with current rev? */
-
-          svn_stringbuf_t *revstr = apr_hash_get (ent->attributes,
-                                                  SVN_ENTRY_ATTR_COMMITTED_REV,
-                                                  APR_HASH_KEY_STRING);
-
-          *revnum = SVN_STR_TO_REV (revstr->data);
+          *revnum = ent->cmt_rev;
           if (revision->kind == svn_client_revision_previous)
             (*revnum)--;
         }

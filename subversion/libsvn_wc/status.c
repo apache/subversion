@@ -178,7 +178,8 @@ assemble_status (svn_wc_status_t **status,
   if (prop_modified_p)
     final_prop_status = svn_wc_status_modified;      
   
-  if (entry->conflicted)
+  if (entry->prejfile || entry->conflict_old || 
+      entry->conflict_new || entry->conflict_wrk)
     {
       svn_boolean_t text_conflict_p, prop_conflict_p;
       svn_stringbuf_t *parent_dir;
