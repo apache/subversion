@@ -646,27 +646,42 @@ svn_fs_node_id (svn_fs_id_t **id_p,
   return SVN_NO_ERROR;
 }
 
-struct is_kind_args {
-  int (*query)(dag_node_t *node);
+struct node_kind_args {
   svn_fs_root_t *root;
   const char *path;
 
-  int result;   /* OUT parameter */
+  svn_node_kind_t kind; /* OUT parameter */
 };
 
 
 static svn_error_t *
-txn_body_is_kind (void *baton, trail_t *trail)
+txn_body_node_kind (void *baton, trail_t *trail)
 {
-  struct is_kind_args *args = baton;
+  struct node_kind_args *args = baton;
   dag_node_t *node;
 
   SVN_ERR (get_dag (&node, args->root, args->path, trail));
-  args->result = (*args->query) (node);
-
+  args->kind = svn_fs__dag_node_kind (node);
+  
   return SVN_NO_ERROR;
 }
 
+svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
+                                   const char *path,
+                                   apr_pool_t *pool)
+{
+  struct node_kind_args args;
+  svn_error_t *err;
+
+  args.root = root;
+  args.path = path;
+
+  err = svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool);
+  if (err)
+    return svn_node_none;
+
+  return args.kind;
+}
 
 svn_error_t *
 svn_fs_is_dir (int *is_dir,
@@ -674,14 +689,13 @@ svn_fs_is_dir (int *is_dir,
                const char *path,
                apr_pool_t *pool)
 {
-  struct is_kind_args args;
+  struct node_kind_args args;
 
-  args.query = svn_fs__dag_is_directory;
   args.root = root;
   args.path = path;
 
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_is_kind, &args, pool));
-  *is_dir = args.result;
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
+  *is_dir = (args.kind == svn_node_dir);
 
   return SVN_NO_ERROR;
 }
@@ -692,14 +706,13 @@ svn_fs_is_file (int *is_file,
                 const char *path,
                 apr_pool_t *pool)
 {
-  struct is_kind_args args;
+  struct node_kind_args args;
 
-  args.query = svn_fs__dag_is_file;
   args.root = root;
   args.path = path;
 
-  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_is_kind, &args, pool));
-  *is_file = args.result;
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_node_kind, &args, pool));
+  *is_file = (args.kind == svn_node_file);
 
   return SVN_NO_ERROR;
 }
