@@ -33,7 +33,7 @@ do_diff(apr_file_t *output_file,
 {
   svn_diff_t *diff;
 
-  SVN_ERR(svn_diff_file(&diff, original, modified, pool));
+  SVN_ERR(svn_diff_file_diff(&diff, original, modified, pool));
 
   *has_changes = svn_diff_contains_diffs(diff);
 

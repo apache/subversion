@@ -35,13 +35,15 @@ do_diff4(apr_file_t *output_file,
 {
   svn_diff_t *diff;
 
-  SVN_ERR(svn_diff4_file(&diff, original, modified, latest, ancestor, pool));
-  SVN_ERR(svn_diff3_file_output(output_file, diff,
-                                original, modified, latest,
-                                NULL, NULL, NULL, NULL,
-                                FALSE,
-                                FALSE,
-                                pool));
+  SVN_ERR(svn_diff_file_diff4(&diff,
+                              original, modified, latest, ancestor,
+                              pool));
+  SVN_ERR(svn_diff_file_output_merge(output_file, diff,
+                                     original, modified, latest,
+                                     NULL, NULL, NULL, NULL,
+                                     FALSE,
+                                     FALSE,
+                                     pool));
 
   return NULL;
 }

@@ -269,10 +269,10 @@ static const svn_diff_fns_t svn_diff__file_vtable =
 };
 
 svn_error_t *
-svn_diff_file(svn_diff_t **diff,
-              const char *original,
-              const char *modified,
-              apr_pool_t *pool)
+svn_diff_file_diff(svn_diff_t **diff,
+                   const char *original,
+                   const char *modified,
+                   apr_pool_t *pool)
 {
   svn_diff__file_baton_t baton;
 
@@ -281,18 +281,18 @@ svn_diff_file(svn_diff_t **diff,
   baton.path[1] = modified;
   baton.pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_diff(diff, &baton, &svn_diff__file_vtable, pool));
+  SVN_ERR(svn_diff_diff(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_diff3_file(svn_diff_t **diff,
-               const char *original,
-               const char *modified,
-               const char *latest,
-               apr_pool_t *pool)
+svn_diff_file_diff3(svn_diff_t **diff,
+                    const char *original,
+                    const char *modified,
+                    const char *latest,
+                    apr_pool_t *pool)
 {
   svn_diff__file_baton_t baton;
 
@@ -302,19 +302,19 @@ svn_diff3_file(svn_diff_t **diff,
   baton.path[2] = latest;
   baton.pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_diff3(diff, &baton, &svn_diff__file_vtable, pool));
+  SVN_ERR(svn_diff_diff3(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_diff4_file(svn_diff_t **diff,
-               const char *original,
-               const char *modified,
-               const char *latest,
-               const char *ancestor,
-               apr_pool_t *pool)
+svn_diff_file_diff4(svn_diff_t **diff,
+                    const char *original,
+                    const char *modified,
+                    const char *latest,
+                    const char *ancestor,
+                    apr_pool_t *pool)
 {
   svn_diff__file_baton_t baton;
 
@@ -325,7 +325,7 @@ svn_diff4_file(svn_diff_t **diff,
   baton.path[3] = ancestor;
   baton.pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_diff4(diff, &baton, &svn_diff__file_vtable, pool));
+  SVN_ERR(svn_diff_diff4(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
@@ -931,18 +931,18 @@ svn_diff3__file_output_conflict(void *baton,
 }
 
 svn_error_t *
-svn_diff3_file_output(apr_file_t *output_file,
-                      svn_diff_t *diff,
-                      const char *original_path,
-                      const char *modified_path,
-                      const char *latest_path,
-                      const char *conflict_original,
-                      const char *conflict_modified,
-                      const char *conflict_latest,
-                      const char *conflict_separator,
-                      svn_boolean_t display_original_in_conflict,
-                      svn_boolean_t display_resolved_conflicts,
-                      apr_pool_t *pool)
+svn_diff_file_output_merge(apr_file_t *output_file,
+                           svn_diff_t *diff,
+                           const char *original_path,
+                           const char *modified_path,
+                           const char *latest_path,
+                           const char *conflict_original,
+                           const char *conflict_modified,
+                           const char *conflict_latest,
+                           const char *conflict_separator,
+                           svn_boolean_t display_original_in_conflict,
+                           svn_boolean_t display_resolved_conflicts,
+                           apr_pool_t *pool)
 {
   svn_diff3__file_output_baton_t baton;
   apr_file_t *file[3];

@@ -33,16 +33,16 @@ do_diff3(apr_file_t *output_file,
 {
   svn_diff_t *diff;
 
-  SVN_ERR(svn_diff3_file(&diff, original, modified, latest, pool));
+  SVN_ERR(svn_diff_file_diff3(&diff, original, modified, latest, pool));
 
   *has_changes = svn_diff_contains_diffs(diff);
 
-  SVN_ERR(svn_diff3_file_output(output_file, diff,
-                                original, modified, latest,
-                                NULL, NULL, NULL, NULL,
-                                FALSE,
-                                FALSE,
-                                pool));
+  SVN_ERR(svn_diff_file_output_merge(output_file, diff,
+                                     original, modified, latest,
+                                     NULL, NULL, NULL, NULL,
+                                     FALSE,
+                                     FALSE,
+                                     pool));
 
   return NULL;
 }

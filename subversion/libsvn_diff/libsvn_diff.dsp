@@ -87,7 +87,27 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=.\lcs.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\token.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\util.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\diff.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\diff3.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\diff4.c
 # End Source File
 # Begin Source File
 
@@ -97,6 +117,10 @@ SOURCE=.\diff_file.c
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=.\diff.h
+# End Source File
 # End Group
 # End Target
 # End Project

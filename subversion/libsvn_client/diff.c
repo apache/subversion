@@ -305,7 +305,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
             }
         }
 
-      SVN_ERR (svn_diff_file (&diff, tmpfile1, tmpfile2, subpool));
+      SVN_ERR (svn_diff_file_diff (&diff, tmpfile1, tmpfile2, subpool));
       if (svn_diff_contains_diffs (diff))
         {
           svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
