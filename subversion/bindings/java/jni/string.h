@@ -59,7 +59,7 @@ string__svn_stringbuf_to_j(JNIEnv *env,
  */
 jstring
 string__c_to_j(JNIEnv *env, 
-               char *string, 
+               const char *string, 
                jboolean *hasException);
 
 svn_stringbuf_t *

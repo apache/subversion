@@ -160,7 +160,7 @@ string__c_to_stringbuf(JNIEnv *env,
 
 jstring
 string__c_to_j(JNIEnv *env, 
-               char *string, 
+               const char *string, 
                jboolean *hasException)
 {
   jboolean _hasException = JNI_FALSE;
