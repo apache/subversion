@@ -1202,6 +1202,9 @@ close_file (void *file_baton)
              fb->pool);
 
           /* Log the patch command. */
+          /* kff todo: these options will have to be portablized too.
+             Even if we know we're doing a plaintext patch, not all
+             patch programs support these args. */
           svn_xml_make_open_tag (&entry_accum,
                                  fb->pool,
                                  svn_xml_self_closing,
@@ -1213,6 +1216,8 @@ close_file (void *file_baton)
                                  SVN_WC__LOG_ATTR_ARG_2,
                                  reject_filename,
                                  SVN_WC__LOG_ATTR_ARG_3,
+                                 svn_string_create ("--", fb->pool),
+                                 SVN_WC__LOG_ATTR_ARG_4,
                                  fb->name,
                                  SVN_WC__LOG_ATTR_INFILE,
                                  received_diff_filename,
