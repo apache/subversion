@@ -159,11 +159,6 @@ core.setup(name="Subversion",
                             libraries=['svn_subr-1', 'svn_swig_py-1', 'swigpy', 'apr-0'],
                             library_dirs=library_dirs,
                             ),
-             core.Extension("_opt",
-                            [source_dir + "/svn_opt.i"],
-                            libraries=['svn_subr-1', 'swigpy', 'apr-0'],
-                            library_dirs=library_dirs,
-                            ),
 
              ### will 'auth' be its own, or bundled elsewhere?
              #core.Extension("_auth",

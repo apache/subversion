@@ -20,6 +20,10 @@
 
 %include typemaps.i
 
+%{
+#include "svn_opt.h"
+%}
+
 /* ----------------------------------------------------------------------- 
    include svn_types.h early. other .i files will import svn_types.i which
    then includes svn_types.h, making further includes get skipped. we want
@@ -168,13 +172,13 @@ void apr_pool_destroy(apr_pool_t *p);
 %include svn_version.h
 %include svn_time.h
 %include svn_props.h
+%include svn_opt.h
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
 #define __attribute__(x)
 
 %include svn_io.h
-
 
 %{
 #include <apr.h>
@@ -185,6 +189,7 @@ void apr_pool_destroy(apr_pool_t *p);
 #include "svn_version.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_opt.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"

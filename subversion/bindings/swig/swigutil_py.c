@@ -646,26 +646,6 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
   return apr_file;
 }
 
-svn_opt_revision_t *svn_swig_py_make_opt_revision (PyObject *py_rev,
-                                                   apr_pool_t *pool)
-{
-  svn_opt_revision_t *rev;
-  int arg1, arg2;
-
-  rev = apr_palloc(pool, sizeof (svn_opt_revision_t));
-  rev->kind = svn_opt_revision_unspecified;
-
-  /* FIXME: This is very hacky.  Silently failing sucks */
-  if (PyArg_Parse(py_rev, (char *)"(ii)", &arg1, &arg2))
-    {
-      rev->kind = (enum svn_opt_revision_kind) arg1;
-      if (rev->kind == svn_opt_revision_number)
-        rev->value.number = arg2;
-    }
-
-  return rev;
-}
-
 void svn_swig_py_notify_func(void *baton,
                              const char *path,
                              svn_wc_notify_action_t action,
