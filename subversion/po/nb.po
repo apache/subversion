@@ -105,7 +105,6 @@ msgid ""
 msgstr ""
 "Subversion er et verktøy for versjonshåndtering\n"
 "Se http://subversion.tigris.org/ for mer informasjon\n"
-"\n"
 
 #: clients/cmdline/help-cmd.c:68
 msgid ""
