@@ -80,7 +80,6 @@ svn_cl__checkout (apr_getopt_t *os,
                   svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
-  int i;
   svn_client_auth_baton_t *auth_baton;
   apr_array_header_t *targets;
   const char *local_dir;
