@@ -1019,7 +1019,8 @@ commit_apply_txdelta(void *file_baton,
   /* Use the client callback to create a tmpfile. */
   SVN_ERR(file->cc->ras->callbacks->open_tmp_file 
           (&baton->tmpfile, 
-           file->cc->ras->callback_baton));
+           file->cc->ras->callback_baton,
+           file->pool));
 
   /* ### register a cleanup on file_pool which closes the file; this
      ### will ensure that the file always gets tossed, even if we exit

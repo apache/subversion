@@ -192,7 +192,8 @@ typedef struct svn_ra_callbacks_t
    * This file will be automatically deleted when @a fp is closed.
    */
   svn_error_t *(*open_tmp_file) (apr_file_t **fp,
-                                 void *callback_baton);
+                                 void *callback_baton,
+                                 apr_pool_t *pool);
   
   /** An authentication baton, created by the application, which is
    * capable of retrieving all known types of credentials.

@@ -33,11 +33,12 @@
 
 static svn_error_t *
 open_admin_tmp_file (apr_file_t **fp,
-                     void *callback_baton)
+                     void *callback_baton,
+                     apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = callback_baton;
   
-  SVN_ERR (svn_wc_create_tmp_file (fp, cb->base_dir, TRUE, cb->pool));
+  SVN_ERR (svn_wc_create_tmp_file (fp, cb->base_dir, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -45,24 +46,25 @@ open_admin_tmp_file (apr_file_t **fp,
 
 static svn_error_t *
 open_tmp_file (apr_file_t **fp,
-               void *callback_baton)
+               void *callback_baton,
+               apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = callback_baton;
   const char *truepath;
   const char *ignored_filename;
 
   if (cb->base_dir)
-    truepath = apr_pstrdup (cb->pool, cb->base_dir);
+    truepath = apr_pstrdup (pool, cb->base_dir);
   else
     /* ### TODO: need better tempfile support */
     truepath = "";
 
   /* Tack on a made-up filename. */
-  truepath = svn_path_join (truepath, "tempfile", cb->pool);
+  truepath = svn_path_join (truepath, "tempfile", pool);
 
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    truepath, ".tmp", TRUE, cb->pool));
+                                    truepath, ".tmp", TRUE, pool));
 
   return SVN_NO_ERROR;
 }
