@@ -49,12 +49,10 @@ struct external_item_t
   /* Where to check out from. */
   const char *url;
 
-  /* What revision to check out.  Only svn_client_revision_number,
-     svn_client_revision_date, and svn_client_revision_head are
-     valid.  ### Any reason to change this to inline, instead of
-     pointer? */
-  svn_client_revision_t *revision;
-
+  /* What revision to check out.  The only valid kinds for this are
+     svn_client_revision_number, svn_client_revision_date, and
+     svn_client_revision_head. */
+  svn_client_revision_t revision;
 };
 
 
@@ -86,7 +84,6 @@ parse_externals_description (apr_hash_t **externals_p,
       const char *target_dir;
       const char *url;
       struct external_item_t *item;
-      svn_client_revision_t *revision;
 
       if ((! line) || (line[0] == '#'))
         continue;
@@ -97,7 +94,6 @@ parse_externals_description (apr_hash_t **externals_p,
       target_dir = APR_ARRAY_IDX (line_parts, 0, const char *);
       url = APR_ARRAY_IDX (line_parts, 1, const char *);
       item = apr_palloc (pool, sizeof (*item));
-      revision = apr_palloc (pool, sizeof (*revision));
       
       if (! url)
         return svn_error_createf
@@ -106,8 +102,7 @@ parse_externals_description (apr_hash_t **externals_p,
 
       /* ### Eventually, parse revision numbers and even dates from
          the description file. */
-      revision->kind = svn_client_revision_head;
-      item->revision = revision;
+      item->revision.kind = svn_client_revision_head;
       item->target_dir = target_dir;
       item->url = url;
 
@@ -172,7 +167,7 @@ checkout_externals_description (const char *description,
                 auth_baton,
                 item->url,
                 svn_path_join (path, item->target_dir, pool),
-                item->revision,
+                &(item.revision),
                 TRUE, /* recurse */
                 NULL,
                 pool));
