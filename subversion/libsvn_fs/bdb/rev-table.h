@@ -63,36 +63,11 @@ svn_error_t *svn_fs__bdb_put_rev (svn_revnum_t *rev,
                                   trail_t *trail);
 
 
-/* Set *ROOT_ID_P to the ID of the root directory of revision REV in FS,
-   as part of TRAIL.  Allocate the ID in TRAIL->pool.  */
-svn_error_t *svn_fs__rev_get_root (const svn_fs_id_t **root_id_p,
-                                   svn_fs_t *fs,
-                                   svn_revnum_t rev,
-                                   trail_t *trail);
-
-
-/* Set *TXN_ID_P to the ID of the transaction that was committed to
-   create REV in FS, as part of TRAIL.  Allocate the ID in
-   TRAIL->pool.  */
-svn_error_t *svn_fs__rev_get_txn_id (const char **txn_id_p,
-                                     svn_fs_t *fs,
-                                     svn_revnum_t rev,
-                                     trail_t *trail);
-
-
 /* Set *YOUNGEST_P to the youngest revision in filesystem FS,
    as part of TRAIL.  Use TRAIL->pool for all temporary allocation. */
 svn_error_t *svn_fs__bdb_youngest_rev (svn_revnum_t *youngest_p,
                                        svn_fs_t *fs,
                                        trail_t *trail);
-
-
-/* Set property NAME to VALUE on REV in FS, as part of TRAIL.  */
-svn_error_t *svn_fs__set_rev_prop (svn_fs_t *fs,
-                                   svn_revnum_t rev,
-                                   const char *name,
-                                   const svn_string_t *value,
-                                   trail_t *trail);
 
 
 #ifdef __cplusplus
