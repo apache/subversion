@@ -94,7 +94,6 @@ svn_error_t *svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
 /* Return true iff NODE is a file/directory/copy.  */
 int svn_fs__dag_is_file (dag_node_t *node);
 int svn_fs__dag_is_directory (dag_node_t *node);
-int svn_fs__dag_is_copy (dag_node_t *node);
 
 
 /* Set *PROPLIST_P to a PROPLIST skel representing the entire property
@@ -384,25 +383,30 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
 
 /* Copies */
 
-/* Create a copy node named NAME in PARENT which refers to SOURCE_PATH
-   in SOURCE_REVISION, as part of TRAIL.  Set *CHILD_P to a reference
-   to the new node, allocated in TRAIL->pool.  PARENT must be mutable.
-   NAME must be a single path component; it cannot be a slash-
-   separated directory path.  */
-svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
-                                    dag_node_t *parent,
-                                    const char *name,
-                                    svn_revnum_t source_revision,
-                                    const char *source_path,
-                                    trail_t *trail);
+/* Make ENTRY in TO_NODE be a copy of FROM_NODE, as part of TRAIL.
+   TO_NODE must be mutable.
+
+   The new node will record the fact that it was copied from FROM_PATH
+   in FROM_REV; therefore, FROM_NODE should be the node found at
+   FROM_PATH in FROM_REV, although this is not checked.  */
+svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
+                               const char *entry,
+                               dag_node_t *from_node,
+                               svn_revnum_t from_rev,
+                               const char *from_path,
+                               trail_t *trail);
 
 
-/* Set *REV_P and *PATH_P to the revision and path of NODE, which must
-   be a copy node, as part of TRAIL.  Allocate *PATH_P in TRAIL->pool.  */
-svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
-                                   char **path_p,
-                                   dag_node_t *node,
-                                   trail_t *trail);
+/* If NODE was copied from some other node, set *REV_P and *PATH_P to
+   the revision and path of the other node, as part of TRAIL.
+   Allocate *PATH_P in TRAIL->pool.
+
+   Else if NODE is not a copy, set *REV_P to SVN_INVALID_REVNUM and
+   *PATH_P to null.  */
+svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
+                                      const char **path_p,
+                                      dag_node_t *node,
+                                      trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_DAG_H */

@@ -664,6 +664,54 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
                                       const svn_string_t *value,
                                       apr_pool_t *pool);
 
+/* Discover a node's copy ancestry, if any.
+
+   If the node at PATH in ROOT was copied from some other node, set
+   *REV_P and *PATH_P to the revision and path of the other node,
+   allocating *PATH_P in POOL.
+
+   Else if there is no copy ancestry for the node, set *REV_P to
+   SVN_INVALID_REVNUM and and *PATH_P to null.
+
+   If an error is returned, the values of *REV_P and *PATH_P are
+   undefined, but otherwise, if one of them is set as described above,
+   you may assume the other is set correspondingly.
+
+   ROOT may be a revision root or a transaction root.
+
+   Notes:
+      - Copy ancestry does not descend.  After copying directory D to
+        E, E will have copy ancestry referring to D, but E's children
+        may not.  See also svn_fs_copy().
+
+      - Copy ancestry *under* a copy is preserved.  That is, if you
+        copy /A/D/G/pi to /A/D/G/pi2, and then copy /A/D/G to /G, then
+        /G/pi2 will still have copy ancestry pointing to /A/D/G/pi.
+        We don't know if this is a feature or a bug yet; if it turns
+        out to be a bug, then the fix is to make svn_fs_copied_from()
+        observe the following logic, which currently callers may
+        choose to follow themselves: if node X has copy history, but
+        its ancestor A also has copy history, then you may ignore X's
+        history if X's revision-of-origin is earlier than A's --
+        because that would mean that X's copy history was preserved in
+        a copy-under-a-copy scenario.  If X's revision-of-origin is
+        the same as A's, then it was copied under A during the same
+        transaction that created A.  (X's revision-of-origin cannot be
+        greater than A's, if X has copy history.)  ### todo: See how
+        people like this, it can always be hidden behind the curtain
+        if necessary.
+
+      - Copy ancestry is not stored as a regular subversion property
+        because it is not inherited.  Copying foo to bar results in a
+        revision of bar with copy ancestry; but committing a text
+        change to bar right after that results in a new revision of
+        bar without copy ancestry.  */
+svn_error_t *svn_fs_copied_from (svn_revnum_t *rev_p,
+                                 const char **path_p,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
 
 /* Given nodes SOURCE and TARGET, and a common ancestor ANCESTOR,
    modify TARGET to contain all the changes made between ANCESTOR and

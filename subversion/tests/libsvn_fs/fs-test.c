@@ -2707,10 +2707,10 @@ copy_test (const char **msg,
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *revision_root;
+  svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t after_rev;
 
-  *msg = "testing svn_fs_copy on file and directory";
+  *msg = "copying and tracking copy history";
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs_and_repos (&fs, "test-repo-copy-test", pool));
@@ -2723,41 +2723,228 @@ copy_test (const char **msg,
   SVN_ERR (svn_fs_close_txn (txn));
 
   /* In second txn, copy the file A/D/G/pi into the subtree A/D/H as
-     pi2.  Change that files contents to state its new name. */
-  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+     pi2.  Change that file's contents to state its new name.  Along
+     the way, test that the copy history was preserved both during the
+     transaction and after the commit. */
+
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
   SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_copy (revision_root, "A/D/G/pi", 
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G/pi", 
                         txn_root, "A/D/H/pi2",
                         pool));
+  { /* Check that copy history was preserved. */
+    svn_revnum_t rev;
+    const char *path;
+    
+    SVN_ERR (svn_fs_copied_from (&rev, &path, txn_root, "A/D/H/pi2", pool));
+
+    if (rev != after_rev)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "pre-commit copy history not preserved (rev lost) for A/D/H/pi2");
+
+    if (strcmp (path, "A/D/G/pi") != 0)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "pre-commit copy history not preserved (path lost) for A/D/H/pi2");
+  }
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "A/D/H/pi2", "This is the file 'pi2'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
   SVN_ERR (svn_fs_close_txn (txn));
 
-  /* Then, as if that wasn't fun enough, copy the whole subtree A/D/H
-     into the root directory as H2! */
-  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+  { /* Check that copy history is still preserved _after_ the commit. */
+    svn_fs_root_t *root;
+    svn_revnum_t rev;
+    const char *path;
+    
+    SVN_ERR (svn_fs_revision_root (&root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "A/D/H/pi2", pool));
+
+    if (rev != (after_rev - 1))
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "post-commit copy history wrong (rev) for A/D/H/pi2");
+
+    if (strcmp (path, "A/D/G/pi") != 0)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "post-commit copy history wrong (path) for A/D/H/pi2");
+  }
+
+  /* Let's copy the copy we just made, to make sure copy history gets
+     chained correctly. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
   SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_copy (revision_root, "A/D/H", 
-                        txn_root, "H2",
-                        pool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/H/pi2", txn_root, "A/D/H/pi3", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
   SVN_ERR (svn_fs_close_txn (txn));
+  { /* Check the copy history. */
+    svn_fs_root_t *root;
+    svn_revnum_t rev;
+    const char *path;
+    
+    /* Check that the original copy still has its old history. */
+    SVN_ERR (svn_fs_revision_root (&root, fs, (after_rev - 1), pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "A/D/H/pi2", pool));
+
+    if (rev != (after_rev - 2))
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "first copy history wrong (rev) for A/D/H/pi2");
+
+    if (strcmp (path, "A/D/G/pi") != 0)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "first copy history wrong (path) for A/D/H/pi2");
+
+    /* Check that the copy of the copy has the right history. */
+    SVN_ERR (svn_fs_revision_root (&root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "A/D/H/pi3", pool));
+
+    if (rev != (after_rev - 1))
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "second copy history wrong (rev) for A/D/H/pi3");
+
+    if (strcmp (path, "A/D/H/pi2") != 0)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "second copy history wrong (path) for A/D/H/pi3");
+  }
+
+  /* Commit a regular change to a copy, make sure the copy history
+     isn't inherited. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/H/pi3", "This is the file 'pi3'.\n", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  { /* Check the copy history. */
+    svn_fs_root_t *root;
+    svn_revnum_t rev;
+    const char *path;
+    
+    /* Check that the copy still has its history. */
+    SVN_ERR (svn_fs_revision_root (&root, fs, (after_rev - 1), pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "A/D/H/pi3", pool));
+
+    if (rev != (after_rev - 2))
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (rev) for A/D/H/pi3");
+
+    if (strcmp (path, "A/D/H/pi2") != 0)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (path) for A/D/H/pi3");
+
+    /* Check that the next revision after the copy has no copy history. */
+    SVN_ERR (svn_fs_revision_root (&root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "A/D/H/pi3", pool));
+
+    if (rev != SVN_INVALID_REVNUM)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (rev) for A/D/H/pi3");
+
+    if (path != NULL)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (path) for A/D/H/pi3");
+  }
+
+  /* Then, as if that wasn't fun enough, copy the whole subtree A/D/H
+     into the root directory as H2! */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/H", txn_root, "H2", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  { /* Check the copy history. */
+    svn_fs_root_t *root;
+    svn_revnum_t rev;
+    const char *path;
+    
+    /* Check that the top of the copy has history. */
+    SVN_ERR (svn_fs_revision_root (&root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "H2", pool));
+
+    if (rev != (after_rev - 1))
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (rev) for H2");
+
+    if (strcmp (path, "A/D/H") != 0)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (path) for H2");
+
+    /* Check that a random file under H2 reports no copy history. */
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "H2/omega", pool));
+
+    if (rev != SVN_INVALID_REVNUM)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (rev) for H2/omega");
+
+    if (path != NULL)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (path) for H2/omega");
+
+    /* Note that H2/pi2 still has copy history, though.  See the doc
+       string for svn_fs_copied_from() for more on this. */
+  }
 
   /* Let's live dangerously.  What happens if we copy a path into one
      of its own children.  Looping filesystem?  Cyclic ancestry?
      Another West Virginia family tree with no branches?  We certainly
      hope that's not the case. */
-  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
   SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_copy (revision_root, "A/B", 
-                        txn_root, "A/B/E/B",
-                        pool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/B", txn_root, "A/B/E/B", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
   SVN_ERR (svn_fs_close_txn (txn));
+  { /* Check the copy history. */
+    svn_fs_root_t *root;
+    svn_revnum_t rev;
+    const char *path;
+    
+    /* Check that the copy has history. */
+    SVN_ERR (svn_fs_revision_root (&root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "A/B/E/B", pool));
+
+    if (rev != (after_rev - 1))
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (rev) for A/B/E/B");
+
+    if (strcmp (path, "A/B") != 0)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (path) for A/B/E/B");
+
+    /* Check that the original does not have copy history. */
+    SVN_ERR (svn_fs_revision_root (&root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, root, "A/B", pool));
+
+    if (rev != SVN_INVALID_REVNUM)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (rev) for A/B");
+
+    if (path != NULL)
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "copy history wrong (path) for A/B");
+  }
 
   /* After all these changes, let's see if the filesystem looks as we
      would expect it to. */
@@ -2768,6 +2955,7 @@ copy_test (const char **msg,
       { "H2",          0 },
       { "H2/chi",      "This is the file 'chi'.\n" },
       { "H2/pi2",      "This is the file 'pi2'.\n" },
+      { "H2/pi3",      "This is the file 'pi3'.\n" },
       { "H2/psi",      "This is the file 'psi'.\n" },
       { "H2/omega",    "This is the file 'omega'.\n" },
       { "A",           0 },
@@ -2794,12 +2982,13 @@ copy_test (const char **msg,
       { "A/D/H",       0 },
       { "A/D/H/chi",   "This is the file 'chi'.\n" },
       { "A/D/H/pi2",   "This is the file 'pi2'.\n" },
+      { "A/D/H/pi3",   "This is the file 'pi3'.\n" },
       { "A/D/H/psi",   "This is the file 'psi'.\n" },
       { "A/D/H/omega", "This is the file 'omega'.\n" }
     };
-    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool)); 
-    SVN_ERR (svn_test__validate_tree (revision_root, expected_entries, 
-                                      32, pool));
+    SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 
+                                      34, pool));
   }
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));

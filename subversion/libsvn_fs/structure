@@ -140,7 +140,10 @@ where:
      an atom indicating the revision number.
 
    * COPY, if present, indicates the node from which this node was
-     copied:   ("copy" ANCESOR-REV ANCESTOR-PATH)
+     copied.  It is a list skel: ("copy" ANCESOR-REV ANCESTOR-PATH)
+     The word "copy" appears first because there may someday be other
+     options in the header, and we'll want to distinguish among them.
+
 
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;

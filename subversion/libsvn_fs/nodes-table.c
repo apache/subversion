@@ -165,13 +165,14 @@ svn_fs__open_nodes_table (DB **nodes_p,
 
 
 static int
-is_valid_flag (skel_t *skel)
+is_valid_option (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
 
-  if (len == 2
-      && svn_fs__matches_atom (skel->children, "mutable")
-      && skel->children->next->is_atom)
+  if (len == 3
+      && svn_fs__matches_atom (skel->children, "copy")
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom)
     {      
       return 1;      
     }
@@ -188,12 +189,12 @@ is_valid_header (skel_t *skel, skel_t **kind_p)
     {
       if (skel->children->is_atom && skel->children->next->is_atom)
         {
-          skel_t *flag;
+          skel_t *option;
 
-          for (flag = skel->children->next->next;
-               flag;
-               flag = flag->next)
-            if (! is_valid_flag (flag))
+          for (option = skel->children->next->next;
+               option;
+               option = option->next)
+            if (! is_valid_option (option))
               return 0;
 
           *kind_p = skel->children;
