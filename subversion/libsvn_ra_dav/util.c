@@ -25,6 +25,7 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_config.h"
 
 #include "ra_dav.h"
 
@@ -216,9 +217,22 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   ne_xml_parser *error_parser;
   int rv;
   int decompress_rv;
+  int decompress_on;
   int code;
   const char *msg;
+  const char *do_compression;
+  svn_config_t *cfg;
   svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR( svn_config_read_config(&cfg, pool) );
+
+  svn_config_get(cfg, &do_compression, "miscellany", "do_compression", "yes");
+  if (strcasecmp(do_compression, "yes") == 0) {
+    decompress_on = 1;
+  }                              
+  else {
+    decompress_on = 0;
+  }
 
   /* create/prep the request */
   req = ne_request_create(ras->sess, method, url);
@@ -243,27 +257,51 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   /* Register the "main" accepter and body-reader with the request --
      the one to use when the HTTP status is 2XX */
-  decompress_main = ne_decompress_reader(req, ne_accept_2xx,
-                                         ne_xml_parse_v, success_parser);
+  if (decompress_on)
+    {
+      decompress_main = ne_decompress_reader(req, ne_accept_2xx,
+                                             ne_xml_parse_v, success_parser);
+    }
+  else
+    {
+      decompress_main = NULL;
+      ne_add_response_body_reader(req, ne_accept_2xx, ne_xml_parse_v,
+                                  success_parser);
+    }
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
-  decompress_err = ne_decompress_reader(req, ra_dav_error_accepter,
-                                        ne_xml_parse_v, error_parser);
+  if (decompress_on)
+    {
+      decompress_err = ne_decompress_reader(req, ra_dav_error_accepter,
+                                            ne_xml_parse_v, error_parser);
+    }
+  else
+    {
+      decompress_err = NULL;
+      ne_add_response_body_reader(req, ra_dav_error_accepter, ne_xml_parse_v,
+                                  error_parser);
+    }
 
   /* run the request and get the resulting status code. */
   rv = ne_request_dispatch(req);
 
-  decompress_rv = ne_decompress_destroy(decompress_main);
-  if (decompress_rv != 0)
+  if (decompress_main)
     {
-      rv = decompress_rv;
+      decompress_rv = ne_decompress_destroy(decompress_main);
+      if (decompress_rv != 0)
+        {
+          rv = decompress_rv;
+        }
     }
 
-  decompress_rv = ne_decompress_destroy(decompress_err);
-  if (decompress_rv != 0)
+  if (decompress_err)
     {
-      rv = decompress_rv;
+      decompress_rv = ne_decompress_destroy(decompress_err);
+      if (decompress_rv != 0)
+        {
+          rv = decompress_rv;
+        }
     }
   
   code = ne_get_status(req)->code;

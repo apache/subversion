@@ -44,6 +44,7 @@
 #include "svn_xml.h"
 #include "svn_dav.h"
 #include "svn_time.h"
+#include "svn_config.h"
 
 #include "ra_dav.h"
 
@@ -444,12 +445,25 @@ static svn_error_t *custom_get_request(ne_session *sess,
 {
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
+  const char *do_compression;
   ne_request *req;
   ne_decompress *decompress;
   svn_error_t *err;
+  svn_config_t *cfg;
   int code;
   int decompress_rv;
+  int decompress_on;
 
+  SVN_ERR( svn_config_read_config(&cfg, pool) );
+
+  svn_config_get(cfg, &do_compression, "miscellany", "do_compression", "yes");
+  if (strcasecmp(do_compression, "yes") == 0) {
+    decompress_on = 1;
+  }
+  else {
+    decompress_on = 0;
+  }
+  
   /* See if we can get a version URL for this resource. This will refer to
      what we already have in the working copy, thus we can get a diff against
      this particular resource. */
@@ -482,7 +496,13 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 
   /* add in a reader to capture the body of the response. */
-  decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
+  if (decompress_on) {
+    decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
+  }
+  else {
+    decompress = NULL;
+    ne_add_response_body_reader(req, ne_accept_2xx, reader, &cgc);
+  }
 
   /* complete initialization of the body reading context */
   cgc.subctx = subctx;
@@ -493,7 +513,12 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                      226 /* IM Used */,
                                      pool);
 
-  decompress_rv = ne_decompress_destroy(decompress);
+  if (decompress) {
+    decompress_rv = ne_decompress_destroy(decompress);
+  }
+  else {
+    decompress_rv = 0;
+  }
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
