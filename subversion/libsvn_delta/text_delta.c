@@ -73,7 +73,7 @@ struct apply_baton {
 
 
 svn_txdelta_window_t *
-svn_txdelta__make_window (svn_txdelta__ops_baton_t *build_baton,
+svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
                           apr_pool_t *pool)
 {
   svn_txdelta_window_t *window;
@@ -85,6 +85,7 @@ svn_txdelta__make_window (svn_txdelta__ops_baton_t *build_baton,
   window->tview_len = 0;
 
   window->num_ops = build_baton->num_ops;
+  window->src_ops = build_baton->src_ops;
   window->ops = build_baton->ops;
 
   /* just copy the fields over, rather than alloc/copying into a whole new
@@ -95,6 +96,31 @@ svn_txdelta__make_window (svn_txdelta__ops_baton_t *build_baton,
   window->new_data = new_data;
 
   return window;
+}
+
+
+
+svn_txdelta_window_t *
+svn_txdelta__copy_window (const svn_txdelta_window_t *window,
+                          apr_pool_t *pool)
+{
+  svn_txdelta__ops_baton_t build_baton = { 0 };
+  svn_txdelta_window_t *new_window;
+  const apr_size_t ops_size = (window->num_ops * sizeof (*build_baton.ops));
+
+  build_baton.num_ops = window->num_ops;
+  build_baton.src_ops = window->src_ops;
+  build_baton.ops_size = window->num_ops;
+  build_baton.ops = apr_palloc (pool, ops_size);
+  memcpy (build_baton.ops, window->ops, ops_size);
+  build_baton.new_data =
+    svn_stringbuf_create_from_string (window->new_data, pool);
+
+  new_window = svn_txdelta__make_window (&build_baton, pool);
+  new_window->sview_offset = window->sview_offset;
+  new_window->sview_len = window->sview_len;
+  new_window->tview_len = window->tview_len;
+  return new_window;
 }
 
 
@@ -152,6 +178,8 @@ svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
   switch (opcode)
     {
     case svn_txdelta_source:
+      ++build_baton->src_ops;
+      /*** FALLTHRU ***/
     case svn_txdelta_target:
       op->action_code = opcode;
       op->offset = offset;
@@ -320,20 +348,19 @@ size_buffer (char **buf, apr_size_t *buf_size,
 }
 
 
-/* Apply the instructions from WINDOW to a source view SBUF to produce
-   a target view TBUF.  SBUF is assumed to have WINDOW->sview_len
-   bytes of data and TBUF is assumed to have room for
-   WINDOW->tview_len bytes of output.  This is purely a memory
-   operation; nothing can go wrong as long as we have a valid window.  */
-
-static void
-apply_instructions (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
+void
+svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
+                                 const char *sbuf, char *tbuf,
+                                 apr_size_t *tlen)
 {
   const svn_txdelta_op_t *op;
-  apr_size_t i, tpos = 0;
+  apr_size_t i, j, tpos = 0;
 
   for (op = window->ops; op < window->ops + window->num_ops; op++)
     {
+      const apr_size_t buf_len = (op->length < *tlen - tpos
+                                  ? op->length : *tlen - tpos);
+
       /* Check some invariants common to all instructions.  */
       assert (op->offset >= 0 && op->length >= 0);
       assert (tpos + op->length <= window->tview_len);
@@ -343,8 +370,7 @@ apply_instructions (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
         case svn_txdelta_source:
           /* Copy from source area.  */
           assert (op->offset + op->length <= window->sview_len);
-          memcpy (tbuf + tpos, sbuf + op->offset, op->length);
-          tpos += op->length;
+          memcpy (tbuf + tpos, sbuf + op->offset, buf_len);
           break;
 
         case svn_txdelta_target:
@@ -353,8 +379,8 @@ apply_instructions (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
              and target copies are allowed to overlap to generate
              repeated data.  */
           assert (op->offset < tpos);
-          for (i = op->offset; i < op->offset + op->length; i++)
-            tbuf[tpos++] = tbuf[i];
+          for (i = op->offset, j = tpos; i < op->offset + buf_len; i++)
+            tbuf[j++] = tbuf[i];
           break;
 
         case svn_txdelta_new:
@@ -362,17 +388,21 @@ apply_instructions (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
           assert (op->offset + op->length <= window->new_data->len);
           memcpy (tbuf + tpos,
                   window->new_data->data + op->offset,
-                  op->length);
-          tpos += op->length;
+                  buf_len);
           break;
 
         default:
-          assert ("Invalid delta instruction code" == NULL);
+          assert (!"Invalid delta instruction code");
         }
+
+      tpos += op->length;
+      if (tpos >= *tlen)
+        return;                 /* The buffer is full. */
     }
 
   /* Check that we produced the right amount of data.  */
   assert (tpos == window->tview_len);
+  *tlen = tpos;
 }
 
 
@@ -393,9 +423,10 @@ apply_window (svn_txdelta_window_t *window, void *baton)
     }
 
   /* Make sure the source view didn't slide backwards.  */
-  assert (window->sview_offset >= ab->sbuf_offset
-          && (window->sview_offset + window->sview_len
-              >= ab->sbuf_offset + ab->sbuf_len));
+  assert (window->sview_len == 0
+          || (window->sview_offset >= ab->sbuf_offset
+              && (window->sview_offset + window->sview_len
+                  >= ab->sbuf_offset + ab->sbuf_len)));
 
   /* Make sure there's enough room in the target buffer.  */
   size_buffer (&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool);
@@ -413,7 +444,8 @@ apply_window (svn_txdelta_window_t *window, void *baton)
        * overlap to the beginning of the new buffer.  */
       if (ab->sbuf_offset + ab->sbuf_len > window->sview_offset)
         {
-          apr_size_t start = (apr_size_t)(window->sview_offset - ab->sbuf_offset);
+          apr_size_t start =
+            (apr_size_t)(window->sview_offset - ab->sbuf_offset);
           memmove (ab->sbuf, old_sbuf + start, ab->sbuf_len - start);
           ab->sbuf_len -= start;
         }
@@ -437,12 +469,12 @@ apply_window (svn_txdelta_window_t *window, void *baton)
 
   /* Apply the window instructions to the source view to generate
      the target view.  */
-  apply_instructions (window, ab->sbuf, ab->tbuf);
+  len = window->tview_len;
+  svn_txdelta__apply_instructions (window, ab->sbuf, ab->tbuf, &len);
+  assert (len == window->tview_len);
 
   /* Write out the output. */
-  len = window->tview_len;
-  err = svn_stream_write (ab->target, ab->tbuf, &len);
-  return err;
+  return svn_stream_write (ab->target, ab->tbuf, &len);
 }
 
 

@@ -131,6 +131,11 @@ typedef struct svn_txdelta_window_t {
   /* The number of instructions in this window.  */
   int num_ops;
 
+  /* The number of svn_txdelta_source instructions in this window. If
+     this number is 0, we don't need to read the source in order to
+     reconstruct the target view. */
+  int src_ops;
+
   /* The instructions for this window.  */
   const svn_txdelta_op_t *ops;
 

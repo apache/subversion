@@ -9,8 +9,12 @@ sys.path.insert(0, python_libs)
 
 # Run the tests
 import exectest
-exectest.run_tests(['key-test',
-                    'skel-test',
-                    'changes-test',
-                    'strings-reps-test',
-                    'fs-test'])
+errors = exectest.run_tests(['key-test', 'skel-test',
+                             'strings-reps-test', 'fs-test'])
+sys.exit(errors)
+
+
+### End of file.
+# local variables:
+# eval: (load-file "../../../tools/dev/svn-dev.el")
+# end:
