@@ -9,6 +9,10 @@ short-term tasks to it, if that's helpful.
 
 ------------------------------------------------------------------------
 
+Ben and Karl and Jim:
+   - Discuss implementation of editor "hooks".  It would be nice to
+     get feedback from the editor for debugging purposes.
+
 Ben and Karl XML factorization todo:
    - generalize signal_expat_bailout
 
