@@ -202,9 +202,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
-    "usage: 1. diff [-r N[:M]] [--old OLD-TGT [--new NEW-TGT]] [PATH ...]\n"
+    "usage: 1. diff [-r N[:M]] [--old OLD-TGT] [--new NEW-TGT] [PATH ...]\n"
     "       2. diff -r N:M URL\n"
-    "       3. diff URL1[@N] URL2[@M]\n\n"
+    "       3. diff [-r N[:M]] URL1[@N] URL2[@M]\n\n"
     "  1. Display the differences between OLD-TGT and NEW-TGT.  PATHs, if\n"
     "     given, are relative to OLD-TGT and NEW-TGT and restrict the output\n"
     "     to differences for those paths.  OLD-TGT and NEW-TGT may be working\n"

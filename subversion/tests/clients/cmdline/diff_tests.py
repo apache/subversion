@@ -1244,6 +1244,7 @@ def diff_branches(sbox):
                                                  '--old', A_url,
                                                  '--new', A2_url,
                                                  rel_path)
+  if err_output: raise svntest.Failure
   verify_expected_output(diff_output, "-foo")
   verify_expected_output(diff_output, "+bar")
 
@@ -1251,6 +1252,7 @@ def diff_branches(sbox):
   diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                  '--old', A_url,
                                                  '--new', A2_url)
+  if err_output: raise svntest.Failure
   verify_expected_output(diff_output, "-foo")
   verify_expected_output(diff_output, "+bar")
 
@@ -1261,6 +1263,7 @@ def diff_branches(sbox):
                                                  '--old', A2_url,
                                                  '--new', A_path,
                                                  rel_path)
+  if err_output: raise svntest.Failure
   verify_expected_output(diff_output, "-bar")
   verify_expected_output(diff_output, "+foo")
   verify_expected_output(diff_output, "+zig")
@@ -1272,6 +1275,27 @@ def diff_branches(sbox):
   #verify_expected_output(diff_output, "-bar")
   #verify_expected_output(diff_output, "+foo")
   #verify_expected_output(diff_output, "+zig")
+
+  # Compare two repository files on different branches
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 A_url + '/B/E/alpha',
+                                                 A2_url + '/B/E/alpha')
+  if err_output: raise svntest.Failure
+  verify_expected_output(diff_output, "-foo")
+  verify_expected_output(diff_output, "+bar")
+
+  # Compare two versions of a file on a single branch
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 A_url + '/B/E/alpha@2',
+                                                 A_url + '/B/E/alpha@3')
+  if err_output: raise svntest.Failure
+  verify_expected_output(diff_output, "+foo")
+
+  # Compare identical files on different branches
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 A_url + '/B/E/alpha@2',
+                                                 A2_url + '/B/E/alpha@3')
+  if diff_output or err_output: raise svntest.Failure
 
 ########################################################################
 #Run the tests
