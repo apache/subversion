@@ -421,6 +421,28 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                 "unrecognized node kind of '%s'.", dst_url);
     }
 
+  /* Create a new commit item and add it to the array. */
+  if (ctx->log_msg_func)
+    {
+      svn_client_commit_item_t *item;
+      const char *tmp_file;
+      apr_array_header_t *commit_items 
+        = apr_array_make (pool, 1, sizeof (item));
+      
+      item = apr_pcalloc (pool, sizeof (*item));
+      item->url = svn_path_join (top_url, dst_rel, pool);
+      item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
+      
+      SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
+      if (! message)
+        return SVN_NO_ERROR;
+    }
+  else
+    message = "";
+
+
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
   SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton, message,
@@ -616,6 +638,26 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                 "file '%s' already exists.", dst_url);
     }
+
+  /* Create a new commit item and add it to the array. */
+  if (ctx->log_msg_func)
+    {
+      svn_client_commit_item_t *item;
+      const char *tmp_file;
+
+      commit_items = apr_array_make (pool, 1, sizeof (item));      
+      item = apr_pcalloc (pool, sizeof (*item));
+      item->url = base_url;
+      item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
+      
+      SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
+      if (! message)
+        return SVN_NO_ERROR;
+    }
+  else
+    message = "";
 
   /* Crawl the working copy for commit items. */
   SVN_ERR (svn_io_check_path (base_path, &src_kind, pool));
@@ -1008,28 +1050,6 @@ setup_copy (svn_client_commit_info_t **commit_info,
             }
         }
     }
-
-  /* Create a new commit item and add it to the array. */
-  if (dst_is_url && ctx->log_msg_func)
-    {
-      svn_client_commit_item_t *item;
-      const char *tmp_file;
-      apr_array_header_t *commit_items 
-        = apr_array_make (pool, 1, sizeof (item));
-      
-      item = apr_pcalloc (pool, sizeof (*item));
-      item->url = apr_pstrdup (pool, dst_path);
-      item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
-        = item;
-      
-      SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool));
-      if (! message)
-        return SVN_NO_ERROR;
-    }
-  else
-    message = "";
 
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
