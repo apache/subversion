@@ -98,8 +98,6 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "import",     FALSE, svn_cl__import,
     "Import a file or tree into the repository.\n"
     "usage: import REPOS_URL [PATH] [NEW_ENTRY_IN_REPOS] \n" },
-  { "im",         TRUE, NULL, NULL },
-  { "imp",        TRUE, NULL, NULL },
 
   { "proplist",   FALSE, svn_cl__proplist,
     "List all properties for given files and directories.\n"
