@@ -59,3 +59,11 @@ Candidate changes:
       User complaint.  Simple fix.
     Votes:
       +1: bliss
+
+  * r11394
+    Fix javahl bindings not using the default config directory if nothing
+    else is specified.
+    Justification:
+      User complaint.  Simple fix in javahl binding only.
+    Votes:
+      +1: pmayweg
