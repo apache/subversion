@@ -127,12 +127,13 @@ def main(fname, oname=None, skip_depends=0):
 
     targ_varname = string.replace(target, '-', '_')
     ldflags = parser.get(target, 'link-flags')
+    add_deps = parser.get(target, 'add-deps')
     objnames = string.join(map(os.path.basename, objects))
     ofile.write('%s_DEPS = %s %s\n'
                 '%s_OBJECTS = %s\n'
                 '%s: $(%s_DEPS)\n'
                 '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-                % (targ_varname, string.join(objects), string.join(deps),
+                % (targ_varname, string.join(objects + deps), add_deps,
                    targ_varname, objnames,
                    tpath, targ_varname,
                    path, tfile, ldflags, targ_varname, string.join(libs)))
@@ -307,6 +308,7 @@ _cfg_defaults = {
   'custom' : '',
   'install' : '',
   'testing' : '',
+  'add-deps' : '',
   }
 
 _default_sources = {
