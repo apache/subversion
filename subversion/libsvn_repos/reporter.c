@@ -66,7 +66,7 @@ svn_repos_set_path (void *report_baton,
     {
       /* Sanity check: make that we didn't call this with real data
          before simply informing the reporter of our base revision. */
-      if (svn_path_is_empty (path, svn_path_repos_style))
+      if (! svn_path_is_empty (path, svn_path_repos_style))
         return 
           svn_error_create
           (SVN_ERR_RA_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
