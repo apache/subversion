@@ -28,9 +28,6 @@ except SyntaxError:
   traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "prop_tests-" + `test_list.index(x)`
 
 ######################################################################
 # Tests
@@ -39,15 +36,14 @@ def sandbox(x):
 
 #----------------------------------------------------------------------
 
-def make_local_props():
+def make_local_props(sbox):
   "write/read props in wc only (ps, pl, pdel)"
 
   # Bootstrap
-  sbox = sandbox(make_local_props)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Add properties to one file and one directory
   svntest.main.run_svn(None, 'propset', 'blue', 'azul',
@@ -95,15 +91,14 @@ def make_local_props():
 
 #----------------------------------------------------------------------
 
-def commit_props():
+def commit_props(sbox):
   "commit properties"
 
   # Bootstrap
-  sbox = sandbox(commit_props)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Add a property to a file and a directory
   mu_path = os.path.join(wc_dir, 'A', 'mu') 
@@ -136,15 +131,14 @@ def commit_props():
 
 #----------------------------------------------------------------------
 
-def update_props():
+def update_props(sbox):
   "receive properties via update"
 
   # Bootstrap
-  sbox = sandbox(update_props)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
   wc_backup = wc_dir + 'backup'
@@ -211,15 +205,14 @@ def update_props():
 
 #----------------------------------------------------------------------
 
-def downdate_props():
+def downdate_props(sbox):
   "receive property changes as part of a downdate"
 
   # Bootstrap
-  sbox = sandbox(downdate_props)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota') 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -298,15 +291,14 @@ def downdate_props():
 
 #----------------------------------------------------------------------
 
-def remove_props():
+def remove_props(sbox):
   "commit the removal of props"
 
   # Bootstrap
-  sbox = sandbox(remove_props)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Add a property to a file
   iota_path = os.path.join(wc_dir, 'iota') 
@@ -352,17 +344,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

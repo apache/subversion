@@ -29,10 +29,6 @@ except SyntaxError:
   raise SystemExit
 
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "basic_tests-" + `test_list.index(x)`
-
 # (abbreviation)
 path_index = svntest.actions.path_index
 
@@ -44,21 +40,20 @@ path_index = svntest.actions.path_index
 
 #----------------------------------------------------------------------
 
-def basic_checkout():
+def basic_checkout(sbox):
   "basic checkout of a wc"
 
-  return svntest.actions.make_repo_and_wc(sandbox(basic_checkout))
+  return sbox.build()
 
 #----------------------------------------------------------------------
 
-def basic_status():
+def basic_status(sbox):
   "basic status command"
 
-  sbox = sandbox(basic_status)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Created expected output tree for 'svn status'
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
@@ -68,14 +63,13 @@ def basic_status():
   
 #----------------------------------------------------------------------
 
-def basic_commit():
+def basic_commit(sbox):
   "basic commit command"
 
-  sbox = sandbox(basic_commit)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Make a couple of local mods to files
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -107,14 +101,13 @@ def basic_commit():
   
 #----------------------------------------------------------------------
 
-def basic_update():
+def basic_update(sbox):
   "basic update command"
 
-  sbox = sandbox(basic_update)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
   wc_backup = wc_dir + 'backup'
@@ -169,14 +162,13 @@ def basic_update():
                                                expected_status_tree)
 
 #----------------------------------------------------------------------
-def basic_merge():
+def basic_merge(sbox):
   "basic merge"
 
-  sbox = sandbox(basic_merge)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
   
   # First change the greek tree to make two files 10 lines long
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -316,14 +308,13 @@ def detect_conflict_files(node, extra_files):
   raise svntest.tree.SVNTreeUnequal
 
 
-def basic_conflict():
+def basic_conflict(sbox):
   "basic conflict"
 
-  sbox = sandbox(basic_conflict)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Make a backup copy of the working copy
   wc_backup = wc_dir + 'backup'
@@ -409,14 +400,13 @@ def basic_conflict():
 
 #----------------------------------------------------------------------
 
-def basic_cleanup():
+def basic_cleanup(sbox):
   "basic cleanup command"
 
-  sbox = sandbox(basic_cleanup)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Lock some directories.
   B_path = os.path.join(wc_dir, 'A', 'B')
@@ -451,14 +441,13 @@ def basic_cleanup():
   
 #----------------------------------------------------------------------
 
-def basic_revert():
+def basic_revert(sbox):
   "basic revert command"
 
-  sbox = sandbox(basic_revert)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Modify some files.
   beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
@@ -542,17 +531,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

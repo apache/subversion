@@ -28,10 +28,6 @@ except SyntaxError:
   traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "commit_tests-" + `test_list.index(x)`
-
 # (abbreviation)
 path_index = svntest.actions.path_index
   
@@ -165,14 +161,13 @@ def make_standard_slew_of_changes(wc_dir):
 
 #----------------------------------------------------------------------
 
-def commit_one_file():
+def commit_one_file(sbox):
   "commit one file."
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(commit_one_file)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Make standard slew of changes to working copy.
   if make_standard_slew_of_changes(wc_dir): return 1
@@ -203,14 +198,13 @@ def commit_one_file():
   
 #----------------------------------------------------------------------
 
-def commit_multiple_targets():
+def commit_multiple_targets(sbox):
   "commit multiple targets"
 
-  sbox = sandbox(commit_multiple_targets)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # This test will commit three targets:  psi, B, and pi.  In that order.
 
@@ -265,14 +259,13 @@ def commit_multiple_targets():
 #----------------------------------------------------------------------
 
 
-def commit_multiple_targets_2():
+def commit_multiple_targets_2(sbox):
   "commit multiple targets, 2nd variation"
 
-  sbox = sandbox(commit_multiple_targets_2)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox);
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # This test will commit three targets:  psi, B, omega and pi.  In that order.
 
@@ -328,14 +321,13 @@ def commit_multiple_targets_2():
 
 #----------------------------------------------------------------------
 
-def commit_inclusive_dir():
+def commit_inclusive_dir(sbox):
   "commit wc_dir/A/D -- includes D. (anchor=A, tgt=D)"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(commit_inclusive_dir)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Make standard slew of changes to working copy.
   if make_standard_slew_of_changes(wc_dir): return 1
@@ -385,14 +377,13 @@ def commit_inclusive_dir():
 
 #----------------------------------------------------------------------
 
-def commit_top_dir():
+def commit_top_dir(sbox):
   "commit wc_dir -- (anchor=wc_dir, tgt={})"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(commit_top_dir)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Make standard slew of changes to working copy.
   if make_standard_slew_of_changes(wc_dir): return 1
@@ -484,14 +475,13 @@ def commit_top_dir():
 #
 # This bug never had an issue number.
 #
-def commit_unversioned_thing():
+def commit_unversioned_thing(sbox):
   "committing unversioned object produces error"
 
-  sbox = sandbox(commit_unversioned_thing)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Create an unversioned file in the wc.
   svntest.main.file_append(os.path.join(wc_dir, 'blorg'), "nothing to see")
@@ -509,14 +499,13 @@ def commit_unversioned_thing():
 
 # regression test for bug #391
 
-def nested_dir_replacements():
+def nested_dir_replacements(sbox):
   "replace two nested dirs, verify empty contents"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(nested_dir_replacements)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Delete and re-add A/D (a replacement), and A/D/H (another replace).
   svntest.main.run_svn(None, 'rm', os.path.join(wc_dir, 'A', 'D'))
@@ -605,14 +594,13 @@ def nested_dir_replacements():
 # where the parent directory's revision lags behind a deleted child's
 # revision.
 
-def hudson_part_1():
+def hudson_part_1(sbox):
   "hudson prob 1.0:  delete file, commit, update"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(hudson_part_1)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
@@ -667,14 +655,13 @@ def hudson_part_1():
 # Testing part 1 of the "Greg Hudson" problem -- variation on previous
 # test, removing a directory instead of a file this time.
 
-def hudson_part_1_variation_1():
+def hudson_part_1_variation_1(sbox):
   "hudson prob 1.1:  delete dir, commit, update"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(hudson_part_1_variation_1)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Remove H from the working copy.
   H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
@@ -735,14 +722,13 @@ def hudson_part_1_variation_1():
 # test, we make sure that a file that is BOTH `deleted' and scheduled
 # for addition can be correctly committed & merged.
 
-def hudson_part_1_variation_2():
+def hudson_part_1_variation_2(sbox):
   "hudson prob 1.2:  delete, commit, re-add, commit"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(hudson_part_1_variation_2)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
@@ -811,14 +797,13 @@ def hudson_part_1_variation_2():
 # In this test, we make sure that we're UNABLE to commit a propchange
 # on an out-of-date directory.
 
-def hudson_part_2():
+def hudson_part_2(sbox):
   "hudson prob 2.0:  prop commit on old dir fails."
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(hudson_part_2)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
@@ -861,16 +846,15 @@ def hudson_part_2():
 
 #----------------------------------------------------------------------
 
-def hook_test():
+def hook_test(sbox):
   "hook testing."
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(hook_test)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
 
   # Get paths to the working copy and repository
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
 
   # Setup the hook configs to echo data back
   start_commit_hook = svntest.main.get_start_commit_hook_path (repo_dir)
@@ -918,14 +902,13 @@ def hook_test():
 # erroneous conflicts due to Ancestor < Target < Source, in terms of
 # node-rev-id parentage.
 
-def merge_mixed_revisions():
+def merge_mixed_revisions(sbox):
   "commit mixed-rev wc (no erronous merge error)"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(merge_mixed_revisions)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Make some convenient paths.
   iota_path = os.path.join(wc_dir, 'iota')
@@ -1098,14 +1081,13 @@ def merge_mixed_revisions():
 
 #----------------------------------------------------------------------
 
-def commit_uri_unsafe():
+def commit_uri_unsafe(sbox):
   "commit files and dirs with URI-unsafe characters"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(commit_uri_unsafe)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Make some convenient paths.
   hash_dir = os.path.join(wc_dir, '#hash#')
@@ -1169,14 +1151,13 @@ def commit_uri_unsafe():
     return 1
   return 0
 
-def commit_deleted_edited():
+def commit_deleted_edited(sbox):
   "commit files that have been deleted, but also edited"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(commit_deleted_edited)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   # Make some convenient paths.
   iota_path = os.path.join(wc_dir, 'iota')
@@ -1211,14 +1192,13 @@ def commit_deleted_edited():
     return 1
   return 0
   
-def commit_in_dir_scheduled_for_addition():
+def commit_in_dir_scheduled_for_addition(sbox):
   "commit a file inside a directory that's already scheduled to be added"
 
-  # Bootstrap:  make independent repo and working copy.
-  sbox = sandbox(commit_deleted_edited)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  if sbox.build():
+    return 1
 
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  wc_dir = sbox.wc_dir
 
   A_path = os.path.join(wc_dir, 'A')
   Z_path = os.path.join(wc_dir, 'Z')
@@ -1259,17 +1239,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

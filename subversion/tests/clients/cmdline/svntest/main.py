@@ -256,6 +256,21 @@ def copy_greek_tree():
   return copy.deepcopy(templist)
 
 ######################################################################
+# Sandbox handling
+
+class Sandbox:
+  "Manages a sandbox for a test to operate within."
+
+  def __init__(self, module, idx):
+    self.name = '%s-%d' % (module, idx)
+    self.wc_dir = os.path.join(general_wc_dir, self.name)
+    self.repo_dir = os.path.join(general_repo_dir, self.name)
+
+  def build(self):
+    return actions.make_repo_and_wc(self.name)
+
+
+######################################################################
 # Main testing functions
 
 # These two functions each take a TEST_LIST as input.  The TEST_LIST
@@ -271,9 +286,20 @@ def run_one_test(n, test_list):
   if (n < 1) or (n > len(test_list) - 1):
     print "There is no test", `n` + ".\n"
     return 1
+
+  func = test_list[n]
+  if func.func_code.co_argcount:
+    # ooh! this function takes a sandbox argument
+    module, unused = \
+      os.path.splitext(os.path.basename(func.func_code.co_filename))
+    sandbox = Sandbox(module, n)
+    args = (sandbox,)
+  else:
+    args = ()
+
   # Run the test.
   try:
-    error = test_list[n]()
+    error = apply(func, args)
   except SVNTreeUnequal:
     print "caught an SVNTreeUnequal exception, returning error instead"
     error = 1
@@ -284,6 +310,17 @@ def run_one_test(n, test_list):
   print sys.argv[0], n, ":", test_list[n].__doc__
   return error
 
+def _internal_run_tests(test_list, testnum=None):
+  exit_code = 0
+
+  if testnum is None:
+    for n in range(1, len(test_list)):
+      if run_one_test(n, test_list):
+        exit_code = 1
+  else:
+    exit_code = run_one_test(testnum, test_list)
+
+  return exit_code
 
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
@@ -296,10 +333,14 @@ def run_one_test(n, test_list):
 #   3.  String "list" passed on command-line:  print each test's docstring.
 
 def run_tests(test_list):
-  "Main routine to run all tests in TEST_LIST."
+  """Main routine to run all tests in TEST_LIST.
+
+  NOTE: this function does not return. It does a sys.exit() with the
+        appropriate exit code.
+  """
 
   global test_area_url
-  testnum = 0
+  testnum = None
 
   for arg in sys.argv:
 
@@ -310,7 +351,9 @@ def run_tests(test_list):
       for x in test_list[1:]:
         print " %2d      %s" % (n, x.__doc__)
         n = n+1
-      return 0
+
+      # done. just exit with success.
+      sys.exit(0)
 
     elif arg == "--url":
       index = sys.argv.index(arg)
@@ -321,17 +364,16 @@ def run_tests(test_list):
         testnum = int(arg)
       except ValueError:
         pass
-      
-  if testnum:
-    return run_one_test(testnum, test_list)
-  
-  # otherwise, run all tests.
-  got_error = 0
-  for n in range(len(test_list)):
-    if n:
-      if run_one_test(n, test_list):
-        got_error = 1
-  return got_error
+
+  exit_code = _internal_run_tests(test_list, testnum)
+
+  # remove all scratchwork: the 'pristine' repository, greek tree, etc.
+  # This ensures that an 'import' will happen the next time we run.
+  if os.path.exists(temp_dir):
+    shutil.rmtree(temp_dir)
+
+  # return the appropriate exit code from the tests.
+  sys.exit(exit_code)
 
 
 ######################################################################
@@ -343,6 +385,9 @@ def run_tests(test_list):
 if os.path.exists(temp_dir):
   shutil.rmtree(temp_dir)
 
+# the modules import each other, so we do this import very late, to ensure
+# that the definitions in "main" have been completed.
+import actions
 
 ### It would be nice to print a graceful error if an older python
 ### interpreter tries to load this file, instead of getting a cryptic

@@ -27,10 +27,6 @@ except SyntaxError:
   traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "diff_tests-" + `test_list.index(x)`
-
 
 ######################################################################
 # Diff output checker
@@ -353,60 +349,57 @@ def repo_diff(wc_dir, rev1, rev2, check_fn):
 #
 
 # test 1
-def diff_update_a_file():
+def diff_update_a_file(sbox):
   "update a file"
 
-  sbox = sandbox(diff_update_a_file)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
 
-  return change_diff_commit_diff(wc_dir, 1,
+  return change_diff_commit_diff(sbox.wc_dir, 1,
                                  update_a_file,
                                  check_update_a_file)
 
 # test 2
-def diff_add_a_file():
+def diff_add_a_file(sbox):
   "add a file"
 
-  sbox = sandbox(diff_add_a_file)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
 
-  return change_diff_commit_diff(wc_dir, 1,
+  return change_diff_commit_diff(sbox.wc_dir, 1,
                                  add_a_file,
                                  check_add_a_file)
 
 #test 3
-def diff_add_a_file_in_a_subdir():
+def diff_add_a_file_in_a_subdir(sbox):
   "add a file in an added directory"
 
-  sbox = sandbox(diff_add_a_file_in_a_subdir)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
 
-  return change_diff_commit_diff(wc_dir, 1,
+  return change_diff_commit_diff(sbox.wc_dir, 1,
                                  add_a_file_in_a_subdir,
                                  check_add_a_file_in_a_subdir)
 
 # test 4
-def diff_replace_a_file():
+def diff_replace_a_file(sbox):
   "replace a file with a file"
 
-  sbox = sandbox(diff_replace_a_file)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
 
-  return change_diff_commit_diff(wc_dir, 1,
+  return change_diff_commit_diff(sbox.wc_dir, 1,
                                  replace_a_file,
                                  check_replace_a_file)
 
 # test 5
-def diff_multiple_reverse():
+def diff_multiple_reverse(sbox):
   "multiple revisions diff'd forwards and backwards"
 
-  sbox = sandbox(diff_multiple_reverse)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
 
   # rev 2
   if change_diff_commit_diff(wc_dir, 1,
@@ -458,12 +451,13 @@ def diff_multiple_reverse():
   return 0
 
 # test 6
-def diff_non_recursive():
+def diff_non_recursive(sbox):
   "non-recursive behaviour"
 
-  sbox = sandbox(diff_non_recursive)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
 
   if change_diff_commit_diff(wc_dir, 1,
                              update_three_files,
@@ -499,12 +493,13 @@ def diff_non_recursive():
   return 0
 
 # test 7
-def diff_repo_subset():
+def diff_repo_subset(sbox):
   "diff only part of the repository"
 
-  sbox = sandbox(diff_repo_subset)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
@@ -528,12 +523,13 @@ def diff_repo_subset():
 
 
 # test 8
-def diff_non_version_controlled_file():
+def diff_non_version_controlled_file(sbox):
   "non version controlled files"
 
-  sbox = sandbox(diff_non_version_controlled_file)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
 
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'foo'), "a new file")
 
@@ -569,17 +565,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

@@ -28,9 +28,6 @@ except SyntaxError:
   traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "copy_tests-" + `test_list.index(x)`
 
 # (abbreviation)
 path_index = svntest.actions.path_index
@@ -115,14 +112,13 @@ path_index = svntest.actions.path_index
 
 #----------------------------------------------------------------------
 
-def basic_copy_and_move_files():
+def basic_copy_and_move_files(sbox):
   "basic copy and move commands -- on files only"
 
-  sbox = sandbox(basic_copy_and_move_files)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   iota_path = os.path.join(wc_dir, 'iota')
@@ -217,17 +213,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

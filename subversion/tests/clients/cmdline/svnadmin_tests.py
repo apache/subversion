@@ -28,9 +28,6 @@ except SyntaxError:
   traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "svnadmin_tests-" + `test_list.index(x)`
 
 # (abbreviation)
 path_index = svntest.actions.path_index
@@ -101,13 +98,15 @@ def get_trees(repo_dir, revision_p = 0):
 
 #----------------------------------------------------------------------
 
-def test_create():
+def test_create(sbox):
   "test 'svnadmin create' subcommand"
 
-  # Bootstrap
-  sbox = sandbox(test_create)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
   url = svntest.main.test_area_url + '/' + repo_dir
 
   if os.path.exists(repo_dir):
@@ -127,16 +126,14 @@ def test_create():
   return 0  # success
 
 
-def test_youngest():
+def test_youngest(sbox):
   "test 'svnadmin youngest' subcommand"
 
-  # Bootstrap
-  sbox = sandbox(test_youngest)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
 
   # Make a couple of local mods to files
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -176,16 +173,14 @@ def test_youngest():
 
 #----------------------------------------------------------------------
 
-def create_txn():
+def create_txn(sbox):
   "test 'svnadmin createtxn' subcommand"
 
-  # Bootstrap
-  sbox = sandbox(create_txn)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
 
   # Make a transaction based on revision 1.
   output, errput = svntest.main.run_svnadmin("createtxn", repo_dir, "1")
@@ -200,16 +195,14 @@ def create_txn():
 
 #----------------------------------------------------------------------
 
-def remove_txn():
+def remove_txn(sbox):
   "test 'svnadmin rmtxns' subcommand"
 
-  # Bootstrap
-  sbox = sandbox(remove_txn)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
 
   # Make three transactions based on revision 1.
   svntest.main.run_svnadmin("createtxn", repo_dir, "1")
@@ -235,16 +228,14 @@ def remove_txn():
 
 #----------------------------------------------------------------------
 
-def list_revs():
+def list_revs(sbox):
   "test 'svnadmin lsrevs' subcommand"
 
-  # Bootstrap
-  sbox = sandbox(list_revs)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
-
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
 
   # Make a couple of local mods to files
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -325,17 +316,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

@@ -28,10 +28,6 @@ except SyntaxError:
   traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "update_tests-" + `test_list.index(x)`
-
 # (abbreviation)
 path_index = svntest.actions.path_index
   
@@ -77,14 +73,13 @@ def detect_extra_files(node, extra_files):
 
 
 
-def update_binary_file():
+def update_binary_file(sbox):
   "update a locally-modified binary file"
 
-  sbox = sandbox(update_binary_file)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Add a binary file to the project.
   fp = open("theta.png")
@@ -202,14 +197,13 @@ def update_binary_file():
 
 #----------------------------------------------------------------------
 
-def update_binary_file_2():
+def update_binary_file_2(sbox):
   "update to an old revision of a binary files"
 
-  sbox = sandbox(update_binary_file_2)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Suck up contents of a test .png file.
   fp = open("theta.png")
@@ -338,14 +332,13 @@ def update_binary_file_2():
 
 #----------------------------------------------------------------------
 
-def update_missing():
+def update_missing(sbox):
   "update missing items (by name) in working copy"
 
-  sbox = sandbox(update_missing)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Remove some files and dirs from the working copy.
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -389,14 +382,13 @@ def update_missing():
 
 #----------------------------------------------------------------------
 
-def update_ignores_added():
+def update_ignores_added(sbox):
   "ensure update is not munging additions or replacements"
 
-  sbox = sandbox(update_ignores_added)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   # Commit something so there's actually a new revision to update to.
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
@@ -454,14 +446,13 @@ def update_ignores_added():
 
 #----------------------------------------------------------------------
 
-def update_to_rev_zero():
+def update_to_rev_zero(sbox):
   "update to revision 0"
 
-  sbox = sandbox(update_to_rev_zero)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
-  
-  if svntest.actions.make_repo_and_wc(sbox):
+  if sbox.build():
     return 1
+
+  wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
   A_path = os.path.join(wc_dir, 'A')
@@ -498,17 +489,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.
