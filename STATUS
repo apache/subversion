@@ -20,7 +20,7 @@ Candidate changes:
       This conflicts with the branch.  A patch against r11308 is here:
       http://www.contactor.se/~dast/svn/archive-2004-10/0521.shtml
     Votes:
-      +1: lundblad
+      +1: lundblad, ghudson
 
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
@@ -42,7 +42,7 @@ Candidate changes:
     Justification:
       User complaint.  Simple fix.
     Votes:
-      +1: bliss, kfogel
+      +1: bliss, kfogel, ghudson
 
   * r11394
     Fix javahl bindings not using the default config directory if nothing
