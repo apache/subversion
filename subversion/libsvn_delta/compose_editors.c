@@ -230,6 +230,25 @@ close_edit (void *edit_baton)
 }
 
 
+static svn_error_t *
+abort_edit (void *edit_baton)
+{
+  struct edit_baton *eb = edit_baton;
+  svn_error_t *err;
+
+  err = (* (eb->editor_1->abort_edit)) (eb->edit_baton_1);
+  if (err)
+    return err;
+  
+  err = (* (eb->editor_2->abort_edit)) (eb->edit_baton_2);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
+
+
 struct handler_pair
 {
   struct file_baton *file_baton;
@@ -417,6 +436,7 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
   editor->change_file_prop = change_file_prop;
   editor->close_file = close_file;
   editor->close_edit = close_edit;
+  editor->abort_edit = abort_edit;
 
   /* Set up the edit baton. */
   eb->editor_1 = editor_1;

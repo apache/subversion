@@ -155,13 +155,6 @@ typedef struct svn_ra_plugin_t
                                      svn_ra_close_commit_func_t close_func,
                                      void *close_baton);
 
-  /* Something went wrong during the commit, so the client is
-     bailing.  Tell the network layer to cleanup any scratchwork left
-     on the server. */
-  svn_error_t *(*abort_commit) (void *session_baton,
-                                void *edit_baton);
-
-
   /* Ask the network layer to check out a copy of the repository URL
      specified in open(), using EDITOR and EDIT_BATON to create a
      working copy. */

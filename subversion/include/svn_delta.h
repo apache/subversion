@@ -530,6 +530,10 @@ typedef struct svn_delta_edit_fns_t
      the entire edit. */
   svn_error_t *(*close_edit) (void *edit_baton);
 
+  /* The editor-driver has decided to bail out.  Allow the editor to
+     gracefully clean up things if it needs to. */
+  svn_error_t *(*abort_edit) (void *edit_baton);
+
 } svn_delta_edit_fns_t;
 
 

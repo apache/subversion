@@ -512,10 +512,10 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       err = import (base_dir, new_entry, editor, edit_baton, pool);
       if (err)
         {
-          /* ignoring the return value of this.  we're *already*
-             about to die.  we just want to give the RA layer a
-             chance to clean up the fs transaction. */
-          ra_lib->abort_commit (session, edit_baton);
+          /* ignoring the return value of this.  we're *already* about
+             to die.  we just want to give the editor a chance to
+             clean up the fs transaction. */
+          editor->abort_edit (edit_baton);
           return err;
         }
     }
@@ -530,9 +530,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       if (err)
         {
           /* ignoring the return value of this.  we're *already* about
-             to die.  we just want to give the RA layer a chance to
+             to die.  we just want to give the editor a chance to
              clean up the fs transaction. */
-          ra_lib->abort_commit (session, edit_baton);
+          editor->abort_edit (edit_baton);
           return err;
         }
     }
