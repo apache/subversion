@@ -836,9 +836,10 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
           if (child->ns != ns || strcmp(child->name, "creationdate") != 0)
             continue;
           /* If this fails, we'll notice below, so ignore any error for now. */
-          svn_error_clear(svn_time_from_cstring(&tm,
-                                                child->first_cdata.first->text,
-                                                resource->pool));
+          svn_error_clear
+            (svn_time_from_cstring(&tm, dav_xml_get_cdata(child,
+                                                          resource->pool, 1),
+                                   resource->pool));
         }
     }
 

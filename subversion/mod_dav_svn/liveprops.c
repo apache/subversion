@@ -208,6 +208,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             if (serr != NULL)
               {
                 /* ### what to do? */
+                svn_error_clear(serr);
                 value = "###error###";
                 break;
               }
@@ -225,6 +226,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         if (serr != NULL)
           {
             /* ### what to do? */
+            svn_error_clear(serr);
             value = "###error###";
             break;
           }
@@ -253,6 +255,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                   resource->info->repos_path, p);
         if (serr != NULL)
           {
+            svn_error_clear(serr);
             value = "0";  /* ### what to do? */
             break;
           }
@@ -283,6 +286,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
         if ((serr != NULL) || (pval == NULL))
           {
+            svn_error_clear(serr);
             if (resource->collection) /* defaults for directories */
               {
                 if (resource->info->repos->xslt_uri)
@@ -304,7 +308,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                    there's no point even checking.  No matter what the
                    error is, we can't claim to have a mime type for
                    this resource. */
-                  return DAV_PROP_INSERT_NOTDEF;
+                svn_error_clear(serr);
+                return DAV_PROP_INSERT_NOTDEF;
               }
             else
               value = pval->data;
@@ -355,6 +360,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           if (serr != NULL)
             {
               /* ### what to do? */
+              svn_error_clear(serr);
               value = "###error###";
               break;
             }
@@ -426,6 +432,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           if (serr != NULL)
             {
               /* ### what to do? */
+              svn_error_clear(serr);
               value = "###error###";
               break;
             }
@@ -463,6 +470,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           if (serr != NULL)
             {
               /* ### what to do? */
+              svn_error_clear(serr);
               value = "###error###";
               break;
             }
@@ -482,6 +490,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       if (serr != NULL)
         {
           /* ### what to do? */
+          svn_error_clear(serr);
           value = "###error###";
           break;
         }
@@ -668,7 +677,10 @@ int dav_svn_get_last_modified_time (const char **datestring,
                                      resource->info->root.root,
                                      resource->info->repos_path, pool);
       if (serr != NULL)
-        return 1;
+        {
+          svn_error_clear(serr);
+          return 1;
+        }
     }
   else
     {
@@ -682,15 +694,23 @@ int dav_svn_get_last_modified_time (const char **datestring,
                               committed_rev,
                               SVN_PROP_REVISION_DATE, pool);
   if (serr != NULL)
-    return 1;
+    {
+      svn_error_clear(serr);
+      return 1;
+    }
   
   if (committed_date == NULL)
-    return 1;
+    {
+      return 1;
+    }
 
   /* return the ISO8601 date as an apr_time_t */
   serr = svn_time_from_cstring(&timeval_tmp, committed_date->data, pool);
   if (serr != NULL)
-    return 1;
+    {
+      svn_error_clear(serr);
+      return 1;
+    }
 
   if (timeval)
     memcpy(timeval, &timeval_tmp, sizeof(*timeval));
