@@ -866,7 +866,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
       SVN_ERR (print_diff_tree
                (root, base_root, tree, svn_stringbuf_create ("", pool),
                 svn_stringbuf_create ("", pool), pool));
-      apr_dir_remove_recursively (SVNLOOK_TMPDIR, pool);
+      SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
     }
   return SVN_NO_ERROR;
 }

@@ -40,7 +40,6 @@
 %ignore svn_io_run_cmd;
 
 %ignore apr_check_dir_empty;
-%ignore apr_dir_remove_recursively;
 
 /* ### probably want to keep this one. disabling for now cuz of the
    ### input stringbuf and its "which pool?" problem. */

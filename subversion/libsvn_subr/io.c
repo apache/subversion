@@ -894,20 +894,19 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
 
    This is a function to perform the equivalent of 'rm -rf'. */
 
-apr_status_t
-apr_dir_remove_recursively (const char *path, apr_pool_t *pool)
+svn_error_t *
+svn_io_remove_dir (const char *path, apr_pool_t *pool)
 {
+  static const char err_msg_fmt[] = "svn_io_remove_dir: removing `%s'";
   apr_status_t status;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
-  apr_pool_t *subpool;
+  apr_pool_t *subpool = svn_pool_create (pool);
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
-  status = apr_pool_create (&subpool, pool);
-  if (! (APR_STATUS_IS_SUCCESS (status))) return status;
-
   status = apr_dir_open (&this_dir, path, subpool);
-  if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+  if (status)
+    return svn_error_createf (status, 0, NULL, subpool, err_msg_fmt, path);
 
   for (status = apr_dir_read (&this_entry, flags, this_dir);
        APR_STATUS_IS_SUCCESS (status);
@@ -921,34 +920,31 @@ apr_dir_remove_recursively (const char *path, apr_pool_t *pool)
               || (strcmp (this_entry.name, "..") == 0))
             continue;
 
-          status = apr_dir_remove_recursively (fullpath, subpool);
-          if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+          SVN_ERR (svn_io_remove_dir (fullpath, subpool));
         }
       else if (this_entry.filetype == APR_REG)
         {
-          status = apr_file_attrs_set (fullpath,
-                                       0,
-                                       APR_FILE_ATTR_READONLY,
-                                       subpool);
-          if (status && status != APR_ENOTIMPL)
-            return status;
-
-          status = apr_file_remove (fullpath, subpool);
-          if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+          /* ### Do we really need the check for APR_REG here? Shouldn't
+             we remove symlinks, pipes and whatnot, too?  --xbc */
+          svn_error_t *err = svn_io_remove_file (fullpath, subpool);
+          if (err)
+            return svn_error_createf (err->apr_err, err->src_err,
+                                      err, err->pool, err_msg_fmt, path);
         }
     }
 
-  if (! (APR_STATUS_IS_ENOENT (status)))
-    return status;
-
+  if (!APR_STATUS_IS_ENOENT (status))
+    return svn_error_createf (status, 0, NULL, subpool, err_msg_fmt, path);
   else
     {
       status = apr_dir_close (this_dir);
-      if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+      if (status)
+        return svn_error_createf (status, 0, NULL, subpool, err_msg_fmt, path);
     }
 
   status = apr_dir_remove (path, subpool);
-  if (! (APR_STATUS_IS_SUCCESS (status))) return status;
+  if (status)
+    return svn_error_createf (status, 0, NULL, subpool, err_msg_fmt, path);
 
   apr_pool_destroy (subpool);
 
