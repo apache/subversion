@@ -432,14 +432,6 @@ typedef struct svn_delta_edit_fns_t
   /* Deleting things.  */
        
   /* Remove the directory entry named NAME.  */
-  /* FIXME: this used to be just delete(), but was changed to avoid
-   * gratuitous incompatibility with C++, where `delete' is a reserved
-   * keyword.  Unfortunately, remove() is taken by the standard C
-   * library.  The compromise is delete_entry(), but if anyone can
-   * think of a better name, tags-query-replace is your friend. :-)
-   * If you're reading this comment long after 22 Dec 2000, then
-   * apparently no one has thought of a better name, so it's probably
-   * time to remove the comment. */
   svn_error_t *(*delete_entry) (svn_stringbuf_t *name,
                                 void *parent_baton);
 
