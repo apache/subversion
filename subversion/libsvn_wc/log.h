@@ -38,6 +38,8 @@ extern "C" {
  * recovery, a given entry is "safe" in the sense that you can either
  * tell it has already been done (in which case, ignore it) or you can
  * do it again without ill effect.
+ *
+ * All log commands are self-closing tags with attributes.
  */
 
 /** Log actions. **/
@@ -134,7 +136,11 @@ extern "C" {
 
 /* Process the instructions in the log file for ADM_ACCESS. 
    DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
-   log entry.  It is always safe to pass null for this. */
+   log entry.  It is always safe to pass null for this.
+
+   If the log fails on its first command, return the error
+   SVN_ERR_WC_BAD_ADM_LOG_START.  If it fails on some subsequent
+   command, return SVN_ERR_WC_BAD_ADM_LOG. */
 svn_error_t *svn_wc__run_log (svn_wc_adm_access_t *adm_access,
                               const char *diff3_cmd,
                               apr_pool_t *pool);
