@@ -192,12 +192,18 @@ add_directory (svn_string_t *name,
   svn_string_t *npath;
 
   maybe_prepend_dest (&path_so_far, eb);
-  svn_wc__ensure_prepare_wc (path_so_far,
-                             eb->repository,
-                             eb->version,
-                             SVN_WC__UNWIND_UPDATE,
-                             eb->pool);
+  err = svn_wc__ensure_prepare_wc (path_so_far, eb->repository, eb->pool);
+  if (err)
+    return err;
 
+  /* Lock the parent. */
+  /* kff todo: locking the parent may be unnecessary in the near
+     future, see comments in finish_directory(). */
+  err = svn_wc__lock (path_so_far, 0, eb->pool);
+  if (err)
+    return err;
+
+  /* Make the full path to the child. */
   npath = svn_string_dup (path_so_far, eb->pool);
   svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, eb->pool);
 
@@ -210,12 +216,8 @@ add_directory (svn_string_t *name,
   if (err)
     return err;
 
-  /* Prep it. */
-  err = svn_wc__ensure_prepare_wc (npath,
-                                   eb->repository,
-                                   eb->version,
-                                   SVN_WC__UNWIND_UPDATE,
-                                   eb->pool);
+  /* Make it be a working copy. */
+  err = svn_wc__ensure_prepare_wc (npath, eb->repository, eb->pool);
   if (err)
     return err;
 
@@ -292,19 +294,24 @@ finish_directory (void *edit_baton, void *child_baton)
   svn_string_t *path = (svn_string_t *) child_baton;
   int stack_empty;
 
-  /* This directory is complete, mark it so. */
-  err = svn_wc__pop_unwind (path,
-                            SVN_WC__UNWIND_UPDATE,
-                            0,
-                            &stack_empty,
-                            eb->pool);
-  if (err)
-    return err;
+  /* kff todo: what we really want here is the parent's dir baton.
+     We don't store it currently.  That will change.
+     In the meantime, cheat and get it from the child_baton the old
+     fashioned way... */
+  svn_string_t *parent = svn_string_dup (path, eb->pool);
+  svn_path_remove_component (parent, SVN_PATH_LOCAL_STYLE);
 
-  /* And remove the lock, so others can work here. */
   err = svn_wc__unlock (path, eb->pool);
   if (err)
     return err;
+
+  /* kff todo: now that the child is finished, we should make an entry
+     in the parent's base-tree (although frankly I'm beginning to
+     wonder if child directories should be recorded anywhere but in
+     themselves; perhaps that would be best, and just let the parent
+     deduce their existence.  We can still tell when an update of the
+     parent is complete, by refcounting.) */
+
 
   /* kff todo: anything else? */
 
@@ -323,13 +330,12 @@ add_file (svn_string_t *name,
   struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path_so_far = (svn_string_t *) parent_baton;
   svn_string_t *npath;
+  svn_error_t *err;
 
   maybe_prepend_dest (&path_so_far, eb);
-  svn_wc__ensure_prepare_wc (path_so_far,
-                             eb->repository,
-                             eb->version,
-                             SVN_WC__UNWIND_UPDATE,
-                             eb->pool);
+  err = svn_wc__ensure_prepare_wc (path_so_far, eb->repository, eb->pool);
+  if (err)
+    return err;
 
   npath = svn_string_dup (path_so_far, eb->pool);
   svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, eb->pool);
@@ -394,7 +400,23 @@ change_file_prop (void *edit_baton,
 static svn_error_t *
 finish_file (void *edit_baton, void *child_baton)
 {
-  /* kff todo */
+  struct e_baton *eb = (struct e_baton *) edit_baton;
+  svn_string_t *file = (svn_string_t *) child_baton;
+  svn_error_t *err;
+
+  /* kff todo: decrement refcount! */
+
+  /* kff todo: what we really want here is the dir baton.
+     Perhaps it should be added to the interface.  Or in the case of
+     refcounting, maybe we'll just get it from the file_baton.
+     In the meantime, cheat and get it from the file_baton the old
+     fashioned way... */
+  svn_string_t *dir = svn_string_dup (file, eb->pool);
+  svn_path_remove_component (dir, SVN_PATH_LOCAL_STYLE);
+
+  err = svn_wc__unlock (dir, eb->pool);
+  if (err)
+    return err;
 
   printf ("\n");
   return SVN_NO_ERROR;
@@ -416,7 +438,7 @@ finish_edit (void *edit_baton, void *dir_baton)
                             &stack_empty,
                             eb->pool);
   if (err)
-    return (err);
+    return err;
   if (! stack_empty)
     return svn_create_error (SVN_ERR_WC_UNWIND_NOT_EMPTY,
                              0,

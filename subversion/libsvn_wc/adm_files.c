@@ -170,13 +170,133 @@ svn_wc__make_adm_thing (svn_string_t *path,
   else   /* unknown type argument, wrongness */
     {
       err = svn_create_error 
-        (0, 0, "init_admin_thing: bad type indicator", NULL, pool);
+        (0, 0, "svn_wc__make_admin_thing: bad type indicator", NULL, pool);
     }
 
   /* Restore path to its original state no matter what. */
   chop_admin_thing (path, components_added);
 
   return err;
+}
+
+
+/* Anything beginning with a `.' is okay.
+ * To avoid confusing people about purpose of tmp/ dir vs these
+ * temporary files, am using .wkg instead of .tmp as the
+ * extension.  I'd like to use the PID, but how to get that portably
+ * via APR?
+ */
+#define SVN_WC__TMP_EXTENSION ".wkg"
+
+
+#ifndef apr_copy_file
+/**
+ * copy one file to another
+ * @param from_path The full path to the source file (using / on all systems)
+ * @param to_path The full path to the dest file (using / on all systems)
+ * @param pool The pool to use.
+ * @tip If a file exists at the new location, then it will be overwritten.  
+ * @tip The source file will be copied until EOF is reached, not until
+ *      its size at the time of opening is reached.
+ * @tip The dest file's permissions will be the same as the source file's.
+ */
+static apr_status_t
+apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
+{
+  apr_file_t *s, *d;
+  apr_status_t apr_err;
+  apr_status_t read_err, write_err;
+  apr_finfo_t finfo;
+  apr_fileperms_t perms;
+  int total_so_far = 0;
+  char buf[1024];
+
+  /* Open source file. */
+  apr_err = apr_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return apr_err;
+  
+  /* Get its size. */
+  apr_err = apr_getfileinfo (&finfo, s);
+  if (apr_err)
+    {
+      apr_close (s);  /* toss any error */
+      return apr_err;
+    }
+  else
+    perms = finfo.protection;
+
+  /* Open dest file. */
+  apr_err = apr_open (&d, dst, (APR_WRITE | APR_CREATE), perms, pool);
+  if (apr_err)
+    {
+      apr_close (s);  /* toss */
+      return apr_err;
+    }
+  
+  /* Copy bytes till the cows come home. */
+  while (read_err != APR_EOF)
+    {
+      apr_ssize_t bytes_this_time = sizeof (buf);
+
+      /* Read 'em. */
+      read_err = apr_read (s, buf, &bytes_this_time);
+      if (read_err && (read_err != APR_EOF))
+        {
+          apr_close (s);  /* toss */
+          apr_close (d);  /* toss */
+          return read_err;
+        }
+
+      /* Write 'em. */
+      /* kff note: I wonder why apr_read() and apr_write() use a
+         single argument to say both how much data is desired and how
+         much actually got read, but apr_full_read() and
+         apr_full_write() use two separate args? */
+      write_err = apr_full_write (d, buf, bytes_this_time, &bytes_this_time);
+      if (write_err)
+        {
+          apr_close (s);  /* toss */
+          apr_close (d);
+          return write_err;
+        }
+
+      if (read_err && (read_err == APR_EOF))
+        {
+          apr_err = apr_close (s);
+          if (apr_err)
+            {
+              apr_close (d);
+              return apr_err;
+            }
+          
+          apr_err = apr_close (d);
+          if (apr_err)
+            return apr_err;
+        }
+    }
+
+  return 0;
+}
+#endif /* apr_copy_file */
+
+
+static svn_error_t *
+copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+
+  apr_err = apr_copy_file (src->data, dst->data, pool);
+  if (apr_err)
+    {
+      svn_string_t *msg = svn_string_create ("copying ", pool);
+      svn_string_appendstr (msg, src, pool);
+      svn_string_appendbytes (msg, " to ", sizeof (" to "), pool);
+      svn_string_appendstr (msg, dst, pool);
+      return svn_create_error (apr_err, 0, msg->data, NULL, pool);
+    }
+  else
+    return SVN_NO_ERROR;
 }
 
 
@@ -189,28 +309,35 @@ svn_wc__open_adm_file (apr_file_t **handle,
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
+  svn_string_t *true_path;  /* a tmp file, if we're writing */
   int components_added;
 
   components_added = extend_with_admin_name (path, fname, pool);
 
-#if 0
-  if (flags | APR_WRITE)
+  /* If we're writing, always do it to a tmp file.  We'll rename on
+     close. */
+  if (flags & APR_WRITE)
     {
-      /* kff todo: I'd like to use PID here, but how to do that
-         portably through APR? */
+      true_path = svn_string_dup (path, pool);
+      svn_string_appendbytes (true_path,
+                              SVN_WC__TMP_EXTENSION,
+                              sizeof (SVN_WC__TMP_EXTENSION),
+                              pool);
 
-      /* Not using ".tmp" to avoid confusing people about purpose of
-         tmp/ dir vs these temporary files. */
-      const char *tmp_ext = ".wkg";
-      svn_string_appendbytes (path, tmp_ext, sizeof (tmp_ext), pool);
-      fooo;
+      if (flags & APR_APPEND)
+        {
+          err = copy_file (path, true_path, pool);
+          if (err)
+            return err;
+        }
     }
-#endif /* 0 */
+  else
+    true_path = path;
 
-  apr_err = apr_open (handle, path->data, flags, APR_OS_DEFAULT, pool);
+  apr_err = apr_open (handle, true_path->data, flags, APR_OS_DEFAULT, pool);
 
   if (apr_err)
-    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+    err = svn_create_error (apr_err, 0, true_path->data, NULL, pool);
 
   /* Restore path to its original state no matter what. */
   chop_admin_thing (path, components_added);
@@ -223,9 +350,11 @@ svn_error_t *
 svn_wc__close_adm_file (apr_file_t *fp,
                         svn_string_t *path,
                         char *fname,
+                        int write,
                         apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
+  svn_string_t *true_path;
   apr_status_t apr_err = 0;
   int components_added;
 
@@ -233,8 +362,33 @@ svn_wc__close_adm_file (apr_file_t *fp,
 
   apr_err = apr_close (fp);
 
-  if (apr_err)
-    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+  if (write)
+    {
+      true_path = svn_string_dup (path, pool);
+      svn_string_appendbytes (true_path,
+                              SVN_WC__TMP_EXTENSION,
+                              sizeof (SVN_WC__TMP_EXTENSION),
+                              pool);
+
+      if (apr_err)
+        {
+          /* We already encountered an error, so just set the right
+             error message and leave. */
+          err = svn_create_error (apr_err, 0, true_path->data, NULL, pool);
+        }
+      else
+        {
+          apr_err = apr_rename_file (true_path->data, path->data, pool);
+          if (apr_err)
+            err = svn_create_error (apr_err, 0, true_path->data, NULL, pool);
+        }
+    }
+  else
+    {
+      /* Just check for an error on the original close. */
+      if (apr_err)
+        err = svn_create_error (apr_err, 0, true_path->data, NULL, pool);
+    }
 
   /* Restore path to its original state no matter what. */
   chop_admin_thing (path, components_added);
@@ -328,7 +482,7 @@ check_adm_exists (int *exists, svn_string_t *path, apr_pool_t *pool)
   else
     *exists = 1;
 
-  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, pool);
+  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
   if (err)
     return err;
 
@@ -359,23 +513,23 @@ make_empty_adm (svn_string_t *path, apr_pool_t *pool)
    we're initializing the files and the adm area isn't valid until
    we're done anyway. */
 static svn_error_t *
-init_contents_thing (svn_string_t *path,
-                     char *thing,
-                     svn_string_t *contents,
-                     apr_pool_t *pool)
+init_adm_file (svn_string_t *path,
+               char *thing,
+               svn_string_t *contents,
+               apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   apr_size_t written = 0;
 
-  err = svn_wc__open_adm_file (&f, path, thing, APR_WRITE, pool);
+  err = svn_wc__open_adm_file (&f, path, thing, APR_WRITE | APR_CREATE, pool);
   if (err)
     return err;
 
   apr_err = apr_full_write (f, contents->data, contents->len, &written);
 
-  err = svn_wc__close_adm_file (f, path, thing, pool);
+  err = svn_wc__close_adm_file (f, path, thing, 1, pool);
   if (err)
     return err;
   
@@ -395,7 +549,6 @@ init_contents_thing (svn_string_t *path,
 static svn_error_t *
 init_adm (svn_string_t *path,
           svn_string_t *repository,
-          svn_vernum_t version,
           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -405,8 +558,10 @@ init_adm (svn_string_t *path,
   const char *readme_contents =
     "This is a Subversion working copy administrative directory.\n"
     "Visit http://subversion.tigris.org/ for more information.\n";
+
+  /* Always create at version 0. */
   svn_string_t *versions_contents
-    = svn_wc__versions_init_contents (version, pool);
+    = svn_wc__versions_init_contents (0, pool);
 
   /* First, make an empty administrative area. */
   err = make_empty_adm (path, pool);
@@ -423,34 +578,20 @@ init_adm (svn_string_t *path,
 
 
   /* SVN_WC__ADM_FORMAT */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_FORMAT,
-                                svn_file_kind, pool);
-  if (err)
-    return err;
-  err = init_contents_thing (path, SVN_WC__ADM_FORMAT,
-                             svn_string_create (format_contents, pool), pool);
+  err = init_adm_file (path, SVN_WC__ADM_FORMAT,
+                       svn_string_create (format_contents, pool), pool);
   if (err)
     return err;
 
 
   /* SVN_WC__ADM_REPOSITORY */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_REPOSITORY,
-                                svn_file_kind, pool);
-  if (err)
-    return err;
-  err = init_contents_thing (path, SVN_WC__ADM_REPOSITORY,
-                             repository, pool);
+  err = init_adm_file (path, SVN_WC__ADM_REPOSITORY, repository, pool);
   if (err)
     return err;
 
 
   /* SVN_WC__ADM_VERSIONS */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_VERSIONS,
-                                svn_file_kind, pool);
-  if (err)
-    return err;
-  err = init_contents_thing (path, SVN_WC__ADM_VERSIONS,
-                             versions_contents, pool);
+  err = init_adm_file (path, SVN_WC__ADM_VERSIONS, versions_contents, pool);
   if (err)
     return err;
 
@@ -504,36 +645,20 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* Lock the dir before completing it, so there's not even a
-     nanosecond when someone thinks it's unlocked. */
-  err = svn_wc__lock (path, 0, pool);
-  if (err)
-    return err;
-
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_README,
-                                svn_file_kind, pool);
-  if (err)
-    return err;
-  err = init_contents_thing (path, SVN_WC__ADM_README,
-                             svn_string_create (readme_contents, pool),
-                             pool);
+  err = init_adm_file (path, SVN_WC__ADM_README,
+                       svn_string_create (readme_contents, pool),
+                       pool);
   if (err)
     return err;
 
 
-  /* Unlock -- the dir is now complete. */
-  if (! initial_unwind)
-    {
-      /* kff todo: this is overloading the initial_unwind argument a
-         bit.  But is there ever a time when we'd want to unlock
-         despite having an initial_unwind, or lock when not having
-         initial_unwind?  I think not... */
-      err = svn_wc__unlock (path, pool);
-      if (err)
-        return err;
-    }
+  /* Now unlock it.  It's already a valid working copy directory, it
+     just happens to be at version 0. */
+  err = svn_wc__unlock (path, pool);
+  if (err)
+    return err;
 
   /* Else no problems, we're outta here. */
   return SVN_NO_ERROR;
@@ -543,7 +668,6 @@ init_adm (svn_string_t *path,
 svn_error_t *
 svn_wc__ensure_adm (svn_string_t *path,
                     svn_string_t *repository,
-                    svn_vernum_t version,
                     int *exists_already,
                     apr_pool_t *pool)
 {
@@ -556,7 +680,7 @@ svn_wc__ensure_adm (svn_string_t *path,
   if (! *exists_already)
     {
       /* kff todo: modify call chain to pass ancestry down? */
-      err = init_adm (path, repository, version, pool);
+      err = init_adm (path, repository, pool);
       if (err)
         return err;
     }

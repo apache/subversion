@@ -77,6 +77,7 @@ svn_wc__versions_init_contents (svn_vernum_t version, apr_pool_t *pool)
      xml.c, replace the hardcode below with the proper calls. */
 
   const char *part_1 = 
+    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
     "<wc-versions xmlns=\"http://subversion.tigris.org/xmlns/\">\n"
     "   <entry version=\"";
   const char *part_2 =
@@ -144,8 +145,8 @@ xml_handle_start (void *userData, const char *tagname, const char **atts)
       const char *entry_name;
       const char *entry_version;
 
-      entry_name = svn_get_xml_attr_value ("name", atts);
-      entry_version = svn_get_xml_attr_value ("version", atts);
+      entry_name = svn_xml_get_attr_value ("name", atts);
+      entry_version = svn_xml_get_attr_value ("version", atts);
 
       if (entry_name)  /* Name is some file in this directory. */
         {
