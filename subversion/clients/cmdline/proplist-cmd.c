@@ -110,6 +110,7 @@ svn_cl__proplist (apr_getopt_t *os,
           int j;
           
           SVN_ERR (svn_client_proplist (&props, target, 
+                                        &(opt_state->start_revision),
                                         opt_state->recursive, pool));
           
           for (j = 0; j < props->nelts; ++j)
