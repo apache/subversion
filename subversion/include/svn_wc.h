@@ -1507,12 +1507,21 @@ svn_wc_cleanup (const char *path,
                 svn_wc_adm_access_t *optional_adm_access,
                 apr_pool_t *pool);
 
-/* Changing repository references at PATH that begin with
-   FROM to begin with TO instead.  Perform necessary allocations in
-   POOL.  If RECURSE is true, do so.
-
-   ADM_ACCESS is an access baton for the directory containing
-   PATH. ADM_ACCESS must not be NULL.  */
+/**
+ * Changing repository references at @a path that begin with
+ * @a from to begin with @a to instead.  Perform necessary allocations in
+ * @a pool.  If @a recurse is true, do so.
+ *
+ * @a adm_access is an access baton for the directory containing
+ * @a path. @a adm_access must not be NULL.
+ *
+ * @param path Working copy directory
+ * @param adm_access Admin access baton (may not be NULL)
+ * @param from Original URL
+ * @param to New URL
+ * @param recurse Whether to recurse into subdirectories
+ * @param pool The pool from which to perform memory allocations
+ **/
 svn_error_t *
 svn_wc_relocate (const char *path,
                  svn_wc_adm_access_t *adm_access,

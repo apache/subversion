@@ -710,9 +710,17 @@ svn_client_cleanup (const char *dir,
                     apr_pool_t *pool);
 
 
-/* Modify a working copy directory DIR, changing any
-   repository URLs that begin with FROM to begin with TO instead,
-   recursing into subdirectories if RECURSE is true. */
+/**
+ * Modify a working copy directory @a dir, changing any
+ * repository URLs that begin with @a from to begin with @a to instead,
+ * recursing into subdirectories if @a recurse is true.
+ *
+ * @param dir Working copy directory
+ * @param from Original URL
+ * @param to New URL
+ * @param recurse Whether to recurse
+ * @param pool The pool from which to perform memory allocations
+ */
 svn_error_t *
 svn_client_relocate (const char *dir,
                      const char *from,
