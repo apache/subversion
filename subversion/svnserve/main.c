@@ -50,6 +50,22 @@ static void sigchld_handler(int signo)
   /* Nothing to do; we just need to interrupt the accept(). */
 }
 
+/* In tunnel or inetd mode, we don't want hook scripts corrupting the
+ * data stream by sending data to stdout, so we need to redirect
+ * stdout somewhere else.  Sending it to stderr is acceptable; sending
+ * it to /dev/null is another option, but apr doesn't provide a way to
+ * do that without also detaching from the controlling terminal.
+ */
+static apr_status_t redirect_stdout(void *arg)
+{
+  apr_pool_t *pool = arg;
+  apr_file_t *out_file, *err_file;
+
+  apr_file_open_stdout(&out_file, pool);
+  apr_file_open_stderr(&err_file, pool);
+  return apr_file_dup2(out_file, err_file, pool);
+}
+
 int main(int argc, const char *const *argv)
 {
   svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
@@ -115,6 +131,7 @@ int main(int argc, const char *const *argv)
 
   if (!daemon_mode && !listen_once)
     {
+      apr_pool_cleanup_register(pool, pool, NULL, redirect_stdout);
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
