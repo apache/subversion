@@ -35,16 +35,6 @@ Candidate changes:
       +1: ghudson, jerenkrantz
       Nominated by: David James <james82@gmail.com>
 
-  * r12630
-    Dataloss bug in svndumpfilter - copyfrom information lost for files
-    copied-with-modifications.
-    Justification:
-      Dataloss!
-    Branch:
-      1.1.x-svndumpfilter r12655:12656
-    Votes:
-      +1: maxb, sussman, dionisos
-
   * r12636
     Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
     are lost.
@@ -56,24 +46,6 @@ Candidate changes:
       cause conflicts in the merge of later revisions.
     Votes:
       +1: maxb, dionisos
-
-  * r12637, r12640
-    Very bad memory handling in svndumpfilter - caches an entire revision
-    of data in memory.
-    Justification:
-      Makes the use of svndumpfilter on dumpstreams containing files
-      larger than available RAM, or revisions in which the total size of
-      changed files is larger than available RAM, totally impossible.
-      This is a showstopper bug, since we do not have obliterate.
-    Notes:
-      r12637 is purely re-ordering of entire functions with no effective
-      code changes whatsoever, in order to make the diff of r12640 more
-      easily reviewable.
-    Branch:
-      1.1.x-svndumpfilter r12657:12659
-      (Each merged revision committed to branch seperately)
-    Votes:
-      +1: maxb, sussman, dionisos
 
   * r12499, r12542, plus branch-only modification in r12670
     Make mailer.py work on Windows.
@@ -87,17 +59,6 @@ Candidate changes:
       1.1.x-mailer.py r12543:HEAD
     Votes:
       +1: maxb
-
-  * r13090
-    javahl binding cleanup of usage of path and url.
-    Justification:
-      javahl binding change only to be more stable on input path and url.
-    Notes:
-      does not apply cleanly to 1.1.*. Please use the patch for issue 2232
-      instead.
-    Votes:
-      +1: pmayweg
-      +0: dionisos
 
   * r13222, r13223, r13232
     Rewrite libsvn_fs_fs's auto-merge algorithm (requires r13193 first)
@@ -221,4 +182,43 @@ Approved changes (further review is welcome, but not required):
       Wholly within bindings/, 2 +1s suffices.
     Votes:
       +1: maxb, rooneg
+
+  * r12630
+    Dataloss bug in svndumpfilter - copyfrom information lost for files
+    copied-with-modifications.
+    Justification:
+      Dataloss!
+    Branch:
+      1.1.x-svndumpfilter r12655:12656
+    Votes:
+      +1: maxb, sussman, dionisos
+
+  * r12637, r12640
+    Very bad memory handling in svndumpfilter - caches an entire revision
+    of data in memory.
+    Justification:
+      Makes the use of svndumpfilter on dumpstreams containing files
+      larger than available RAM, or revisions in which the total size of
+      changed files is larger than available RAM, totally impossible.
+      This is a showstopper bug, since we do not have obliterate.
+    Notes:
+      r12637 is purely re-ordering of entire functions with no effective
+      code changes whatsoever, in order to make the diff of r12640 more
+      easily reviewable.
+    Branch:
+      1.1.x-svndumpfilter r12657:12659
+      (Each merged revision committed to branch seperately)
+    Votes:
+      +1: maxb, sussman, dionisos
+
+  * r13090
+    javahl binding cleanup of usage of path and url.
+    Justification:
+      javahl binding change only to be more stable on input path and url.
+    Notes:
+      does not apply cleanly to 1.1.*. Please use the patch for issue 2232
+      instead.
+    Votes:
+      +1: pmayweg
+      +0: dionisos
 
