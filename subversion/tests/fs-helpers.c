@@ -205,13 +205,13 @@ svn_test__get_file_contents (svn_fs_root_t *root,
 static svn_error_t *
 get_dir_entries (apr_hash_t *tree_entries,
                  svn_fs_root_t *root,
-                 svn_stringbuf_t *path, 
+                 const char *path, 
                  apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
 
-  SVN_ERR (svn_fs_dir_entries (&entries, root, path->data, pool));
+  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
   
   /* Copy this list to the master list with the path prepended to the
      names */
@@ -221,7 +221,7 @@ get_dir_entries (apr_hash_t *tree_entries,
       apr_ssize_t keylen;
       void *val;
       svn_fs_dirent_t *dirent;
-      svn_stringbuf_t *full_path;
+      const char *full_path;
       int is_dir;
  
       apr_hash_this (hi, &key, &keylen, &val);
@@ -229,17 +229,14 @@ get_dir_entries (apr_hash_t *tree_entries,
 
       /* Calculate the full path of this entry (by appending the name
          to the path thus far) */
-      full_path = svn_stringbuf_dup (path, pool);
-      svn_path_add_component (full_path,
-                              svn_stringbuf_create (dirent->name, pool));
+      full_path = svn_path_join (path, dirent->name, pool);
 
       /* Now, copy this dirent to the master hash, but this time, use
          the full path for the key */
-      apr_hash_set (tree_entries, full_path->data, 
-                    APR_HASH_KEY_STRING, dirent);
+      apr_hash_set (tree_entries, full_path, APR_HASH_KEY_STRING, dirent);
 
       /* If this entry is a directory, recurse into the tree. */
-      SVN_ERR (svn_fs_is_dir (&is_dir, root, full_path->data, pool));
+      SVN_ERR (svn_fs_is_dir (&is_dir, root, full_path, pool));
       if (is_dir)
         SVN_ERR (get_dir_entries (tree_entries, root, full_path, pool));
     }
@@ -296,7 +293,6 @@ svn_test__validate_tree (svn_fs_root_t *root,
 {
   apr_hash_t *tree_entries, *expected_entries;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_stringbuf_t *root_dir = svn_stringbuf_create ("", subpool);
   svn_stringbuf_t *extra_entries = NULL;
   svn_stringbuf_t *missing_entries = NULL;
   svn_stringbuf_t *corrupt_entries = NULL;
@@ -315,7 +311,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
   tree_entries = apr_hash_make (pool);
   
   /* Begin the recursive directory entry dig */
-  SVN_ERR (get_dir_entries (tree_entries, root, root_dir, subpool));
+  SVN_ERR (get_dir_entries (tree_entries, root, "", subpool));
 
   /* For each entry in our EXPECTED_ENTRIES hash, try to find that
      entry in the TREE_ENTRIES hash given us by the FS.  If we find
