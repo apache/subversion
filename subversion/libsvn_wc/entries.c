@@ -504,13 +504,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   /* lock creation date. */
   {
     const char *cdate_str = 
-      apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_CRT_DATE,
+      apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
                     APR_HASH_KEY_STRING);
     if (cdate_str)
       {
-        SVN_ERR (svn_time_from_cstring (&entry->lock_crt_date, cdate_str,
-                                        pool));
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE;
+        SVN_ERR (svn_time_from_cstring (&entry->lock_creation_date, 
+                                        cdate_str, pool));
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE;
       }
   }
   
@@ -1060,9 +1060,10 @@ write_entry (svn_stringbuf_t **output,
                   entry->lock_comment);
 
   /* Lock creation date */
-  if (entry->lock_crt_date)
-    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_CRT_DATE, APR_HASH_KEY_STRING,
-                  svn_time_to_cstring (entry->lock_crt_date, pool));
+  if (entry->lock_creation_date)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
+                  APR_HASH_KEY_STRING,
+                  svn_time_to_cstring (entry->lock_creation_date, pool));
 
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
@@ -1369,8 +1370,8 @@ fold_entry (apr_hash_t *entries,
                                : NULL);
 
   /* Lock creation date */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE)
-    cur_entry->lock_crt_date = entry->lock_crt_date;
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
+    cur_entry->lock_creation_date = entry->lock_creation_date;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */

@@ -608,7 +608,7 @@ log_do_delete_lock (struct log_runner *loggy,
   svn_wc_entry_t entry;
 
   entry.lock_token = entry.lock_comment = entry.lock_owner = NULL;
-  entry.lock_crt_date = 0;
+  entry.lock_creation_date = 0;
 
   /* Now write the new entry out */
   err = svn_wc__entry_modify (loggy->adm_access, name,
@@ -616,7 +616,7 @@ log_do_delete_lock (struct log_runner *loggy,
                               SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
                               | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
                               | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
-                              | SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE,
+                              | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
                               FALSE, loggy->pool);
   if (err)
     return svn_error_createf (pick_error_code (loggy), err,
