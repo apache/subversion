@@ -102,75 +102,6 @@ my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 /* 
    NOT EXPORTED.
 
-   Input:  a bytestring
-
-   Returns: offset of first non-whitespace character 
-
-      (if bytestring is ALL whitespace, then it returns the size of
-      the bytestring.  Be careful not to use this value as an array
-      offset!)
-
-*/
-
-size_t
-first__non_whitespace (const svn_string_t *str)
-{
-  size_t i;
-
-  for (i = 0; i < str->len; i++)
-    {
-      if (! isspace (str->data[i]))
-        {
-          return i;
-        }
-    }
-
-  /* if we get here, then the string must be entirely whitespace */
-  return (str->len);  
-}
-
-
-/* 
-   NOT EXPORTED.
-
-   Input:  a bytestring
-
-   Output:  same bytestring, stripped of whitespace on both sides
-            (input bytestring is modified IN PLACE)
-*/
-
-void
-strip__whitespace (svn_string_t *str)
-{
-  size_t i;
-
-  /* Find first non-whitespace character */
-  size_t offset = first__non_whitespace (str);
-
-  /* Go ahead!  Waste some RAM, we've got pools! :)  */
-  str->data += offset;
-  str->len -= offset;
-
-  /* Now that we've chomped whitespace off the front, search backwards
-     from the end for the first non-whitespace. */
-
-  for (i = (str->len - 1); i >= 0; i--)
-    {
-      if (! isspace (str->data[i]))
-        {
-          break;
-        }
-    }
-  
-  /* Mmm, waste some more RAM */
-  str->len = i + 1;
-}
-
-
-
-/* 
-   NOT EXPORTED.
-
    Input:  a bytestring, starting search offset, search character, and pool
 
    Returns:  1. the offset of the search character
@@ -207,7 +138,7 @@ slurp__to (const svn_string_t *searchstr,
                                   (i - start - 1),        /* number to copy */
                                   pool);
           
-          strip__whitespace (substr);
+          svn_string_strip_whitespace (substr);
 
           return i;
         }
@@ -298,7 +229,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
   while (my__readline (FILE, currentline, scratchpool) != APR_EOF)
     {
       char c;
-      size_t offset = first__non_whitespace (currentline);
+      size_t offset = svn_string_first_non_whitespace (currentline);
 
       if (offset == currentline->len)
         {
