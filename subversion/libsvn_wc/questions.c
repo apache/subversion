@@ -234,12 +234,12 @@ contents_identical_p (svn_boolean_t *identical_p,
   while (status != APR_EOF)
     {
       status = apr_full_read (local_file, buf1, BUFSIZ, &bytes_read1);
-      if (status)
+      if (status && (status != APR_EOF))
         return svn_error_create
           (status, 0, NULL, pool, "apr_full_read() failed.");
 
       status = apr_full_read (textbase_file, buf2, BUFSIZ, &bytes_read2);
-      if (status)
+      if (status && (status != APR_EOF))
         return svn_error_create
           (status, 0, NULL, pool, "apr_full_read() failed.");
       
