@@ -40,7 +40,6 @@ typedef enum dag_node_kind_t
 {
   dag_node_kind_file = 1, /* Purposely reserving 0 for error */
   dag_node_kind_dir,
-  dag_node_kind_copy
 }
 dag_node_kind_t;
 
@@ -94,13 +93,6 @@ svn_fs__dag_is_directory (dag_node_t *node)
 }
 
 
-int 
-svn_fs__dag_is_copy (dag_node_t *node)
-{
-  return (node->kind == dag_node_kind_copy ? TRUE : FALSE);
-}
-
-
 const svn_fs_id_t *
 svn_fs__dag_get_id (dag_node_t *node)
 {
@@ -141,11 +133,16 @@ node_rev_is_mutable (skel_t *node_content)
 
 /* Set the revision field in the header of NODE_REV to a skel
    representing the empty string, an indication that this
-   NODE_REV is uncommitted.  */
+   NODE_REV is uncommitted.  
+
+   Also, set its copy history to null.  If this node is a copy,
+   someone will set it so later; but no matter what, it shouldn't
+   claim to be a copy of whatever its predecessor was a copy of. */
 static void
 node_rev_make_mutable (skel_t *node_rev)
 {
   (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->len = 0;
+  (SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (node_rev))) = NULL;
   return;
 }
 
@@ -271,8 +268,6 @@ svn_fs__dag_get_node (dag_node_t **node,
     new_node->kind = dag_node_kind_file;
   else if (node_is_kind_p (contents, "dir"))
     new_node->kind = dag_node_kind_dir;
-  else if (node_is_kind_p (contents, "copy"))
-    new_node->kind = dag_node_kind_copy;
   else
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, 0, fs->pool,
                              "Attempt to create unknown kind of node");
@@ -1605,165 +1600,88 @@ svn_fs__dag_rename (dag_node_t *from_dir,
 
 
 
-/* Create a copy node named NAME in PARENT which refers to SOURCE_PATH
-   in SOURCE_REVISION, as part of TRAIL.  Set *CHILD_P to a reference
-   to the new node, allocated in TRAIL->pool.  PARENT must be mutable.
-   NAME must be a single path component; it cannot be a slash-
-   separated directory path.  */
 svn_error_t *
-svn_fs__dag_make_copy (dag_node_t **child_p,
-                       dag_node_t *parent,
-                       const char *name,
-                       svn_revnum_t source_revision,
-                       const char *source_path,
-                       trail_t *trail)
+svn_fs__dag_copy (dag_node_t *to_node,
+                  const char *entry,
+                  dag_node_t *from_node,
+                  svn_revnum_t from_rev,
+                  const char *from_path,
+                  trail_t *trail)
 {
-  skel_t *new_node_skel;
-  svn_fs_id_t *new_node_id;
+  skel_t *from_node_rev, *to_node_rev;
+  svn_fs_id_t *new_id;
 
-  abort();
-
-  /* NOTREACHED */
-
-  /* Make sure that parent is a directory */
-  if (! svn_fs__dag_is_directory (parent))
-    return 
-      svn_error_createf 
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
-       "Attempted to create entry in non-directory parent");
-    
+  /* Make a copy of the original node revision skel. */
+  SVN_ERR (get_node_revision (&from_node_rev, from_node, trail));
+  to_node_rev = svn_fs__copy_skel (from_node_rev, trail->pool);
+  
+  /* Set the copy option in the new skel. */
   {
-    svn_boolean_t is_mutable;
-    
-    /* Make sure the parent is mutable */
-    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, parent, trail));
-    if (! is_mutable) 
-      return 
-        svn_error_createf 
-        (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
-         "Attempted to make a copy node under a non-mutable parent");
+    skel_t *copy_option;
+    char *rev_str = apr_psprintf (trail->pool, "%ld", from_rev);
+
+    copy_option = svn_fs__make_empty_list (trail->pool);
+    svn_fs__prepend (svn_fs__str_atom (from_path, trail->pool), copy_option);
+    svn_fs__prepend (svn_fs__str_atom (rev_str, trail->pool), copy_option);
+    svn_fs__prepend (svn_fs__str_atom ("copy", trail->pool), copy_option);
+
+    /* If the from_node was itself a copy, we don't want to preserve
+       that copy history in the new node. */
+    if (SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (to_node_rev)))
+      SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (to_node_rev)) = NULL;
+
+    /* Set or replace with the new copy history. */
+    svn_fs__append (copy_option, SVN_FS__NR_HEADER (to_node_rev));
   }
 
-  /* Check that parent does not already have an entry named NAME. */
-  {
-    skel_t *entry_skel;
-
-    SVN_ERR (dir_entry_from_node (&entry_skel, parent, name, trail));
-    if (entry_skel)
-      {
-        return 
-          svn_error_createf 
-          (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, trail->pool,
-           "Attempted to create entry that already exists");
-      }
-  }
-
-  /* Make sure that NAME is a single path component. */
-  if (! svn_fs__is_single_path_component (name))
-    return 
-      svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
-       "Attempted to make a copy node with an illegal name `%s'", name);
-    
-  /* cmpilato todo: Need to validate SOURCE_REVISION and SOURCE_PATH
-     with some degree of intelligence, I'm sure.  Should we make sure
-     that SOURCE_REVISION is an existing revising?  Should we traverse
-     the SOURCE_PATH in that revision to make sure that it really
-     exists? */
-  if (! SVN_IS_VALID_REVNUM(source_revision))
-    return 
-      svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
-       "Attempted to make a copy node with an invalid source revision");
-
-  if ((! source_path) || (! strlen (source_path)))
-    return 
-      svn_error_createf 
-      (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
-       "Attempted to make a copy node with an invalid source path");
-
-  /* Create the new node's NODE-REVISION skel */
-  {
-    skel_t *header_skel;
-    skel_t *flag_skel;
-    skel_t *base_path_skel;
-    svn_stringbuf_t *id_str;
-    const char *rev;
-
-    /* Create a string containing the SOURCE_REVISION */
-    rev = apr_psprintf (trail->pool, "%lu", (unsigned long) source_revision);
-
-    /* Get a string representation of the PARENT's node ID */
-    id_str = svn_fs_unparse_id (parent->id, trail->pool);
-    
-    /* Create a new skel for our new copy node, the format of which is
-       (HEADER SOURCE-REVISION (NAME ...)).  HEADER is (`copy'
-       PROPLIST (`mutable' PARENT-ID)).  The list of NAMEs describes
-       the path to the source file, described as a series of single
-       path components (imagine a '/' between each successive NAME in
-       thelist, if you will). */
-    
-    /* Step 1: create the FLAG skel. */
-    flag_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool), flag_skel);
-    svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), flag_skel);
-    /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
-    
-    /* Step 2: create the HEADER skel. */
-    header_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (flag_skel, header_skel);
-    /* cmpilato todo:  Find out of this is supposed to be an empty
-       PROPLIST, or a copy of the PROPLIST from the source file. */
-    svn_fs__prepend (svn_fs__make_empty_list (trail->pool), header_skel);
-    svn_fs__prepend (svn_fs__str_atom ("copy", trail->pool), header_skel);
-    /* Now we have a HEADER skel: (`copy' () FLAG) */
-
-    /* Step 3: assemble the source path list. */
-    base_path_skel = svn_fs__make_empty_list (trail->pool);
-    /* cmpilato todo: Need to find out more on the topic of base
-       paths.  Can they be relative, or only absolute, and what's the
-       format of the skel in either case? */
-    /* We now have a list of path components, (NAME ...) */
-
-    /* Step 4: assemble the NODE-REVISION skel. */
-    new_node_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (base_path_skel, new_node_skel);
-    svn_fs__prepend (svn_fs__str_atom (rev, trail->pool), new_node_skel);
-    svn_fs__prepend (header_skel, new_node_skel);
-    /* All done, skel-wise.  We have a NODE-REVISION skel as described
-       far above. */
-    
-    /* Time to actually create our new node in the filesystem */
-    SVN_ERR (svn_fs__create_node (&new_node_id, 
-                                  parent->fs,
-                                  new_node_skel, trail));
-  }
-
-  /* Create a new node_dag_t for our new node */
-  SVN_ERR (svn_fs__dag_get_node (child_p, 
-                                    svn_fs__dag_get_fs (parent),
-                                    new_node_id, trail));
-
-  /* We can safely call set_entry because we already know that
-     PARENT is mutable, and we just created CHILD, so we know it has
-     no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  SVN_ERR (set_entry (parent, name, svn_fs__dag_get_id (*child_p), trail));
-
+  /* The new node doesn't know what revision it was created in yet. */
+  (SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (to_node_rev)))->len = 0;
+  
+  /* Store the new node under a new id in the filesystem.
+     Note: The new_id is not related to from_node's id.  This is
+     because the new node is not a next revision of from_node, but
+     rather a copy of it.  Since for copies, all the ancestry
+     information we care about is recorded in the copy options, there
+     is no reason to make the id's be related.  */
+  SVN_ERR (svn_fs__create_node (&new_id, to_node->fs, to_node_rev, trail));
+  
+  /* Set the entry in to_node to the id of new, copied node. */
+  SVN_ERR (svn_fs__dag_set_entry (to_node, entry, new_id, trail));
+  
   return SVN_NO_ERROR;
 }
 
 
-/* Set *REV_P and *PATH_P to the revision and path of NODE, which must
-   be a copy node, as part of TRAIL.  Allocate *PATH_P in TRAIL->pool.  */
 svn_error_t *
-svn_fs__dag_get_copy (svn_revnum_t *rev_p,
-                      char **path_p,
-                      dag_node_t *node,
-                      trail_t *trail)
+svn_fs__dag_copied_from (svn_revnum_t *rev_p,
+                         const char **path_p,
+                         dag_node_t *node,
+                         trail_t *trail)
 {
-  abort();
-  /* NOTREACHED */
-  return NULL;
+  skel_t *node_rev;
+  skel_t *copy_skel;
+
+  SVN_ERR (get_node_revision (&node_rev, node, trail));
+  copy_skel = SVN_FS__NR_HDR_COPY (SVN_FS__NR_HEADER (node_rev));
+
+  if (copy_skel)
+    {
+      char *rev_str = apr_pstrndup (trail->pool,
+                                    copy_skel->children->next->data,
+                                    copy_skel->children->next->len);
+
+      *rev_p = (svn_revnum_t) atoi (rev_str);
+      *path_p = apr_pstrndup (trail->pool,
+                              copy_skel->children->next->next->data,
+                              copy_skel->children->next->next->len);
+    }
+  else
+    {
+      *rev_p = SVN_INVALID_REVNUM;
+      *path_p = NULL;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1871,8 +1789,7 @@ stabilize_node (dag_node_t *node, svn_revnum_t rev, trail_t *trail)
               SVN_ERR (stabilize_node (child, rev, trail));
             }
         }
-      else if (svn_fs__dag_is_file (node)
-               || svn_fs__dag_is_copy (node))
+      else if (svn_fs__dag_is_file (node))
         ;
       else
         abort ();

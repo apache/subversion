@@ -2025,21 +2025,16 @@ txn_body_copy (void *baton,
 
   if (svn_fs_is_revision_root (from_root))
     {
-      /* Copying a file or directory from a revision root.  This is a
-         trivial referencing operation. */
-
-      /* Make sure that this node's parents are mutable.  */
+      /* Make sure the target node's parents are mutable.  */
       SVN_ERR (make_path_mutable (to_root, to_parent_path->parent, 
                                   to_path, trail));
 
-      /* Now, set the entry with this name in the parent to the id of
-         the node we are copying.  If the destination parent has no
-         entry of this name, we'll just create one. */
-      SVN_ERR (svn_fs__dag_set_entry 
-               (to_parent_path->parent->node,
-                to_parent_path->entry,
-                svn_fs__dag_get_id (from_parent_path->node),
-                trail));
+      SVN_ERR (svn_fs__dag_copy (to_parent_path->parent->node,
+                                 to_parent_path->entry,
+                                 from_parent_path->node,
+                                 svn_fs_revision_root_revision (from_root),
+                                 from_path,
+                                 trail));
     }
   else
     {
@@ -2077,6 +2072,61 @@ svn_fs_copy (svn_fs_root_t *from_root,
   args.to_root   = to_root;
   args.to_path   = to_path;
   return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
+}
+
+
+struct copied_from_args
+{
+  svn_fs_root_t *root;      /* Root for the node whose ancestry we seek. */
+  const char *path;         /* Path for the node whose ancestry we seek. */
+
+  svn_revnum_t result_rev;  /* Revision, if any, of the ancestor. */
+  const char *result_path;  /* Path, if any, of the ancestor. */
+
+  apr_pool_t *pool;         /* Allocate `result_path' here. */
+};
+
+
+static svn_error_t *
+txn_body_copied_from (void *baton, trail_t *trail)
+{
+  struct copied_from_args *args = baton;
+  parent_path_t *path_down;
+
+  SVN_ERR (open_path (&path_down,
+                      args->root,
+                      args->path,
+                      0,
+                      trail));
+
+  SVN_ERR (svn_fs__dag_copied_from (&(args->result_rev),
+                                    &(args->result_path),
+                                    path_down->node,
+                                    trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_copied_from (svn_revnum_t *rev_p,
+                    const char **path_p,
+                    svn_fs_root_t *root,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  struct copied_from_args args;
+
+  args.root = root;
+  args.path = path;
+  args.pool = pool;
+
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_copied_from, &args, pool));
+
+  *rev_p  = args.result_rev;
+  *path_p = args.result_path;
+
+  return SVN_NO_ERROR;
 }
 
 

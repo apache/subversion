@@ -23,22 +23,33 @@
 
 /*** Accessor Macros. ***/
 
-/* Access the header of a node revision skel. */
+/* Access the HEADER of a node revision skel. */
 #define SVN_FS__NR_HEADER(node_rev) ((node_rev)->children)
 
-/* Access the property rep key of a node revision skel. */
+/* Access the PROP-KEY of a node revision skel. */
 #define SVN_FS__NR_PROP_KEY(node_rev) ((node_rev)->children->next)
 
-/* Access the data rep key of a node revision skel. */
+/* Access the DATA-KEY (or ENTRIES-KEY) of a node revision skel. */
 #define SVN_FS__NR_DATA_KEY(node_rev) ((node_rev)->children->next->next)
 
-/* Access the kind skel of a node revision header.
+/* Access the KIND skel of a node revision header.
    NOTE: takes a header skel, not a node-revision skel.  */
 #define SVN_FS__NR_HDR_KIND(header) ((header)->children)
 
-/* Access the revision skel of a node revision header.
+/* Access the REV skel of a node revision header.
    NOTE: takes a header skel, not a node-revision skel.  */
 #define SVN_FS__NR_HDR_REV(header) ((header)->children->next)
+
+/* Access the COPY skel of a node revision header, null if none.
+   NOTE: takes a header skel, not a node-revision skel.
+
+   Note for the future: we may eventually have other optional fields
+   in a node revision header.  If that happens, and their order is
+   unfixed, then it will probably pay to make a function
+   svn_fs__nr_hdr_option() that takes a string and returns the
+   corresponding skel, and then the accessor macros for the third item
+   and beyond in a header would use that function.  Or something. */
+#define SVN_FS__NR_HDR_COPY(header) ((header)->children->next->next)
 
 
 
