@@ -12,15 +12,23 @@ use SVN::Base qw(Delta svn_delta_editor_);
 *invoke_set_target_revision = *SVN::_Delta::svn_delta_editor_invoke_set_target_revision;
 use strict;
 
+sub convert_editor {
+    my $self = shift;
+    if (ref($_[0]) && $_[0]->isa('_p_svn_delta_editor_t')) {
+	@{$self}{qw/_editor _baton/} = @_;
+	return 1;
+    }
+    return 0;
+}
+
 sub new {
     my $class = shift;
     my $self = bless {}, $class;
 
-    if (ref($_[0]) && $_[0]->isa('_p_svn_delta_editor_t')) {
-	@{$self}{qw/_editor _baton/} = @_;
-    }
-    else {
+    unless ($self->convert_editor(@_)) {
 	%$self = @_;
+	$self->convert_editor (@{$self->{_editor}})
+	    if $self->{_editor};
     }
 
     warn "debug" if $self->{_debug};
