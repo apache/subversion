@@ -50,14 +50,14 @@ SPECIFIC LANGUAGE BINDINGS
 
 *  Python
 
-   1.  On Unix systems, run 'make swig-py from the top of the
+   1.  On Unix systems, run 'make swig-py' from the top of the
        Subversion source tree.  This will invoke SWIG on the *.i
        files, resulting in a collection of .c source files.  It will
        then compile and link those .c files into Python libraries.
 
        On Windows, ???
 
-   2.  On Unix systems, run 'make install-swig-py (as root, typically)
+   2.  On Unix systems, run 'make install-swig-py' (as root, typically)
        from the top of the Subversion source tree.  This will copy
        your new Python libraries into the appropriate system location.
 
@@ -66,7 +66,7 @@ SPECIFIC LANGUAGE BINDINGS
        directory.  You can do this by running
        'make install-swig-py swig_pydir=~'.
 
-       Note: If you want to install to an alterante prefix (usually only
+       Note: If you want to install to an alternate prefix (usually only
        if you are building packages), you can supply the prefix here.  An
        example of doing this for building rpms looks like
        'make install-swig-py DESTDIR=$RPM_BUILD_ROOT/usr'.
@@ -85,7 +85,7 @@ SPECIFIC LANGUAGE BINDINGS
 
    The Java bindings are still under development, and have not yet
    reached a functional state.  You can attempt to build them by
-   running 'make swig-java from the top level of the Subversion
+   running 'make swig-java' from the top level of the Subversion
    source tree.
 
 
