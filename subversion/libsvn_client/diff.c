@@ -863,6 +863,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   enum svn_wc_merge_outcome_t merge_outcome;
   const char *auth_dir;
+  svn_boolean_t already_modified;
 
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
@@ -912,7 +913,10 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   if (status)
     return svn_error_createf (status, NULL, "failed to close '%s'.",
                               tmpfile2);   
-  
+
+  SVN_ERR (svn_wc_text_modified_p (&already_modified, target_wcpath, FALSE,
+                                   adm_access, pool));
+
   /* Perform a 3-way merge between the temporary fulltexts and the
      current working file. */
   oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT, rev1);
@@ -923,6 +927,15 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
                          &merge_outcome, pool));
   if (merge_outcome == svn_wc_merge_conflict)
     text_state = svn_wc_notify_state_conflicted;
+  else if (merge_outcome == svn_wc_merge_merged)
+    {
+      if (already_modified)
+        text_state = svn_wc_notify_state_merged;
+      else
+        text_state = svn_wc_notify_state_changed;
+    }
+  else
+    text_state = svn_wc_notify_state_unchanged;
 
   SVN_ERR (svn_io_remove_file (tmpfile1, pool));
   SVN_ERR (svn_io_remove_file (tmpfile2, pool));
@@ -938,12 +951,9 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
 
   if (notify_func)
     {
-
       /* First check that regular props changed. */
       if (regular_props->nelts == 0)
 	prop_state = svn_wc_notify_state_unchanged;
-
-      /* ### todo: Detect the actual text state, and pass that below.  */
 
       (*notify_func) (notify_baton,
                       target_wcpath,
