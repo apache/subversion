@@ -410,9 +410,9 @@ $ svn log -r 1729:{2/17/02}
           <title>Switches</title>
 
           <screen>
-  --targets FILENAME
-  --non-recursive (-N)
-  --quiet (-q)
+--targets FILENAME
+--non-recursive (-N)
+--quiet (-q)
           </screen>
         </refsect1>
         
@@ -422,28 +422,28 @@ $ svn log -r 1729:{2/17/02}
           <para>To add a file to your working copy:</para>
 
           <screen>
-  $ svn add foo.c 
-  A         foo.c
+$ svn add foo.c 
+A         foo.c
           </screen>
 
           <para>When adding a directory, the default behavior of
             <command>svn add</command> is to recurse:</para>
           
           <screen>
-  $ svn add testdir
-  A         testdir
-  A         testdir/a
-  A         testdir/b
-  A         testdir/c
-  A         testdir/d
+$ svn add testdir
+A         testdir
+A         testdir/a
+A         testdir/b
+A         testdir/c
+A         testdir/d
           </screen>
 
           <para>You can add a directory without adding its
             contents:</para>
           
           <screen>
-  $ svn add --non-recursive otherdir
-  A         otherdir
+$ svn add --non-recursive otherdir
+A         otherdir
           </screen>
         </refsect1>
       </refentry>
