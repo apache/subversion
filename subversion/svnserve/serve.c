@@ -74,7 +74,7 @@ typedef struct {
   svn_ra_svn_conn_t *conn;
 } log_baton_t;
 
-enum authn_type { AUTHENTICATED, UNAUTHENTICATED };
+enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
 enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 
 /* Verify that URL is inside REPOS_URL and get its fs path. */
@@ -912,7 +912,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                server_baton_t *b)
 {
-  if (get_access(b, FALSE) != NO_ACCESS)
+  if (get_access(b, UNAUTHENTICATED) != NO_ACCESS)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
 #if APR_HAS_USER
   if (b->tunnel)
@@ -954,7 +954,8 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 #endif
 
-  if (strcmp(mech, "ANONYMOUS") == 0)
+  if (get_access(b, UNAUTHENTICATED) != NO_ACCESS
+      && strcmp(mech, "ANONYMOUS") == 0)
     {
       if (b->believe && mecharg && *mecharg)
         b->user = mecharg;
