@@ -699,12 +699,20 @@ class Config:
       # if a matching rule hasn't been given, then use the empty string
       # as it will match all paths
       for_paths = getattr(sub, 'for_paths', '')
-      self._group_re.append((group, re.compile(for_paths), params))
+      exclude_paths = getattr(sub, 'exclude_paths', None)
+      if exclude_paths:
+        exclude_paths_re = re.compile(exclude_paths)
+      else:
+        exclude_paths_re = None
+
+      self._group_re.append((group, re.compile(for_paths),
+                             exclude_paths_re, params))
 
     # after all the groups are done, add in the default group
     try:
       self._group_re.append((None,
                              re.compile(self.defaults.for_paths),
+                             None,
                              default_params))
     except AttributeError:
       # there is no self.defaults.for_paths
@@ -713,9 +721,11 @@ class Config:
   def which_groups(self, path):
     "Return the path's associated groups."
     groups = []
-    for group, pattern, repos_params in self._group_re:
+    for group, pattern, exclude_pattern, repos_params in self._group_re:
       match = pattern.match(path)
       if match:
+        if exclude_pattern and exclude_pattern.match(path):
+          continue
         params = repos_params.copy()
         params.update(match.groupdict())
         groups.append((group, params))
