@@ -1,0 +1,105 @@
+=============================================================================
+THOTZ: (by cmpilato, on conversion to the new NodeRevId system)
+              *** do not merge me into the main trunk **
+=============================================================================
+
+svn_fs__id_length
+        Used all over the place, typically by things that examine id
+        digits directly (deltify.c, id.c, nodes-table.c).   This will 
+        disappear.
+
+svn_fs__precede_id
+        Used by txn_body_revisions_changed (whose whole algorithm will
+        change) and svn_fs__check_related (whose whole algorithm will
+        change).  This will likely disappear.
+
+svn_fs__id_is_ancestor
+        Used by merge.
+
+svn_fs__id_is_parent
+        Used by svn_fs_txn_path_is_id for id roots.
+
+svn_fs_id_distance
+        Used by merge for relatedness checking (where svn_fs_check_related
+        will work) and for re-IDing (which won't apply any more).
+        Used by the svn_repos_dir_delta stuffs where svn_fs_check_related 
+        will work.  This will disappear.
+
+svn_fs_check_related
+        Currently used nowhere but in tests.  This will replace
+        svn_fs_id_distance (and become about 3 lines long!).
+
+svn_fs_txn_path_is_id
+        Only exists for id roots.
+
+--
+
+Greg Stein agrees that once mod_dav_svn stops using vsn-rsrc-urls that
+contain node-revision-ids, we no longer need the concept of an `id
+root' in the filesystem.  That means we can lose:
+
+      svn_fs_txn_path_is_id()
+      svn_fs__id_is_parent()
+      svn_fs_id_root()
+      svn_fs_is_id_root()
+      a chunk of open_path()
+
+--
+
+Deltification is currently the only process in place that asks the
+question, "Where is my next successor?"  Currently the question is
+answered by doing a little node revision id mathematics; that's no
+longer an option.  Input to deltification is still root/path, so what
+might a new algorithm be?
+
+--
+
+svn_fs__new_node_id: needs a txn_id, but not a copy id.  If something
+was copied, it has a successor id.  node id is chosen as the next
+available node id in the `nodes' table.
+
+svn_fs__new_node_id is called only by svn_fs__create_node, which is
+called by make_entry and svn_fs__dag_copy.  The svn_fs__dag_copy case
+will, however, become a use of svn_fs__new_successor_id.
+
+--
+
+svn_fs__new_successor_id: needs a txn_id and an optional copy id.
+node id is inherited.  Careful though:  successor allocation is a bit
+tricky due to passive migration of copied subtree items.  That is, if
+I copy /dir1 to /dir2, dir2 gets a new copy id, but its children are
+generally untouched.  However, the next change made to one of dir2's
+children will earn the copy ID granted to dir2.  I suppose that
+open_path or make_path_mutable will need to track where it finds a
+directory whose copy id is different than that of its children (and
+verify that this difference isn't because the children were copied
+again or something) and hand the copy ID to DAG functions that will
+modify the children.  Actually, now that I think about it,
+make_path_mutable is the key here...  Of course, we still have to pass
+the stupid txn id into every function that tests mutability of nodes. 
+:-(
+
+svn_fs__new_successor_id is called by svn_fs__create_successor and by
+merge, but the merge case will go away.  svn_fs__create_successor is
+called by svn_fs__dag_clone_root and svn_fs__dag_clone_child, as
+expected.
+
+--
+
+"In which revisions did this node change?"  Given a node revision id,
+we'd like to know in what revisions this node has changed, and we'd
+like the option of filtering out changes that occurred before the last
+time this node was copied.
+
+Algorithm looks like this:
+
+   while (NODE-REV-ID):
+     get TXN_ID from node revision id.
+     lookup REVISION with TXN_ID.
+     add REVISION to return value.
+     if ((filtering) and (my COPY_ID != my predecessor's COPY_ID))
+       break;
+     NODE-REV-ID = node revision's predecessor id
+
+--
+
