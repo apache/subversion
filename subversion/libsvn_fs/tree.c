@@ -2579,8 +2579,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
-  SVN_ERR (open_path (&parent_path, tb->root, tb->path,
-                      open_path_last_optional, trail));
+  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, trail));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
