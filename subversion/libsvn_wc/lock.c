@@ -590,12 +590,39 @@ svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
   return SVN_NO_ERROR;
 }
 
+/* Ensure that the cache for the pruned hash (no deleted entries) in
+   ADM_ACCESS is valid if the full hash is cached.
+
+   ### Should this sort of processing be in entries.c? */
 static void
 prune_deleted (svn_wc_adm_access_t *adm_access)
 {
   if (! adm_access->entries && adm_access->entries_deleted)
     {
       apr_hash_index_t *hi;
+
+      /* I think it will be common for there to be no deleted entries, so
+         it is worth checking for that case as we can optimise it. */
+      for (hi = apr_hash_first (adm_access->pool, adm_access->entries_deleted);
+           hi;
+           hi = apr_hash_next (hi))
+        {
+          void *val;
+          apr_hash_this (hi, NULL, NULL, &val);
+          svn_wc_entry_t *entry;
+          entry = val;
+          if (entry->deleted)
+            break;
+        }
+
+      if (! hi)
+        {
+          /* There are no deleted entries, so we can use the full hash */
+          adm_access->entries = adm_access->entries_deleted;
+          return;
+        }
+
+      /* Construct pruned hash without deleted entries */
       adm_access->entries = apr_hash_make (adm_access->pool);
       for (hi = apr_hash_first (adm_access->pool, adm_access->entries_deleted);
            hi;
