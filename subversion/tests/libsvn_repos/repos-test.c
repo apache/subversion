@@ -709,7 +709,7 @@ struct locations_info
 static svn_error_t *
 check_locations_info (apr_hash_t *locations, const struct locations_info *info)
 {
-  int i;
+  unsigned int i;
   for (i = 0; info->rev != 0; ++i, ++info)
     {
       const char *p = apr_hash_get (locations, &info->rev, sizeof
