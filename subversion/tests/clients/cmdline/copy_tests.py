@@ -1116,7 +1116,7 @@ def diff_repos_to_wc_copy(sbox):
   wc_dir = sbox.wc_dir
   
   iota_repos_path = svntest.main.current_repo_url + '/iota'
-  target_wc_path = os.path.join(wc_dir, 'new_file');
+  target_wc_path = os.path.join(wc_dir, 'new_file')
 
   # Copy a file from the repository to the working copy.
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
@@ -1140,13 +1140,13 @@ def repos_to_wc_copy_eol_keywords(sbox):
   wc_dir = sbox.wc_dir
   
   iota_repos_path = svntest.main.current_repo_url + '/iota'
-  iota_wc_path = os.path.join(wc_dir, 'iota');
-  target_wc_path = os.path.join(wc_dir, 'new_file');
+  iota_wc_path = os.path.join(wc_dir, 'iota')
+  target_wc_path = os.path.join(wc_dir, 'new_file')
 
   # Modify iota to make it checkworthy.
   f = open(iota_wc_path, "ab")
-  f.write("\nHello\nSubversion\n$LastChangedRevision$\n");
-  f.close();
+  f.write("\nHello\nSubversion\n$LastChangedRevision$\n")
+  f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:eol-style',
@@ -1158,7 +1158,7 @@ def repos_to_wc_copy_eol_keywords(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'commit', '-m', 'log msg',
-                                     wc_dir);
+                                     wc_dir)
 
   # Copy a file from the repository to the working copy.
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
@@ -1175,11 +1175,11 @@ def repos_to_wc_copy_eol_keywords(sbox):
 
   # Okay, if we got this far, we might as well make sure that the
   # translations/substitutions were done correctly:
-  f = open(target_wc_path, "rb");
-  raw_contents = f.read();
-  f.seek(0, 0);
-  line_contents = f.readlines();
-  f.close();
+  f = open(target_wc_path, "rb")
+  raw_contents = f.read()
+  f.seek(0, 0)
+  line_contents = f.readlines()
+  f.close()
 
   if re.match('[^\\r]\\n', raw_contents):
     raise svntest.Failure

@@ -835,7 +835,8 @@ def basic_switch(sbox):
 #----------------------------------------------------------------------
 
 def verify_file_deleted(message, path):
-  try: open(path, 'r')
+  try:
+    open(path, 'r')
   except IOError:
     return
   if message is not None:
@@ -844,9 +845,11 @@ def verify_file_deleted(message, path):
   raise Failure
   
 def can_cd_to_dir(path):
-  current_dir = os.getcwd();
-  try: os.chdir(path)
-  except OSError: return 0
+  current_dir = os.getcwd()
+  try:
+    os.chdir(path)
+  except OSError:
+    return 0
   os.chdir(current_dir)
   return 1
   
@@ -1096,7 +1099,7 @@ def basic_node_kind_change(sbox):
   "attempt to change node kind"
 
   sbox.build()
-  wc_dir = sbox.wc_dir;
+  wc_dir = sbox.wc_dir
   
   # Schedule a file for deletion
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
