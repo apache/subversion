@@ -77,7 +77,7 @@
 
 /* Given two property hashes (working copy and `base'), deduce what
    propchanges the user has made since the last update.  Return these
-   changes as a series of (svn_propchange_t *) objects stored in
+   changes as a series of (svn_prop_t *) objects stored in
    LOCAL_PROPCHANGES, allocated from POOL.  */
 
 /* For note, here's a quick little table describing the logic of this
@@ -416,7 +416,6 @@ svn_wc__do_property_merge (svn_string_t *path,
                            const svn_string_t *name,
                            apr_array_header_t *propchanges,
                            apr_pool_t *pool,
-                           enum svn_node_kind kind,
                            svn_string_t **entry_accum)
 {
   int i;
@@ -428,7 +427,6 @@ svn_wc__do_property_merge (svn_string_t *path,
   svn_string_t *tmp_prop_base, *real_prop_base;
   svn_string_t *tmp_props, *real_props;
   
-  const char *PROPS, *PROP_BASE;  /* constants pointing to parts of SVN/ */
   apr_array_header_t *local_propchanges; /* propchanges that the user
                                             has made since last update */
   apr_hash_t *localhash;   /* all `working' properties */
@@ -442,35 +440,42 @@ svn_wc__do_property_merge (svn_string_t *path,
   svn_string_t *reject_tmp_path = NULL;
 
 
-  /* Decide which areas of SVN/ are relevant */
-  if (kind == svn_node_file)
+  if (name == NULL)
     {
-      PROPS = SVN_WC__ADM_PROPS;
-      PROP_BASE = SVN_WC__ADM_PROP_BASE;
+      /* We're fetching properties for the _directory_ "path" */
+      base_propfile_path = svn_wc__adm_path (path,
+                                             0, /* not tmp */
+                                             pool,
+                                             SVN_WC__ADM_DIR_PROP_BASE,
+                                             NULL);
+      
+      local_propfile_path = svn_wc__adm_path (path,
+                                              0, /* not tmp */
+                                              pool,
+                                              SVN_WC__ADM_DIR_PROPS,
+                                              NULL);
     }
-  else if (kind == svn_node_dir)
+  else
     {
-      PROPS = SVN_WC__ADM_DIR_PROPS;
-      PROP_BASE = SVN_WC__ADM_DIR_PROP_BASE;
+      /* We're fetching properties for the file "path/name" */
+      base_propfile_path = svn_wc__adm_path (path,
+                                             0, /* not tmp */
+                                             pool,
+                                             SVN_WC__ADM_PROP_BASE,
+                                             name->data,
+                                             NULL);
+      
+      local_propfile_path = svn_wc__adm_path (path,
+                                              0, /* not tmp */
+                                              pool,
+                                              SVN_WC__ADM_PROPS,
+                                              name->data,
+                                              NULL);
     }
   
   /* Load the base & working property files into hashes */
   localhash = apr_make_hash (pool);
   basehash = apr_make_hash (pool);
-  
-  base_propfile_path = svn_wc__adm_path (path,
-                                         0, /* not tmp */
-                                         pool,
-                                         PROP_BASE,
-                                         name->data,
-                                         NULL);
-  
-  local_propfile_path = svn_wc__adm_path (path,
-                                          0, /* not tmp */
-                                          pool,
-                                          PROPS,
-                                          name->data,
-                                          NULL);
   
   err = svn_wc__load_prop_file (base_propfile_path,
                                 basehash, pool);
@@ -532,20 +537,33 @@ svn_wc__do_property_merge (svn_string_t *path,
               {
                 /* This is the very first prop conflict found on this
                    node. */
-                svn_string_t *tmparea;
+                svn_string_t *tmppath;
                 svn_string_t *tmpname;
 
                 /* Open a unique .prej file in the tmp/props/ area */
-                tmparea = svn_wc__adm_path (path,
-                                            TRUE, 
-                                            pool,
-                                            PROPS,
-                                            name->data,
-                                            NULL);
-                
+                if (name == NULL)
+                  {
+                    /* Dealing with directory "path" */
+                    tmppath = svn_wc__adm_path (path,
+                                                TRUE, /* use tmp */
+                                                pool,
+                                                SVN_WC__ADM_DIR_PROPS,
+                                                NULL);
+                  }
+                else
+                  {
+                    /* Dealing with file "path/name" */
+                    tmppath = svn_wc__adm_path (path,
+                                                TRUE, /* use tmp */
+                                                pool,
+                                                SVN_WC__ADM_PROPS,
+                                                name->data,
+                                                NULL);
+                  }
+
                 err = svn_io_open_unique_file (&reject_tmp_fp,
                                                &reject_tmp_path,
-                                               tmparea,
+                                               tmppath,
                                                SVN_WC__PROP_REJ_EXT,
                                                pool);
                 if (err) return err;
@@ -556,15 +574,28 @@ svn_wc__do_property_merge (svn_string_t *path,
                 tmpname = svn_path_last_component (reject_tmp_path,
                                                    svn_path_local_style,
                                                    pool);
-                
-                reject_tmp_path = 
-                  svn_wc__adm_path (svn_string_create ("", pool),
-                                    TRUE, 
-                                    pool,
-                                    PROPS,
-                                    tmpname->data,
-                                    NULL);
 
+                if (name == NULL)
+                  {
+                    /* Dealing with directory "path" */
+                    reject_tmp_path = 
+                      svn_wc__adm_path (svn_string_create ("", pool),
+                                        TRUE, /* use tmp */
+                                        pool,
+                                        tmpname->data,
+                                        NULL);
+                  }
+                else
+                  {
+                    /* Dealing with file "path/name" */
+                    reject_tmp_path = 
+                      svn_wc__adm_path (svn_string_create ("", pool),
+                                        TRUE, 
+                                        pool,
+                                        SVN_WC__ADM_PROPS,
+                                        tmpname->data,
+                                        NULL);
+                  }               
               }
 
             /* Append the conflict to the open tmp/PROPS/---.prej file */
@@ -586,61 +617,109 @@ svn_wc__do_property_merge (svn_string_t *path,
   
   
   /* Done merging property changes into both pristine and working
-     hashes.  Now we write them to temporary files.  Notice that
-     the paths computed are ABSOLUTE pathnames.  */
+  hashes.  Now we write them to temporary files.  Notice that the
+  paths computed are ABSOLUTE pathnames, which is what our disk
+  routines require.*/
+
+  if (name == NULL)
+    {
+      /* We're fetching properties for the _directory_ "path" */
+      base_prop_tmp_path = svn_wc__adm_path (path,
+                                             1, /* tmp */
+                                             pool,
+                                             SVN_WC__ADM_DIR_PROP_BASE,
+                                             NULL);
+      
+      local_prop_tmp_path = svn_wc__adm_path (path,
+                                              1, /* tmp */
+                                              pool,
+                                              SVN_WC__ADM_DIR_PROPS,
+                                              NULL);
+    }
+  else
+    {
+      /* We're fetching properties for the file "path/name" */
+      base_prop_tmp_path = svn_wc__adm_path (path,
+                                             1, /* tmp */
+                                             pool,
+                                             SVN_WC__ADM_PROP_BASE,
+                                             name->data,
+                                             NULL);
+      
+      local_prop_tmp_path = svn_wc__adm_path (path,
+                                              1, /* tmp */
+                                              pool,
+                                              SVN_WC__ADM_PROPS,
+                                              name->data,
+                                              NULL);
+    }
+
   
   /* Write the merged pristine prop hash to either
-     SVN/tmp/prop-base/filename or SVN/tmp/dir-prop-base */
-  base_prop_tmp_path = svn_wc__adm_path (path,
-                                         TRUE, /* tmp area */
-                                         pool,
-                                         PROP_BASE,
-                                         name->data,
-                                         NULL);
-  
+     path/SVN/tmp/prop-base/name or path/SVN/tmp/dir-prop-base */
   err = svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool);
   if (err) return err;
   
-  /* Write the merged local prop hash to SVN/tmp/props/filename or
-     SVN/tmp/dir-props */
-  local_prop_tmp_path = svn_wc__adm_path (path,
-                                          TRUE, /* tmp area */
-                                          pool,
-                                          PROPS,
-                                          name->data,
-                                          NULL);
-  
+  /* Write the merged local prop hash to path/SVN/tmp/props/name or
+     path/SVN/tmp/dir-props */
   err = svn_wc__save_prop_file (local_prop_tmp_path, localhash, pool);
   if (err) return err;
   
-  /* Compute pathnames for the "mv" log entries.  Notice that
-     these paths are RELATIVE pathnames, so that each SVN subdir
-     remains separable when executing run_log().  */
-  tmp_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+  /* Compute pathnames for the "mv" log entries.  Notice that these
+     paths are RELATIVE pathnames (each beginning with "SVN/"), so
+     that each SVN subdir remains separable when executing run_log().  */
+  if (name == NULL)
+    {
+      tmp_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+                                        1, /* tmp */
+                                        pool,
+                                        SVN_WC__ADM_DIR_PROP_BASE,
+                                        NULL);
+      real_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+                                         0, /* no tmp */
+                                         pool,
+                                         SVN_WC__ADM_DIR_PROP_BASE,
+                                         NULL);
+      
+      tmp_props = svn_wc__adm_path (svn_string_create ("", pool),
                                     1, /* tmp */
                                     pool,
-                                    PROP_BASE,
-                                    name->data,
+                                    SVN_WC__ADM_DIR_PROPS,
                                     NULL);
-  real_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+      real_props = svn_wc__adm_path (svn_string_create ("", pool),
                                      0, /* no tmp */
                                      pool,
-                                     PROP_BASE,
+                                     SVN_WC__ADM_DIR_PROPS,
+                                     NULL);
+    }
+  else 
+    {
+      tmp_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+                                        1, /* tmp */
+                                        pool,
+                                        SVN_WC__ADM_PROP_BASE,
+                                        name->data,
+                                        NULL);
+      real_prop_base = svn_wc__adm_path (svn_string_create ("", pool),
+                                         0, /* no tmp */
+                                         pool,
+                                         SVN_WC__ADM_PROP_BASE,
+                                         name->data,
+                                         NULL);
+      
+      tmp_props = svn_wc__adm_path (svn_string_create ("", pool),
+                                    1, /* tmp */
+                                    pool,
+                                    SVN_WC__ADM_PROPS,
+                                    name->data,
+                                    NULL);
+      real_props = svn_wc__adm_path (svn_string_create ("", pool),
+                                     0, /* no tmp */
+                                     pool,
+                                     SVN_WC__ADM_PROPS,
                                      name->data,
                                      NULL);
-  
-  tmp_props = svn_wc__adm_path (svn_string_create ("", pool),
-                                1, /* tmp */
-                                pool,
-                                PROPS,
-                                name->data,
-                                NULL);
-  real_props = svn_wc__adm_path (svn_string_create ("", pool),
-                                 0, /* no tmp */
-                                 pool,
-                                 PROPS,
-                                 name->data,
-                                 NULL);
+    }
   
   
   /* Write log entry to move pristine tmp copy to real pristine area. */
@@ -682,8 +761,19 @@ svn_wc__do_property_merge (svn_string_t *path,
                                   
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      err = svn_wc__get_existing_prop_reject_file (&reject_path, path,
-                                                   name, pool);
+      if (name == NULL)
+        {
+          err =
+            svn_wc__get_existing_prop_reject_file
+            (&reject_path, path,
+             svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool), pool);
+        }
+      else
+        {
+          err = svn_wc__get_existing_prop_reject_file (&reject_path, path,
+                                                       name, pool);
+        }
+      
       if (err) return err;
 
       if (! reject_path)
@@ -692,7 +782,16 @@ svn_wc__do_property_merge (svn_string_t *path,
              opening and closing it. */
           svn_string_t *reserved_path;
           svn_string_t *full_path = svn_string_dup (path, pool);
-          svn_path_add_component (full_path, name, svn_path_local_style);
+
+          if (name == NULL)
+            svn_path_add_component (full_path,
+                                    svn_string_create
+                                    (SVN_WC__THIS_DIR_PREJ,
+                                     pool),
+                                    svn_path_local_style);
+          else
+            svn_path_add_component (full_path, name, svn_path_local_style);
+
           err = svn_io_open_unique_file (&reject_fp,
                                          &reserved_path,
                                          full_path,

@@ -140,6 +140,11 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_DPROP_BASE          "dprop-base"/* Isn't this bogus now? */
 #define SVN_WC__ADM_LOG                 "log"
 
+/* The basename of the ".prej" file, if a directory ever has property
+   conflicts.  This .prej file will appear *within* the conflicted
+   directory.  */
+#define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
+
 /* Return a string containing the admin subdir name. */
 svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
 
@@ -494,7 +499,7 @@ apr_time_t svn_wc__string_to_time (svn_string_t *timestr);
 
 /* Given two property hashes (working copy and `base'), deduce what
    propchanges the user has made since the last update.  Return these
-   changes as a series of (svn_propchange_t *) objects stored in
+   changes as a series of (svn_prop_t *) objects stored in
    LOCAL_PROPCHANGES, allocated from POOL.  */
 svn_error_t *
 svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
@@ -554,20 +559,22 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
                         apr_pool_t *pool);
 
 
-/* Given PATH/NAME (representing a node of type KIND) and an array of
-   PROPCHANGES, merge the changes into the working copy.  Necessary
-   log entries will be appended to ENTRY_ACCUM.
+/* Given PATH/NAME and an array of PROPCHANGES, merge the changes into
+   the working copy.  Necessary log entries will be appended to
+   ENTRY_ACCUM.
+
+   If we are attempting to merge changes to a directory, simply pass
+   the directory as PATH and NULL for NAME.
 
    If conflicts are found when merging, they are placed into a
-   temporary .prej file.  Log entries are then written to move this
-   file next to the working copy, or to append the conflicts to the
-   file's already-existing .prej file.  */
+   temporary .prej file within SVN. Log entries are then written to
+   move this file into PATH, or to append the conflicts to the file's
+   already-existing .prej file in PATH.  */
 svn_error_t *
 svn_wc__do_property_merge (svn_string_t *path,
                            const svn_string_t *name,
                            apr_array_header_t *propchanges,
                            apr_pool_t *pool,
-                           enum svn_node_kind kind,
                            svn_string_t **entry_accum);
 
 

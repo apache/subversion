@@ -671,9 +671,8 @@ close_directory (void *dir_baton)
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
-      err = svn_wc__do_property_merge (db->path, db->name,
+      err = svn_wc__do_property_merge (db->path, NULL,
                                        db->propchanges, db->pool,
-                                       svn_node_dir,
                                        &entry_accum);
       if (err) 
         return 
@@ -1188,7 +1187,6 @@ close_file (void *file_baton)
     {
       err = svn_wc__do_property_merge (fb->dir_baton->path, fb->name,
                                        fb->propchanges, fb->pool,
-                                       svn_node_file,
                                        &entry_accum);
       if (err) 
         return
