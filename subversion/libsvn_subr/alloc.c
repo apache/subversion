@@ -50,6 +50,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -119,7 +120,7 @@ svn_slurp_file (const char *file, size_t *len)
   /* todo: fooo, this is crap, make it robust or use APR */
 
   if (stat (file, &s) < 0)
-    fprintf (stderr, errno, "can't stat %s", file);
+    fprintf (stderr, "can't stat %s (%s)", file, strerror (errno));
   
   *len = s.st_size;
 
@@ -137,12 +138,12 @@ svn_slurp_file (const char *file, size_t *len)
 
       total_so_far += received;
 
-      if (feof (fp))
+      if ((total_so_far >= *len) || (feof (fp)))
         break;
     }
 
     if (fclose (fp) < 0)
-      fprintf (stderr, "cannot close %s", file);
+      fprintf (stderr, "cannot close %s (%s)", file, strerror (errno));
 
     return buf;
 }

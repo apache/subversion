@@ -46,6 +46,8 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include <stdlib.h>
+
 
 
 void *svn_malloc (size_t len);

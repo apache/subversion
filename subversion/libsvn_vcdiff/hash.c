@@ -39,13 +39,13 @@
 
 
 
-hash_table_t *
+hash_entry_t *
 make_hash_entry ()
 {
   hash_entry_t *e;
 
   e = svn_malloc (sizeof (*e));
-  memset (e->table, 0, sizeof (*e));
+  memset (e, 0, sizeof (*e));  /* cleanliness is next to godliness */
 
   return e;
 }
@@ -106,25 +106,24 @@ hash_string (char *data, int len)
 }
 
 
-long int
-try_match (unsigned char *str, long int len, long int pos, hash_table_t *)
+/* If there is an entry for STR (up to LEN) in the hash table T, return
+   the hash entry there.  Else make an entry for POS, and return NULL. */
+hash_entry_t *
+try_match (char *str, size_t len, size_t pos, hash_table_t *t)
 {
   hash_entry_t *e;
-  long int retval;
 
   size_t hash_code = (hash_string (str, len) % t->size);
 
-  if ((e = t->table[hash_code]) == NULL)
-    {
-      e = make_hash_entry ();
-      e->pos = pos;
-      t->table[hash_code] = e;
-      retval = -1;
-    }
-  else  /* we got a maybe-match, let caller figure it out */
-    retval = e->pos;
+  if ((e = t->table[hash_code]))
+    return e;
 
-  return retval;
+  /* Else. */
+
+  e = make_hash_entry ();
+  e->pos = pos;
+  t->table[hash_code] = e;
+  return NULL;
 }
 
 
