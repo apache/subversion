@@ -54,16 +54,6 @@ check_already_open (svn_fs_t *fs)
 
 
 
-/* This function is provided for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems. */
-static svn_error_t *
-fs_set_errcall (svn_fs_t *fs,
-                void (*db_errcall_fcn) (const char *errpfx, char *msg))
-{
-
-  return SVN_NO_ERROR;
-}
-
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
   svn_fs_fs__youngest_rev,
@@ -83,9 +73,9 @@ static fs_vtable_t fs_vtable = {
 
 /* Creating a new filesystem. */
 
-/* Create a new fsfs backed Subversion filesystem at path PATH and
-   link it to the filesystem FS.  Perform temporary allocations in
-   POOL. */
+/* This implements the fs_library_vtable_t.create() API.  Create a new
+   fsfs-backed Subversion filesystem at path PATH and link it into
+   *FS.  Perform temporary allocations in POOL. */
 static svn_error_t *
 fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -106,15 +96,16 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
 /* Gaining access to an existing filesystem.  */
 
-/* Implements the svn_fs_open API.  Opens a Subversion filesystem
-   located at PATH and sets FS to point to the correct vtable for the
-   fsfs filesystem.  All allocations are from POOL. */
+/* This implements the fs_library_vtable_t.open() API.  Open an FSFS
+   Subversion filesystem located at PATH, set *FS to point to the
+   correct vtable for the filesystem.  Use POOL for any temporary
+   allocations. */
 static svn_error_t *
 fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd;
 
-  SVN_ERR (svn_fs_fs__open (fs, path, fs->pool));
+  SVN_ERR (svn_fs_fs__open (fs, path, pool));
 
   ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
@@ -125,10 +116,10 @@ fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
 
 
-/* Copy a possibly live Subversion filesystem from SRC_PATH to
-   DEST_PATH.  The CLEAN_LOGS argument is ignored and included for
-   Subversion 1.0.x compatibility.  Perform all temporary allocations
-   in POOL. */
+/* This implements the fs_library_vtable_t.hotcopy() API.  Copy a
+   possibly live Subversion filesystem from SRC_PATH to DEST_PATH.
+   The CLEAN_LOGS argument is ignored and included for Subversion
+   1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
 fs_hotcopy (const char *src_path, 
             const char *dest_path, 
@@ -142,8 +133,22 @@ fs_hotcopy (const char *src_path,
 
 
 
+/* This function is provided for Subversion 1.0.x compatibility.  It
+   has no effect for fsfs backed Subversion filesystems.  It conforms
+   to the fs_library_vtable_t.bdb_set_errcall() API. */
+static svn_error_t *
+fs_set_errcall (svn_fs_t *fs,
+                void (*db_errcall_fcn) (const char *errpfx, char *msg))
+{
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* This function is included for Subversion 1.0.x compability.  It has
-   no effect for fsfs backed Subversion filesystems. */
+   no effect for fsfs backed Subversion filesystems.  It conforms to
+   the fs_library_vtable_t.bdb_recover() API. */
 static svn_error_t *
 fs_recover (const char *path,
             apr_pool_t *pool)
@@ -157,7 +162,8 @@ fs_recover (const char *path,
 
 
 /* This function is included for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems. */
+   has no effect for fsfs backed Subversion filesystems.  It conforms
+   to the fs_library_vtable_t.bdb_logfiles() API. */
 static svn_error_t *
 fs_logfiles (apr_array_header_t **logfiles,
              const char *path,
