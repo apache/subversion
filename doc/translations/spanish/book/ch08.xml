@@ -1204,26 +1204,28 @@ if __name__ == '__main__':
         sobre un recurso versionado (o por versionar)!</para>
 
       <sidebar>
-        <title>Comparing the Administrative Areas of Subversion and
-          CVS</title>
+        <title>Comparando las áreas administrativas de Subversion
+          y CVS</title>
 
-        <para>A glance inside the typical <filename>.svn</filename>
-          directory turns up a bit more than what CVS maintains in its
-          <filename>CVS</filename> administrative directories.  The
-          <filename>entries</filename> file contains XML which
-          describes the current state of the working copy directory,
-          and basically serves the purposes of CVS's
-          <filename>Entries</filename>, <filename>Root</filename>, and
-          <filename>Repository</filename> files combined.</para>
+        <para>Un vistazo dentro del típico directorio
+          <filename>.svn</filename> revela más cosas <!-- TODO turns
+          up a bit more, ¿ein? --> que lo que CVS mantiene en su
+          directorio administrativo <filename>CVS</filename>. El
+          fichero <filename>entries</filename> contiene
+          XML que describe el estado actual del directorio
+          de la copia local de trabajo, y básicamente
+          sirve para los propósitos de los ficheros de CVS
+          <filename>Entries</filename>, <filename>Root</filename>,
+          y <filename>Repository</filename> combinados.</para>
 
       </sidebar>
 
-      <para>The following is an example of an actual entries
-        file:</para>
+      <para>A continuación mostramos un ejemplo de un fichero de
+        entradas real:</para>
 
       <example id="svn-ch-8-sect-3-ex-1">
-        <title>Contents of a Typical <filename>.svn/entries</filename>
-          File</title>
+        <title>Contenido de un fichero
+          <filename>.svn/entries</filename> típico.</title>
         <programlisting>
 &lt;?xml version="1.0" encoding="utf-8"?&gt;
 &lt;wc-entries
