@@ -48,21 +48,23 @@ svn_cl__update (apr_getopt_t *os,
       svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
       const svn_delta_edit_fns_t *trace_editor;
       void *trace_edit_baton;
+      svn_string_t *parent_dir, *entry;
 
-      err = svn_cl__get_trace_update_editor (&trace_editor,
-                                             &trace_edit_baton,
-                                             target, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_wc_get_actual_update_target (target,
+                                                &parent_dir,
+                                                &entry,
+                                                pool));
 
-      err = svn_client_update (NULL, NULL,
-                               trace_editor, trace_edit_baton,
-                               target,
-                               opt_state->xml_file,
-                               opt_state->revision,
-                               pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
+                                                &trace_edit_baton,
+                                                parent_dir, pool));
+
+      SVN_ERR (svn_client_update (NULL, NULL,
+                                  trace_editor, trace_edit_baton,
+                                  target,
+                                  opt_state->xml_file,
+                                  opt_state->revision,
+                                  pool));
     }
 
   return SVN_NO_ERROR;

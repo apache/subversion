@@ -411,6 +411,24 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
                                        apr_pool_t *pool);
 
 
+/*
+ * Conditionally split PATH into a PARENT_DIR and an ENTRY in that
+ * parent_dir for the purposes of updates.
+ *
+ * PARENT_DIR is the directory at which the update editor should be
+ * rooted.
+ *
+ * ENTRY is the actual thing in the PARENT_DIR that should be updated,
+ * or NULL if the entire directory should be updated.
+ *
+ * Do all necessary allocations in POOL.
+ */
+svn_error_t *svn_wc_get_actual_update_target (svn_string_t *path,
+                                              svn_string_t **parent_dir,
+                                              svn_string_t **entry,
+                                              apr_pool_t *pool);
+
+
 /* Like svn_wc_get_update_editor(), except that:
  *
  * DEST will be created as a working copy, if it does not exist
