@@ -707,6 +707,8 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "C-=") 'svn-status-show-svn-diff-for-marked-files)
   (define-key svn-status-mode-map (kbd "~") 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map (kbd "E") 'svn-status-ediff-with-revision)
+  (define-key svn-status-mode-map (kbd "X") 'svn-status-resolve-conflicts)
+
   (define-key svn-status-mode-map (kbd "C-n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
@@ -762,6 +764,7 @@ A and B must be line-info's."
      ["svn diff current file" svn-status-show-svn-diff t]
      ["svn diff marked files" svn-status-show-svn-diff-for-marked-files t]
      ["svn ediff current file" svn-status-ediff-with-revision t]
+     ["svn resolve conflicts" svn-status-resolve-conflicts]
      )
     ["svn cat ..." svn-status-get-specific-revision t]
     ["svn add" svn-status-add-file t]
@@ -2661,6 +2664,105 @@ display routine for svn-status is available."
   (message (concat "The *svn-status* buffer will be"
                    (if svn-status-sort-status-buffer "" " not")
                    " sorted.")))
+
+;;;------------------------------------------------------------
+;;; resolve conflicts using ediff
+;;;------------------------------------------------------------
+(defun svn-resolve-conflicts-ediff (&optional name-A name-B)
+  "Invoke ediff to resolve conflicts in the current buffer.
+The conflicts must be marked with rcsmerge conflict markers."
+  (interactive)
+  (let* ((found nil)
+         (file-name (file-name-nondirectory buffer-file-name))
+         (your-buffer (generate-new-buffer
+                       (concat "*" file-name
+                               " " (or name-A "WORKFILE") "*")))
+         (other-buffer (generate-new-buffer
+                        (concat "*" file-name
+                                " " (or name-B "CHECKED-IN") "*")))
+         (result-buffer (current-buffer)))
+    (save-excursion
+      (set-buffer your-buffer)
+      (erase-buffer)
+      (insert-buffer result-buffer)
+      (goto-char (point-min))
+      (while (re-search-forward "^<<<<<<< .mine\n" nil t)
+        (setq found t)
+        (replace-match "")
+        (if (not (re-search-forward "^=======\n" nil t))
+            (error "Malformed conflict marker"))
+        (replace-match "")
+        (let ((start (point)))
+          (if (not (re-search-forward "^>>>>>>> .r[0-9]+\n" nil t))
+              (error "Malformed conflict marker"))
+          (delete-region start (point))))
+      (if (not found)
+          (progn
+            (kill-buffer your-buffer)
+            (kill-buffer other-buffer)
+            (error "No conflict markers found")))
+      (set-buffer other-buffer)
+      (erase-buffer)
+      (insert-buffer result-buffer)
+      (goto-char (point-min))
+      (while (re-search-forward "^<<<<<<< .mine\n" nil t)
+        (let ((start (match-beginning 0)))
+          (if (not (re-search-forward "^=======\n" nil t))
+              (error "Malformed conflict marker"))
+          (delete-region start (point))
+          (if (not (re-search-forward "^>>>>>>> .r[0-9]+\n" nil t))
+              (error "Malformed conflict marker"))
+          (replace-match "")))
+      (let ((config (current-window-configuration))
+            (ediff-default-variant 'default-B))
+
+        ;; Fire up ediff.
+
+        (set-buffer (ediff-merge-buffers your-buffer other-buffer))
+
+        ;; Ediff is now set up, and we are in the control buffer.
+        ;; Do a few further adjustments and take precautions for exit.
+
+        (make-local-variable 'svn-ediff-windows)
+        (setq svn-ediff-windows config)
+        (make-local-variable 'svn-ediff-result)
+        (setq svn-ediff-result result-buffer)
+        (make-local-variable 'ediff-quit-hook)
+        (setq ediff-quit-hook
+              (lambda ()
+                (let ((buffer-A ediff-buffer-A)
+                      (buffer-B ediff-buffer-B)
+                      (buffer-C ediff-buffer-C)
+                      (result svn-ediff-result)
+                      (windows svn-ediff-windows))
+                  (ediff-cleanup-mess)
+                  (set-buffer result)
+                  (erase-buffer)
+                  (insert-buffer buffer-C)
+                  (kill-buffer buffer-A)
+                  (kill-buffer buffer-B)
+                  (kill-buffer buffer-C)
+                  (set-window-configuration windows)
+                  (message "Conflict resolution finished; you may save the buffer"))))
+        (message "Please resolve conflicts now; exit ediff when done")
+        nil))))
+
+(defun svn-resolve-conflicts (filename)
+  (let ((buff (find-file-noselect filename)))
+    (if buff
+        (progn (switch-to-buffer buff)
+               (svn-resolve-conflicts-ediff))
+      (error "can not open file %s" filename))))
+
+(defun svn-status-resolve-conflicts ()
+  "Resolve conflict in the selected file"
+  (interactive)
+  (let ((file-info (svn-status-get-line-information)))
+    (or (and file-info
+             (= ?C (svn-status-line-info->filemark file-info))
+             (svn-resolve-conflicts 
+              (svn-status-line-info->full-path file-info)))
+        (error "can not resolve conflicts at this point"))))
 
 ;; --------------------------------------------------------------------------------
 ;; svn status profiling
