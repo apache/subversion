@@ -464,17 +464,17 @@ change_dir_prop (void *parent_baton,
   struct dir_baton *d = parent_baton;
   svn_error_t *err;
 
-  if (d->edit_baton->editor_1->change_file_prop)
+  if (d->edit_baton->editor_1->change_dir_prop)
     {
-      err = (* (d->edit_baton->editor_1->change_file_prop))
+      err = (* (d->edit_baton->editor_1->change_dir_prop))
         (d->dir_baton_1, name, value);
       if (err)
         return err;
     }
 
-  if (d->edit_baton->editor_2->change_file_prop)
+  if (d->edit_baton->editor_2->change_dir_prop)
     {
-      err = (* (d->edit_baton->editor_2->change_file_prop))
+      err = (* (d->edit_baton->editor_2->change_dir_prop))
         (d->dir_baton_2, name, value);
       if (err)
         return err;
