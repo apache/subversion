@@ -127,10 +127,6 @@ SOURCE=.\path.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\pipe.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\pool.c
 # End Source File
 # Begin Source File
