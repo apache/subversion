@@ -199,7 +199,12 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
     if (!apr_err && (inwords > 0 || outbytes == 0))
       apr_err = APR_INCOMPLETE;
     if (apr_err)
-      goto utf8_error;
+      {
+       utf8_error:
+        if (error_stream)
+          fprintf (error_stream, "Can't convert module path to UTF-8");
+        return EXIT_FAILURE;
+      }
 
     utf8_path[outlength - outbytes] = '\0';
     internal_path = svn_path_internal_style (utf8_path, pool);
@@ -220,11 +225,6 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 #endif
 
   return EXIT_SUCCESS;
-
- utf8_error:
-  if (error_stream)
-    fprintf (error_stream, "Can't convert module path to UTF-8");
-  return EXIT_FAILURE;
 }
 
 
