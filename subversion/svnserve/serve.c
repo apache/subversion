@@ -364,12 +364,8 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, FALSE,
                                   &aborted));
-  /* ### todo: let NULL be NULL, not empty string.  cmpilato dunno how
-         ra-svn wants to handle this -- does the protocol have a
-         representation for NULL strings? */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "rcc", new_rev, 
-                                 date ? date : "", 
-                                 author ? author : ""));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)",
+                                 new_rev, date, author));
   return SVN_NO_ERROR;
 }
 
