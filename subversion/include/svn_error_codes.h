@@ -469,6 +469,10 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 5,
               "Unsupported repository version")
 
+  SVN_ERRDEF (SVN_ERR_REPOS_DISABLED_FEATURE,
+              SVN_ERR_REPOS_CATEGORY_START + 6,
+              "Disabled repository feature")
+
   /* generic ra errors */
 
   SVN_ERRDEF (SVN_ERR_RA_ILLEGAL_URL,

@@ -192,6 +192,83 @@ run_post_commit_hook (svn_repos_t *repos,
 }
 
 
+/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
+   temporary allocations.  If the hook fails, return
+   SVN_ERR_REPOS_HOOK_FAILURE.  */
+static svn_error_t  *
+run_pre_revprop_change_hook (svn_repos_t *repos,
+                             svn_revnum_t rev,
+                             const char *name,
+                             const svn_string_t *value,
+                             apr_pool_t *pool)
+{
+  enum svn_node_kind kind;
+  const char *hook = svn_repos_pre_revprop_change_hook(repos, pool);
+
+  if ((! svn_io_check_path (hook, &kind, pool)) 
+      && (kind == svn_node_file))
+    {
+      const char *args[5];
+
+      /* ### somehow pass VALUE as stdin to hook?! */
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+      args[3] = name;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE, pool));
+    }
+  else
+    {
+      /* If the pre- hook doesn't exist at all, then default to
+         MASSIVE PARANOIA.  Changing revision properties is a lossy
+         operation; so unless the repository admininstrator has
+         *deliberately* created the pre-hook, disallow all changes. */
+      return 
+        svn_error_create 
+        (SVN_ERR_REPOS_DISABLED_FEATURE, 0, NULL, pool,
+         "Repository has not been enabled to accept revision propchanges;\n"
+         "ask the administrator to create a pre-revprop-change hook.");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Run the pre-revprop-change hook for REPOS.  Use POOL for any
+   temporary allocations.  If the hook fails, return
+   SVN_ERR_REPOS_HOOK_FAILURE.  */
+static svn_error_t  *
+run_post_revprop_change_hook (svn_repos_t *repos,
+                              svn_revnum_t rev,
+                              const char *name,
+                              apr_pool_t *pool)
+{
+  enum svn_node_kind kind;
+  const char *hook = svn_repos_post_revprop_change_hook(repos, pool);
+  
+  if ((! svn_io_check_path (hook, &kind, pool)) 
+      && (kind == svn_node_file))
+    {
+      const char *args[5];
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+      args[3] = name;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 /*** Public interface. ***/
 
@@ -225,6 +302,29 @@ svn_repos_fs_commit_txn (const char **conflict_p,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_repos_fs_change_rev_prop (svn_repos_t *repos,
+                              svn_revnum_t rev,
+                              const char *name,
+                              const svn_string_t *value,
+                              apr_pool_t *pool)
+{
+  svn_fs_t *fs = repos->fs;
+
+  /* Run pre-revprop-change hook */
+  SVN_ERR (run_pre_revprop_change_hook (repos, rev, name, value, pool));
+
+  /* Change the revision prop. */
+  SVN_ERR (svn_fs_change_rev_prop (fs, rev, name, value, pool));
+
+  /* Run post-revprop-change hook */
+  SVN_ERR (run_post_revprop_change_hook (repos, rev, name, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_error_t *

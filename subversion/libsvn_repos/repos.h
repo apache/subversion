@@ -53,6 +53,9 @@ extern "C" {
 #define SVN_REPOS__HOOK_POST_COMMIT     "post-commit"
 #define SVN_REPOS__HOOK_READ_SENTINEL   "read-sentinels"
 #define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
+#define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
+#define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
+
 
 /* The extension added to the names of example hook scripts. */
 #define SVN_REPOS__HOOK_DESC_EXT        ".tmpl"

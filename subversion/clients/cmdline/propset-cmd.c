@@ -66,28 +66,81 @@ svn_cl__propset (apr_getopt_t *os,
      happen. */
   if (svn_prop_is_svn_prop (pname_utf8))
     SVN_ERR (svn_utf_string_to_utf8 (&propval, propval, pool));
-      
+
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
                                          FALSE, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_cl__push_implicit_dot_target (targets, pool);
-
-  for (i = 0; i < targets->nelts; i++)
+              
+  /* Decide if we're making a local mod to a versioned working copy
+     prop, or making a permanent change to an unversioned repository
+     revision prop.  The existence of the '-r' flag is the key. */
+  if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
-      const char *target = ((const char **) (targets->elts))[i];
-      SVN_ERR (svn_client_propset (pname_utf8, propval, target,
-                                   opt_state->recursive, pool));
+      svn_revnum_t rev;
+      const char *URL, *target;
+      svn_boolean_t is_url;
+      svn_client_auth_baton_t *auth_baton;
 
+      auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+
+      /* Either we have a URL target, or an implicit wc-path ('.')
+         which needs to be converted to a URL. */
+      if (targets->nelts <= 0)
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL, pool,
+                                "No URL target available.");
+      target = ((const char **) (targets->elts))[0];
+      is_url = svn_path_is_url (target);
+      if (is_url)
+        {
+          URL = target;
+        }
+      else
+        {
+          svn_wc_adm_access_t *adm_access;          
+          svn_wc_entry_t *entry;
+          SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
+                                          FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+          SVN_ERR (svn_wc_adm_close (adm_access));
+          URL = entry->url;
+        }
+
+      /* Let libsvn_client do the real work. */
+      SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
+                                       URL, &(opt_state->start_revision),
+                                       auth_baton, &rev, pool));
       if (! opt_state->quiet) 
         {
           const char *target_native;
-          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
-          printf ("property `%s' set%s on '%s'\n",
-                  pname, 
-                  opt_state->recursive ? " (recursively)" : "",
-                  target_native);
+          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
+                                              target, pool));
+          printf ("property `%s' set on repository revision '%"
+                  SVN_REVNUM_T_FMT"'\n",
+                  pname, rev);
+        }      
+    }
+  
+  else
+    {
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *target = ((const char **) (targets->elts))[i];
+          SVN_ERR (svn_client_propset (pname_utf8, propval, target,
+                                       opt_state->recursive, pool));
+          
+          if (! opt_state->quiet) 
+            {
+              const char *target_native;
+              SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
+                                                  target, pool));
+              printf ("property `%s' set%s on '%s'\n",
+                      pname, 
+                      opt_state->recursive ? " (recursively)" : "",
+                      target_native);
+            }
         }
     }
 
