@@ -424,7 +424,7 @@ is_child_lazy_copied (svn_boolean_t *lazy_p,
                       const char *child_path,
                       trail_t *trail)
 {
-  char *child_committed_path;
+  const char *child_committed_path;
   svn_fs__copy_t *copy;
     
   /* If the current CopyID and the child CopyID are different
@@ -601,6 +601,7 @@ open_path (parent_path_t **parent_path_p,
              case, we stay put: the current directory stays the same,
              and we add nothing to the parent path.  */
           child = here;
+          child_id = NULL;
         }
       else
         {
@@ -726,7 +727,6 @@ choose_copy_id (copy_id_inherit_t *inherit_p,
 {
   const svn_fs_id_t *child_id, *parent_id;
   const char *child_copy_id, *parent_copy_id;
-  const char *child_path = NULL, *id_path = NULL;
   svn_fs__copy_t *copy;
 
   /* Make some assertions about the function input. */
@@ -2608,13 +2608,12 @@ txn_body_dir_entries (void *baton,
   parent_path_t *parent_path;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_revnum_t last_revision;
+  svn_revnum_t last_revision = SVN_INVALID_REVNUM; /* silence gcc unitialised */
   svn_fs__copy_t *copy;
   svn_fs__transaction_t *txn;
   const char *parent_copy_id;
   const svn_fs_id_t *parent_id;
   svn_boolean_t lazy = FALSE;
-  svn_string_t *createdrev = NULL;
   svn_fs_t *fs;
 
   fs = args->root->fs;
