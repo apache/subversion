@@ -5755,8 +5755,7 @@ revisions_changed (const char **msg,
         const char *path = greek_paths[j];
         const svn_revnum_t num_revs = chrevs[j][0];
         
-        SVN_ERR (svn_fs_revisions_changed (&revs, fs, rev_root,
-                                           path, spool));
+        SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path, spool));
 
         /* Are we at least looking at the right number of returned
            revisions? */

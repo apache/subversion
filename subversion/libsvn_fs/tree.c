@@ -756,30 +756,59 @@ svn_fs_is_file (int *is_file,
 }
 
 
-/* Helper for svn_fs_is_different.  Return KIND of node at ROOT:PATH. */
-static svn_error_t *
-get_node_kind (enum svn_node_kind *kind,
-               svn_fs_root_t *root,
-               const char *path,
-               apr_pool_t *pool)
+struct is_different_args
 {
-  int is_dir, is_file;
+  int is_different;
+  svn_fs_root_t *root1;
+  const char *path1;
+  svn_fs_root_t *root2;
+  const char *path2;
+};
 
-  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
-  if (is_dir)
-    *kind = svn_node_dir;
-  else
+
+static svn_error_t *
+txn_body_is_different (void *baton, trail_t *trail)
+{
+  struct is_different_args *args = baton;
+  dag_node_t *node1, *node2;
+  svn_node_kind_t kind;
+  int props_differ, contents_differ;
+
+  /* Assume the paths *are* different. */
+  args->is_different = 1;
+
+  /* Get the node revisions for these paths. */
+  SVN_ERR (get_dag (&node1, args->root1, args->path1, trail));
+  SVN_ERR (get_dag (&node2, args->root2, args->path2, trail));
+
+  /* If they have the same node-ID, they're the same! */
+  if (svn_fs__dag_get_id (node1) == svn_fs__dag_get_id (node2))
     {
-      SVN_ERR (svn_fs_is_file (&is_file, root, path, pool));
-      if (is_file)
-        *kind = svn_node_file;
-      else
-        return 
-          svn_error_createf 
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "Node for `%s' seems to be neither file nor dir.", path);
+      args->is_different = 0;
+      return SVN_NO_ERROR;
     }
-  
+
+  /* If their kinds differ, they differ. */
+  if ((kind = svn_fs__dag_node_kind (node1)) != svn_fs__dag_node_kind (node2))
+    return SVN_NO_ERROR;
+
+  /* Now call our internal differencing checker thingamabob.  This
+     will only compare representation IDs, though, so it only tells us
+     when things have the same contents, really, not when they have
+     different contents. 
+
+     ### todo: Finish svn_fs__things_different to do the full content
+     comparison it was intended to do.  */
+  SVN_ERR (svn_fs__things_different (&props_differ,
+                                     &contents_differ,
+                                     node1, node2, trail));
+
+  if (! (props_differ || contents_differ))
+    {
+      args->is_different = 0;
+      return SVN_NO_ERROR;
+    }
+      
   return SVN_NO_ERROR;
 }
 
@@ -794,61 +823,22 @@ svn_fs_is_different (int *is_different,
                      const char *path2,
                      apr_pool_t *pool)
 {
+  struct is_different_args args;
 
-  svn_fs_id_t *id1, *id2;
-  enum svn_node_kind kind1, kind2;
+  if ((svn_fs_root_fs (root1)) != (svn_fs_root_fs (root2)))
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "Asking is different in two different filesystems.");
 
-  /* Easy check:  are they the same ID? */
-  SVN_ERR (svn_fs_node_id (&id1, root1, path1, pool));
-  SVN_ERR (svn_fs_node_id (&id2, root2, path2, pool));
-  if (svn_fs_id_eq (id1, id2))
-    {
-      *is_different = FALSE;
-      return SVN_NO_ERROR;
-    }
+  args.root1 = root1;
+  args.path1 = path1;
+  args.root2 = root2;
+  args.path2 = path2;
 
-  /* Easy check:  are they different node types? */
-  SVN_ERR (get_node_kind (&kind1, root1, path1, pool));
-  SVN_ERR (get_node_kind (&kind2, root2, path2, pool));
-  
-  if (kind1 != kind2)
-    {
-      *is_different = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* If they're both files... */
-  if (kind1 == svn_node_file)
-    {
-      /* ... then they can't be the same, because the IDs are different. */
-      *is_different = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* If they're both dirs... */
-  if (kind1 == svn_node_dir)
-    {
-      /* ... compare dirent hashes.  (steal code from
-         libsvn_wc/props.c?).  For each dirent match, check to see if
-         the dirent node-rev-ids have any relationship to one
-         another. */
-
-
-
-
-
-
-
-
-    }
-
+  SVN_ERR (svn_fs__retry_txn (root1->fs, txn_body_is_different, &args, pool));
+  *is_different = args.is_different;
   return SVN_NO_ERROR;
 }
-
-
-
-
-
 
 
 struct node_prop_args
@@ -2791,12 +2781,12 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 
 svn_error_t *
 svn_fs_revisions_changed (apr_array_header_t **revs,
-                          svn_fs_t *fs,
                           svn_fs_root_t *root,
                           const char *path,
                           apr_pool_t *pool)
 {
   struct revisions_changed_args args;
+  svn_fs_t *fs = svn_fs_root_fs (root);
 
   /* Populate the baton. */
   args.revs = revs;
