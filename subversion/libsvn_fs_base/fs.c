@@ -542,7 +542,6 @@ static svn_error_t *
 base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   svn_error_t *svn_err;
-  const char *path_apr;
   const char *path_native;
   base_fs_data_t *bfd;
 
@@ -557,7 +556,6 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
-  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, fs->path, fs->pool));
 
   SVN_ERR (bdb_write_config (fs));
 
