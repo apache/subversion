@@ -639,6 +639,9 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
                 }
             }
 
+          /* XXX: '\n' doesn't really cut it.  We need to be able to detect
+           * XXX: '\n', '\r' and '\r\n'.
+           */
           eol = memchr(curp, '\n', length);
 
           if (eol != NULL)
@@ -690,7 +693,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
       if (bytes_processed && (type != svn_diff__file_output_unified_skip))
         {
           svn_stringbuf_appendcstr(baton->hunk,
-                                   "\n\\ No newline at end of file\n");
+            APR_EOL_STR "\\ No newline at end of file" APR_EOL_STR);
         }
 
       baton->length[idx] = 0;
@@ -752,7 +755,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
                       baton->hunk_length[1]);
     }
 
-  apr_file_printf(baton->output_file, " @@\n");
+  apr_file_printf(baton->output_file, " @@" APR_EOL_STR);
 
   /* Output the hunk content */
   hunk_len = baton->hunk->len;
@@ -910,8 +913,8 @@ svn_diff_file_output_unified(apr_file_t *output_file,
         }
 
       SVN_ERR( svn_io_file_printf(output_file,
-                                  "--- %s\n"
-                                  "+++ %s\n",
+                                  "--- %s" APR_EOL_STR
+                                  "+++ %s" APR_EOL_STR,
                                   original_header, modified_header) );
 
       SVN_ERR(svn_diff_output(diff, &baton,
@@ -988,6 +991,9 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   if (curp == endp)
     return SVN_NO_ERROR;
 
+  /* XXX: '\n' doesn't really cut it.  We need to be able to detect
+   * XXX: '\n', '\r' and '\r\n'.
+   */
   eol = memchr(curp, '\n', endp - curp);
   if (!eol)
     eol = endp;
@@ -1110,7 +1116,7 @@ svn_diff3__file_output_conflict(void *baton,
         "svn_diff3_file_output: error writing file.");
     }
 
-  apr_file_putc('\n', file_baton->output_file);
+  apr_file_puts(APR_EOL_STR, file_baton->output_file);
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
             modified_start, modified_length));
@@ -1124,7 +1130,7 @@ svn_diff3__file_output_conflict(void *baton,
             "svn_diff3_file_output: error writing file.");
         }
 
-      apr_file_putc('\n', file_baton->output_file);
+      apr_file_puts(APR_EOL_STR, file_baton->output_file);
 
       SVN_ERR(svn_diff3__file_output_hunk(baton, 0,
               original_start, original_length));
@@ -1137,7 +1143,7 @@ svn_diff3__file_output_conflict(void *baton,
         "svn_diff3_file_output: error writing file.");
     }
 
-  apr_file_putc('\n', file_baton->output_file);
+  apr_file_puts(APR_EOL_STR, file_baton->output_file);
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
             latest_start, latest_length));
@@ -1149,7 +1155,7 @@ svn_diff3__file_output_conflict(void *baton,
         "svn_diff3_file_output: error writing file.");
     }
 
-  apr_file_putc('\n', file_baton->output_file);
+  apr_file_puts(APR_EOL_STR, file_baton->output_file);
 
   return SVN_NO_ERROR;
 }
