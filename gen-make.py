@@ -85,14 +85,11 @@ def main(fname, oname=None, skip_depends=0):
       if parser.get(target, 'testing') != 'skip':
         fs_test_progs.append(tpath)
 
-    pats = parser.get(target, 'sources')
-    if not pats:
-      pats = _default_sources[bldtype]
-    sources, s_errors = _collect_paths(pats, path)
+    s_errors = target_ob.find_sources(parser.get(target, 'sources'))
     errors = errors or s_errors
 
     objects = [ ]
-    for src in sources:
+    for src in target_ob.sources:
       if src[-2:] == '.c':
         objname = src[:-2] + objext
         objects.append(objname)
@@ -140,14 +137,14 @@ def main(fname, oname=None, skip_depends=0):
     if custom == 'apache-mod':
       # special build, needing Apache includes
       ofile.write('# build these special -- use APACHE_INCLUDES\n')
-      for src in sources:
+      for src in target_ob.sources:
         if src[-2:] == '.c':
           ofile.write('%s%s: %s\n\t$(COMPILE_APACHE_MOD)\n'
                       % (src[:-2], objext, src))
       ofile.write('\n')
     elif custom == 'swig-py':
       ofile.write('# build this with -DSWIGPYTHON\n')
-      for src in sources:
+      for src in target_ob.sources:
         if src[-2:] == '.c':
           ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
                       % (src[:-2], objext, src))
@@ -233,6 +230,11 @@ def main(fname, oname=None, skip_depends=0):
 		       os.path.join('$(%sdir)' % area_var, fname)))
       ofile.write('\n')
 
+    # generate .dsp files for each target
+    for t in inst_targets:
+      #t.write_dsp()
+      pass
+
   includes, i_errors = _collect_paths(parser.get('includes', 'paths'))
   errors = errors or i_errors
 
@@ -306,6 +308,7 @@ def main(fname, oname=None, skip_depends=0):
   if errors:
     sys.exit(1)
 
+
 class Target:
   def __init__(self, name, path, install, type):
     self.name = name
@@ -330,6 +333,34 @@ class Target:
 
     self.install = install
     self.output = os.path.join(path, tfile)
+
+  def find_sources(self, patterns):
+    if not patterns:
+      patterns = _default_sources[self.type]
+    self.sources, errors = _collect_paths(patterns, self.path)
+    self.sources.sort()
+    return errors
+
+  def write_dsp(self):
+    if self.type == 'exe':
+      template = open('build/win32/exe-template', 'rb').read()
+    else:
+      template = open('build/win32/dll-template', 'rb').read()
+
+    dsp = string.replace(template, '@NAME@', self.name)
+
+    cfiles = [ ]
+    for src in self.sources:
+      cfiles.append('# Begin Source File\x0d\x0a'
+                    '\x0d\x0a'
+                    'SOURCE=.\\%s\x0d\x0a'
+                    '# End Source File\x0d\x0a' % os.path.basename(src))
+    dsp = string.replace(dsp, '@CFILES@', string.join(cfiles, ''))
+
+    dsp = string.replace(dsp, '@HFILES@', '')
+
+    fname = os.path.join(self.path, self.name + '.dsp-test')
+    open(fname, 'wb').write(dsp)
 
 class GenMakeError(Exception):
   pass
