@@ -16,7 +16,11 @@ thread and mention the thread below.
 
 Candidate changes:
 
-  [none pending]
+  * r8772
+    Make the RedHat RPMs build again after the r8778 change.
+    Justification: Redhat RPMs can't be built without it.
+    Votes:
+      +1: david
 
 Status of 1.0.1:
 ================
