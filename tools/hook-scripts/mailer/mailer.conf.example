@@ -25,6 +25,10 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 # This option specifies the hostname for delivery via SMTP
 #smtp_hostname = localhost
 
+# Username and password for SMTP servers requiring authorisation
+#smtp_username = example
+#smtp_password = example
+
 # --------------------------------------------------------------------------
 
 #
