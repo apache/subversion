@@ -342,6 +342,9 @@ use SVN::Base qw(Core svn_opt_revision_t_value_);
 package _p_svn_config_t;
 use SVN::Base qw(Core svn_config_);
 
+package _p_svn_dirent_t;
+use SVN::Base qw(Core svn_dirent_t_);
+
 =head2 svn_config_t
 
 =cut

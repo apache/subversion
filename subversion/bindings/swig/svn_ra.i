@@ -40,6 +40,7 @@
     void **report_baton
 };
 
+%apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
 /* -----------------------------------------------------------------------
    thunk ra_callback

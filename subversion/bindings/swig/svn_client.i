@@ -211,19 +211,6 @@
 %typemap(perl5,argout) apr_hash_t **statushash {
     /* ### FIXME-perl */
 }
-/* -----------------------------------------------------------------------
-   fix up the return hash for svn_client_ls() 
-*/
-
-%typemap(python,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
-%typemap(python,argout,fragment="t_output_helper") apr_hash_t **dirents {
-	$result = t_output_helper(
-		$result,
-		svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_dirent_t));
-}
-%typemap(perl5,argout) apr_hash_t **dirents {
-    /* ### FIXME-perl */
-}
 
 /* -----------------------------------------------------------------------
    handle the prompt_baton
