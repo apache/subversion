@@ -1384,15 +1384,14 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
   /* ### the destination's parent must be a working collection */
 
   /* ### ben goofing around: */
-  char *msg;
-  apr_psprintf
-    (src->pool, "Got a COPY request with src arg '%s' and dst arg '%s'",
-     src->uri, dst->uri);
+  /*  char *msg;
+      apr_psprintf
+      (src->pool, "Got a COPY request with src arg '%s' and dst arg '%s'",
+      src->uri, dst->uri);
+      
+      return dav_new_error(src->pool, HTTP_NOT_IMPLEMENTED, 0, msg);
+  */
 
-  return dav_new_error(src->pool, HTTP_NOT_IMPLEMENTED, 0, msg);
-
-#if 0
-  /* What we will really do... */
   svn_error_t *serr;
   
   serr = svn_fs_copy (src->info->root.root,  /* the root object of src */
@@ -1403,8 +1402,8 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Unable to make a filesystem copy.");
-#endif
 
+  return NULL;
 }
 
 static dav_error * dav_svn_move_resource(dav_resource *src,
