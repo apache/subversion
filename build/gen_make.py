@@ -174,14 +174,14 @@ class MakefileGenerator(gen_base.GeneratorBase):
         # Construct a .libs directory within the Apache area and populate it
         # with the appropriate files. Also drop the .la file in the target dir.
         self.ofile.write('\ninstall-mods-static: %s\n'
-                         '\t$(MKDIR) %s\n'
+                         '\t$(MKDIR) $(DESTDIR)%s\n'
                          % (string.join(la_tweaked + s_files),
                             os.path.join('$(APACHE_TARGET)', '.libs')))
         for file in la_tweaked:
           dirname, fname = os.path.split(file)
           base = os.path.splitext(fname)[0]
-          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
-                           '\t$(INSTALL_MOD_STATIC) %s %s\n'
+          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
+                           '\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
                            % (os.path.join(dirname, '.libs', base + '.a'),
                               os.path.join('$(APACHE_TARGET)',
                                            '.libs',
@@ -191,7 +191,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
         # copy the other files to the target dir
         for file in s_files:
-          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
+          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
                            % (file, os.path.join('$(APACHE_TARGET)',
                                                  os.path.basename(file))))
         self.ofile.write('\n')
@@ -199,12 +199,12 @@ class MakefileGenerator(gen_base.GeneratorBase):
       elif area != 'test' and area != 'fs-test':
         area_var = string.replace(area, '-', '_')
         self.ofile.write('install-%s: %s\n'
-                         '\t$(MKDIR) $(%sdir)\n'
+                         '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
                          % (area, string.join(files), area_var))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = os.path.split(file)
-          self.ofile.write('\tcd %s ; $(INSTALL_%s) %s %s\n'
+          self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
                            % (dirname,
                               string.upper(area_var),
                               fname,
@@ -222,10 +222,10 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
     includedir = os.path.join('$(includedir)', 'subversion-%s' % self.version)
     self.ofile.write('install-include: %s\n'
-                     '\t$(MKDIR) %s\n'
+                     '\t$(MKDIR) $(DESTDIR)%s\n'
                      % (string.join(self.includes), includedir))
     for file in self.includes:
-      self.ofile.write('\t$(INSTALL_INCLUDE) %s %s\n'
+      self.ofile.write('\t$(INSTALL_INCLUDE) %s $(DESTDIR)%s\n'
                        % (os.path.join('$(top_srcdir)', file),
                           os.path.join(includedir, os.path.basename(file))))
 
