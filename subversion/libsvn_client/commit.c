@@ -467,6 +467,7 @@ static svn_error_t *
 get_ra_editor (void **ra_baton, 
                void **session,
                svn_ra_plugin_t **ra_lib,
+               svn_revnum_t *latest_rev,
                const svn_delta_editor_t **editor,
                void **edit_baton,
                svn_client_auth_baton_t *auth_baton,
@@ -492,6 +493,10 @@ get_ra_editor (void **ra_baton,
                                         commit_items, is_commit,
                                         is_commit, !is_commit,
                                         auth_baton, pool));
+
+  /* Fetch the latest revision if requested. */
+  if (latest_rev)
+    SVN_ERR ((*ra_lib)->get_latest_revnum (*session, latest_rev));
   
   /* Fetch RA commit editor. */
   return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 
@@ -578,7 +583,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       if (kind == svn_node_file)
         svn_path_split (path, &base_dir, NULL, pool);
-      SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
+      SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
                               &editor, &edit_baton, auth_baton, url, base_dir,
                               NULL, log_msg, NULL, &committed_rev,
                               &committed_date, &committed_author, 
@@ -836,9 +841,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
     {
-      svn_revnum_t head = SVN_INVALID_REVNUM;
+      svn_revnum_t head;
 
-      if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, 
+      if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, &head,
                                     &editor, &edit_baton, auth_baton,
                                     base_url, base_dir, base_dir_access,
                                     log_msg, commit_items, &committed_rev, 
@@ -858,22 +863,14 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
           if ((item->kind == svn_node_dir)
               && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-              && (! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
+              && (! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+              && item->revision != head)
             {
-              if (! SVN_IS_VALID_REVNUM (head))
-                {
-                  if ((cmt_err = ra_lib->get_latest_revnum (session, &head)))
-                    goto cleanup;
-                }
-
-              if (item->revision != head)
-                {             
-                  cmt_err = svn_error_createf 
-                    (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL,
-                     "Cannot commit propchanges for directory '%s'",
-                     item->path);
-                  goto cleanup;
-                }
+              cmt_err = svn_error_createf 
+                (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL,
+                 "Cannot commit propchanges for directory '%s'",
+                 item->path);
+              goto cleanup;
             }
         }
     }

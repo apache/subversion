@@ -436,7 +436,7 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
                                rev, (props != NULL), (stream != NULL)));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rl", &rev, &proplist));
 
-  if (!SVN_IS_VALID_REVNUM(rev) && fetched_rev)
+  if (fetched_rev)
     *fetched_rev = rev;
   if (props)
     SVN_ERR(parse_proplist(proplist, pool, props));
@@ -483,7 +483,7 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll", &rev, &proplist,
                                        &dirlist));
 
-  if (!SVN_IS_VALID_REVNUM(rev) && fetched_rev)
+  if (fetched_rev)
     *fetched_rev = rev;
   if (props)
     SVN_ERR(parse_proplist(proplist, pool, props));
