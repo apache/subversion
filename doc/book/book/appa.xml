@@ -223,14 +223,14 @@
         Default</title>
       
       <varlistentry>
-        <term><option>-u</option> switch</term>
+        <term><option>-u</option></term>
         <listitem>
           <para>Add out-of-dateness information from repository.</para>
         </listitem>
       </varlistentry>
       
       <varlistentry>
-        <term><option>-v</option> switch</term>
+        <term><option>-v</option></term>
         <listitem>
           <para>Show <emphasis>all</emphasis> entries under
             version control.</para>
@@ -238,7 +238,7 @@
       </varlistentry>
 
       <varlistentry>
-        <term><option>-N</option> switch</term>
+        <term><option>-N</option></term>
         <listitem>
           <para>Nonrecursive.</para>
         </listitem>
