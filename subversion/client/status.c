@@ -72,8 +72,7 @@
 static void
 generate_status_codes (char *str_status,
                        enum svn_wc_status_kind text_status,
-                       enum svn_wc_status_kind prop_status,
-                       int verbose)
+                       enum svn_wc_status_kind prop_status)
 {
   char text_statuschar, prop_statuschar;
 
@@ -102,16 +101,18 @@ generate_status_codes (char *str_status,
       break;
     }
 
+  /* Properties stay `invisible' unless they're locally modified,
+     merged or conflicted. */
   switch (prop_status)
     {
     case svn_wc_status_none:
-      prop_statuschar = '-';
+      prop_statuschar = ' ';
       break;
     case svn_wc_status_added:
-      prop_statuschar = 'A';
+      prop_statuschar = ' ';
       break;
     case svn_wc_status_deleted:
-      prop_statuschar = 'D';
+      prop_statuschar = ' ';
       break;
     case svn_wc_status_modified:
       prop_statuschar = 'M';
@@ -126,38 +127,9 @@ generate_status_codes (char *str_status,
       prop_statuschar = '?';
       break;
     }
-
-  if (verbose)
-    sprintf (str_status, "%c%c", text_statuschar, prop_statuschar);
-
-  else
-    {
-      char one_char;
-
-      /* Guys, go to town on this section.  Here are some quick rules
-         I made up.  Feel free to rewrite them however you want.  :) */
-
-      if ((text_statuschar == '-') && (prop_statuschar == '-'))
-        one_char = '-';
-          
-      else if ((text_statuschar == 'A') || (prop_statuschar == 'A'))
-        one_char = 'A';
-
-      if ((text_statuschar == 'D') || (prop_statuschar == 'D'))
-        one_char = 'D';
-
-      if ((text_statuschar == 'M') || (prop_statuschar == 'M'))
-        one_char = 'M';
-
-      if ((text_statuschar == 'C') || (prop_statuschar == 'C'))
-        one_char = 'C';
-      
-      sprintf (str_status, "%c ", one_char);
-    }
-
-  return;
+  
+  sprintf (str_status, "%c%c", text_statuschar, prop_statuschar);
 }
-
 
 void
 svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
@@ -168,9 +140,7 @@ svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
   /* Create either a one or two character status code */
   generate_status_codes (str_status,
                          status->text_status,
-                         status->prop_status,
-                         1 /* be verbose */);  
-  /* TODO: use the verbose switch from a command line option */
+                         status->prop_status);
   
   /* Grab the entry revision once, safely. */
   if (status->entry)
