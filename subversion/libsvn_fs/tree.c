@@ -835,7 +835,114 @@ svn_fs_merge (const char **conflict_p,
               const char *ancestor_path,
               apr_pool_t *pool)
 {
-  abort ();
+  *conflict_p = NULL;
+
+#if 0
+
+  if (ancestor is dir, source is dir, target is dir)
+    {
+      /* All three are directories.  Make three hashes, one for each
+         dir's entries, then... todo */
+
+      for (each entry E in ancestor)
+        {
+          if (E exists in neither source nor target)
+            {
+              target stays as is, it was a double delete;
+            }
+          else if (E exists in source but not target)
+            {
+              target takes source;
+            }
+          else if (E exists in target but not source)
+            {
+              target stays as is;
+            }
+          else if (E exists in target and source)
+            {
+              if (E is the same in target and source)
+                target stays as is;
+              else (E is different in target and source)
+                CONFLICT;
+            }
+        }
+
+      /* Now take care of all remaining entries in source. */
+
+      for (each entry E in source but not in ancestor)
+        {
+          if (E does not exist in target)
+            target takes E from source;
+          else if (E exists in target and is same as in source)
+            target stays as is, it was a twin add;
+          else if (E exists in target but is different from in source)
+            CONFLICT;
+        }
+
+      /* All entries in ancestor and source have been accounted for.
+         Anything remaining in target is a non-conflicting add, so do
+         nothing. */
+    }
+  else if (ancestor is dir, source is file, target is file)
+    {
+      if (source is same file as target)
+        target stays as is;
+      else (source is different file from target)
+        CONFLICT;
+    }
+  else if (ancestor is dir, source is dir, target is file)
+    {
+      if (ancestor is same dir as source)
+        target stays file;
+      else (ancestor is different dir from source)
+        CONFLICT;
+    }
+  else if (ancestor is dir, source is file, target is dir)
+    {
+      if (ancestor is same dir as target)
+        target takes source file;
+      else (ancestor is different dir from target)
+        CONFLICT;
+    }
+  else if (ancestor is file, source is dir, target is dir)
+    {
+      if (source is same dir as target)
+        target stays as is;
+      else (source is different dir from target)
+        CONFLICT;
+    }
+  else if (ancestor is file, source is dir, target is file)
+    {
+      if (ancestor is same file as target)
+        target takes source dir;
+      else (ancestor is different file from target)
+        CONFLICT;
+    }
+  else if (ancestor is file, source is file, target is dir)
+    {
+      if (ancestor is same file as source)
+        target stays same;
+      else (ancestor is different file from source)
+        CONFLICT;
+    }
+  else if (ancestor is file, source is file, target is file)
+    {
+      if (ancestor is same as source is same as target)
+        target stays as is;
+      else if (ancestor is same as source, but target is different)
+        target stays as is;
+      else if (ancestor is same as target, but source is different)
+        target takes source;
+      else if (source is same as target, but ancestor is different)
+        target stays as is, it was the same change;
+      else (ancestor is different from source is different from target)
+        CONFLICT;
+    }
+
+#endif /* 0 */
+
+
+  return SVN_NO_ERROR;
 }
 
 
