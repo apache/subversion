@@ -1160,7 +1160,9 @@ $ svnlook tree /path/to/repos --show-ids
           <varlistentry>
             <term><literal>uuid</literal></term>
             <listitem>
-              <para>Print the tree's unique user ID (UUID).</para>
+              <para>Print the repository's UUID&mdash;
+                <emphasis>U</emphasis>niversal <emphasis>U</emphasis>nique
+                <emphasis>ID</emphasis>entifier.</para>
             </listitem>
           </varlistentry>
 
