@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <apr_general.h>  /* for strcasecmp() */
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
@@ -897,7 +898,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
 {
   *is_valid_p = TRUE;
 
-  /* Using apr_strnatcasecmp() to accept downcased short versions of
+  /* Using strcasecmp() to accept downcased short versions of
    * keywords.  Note that this doesn't apply to the strings being
    * expanded in the file -- rather, it's so users can do
    *
@@ -908,7 +909,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
    */
 
   if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
-      || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+      || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
       if ((entry) && (entry->cmt_rev))
         keywords->revision = svn_string_createf (pool, "%ld", entry->cmt_rev);
@@ -919,7 +920,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->revision = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
-           || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+           || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
     {
       if (entry && (entry->cmt_date))
         keywords->date = svn_wc__friendly_date 
@@ -928,7 +929,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->date = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
-           || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+           || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
     {
       if (entry && (entry->cmt_author))
         keywords->author = svn_string_create_from_buf (entry->cmt_author, pool);
@@ -936,7 +937,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->author = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
-           || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
+           || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
     {
       if (entry && (entry->url))
         keywords->url = svn_string_create_from_buf (entry->url, pool);
@@ -1053,15 +1054,15 @@ svn_wc__get_executable_prop (svn_boolean_t **wants_exec,
   if (propval == NULL)
     *wants_exec = NULL;
   
-  else if ((! apr_strnatcasecmp (propval->data, "true"))
-           || (! apr_strnatcasecmp (propval->data, "on")))
+  else if ((! strcasecmp (propval->data, "true"))
+           || (! strcasecmp (propval->data, "on")))
     {
       *wants_exec = apr_pcalloc (pool, sizeof (*wants_exec));
       **wants_exec = TRUE;
     }
   
-  else if ((! apr_strnatcasecmp (propval->data, "false"))
-           || (! apr_strnatcasecmp (propval->data, "off")))
+  else if ((! strcasecmp (propval->data, "false"))
+           || (! strcasecmp (propval->data, "off")))
     {
       *wants_exec = apr_pcalloc (pool, sizeof (*wants_exec));
       **wants_exec = FALSE;
