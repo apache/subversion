@@ -9,6 +9,7 @@ libsvn_fs_la_SOURCES =				\
                         dag.h                   \
 			dbt.c			\
                         dbt.h                   \
+                        editor.c                \
 			err.c			\
                         err.h                   \
 			fs.c			\
@@ -37,7 +38,6 @@ libsvn_fs_la_SOURCES =				\
 
 # Set aside for the moment:
 #			txn.c			\
-#                      editor.c                \
 #		       delta.c			\
 #		       file.c			\
 #                      file.h                   \
