@@ -29,7 +29,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   envvars={
     "$(SVN_APR_LIBS)": ["apr"],
-    "$(SVN_APRUTIL_LIBS)": ["aprutil"],
+    "$(SVN_APRUTIL_LIBS)": ["aprutil", "apriconv"],
     "$(NEON_LIBS)":  ["neon"],
     "$(SVN_DB_LIBS)": [],
     "$(SVN_XMLRPC_LIBS)": [],
@@ -48,7 +48,16 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       open(dest,'wb').write(open(src, 'rb').read())
       os.unlink(src)
 
-  def __init__(self, fname, verfname, subdir):
+  def parse_options(self, options):
+    for opt, val in options:
+      if opt == '--with-httpd':
+        self.httpd_path = val
+        break
+    else:
+      self.httpd_path = None
+      self.skip_targets = { 'mod_dav_svn': None }
+
+  def __init__(self, fname, verfname, options, subdir):
     """
     Do some Windows specific setup
 
@@ -67,8 +76,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     create the necessary paths
 
     """
+
+    # parse (and save) the options that were passed to us
+    self.parse_options(options)
+
 ### GJS: don't do this right now
-#    self.copyfile(os.path.join("subversion","libsvn_subr","getdate.c"), os.path.join("subversion","libsvn_subr","getdate.cw"))
 #    self.movefile(os.path.join("subversion","mod_dav_svn","davlog.c"), os.path.join("subversion","mod_dav_svn","log.c"))
 #    self.movefile(os.path.join("subversion","mod_dav_svn","davrepos.c"), os.path.join("subversion","mod_dav_svn","repos.c"))
 
@@ -110,6 +122,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         print 'Wrote %s' % svnissdeb
 
     #Initialize parent
+    ### we don't want to munge the working copy since we might be
+    ### generating the Windows build files on a Unix box prior to
+    ### release. this copy already occurs in svn_config.dsp. (is that
+    ### broken or something?)
+#    self.copyfile(os.path.join("subversion","libsvn_subr","getdate.c"),
+#                  os.path.join("subversion","libsvn_subr","getdate.cw"))
     gen_base.GeneratorBase.__init__(self, fname, verfname)
 
     #Make the project files directory if it doesn't exist
@@ -238,10 +256,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                         ""],
                                        rootpath)
       fakeincludes.extend([
-        "$(HTTPD)/srclib/apr/include",
-        "$(HTTPD)/srclib/apr-util/include",
-        "$(HTTPD)/srclib/apr-util/xml/expat/lib",
-        "$(HTTPD)/include"
+        self.httpd_path + "/srclib/apr/include",
+        self.httpd_path + "/srclib/apr-util/include",
+        self.httpd_path + "/srclib/apr-util/xml/expat/lib",
+        self.httpd_path + "/include"
         ])
     else:
       fakeincludes = self.map_rootpath(["subversion/include",
@@ -264,11 +282,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if target.name == 'mod_dav_svn':
       fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
       fakelibdirs.extend([
-        "$(HTTPD)/%s" % cfg,
-        "$(HTTPD)/modules/dav/main/%s" % cfg,
-        "$(HTTPD)/srclib/apr/%s" % cfg,
-        "$(HTTPD)/srclib/apr-util/%s" % cfg,
-        "$(HTTPD)/srclib/apr-util/xml/expat/lib/%s" % libcfg
+        self.httpd_path + "/%s" % cfg,
+        self.httpd_path + "/modules/dav/main/%s" % cfg,
+        self.httpd_path + "/srclib/apr/%s" % cfg,
+        self.httpd_path + "/srclib/apr-util/%s" % cfg,
+        self.httpd_path + "/srclib/apr-util/xml/expat/lib/%s" % libcfg
         ])
     else:
       fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)

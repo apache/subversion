@@ -29,7 +29,8 @@ gen_modules = {
   'make-bcpp' : ('gen_bcpp_make', '### need description'),
   }
 
-def main(fname, gentype, verfname=None, oname=None, skip_depends=0):
+def main(fname, gentype, verfname=None, oname=None,
+         skip_depends=0, other_options=None):
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
 
@@ -39,7 +40,7 @@ def main(fname, gentype, verfname=None, oname=None, skip_depends=0):
     print 'ERROR: the "%s" generator is not yet implemented.' % gentype
     sys.exit(1)
 
-  generator = gen_module.Generator(fname, verfname)
+  generator = gen_module.Generator(fname, verfname, other_options)
   if not skip_depends:
     generator.compute_hdr_deps()
 
@@ -64,7 +65,8 @@ def _usage_exit():
 
 if __name__ == '__main__':
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'st:')
+    opts, args = getopt.getopt(sys.argv[1:], 'st:',
+                               ['with-httpd='])
     if len(args) > 1:
       _usage_exit()
   except getopt.GetoptError:
@@ -73,6 +75,7 @@ if __name__ == '__main__':
   conf = 'build.conf'
   skip = 0
   gentype = 'make'
+  rest = []
 
   if args:
     conf = args[0]
@@ -82,11 +85,13 @@ if __name__ == '__main__':
       skip = 1
     elif opt == '-t':
       gentype = val
+    else:
+      rest.append((opt, val))
 
   if gentype not in gen_modules.keys():
     _usage_exit()
 
-  main(conf, gentype, skip_depends=skip)
+  main(conf, gentype, skip_depends=skip, other_options=rest)
 
 
 ### End of file.

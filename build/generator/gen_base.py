@@ -24,7 +24,7 @@ class GeneratorBase:
   #        file-type is 'target', 'object', ...
   #
 
-  def __init__(self, fname, verfname):
+  def __init__(self, fname, verfname, options=None):
     parser = ConfigParser.ConfigParser(_cfg_defaults)
     parser.read(fname)
 
@@ -50,8 +50,14 @@ class GeneratorBase:
     self.infopages = [ ]
     self.graph = DependencyGraph()
 
+    if not hasattr(self, 'skip_targets'):
+      self.skip_targets = { }
+
     # PASS 1: collect the targets and some basic info
     for target in _filter_targets(parser.sections()):
+      if self.skip_targets.has_key(target):
+        continue
+
       install = parser.get(target, 'install')
       type = parser.get(target, 'type')
 

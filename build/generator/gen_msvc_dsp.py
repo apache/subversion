@@ -14,8 +14,9 @@ import ezt
 class Generator(gen_win.WinGeneratorBase):
   "Generate a Microsoft Visual C++ 6 project"
 
-  def __init__(self, fname, verfname):
-    gen_win.WinGeneratorBase.__init__(self, fname, verfname, 'msvc-dsp')
+  def __init__(self, fname, verfname, options):
+    gen_win.WinGeneratorBase.__init__(self, fname, verfname, options,
+                                      'msvc-dsp')
 
   def default_output(self, conf_path):
     return 'subversion_msvc.dsw'
@@ -97,13 +98,21 @@ class Generator(gen_win.WinGeneratorBase):
 
     targets = [ ]
 
+    # Generate .dsp file names for the targets: replace dashes with
+    # underscores and replace *-test with test_* (so that the test
+    # programs are visually separare from the rest of the projects)
+    for name in self.targets.keys():
+      pos = string.find(name, '-test')
+      if pos >= 0:
+        dsp_name = 'test_' + string.replace(name[:pos], '-', '_')
+      else:
+        dsp_name = string.replace(name, '-', '_')
+      self.targets[name].dsp_name = dsp_name
+
+    # Traverse the targets and generate the project files
     items = self.targets.items()
     items.sort()
     for name, target in items:
-      # This isn't working yet
-      if string.find(name, '-test') >= 0:
-        continue
-
       # These aren't working yet
       if isinstance(target, gen_base.TargetScript) \
          or isinstance(target, gen_base.TargetSWIG):
@@ -118,7 +127,7 @@ class Generator(gen_win.WinGeneratorBase):
         fname = project_path + '.dsp'
       else:
         fname = os.path.join(self.projfilesdir,
-                             "%s_msvc.dsp" % (string.replace(name, '-', '_')))
+                             "%s_msvc.dsp" % target.dsp_name)
         depth = string.count(self.projfilesdir, os.sep) + 1
         self.write_project(target, fname, string.join(['..']*depth, '\\'))
 
@@ -128,32 +137,49 @@ class Generator(gen_win.WinGeneratorBase):
       # For MSVC we need to hack around mod_dav_svn &
       # libsvn_ra because dependencies implies linking
       # and there is no way around that
-      depends = []
-      if name == 'mod_dav_svn':
+      if name == '__CONFIG__':
         depends = []
+      else:
+        depends = [self.targets['__CONFIG__']]
+
+      if name == 'mod_dav_svn':
+        pass
       elif name == 'depdelta':
-        depends = [self.targets['libsvn_delta']]
+        depends.append(self.targets['libsvn_delta'])
       elif name == 'libsvn_wc':
-        depends = [self.targets['depdelta']]
+        depends.append(self.targets['depdelta'])
       elif name == 'depsubr':
-        depends = [self.targets['libsvn_subr']]
+        depends.append(self.targets['libsvn_subr'])
       elif name == 'libsvn_ra_svn':
-        depends = [self.targets['depsubr']]
+        depends.append(self.targets['depsubr'])
       elif name == 'libsvn_ra_dav':
-        depends = [self.targets['depsubr'], self.targets['neon']]
+        depends.append(self.targets['depsubr'])
+        depends.append(self.targets['neon'])
       elif isinstance(target, gen_base.Target):
-        depends = self.get_unique_win_depends(target)
+        if isinstance(target, gen_base.TargetExe):
+          deps = { }
+          for obj in self.get_win_depends(target, 0):
+            deps[obj] = None
+          for obj in self.get_win_depends(target, 2):
+            if isinstance(obj, gen_base.TargetLib):
+              deps[obj] = None
+          deps = deps.keys()
+          deps.sort()
+          depends.extend(deps)
+        else:
+          depends.extend(self.get_unique_win_depends(target))
       else:
         assert 0
 
       dep_names = [ ]
       for dep in depends:
-        dep_names.append(string.replace(dep.name, '-', ''))
+        dep_names.append(dep.dsp_name)
 
-      targets.append(_item(name=string.replace(name, '-', ''),
+      targets.append(_item(name=target.dsp_name,
                            dsp=string.replace(fname, os.sep, '\\'),
                            depends=dep_names))
 
+    targets.sort()
     data = {
       'targets' : targets,
       }
