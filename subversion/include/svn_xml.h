@@ -90,8 +90,16 @@ svn_xml_parser_t *svn_xml_make_parser (void *userData,
 void svn_xml_free_parser (svn_xml_parser_t *svn_parser);
 
 
-/* Push LEN bytes of xml data in BUF at SVN_PARSER.  If this is the
-   final push, IS_FINAL must be set.  */
+/* Push LEN bytes of xml data in BUF at SVN_PARSER.  
+
+   If this is the final push, IS_FINAL must be set.  
+
+   An error will be returned if there was a syntax problem in the XML,
+   or if any of the callbacks set an error using
+   svn_xml_signal_bailout().  
+
+   If an error is returned, the svn_xml_parser_t will have been freed
+   automatically, so the caller should not call svn_xml_free_parser(). */ 
 svn_error_t *svn_xml_parse (svn_xml_parser_t *parser,
                             const char *buf,
                             apr_ssize_t len,
