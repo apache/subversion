@@ -80,7 +80,7 @@ svn_client_status (apr_hash_t **statushash,
   svn_error_t *err;
   apr_hash_t *hash = apr_make_hash (pool);
 
-  err = svn_wc_get_status (hash, path, pool);
+  err = svn_wc_statuses (hash, path, pool);
   if (err) return err;
 
   /* TODO: each status structure in the hash now has all fields filled
