@@ -598,7 +598,8 @@ do_finish_directory (svn_delta__digger_t *digger)
     return SVN_NO_ERROR;
 
   /* Nothing to do but caller the walker's callback, methinks. */
-  err = (* (digger->walker->finish_directory)) (digger->stack->baton);
+  err = (* (digger->walker->finish_directory)) (digger->walk_baton,
+                                                digger->stack->baton);
   if (err)
     return err;
 
@@ -620,7 +621,8 @@ do_finish_file (svn_delta__digger_t *digger)
     return SVN_NO_ERROR;
 
   /* Call the walker's callback. */
-  err = (* (digger->walker->finish_file)) (digger->stack->file_baton);
+  err = (* (digger->walker->finish_file)) (digger->walk_baton,
+                                           digger->stack->file_baton);
   if (err)
     return err;
 

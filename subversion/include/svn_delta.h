@@ -483,7 +483,8 @@ typedef struct svn_delta_walk_t
      (set by add_directory or replace_directory).  We won't be using
      the baton any more, so whatever resources it refers to may now be
      freed.  */
-  svn_error_t *(*finish_directory) (void *dir_baton);
+  svn_error_t *(*finish_directory) (void *walk_baton,
+                                    void *dir_baton);
 
 
   /* Creating and modifying files.  */
@@ -541,7 +542,8 @@ typedef struct svn_delta_walk_t
   /* We are done processing a file, whose baton is FILE_BATON (set by
      `add_file' or `replace_file').  We won't be using the baton any
      more, so whatever resources it refers to may now be freed.  */
-  svn_error_t *(*finish_file) (void *file_baton);
+  svn_error_t *(*finish_file) (void *walk_baton,
+                               void *file_baton);
 
 } svn_delta_walk_t;
 
