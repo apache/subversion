@@ -63,7 +63,7 @@ then
     echo "" >> "$MAILFILE"
     $CAT "$LOG_FILE" >> "$MAILFILE"
 else
-    $CAT <<EOF > "$MAILFILE"
+    $CAT <<EOF >> "$MAILFILE"
 MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="$NEXT_PART"
 
