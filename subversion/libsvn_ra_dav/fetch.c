@@ -102,6 +102,7 @@ typedef svn_error_t * (*prop_setter_t)(void *baton,
 
 typedef struct {
   void *baton;
+  svn_boolean_t fetch_props;
   const char *vsn_url;
 } dir_item_t;
 
@@ -112,6 +113,7 @@ typedef struct {
   svn_stringbuf_t *fname;
 
   svn_boolean_t is_status;
+  svn_boolean_t fetch_props;
 
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
@@ -907,6 +909,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton);
+
+      /* Property fetching is NOT implied in replacement. */
+      TOP_DIR(rb).fetch_props = TRUE;
       break;
 
     case ELEM_add_directory:
@@ -930,6 +935,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton);
+
+      /* Property fetching is implied in addition. */
+      TOP_DIR(rb).fetch_props = TRUE;
       break;
 
     case ELEM_replace_file:
@@ -943,6 +951,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       CHKERR( (*rb->editor->replace_file)(rb->namestr, TOP_DIR(rb).baton, base,
                                           &rb->file_baton) );
+
+      /* Property fetching is NOT implied in replacement. */
+      rb->fetch_props = FALSE;
       break;
 
     case ELEM_add_file:
@@ -963,6 +974,9 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       CHKERR( (*rb->editor->add_file)(rb->namestr, TOP_DIR(rb).baton,
                                       cpath, crev, &rb->file_baton) );
+
+      /* Property fetching is implied in addition. */
+      rb->fetch_props = FALSE;
       break;
 
     case ELEM_remove_prop:
@@ -997,34 +1011,11 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
         }
       else
         {
-          svn_ra_dav_resource_t *rsrc;
-          prop_setter_t setter;
-          void *baton;
+          /* Note that we need to fetch props for this... */
           if (rb->file_baton == NULL)
-            { 
-              /* fetch dir props. using TOP_DIR.vsn_url */
-              setter = rb->editor->change_dir_prop;
-              baton = TOP_DIR(rb).baton;
-              CHKERR (svn_ra_dav__get_props_resource(&rsrc,
-                                                     rb->ras->sess2,
-                                                     TOP_DIR(rb).vsn_url,
-                                                     NULL,
-                                                     NULL,
-                                                     rb->ras->pool));
-            }
+            TOP_DIR(rb).fetch_props = TRUE; /* ...directory. */
           else
-            {
-              /* fetch file props. using href. */
-              setter = rb->editor->change_file_prop;
-              baton = rb->file_baton;
-              CHKERR (svn_ra_dav__get_props_resource(&rsrc,
-                                                     rb->ras->sess2,
-                                                     rb->href->data,
-                                                     NULL,
-                                                     NULL,
-                                                     rb->ras->pool));
-            }
-          add_props(rsrc, setter, baton, rb->ras->pool);
+            rb->fetch_props = TRUE; /* ...file. */
         }
       break;
 
@@ -1057,6 +1048,58 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 }
 
 
+static svn_error_t *
+add_node_props (report_baton_t *rb)
+{
+  svn_ra_dav_resource_t *rsrc;
+
+  /* Do nothing for status commands.  */
+  if (rb->is_status)
+    return SVN_NO_ERROR;
+
+  /*** ### HACK HACK HACK ***/
+  /* We're going to blow off empty URLs herein, but this is WRONG, and
+     I'm only doing it until I can figure out how to get a URL for the
+     root directory of the repos (which, for some reason, I don't have
+     on hand currently). */
+  if (rb->file_baton)
+    {
+      if (rb->href->data == NULL)
+        return SVN_NO_ERROR;
+
+      /* Fetch dir props. */
+      SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
+                                              rb->ras->sess2,
+                                              rb->href->data,
+                                              NULL,
+                                              NULL,
+                                              rb->ras->pool));
+      add_props(rsrc, 
+                rb->editor->change_file_prop, 
+                rb->file_baton,
+                rb->ras->pool);
+    }
+  else
+    {
+      if (TOP_DIR(rb).vsn_url == NULL)
+        return SVN_NO_ERROR;
+
+      /* Fetch dir props. */
+      SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
+                                              rb->ras->sess2,
+                                              TOP_DIR(rb).vsn_url,
+                                              NULL,
+                                              NULL,
+                                              rb->ras->pool));
+      add_props(rsrc, 
+                rb->editor->change_dir_prop, 
+                TOP_DIR(rb).baton, 
+                rb->ras->pool);
+    }
+    
+  return SVN_NO_ERROR;
+}
+
 static int end_element(void *userdata, 
                        const struct ne_xml_elm *elm,
                        const char *cdata)
@@ -1067,28 +1110,13 @@ static int end_element(void *userdata,
   switch (elm->id)
     {
     case ELEM_add_directory:
-      /* fetch all dir props */
-      /* ### we won't do this during a status check for now, since the
-         act of adding an file is enough to make status display this
-         file */
-      if (! rb->is_status)
-        {
-          svn_ra_dav_resource_t *rsrc;
-          CHKERR (svn_ra_dav__get_props_resource(&rsrc,
-                                                 rb->ras->sess2,
-                                                 TOP_DIR(rb).vsn_url,
-                                                 NULL,
-                                                 NULL,
-                                                 rb->ras->pool));
-          add_props(rsrc, 
-                    rb->editor->change_dir_prop, 
-                    TOP_DIR(rb).baton, 
-                    rb->ras->pool);
-        }
 
       /*** FALLTHRU ***/
 
     case ELEM_replace_directory:
+      /* fetch node props as necessary. */
+      CHKERR (add_node_props (rb));
+
       /* close the topmost directory, and pop it from the stack */
       CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton) );
       --rb->dirs->nelts;
@@ -1103,28 +1131,13 @@ static int end_element(void *userdata,
                                 rb->is_status ? FALSE : TRUE,
                                 rb->file_baton, rb->editor, rb->ras->pool) );
 
-      /* fetch all file props */
-      /* ### we won't do this during a status check for now, since the
-         act of adding an file is enough to make status display this
-         file */
-      if (! rb->is_status)
-        {
-          svn_ra_dav_resource_t *rsrc;
-          CHKERR(svn_ra_dav__get_props_resource(&rsrc,
-                                                rb->ras->sess2,
-                                                rb->href->data,
-                                                NULL,
-                                                NULL,
-                                                rb->ras->pool));
-          add_props(rsrc, 
-                    rb->editor->change_file_prop, 
-                    rb->file_baton,
-                    rb->ras->pool);
-        }
 
       /*** FALLTHRU ***/
 
     case ELEM_replace_file:
+      /* fetch node props as necessary. */
+      CHKERR (add_node_props (rb));
+
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton) );
       rb->file_baton = NULL;
