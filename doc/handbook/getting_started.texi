@@ -24,7 +24,7 @@ a central @dfn{repository}.  The repository is much like an ordinary
 file server, except that it remembers every change ever made to your
 files.  This allows you to recover older versions of your files, or
 browse the history of how your files changed.  Many people think of
-revision-control as a sort of "time machine".
+revision-control as a sort of ``time machine.''
 
 Some revision control systems are also @dfn{software configuration
 management (SCM)} systems.  These systems are specifically tailored to
@@ -37,7 +37,7 @@ of files.  (And is still darn good at managing source code.)
 
 @subsection History
 
-Subversion aims to be the successor to CVS (@uref{http://www.cvshome.org}).
+Subversion aims to be the successor to CVS (@uref{http://www.cvshome.org/}).
 
 At the time of writing, CVS is the standard Free revision control system
 used by the open-source community.  It has a hard-earned, well deserved
@@ -52,7 +52,7 @@ development model while fixing the most obvious flaws.  Existing CVS
 users are the first target audience: any CVS user should be able to
 start using Subversion with little effort.
 
-Collabnet (@uref{http://www.collab.net}) provided the initial funding
+Collabnet (@uref{http://www.collab.net/}) provided the initial funding
 in 2000 to begin development work, and the effort has now blossomed
 into a large, open-source project backed by a community of free
 software developers.
@@ -80,7 +80,7 @@ list to whet your appetite:
 
 @item 
 @b{Directory versioning} The Subversion repository doesn't use RCS
-files like CVS; instead, it implements a 'virtual' versioned
+files like CVS; instead, it implements a ``virtual'' versioned
 filesystem that tracks tree-structures over time.  Files @emph{and}
 directories are versioned.  At last, there are real client-side 
 `move' and `copy' commands.
@@ -128,7 +128,7 @@ free to skip this section and move on to @ref{Installation} and
 @ref{Basics}.
 
 Here's a helpful diagram of Subversion's layers.  Program flow begins at
-the top of the diagram (initiated by the user) and flows "downward".
+the top of the diagram (initiated by the user) and flows ``downward.''
 
 @c ### Insert Fitz's nicer TIFF graphic here?  Perhaps use that
 @c graphic for dvi or html output, but use the ASCII diagram for info
@@ -213,8 +213,8 @@ server, Subversion gets all these features for free.
 
 Subversion uses WebDAV as its network protocol.  DAV (Distributed
 Authoring and Versioning) is a whole discussion in itself (see
-@uref{http://www.webdav.org}) -- but in short, it's an extension to
-HTTP that allows reads/writes and "versioning" of files over the web.
+@uref{http://www.webdav.org/}) -- but in short, it's an extension to
+HTTP that allows reads/writes and ``versioning'' of files over the web.
 The Subversion project is hoping to ride a slowly rising tide of
 support for this protocol: all of the latest file-browsers for Win32,
 MacOS, and GNOME speak this protocol already.  Interoperability will
@@ -224,14 +224,14 @@ For users who simply wish to access Subversion repositories on local
 disk, the client can do this too; no network is required.  The
 "Repository Access" layer (RA) is an abstract API implemented by both
 the DAV and local-access RA libraries.  This is a specific benefit of
-writing a "librarized" revision control system: feel like writing a new
+writing a ``librarized'' revision control system: feel like writing a new
 network protocol for Subversion?  Just write a new library that
 implements the RA API.
 
 
 @subsection Client Libraries
 
-On the client side, the Subversion "working copy" library maintains
+On the client side, the Subversion ``working copy'' library maintains
 administrative information within special .svn subdirectories, similar
 in purpose to the CVS administrative directories found in CVS working
 copies.
@@ -241,14 +241,14 @@ usual, however.  The `entries' file contains XML which describes the
 current state of the working copy directory (and which basically
 serves the purposes of CVS's Entries, Root, and Repository files
 combined).  But other items present (and not found in CVS) include
-storage locations for the versioned "properties" (the metadata
-mentioned in 'Subversion Features' above) and private caches of
+storage locations for the versioned ``properties'' (the metadata
+mentioned in ``Subversion Features'' above) and private caches of
 pristine versions of each file.  This latter feature provides the
 ability to report local modifications -- and do reversions --
 @emph{without} network access.  Authentication data is also stored
 within .svn/, rather than in a single .cvspass-like file.
 
-The Subversion "client" library has the broadest responsibility; its job
+The Subversion ``client'' library has the broadest responsibility; its job
 is to mingle the functionality of the working-copy library with that of
 the repository-access library, and then to provide a highest-level API
 to any application that wishes to perform general revision control
@@ -284,15 +284,15 @@ To build from source code, @xref{Compiling and installing}.
 
 If you're an existing CVS user, then the first section, @ref{The
 Subversion Development Model}, should already be familiar.  You may just
-want to skim it quickly, noting the special definition of "Revision" in
+want to skim it quickly, noting the special definition of ``Revision'' in
 the second subsection.  At some point, you should probably also read the
 appendix which describes fundamental differences between CVS and SVN
 (@xref{SVN for CVS users}.)
 
 
 @menu
-* The Subversion Development Model::  
-* Quick Walkthrough::           
+* The Subversion Development Model::
+* Quick Walkthrough::
 @end menu
 
 @node The Subversion Development Model
@@ -300,10 +300,10 @@ appendix which describes fundamental differences between CVS and SVN
 
 
 @menu
-* Working Directories and Repositories::  
-* Transactions and Revision Numbers::  
-* How Working Directories Track the Repository::  
-* Subversion Does Not Lock Files::  
+* Working Directories and Repositories::
+* Transactions and Revision Numbers::
+* How Working Directories Track the Repository::
+* Subversion Does Not Lock Files::
 @end menu
 
 @node Working Directories and Repositories
@@ -531,7 +531,7 @@ local changes.  If it can't complete the merge in a plausible way
 automatically, Subversion leaves it to the user to resolve the conflict.
 @end itemize
 
-The subversion "status" command will show you the state of any item in
+The subversion @samp{status} command will show you the state of any item in
 your working copy.  @xref{Basic Work Cycle}, in particular the
 subsection ``Examine your changes''.
 
@@ -599,13 +599,13 @@ Cycle}, in particular the subsection ``Merge others' changes''.
 The previous section gave an abstract overview of the Subversion
 development model.  Here's an opportunity to play with Subversion in
 some hands-on examples.  The Subversion commands demoed here are just
-small examples of what Subversion can do;  see Chapter 2 for full
+small examples of what Subversion can do; see Chapter 2 for full
 explanations of each.
 
 
 @menu
-* Make a repository::           
-* Make some working copies::    
+* Make a repository::
+* Make some working copies::
 @end menu
 
 @node Make a repository
@@ -613,7 +613,7 @@ explanations of each.
 
 
 The Subversion client has an abstract interface for accessing a
-repository.  Two "Repository Access" (RA) implementations currently
+repository.  Two ``Repository Access'' (RA) implementations currently
 exist as libraries.  You can see which methods are available to your svn
 client like so:
 
@@ -623,7 +623,7 @@ Subversion Client, version N
 compiled Jan 26 2002, 16:43:58
 
 Copyright (C) 2000-2002 CollabNet.
-Subversion is open source software, see http://subversion.tigris.org/
+Subversion is open source software, see @uref{http://subversion.tigris.org/}
 
 The following repository access (RA) modules are available:
 
@@ -657,7 +657,7 @@ someproject/foo
 @end example
 
 Once the repository exists, you can initially import your data into it,
-using the ra_local access method (invoked by using a 'file' URL):
+using the ra_local access method (invoked by using a ``file'' URL):
 
 @example
 $ svn import file:///absolute/path/to/myrepos someproject myproj    
@@ -671,9 +671,9 @@ the repository's filesystem, and copies all the data from
 
 
 @node Make some working copies
-@subsubsection Make some Working copies
+@subsubsection Make some working copies
 
-Now check out a fresh "working copy" of your project.  To do this, we
+Now check out a fresh ``working copy'' of your project.  To do this, we
 specify a URL to the exact directory within the repository that we want.
 The parameter after the URL allows us to name the working copy we check out.
 
@@ -688,7 +688,7 @@ A  wc/baz/bloo
 
 Now we have a working copy in a local directory called @file{wc}, which
 represents the location @file{/myproj} in the repository (assuming the
-repository's root is @uref{file:///usr/local/svn/repos}.)
+repository's root is @url{file:///usr/local/svn/repos}.)
 
 For the sake of example, let's duplicate the working copy, and pretend
 it belongs to someone else:
@@ -709,8 +709,8 @@ $ svn add newfile              # schedule newfile for addition
 @end example
 
 That's a lot of changes!  If we were to leave and come back tomorrow,
-how could we remember what changes we'd made?  Easy.  The 'status'
-command will show us all of the "local modifications" in our working
+how could we remember what changes we'd made?  Easy.  The @samp{status}
+command will show us all of the ``local modifications'' in our working
 copy:
 
 @example
@@ -749,7 +749,7 @@ were for.
 
 Finally, pretend that you are now Felix, or some other collaborator.  If
 you go @file{wc2} (that other working copy you made), it will need the
-@command{svn update} command to receive the Revision 2 changes:
+@samp{svn update} command to receive the Revision 2 changes:
 
 @example
    $ cd ../wc2                # change to the back-up working copy
@@ -761,7 +761,7 @@ you go @file{wc2} (that other working copy you made), it will need the
    D   ./baz
 @end example
 
-The output of the @command{update} command tells Felix that baz was
+The output of the @samp{svn update} command tells Felix that baz was
 (D)eleted from his working copy, newfile was (A)dded to his working
 copy, and that bar and foo had their contents (U)pdated.
 
@@ -774,10 +774,8 @@ things can happen:
 @itemize @bullet
 @item
 The merge can go smoothly.  That is, the two sets of changes do not
-overlap.  In this case, @command{svn update} prints a G
-(``mer(G)ed'').
+overlap.  In this case, @samp{svn update} prints a @samp{G} (``mer(G)ed'').
 @item
-The sets of changes overlap, and a C for (C)onflict is printed.  See
+The sets of changes overlap, and a @samp{C} for (C)onflict is printed.  See
 section ??? for information about how conflict resolution works.
 @end itemize
-
