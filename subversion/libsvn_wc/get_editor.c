@@ -966,7 +966,7 @@ make_editor (svn_string_t *dest,
       assert (repos != NULL);
     }
 
-  eb = apr_palloc (subpool, sizeof (*edit_baton));
+  eb = apr_palloc (subpool, sizeof (*eb));
   eb->dest_dir       = dest;
   eb->pool           = subpool;
   eb->is_checkout    = is_checkout;
