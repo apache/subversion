@@ -77,7 +77,7 @@ build directory, or an apr-config file.])
       apr_config="apr-config"
     else
       dnl look in some standard places (apparently not in builtin/default)
-      for lookdir in /usr /usr/local /opt/apr ; do
+      for lookdir in /usr /usr/local /opt/apr /usr/local/apache2 ; do
         if $TEST_X "$lookdir/bin/apr-config"; then
           apr_found="yes"
           apr_config="$lookdir/bin/apr-config"
