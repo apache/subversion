@@ -356,6 +356,19 @@ allocate_env (svn_fs_t *fs)
   SVN_ERR (DB_WRAP (fs, "setting deadlock detection policy",
                     fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM)));
 
+  /* Berkeley defaults to a 32k log buffer, which is too small for our
+     purposes; see this post from Daniel Berlin <dan@dberlin.org>:
+
+     http://subversion.tigris.org/servlets/ReadMsg?msgId=56325&listName=dev
+
+     for details.  Below, we increase it to 256k for better
+     throughput.  Note that the size of a logfile must be at least 4
+     times this amount; they default to 10 megs, so we're still fine,
+     but if you increase the 256 drastically, you'll want to look at
+     DB_ENV->set_lg_max(). */
+  SVN_ERR (DB_WRAP (fs, "setting in-memory log buffer size",
+		    fs->env->set_lg_bsize (fs->env, 256 * 1024)));
+  
   return SVN_NO_ERROR;
 }
 
