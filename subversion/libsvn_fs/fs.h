@@ -22,15 +22,19 @@
 
 /*** Repository layout. ***/
 
-/* The top-level repository dir contains a README and a subdirectory.
- * The subdirectory holds the Berkeley DB environment.  In the future,
- * there may be other subdirectories, for example to hold large object
- * files that are farmed out to disk instead of being stored in the
- * DB.
- */
-#define SVN_FS__REPOS_README "README"    /* Explanation for trespassers. */
-#define SVN_FS__REPOS_DB_DIR "db"        /* Where Berkeley lives. */
+/* The top-level repository dir contains a README and various
+   subdirectories.  */
+#define SVN_FS__REPOS_README      "README"  /* Explanation for trespassers. */
+#define SVN_FS__REPOS_DB_DIR      "db"      /* Where Berkeley lives. */
+#define SVN_FS__REPOS_DAV_DIR     "dav"     /* DAV sandbox. */
+#define SVN_FS__REPOS_CONF_DIR    "conf"    /* Hook configuration files. */
+#define SVN_FS__REPOS_CUSTOM_DIR  "custom"  /* User space; svn stays out. */
 
+/* In the repository conf directory, look for these files. */
+#define SVN_FS__REPOS_CONF_PRECOMMIT_HOOKS   "pre-commit.conf"
+#define SVN_FS__REPOS_CONF_POSTCOMMIT_HOOKS  "post-commit.conf"
+#define SVN_FS__REPOS_CONF_READ_SENTINELS    "read-sentinels.conf"
+#define SVN_FS__REPOS_CONF_WRITE_SENTINELS   "write-sentinels.conf"
 
 
 /*** The filesystem structure.  ***/
@@ -41,6 +45,12 @@ struct svn_fs_t {
      completely clean up the filesystem, including any database
      or system resources it holds.  */
   apr_pool_t *pool;
+
+  /* The path to the repository's dav directory. */
+  char *dav_path;
+
+  /* The path to the repository's conf directory. */
+  char *conf_path;
 
   /* The path to the Berkeley DB environment, for use in error
      messages.  Although the repository is officially the parent of
