@@ -3,7 +3,7 @@ use SVN::Base qw(Ra svn_ra_);
 
 =head1 NAME
 
-SVN::Ra - Subversion remote acess functions
+SVN::Ra - Subversion remote access functions
 
 =head1 SYNOPSIS
 
@@ -31,7 +31,7 @@ used as the url. valid keys are:
 
 =item auth
 
-An auth_baton could be given to the SVN::RA object. Deafult to a
+An auth_baton could be given to the SVN::RA object. Default to a
 auth_provider with a username_provider. See L<SVN::Client> for how to
 create auth_baton.
 

@@ -125,7 +125,7 @@ CSVNWorkingCopy::watch_dir(BSTR bstrDir)
 		free(_pszNotification_Dir);
 	}
 
-	// Setup new direcotry
+	// Setup new directory
 	psz = W2A(bstrDir);
 	_pszNotification_Dir = (char *)malloc(strlen(psz) + 1);
 	strcpy(_pszNotification_Dir, psz);

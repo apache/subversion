@@ -116,7 +116,7 @@ Finally you may pass a date by specifying the date inside curly braces
 '{}'.  The date formats accepted are the same as the command line client
 accepts.
 
-=item $recursive $nonrecusive.
+=item $recursive $nonrecursive.
 
 A boolean parameter that specifies if the action should follow directories.  It
 should only be 1 or 0.  $recursive means, 1 means to descend into directories,
@@ -146,7 +146,7 @@ methods described below:
 
     KEY                    DEFAULT
     ----------             ----------------------------------------
-    auth                   auth_baton intiated to provide the
+    auth                   auth_baton initiated to provide the
                            provider that read cached authentication
                            options from the subversion config only.
 
@@ -314,7 +314,7 @@ $src_target must be a file or directory under version control, or the URL
 of a versioned item in the repository.  If $src_target is a URL,
 $src_revision is used to choose the revision from which to copy the
 $src_target.  $dst_path must be a file or directory under version control,
-or a repoistory URL, existant or not.
+or a repository URL, existent or not.
 
 If $dst_target is a URL immediately attempt to commit the copy action
 to the repository.  The log_msg callback will be called to query for a commit
@@ -404,7 +404,7 @@ If some components of $url do not exist then create parent directories
 as necessary.
 
 If $path is a directory, the contents of that directory are imported
-directly into the directory identifed by $url.  Note that the directory 
+directly into the directory identified by $url.  Note that the directory 
 $path itself is not imported; that is, the basename of $path is not part
 of the import.
 
@@ -445,7 +445,7 @@ $SVN::Error::CLIENT_BAD_REVISION.
 
 Special case for repositories at revision 0:
 
-If $start is 'HEAD' and $end is 1, then handle an emtpy (no revisions)
+If $start is 'HEAD' and $end is 1, then handle an empty (no revisions)
 repository specially: instead of erroring because requested revision 1
 when the highest revision is 0, just invoke $log_receiver on revision 0,
 passing undef to changed paths and empty strings for the author and date.
@@ -464,7 +464,7 @@ It is called once for each log $message from the $revision
 on $date by $author.  $author, $date or $message may be undef.
 
 If $changed_paths is defined it references a hash with the keys
-every path commited in $revision; the values are svn_log_changed_path_t
+every path committed in $revision; the values are svn_log_changed_path_t
 objects.  
 
 =item $ctx-E<gt>ls($target, $revision, $recursive, $pool);
@@ -477,7 +477,7 @@ recurse subdirectories in $target.
 
 If $target is a file only return an entry for the file.
 
-If $target is non-existant, raises the $SVN::Error::FS_NOT_FOUND
+If $target is non-existent, raises the $SVN::Error::FS_NOT_FOUND
 error.
  
 =item $ctx-E<gt>merge($src1, $rev1, $src2, $rev2, $target_wcpath, $recursive, $ignore_ancestry, $force, $dry_run, $pool);
@@ -492,7 +492,7 @@ By 'merging', we mean: apply file differences and schedule additions &
 deletions when appropriate.
 
 $src1 and $src2 must both represent the same node kind; that is, if $src1
-is a direcotry, $src2 must also be, and if $src1 is a file, $src2 must also be.
+is a directory, $src2 must also be, and if $src1 is a file, $src2 must also be.
 
 If either $rev1 or $rev2 is undef raises the $SVN::Error::CLIENT_BAD_REVISION
 error.
@@ -505,7 +505,7 @@ checked for relatedness first.  Unrelated items are typically transmitted
 to the editor as a deletion of one thing and the addition of another, but
 if this flag is true, unrelated items will be diffed as if they were related.
 
-If $force is not set and the merge involves deleting locally modifed or
+If $force is not set and the merge involves deleting locally modified or
 unversioned items the operation will raise an error.  If $force is set such
 items will be deleted.
 
@@ -541,7 +541,7 @@ of a versioned item in the repository.
 
 If $src_path is a repository URL:
 
-* $dst_path must also be a repository URL (existant or not).
+* $dst_path must also be a repository URL (existent or not).
 
 * $src_revision is used to choose the revision from which to copy the 
 $src_path.
@@ -553,12 +553,12 @@ returns a svn_client_commit_info_t object.
 
 If $src_path is a working copy path
 
-* $dst_path must also be a working copy path (existant or not).
+* $dst_path must also be a working copy path (existent or not).
 
 * $src_revision is ignored and may be undef.  The log_msg callback will
 not be called.
 
-* This is a sceduling operation.  No changes will happen to the repository
+* This is a scheduling operation.  No changes will happen to the repository
 until a commit occurs.  This scheduling can be removed with $ctx-E<gt>revert().
 If $src_path is a file it is removed from the working copy immediately.
 If $src_path is a directory it will remain in the working copy but all
@@ -631,9 +631,9 @@ If $path is not in a state of conflict to begin with, do nothing.
 If $path's conflict state is removed  call the notify callback with the
 $path.
 
-=item $ctx-E<gt>revert($paths, $resursive, $pool); 
+=item $ctx-E<gt>revert($paths, $recursive, $pool); 
 
-Restore the pristine version of a working copy $paths, efficentively undoing
+Restore the pristine version of a working copy $paths, effectively undoing
 any local mods.  
 
 For each path in $paths, if it is a directory and $recursive
@@ -758,10 +758,10 @@ If $target is unversioned (has no entry), returns undef.
 Return the repository uuid for working-copy $path, allocated in $pool.
 
 Use $adm_access to retrieve the uuid from $path's entry; if not present in the
-entry, then call $ctx-E<gt>uuid_from_uril() to retrieve, using the entry's URL.
+entry, then call $ctx-E<gt>uuid_from_url() to retrieve, using the entry's URL.
 
 Note: The only reason this function falls back on $ctx-E<gt>uuid_from_url is for
-compatability purposes.  Old working copies may not have uuids in the entries
+compatibility purposes.  Old working copies may not have uuids in the entries
 files.
 
 Note: This method probably doesn't work right now without a lot of pain,
@@ -821,7 +821,7 @@ foreach my $function (qw(checkout update switch add mkdir delete commit
 
         if (ref($_[$#_]) eq '_p_apr_pool_t')
         {
-            # if we got a pool pased to us we need to
+            # if we got a pool passed to us we need to
             # leave it off until we add the ctx first
             # so we push only the first arg to the next
             # to last arg.
@@ -854,7 +854,7 @@ foreach my $function (qw(checkout update switch add mkdir delete commit
 
 The following attribute methods are provided that allow you to set various
 configuration or retrieve it.  They all take value(s) to set the attribute and
-return the new value of the attribute or no paremeters which returns the
+return the new value of the attribute or no parameters which returns the
 current value.
 
 =over 4
@@ -909,7 +909,7 @@ The subroutine pointed to by this reference will be called when a change
 is made to the working copy.  The return value of this function is ignored.
 It's only purpose is to notify you of the change.
 
-The subroutine will receive 6 parameters.  The first paramater will be the path
+The subroutine will receive 6 parameters.  The first parameter will be the path
 of the changed file (absolute or relative to the cwd).  The second is an
 integer specifying the type of action taken.  See L<SVN::Wc> for a list of the
 possible actions values and what they mean.  The 3rd is an integer specifying
@@ -917,7 +917,7 @@ the kind of node the path is, which can be: $SVN::Node::none, $SVN::Node::file,
 $SVN::Node::dir, $SVN::Node::unknown.  The fourth parameter is the mime-type of
 the file or undef if the mime-type is unknown, it will always be undef for
 directories.  The 5th parameter is the state of the file, again see L<SVN::Wc>
-for a list of the possible states.  The 6th and final paramter is the numeric
+for a list of the possible states.  The 6th and final parameter is the numeric
 revision number of the changed file.  The revision number will be -1 except
 when the action is $SVN::Wc::Notify::Action::update_completed.
 
@@ -1118,7 +1118,7 @@ cached sessions.  Takes no parameters or optionally a pool parameter.
 Returns a server trust  provider that prompts the user via a callback. Takes
 one or two parameters the callback subroutine and optionally a pool parameter.
 The subroutine gets called with the following parameters.  A
-svn_auth_cred_ssl_server_trust_t object, a realm string, an integer specifiying
+svn_auth_cred_ssl_server_trust_t object, a realm string, an integer specifying
 how the certificate failed authentication, a svn_auth_ssl_server_cert_info_t
 object, may_save, and a pool.  The svn_auth_cred_ssl_server_trust_t object has
 the following members: may_save and accepted_failures.  The
@@ -1154,9 +1154,9 @@ may_save.
 
 =item SVN::Client::get_ssl_cert_pw_file_provider
 
-Returns a client certificate password provider that returns infromation from
+Returns a client certificate password provider that returns information from
 previously cached sessions.  Takes no parameters or optionally a pool
-paramater.
+parameter.
 
 =item SVN::Client::get_ssl_cert_pw_prompt_provider
 
@@ -1239,7 +1239,7 @@ use SVN::Base qw(Client svn_client_commit_item_t_);
 
 =item $cinfo-E<gt>revision()
 
-Just commited revision.
+Just committed revision.
 
 =item $cinfo-E<gt>date()
 

@@ -62,7 +62,7 @@ auth_open_helper.
 =item SVN::Core::auth_open_helper([auth provider array);
 
 Prompt providers return two values instead of one.  The
-2nd paramaeter is a reference to whatever was passed into
+2nd parameter is a reference to whatever was passed into
 them as the callback.  auth_open_helper splits up these
 arguments, passing the provider objects into auth_open
 which gives it an auth_baton and putting the other
@@ -509,7 +509,7 @@ Returns the english description of the apr_err status code set on the
 $svn_error_t.  This is short for:
 SVN::Error::strerror($svn_error_t-E<gt>apr_err());
 
-=item SVN::Error::create($apr_err, $child, $messsage);
+=item SVN::Error::create($apr_err, $child, $message);
 
 Returns a new svn_error_t object with the error status specified in $apr_err,
 the child as $child, and error message of $message.
