@@ -74,12 +74,12 @@ parse_local_repos_path(apr_getopt_t *os, const char ** repos_path,
   if (*repos_path == NULL)
     {
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
-                               "repository argument required\n");
+                               "repository argument required");
     }
   else if (svn_path_is_url (*repos_path))
     {
       return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                "'%s' is an url when it should be a path\n",
+                                "'%s' is an url when it should be a path",
                                 *repos_path);
     }
 

@@ -53,7 +53,7 @@ svn_cl__copy (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
   if (targets->nelts != 2)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   src_path = ((const char **) (targets->elts))[0];
   dst_path = ((const char **) (targets->elts))[1];

@@ -3991,7 +3991,7 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
 
   /* We require a revision root. */
   if (root->kind != revision_root)
-    return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, NULL, "");
+    return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   /* And we require that the path exist in the root. */
   SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
