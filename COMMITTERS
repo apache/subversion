@@ -1,27 +1,32 @@
-Each of these people has commit access to at least some portion of the
-Subversion tree.  Note that this is not nearly a full list of
-Subversion's authors; for that, you'd have to also look over the log
-messages to see all the patch contributors.
+The following people have commit access to the Subversion tree.  Note
+that this is not a full list of Subversion's authors, however -- for
+that, you'd need to look over the log messages to see all the patch
+contributors.
 
 If you have a question or comment, it's probably best to mail
 dev@subversion.tigris.org, rather than mailing any of these people
 directly.
 
-jimb: Jim Blandy <jimb@redhat.com>
-sussman: Ben Collins-Sussman <sussman@collab.net>
-kfogel: Karl Fogel <kfogel@collab.net>
-gstein: Greg Stein <gstein@lyra.org>
-brane: Branko Cibej <brane@xbc.nu>
-joe: Joe Orton <joe@light.plus.com>
-ghudson: Greg Hudson <ghudson@mit.edu>
-lefty: Lee P. W. Burgess <lefty@red-bean.com>
-fitz: Brian Fitzpatrick <fitz@red-bean.com>
-mab: Matthew Braithwaite <matt@braithwaite.net>
-daniel: Daniel Stenberg <daniel@haxx.se>
-mmurphy: Mark Murphy <mmurphy@collab.net>
-rassilon: Bill Tutt <rassilon@lyra.org>
-cmpilato: C. Michael Pilato <cmpilato@collab.net>
-kevin: Kevin Pilch-Bisson <kevin@pilch-bisson.net>
-XelaRellum: Alexander Mueller <alex@littleblue.de>
-david: David Summers <david@summersoft.fay.ar.us>
-yoshiki: Yoshiki Hayashi <yoshiki@xemacs.org>
+Blanket commit access:
+
+   jimb: Jim Blandy <jimb@redhat.com>
+   sussman: Ben Collins-Sussman <sussman@collab.net>
+   kfogel: Karl Fogel <kfogel@collab.net>
+   gstein: Greg Stein <gstein@lyra.org>
+   brane: Branko Cibej <brane@xbc.nu>
+   joe: Joe Orton <joe@light.plus.com>
+   ghudson: Greg Hudson <ghudson@mit.edu>
+   lefty: Lee P. W. Burgess <lefty@red-bean.com>
+   fitz: Brian Fitzpatrick <fitz@red-bean.com>
+   mab: Matthew Braithwaite <matt@braithwaite.net>
+   daniel: Daniel Stenberg <daniel@haxx.se>
+   mmurphy: Mark Murphy <mmurphy@collab.net>
+   rassilon: Bill Tutt <rassilon@lyra.org>
+   cmpilato: C. Michael Pilato <cmpilato@collab.net>
+   kevin: Kevin Pilch-Bisson <kevin@pilch-bisson.net>
+
+Commit access for specific areas:
+
+   XelaRellum: Alexander Mueller <alex@littleblue.de> (Java bindings)
+   yoshiki: Yoshiki Hayashi <yoshiki@xemacs.org>      (Ruby bindings)
+   david: David Summers <david@summersoft.fay.ar.us>  (RPMs)

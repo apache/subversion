@@ -66,11 +66,11 @@ patches to dev@subversion.tigris.org. :-)
 After someone has contributed a few non-trivial patches, some current
 committer (usually the one who has reviewed and applied the patches)
 proposes that person for commit access.  This proposal is sent only to
-the other committers -- the ensuing discussion is private, so that
-everyone can feel comfortable speaking their minds.  Assuming there
-are no objections, the contributor is granted commit access.  The
-decision is made by consensus among all committers; there are no
-formal rules governing the procedure.
+the other full committers -- the ensuing discussion is private, so
+that everyone can feel comfortable speaking their minds.  Assuming
+there are no objections, the contributor is granted commit access.
+The decision is made by consensus; there are no formal rules governing
+the procedure.
 
 
 
