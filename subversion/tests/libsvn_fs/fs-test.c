@@ -30,6 +30,9 @@
 #include "../../libsvn_fs/trail.h"
 
 
+#define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
+
+
 /*-----------------------------------------------------------------*/
 
 /** The actual fs-tests called by `make check` **/
@@ -321,8 +324,9 @@ call_functions_with_unopened_fs (const char **msg,
   }
 
   {
-    svn_stringbuf_t *ignored, *unused;
-    err = svn_fs_revision_prop (&ignored, fs, 0, unused, pool);
+    svn_stringbuf_t *ignored;
+    svn_string_t unused;
+    err = svn_fs_revision_prop (&ignored, fs, 0, &unused, pool);
     SVN_ERR (check_no_fs_error (err, pool));
   }
 
@@ -333,8 +337,8 @@ call_functions_with_unopened_fs (const char **msg,
   }
 
   {
-    svn_stringbuf_t *unused1, *unused2;
-    err = svn_fs_change_rev_prop (fs, 0, unused1, unused2, pool);
+    svn_string_t unused1, unused2;
+    err = svn_fs_change_rev_prop (fs, 0, &unused1, &unused2, pool);
     SVN_ERR (check_no_fs_error (err, pool));
   }
 
@@ -620,6 +624,8 @@ revision_props (const char **msg,
   apr_hash_t *proplist;
   svn_stringbuf_t *value;
   int i;
+  svn_string_t s1;
+  svn_string_t s2;
 
   const char *initial_props[4][2] = { 
     { "color", "red" },
@@ -644,43 +650,32 @@ revision_props (const char **msg,
   /* Set some properties on the revision. */
   for (i = 0; i < 4; i++)
     {
-      SVN_ERR (svn_fs_change_rev_prop 
-               (fs, 0, 
-                svn_string_create (initial_props[i][0], pool),
-                svn_string_create (initial_props[i][1], pool), 
-                pool));
+      SET_STR (&s1, initial_props[i][0]);
+      SET_STR (&s2, initial_props[i][1]);
+      SVN_ERR (svn_fs_change_rev_prop (fs, 0, &s1, &s2, pool));
     }
 
   /* Change some of the above properties. */
-  SVN_ERR (svn_fs_change_rev_prop 
-           (fs, 0, 
-            svn_string_create ("color", pool),
-            svn_string_create ("violet", pool), 
-            pool));
-  SVN_ERR (svn_fs_change_rev_prop 
-           (fs, 0, 
-            svn_string_create ("auto", pool),
-            svn_string_create ("Red 2000 Chevrolet Blazer", pool), 
-            pool));
+  SET_STR (&s1, "color");
+  SET_STR (&s2, "violet");
+  SVN_ERR (svn_fs_change_rev_prop (fs, 0, &s1, &s2, pool));
+
+  SET_STR (&s1, "auto");
+  SET_STR (&s2, "Red 2000 Chevrolet Blazer");
+  SVN_ERR (svn_fs_change_rev_prop (fs, 0, &s1, &s2, pool));
 
   /* Remove a property altogether */
-  SVN_ERR (svn_fs_change_rev_prop 
-           (fs, 0, 
-            svn_string_create ("size", pool),
-            NULL,
-            pool));
+  SET_STR (&s1, "size");
+  SVN_ERR (svn_fs_change_rev_prop (fs, 0, &s1, NULL, pool));
 
   /* Copy a property's value into a new property. */
-  SVN_ERR (svn_fs_revision_prop 
-           (&value, 
-            fs, 0, 
-            svn_string_create ("color", pool),
-            pool));
-  SVN_ERR (svn_fs_change_rev_prop 
-           (fs, 0, 
-            svn_string_create ("flower", pool),
-            value,
-            pool));
+  SET_STR (&s1, "color");
+  SVN_ERR (svn_fs_revision_prop (&value, fs, 0, &s1, pool));
+
+  SET_STR (&s1, "flower");
+  s2.data = value->data;
+  s2.len = value->len;
+  SVN_ERR (svn_fs_change_rev_prop (fs, 0, &s1, &s2, pool));
 
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */
@@ -736,6 +731,8 @@ transaction_props (const char **msg,
   svn_stringbuf_t *value;
   svn_revnum_t after_rev;
   int i;
+  svn_string_t s1;
+  svn_string_t s2;
 
   const char *initial_props[4][2] = { 
     { "color", "red" },
@@ -761,43 +758,32 @@ transaction_props (const char **msg,
   /* Set some properties on the revision. */
   for (i = 0; i < 4; i++)
     {
-      SVN_ERR (svn_fs_change_txn_prop 
-               (txn,
-                svn_string_create (initial_props[i][0], pool),
-                svn_string_create (initial_props[i][1], pool), 
-                pool));
+      SET_STR (&s1, initial_props[i][0]);
+      SET_STR (&s2, initial_props[i][1]);
+      SVN_ERR (svn_fs_change_txn_prop (txn, &s1, &s2, pool));
     }
 
   /* Change some of the above properties. */
-  SVN_ERR (svn_fs_change_txn_prop 
-           (txn,
-            svn_string_create ("color", pool),
-            svn_string_create ("violet", pool), 
-            pool));
-  SVN_ERR (svn_fs_change_txn_prop 
-           (txn, 
-            svn_string_create ("auto", pool),
-            svn_string_create ("Red 2000 Chevrolet Blazer", pool), 
-            pool));
+  SET_STR (&s1, "color");
+  SET_STR (&s2, "violet");
+  SVN_ERR (svn_fs_change_txn_prop (txn, &s1, &s2, pool));
+
+  SET_STR (&s1, "auto");
+  SET_STR (&s2, "Red 2000 Chevrolet Blazer");
+  SVN_ERR (svn_fs_change_txn_prop (txn, &s1, &s2, pool));
 
   /* Remove a property altogether */
-  SVN_ERR (svn_fs_change_txn_prop 
-           (txn, 
-            svn_string_create ("size", pool),
-            NULL,
-            pool));
+  SET_STR (&s1, "size");
+  SVN_ERR (svn_fs_change_txn_prop (txn, &s1, NULL, pool));
 
   /* Copy a property's value into a new property. */
-  SVN_ERR (svn_fs_txn_prop 
-           (&value, 
-            txn, 
-            svn_string_create ("color", pool),
-            pool));
-  SVN_ERR (svn_fs_change_txn_prop 
-           (txn, 
-            svn_string_create ("flower", pool),
-            value,
-            pool));
+  SET_STR (&s1, "color");
+  SVN_ERR (svn_fs_txn_prop (&value, txn, &s1, pool));
+
+  SET_STR (&s1, "flower");
+  s2.data = value->data;
+  s2.len = value->len;
+  SVN_ERR (svn_fs_change_txn_prop (txn, &s1, &s2, pool));
 
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */
@@ -900,6 +886,8 @@ node_props (const char **msg,
   apr_hash_t *proplist;
   svn_stringbuf_t *value;
   int i;
+  svn_string_t s1;
+  svn_string_t s2;
 
   const char *initial_props[4][2] = { 
     { "Best Rock Artist", "Creed" },
@@ -929,43 +917,33 @@ node_props (const char **msg,
   /* Set some properties on the nodes. */
   for (i = 0; i < 4; i++)
     {
-      SVN_ERR (svn_fs_change_node_prop 
-               (txn_root, "music.txt", 
-                svn_string_create (initial_props[i][0], pool),
-                svn_string_create (initial_props[i][1], pool), 
-                pool));
+      SET_STR (&s1, initial_props[i][0]);
+      SET_STR (&s2, initial_props[i][1]);
+      SVN_ERR (svn_fs_change_node_prop
+               (txn_root, "music.txt", &s1, &s2, pool));
     }
 
   /* Change some of the above properties. */
-  SVN_ERR (svn_fs_change_node_prop 
-           (txn_root, "music.txt", 
-            svn_string_create ("Best Rock Artist", pool),
-            svn_string_create ("P.O.D.", pool), 
-            pool));
-  SVN_ERR (svn_fs_change_node_prop 
-           (txn_root, "music.txt", 
-            svn_string_create ("Best Rap Artist", pool),
-            svn_string_create ("Busta Rhymes", pool), 
-            pool));
+  SET_STR (&s1, "Best Rock Artist");
+  SET_STR (&s1, "P.O.D.");
+  SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", &s1, &s2, pool));
+
+  SET_STR (&s1, "Best Rap Artist");
+  SET_STR (&s1, "Busta Rhymes");
+  SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", &s1, &s2, pool));
 
   /* Remove a property altogether */
-  SVN_ERR (svn_fs_change_node_prop 
-           (txn_root, "music.txt", 
-            svn_string_create ("Best Country Artist", pool),
-            NULL,
-            pool));
+  SET_STR (&s1, "Best Country Artist");
+  SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", &s1, NULL, pool));
 
   /* Copy a property's value into a new property. */
-  SVN_ERR (svn_fs_node_prop 
-           (&value, 
-            txn_root, "music.txt", 
-            svn_string_create ("Best Sound Designer", pool),
-            pool));
-  SVN_ERR (svn_fs_change_node_prop 
-           (txn_root, "music.txt",
-            svn_string_create ("Biggest Cakewalk Fanatic", pool),
-            value,
-            pool));
+  SET_STR (&s1, "Best Sound Designer");
+  SVN_ERR (svn_fs_node_prop (&value, txn_root, "music.txt", &s1, pool));
+
+  SET_STR (&s1, "Biggest Cakewalk Fanatic");
+  s2.data = value->data;
+  s2.len = value->len;
+  SVN_ERR (svn_fs_change_node_prop (txn_root, "music.txt", &s1, &s2, pool));
 
   /* Obtain a list of all current properties, and make sure it matches
      the expected values. */

@@ -146,7 +146,7 @@ int svn_fs__matches_atom (skel_t *skel, const char *str);
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */
-int svn_fs__atom_matches_string (skel_t *skel, svn_stringbuf_t *str);
+int svn_fs__atom_matches_string (skel_t *skel, const svn_string_t *str);
 
 
 /* Return the length of the list skel SKEL.  Atoms have a length of -1.  */
