@@ -52,7 +52,8 @@ typedef void * svn_repos_file_rev_handler_t;
 %apply const char *MAY_BE_NULL {
     const char *src_entry,
     const char *unused_1,
-    const char *unused_2
+    const char *unused_2,
+    const char *token
 };
 
 /* svn_repos_db_logfiles() */
@@ -143,6 +144,12 @@ typedef void * svn_repos_file_rev_handler_t;
    handle config and fs_config in svn_repos_create
 */
 
+/* ### TODO: %typemap(python, in) apr_hash_t *config {} */
+
+%typemap(python, in) apr_hash_t *fs_config {
+    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
+}
+    
 %typemap(perl5, in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);

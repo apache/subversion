@@ -62,10 +62,10 @@
    ### return non-const type. SWIG's type checking may see these as
    ### incompatible. */
 
-/* svn_fs_apply_textdelta(), svn_fs_apply_text() */
 %apply const char *MAY_BE_NULL {
     const char *base_checksum,
-    const char *result_checksum
+    const char *result_checksum,
+    const char *token
 };
 
 /* svn_fs_parse_id() */
