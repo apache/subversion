@@ -52,4 +52,6 @@ dnl            subversion/libsvn_wc/Makefile                     \
 dnl            subversion/libsvn_vcdiff/Makefile                 \
 dnl            subversion/libsvn_svr/tests/Makefile])
 
-AC_OUTPUT([subversion/libsvn_string/Makefile])
+AC_OUTPUT([Makefile                                           \
+          subversion/Makefile                                 \
+          subversion/libsvn_string/Makefile])
