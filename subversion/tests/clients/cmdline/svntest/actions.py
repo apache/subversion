@@ -199,6 +199,7 @@ def verify_update(actual_output, wc_dir_name,
 
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,
+                          error_re_string = None,
                           singleton_handler_a = None,
                           a_baton = None,
                           singleton_handler_b = None,
@@ -207,6 +208,11 @@ def run_and_verify_update(wc_dir_name,
                           *args):
   """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
   update subcommand.  
+
+  If ERROR_RE_STRING, the update must exit with error, and the error
+  message must match regular expression ERROR_RE_STRING.
+
+  Else if ERROR_RE_STRING is None, then:
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
@@ -218,9 +224,17 @@ def run_and_verify_update(wc_dir_name,
   Return 0 if successful."""
 
   # Update and make a tree of the output.
-  output, errput = main.run_svn (None, 'up', wc_dir_name, *args)
-  mytree = tree.build_tree_from_checkout (output)
+  output, errput = main.run_svn (error_re_string, 'up', wc_dir_name, *args)
 
+  if (error_re_string):
+    rm = re.compile(error_re_string)
+    for line in errput:
+      match = rm.search(line)
+      if match:
+        return 0
+    return 1
+
+  mytree = tree.build_tree_from_checkout (output)
   return verify_update (mytree, wc_dir_name,
                         output_tree, disk_tree, status_tree,
                         singleton_handler_a, a_baton,

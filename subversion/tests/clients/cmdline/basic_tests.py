@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import shutil, stat, string, sys, re, os.path
 
 # Our testing module
 import svntest
@@ -154,6 +154,134 @@ def basic_update(sbox):
                                                expected_output_tree,
                                                expected_disk_tree,
                                                expected_status_tree)
+
+#----------------------------------------------------------------------
+def basic_corruption(sbox):
+  "basic corruption detection"
+
+  ## I always wanted a test named "basic_corruption". :-)
+  ## Here's how it works:
+  ##
+  ##    1. Make a working copy at rev 1, duplicate it.  Now we have
+  ##        two working copies at rev 1.  Call them first and second.
+  ##    2. Make a local mod to `first/A/mu'.
+  ##    3. Intentionally corrupt `first/A/.svn/text-base/mu.svn-base'.
+  ##    4. Try to commit, expect a failure.
+  ##    5. Repair the text-base, commit again, expect success.
+  ##    6. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
+  ##    7. Try to update `second', expect failure.
+  ##    8. Repair the text-base, update again, expect success.
+  ##
+  ## Here we go...
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Make the "other" working copy
+  other_wc = wc_dir + '-other'
+  svntest.actions.duplicate_dir (wc_dir, other_wc)
+
+  # Make a local mod to mu
+  mu_path = os.path.join (wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, 'appended mu text')
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree (output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  status_list = svntest.actions.get_virginal_status_list (wc_dir, '2')
+  for item in status_list:
+    if (item[0] != mu_path):
+      item[3]['wc_rev'] = '1'
+  expected_status_tree = svntest.tree.build_generic_tree (status_list)
+
+  # Modify mu's text-base, so we get a checksum failure the first time
+  # we try to commit.
+  tb_dir_path = os.path.join (wc_dir, 'A', '.svn', 'text-base')
+  mu_tb_path = os.path.join (tb_dir_path, 'mu.svn-base')
+  mu_saved_tb_path = mu_tb_path + "-saved"
+  tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
+  mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
+  os.chmod (tb_dir_path, 0777)  # ### What's a more portable way to do this?
+  os.chmod (mu_tb_path, 0666)   # ### Would rather not use hardcoded numbers.
+  shutil.copyfile (mu_tb_path, mu_saved_tb_path)
+  svntest.main.file_append (mu_tb_path, 'Aaagggkkk, corruption!')
+  os.chmod (tb_dir_path, tb_dir_saved_mode)
+  os.chmod (mu_tb_path, mu_tb_saved_mode)
+
+  # This commit should fail due to text base corruption.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, "checksum",
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Restore the uncorrupted text base.
+  os.chmod (tb_dir_path, 0777)
+  os.chmod (mu_tb_path, 0666)
+  os.rename (mu_saved_tb_path, mu_tb_path)
+  os.chmod (tb_dir_path, tb_dir_saved_mode)
+  os.chmod (mu_tb_path, mu_tb_saved_mode)
+
+  # This commit should succeed.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Create expected output tree for an update of the other_wc.
+  output_list = [ [os.path.join (other_wc, 'A', 'mu'),
+                   None, {}, {'status' : 'U '}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update.
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree[2][1] = my_greek_tree[2][1] + 'appended mu text'
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(other_wc, '2')
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Modify mu's text-base, so we get a checksum failure the first time
+  # we try to update.
+  tb_dir_path = os.path.join (other_wc, 'A', '.svn', 'text-base')
+  mu_tb_path = os.path.join (tb_dir_path, 'mu.svn-base')
+  mu_saved_tb_path = mu_tb_path + "-saved"
+  tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
+  mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
+  os.chmod (tb_dir_path, 0777)
+  os.chmod (mu_tb_path, 0666)
+  shutil.copyfile (mu_tb_path, mu_saved_tb_path)
+  svntest.main.file_append (mu_tb_path, 'Aiyeeeee, corruption!\nHelp!\n')
+  os.chmod (tb_dir_path, tb_dir_saved_mode)
+  os.chmod (mu_tb_path, mu_tb_saved_mode)
+
+  # Do the update and check the results in three ways.
+  if svntest.actions.run_and_verify_update(other_wc,
+                                           expected_output_tree,
+                                           expected_disk_tree,
+                                           expected_status_tree,
+                                           "checksum"):
+    return 1
+
+  # Restore the uncorrupted text base.
+  os.chmod (tb_dir_path, 0777)
+  os.chmod (mu_tb_path, 0666)
+  os.rename (mu_saved_tb_path, mu_tb_path)
+  os.chmod (tb_dir_path, tb_dir_saved_mode)
+  os.chmod (mu_tb_path, mu_tb_saved_mode)
+
+  # This update should succeed.  (Actually, I'm kind of astonished
+  # that this works without even an intervening "svn cleanup".)
+  return svntest.actions.run_and_verify_update (other_wc,
+                                                expected_output_tree,
+                                                expected_disk_tree,
+                                                expected_status_tree)
+
 
 #----------------------------------------------------------------------
 def basic_merge(sbox):
@@ -386,6 +514,7 @@ Original appended text for rho>>>>>>> .r2
                            expected_output_tree,
                            expected_disk_tree,
                            expected_status_tree,
+                           None,
                            detect_conflict_files, # our singleton handler func
                            extra_files):    # our handler will look for these
     return 1
@@ -868,6 +997,7 @@ test_list = [ None,
               basic_status,
               basic_commit,
               basic_update,
+              basic_corruption,
               basic_merge,
               basic_conflict,
               basic_cleanup,

@@ -173,6 +173,7 @@ def update_binary_file(sbox):
                                            expected_output_tree,
                                            expected_disk_tree,
                                            expected_status_tree,
+                                           None,
                                            detect_extra_files, extra_files,
                                            None, None, 1):
     return 1
@@ -315,7 +316,7 @@ def update_binary_file_2(sbox):
                                                expected_output_tree,
                                                expected_disk_tree,
                                                expected_status_tree,
-                                               None, None,
+                                               None, None, None,
                                                None, None, 1,
                                                '-r', '2')
 
@@ -366,7 +367,7 @@ def update_missing(sbox):
                                                expected_output_tree,
                                                expected_disk_tree,
                                                expected_status_tree,
-                                               None, None, None, None, 0,
+                                               None, None, None, None, None, 0,
                                                mu_path, rho_path,
                                                E_path, H_path)
 
@@ -460,7 +461,7 @@ def update_to_rev_zero(sbox):
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output_tree,
                                                expected_disk_tree,
-                                               None,
+                                               None, None,
                                                None, None, None, None, 0,
                                                '-r', '0')
 
