@@ -1,5 +1,14 @@
 Review and comments on the Subversion book listed by chapter.
 
+Overall Book Comments
+
+        #1) Blair
+
+            It may be a good idea where possible to set up a little
+            example repository for the book.  It could live as
+
+            http://www.svnbook.org/examples/
+
 Chapter 3
 
         #1) ghudson (also affects ch 9 a little bit)
@@ -24,32 +33,6 @@ Chapter 3
 
 Chapter 5
 
-    Section svn-ch-5-sect-2.1
-
-        #1) Blair
-
-            There is this paragraph
-
-            <para>Currently there are five true hooks implemented by the
-            Subversion repository:</para>
-
-            My question is, what makes a hook considered a "true" hook?
-
-    Section svn-ch-5-sect-3.1.1
-
-        #1) Blair
-
-            I think this section on svnlook tree requires more
-            explanation of what is being printed, what is a node
-            revision ID, etc.  It makes statements on how it can be
-            helpful to administrators but doesn't say how.  It also
-            doesn't say how to decide if a dead transaction is really
-            dead.  I suggest either removing it entirely, increasing
-            the description substantially, or least preferably, just
-            linking to an external document that explains this in
-            greater detail, but that's not really appropriate for a
-            book, it it then :)
-
     Section svn-ch-5-sect-6
 
         #1) Blair
@@ -69,25 +52,17 @@ Chapter 5
             could well be merged into.  If that doesn't work, I would
             consider moving it up to the front of this chapter.
 
-Chapter 6
 
-    Section svn-ch-6-sect-4
+Chapter 9
 
-        #1) Blair
+    Section svn-ch-9-sect-1.2
 
-            In this sentence:
+        #1) naked
 
-                The result is a standardized,
-                robust system that is conveniently packaged as part of the
-                Apache 2.0 software, is supported by numerous pieces of core
-                operating system and third-party products, and which doesn't
-                require network administrators to open up yet another custom
-                port.
+            "svn diff" synopsis differs from actual usage and there is
+            no explanation or examples of the --old and --new
+            arguments which are bound to be confusing.
 
-            What does this mean "is supported by numerous pieces of
-            core operating system ... products"?  It would seem that
-            Apache supports running on these OSes.
+        #2) naked
 
-            Maybe changing it to read "is supported by numerous
-            operating systems and third-party products, and which ..." 
-            makes more sense.
+            "svn merge" has the same problem as above.

@@ -15,8 +15,8 @@
       unconsciously.  For all intents and purposes, you are ready to
       use Subversion in a typical environment.</para>
 
-    <para>But the Subversion feature set doesn't stop at "common
-      version control operations".</para>
+    <para>But the Subversion feature set doesn't stop at <quote>common
+      version control operations</quote>.</para>
 
     <para>This chapter highlights some of Subversion's features that
       aren't quite so regularly used.  In it, we will discuss
@@ -79,9 +79,10 @@
         user's home directory.  On Win32 systems, Subversion creates a
         folder named <filename>Subversion</filename>, typically inside
         the <filename>Application Data</filename> area of the user's
-        profile directory.  However, on this platform the exact
-        location differs from system to system, and is dictated by the
-        Windows registry.
+        profile directory (which, by the way, is usually a hidden
+        directory).  However, on this platform the exact location
+        differs from system to system, and is dictated by the Windows
+        registry.
         <footnote>
           <para>The <literal>APPDATA</literal> environment variable
             points to the <filename>Application Data</filename> area,
@@ -392,7 +393,7 @@ collabnet = svn.collab.net
             <listitem>
               <para>Set this variable to <literal>yes</literal> if you
                 want Subversion to automatically trust the set of
-                "default" CAs that ship with OpenSSL.</para>
+                default CAs that ship with OpenSSL.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -490,10 +491,10 @@ collabnet = svn.collab.net
               <para>This specifies the absolute path of a differencing
                 program, used when Subversion generates
                 <quote>diff</quote> output (such as when using the
-                <command>svn diff</command> command).  The default
-                value is the path of the GNU diff utility, as
-                determined by the Subversion source code build
-                system.</para>
+                <command>svn diff</command> command).  By default
+                Subversion uses an internal differencing
+                library&mdash;setting this option will cause it to
+                perform this task using an external program.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -502,9 +503,10 @@ collabnet = svn.collab.net
               <para>This specifies the absolute path of a three-way
                 differencing program.  Subversion uses this program to
                 merge changes made by the user with those received
-                from the repository.  The default value is the path of
-                the GNU diff3 utility, as determined by the Subversion
-                source code build system.</para>
+                from the repository.  By default Subversion uses an
+                internal differencing library&mdash;setting this
+                option will cause it to perform this task using an
+                external program.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
@@ -513,11 +515,8 @@ collabnet = svn.collab.net
               <para>This flag should be set to <literal>true</literal>
               if the program specified by the
               <literal>diff3-cmd</literal> option accepts a
-              <option>--diff-program</option> command-line parameter.
-              Since the <literal>diff3-cmd</literal> option's default
-              value is determined at compilation time, the default
-              value for the <literal>diff3-has-program-arg</literal>
-              is, too.</para>
+              <option>--diff-program</option> command-line
+              parameter.</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -622,8 +621,9 @@ collabnet = svn.collab.net
                 for the working copy files to have timestamps that
                 reflect the last time they were changed in the
                 repository.  The <command>svn export</command> command
-                always places these "last-commit timestamps" on trees
-                that it produces.  By setting this config variable to
+                always places these <quote>last-commit
+                timestamps</quote> on trees that it produces.  By
+                setting this config variable to
                 <literal>yes</literal>, the <command>svn
                 checkout</command>, <command>svn update</command>,
                 <command>svn switch</command>, and <command>svn
@@ -758,7 +758,7 @@ collabnet = svn.collab.net
 
       <screen>
 $ svn propset copyright '(c) 2003 Red-Bean Software' calc/button.c
-property `copyright' set on 'calc/button.c'
+property 'copyright' set on 'calc/button.c'
 $
 </screen>
        
@@ -773,7 +773,7 @@ $
 
       <screen>
 $ svn propset license -F /path/to/LICENSE calc/button.c
-property `license' set on 'calc/button.c'
+property 'license' set on 'calc/button.c'
 $
 </screen>
 
@@ -796,7 +796,7 @@ $
 
       <screen>
 $ svn propedit copyright calc/button.c  ### exit the editor without changes
-No changes to property `copyright' on `calc/button.c'
+No changes to property 'copyright' on 'calc/button.c'
 $
 </screen>
 
@@ -808,9 +808,9 @@ $
 
       <screen>
 $ svn propset copyright '(c) 2002 Red-Bean Software' calc/*
-property `copyright' set on 'calc/Makefile'
-property `copyright' set on 'calc/button.c'
-property `copyright' set on 'calc/integer.c'
+property 'copyright' set on 'calc/Makefile'
+property 'copyright' set on 'calc/button.c'
+property 'copyright' set on 'calc/integer.c'
 &hellip;
 $
 </screen>
@@ -867,7 +867,7 @@ red-beans-and-rice.
 
       <screen>
 $ svn propset license '' calc/button.c
-property `license' set on 'calc/button.c'
+property 'license' set on 'calc/button.c'
 $ svn proplist --verbose calc/button.c
 Properties on 'calc/button.c':
   copyright : (c) 2003 Red-Bean Software
@@ -881,7 +881,7 @@ $
 
       <screen>
 $ svn propdel license calc/button.c
-property `license' deleted from ''.
+property 'license' deleted from ''.
 $ svn proplist --verbose calc/button.c
 Properties on 'calc/button.c':
   copyright : (c) 2003 Red-Bean Software
@@ -918,7 +918,7 @@ $
 
         <screen>
 $ svn propset svn:log '* button.c: Fix a compiler warning.' -r11 --revprop
-property `svn:log' set on repository revision '11'
+property 'svn:log' set on repository revision '11'
 $
 </screen>
 
@@ -997,7 +997,7 @@ $ svn status calc
  C     calc/button.c
 ?      calc/button.c.prej
 $ cat calc/button.c.prej 
-prop `linecount': user set to '1256', but update set to '1301'.
+prop 'linecount': user set to '1256', but update set to '1301'.
 $
 </screen>
  
@@ -1152,16 +1152,17 @@ $
           <literal>global-ignores</literal> run-time configuration
           option (see <xref linkend="svn-ch-7-sect-1.3.2" />) to
           filter unversioned files and directories out of commands
-          like <command>svn status</command>.</para>
+          like <command>svn status</command>, <command>svn
+          add</command>, and <command>svn import</command>.</para>
 
         <para>The rationale behind the <literal>svn:ignore</literal>
           property is easily explained.  Subversion does not assume
           that every file or subdirectory in a working copy directory
           is intended for version control.  Resources must be
           explicitly placed under Subversion's management using the
-          <command>svn add</command> command.  As a result, there are
-          often many resources in a working copy that are not
-          versioned.</para>
+          <command>svn add</command> or <command>svn import</command>
+          commands.  As a result, there are often many resources in a
+          working copy that are not versioned.</para>
 
         <para>Now, the <command>svn status</command> command displays
           as part of its output every unversioned file or subdirectory
@@ -1204,7 +1205,7 @@ $
        
           <screen>
 $ svn propset svn:ignore -F .cvsignore .
-property `svn:ignore' set on '.'
+property 'svn:ignore' set on '.'
 $
 </screen>        
 
@@ -1286,7 +1287,7 @@ $ svn status
           Subversion is simply not reminding you that they are present
           and unversioned.  And now with all the trivial noise removed
           from the display, you are left with more interesting
-          items&mdash; such as that source code file that you probably
+          items&mdash;such as that source code file that you probably
           forgot to add to version control.</para>
 
         <para>If you want to see the ignored files, you can pass the 
@@ -1303,9 +1304,17 @@ I      calc/debug_log.2.gz
 I      calc/debug_log.3.gz
 </screen>
 
+        <para>The list of patterns to ignore is also used by
+          <command>svn add</command> and <command>svn
+          import</command>.  Both of these operations involve asking
+          Subversion to begin managing some set of files and
+          directories.  Rather than force the user to pick and choose
+          which files in a tree she wishes to start versioning,
+          Subversion uses the ignore patterns to determine which files
+          should not be swept into the version control system as part
+          of a larger recursive addition or import operation.</para>
+   
       </sect3>
-
-      <!-- cmpilato was here -->
 
       <sect3 id="svn-ch-7-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
@@ -1436,7 +1445,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
 
         <screen>
 $ svn propset svn:keywords "LastChangedDate Author" weather.txt
-property `svn:keywords' set on 'weather.txt'
+property 'svn:keywords' set on 'weather.txt'
 $
 </screen>        
 
@@ -1662,10 +1671,10 @@ Cumulus clouds are appearing more frequently as summer approaches.
       URL&mdash;and possibly a particular revision&mdash;of a
       versioned resource.  In Subversion, you declare externals
       definitions in groups using the <literal>svn:externals</literal>
-      property.  This property is set on a versioned directory, and
-      its value is a multi-line table of subdirectories (relative to
-      the versioned directory on which the property is set) and
-      Subversion repository URLs.</para>
+      property.  This property may be set on any versioned directory,
+      and its value is a multi-line table of subdirectories (relative
+      to the versioned directory on which the property is set) and
+      fully qualified, absolute Subversion repository URLs.</para>
 
     <screen>
 $ svn propget svn:externals calc
@@ -1734,6 +1743,23 @@ Fetching external item into calc/third-party/skins
       you've made in one or more of the auxiliary working copies, you
       must run <command>svn commit</command> explicitly on those
       working copies, not on the primary working copy.</para>
+
+    <para>Also, since the definitions themselves use absolute URLs,
+      moving or copying a directory to which they are attached will
+      not affect what gets checked out as an external (though the
+      relative local target subdirectory will, of course, move with
+      renamed directory).  This can be confusing&mdash;even
+      frustrating&mdash;in certain situtations.  For example, if you
+      use externals definitions on a directory in your
+      <filename>/trunk</filename> development line which point to
+      other areas of that same line, and then you use <command>svn
+      copy</command> to branch that line to some new location
+      <filename>/branches/my-branch</filename>, the externals
+      definitions on items in your new branch will still refer to
+      versioned resources in <filename>/trunk</filename>.  Also, be
+      aware that if you need to re-parent your working copy (using
+      <command>svn switch --relocate</command>), externals definitions
+      will <emphasis>not</emphasis> also be re-parented.</para>
 
   </sect1>
 
@@ -1842,7 +1868,7 @@ Fetching external item into calc/third-party/skins
       <screen>
 &hellip;
 $ svn import /path/to/libcomplex-1.0 \
-             http://svn.example.com/repos/calc/vendor/libcomplex/current \
+             http://svn.example.com/repos/vendor/libcomplex/current \
              -m 'importing initial 1.0 vendor drop'
 &hellip;
 </screen>
@@ -1854,8 +1880,8 @@ $ svn import /path/to/libcomplex-1.0 \
         make our customizations to it.</para>
     
       <screen>
-$ svn copy http://svn.example.com/repos/calc/vendor/libcomplex/current  \
-           http://svn.example.com/repos/calc/vendor/libcomplex/1.0      \
+$ svn copy http://svn.example.com/repos/vendor/libcomplex/current  \
+           http://svn.example.com/repos/vendor/libcomplex/1.0      \
            -m 'tagging libcomplex-1.0'
 &hellip;
 $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
@@ -1984,8 +2010,8 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
         might look like:</para>
 
       <screen>
-$ svn_load_dirs.pl http://svn.example.com/repos/calc/vendor/libcomplex \
-                   current                                             \
+$ svn_load_dirs.pl http://svn.example.com/repos/vendor/libcomplex \
+                   current                                        \
                    /path/to/libcomplex-1.1
 &hellip;
 </screen>
@@ -1997,9 +2023,9 @@ $ svn_load_dirs.pl http://svn.example.com/repos/calc/vendor/libcomplex \
         the first program argument.</para>
 
       <screen>
-$ svn_load_dirs.pl -t libcomplex-1.1                                   \
-                   http://svn.example.com/repos/calc/vendor/libcomplex \
-                   current                                             \
+$ svn_load_dirs.pl -t libcomplex-1.1                              \
+                   http://svn.example.com/repos/vendor/libcomplex \
+                   current                                        \
                    /path/to/libcomplex-1.1
 &hellip;
 </screen>

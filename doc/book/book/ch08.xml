@@ -77,7 +77,7 @@
           </row>
           <row>
             <entry>libsvn_ra_svn</entry>
-            <entry>A proprietary protocol Repository Access module</entry>
+            <entry>A custom protocol Repository Access module</entry>
           </row>
           <row>
             <entry>libsvn_repos</entry>
@@ -92,6 +92,11 @@
             <entry>The working copy management library</entry>
           </row>
           <row>
+            <entry>mod_authz_svn</entry>
+            <entry>Apache authorization module for Subversion
+            repositories access via WebDAV.</entry>
+          </row>
+          <row>
             <entry>mod_dav_svn</entry>
             <entry>Apache module for mapping WebDAV operations to
             Subversion ones</entry>
@@ -100,14 +105,15 @@
       </tgroup>
     </table>
 
-    <para>The fact that the word "miscellaneous" only appears once in
-      Table 7-1 is a good sign.  The Subversion development team
-      is serious about making sure that functionality lives in the
-      right layer and libraries.  Perhaps the greatest advantage of
-      the modular design is its lack of complexity from a developer's
-      point of view.  As a developer, you can quickly formulate that
-      kind of "big picture" that allows you to pinpoint the location
-      of certain pieces of functionality with relative ease.</para>
+    <para>The fact that the word <quote>miscellaneous</quote> only
+      appears once in Table 7-1 is a good sign.  The Subversion
+      development team is serious about making sure that functionality
+      lives in the right layer and libraries.  Perhaps the greatest
+      advantage of the modular design is its lack of complexity from a
+      developer's point of view.  As a developer, you can quickly
+      formulate that kind of <quote>big picture</quote> that allows
+      you to pinpoint the location of certain pieces of functionality
+      with relative ease.</para>
 
     <para>Another benefit of modularity is the ability to replace a
       given module with a whole new library that implements the same
@@ -115,7 +121,7 @@
       this happens within Subversion already.  The libsvn_ra_dav,
       libsvn_ra_local, and libsvn_ra_svn all implement the same
       interface.  And all three communicate with the Repository
-      Layer&mdash; libsvn_ra_dav and libsvn_ra_svn do so across a
+      Layer&mdash;libsvn_ra_dav and libsvn_ra_svn do so across a
       network, and libsvn_ra_local connects to it directly.</para>
 
     <para>The client itself also highlights modularity in the
@@ -139,16 +145,17 @@
         of your version-controlled data.  This layer is connected to
         the Client Layer via the Repository Access Layer, and is, from
         the perspective of the Subversion user, the stuff at the
-        "other end of the line."</para>
+        <quote>other end of the line.</quote></para>
 
       <para>The Subversion Filesystem is accessed via the libsvn_fs
         API, and is not a kernel-level filesystem that one would
         install in an operating system (like the Linux ext2 or NTFS),
-        but a virtual filesystem.  Rather than storing "files" and
-        "directories" as real files and directories (as in, the kind
-        you can navigate through using your favorite shell program),
-        it uses a database system for its back-end storage mechanism.
-        Currently, the database system in use is Berkeley DB.
+        but a virtual filesystem.  Rather than storing
+        <quote>files</quote> and <quote>directories</quote> as real
+        files and directories (as in, the kind you can navigate
+        through using your favorite shell program), it uses a database
+        system for its back-end storage mechanism.  Currently, the
+        database system in use is Berkeley DB.
         <footnote>
           <para>The choice of Berkeley DB brought several automatic
             features that Subversion needed, such as data integrity,
@@ -166,14 +173,14 @@
         directories, copy and move them around, modify file contents,
         and so on.  It also has features that are not quite as common,
         such as the ability to add, modify, and remove metadata
-        ("properties") on each file or directory.  Furthermore, the
-        Subversion Filesystem is a versioning filesystem, which means
-        that as you make changes to your directory tree, Subversion
-        remembers what your tree looked like before those changes.
-        And before the previous changes.  And the previous ones.  And
-        so on, all the way back through versioning time to (and just
-        beyond) the moment you first started adding things to the
-        filesystem.</para>
+        (<quote>properties</quote>) on each file or directory.
+        Furthermore, the Subversion Filesystem is a versioning
+        filesystem, which means that as you make changes to your
+        directory tree, Subversion remembers what your tree looked
+        like before those changes.  And before the previous changes.
+        And the previous ones.  And so on, all the way back through
+        versioning time to (and just beyond) the moment you first
+        started adding things to the filesystem.</para>
 
       <para>All the modifications you make to your tree are done
         within the context of a Subversion transaction.  The following
@@ -197,22 +204,23 @@
         modifications are permanently stored as historical artifacts.
         Each of these cycles generates a single new revision of your
         tree, and each revision is forever accessible as an immutable
-        snapshot of "the way things were."</para>
+        snapshot of <quote>the way things were.</quote></para>
 
       <sidebar>
         <title>The Transaction Distraction</title>
 
         <para>The notion of a Subversion transaction, especially given
-          its close proximity the database code in libsvn_fs, can
+          its close proximity to the database code in libsvn_fs, can
           become easily confused with the transaction support provided
           by the underlying database itself.  Both types of
           transaction exist to provide atomicity and isolation.  In
           other words, transactions give you the ability to perform a
-          set of actions in an "all or nothing" fashion&mdash;either
-          all the actions in the set complete with success, or they
-          all get treated as if <emphasis>none</emphasis> of them ever
-          happened&mdash;and in a way that does not interfere with
-          other processes acting on the data.</para>
+          set of actions in an <quote>all or nothing</quote>
+          fashion&mdash;either all the actions in the set complete
+          with success, or they all get treated as if
+          <emphasis>none</emphasis> of them ever happened&mdash;and in
+          a way that does not interfere with other processes acting on
+          the data.</para>
 
         <para>Database transactions generally encompass small
           operations related specifically to the modification of data
@@ -429,10 +437,11 @@ make_new_directory (const char *repos_path,
         to your developer mailing list), you need to use the
         libsvn_repos-wrapped version of that
         function&mdash;<function>svn_repos_fs_commit_txn</function>.
-        This function will actually first run the "pre-commit" hook
-        script if one exists, then commit the transaction, and finally
-        will run a "post-commit" hook script.  The hooks provide a
-        special kind of reporting mechanism that does not really
+        This function will actually first run the
+        <literal>pre-commit</literal> hook script if one exists, then
+        commit the transaction, and finally will run a
+        <literal>post-commit</literal> hook script.  The hooks provide
+        a special kind of reporting mechanism that does not really
         belong in the core filesystem library itself.  (For more
         information regarding Subversion's repository hooks, see <xref
         linkend="svn-ch-5-sect-2.1" />.)</para>
@@ -459,9 +468,9 @@ make_new_directory (const char *repos_path,
             set of files was modified in the filesystem.</para>
         </listitem>
         <listitem>
-          <para>generate a human-readable "dump" of the filesystem, a
-            complete representation of the revisions in the
-            filesystem.</para>
+          <para>generate a human-readable <quote>dump</quote> of the
+            filesystem, a complete representation of the revisions in
+            the filesystem.</para>
         </listitem>
         <listitem>
           <para>parse that dump format, loading the dumped revisions
@@ -479,16 +488,16 @@ make_new_directory (const char *repos_path,
     <sect2 id="svn-ch-8-sect-1.2">
       <title>Repository Access Layer</title>
 
-      <para>If the Subversion Repository Layer is at "the other end of
-        the line", the Repository Access Layer is the line itself.
-        Charged with marshalling data between the client libraries and
-        the repository, this layer includes the libsvn_ra module
-        loader library, the RA modules themselves (which currently
-        includes libsvn_ra_dav, libsvn_ra_local, and libsvn_ra_svn),
-        and any additional libraries needed by one or more of those RA
-        modules, such as the mod_dav_svn Apache module with which
-        libsvn_ra_dav communicates or libsvn_ra_svn's server,
-        <command>svnserve</command>.</para>
+      <para>If the Subversion Repository Layer is at <quote>the other
+        end of the line</quote>, the Repository Access Layer is the
+        line itself.  Charged with marshalling data between the client
+        libraries and the repository, this layer includes the
+        libsvn_ra module loader library, the RA modules themselves
+        (which currently includes libsvn_ra_dav, libsvn_ra_local, and
+        libsvn_ra_svn), and any additional libraries needed by one or
+        more of those RA modules, such as the mod_dav_svn Apache
+        module with which libsvn_ra_dav communicates or
+        libsvn_ra_svn's server, <command>svnserve</command>.</para>
 
       <para>Since Subversion uses URLs to identify its repository
         resources, the protocol portion of the URL schema (usually
@@ -496,24 +505,26 @@ make_new_directory (const char *repos_path,
         <literal>https:</literal>, or <literal>svn:</literal>) is used
         to determine which RA module will handle the communications.
         Each module registers a list of the protocols it knows how to
-        "speak" so that the RA loader can, at runtime, determine which
-        module to use for the task at hand.  You can determine which
-        RA modules are available to the Subversion command-line
-        client, and what protocols they claim to support, by running
-        <command>svn --version</command>:</para>
+        <quote>speak</quote> so that the RA loader can, at runtime,
+        determine which module to use for the task at hand.  You can
+        determine which RA modules are available to the Subversion
+        command-line client, and what protocols they claim to support,
+        by running <command>svn --version</command>:</para>
      
       <screen>
 $ svn --version
-svn, version 0.25.0 (dev build)
-   compiled Jul 18 2003, 16:25:59
- 
-Copyright (C) 2000-2003 CollabNet.
+svn, version 1.0.1 (r9023)
+   compiled Mar 17 2004, 09:31:13
+
+Copyright (C) 2000-2004 CollabNet.
 Subversion is open source software, see http://subversion.tigris.org/
- 
+This product includes software developed by CollabNet (http://www.Collab.Net/).
+
 The following repository access (RA) modules are available:
- 
+
 * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
   - handles 'http' schema
+  - handles 'https' schema
 * ra_local : Module for accessing a repository on local disk.
   - handles 'file' schema
 * ra_svn : Module for accessing a repository using the svn network protocol.
@@ -601,15 +612,16 @@ The following repository access (RA) modules are available:
           example, if Neon finds the OpenSSL libraries, it allows the
           Subversion client to attempt to use SSL-encrypted
           communications with the Apache server (whose own mod_ssl can
-          "speak the language").  Also, both Neon itself and Apache's
-          mod_deflate can understand the "deflate" algorithm (the same
-          used by the PKZIP and gzip programs), so requests can be
-          sent in smaller, compressed chunks across the wire.  Other
-          complex features that Subversion hopes to support in the
-          future include the ability to automatically handle
-          server-specified redirects (for example, when a repository
-          has been moved to a new canonical URL) and taking advantage
-          of HTTP pipelining.</para>
+          <quote>speak the language</quote>).  Also, both Neon itself
+          and Apache's mod_deflate can understand the
+          <quote>deflate</quote> algorithm (the same used by the PKZIP
+          and gzip programs), so requests can be sent in smaller,
+          compressed chunks across the wire.  Other complex features
+          that Subversion hopes to support in the future include the
+          ability to automatically handle server-specified redirects
+          (for example, when a repository has been moved to a new
+          canonical URL) and taking advantage of HTTP
+          pipelining.</para>
   
         <!-- Talk about another difference between CVS and Subversion.
              CVS users had to specify which auth mechanism to use
@@ -622,11 +634,11 @@ The following repository access (RA) modules are available:
       </sect3>
 
       <sect3 id="svn-ch-8-sect-1.2.2">
-        <title>RA-SVN (Proprietary Protocol Repository Access)</title>
+        <title>RA-SVN (Custom Protocol Repository Access)</title>
 
         <para>In addition to the standard HTTP/WebDAV protocol,
           Subversion also provides an RA implementation that uses a
-          proprietary protocol.  The libsvn_ra_svn module implements
+          custom protocol.  The libsvn_ra_svn module implements
           its own network socket connectivity, and communicates with a
           stand-alone server&mdash;the <filename>svnserve</filename>
           program&mdash;on the machine that hosts the
@@ -706,7 +718,7 @@ The following repository access (RA) modules are available:
         implemented by the client-side libraries exists for the sole
         purpose of managing working copies&mdash;directories full of
         files and other subdirectories which serve as a sort of local,
-        editable "reflection" of one or more repository
+        editable <quote>reflection</quote> of one or more repository
         locations&mdash;and propagating changes to and from the
         Repository Access layer.</para>
 
@@ -796,17 +808,17 @@ The following repository access (RA) modules are available:
 
     <para>The first thing you might notice is that Subversion's
       datatypes and functions are namespace protected.  Every public
-      Subversion symbol name begins with <literal>"svn_"</literal>,
+      Subversion symbol name begins with <literal>svn_</literal>,
       followed by a short code for the library in which the symbol is
-      defined (such as <literal>"wc"</literal>,
-      <literal>"client"</literal>, <literal>"fs"</literal>, etc.),
-      followed by a single underscore (<literal>"_"</literal>) and
+      defined (such as <literal>wc</literal>,
+      <literal>client</literal>, <literal>fs</literal>, etc.),
+      followed by a single underscore (<literal>_</literal>) and
       then the rest of the symbol name.  Semi-public functions (used
       among source files of a given library but not by code outside
       that library, and found inside the library directories
       themselves) differ from this naming scheme in that instead of a
       single underscore after the library code, they use a double
-      underscore (<literal>"__"</literal>).  Functions that are private
+      underscore (<literal>__</literal>).  Functions that are private
       to a given source file have no special prefixing, and are declared
       <literal>static</literal>.  Of course, a compiler isn't
       interested in these naming conventions, but they definitely help
@@ -818,7 +830,7 @@ The following repository access (RA) modules are available:
 
       <para>Along with Subversion's own datatype, you will see many
         references to datatypes that begin with
-        <literal>"apr_"</literal>&mdash;symbols from the Apache
+        <literal>apr_</literal>&mdash;symbols from the Apache
         Portable Runtime (APR) library.  APR is Apache's portability
         library, originally carved out of its server code as an
         attempt to separate the OS-specific bits from the
@@ -869,18 +881,18 @@ The following repository access (RA) modules are available:
       <para>With remote version control operation as the whole point
         of Subversion's existence, it makes sense that some attention
         has been paid to internationalization (i18n) support.  After
-        all, while "remote" might mean "across the office", it could
-        just as well mean "across the globe."  To facilitate this, all
-        of Subversion's public interfaces that accept path arguments
-        expect those paths to be canonicalized, and encoded in UTF-8.
-        This means, for example, that any new client binary that
-        drives the libsvn_client interface needs to first convert
-        paths from the locale-specific encoding to UTF-8 before
-        passing those paths to the Subversion libraries, and then
-        re-convert any resultant output paths from Subversion back
-        into the locale's encoding before using those paths for
-        non-Subversion purposes.  Fortunately, Subversion provides a
-        suite of functions (see
+        all, while <quote>remote</quote> might mean <quote>across the
+        office</quote>, it could just as well mean <quote>across the
+        globe.</quote> To facilitate this, all of Subversion's public
+        interfaces that accept path arguments expect those paths to be
+        canonicalized, and encoded in UTF-8.  This means, for example,
+        that any new client binary that drives the libsvn_client
+        interface needs to first convert paths from the
+        locale-specific encoding to UTF-8 before passing those paths
+        to the Subversion libraries, and then re-convert any resultant
+        output paths from Subversion back into the locale's encoding
+        before using those paths for non-Subversion purposes.
+        Fortunately, Subversion provides a suite of functions (see
         <filename>subversion/include/svn_utf.h</filename>) that can be
         used by any program to do these conversions.</para>
 
@@ -921,7 +933,7 @@ The following repository access (RA) modules are available:
         by these languages are often better at handling information
         that comes from users.  As you know, only a human can botch up
         the input to a program as well as they do, and the
-        scripting-type language simply handle that misinformation more
+        scripting-type language simply handles that misinformation more
         gracefully.  Of course, often that flexibility comes at the
         cost of performance.  That is why using a tightly-optimized,
         C-based interface and library suite, combined with a powerful,
@@ -976,12 +988,12 @@ def crawl_filesystem_dir (root, directory, pool):
         need to pay close attention to memory usage, and need to use
         custom datatypes for representing the hash of entries and the
         list of paths.  Python has hashes and lists (called
-        "dictionaries" and "sequences", respectively) as built-in
-        datatypes, and provides a wonderful selection of methods for
-        operating on those types.  And since Python uses reference
-        counting and garbage collection, users of the language don't
-        have to bother themselves with allocating and freeing
-        memory.</para>
+        <quote>dictionaries</quote> and <quote>sequences</quote>,
+        respectively) as built-in datatypes, and provides a wonderful
+        selection of methods for operating on those types.  And since
+        Python uses reference counting and garbage collection, users
+        of the language don't have to bother themselves with
+        allocating and freeing memory.</para>
 
       <para>In the previous section of this chapter, we mentioned the
         <filename>libsvn_client</filename> interface, and how it
@@ -1022,17 +1034,19 @@ if __name__ == '__main__':
 </programlisting>
       </example>
 
-      <para>Currently, it is Subversion's Python bindings that are the
-        most complete.  Some attention is also being given to the Java
-        bindings.  Once you have the SWIG interface files properly
-        configured, generation of the specific wrappers for all the
-        supported SWIG languages (which currently includes versions of
-        C#, Guile, Java, Mzscheme, OCaml, Perl, PHP, Python, Ruby, and Tcl)
-        should theoretically be trivial.  Still, some extra
-        programming is required to compensate for complex APIs that
-        SWIG needs some help generalizing.  For more information on
-        SWIG itself, see the project's website at <systemitem
-        class="url">http://www.swig.org</systemitem>.</para>
+      <para>Subversion's language bindings unfortunately tend to lack
+        the level of attention given to the core Subversion modules.
+        However, there have been significant efforts towards creating
+        functional bindings for Python, Perl, and Java.  Once you have
+        the SWIG interface files properly configured, generation of
+        the specific wrappers for all the supported SWIG languages
+        (which currently includes versions of C#, Guile, Java,
+        Mzscheme, OCaml, Perl, PHP, Python, Ruby, and Tcl) should
+        theoretically be trivial.  Still, some extra programming is
+        required to compensate for complex APIs that SWIG needs some
+        help generalizing.  For more information on SWIG itself, see
+        the project's website at <systemitem
+        class="url">http://www.swig.org/</systemitem>.</para>
 
     </sect2>
   </sect1>
@@ -1154,11 +1168,11 @@ if __name__ == '__main__':
 
       <para>As you can see, the entries file is essentially a list of
         entries.  Each <sgmltag>entry</sgmltag> tag represents one of
-        three things: the working copy directory itself (noted by
-        having its <structfield>name</structfield> attribute set to
-        <literal>"svn:this-dir"</literal>), a file in that working
-        copy directory (noted by having its
-        <structfield>kind</structfield> attribute set to
+        three things: the working copy directory itself (called the
+        <quote>this directory</quote> entry, and noted as having an
+        empty value for its <structfield>name</structfield>
+        attribute), a file in that working copy directory (noted by
+        having its <structfield>kind</structfield> attribute set to
         <literal>"file"</literal>), or a subdirectory in that working
         copy (<structfield>kind</structfield> here is set to
         <literal>"dir"</literal>).  The files and subdirectories whose
@@ -1186,16 +1200,15 @@ if __name__ == '__main__':
             entry's name.</para>
         </footnote>
         (in the <structfield>url</structfield> case) the data stored
-        in the <literal>"svn:this-dir"</literal> entry.  Note also
-        that for subdirectory entries, Subversion stores only the
-        crucial attributes&mdash;name, kind, url, revision, and
-        schedule.  In an effort to reduce duplicated information,
-        Subversion dictates that the method for determining the full
-        set of information about a subdirectory is to traverse down
-        into that subdirectory, and read the
-        <literal>"svn:this-dir"</literal> entry from its own
-        <filename>.svn/entries</filename> file.  However, a reference
-        to the subdirectory is kept in its parent's
+        in the <quote>this directory</quote> entry.  Note also that
+        for subdirectory entries, Subversion stores only the crucial
+        attributes&mdash;name, kind, url, revision, and schedule.  In
+        an effort to reduce duplicated information, Subversion
+        dictates that the method for determining the full set of
+        information about a subdirectory is to traverse down into that
+        subdirectory, and read the <quote>this directory</quote> entry
+        from its own <filename>.svn/entries</filename> file.  However,
+        a reference to the subdirectory is kept in its parent's
         <filename>entries</filename> file, with enough information to
         permit basic versioning operations in the event that the
         subdirectory itself is actually missing from disk.</para>
@@ -1207,34 +1220,35 @@ if __name__ == '__main__':
       <title>Pristine Copies and Property Files</title>
 
       <para>As mentioned before, the <filename>.svn</filename>
-        directory also holds the pristine "text-base" versions of
-        files.  Those can be found in
+        directory also holds the pristine <quote>text-base</quote>
+        versions of files.  Those can be found in
         <filename>.svn/text-base</filename>.  The benefits of these
         pristine copies are multiple&mdash;network-free checks for
-        local modifications and "diff" reporting, network-free
+        local modifications and difference reporting, network-free
         reversion of modified or missing files, smaller transmission
         of changes to the server&mdash;but comes at the cost of having
         each versioned file stored at least twice on disk.  These
         days, this seems to be a negligible penalty for most files.
         However, the situation gets uglier as the size of your
         versioned files grows.  Some attention is being given to
-        making the presence of the "text-base" an option.  Ironically
-        though, it is as your versioned files' sizes get larger that
-        the existence of the "text-base" becomes more
-        crucial&mdash;who wants to transmit a huge file across a
-        network just because they want to commit a tiny change to
-        it?</para>
+        making the presence of the <quote>text-base</quote> an option.
+        Ironically though, it is as your versioned files' sizes get
+        larger that the existence of the <quote>text-base</quote>
+        becomes more crucial&mdash;who wants to transmit a huge file
+        across a network just because they want to commit a tiny
+        change to it?</para>
 
-      <para>Similar in purpose to the "text-base" files are the
-        property files and their pristine "prop-base" copies, located
-        in <filename>.svn/props</filename> and
+      <para>Similar in purpose to the <quote>text-base</quote> files
+        are the property files and their pristine
+        <quote>prop-base</quote> copies, located in
+        <filename>.svn/props</filename> and
         <filename>.svn/prop-base</filename> respectively.  Since
         directories can have properties, too, there are also
         <filename>.svn/dir-props</filename> and
         <filename>.svn/dir-prop-base</filename> files.  Each of these
-        property files ("working" and "base" versions) uses a simple
-        "hash-on-disk" file format for storing the property names and
-        values.</para>
+        property files (<quote>working</quote> and <quote>base</quote>
+        versions) uses a simple <quote>hash-on-disk</quote> file
+        format for storing the property names and values.</para>
 
     </sect2>
   </sect1>
@@ -1245,35 +1259,30 @@ if __name__ == '__main__':
   <sect1 id="svn-ch-8-sect-4">
     <title>WebDAV</title>
 
-    <para>WebDAV ("Web-based Distributed Authoring and Versioning") is
-      an extension of the standard HTTP protocol designed to make the
-      web into a read/write medium, instead of the basically read-only
-      medium that exists today.  The theory is that directories and
-      files can be shared&mdash;as both readable and writable
-      objects&mdash;over the web.  RFCs 2518 and 3253 describe the
-      WebDAV/DeltaV extensions to HTTP, and are available (along with
-      a lot of other useful information) at <systemitem
+    <para>WebDAV (shorthand for <quote>Web-based Distributed Authoring
+      and Versioning</quote>) is an extension of the standard HTTP
+      protocol designed to make the web into a read/write medium,
+      instead of the basically read-only medium that exists today.
+      The theory is that directories and files can be shared&mdash;as
+      both readable and writable objects&mdash;over the web.  RFCs
+      2518 and 3253 describe the WebDAV/DeltaV extensions to HTTP, and
+      are available (along with a lot of other useful information) at
+      <systemitem
       class="url">http://www.webdav.org/</systemitem>.</para>
 
     <para>A number of operating system file browsers are already able
       to mount networked directories using WebDAV.  On Win32, the
-      Windows Explorer can browse what it calls "WebFolders" (which
-      are just WebDAV-ready network locations) as if they were regular
+      Windows Explorer can browse what it calls WebFolders (which are
+      just WebDAV-ready network locations) as if they were regular
       shared folders.  Mac OS X also has this capability, as do the
       Nautilus and Konqueror browsers (under GNOME and KDE,
       respectively).</para>
 
     <para>How does all of this apply to Subversion?  The mod_dav_svn
-      Apache module uses HTTP, extended by WebDAV and DeltaV, as its
-      primary network protocol.  Rather than implementing a new
-      proprietary protocol, the original Subversion designers decided
-      to simply map the versioning concepts and actions used by
-      Subversion onto the concepts exposed by RFCs 2518 and 3253.
-      <footnote>
-        <para>As it turns out, Subversion has more recently evolved a
-          proprietary protocol anyway, implemented by the libsvn_ra_svn
-          module.</para>
-      </footnote>
+      Apache module uses HTTP, extended by WebDAV and DeltaV, as one
+      of its network protocols.  Subversion uses mod_dav_svn to map
+      between Subversion's versioning concepts and those of RFCs 2518
+      and 3253.
     </para>
 
     <para>For a more thorough discussion of WebDAV, how it works, and
@@ -1299,7 +1308,8 @@ if __name__ == '__main__':
       program that crashes itself, or worse, crashes the computer.
       Fortunately, the APR library that Subversion depends on for
       portability provides the <structname>apr_pool_t</structname>
-      type, which represents a "pool" of memory.</para>
+      type, which represents a pool from which the application may
+      allocate memory.</para>
 
     <para>A memory pool is an abstract representation of a chunk of
       memory allocated for use by a program.  Rather than requesting
@@ -1325,22 +1335,22 @@ if __name__ == '__main__':
       and destroyed, using <function>apr_pool_clear()</function> and
       <function>apr_pool_destroy()</function> respectively.  This
       gives developers the flexibility to allocate several&mdash;or
-      several thousand&mdash; things from the pool, and then clean up
+      several thousand&mdash;things from the pool, and then clean up
       all of that memory with a single function call!  Further, pools
-      have hierarchy.  You can make "subpools" of any previously
-      created pool.  When you clear a pool, all of its subpools are
-      destroyed; if you destroy a pool, it and its subpools are
-      destroyed.</para>
+      have hierarchy.  You can make <quote>subpools</quote> of any
+      previously created pool.  When you clear a pool, all of its
+      subpools are destroyed; if you destroy a pool, it and its
+      subpools are destroyed.</para>
 
     <para>Before we go further, developers should be aware that they
       probably will not find many calls to the APR pool functions we
       just mentioned in the Subversion source code.  APR pools offer
       some extensibility mechanisms, like the ability to have custom
-      "user data" attached to the pool, and mechanisms for registering
-      cleanup functions that get called when the pool is destroyed.
-      Subversion makes use of these extensions in a somewhat
-      non-trivial way.  So, Subversion supplies (and most of its code
-      uses) the wrapper functions
+      <quote>user data</quote> attached to the pool, and mechanisms
+      for registering cleanup functions that get called when the pool
+      is destroyed.  Subversion makes use of these extensions in a
+      somewhat non-trivial way.  So, Subversion supplies (and most of
+      its code uses) the wrapper functions
       <function>svn_pool_create()</function>,
       <function>svn_pool_clear()</function>, and
       <function>svn_pool_destroy()</function>.</para>
@@ -1387,6 +1397,9 @@ crawl_dir (apr_array_header_t *files,
     {
       const char *child_path;
 
+      /* Clear the per-iteration SUBPOOL.  */
+      svn_pool_clear (subpool);
+
       /* Skip entries for "this dir" ('.') and its parent ('..').  */
       if (finfo.filetype == APR_DIR)
         {
@@ -1420,10 +1433,10 @@ crawl_dir (apr_array_header_t *files,
           /* Add the path to the array.  */
           (*((const char **) apr_array_push (files))) = child_path;
         }
-
-      /* Clear the per-iteration SUBPOOL.  */
-      svn_pool_clear (subpool);
     }
+
+  /* Destroy SUBPOOL.  */
+  svn_pool_destroy (subpool);
 
   /* Check that the loop exited cleanly. */
   if (apr_err)
@@ -1433,9 +1446,6 @@ crawl_dir (apr_array_header_t *files,
   apr_err = apr_dir_close (dir);
   if (apr_err)
     return apr_err;
-
-  /* Destroy SUBPOOL.  */
-  svn_pool_destroy (subpool);
 
   return APR_SUCCESS;
 }
@@ -1474,7 +1484,7 @@ crawl_dir (apr_array_header_t *files,
     
     <para>The official source of information about the Subversion
       project is, of course, the project's website at <systemitem
-      class="url">http://subversion.tigris.org</systemitem>.  There
+      class="url">http://subversion.tigris.org/</systemitem>.  There
       you can find information about getting access to the source code
       and participating on the discussion lists.  The Subversion
       community always welcomes new members.  If you are
@@ -1502,17 +1512,17 @@ crawl_dir (apr_array_header_t *files,
 
       <para>But how do you know what needs to be done?  It is quite
         common for a programmer to have the greatest intentions of
-        helping out with the development, yet be unable to find a
-        good starting point.  After all, not many folks come to the
+        helping out with the development, yet be unable to find a good
+        starting point.  After all, not many folks come to the
         community having already decided on a particular itch they
         would like to scratch.  But by watching the developer
         discussion lists, you might see mentions of existing bugs or
-        feature requests fly by that particularly interest
-        you.  Also, a great place to look for outstanding, unclaimed
-        tasks is the Issue Tracking database on the Subversion
-        website.  There you will find the current list of known bugs
-        and feature requests.  If you want to start with something
-        small, look for issues marked as "bite-sized".</para>
+        feature requests fly by that particularly interest you.  Also,
+        a great place to look for outstanding, unclaimed tasks is the
+        Issue Tracking database on the Subversion website.  There you
+        will find the current list of known bugs and feature requests.
+        If you want to start with something small, look for issues
+        marked as <quote>bite-sized</quote>.</para>
       
     </sect2>
     
@@ -1525,18 +1535,19 @@ crawl_dir (apr_array_header_t *files,
         Subversion source repository.  As straightforward as that
         might sound, the task can be slightly tricky.  Because
         Subversion's source code is versioned using Subversion itself,
-        you actually need to "bootstrap" by getting a working
-        Subversion client via some other method.  The most common
-        methods include downloading the latest binary distribution (if
-        such is available for your platform), or downloading the
-        latest source tarball and building your own Subversion client.
-        If you build from source, make sure to read the INSTALL file in
-        the top level of the source tree for instructions.</para>
+        you actually need to <quote>bootstrap</quote> by getting a
+        working Subversion client via some other method.  The most
+        common methods include downloading the latest binary
+        distribution (if such is available for your platform), or
+        downloading the latest source tarball and building your own
+        Subversion client.  If you build from source, make sure to
+        read the <filename>INSTALL</filename> file in the top level of
+        the source tree for instructions.</para>
 
       <para>After you have a working Subversion client, you are now
         poised to checkout a working copy of the Subversion source
         repository from <systemitem
-        class="url">http://svn.collab.net/repos/svn/trunk</systemitem>:
+        class="url">http://svn.collab.net/repos/svn/trunk/</systemitem>:
         <footnote>
           <para>Note that the URL checked out in the example above
             ends not with <literal>svn</literal>, but with a
@@ -1552,7 +1563,7 @@ A  INSTALL
 A  README
 A  autogen.sh
 A  build.conf
-...
+&hellip;
 </screen>
 
       <para>The above command will checkout the bleeding-edge, latest
@@ -1563,8 +1574,8 @@ A  build.conf
         directory, though, after this operation completes, you will
         now have the Subversion source code.  Of course, you will
         still need to fetch a few helper libraries (apr, apr-util,
-        etc.)&mdash;see the INSTALL file in the top level of the
-        working copy for details.</para>
+        etc.)&mdash;see the <filename>INSTALL</filename> file in the
+        top level of the working copy for details.</para>
 
     </sect2>
 
@@ -1574,8 +1585,9 @@ A  build.conf
       
       <para>Now that you have a working copy containing the latest
         Subversion source code, you will most certainly want to take a
-        cruise through the HACKING file in that working copy's
-        top-level directory.  The HACKING file contains general
+        cruise through the <filename>HACKING</filename> file in that
+        working copy's top-level directory.  The
+        <filename>HACKING</filename> file contains general
         instructions for contributing to Subversion, including how to
         properly format your source code for consistency with the rest
         of the codebase, how to describe your proposed changes with an
@@ -1584,11 +1596,12 @@ A  build.conf
         earned&mdash;a government by meritocracy.
         <footnote>
           <para>While this may superficially appear as some sort of
-            elitism, this "earn your commit privileges" notion is
-            about efficiency&mdash;whether it costs more in time and
-            effort to review and apply someone else's changes that are
-            likely to be safe and useful, versus the potential costs
-            of undoing changes that are dangerous.</para>
+            elitism, this <quote>earn your commit privileges</quote>
+            notion is about efficiency&mdash;whether it costs more in
+            time and effort to review and apply someone else's changes
+            that are likely to be safe and useful, versus the
+            potential costs of undoing changes that are
+            dangerous.</para>
         </footnote>
         The HACKING file is an invaluable resource when it comes to 
         making sure that your proposed changes earn the praises they
@@ -1613,9 +1626,10 @@ A  build.conf
 
       <para>Subversion has a fairly thorough
         <footnote>
-          <para>You might want to grab some popcorn.  "Thorough", in
-            this instance, translates to somewhere around thirty
-            minutes of non-interactive machine churn.</para>
+          <para>You might want to grab some popcorn.
+            <quote>Thorough</quote>, in this instance, translates to
+            somewhere in the neighborhook of thirty minutes of
+            non-interactive machine churn.</para>
         </footnote>
         regression test suite, and your proposed changes are expected
         to not cause any of those tests to fail.  By running
@@ -1639,9 +1653,9 @@ A  build.conf
         allows you to specify that a given test is expected to fail
         (called an <literal>XFAIL</literal>), and so long as
         Subversion fails in the way that was expected, a test result
-        of XFAIL itself is considered a success.  Ultimately, the
-        better the test suite, the less time wasted on diagnosing
-        potentially obscure regression bugs.</para>
+        of <literal>XFAIL</literal> itself is considered a success.
+        Ultimately, the better the test suite, the less time wasted on
+        diagnosing potentially obscure regression bugs.</para>
 
     </sect2>
 
@@ -1660,8 +1674,9 @@ A  build.conf
         add your changes to the public source code tree.  Recall that
         permission to directly commit changes to the repository is
         granted on merit&mdash;if you demonstrate comprehension of
-        Subversion, programming competency, and a "team spirit", you
-        will likely be awarded that permission.</para>
+        Subversion, programming competency, and a <quote>team
+        spirit</quote>, you will likely be awarded that
+        permission.</para>
 
     </sect2>
   </sect1>

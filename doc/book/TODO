@@ -16,10 +16,12 @@ Stuff that needs more discussion:
   - (perhaps) suggest the use of environment variables to represent
     long repository URLs.  useful for lots of branching/tagging commands.
 
+  - some folks want a glossary.  that's good, since we have a
+    glossary.xml anyway.  :-)  probably something we do at the last minute.
+    (I think O'Reilly does this)
+
 --------------------------------------------------------------
 To be fixed by someone:
-
-  - svnadmin docs sorely need to be updated.  See Ch05 and Ch09.
 
   - explain that while 'svn import' creates intermediate directories
     for you, 'svn mkdir', 'svn move', and 'svn copy' will not.
@@ -28,43 +30,20 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
-  - ch07: maybe an explanation for the person writing a new main()
-    application... what are all those callbacks in the ctx_t used for?
-    people have asked this in irc.  what sort of things does an
-    application *have* to set up in the cxt_t in order to call an
-    svn_client_foo() function?
-
-  - ch07: clarify that svn:externals can only point to directories,
-    and that URLs are absolute (so they don't move as part of copies
-    or moves, or 'svn switch --relocate').
-
-  - ch07:  'global-ignores' affects 'svn import', but book only
-    mentions the effect on 'status' and 'add'
-
-  - appendix A:  explain that we don't support $Log$, and why.
-
 --------------------------------------------------------------
 
 To be fixed by fitz:
-  - Check svnadmin and svnlook commands for flags in ch09
-    [[ In progress ]]
 
-  - new 'svn diff' UI (when it's done) -- affects ch03, ch09, and
-    maybe other chapters.
+  - Be clear that PREV, BASE, and COMMITTED only refer to local paths,
+    not to URLs.
+  - Document svnadmin --deltify in Ch09.
 
-  - some folks want a glossary.  that's good, since we have a
-    glossary.xml anyway.  :-)  probably something we do at the last minute.
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
---------------------------------------------------------------
-
-To be fixed by kfogel:
-
-  - cvs2svn.py is a lot more complex now, with many more switches,
-    especially since it now converts branches and tags.  Need to
-    expand our coverage of this in Appendix B.
+* document 'svn log -v --stop-on-copy branchURL' as the easiest way to
+  discover when a branch was created.  This is a major FAQ.
 
 
 

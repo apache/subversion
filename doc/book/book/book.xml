@@ -3,6 +3,7 @@
 [
 <!ENTITY % vers   SYSTEM "version.xml">
 %vers;
+<!ENTITY foreword SYSTEM "foreword.xml">
 <!ENTITY ch00     SYSTEM "ch00.xml">
 <!ENTITY ch01     SYSTEM "ch01.xml">
 <!ENTITY ch02     SYSTEM "ch02.xml">
@@ -17,7 +18,6 @@
 <!ENTITY appb     SYSTEM "appb.xml">
 <!ENTITY appc     SYSTEM "appc.xml">
 <!ENTITY appd     SYSTEM "appd.xml">
-<!ENTITY appe     SYSTEM "appe.xml">
 <!ENTITY gloss    SYSTEM "glossary.xml">
 <!ENTITY copy     SYSTEM "copyright.xml">
 <!ENTITY colo     SYSTEM "colo.xml">
@@ -33,7 +33,7 @@
   <bookinfo>
 
     <edition>First</edition>
-    <isbn>?-?????-???-?</isbn>
+    <isbn>0-59600-448-6</isbn>
     <authorgroup>
 
       <author>
@@ -61,10 +61,20 @@
     <pagenums>350 pages (est.)</pagenums>
     <pubdate>(TBA)</pubdate>
 
+    <copyright>
+      <year>2000</year>
+      <year>2001</year>
+      <year>2002</year>
+      <year>2003</year>
+      <year>2004</year>
+      <holder>CollabNet, Inc.</holder>
+    </copyright>
+
   </bookinfo>
 
   <!-- External entity refs -->
 
+  &foreword;
   &ch00;
   &ch01;
   &ch02;
@@ -79,7 +89,6 @@
   &appb;
   &appc;
   &appd;
-  &appe;
 <!--  &copy; This gives validation errors -->
   &gloss;
   &colo;

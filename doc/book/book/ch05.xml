@@ -151,14 +151,14 @@
           simplicity, thread-safety, support for cursors, and so
           on.</para>
 
-        <para>Berkeley DB provides real transaction support&mdash;
-          perhaps its most powerful feature.  Multiple processes
-          accessing your Subversion repositories don't have to worry
-          about accidentally clobbering each other's data.  The
-          isolation provided by the transaction system is such that
-          for any given operation, the Subversion repository code sees
-          a static view of the database&mdash;not a database that is
-          constantly changing at the hand of some other
+        <para>Berkeley DB provides real transaction
+          support&mdash;perhaps its most powerful feature.  Multiple
+          processes accessing your Subversion repositories don't have
+          to worry about accidentally clobbering each other's data.
+          The isolation provided by the transaction system is such
+          that for any given operation, the Subversion repository code
+          sees a static view of the database&mdash;not a database that
+          is constantly changing at the hand of some other
           process&mdash;and can make decisions based on that view.  If
           the decision made happens to conflict with what another
           process is doing, the entire operation is rolled back as if
@@ -258,7 +258,7 @@ $ svnadmin create path/to/repos
       machine where the repository resides to examine or modify
       aspects of the repository, and are in fact unable to perform
       tasks across a network.  A common mistake made by Subversion
-      newcomers is trying to pass URLs (even "local"
+      newcomers is trying to pass URLs (even <quote>local</quote>
       <literal>file:</literal> ones) to these two programs.</para>
 
     <para>So, after you've run the <command>svnadmin create</command>
@@ -268,7 +268,7 @@ $ svnadmin create path/to/repos
             
     <screen>
 $ ls repos
-dav/  db/  format  hooks/  locks/  README.txt
+conf/  dav/  db/  format  hooks/  locks/  README.txt
 </screen>
       
     <para>With the exception of the <filename>README.txt</filename> and
@@ -280,6 +280,12 @@ dav/  db/  format  hooks/  locks/  README.txt
       the items you see in your new repository directory:</para>
 
     <variablelist>
+     <varlistentry>
+        <term>conf</term>
+        <listitem>
+          <para>A directory containing repository configuration files.</para>
+        </listitem>
+      </varlistentry>
      <varlistentry>
         <term>dav</term>
         <listitem>
@@ -479,7 +485,10 @@ pre-commit.tmpl
               counterpart, <filename>post-revprop-change</filename>)
               so that repository administrators can keep records of
               changes to these items using some external means if
-              they so desire.</para>
+              they so desire.  As a precaution against losing
+              unversioned property data, Subversion clients will not
+              be allowed to remotely modify revision properties at all
+              unless this hook is implemented for your repository.</para>
 
             <para>This hook runs just before such a modification is
               made to the repository.  The repository passes four
@@ -650,8 +659,8 @@ $ svnlook info /path/to/repos --revision 19
 
         <para>The only exception to these rules about subcommands is
           the <command>svnlook youngest</command> subcommand, which
-          takes no options, and simply prints out the HEAD revision
-          number.</para>
+          takes no options, and simply prints out the
+          <literal>HEAD</literal> revision number.</para>
 
         <screen>
 $ svnlook youngest /path/to/repos
@@ -910,7 +919,8 @@ Available subcommands:
               <para>Run over a specified revision range, performing
                 predecessor deltification on the paths changed in
                 those revisions.  If no revisions are specified, this
-                command will simply deltify the HEAD revision.</para>
+                command will simply deltify the
+                <literal>HEAD</literal> revision.</para>
             </listitem>
           </varlistentry>
 
@@ -1031,7 +1041,7 @@ Available subcommands:
           reason).  Or, perhaps you have multiple projects sharing a
           single repository, and you decide to split them up into
           their own repositories.  To accomplish tasks like this,
-          administrators need an more manageable and malleable
+          administrators need a more manageable and malleable
           representation of the data in their repositories&mdash;the
           Subversion repository dump format.</para>
 
@@ -1309,11 +1319,11 @@ Node-path: spreadsheet/Makefile
         <para>Once started, the program behaves similarly to a shell
           program, allowing you to browse the various directories in
           your repository.  Initially, you are
-          <quote>positioned</quote> in the root directory of the HEAD
-          revision of the repository, and presented with a command
-          prompt.  You can use the <literal>help</literal> command at
-          any time to display a list of available commands and what
-          they do.</para>
+          <quote>positioned</quote> in the root directory of the
+          <literal>HEAD</literal> revision of the repository, and
+          presented with a command prompt.  You can use the
+          <literal>help</literal> command at any time to display a
+          list of available commands and what they do.</para>
 
         <screen>
 $ svnshell.py /path/to/repos
@@ -1386,8 +1396,8 @@ $
           commands may be specified at a single command prompt,
           separated by a semicolon.  Also, the shell understands the
           notions of relative and absolute paths, and will properly
-          handle the "<literal>.</literal>" and
-          "<literal>..</literal>" special path components.</para>
+          handle the <literal>.</literal> and
+          <literal>..</literal> special path components.</para>
 
         <para>The <literal>youngest</literal> command displays the
           youngest revision.  This is useful for determining the range
@@ -1721,6 +1731,39 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 ## disk space reclaimed!
 </screen>
 
+        <para>To keep the size of the repository as small as possible,
+          Subversion uses <firstterm>deltification</firstterm> (or,
+          <quote>deltified storage</quote>) within the repository
+          itself.  Deltification involves encoding the representation
+          of a chunk of data as a collection of differences against
+          some other chunk of data.  If the two pieces of data are
+          very similar, this deltification results in storage savings
+          for the deltified chunk&mdash;rather than taking up space
+          equal to the size of the original data, it only takes up
+          enough space to say, <quote>I look just like this other
+          piece of data over here, except for the following couple of
+          changes.</quote> Specifically, each time a new version of a
+          file is committed to the repository, Subversion encodes the
+          previous version (actually, several previous versions) as a
+          delta against the new version.  The result is that most of
+          the repository data that tends to be sizable&mdash;namely,
+          the contents of versioned files&mdash;is stored at a much
+          smaller size than the original <quote>fulltext</quote>
+          representation of that data.</para>
+
+        <note>
+          <para>Because all of the Subversion repository data that is
+            subject to deltification is stored in a single Berkeley DB
+            database file, reducing the size of the stored values will
+            not necessarily reduce the size of the database file
+            itself.  Berkeley DB will, however, keep internal records
+            of unused areas of the database file, and use those areas
+            first before growing the size of the database file.  So
+            while deltification doesn't produce immediate space
+            savings, it can drastically slow future growth of the
+            database.</para>
+        </note>
+
     </sect2>
         
     <!-- ***************************************************************** -->
@@ -1773,7 +1816,12 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
             Server, too.</para>
         </listitem>
         <listitem> 
-          <para>Become the user who owns and manages the repository.</para>
+          <para>Become the user who owns and manages the repository.
+            This is important, as recovering a repository while
+            running as the wrong user can tweak the permissions of the
+            repository's files in such a way that your repository will
+            still be inaccessible even after it is 
+            <quote>unwedged</quote>.</para>
         </listitem>
         <listitem>
           <para>Run the command <command>svnadmin recover
@@ -1808,7 +1856,7 @@ The latest repos revision is 19.
         successfully unwedge your repository, you should do two
         things.  First, move your broken repository out of the way and
         restore your latest backup of it.  Then, send an email to the
-        Subversion developer list (at
+        Subversion user list (at
         <email>users@subversion.tigris.org</email>) describing your
         problem in detail.  Data integrity is an extremely high
         priority to the Subversion developers.</para>
@@ -1893,9 +1941,9 @@ $ svnadmin dump myrepos &gt; dumpfile
         contains all the data stored in your repository in the
         requested range of revisions.  Note that <command>svnadmin
         dump</command> is reading revision trees from the repository
-        just like any other "reader" process would (<command>svn
-        checkout</command>, for example.)  So it's safe to run this
-        command at any time.</para>
+        just like any other <quote>reader</quote> process would
+        (<command>svn checkout</command>, for example.)  So it's safe
+        to run this command at any time.</para>
 
       <para>The other subcommand in the pair, <command>svnadmin
         load</command>, parses the standard input stream as a
@@ -2072,7 +2120,7 @@ $
         changes&mdash;each of which should be treated as a new
         revision&mdash;using this file format.  In fact, the
         <command>cvs2svn.py</command> utility (see <xref
-        linkend="svn-ap-e-sect-1"/>) uses the dump format to represent the
+        linkend="svn-ap-a-sect-11"/>) uses the dump format to represent the
         contents of a CVS repository so that those contents can be
         moved in a Subversion repository.</para>
 
@@ -2193,7 +2241,7 @@ $
         would want to include as part of a system-wide nightly backup.
         For most repositories, archived commit emails alone provide
         sufficient redundancy as restoration sources, at least for the
-        most recernt few commits.  But it's your data&mdash;protect it
+        most recent few commits.  But it's your data&mdash;protect it
         as much as you'd like.</para>
             
       <para>Often, the best approach to repository backups is a
