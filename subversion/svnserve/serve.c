@@ -544,7 +544,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   void *edit_baton, *report_baton;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cl", &rev, &target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]cb", &rev, &target,
                                  &recurse));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
