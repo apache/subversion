@@ -89,10 +89,9 @@ svn_cl__proplist (apr_getopt_t *os,
       
       printf("Unversioned properties on revision %"SVN_REVNUM_T_FMT":\n",
              rev);
-      if (opt_state->verbose)
-        SVN_ERR (svn_cl__print_prop_hash (proplist, pool));
-      else
-        SVN_ERR (svn_cl__print_prop_names (proplist, pool));
+
+      SVN_ERR (svn_cl__print_prop_hash
+               (proplist, (! opt_state->verbose), pool));
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
@@ -116,10 +115,8 @@ svn_cl__proplist (apr_getopt_t *os,
                                                             item->node_name,
                                                             pool));
               printf("Properties on '%s':\n", node_name_native);
-              if (opt_state->verbose)
-                SVN_ERR (svn_cl__print_prop_hash (item->prop_hash, pool));
-              else
-                SVN_ERR (svn_cl__print_prop_names (item->prop_hash, pool));
+              SVN_ERR (svn_cl__print_prop_hash
+                       (item->prop_hash, (! opt_state->verbose), pool));
             }
         }
     }
