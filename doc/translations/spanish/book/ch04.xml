@@ -1779,16 +1779,18 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 377.
 </screen>
 
-      <para>And now developers are free to continue adding
-        cutting-edge (or experimental) features to
-        <filename>/calc/trunk</filename>, and you can declare a
-        project policy that only bugfixes are to be committed to
-        <filename>/calc/branches/stable-1.0</filename>.  That is, as
-        people continue to work on the trunk, a human selectively
-        ports bugfixes over to the stable branch.  Even after the
-        stable branch has shipped, you'll probably continue to
-        maintain the branch for a long time&mdash;that is, as long
-        as you continue to support that release for customers.</para>
+      <para>Y ahora los desarrolladores son libres de continuar
+        añadiendo características novísimas (o experimentales)
+        a <filename>/calc/trunk</filename>, y usted
+        puede declarar como política del proyecto que
+        sólo las correcciones de fallos serán realizadas en
+        <filename>/calc/branches/stable-1.0</filename>.  Es decir,
+        a medida que la gente continúa su trabajo en el tronco, un
+        humano portará selectivamente las correcciones de fallos
+        a la rama establa. Incluso después de haber lanzado la
+        rama estable, probablemente continuará manteniéndola por
+        un largo tiempo&mdash;es decir, tanto como desee continuar
+        el soporte de esa versión para sus usuarios.</para>
 
     </sect2>
 
@@ -1799,21 +1801,22 @@ Committed revision 377.
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-8">
-    <title>Summary</title>
+    <title>Sumario</title>
 
-    <para>We've covered a lot of ground in this chapter.  We've
-      discussed the concepts of tags and branches, and demonstrated
-      how Subversion implements these concepts by copying directories
-      with the <command>svn copy</command> command.  We've shown how
-      to use <command>svn merge</command> to copy changes from one
-      branch to another, or roll back bad changes.  We've gone over
-      the use of <command>svn switch</command> to create
-      mixed-location working copies.  And we've talked about how one
-      might manage the organization and lifetimes of branches in a
-      repository.</para>
+    <para>Hemos cubierto mucho terreno en este capítulo. Hemos
+      discutido los conceptos de las etiquetas y ramas, y
+      demostrado como Subversion implementa estos conceptos por
+      medio de la copia de directorios y el comando <command>svn
+      copy</command>.  Hemos mostrado cómo usar <command>svn
+      merge</command> para copiar cambios de una rama a otra,
+      o deshacer cambios erróneos. Hemos revisado el uso de
+      <command>svn switch</command> para crear copias de trabajo
+      con mezcla de localizaciones del repositorio. Y hemos hablado
+      sobre cómo podría gestionar la organización y tiempos de vida
+      de las ramas en un repositorio.</para>
 
-    <para>Remember the Subversion mantra: branches and tags are cheap.
-      So use them liberally!</para>
+    <para>Recuerde el mantra de subversion: las ramas y etiquetas
+      son ligeras. ¡Úselas sin pudor!</para>
 
   </sect1>
 
