@@ -107,7 +107,7 @@ sub check_out
     my ( $url ) = @_;
     my $wc_dir = "wcstress.$$";
     mkdir "$wc_dir", 0755 or die "mkdir wcstress.$$: $!\n";
-    my $svn_cmd = "svn co $url -d $wc_dir";
+    my $svn_cmd = "svn co $url $wc_dir";
     system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
     return $wc_dir;
   }
