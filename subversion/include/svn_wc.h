@@ -64,7 +64,10 @@ extern "C" {
 typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
 
-/** Return, in @a *adm_access, a pointer to a new access baton for the working
+/**
+ * @since New in 1.1.
+ *
+ * Return, in @a *adm_access, a pointer to a new access baton for the working
  * copy administrative area associated with the directory @a path.  If
  * @a write_lock is true the baton will include a write lock, otherwise the
  * baton can only be used for read access.  If @a path refers to a directory
@@ -119,7 +122,10 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               svn_boolean_t tree_lock,
                               apr_pool_t *pool);
 
-/** Checks the working copy to determine the node type of @a path.  If 
+/**
+ * @since New in 1.1.
+ *
+ * Checks the working copy to determine the node type of @a path.  If 
  * @a path is a versioned directory then the behaviour is like that of
  * @c svn_wc_adm_open2, otherwise, if @a path is a file or does not
  * exist, then the behaviour is like that of @c svn_wc_adm_open2 with
@@ -175,7 +181,10 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
                                         const char *path,
                                         apr_pool_t *pool);
 
-/** Try various ways to obtain an access baton for @a path.
+/**
+ * @since New in 1.1.
+ *
+ * Try various ways to obtain an access baton for @a path.
  *
  * First, try to obtain @a *adm_access via @c svn_wc_adm_probe_retrieve(),
  * but if this fails because @a associated can't give a baton for
