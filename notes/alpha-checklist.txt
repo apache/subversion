@@ -10,119 +10,6 @@ Outline Mode:
 
 ------------------------------------------------------------------------
 
-* M3 todo list
-
-  M3 is self-hosting with a command line client.
-        
-  We need every command supported by the client tested (edge-cases and
-  all) by the test-suite. Those commands include: add, checkout,
-  commit, copy, delete, diff, import, merge, propget, propset, status,
-  update, and help.
-
-** Network layer needs to support user-props (gstein).
-
-  ESTIMATE: 1 programmer week for most of us to get props over DAV
-            working, less time if gstein or joe orton does it.
-
-  STATUS: Ben is working on this as we speak.
-
-*** autodetection of text/binary types / keyword sub / newline translation
-
-   ANSWER: This will be solved by three separate properties: 
-           - mime-type. We will have a heuristic that determines as best it
-           can what the mime-type of a file is (of course it will be
-           user-configurable).
-
-                [ We should look in the standard locations for mime
-                  data on the platforms where it's available;
-                  /etc/mime.magic on various Unices, the registry on
-                  Win32, etc.                                      --xbc ]
-
-           - Keyword Substitution (BOOL)
-           - Newline Translation (BOOL)
-           Note that we will always err on the safe side (assume that a file
-           is binary and wants no Keyword Substitution or Newline
-           Translation if we are not certain about the contents of a file. 
-
-                [ I think it would be better to make these values (a
-                  list of) keywords instead of plain switches.
-
-                   - For keyword substitution, you could enable only a
-                     subset of the available keywords -- e.g., turn of
-                     the infamous [$]Log[$].
-
-                   - Newline translation might have the following
-                     values:
-
-                     - "none": No translation; default for binary
-                       files
-
-                     - "native": Use whatever the client platform's
-                        own line separator is; this would be the
-                        default for plain text files
-
-                     - "unix", "dos", "mac": force newlines to \n,
-                       \r\n or \n\r, respectively; for instance,
-                       MSVC's .dsp and .dsw files would need "dos"
-                       translation.
-
-                     Also see dev thread
-                     Subject: Alphe-checklist comments             --xbc ]
-
-
-  ESTIMATE: .5 to 1 programmer week.  Not difficult to code at all,
-            just a matter of getting properties interpreted right.
-
-  STATUS: Karl is waiting on Ben's props-over-DAV work, then will do
-          (though volunteers welcome!)
-
-*** binary updates
-
-   Make sure we don't try to run 'diff' and 'patch' when we receive a
-   new version of a binary file.  Just copy the new version out into
-   the working copy and rename one of them.
-
-
-*** cross-process read/write lock function for DB_RUN_RECOVERY. (gstein)
-
-  ESTIMATE: 1 programmer week.  Might be less, betting conservatively.
-
-*** hook system -- to fire off shell scripts.  (kfogel defines, gstein imps)
-
-   (Need commit emails for M3, specifically.)
-
-   Answer: independent library (libsvn_repos), which fs callers must
-   call into.  All cooperative callers of libsvn_fs (mod_dav_svn,
-   ra_local) will call pre/post hooks.  The interfaces in the hook
-   layer will very similar to those in svn_fs.h.
-
-   ACTION:  discuss and design specifics.
-
-   ANSWER: gstein proposed that in the case of pre and post-commit
-           hooks, we fire off a subprocess and pass it the transaction
-           ID.
-           
-           Hooks are all going to be provided in the libsvn_repos
-           library.  Configuration files are not going to *have* to be
-           in the repository. They will sit on the server *near* the
-           repository, and users *can* put them in the repository.
-
-  ESTIMATE: 2 programmer weeks.
-
-  STATUS: Mike and Karl working on right now, see
-          subversion/libsvn_repos/hooks.txt.
-
-** simple Apache-only authentication & authorization (gstein, kfogel)
-
-  Ben asks:  doesn't this already exst?  Can't we just throw existing
-  Apache security directives into the <Location> tag and build an
-  htaccess file?
-
-  ESTIMATE: ?  Need to start discussion on the list about this.
-
-** optimize deltification if time permits.
-
-
 * ALPHA items
 
   Alpha is when we're ready to release 1.0, except that we've got lots
@@ -195,7 +82,6 @@ subdirs, or hide them under a cvs-like interface?
 ** UTF-8 preparations (jimb?)
 
 ** change ra_local commit-style (sussman & gstein will discuss)
-
 
 
 * POST-1.0
@@ -277,9 +163,4 @@ subdirs, or hide them under a cvs-like interface?
 ** read-only repos mirrors
 
 ** modules --- (still discussing) 
-
-
-
- 
-
 
