@@ -845,7 +845,7 @@ def copy_preserve_executable_bit(sbox):
   mode2 = os.stat(newpath1)[stat.ST_MODE]
 
   if mode1 == mode2:
-    print "setting svn:executable did not change file's permissins"
+    print "setting svn:executable did not change file's permissions"
     return 1
 
   # Commit the file

@@ -156,7 +156,7 @@ public interface WorkingCopy {
    * PATH's entrire administrative area will be deleted, along with
    *  *all * the administrative areas anywhere in the tree below PATH.
    *
-   * Normally, only adminstrative data is removed.  However, if
+   * Normally, only administrative data is removed.  However, if
    * DESTROY_WF is set, then all working file(s) and dirs are deleted
    * from disk as well.  When called with DESTROY_WF, any locally
    * modified files will  *not * be deleted, and the special error

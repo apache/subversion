@@ -149,7 +149,7 @@ I.  Theory
 
       Most important subcommands (co, up, ci, im, st) print results to
       stdout as a list of paths.  Even though the paths may be printed
-      out in an unpredicable order, we still want to make sure this
+      out in an unpredictable order, we still want to make sure this
       list is exactly the *set* of lines we expect to get.
 
    2.  Verifying the working copy itself.
@@ -183,14 +183,14 @@ II.  Practice:  Trees
 
       Special parsers examine lines printed by subcommands, and
       convert them into a tree of tree-nodes.  The 'contents' and
-      'properties' fields are empty; but epending on the subcommand,
+      'properties' fields are empty; but prepending on the subcommand,
       specific attributes in the 'atts' field are set in tree-nodes:
 
        - svn co/up:        a 'status' attribute is set to a two-character
                            value from the set (A, D, G, U, C, _, ' ')
 
        - svn status:       a 'status' attribute (as above), plus 'wc_rev'
-                           and 'repos_rev' attributies to hold the wc
+                           and 'repos_rev' attributes to hold the wc
                            and repos revision numbers.
 
        - svn ci/im:        a 'verb' attribute is set to one of

@@ -130,7 +130,7 @@ directory.
 
 @item
 A @file{lock} file, whose presence implies that some client is currently
-operating on the adminstrative area.
+operating on the administrative area.
 
 @item
 A @file{tmp} directory, for holding scratch-work and helping make

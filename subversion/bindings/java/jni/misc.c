@@ -50,7 +50,7 @@ misc__throw_exception_by_name(JNIEnv *env,
     {
       jclass cls = (*env)->FindClass(env, name);
 
-      /* if class is null, an exception already has occured */
+      /* if class is null, an exception already has occurred */
       if( cls != NULL )
         {
           (*env)->ThrowNew(env, cls, msg);

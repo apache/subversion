@@ -119,7 +119,7 @@
     <!-- Fitz's revised graphic here (Heaven help us if he ever makes
          another piece of graphic art ... what *will* we call it?).
          Verify that the layers are accurately represented.  For
-         example, It might make more sense to referer to the
+         example, It might make more sense to refer to the
          "Repository Access" layer than the "Network Layer".  Also,
          make sure that each library also gives its libsvn_foo name. -->
 
@@ -418,14 +418,14 @@ make_new_directory (const char *repos_path,
          (someone else seems to have made changes to the same area 
          of the filesystem that we tried to modify).  Print an error
          message.  */
-      printf ("A conflict occured at path '%s' while attempting "
+      printf ("A conflict occurred at path '%s' while attempting "
               "to add directory '%s' to the repository at '%s'.\n", 
               conflict_str, new_directory, repos_path);
     }
   else
     {
       /* Some other error has occurred.  Print an error message.  */
-      printf ("An error occured while attempting to add directory '%s' "
+      printf ("An error occurred while attempting to add directory '%s' "
               "to the repository at '%s'.\n", 
               new_directory, repos_path);
     }
@@ -695,7 +695,7 @@ The following repository access (RA) modules are available:
           contents of the file at that location by examining the
           filesystem directly.  However, Subversion's resources exist
           in a virtual filesystem (see <xref
-          linkend="svn-ch-7-sect-1.1" />), and your browser wil not
+          linkend="svn-ch-7-sect-1.1" />), and your browser will not
           understand how to read that filesystem.</para>
 
       </sect3>
@@ -727,7 +727,7 @@ The following repository access (RA) modules are available:
         purpose of managing working copies&mdash;directories full of
         files and other subdirectories which serve as a sort of local,
         editable "reflection" of one or more repository
-        locations&mdash;and propogating changes to and from the
+        locations&mdash;and propagating changes to and from the
         Repository Access layer.</para>
 
       <para>Subversion's working copy library, libsvn_wc, is directly
@@ -830,7 +830,7 @@ The following repository access (RA) modules are available:
       source file have no special prefixing, and are declared
       <literal>static</literal>.  Of course, a compiler isn't
       interested in these naming conventions, but they definitely help
-      to clarify the scopy of a given function or datatype.</para>
+      to clarify the scope of a given function or datatype.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-2.1">
@@ -931,7 +931,7 @@ The following repository access (RA) modules are available:
         APIs via a language binding&mdash;simplicity.  Generally
         speaking, languages such as Python and Perl are much more
         flexible and easy to use than C or C++.  The sort of
-        high-level datatypes and context-driven typechecking provided
+        high-level datatypes and context-driven type checking provided
         by these languages are often better at handling information
         that comes from users.  As you know, only a human can botch up
         the input to a program as well as they do, and the

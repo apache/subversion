@@ -249,7 +249,7 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
   if (base_is_root && total_len == 1)
     return apr_pmemdup (pool, "/", 2);
 
-  /* we got the total size. allocate it, with room for a NUL character. */
+  /* we got the total size. allocate it, with room for a NULL character. */
   path = p = apr_palloc (pool, total_len + 1);
 
   /* if we aren't supposed to skip forward to an absolute component, and if

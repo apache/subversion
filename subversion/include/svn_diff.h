@@ -27,7 +27,7 @@
  * strings of data.  The Subversion client and server send text deltas
  * to one another during updates and commits.
  *
- * This API, however, is (or will be) used for peforming *contextual*
+ * This API, however, is (or will be) used for performing *contextual*
  * merges between files in the working copy.  During an update or
  * merge, 3-way file merging is needed.  And 'svn diff' needs to show
  * the differences between 2 files.
@@ -36,7 +36,7 @@
  * operates on any source of data (a "datasource") and calculates
  * contextual differences on "tokens" within the data.  In our
  * particular usage, the datasources are files and the tokens are
- * lines.  But the possibilites are endless.
+ * lines.  But the possibilities are endless.
  */
 
 
@@ -235,7 +235,7 @@ typedef struct svn_diff_output_fns_t
    * between the "original" and "modified" datasources.  Specifically,
    * the conflict starts at @a original_start and foes for @a original_length
    * tokens in the original data, and at @a modified_start for 
-   * @a modified_lenght tokens in the modified data.
+   * @a modified_length tokens in the modified data.
    *
    * If doing a three-way diff, then an identical data range was discovered
    * between the "original" and "latest" datasources, but this conflicts with

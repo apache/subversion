@@ -168,7 +168,7 @@ check_atom (skel_t *skel, const char *data, apr_size_t len)
 
 /* Append to STR an implicit-length atom consisting of the byte BYTE,
    terminated by the character TERM.  BYTE must be a name byte,
-   and TERM must be a valid skel separator, or NUL.  */
+   and TERM must be a valid skel separator, or NULL.  */
 static void
 put_implicit_length_byte (svn_stringbuf_t *str, char byte, char term)
 {

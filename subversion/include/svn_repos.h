@@ -182,11 +182,11 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * @a tgt_path may (indeed, should) be @c NULL when the source and target
  * paths of the report are the same.  That is, @a tgt_path should *only*
  * be specified when specifying that the resultant editor drive be one
- * that tranforms the reported heirarchy into a pristing tree of
+ * that transforms the reported hierarchy into a pristine tree of
  * @a tgt_path at revision @a revnum.  Else, a @c NULL value for @a tgt_path 
  * will indicate that the editor should be driven in such a way as to
- * transform the reported heirarchy to revision @a revnum, preserving the
- * reported heirarchy.
+ * transform the reported hierarchy to revision @a revnum, preserving the
+ * reported hierarchy.
  *
  * @a text_deltas instructs the driver of the @a editor to enable to disable
  * the generation of text deltas.
@@ -455,10 +455,10 @@ svn_repos_checkout (svn_fs_t *fs,
 
 
 /** Invoke @a receiver with @a receiver_baton on each log message from 
- * @a start to @a end in @a repos's fileystem.
+ * @a start to @a end in @a repos's filesystem.
  *
  * Invoke @a receiver with @a receiver_baton on each log message from 
- * @a start to @a end in @a repos's fileystem.  @a start may be greater 
+ * @a start to @a end in @a repos's filesystem.  @a start may be greater 
  * or less than @a end; this just controls whether the log messages are 
  * processed in descending or ascending revision number order.
  *

@@ -434,7 +434,7 @@ def update_lose_external(sbox):
 #----------------------------------------------------------------------
 
 def update_change_pristine_external(sbox):
-  "update to receive a change to an unmodifed external module."
+  "update to receive a change to an unmodified external module."
 
   if externals_test_setup(sbox):
     return 1
@@ -706,7 +706,7 @@ def modify_and_update_receive_new_external(sbox):
   was_cwd = os.getcwd()
   os.chdir(B_path)
   try:
-    # Once apon a time there was a core-dump here
+    # Once upon a time there was a core-dump here
     out_lines, err_lines = svntest.main.run_svn (None, 'up')
     if err_lines or not out_lines:
       print "update failed"

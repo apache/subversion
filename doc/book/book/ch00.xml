@@ -30,7 +30,7 @@
       similar to CVS, and by attempting to fix most of CVS's noticeable
       flaws.  While the result isn't necessarily the next great
       evolution in version control design, Subversion
-      <emphasis>is</emphasis> very powerful, very useable, and very
+      <emphasis>is</emphasis> very powerful, very usable, and very
       flexible.
     </para>
 
@@ -159,12 +159,12 @@
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-5">
-    <title>Acknowledgements</title>
+    <title>Acknowledgments</title>
 
     <para>### Huge list of thanks to the many svn developers who sent
       patches/feedback on this book. </para>
 
-    <para>### Also, individual-author acknowledgements to specific
+    <para>### Also, individual-author acknowledgments to specific
       friends and family.</para>
 
   </sect1>

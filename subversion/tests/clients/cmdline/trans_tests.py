@@ -269,7 +269,7 @@ def enable_translation(sbox):
 
   wc_dir = sbox.wc_dir
   return 1
-  # TODO: Turn on newline conversion and/or keyword substition for all
+  # TODO: Turn on newline conversion and/or keyword substitution for all
   # sorts of files, with and without local mods, and verify that
   # status shows the right stuff.  The, commit those mods.
 

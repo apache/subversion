@@ -89,7 +89,7 @@ typedef svn_error_t *
  * provider of type @c svn_auth_cred_simple_t that gets information by
  * prompting the user with @a prompt_func and @a prompt_baton.  If
  * either @c SVN_AUTH_PARAM_DEFAULT_USERNAME or @c
- * SVN_AUTH_PARAME_DEFAULT_PASSWORD is defined as a runtime parameter
+ * SVN_AUTH_PARAM_DEFAULT_PASSWORD is defined as a runtime parameter
  * in the @c auth_baton, then return the default argument(s) when @c
  * svn_auth_first_credentials is called.  If @c
  * svn_auth_first_credentials fails, then re-prompt @a retry_limit
@@ -719,7 +719,7 @@ svn_client_status (apr_hash_t **statushash,
  *
  * @a targets contains all the working copy paths (as <tt>const char 
  * *</tt>'s) for which log messages are desired.  The repository info is
- * determinied by taking the common prefix of the target entries' URLs.
+ * determined by taking the common prefix of the target entries' URLs.
  * The common prefix of @a targets, if it is a valid working copy, 
  * determines the auth info.  @a receiver is invoked only on messages 
  * whose revisions involved a change to some path in @a targets.
@@ -806,7 +806,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * the working-copy path @a target_wcpath.
  *
  * By "merging", we mean:  apply file differences using
- * @c svn_wc_merge, and schedule additions & deletions when appopriate.
+ * @c svn_wc_merge, and schedule additions & deletions when appropriate.
  *
  * @a url1 and @a url2 must both represent the same node kind -- that is,
  * if @a url1 is a directory, @a url2 must also be, and if @a url1 is a
@@ -827,7 +827,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * ctx->notify_baton once for each merged target, passing the target's local 
  * path.
  *
- * If @a dry_run is @a true the merge is carried out, and full notfication
+ * If @a dry_run is @a true the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
  * the authentication baton cached in @a ctx is used to communicate with the 

@@ -84,7 +84,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * @a path will be locked.  All the access batons will become part of the set
  * containing @a adm_access.  This is an all-or-nothing option, if it is not
  * possible to lock the entire tree then an error will be returned and
- * @a adm_access will be invalid, with the exception that sudirectories of
+ * @a adm_access will be invalid, with the exception that subdirectories of
  * @a path that are missing from the physical filesystem will not be locked
  * and will not cause an error.  The error @c SVN_ERR_WC_LOCKED will be
  * returned if a subdirectory of @a path is already write locked.
@@ -201,7 +201,7 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
  * alter the operation of the WC library.
  */
 
-/** The type of action occuring. */
+/** The type of action occurring. */
 typedef enum svn_wc_notify_action_t
 {
   svn_wc_notify_add = 0,
@@ -241,7 +241,7 @@ typedef enum svn_wc_notify_action_t
 } svn_wc_notify_action_t;
 
 
-/** The type of notification that is occuring. */
+/** The type of notification that is occurring. */
 typedef enum svn_wc_notify_state_t
 {
   svn_wc_notify_state_inapplicable = 0,
@@ -677,7 +677,7 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
  * Important note: the @a entries hash is the entries cache in @a adm_access 
  * and so usually the hash itself, the keys and the values should be treated 
  * as read-only.  If any of these are modified then it is the callers
- * resposibility to ensure that the entries file on disk is updated.  Treat
+ * responsibility to ensure that the entries file on disk is updated.  Treat
  * the hash values as type (<tt>const svn_wc_entry_t *</tt>) if you wish to 
  * avoid accidental modification.  Modifying the schedule member is a
  * particularly bad idea, as the entries writing process relies on having
@@ -841,7 +841,7 @@ enum svn_wc_status_kind
     /** exists, but uninteresting. */
     svn_wc_status_normal,
 
-    /** is scheduled for additon */
+    /** is scheduled for addition */
     svn_wc_status_added,
 
     /** under v.c., but is missing */
@@ -1648,7 +1648,7 @@ svn_error_t *svn_wc_prop_set (const char *name,
  *
  * The function currently parses the namespace like so:
  *
- *   - 'svn:wc:'  ==>  a wcprop, stored/accessed seperately via different API.
+ *   - 'svn:wc:'  ==>  a wcprop, stored/accessed separately via different API.
  *
  *   - 'svn:entry:' ==> an "entry" prop, shunted into the 'entries' file.
  *
@@ -1760,7 +1760,7 @@ svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
  * --------        ---------         -----
  * value = foo     value = NULL      Deletion occurred.
  * value = foo     value = bar       Set occurred (modification)
- * value = NULL value = baz Set occurred (creation)</pre>
+ * value = NULL    value = baz       Set occurred (creation)</pre>
  */
 svn_error_t *
 svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
@@ -1842,7 +1842,7 @@ typedef enum svn_wc_merge_outcome_t
  *     respectively.
  *
  *   * Mark the entry for @a merge_target as "conflicted", and track the
- *     abovementioned backup files in the entry as well.
+ *     above mentioned backup files in the entry as well.
  *
  * Binary case:
  *

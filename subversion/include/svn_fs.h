@@ -238,7 +238,7 @@ int svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b);
 /** Return non-zero IFF the nodes associated with @a id1 and @a id2 are
  * related, else return zero.  
  *
- * NOTE: While this might seem redundent in the presence of
+ * NOTE: While this might seem redundant in the presence of
  * @c svn_fs_compare_ids (looking for a return value != -1), it is
  * slightly faster to run if the equality case is not interesting to
  * you.
@@ -491,7 +491,7 @@ svn_error_t *svn_fs_txn_proplist (apr_hash_t **table_p,
                                   apr_pool_t *pool);
 
 
-/** Change a tranactions @a txn's property's value, or add/delete a
+/** Change a transactions @a txn's property's value, or add/delete a
  * property.  @a name is the name of the property to change, and @a value 
  * is the new value of the property, or zero if the property should be
  * removed altogether.  Do any necessary temporary allocation in @a pool.
@@ -597,7 +597,7 @@ svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 
 
 
-/** The kind of change that occured on the path. */
+/** The kind of change that occurred on the path. */
 typedef enum
 {
   /** default value */

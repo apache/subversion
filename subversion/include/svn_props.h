@@ -215,7 +215,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 /** Another type of non-user-visible property.
  *
  * Another type of non-user-visible property.  "Entry properties" are
- * stored as fields with the adminstrative 'entries' file.  
+ * stored as fields with the administrative 'entries' file.  
  */
 #define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"
 

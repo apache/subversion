@@ -121,7 +121,7 @@ I.    BUILD REQUIREMENTS
       Be sure to use a native Windows CVS client (as opposed to
       Cygwin's version) so that the .dsp files get carriage-returns at
       the ends of their lines.  Otherwise Visual Studio will complain
-      that it doesn't reccognize the .dsp files.
+      that it doesn't recognize the .dsp files.
 
 
       2.  autoconf 2.50 or newer (Unix only)
@@ -293,7 +293,7 @@ I.    BUILD REQUIREMENTS
       libraries you need.
 
       Under Windows, you have to edit a batch file available in your
-      Subversion source tree (the root of which is labelled <SVN>
+      Subversion source tree (the root of which is labeled <SVN>
       below):
 
           <SVN>\build\win32\build_neon.bat
@@ -626,7 +626,7 @@ II.   INSTALLATION
       If you want to build the (local) server components, you'll also
       need a copy of Berkeley DB, version 4.0.14 or newer.  Details are
       in Section I.6. For your convenience, there is also a binary
-      distibution on the Subversion downloads page
+      distribution on the Subversion downloads page
 
           http://subversion.tigris.org/ProjectDownloadList
 
@@ -858,7 +858,7 @@ III.  BUILDING A SUBVERSION SERVER
                  Require valid-user
              </LimitExcept>
 
-          c) For seperate restricted read and write access:
+          c) For separate restricted read and write access:
 
              AuthGroupFile /my/svn/group/file
 
@@ -872,7 +872,7 @@ III.  BUILDING A SUBVERSION SERVER
              </Limit>
 
       These are only a few simple examples.  For a complete tutorial
-      on Apache access contol, please consider taking a look at the
+      on Apache access control, please consider taking a look at the
       tutorials found under "Security" on the following page:
       http://httpd.apache.org/docs-2.0/misc/tutorials.html
 

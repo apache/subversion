@@ -2388,7 +2388,7 @@ svn-tunnel-agent = ssh
         And in fact, these servers can run in parallel, each accessing
         your repositories in its own way, and each without hindering
         the other.  To recap the previous two sections, here's a brief
-        list of the highlist of the two available Subversion
+        list of the highlights of the two available Subversion
         servers&mdash;choose whatever works best for you and your
         users.</para>
       
@@ -2476,7 +2476,7 @@ svn-tunnel-agent = ssh
       </listitem>
     </itemizedlist>
 
-    <para>The most common problem adminstrators run into is repository
+    <para>The most common problem administrators run into is repository
       ownership and permissions.  Does every process (or user) in the
       previous list have the rights to read and write the Berkeley DB
       files?  Assuming you have a Unix-like operating system, a
@@ -2514,7 +2514,7 @@ svn-tunnel-agent = ssh
       <literal>http://</literal> or <literal>svn://</literal> URLs.
       And to maintain multiple server processes for your Subversion
       repositories is likely to be more of a headache than necessary.
-      We recommend you chooose the server which best meets your needs
+      We recommend you choose the server which best meets your needs
       and stick with it!</para>
 
   </sect1>

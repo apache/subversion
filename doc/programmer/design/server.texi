@@ -67,7 +67,7 @@ contents, the Subversion Filesystem records changes to file meta-data
 There are two main files that describe the Subversion filesystem.
 
 First, read the section below (@xref{Repository Structure}.) for a
-general overview of how the fileystem works.
+general overview of how the filesystem works.
 
 Once you've done this, read Jim Blandy's own structural overview, which
 explains how nodes and revisions are organized (among other things) in

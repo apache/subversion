@@ -788,7 +788,7 @@ void *svn_swig_java_make_callback_baton(JNIEnv *jenv,
   globalref = JCALL1(NewGlobalRef, jenv, callback);
   if (globalref == NULL)
     {
-      /* Exception occured */
+      /* Exception occurred */
       return 0;
     }
 
@@ -930,7 +930,7 @@ static stream_baton_t *make_stream_baton(JNIEnv *jenv,
   globalref = JCALL1(NewGlobalRef, jenv, stream);
   if (globalref == NULL)
     {
-      /* Exception occured */
+      /* Exception occurred */
       return 0;
     }
 

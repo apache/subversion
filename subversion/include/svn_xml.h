@@ -132,7 +132,7 @@ typedef void (*svn_xml_start_elem)(void *baton,
 
 typedef void (*svn_xml_end_elem)(void *baton, const char *name);
 
-/* data is not NUL-terminated. */
+/* data is not NULL-terminated. */
 typedef void (*svn_xml_char_data)(void *baton,
                                   const char *data,
                                   apr_size_t len);

@@ -604,7 +604,7 @@ working-copies
               locks resuming unfinished operations.  If you ever get a
               <quote>working copy locked</quote> error, run this
               command to remove stale locks and get your working copy
-              into a useable state again.  See <xref
+              into a usable state again.  See <xref
               linkend="svn-ap-c"/>.</para>
           </refsect1>
 
@@ -1442,7 +1442,7 @@ Committed revision 19.
 
             <para><command>svn info</command> will show you all the
               useful information that it has for items in your working
-              copy.  It will show informtion for files:</para>
+              copy.  It will show information for files:</para>
 
             <screen>
 $ svn info foo.c
@@ -2664,7 +2664,7 @@ foo.c.r31
             <title>Description</title>
 
             <para>Print the status of working copy files and
-              directories.  With no args, it prints only locally
+              directories.  With no arguments, it prints only locally
               modified items (no repository access).  With
               <option>--show-updates</option>, add working revision
               and server out-of-date information.  With
@@ -3249,7 +3249,7 @@ Updated to revision 30.
             <term><option>--on-disk-template <replaceable>ARG</replaceable></option></term>
             <listitem>
 
-              <para>Specify a templete to use for the on-disk
+              <para>Specify a template to use for the on-disk
                 structure (i.e. <filename>conf/</filename>,
                 <filename>hooks/</filename>, etc.) of the repository
                 you want to create.</para>
@@ -3421,7 +3421,7 @@ Content-length: 101
         <refnamediv>
           <refname>svnadmin load</refname> <refpurpose>Read a
             <quote>dumpfile-formatted</quote> stream from
-            STDIN.</refpurpose>
+            stdin.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -3504,7 +3504,7 @@ $ svnadmin lscr /usr/local/svn/repos/ test-moved-file
           </screen>
 
           <para>List the revisions in which a path was modified
-            including changes that occured before it was
+            including changes that occurred before it was
             moved/copied:</para>
 
           <screen>
