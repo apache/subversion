@@ -129,8 +129,9 @@ svn_boolean_t svn_string_compare (const svn_string_t *str1,
 
 /** convenience routines **/
 
-/* Return offset of first non-whitespace character in STR, or -1 if none. */
-apr_ssize_t svn_string_first_non_whitespace (const svn_string_t *str);
+/* Return offset of first non-whitespace character in STR, or return
+   STR->len if none. */
+apr_size_t svn_string_first_non_whitespace (const svn_string_t *str);
 
 /* Strips whitespace from both sides of STR (modified in place). */
 void svn_string_strip_whitespace (svn_string_t *str);
@@ -211,8 +212,9 @@ svn_boolean_t svn_stringbuf_compare (const svn_stringbuf_t *str1,
 
 /** convenience routines **/
 
-/* Return offset of first non-whitespace character in STR, or -1 if none. */
-apr_ssize_t svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str);
+/* Return offset of first non-whitespace character in STR, or return
+   STR->len if none. */
+apr_size_t svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str);
 
 /* Strips whitespace from both sides of STR (modified in place). */
 void svn_stringbuf_strip_whitespace (svn_stringbuf_t *str);
