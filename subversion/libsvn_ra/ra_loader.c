@@ -283,7 +283,8 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
         {
           line = apr_psprintf (pool, "* %s : %s\n",
                                list[idx].ra_lib->name,
-                               list[idx].ra_lib->description);
+                               dgettext(PACKAGE_NAME,
+                                        list[idx].ra_lib->description));
           svn_stringbuf_appendcstr (*descriptions, line);
         }
 
