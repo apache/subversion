@@ -10,8 +10,8 @@ will no longer be necessary.</p>
 
 <h2>Overview</h2>
 
-<p>Subversion 1.1 can best be summarized as: (1) a new non-database
-repository back-end, and (2) a whole slew of client-side
+<p>Subversion 1.1 can best be summarized as: (1) an optional new
+non-database repository back-end, and (2) a whole slew of client-side
 improvements.  Details are given below.</p>
 
 <p>Note that Subversion 1.1 is a superset of all the Subversion 1.0.x
@@ -69,7 +69,9 @@ new features and fixes many smaller bugs.</p>
    href="http://web.mit.edu/ghudson/info/fsfs">http://web.mit.edu/ghudson/info/fsfs</a></p>
 
 <p>To create an fsfs repository, simply run <tt>'svnadmin create
-      --fs-type fsfs'</tt>.</p>
+      --fs-type fsfs'</tt>.  Or, if BerkeleyDB wasn't detected at
+    compile time, <tt>'svnadmin create'</tt> will default to type
+    fsfs.</p>
 
 
 <h3>Symlink versioning</h3>
@@ -160,6 +162,19 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1509">issue
 
 <p>
 
+
+<dt><h3>New 'store-passwords' runtime variable:</h3></dt>
+
+<dd>The previous <tt>store-auth-creds</tt> runtime variable still
+works, but many users were unhappy with it.  It disables <b>all</b>
+credentials caching on local disk: passwords, usernames, server certs.
+This new runtime variable only disables password caching, so that
+server certificates can still be remembered.</dd>
+
+<p>
+
+
+
 <dt><h3>Bugfixes:</h3></dt>
 <dd>More than 40 "small" bugs fixed.  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
@@ -190,6 +205,12 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
       <dt><tt>svnadmin create --fs-type [fsfs | bdb]</tt></dt>
       <dd>Create a repository using either 'fsfs' or 'bdb' backend,
       defaults is 'bdb'.</dd>
+
+      <dt><tt>svnadmin recover [--wait]</tt></dt>
+      <dd>This command now exits immediately if another process has a
+      lock on the repository.  Use the new <tt>--wait</tt> option to
+      get the old behavior (where svnadmin blocks indefinitely until
+      the lock is freed.)</dd>
 
       <dt><tt>svnserve --tunnel-user=NAME</tt></dt>
       <dd>Used in conjuction with <tt>--tunnel</tt> switch;  tells
