@@ -19,19 +19,12 @@ Karl working copy todo:
    - make updates work as checkouts do (should only be a little bit
      left)
    - work on properties, or work with someone on props
-   - probably decide that all entries in a versions file will always
-     be listed explicitly (they'd have to be for checksums to be kept
-     anyway), and change the documentation about this everywhere.
-     Should result in no code changes, as none of the code folded
-     redundant version information anyway.
    - fix working copy identification/allergy code
-   - an xml-writing editor (should be 2 to 3 hours tops)
    - oh my goodness, what is *up* with that bug in free_file_baton?
    - timestamps
-   - checksums?
-
-Karl/all todo:
-   - ancestry args to replace_root go away?  Think about this.
+   - reduce or remove svn_wc__write_adm_item() and v_write_adm_item(),
+     because they're now redundant with the generalized XML output
+     code.
 
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
