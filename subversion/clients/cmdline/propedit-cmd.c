@@ -263,7 +263,7 @@ svn_cl__propedit (apr_getopt_t *os,
               SVN_ERR
                 (svn_cmdline_printf
                  (subpool, _("Set new value for property '%s' on '%s'\n"),
-                  pname_utf8, target));
+                  pname_utf8, target_local));
             }
           else
             {
