@@ -2,11 +2,6 @@ XSLTPROC = xsltproc
 INSTALL_DIR = $(DESTDIR)/usr/share/doc/subversion
 INSTALL = install
 
-BOOKFILES=appa.xml appb.xml appc.xml appd.xml book.xml ch00.xml \
-          ch01.xml ch02.xml ch03.xml ch04.xml ch05.xml ch06.xml \
-          ch07.xml ch08.xml ch09.xml colo.xml copyright.xml \
-          foreword.xml glossary.xml
-
 ## You shouldn't normally need to edit anything below here.
 SHELL = /bin/sh
 SVNVERSION = svnversion
@@ -180,20 +175,26 @@ install-misc-pdf: $(MDOCS_PDF_TARGET) $(MDOCS_INSTALL_DIR)
 install-misc-ps: $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 	$(INSTALL) $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 
+# Stuff below here is added for building the Norwegian version.
+
+BUILDTMP_DIR = build.tmp
+
 build: htmlbook copytobuild
 
 htmlbook:
 	$(MAKE) clean && $(MAKE) all-html
 
 copytobuild:
-	mkdir build.tmp
-	rmdir build.tmp
-	svn co http://svn.sunbase.org/repos/svnbook_nb/build build.tmp
-	find build.tmp -type f | grep -v '/\.svn/' | xargs rm
-	cp -a book/html-chunk build.tmp/
-	cp -p book/svn-book.html build.tmp/
-	cp -a book/html-chunk/images build.tmp/
-	cp -a book/styles.css build.tmp/
+	mkdir $(BUILDTMP_DIR)
+	rmdir $(BUILDTMP_DIR)
+	svn co http://svn.sunbase.org/repos/svnbook_nb/build $(BUILDTMP_DIR)
+	find $(BUILDTMP_DIR) -type f | grep -v '/\.svn/' | xargs rm
+	cp -a $(BOOK_HTML_CHUNK_DIR) $(BUILDTMP_DIR)/
+	cp -a $(BOOK_HTML_TARGET) $(BUILDTMP_DIR)/
+	cp -a $(BOOK_IMAGES) $(BUILDTMP_DIR)/images/
+	cp -a $(BOOK_DIR)/styles.css $(BUILDTMP_DIR)/
+	cp -a $(MDOCS_DIR) $(BUILDTMP_DIR)/
+	cp -a $(BOOK_DIR)/styles.css $(BUILDTMP_DIR)/$(MDOCS_DIR)/
 
 editmode:
 	$(MAKE) convfiles CONV_PARAM=-e
@@ -202,7 +203,7 @@ commitmode:
 	$(MAKE) convfiles CONV_PARAM=
 
 convfiles:
-	for _prc in $(BOOKFILES); do \
+	for _prc in $(BOOK_ALL_SOURCE); do \
 		echo -n "$$_prc: convert..."; \
 		dest=book/$$_prc; \
 		swp=book/.$$_prc.swp; \
@@ -215,3 +216,6 @@ convfiles:
 		mv $$dest.tmp $$dest; \
 		echo "OK."; \
 	done
+
+# $Id$
+# vim: set ts=4 sw=4 sts=4 noet :
