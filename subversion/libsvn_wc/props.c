@@ -1523,8 +1523,8 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
              parent_directory, line);
         }
 
-      item->target_dir = svn_path_internal_style
-        (svn_path_canonicalize (item->target_dir, pool), pool);
+      item->target_dir = svn_path_canonicalize
+        (svn_path_internal_style (item->target_dir, pool), pool);
       {
         int tgt_dir_len = strlen (item->target_dir);
 
