@@ -99,7 +99,14 @@ def run_cvs2svn(error_re, *varargs):
   If ERROR_RE is not None, it is a string regular expression that must
   match some line of the error output; if it matches, return None,
   else return 1."""
-  return run_program(cvs2svn, error_re, *varargs)
+  if sys.platform == "win32":
+    # For an unknown reason, without this special case, the cmd.exe process
+    # invoked by os.system('sort ...') in cvs2svn.py receives invalid stdio
+    # handles. Therefore, the redirection of the output to the .s-revs file
+    # fails.
+    return run_program("python", error_re, cvs2svn, *varargs)
+  else:
+    return run_program(cvs2svn, error_re, *varargs)
 
 
 def run_svn(*varargs):
