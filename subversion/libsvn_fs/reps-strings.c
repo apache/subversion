@@ -57,7 +57,7 @@ make_fulltext_rep (const char *str_key,
 
 {
   svn_fs__representation_t *rep = apr_palloc (pool, sizeof (*rep));
-  rep->is_mutable = 1;
+  rep->is_mutable = mutable;
   rep->kind = svn_fs__rep_kind_fulltext;
   rep->contents.fulltext.string_key = apr_pstrdup (pool, str_key);
   return rep;
