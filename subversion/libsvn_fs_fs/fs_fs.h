@@ -335,11 +335,13 @@ svn_error_t *svn_fs_fs__delete_node_revision (svn_fs_t *fs,
 
 
 /* Find the paths which were changed in transaction TXN_ID of
-   filesystem FS and store them in *CHANGED_PATHS_P.  Get any
-   temporary allocations from POOL. */
+   filesystem FS and store them in *CHANGED_PATHS_P.  Cached copyfrom
+   information will be stored in COPYFROM_CACHE if it is non-NULL.
+   Get any temporary allocations from POOL. */
 svn_error_t *svn_fs_fs__txn_changes_fetch (apr_hash_t **changes,
                                            svn_fs_t *fs,
                                            const char *txn_id,
+                                           apr_hash_t *copyfrom_cache,
                                            apr_pool_t *pool);
 
 /* Following are defines that specify the textual elements of the

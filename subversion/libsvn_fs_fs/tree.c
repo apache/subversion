@@ -1248,7 +1248,7 @@ undelete_change (svn_fs_t *fs,
   path = svn_fs__canonicalize_abspath (path, pool);
 
   /* First, get the changes associated with TXN_ID. */
-  SVN_ERR (svn_fs_fs__txn_changes_fetch (&changes, fs, txn_id, pool));
+  SVN_ERR (svn_fs_fs__txn_changes_fetch (&changes, fs, txn_id, NULL, pool));
 
   /* Now, do any of those changes apply to path and indicate deletion? */
   this_change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
