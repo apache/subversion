@@ -217,8 +217,12 @@ svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
 
 /* Like svn_fs_begin_txn(), but use AUTHOR and LOG_MSG to set the
  * corresponding properties on transaction *TXN_P.  FS, REV, *TXN_P,
- * and POOL are as in svn_fs_begin_txn().  
-*/
+ * and POOL are as in svn_fs_begin_txn().
+ *
+ * Before a txn is created, the repository's start-commit hooks are
+ * run; if any of them fail, no txn is created, *TXN_P is
+ * unaffected, and SVN_ERR_REPOS_HOOK_FAILURE is returned.
+ */
 svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                                 svn_fs_t *fs,
                                                 svn_revnum_t rev,
