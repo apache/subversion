@@ -307,7 +307,6 @@ def ensure_directories(path, root, dumpfile):
   not already present under node ROOT, adding them to ROOT's tree as
   we go.  Return the last parent directory, that is, the parent
   of PATH's basename.  Leading slash(es) on PATH are optional."""
-  path = path.lstrip('/')
   path_so_far = None
   components = filter(None, string.split(path, '/'))
   last_idx = len(components) - 1
