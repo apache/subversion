@@ -867,8 +867,10 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
 
 /** Parse the `entries' file for @a adm_access and return a hash @a entries, 
  * whose keys are (<tt>const char *</tt>) entry names and values are 
- * (<tt>svn_wc_entry_t *</tt>).  Allocate @a entries, and its keys and 
- * values, in @a pool.
+ * (<tt>svn_wc_entry_t *</tt>).  The hash @a entries, and its keys and
+ * values, are allocated from the pool used to open the @a adm_access
+ * baton (that's how the entries caching works).  @a pool is used for
+ * transient allocations.
  *  
  * Entries that are in a 'deleted' or 'absent' state (and not
  * scheduled for re-addition) are not returned in the hash, unless
