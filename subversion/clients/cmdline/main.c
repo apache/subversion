@@ -170,7 +170,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
     "usage: delete [TARGET [TARGET ... ]]\n\n"
-    "  If run on a working-copy TARGET, the item is scheduled for deletion\n"
+    "  If run on a working copy TARGET, the item is scheduled for deletion\n"
     "  upon the next commit.  Files, and directories that have not been\n"
     "  committed, are immediately removed from the working copy.  The\n"
     "  command will not remove TARGETs that are, or contain, unversioned\n"
@@ -187,10 +187,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "display the differences between two paths.\n"
     "usage: 1. diff [-r N[:M]] [TARGET [TARGET ... ]]\n"
     "       2. diff URL1[@N] URL2[@M]\n\n"
-    "  1. Each TARGET can be either a working-copy path or URL.  If no\n"
+    "  1. Each TARGET can be either a working copy path or URL.  If no\n"
     "     TARGET is specified, a value of '.' is assumed.\n\n"
     "     If TARGET is a URL, then revs N and M must be given via -r.\n\n"
-    "     If TARGET is a working-copy path, then -r switch means:\n"
+    "     If TARGET is a working copy path, then -r switch means:\n"
     "       -r N:M  : server compares TARGET@N and TARGET@M,\n"
     "       -r N    : client compares TARGET@N against working copy\n"
     "       (no -r) : client compares base and working copies of TARGET\n\n"
@@ -281,7 +281,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  2. In the second form TARGET can be an URL, or it can be a working copy\n"
     "     path in which case the corresponding URL is used.  This URL, at\n"
     "     revisions N and M, defines the two sources to be compared.\n\n"
-    "  PATH is the working-copy path that will receive the changes.\n"
+    "  PATH is the working copy path that will receive the changes.\n"
     "  If omitted, a default value of '.' is assumed.\n\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
@@ -415,7 +415,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      ' ' no modifications\n"
     "      'M' Modified\n"
     "      'C' Conflicted\n"
-    "    Third column: Whether the directory is locked by Subversion\n"
+    "    Third column: Whether the working copy directory is locked\n"
     "      ' ' not locked\n"
     "      'L' locked\n"
     "    Fourth column: Scheduled commit will contain addition-with-history\n"
