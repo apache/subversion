@@ -378,7 +378,10 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
   SVN_ERR( svn_ra_dav__get_props(&props, sess, url_path, NE_DEPTH_ZERO,
                                  label, which_props, pool) );
 
-  if (label != NULL)
+  /* ### HACK.  We need to have the client canonicalize paths, get rid
+     of double slashes and such.  This check is just a check against
+     non-SVN servers;  in the long run we want to re-enable this. */
+  if (1 || label != NULL)
     {
       /* pick out the first response: the URL requested will not match
        * the response href. */
@@ -453,6 +456,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 {
   svn_ra_dav_resource_t *rsrc;
   const char *vcc;
+  struct uri parsed_url;
 
   /* ### we may be able to replace some/all of this code with an
      ### expand-property REPORT when that is available on the server. */
@@ -472,10 +476,14 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
         is a collection or not.
   */
 
+  /* Split the copyfrom url into it's component pieces (schema,
+     host, path, etc).  We want the path part. */
+  uri_parse (url, &parsed_url, NULL);
+
   /* ### do we want to optimize the props we fetch, based on what the
      ### user has requested? i.e. omit resourcetype when is_dir is NULL
      ### and omit relpath when bc_relative is NULL. */
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, url,
+  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, parsed_url.path,
                                           NULL, starting_props, pool) );
 
   if (is_dir != NULL)

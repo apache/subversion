@@ -33,6 +33,7 @@
 
 #include <ne_request.h>
 #include <ne_props.h>
+#include <ne_basic.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -719,21 +720,74 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
   ** method to copy from [### where?] into the working collection.
   */
 
-  /* ### ancestor_path is ignored for now */
-
-  /* do the CHECKOUT now. we'll PUT the new file later on. */
+  /* Do the parent CHECKOUT first */
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
+  /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(pool, sizeof(*file));
   file->cc = parent->cc;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc, name->data, 1) );
 
-  /* ### wait for apply_txdelta before doing a PUT. it might arrive a
-     ### "long time" from now. certainly after many other operations, so
-     ### we don't want to start a PUT just yet.
-     ### so... anything else to do here?
-  */
+  if (! copyfrom_path)
+    {
+      /* This a truly new file. */
 
+      /* ### wait for apply_txdelta before doing a PUT. it might arrive a
+         ### "long time" from now. certainly after many other operations, so
+         ### we don't want to start a PUT just yet.
+         ### so... anything else to do here?
+      */
+    }
+  else
+    {
+      svn_string_t bc_url, bc_relative;
+      svn_stringbuf_t *src_url;
+      int stat;
+
+      /* This add has history, so we need to do a COPY. */
+      
+      /* Convert the copyfrom_* url/rev "public" pair into a Baseline
+         Collection (BC) URL that represents the revision -- and a
+         relative path under that BC.  */
+      SVN_ERR( svn_ra_dav__get_baseline_info(FALSE,
+                                             &bc_url, &bc_relative, NULL,
+                                             parent->cc->ras->sess,
+                                             copyfrom_path->data,
+                                             copyfrom_revision,
+                                             pool));
+
+
+      /* Combine the BC-URL and relative path; this is the main
+         "source" argument to the COPY request.  The "Destination:"
+         header given to COPY is simply the wr_url that is already
+         part of the file_baton. */
+      src_url = svn_stringbuf_create(bc_url.data, pool);
+      svn_path_add_component_nts(src_url, bc_relative.data,
+                                 svn_path_url_style);
+
+      /* Stoopid debugging info */
+      printf ("For local path %s :\n", file->rsrc->local_path->data);
+      printf ("Copyfrom_url/rev:  %s, %ld\n",
+              copyfrom_path->data, copyfrom_revision);
+      printf ("bc_url, bc_relative:  %s, %s\n", 
+              bc_url.data, bc_relative.data);
+      printf ("COPY args are: %s, %s\n",
+              src_url->data, file->rsrc->wr_url);              
+
+      /* Have neon do the COPY. */
+      stat = ne_copy(parent->cc->ras->sess,
+                     1,                   /* overwrite */
+                     NE_DEPTH_ZERO,       /* for a file, does it care? */
+                     src_url->data,       /* source URI */
+                     file->rsrc->wr_url); /* dest URI */
+
+      printf ("ne_copy result code was: %d\n", stat);
+      fflush(stdout);
+
+    }
+
+
+  /* return the file_baton */
   *file_baton = file;
   return NULL;
 }
