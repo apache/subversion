@@ -265,23 +265,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   /* Most elements have a name attribute, so try to grab one now. */
   const char *name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_NAME, atts);
 
-  if (strcmp (eltname, SVN_WC__LOG_MERGE_TEXT) == 0)
-    {
-      const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
-
-      if (! name)
-        return signal_error
-          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                     0,
-                                     NULL,
-                                     loggy->pool,
-                                     "missing name attr in %s",
-                                     loggy->path->data));
-      else
-        /* Note that saved_mods is allowed to be null. */
-        err = merge_text (loggy->path, name, saved_mods, loggy->pool);
-    }
-  else if (strcmp (eltname, SVN_WC__LOG_RUN_CMD) == 0)
+  if (strcmp (eltname, SVN_WC__LOG_RUN_CMD) == 0)
     {
       /* kff todo */
     }
