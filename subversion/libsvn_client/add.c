@@ -29,32 +29,97 @@
 
 /*** Code. ***/
 
+static svn_error_t *
+add_dir_recursive (const char *dirname,
+                   apr_pool_t *pool)
+{
+  apr_dir_t *dir;
+  apr_finfo_t this_entry;
+  apr_status_t apr_err;
+  apr_pool_t *subpool;
+
+  /* Add this directory to revision control. */
+  SVN_ERR (svn_wc_add_directory (svn_string_create (dirname, pool),
+                                 pool));
+
+  /* Create a subpool for iterative memory control. */
+  subpool = svn_pool_create (pool);
+
+  /* Read the directory entries one by one and add those things to
+     revision control. */
+  apr_err = apr_dir_open (&dir, dirname, pool);
+  for (apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir);
+       APR_STATUS_IS_SUCCESS (apr_err);
+       apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir))
+    {
+      svn_string_t *fullpath;
+
+      /* Skip over SVN admin directories. */
+      if (strcmp (this_entry.name, SVN_WC_ADM_DIR_NAME) == 0)
+        continue;
+
+      /* Skip entries for this dir and its parent.  */
+      if ((strcmp (this_entry.name, ".") == 0)
+          || (strcmp (this_entry.name, "..") == 0))
+        continue;
+
+      /* Construct the full path of the entry. */
+      fullpath = svn_string_create (dirname, subpool);
+      svn_path_add_component 
+        (fullpath,
+         svn_string_create (this_entry.name, subpool),
+         svn_path_local_style);
+
+      if (this_entry.filetype == APR_DIR)
+        /* Recurse. */
+        SVN_ERR (add_dir_recursive (fullpath->data, subpool));
+
+      else if (this_entry.filetype == APR_REG)
+        SVN_ERR (svn_wc_add_file (fullpath, subpool));
+
+      /* Clean out the per-iteration pool. */
+      svn_pool_clear (subpool);
+    }
+
+  /* Destroy the per-iteration pool. */
+  svn_pool_destroy (subpool);
+
+  /* Check that the loop exited cleanly. */
+  if (! (APR_STATUS_IS_ENOENT (apr_err)))
+    {
+      return svn_error_createf
+        (apr_err, 0, NULL, subpool, "error during recursive add of `%s'",
+         dirname);
+    }
+  else  /* Yes, it exited cleanly, so close the dir. */
+    {
+      apr_err = apr_dir_close (dir);
+      if (! (APR_STATUS_IS_SUCCESS (apr_err)))
+        return svn_error_createf
+          (apr_err, 0, NULL, subpool, "error closing dir `%s'", dirname);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client_add (svn_string_t *path, 
                 svn_boolean_t recursive,
                 apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  svn_error_t * err;
+  svn_error_t *err = NULL;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   
   if (kind == svn_node_file)
     {
-      if (recursive)
-        {
-          /* todo: a gentle warning about trying to recurse on a file
-             might be in order here. */
-        }
-      else
-        err = svn_wc_add_file (path, pool);
+      err = svn_wc_add_file (path, pool);
     }
   else if (kind == svn_node_dir)
     {
       if (recursive)
-        {
-          /* todo: um...recursively mark a tree for addition. */
-        }
+        SVN_ERR (add_dir_recursive (path->data, pool));
       else
         err = svn_wc_add_directory (path, pool);
     }
