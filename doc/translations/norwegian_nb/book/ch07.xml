@@ -532,7 +532,7 @@ collabnet = svn.collab.net
           define new tunnel schemes for use with
           <command>svnserve</command> and <literal>svn://</literal>
           client connections.  For more details, see <xref
-          linkend="svn-ch-6-sect-3.3"/>.</para>
+          linkend="svn-ch-6-sect-3.4"/>.</para>
 
         <para>The <literal>miscellany</literal> section is where
           everything that doesn't belong elsewhere winds up.

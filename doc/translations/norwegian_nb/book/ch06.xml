@@ -93,7 +93,8 @@
             <entry>blanket read/write access, or per-directory access
               control</entry>
             
-            <entry>blanket read/write access</entry>
+            <entry>blanket read/write access, or per-directory write access
+              control using hook scripts</entry>
           </row>
           
           <row>
@@ -691,8 +692,21 @@ auth-access = write
       </sect3>
 
     </sect2>
-    
+
+
     <sect2 id="svn-ch-6-sect-3.3">
+      <title>External path-based authorization</title>
+
+      <para>While <command>svnserve</command> itself does not provide
+        any means to control per-path authorization, a pre-commit hook
+        can be used to enforce per-path write access control. The
+        Subversion distribution comes with
+        <command>commit-access-control.pl</command> and the more
+        sophisticated <command>svnperms.py</command> scripts for use
+        in pre-commit scripts.</para>
+    </sect2>
+
+    <sect2 id="svn-ch-6-sect-3.4">
       <title>SSH authentication and authorization</title>
 
       <para><command>svnserve</command>'s built-in authentication can
