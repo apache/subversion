@@ -5,7 +5,7 @@ svn_SOURCES = main.c status.c props.c                  \
               add-cmd.c commit-cmd.c checkout-cmd.c    \
               proplist-cmd.c delete-cmd.c status-cmd.c \
               update-cmd.c propget-cmd.c propset-cmd.c \
-              trace-update.c
+              trace-update.c trace-commit.c
 
 ## Flags needed when compiling:
 INCLUDES = -I. -I../include -I../../apr/include -I../../expat-lite
