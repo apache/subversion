@@ -38,15 +38,6 @@ Candidate changes:
       +1: dlr
       +1: breser
 
-  * r9089
-    Fix broken build of python swig bindings on win32. 
-    Justification: single line fix in bindings file which replaces the
-    non standard type "long long" with the matching apr type 
-    "apr_int64_t". The python bindings will not build without it.
-    Votes:
-      +0: breser (built, but didn't test), dlr
-      +1: cmpilato
-
   * r9104, r9197
     Do not turn /s in URLS to \s on Windows. 
     Justification: The paths are for URLS they should be copyable for use on

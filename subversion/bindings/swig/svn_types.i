@@ -183,7 +183,7 @@
 
 %typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
     "$result = t_output_helper($result,
-                               PyLong_FromLongLong((long long) (*$1)));";
+                               PyLong_FromLongLong((apr_int64_t) (*$1)));";
 
 /* XXX: apply long long *OUTPUT doesn't track $1 correctly */
 %typemap(perl5,argout) svn_filesize_t * {
