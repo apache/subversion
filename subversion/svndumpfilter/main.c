@@ -126,48 +126,68 @@ ary_prefix_match (apr_array_header_t *pfxlist, const char *path)
 
 struct parse_baton_t 
 {
-  svn_boolean_t       do_exclude;
-  svn_boolean_t       quiet;
-  svn_boolean_t       drop_empty_revs;
-  svn_boolean_t       do_renumber_revs;
-  svn_boolean_t       preserve_revprops;
-  svn_stream_t       *in_stream;
-  svn_stream_t       *out_stream;
-  apr_int32_t         rev_drop_count;
+  /* Command-line options values. */
+  svn_boolean_t do_exclude;
+  svn_boolean_t quiet;
+  svn_boolean_t drop_empty_revs;
+  svn_boolean_t do_renumber_revs;
+  svn_boolean_t preserve_revprops;
   apr_array_header_t *prefixes;
-  apr_hash_t         *dropped_nodes;
-  apr_hash_t         *renumber_history;
+
+  /* Input and output streams. */
+  svn_stream_t *in_stream;
+  svn_stream_t *out_stream;
+
+  /* State for the filtering process. */
+  apr_int32_t rev_drop_count;
+  apr_hash_t *dropped_nodes;
+  apr_hash_t *renumber_history;
 };
 
 struct revision_baton_t 
 {
+  /* Reference to the global parse baton. */
   struct parse_baton_t *pb;
 
-  svn_boolean_t    has_nodes;
-  svn_boolean_t    has_props;
-  svn_boolean_t    had_dropped_nodes;
-  svn_revnum_t     rev_orig;
-  svn_revnum_t     rev_actual;
+  /* Does this revision have node or prop changes? */
+  svn_boolean_t has_nodes;
+  svn_boolean_t has_props;
+
+  /* Did we drop any nodes? */
+  svn_boolean_t had_dropped_nodes;
+
+  /* The original and new (re-mapped) revision numbers. */
+  svn_revnum_t rev_orig;
+  svn_revnum_t rev_actual;
+
+  /* Pointers to dumpfile data. */
   svn_stringbuf_t *header;
-  apr_hash_t      *props;
+  apr_hash_t *props;
   svn_stringbuf_t *body;
-  svn_stream_t    *body_stream;
+  svn_stream_t *body_stream;
 };
 
 struct node_baton_t 
 {
+  /* Reference to the current revision baton. */
   struct revision_baton_t *rb;
 
-  svn_boolean_t    do_skip;
-  svn_boolean_t    has_props;
-  svn_boolean_t    has_text;
-  svn_boolean_t    remove_props;
+  /* Are we skipping this node? */
+  svn_boolean_t do_skip;
+
+  /* Have we been instructed to change or remove props on, or change
+     the text of, this node? */
+  svn_boolean_t has_props;
+  svn_boolean_t remove_props;
+  svn_boolean_t has_text;
+
+  /* Pointers to dumpfile data. */
   svn_stringbuf_t *header;
   svn_stringbuf_t *props;
   svn_stringbuf_t *body;
   svn_stringbuf_t *node_path;
   svn_stringbuf_t *copyfrom_path;
-  svn_stream_t    *body_stream;
+  svn_stream_t *body_stream;
 };
 
 
