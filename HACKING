@@ -184,11 +184,6 @@ A rough guide to the source tree:
       The command line client.
    subversion/tests/
       Automated test suite.
-   expat-lite/
-      Expat library from James Clark. There is a private copy in the
-      Subversion repository because we have some local changes to
-      it. See expat-lite/CHANGES.svn and expat-lite/CHANGES for
-      information on those changes.
    apr/
       Apache Portable Runtime library.
       *Note*: This is not in the same repository as Subversion.  Read
