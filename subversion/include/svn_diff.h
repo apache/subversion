@@ -142,6 +142,42 @@ svn_diff_output(svn_diff_t *diff,
                 void *output_baton,
                 svn_diff_output_fns_t *output_fns);
 
+
+/*** Diffs on files ***/
+
+/* Function to diff two files.
+ *
+ * DIFF is where the diff will be stored.
+ * ORIGINAL is the path to the original file.
+ * MODIFIED is the path to the file to which the
+ *   original file will be compared.
+ * POOL is the pool you want the diff to
+ *   be allocated out of.
+ */
+apr_status_t
+svn_diff_file(svn_diff_t **diff,
+              const char *original,
+              const char *modified,
+              apr_pool_t *pool);
+
+/* Function to diff three files.
+ *
+ * DIFF is where the diff will be stored.
+ * ORIGINAL is the path to the original file; the
+ *  common ancestor of MODIFIED1 and MODIFIED2.
+ * MODIFIED1 and MODIFIED2 are the paths to the
+ *   files to be compared with the common ancestor
+ *   (and eachother).
+ * POOL is the pool you want the diff to
+ *   be allocated out of.
+ */
+apr_status_t
+svn_diff3_file(svn_diff_t **diff,
+               const char *original,
+               const char *modified1,
+               const char *modified2,
+               apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
