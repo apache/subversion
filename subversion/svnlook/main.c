@@ -1261,23 +1261,56 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
 }
 
 
-/* Write this. */
+
+/* Callback baton for print_history() (and do_history()). */
+struct print_history_baton
+{
+  svn_fs_t *fs;
+  svn_boolean_t show_ids;
+};
+
+/* Implements svn_repos_history_func_t interface.  Print the history
+   that's reported through this callback, possibly finding and
+   displaying node-rev-ids. */
+static svn_error_t *
+print_history (void *baton,
+               const char *path,
+               svn_revnum_t revision,
+               apr_pool_t *pool)
+{
+  struct print_history_baton *phb = baton;
+
+  if (phb->show_ids)
+    {
+      const svn_fs_id_t *node_id;
+      svn_fs_root_t *rev_root;
+      svn_string_t *id_string;
+
+      SVN_ERR (svn_fs_revision_root (&rev_root, phb->fs, revision, pool));
+      SVN_ERR (svn_fs_node_id (&node_id, rev_root, path, pool));
+      id_string = svn_fs_unparse_id (node_id, pool);
+      printf ("%8" SVN_REVNUM_T_FMT "   %s <%s>\n", 
+              revision, path, id_string->data);
+    }
+  else
+    {
+      printf ("%8" SVN_REVNUM_T_FMT "   %s\n", revision, path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Print a tabular display of history location points for PATH in
+   revision C->rev_id.  Optionally, SHOW_IDS.  Use POOL for
+   allocations. */
 static svn_error_t *
 do_history (svnlook_ctxt_t *c, 
             const char *path, 
             svn_boolean_t show_ids,
             apr_pool_t *pool)
 {
-  svn_fs_root_t *root;
-  svn_node_kind_t kind;
-  svn_fs_history_t *history;
-  apr_pool_t *oldpool = svn_pool_create (pool);
-  apr_pool_t *newpool = svn_pool_create (pool);
-  const char *history_path;
-  svn_revnum_t history_rev;
-
-  SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (verify_path (&kind, root, path, pool));
+  struct print_history_baton args;
 
   if (show_ids)
     {
@@ -1290,59 +1323,13 @@ do_history (svnlook_ctxt_t *c,
       printf ("--------   ---------\n");
     }
 
-  SVN_ERR (svn_fs_node_history (&history, root, path, oldpool));
-
-  /* Now, we loop over the history items, calling svn_fs_history_prev(). */
-  do
-    {
-      apr_pool_t *tmppool;
-      svn_string_t *id_string = NULL;
-
-      /* Note that we have to do some crazy pool work here.  We can't
-         get rid of the old history until we use it to get the new, so
-         we alternate back and forth between our subpools.  */
-      SVN_ERR (svn_fs_history_prev (&history, history, 1, newpool));
-
-      /* Only continue if there is further history to deal with. */
-      if (! history)
-        break;
-
-      /* Fetch the location information for this history step.
-         ### We would probably just use POOL if we actually cared
-         ### about the HISTORY_PATH. */
-      SVN_ERR (svn_fs_history_location (&history_path, &history_rev,
-                                        history, newpool));
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&history_path, 
-                                              history_path, newpool));
-
-      if (show_ids)
-        {
-          const svn_fs_id_t *node_id;
-          svn_fs_root_t *rev_root;
-          SVN_ERR (svn_fs_revision_root (&rev_root, c->fs, 
-                                         history_rev, newpool));
-          SVN_ERR (svn_fs_node_id (&node_id, rev_root, 
-                                   history_path, newpool));
-          id_string = svn_fs_unparse_id (node_id, newpool);
-        }
-      printf ("%8" SVN_REVNUM_T_FMT "   %s%s%s%s\n",
-              history_rev, history_path,
-              id_string ? " <" : "",
-              id_string ? id_string->data : "",
-              id_string ? ">" : "");
-     
-      /* We're done with the old history item, so we can clear its
-         pool, and then toggle our notion of "the old pool". */
-      svn_pool_clear (oldpool);
-      tmppool = oldpool;
-      oldpool = newpool;
-      newpool = tmppool;
-    }
-  while (history); /* shouldn't hit this */
-
-  svn_pool_destroy (oldpool);
-  svn_pool_destroy (newpool);
-
+  /* Call our history crawler.  We want the whole lifetime of the path
+     (prior to the user-supplied revision, of course), across all
+     copies. */
+  args.fs = c->fs;
+  args.show_ids = show_ids;
+  SVN_ERR (svn_repos_history (c->fs, path, print_history, &args,
+                              0, c->rev_id, 1, pool));
   return SVN_NO_ERROR;
 }
 

@@ -60,7 +60,6 @@ static svn_opt_subcommand_t
   subcommand_dump,
   subcommand_help,
   subcommand_load,
-  subcommand_lscr,
   subcommand_lstxns,
   subcommand_list_dblogs,
   subcommand_list_unused_dblogs,
@@ -73,7 +72,6 @@ enum
   { 
     svnadmin__version = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__incremental,
-    svnadmin__follow_copies,
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
     svnadmin__parent_dir,
@@ -104,9 +102,6 @@ static const apr_getopt_option_t options_table[] =
 
     {"incremental",   svnadmin__incremental, 0,
      "dump incrementally"},
-
-    {"copies",   svnadmin__follow_copies, 0,
-     "follow copy history"},
 
     {"quiet",           'q', 0,
      "no progress (only errors) to stderr"},
@@ -163,16 +158,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "one specified in the stream.  Progress feedback is sent to stdout.\n",
      {svnadmin__ignore_uuid, svnadmin__force_uuid, svnadmin__parent_dir} },
 
-    {"lscr", subcommand_lscr, {0},
-     "usage: svnadmin lscr REPOS_PATH PATH [--copies]\n\n"
-     "Print, one-per-line and youngest-to-eldest, the revisions in\n"
-     "which PATH was modified.  Use the COPIES flag to allow this\n"
-     "operation to cross copy history while searching for revisions.\n"
-     "(For directories, this is, for now, almost guaranteed to be\n"
-     "uninteresting.  Also, PATH must exist in the HEAD of the\n"
-     "repository.)\n",
-     {svnadmin__follow_copies} },
-
     {"list-dblogs", subcommand_list_dblogs, {0},
      "usage: svnadmin list-dblogs REPOS_PATH\n\n"
      "List all Berkeley DB log files.\n\n"
@@ -228,7 +213,6 @@ struct svnadmin_opt_state
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
-  svn_boolean_t follow_copies;                      /* --copies */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
@@ -367,44 +351,6 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
                               opt_state->uuid_action, opt_state->parent_dir,
                               pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_revnum_t youngest_rev;
-  apr_array_header_t *revs, *args;
-  const char *path_utf8;
-  int i;
-
-  SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
-  
-  if (args->nelts != 1)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              "exactly one path argument required");
-
-  SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8,
-                                    APR_ARRAY_IDX (args, 0, const char *),
-                                    pool));
-  path_utf8 = svn_path_internal_style (path_utf8, pool);
-  
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs (repos);
-  svn_fs_youngest_rev (&youngest_rev, fs, pool);
-  SVN_ERR (svn_repos_revisions_changed (&revs, fs, path_utf8, youngest_rev, 0,
-                                        opt_state->follow_copies, pool));
-  for (i = 0; i < revs->nelts; i++)
-    {
-      svn_revnum_t this_rev = ((svn_revnum_t *)revs->elts)[i];
-      printf ("%" SVN_REVNUM_T_FMT "\n", this_rev);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -729,9 +675,6 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__incremental:
         opt_state.incremental = TRUE;
-        break;
-      case svnadmin__follow_copies:
-        opt_state.follow_copies = TRUE;
         break;
       case svnadmin__ignore_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_ignore;
