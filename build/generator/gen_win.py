@@ -339,14 +339,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     return sources.keys()
 
-  def find_win_project(self, base, projtypes):
-    "Find a project for base that is one of projtypes & return the projects filename"
-
-    for x in projtypes:
-      if os.path.exists(base+x):
-        return base+x
-    raise gen_base.GenError("Unable to find project file for external build rule '%s'" % base)
-
   def write_file_if_changed(self, fname, new_contents):
     """Rewrite the file if new_contents are different than its current content.
 
