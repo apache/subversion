@@ -22,7 +22,6 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -33,7 +32,6 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
-#include "svn_private_config.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -60,11 +58,8 @@ svn_cl__propedit (apr_getopt_t *os,
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {

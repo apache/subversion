@@ -276,9 +276,14 @@ locale-gnu-pot:
 	  --msgid-bugs-address=dev@subversion.tigris.org \
 	  --add-comments --files-from=- -o po/subversion.pot )
 
+# "make locale-gnu-po-update" updates all translations.
+# "make locale-gnu-po-update PO=ll" updates only the ll.po file.
 locale-gnu-po-update: locale-gnu-pot
+	@if test "$(PO)" = "" ; then \
+	  PO='*' ; \
+	fi ; \
 	(cd $(abs_srcdir)/subversion/po ; \
-	 for i in *.po ; do \
+	 for i in $$PO.po ; do \
 	   $(MSGMERGE) --sort-by-file --update $$i subversion.pot ; \
 	 done )
 

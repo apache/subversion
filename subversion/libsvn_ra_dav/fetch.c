@@ -31,7 +31,6 @@
 #include <ne_socket.h>
 #include <ne_basic.h>
 #include <ne_utils.h>
-#include <ne_basic.h>
 #include <ne_207.h>
 #include <ne_props.h>
 #include <ne_xml.h>

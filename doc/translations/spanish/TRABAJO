@@ -26,23 +26,30 @@ aunque puede tener perfectamente marcas de otro tipo, por ejemplo
 para aclarar detalles en la traducción realizada.
 
 
+Relación nombre usuario <-> nombre real:
+----------------------------------------
+gradha                  Grzegorz Adam Hankiewicz
+ruben                   Rubén Gómez
+beerfrick               Ariel Arjona
+
+
 Ficheros huérfanos con traducción parcial:
 ------------------------------------------
-ch02.xml: por Ariel Arjona.
+ch02.xml: beerfrick
 
 
 Ficheros en proceso de traducción:
 ----------------------------------
-ch03.xml: por Rubén Gómez.
-ch04.xml: por Grzegorz Adam Hankiewicz.
+ch03.xml: ruben
+ch04.xml: gradha
 
 
 Ficheros que han completado al menos una traducción básica:
 -----------------------------------------------------------
-book.xml: por Grzegorz Adam Hankiewicz.
-foreword.xml: por Grzegorz Adam Hankiewicz.
-ch00.xml: por Grzegorz Adam Hankiewicz.
-ch01.xml: por Rubén Gómez.
+book.xml: gradha
+foreword.xml: gradha
+ch00.xml: gradha
+ch01.xml: ruben
 
 
 Ficheros revisados sin verificar el original:

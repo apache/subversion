@@ -747,53 +747,58 @@ U   my-calc-branch/integer.c
           Debería poder usar esta información para automatizar las
           fusiones tanto como sea posible.</para>
 
-        <para>Unfortunately, Subversion is not such a system.  Like
-          CVS, Subversion 1.0 does not yet record any information
-          about merge operations.  When you commit local
-          modifications, the repository has no idea whether those
-          changes came from running <command>svn merge</command>, or
-          from just hand-editing the files.</para>
+        <para>Desafortunadamente, Subversion no es tal sistema. Al
+          igual que CVS, Subversion 1.0 no almacena ninguna
+          información sobre operaciones de fusionado. Cuando envía
+          sus cambios locales, el repositorio no tiene idea si esos
+          cambios vinieron de una ejecución del comando <command>svn
+          merge</command>, o de una modificación manual de los
+          ficheros.</para>
 
-        <para>What does this mean to you, the user?  It means that
-          until the day Subversion grows this feature, you'll have to
-          track merge information yourself.  The best place to do this
-          is in the commit log-message.  As demonstrated in the
-          earlier example, it's recommended that your log-message
-          mention a specific revision number (or range of revisions)
-          that are being merged into your branch.  Later on, you can
-          run <command>svn log</command> to review which changes your
-          branch already contains.  This will allow you to carefully
-          construct a subsequent <command>svn merge</command> command
-          that won't be redundant with previously ported
-          changes.</para>
+        <para>¿Qué significa esto para usted, el usuario? Significa
+          que hasta que llegue el día que Subversion desarrolle
+          esta característica, tendrá que gestionar usted mismo la
+          información de fusionado.  El mejor lugar para hacerlo
+          es en el informe de cambios cuando envía cambios al
+          repositorio. Tal y como se demostró en el ejemplo
+          anterior, es recomendable que su informe de cambios
+          mencione el número de revisión específico (o rango de
+          revisiones) que está siendo fusionado en su rama. Más
+          tarde, puede ejecutar <command>svn log</command> para
+          revisar qué cambios contiene ya su rama. Esto le permitirá
+          construir con cuidado siguientes comandos <command>svn
+          merge</command> que no serán redundantes con cambios
+          previamente portados.</para>
 
-        <para>In the next section, we'll show some examples of this
-          technique in action.</para>
+        <para>En la siguiente sección, le mostraremos algunos
+          ejemplos de esta técnica en acción.</para>
 
       </sect3>
       
       <sect3 id="svn-ch-4-sect-3.2.2">
-        <title>Previewing Merges</title>
+        <title>Visualización previa de fusiones</title>
         
-        <para>Because merging only results in local modifications,
-          it's not usually a high-risk operation.  If you get the
-          merge wrong the first time, simply <command>svn
-          revert</command> the changes and try again.</para>
+        <para>Dado que el fusionado sólo genera modificaciones
+          locales, normalmente no es una operación de alto riesgo. Si
+          se equivoca en el fusionado la primera vez, simplemente
+          ejecute <command>svn revert</command> para ignorar los
+          cambios y pruebe de nuevo.</para>
         
-        <para>It's possible, however, that your working copy might
-          already have local modifications.  The changes applied by a
-          merge will be mixed with your pre-existing ones, and running
-          <command>svn revert</command> is no longer an option.  The
-          two sets of changes may be impossible to separate.</para>
+        <para>Es posible, no obstante, que su copia local ya
+          tenga algunas modificaciones. Los cambios aplicados por
+          una fusión se mezclarán con sus modificaciones locales,
+          por lo que ejecutar <command>svn revert</command> ya no
+          es una opción. Los dos conjuntos de cambios quizás sean
+          imposibles de separar.</para>
 
-        <para>In cases like this, people take comfort in being able to
-          predict or examine merges before they happen.  One simple
-          way to do that is to run <command>svn diff</command> with
-          the same arguments you plan to pass to <command>svn
-          merge</command>, as we already showed in our first example
-          of merging.  Another method of previewing is to pass the
-          <option>--dry-run</option> option to the merge
-          command:</para>
+        <para>En casos como este, la gente se reconforta con la idea
+          de ser capaces de predecir o examinar las fusiones antes
+          de que ocurran. Una manera simple de hacerlo es ejecutar
+          <command>svn diff</command> con los mismos argumentos que
+          planea pasar a <command>svn merge</command>, tal y como
+          ya le enseñamos en el primer ejemplo de fusionado. Otro
+          método de visualización previa es pasar la opción
+          <option>--dry-run</option> al comando de fusionado:</para>
 
         <screen>
 $ svn merge --dry-run -r 343:344 http://svn.example.com/repos/calc/trunk
@@ -803,47 +808,55 @@ $ svn status
 #  nothing printed, working copy is still unchanged.
 </screen>
 
-        <para>The <option>--dry-run</option> option doesn't actually
-          apply any local changes to the working copy.  It only shows
-          status codes that <emphasis>would</emphasis> be printed in a
-          real merge.  It's useful for getting a <quote>high
-          level</quote> preview of the potential merge, for those
-          times when running <command>svn diff</command> gives too
-          much detail.</para>
+        <para>La opción <option>--dry-run</option> en realidad no
+          aplica ningún cambio a su copia local. Únicamente muestra
+          los códigos de estado que <emphasis>serían</emphasis>
+          mostrados durante una fusión de verdad.  Esto es útil
+          para obtener una visualización previa de <quote>alto
+          nivel</quote> de la potencial fusión, para aquellos
+          casos en los que ejecutar <command>svn diff</command>
+          proporcionaría demasiados detalles.</para>
 
       </sect3>
 
       <sidebar>
-        <title>Subversion and Changesets</title>
+        <title>Subversion y los changesets</title>
 
-        <para>Everyone seems to have a slightly different definition
-          of <quote>changeset</quote>, or a least a different
-          expectation of what it means for a version control system to
-          have <quote>changeset features</quote>.  For our purpose,
-          let's say that a changeset is just a collection of changes
-          with a unique name.  The changes might include textual edits
-          to file contents, modifications to tree structure, or tweaks
-          to metadata.  In more common speak, a changeset is just a
-          patch with a name you can refer to.</para>
+        <para>Todo el mundo parece tener una idea diferente de la
+          definición de <quote>changeset</quote>, o al
+          menos expectaciones diferentes sobre lo que
+          significa para un sistema de control de versiones
+          tener <quote>características de changeset</quote>.
+          Para nuestros propósitos, digamos que un changeset es una
+          colección de cambios con nombre único. Los cambios pueden
+          incluír ediciones textuales a los contenidos de un fichero,
+          modificaciones a la estructura de un directorio, o cambios
+          en los metadatos. En el habla habitual, un changeset es
+          un parche con un nombre al que se puede referir.</para>
 
-        <para>In Subversion, a global revision number N names a tree
-          in the repository: it's the way the repository looked after
-          the Nth commit.  It's also the name of an implicit
-          changeset: if you compare tree N with tree N-1, you can
-          derive the exact patch that was committed.  For this reason,
-          it's easy to think of <quote>revision N</quote> as not just
-          a tree, but a changeset as well.  If you use an issue
-          tracker to manage bugs, you can use the revision numbers to
-          refer to particular patches that fix bugs&mdash;for example,
-          <quote>this issue was fixed by revision 9238.</quote>.
-          Somebody can then run <command>svn log -r9238</command> to
-          read about the exact changeset which fixed the bug, and run
-          <command>svn diff -r9237:9238</command> to see the patch
-          itself.  And Subversion's merge command also uses revision
-          numbers.  You can merge specific changesets from one branch
-          to another by naming them in the merge arguments:
-          <command>svn merge -r9237:9238</command> would merge
-          changeset #9238 into your working copy.</para>
+        <para>En Subversion, un número global de revisión N nombra el
+          árbol en el repositorio: es la forma en la que quedó
+          el repositorio tras el cambio número N. También es el
+          nombre implícito de un changeset: si compara el árbol
+          N con el árbol N-1, puede derivar el parche exacto
+          cuyos cambios fueron hechos efectivos. Por esta razón,
+          es fácil pensar de la <quote>revisión N</quote> no
+          sólo como un árbol, sino también como un changeset. Si
+          usa un software de gestión de tareas <!-- TODO buscar
+          traducción issue tracker to manage bugs -->para tratar
+          fallos, puede usar los números de revisión para hacer
+          referencia a los parches específicos que corrigen
+          determinados fallos&mdash;por ejemplo, <quote>este
+          problema fue corregido en la revisión 9238.</quote>.
+          Entonces alguien puede ejecutar <command>svn log
+          -r9238</command> para obtener información del changeset
+          exacto que corrigió el problema, y ejecutar <command>svn
+          diff -r9237:9238</command> para ver el propio parche.
+          Y el comando de fusionado de Subversion también usa números
+          de revisión. Puede fusionar changesets específicos de una
+          rama a otra nombrándolos en los parámetros de fusionado:
+          <command>svn merge -r9237:9238</command> fusionaría el
+          changeset #9238 en su copia local.</para>
       </sidebar>
       
       <sect3 id="svn-ch-4-sect-3.2.3">

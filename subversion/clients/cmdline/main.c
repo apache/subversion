@@ -295,8 +295,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 
   { "export", svn_cl__export, {0},
     N_("Create an unversioned copy of a tree.\n"
-       "usage: 1. export [-r REV] URL [PATH]\n"
-       "       2. export [-r REV] PATH1 [PATH2]\n"
+       "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
+       "       2. export [-r REV] PATH1[@PEGREV] [PATH2]\n"
        "\n"
        "  1. Exports a clean directory tree from the repository specified by\n"
        "     URL, at revision REV if it is given, otherwise at HEAD, into\n"
@@ -313,7 +313,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        " all local\n"
        "     changes will be preserved, but files not under version "
        "control will\n"
-       "     not be copied.\n"),
+       "     not be copied.\n"
+       "\n"
+       "  If specified, PEGREV determines in which revision the target is "
+       "first\n"
+       "  looked up.\n"),
     {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt, svn_cl__native_eol_opt} },
 

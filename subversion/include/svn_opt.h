@@ -216,16 +216,14 @@ typedef struct svn_opt_revision_t
  * Set @a *start_revision and/or @a *end_revision according to @a arg, 
  * where @a arg is "N" or "N:M", like so:
  * 
- *    - If @a arg is "N", set @a *start_revision's kind to
- *      @c svn_opt_revision_number and its value to the number N; and
+ *    - If @a arg is "N", set @a *start_revision to represent N, and
  *      leave @a *end_revision untouched.
  *
- *    - If @a arg is "N:M", set @a *start_revision's and @a *end_revision's
- *      kinds to @c svn_opt_revision_number and values to N and M
- *      respectively. 
+ *    - If @a arg is "N:M", set @a *start_revision and @a *end_revision
+ *      to represent N and M respectively. 
  * 
  * N and/or M may be one of the special revision descriptors
- * recognized by @c revision_from_word().
+ * recognized by @c revision_from_word(), or a date in curly braces.
  *
  * If @a arg is invalid, return -1; else return 0.
  * It is invalid to omit a revision (as in, ":", "N:" or ":M").
@@ -234,6 +232,8 @@ typedef struct svn_opt_revision_t
  *
  * It is typical, though not required, for @a *start_revision and
  * @a *end_revision to be @c svn_opt_revision_unspecified kind on entry.
+ *
+ * Use @a pool for temporary allocations.
  */
 int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
                             svn_opt_revision_t *end_revision,
@@ -245,6 +245,23 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 /* Parsing arguments. */
 
 /**
+ * @since New in 1.2.
+ *
+ * Pull remaining target arguments from @a os into @a *targets_p, including
+ * targets stored in @a known_targets (which might come from, for
+ * example, the "--targets" command line option), converting them to
+ * UTF-8.  Allocate @a *targets_p and its elements in @a pool.
+ */
+svn_error_t *
+svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
+                               apr_getopt_t *os,
+                               apr_array_header_t *known_targets,
+                               apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
  * Pull remaining target arguments from @a os into @a *targets_p, including
  * targets stored in @a known_targets (which might come from, for
  * example, the "--targets" command line option), converting them to
@@ -252,10 +269,12 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
  *
  * If @a extract_revisions is set, then this function will attempt to
  * look for trailing "@rev" syntax on the paths.  If an @rev is found
- * for the first target in *TARGETS_P, it will overwrite the value of
- * @a *start_revision.  If an @rev is found for the second target in
- * *TARGETS_P,  it will overwrite @a *end_revision.  (Extra revisions 
- * beyond that are ignored.) 
+ * for the first target in @a *targets_p, it will be removed from the
+ * first target string and its value will overwrite the value of @a
+ * *start_revision.  If an @rev is found for the second target in @a
+ * *targets_p, it will be removed from the second target string and its
+ * value will overwrite @a *end_revision.  (Extra revisions beyond that
+ * are ignored.) 
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,

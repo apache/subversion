@@ -711,11 +711,11 @@ U   my-calc-branch/integer.c
           possible.</para>
 
         <para>Unfortunately, Subversion is not such a system.  Like
-          CVS, Subversion 1.0 does not yet record any information
-          about merge operations.  When you commit local
-          modifications, the repository has no idea whether those
-          changes came from running <command>svn merge</command>, or
-          from just hand-editing the files.</para>
+          CVS, Subversion does not yet record any information about
+          merge operations.  When you commit local modifications, the
+          repository has no idea whether those changes came from
+          running <command>svn merge</command>, or from just
+          hand-editing the files.</para>
 
         <para>What does this mean to you, the user?  It means that
           until the day Subversion grows this feature, you'll have to
@@ -816,7 +816,7 @@ $ svn status
           very likely hear reference to the term
           <firstterm>ancestry</firstterm>.  This word is used to
           describe the relationship between two objects in a
-          repository: if they're related to each other, than one
+          repository: if they're related to each other, then one
           object is said to be an ancestor of the other.</para>
 
         <para>For example, suppose you commit revision 100, which

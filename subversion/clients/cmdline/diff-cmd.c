@@ -98,11 +98,8 @@ svn_cl__diff (apr_getopt_t *os,
       /* The 'svn diff --old=OLD[@OLDREV] [--new=NEW[@NEWREV]]
          [PATH...]' case matches. */
 
-      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                             opt_state->targets,
-                                             NULL,
-                                             NULL,
-                                             FALSE, pool));
+      SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
+                                              opt_state->targets, pool));
 
       tmp = apr_array_make (pool, 2, sizeof (const char *));
       APR_ARRAY_PUSH (tmp, const char *) = (opt_state->old_target);
@@ -136,11 +133,8 @@ svn_cl__diff (apr_getopt_t *os,
 
       /* Here each target is a pegged object. Find out the starting
          and ending paths for each target. */
-      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                             opt_state->targets,
-                                             NULL,
-                                             NULL,
-                                             FALSE, pool));
+      SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
+                                              opt_state->targets, pool));
 
       svn_opt_push_implicit_dot_target (targets, pool);
 

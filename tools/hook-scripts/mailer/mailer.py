@@ -237,12 +237,11 @@ class Commit(Messenger):
     Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
 
     # get all the changes and sort by path
-    editor = svn.repos.RevisionChangeCollector(repos.fs_ptr, repos.rev,
-                                               self.pool)
+    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, self.pool)
 
-    self.changelist = editor.changes.items()
+    self.changelist = editor.get_changes().items()
     self.changelist.sort()
 
     ### hunh. this code isn't actually needed for StandardOutput. refactor?

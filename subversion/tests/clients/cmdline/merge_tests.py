@@ -1942,7 +1942,7 @@ def merge_binary_with_common_ancestry(sbox):
 #----------------------------------------------------------------------
 # A test for issue 1905
 def merge_funny_chars_on_path(sbox):
-  "merge with funny characters (issue #1995)"
+  "merge with funny characters (issue #1905)"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2052,8 +2052,8 @@ def merge_funny_chars_on_path(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       0, # please check props
-                                       1) # and do a dry-run also)
+                                       0, # don't check props
+                                       1) # but do a dry-run
 
   expected_output_dic = {}
   

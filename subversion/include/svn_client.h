@@ -532,7 +532,7 @@ svn_client_add2 (const char *path,
                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_client_add2(), but with the @a force parameter
  * always set to @c FALSE.
@@ -779,7 +779,7 @@ svn_client_log2 (const apr_array_header_t *targets,
 
 
 /**
- * @deprecated provided for compatibility with the 1.0.0 API
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_client_log2, but with the @a limit parameter set to 0.
  */
@@ -1088,7 +1088,10 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  apr_pool_t *pool);
 
 
-/** Move @a src_path to @a dst_path.
+/**
+ * @since New in 1.2.
+ *
+ * Move @a src_path to @a dst_path.
  *
  * @a src_path must be a file or directory under version control, or the
  * URL of a versioned item in the repository.  
@@ -1096,9 +1099,6 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  * If @a src_path is a repository URL:
  *
  *   - @a dst_path must also be a repository URL (existent or not).
- *
- *   - @a src_revision is used to choose the revision from which to copy 
- *     the @a src_path.
  *
  *   - the authentication baton in @a ctx and @a ctx->log_msg_func/@a 
  *     ctx->log_msg_baton are used to commit the move.
@@ -1110,8 +1110,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *
  *   - @a dst_path must also be a working copy path (existent or not).
  *
- *   - @a src_revision, and @a ctx->log_msg_func/@a ctx->log_msg_baton are 
- *     ignored.
+ *   - @a ctx->log_msg_func and @a ctx->log_msg_baton are ignored.
  *
  *   - This is a scheduling operation.  No changes will happen to the
  *     repository until a commit occurs.  This scheduling can be removed
@@ -1133,6 +1132,22 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  * the new location of the thing.
  *
  * ### Is this really true?  What about @c svn_wc_notify_commit_replaced? ### 
+ */ 
+svn_error_t *
+svn_client_move2 (svn_client_commit_info_t **commit_info,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t force,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1.0 API.
+ *
+ * Similar to @c svn_client_move2, but an extra argument @a src_revision
+ * must be passed.  This has no effect, but must be of kind
+ * @c svn_opt_revision_unspecified or @c svn_opt_revision_head,
+ * otherwise error @c SVN_ERR_UNSUPPORTED_FEATURE is returned.
  */ 
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
@@ -1383,7 +1398,7 @@ svn_client_revprop_list (apr_hash_t **props,
 
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Export the contents of either a subversion repository or a
  * subversion working copy into a 'clean' directory (meaning a
@@ -1397,6 +1412,9 @@ svn_client_revprop_list (apr_hash_t **props,
  *
  * @a to is the path to the directory where you wish to create the exported
  * tree.
+ *
+ * @a peg_revision is the revision where the path is first looked up
+ * when exporting from a repository.
  *
  * @a revision is the revision that should be exported, which is only used 
  * when exporting from a repository.
@@ -1417,6 +1435,25 @@ svn_client_revprop_list (apr_hash_t **props,
  * All allocations are done in @a pool.
  */ 
 svn_error_t *
+svn_client_export3 (svn_revnum_t *result_rev,
+                    const char *from,
+                    const char *to,
+                    svn_opt_revision_t *peg_revision,
+                    svn_opt_revision_t *revision,
+                    svn_boolean_t force, 
+                    const char *native_eol,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+
+/**
+ * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_export3, but with the @a peg_revision
+ * parameter always set to @c svn_opt_revision_unspecified.
+ */
+svn_error_t *
 svn_client_export2 (svn_revnum_t *result_rev,
                     const char *from,
                     const char *to,
@@ -1428,7 +1465,7 @@ svn_client_export2 (svn_revnum_t *result_rev,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_client_export2(), but with the @a native_eol parameter
  * always set to @c NULL.

@@ -44,10 +44,17 @@ class VCActions:
   def __init__(self):
     pass
   def add_file(self, path):
+    """Add an existing file to version control."""
     pass
   def remove_file(self, path):
+    """Remove an existing file from version control, and delete it."""
     pass
 
+
+class NoVCActions(VCActions):
+  def remove_file(self, path):
+    os.unlink(path)
+  
 
 class CVSActions(VCActions):
   def add_file(self, path):
@@ -55,7 +62,7 @@ class CVSActions(VCActions):
     try:
       dirname, basename = os.path.split(path)
       os.chdir(os.path.join(cwd, dirname))
-      os.system('cvs -Q add -m "Adding file to repository" ' + basename)
+      os.system('cvs -Q add -m "Adding file to repository" "%s"' % (basename))
     finally:
       os.chdir(cwd)
   def remove_file(self, path):
@@ -63,17 +70,17 @@ class CVSActions(VCActions):
     try:
       dirname, basename = os.path.split(path)
       os.chdir(os.path.join(cwd, dirname))
-      os.system('cvs -Q rm -f ' + basename)
+      os.system('cvs -Q rm -f "%s"' % (basename))
     finally:
       os.chdir(cwd)
 
 
 class SVNActions(VCActions):
   def add_file(self, path):
-    os.system('svn add --quiet ' + path)
+    os.system('svn add --quiet "%s"' % (path))
   def remove_file(self, path):
     os.remove(path)
-    os.system('svn rm --quiet --force ' + path)
+    os.system('svn rm --quiet --force "%s"' % (path))
 
     
 class hashDir:
@@ -150,8 +157,7 @@ talented scramble-tree.py script.
     print 'delete_file:', path
     if self.dry_run:
       return    
-    if self.vc_actions:
-      self.vc_actions.remove_file(path)
+    self.vc_actions.remove_file(path)
 
   def munge_file(self, path):
     # Only do something 33% of the time
@@ -165,8 +171,7 @@ talented scramble-tree.py script.
       if self.dry_run:
         return
       open(path, 'w').write(self.greeking)
-      if self.vc_actions:
-        self.vc_actions.add_file(path)
+      self.vc_actions.add_file(path)
 
 
 def usage(retcode=255):
@@ -194,7 +199,7 @@ def walker_callback(scrambler, dirname, fnames):
 
 def main():
   seed = None
-  vc_actions = None
+  vc_actions = NoVCActions()
   dry_run = 0
 
   # Mm... option parsing.

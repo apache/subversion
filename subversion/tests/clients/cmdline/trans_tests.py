@@ -343,7 +343,7 @@ def keywords_from_birth(sbox):
     ]
   
   fp = open(os.path.join(wc_dir, '.svn', 'text-base',
-			 'fixed_length_keywords.svn-base'), 'rb')
+			 'fixed_length_keywords.svn-base'), 'r')
   actual_textbase_kw = fp.readlines()
   fp.close()
   check_keywords(actual_textbase_kw, kw_textbase, "text base")

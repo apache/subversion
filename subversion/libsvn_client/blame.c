@@ -20,7 +20,6 @@
 
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"

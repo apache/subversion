@@ -164,7 +164,7 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_subst_copy_and_translate2 except that @a special is
  * always set to @c FALSE.

@@ -73,11 +73,8 @@ svn_cl__checkout (apr_getopt_t *os,
   const char *repos_url;
   int i;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* If there are no targets at all, then let's just give the user a
      friendly help message, rather than silently exiting.  */

@@ -164,7 +164,7 @@ svn_error_t * svn_repos_hotcopy (const char *src_path,
                                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
@@ -607,7 +607,7 @@ svn_repos_history2 (svn_fs_t *fs,
                     apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_repos_history(), but with @a authz_read_func and
  * @a authz_read_baton always set to NULL.
@@ -669,7 +669,7 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
 
 
 /**
- * @since new in 1.2.
+ * @since New in 1.2.
  *
  * Invoke @a receiver with @a receiver_baton on each log message from 
  * @a start to @a end in @a repos's filesystem.  @a start may be greater 
@@ -739,7 +739,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
 svn_repos_get_logs2 (svn_repos_t *repos,
@@ -755,7 +755,7 @@ svn_repos_get_logs2 (svn_repos_t *repos,
                      apr_pool_t *pool);
 
 /** 
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Same as to svn_repos_dump_fs2(), but with @a authz_read_func and
  * @a authz_read_baton always set to NULL.
@@ -944,7 +944,7 @@ svn_error_t *svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
                                             apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_repos_fs_change_rev_prop2(), but with the
  * @a authz_read_func parameter always NULL.
@@ -1229,7 +1229,7 @@ svn_error_t *svn_repos_dump_fs2 (svn_repos_t *repos,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
  * parameter always set to @c FALSE.
@@ -1440,7 +1440,7 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * A vtable that is driven by @c svn_repos_parse_dumpstream.  Lacks
  * the delete_node_property and apply_textdelta callbacks.
@@ -1473,7 +1473,7 @@ typedef struct svn_repos_parse_fns_t
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_repos_parse_dumpstream2, but uses the more limited
  * svn_repos_parser_fns_t vtable type.
@@ -1488,7 +1488,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_repos_get_fs_build_parser2, but yields the more
  * limited svn_repos_parser_fns_t vtable type.
