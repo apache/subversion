@@ -130,7 +130,6 @@ static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
                            mc->vsn_url_name, &vsn_url_str) );
 
   /* bump the revision and commit the file */
-  printf("closing: %s\n", path_str.data);
   return (*mc->close_commit)(mc->close_baton, &path_str, mc->rev);
 }
 
@@ -548,7 +547,6 @@ svn_error_t * svn_ra_dav__merge_activity(
     {
       svn_string_set(path_str,
                      APR_ARRAY_IDX(deleted_entries, i, const char *));
-      printf("closing: %s\n", path_str->data);
       SVN_ERR( (*close_commit)(close_baton, path_str, mc.rev) );
     }
 
