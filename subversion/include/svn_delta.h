@@ -64,10 +64,6 @@
 
 /*** Stuff used throughout the delta interface.  ***/
 
-/* The three possible delta-ish actions. */
-enum { svn_delta_add = 1, svn_delta_delete, svn_delta_replace };
-
-
 /* A typedef for functions resembling the POSIX `read' system call,
    representing a incoming stream of bytes, in caller-pulls form.
 
@@ -549,6 +545,11 @@ typedef struct svn_delta_walk_t
      more, so whatever resources it refers to may now be freed.  */
   svn_error_t *(*finish_file) (void *walk_baton,
                                void *file_baton);
+
+  /* All delta processing is done.  Call this, with the DIR_BATON for
+     the root directory of the changes. */
+  svn_error_t *(*finish_walk) (void *walk_baton,
+                               void *dir_baton);
 
 } svn_delta_walk_t;
 
