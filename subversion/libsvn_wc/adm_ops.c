@@ -533,14 +533,6 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
       
   if (is_file)
     {
-      /* ### sanity check: check for DELETED flag?? */
-
-      /* Remove NAME from PATH's entries file: */
-      svn_path_add_component (full_path, name, svn_path_local_style);
-      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
-      svn_wc__entry_remove (entries, name);
-      SVN_ERR (svn_wc__entries_write (entries, path, pool));
-
       if (destroy_wf)
         {
           /* Check for local mods. */
@@ -553,6 +545,7 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
           else
             {
               /* Remove the actual working file. */
+              svn_path_add_component (full_path, name, svn_path_local_style);
               apr_err = apr_file_remove (full_path->data, subpool);
               if (apr_err)
                 return svn_error_createf (apr_err, 0, NULL, subpool,
@@ -560,6 +553,12 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
                                           full_path->data);
             }
         }
+
+      /* Remove NAME from PATH's entries file: */
+      svn_path_add_component (full_path, name, svn_path_local_style);
+      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      svn_wc__entry_remove (entries, name);
+      SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
       /* Remove text-base/NAME, prop/NAME, prop-base/NAME, wcprops/NAME */
       {
