@@ -1620,16 +1620,17 @@ Committed revision 352.
         es una instantánea exacta de su copia local de
         trabajo&mdash;revisiones mezcladas, urls, y todo eso.</para>
 
-      <para>Other users have found interesting uses for this feature.
-        Sometimes there are situations where you have a bunch of local
-        changes made to your working copy, and you'd like a
-        collaborator to see them.  Instead of running <command>svn
-        diff</command> and sending a patchfile (which won't capture
-        tree changes), you can instead use <command>svn copy</command>
-        to <quote>upload</quote> your working copy to a private area
-        of the repository.  Your collaborator can then either checkout
-        a verbatim copy of your working copy, or use <command>svn
-        merge</command> to receive your exact changes.</para>
+      <para>Otros usuarios han encontrado usos interesantes de
+        esta característica.  A veces hay situaciones en las que
+        acaba de enviar al repositorio un grupo de cambios locales,
+        y querría que los viese un colaborador. En lugar de ejecutar
+        <command>svn diff</command> y enviar el fichero de parche
+        (el cual no captura cambios en el árbol), puede usar en su
+        lugar <command>svn copy</command> para <quote>subir</quote>
+        su copia local a un área privada del repositorio.  Entonces
+        su colaborador puede o bien obtener una copia tal cual de
+        su copia local, o bien usar <command>svn merge</command>
+        para recibir sus cambios exactos.</para>
 
     </sect2>
 
@@ -1639,15 +1640,17 @@ Committed revision 352.
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-7">
-    <title>Branch Maintenance</title>
+    <title>Mantenimiento de ramas</title>
 
-    <para>You may have noticed by now that Subversion is extremely
-      flexible.  Because it implements branches and tags with the same
-      underlying mechanism (directory copies), and because branches
-      and tags appear in normal filesystem space, many people find
-      Subversion intimidating.  It's almost <emphasis>too</emphasis>
-      flexible.  In this section, we'll offer some suggestions for
-      arranging and managing your data over time.</para>
+    <para>Habrá notado que Subversion es extremadamente
+      flexible. Dado que implementa ramas y etiquetas mediante el
+      mismo mecanismo (copias de directorio), y tanto las ramas como
+      las etiquetas aparecen en el espacio normal del sistema de
+      archivos, mucha gente encuentra Subversion intimidante. Es
+      incluso <emphasis>demasiado</emphasis> flexible.  En esta
+      sección le ofrecemos algunas sugerencias para agrupar <!--
+      TODO arrange != agrupar --> y gestionar sus datos a lo largo
+      del tiempo.</para>
 
     <sect2 id="svn-ch-4-sect-7.1">
       <title>Repository Layout</title>
