@@ -211,9 +211,12 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
                                        apr_pool_t *pool);
 
 
-/** The following functions are similar to their generic counterparts,
-  * but only work on Berkeley DB filesystems.  They are provided for
-  * compatibility with the Subversion 1.0 API. */
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * The following functions are similar to their generic counterparts,
+ * but only work on Berkeley DB filesystems.
+ */
 svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
 svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
