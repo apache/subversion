@@ -32,7 +32,7 @@ usage: switch REPOS_URL [TARGET]
 Valid options:
   -r [--revision] arg      : specify revision number ARG (or X:Y range)
   -D [--date] arg          : specify a date ARG (instead of a revision)
-  -n [--nonrecursive]      : operate on single directory only
+  -N [--nonrecursive]      : operate on single directory only
   --username arg           : specify a username ARG
   --password arg           : specify a password ARG
 

@@ -55,8 +55,8 @@ const apr_getopt_option_t svn_cl__options[] =
     {"--eek--",       '?', 0, "show help on a subcommand"},
     {"message",       'm', 1, "specify commit message \"ARG\""},
     {"quiet",         'q', 0, "print as little as possible"},
-    {"recursive",     svn_cl__recursive_opt, 0, "descend recursively"},
-    {"nonrecursive",  'n', 0, "operate on single directory only"},
+    {"recursive",     'R', 0, "descend recursively"},
+    {"nonrecursive",  'N', 0, "operate on single directory only"},
     {"revision",      'r', 1, "specify revision number ARG (or X:Y range)"},
     {"date",          'D', 1, "specify a date ARG (instead of a revision)"},
     {"file",          'F', 1, "read data from file ARG"},
@@ -125,14 +125,14 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: svn add [OPTIONS] [TARGETS]\n", 
-    {svn_cl__targets_opt, svn_cl__recursive_opt} },
+    {svn_cl__targets_opt, 'R'} },
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
     "usage: svn checkout REPOS_URL [DESTINATION]\n"
     "  Note: If DESTINATION is omitted, the basename of the REPOS_URL will\n"
     "  be used as the destination.\n",
-    {'r', 'D', 'q', 'n',
+    {'r', 'D', 'q', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt }  },
 
@@ -147,7 +147,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: svn commit [TARGETS]\n\n"
     "  Be sure to use one of -m or -F to send a log message;\n"
     "  the -r switch is only for use with --xml-file.\n",
-    {'m', 'F', 'q', 'n', svn_cl__targets_opt,
+    {'m', 'F', 'q', 'N', svn_cl__targets_opt,
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
   
@@ -192,7 +192,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "   2. if alternate syntax is used, the server compares URL1 and URL2\n"
     "      at revisions N and M respectively.  If either N or M are\n"
     "      ommitted, value of HEAD is assumed.\n",
-    {'r', 'D', 'x', 'n',
+    {'r', 'D', 'x', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
 
   { "export", svn_cl__export, {0},
@@ -225,14 +225,14 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    If no 3rd arg, copy top-level contents of PATH into REPOS_URL\n"
     "    directly.  Otherwise, create NEW_ENTRY underneath REPOS_URL and\n"
     "    begin copy there.  (-r is only needed if importing to --xml-file)\n",
-    {'F', 'm', 'q', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+    {'F', 'm', 'q', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
     "usage: svn info [PATH1 [PATH2] ...]\n\n"
     "    Print information about PATHs.\n",
-    {svn_cl__targets_opt, svn_cl__recursive_opt} },
+    {svn_cl__targets_opt, 'R'} },
  
   { "log", svn_cl__log, {0},
     "Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -262,7 +262,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    N and M default to HEAD if omitted.\n\n"
     "  * WCPATH is the working-copy path that will receive the changes.\n"
     "    If omitted, a default value of '.' is assumed.\n\n",
-    {'r', 'D', 'n', svn_cl__force_opt,
+    {'r', 'D', 'N', svn_cl__force_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
@@ -286,7 +286,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove property PROPNAME on files and directories.\n"
     "usage: propdel PROPNAME [TARGETS]\n",
-    {'q', svn_cl__recursive_opt} },
+    {'q', 'R'} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
@@ -296,12 +296,12 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of property PROPNAME on files or directories.\n"
     "usage: propget PROPNAME [TARGETS]\n",
-    {svn_cl__recursive_opt} },
+    {'R'} },
   
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties attached to files or directories.\n"
     "usage: proplist [TARGETS]\n",
-    {'v', svn_cl__recursive_opt} },
+    {'v', 'R'} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set property PROPNAME to PROPVAL on files or directories.\n"
@@ -325,14 +325,14 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "        whether to merge the file, and how to serve it from Apache.\n"
     "        A mimetype beginning with 'text/' (or an absent mimetype) is\n"
     "        treated as text.  Anything else is treated as binary.\n",
-    {'F', 'q', svn_cl__targets_opt, svn_cl__recursive_opt} },
+    {'F', 'q', svn_cl__targets_opt, 'R'} },
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
     "usage: revert TARGET1 [TARGET2 [TARGET3 ... ]]\n\n"
     "    Note:  this routine does not require network access, and \n"
     "    resolves any conflicted states.\n",
-    {svn_cl__targets_opt, svn_cl__recursive_opt} },
+    {svn_cl__targets_opt, 'R'} },
 
   { "resolve", svn_cl__resolve, {0},
     "Remove 'conflicted' state on working copy files or directories.\n"
@@ -340,7 +340,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    Note:  this routine does not semantically resolve conflict markers;\n"
     "    it merely removes conflict-related artifact files and allows TARGET\n"
     "    to be committed again.\n",
-    {svn_cl__targets_opt, svn_cl__recursive_opt} },
+    {svn_cl__targets_opt, 'R'} },
  
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"
@@ -353,14 +353,14 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    _                    965       938     kfogel      ./autogen.sh\n"
     "    _      *             965       970    sussman      ./build.conf\n"
     "    M                    965       687        joe      ./buildcheck.sh\n",
-    { 'u', 'v', 'n', 'q',
+    { 'u', 'v', 'N', 'q',
       svn_cl__auth_username_opt, svn_cl__auth_password_opt } },
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
     "usage: switch REPOS_URL [TARGET]\n\n"
     "   Note:  this is the way to move a working copy to a new branch.\n",
-    {'r', 'D', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'r', 'D', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -376,7 +376,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    U  Updated\n"
     "    C  Conflict\n"
     "    G  Merged\n",
-    {'r', 'D', 'n', svn_cl__auth_username_opt,
+    {'r', 'D', 'N', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__xml_file_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -1028,10 +1028,10 @@ main (int argc, const char * const *argv)
       case svn_cl__force_opt:
         opt_state.force = TRUE;
         break;
-      case svn_cl__recursive_opt:
+      case 'R':
         opt_state.recursive = TRUE;
         break;
-      case 'n':
+      case 'N':
         opt_state.nonrecursive = TRUE;
         break;
       case svn_cl__version_opt:
