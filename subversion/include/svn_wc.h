@@ -106,11 +106,12 @@ typedef struct svn_wc_status_t
 } svn_wc_status_t;
 
 
-/* Given a PATH to a working copy file or dir, return a STATUS
-   structure describing it.  All fields will be filled in _except_ for
-   the field containing the current repository revision; this will be
-   filled in by svn_client_status(), the primary caller of this
-   routine. */
+/* Given a PATH to a working copy files or dir, return a STATUSHASH
+   which maps names to status structures.  For each struct, all fields
+   will be filled in _except_ for the field containing the current
+   repository revision; this will be filled in by svn_client_status(),
+   the primary caller of this routine. */
+/* kff todo: this is gonna change real soon now. */
 svn_error_t *svn_wc_get_status (apr_hash_t *statushash,
                                 svn_string_t *path,
                                 apr_pool_t *pool);

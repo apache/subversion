@@ -1448,7 +1448,6 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
 
 
 
-/* Destroy an svn_delta_xml_parser_t when finished with it. */
 void 
 svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser)
 {
@@ -1457,10 +1456,6 @@ svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser)
 
 
 
-/* Parse LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
-   parsed, editor callbacks will be executed.  If this is the final
-   parser "push", ISFINAL must be set to true (so that both expat and
-   local cleanup can occur.)  */
 svn_error_t *
 svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
                           svn_delta_xml_parser_t *delta_parser)
@@ -1490,13 +1485,6 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
 
 
 
-/* Reads an XML stream from SOURCE_FN using expat internally,
-  validating the XML as it goes (according to Subversion's own
-  tree-delta DTD).  Whenever an interesting event happens, it calls a
-  caller-specified callback routine from EDITOR.  
-
-  Once called, it retains control and "pulls" data from SOURCE_FN
-  until either the stream runs out or it encounters an error. */
 svn_error_t *
 svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                           void *source_baton,

@@ -887,9 +887,6 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
 /*------------------------------------------------------------------*/
 /*** Public Interface:  svn_wc_crawl_local_mods() ***/
 
-/* Traverse a working copy beginning at ROOT_DIRECTORY, looking for
-   added, deleted, or modified files.  Communicate all local changes
-   to EDIT_FNS as they are discovered. */
 svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
                          svn_string_t *root_directory,
