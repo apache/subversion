@@ -23,19 +23,22 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Return a pointer to the ID of TXN.  The return value is live for as
-   long as TXN is.  */
-const char *svn_fs__txn_id (svn_fs_txn_t *txn);
+/* The private structure underlying the public svn_fs_txn_t typedef.  */
 
+struct svn_fs_txn_t
+{
+  /* The filesystem to which this transaction belongs.  */
+  svn_fs_t *fs;
 
-/* Return a pointer to the FS of TXN.  The return value is live for as
-   long as TXN is.  */
-svn_fs_t *svn_fs__txn_fs (svn_fs_txn_t *txn);
+  /* The revision on which this transaction is based, or
+     SVN_INVALID_REVISION if the transaction is not based on a
+     revision at all. */
+  svn_revnum_t base_rev;
 
-
-/* Return a pointer to the POOL of TXN.  Freeing this pool frees TXN
-   (but see svn_fs_close_txn).  */ 
-apr_pool_t *svn_fs__txn_pool (svn_fs_txn_t *txn);
+  /* The ID of this transaction --- a null-terminated string.
+     This is the key into the `transactions' table.  */
+  const char *id;
+};
 
 
 #ifdef __cplusplus

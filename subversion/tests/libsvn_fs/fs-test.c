@@ -103,7 +103,7 @@ test_commit_txn (svn_revnum_t *new_rev,
   const char *conflict;
   svn_error_t *err;
 
-  err = svn_fs_commit_txn (&conflict, new_rev, txn);
+  err = svn_fs_commit_txn (&conflict, new_rev, txn, pool);
 
   if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
     {
@@ -208,9 +208,6 @@ trivial_transaction (const char **msg,
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "Got a NULL txn name.");
 
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -225,6 +222,7 @@ reopen_trivial_transaction (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   const char *txn_name;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   *msg = "open an existing transaction by name";
 
@@ -234,17 +232,17 @@ reopen_trivial_transaction (const char **msg,
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-reopen-trivial-txn", pool));
 
   /* Begin a new transaction that is based on revision 0.  */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, subpool));
 
   /* Close the transaction. */
-  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
 
   /* Reopen the transaction by name */
-  SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
+  SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, subpool));
 
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
+  /* Close the transaction ... again. */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -276,9 +274,6 @@ create_file_transaction (const char **msg,
   
   /* Create a new file in the root directory. */
   SVN_ERR (svn_fs_make_file (txn_root, "beer.txt", pool));
-
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
 
   return SVN_NO_ERROR;
 }
@@ -380,6 +375,7 @@ verify_txn_list (const char **msg,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
+  apr_pool_t *subpool;
   svn_fs_txn_t *txn1, *txn2;
   const char *name1, *name2;
   apr_array_header_t *txn_list;
@@ -391,15 +387,17 @@ verify_txn_list (const char **msg,
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-verify-txn-list", pool));
 
-  /* Begin a new transaction, get its name, close it.  */
-  SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, pool));
+  /* Begin a new transaction, get its name (in the top pool), close it.  */
+  subpool = svn_pool_create (pool);
+  SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, subpool));
   SVN_ERR (svn_fs_txn_name (&name1, txn1, pool));
-  SVN_ERR (svn_fs_close_txn (txn1));
+  svn_pool_destroy (subpool);
 
-  /* Begin *another* transaction, get its name, close it.  */
-  SVN_ERR (svn_fs_begin_txn (&txn2, fs, 0, pool));
+  /* Begin *another* transaction, get its name (in the top pool), close it.  */
+  subpool = svn_pool_create (pool);
+  SVN_ERR (svn_fs_begin_txn (&txn2, fs, 0, subpool));
   SVN_ERR (svn_fs_txn_name (&name2, txn2, pool));
-  SVN_ERR (svn_fs_close_txn (txn2));
+  svn_pool_destroy (subpool);
 
   /* Get the list of active transactions from the fs. */
   SVN_ERR (svn_fs_list_transactions (&txn_list, fs, pool));
@@ -468,9 +466,6 @@ write_and_read_file (const char **msg,
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "data read != data written.");    
 
-  /* Clean up the repos. */
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -508,9 +503,6 @@ create_mini_tree_transaction (const char **msg,
   /* Now, create a file in our new directory. */
   SVN_ERR (svn_fs_make_file (txn_root, "keg/beer.txt", pool));
 
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -537,9 +529,6 @@ create_greek_tree_transaction (const char **msg,
 
   /* Create and verify the greek tree. */
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
 
   return SVN_NO_ERROR;
 }
@@ -641,9 +630,6 @@ list_directory (const char **msg,
       SVN_ERR (verify_entry (entries, "y"));
       SVN_ERR (verify_entry (entries, "z"));
     }
-
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
 
   return SVN_NO_ERROR;
 }
@@ -848,13 +834,12 @@ transaction_props (const char **msg,
       }
   }
   
-  /* Commit (and close) the transaction. */
+  /* Commit the transaction. */
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
   if (after_rev != 1)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
        "committed transaction got wrong revision number");
-  SVN_ERR (svn_fs_close_txn (txn));
 
   /* Obtain a list of all properties on the new revision, and make
      sure it matches the expected values.  If you're wondering, the
@@ -1007,9 +992,6 @@ node_props (const char **msg,
       }
   }
   
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -1283,7 +1265,7 @@ abort_txn (const char **msg,
     SVN_ERR (svn_fs_node_id (&t2_tau_id, txn2_root, "/A/D/G/tau", pool));
 
     /* Abort just txn2. */
-    SVN_ERR (svn_fs_abort_txn (txn2));
+    SVN_ERR (svn_fs_abort_txn (txn2, pool));
 
     /* Now test that all the nodes in txn2 at the time of the abort
      * are gone, but all of the ones in txn1 are still there. 
@@ -1372,12 +1354,7 @@ abort_txn (const char **msg,
           (SVN_ERR_FS_GENERAL, NULL,
            "txn name \"%s\" was recycled", txn3_name);
       }
-
-    SVN_ERR (svn_fs_close_txn (txn3));
   }
-
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn1));
 
   return SVN_NO_ERROR;
 }
@@ -1427,9 +1404,6 @@ fetch_youngest_rev (const char **msg,
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "couldn't fetch youngest revision");
 
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -1473,10 +1447,7 @@ basic_commit (const char **msg,
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
 
   /* Commit it. */
-  SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn));
-
-  /* Close the transaction */
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn, pool));
 
   /* Make sure it's a different revision than before. */
   if (after_rev == before_rev)
@@ -1505,6 +1476,7 @@ test_tree_node_validation (const char **msg,
   svn_fs_root_t *txn_root, *revision_root;
   svn_revnum_t after_rev;
   const char *conflict;
+  apr_pool_t *subpool;
 
   *msg = "testing tree validation helper";
 
@@ -1515,6 +1487,7 @@ test_tree_node_validation (const char **msg,
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-validate-tree-entries", pool));
 
   /* In a txn, create the greek tree. */
+  subpool = svn_pool_create (pool);
   {
     static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
@@ -1539,24 +1512,26 @@ test_tree_node_validation (const char **msg,
       { "A/D/H/psi",   "This is the file 'psi'.\n" },
       { "A/D/H/omega", "This is the file 'omega'.\n" }
     };
-
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-    SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+    SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
 
     /* Carefully validate that tree in the transaction. */
-    SVN_ERR (svn_test__validate_tree (txn_root, expected_entries, 20, pool));
+    SVN_ERR (svn_test__validate_tree (txn_root, expected_entries, 20, 
+                                      subpool));
 
-    /* Go ahead and commit the tree */
-    SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+    /* Go ahead and commit the tree, and destroy the txn object.  */
+    SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn, subpool));
 
     /* Carefully validate that tree in the new revision, now. */
-    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool));
-    SVN_ERR (svn_test__validate_tree (revision_root, expected_entries, 20, pool));
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, subpool));
+    SVN_ERR (svn_test__validate_tree (revision_root, expected_entries, 20, 
+                                      subpool));
   }
+  svn_pool_destroy (subpool);
 
   /* In a new txn, modify the greek tree. */
+  subpool = svn_pool_create (pool);
   {
     static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
@@ -1581,36 +1556,40 @@ test_tree_node_validation (const char **msg,
       { "A/D/I/epsilon", "This is the file 'epsilon'.\n" }
     };
 
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
     SVN_ERR (svn_test__set_file_contents 
-             (txn_root, "iota", "This is a new version of 'iota'.\n", pool));
-    SVN_ERR (svn_fs_delete (txn_root, "A/mu", pool));            
-    SVN_ERR (svn_fs_delete (txn_root, "A/D/G", pool));            
-    SVN_ERR (svn_fs_make_dir (txn_root, "A/D/I", pool));
-    SVN_ERR (svn_fs_make_file (txn_root, "A/D/I/delta", pool));
+             (txn_root, "iota", "This is a new version of 'iota'.\n", 
+              subpool));
+    SVN_ERR (svn_fs_delete (txn_root, "A/mu", subpool));            
+    SVN_ERR (svn_fs_delete (txn_root, "A/D/G", subpool));            
+    SVN_ERR (svn_fs_make_dir (txn_root, "A/D/I", subpool));
+    SVN_ERR (svn_fs_make_file (txn_root, "A/D/I/delta", subpool));
     SVN_ERR (svn_test__set_file_contents 
-             (txn_root, "A/D/I/delta", "This is the file 'delta'.\n", pool));
-    SVN_ERR (svn_fs_make_file (txn_root, "A/D/I/epsilon", pool));
+             (txn_root, "A/D/I/delta", "This is the file 'delta'.\n", 
+              subpool));
+    SVN_ERR (svn_fs_make_file (txn_root, "A/D/I/epsilon", subpool));
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/D/I/epsilon", "This is the file 'epsilon'.\n", 
-              pool));
-    SVN_ERR (svn_fs_make_file (txn_root, "A/C/kappa", pool));
+              subpool));
+    SVN_ERR (svn_fs_make_file (txn_root, "A/C/kappa", subpool));
     SVN_ERR (svn_test__set_file_contents 
-             (txn_root, "A/C/kappa", "This is the file 'kappa'.\n", pool));
+             (txn_root, "A/C/kappa", "This is the file 'kappa'.\n", 
+              subpool));
 
     /* Carefully validate that tree in the transaction. */
-    SVN_ERR (svn_test__validate_tree (txn_root, expected_entries, 19, pool));
+    SVN_ERR (svn_test__validate_tree (txn_root, expected_entries, 19, 
+                                      subpool));
     
-    /* Go ahead and commit the tree */
-    SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+    /* Go ahead and commit the tree, and destroy the txn object.  */
+    SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn, subpool));
 
     /* Carefully validate that tree in the new revision, now. */
-    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool));
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, subpool));
     SVN_ERR (svn_test__validate_tree (revision_root, expected_entries,
-                                      19, pool));
+                                      19, subpool));
   }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1687,7 +1666,6 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__validate_tree (revision_root, expected_entries, 
                                       20, pool));
   }
-  SVN_ERR (svn_fs_close_txn (txn));
   revisions[revision_count++] = after_rev;
 
   /* Let's add a directory and some files to the tree, and delete 
@@ -1741,7 +1719,6 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__validate_tree (revision_root, expected_entries, 
                                       23, pool));
   }
-  SVN_ERR (svn_fs_close_txn (txn));
   revisions[revision_count++] = after_rev;
 
   /* We don't think the A/D/H directory is pulling it's weight...let's
@@ -1785,7 +1762,6 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__validate_tree (revision_root, expected_entries, 
                                       20, pool));
   }
-  SVN_ERR (svn_fs_close_txn (txn));
   revisions[revision_count++] = after_rev;
 
   /* Delete iota (yet again). */
@@ -1824,7 +1800,6 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__validate_tree (revision_root, expected_entries, 
                                       19, pool));
   }
-  SVN_ERR (svn_fs_close_txn (txn));
   revisions[revision_count++] = after_rev;
 
   /***********************************************************************/
@@ -1931,7 +1906,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "theta", "This is another file 'theta'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/theta", pool));
-    SVN_ERR (svn_fs_abort_txn (txn));
+    SVN_ERR (svn_fs_abort_txn (txn, pool));
 
     /* (1) E exists in ANCESTOR, but has been deleted from B.  Can't
        occur, by assumption that E doesn't exist in ANCESTOR. */
@@ -1992,7 +1967,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/D/H/omega", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/H", pool));
-    SVN_ERR (svn_fs_abort_txn (txn));
+    SVN_ERR (svn_fs_abort_txn (txn, pool));
 
     /* E exists in both ANCESTOR and B ... */
     {
@@ -2028,7 +2003,7 @@ merging_commit (const char **msg,
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/zeta", pool));
       SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/H", pool));
-      SVN_ERR (svn_fs_abort_txn (txn));
+      SVN_ERR (svn_fs_abort_txn (txn, pool));
 
       /* (1) and refers to the same node revision.  Omit E from the
          merged tree.  This is already tested in Merge-Test 3
@@ -2136,7 +2111,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/mu", "This is the file 'mu'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/mu", pool));
-    SVN_ERR (svn_fs_abort_txn (txn));
+    SVN_ERR (svn_fs_abort_txn (txn, pool));
 
     /* (1) E exists in both ANCESTOR and B, but refers to different
        revisions of the same node.  Conflict. */
@@ -2145,7 +2120,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/mu", "A change to file 'mu'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/mu", pool));
-    SVN_ERR (svn_fs_abort_txn (txn));
+    SVN_ERR (svn_fs_abort_txn (txn, pool));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same
        node revision.  Replace E with A's node revision.  */
@@ -2260,7 +2235,7 @@ merging_commit (const char **msg,
              (txn_root, "A/B/lambda", "A different change to 'lambda'.\n", 
               pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/B/lambda", pool));
-    SVN_ERR (svn_fs_abort_txn (txn));
+    SVN_ERR (svn_fs_abort_txn (txn, pool));
 
     /* (1b) E exists in both ANCESTOR and B, but refers to different
        revisions of the same directory node.  Merge A/E and B/E,
@@ -2317,7 +2292,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/D/G/xi", "This is a different file 'xi'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/G/xi", pool));
-    SVN_ERR (svn_fs_abort_txn (txn));
+    SVN_ERR (svn_fs_abort_txn (txn, pool));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same node
        revision.  Replace E with A's node revision.  */
@@ -2397,7 +2372,7 @@ merging_commit (const char **msg,
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "iota", "New contents for 'iota'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, "/iota", pool));
-  SVN_ERR (svn_fs_abort_txn (txn));
+  SVN_ERR (svn_fs_abort_txn (txn, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2426,7 +2401,6 @@ copy_test (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
 
   /* In second txn, copy the file A/D/G/pi into the subtree A/D/H as
      pi2.  Change that file's contents to state its new name.  Along
@@ -2443,7 +2417,8 @@ copy_test (const char **msg,
     svn_revnum_t rev;
     const char *path;
     
-    SVN_ERR (svn_fs_copied_from (&rev, &path, txn_root, "A/D/H/pi2", pool));
+    SVN_ERR (svn_fs_copied_from (&rev, &path, txn_root, 
+                                 "A/D/H/pi2", pool));
 
     if (rev != after_rev)
       return svn_error_create
@@ -2458,7 +2433,6 @@ copy_test (const char **msg,
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "A/D/H/pi2", "This is the file 'pi2'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
 
   { /* Check that copy history is still preserved _after_ the commit. */
     svn_fs_root_t *root;
@@ -2486,7 +2460,6 @@ copy_test (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D/H/pi2", txn_root, "A/D/H/pi3", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
   { /* Check the copy history. */
     svn_fs_root_t *root;
     svn_revnum_t rev;
@@ -2529,7 +2502,6 @@ copy_test (const char **msg,
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "A/D/H/pi3", "This is the file 'pi3'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
   { /* Check the copy history. */
     svn_fs_root_t *root;
     svn_revnum_t rev;
@@ -2571,7 +2543,6 @@ copy_test (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D/H", txn_root, "H2", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
   { /* Check the copy history. */
     svn_fs_root_t *root;
     svn_revnum_t rev;
@@ -2617,7 +2588,6 @@ copy_test (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_copy (rev_root, "A/B", txn_root, "A/B/E/B", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
   { /* Check the copy history. */
     svn_fs_root_t *root;
     svn_revnum_t rev;
@@ -3046,9 +3016,6 @@ delete_mutables (const char **msg,
     SVN_ERR (check_id_absent (fs, iota_id, pool));
   }
 
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -3135,7 +3102,7 @@ delete (const char **msg,
     SVN_ERR (svn_test__validate_tree (txn_root, expected_entries, 18, pool));
   }
   /* Abort transaction.  */
-  SVN_ERR (svn_fs_abort_txn (txn));
+  SVN_ERR (svn_fs_abort_txn (txn, pool));
 
   /* 2. Delete mutable directory. */
 
@@ -3230,7 +3197,7 @@ delete (const char **msg,
   }
 
   /* Abort transaction.  */
-  SVN_ERR (svn_fs_abort_txn (txn));
+  SVN_ERR (svn_fs_abort_txn (txn, pool));
 
   /* 3. Delete mutable directory with immutable nodes. */
 
@@ -3242,8 +3209,7 @@ delete (const char **msg,
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
 
   /* Commit the greek tree. */
-  SVN_ERR (svn_fs_commit_txn (NULL, &new_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &new_rev, txn, pool));
 
   /* Create new transaction. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, new_rev, pool));
@@ -3339,7 +3305,7 @@ delete (const char **msg,
   }
 
   /* Abort transaction.  */
-  SVN_ERR (svn_fs_abort_txn (txn));
+  SVN_ERR (svn_fs_abort_txn (txn, pool));
 
   /* 4. Delete immutable file. */
 
@@ -3394,7 +3360,7 @@ delete (const char **msg,
   }
 
   /* Abort transaction.  */
-  SVN_ERR (svn_fs_abort_txn (txn));
+  SVN_ERR (svn_fs_abort_txn (txn, pool));
 
   /* 5. Delete immutable directory. */
 
@@ -3480,9 +3446,6 @@ delete (const char **msg,
     }
   }
 
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -3515,8 +3478,7 @@ commit_date (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, pool));
 
   after_commit = apr_time_now ();
 
@@ -3554,6 +3516,7 @@ check_old_revisions (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_revnum_t rev;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   *msg = "check old revisions";
 
@@ -3564,11 +3527,11 @@ check_old_revisions (const char **msg,
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-old-revisions", pool));
 
   /* Commit a greek tree. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, subpool));
+  svn_pool_clear (subpool);
 
   /* Modify and commit iota a few times, then test to see if we can
      retrieve all the committed revisions. */
@@ -3598,52 +3561,52 @@ not a dot, will pass from the law until all is accomplished."
 #define iota_contents_7 "This is the file 'iota'.\n"
 
     /* Revision 2. */
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
     SVN_ERR (svn_test__set_file_contents
-             (txn_root, "iota", iota_contents_2, pool));
-    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+             (txn_root, "iota", iota_contents_2, subpool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, subpool));
+    svn_pool_clear (subpool);
     
     /* Revision 3. */
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
     SVN_ERR (svn_test__set_file_contents
-             (txn_root, "iota", iota_contents_3, pool));
-    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+             (txn_root, "iota", iota_contents_3, subpool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, subpool));
+    svn_pool_clear (subpool);
     
     /* Revision 4. */
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
     SVN_ERR (svn_test__set_file_contents
-             (txn_root, "iota", iota_contents_4, pool));
-    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+             (txn_root, "iota", iota_contents_4, subpool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, subpool));
+    svn_pool_clear (subpool);
     
     /* Revision 5. */
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
     SVN_ERR (svn_test__set_file_contents
-             (txn_root, "iota", iota_contents_5, pool));
-    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+             (txn_root, "iota", iota_contents_5, subpool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, subpool));
+    svn_pool_clear (subpool);
     
     /* Revision 6. */
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
     SVN_ERR (svn_test__set_file_contents
-             (txn_root, "iota", iota_contents_6, pool));
-    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+             (txn_root, "iota", iota_contents_6, subpool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, subpool));
+    svn_pool_clear (subpool);
 
     /* Revision 7. */
-    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, pool));
-    SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+    SVN_ERR (svn_fs_begin_txn (&txn, fs, rev, subpool));
+    SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
     SVN_ERR (svn_test__set_file_contents
-             (txn_root, "iota", iota_contents_7, pool));
-    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn));
-    SVN_ERR (svn_fs_close_txn (txn));
+             (txn_root, "iota", iota_contents_7, subpool));
+    SVN_ERR (svn_fs_commit_txn (NULL, &rev, txn, subpool));
+    svn_pool_clear (subpool);
 
     /** Now check the full Greek Tree in all of those revisions,
         adjusting `iota' for each one. ***/
@@ -3866,6 +3829,7 @@ not a dot, will pass from the law until all is accomplished."
     }
   }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -3918,6 +3882,7 @@ check_all_revisions (const char **msg,
   svn_revnum_t youngest_rev;
   svn_test__tree_t expected_trees[5]; /* one tree per commit, please */
   svn_revnum_t revision_count = 0;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   *msg = "after each commit, check all revisions";
 
@@ -3933,16 +3898,16 @@ check_all_revisions (const char **msg,
   {
     expected_trees[revision_count].num_entries = 0;
     expected_trees[revision_count].entries = 0;
-    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, subpool));
     revision_count++;
   }
+  svn_pool_clear (subpool);
 
   /* Create and commit the greek tree. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
 
   /***********************************************************************/
   /* REVISION 1 */
@@ -3973,15 +3938,16 @@ check_all_revisions (const char **msg,
     };
     expected_trees[revision_count].entries = expected_entries;
     expected_trees[revision_count].num_entries = 20;
-    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, subpool));
     revision_count++;
   }
+  svn_pool_clear (subpool);
 
   /* Make a new txn based on the youngest revision, make some changes,
      and commit those changes (which makes a new youngest
      revision). */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   {
     static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/delta",     "This is the file 'delta'.\n" },
@@ -3995,10 +3961,10 @@ check_all_revisions (const char **msg,
       { 'e', "iota",        "Changed file 'iota'.\n" },
       { 'e', "A/D/G/rho",   "Changed file 'rho'.\n" }
     };
-    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 10, pool));
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 10, 
+                                        subpool));
   }
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
 
   /***********************************************************************/
   /* REVISION 2 */
@@ -4029,15 +3995,16 @@ check_all_revisions (const char **msg,
     };
     expected_trees[revision_count].entries = expected_entries;
     expected_trees[revision_count].num_entries = 20;
-    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, subpool));
     revision_count++;
   } 
+  svn_pool_clear (subpool);
 
   /* Make a new txn based on the youngest revision, make some changes,
      and commit those changes (which makes a new youngest
      revision). */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   {
     static svn_test__txn_script_command_t script_entries[] = {
       { 'a', "A/mu",        "Re-added file 'mu'.\n" },
@@ -4045,10 +4012,10 @@ check_all_revisions (const char **msg,
       { 'd', "iota",        "" },
       { 'e', "A/delta",     "This is the file 'delta'.\nLine 2.\n" }
     };
-    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 4, pool));
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 4, 
+                                        subpool));
   }
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
 
   /***********************************************************************/
   /* REVISION 3 */
@@ -4080,24 +4047,24 @@ check_all_revisions (const char **msg,
     };
     expected_trees[revision_count].entries = expected_entries;
     expected_trees[revision_count].num_entries = 21;
-    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, subpool));
     revision_count++;
   }
+  svn_pool_clear (subpool);
 
   /* Make a new txn based on the youngest revision, make some changes,
      and commit those changes (which makes a new youngest
      revision). */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   {
     static svn_test__txn_script_command_t script_entries[] = {
       { 'c', "A/D/G",        "A/D/G2" },
       { 'c', "A/epsilon",    "A/B/epsilon" },
     };
-    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 2, pool));
+    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 2, subpool));
   }
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
 
   /***********************************************************************/
   /* REVISION 4 */
@@ -4133,9 +4100,10 @@ check_all_revisions (const char **msg,
     };
     expected_trees[revision_count].entries = expected_entries;
     expected_trees[revision_count].num_entries = 25;
-    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, pool));
+    SVN_ERR (validate_revisions (fs, expected_trees, revision_count, subpool));
     revision_count++;
   }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -4278,7 +4246,6 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
      match.  */
 
   /* Create a big, ugly, pseudo-random-filled file and commit it.  */
-  svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_fs_make_file (txn_root, "bigfile", subpool));
@@ -4287,13 +4254,12 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  svn_pool_clear (subpool);
 
   /* Now, let's make some edits to the beginning of our file, and
      commit those. */
-  svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   random_data_to_buffer (content_buffer, 20, TRUE, seed);
@@ -4301,12 +4267,11 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  svn_pool_clear (subpool);
 
   /* Now, let's make some edits to the end of our file. */
-  svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE, seed);
@@ -4314,13 +4279,12 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  svn_pool_clear (subpool);
 
   /* How about some edits to both the beginning and the end of the
      file? */
-  svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   random_data_to_buffer (content_buffer, 20, TRUE, seed);
@@ -4329,16 +4293,15 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+  svn_pool_clear (subpool);
 
   /* Alright, now we're just going to go crazy.  Let's make many more
      edits -- pseudo-random numbers and offsets of bytes changed to
      more pseudo-random values.  */
   for (j = youngest_rev; j < 30; j = youngest_rev)
     {
-      svn_pool_clear (subpool);
       SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
       random_data_to_buffer (content_buffer, filesize, FALSE, seed);
@@ -4347,9 +4310,9 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
                                        "bigfile", NULL, NULL, subpool));
       SVN_ERR (svn_txdelta_send_string 
                (&contents, wh_func, wh_baton, subpool));
-      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-      SVN_ERR (svn_fs_close_txn (txn));
+      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
       memcpy (digest_list[youngest_rev], digest, MD5_DIGESTSIZE);
+      svn_pool_clear (subpool);
     }
 
   /* Now, calculate an MD5 digest for the contents of our big ugly
@@ -4358,13 +4321,13 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
      commit. */
   for (j = youngest_rev; j > 0; j--)
     {
-      svn_pool_clear (subpool);
       SVN_ERR (svn_fs_revision_root (&rev_root, fs, j, subpool));
       SVN_ERR (get_file_digest (digest, rev_root, "bigfile", subpool));
       if (memcmp (digest, digest_list[j], MD5_DIGESTSIZE))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            "MD5 checksum failure, revision %" SVN_REVNUM_T_FMT, j);
+      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);
@@ -4419,6 +4382,7 @@ check_root_revision (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev, test_rev;
+  apr_pool_t *subpool = svn_pool_create (pool);
   int i;
 
   *msg = "ensure accurate storage of root node";
@@ -4430,44 +4394,46 @@ check_root_revision (const char **msg,
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-root-revision", pool));
 
   /* Create and commit the greek tree. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
 
   /* Root node's revision should be the same as YOUNGEST_REV. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
-  SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool)); 
+  SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", subpool));
   if (test_rev != youngest_rev)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
        "Root node in revision %" SVN_REVNUM_T_FMT
        " has unexpected stored revision %" SVN_REVNUM_T_FMT,
        youngest_rev, test_rev);
+  svn_pool_clear (subpool);
 
   for (i = 0; i < 10; i++)
     {
       /* Create and commit the greek tree. */
-      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
       SVN_ERR (svn_test__set_file_contents 
                (txn_root, "iota", 
-                apr_psprintf (pool, "iota version %d", i + 2), pool));
+                apr_psprintf (subpool, "iota version %d", i + 2), subpool));
 
-      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-      SVN_ERR (svn_fs_close_txn (txn));
+      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
 
       /* Root node's revision should be the same as YOUNGEST_REV. */
-      SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
-      SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool)); 
+      SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", subpool));
       if (test_rev != youngest_rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            "Root node in revision %" SVN_REVNUM_T_FMT
            " has unexpected stored revision %" SVN_REVNUM_T_FMT,
            youngest_rev, test_rev);
+      svn_pool_clear (subpool);
     }
+
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -4490,13 +4456,13 @@ verify_path_revs (svn_fs_root_t *root,
 
   for (i = 0; i < num_path_revs; i++)
     {
+      svn_pool_clear (subpool);
       SVN_ERR (svn_fs_node_created_rev (&rev, root, args[i].path, subpool));
       if (rev != args[i].rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
-           "verify_path_revs: '%s' has created rev '%"
-           SVN_REVNUM_T_FMT "' (expected '%"
-           SVN_REVNUM_T_FMT "')",
+           "verify_path_revs: '%s' has created rev '%" SVN_REVNUM_T_FMT "' "
+           "(expected '%" SVN_REVNUM_T_FMT "')", 
            args[i].path, rev, args[i].rev);
     }
 
@@ -4566,8 +4532,7 @@ test_node_created_rev (const char **msg,
   SVN_ERR (verify_path_revs (txn_root, path_revs, 20, subpool));
 
   /* Now commit the transaction. */
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
 
   /* Now, we have a new revision, and all paths in it should have a
      created rev of 1.  Verify this. */
@@ -4602,8 +4567,7 @@ test_node_created_rev (const char **msg,
   path_revs[1].rev = SVN_INVALID_REVNUM; /* iota */
   SVN_ERR (verify_path_revs (txn_root, path_revs, 20, subpool));
   /* commit transaction */
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   /* get a revision root for the new revision */
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
   /* verify created revs */
@@ -4627,8 +4591,7 @@ test_node_created_rev (const char **msg,
   path_revs[20].rev = SVN_INVALID_REVNUM; /* omega */
   SVN_ERR (verify_path_revs (txn_root, path_revs, 20, subpool));
   /* commit transaction */
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   /* get a revision root for the new revision */
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
   /* verify created revs */
@@ -4638,7 +4601,6 @@ test_node_created_rev (const char **msg,
   path_revs[17].rev = 3; /* H */
   path_revs[20].rev = 3; /* omega */
   SVN_ERR (verify_path_revs (rev_root, path_revs, 20, subpool));
-
 
   /* Destroy the per-commit subpool. */
   svn_pool_destroy (subpool);
@@ -4693,22 +4655,19 @@ check_related (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_fs_make_file (txn_root, "A", subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "A", "1", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 2 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "A", "2", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 3 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "A", "3", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 4 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
@@ -4720,16 +4679,14 @@ check_related (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, subpool));
   SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "C", subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "C", "4", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 5 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "B", "5", subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "C", "5", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 6 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
@@ -4739,8 +4696,7 @@ check_related (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, 5, subpool));
   SVN_ERR (svn_fs_copy (rev_root, "B", txn_root, "D", subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "D", "5", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 7 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
@@ -4748,15 +4704,13 @@ check_related (const char **msg,
   SVN_ERR (svn_test__set_file_contents (txn_root, "D", "7", subpool));
   SVN_ERR (svn_fs_make_file (txn_root, "E", subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "E", "7", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 8 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "E", "8", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 9 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
@@ -4764,17 +4718,16 @@ check_related (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, 8, subpool));
   SVN_ERR (svn_fs_copy (rev_root, "E", txn_root, "F", subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "F", "9", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
   svn_pool_clear (subpool);
   /* Revision 10 */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "F", "10", subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
   
-  /*** Step II: Exhausively verify relationship between all nodes in
+  /*** Step II: Exhaustively verify relationship between all nodes in
        existence. */
   {
     int i, j;
@@ -4946,8 +4899,7 @@ branch_test (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
   
   /*** Revision 2:  Copy A/D/G/rho to A/D/G/rho2.  ***/
@@ -4955,8 +4907,7 @@ branch_test (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D/G/rho", txn_root, "A/D/G/rho2", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   /*** Revision 3:  Copy A/D/G to A/D/G2.  ***/
@@ -4964,8 +4915,7 @@ branch_test (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   /*** Revision 4:  Copy A/D to A/D2.  ***/
@@ -4973,8 +4923,7 @@ branch_test (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   /*** Revision 5:  Edit all the rho's! ***/
@@ -4997,25 +4946,7 @@ branch_test (const char **msg,
                                         "Edited text.", spool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho2", 
                                         "Edited text.", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
-  svn_pool_clear (spool);
-
-#if 0
-  {
-    const svn_fs_id_t *G2_id, *G2_rho_id, *G2_rho2_id;
-
-    /* Now, A/D/G and A/D/G2 should have the same NodeId, but A/D/G2
-       should have earned a new CopyId.  Also, A/D/G/rho and
-       A/D/G/rho2 should be the same nodes as A/D/G2/rho and
-       A/D/G2/rho2, respectively.  */
-    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-    SVN_ERR (svn_fs_node_id (&G2_id, rev_root, "A/D/G2", spool));
-    SVN_ERR (svn_fs_node_id (&G2_rho_id, rev_root, "A/D/G2/rho", spool));
-    SVN_ERR (svn_fs_node_id (&G2_rho2_id, rev_root, "A/D/G2/rho2", spool));
-  }
-  svn_pool_clear (spool);
-#endif /* 0 */
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
 
   svn_pool_destroy (spool);
 
@@ -5062,8 +4993,6 @@ verify_checksum (const char **msg,
        svn_md5_digest_to_cstring (expected_digest, pool),
        svn_md5_digest_to_cstring (actual_digest, pool));
 
-  SVN_ERR (svn_fs_close_txn (txn));
-
   return SVN_NO_ERROR;
 }
 
@@ -5090,8 +5019,7 @@ create_within_copy (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   /*** Revision 2:  Copy A/D to A/D3 ***/
@@ -5099,8 +5027,7 @@ create_within_copy (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D3", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   /*** Revision 3:  Copy A/D/G to A/D/G2 ***/
@@ -5108,8 +5035,7 @@ create_within_copy (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   /*** Revision 4: Copy A/D to A/D2 and create up and I in the existing
@@ -5118,23 +5044,21 @@ create_within_copy (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D/G2/I", pool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G2/up", pool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/I", pool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/up", pool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/G2/I", pool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/G2/up", pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D/G2/I", spool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G2/up", spool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/I", spool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/up", spool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/G2/I", spool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/G2/up", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   /*** Revision 5:  Create A/D3/down and A/D3/J ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D3/down", pool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D3/J", pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D3/down", spool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D3/J", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
   svn_pool_clear (spool);
 
   {
@@ -5191,7 +5115,7 @@ skip_deltas (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
-  apr_pool_t *subpool;
+  apr_pool_t *subpool = svn_pool_create (pool);
   svn_revnum_t youngest_rev = 0;
   const char *one_line = "This is a line in file 'f'.\n";
   svn_stringbuf_t *f = svn_stringbuf_create (one_line, pool); 
@@ -5205,15 +5129,14 @@ skip_deltas (const char **msg,
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-skip-deltas", pool));
 
   /* Create the file. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_make_file (txn_root, "f", pool));
-  SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "f", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
 
   /* Now, commit changes to the file 128 times. */
-  subpool = svn_pool_create (pool);
   while (youngest_rev <= 128)
     {
       /* Append another line to the ever-growing file contents. */
@@ -5223,9 +5146,7 @@ skip_deltas (const char **msg,
       SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
       SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, subpool));
-      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-      SVN_ERR (svn_fs_close_txn (txn));
-
+      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
       svn_pool_clear (subpool);
     }
 
@@ -5233,17 +5154,12 @@ skip_deltas (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, pool));
   SVN_ERR (svn_test__get_file_contents (rev_root, "f", &f, pool));
   if (strcmp (one_line, f->data) != 0)
-    {
-      return svn_error_createf
-        (SVN_ERR_TEST_FAILED, NULL,
-         "wrong contents for revision 1 of file 'f'.\n"
-         "Expected:\n"
-         "   '%s'\n"
-         "Got:\n"
-         "   '%s'\n",
-         one_line, f->data);
-    }
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL, 
+       "Wrong contents.  Expected:\n   '%s'\nGot:\n   '%s'\n", 
+       one_line, f->data);
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -5290,8 +5206,7 @@ redundant_copy (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, pool));
 
   /* In a transaction, copy A to Z. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));

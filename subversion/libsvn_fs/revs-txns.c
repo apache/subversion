@@ -21,6 +21,7 @@
 #include "err.h"
 #include "trail.h"
 #include "id.h"
+#include "txn.h"
 #include "revs-txns.h"
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
@@ -428,7 +429,7 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
 {
   struct txn_proplist_args args;
   apr_hash_t *table;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
+  svn_fs_t *fs = txn->fs;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
@@ -450,7 +451,7 @@ svn_fs_txn_prop (svn_string_t **value_p,
 {
   struct txn_proplist_args args;
   apr_hash_t *table;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
+  svn_fs_t *fs = txn->fs;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
@@ -522,7 +523,7 @@ svn_fs_change_txn_prop (svn_fs_txn_t *txn,
                         apr_pool_t *pool)
 {
   struct change_txn_prop_args args;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
+  svn_fs_t *fs = txn->fs;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
