@@ -336,6 +336,10 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       for (i = 0; path1[i] && path2[i] && (path1[i] == path2[i]); i++)
         ;
 
+      /* Make sure the prefix is made of whole components. (Issue #1771) */
+      for ( ; (i > 0) && (path1[i] != '/'); i--)
+         ;
+
       path1 = path1 + i;
       path2 = path2 + i;
 
