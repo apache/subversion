@@ -310,7 +310,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
 
   /* if our caller is interested in having access to this parser, call
      the SET_PARSER callback with BATON. */
-  if (set_parser)
+  if (set_parser != NULL)
     set_parser(success_parser, baton);
 
   /* create a parser to read the <D:error> response body */
