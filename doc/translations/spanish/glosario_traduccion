@@ -116,4 +116,10 @@ schedule -> programa o planifica
     Parece más correcta la opción programa, en el sentido de pensar en
     hacer algo.
     schedule foo to be added -> programa la adición de foo
-    
+
+changeset -> ???
+    Aparentemente conjunto de cambios. No puede ser traducido
+    como parche, el libro inglés indica que un "changeset" es un
+    parche con nombre único. Por ahora dejar en "changeset", ya se
+    buscará algo en el futuro. Para ver la descripción del libro,
+    buscar en ch04.xml la frase "Subversion y los changesets".
