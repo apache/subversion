@@ -514,19 +514,23 @@ static svn_error_t *
 ra_close_commit (void *close_baton,
 		 svn_stringbuf_t *path,
 		 svn_boolean_t recurse,
-		 svn_revnum_t new_rev)
+		 svn_revnum_t new_rev,
+		 const char *rev_date,
+		 const char *rev_author)
 {
   struct close_commit_baton_t *bt = close_baton;
   int error;
-  VALUE args[5];
+  VALUE args[7];
 
   args[0] = bt->proc;
   args[1] = (VALUE) "call";
   args[2] = rb_str_new (path->data, path->len);
   args[3] = recurse ? Qtrue : Qfalse;
   args[4] = LONG2NUM (new_rev);
+  args[5] = rb_str_new2 (rev_date);
+  args[6] = rb_str_new2 (rev_author);
 
-  rb_protect (svn_ruby_protect_call3, (VALUE) args, &error);
+  rb_protect (svn_ruby_protect_call5, (VALUE) args, &error);
 
   if (error)
     return svn_ruby_error ("close commit function", bt->pool);
