@@ -1,7 +1,3 @@
-Crear scripts que monitorizan los últimos accesos de escritura
-al servidor para indicar traducciones bloqueadas, y finalmente,
-traductores que ya no colaboran con el proyecto.
-
 Mandar mensajes periódicos a la lista de correo indicando el estado
 de la traducción y buscando revisores.
 
