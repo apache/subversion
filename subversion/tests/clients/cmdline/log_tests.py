@@ -57,14 +57,24 @@ path_index = svntest.actions.path_index
 ######################################################################
 
 
+
 ######################################################################
-# Utilities
+# Globals
 #
 
 # These variables are set by guarantee_repos_and_wc().
 max_revision = 0    # Highest revision in the repos
 repos_path = None   # Where is the repos
 wc_path = None      # Where is the working copy
+
+# What separates log msgs from one another in raw log output.
+msg_separator = '------------------------------------' \
+                + '------------------------------------'
+
+
+######################################################################
+# Utilities
+#
 
 def guarantee_repos_and_wc():
   "Make a repository and working copy, commit max_revision revisions."
@@ -100,60 +110,135 @@ def guarantee_repos_and_wc():
 
   # Revision 2: edit iota
   svntest.main.file_append (iota_path, "2")
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 2")
+  svntest.main.run_svn (None, 'up')
 
   # Revision 3: edit A/D/H/omega, A/D/G/pi, A/D/G/rho, and A/B/E/alpha
   svntest.main.file_append (omega_path, "3")
   svntest.main.file_append (pi_path, "3")
   svntest.main.file_append (rho_path, "3")
   svntest.main.file_append (alpha_path, "3")
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 3")
+  svntest.main.run_svn (None, 'up')
 
   # Revision 4: edit iota again, add A/C/epsilon
   svntest.main.file_append (iota_path, "4")
   svntest.main.file_append (epsilon_path, "4")
   svntest.main.run_svn (None, 'add', epsilon_path)
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 4")
+  svntest.main.run_svn (None, 'up')
 
   # Revision 5: edit A/C/epsilon, delete A/D/G/rho
   svntest.main.file_append (epsilon_path, "5")
   svntest.main.run_svn (None, 'rm', rho_path)
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 5")
+  svntest.main.run_svn (None, 'up')
 
   # Revision 6: prop change on A/B, edit A/D/H/psi
   svntest.main.run_svn (None, 'ps', 'blue', 'azul', B_path)  
   svntest.main.file_append (psi_path, "6")
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 6")
+  svntest.main.run_svn (None, 'up')
 
   # Revision 7: edit A/mu, prop change on A/mu
   svntest.main.file_append (mu_path, "7")
   svntest.main.run_svn (None, 'ps', 'red', 'burgundy', mu_path)
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 7")
+  svntest.main.run_svn (None, 'up')
 
   # Revision 8: edit iota yet again, re-add A/D/G/rho
   svntest.main.file_append (iota_path, "8")
   svntest.main.file_append (rho_path, "8")
   svntest.main.run_svn (None, 'add', rho_path)
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 8")
+  svntest.main.run_svn (None, 'up')
 
   # Revision 9: edit A/B/E/beta, delete A/B/E/alpha
   svntest.main.file_append (beta_path, "9")
   svntest.main.run_svn (None, 'rm', alpha_path)
+  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 9")
+  svntest.main.run_svn (None, 'up')
 
-
-  fooo
-  status_list = svntest.actions.get_virginal_status_list (wc_path, '2')
-  for item in status_list:
-    item[3]['repos_rev'] = '2'
-    if (item[0] == iota_path):
-      item[3]['wc_rev'] = '2'
-      item[3]['status'] = '__'
-  expected_status_tree = svntest.tree.build_generic_tree (status_list)
-  return svntest.actions.run_and_verify_commit (wc_path,
-                                                expected_output_tree,
-                                                expected_status_tree,
-                                                None,
-                                                None, None,
-                                                None, None,
-                                                omega_path)
-
-
+  ### todo: Here, Ben is going to insert some code to check status.
+  ### Thanks Ben!  We love Ben!  Yay Ben!  <thud>
 
   # Restore.
   os.chdir (was_cwd)
+
+
+def parse_log_output(log_lines):
+  """Return a log chain derived from LOG_LINES.
+  A log chain is a list of hashes; each hash represents one log
+  message, in the order it appears in LOG_LINES (the first log
+  message in the data is also the first element of the list, and so
+  on).
+
+  Each hash contains the following keys/values:
+
+     'revision' ===>  number
+     'author'   ===>  string
+     'date'     ===>  string
+     'msg'      ===>  string  (the log message itself)
+
+  If LOG_LINES contains changed-path information, then the hash
+  also contains
+
+     'paths'    ===>  list of strings
+
+     """
+
+  # Here's some log output to look at while writing this function:
+  
+  # ------------------------------------------------------------------------
+  # rev 5:  kfogel | Tue 6 Nov 2001 17:18:19 | 1 line
+  # 
+  # Log message for revision 5.
+  # ------------------------------------------------------------------------
+  # rev 4:  kfogel | Tue 6 Nov 2001 17:18:18 | 1 line
+  # 
+  # Log message for revision 4.
+  # ------------------------------------------------------------------------
+  # rev 3:  kfogel | Tue 6 Nov 2001 17:18:17 | 1 line
+  # 
+  # Log message for revision 3.
+  # ------------------------------------------------------------------------
+  # rev 2:  kfogel | Tue 6 Nov 2001 17:18:16 | 1 line
+  # 
+  # Log message for revision 2.
+  # ------------------------------------------------------------------------
+  # rev 1:  foo | Tue 6 Nov 2001 15:27:57 | 1 line
+  # 
+  # Log message for revision 1.
+  # ------------------------------------------------------------------------
+
+  # Regular expression to match the header line of a log message, with
+  # these groups: (revision number), (author), (date), (num lines).
+  header_re = re.compile ('^rev ([0-9])+:  ' \
+                          + '([^|])* \| ([^|])* \| ([0-9]+) line')
+  
+  for line in log_lines:
+    match = header_re.search(line)
+    if match and match.groups():
+      ### todo: working here
+      print "header: ", line
+
+  return ()
+
+
+def check_log_chain (start, end):
+  """Verify that a log chain looks as expected (see documentation for
+  parse_log_output() for more about log chains.)
+
+  Return 0 if the log chain's messages run from revision START to END
+  with no gaps, and that each log message is one line of the form
+
+     'Log message for revision N'
+
+  where N is the revision number of that commit.  Also verify that
+  author and date are present and look sane, but don't check them too
+  carefully.
+  """
+  return 0
 
 
 ######################################################################
@@ -169,7 +254,7 @@ def plain_log():
   was_cwd = os.getcwd()
   os.chdir(wc_path);
 
-  output, errput = main.run_svn (None, 'log');
+  output, errput = svntest.main.run_svn (None, 'log');
 
   if errput: return 1
 
