@@ -285,10 +285,13 @@ svn_wc_statuses (apr_hash_t *statushash,
              kff todo: However, must handle mixed working copies.
              What if the subdir is not under revision control, or is
              from another repository? */
-          if (descend
-              && (kind == svn_node_dir)
+          if ((kind == svn_node_dir)
               && (strcmp (basename, SVN_WC_ENTRY_THIS_DIR) != 0))
-            svn_wc_statuses (statushash, fullpath, descend, pool);
+            {
+              if (descend)
+                svn_wc_statuses (statushash, fullpath, descend, pool);
+              /* else ignore subdir -- simply don't report its status */
+            }
           else
             {
               err = add_status_structure (statushash, fullpath, entry, pool);
