@@ -131,7 +131,8 @@ int main(int argc, const char *const *argv)
 
   if (!daemon_mode && !listen_once)
     {
-      apr_pool_cleanup_register(pool, pool, NULL, redirect_stdout);
+      apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
+                                redirect_stdout);
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
