@@ -200,13 +200,14 @@ probe (const char **dir,
        apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  int is_wc;
+  int wc_format_version;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+    SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
 
-  if (kind != svn_node_dir || ! is_wc)
+  /* a "version" of 0 means a non-wc directory */
+  if (kind != svn_node_dir || wc_format_version == 0)
     *dir = svn_path_dirname (path, pool);
   else
     *dir = path;

@@ -170,10 +170,12 @@ assemble_status (svn_wc_status_t **status,
   if (entry->kind == svn_node_dir
       && path_kind == svn_node_dir)
     {
-      int is_wc;
+      int wc_format_version;
 
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-      if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+
+      /* a "version" of 0 means a non-wc directory */
+      if (wc_format_version == 0)
         final_text_status = svn_wc_status_obstructed;
     }
 
@@ -705,12 +707,14 @@ svn_wc_statuses (apr_hash_t *statushash,
       /* Sanity check to make sure that we're being called on a working copy.
          This isn't strictly necessary, since svn_wc_entries_read will fail 
          anyway, but it lets us return a more meaningful error. */ 
-      int is_wc;
+      int wc_format_version;
       svn_boolean_t is_root;
       const svn_wc_entry_t *parent_entry;
 
-      SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
-      if (! is_wc)
+      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+
+      /* a "version" of 0 means a non-wc directory */
+      if (wc_format_version == 0)
         return svn_error_createf
           (SVN_ERR_WC_NOT_DIRECTORY, NULL,
            "svn_wc_statuses: %s is not a working copy directory", path);
