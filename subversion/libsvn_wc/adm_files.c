@@ -57,6 +57,7 @@
 #include <apr_hash.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
+#include <apr_strings.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -208,7 +209,6 @@ apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
   apr_status_t read_err, write_err;
   apr_finfo_t finfo;
   apr_fileperms_t perms;
-  int total_so_far = 0;
   char buf[1024];
 
   /* Open source file. */
@@ -253,7 +253,7 @@ apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
          single argument to say both how much data is desired and how
          much actually got read, but apr_full_read() and
          apr_full_write() use two separate args? */
-      write_err = apr_full_write (d, buf, bytes_this_time, &bytes_this_time);
+      write_err = apr_full_write (d, buf, bytes_this_time, NULL);
       if (write_err)
         {
           apr_close (s);  /* toss */
@@ -289,11 +289,9 @@ copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
   apr_err = apr_copy_file (src->data, dst->data, pool);
   if (apr_err)
     {
-      svn_string_t *msg = svn_string_create ("copying ", pool);
-      svn_string_appendstr (msg, src, pool);
-      svn_string_appendbytes (msg, " to ", sizeof (" to "), pool);
-      svn_string_appendstr (msg, dst, pool);
-      return svn_create_error (apr_err, 0, msg->data, NULL, pool);
+      const char *msg = apr_psprintf(pool, "copying %s to %s", src, dst);
+
+      return svn_create_error (apr_err, 0, msg, NULL, pool);
     }
   else
     return SVN_NO_ERROR;
