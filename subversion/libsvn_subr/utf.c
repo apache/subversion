@@ -218,11 +218,15 @@ svn_utf_string_to_utf8 (const svn_string_t *src,
 svn_error_t *
 svn_utf_cstring_to_utf8_stringbuf (const char *src,
                                    svn_stringbuf_t **dest,
+                                   apr_xlate_t *xlator,
                                    apr_pool_t *pool)
 {
   /* Get a converter from the native character encoding to UTF-8 */
   apr_xlate_t *convset;
-  SVN_ERR (get_ntou_xlate_handle (&convset, pool));
+  if (! xlator)
+    SVN_ERR (get_ntou_xlate_handle (&convset, pool));
+  else
+    convset = xlator;
 
   return convert_to_stringbuf (convset, src, strlen (src), dest, pool);
 }
@@ -231,10 +235,11 @@ svn_utf_cstring_to_utf8_stringbuf (const char *src,
 svn_error_t *
 svn_utf_cstring_to_utf8 (const char *src,
                          const char **dest,
+                         apr_xlate_t *xlator,
                          apr_pool_t *pool)
 {
   svn_stringbuf_t *destbuf;
-  SVN_ERR (svn_utf_cstring_to_utf8_stringbuf (src, &destbuf, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8_stringbuf (src, &destbuf, xlator, pool));
   *dest = destbuf->data;
   return SVN_NO_ERROR;
 }
@@ -396,6 +401,7 @@ svn_utf_string_to_utf8 (const svn_string_t *src,
 svn_error_t *
 svn_utf_cstring_to_utf8_stringbuf (const char *src,
                                    svn_stringbuf_t **dest,
+                                   apr_xlate_t *xlator,
                                    apr_pool_t *pool)
 {
   SVN_ERR (check_non_ascii (src, strlen (src), pool));
@@ -407,6 +413,7 @@ svn_utf_cstring_to_utf8_stringbuf (const char *src,
 svn_error_t *
 svn_utf_cstring_to_utf8 (const char *src,
                          const char **dest,
+                         apr_xlate_t *xlator,
                          apr_pool_t *pool)
 {
   apr_size_t len = strlen (src);

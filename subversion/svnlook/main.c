@@ -1080,9 +1080,9 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create (NULL);
 
   /* Convert repository path and txn name (if present) to UTF-8 */
-  INT_ERR (svn_utf_cstring_to_utf8 (repos_path, &repos_path_utf8, pool));
+  INT_ERR (svn_utf_cstring_to_utf8 (repos_path, &repos_path_utf8, NULL, pool));
   if(txn_name)
-    INT_ERR (svn_utf_cstring_to_utf8 (txn_name, &c.txn_name, pool));    
+    INT_ERR (svn_utf_cstring_to_utf8 (txn_name, &c.txn_name, NULL, pool));    
 
   /* Open the repository with the given path. */
   INT_ERR (svn_repos_open (&(c.repos), repos_path_utf8, pool));

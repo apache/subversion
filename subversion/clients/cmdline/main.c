@@ -61,8 +61,10 @@ const apr_getopt_option_t svn_cl__options[] =
     {"revision",      'r', 1, "specify revision number ARG (or X:Y range)"},
     {"date",          'D', 1, "specify a date ARG (instead of a revision)"},
     {"file",          'F', 1, "read data from file ARG"},
-    {"xml-file",      svn_cl__xml_file_opt, 1, "read/write xml to specified file ARG"},
-    {"locale",        svn_cl__locale_opt, 1, "specify a locale ARG"},
+    {"xml-file",      svn_cl__xml_file_opt, 1,
+                      "read/write xml to specified file ARG"},
+    {"message-encoding", svn_cl__msg_encoding_opt, 1,
+                      "use ARG as encoding for log message taken from -F"},
     {"version",       svn_cl__version_opt, 0, "print client version info"},
     {"verbose",       'v', 0, "print extra information"},
     {"very-verbose",  'V', 0, "print maxmimum information"},
@@ -70,7 +72,8 @@ const apr_getopt_option_t svn_cl__options[] =
     {"username",      svn_cl__auth_username_opt, 1, "specify a username ARG"},
     {"password",      svn_cl__auth_password_opt, 1, "specify a password ARG"},
     {"extensions",    'x', 1, "pass \"ARG\" as bundled options to GNU diff"},
-    {"targets",       svn_cl__targets_opt, 1, "pass contents of file \"ARG\" as additional args"},
+    {"targets",       svn_cl__targets_opt, 1,
+                      "pass contents of file \"ARG\" as additional args"},
     {"xml",           svn_cl__xml_opt, 0, "output in xml"},
     {"strict",        svn_cl__strict_opt, 0, "use strict semantics"},
     {0,               0, 0}
@@ -145,7 +148,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "   the -r switch is only for use with --xml-file.\n",
     {'m', 'F', 'q', 'n', svn_cl__targets_opt,
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__xml_file_opt, 'r'} },
+     svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
@@ -156,7 +159,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    URL -> WC:   check out URL into WC, schedule for addition\n"
     "    URL -> URL:  complete server-side copy;  used to branch & tag\n",
     {'m', 'F', 'r', 'D',
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__msg_encoding_opt} },
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
@@ -170,7 +174,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "  * If run on an URL, item is deleted from the repository via an\n"
     "    immediate commit.\n",
     {svn_cl__force_opt, 'm', 'F', svn_cl__targets_opt,
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__msg_encoding_opt} },
   
   { "diff", svn_cl__diff, {"di"},
     "display the differences between two paths.\n"
@@ -220,7 +225,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    directly.  Otherwise, create NEW_ENTRY underneath REPOS_URL and\n"
     "    begin copy there.  (-r is only needed if importing to --xml-file)\n",
     {'F', 'm', 'q', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__xml_file_opt, 'r'} },
+     svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
@@ -264,7 +269,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: mkdir [NEW_DIR | REPOS_URL].\n\n"
     "    Either create NEW_DIR in working copy scheduled for addition,\n"
     "    or create REPOS_URL via immediate commit.\n",
-    {'m', 'F', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'m', 'F', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
+     svn_cl__msg_encoding_opt} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"},
     "Move/rename something in working copy or repository.\n"
@@ -274,7 +280,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    WC  -> WC:   move and schedule for addition (with history)\n"
     "    URL -> URL:  complete server-side rename.\n",    
     {'m', 'F', 'r', 'D', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__force_opt} },
+     svn_cl__force_opt, svn_cl__msg_encoding_opt} },
   
   { "propdel", svn_cl__propdel, {"pdel"},
     "Remove property PROPNAME on files and directories.\n"
@@ -840,22 +846,10 @@ main (int argc, const char * const *argv)
   svn_boolean_t log_is_pathname = FALSE;
   apr_status_t apr_err;
 
-  /* FIXME: This is a first step towards support for localization in
-     `svn'.  In real life, this call would be
-
-         setlocale (LC_ALL, "");
-
-     so that initial help or error messages are displayed in the
-     language defined by the environment.  Right now, though, we don't
-     even care if the call fails.
-
-     (Actually, this is a no-op; according to the C standard, "C" is
-     the default locale at program startup.) */
-  setlocale (LC_ALL, "C");
-
-  /* For APR_LOCALE_CHARSET to do the right thing, we need to at least
-     let LC_CTYPE be set from the environment. */
-  setlocale (LC_CTYPE, "");
+  /* C programs default to the "C" locale by default.  But because svn
+     is supposed to be i18n-aware, it should inherit the default
+     locale of its environment.  */
+  setlocale (LC_ALL, "");
 
   /* Initialize the APR subsystem, and register an atexit() function
      to Uninitialize that subsystem at program exit. */
@@ -929,7 +923,7 @@ main (int argc, const char * const *argv)
         ret = svn_cl__parse_revision (&opt_state, opt_arg, pool);
         if (ret)
           {
-            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
             if (err)
               svn_handle_error (err, stderr, FALSE);
             else
@@ -947,7 +941,7 @@ main (int argc, const char * const *argv)
         ret = parse_date (&opt_state, opt_arg, pool);
         if (ret)
           {
-            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
             if (err)
               svn_handle_error (err, stderr, FALSE);
             else
@@ -977,7 +971,8 @@ main (int argc, const char * const *argv)
         opt_state.quiet = TRUE;
         break;
       case svn_cl__xml_file_opt:
-        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.xml_file, pool);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.xml_file,
+                                       NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -986,7 +981,7 @@ main (int argc, const char * const *argv)
           }
         break;
       case 'd':
-        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.target, pool);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.target, NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -995,7 +990,7 @@ main (int argc, const char * const *argv)
           }
         break;
       case 'F':
-        err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
         if (!err)
           err = svn_string_from_file (&(opt_state.filedata),
                                       utf8_opt_arg, pool);
@@ -1017,7 +1012,7 @@ main (int argc, const char * const *argv)
       case svn_cl__targets_opt:
 	{
  	  svn_stringbuf_t *buffer, *buffer_utf8;
-          err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+          err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
           if (! err)
             err = svn_string_from_file (&buffer, utf8_opt_arg, pool);
           if (! err)
@@ -1048,7 +1043,7 @@ main (int argc, const char * const *argv)
       case svn_cl__auth_username_opt:
         err = svn_utf_cstring_to_utf8 (opt_arg,
                                        &opt_state.auth_username,
-                                       pool);
+                                       NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -1059,7 +1054,7 @@ main (int argc, const char * const *argv)
       case svn_cl__auth_password_opt:
         err = svn_utf_cstring_to_utf8 (opt_arg,
                                        &opt_state.auth_password,
-                                       pool);
+                                       NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -1067,31 +1062,8 @@ main (int argc, const char * const *argv)
             return EXIT_FAILURE;
           }
         break;
-      case svn_cl__locale_opt:
-        /* The only locale name that ISO C defines is the "C" locale;
-           using any other argument is not portable. But that's O.K.,
-           because the main purpose of this option is:
-
-              a) support for wrapper programs which parse `svn's
-                 output, and should call `svn --locale=C' to get
-                 predictable results; and
-
-              b) for testing various translations without having to
-                 twiddle with the environment.
-        */
-        if (NULL == setlocale (LC_ALL, opt_arg))
-          {
-            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
-
-            if (err)
-              svn_handle_error (err, stderr, FALSE);
-            else
-              err = svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                       0, NULL, pool,
-                                       "The locale `%s' can not be set",
-                                       utf8_opt_arg);
-            svn_handle_error (err, stderr, FALSE);
-          }
+      case svn_cl__msg_encoding_opt:
+        opt_state.filedata_encoding = apr_pstrdup (pool, opt_arg);
         break;
       case svn_cl__xml_opt:
         opt_state.xml = TRUE;
@@ -1100,7 +1072,8 @@ main (int argc, const char * const *argv)
         opt_state.strict = TRUE;
         break;
       case 'x':
-        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.extensions, pool);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.extensions,
+                                       NULL, pool);
         if (err) {
           svn_handle_error (err, stderr, FALSE);
           svn_pool_destroy (pool);

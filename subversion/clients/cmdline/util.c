@@ -195,7 +195,7 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
       const char *target;
 
       /* FIXME: need to handle errors here... */
-      svn_utf_cstring_to_utf8 (os->argv[os->ind], &target, pool);
+      svn_utf_cstring_to_utf8 (os->argv[os->ind], &target, NULL, pool);
 
       /* If this path looks like it would work as a URL in one of the
          currently available RA libraries, we add it unconditionally
@@ -392,7 +392,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       err = svn_string_from_file (&edited_contents_s, tmpfile_name, pool);
       if (!err)
         err = svn_utf_cstring_to_utf8 (edited_contents_s->data,
-                                       edited_contents, pool);
+                                       edited_contents, NULL, pool);
       if (err)
         goto cleanup; /* In case more code gets added before cleanup... */
     }
@@ -418,6 +418,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 struct log_msg_baton
 {
   const char *message;
+  const char *message_encoding; /* the locale/encoding of the message. */
   const char *base_dir; /* UTF-8! */
 };
 
@@ -433,6 +434,9 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
     baton->message = opt_state->filedata->data;
   else
     baton->message = opt_state->message;
+
+  if (opt_state->filedata_encoding)
+    baton->message_encoding = opt_state->filedata_encoding;
 
   baton->base_dir = base_dir ? base_dir : ".";
 
@@ -518,7 +522,24 @@ svn_cl__get_log_message (const char **log_msg,
 
   if (lmb->message)
     {
-      return svn_utf_cstring_to_utf8 (lmb->message, log_msg, pool);
+      /* If a special --message-encoding was given on the commandline,
+         convert the log message from that locale to UTF8: */
+      if (lmb->message_encoding)
+        {
+          apr_xlate_t *xlator;
+          apr_status_t apr_err =  
+            apr_xlate_open (&xlator, "UTF-8", lmb->message_encoding, pool);
+
+          if (apr_err != APR_SUCCESS)
+            return svn_error_create (apr_err, 0, NULL, pool,
+                                     "failed to create a converter to UTF-8");
+
+          return svn_utf_cstring_to_utf8 (lmb->message, log_msg, xlator, pool);
+        }
+      /* otherwise, just convert the message to utf8 by assuming it's
+         already in the 'default' locale of the environment. */
+      else        
+        return svn_utf_cstring_to_utf8 (lmb->message, log_msg, NULL, pool);
     }
 
   if (! (commit_items || commit_items->nelts))
@@ -530,7 +551,8 @@ svn_cl__get_log_message (const char **log_msg,
   while (! message)
     {
       /* We still don't have a valid commit message.  Use $EDITOR to
-         get one. */
+         get one.  Note that svn_cl__edit_externally will still return
+         a UTF-8'ized log message. */
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_create (default_msg, pool);
       svn_error_t *err = NULL;

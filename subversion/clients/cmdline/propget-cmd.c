@@ -48,7 +48,7 @@ svn_cl__propget (apr_getopt_t *os,
      thereof) */
   SVN_ERR (svn_cl__parse_num_args (&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
-  SVN_ERR (svn_utf_cstring_to_utf8 (pname, &pname_utf8, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (pname, &pname_utf8, NULL, pool));
   is_svn_prop = svn_prop_is_svn_prop (pname_utf8);
   
   /* suck up all the remaining arguments into a targets array */
