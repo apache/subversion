@@ -75,6 +75,32 @@ class State:
       if filter(path, item):
         apply(item.tweak, (), kw)
 
+  def write_to_disk(self, target_dir):
+    """Construct a directory structure on disk, matching our state.
+
+    WARNING: any StateItem that does not have contents (.contents is None)
+    is assumed to be a directory.
+    """
+    if not os.path.exists(target_dir):
+      os.makedirs(target_dir)
+
+    for path, item in self.desc.items():
+      fullpath = os.path.join(target_dir, path)
+      if item.contents is None:
+        # a directory
+        if not os.path.exists(fullpath):
+          os.makedirs(fullpath)
+      else:
+        # a file
+
+        # ensure its directory exists
+        dirpath = os.path.dirname(fullpath)
+        if not os.path.exists(dirpath):
+          os.makedirs(dirpath)
+
+        # write out the file contents now
+        open(fullpath, 'w').write(item.contents)
+
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
     nodelist = [ ]

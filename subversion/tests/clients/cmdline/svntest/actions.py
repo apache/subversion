@@ -41,8 +41,7 @@ def guarantee_greek_repository(path):
     main.create_repos(main.pristine_dir)
     
     # dump the greek tree to disk.
-    main.write_tree(main.greek_dump_dir,
-                    [[x[0], x[1]] for x in main.greek_tree])
+    main.greek_state.write_to_disk(main.greek_dump_dir)
 
     # build a URL for doing an import.
     url = main.test_area_url + '/' + main.pristine_dir
@@ -73,13 +72,15 @@ def guarantee_greek_repository(path):
       sys.exit(1)
     output_tree = tree.build_tree_from_commit(output)
 
+    ### due to path normalization in the .old_tree() method, we cannot
+    ### prepend the necessary '.' directory. thus, let's construct an old
+    ### tree manually from the greek_state.
     output_list = []
-    path_list = [x[0] for x in main.greek_tree]
-    for apath in path_list:
-      item = [ os.path.join(".", apath), None, {}, {'verb' : 'Adding'}]
-      output_list.append(item)
+    for greek_path in main.greek_state.desc.keys():
+      output_list.append([ os.path.join('.', greek_path),
+                           None, {}, {'verb' : 'Adding'}])
     expected_output_tree = tree.build_generic_tree(output_list)
-      
+
     if tree.compare_trees(output_tree, expected_output_tree):
       print "ERROR:  output of import command is unexpected."
       sys.exit(1)
@@ -474,20 +475,17 @@ def make_repo_and_wc(test_name):
   url = main.test_area_url + '/' + main.current_repo_dir
 
   # Generate the expected output tree.
-  output_list = []
-  path_list = [x[0] for x in main.greek_tree]
-  for path in path_list:
-    item = [ os.path.join(wc_dir, path), None, {}, {'status' : 'A '} ]
-    output_list.append(item)
-  expected_output_tree = tree.build_generic_tree(output_list)
+  expected_output = main.greek_state.copy()
+  expected_output.wc_dir = wc_dir
+  expected_output.tweak(status='A ', contents=None)
 
   # Generate an expected wc tree.
-  expected_wc_tree = tree.build_generic_tree(main.greek_tree)
+  expected_wc = main.greek_state
 
   # Do a checkout, and verify the resulting output and disk contents.
   return run_and_verify_checkout(url, wc_dir,
-                                 expected_output_tree,
-                                 expected_wc_tree)
+                                 expected_output,
+                                 expected_wc)
 
 
 # Duplicate a working copy or other dir.
@@ -500,44 +498,6 @@ def duplicate_dir(wc_name, wc_copy_name):
   shutil.copytree(wc_name, wc_copy_name)
   
 
-
-# A generic starting state for the output of 'svn status'.
-# Returns a list of the form:
-#
-#   [ ['wc_dir', None, {}, {'status':'_ ',
-#                           'wc_rev':'1',
-#                           'repos_rev':'1'}],
-#     ['wc_dir/A', None, {}, {'status':'_ ',
-#                             'wc_rev':'1',
-#                             'repos_rev':'1'}],
-#     ['wc_dir/A/mu', None, {}, {'status':'_ ',
-#                                'wc_rev':'1',
-#                                'repos_rev':'1'}],
-#     ... ]
-#
-def get_virginal_status_list(wc_dir, rev):
-  """Given a WC_DIR, return a list describing the expected 'status'
-  output of an up-to-date working copy at revision REV.  (i.e. the
-  repository and working copy files are all at REV).
-
-  WARNING:  REV is a string, not an integer. :)
-
-  The list returned is suitable for passing to
-  tree.build_generic_tree()."""
-
-  output_list = [[wc_dir, None, {},
-                  {'status' : '_ ',
-                   'wc_rev' : rev,
-                   'repos_rev' : rev}]]
-  path_list = [x[0] for x in main.greek_tree]
-  for path in path_list:
-    item = [os.path.join(wc_dir, path), None, {},
-            {'status' : '_ ',
-             'wc_rev' : rev,
-             'repos_rev' : rev}]
-    output_list.append(item)
-
-  return output_list
 
 def get_virginal_state(wc_dir, rev):
   "Return a virginal greek tree state for a WC and repos at revision REV."
@@ -553,18 +513,6 @@ def get_virginal_state(wc_dir, rev):
 
   return state
 
-
-# Ben sez: this is -proof- that we really want a hash of SVNTreeNodes
-# when we do a future rewrite.  :-)
-#
-# Convenience routine for treating our list format like a pseudo-hash
-def path_index(list, path):
-  "Return the index of PATH in our standard list-format"
-  
-  for item in list:
-    if item[0] == path:
-      return list.index(item)
-  return None
 
 # Cheap administrative directory locking
 def lock_admin_dir(wc_dir):
