@@ -99,25 +99,77 @@ check_existence (svn_string_t path, apr_status_t err_to_report)
 }
 
 
-static svn_error_t *
-update_data_handler (svn_digger_t *diggy, svn_edit_content_t *eddy);
+/* kff todo: this will want to be somewhere else, and get decided at
+   configure time too probably.  For now let's just get checkout
+   working. */
+#define SVN_DIR_SEPARATOR '/'
+
+
+/* Return a path from a delta stack. */
+static svn_string_t *
+delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
 {
-  /* kff todo */
+  svn_delta_stackframe_t *p = stack;
+  svn_string_t *path;
+
+  path = svn_string_create ("", pool);
+
+  /* Recursive, but not tail-recursive.  
+     Oh, wait -- this is C, there's no difference (thud). */
+
+  if (p->kind == svn_XML_content)  /* either "<dir ...>" or "<file ...>" */
+    {
+      if (p->content_kind == svn_content_dir)   /* it's "<dir ...>" */
+        {
+          char dirsep = SVN_DIR_SEPARATOR;
+          path = svn_string_appendbytes (path, &dirsep, 1, pool);
+          path = svn_string_appendstr (path, p->name, pool);
+          
+          if (stack->next)
+            {
+              /* Return the current path, having recursively appended
+                 whatever path remains. */
+            return svn_string_appendstr
+              (path, delta_stack_to_path (stack->next, pool), pool);
+            }
+          else
+            return path;
+        }
+      if (p->content_kind == svn_content_file)  /* it's "<file ...>" */
+        {
+          /* Don't recurse past a non-directory, just return. */
+          return svn_string_appendstr (path, stack->name, pool);
+        }
+    }
+  else if (stack->next)  /* Not an edit_content, so skip to next if can... */
+    {
+      return delta_stack_to_path (stack->next, pool);
+    }
+  else                   /* ... but if can't, return an empty string. */
+    return path;
 }
 
 
 static svn_error_t *
 update_dir_handler (svn_digger_t *diggy, svn_edit_content_t *eddy);
 {
-  svn_delta_t *delta = diggy->delta;
-  svn_string_t *dir  = delta_to_path (delta);  /* kff todo */
+  svn_delta_stackframe_t *stack = diggy->stack;
+  svn_string_t *dir = delta_stack_to_path (frame);
 
   if (! dir)
     {
-      /* kff todo: implement delta_to_path() in terms of
-         svn_walk_delta(), after finishing same. */
+      /* kff todo: make an error */
     }
-  fooo working here;
+
+  /* Else, make the directory. */
+
+#if 0
+  if (apr_create_pool (&pglobal, NULL) != APR_SUCCESS)
+    {
+      printf ("apr_create_pool() failed.\n");
+      exit (1);
+    }
+#endif
  
 }
 
