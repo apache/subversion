@@ -136,8 +136,10 @@ test1 (const char **msg,
 }
 
 
-static const char *true_keys[] = {"true1", "true2", "true3", NULL};
-static const char *false_keys[] = {"false1", "false2", "false3", NULL};
+static const char *true_keys[] = {"true1", "true2", "true3", "true4",
+                                  NULL};
+static const char *false_keys[] = {"false1", "false2", "false3", "false4",
+                                   NULL};
 
 static svn_error_t *
 test2 (const char **msg, 

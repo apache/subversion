@@ -1547,7 +1547,7 @@ svn_io_run_diff3 (const char *dir,
   args[i++] = yours_label;
 #ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
   {
-    const char *has_arg;
+    svn_boolean_t has_arg;
 
     /* ### FIXME: we really shouldn't be reading the config here;
        instead, the necessary bits should be passed in by the caller.
@@ -1559,10 +1559,9 @@ svn_io_run_diff3 (const char *dir,
     SVN_ERR (svn_config_get_config (&config, pool));
     cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
                                  APR_HASH_KEY_STRING) : NULL;
-    svn_config_get (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS, 
-                    SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG, "yes");
-    if (0 == strcasecmp(has_arg, "yes")
-        || 0 == strcasecmp(has_arg, "true"))
+    svn_config_get_bool (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS, 
+                         SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG, TRUE);
+    if (has_arg)
       {
         const char *diff_cmd, *diff_utf8;
         svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,

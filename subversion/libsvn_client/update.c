@@ -61,7 +61,6 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
-  const char *commit_time_str;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_node_kind_t kind;
@@ -99,13 +98,8 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                   SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
   /* See if the user wants last-commit timestamps instead of current ones. */
-  svn_config_get (cfg, &commit_time_str, SVN_CONFIG_SECTION_MISCELLANY,
-                  SVN_CONFIG_OPTION_USE_COMMIT_TIMES, NULL);
-  if (commit_time_str)
-    use_commit_times = (strcasecmp (commit_time_str, "yes") == 0) 
-                       ? TRUE : FALSE;
-  else
-    use_commit_times = FALSE;
+  svn_config_get_bool (cfg, &use_commit_times, SVN_CONFIG_SECTION_MISCELLANY,
+                       SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE);
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

@@ -617,11 +617,13 @@ svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
     *valuep = default_value;
   else if (0 == strcasecmp (tmp_value, SVN_CONFIG_TRUE)
            || 0 == strcasecmp (tmp_value, "yes")
-           || 0 == strcasecmp (tmp_value, "on"))
+           || 0 == strcasecmp (tmp_value, "on")
+           || 0 == strcmp (tmp_value, "1"))
     *valuep = TRUE;
   else if (0 == strcasecmp (tmp_value, SVN_CONFIG_FALSE)
            || 0 == strcasecmp (tmp_value, "no")
-           || 0 == strcasecmp (tmp_value, "off"))
+           || 0 == strcasecmp (tmp_value, "off")
+           || 0 == strcmp (tmp_value, "0"))
     *valuep = FALSE;
   else
     return svn_error_createf (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,

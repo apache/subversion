@@ -625,6 +625,20 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
    "     described above."
    APR_EOL_STR
    APR_EOL_STR
+   "   - When a value is a boolean, any of the following strings are"
+   APR_EOL_STR
+   "     recognised as truth values (case does not matter):"
+   APR_EOL_STR
+   APR_EOL_STR
+   "       true      false"
+   APR_EOL_STR
+   "       yes       no"
+   APR_EOL_STR
+   "       on        off"
+   APR_EOL_STR
+   "       1         0"
+   APR_EOL_STR
+   APR_EOL_STR
    "   - When a value is a list, it is comma-separated.  Again, the"
    APR_EOL_STR
    "     whitespace around each element of the list is trimmed."

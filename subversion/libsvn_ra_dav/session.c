@@ -322,7 +322,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         apr_pool_t *pool)
 {
   const char *exceptions, *port_str, *timeout_str, *server_group;
-  const char *debug_str, *compress_str;
+  const char *debug_str;
   svn_boolean_t is_exception = FALSE;
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -332,7 +332,6 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
-  compress_str    = "no";
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -355,8 +354,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
       svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
-      svn_config_get(cfg, &compress_str, SVN_CONFIG_SECTION_GLOBAL, 
-                     SVN_CONFIG_OPTION_HTTP_COMPRESSION, NULL);
+      svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
+                          SVN_CONFIG_OPTION_HTTP_COMPRESSION, FALSE);
       svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
     }
@@ -379,8 +378,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, *proxy_password);
       svn_config_get(cfg, &timeout_str, server_group, 
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
-      svn_config_get(cfg, &compress_str, server_group, 
-                     SVN_CONFIG_OPTION_HTTP_COMPRESSION, compress_str);
+      svn_config_get_bool(cfg, compression, server_group,
+                          SVN_CONFIG_OPTION_HTTP_COMPRESSION, *compression);
       svn_config_get(cfg, &debug_str, server_group, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
     }
@@ -435,11 +434,6 @@ static svn_error_t *get_server_settings(const char **proxy_host,
     }
   else
     *neon_debug = 0;
-
-  if (compress_str)
-    *compression = (strcasecmp(compress_str, "yes") == 0) ? TRUE : FALSE;
-  else
-    *compression = FALSE;
 
   return SVN_NO_ERROR;
 }
