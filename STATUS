@@ -57,14 +57,8 @@ Candidate changes:
     fsfs does not check if the revision is valid for proplist/propedit/etc
     Justification:
       User complaint.  Simple fix.
-    Notes: My veto is only while we discuss the other part of this
-      change, which creates an empty revprop file in r0 in FSFS
-      repositories.  In BDB repositories, even r0 has an svn:date
-      property.  See dev list thread about r11364.  I'm +1 on the rest
-      of the change (i.e., the first two hunks in the diff).  -kfogel
     Votes:
-      +1: bliss
-      -1: kfogel (see notes)
+      +1: bliss, kfogel
 
   * r11394
     Fix javahl bindings not using the default config directory if nothing
