@@ -22,7 +22,7 @@ fi
 (cd apr && build/buildcheck.sh) || exit 1
 
 # Make sure the Neon directory is present
-NEON_WANTED=0.11.0
+NEON_WANTED=0.15.3
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_WANTED}.tar.gz"
 
 if [ ! -d neon ]; then
