@@ -52,7 +52,7 @@ open_or_create (VALUE class, VALUE aPath, int create)
   svn_error_t *err;
   char *path;
 
-  VALUE obj;
+  VALUE obj, argv[1];
   svn_ruby_fs_t *rb_fs;
 
   Check_Type (aPath, T_STRING);
@@ -63,7 +63,8 @@ open_or_create (VALUE class, VALUE aPath, int create)
   rb_fs->fs = fs;
   rb_fs->pool = pool;
   rb_fs->closed = FALSE;
-  rb_obj_call_init (obj, 0, 0);
+  argv[0] = aPath;
+  rb_obj_call_init (obj, 1, argv);
   
   if (create)
     err = svn_fs_create_berkeley (fs, path);
@@ -123,6 +124,13 @@ fs_recover (VALUE class, VALUE aPath)
 
 
 /* Instance methods. */
+
+static VALUE
+fs_initialize (VALUE self, VALUE aPath)
+{
+  /* Do nothing. */
+  return self;
+}
 
 static VALUE
 fs_is_closed (VALUE self)
@@ -399,6 +407,7 @@ svn_ruby_init_fs ()
   rb_define_singleton_method (cSvnFS, "delete", fs_delete, 1);
   rb_define_singleton_method (cSvnFS, "recover", fs_recover, 1);
 
+  rb_define_method (cSvnFS, "initialize", fs_initialize, 1);
   rb_define_method (cSvnFS, "closed?", fs_is_closed, 0);
   rb_define_method (cSvnFS, "close", fs_close, 0);
   rb_define_method (cSvnFS, "youngestRev", fs_youngest_rev, 0);
