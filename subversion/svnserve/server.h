@@ -45,11 +45,20 @@ typedef struct serve_params_t {
   /* True if the deprecated read-only flag was specified on the
      command-line, which forces all connections to be read-only. */
   svn_boolean_t read_only;
+
+  /* SSL baton, non-NULL iff SSL has been configured */
+  void *ssl_baton;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                    apr_pool_t *pool);
+
+/* Initialize the SSL provider, using CERT as the path to the certificate
+   file and KEY as the path to the key file.  Set *BATON to the callback
+   baton to be used for future SSL calls, using POOL for any allocation. */
+svn_error_t *ssl_init(const char *cert, const char *key, void **baton,
+                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -61,6 +61,15 @@ const svn_string_t *svn_base64_decode_string (const svn_string_t *str,
                                               apr_pool_t *pool);
 
 
+/** Returns a base64 encoding of @c buffer.
+ *
+ * Allocate the returned encoding in @c pool.
+ */
+svn_stringbuf_t *svn_base64_from_buffer (unsigned char buffer[],
+                                         apr_size_t len,
+                                         apr_pool_t *pool);
+
+
 /** Return a base64-encoded checksum for finalized @c digest.
  *
  * @c digest contains @c APR_MD5_DIGESTSIZE bytes of finalized data.

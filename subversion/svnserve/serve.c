@@ -1686,12 +1686,23 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.pool = pool;
 
   /* Send greeting.   When we drop support for version 1, we can
-   * start sending an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
-                                 (apr_uint64_t) 1, (apr_uint64_t) 2));
+   * start sending an empty mechlist. 
+   * Note : version 1 does not support SSL. */
+  if (params->ssl_baton)
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
+                                   (apr_uint64_t) 2, (apr_uint64_t) 2));
+  else
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
+                                   (apr_uint64_t) 1, (apr_uint64_t) 2));
+
   SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(w))",
-                                 SVN_RA_SVN_CAP_EDIT_PIPELINE));
+  if (params->ssl_baton)
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(ww))",
+                                   SVN_RA_SVN_CAP_EDIT_PIPELINE,
+                                   SVN_RA_SVN_CAP_SSL));
+  else
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(w))",
+                                   SVN_RA_SVN_CAP_EDIT_PIPELINE));
 
   /* Read client response.  Because the client response form changed
    * between version 1 and version 2, we have to do some of this by
@@ -1710,6 +1721,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nw(?c)l",
                                      &ver, &mech, &mecharg, &caplist));
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+      if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
+          return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                                  _("Client does not support SSL"));
       SVN_ERR(auth(conn, pool, mech, mecharg, &b, READ_ACCESS, FALSE,
                    &success));
       if (!success)
@@ -1731,11 +1745,21 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   else if (b.protocol_version == 2)
     {
       /* Version 2: client sends version, capability list, and client
-       * URL, and then we do an auth request. */
+       * URL, and then we do an auth request after test for client
+       * SSL capability. */
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nlc", &ver,
                                      &caplist, &client_url));
       client_url = svn_path_canonicalize(client_url, pool);
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+
+      if (params->ssl_baton 
+          && svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
+        {
+          /* Flush write buffer before SSL handshake. */
+          svn_ra_svn_flush(conn, pool);
+
+          SVN_ERR(svn_ra_svn_ssl_start(conn, params->ssl_baton, pool));
+        }
       err = find_repos(client_url, params->root, &b, pool);
       if (!err)
         {

@@ -40,8 +40,9 @@
 #include "svn_ra_svn.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "svn_base64.h"
 
-#include "ra_svn.h"
+#include "ra_svn_ssl.h"
 
 typedef struct {
   svn_ra_svn_conn_t *conn;
@@ -49,6 +50,7 @@ typedef struct {
   svn_boolean_t is_tunneled;
   svn_auth_baton_t *auth_baton;
   const char *user;
+  const char *hostname;
   const char *realm_prefix;
 } ra_svn_session_baton_t;
 
@@ -251,9 +253,10 @@ static svn_error_t *auth_response(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_boolean_t compat)
 {
   if (compat)
-    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(w)", (apr_uint64_t) 1,
+    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(ww)", (apr_uint64_t) 1,
                                   mech, mech_arg,
-                                  SVN_RA_SVN_CAP_EDIT_PIPELINE);
+                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
+                                  SVN_RA_SVN_CAP_SSL);
   else
     return svn_ra_svn_write_tuple(conn, pool, "w(?c)", mech, mech_arg);
 }
@@ -271,6 +274,49 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("Unexpected server response to authentication"));
   return SVN_NO_ERROR;
+}
+
+/* Authenticate the server certificate. */
+static svn_error_t *do_ssl_auth(ra_svn_session_baton_t *sess, 
+                                ssl_conn_t *ssl_conn,
+                                apr_pool_t *pool)
+{
+  svn_auth_iterstate_t *state;
+  void *creds;
+  svn_error_t *error;
+  apr_uint32_t *cert_failures = apr_palloc (pool, sizeof(*cert_failures));
+
+  svn_auth_ssl_server_cert_info_t *cert_info = 
+    apr_palloc(pool, sizeof(*cert_info));
+
+  SVN_ERR(svn_ra_svn__fill_server_cert_info(ssl_conn, pool, 
+                                            sess->hostname,
+                                            cert_info, cert_failures));
+
+  svn_auth_set_parameter(sess->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
+                         cert_failures);
+
+  svn_auth_set_parameter(sess->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                         cert_info);
+
+  SVN_ERR(svn_auth_first_credentials(&creds, &state,
+                                     SVN_AUTH_CRED_SSL_SERVER_TRUST,
+                                     sess->realm_prefix,
+                                     sess->auth_baton,
+                                     pool));  
+
+  if (!creds)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                _("Server certificate rejected"));
+
+  error = svn_auth_save_credentials(state, pool);
+  
+  svn_auth_set_parameter(sess->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
+
+  return error;
 }
 
 /* Respond to an auth request and perform authentication.  REALM may
@@ -560,7 +606,6 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
 
   /* Guard against dotfile output to stdout on the server. */
   *conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
-  (*conn)->proc = proc;
   SVN_ERR(svn_ra_svn_skip_leading_garbage(*conn, pool));
   return SVN_NO_ERROR;
 }
@@ -638,6 +683,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   sess->is_tunneled = (tunnel != NULL);
   sess->auth_baton = callbacks->auth_baton;
   sess->user = user;
+  sess->hostname = hostname;
   sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", hostname, port);
 
   /* In protocol version 2, we send back our protocol version, our
@@ -645,7 +691,8 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
    * request.  In version 1, we send back the protocol version, auth
    * mechanism, mechanism initial response, and capability list, and;
    * then send the URL after authentication.  do_auth temporarily has
-   * support for the mixed-style response. */
+   * support for the mixed-style response. 
+   * Note : SSL is not supported for version 1. */
   /* When we punt support for protocol version 1, we should:
    * - Eliminate this conditional and the similar one below
    * - Remove v1 support from auth_response and inline it into do_auth
@@ -659,13 +706,35 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
     }
   else
     {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(w)c", (apr_uint64_t) 2,
-                                     SVN_RA_SVN_CAP_EDIT_PIPELINE, url));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(ww)c", (apr_uint64_t) 2,
+                                     SVN_RA_SVN_CAP_EDIT_PIPELINE, 
+                                     SVN_RA_SVN_CAP_SSL, url));
+
+      /* Setup the SSL if it's supported by the server. */
+      if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
+        {
+          void *ssl_ctx;
+          ssl_conn_t *ssl_conn;
+
+          if (tunnel) 
+            return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                    _("SSL is not implemented for tunnel"));
+
+          /* Flush write buffer before initiating SSL handshake. */
+          svn_ra_svn_flush(sess->conn, pool);
+
+          SVN_ERR(svn_ra_svn__init_ssl_ctx(&ssl_ctx, pool));
+          SVN_ERR(svn_ra_svn__setup_ssl_conn(sess->conn, ssl_ctx,
+                                             &ssl_conn, pool));
+          SVN_ERR(svn_ra_svn__ssl_connect(ssl_conn, pool));
+          SVN_ERR(do_ssl_auth(sess, ssl_conn, pool));
+        }
+
       SVN_ERR(handle_auth_request(sess, pool));
     }
 
   /* This is where the security layer would go into effect if we
-   * supported security layers, which is a ways off. */
+   * supported security layers, which is a ways off. */ 
 
   /* Read the repository's uuid and root URL. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c", &conn->uuid,
