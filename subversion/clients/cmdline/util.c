@@ -256,6 +256,12 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
           apr_err = apr_filepath_merge (&truenamed_target, "", raw_target,
                                         APR_FILEPATH_TRUENAME, pool);
 
+          /* ### HACK: apr_filepath_merge("", ".") returns "", which
+             is borken.  Sander is looking into fixing this apr bug.
+             Remove this hack when it's fixed:  */
+          if (! strcmp (truenamed_target, ""))
+            truenamed_target = ".";
+
           /* It's okay for the file to not exist, that just means we have
              to accept the case given to the client. */
           if (APR_STATUS_IS_ENOENT (apr_err))
