@@ -1000,18 +1000,24 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
       
 #else
       int rv;
-      
+
       do {
         rv = fsync (filehand);
       } while (rv == -1 && APR_STATUS_IS_EINTR (apr_get_os_error ()));
 
+      /* If the file is in a memory filesystem, fsync() may return
+         EINVAL.  Presumably the user knows the risks, and we can just
+         ignore the error. */
+      if (rv == -1 && APR_STATUS_IS_EINVAL (apr_get_os_error ()))
+        return SVN_NO_ERROR;
+
       if (rv == -1)
         return svn_error_wrap_apr
           (apr_get_os_error (), "Can't flush file to disk.");
-      
+
 #endif
   }
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
     
 
