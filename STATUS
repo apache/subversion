@@ -28,16 +28,6 @@ due to persistent lack of votes:
 
 Candidate changes:
 
-  * r13712
-    Take out RPM "static build" feature that never actually worked.
-    This feature was intended to build svnadmin statically such that when a
-    package upgrade occured, the admin could dump the (old format) repository
-    AFTER the upgrade.  Testing has revealed that the static compile with BDB
-    never worked.
-    Justification: Don't imply promises we can't keep.
-    Votes:
-      +1: david
-
   * r13715
     Teach swig-1.3.19-3 to co-exist with swig package that comes with Redhat.
     Justification: Less hassle for software developers because packages
