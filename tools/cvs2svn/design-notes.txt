@@ -179,6 +179,88 @@ Pass 5:
 Load the dumpfile into Subversion.  Voilà.
 
 
+                 ===============================
+                     Branches and Tags Plan.
+                 ===============================
+
+[This is written somewhat hastily, mainly to serve as notes to myself
+to remind me of what I'm doing.  The full description will be worked
+into the pass documentation above later.  Much thanks to Mike Pilato
+for in-depth discussion about the problem.]
+
+Some background for this branches/tags solution can be found at
+
+   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=32809
+
+We're not going to write a dumpfile in pass4.  Instead, we're going to
+write to a commits file; it'll record the same stuff the dumpfile
+does, minus the file contents.  The reason to do this is that we'll
+need to make several passes through that commits file in order to get
+branch creation times right.  Then when we've got them all lined up,
+we can write the dumpfile in a later pass.
+
+So the first thing we do is convert 
+
+   cvs2svn-data.s-revs  ==>  cvs2svn-data.commits
+
+Let's say the format of cvs2svn-data.commits is the same line-based
+format as cvs2svn-data.s-revs, without the interleaving, and there's
+new prefix slot to indicate revision numbers, something like this:
+
+   1
+     3ecd5b32 <hash> C 1.1 * 0 0 <path>
+     3ecd5b32 <hash> C 1.1 * 0 0 <path>
+     3ecd5b32 <hash> C 1.1 * 0 0 <path>
+     3ecd5b32 <hash> C 1.1 * 1 T_MIXED 1 B_MIXED <path>
+   2
+     ...
+
+That is, first we indicate the upcoming revision, then all the files
+in that revision (indented by two spaces).
+
+So now we have a file listing every trunk commit, and we know the
+actual Subversion revision number of that commit.  We make a pass
+over the .commits file, and for each line do this
+
+   for each branch:
+     Look up the subversionized <path> in branches/<branchname>.db
+       If not present, then initialize with list `(this-rev)'.
+       Else if present, error -- branches can't be created twice.
+
+     Then bubble up up subversionized <path>'s parents:
+       If present, adjust the range of possible revisions
+       Else if not present, add, with revision `(this-rev)'.
+       (We could keep scores for different ranges, but that vastly
+       complicates things... Let's get the simpler algorithm working
+       first, since it's really a subset of the score-keeping one
+       anyway.)
+
+     Look up the subversionized <path> in every other branches/*.db:
+       If present, set range endpoint, so we have `(revA revB)'.
+       Else if not present, do nothing.
+
+Similar deal for tags.
+
+Now we can make a second pass over the commits file, this time looking
+up tags and branches in their DBs.  For each one we can find a decent
+set of mkdirs and copies -- not always the ideal minimal set, but in
+most cases it should be close.  It will tend to do copies of whole
+directories or directory trees the farther down it goes, so the danger
+lessens as we approach leaf nodes, which is good.
+
+We'll have to make N passes total, in order to handle branches off of
+branches (N being the max branching depth).
+
+Oh, one other thing: the head mirror will have to become a full
+history mirror -- just the skeletal tree, not the file contents.  The
+reason is that when we create a branch by copying, it could
+accidentally capture some files that aren't actually on the branch.
+The solution is to be able to iterate over all the children of the
+branch source directory *at a given revision*, checking which ones
+have keys in the tags/foo.db or branches/foo.db file.  Those that
+don't get `delete's outputted.
+
+
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
 Some older notes and ideas about cvs2svn.  Not deleted, because they
