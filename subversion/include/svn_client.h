@@ -470,8 +470,7 @@ svn_client_checkout (svn_revnum_t *result_rev,
  * of a versioned path will cause an update that attempts to add that path,
  * other unversioned paths are skipped.  If @a result_revs is not
  * @c NULL an array of svn_revnum_t will be returned with each element set
- * to the value of the actual revision to which the corresponding path was
- * updated.
+ * to the revision to which @a revision was resolved.
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If @a 

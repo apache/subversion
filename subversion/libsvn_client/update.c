@@ -52,7 +52,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
-  const char *URL, *anchor, *target;
+  const char *anchor, *target;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
@@ -78,15 +78,10 @@ svn_client__update_internal (svn_revnum_t *result_rev,
 
   /* Get full URL from the ANCHOR. */
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL, 
-                              _("'%s' is not under version control"),
-                              svn_path_local_style (anchor, pool));
   if (! entry->url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                               _("Entry '%s' has no URL"),
                               svn_path_local_style (anchor, pool));
-  URL = apr_pstrdup (pool, entry->url);
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
@@ -106,10 +101,10 @@ svn_client__update_internal (svn_revnum_t *result_rev,
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, entry->url, pool));
 
   /* Open an RA session for the URL */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor, 
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, entry->url, anchor, 
                                         adm_access, NULL, TRUE, TRUE, 
                                         ctx, pool));
 
@@ -215,9 +210,12 @@ svn_client_update2 (apr_array_header_t **result_revs,
       err = svn_client__update_internal (&result_rev, path, revision,
                                          recurse, &sleep, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
-        return err;
+        {
+          return err;
+        }
       else if (err)
         {
+          /* SVN_ERR_WC_NOT_DIRECTORY: it's not versioned */
           svn_error_clear (err);
           err = SVN_NO_ERROR;
           result_rev = SVN_INVALID_REVNUM;
