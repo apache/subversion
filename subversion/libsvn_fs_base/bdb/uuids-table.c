@@ -27,6 +27,8 @@
 #include "bdb-err.h"
 #include "uuids-table.h"
 
+#include "svn_private_config.h"
+
 
 /*** Creating and opening the uuids table.
      When the table is created, the repository's uuid is

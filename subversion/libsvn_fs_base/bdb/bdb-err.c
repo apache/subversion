@@ -32,6 +32,8 @@
 #include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 
+#include "svn_private_config.h"
+
 
 /* Return a distinguished error for any db error code we want to detect
  * programatically; otherwise return a generic error.

@@ -27,6 +27,8 @@
 #include "bdb-err.h"
 #include "strings-table.h"
 
+#include "svn_private_config.h"
+
 
 /*** Creating and opening the strings table. ***/
 

@@ -31,6 +31,8 @@
 #include "bdb-err.h"
 #include "txn-table.h"
 
+#include "svn_private_config.h"
+
 
 static svn_boolean_t
 is_committed (transaction_t *txn)
