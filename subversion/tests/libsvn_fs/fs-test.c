@@ -3928,6 +3928,61 @@ dir_deltas (const char **msg)
     revision_count++;
   }
 
+  /* Make a new txn based on the youngest revision, make some changes,
+     and commit those changes (which makes a new youngest
+     revision). */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_copy (revision_root, "A/D/G",
+                        txn_root, "A/D/G2",
+                        pool));
+  SVN_ERR (svn_fs_copy (revision_root, "A/epsilon",
+                        txn_root, "A/B/epsilon",
+                        pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /***********************************************************************/
+  /* REVISION 4 */
+  /***********************************************************************/
+  {
+    tree_test_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "A",           0 },
+      { "A/delta",     "This is the file 'delta'.\nLine 2.\n" },
+      { "A/epsilon",   "This is the file 'epsilon'.\n" },
+      { "A/mu",        "Re-added file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/epsilon", "This is the file 'epsilon'.\n" },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/B/Z",       0 },
+      { "A/B/Z/zeta",  "This is the file 'zeta'.\n" },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "Changed file 'rho'.\n" },
+      { "A/D/G2",      0 },
+      { "A/D/G2/pi",   "This is the file 'pi'.\n" },
+      { "A/D/G2/rho",  "Changed file 'rho'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", 0 }
+    };
+    expected_trees[revision_count].entries = expected_entries;
+    expected_trees[revision_count].num_entries = 25;
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, youngest_rev, pool)); 
+    SVN_ERR (validate_tree (revision_root,
+                            expected_trees[revision_count].entries,
+                            expected_trees[revision_count].num_entries));
+    revision_count++;
+  }
+
   /* THE BIG IDEA: Now that we have a collection of revisions, let's
      first make sure that given any two revisions, we can get the
      right delta between them.  We'll do this by selecting our two
