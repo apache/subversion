@@ -50,3 +50,11 @@
 
 void *svn_malloc (size_t len);
 void *svn_realloc (void *old, size_t new_len);
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

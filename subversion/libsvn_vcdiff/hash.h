@@ -1,4 +1,4 @@
-/* Handy subroutines used throughout Subversion.
+/* Hashing interface for a vdelta implementation.
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -48,8 +48,48 @@
 
 
 
-void *svn_malloc (size_t len);
-void *svn_realloc (void *old, size_t new_len);
+/* *********************** Data Structures ************************** */
+
+
+/* One entry in a hash table. */
+typedef struct hash_entry_t
+{
+  /* Notice that this doesn't point to a chain of hash buckets.
+   * That's right -- we clobber on collision.  It's a time-space
+   * tradeoff, and optimizing for time is faster to implement.
+   *
+   * An in-between solution is to keep `pos1', `pos2' ... `posN',
+   * hardcoded in the data type here, and try all of them for the
+   * longest available match.  I think N == 4 would be good, on no
+   * basis whatsoever.
+   *
+   * The best solution, for optimizing delta size, is to be a regular
+   * hash table with an extendable bucket chain.  But vdelta might run
+   * real slow that way. :-)
+   */
+
+  long int pos;        /* Where was this string in the input? */
+} hash_entry_t;
+
+
+/* A hash table is basically an array of hash_entries. */
+typedef struct hash_table_t
+{
+  size_t size;
+  hash_entry_t *table;
+} hash_table_t;
+
+
+/* *********************** Functions ************************** */
+
+hash_table_t *make_hash_table (size_t size);
+
+void free_hash_table (hash_table_t *table);
+
+/* Return the position associated with the match, if any, else -1. 
+   Put STR into the hash_table in any case. */
+long int try_match (unsigned char *str, long int len, long int pos,
+                    hash_table_t *);
 
 
 
