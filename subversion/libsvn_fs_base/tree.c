@@ -48,6 +48,7 @@
 #include "dag.h"
 #include "tree.h"
 #include "revs-txns.h"
+#include "id.h"
 #include "bdb/txn-table.h"
 #include "bdb/rev-table.h"
 #include "bdb/nodes-table.h"
@@ -537,11 +538,12 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
   /* Initialize some convenience variables. */
   child_id = svn_fs_base__dag_get_id (child->node);
   parent_id = svn_fs_base__dag_get_id (child->parent->node);
-  child_copy_id = svn_fs__id_copy_id (child_id);
-  parent_copy_id = svn_fs__id_copy_id (parent_id);
+  child_copy_id = svn_fs_base__id_copy_id (child_id);
+  parent_copy_id = svn_fs_base__id_copy_id (parent_id);
 
   /* If this child is already mutable, we have nothing to do. */
-  if (svn_fs_base__key_compare (svn_fs__id_txn_id (child_id), txn_id) == 0)
+  if (svn_fs_base__key_compare (svn_fs_base__id_txn_id (child_id),
+                                txn_id) == 0)
     {
       *inherit_p = copy_id_inherit_self;
       *copy_src_path = NULL;
@@ -858,7 +860,7 @@ make_path_mutable (svn_fs_root_t *root,
         {
         case copy_id_inherit_parent:
           parent_id = svn_fs_base__dag_get_id (parent_path->parent->node);
-          copy_id = svn_fs__id_copy_id (parent_id);
+          copy_id = svn_fs_base__id_copy_id (parent_id);
           break;
 
         case copy_id_inherit_new:
@@ -892,7 +894,7 @@ make_path_mutable (svn_fs_root_t *root,
         {
           const svn_fs_id_t *new_node_id = svn_fs_base__dag_get_id (clone);
           SVN_ERR (svn_fs_bdb__create_copy (fs, copy_id, copy_src_path,
-                                            svn_fs__id_txn_id (node_id),
+                                            svn_fs_base__id_txn_id (node_id),
                                             new_node_id,
                                             copy_kind_soft, trail));
           SVN_ERR (svn_fs_base__add_txn_copy (fs, txn_id, copy_id, trail));
@@ -989,7 +991,8 @@ txn_body_node_id (void *baton, trail_t *trail)
   dag_node_t *node;
 
   SVN_ERR (get_dag (&node, args->root, args->path, trail));
-  *args->id_p = svn_fs__id_copy (svn_fs_base__dag_get_id (node), trail->pool);
+  *args->id_p = svn_fs_base__id_copy (svn_fs_base__dag_get_id (node),
+                                      trail->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1010,7 +1013,8 @@ base_node_id (const svn_fs_id_t **id_p,
          The root directory ("" or "/") node is stored in the
          svn_fs_root_t object, and never changes when it's a revision
          root, so we can just reach in and grab it directly. */
-      *id_p = svn_fs__id_copy (svn_fs_base__dag_get_id (brd->root_dir), pool);
+      *id_p = svn_fs_base__id_copy (svn_fs_base__dag_get_id (brd->root_dir),
+                                    pool);
     }
   else
     {
@@ -1537,7 +1541,7 @@ txn_body_pred_id (void *baton, trail_t *trail)
 
   SVN_ERR (svn_fs_bdb__get_node_revision (&nr, trail->fs, args->id, trail));
   if (nr->predecessor_id)
-    args->pred_id = svn_fs__id_copy (nr->predecessor_id, args->pool);
+    args->pred_id = svn_fs_base__id_copy (nr->predecessor_id, args->pool);
   else
     args->pred_id = NULL;
 
@@ -1566,7 +1570,7 @@ deltify_mutable (svn_fs_t *fs,
      to do because for items in the tree to be mutable, their parent
      dirs must also be mutable.  Therefore, if a directory is not
      mutable under TXN_ID, its children cannot be.  */
-  if (strcmp (svn_fs__id_txn_id (id), txn_id))
+  if (strcmp (svn_fs_base__id_txn_id (id), txn_id))
     return SVN_NO_ERROR;
 
   /* Is this a directory?  */
@@ -1748,7 +1752,7 @@ update_ancestry (svn_fs_t *fs,
   node_revision_t *noderev;
 
   /* Set target's predecessor-id to source_id.  */
-  if (strcmp (svn_fs__id_txn_id (target_id), txn_id))
+  if (strcmp (svn_fs_base__id_txn_id (target_id), txn_id))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Unexpected immutable node at '%s'", target_path);
@@ -1877,7 +1881,7 @@ merge (svn_stringbuf_t *conflict_p,
   ancestor_id = svn_fs_base__dag_get_id (ancestor);
 
   /* It's improper to call this function with ancestor == target. */
-  if (svn_fs__id_eq (ancestor_id, target_id))
+  if (svn_fs_base__id_eq (ancestor_id, target_id))
     {
       svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
@@ -1892,8 +1896,8 @@ merge (svn_stringbuf_t *conflict_p,
    * Either no change made in source, or same change as made in target.
    * Both mean nothing to merge here.
    */
-  if (svn_fs__id_eq (ancestor_id, source_id)
-      || (svn_fs__id_eq (source_id, target_id)))
+  if (svn_fs_base__id_eq (ancestor_id, source_id)
+      || (svn_fs_base__id_eq (source_id, target_id)))
     return SVN_NO_ERROR;
 
   /* Else proceed, knowing all three are distinct node revisions.
@@ -2067,7 +2071,7 @@ merge (svn_stringbuf_t *conflict_p,
           && (t_entry = apr_hash_get (t_entries, key, klen)))
         {
           /* If source entry has changed since ancestor entry... */
-          if (! svn_fs__id_eq (a_entry->id, s_entry->id))
+          if (! svn_fs_base__id_eq (a_entry->id, s_entry->id))
             {
               svn_boolean_t a_ancestorof_t = FALSE, t_ancestorof_s = FALSE;
               svn_boolean_t s_ancestorof_t = FALSE;
@@ -2083,7 +2087,7 @@ merge (svn_stringbuf_t *conflict_p,
 
                    This could very well be the ugliest code in Subversion. */
 
-              a_is_t = svn_fs__id_eq (a_entry->id, t_entry->id);
+              a_is_t = svn_fs_base__id_eq (a_entry->id, t_entry->id);
               if (a_is_t)
                 {
                   /* This is Case 1.  */
@@ -2196,7 +2200,7 @@ merge (svn_stringbuf_t *conflict_p,
         {
           /* If E changed between ancestor and source, then that
              conflicts with E's having been removed from target. */
-          if (! svn_fs__id_eq (a_entry->id, s_entry->id))
+          if (! svn_fs_base__id_eq (a_entry->id, s_entry->id))
             {
               return conflict_err (conflict_p,
                                    svn_path_join (target_path,
@@ -2396,8 +2400,8 @@ txn_body_merge (void *baton, trail_t *trail)
                                                txn_id, trail));
     }
 
-  if (svn_fs__id_eq (svn_fs_base__dag_get_id (ancestor_node),
-                     svn_fs_base__dag_get_id (txn_root_node)))
+  if (svn_fs_base__id_eq (svn_fs_base__dag_get_id (ancestor_node),
+                          svn_fs_base__dag_get_id (txn_root_node)))
     {
       /* If no changes have been made in TXN since its current base,
          then it can't conflict with any changes since that base.  So
@@ -2479,8 +2483,8 @@ txn_body_commit (void *baton, trail_t *trail)
      for the other.  We can certainly do the comparison we need, but
      it would be nice to grab the same type of information from the
      start, instead of having to transform one of them. */
-  if (! svn_fs__id_eq (y_rev_root_id,
-                       svn_fs_base__dag_get_id (txn_base_root_node)))
+  if (! svn_fs_base__id_eq (y_rev_root_id,
+                            svn_fs_base__dag_get_id (txn_base_root_node)))
     {
       svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
@@ -3037,17 +3041,18 @@ txn_body_copied_from (void *baton, trail_t *trail)
     return SVN_NO_ERROR;
 
   /* If NODE's copy-ID is the same as that of its predecessor... */
-  if (svn_fs_base__key_compare (svn_fs__id_copy_id (node_id),
-                                svn_fs__id_copy_id (pred_id)) != 0)
+  if (svn_fs_base__key_compare (svn_fs_base__id_copy_id (node_id),
+                                svn_fs_base__id_copy_id (pred_id)) != 0)
     {
       /* ... then NODE was either the target of a copy operation,
          a copied subtree item.  We examine the actual copy record
          to determine which is the case.  */
       copy_t *copy;
       SVN_ERR (svn_fs_bdb__get_copy (&copy, fs,
-                                     svn_fs__id_copy_id (node_id), trail));
+                                     svn_fs_base__id_copy_id (node_id),
+                                     trail));
       if ((copy->kind == copy_kind_real)
-          && svn_fs__id_eq (copy->dst_noderev_id, node_id))
+          && svn_fs_base__id_eq (copy->dst_noderev_id, node_id))
         {
           args->result_path = copy->src_path;
           SVN_ERR (svn_fs_base__txn_get_revision (&(args->result_rev), fs,
@@ -3866,7 +3871,8 @@ examine_copy_inheritance (const char **copy_id,
                           trail_t *trail)
 {
   /* The default response -- our current copy ID, and no fetched COPY. */
-  *copy_id = svn_fs__id_copy_id (svn_fs_base__dag_get_id (parent_path->node));
+  *copy_id = svn_fs_base__id_copy_id
+    (svn_fs_base__dag_get_id (parent_path->node));
   *copy = NULL;
 
   /* If we have no parent (we are looking at the root node), or if
@@ -4014,7 +4020,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
      (which is either a real predecessor, or is the node itself
      playing the predecessor role to an imaginary mutable successor),
      then we need to report a copy.  */
-  if (svn_fs_base__key_compare (svn_fs__id_copy_id (node_id),
+  if (svn_fs_base__key_compare (svn_fs_base__id_copy_id (node_id),
                                 end_copy_id) != 0)
     {
       const char *remainder;
@@ -4052,7 +4058,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
                    (&src_rev, fs, copy->src_txn_id, trail));
           SVN_ERR (svn_fs_base__txn_get_revision
                    (&dst_rev, fs,
-                    svn_fs__id_txn_id (copy->dst_noderev_id), trail));
+                    svn_fs_base__id_txn_id (copy->dst_noderev_id), trail));
           src_path = svn_path_join (copy->src_path, remainder,
                                     trail->pool);
           if (copy->kind == copy_kind_soft)

@@ -47,6 +47,7 @@
 #include "tree.h"
 #include "revs-txns.h"
 #include "fs_fs.h"
+#include "id.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -496,11 +497,11 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
   /* Initialize some convenience variables. */
   child_id = svn_fs_fs__dag_get_id (child->node);
   parent_id = svn_fs_fs__dag_get_id (child->parent->node);
-  child_copy_id = svn_fs__id_copy_id (child_id);
-  parent_copy_id = svn_fs__id_copy_id (parent_id);
+  child_copy_id = svn_fs_fs__id_copy_id (child_id);
+  parent_copy_id = svn_fs_fs__id_copy_id (parent_id);
 
   /* If this child is already mutable, we have nothing to do. */
-  if (svn_fs_fs__get_id_txn (child_id))
+  if (svn_fs_fs__id_txn_id (child_id))
     {
       *inherit_p = copy_id_inherit_self;
       *copy_src_path = NULL;
@@ -821,7 +822,7 @@ make_path_mutable (svn_fs_root_t *root,
         {
         case copy_id_inherit_parent:
           parent_id = svn_fs_fs__dag_get_id (parent_path->parent->node);
-          copy_id = svn_fs__id_copy_id (parent_id);
+          copy_id = svn_fs_fs__id_copy_id (parent_id);
           break;
           
         case copy_id_inherit_new:
@@ -848,8 +849,8 @@ make_path_mutable (svn_fs_root_t *root,
 
       child_id = svn_fs_fs__dag_get_id (parent_path->node);
       copyroot_id = svn_fs_fs__dag_get_id (copyroot_node);
-      if (strcmp (svn_fs__id_node_id (child_id),
-                  svn_fs__id_node_id (copyroot_id)) != 0)
+      if (strcmp (svn_fs_fs__id_node_id (child_id),
+                  svn_fs_fs__id_node_id (copyroot_id)) != 0)
         is_parent_copyroot = TRUE;
       
       /* Now make this node mutable.  */
@@ -960,14 +961,14 @@ fs_node_id (const svn_fs_id_t **id_p,
          The root directory ("" or "/") node is stored in the
          svn_fs_root_t object, and never changes when it's a revision
          root, so we can just reach in and grab it directly. */
-      *id_p = svn_fs__id_copy (svn_fs_fs__dag_get_id (frd->root_dir), pool);
+      *id_p = svn_fs_fs__id_copy (svn_fs_fs__dag_get_id (frd->root_dir), pool);
     }
   else
     {
       dag_node_t *node;
 
       SVN_ERR (get_dag (&node, root, path, pool));
-      *id_p = svn_fs__id_copy (svn_fs_fs__dag_get_id (node), pool);
+      *id_p = svn_fs_fs__id_copy (svn_fs_fs__dag_get_id (node), pool);
     }
   return SVN_NO_ERROR;
 }
@@ -1218,7 +1219,7 @@ update_ancestry (svn_fs_t *fs,
 {
   node_revision_t *noderev;
 
-  if (svn_fs_fs__get_id_txn (target_id) == NULL)
+  if (svn_fs_fs__id_txn_id (target_id) == NULL)
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
        "Unexpected immutable node at '%s'", target_path);
@@ -1351,7 +1352,7 @@ merge (svn_stringbuf_t *conflict_p,
   ancestor_id = svn_fs_fs__dag_get_id (ancestor);
 
   /* It's improper to call this function with ancestor == target. */
-  if (svn_fs__id_eq (ancestor_id, target_id))
+  if (svn_fs_fs__id_eq (ancestor_id, target_id))
     {
       svn_string_t *id_str = svn_fs_unparse_id (target_id, pool);
       return svn_error_createf
@@ -1366,8 +1367,8 @@ merge (svn_stringbuf_t *conflict_p,
    * Either no change made in source, or same change as made in target.
    * Both mean nothing to merge here.
    */
-  if (svn_fs__id_eq (ancestor_id, source_id)
-      || (svn_fs__id_eq (source_id, target_id)))
+  if (svn_fs_fs__id_eq (ancestor_id, source_id)
+      || (svn_fs_fs__id_eq (source_id, target_id)))
     return SVN_NO_ERROR;
 
   /* Else proceed, knowing all three are distinct node revisions.
@@ -1542,7 +1543,7 @@ merge (svn_stringbuf_t *conflict_p,
           && (t_entry = apr_hash_get (t_entries, key, klen)))
         {
           /* If source entry has changed since ancestor entry... */
-          if (! svn_fs__id_eq (a_entry->id, s_entry->id))
+          if (! svn_fs_fs__id_eq (a_entry->id, s_entry->id))
             {
               svn_boolean_t a_ancestorof_t = FALSE, t_ancestorof_s = FALSE;
               svn_boolean_t s_ancestorof_t = FALSE;
@@ -1558,7 +1559,7 @@ merge (svn_stringbuf_t *conflict_p,
 
                    This could very well be the ugliest code in Subversion. */
 
-              a_is_t = svn_fs__id_eq (a_entry->id, t_entry->id);
+              a_is_t = svn_fs_fs__id_eq (a_entry->id, t_entry->id);
               if (a_is_t)
                 {
                   /* This is Case 1.  */
@@ -1673,7 +1674,7 @@ merge (svn_stringbuf_t *conflict_p,
         {
           /* If E changed between ancestor and source, then that
              conflicts with E's having been removed from target. */
-          if (! svn_fs__id_eq (a_entry->id, s_entry->id))
+          if (! svn_fs_fs__id_eq (a_entry->id, s_entry->id))
             {
               return conflict_err (conflict_p,
                                    svn_path_join (target_path,
@@ -1851,7 +1852,7 @@ merge_changes (dag_node_t *ancestor_node,
                                              txn_id, pool));
     }
   
-  if (svn_fs__id_eq (svn_fs_fs__dag_get_id (ancestor_node),
+  if (svn_fs_fs__id_eq (svn_fs_fs__dag_get_id (ancestor_node),
                      svn_fs_fs__dag_get_id (txn_root_node)))
     {
       /* If no changes have been made in TXN since its current base,

@@ -289,19 +289,16 @@ int svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
 /** Return non-zero IFF the nodes associated with @a id1 and @a id2 are
  * related, else return zero.  
- *
- * NOTE: While this might seem redundant in the presence of
- * @c svn_fs_compare_ids (looking for a return value != -1), it is
- * slightly faster to run if the equality case is not interesting to
- * you.
  */
 svn_boolean_t svn_fs_check_related (const svn_fs_id_t *id1,
                                     const svn_fs_id_t *id2);
 
 
-/** Parse the @a len bytes at @a data as a node revision @a id.  Return zero 
- * if the bytes are not a properly-formed @a id.  Allocate the parsed @a id 
- * in @a pool.
+/** @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * NOTE: This function is not guaranteed to work with all filesystem
+ * types.  There is currently no un-deprecated equivalent; contact the
+ * Subversion developers if you have a need for it.
  */
 svn_fs_id_t *svn_fs_parse_id (const char *data, 
                               apr_size_t len,

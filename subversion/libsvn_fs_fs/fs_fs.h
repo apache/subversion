@@ -18,29 +18,6 @@
 #ifndef SVN_LIBSVN_FS__FS_FS_H
 #define SVN_LIBSVN_FS__FS_FS_H
 
-/* Given a node-id ID that corresponds to a node in an fsfs backed
-   filesystem, return the revision in which this node was committed,
-   or SVN_INVALID_REVNUM if the node is within an uncommitted
-   transaction. */
-svn_revnum_t svn_fs_fs__get_id_rev (const svn_fs_id_t *id);
-
-/* Given a node-id ID that corresponds to a node in an fsfs backed
-   filesystem, return the offset into the permanent revision file
-   where the node-revision is located.  If this node-revision is
-   located in an uncommitted transaction, return 0. */
-apr_off_t svn_fs_fs__get_id_offset (const svn_fs_id_t *id);
-
-/* Given a node-id ID that corresponds to a node in an fsfs backed
-   filesystem, return the transaction id in which the node is located.
-   If the node is located in a committed revision, return NULL. */
-const char *svn_fs_fs__get_id_txn (const svn_fs_id_t *id);
-
-/* Set the transaction id of node-id ID backed by a fsfs filesystem to
-   TXN_ID.  Allocate any necessary storage from POOL. */
-svn_error_t * svn_fs_fs__set_id_txn (svn_fs_id_t *id,
-                                     const char *txn_id,
-                                     apr_pool_t *pool);
-
 /* Open the fsfs filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__open (svn_fs_t *fs,

@@ -26,6 +26,7 @@
 #include "../fs.h"
 #include "../err.h"
 #include "../trail.h"
+#include "../id.h"
 #include "../util/fs_skels.h"
 #include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
@@ -144,7 +145,8 @@ fold_change (apr_hash_t *changes,
          revision ID as our last change except where the last change
          was a deletion. */
       if (change->noderev_id
-          && (! svn_fs__id_eq (old_change->node_rev_id, change->noderev_id))
+          && (! svn_fs_base__id_eq (old_change->node_rev_id,
+                                    change->noderev_id))
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
@@ -191,7 +193,8 @@ fold_change (apr_hash_t *changes,
           /* An add at this point must be following a previous delete,
              so treat it just like a replace. */
           old_change->change_kind = svn_fs_path_change_replace;
-          old_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
+          old_change->node_rev_id = svn_fs_base__id_copy (change->noderev_id,
+                                                          pool);
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           break;
@@ -214,7 +217,8 @@ fold_change (apr_hash_t *changes,
          structure from the internal one (in the hash's pool), and dup
          the path into the hash's pool, too. */
       new_change = apr_pcalloc (pool, sizeof (*new_change));
-      new_change->node_rev_id = svn_fs__id_copy (change->noderev_id, pool);
+      new_change->node_rev_id = svn_fs_base__id_copy (change->noderev_id,
+                                                      pool);
       new_change->change_kind = change->kind;
       new_change->text_mod = change->text_mod;
       new_change->prop_mod = change->prop_mod;

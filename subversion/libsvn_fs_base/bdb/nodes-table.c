@@ -28,6 +28,7 @@
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../key-gen.h"
+#include "../id.h"
 #include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 #include "nodes-table.h"
@@ -113,7 +114,7 @@ svn_fs_bdb__new_node_id (svn_fs_id_t **id_p,
   SVN_ERR (BDB_WRAP (fs, "bumping next node ID key", db_err));
 
   /* Create and return the new node id. */
-  *id_p = svn_fs__create_id (next_node_id, copy_id, txn_id, trail->pool);
+  *id_p = svn_fs_base__id_create (next_node_id, copy_id, txn_id, trail->pool);
   return SVN_NO_ERROR;
 }
 
@@ -133,10 +134,11 @@ svn_fs_bdb__new_successor_id (svn_fs_id_t **successor_p,
   assert (txn_id);
 
   /* Create and return the new successor ID.  */
-  new_id = svn_fs__create_id (svn_fs__id_node_id (id),
-                              copy_id ? copy_id : svn_fs__id_copy_id (id),
-                              txn_id,
-                              trail->pool);
+  new_id = svn_fs_base__id_create (svn_fs_base__id_node_id (id),
+                                   copy_id ? copy_id
+                                   : svn_fs_base__id_copy_id (id),
+                                   txn_id,
+                                   trail->pool);
 
   /* Now, make sure this NEW_ID doesn't already exist in FS. */
   err = svn_fs_bdb__get_node_revision (NULL, fs, new_id, trail);

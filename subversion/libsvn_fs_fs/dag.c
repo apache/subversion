@@ -31,6 +31,7 @@
 #include "key-gen.h"
 #include "revs-txns.h"
 #include "fs_fs.h"
+#include "id.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -105,7 +106,7 @@ copy_node_revision (node_revision_t *noderev,
   node_revision_t *nr = apr_pcalloc (pool, sizeof (*nr));
   nr->kind = noderev->kind;
   if (noderev->predecessor_id)
-    nr->predecessor_id = svn_fs__id_copy (noderev->predecessor_id, pool);
+    nr->predecessor_id = svn_fs_fs__id_copy (noderev->predecessor_id, pool);
   nr->predecessor_count = noderev->predecessor_count;
   if (noderev->copyfrom_path)
     nr->copyfrom_path = apr_pstrdup (pool, noderev->copyfrom_path);
@@ -159,7 +160,7 @@ get_node_revision (node_revision_t **noderev_p,
 svn_boolean_t svn_fs_fs__dag_check_mutable (dag_node_t *node, 
                                             const char *txn_id)
 {
-  return (svn_fs_fs__get_id_txn (svn_fs_fs__dag_get_id (node)) != NULL);
+  return (svn_fs_fs__id_txn_id (svn_fs_fs__dag_get_id (node)) != NULL);
 }
 
 
@@ -175,7 +176,7 @@ svn_fs_fs__dag_get_node (dag_node_t **node,
   /* Construct the node. */
   new_node = apr_pcalloc (pool, sizeof (*new_node));
   new_node->fs = fs;
-  new_node->id = svn_fs__id_copy (id, pool); 
+  new_node->id = svn_fs_fs__id_copy (id, pool); 
   new_node->pool = pool;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
@@ -197,7 +198,7 @@ svn_fs_fs__dag_get_revision (svn_revnum_t *rev,
                              apr_pool_t *pool)
 {
   /* Look up the committed revision from the Node-ID. */
-  *rev = svn_fs_fs__get_id_rev (node->id);
+  *rev = svn_fs_fs__id_rev (node->id);
 
   return SVN_NO_ERROR;
 }
@@ -422,8 +423,8 @@ make_entry (dag_node_t **child_p,
   new_noderev.copyfrom_path = NULL;
   
   SVN_ERR (svn_fs_fs__create_node
-           (&new_node_id, svn_fs_fs__dag_get_fs (parent),
-            &new_noderev, svn_fs__id_copy_id (svn_fs_fs__dag_get_id (parent)),
+           (&new_node_id, svn_fs_fs__dag_get_fs (parent), &new_noderev,
+            svn_fs_fs__id_copy_id (svn_fs_fs__dag_get_id (parent)),
             txn_id, pool));
 
   /* Create a new dag_node_t for our new node */
@@ -509,7 +510,7 @@ svn_fs_fs__dag_set_proplist (dag_node_t *node,
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_fs__dag_check_mutable (node, txn_id))
     {
-      svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
+      svn_string_t *idstr = svn_fs_fs__id_unparse (node->id, node->pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
          "Can't set proplist on *immutable* node-revision %s",
@@ -622,7 +623,7 @@ svn_fs_fs__dag_clone_child (dag_node_t **child_p,
       noderev->copyfrom_path = NULL;
       noderev->copyfrom_rev = SVN_INVALID_REVNUM;
       
-      noderev->predecessor_id = svn_fs__id_copy (cur_entry->id, pool);
+      noderev->predecessor_id = svn_fs_fs__id_copy (cur_entry->id, pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
       noderev->created_path = svn_path_join (parent_path, name, pool);
@@ -657,7 +658,7 @@ svn_fs_fs__dag_clone_root (dag_node_t **root_p,
   /* Oh, give me a clone...
      (If they're the same, we haven't cloned the transaction's root
      directory yet.)  */
-  if (svn_fs__id_eq (root_id, base_root_id)) 
+  if (svn_fs_fs__id_eq (root_id, base_root_id)) 
     {
       abort ();
     }
@@ -977,7 +978,7 @@ svn_fs_fs__dag_dup (dag_node_t *node,
 
   new_node->fs = node->fs;
   new_node->pool = pool;
-  new_node->id = svn_fs__id_copy (node->id, pool);
+  new_node->id = svn_fs_fs__id_copy (node->id, pool);
   new_node->kind = node->kind;
   new_node->created_path = apr_pstrdup (pool, node->created_path);
 
@@ -1043,7 +1044,7 @@ svn_fs_fs__dag_copy (dag_node_t *to_node,
 
       /* Create a successor with it's predecessor pointing at the copy
          source. */
-      to_noderev->predecessor_id = svn_fs__id_copy (src_id, pool);
+      to_noderev->predecessor_id = svn_fs_fs__id_copy (src_id, pool);
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
       to_noderev->created_path =
@@ -1130,7 +1131,7 @@ is_ancestor_callback (void *baton,
   if (node)
     {
       /* ... compare NODE's ID with the ID we're looking for. */
-      if (svn_fs__id_eq (b->node1_id, svn_fs_fs__dag_get_id (node)))
+      if (svn_fs_fs__id_eq (b->node1_id, svn_fs_fs__dag_get_id (node)))
         b->is_ancestor = TRUE;
 
       /* Now, if we only are interested in parenthood, we don't care
@@ -1157,7 +1158,7 @@ svn_fs_fs__dag_is_ancestor (svn_boolean_t *is_ancestor,
   *is_ancestor = FALSE;
 
   /* Ancestry holds relatedness as a prerequisite. */
-  if (! svn_fs_check_related (id1, id2))
+  if (! svn_fs_fs__id_check_related (id1, id2))
     return SVN_NO_ERROR;
 
   baton.is_ancestor = FALSE;
@@ -1188,7 +1189,7 @@ svn_fs_fs__dag_is_parent (svn_boolean_t *is_parent,
   *is_parent = FALSE;
 
   /* Parentry holds relatedness as a prerequisite. */
-  if (! svn_fs_check_related (id1, id2))
+  if (! svn_fs_fs__id_check_related (id1, id2))
     return SVN_NO_ERROR;
 
   baton.is_ancestor = FALSE;
