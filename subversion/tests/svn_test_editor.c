@@ -256,7 +256,7 @@ add_or_replace_dir (svn_string_t *name,
     {
       str = svn_string_createf (pd->edit_baton->pool,
                                 "copyfrom_path: %s\n",
-                                base_path->data);
+                                base_path ? base_path->data : "");
       SVN_ERR (print (d->edit_baton, d->indent_level, str));
 
       str = svn_string_createf (pd->edit_baton->pool,
@@ -412,7 +412,8 @@ add_or_replace_file (svn_string_t *name,
   if (strcmp (pivot_string, "add") == 0)
     {
       str = svn_string_createf (d->edit_baton->pool,
-                                "copyfrom_path: %s\n", base_path->data);
+                                "copyfrom_path: %s\n", 
+                                base_path ? base_path->data : "");
       SVN_ERR (print (fb->dir_baton->edit_baton, fb->indent_level, str));
 
       str = svn_string_createf (d->edit_baton->pool,
