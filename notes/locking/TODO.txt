@@ -1,61 +1,69 @@
 TODO for locking
-===============
+================
 
-This is a summary of the current state of the locking implementation.
+
+MUST HAVE
+---------
 
 * svn update removes defunct locks
   - Send lock tokens over ra_dav (sussman)
   - WC stuff (lundblad)
-  - Client changes
+  - Client changes  (ask lundblad?)
 
-* libsvn_client and libsvn_ra take lists to lock/unlock:
-  - fix ra_dav shim (sussman)
-  - fix svnserve shim (fitz)
+* svn status -u shows lock info from repos.  (lundblad?)
 
-* rev svn_wc_notify_func_t (on trunk) (lundblad)
+    --> list discussion:  separate subcommand instead?  (fitz)
 
-* svn status -u shows lock info from repos.  (lundblad?  depends on update?)
+* research future ra_dav shim removal plan:  will it work? (sussman)
 
-* client test cases (fitz) [broad cases done]
+* chat with jorton about neon 0.25 escaping bugs.  This affects:
+
+   * need to xml-escape lock-comments over http.  (sussman;  almost done)
+
+* 'svn commit' can easily create a no-op revision (fitz)
+
+* fs lock-enforcement issues (cmpilato)
+
+* fix svn_fs_access_t handling in svnserve (lundblad?)
+   
+* bump fs format file (cmpilato)
+
+* autoversioning:
+
+    - fix issue 2161 (sussman)
+    - research interoperability with popular dav clients (fitz)
+
+
+NICE TO HAVE
+------------
+
+* svn lock and unlock should continue with next target on certain errors
 
 * improve cmdline help messages
 
-* general bugs:
+* 'svn lock URL' should work, no working copy required.  easy to
+   do, just throw away the svn_lock_t that comes back.
 
-   * 'svn commit' can easily create a no-op revision (fitz)
-   * svn lock and unlock should continue with next target on certain errors
-   * fs 'changes' table needs to be discussed w.r.t lock enforcement
+* 'svn unlock URL --force' should work with no working copy present.
 
-* svnserve bugs:
-  
-   * Fix svn_fs_access_t handling in svnserve
+* rev svn_wc_notify_func_t (on trunk) (lundblad)
 
-* DAV bugs:
+* remove ra_svn shim for multiple locks/unlocks (fitz)
 
-   * need to xml-escape lock-comments over http.  (sussman;  almost done)
-   
-* get httpd 2.0.54 released, so that svn 1.2 can compile on win32 (??)
+* client test cases (fitz) [broad cases done]
 
-* get neon 0.25 released, so the control-c bug can go away?? (jorton)
+* get httpd 2.0.54 released, so that svn 1.2 can compile on win32
 
-* Nice to Have, but not showstoppers, because they're client-only:
+* get neon 0.25 released, so the control-c bug can go away
 
-   * 'svn lock URL' should work, no working copy required.  easy to
-     do, just throw away the svn_lock_t that comes back.
 
-   * 'svn unlock URL --force' should work with no working copy present.
+-----------------------------------------------
 
 * Questions:
 
    * Decide what should happen when unlocking in commit if an error happens.
 
-
-* LIST DISCUSSIONS TO HAVE:
-
-  * should we bump the format file, so a libsvn_fs 1.0 or 1.1
-    library isn't allowed to circumvent locks?
-
-  * how do locks relate to dump/load?
+   * how do locks relate to dump/load?  file as an enhancement? 
 
 
 * Stuff to document in book:
