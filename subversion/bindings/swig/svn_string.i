@@ -63,7 +63,7 @@ typedef struct svn_string_t svn_string_t;
 }
 
 /* svn_stringbuf_t ** is always an output parameter */
-%typemap(ignore) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
+%typemap(in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
     $1 = &temp;
 }
 %apply RET_STRING { svn_stringbuf_t ** };
@@ -99,7 +99,7 @@ typedef struct svn_string_t svn_string_t;
 }
 
 /* svn_string_t ** is always an output parameter */
-%typemap(ignore) svn_string_t ** (svn_string_t *temp) {
+%typemap(in,numinputs=0) svn_string_t ** (svn_string_t *temp) {
     $1 = &temp;
 }
 %apply RET_STRING { svn_string_t ** };

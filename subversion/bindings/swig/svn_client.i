@@ -37,35 +37,6 @@
 };
 
 /* -----------------------------------------------------------------------
-   make return commit item structures magically turn into a 3-tuple of
-   (rev, datestring, author).
-*/
-%typemap(python,argout,fragment="t_output_helper") svn_client_commit_info_t **
-{       
-    PyObject *list;
-    PyObject *rev, *date, *author;
-    if (!(*$1)) {
-        $result = Py_None;
-        Py_INCREF(Py_None);
-    }
-    list = PyList_New(3);
-    rev = PyInt_FromLong((*$1)->revision);
-    date = PyString_FromString((*$1)->date);
-    author = PyString_FromString((*$1)->author);
-    if (!(list && rev && date && author)) {
-        Py_XDECREF(rev);
-        Py_XDECREF(date);
-        Py_XDECREF(author);
-        Py_XDECREF(list);
-        return NULL;
-    }       
-    PyList_SET_ITEM(list, 0, rev);
-    PyList_SET_ITEM(list, 1, date);
-    PyList_SET_ITEM(list, 2, author);
-    $result = t_output_helper($result, list);
-};
-
-/* -----------------------------------------------------------------------
    all "targets" and "diff_options" arrays are constant inputs of
    svn_stringbuf_t *
  */
@@ -83,7 +54,7 @@
    handle the return value for svn_client_proplist()
 */
 
-%typemap(ignore) apr_array_header_t ** (apr_array_header_t *temp) {
+%typemap(in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
     $1 = &temp;
 }
 %typemap(python,argout,fragment="t_output_helper") apr_array_header_t ** {
@@ -139,7 +110,7 @@
 /* -----------------------------------------------------------------------
    handle the "statushash" OUTPUT param for svn_client_status()
 */
-%typemap(ignore) apr_hash_t **statushash = apr_hash_t **OUTPUT;
+%typemap(in,numinputs=0) apr_hash_t **statushash = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **statushash {
     $result = t_output_helper(
         $result,

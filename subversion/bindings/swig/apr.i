@@ -56,7 +56,7 @@ typedef apr_int32_t time_t;
 %apply long long { apr_time_t };
 
 /* 'apr_time_t *' will always be an OUTPUT parameter */
-%typemap(ignore) apr_time_t * (apr_time_t temp) {
+%typemap(in,numinputs=0) apr_time_t * (apr_time_t temp) {
     $1 = &temp;
 }
 %typemap(python,argout,fragment="t_output_helper") apr_time_t * {
@@ -78,7 +78,7 @@ typedef apr_int32_t time_t;
    create an OUTPUT argument typemap for an apr_hash_t **
 */
 
-%typemap(ignore) apr_hash_t **OUTPUT (apr_hash_t *temp) {
+%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp) {
     $1 = &temp;
 }
 
@@ -87,7 +87,7 @@ typedef apr_int32_t time_t;
    property values
 */
 
-%typemap(ignore) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
+%typemap(in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
 %typemap(python,argout) apr_hash_t **PROPHASH {
     /* toss prior result, get new result from the hash */
     Py_DECREF($result);
@@ -106,7 +106,7 @@ typedef apr_int32_t time_t;
    apr_file_t ** is always an OUT param
 */
 
-%typemap(ignore) apr_file_t ** (apr_file_t *temp) {
+%typemap(in,numinputs=0) apr_file_t ** (apr_file_t *temp) {
     $1 = &temp;
 }
 %typemap(python,argout,fragment="t_output_helper") apr_file_t ** {

@@ -146,7 +146,7 @@
    the second argument to svn_parse_date is unused: always pass NULL
 */
 
-%typemap(ignore) struct getdate_time *now {
+%typemap(in,numinputs=0) struct getdate_time *now {
     $1 = NULL;
 }
 
