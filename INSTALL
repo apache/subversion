@@ -31,6 +31,7 @@ Contents:
      D. Running and Testing
 
 
+
 I.    BUILD REQUIREMENTS
       ==================
 
@@ -348,6 +349,8 @@ I.    BUILD REQUIREMENTS
       If `makeinfo' is not installed before `configure' is run, then
       the documentation will not be created and installed.
 
+
+
 II.   INSTALLATION
       ============
 
@@ -648,6 +651,7 @@ II.   INSTALLATION
           using the latest cygwin. ymmv.]
 
 
+
 III.  BUILDING A SUBVERSION SERVER
       ============================
 
