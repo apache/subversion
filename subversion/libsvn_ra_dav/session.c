@@ -224,6 +224,57 @@ get_proxy (const char **proxy_host,
 }
 
 
+/* Userdata for the `proxy_auth' function. */
+struct proxy_auth_baton
+{
+  const char *username;  /* Cannot be NULL, but "" is okay. */
+  const char *password;  /* Cannot be NULL, but "" is okay. */
+};
+
+
+/* An `ne_request_auth' callback, see ne_auth.h.  USERDATA is a
+ * `struct proxy_auth_baton *'.
+ *
+ * If ATTEMPT < 10, copy USERDATA->username and USERDATA->password
+ * into USERNAME and PASSWORD respectively (but do not copy more than
+ * NE_ABUFSIZ bytes of either), and return zero to indicate to Neon
+ * that authentication should be attempted.
+ *
+ * If ATTEMPT >= 10, copy nothing into USERNAME and PASSWORD and
+ * return 1, to cancel further authentication attempts.
+ *
+ * Ignore REALM.
+ *
+ * ### Note: There is no particularly good reason for the 10-attempt
+ * limit.  Perhaps there should only be one attempt, and if it fails,
+ * we just cancel any further attempts.  I used 10 just in case the
+ * proxy tries various times with various realms, since we ignore
+ * REALM.  And why do we ignore REALM?  Because we currently don't
+ * have any way to specify different auth information for different
+ * realms.  (I'm assuming that REALM would be a realm on the proxy
+ * server, not on the Subversion repository server that is the real
+ * destination.)  Do we have any need to support proxy realms?
+ */
+static int
+proxy_auth (void *userdata,
+            const char *realm,
+            int attempt,
+            char *username,
+            char *password)
+{
+  struct proxy_auth_baton *pab = userdata;
+
+  if (attempt >= 10)
+    return 1;
+
+  /* Else. */
+
+  apr_cpystrn (username, pab->username, NE_ABUFSIZ);
+  apr_cpystrn (password, pab->password, NE_ABUFSIZ);
+
+  return 0;
+}
+
 
 /* ### need an ne_session_dup to avoid the second gethostbyname
  * call and make this halfway sane. */
@@ -264,32 +315,6 @@ svn_ra_dav__open (void **session_baton,
   ne_debug_init(stderr, NE_DBG_HTTP|NE_DBG_HTTPBODY);
 #endif
 
-  /* Does the requested URL need to go through a proxy? */
-  {
-    const char *proxy_host;
-    int proxy_port;
-    const char *proxy_username;
-    const char *proxy_password;
-    
-    SVN_ERR (get_proxy (&proxy_host,
-                        &proxy_port,
-                        &proxy_username,
-                        &proxy_password,
-                        uri.host,
-                        pool));
-
-#if 0  /* ### view proxy information for debugging */
-    if (proxy_host)
-      {
-        printf ("%s ==>\n", uri.host);
-        printf ("   %s:%d\n", proxy_host, proxy_port);
-        printf ("   %s\n", proxy_username);
-        printf ("   %s\n", proxy_password);
-        printf ("\n");
-      }
-#endif /* 0 */
-  }
-
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
 
@@ -324,6 +349,43 @@ svn_ra_dav__open (void **session_baton,
   /* Create two neon session objects, and set their properties... */
   sess = ne_session_create(uri.scheme, uri.host, uri.port);
   sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
+
+  /* If there's a proxy for this URL, use it. */
+  {
+    const char *proxy_host;
+    int proxy_port;
+    const char *proxy_username;
+    const char *proxy_password;
+    
+    SVN_ERR (get_proxy (&proxy_host,
+                        &proxy_port,
+                        &proxy_username,
+                        &proxy_password,
+                        uri.host,
+                        pool));
+
+    if (proxy_port == -1)
+      proxy_port = 80;
+
+    if (proxy_host)
+      {
+        ne_session_proxy (sess, proxy_host, proxy_port);
+        ne_session_proxy (sess2, proxy_host, proxy_port);
+
+        if (proxy_username)
+          {
+            /* Allocate the baton in pool, not on stack, so it will
+               last till whenever Neon needs it. */
+            struct proxy_auth_baton *pab = apr_palloc (pool, sizeof (*pab));
+
+            pab->username = proxy_username;
+            pab->password = proxy_password ? proxy_password : "";
+        
+            ne_set_proxy_auth (sess, proxy_auth, pab);
+            ne_set_proxy_auth (sess2, proxy_auth, pab);
+          }
+      }
+  }
 
   /* For SSL connections, when the CA certificate is not known for the
      server certificate or the server cert has other verification
