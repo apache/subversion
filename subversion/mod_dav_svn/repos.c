@@ -53,12 +53,183 @@
 
 
 #include <httpd.h>
+#include <http_protocol.h>
 #include <mod_dav.h>
 
 #include "dav_svn.h"
 
 
-const dav_hooks_repository dav_svn_hooks_repos = { 0 };
+struct dav_resource_private {
+  /* ### fill this in */
+  int unused_for_now;
+};
+
+struct dav_stream {
+  /* ### fill this in */
+  int unused_for_now;
+};
+
+
+static dav_resource * dav_svn_get_resource(request_rec *r,
+                                           const char *root_dir,
+                                           const char *workspace,
+                                           const char *target,
+                                           int is_label)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_resource * dav_svn_get_parent_resource(const dav_resource *resource)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static int dav_svn_is_same_resource(const dav_resource *res1,
+                                    const dav_resource *res2)
+{
+  /* ### fill this in */
+  return 1;
+}
+
+static int dav_svn_is_parent_resource(const dav_resource *res1,
+                                      const dav_resource *res2)
+{
+  /* ### fill this in */
+  return 1;
+}
+
+static dav_error * dav_svn_open_stream(const dav_resource *resource,
+                                       dav_stream_mode mode,
+                                       dav_stream **stream)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
+                                       apr_size_t *bufsize)
+{
+  /* ### fill this in */
+  *bufsize = 0;
+  return NULL;
+}
+
+static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
+                                        apr_size_t bufsize)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_seek_stream(dav_stream *stream,
+                                       apr_off_t abs_position)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_set_headers(request_rec *r,
+                                       const dav_resource *resource)
+{
+  if (!resource->exists)
+    return NULL;
+
+  /* make sure the proper mtime is in the request record */
+#if 0
+  ap_update_mtime(r, resource->info->finfo.mtime);
+#endif
+
+  /* ### note that these use r->filename rather than <resource> */
+  ap_set_last_modified(r);
+  ap_set_etag(r);
+
+  /* we accept byte-ranges */
+  apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
+
+  /* set up the Content-Length header */
+#if 0
+  ap_set_content_length(r, resource->info->finfo.size);
+#endif
+
+  /* ### how to set the content type? */
+  /* ### until this is resolved, the Content-Type header is busted */
+
+  return NULL;
+}
+
+static dav_error * dav_svn_create_collection(dav_resource *resource)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_copy_resource(const dav_resource *src,
+                                         dav_resource *dst,
+                                         int depth,
+                                         dav_response **response)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_move_resource(dav_resource *src,
+                                         dav_resource *dst,
+                                         dav_response **response)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_remove_resource(dav_resource *resource,
+                                           dav_response **response)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static dav_error * dav_svn_walk(dav_walker_ctx *wctx, int depth)
+{
+  /* ### fill this in */
+  return NULL;
+}
+
+static const char * dav_svn_getetag(const dav_resource *resource)
+{
+  /* ### fix this */
+  return "svn-etag";
+}
+
+
+const dav_hooks_repository dav_svn_hooks_repos =
+{
+  1,                            /* special GET handling */
+  dav_svn_get_resource,
+  dav_svn_get_parent_resource,
+  dav_svn_is_same_resource,
+  dav_svn_is_parent_resource,
+  dav_svn_open_stream,
+  dav_svn_close_stream,
+  dav_svn_read_stream,
+  dav_svn_write_stream,
+  dav_svn_seek_stream,
+  dav_svn_set_headers,
+  NULL,                         /* get_pathname */
+  NULL,                         /* free_file */
+  dav_svn_create_collection,
+  dav_svn_copy_resource,
+  dav_svn_move_resource,
+  dav_svn_remove_resource,
+  dav_svn_walk,
+  dav_svn_getetag,
+};
 
 
 /* 
