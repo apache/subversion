@@ -1,3 +1,12 @@
+Each of these people have commit access to at least some portion of
+the Subversion tree.  Note that this is not nearly a full list of
+Subversion's authors; for that, you'd have to also look over the log
+messages to see all the patch contributors.
+
+If you have a question or comment, it's probably best to mail
+dev@subversion.tigris.org, rather than mailing any of these people
+directly.
+
 jimb: Jim Blandy <jimb@redhat.com>
 sussman: Ben Collins-Sussman <sussman@collab.net>
 kfogel: Karl Fogel <kfogel@collab.net>
@@ -5,9 +14,7 @@ gstein: Greg Stein <gstein@lyra.org>
 brane: Branko Cibej <brane@xbc.nu>
 joe: Joe Orton <joe@light.plus.com>
 ghudson: Greg Hudson <ghudson@mit.edu>
-kbob: Bob Miller <kbob@jogger-egg.com>
 lefty: Lee P. W. Burgess <lefty@red-bean.com>
-bkorb: Bruce Korb <bkorb@cruzio.com>
 fitz: Brian Fitzpatrick <fitz@red-bean.com>
 mab: Matthew Braithwaite <matt@braithwaite.net>
 daniel: Daniel Stenberg <daniel@haxx.se>
