@@ -1493,7 +1493,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       title = ap_escape_html(resource->pool, resource->info->repos_path);
 
     if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-      title = apr_psprintf(resource->pool, "Revision %ld: %s",
+      title = apr_psprintf(resource->pool,
+                           "Revision %" SVN_REVNUM_T_FMT ": %s",
                            resource->info->root.rev, title);
 
     if (resource->info->repos->repo_name)
@@ -2026,9 +2027,10 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
   svn_stringbuf_t *path;
 
   if (base->baselined)
-    path = svn_stringbuf_createf(base->pool, "/%s/wbl/%s/%ld",
-                              base->info->repos->special_uri,
-                              activity_id, base->info->root.rev);
+    path = svn_stringbuf_createf(base->pool,
+                                 "/%s/wbl/%s/%" SVN_REVNUM_T_FMT,
+                                 base->info->repos->special_uri,
+                                 activity_id, base->info->root.rev);
   else
     path = svn_stringbuf_createf(base->pool, "/%s/wrk/%s%s",
                               base->info->repos->special_uri,

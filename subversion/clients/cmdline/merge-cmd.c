@@ -105,7 +105,8 @@ svn_cl__merge (apr_getopt_t *os,
   if (opt_state->end_revision.kind == svn_client_revision_unspecified)
     opt_state->end_revision.kind = svn_client_revision_head;
 
-  /*  printf ("I would now call svn_client_merge with these arguments\n");
+  /*  ### Is anyone still using this debugging printf?
+      printf ("I would now call svn_client_merge with these arguments\n");
       printf ("sourcepath1 = %s\nrevision1 = %ld, %d\n"
           "sourcepath2 = %s\nrevision2 = %ld, %d\ntargetpath = %s\n",
           sourcepath1->data, (long int) opt_state->start_revision.value.number,

@@ -178,7 +178,7 @@ print_long_format (const char *path,
       
       s_author = status->entry->cmt_author;
       if (SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
-        sprintf(revbuf, "%ld", status->entry->cmt_rev);
+        sprintf(revbuf, "%" SVN_REVNUM_T_FMT, status->entry->cmt_rev);
       else
         revstr = "    ? ";
 

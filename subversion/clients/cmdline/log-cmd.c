@@ -211,7 +211,7 @@ svn_cl__log (apr_getopt_t *os,
       if (opt_state->end_revision.kind == svn_client_revision_unspecified)
         {
           opt_state->end_revision.kind = svn_client_revision_number;
-          opt_state->end_revision.value.number = 1;  /* oldest commit */
+          opt_state->end_revision.value.number = 0;
         }
     }
 

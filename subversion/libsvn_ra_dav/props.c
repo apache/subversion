@@ -632,7 +632,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 
       /* ### send Label hdr, get DAV:baseline-collection [from the baseline] */
 
-      apr_snprintf(label, sizeof(label), "%ld", revision);
+      apr_snprintf(label, sizeof(label), "%" SVN_REVNUM_T_FMT, revision);
 
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */

@@ -352,9 +352,11 @@ close_edit (void *edit_baton)
   if (! eb->suppress_final_line)
     {
       if (eb->is_checkout)
-        printf ("Checked out revision %ld.\n", eb->target_revision);
+        printf ("Checked out revision %" SVN_REVNUM_T_FMT ".\n",
+                eb->target_revision);
       else
-        printf ("Updated to revision %ld.\n", eb->target_revision);
+        printf ("Updated to revision %" SVN_REVNUM_T_FMT ".\n",
+                eb->target_revision);
     }
 
   svn_pool_destroy (eb->pool);

@@ -1577,7 +1577,9 @@ static svn_error_t * reporter_set_path(void *report_baton,
 
   svn_xml_escape_nts (&qpath, path, rb->ras->pool);
   entry = apr_psprintf(rb->ras->pool,
-                       "<S:entry rev=\"%ld\">%s</S:entry>" DEBUG_CR,
+                       "<S:entry rev=\"%"
+                       SVN_REVNUM_T_FMT
+                       "\">%s</S:entry>" DEBUG_CR,
                        revision, qpath->data);
 
   status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
@@ -1616,8 +1618,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
   svn_xml_escape_nts (&qpath, path, rb->ras->pool);
   svn_xml_escape_nts (&qlinkpath, bc_relative.data, rb->ras->pool);
   entry = apr_psprintf(rb->ras->pool,
-                       "<S:entry rev=\"%ld\" linkpath=\"/%s\">%s</S:entry>" 
-                       DEBUG_CR,
+                       "<S:entry rev=\"%" SVN_REVNUM_T_FMT
+                       "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
                        revision, qlinkpath->data, qpath->data);
 
   status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
@@ -1806,8 +1808,8 @@ make_reporter (void *session_baton,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       s = apr_psprintf(ras->pool, 
-                       "<S:target-revision>%ld</S:target-revision>",
-                       revision);
+                       "<S:target-revision>%" SVN_REVNUM_T_FMT
+                       "</S:target-revision>", revision);
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
       if (status)
         {

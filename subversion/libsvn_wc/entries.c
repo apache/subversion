@@ -785,7 +785,8 @@ write_entry (svn_stringbuf_t **output,
   /* Revision */
   if (SVN_IS_VALID_REVNUM (entry->revision))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
-                  svn_stringbuf_createf (pool, "%ld", entry->revision));
+                  svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
+                                         entry->revision));
   
   /* URL */
   if (entry->url)
@@ -858,7 +859,8 @@ write_entry (svn_stringbuf_t **output,
 
   if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
-                  svn_stringbuf_createf (pool, "%ld", entry->copyfrom_rev));
+                  svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
+                                         entry->copyfrom_rev));
 
   if (entry->copyfrom_url)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
@@ -886,7 +888,8 @@ write_entry (svn_stringbuf_t **output,
   /* Last-commit Stuff */
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
-                  svn_stringbuf_createf (pool, "%ld", entry->cmt_rev));
+                  svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
+                                         entry->cmt_rev));
 
   if (entry->cmt_author)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,

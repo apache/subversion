@@ -93,7 +93,7 @@ print_tree (svn_fs_root_t *root,
         {
           apr_off_t len;
           SVN_ERR (svn_fs_file_length (&len, root, this_full_path, pool));
-          printf (" <%s> [%ld]\n", id_str->data, (long int) len);
+          printf (" <%s> [%" APR_OFF_T_FMT "]\n", id_str->data, len);
         }
     }
 
@@ -276,7 +276,7 @@ main (int argc, const char * const *argv)
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
         svn_fs_youngest_rev (&youngest_rev, fs, pool);
-        printf ("%ld\n", (long int) youngest_rev);
+        printf ("%" SVN_REVNUM_T_FMT "\n", youngest_rev);
       }
       break;
 
@@ -304,7 +304,7 @@ main (int argc, const char * const *argv)
         for (i = 0; i < revs->nelts; i++)
           {
             svn_revnum_t this_rev = ((svn_revnum_t *)revs->elts)[i];
-            printf ("%ld\n", (long int)this_rev);
+            printf ("%" SVN_REVNUM_T_FMT "\n", this_rev);
           }
       }
       break;
@@ -426,7 +426,7 @@ main (int argc, const char * const *argv)
             if (! log)
               log = svn_string_create ("", this_pool);
             
-            printf ("Revision %ld\n", (long int) this);
+            printf ("Revision %" SVN_REVNUM_T_FMT "\n", this);
             printf ("Created: %s\n", datestamp->data);
             printf ("Author: %s\n", author->data);
             printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
@@ -583,8 +583,8 @@ main (int argc, const char * const *argv)
         INT_ERR (svn_fs_is_dir (&is_dir, rev_root, node, pool));
 
         /* do the (un-)deltification */
-        printf ("%seltifying `%s' in revision %ld...", 
-                is_deltify ? "D" : "Und", node, (long int)the_rev);
+        printf ("%seltifying `%s' in revision %" SVN_REVNUM_T_FMT "...", 
+                is_deltify ? "D" : "Und", node, the_rev);
         if (is_deltify)
           {
             INT_ERR (svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool));

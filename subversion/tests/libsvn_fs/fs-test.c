@@ -5074,7 +5074,8 @@ undeltify_deltify (const char **msg,
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-               "%s:%ld undeltified contents are incorrect", path, i_rev);
+               "%s:%" SVN_REVNUM_T_FMT
+               " undeltified contents are incorrect", path, i_rev);
 
           /* Now, re-deltify, and again get its contents and verify them.  */
           SVN_ERR (svn_fs_deltify (rev_root, path, 0, iterpool));
@@ -5083,7 +5084,8 @@ undeltify_deltify (const char **msg,
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-               "%s:%ld re-deltified contents are incorrect", path, i_rev);
+               "%s:%" SVN_REVNUM_T_FMT
+               " re-deltified contents are incorrect", path, i_rev);
 
           /* Clear out the per-file pool. */
           svn_pool_clear (iterpool);
@@ -5121,7 +5123,8 @@ undeltify_deltify (const char **msg,
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-               "%s:%ld undeltified contents are incorrect", path, i_rev);
+               "%s:%" SVN_REVNUM_T_FMT
+               " undeltified contents are incorrect", path, i_rev);
 
           /* Clear out the per-file pool. */
           svn_pool_clear (iterpool);
@@ -5154,7 +5157,8 @@ undeltify_deltify (const char **msg,
           if (strcmp (greek_files[i][i_rev], contents->data))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
-               "%s:%ld re-deltified contents are incorrect", path, i_rev);
+               "%s:%" SVN_REVNUM_T_FMT
+               " re-deltified contents are incorrect", path, i_rev);
 
           /* Clear out the per-file pool. */
           svn_pool_clear (iterpool);
@@ -5196,7 +5200,9 @@ verify_path_revs (svn_fs_root_t *root,
       if (rev != args[i].rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "verify_path_revs: '%s' has created rev '%ld' (expected '%ld')",
+           "verify_path_revs: '%s' has created rev '%"
+           SVN_REVNUM_T_FMT "' (expected '%"
+           SVN_REVNUM_T_FMT "')",
            args[i].path, rev, args[i].rev);
     }
 
@@ -5587,7 +5593,9 @@ print_chrevs (const apr_array_header_t *revs_got,
           rev = ((svn_revnum_t *)revs_got->elts)[i];
           outstr = apr_pstrcat (pool, 
                                 outstr,
-                                apr_psprintf (pool, "%ld ", (long int)rev),
+                                apr_psprintf (pool, "%"
+                                              SVN_REVNUM_T_FMT
+                                              " ", rev),
                                 NULL);
         }
     }
@@ -5596,8 +5604,8 @@ print_chrevs (const apr_array_header_t *revs_got,
     {
       outstr = apr_pstrcat (pool, 
                             outstr,
-                            apr_psprintf (pool, "%ld ", 
-                                          (long int)revs_expected[i]),
+                            apr_psprintf (pool, "%" SVN_REVNUM_T_FMT " ",
+                                          revs_expected[i]),
                             NULL);
     }
   return apr_pstrcat (pool, outstr, "}", NULL);

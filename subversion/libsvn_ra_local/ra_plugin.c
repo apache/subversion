@@ -687,7 +687,8 @@ svn_ra_local__get_file (void *session_baton,
                                              sbaton->pool));
 
 
-      revision_str = apr_psprintf (sbaton->pool, "%ld", committed_rev);
+      revision_str = apr_psprintf (sbaton->pool, "%" SVN_REVNUM_T_FMT,
+                                   committed_rev);
       value = svn_stringbuf_create (revision_str, sbaton->pool);
       apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_REV, 
                     APR_HASH_KEY_STRING, value);
