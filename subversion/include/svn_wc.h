@@ -514,7 +514,7 @@ svn_error_t *svn_wc_add (const char *path,
    DESTROY_WF is set, then all working file(s) and dirs are deleted
    from disk as well.  When called with DESTROY_WF, any locally
    modified files will *not* be deleted, and the special error
-   SVN_WC_LEFT_LOCAL_MOD might be returned.  (Callers only need to
+   SVN_ERR_WC_LEFT_LOCAL_MOD might be returned.  (Callers only need to
    check for this special return value if DESTROY_WF is set.)
 
    WARNING:  This routine is exported for careful, measured use by
