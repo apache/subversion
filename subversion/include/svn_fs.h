@@ -537,9 +537,19 @@ svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 /* Operations appropriate to all kinds of nodes.  */
 
 
-/* Return non-zero iff PATH in ROOT is a...  */
-int svn_fs_is_dir  (svn_fs_root_t *root, const char *path);
-int svn_fs_is_file (svn_fs_root_t *root, const char *path);
+/* Set *IS_DIR to non-zero iff PATH in ROOT is a directory.
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_is_dir (int *is_dir,
+                            svn_fs_root_t *root,
+                            const char *path,
+                            apr_pool_t *pool);
+
+/* Set *IS_FILE to non-zero iff PATH in ROOT is a file.
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_is_file (int *is_file,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_pool_t *pool);
 
 
 /* Set *ID_P to the node revision ID of PATH in ROOT, allocated in POOL.
