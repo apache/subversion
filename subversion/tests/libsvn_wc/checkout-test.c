@@ -162,7 +162,10 @@ main (int argc, char **argv)
      pool);
   
   if (err)
-    svn_handle_error (err, stdout, 0);
+    {
+      svn_handle_error (err, stdout, 0);
+      exit (1);
+    }
 
   apr_close (src);
 
