@@ -825,7 +825,7 @@ pre-commit.tmpl
         environment directory, and parses the options found in that
         file for use with that particular Berkeley environment.</para>
 
-     <para>The Berkeley configuration file for your repository is
+      <para>The Berkeley configuration file for your repository is
         located in the <filename>db</filename> environment directory,
         at <filename>repos/db/DB_CONFIG</filename>.  Subversion itself
         creates this file when it creates the rest of the repository.
@@ -2211,12 +2211,12 @@ The latest repos revision is 19.
         </listitem>
         <listitem>
           <para>If the migration process made your repository
-           accessible at a different URL (e.g. moved to a different
-           computer, or is being accessed via a different schema),
-           then you'll probably want to tell your users to run
-           <command>svn switch --relocate</command> on their existing
-           working copies.  See <xref
-           linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
+            accessible at a different URL (e.g. moved to a different
+            computer, or is being accessed via a different schema),
+            then you'll probably want to tell your users to run
+            <command>svn switch --relocate</command> on their existing
+            working copies.  See <xref
+            linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
         </listitem>
       </orderedlist>
 
@@ -2623,53 +2623,53 @@ $
         projects, or to give each project its own repository, or some
         compromise of these two.</para>
 
-     <para>There are benefits to using a single repository for
-       multiple projects, most obviously the lack of duplicated
-       maintenance.  A single repository means that there is one set
-       of hook scripts, one thing to routinely backup, one thing to
-       dump and load if Subversion releases an incompatible new
-       version, and so on.  Also, you can move data between
-       projects easily, and without losing any historical versioning
-       information.</para>
+      <para>There are benefits to using a single repository for
+        multiple projects, most obviously the lack of duplicated
+        maintenance.  A single repository means that there is one set
+        of hook scripts, one thing to routinely backup, one thing to
+        dump and load if Subversion releases an incompatible new
+        version, and so on.  Also, you can move data between projects
+        easily, and without losing any historical versioning
+        information.</para>
 
-     <para>The downside of using a single repository is that different
-       projects may have different commit mailing lists or different
-       authentication and authorization requirements.  Also, remember
-       that Subversion uses repository-global revision numbers.  Some
-       folks don't like the fact that even though no changes have been
-       made to their project lately, the youngest revision number for
-       the repository keeps climbing because other projects are
-       actively adding new revisions.</para>
+      <para>The downside of using a single repository is that
+        different projects may have different commit mailing lists or
+        different authentication and authorization requirements.
+        Also, remember that Subversion uses repository-global revision
+        numbers.  Some folks don't like the fact that even though no
+        changes have been made to their project lately, the youngest
+        revision number for the repository keeps climbing because
+        other projects are actively adding new revisions.</para>
 
-     <para>A middle-ground approach can be taken, too.  For example,
-       projects can be grouped by how well they relate to each other.
-       You might have a few repositories with a handful of projects in
-       each repository.  That way, projects that are likely to want to
-       share data can do so easily, and as new revisions are added to
-       the repository, at least the developers know that those new
-       revisions are at least remotely related to everyone who uses
-       that repository.</para>
+      <para>A middle-ground approach can be taken, too.  For example,
+        projects can be grouped by how well they relate to each other.
+        You might have a few repositories with a handful of projects
+        in each repository.  That way, projects that are likely to
+        want to share data can do so easily, and as new revisions are
+        added to the repository, at least the developers know that
+        those new revisions are at least remotely related to everyone
+        who uses that repository.</para>
 
-     <para>After deciding how to organize your projects with respect
-       to repositories, you'll probably want to think about directory
-       hierarchies in the repositories themselves.  Because Subversion
-       uses regular directory copies for branching and tagging (see
-       <xref linkend="svn-ch-4"/>), the Subversion community
-       recommends that you choose a repository location for each
-       <firstterm>project root</firstterm>&mdash;the
-       <quote>top-most</quote> directory which contains data related
-       to that project&mdash;and then create three subdirectories
-       beneath that root: <filename>trunk</filename>, meaning the
-       directory under which the main project development occurs;
-       <filename>branches</filename>, which is a directory in which to
-       create various named branches of the main development line;
-       <filename>tags</filename>, which is a directory of branches
-       that are created, and perhaps destroyed, but never
-       changed.</para>
+      <para>After deciding how to organize your projects with respect
+        to repositories, you'll probably want to think about directory
+        hierarchies in the repositories themselves.  Because
+        Subversion uses regular directory copies for branching and
+        tagging (see <xref linkend="svn-ch-4"/>), the Subversion
+        community recommends that you choose a repository location for
+        each <firstterm>project root</firstterm>&mdash;the
+        <quote>top-most</quote> directory which contains data related
+        to that project&mdash;and then create three subdirectories
+        beneath that root: <filename>trunk</filename>, meaning the
+        directory under which the main project development occurs;
+        <filename>branches</filename>, which is a directory in which
+        to create various named branches of the main development line;
+        <filename>tags</filename>, which is a directory of branches
+        that are created, and perhaps destroyed, but never
+        changed.</para>
 
-     <para>For example, your repository might look like:</para>
+      <para>For example, your repository might look like:</para>
 
-     <screen>
+      <screen>
 /
    calc/
       trunk/

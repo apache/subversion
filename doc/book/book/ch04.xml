@@ -300,7 +300,7 @@ Checked out revision 341.
         creating a working copy of a branch.)</para>
 
       <para>Let's pretend that a week goes by, and the following
-      commits happen:</para>
+        commits happen:</para>
 
       <itemizedlist>
         <listitem><para>
@@ -372,13 +372,13 @@ Changed paths:
 </screen>
 
       <para>Notice that Subversion is tracing the history of your
-      branch's <filename>integer.c</filename> all the way back through
-      time, even traversing the point where it was copied.  It shows
-      the creation of the branch as an event in the history, because
-      <filename>integer.c</filename> was implicitly copied when all of
-      <filename>/calc/trunk/</filename> was copied.  Now look what
-      happens when Sally runs the same command on her copy of the
-      file:</para>
+        branch's <filename>integer.c</filename> all the way back
+        through time, even traversing the point where it was copied.
+        It shows the creation of the branch as an event in the
+        history, because <filename>integer.c</filename> was implicitly
+        copied when all of <filename>/calc/trunk/</filename> was
+        copied.  Now look what happens when Sally runs the same
+        command on her copy of the file:</para>
 
 <screen>
 $ pwd
@@ -410,13 +410,13 @@ Changed paths:
 </screen>
 
       <para>Sally sees her own revision 344 change, but not the change
-      you made in revision 343.  As far as Subversion is concerned,
-      these two commits affected different files in different
-      repository locations.  However, Subversion
-      <emphasis>does</emphasis> show that the two files share a common
-      history.  Before the branch-copy was made in revision 341, they
-      used to be the same file.  That's why you and Sally both see
-      the changes made in revisions 303 and 98.</para>
+        you made in revision 343.  As far as Subversion is concerned,
+        these two commits affected different files in different
+        repository locations.  However, Subversion
+        <emphasis>does</emphasis> show that the two files share a
+        common history.  Before the branch-copy was made in revision
+        341, they used to be the same file.  That's why you and Sally
+        both see the changes made in revisions 303 and 98.</para>
 
     </sect2>
 
@@ -424,7 +424,7 @@ Changed paths:
       <title>The Key Concepts Behind Branches</title> 
 
       <para>There are two important lessons that you should remember
-      from this section.</para>
+        from this section.</para>
 
       <orderedlist>
         <listitem>
@@ -436,12 +436,13 @@ Changed paths:
         </listitem>
         <listitem>
           <para>Subversion has no internal concept of a
-          branch&mdash;only copies.  When you copy a directory, the
-          resulting directory is only a <quote>branch</quote> because
-          <emphasis>you</emphasis> attach that meaning to it.  You may
-          think of the directory differently, or treat it differently,
-          but to Subversion it's just an ordinary directory that
-          happens to have been created by copying.</para>
+            branch&mdash;only copies.  When you copy a directory, the
+            resulting directory is only a <quote>branch</quote>
+            because <emphasis>you</emphasis> attach that meaning to
+            it.  You may think of the directory differently, or treat
+            it differently, but to Subversion it's just an ordinary
+            directory that happens to have been created by
+            copying.</para>
         </listitem>
       </orderedlist>
 
@@ -632,10 +633,11 @@ done
           directory, the output of <command>svn diff</command>
           wouldn't have mentioned it at all.  <command>svn
           diff</command> only outputs the limited patch-format, so
-          there are some ideas it simply can't express.  <footnote>
-          <para>In the future, the Subversion project plans to use (or
-          invent) an expanded patch format that describes
-          tree-changes.</para>
+          there are some ideas it simply can't express.
+          <footnote>
+            <para>In the future, the Subversion project plans to use
+              (or invent) an expanded patch format that describes
+              tree-changes.</para>
           </footnote>
           The <command>svn merge</command> command, however, can express
           tree-changes by directly applying them to your working
@@ -654,8 +656,9 @@ done
         following common operations:</para>
 
       <orderedlist>
-        <listitem> <para>You want to merge directory changes into your
-            current working directory.</para>
+        <listitem>
+          <para>You want to merge directory changes into your current
+            working directory.</para>
         </listitem>
         <listitem>
           <para>You want to merge the changes in a specific file into
@@ -878,8 +881,8 @@ $ svn status
     <title>Common Use-Cases for Merging</title>
 
     <para>There are many different uses for <command>svn
-        merge</command>, and this section describes the most common
-        ones you're likely to run into.</para>
+      merge</command>, and this section describes the most common ones
+      you're likely to run into.</para>
 
     <sect2 id="svn-ch-4-sect-4.1">
       <title>Merging a Whole Branch to Another</title>
@@ -924,15 +927,15 @@ $ svn status
 
       <tip>
         <para>A nice way of finding the revision in which a branch was
-        created (the "base" of the branch) is to use the
-        <option>--stop-on-copy</option> option to <command>svn
-        log</command>.  The log subcommand will normally show every
-        change ever made to the branch, including tracing back through
-        the copy which created the branch.  So normally, you'll see
-        history from the trunk as well.  The
-        <option>--stop-on-copy</option> will halt log output as soon
-        as <command>svn log</command> detects that its target was
-        copied or renamed.</para>
+          created (the "base" of the branch) is to use the
+          <option>--stop-on-copy</option> option to <command>svn
+          log</command>.  The log subcommand will normally show every
+          change ever made to the branch, including tracing back
+          through the copy which created the branch.  So normally,
+          you'll see history from the trunk as well.  The
+          <option>--stop-on-copy</option> will halt log output as soon
+          as <command>svn log</command> detects that its target was
+          copied or renamed.</para>
 
         <para>So in our continuing example,</para>
 
@@ -949,8 +952,8 @@ $
 </screen>
         
         <para>As expected, the final revision printed by this command
-        is the revision in which <filename>my-calc-branch</filename>
-        was created by copying.</para>
+          is the revision in which <filename>my-calc-branch</filename>
+          was created by copying.</para>
       </tip>
 
 
@@ -1154,10 +1157,10 @@ Committed revision 350.
 
       <para>Subversion has no <filename>Attic</filename> directory
         like CVS does,
-        <footnote><para>Because CVS doesn't version trees, it creates
-          an <filename>Attic</filename> area within each repository
-          directory as a way of remembering deleted
-          files.</para>
+        <footnote>
+          <para>Because CVS doesn't version trees, it creates an
+            <filename>Attic</filename> area within each repository
+            directory as a way of remembering deleted files.</para>
         </footnote>
         so you need to use <command>svn
         log</command> to discover the exact coordinate pair you wish
@@ -1305,12 +1308,13 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       algorithm when using branches:</para>
 
       <orderedlist>
-        <listitem> <para>Copy the project's entire 'trunk' to a new
-        branch directory.</para>
+        <listitem>
+          <para>Copy the project's entire 'trunk' to a new branch
+            directory.</para>
         </listitem>
         <listitem>
           <para>Switch only <emphasis>part</emphasis> of the trunk
-          working copy to mirror the branch.</para>
+            working copy to mirror the branch.</para>
         </listitem>
       </orderedlist>
     
@@ -1350,7 +1354,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       <title>Switches and Updates</title>
       
       <para>Have you noticed that the output of <command>svn
-          switch</command> and <command>svn update</command> look the
+        switch</command> and <command>svn update</command> look the
         same?  The switch command is actually a superset of the
         update command.</para>
 
@@ -1361,7 +1365,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
         switch</command> and <command>svn update</command> is that the
         update command always compares two identical paths.</para>
       
-       <para>That is, if your working copy is a mirror of
+      <para>That is, if your working copy is a mirror of
         <filename>/calc/trunk</filename>, then <command>svn
         update</command> will automatically compare your working copy
         of <filename>/calc/trunk</filename> to

@@ -236,12 +236,11 @@
       <varlistentry>
         <term>Efficient branching and tagging</term>
         <listitem>
-          <para>
-            The cost of branching and tagging need not be proportional to the
-            project size.  Subversion creates branches and tags by
-            simply copying the project, using a mechanism similar to a
-            hard-link.  Thus these operations take only a very small,
-            constant amount of time.
+          <para>The cost of branching and tagging need not be
+            proportional to the project size.  Subversion creates
+            branches and tags by simply copying the project, using a
+            mechanism similar to a hard-link.  Thus these operations
+            take only a very small, constant amount of time.
           </para>
         </listitem>
       </varlistentry>
@@ -433,18 +432,18 @@
 
     <note>
       <para>The following example assumes that you have
-      <command>svn</command>, the Subversion command-line client, and
-      <command>svnadmin</command>, the administrative tool, ready to
-      go.  It also assumes that your <command>svn</command> client has
-      been compiled against Berkeley DB.  To verify this, run
-      <command>svn --version</command> and make sure the
-      <literal>ra_local</literal> module is available.  Without this
-      module, the client cannot access <literal>file://</literal>
-      URLs.</para>
+        <command>svn</command>, the Subversion command-line client,
+        and <command>svnadmin</command>, the administrative tool,
+        ready to go.  It also assumes that your <command>svn</command>
+        client has been compiled against Berkeley DB.  To verify this,
+        run <command>svn --version</command> and make sure the
+        <literal>ra_local</literal> module is available.  Without this
+        module, the client cannot access <literal>file://</literal>
+        URLs.</para>
     </note>
 
     <para>Subversion stores all versioned data in a central
-    repository.  To begin, create a new repository:</para>
+      repository.  To begin, create a new repository:</para>
 
     <screen>
 $ svnadmin create /path/to/repos
@@ -453,19 +452,20 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
 </screen>
 
     <para>This command creates a new directory
-    <filename>/path/to/repos</filename> which contains a Subversion
-    repository.  Make sure that this directory lives on a local disk,
-    <emphasis>not</emphasis> a network share.  This new directory
-    mainly contains a collection of Berkeley DB database files.  You
-    won't see your versioned files if you peek inside.  For more
-    information about repository creation and maintenance, see <xref
-    linkend="svn-ch-5"/>.</para>
+      <filename>/path/to/repos</filename> which contains a Subversion
+      repository.  Make sure that this directory lives on a local
+      disk, <emphasis>not</emphasis> a network share.  This new
+      directory mainly contains a collection of Berkeley DB database
+      files.  You won't see your versioned files if you peek inside.
+      For more information about repository creation and maintenance,
+      see <xref linkend="svn-ch-5"/>.</para>
 
     <para>Next, create a tree of files and directories to import into
-    the repository.  For reasons that will be clear later on (see
-    <xref linkend="svn-ch-4"/>), your structure should contain three
-    top-level directories named <filename>branches</filename>,
-    <filename>tags</filename>, and <filename>trunk</filename>:</para>
+      the repository.  For reasons that will be clear later on (see
+      <xref linkend="svn-ch-4"/>), your structure should contain three
+      top-level directories named <filename>branches</filename>,
+      <filename>tags</filename>, and
+      <filename>trunk</filename>:</para>
 
     <screen>
 /tmp/project/branches/
@@ -478,8 +478,8 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
 </screen>
 
     <para>Once you have a tree of data ready to go, import the data
-    into the repository with the <command>svn import</command>
-    command (see <xref linkend="svn-ch-3-sect-7.3"/>):</para>
+      into the repository with the <command>svn import</command>
+      command (see <xref linkend="svn-ch-3-sect-7.3"/>):</para>
 
     <screen>
 $ svn import /tmp/project file:///path/to/repos -m "initial import"

@@ -366,7 +366,7 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 </screen>
 
         <para>Read about adding authentication in <xref
-            linkend="svn-ch-6"/>.</para>
+          linkend="svn-ch-6"/>.</para>
       </sect3>
 
 
@@ -416,18 +416,18 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
           time.</para>
 
         <para>For example, if you've exported a repository as
-            <literal>&lt;Location /www/foo&gt;</literal>, but you've
-            also set your <literal>DocumentRoot</literal> to be
-            <filename>/www</filename>, then you're in trouble.  When
-            the request comes in for
-            <filename>/www/foo/bar</filename>, Apache doesn't know
-            whether to find a <emphasis>real</emphasis> file named
-            <filename>/foo/bar</filename> within your
-            <literal>DocumentRoot</literal>, or whether to ask
-            mod_dav_svn to fetch a file <filename>/bar</filename> from
-            the <filename>/www/foo</filename> repository.  Usually the
-            former case wins, and hence the "Moved Permanently"
-            error.</para>
+          <literal>&lt;Location /www/foo&gt;</literal>, but you've
+          also set your <literal>DocumentRoot</literal> to be
+          <filename>/www</filename>, then you're in trouble.  When the
+          request comes in for <filename>/www/foo/bar</filename>,
+          Apache doesn't know whether to find a
+          <emphasis>real</emphasis> file named
+          <filename>/foo/bar</filename> within your
+          <literal>DocumentRoot</literal>, or whether to ask
+          mod_dav_svn to fetch a file <filename>/bar</filename> from
+          the <filename>/www/foo</filename> repository.  Usually the
+          former case wins, and hence the "Moved Permanently"
+          error.</para>
 
         <para>The solution is to make sure your repository
           <literal>&lt;Location&gt;</literal> does not overlap or live

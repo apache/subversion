@@ -561,10 +561,10 @@
         <term>Symbolic link versioning</term>
         <listitem>
           <para>Unix users can now create symbolic links and place
-          them under version control with the <command>svn
-          add</command> command.  See <xref
-          linkend="svn-ch-9-sect-1.2-re-add"/> and <xref
-          linkend="svn-ch-7-sect-2.3.7"/>.</para>
+            them under version control with the <command>svn
+            add</command> command.  See <xref
+            linkend="svn-ch-9-sect-1.2-re-add"/> and <xref
+            linkend="svn-ch-7-sect-2.3.7"/>.</para>
         </listitem>
       </varlistentry>
 
@@ -604,13 +604,14 @@
         <term>Localized user messages</term>
         <listitem>
           <para>Subversion 1.1 is now using
-          <literal>gettext()</literal> to display translated error,
-          informational, and help messages to the user. There are
-          currently translations for German, Spanish, Polish, Swedish,
-          Traditional Chinese, Japanese, Brazilian Portuguese and
-          Norwegian Bokmal.  To localize your Subversion client, just
-          set your shell's LANG environment variable to a supported
-          locale value (for example, <literal>de_DE</literal>).</para>
+            <literal>gettext()</literal> to display translated error,
+            informational, and help messages to the user. There are
+            currently translations for German, Spanish, Polish,
+            Swedish, Traditional Chinese, Japanese, Brazilian
+            Portuguese and Norwegian Bokmal.  To localize your
+            Subversion client, just set your shell's LANG environment
+            variable to a supported locale value (for example,
+            <literal>de_DE</literal>).</para>
         </listitem>
       </varlistentry>
 
@@ -618,8 +619,8 @@
         <term>Shareable working copies</term>
         <listitem>
           <para>There have been historical problems with permissions
-          when multiple users share a working copy, which are believed
-          to be fixed now.</para>
+            when multiple users share a working copy, which are
+            believed to be fixed now.</para>
         </listitem>
       </varlistentry>
 
@@ -636,12 +637,12 @@
         <term>Optimizations and bugfixes</term>
         <listitem>
           <para>The <command>svn checkout</command>, <command>svn
-          update</command>, <command>svn status</command>, and
-          <command>svn blame</command> commands are faster.  More than
-          fifty small bugs have been fixed, all described in the
-          Subversion project's CHANGES file (at <systemitem
-          class="url">http://svn.collab.net/repos/svn/trunk/CHANGES
-          </systemitem>).</para>
+            update</command>, <command>svn status</command>, and
+            <command>svn blame</command> commands are faster.  More
+            than fifty small bugs have been fixed, all described in
+            the Subversion project's CHANGES file (at <systemitem
+            class="url">http://svn.collab.net/repos/svn/trunk/CHANGES
+            </systemitem>).</para>
         </listitem>
       </varlistentry>
 
@@ -684,5 +685,8 @@
   </sect1>
 </preface>
 
-<!-- local variables: sgml-parent-document: ("book.xml" "chapter")
-end: -->
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->

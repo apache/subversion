@@ -53,10 +53,10 @@
           <term>New write methods</term>
           <listitem>
             <para>Beyond the standard HTTP <literal>PUT</literal>
-            method (which creates or overwrites a web resource),
-            WebDAV defines new <literal>COPY</literal> and
-            <literal>MOVE</literal> methods for duplicating or
-            rearranging resources.</para>
+              method (which creates or overwrites a web resource),
+              WebDAV defines new <literal>COPY</literal> and
+              <literal>MOVE</literal> methods for duplicating or
+              rearranging resources.</para>
           </listitem>
         </varlistentry>
                 
@@ -97,14 +97,14 @@
           <term>Locking</term>
           <listitem>
             <para>A WebDAV server may decide to offer a locking
-            feature to clients&mdash;this part of the specification is
-            optional, although most WebDAV servers do offer the
-            feature.  If present, then clients can use the new
-            <literal>LOCK</literal> and <literal>UNLOCK</literal>
-            methods to mediate access to a resource.  In most cases
-            these methods are used to create exclusive write locks (as
-            discussed in <xref linkend="svn-ch-2-sect-2.2"/>),
-            although shared write locks are also possible.</para>
+              feature to clients&mdash;this part of the specification
+              is optional, although most WebDAV servers do offer the
+              feature.  If present, then clients can use the new
+              <literal>LOCK</literal> and <literal>UNLOCK</literal>
+              methods to mediate access to a resource.  In most cases
+              these methods are used to create exclusive write locks
+              (as discussed in <xref linkend="svn-ch-2-sect-2.2"/>),
+              although shared write locks are also possible.</para>
           </listitem>
         </varlistentry>
 
@@ -128,11 +128,10 @@
 
       <variablelist>
 
-      <varlistentry>
-        <term>Per-resource versioning</term>
-        <listitem>
-            <para>
-              Like CVS and other version-control systems, DeltaV
+        <varlistentry>
+          <term>Per-resource versioning</term>
+          <listitem>
+            <para>Like CVS and other version-control systems, DeltaV
               assumes that each resource has a potentially infinite
               number of states.  A client begins by placing a resource
               under version control using the new
@@ -143,97 +142,96 @@
               resource is created, called a Version Resource (VR).
               VCRs and VRs are still ordinary web resources, defined
               by URLs.  Specific VRs can have human-friendly names as
-              well.
-            </para>
+              well.</para>
           </listitem>
         </varlistentry>
 
-      <varlistentry>
-        <term>Server-side working-copy model</term>
-        <listitem>
+        <varlistentry>
+          <term>Server-side working-copy model</term>
+          <listitem>
             <para>Some DeltaV servers support the ability to create a
-            virtual <quote>workspace</quote> on the server, where all
-            of your work is performed.  Clients use the
-            <literal>MKWORKSPACE</literal> method to create a private
-            area, then indicate they want to change specific VCRs by
-            <quote>checking them out</quote> into the workspace,
-            editing them, and <quote>checking them in</quote> again.
-            In HTTP terms, the sequence of methods would be
-            <literal>CHECKOUT</literal>, <literal>PUT</literal>,
-            <literal>CHECKIN</literal>.  After each
-            <literal>CHECKIN</literal>, a new VR is created, and
-            the edited VCR's contents now <quote>point to</quote> the
-            latest VR.  Each VCR has also has a <quote>history</quote>
-            resource which tracks and orders its various VR
-            states.</para>
+              virtual <quote>workspace</quote> on the server, where
+              all of your work is performed.  Clients use the
+              <literal>MKWORKSPACE</literal> method to create a
+              private area, then indicate they want to change specific
+              VCRs by <quote>checking them out</quote> into the
+              workspace, editing them, and <quote>checking them
+              in</quote> again.  In HTTP terms, the sequence of
+              methods would be <literal>CHECKOUT</literal>,
+              <literal>PUT</literal>, <literal>CHECKIN</literal>.
+              After each <literal>CHECKIN</literal>, a new VR is
+              created, and the edited VCR's contents now <quote>point
+              to</quote> the latest VR.  Each VCR has also has a
+              <quote>history</quote> resource which tracks and orders
+              its various VR states.</para>
           </listitem>
         </varlistentry>
 
-      <varlistentry>
-        <term>Client-side working-copy model</term>
-        <listitem>
+        <varlistentry>
+          <term>Client-side working-copy model</term>
+          <listitem>
             <para>Some DeltaV servers also support the idea that the
-            client may have a private working copy full of specific
-            VRs.  (This is how CVS and Subversion work.)  When the
-            client wants to commit changes to the server, it begins by
-            creating a temporary server transaction (called an
-            activity) with the <literal>MKACTIVITY</literal> method.
-            The client then performs a <literal>CHECKOUT</literal> on
-            each VR it wishes to change, which creates a number of
-            temporary <quote>working resources</quote> in the
-            activity, that can be modified using
-            <literal>PUT</literal> and <literal>PROPPATCH</literal>
-            methods.  Finally, the client performs a
-            <literal>CHECKIN</literal> on each working resource, which
-            creates a new VR within each VCR, and the entire activity
-            is deleted.</para>
+              client may have a private working copy full of
+              specific VRs.  (This is how CVS and Subversion work.)
+              When the client wants to commit changes to the server,
+              it begins by creating a temporary server transaction
+              (called an activity) with the
+              <literal>MKACTIVITY</literal> method.  The client then
+              performs a <literal>CHECKOUT</literal> on each VR it
+              wishes to change, which creates a number of temporary
+              <quote>working resources</quote> in the activity, that
+              can be modified using <literal>PUT</literal> and
+              <literal>PROPPATCH</literal> methods.  Finally, the
+              client performs a <literal>CHECKIN</literal> on each
+              working resource, which creates a new VR within each
+              VCR, and the entire activity is deleted.</para>
           </listitem>
         </varlistentry>
 
-      <varlistentry>
-        <term>Configurations</term>
-        <listitem>
+        <varlistentry>
+          <term>Configurations</term>
+          <listitem>
             <para>DeltaV allows you define flexible collections of
-            VCRs called <quote>configurations</quote>, which don't
-            necessarily respond to particular directories.  Each VCR's
-            contents can be made to point to a specific VR using the
-            <literal>UPDATE</literal> method.  Once the configuration
-            is perfect, the client can create a
-            <quote>snapshot</quote> of the whole configuration, called
-            a <quote>baseline</quote>.  Clients use the
-            <literal>CHECKOUT</literal> and <literal>CHECKIN</literal>
-            methods to capture specific states of configurations, much
-            like they use these methods to create specific VR states
-            of VCRs.</para>
+              VCRs called <quote>configurations</quote>, which don't
+              necessarily respond to particular directories.  Each VCR's
+              contents can be made to point to a specific VR using the
+              <literal>UPDATE</literal> method.  Once the configuration
+              is perfect, the client can create a
+              <quote>snapshot</quote> of the whole configuration, called
+              a <quote>baseline</quote>.  Clients use the
+              <literal>CHECKOUT</literal> and <literal>CHECKIN</literal>
+              methods to capture specific states of configurations, much
+              like they use these methods to create specific VR states
+              of VCRs.</para>
           </listitem>
         </varlistentry>
 
-      <varlistentry>
-        <term>Extensibility</term>
-        <listitem>
+        <varlistentry>
+          <term>Extensibility</term>
+          <listitem>
             <para>DeltaV defines a new method,
-            <literal>REPORT</literal>, which allows the client and
-            server to perform customized data exchanges.  The client
-            sends a <literal>REPORT</literal> request with a
-            properly-labeled XML body full of custom data; assuming
-            the server understands the specific report-type, it
-            responds with an equally custom XML body.  This technique
-            is very similar to XML-RPC.</para>
+              <literal>REPORT</literal>, which allows the client and
+              server to perform customized data exchanges.  The client
+              sends a <literal>REPORT</literal> request with a
+              properly-labeled XML body full of custom data; assuming
+              the server understands the specific report-type, it
+              responds with an equally custom XML body.  This technique
+              is very similar to XML-RPC.</para>
           </listitem>
         </varlistentry>
 
-      <varlistentry>
-        <term>Autoversioning</term>
-        <listitem>
+        <varlistentry>
+          <term>Autoversioning</term>
+          <listitem>
             <para>For many, this is the <quote>killer</quote> feature
-            of DeltaV.  If the DeltaV server supports this feature,
-            then basic WebDAV clients (i.e. those unaware of
-            versioning) can still write to the server, and the server
-            will silently perform versioning anyway.  In the simplest
-            example, an ignorant <literal>PUT</literal> from a basic
-            WebDAV client might be translated by the server as a
-            <literal>CHECKOUT</literal>, <literal>PUT</literal>,
-            <literal>CHECKIN</literal>.</para>
+              of DeltaV.  If the DeltaV server supports this feature,
+              then basic WebDAV clients (i.e. those unaware of
+              versioning) can still write to the server, and the server
+              will silently perform versioning anyway.  In the simplest
+              example, an ignorant <literal>PUT</literal> from a basic
+              WebDAV client might be translated by the server as a
+              <literal>CHECKOUT</literal>, <literal>PUT</literal>,
+              <literal>CHECKIN</literal>.</para>
           </listitem>
         </varlistentry>
         
@@ -607,9 +605,9 @@ BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
 
         <listitem>
           <para>When deleting a collection, it issues an HTTP
-          <literal>DELETE</literal> on each individual child instead
-          of on the collection itself.  This creates a whole bunch of
-          new revisions.</para>
+            <literal>DELETE</literal> on each individual child instead
+            of on the collection itself.  This creates a whole bunch of
+            new revisions.</para>
         </listitem>
 
       </itemizedlist>

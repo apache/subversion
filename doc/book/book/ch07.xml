@@ -455,11 +455,11 @@ collabnet = svn.collab.net
             <term><literal>store-auth-creds</literal></term>
             <listitem>
               <para>This setting is the same as
-              <literal>store-passwords</literal>, except that enables
-              or disables disk-caching of <emphasis>all</emphasis>
-              authentication information: usernames, passwords, server
-              certificates, and any other types of cacheable
-              credentials.</para>
+                <literal>store-passwords</literal>, except that
+                enables or disables disk-caching of
+                <emphasis>all</emphasis> authentication information:
+                usernames, passwords, server certificates, and any
+                other types of cacheable credentials.</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -520,10 +520,10 @@ collabnet = svn.collab.net
             <term><literal>diff3-has-program-arg</literal></term>
             <listitem>
               <para>This flag should be set to <literal>true</literal>
-              if the program specified by the
-              <literal>diff3-cmd</literal> option accepts a
-              <option>--diff-program</option> command-line
-              parameter.</para>
+                if the program specified by the
+                <literal>diff3-cmd</literal> option accepts a
+                <option>--diff-program</option> command-line
+                parameter.</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -732,7 +732,7 @@ collabnet = svn.collab.net
         files is a mess, and grows in multiples with each new photo
         added to the site.</para>
 
-     <para>Now consider the same setup using Subversion's file
+      <para>Now consider the same setup using Subversion's file
         properties.  Imagine having a single image file,
         <filename>image123.jpg</filename>, and then properties set on
         that file named <literal>caption</literal>,
@@ -1167,7 +1167,7 @@ $
           perhaps they've forgotten to add a resource to version
           control.</para>
 
-       <para>But Subversion cannot possibly guess the names of
+        <para>But Subversion cannot possibly guess the names of
           every resource that should be ignored.  Also, quite often
           there are things that should be ignored in
           <emphasis>every</emphasis> working copy of a particular
