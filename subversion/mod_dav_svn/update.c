@@ -50,6 +50,8 @@ typedef struct {
   svn_boolean_t seen_prop_change;
 } item_baton_t;
 
+#define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
+
 
 static item_baton_t *make_child_baton(item_baton_t *parent, const char *name,
 				      svn_boolean_t is_dir)
@@ -109,7 +111,7 @@ static void send_vsn_url(item_baton_t *baton)
 			   SVN_INVALID_REVNUM, stable_id->data,
 			   1 /* add_href */, baton->pool);
 
-  send_xml(baton->uc, "<D:checked-in>%s</D:checked-in>", href);
+  send_xml(baton->uc, "<D:checked-in>%s</D:checked-in>" DEBUG_CR, href);
 }
 
 static void add_helper(svn_boolean_t is_dir,
@@ -128,8 +130,8 @@ static void add_helper(svn_boolean_t is_dir,
   qname = apr_xml_quote_string(child->pool, name, 1);
 
   if (copyfrom_path == NULL)
-    send_xml(child->uc, "<S:add-%s name=\"%s\"/>",
-	     is_dir ? "directory" : "file", qname);
+    send_xml(child->uc, "<S:add-%s name=\"%s\"/>" DEBUG_CR,
+             DIR_OR_FILE(is_dir), qname);
   else
     {
       const char *qcopy;
@@ -137,8 +139,8 @@ static void add_helper(svn_boolean_t is_dir,
       qcopy = apr_xml_quote_string(child->pool, copyfrom_path->data, 1);
       send_xml(child->uc,
 	       "<S:add-%s name=\"%s\" "
-	       "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\"/>",
-	       is_dir ? "directory" : "file",
+	       "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\"/>" DEBUG_CR,
+               DIR_OR_FILE(is_dir),
 	       qname, copyfrom_path->data, copyfrom_revision);
     }
 
@@ -159,8 +161,8 @@ static void replace_helper(svn_boolean_t is_dir,
   child = make_child_baton(parent, name, is_dir);
 
   qname = apr_xml_quote_string(child->pool, name, 1);
-  send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%ld\"/>",
-	   is_dir ? "directory" : "file", qname, base_revision);
+  send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
+	   DIR_OR_FILE(is_dir), qname, base_revision);
 
   send_vsn_url(child);
 
@@ -170,12 +172,12 @@ static void replace_helper(svn_boolean_t is_dir,
 static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
   if (baton->seen_prop_change)
-    send_xml(baton->uc, "<S:fetch-props/>");
+    send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
 
   if (baton->added)
-    send_xml(baton->uc, "</S:add-%s>", is_dir ? "directory" : "file");
+    send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
   else
-    send_xml(baton->uc, "</S:replace-%s>", is_dir ? "directory" : "file");
+    send_xml(baton->uc, "</S:replace-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
 }
 
 static svn_error_t * upd_set_target_revision(void *edit_baton,
@@ -184,8 +186,9 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
   update_ctx_t *uc = edit_baton;
 
   send_xml(uc,
-	   "<S:update-report>"
-	   "<S:target-revision rev=\"%ld\"/>", target_revision);
+	   "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+           "xmlns:D=\"DAV:\">" DEBUG_CR
+	   "<S:target-revision rev=\"%ld\"/>" DEBUG_CR, target_revision);
 
   return NULL;
 }
@@ -207,7 +210,7 @@ static svn_error_t * upd_replace_root(void *edit_baton,
 
   *root_baton = b;
 
-  send_xml(uc, "<S:replace-directory rev=\"%ld\">", base_revision);
+  send_xml(uc, "<S:replace-directory rev=\"%ld\">" DEBUG_CR, base_revision);
 
   return NULL;
 }
@@ -219,7 +222,7 @@ static svn_error_t * upd_delete_entry(svn_string_t *name,
   const char *qname;
 
   qname = apr_xml_quote_string(parent->pool, name->data, 1);
-  send_xml(parent->uc, "<S:delete-entry name=\"%s\"/>", name->data);
+  send_xml(parent->uc, "<S:delete-entry name=\"%s\"/>" DEBUG_CR, name->data);
 
   return NULL;
 }
@@ -300,7 +303,7 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
 {
   item_baton_t *file = file_baton;
 
-  send_xml(file->uc, "<S:fetch-file/>");
+  send_xml(file->uc, "<S:fetch-file/>" DEBUG_CR);
 
   *handler = noop_handler;
 
@@ -317,7 +320,7 @@ static svn_error_t * upd_close_edit(void *edit_baton)
 {
   update_ctx_t *uc = edit_baton;
 
-  send_xml(uc, "</S:update-report>");
+  send_xml(uc, "</S:update-report>" DEBUG_CR);
 
   return NULL;
 }
@@ -336,6 +339,13 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   int ns;
   svn_error_t *serr;
   svn_string_t *pathstr;
+
+  if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+    {
+      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                           "This report can only be run against a "
+                           "version-controlled resource.");
+    }
 
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
@@ -356,9 +366,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       }
   if (revnum == SVN_INVALID_REVNUM)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-			   "An SVN:target-revision element was not found "
-			   "in the request's XML body.");
+      serr = svn_fs_youngest_rev(&revnum, resource->info->repos->fs,
+                                 resource->pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not determine the youngest "
+                                     "revision for the update process.");
+        }
     }
 
   editor = svn_delta_default_editor(resource->pool);
@@ -388,7 +403,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     {
     }
 
-  fs_base = svn_string_create("", resource->pool);
+  fs_base = svn_string_create(resource->info->repos_path, resource->pool);
   serr = svn_repos_begin_report(&rbaton, revnum,
 				resource->info->repos->fs, fs_base,
 				editor, &uc, resource->pool);
@@ -413,8 +428,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 	/* ### assume first/only attribute is the rev */
 	rev = atol(child->attr->value);
 
-	/* ### assume no white space, child elems, etc */
-	path = child->first_cdata.first->text;
+	path = dav_xml_get_cdata(child, resource->pool, 1 /* strip_white */);
 
 	svn_string_set(pathstr, path);
 	serr = svn_repos_set_path(rbaton, pathstr, rev);
