@@ -10,3 +10,4 @@ libsvn_string_so_SOURCES = svn_string.c
 CFLAGS = -shared -fPIC 
 INCLUDES = -I../include -I../../apr/include
 LIBADD = -L../../apr
+

@@ -13,9 +13,8 @@ autoconf
 autoheader
 
 # Meta-configure apr/ subdir
-# Meta-configure apr/ subdir
 if [ -d apr ]; then
-  (cd apr; ./buildconf)
+  (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
 else
   echo ""
   echo "You don't have an apr/ subdirectory here.  Please get one:"

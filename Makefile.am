@@ -3,7 +3,7 @@
 ## kff todo: we're just going to get subversion/libsvn_string working first.
 ## SUBDIRS = doc subversion
 
-SUBDIRS = subversion
+SUBDIRS = subversion doc
 
 ChangeLog: changelog
 
