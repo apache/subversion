@@ -11,9 +11,8 @@
       properly configure and care for it so that potential problems
       are avoided, and actual problems are safely resolved.</para>
 
-    <para>In this chapter, we'll discuss how to create and configure a
-      Subversion repository, and how to expose that repository for
-      network accessibility.  We'll also talk about repository
+    <para>In this chapter, we'll discuss how to create and configure
+      a Subversion repository.  We'll also talk about repository
       maintenance, including the use of the <command>svnlook</command>
       and <command>svnadmin</command> tools (which are provided with
       Subversion).  We'll address some common questions and mistakes,
@@ -150,9 +149,156 @@
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-1.3">
-      <title>Berkeley DB</title>
+    <sect2 id="svn-ch-5-sect-1.2.A">
+      <title>Repository Data-Stores</title>
 
+      <para>As of Subversion 1.1, there are two options for storing
+        data in a Subversion repository.  One type of repository
+        stores everything in a Berkeley DB database; the other kind
+        stores data in ordinary flat files, using a proprietary binary
+        format.  Because Subversion developers often refer to a
+        repository as "The [Versioned] Filesystem", they have adopted
+        the habit of referring to the latter type of repository as
+        <firstterm>FSFS</firstterm>: that is, it's a versioned
+        filesystem implementation that uses the native OS filesystem
+        to store data.</para>
+
+      <para>When a repository is created, an administrator must decide
+        whether it will use BerkeleyDB or FSFS.  There are advantages
+        and disadvantages to each, which we'll describe in a bit.
+        Neither back-end is more <quote>official</quote> than another,
+        and programs which access the repository are insulated from
+        this implementation detail.  Programs have no idea how a
+        repository is storing data; they only see revision and
+        transaction trees through the repository API.</para>
+
+      <para>Here is a table that gives an comparative overview of
+        BerkeleyDB and FSFS repositories.  The next sections go into
+        detail.</para>
+
+      <table id="svn-ch-5-table-1">
+        <title>Repository Data-Store Comparison</title>
+        <tgroup cols="3">
+          <thead>
+            <row>
+              <entry>Feature</entry>
+              <entry>BerkeleyDB</entry>
+              <entry>FSFS</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>Sensitivity to interruptions</entry>
+              
+              <entry>very;  crashes and permission problems can leave the
+                database <quote>wedged</quote>, requiring journaled
+                recovery procedures.</entry>
+              
+              <entry>quite insensitive.</entry>
+            </row>
+            
+            <row>
+              <entry>Usable from a read-only mount</entry>
+              
+              <entry>no</entry>
+              
+              <entry>yes</entry>
+            </row>
+            
+            <row>
+              <entry>Platform-independent storage</entry>
+              
+              <entry>no</entry>
+              
+              <entry>yes</entry>
+            </row>
+            
+            <row>
+              <entry>Usable over network filesystems</entry>
+              
+              <entry>no</entry>
+              
+              <entry>yes</entry>
+            </row>
+            
+            <row>
+              <entry>Repository size</entry>
+              
+              <entry>slightly larger</entry>
+              
+              <entry>slightly smaller</entry>
+            </row>
+
+            <row>
+              <entry>Scalability: number of revision trees</entry>
+              
+              <entry>database;  no problems</entry>
+              
+              <entry>some older native filesystems don't scale well with
+                thousands of entries in a single directory.</entry>
+            </row>
+
+            <row>
+              <entry>Scalability: directories with many files</entry>
+              
+              <entry>slower</entry>
+              
+              <entry>faster</entry>
+            </row>
+                        
+            <row>
+              <entry>Speed:  checking out latest code</entry>
+              
+              <entry>faster</entry>
+              
+              <entry>slower</entry>
+            </row>
+            
+            <row>
+              <entry>Speed:  large commits</entry>
+              
+              <entry>slower, but work is spread throughout commit</entry>
+              
+              <entry>faster, but finalization delay may cause client
+                timeouts</entry>
+            </row>
+            
+            <row>
+              <entry>Group permissions handling</entry>
+              
+              <entry>sensitive to user umask problems;  best if accessed
+                by only one user.</entry>
+              
+              <entry>works around umask problems</entry>
+            </row>
+
+            <row>
+              <entry>Backup strategy</entry>
+              
+              <entry>use <command>svnadmin</command> commands to perform
+                full and incremental backups</entry>
+              
+              <entry>can also use standard backup software for full and
+                incremental backups;  able to split repository over
+                multiple spools</entry>
+            </row>
+
+            <row>
+              <entry>Code maturity</entry>
+              
+              <entry>in use since 2001</entry>
+              
+              <entry>in use since 2004</entry>
+            </row>
+
+          </tbody>
+        </tgroup>      
+      </table>
+      
+    <!-- ***************************************************************** -->
+      <sect3 id="svn-ch-5-sect-1.3">
+        <title>Berkeley DB</title>
+        
         <para>The data housed within Subversion repositories actually
           lives inside a database, specifically, a Berkeley DB Data
           Store.  When the initial design phase of Subversion was in
@@ -213,6 +359,15 @@
           set of specifications, almost no known shares actually meet
           all those specifications.</para>
 
+      </sect3>
+      
+    <!-- ***************************************************************** -->
+      <sect3 id="svn-ch-5-sect-1.4">
+        <title>FSFS</title>
+      
+        <para>blah</para>
+
+      </sect3>
     </sect2>
   </sect1>
 
