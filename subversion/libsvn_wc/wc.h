@@ -448,7 +448,9 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
                                     apr_pool_t *pool);
 
 
-/* For PATH's entries file, create or modify an entry NAME, using
+/* Your one-stop shopping for changing an entry:
+ *
+ * For PATH's entries file, create or modify an entry NAME, using
  * explicit fields and, secondarily, the attributes in ATTS.
  * 
  * If NAME is null, it means the dir's own entry, as usual.
@@ -481,8 +483,7 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * even if they also appear in ATTS.
  * 
  * NOTE: when you call this function, the entries file will be read,
- * tweaked, and written back out.  This is your one-stop shopping for
- * changing an entry.
+ * tweaked, and written back out.
  */
 svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_string_t *name,
