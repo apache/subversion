@@ -232,6 +232,8 @@ svn_wc_process_committed (const char *path,
   char *revstr = apr_psprintf (pool, "%ld", new_revnum);
   const char *hex_digest = NULL;
 
+  logtags = svn_stringbuf_create ("", pool);
+
   SVN_ERR (svn_wc__adm_write_check (adm_access));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
@@ -251,9 +253,21 @@ svn_wc_process_committed (const char *path,
   if (base_name)
     {
       /* PATH must be some sort of file */
-      const char *latest_base;
+      const char *latest_base,*revert_file;
       svn_node_kind_t kind;
 
+      /* If the revert file exists it needs to be deleted when the file
+       * is committed. */
+      revert_file = svn_wc__text_revert_path (path, FALSE, pool);
+      SVN_ERR (svn_io_check_path (revert_file, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
+                                 SVN_WC__LOG_RM,
+                                 SVN_WC__LOG_ATTR_NAME, revert_file,
+                                 NULL);
+        }
+      
       /* There may be a new text base is sitting in the adm tmp area by
          now, because the commit succeeded.  A file that is copied, but not
          otherwise modified, doesn't have a new text base, so we use
@@ -302,7 +316,6 @@ svn_wc_process_committed (const char *path,
       base_name = SVN_WC_ENTRY_THIS_DIR;
     }
 
-  logtags = svn_stringbuf_create ("", pool);
 
   /* Append a log command to set (overwrite) the 'committed-rev',
      'committed-date', 'last-author', and possibly `checksum'
@@ -972,6 +985,14 @@ svn_wc_add (const char *path,
       modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
     }
 
+  /* If this is a replacement we want to remove the checksum so it is not set
+   * to the old value. */
+  if (is_replace)
+    {
+      tmp_entry.checksum = NULL;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+    }
+  
   tmp_entry.revision = 0;
   tmp_entry.kind = kind;
   tmp_entry.schedule = svn_wc_schedule_add;
@@ -1236,6 +1257,18 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     }
   else if (entry->schedule == svn_wc_schedule_replace)
     {
+      /* If the replacement is a copy need to clean up the
+       * related things in entries */
+      if (entry->copied) 
+        {
+          entry->copied = FALSE;
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+          entry->copyfrom_url = FALSE;
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
+          entry->copyfrom_rev = SVN_INVALID_REVNUM;
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+        }
+
       /* Edge case: we're reverting a replacement, and
          svn_wc_props_modified_p thinks there's no property mods.
          However, because of the scheduled replacement,
@@ -1266,6 +1299,21 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     {
       SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
       base_thing = svn_wc__text_base_path (fullpath, 0, pool);
+
+      /* Look for a revert base file.  If it exists use it for
+       * the text base for the file.  If it doesn't use the normal
+       * text base. */
+      {
+        svn_node_kind_t disk_kind;
+        const char *revert_thing;
+       
+        revert_thing = svn_wc__text_revert_path (fullpath, 0, pool);
+        SVN_ERR (svn_io_check_path (revert_thing, &disk_kind, pool));
+        if (disk_kind == svn_node_file)
+          {
+            SVN_ERR (svn_io_file_rename (revert_thing, base_thing, pool));
+          }          
+      }     
 
       if (! magic_props_changed)
         SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, TRUE,

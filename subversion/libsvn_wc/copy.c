@@ -137,6 +137,7 @@ copy_file_administratively (const char *src_path,
   svn_node_kind_t dst_kind;
   const svn_wc_entry_t *src_entry, *dst_entry;
   svn_boolean_t special;
+  svn_boolean_t replace = FALSE;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -157,10 +158,7 @@ copy_file_administratively (const char *src_path,
   if (dst_entry && dst_entry->kind == svn_node_file)
     {
       if (dst_entry->schedule == svn_wc_schedule_delete)
-        return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                  _("'%s' is scheduled for deletion; it must"
-                                    " be committed before being overwritten"),
-                                  svn_path_local_style (dst_path, pool));
+        replace = TRUE;
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("There is already a versioned item '%s'"),
@@ -198,6 +196,17 @@ copy_file_administratively (const char *src_path,
                                             TRUE, /* expand */
                                             TRUE, /* special */
                                             pool));
+ 
+  /* If we're replacing the file then we need to save the destination files
+   * text base before replacing it (see comments below for why it gets
+   * replaced).  This allows us to revert the entire change. */
+  if (replace) 
+    {
+      const char *src_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
+      const char *dst_rvrt = svn_wc__text_revert_path (dst_path, FALSE, pool);
+
+      SVN_ERR (svn_io_copy_file (src_txtb, dst_rvrt, TRUE, pool));
+    }
   
   /* Copy the pristine text-base over.  Why?  Because it's the *only*
      way we can detect any upcoming local mods on the copy.
