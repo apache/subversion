@@ -38,12 +38,17 @@
 **
 ** Note that VSN_URL is NULL if this resource has just been added, and
 ** WR_URL can be NULL if the resource has not (yet) been checked out.
+**
+** LOCAL_PATH is relative to the root of the commit. It will be used
+** for the get_func, set_func, and close_func callbacks.
 */
 typedef struct
 {
   const char *url;
   const char *vsn_url;
   const char *wr_url;
+
+  svn_string_t *local_path;
 } resource_t;
 
 typedef struct
@@ -51,6 +56,7 @@ typedef struct
   svn_ra_session_t *ras;
   const char *activity_url;
 
+  /* ### resources may not be needed */
   apr_hash_t *resources;        /* URL (const char *) -> RESOURCE_T */
 
   /* name of local prop to hold the version resource's URL */
@@ -58,7 +64,7 @@ typedef struct
 
   svn_ra_get_wc_prop_func_t get_func;
   svn_ra_set_wc_prop_func_t set_func;
-  svn_ra_close_commit_prop_func_t close_func;
+  svn_ra_close_commit_func_t close_func;
   void *close_baton;
 
   svn_string_t *log_msg;
@@ -68,17 +74,9 @@ typedef struct
 typedef struct
 {
   commit_ctx_t *cc;
-  resource_t res;
+  resource_t *rsrc;
   apr_hash_t *prop_changes;
-} dir_baton_t;
-
-/* ### combine this with dir_baton_t ? */
-typedef struct
-{
-  commit_ctx_t *cc;
-  resource_t res;
-  apr_hash_t *prop_changes;
-} file_baton_t;
+} resource_baton_t;
 
 /*
 ** singleton_delete_prop:
@@ -164,56 +162,64 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   return NULL;
 }
 
-static resource_t * add_resource(commit_ctx_t *cc,
-                                 const char *url, const char *vsn_url,
-                                 const char *wr_url)
+static svn_error_t * add_child(resource_t **child,
+                               commit_ctx_t *cc,
+                               const resource_t *parent,
+                               const char *name,
+                               int created)
 {
-  resource_t *res;
+  apr_pool_t *pool = cc->ras->pool;
+  resource_t *rsrc;
 
-  res = apr_pcalloc(cc->ras->pool, sizeof(*res));
-  res->url = url;
-  res->vsn_url = vsn_url;
-  res->wr_url = wr_url;
+  rsrc = apr_pcalloc(pool, sizeof(*rsrc));
+  rsrc->url = apr_pstrcat(pool, parent->url, "/", name, NULL);
 
-  apr_hash_set(cc->resources, url, APR_HASH_KEY_STRING, res);
+  rsrc->local_path = svn_string_dup(parent->local_path, pool);
+  svn_path_add_component_nts(rsrc->local_path, name, svn_path_local_style);
 
-  return res;
+  /* If the resource was just created, then its WR appears under the
+     parent and it has no VR URL. If the resource already existed, then
+     it has no WR and its VR can be found in the WC properties. */
+  if (created)
+    {
+      /* ### does the workcol have a trailing slash? do some extra work */
+      rsrc->wr_url = apr_pstrcat(pool, parent->wr_url, "/", name, NULL);
+    }
+  else
+    {
+      svn_string_t *vsn_url_value;
+
+      SVN_ERR( (*cc->get_func)(cc->close_baton,
+                               rsrc->local_path,
+                               cc->vsn_url_name,
+                               &vsn_url_value) );
+      rsrc->vsn_url = vsn_url_value->data;
+    }
+
+  apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
+
+  *child = rsrc;
+  return NULL;
 }
 
-static svn_error_t * checkout_resource(commit_ctx_t *cc, const char *url,
-                                       const char **wr_url)
+/* check out the specified resource (if it hasn't been checked out yet) */
+static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 {
-  resource_t *res = apr_hash_get(cc->resources, url, APR_HASH_KEY_STRING);
   http_req *req;
   int rv;
   int code;
   const char *body;
   const char *locn = NULL;
 
-  printf("[checkout_resource] CHECKOUT: %s\n", url);
+  printf("[checkout_resource] CHECKOUT: %s\n", res->url);
 
-  if (res != NULL && res->wr_url != NULL)
+  if (res->wr_url != NULL)
     {
-      if (wr_url != NULL)
-        *wr_url = res->wr_url;
+      /* already checked out! */
       return NULL;
     }
 
-  if (res == NULL)
-    {
-      const char *vsn_url;
-
-      /* ### fetch vsn_url from the local prop store */
-      vsn_url = NULL;
-#if 0
-      /* ### need the path */
-      SVN_ERR( (*cc->get_func)(cc->close_baton, path, cc->vsn_url_name,
-                               &vsn_url) );
-#endif
-
-      /* ### check to see if we need the copy */
-      res = add_resource(cc, apr_pstrdup(cc->ras->pool, url), vsn_url, NULL);
-    }
+  /* assert: res->vsn_url != NULL */
 
   /* ### send a CHECKOUT resource on res->vsn_url; include cc->activity_url;
      ### place result into res->wr_url and return it */
@@ -259,15 +265,12 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, const char *url,
     {
       /* ### error */
     }
-
   if (locn == NULL)
     {
       /* ### error */
     }
 
   res->wr_url = locn;
-  if (wr_url != NULL)
-    *wr_url = locn;
 
   return NULL;
 }
@@ -294,7 +297,7 @@ static void record_prop_change(apr_pool_t *pool,
 }
 
 static svn_error_t * do_proppatch(svn_ra_session_t *ras,
-                                  const resource_t *res,
+                                  const resource_t *rsrc,
                                   apr_hash_t *changes)
 {
   /* ### the hash contains the FINAL state, so the ordering of the items
@@ -305,7 +308,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   /* ### we should have res->wr_url */
   /* ### maybe pass wr_url rather than resource_t* */
 
-  printf("[do_proppatch] PROPPATCH: %s\n", res->url);
+  printf("[do_proppatch] PROPPATCH: %s\n", rsrc->url);
 
   return NULL;
 }
@@ -315,12 +318,28 @@ static svn_error_t * commit_replace_root(void *edit_baton,
                                          void **root_baton)
 {
   commit_ctx_t *cc = edit_baton;
-  dir_baton_t *root = apr_pcalloc(cc->ras->pool, sizeof(*root));
+  resource_baton_t *root;
+  resource_t *rsrc;
+  svn_string_t *vsn_url_value;
 
+  /* create the root resource. no wr_url (yet) */
+  rsrc = apr_pcalloc(cc->ras->pool, sizeof(*rsrc));
+  rsrc->url = cc->ras->root.path;
+
+  /* ### or use empty string? */
+  rsrc->local_path = svn_string_create(".", cc->ras->pool);
+
+  SVN_ERR( (*cc->get_func)(cc->close_baton,
+                           rsrc->local_path,
+                           cc->vsn_url_name,
+                           &vsn_url_value) );
+  rsrc->vsn_url = vsn_url_value->data;
+
+  apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
+
+  root = apr_pcalloc(cc->ras->pool, sizeof(*root));
   root->cc = cc;
-
-  root->res.url = cc->ras->root.path;
-  /* ### fetch vsn_url from props */
+  root->rsrc = rsrc;
 
   *root_baton = root;
 
@@ -330,27 +349,30 @@ static svn_error_t * commit_replace_root(void *edit_baton,
 static svn_error_t * commit_delete_entry(svn_string_t *name,
                                          void *parent_baton)
 {
-  dir_baton_t *parent = parent_baton;
-  const char *workcol;
+  resource_baton_t *parent = parent_baton;
+  apr_pool_t *pool = parent->cc->ras->pool;
   const char *child;
   int code;
 
   /* get the URL to the working collection */
   printf("[delete_entry] ");
-  SVN_ERR( checkout_resource(parent->cc, parent->res.url, &workcol) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   /* create the URL for the child resource */
   /* ### does the workcol have a trailing slash? do some extra work */
-  /* ### what if the child is already checked out? possible? */
-  child = apr_pstrcat(parent->cc->ras->pool, workcol, "/", name->data, NULL);
+  child = apr_pstrcat(pool, parent->rsrc->wr_url, "/", name->data, NULL);
+
+  /* Note: the child cannot have a resource stored in the resources table
+     because of the editor traversal rules. That is: this is the first time
+     we have seen anything about the child, and we're deleting it. As a
+     corollary, we know the child hasn't been checked out. */
 
   /* delete the child resource */
   SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code) );
   if (code != 200)
     {
       /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_DELETE_FAILED, 0, NULL,
-                               parent->cc->ras->pool,
+      return svn_error_createf(SVN_ERR_RA_DELETE_FAILED, 0, NULL, pool,
                                "Could not DELETE %s", child);
     }
 
@@ -365,38 +387,32 @@ static svn_error_t * commit_add_dir(svn_string_t *name,
                                     svn_revnum_t copyfrom_revision,
                                     void **child_baton)
 {
-  dir_baton_t *parent = parent_baton;
-  dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
-  const char *workcol;
-  const char *newcol;
+  resource_baton_t *parent = parent_baton;
+  apr_pool_t *pool = parent->cc->ras->pool;
+  resource_baton_t *child;
   int code;
-
-  child->cc = parent->cc;
-  child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
-                               "/", name->data, NULL);
-
-  /* get the URL to the working collection */
-  printf("[add_dir] ");
-  SVN_ERR( checkout_resource(parent->cc, parent->res.url, &workcol) );
-
-  /* create the URL for the child resource */
-  /* ### does the workcol have a trailing slash? do some extra work */
-  newcol = apr_pstrcat(parent->cc->ras->pool, workcol, "/", name->data, NULL);
 
   /* ### no support for ancestor right now. that will use COPY */
 
+  /* check out the parent resource so that we can create the new collection
+     as one of its children. */
+  printf("[add_dir] ");
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
+
+  child = apr_pcalloc(pool, sizeof(*child));
+  child->cc = parent->cc;
+  SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc, name->data, 1) );
+
   /* create the new collection */
-  SVN_ERR( simple_request(parent->cc->ras, "MKCOL", newcol, &code) );
+  SVN_ERR( simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
+                          &code) );
   if (code != 201)
     {
       /* ### need to be more sophisticated with reporting the failure */
       /* ### need error */
     }
 
-  printf("[add_dir] MKCOL: %s\n", child->res.url);
-
-  /* record information about the new collection */
-  add_resource(parent->cc, child->res.url, NULL, newcol);
+  printf("[add_dir] MKCOL: %s\n", child->rsrc->url);
 
   *child_baton = child;
   return NULL;
@@ -407,12 +423,12 @@ static svn_error_t * commit_rep_dir(svn_string_t *name,
                                     svn_revnum_t base_revision,
                                     void **child_baton)
 {
-  dir_baton_t *parent = parent_baton;
-  dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
+  resource_baton_t *parent = parent_baton;
+  apr_pool_t *pool = parent->cc->ras->pool;
+  resource_baton_t *child = apr_pcalloc(pool, sizeof(*child));
 
   child->cc = parent->cc;
-  child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
-                               "/", name->data, NULL);
+  SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc, name->data, 0) );
 
   /*
   ** Note: replace_dir simply means that a change has occurred somewhere
@@ -432,29 +448,29 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
                                             svn_string_t *name,
                                             svn_string_t *value)
 {
-  dir_baton_t *dir = dir_baton;
+  resource_baton_t *dir = dir_baton;
 
   /* record the change. it will be applied at close_dir time. */
   record_prop_change(dir->cc->ras->pool, &dir->prop_changes, name, value);
 
   /* do the CHECKOUT sooner rather than later */
   printf("[change_dir_prop] ");
-  SVN_ERR( checkout_resource(dir->cc, dir->res.url, NULL) );
+  SVN_ERR( checkout_resource(dir->cc, dir->rsrc) );
 
   printf("[change_dir_prop] %s: %s=%s\n",
-         dir->res.url, name->data, value->data);
+         dir->rsrc->url, name->data, value->data);
 
   return NULL;
 }
 
 static svn_error_t * commit_close_dir(void *dir_baton)
 {
-  dir_baton_t *dir = dir_baton;
+  resource_baton_t *dir = dir_baton;
 
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
   printf("[close_dir] ");
-  SVN_ERR( do_proppatch(dir->cc->ras, &dir->res, dir->prop_changes) );
+  SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir->prop_changes) );
 
   return NULL;
 }
@@ -465,12 +481,10 @@ static svn_error_t * commit_add_file(svn_string_t *name,
                                      svn_revnum_t copyfrom_revision,
                                      void **file_baton)
 {
-  dir_baton_t *parent = parent_baton;
-  file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
+  resource_baton_t *parent = parent_baton;
+  apr_pool_t *pool = parent->cc->ras->pool;
+  resource_baton_t *file;
 
-  file->cc = parent->cc;
-  file->res.url = apr_pstrcat(file->cc->ras->pool, parent->res.url,
-                              "/", name->data, NULL);
   /* ### store name, parent? */
 
   /*
@@ -486,7 +500,11 @@ static svn_error_t * commit_add_file(svn_string_t *name,
 
   /* do the CHECKOUT now. we'll PUT the new file later on. */
   printf("[add_file] ");
-  SVN_ERR( checkout_resource(parent->cc, parent->res.url, NULL) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
+
+  file = apr_pcalloc(pool, sizeof(*file));
+  file->cc = parent->cc;
+  SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc, name->data, 1) );
 
   /* ### wait for apply_txdelta before doing a PUT. it might arrive a
      ### "long time" from now. certainly after many other operations, so
@@ -503,17 +521,17 @@ static svn_error_t * commit_rep_file(svn_string_t *name,
                                      svn_revnum_t base_revision,
                                      void **file_baton)
 {
-  dir_baton_t *parent = parent_baton;
-  file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
+  resource_baton_t *parent = parent_baton;
+  apr_pool_t *pool = parent->cc->ras->pool;
+  resource_baton_t *file;
 
+  file = apr_pcalloc(pool, sizeof(*file));
   file->cc = parent->cc;
-  file->res.url = apr_pstrcat(file->cc->ras->pool, parent->res.url,
-                              "/", name->data, NULL);
-  /* ### store more info? */
+  SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc, name->data, 0) );
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
   printf("[rep_file] ");
-  SVN_ERR( checkout_resource(parent->cc, file->res.url, NULL) );
+  SVN_ERR( checkout_resource(parent->cc, file->rsrc) );
 
   /* ### wait for apply_txdelta before doing a PUT. it might arrive a
      ### "long time" from now. certainly after many other operations, so
@@ -535,11 +553,11 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
                                           svn_txdelta_window_handler_t *handler,
                                           void **handler_baton)
 {
-  file_baton_t *file = file_baton;
+  resource_baton_t *file = file_baton;
 
   /* ### begin a PUT here? */
 
-  printf("[apply_txdelta] PUT: %s\n", file->res.url);
+  printf("[apply_txdelta] PUT: %s\n", file->rsrc->url);
 
   *handler = commit_send_txdelta;
   *handler_baton = NULL;
@@ -552,29 +570,29 @@ static svn_error_t * commit_change_file_prop(
   svn_string_t *name,
   svn_string_t *value)
 {
-  file_baton_t *file = file_baton;
+  resource_baton_t *file = file_baton;
 
   /* record the change. it will be applied at close_file time. */
   record_prop_change(file->cc->ras->pool, &file->prop_changes, name, value);
 
   /* do the CHECKOUT sooner rather than later */
   printf("[change_file_prop] ");
-  SVN_ERR( checkout_resource(file->cc, file->res.url, NULL) );
+  SVN_ERR( checkout_resource(file->cc, file->rsrc) );
 
   printf("[change_file_prop] %s: %s=%s\n",
-         file->res.url, name->data, value->data);
+         file->rsrc->url, name->data, value->data);
 
   return NULL;
 }
 
 static svn_error_t * commit_close_file(void *file_baton)
 {
-  file_baton_t *file = file_baton;
+  resource_baton_t *file = file_baton;
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
   printf("[close_file] ");
-  SVN_ERR( do_proppatch(file->cc->ras, &file->res, file->prop_changes) );
+  SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file->prop_changes) );
 
   return NULL;
 }
