@@ -62,13 +62,15 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_DATE      "committed-date"
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR    "last-author"
 #define SVN_WC__ENTRY_ATTR_UUID          "uuid"
+#define SVN_WC__ENTRY_ATTR_INCOMPLETE    "incomplete"
 
 
 
-/* Initialize an entries file based on URL, in th adm area for
-   PATH.  The adm area must not already have an entries file. */
+/* Initialize an entries file based on URL at INITIAL_REV, in the adm
+   area for PATH.  The adm area must not already have an entries file. */
 svn_error_t *svn_wc__entries_init (const char *path,
                                    const char *url,
+                                   svn_revnum_t initial_rev,
                                    apr_pool_t *pool);
 
 
@@ -114,6 +116,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CMT_DATE      0x00010000
 #define SVN_WC__ENTRY_MODIFY_CMT_AUTHOR    0x00020000
 #define SVN_WC__ENTRY_MODIFY_UUID          0x00040000
+#define SVN_WC__ENTRY_MODIFY_INCOMPLETE    0x00080000
 
 
 /* ...or perhaps this to mean all of those above... */
