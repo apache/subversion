@@ -971,8 +971,8 @@ software to colorize log entries automatically.
 As an exception to the above, if you make exactly the same change in
 several files, list all the changed files in one entry. For example:
 
-   * subversion/libsvn_ra_pegions/twirl.c,
-     subversion/libsvn_ra_pegions/roost.c:
+   * subversion/libsvn_ra_pigeons/twirl.c,
+     subversion/libsvn_ra_pigeons/roost.c:
      Include svn_private_config.h.
 
 If all the changed files are deep inside the source tree, you can
