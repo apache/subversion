@@ -268,6 +268,14 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                                       const char *uri,
                                       apr_pool_t *pool);
 
+/* Generate the HTTP response body for a successful MERGE. */
+/* ### more docco */
+dav_error * dav_svn__merge_response(ap_filter_t *output,
+                                    svn_fs_t *repos,
+                                    svn_revnum_t new_rev,
+                                    apr_xml_elem *prop_elem,
+                                    apr_pool_t *pool);
+
 #endif /* DAV_SVN_H */
 
 
