@@ -740,6 +740,9 @@ def revprop_change(sbox):
 
 #----------------------------------------------------------------------
 
+class _PropError:
+  pass
+
 def prop_value_conversions(sbox):
   "some svn: properties should be converted"
 
@@ -811,16 +814,13 @@ def prop_value_conversions(sbox):
   # plain '\n'. The _last_ \n is also from the client, but it's not
   # part of the prop value and it doesn't get converted in the pipe.
 
-  class PropError:
-    pass
-
   def check_prop(name, path, exp_out):
     out, err = svntest.main.run_svn(None, 'pg', name, path)
     if out != exp_out:
       print "svn pg", name, "output does not match expected."
       print "Expected standard output: ", exp_out, "\n"
       print "Actual standard output: ", out, "\n"
-      raise PropError()
+      raise _PropError()
 
   try:
     # Check svn:mime-type
@@ -859,7 +859,7 @@ def prop_value_conversions(sbox):
     check_prop('some-prop', lambda_path, ['bar\n'])
     check_prop('some-prop', mu_path,[' bar baz\n'])
     check_prop('some-prop', iota_path, ['bar\n', '\n'])
-  except PropError:
+  except _PropError:
     return 1
 
   return 0
