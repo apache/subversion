@@ -2204,58 +2204,6 @@ Examples
 
 
   </sect1>
-  
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 4 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-8-sect-4">
-    <title>Repository Configuration Files</title>
-    
-    <para>###TODO We should probably break out Apache stuff into its
-      own section and talk about ra_local on its own. For ra_dav, go
-      through all the relevant directives and what they do.  Once
-      ra_svn matures a bit, we can add that.</para>
-
-  </sect1>
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 5 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-8-sect-5">
-    <title>Repository commit hooks</title>
-    
-    <para>
-      ###TODO pre-commit, post-commit, start-co
-    </para>
-
-  </sect1>
-
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 6 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-8-sect-6">
-    <title>Client configuration (Inside the
-      <filename>.subversion</filename> directory)</title>
-    
-    <para>###TODO Write this</para>
-    
-  </sect1>
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 7 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-8-sect-7">
-    <title>The Working Copy Administrative Area (Inside the
-      <filename>.svn</filename> directories)</title>
-
-    <!-- ###TODO: Do we want to include this? -Fitz -->
-    <para>
-      ###TODO If we decide to go with this, add a short summary, a
-      big warning to not touch anything, and then a quick blurb for
-      each of the following: README, auth/, dir-prop-base,
-      dir-props, dir-wcprops, empty-file, entries, format,
-      prop-base/, props/, text-base/, tmp/, and wcprops/</para>
-
-  </sect1>
-  
 </chapter>
 
 
