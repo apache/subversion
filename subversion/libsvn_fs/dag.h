@@ -103,18 +103,6 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
                                        trail_t *trail);
 
 
-/* Make a new mutable clone of the node named NAME in PARENT, and
-   adjust PARENT's directory entry to point to it, as part of TRAIL,
-   unless NAME in PARENT already refers to a mutable node.  In either
-   case, set *CHILD_P to a reference to the new node, allocated in
-   TRAIL->pool.  PARENT must be mutable.  NAME must be a single path
-   component; it cannot be a slash-separated directory path.  */
-svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
-                                      dag_node_t *parent,
-                                      const char *name,
-                                      trail_t *trail);
-
-
 
 /* Revision and transaction roots.  */
 
@@ -176,6 +164,18 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
                                dag_node_t *parent,
                                const char *name,
                                trail_t *trail);
+
+
+/* Make a new mutable clone of the node named NAME in PARENT, and
+   adjust PARENT's directory entry to point to it, as part of TRAIL,
+   unless NAME in PARENT already refers to a mutable node.  In either
+   case, set *CHILD_P to a reference to the new node, allocated in
+   TRAIL->pool.  PARENT must be mutable.  NAME must be a single path
+   component; it cannot be a slash-separated directory path.  */
+svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
+                                      dag_node_t *parent,
+                                      const char *name,
+                                      trail_t *trail);
 
 
 /* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
