@@ -320,7 +320,7 @@ def receive_copy_in_update(sbox):
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/B/newG' : Item(),
     'A/B/newG/pi' : Item("This is the file 'pi'."),
@@ -408,7 +408,7 @@ def resurrect_deleted_dir(sbox):
     'A/D/G/tau' : Item(status='A '),
     })
 
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   

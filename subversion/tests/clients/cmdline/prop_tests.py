@@ -65,7 +65,7 @@ def make_local_props(sbox):
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
 
   # What we expect the disk tree to look like:
-  expected_disk = svntest.actions.get_virginal_disk(1)
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', props={'blue' : 'azul', 'green' : 'verde'})
   expected_disk.tweak('A/D/G', props={'red' : 'rojo'})
 
@@ -166,7 +166,7 @@ def update_props(sbox):
     })
   
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk(1)
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', props={'blue' : 'azul'})
   expected_disk.tweak('A/D/H', props={'red' : 'rojo'})
 
@@ -243,7 +243,7 @@ def downdate_props(sbox):
     })
   
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk(1)
+  expected_disk = svntest.main.greek_state
   
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -346,7 +346,7 @@ def update_conflict_props(sbox):
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk(1)
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', props={'cash-sound' : 'beep!'})
   expected_disk.tweak('A', props={'foo' : 'baz'})
 
@@ -509,7 +509,7 @@ def revert_replacement_props(sbox):
   expected_status.tweak('iota', status='__')
   expected_status.tweak('A/B/lambda', status='__')
 
-  expected_disk = svntest.actions.get_virginal_disk(1)
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', props={'cash-sound' : 'cha-ching!'})
   expected_disk.tweak('A/B/lambda', props={'boson' : 'W'})
 
