@@ -35,10 +35,14 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Symbols that define the version number.
-   XXX FIXME: Modify before each snapshot, milestone or release. */
+/* Symbols that define the version number. */
 
-/* Version numbers: <major>.<minor>.<micro> */
+/* Version numbers: <major>.<minor>.<micro>
+ *
+ * The version numbers in this file follow the rules established by:
+ *
+ *   http://apr.apache.org/versioning.html
+ */
 
 /** Major version number.
  *
@@ -62,6 +66,7 @@ extern "C" {
 /** Library version number.
  *
  * Modify whenever there's an incompatible change in the library ABI.
+ * ### this is semantically equivalent to SVN_VER_MAJOR. fix...
  */
 #define SVN_VER_LIBRARY    1
 
@@ -82,8 +87,7 @@ extern "C" {
  *
  * This tag is used to generate a version number string to identify
  * the client and server in HTTP requests, for example. It must not
- * contain any spaces. This value remains "+" in the
- * repository.
+ * contain any spaces. This value remains "+" in the repository.
  *
  * During the distribution process, we automatically replace this text
  * with "" to indicate a baselined version.
@@ -114,6 +118,10 @@ extern "C" {
 
 /** Complete version string */
 #define SVN_VERSION        SVN_VER_NUM " (" SVN_VER_TAG ")"
+
+
+
+/* ### need runtime query function(s). see apr_version.h for example. */
 
 
 #ifdef __cplusplus
