@@ -1,12 +1,7 @@
 #!/bin/sh
 
-if test "$#" != 1; then
-  echo "ERROR ($0): not enough arguments. Must supply SOURCE-DIR."
-  exit 1
-fi
-
-SVN_PROG=../svn
-XML_DIR=$1/subversion/tests/xml
+SVN_PROG=../../../../clients/cmdline/svn
+XML_DIR=../../../xml
 TEST_DIR_1=t1
 TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit

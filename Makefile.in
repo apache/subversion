@@ -106,7 +106,7 @@ check: $(TEST_DEPS)
 	    echo ; \
 	    echo -n "Running all sub-tests in $$progbase..." ; \
 	    echo "START: $$progbase" >> $$logfile ; \
-	    if (cd $$progdir && ./$$progbase $(abs_srcdir)) >> $$logfile ; then \
+	    if (cd $$progdir && ./$$progbase) >> $$logfile ; then \
 		echo "SUCCESS" ; \
 	    else \
 		failed=yes; \
