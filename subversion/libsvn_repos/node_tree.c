@@ -1,5 +1,5 @@
 /*
- * editors.c:  an editor for tracking commit changes
+ * node_tree.c:  an editor for tracking repository deltas changes
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -24,8 +24,92 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
-#include "svnlook.h"
+#include "svn_repos.h"
 
+
+
+/*** Node creation and assembly structures and routines. ***/
+static svn_repos_node_t *
+create_node (const char *name, 
+             apr_pool_t *pool)
+{
+  svn_repos_node_t *node = apr_palloc (pool, sizeof (svn_repos_node_t));
+  node->action = 'R';
+  node->kind = svn_node_unknown;
+  node->name = apr_pstrdup (pool, name);
+  return node;
+}
+
+
+static svn_repos_node_t *
+create_sibling_node (svn_repos_node_t *elder, 
+                     const char *name, 
+                     apr_pool_t *pool)
+{
+  svn_repos_node_t *tmp_node;
+  
+  /* No ELDER sibling?  That's just not gonna work out. */
+  if (! elder)
+    return NULL;
+
+  /* Run to the end of the list of siblings of ELDER. */
+  tmp_node = elder;
+  while (tmp_node->sibling)
+    tmp_node = tmp_node->sibling;
+
+  /* Create a new youngest sibling and return that. */
+  return (tmp_node->sibling = create_node (name, pool));
+}
+
+
+static svn_repos_node_t *
+create_child_node (svn_repos_node_t *parent, 
+                   const char *name, 
+                   apr_pool_t *pool)
+{
+  /* No PARENT node?  That's just not gonna work out. */
+  if (! parent)
+    return NULL;
+
+  /* If PARENT has no children, create its first one and return that. */
+  if (! parent->child)
+    return (parent->child = create_node (name, pool));
+
+  /* If PARENT already has a child, create a new sibling for its first
+     child and return that. */
+  return create_sibling_node (parent->child, name, pool);
+}
+
+
+static svn_repos_node_t *
+find_child_by_name (svn_repos_node_t *parent, 
+                    const char *name)
+{
+  svn_repos_node_t *tmp_node;
+
+  /* No PARENT node, or a barren PARENT?  Nothing to find. */
+  if ((! parent) || (! parent->child))
+    return NULL;
+
+  /* Look through the children for a node with a matching name. */
+  tmp_node = parent->child;
+  while (1)
+    {
+      if (! strcmp (tmp_node->name, name))
+        {
+          return tmp_node;
+        }
+      else
+        {
+          if (tmp_node->sibling)
+            tmp_node = tmp_node->sibling;
+          else
+            break;
+        }
+    }
+
+  return NULL;
+}
 
 
 /*** Editor functions and batons. ***/
@@ -36,7 +120,7 @@ struct edit_baton
   svn_fs_root_t *root;
   svn_fs_root_t *base_root;
   apr_pool_t *pool;
-  repos_node_t *node;
+  svn_repos_node_t *node;
 };
 
 
@@ -44,7 +128,7 @@ struct dir_baton
 {
   svn_stringbuf_t *path;
   struct edit_baton *edit_baton;
-  repos_node_t *node;
+  svn_repos_node_t *node;
 };
 
 
@@ -52,13 +136,13 @@ struct file_baton
 {
   svn_stringbuf_t *path;
   struct dir_baton *dir_baton;
-  repos_node_t *node;
+  svn_repos_node_t *node;
 };
 
 
 struct window_handler_baton
 {
-  repos_node_t *node;
+  svn_repos_node_t *node;
 };
 
 
@@ -69,7 +153,7 @@ delete_entry (svn_stringbuf_t *name,
   struct dir_baton *d = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = (struct edit_baton *) d->edit_baton;
   svn_stringbuf_t *full_path;
-  repos_node_t *node;
+  svn_repos_node_t *node;
   int is_dir;
 
   /* Construct the full path of this entry based on its parent. */
@@ -80,9 +164,9 @@ delete_entry (svn_stringbuf_t *name,
   SVN_ERR (svn_fs_is_dir (&is_dir, eb->base_root, full_path->data, eb->pool));
 
   /* Get (or create) the change node and update it. */
-  node = svnlook_find_child_by_name (d->node, name->data);
+  node = find_child_by_name (d->node, name->data);
   if (! node)
-    node = svnlook_create_child_node (d->node, name->data, eb->pool);
+    node = create_child_node (d->node, name->data, eb->pool);
 
   if (is_dir)
     node->kind = svn_node_dir;
@@ -107,7 +191,7 @@ replace_root (void *edit_baton,
 
   d->path = (svn_stringbuf_t *) svn_stringbuf_create ("", eb->pool);
   d->edit_baton = eb;
-  d->node = (eb->node = svnlook_create_node ("", eb->pool));
+  d->node = (eb->node = create_node ("", eb->pool));
   d->node->kind = svn_node_dir;
   d->node->action = 'R';
   SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, "", eb->pool));
@@ -133,7 +217,7 @@ replace_directory (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   d->edit_baton = eb;
-  d->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
+  d->node = create_child_node (pd->node, name->data, eb->pool);
   d->node->kind = svn_node_dir;
   d->node->action = 'R';
   SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, d->path->data, eb->pool));
@@ -160,7 +244,7 @@ add_directory (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   d->edit_baton = eb;
-  d->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
+  d->node = create_child_node (pd->node, name->data, eb->pool);
   d->node->kind = svn_node_dir;
   d->node->action = 'A';
   SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, d->path->data, eb->pool));
@@ -186,7 +270,7 @@ replace_file (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   fb->dir_baton = pd;
-  fb->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
+  fb->node = create_child_node (pd->node, name->data, eb->pool);
   fb->node->kind = svn_node_file;
   fb->node->action = 'R';
   SVN_ERR (svn_fs_node_id (&(fb->node->id), eb->root, 
@@ -214,7 +298,7 @@ add_file (svn_stringbuf_t *name,
 
   /* Fill in other baton members */
   fb->dir_baton = pd;
-  fb->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
+  fb->node = create_child_node (pd->node, name->data, eb->pool);
   fb->node->kind = svn_node_file;
   fb->node->action = 'A';
   SVN_ERR (svn_fs_node_id (&(fb->node->id), eb->root, 
@@ -280,12 +364,12 @@ change_dir_prop (void *parent_baton,
 
 
 svn_error_t *
-svnlook_tree_delta_editor (const svn_delta_edit_fns_t **editor,
-                           void **edit_baton,
-                           svn_fs_t *fs,
-                           svn_fs_root_t *root,
-                           svn_fs_root_t *base_root,
-                           apr_pool_t *pool)
+svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
+                       void **edit_baton,
+                       svn_fs_t *fs,
+                       svn_fs_root_t *root,
+                       svn_fs_root_t *base_root,
+                       apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;
   struct edit_baton *my_edit_baton;
@@ -317,8 +401,8 @@ svnlook_tree_delta_editor (const svn_delta_edit_fns_t **editor,
 
 
 
-repos_node_t *
-svnlook_edit_baton_tree (void *edit_baton)
+svn_repos_node_t *
+svn_repos_node_from_baton (void *edit_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   return eb->node;
