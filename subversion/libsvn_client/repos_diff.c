@@ -808,7 +808,7 @@ close_file (void *file_baton,
      have an access baton, since in that case the file will already have
      been recognised as added, in which case they cannot conflict. A
      similar argument applies to directories in close_directory. */
-  if (b->propchanges->nelts > 0 && (! eb->dry_run || adm_access))
+  if (b->propchanges->nelts > 0 && (! (eb->dry_run && b->added)))
     {
       SVN_ERR (eb->diff_callbacks->props_changed
                (adm_access, &prop_state,
