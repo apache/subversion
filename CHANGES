@@ -8,9 +8,14 @@ http://svn.collab.net/repos/svn/tags/???
  * fixed: create runtime config files with native EOLs. (Issue #1802)
  * fixed: recursive propset can corrupt .svn/entries (issue #1794)
  * fixed: better support for shared working copies [not finished] (issue #1509)
+ * fixed: mod_authz_svn should ignore uri on MERGE request (partial #1821)
+ * fixed: svnserve assertion failure on empty error messages
 
  Developer-visible changes:
- *
+ * fixed: deprecation warning from SWIG 1.3.20_
+ * fixed: broken win32 python-swig bindings compilation.
+ * fixed: bug in libsvn_fs changes-table change-folding code.
+ * fixed: perl bindings: wrap root->paths_changed, apply_txdelta return values
 
 
 Version 1.0.1
