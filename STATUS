@@ -186,3 +186,11 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: philip, lundblad, maxb
 
+  * r13358
+    Fix a case where merge breaks the wc.
+    Justification:
+      We shouldn't be breaking the wc with merges.
+    Branch:
+      1.1.x-r13358
+    Votes:
+      +1: breser
