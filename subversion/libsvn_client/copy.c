@@ -575,7 +575,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
-                                   NULL, NULL, NULL,
+                                   NULL, NULL, 0,
                                    &tempfiles, pool);
 
   commit_in_progress = FALSE;

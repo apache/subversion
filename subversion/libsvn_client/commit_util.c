@@ -747,7 +747,7 @@ do_item_commit (const char *url,
                 apr_hash_t *tempfiles,
                 svn_wc_notify_func_t notify_func,
                 void *notify_baton,
-                svn_stringbuf_t *display_dir,
+                int notify_path_offset,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind = item->kind;
@@ -768,7 +768,7 @@ do_item_commit (const char *url,
   if (notify_func)
     {
       /* Convert an absolute path into a relative one (for feedback.) */
-      const char *path = item->path->data + (display_dir->len + 1);
+      const char *path = item->path->data + notify_path_offset;
 
       if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
           && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
@@ -887,7 +887,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        void *edit_baton,
                        svn_wc_notify_func_t notify_func,
                        void *notify_baton,
-                       svn_stringbuf_t *display_dir,
+                       int notify_path_offset,
                        apr_hash_t **tempfiles,
                        apr_pool_t *pool)
 {
@@ -990,7 +990,8 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
       /*** Step D - Commit the item.  ***/
       SVN_ERR (do_item_commit (item_url->data, item, editor,
                                db_stack, &stack_ptr, file_mods, *tempfiles,
-                               notify_func, notify_baton, display_dir, pool));
+                               notify_func, notify_baton, notify_path_offset,
+                               pool));
 
       /* Save our state for the next iteration. */
       if ((item->kind == svn_node_dir)

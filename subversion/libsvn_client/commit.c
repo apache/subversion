@@ -683,6 +683,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_boolean_t use_xml = (xml_dst && xml_dst->data) ? TRUE : FALSE;
   svn_boolean_t commit_in_progress = FALSE;
   svn_stringbuf_t *display_dir = svn_stringbuf_create (".", pool);
+  int notify_path_offset;
   int i;
 
   /* Condense the target list. */
@@ -814,13 +815,17 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                          after_editor, after_edit_baton, pool);
 
 
-  /* Calculate a display_dir. */
+  /* Determine prefix to strip from the commit notify messages */
   if ((cmt_err = svn_path_get_absolute (&display_dir, display_dir, pool)))
     goto cleanup;
+  display_dir = svn_path_get_longest_ancestor (display_dir, base_dir, pool);
+  notify_path_offset = display_dir->len ? display_dir->len + 1 : 0;
 
+  printf ("notify_path_offset:%d\n", notify_path_offset);
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
-                                   notify_func, notify_baton, display_dir,
+                                   notify_func, notify_baton,
+                                   notify_path_offset,
                                    &tempfiles, pool);
 
   /* Make a note that our commit is finished. */

@@ -1349,6 +1349,50 @@ def commit_add_file_twice(sbox):
                                                 None, None,
                                                 wc_dir)
 
+#----------------------------------------------------------------------
+
+# There was a problem that committing from a directory that had a
+# longer name than the working copy directory caused the commit notify
+# messages to display truncated/random filenames.
+
+def commit_from_long_dir(sbox):
+  "commit from a dir with a longer name than the wc"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_dir = os.getcwd()
+  abs_wc_dir = os.path.join(was_dir, wc_dir)
+  
+  # something to commit
+  svntest.main.file_append(os.path.join(wc_dir, 'iota'), "modified iota")
+
+  # Create expected output tree.
+  output_list = [ ['iota', None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Any length name was enough to provoke the original bug, but
+  # keeping it's length less than that of the filename 'iota' avoided
+  # random behaviour, but still caused the test to fail
+  extra_name = 'xx'
+
+  os.chdir(wc_dir)
+  os.mkdir(extra_name)
+  os.chdir(extra_name)
+
+  if svntest.actions.run_and_verify_commit (abs_wc_dir,
+                                            expected_output_tree,
+                                            None,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            abs_wc_dir):
+    os.chdir(was_dir)
+    return 1
+  os.chdir(was_dir)
+  
+
 ########################################################################
 # Run the tests
 
@@ -1375,6 +1419,7 @@ test_list = [ None,
               commit_in_dir_scheduled_for_addition,
               commit_rmd_and_deleted_file,
               commit_add_file_twice,
+              commit_from_long_dir,
              ]
 
 if __name__ == '__main__':
