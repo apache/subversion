@@ -364,7 +364,6 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
     {
       const char *qname = apr_xml_quote_string(pool, child->name, 1);
       const char *elt;
-      const char *chk_attr = "";
       const char *real_path = get_real_fs_path(child, pool);
 
       if (! is_dir)
@@ -401,11 +400,11 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
         {
           if (bc_url)            
             elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "bc-url=\"%s\"%s>" DEBUG_CR,
-                               DIR_OR_FILE(is_dir), qname, bc_url, chk_attr);
+                               "bc-url=\"%s\">" DEBUG_CR,
+                               DIR_OR_FILE(is_dir), qname, bc_url);
           else
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\"%s>" DEBUG_CR,
-                               DIR_OR_FILE(is_dir), qname, chk_attr);
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\">" DEBUG_CR,
+                               DIR_OR_FILE(is_dir), qname);
         }
       else
         {
@@ -415,16 +414,16 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
             elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
                                "copyfrom-path=\"%s\" copyfrom-rev=\"%"
                                SVN_REVNUM_T_FMT "\" "
-                               "bc-url=\"%s\"%s>" DEBUG_CR,
+                               "bc-url=\"%s\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
                                qname, qcopy, copyfrom_revision,
-                               bc_url, chk_attr);
+                               bc_url);
           else
             elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
                                "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                               SVN_REVNUM_T_FMT "\"%s>" DEBUG_CR,
+                               SVN_REVNUM_T_FMT "\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
-                               qname, qcopy, copyfrom_revision, chk_attr);
+                               qname, qcopy, copyfrom_revision);
         }
 
       /* Resist the temptation to pass 'elt' as the format string.
