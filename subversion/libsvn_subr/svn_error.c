@@ -96,16 +96,16 @@ svn_create_error (ap_status_t err,
                                          sizeof(svn_error_t));
 
   /* Create space for strerror()'s result */
-  char *strerror_msg = ap_palloc (pool, 100);
+  strerror_msg = ap_palloc (pool, 100);
 
   new_error->err = err;
   new_error->fatal = fatal;
   new_error->message = message;
   new_error->child = child;
 
-  new_error->canonical_errno = ap_canonical_error (errno);
+  new_error->apr_errno = ap_canonical_error (errno);
   ap_strerror (err, strerror_msg, 100);
-  new_error->description = strerror_msg;
+  new_error->apr_description = strerror_msg;
 
   new_error->pool = pool;  
 
@@ -142,8 +142,8 @@ svn_handle_error (svn_error_t *err)
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
-  printf ("\nsvn_error: errno %d, %s\n", 
-          err->err, err->description);
+  printf ("\nsvn_error: errno %d,, apr_errno %d: %s\n", 
+          err->err, err->apr_errno, err->apr_description);
   printf ("      %s\n", err->message);
   fflush (stdout);
 
