@@ -547,6 +547,28 @@ def diff_non_version_controlled_file(sbox):
 
   return 0
   
+# test 9
+def diff_pure_repository_update_a_file(sbox):
+  "pure repository diff update a file"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  update_a_file()
+  svntest.main.run_svn(None, 'ci')
+  os.chdir(was_cwd)
+
+  url = os.path.join(svntest.main.test_area_url,
+                     svntest.main.general_repo_dir,
+                     sbox.name)
+  print url
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2', url)
+
+  return check_update_a_file(diff_output)
 
 ########################################################################
 # Run the tests
@@ -562,6 +584,7 @@ test_list = [ None,
               diff_non_recursive,
               diff_repo_subset,
               diff_non_version_controlled_file,
+              diff_pure_repository_update_a_file
              ]
 
 if __name__ == '__main__':

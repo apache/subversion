@@ -191,10 +191,7 @@ svn_client_diff (svn_stringbuf_t *path,
   if (path_is_url)
     {
       URL = path;
-      /* Need to set anchor since the ra callbacks use it for creating
-         temporary files. */
-      /* ### TODO: Need apr temp file support */
-      anchor = svn_stringbuf_create(".", pool);
+      anchor = NULL;
       target = NULL;
     }
   else

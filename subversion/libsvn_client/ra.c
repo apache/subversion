@@ -47,8 +47,14 @@ open_tmp_file (apr_file_t **fp,
                void *callback_baton)
 {
   svn_client__callback_baton_t *cb = callback_baton;
-  svn_stringbuf_t *truepath = svn_stringbuf_dup (cb->base_dir, cb->pool);
+  svn_stringbuf_t *truepath;
   svn_stringbuf_t *ignored_filename;
+
+  if (cb->base_dir)
+    truepath = svn_stringbuf_dup (cb->base_dir, cb->pool);
+  else
+    /* ### TODO: need better tempfile support */
+    truepath = svn_stringbuf_create (".", cb->pool);
 
   /* Tack on a made-up filename. */
   svn_path_add_component_nts (truepath, "tempfile");
