@@ -104,11 +104,6 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 			      void *warning_baton);
 
 
-/* Create a new sub-pool of the pool used by the filesystem FS.  This
-   pool will be freed whenever FS is closed, but could also be freed
-   earlier, if you like.  */
-apr_pool_t *svn_fs_subpool (svn_fs_t *fs);
-
 
 /* Subversion filesystems based on Berkeley DB.  */
 
@@ -376,12 +371,6 @@ int svn_fs_node_is_dir (svn_fs_node_t *node);
 int svn_fs_node_is_file (svn_fs_node_t *node);
 
 
-/* Create a new subpool of the pool used by the node NODE.  This pool
-   will be freed whenever NODE is closed, but could also be freed
-   earlier, if you like.  */
-apr_pool_t *svn_fs_node_subpool (svn_fs_node_t *node);
-
-
 /* Free the node object NODE.  */
 void svn_fs_close_node (svn_fs_node_t *node);
 
@@ -398,6 +387,12 @@ void svn_fs_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
 
 /* Cancel the request to close NODE when POOL is freed.  */
 void svn_fs_kill_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
+
+
+/* Close NODE, and remove the request to clean it up from POOL.  This
+   is the equivalent of calling `apr_run_cleanup' on the node cleanup
+   function in POOL.  */
+void svn_fs_run_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node);
 
 
 /* Return the filesystem version number of NODE.

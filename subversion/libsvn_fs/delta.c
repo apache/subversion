@@ -385,8 +385,7 @@ replace_from_scratch (struct context *c, void *dir_baton,
   else
     abort ();
 
-  svn_fs_kill_cleanup_node (c->pool, new);
-  svn_fs_close_node (new);
+  svn_fs_run_cleanup_node (c->pool, new);
 
   return 0;
 }
@@ -462,10 +461,8 @@ replace_related (struct context *c, void *dir_baton,
     abort ();
 
   /* Close the ancestor and target files.  */
-  svn_fs_kill_cleanup_node (c->pool, a);
-  svn_fs_close_node (a);
-  svn_fs_kill_cleanup_node (c->pool, t);
-  svn_fs_close_node (t);
+  svn_fs_run_cleanup_node (c->pool, a);
+  svn_fs_run_cleanup_node (c->pool, t);
 
   return 0;
 }
