@@ -582,6 +582,10 @@ install-info: doc-all-info
           $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst;         \
         done
 
+install-swig-py: install-swig-py-lib
+
+install-swig-java: install-swig-java-lib
+
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
 
