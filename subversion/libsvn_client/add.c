@@ -476,6 +476,7 @@ path_driver_cb_func (void **dir_baton,
                      apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor = callback_baton;
+  SVN_ERR (svn_path_check_valid (path, pool));
   return editor->add_directory (path, parent_baton, NULL,
                                 SVN_INVALID_REVNUM, pool, dir_baton);
 }

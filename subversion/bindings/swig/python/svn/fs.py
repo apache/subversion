@@ -23,9 +23,10 @@ _unprefix_names(locals(), 'SVN_FS_')
 del _unprefix_names
 
 
-# Names that are not to be exported - del-ed at end
-import sys, os, popen2, tempfile
-import svn.core
+# Names that are not to be exported
+import sys as _sys, os as _os, popen2 as _popen2, tempfile as _tempfile
+import __builtin__
+import core as _core
 
 
 def entries(root, path, pool):
@@ -51,19 +52,19 @@ class FileDiff:
 
     # the caller can't manage this pool very well given our indirect use
     # of it. so we'll create a subpool and clear it at "proper" times.
-    self.pool = svn.core.svn_pool_create(pool)
+    self.pool = _core.svn_pool_create(pool)
 
   def either_binary(self):
     "Return true if either of the files are binary."
     if self.path1 is not None:
-      prop = node_prop(self.root1, self.path1, svn.core.SVN_PROP_MIME_TYPE,
+      prop = node_prop(self.root1, self.path1, _core.SVN_PROP_MIME_TYPE,
                        self.pool)
-      if prop and svn.core.svn_mime_type_is_binary(prop):
+      if prop and _core.svn_mime_type_is_binary(prop):
         return 1
     if self.path2 is not None:
-      prop = node_prop(self.root2, self.path2, svn.core.SVN_PROP_MIME_TYPE,
+      prop = node_prop(self.root2, self.path2, _core.SVN_PROP_MIME_TYPE,
                        self.pool)
-      if prop and svn.core.svn_mime_type_is_binary(prop):
+      if prop and _core.svn_mime_type_is_binary(prop):
         return 1
     return 0
 
@@ -74,13 +75,12 @@ class FileDiff:
       stream = file_contents(root, path, pool)
       try:
         while 1:
-          chunk = svn.core.svn_stream_read(stream,
-              svn.core.SVN_STREAM_CHUNK_SIZE)
+          chunk = _core.svn_stream_read(stream, _core.SVN_STREAM_CHUNK_SIZE)
           if not chunk:
             break
           fp.write(chunk)
       finally:
-        svn.core.svn_stream_close(stream)
+        _core.svn_stream_close(stream)
     fp.close()
     
     
@@ -90,13 +90,13 @@ class FileDiff:
       return self.tempfile1, self.tempfile2
 
     # Make tempfiles, and dump the file contents into those tempfiles.
-    self.tempfile1 = tempfile.mktemp()
-    self.tempfile2 = tempfile.mktemp()
+    self.tempfile1 = _tempfile.mktemp()
+    self.tempfile2 = _tempfile.mktemp()
 
     self._dump_contents(self.tempfile1, self.root1, self.path1, self.pool)
-    svn.core.svn_pool_clear(self.pool)
+    _core.svn_pool_clear(self.pool)
     self._dump_contents(self.tempfile2, self.root2, self.path2, self.pool)
-    svn.core.svn_pool_clear(self.pool)
+    _core.svn_pool_clear(self.pool)
 
     return self.tempfile1, self.tempfile2
 
@@ -110,12 +110,12 @@ class FileDiff:
           + [self.tempfile1, self.tempfile2]
           
     # the windows implementation of popen2 requires a string
-    if sys.platform == "win32":
-      cmd = svn.core.argv_to_command_string(cmd)
+    if _sys.platform == "win32":
+      cmd = _core.argv_to_command_string(cmd)
 
     # open the pipe, forget the end for writing to the child (we won't),
     # and then return the file object for reading from the child.
-    fromchild, tochild = popen2.popen2(cmd)
+    fromchild, tochild = _popen2.popen2(cmd)
     tochild.close()
     return fromchild
 
@@ -124,16 +124,11 @@ class FileDiff:
     # failures trying to remove them
     if self.tempfile1 is not None:
       try:
-        os.remove(self.tempfile1)
+        _os.remove(self.tempfile1)
       except OSError:
         pass
     if self.tempfile2 is not None:
       try:
-        os.remove(self.tempfile2)
+        _os.remove(self.tempfile2)
       except OSError:
         pass
-
-
-# Do not export these names
-del sys, os, popen2, tempfile
-del svn

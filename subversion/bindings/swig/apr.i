@@ -25,27 +25,16 @@
 
 %include typemaps.i
 
-/* This is default in SWIG 1.3.17 and is a really good idea */
-%typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
+/* -----------------------------------------------------------------------
+   This is default in SWIG 1.3.17 and is a really good idea
+*/
+
+%typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], \
+    SWIGTYPE (CLASS::*) %{
   protected static long getCPtr($javaclassname obj) {
     return (obj == null) ? 0 : obj.swigCPtr;
   }
 %}
-
-/* ----------------------------------------------------------------------- */
-
-/* define an OUTPUT typemap for 'apr_off_t *'. for now, we'll treat it as
-   a 'long' even if that isn't entirely correct... */
-
-%typemap(python,in,numinputs=0) apr_off_t * (apr_off_t temp)
-    "$1 = &temp;";
-
-%typemap(python,argout,fragment="t_output_helper") apr_off_t *
-    "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
-
-%typemap(perl5,argout) apr_off_t * {
-    /* ### FIXME-perl apr_off_t out*/
-}
 
 /* ----------------------------------------------------------------------- */
 
@@ -57,65 +46,25 @@
 //%include apr_errno.h
 typedef int apr_status_t;
 
-/* ### seems that SWIG isn't picking up the definition of size_t */
-typedef unsigned long size_t;
+/* -----------------------------------------------------------------------
+   apr_time_t
+*/
 
 /* Define the time type (rather than picking up all of apr_time.h) */
 typedef apr_int64_t apr_time_t;
 
+/* For apr_time_ansi_put().
+   We guess, because only the system C compiler can successfully parse
+   system headers if they incorporate weird include paths
+   (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-/* -----------------------------------------------------------------------
-   handle the mappings for apr_time_t
-
-   Note: we don't generalize this to 'long long' since SWIG is starting
-   to handle that.
-*/
-
 #if APR_INT64_T_FMT == "ld"
-
-    %apply long { apr_time_t };
-
-    %typemap(python,argout,fragment="t_output_helper") apr_time_t *
-        "$result = t_output_helper($result, PyLong_FromLong(*$1));";
-
+    %apply long *OUTPUT { apr_time_t * };
 #else
-
-    %apply long long { apr_time_t };
-
-    %typemap(python,argout,fragment="t_output_helper") apr_time_t *
-        "$result = t_output_helper($result, PyLong_FromLongLong(*$1));";
-
+    %apply long long *OUTPUT { apr_time_t * };
 #endif
 
-/* 'apr_time_t *' will always be an OUTPUT parameter */
-%typemap(in,numinputs=0) apr_time_t * (apr_time_t temp)
-    "$1 = &temp;";
-
-
-%typemap(java,argout) apr_time_t * {
-	/* FIXME: What goes here? */
-}
-
-/* -----------------------------------------------------------------------
-   create some INOUT typemaps for apr_size_t
-*/
-
-%apply unsigned long *INOUT { apr_size_t *INOUT };
-
-%typemap(python,in) apr_size_t *INOUT (apr_size_t temp) {
-    temp = (apr_size_t) PyInt_AsLong($input);
-    $1 = &temp;
-}
-%typemap(java,in) apr_size_t *INOUT (apr_size_t temp) {
-    temp = (apr_size_t) JCALL2(CallLongMethod, jenv, $input, svn_swig_java_mid_long_longvalue);
-    $1 = &temp;
-}
-
-%typemap(perl5,in) apr_size_t *INOUT (apr_size_t temp) {
-    temp = (apr_size_t) SvIV($input);
-    $1 = &temp;
-}
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **
 */
@@ -136,6 +85,29 @@ typedef apr_int32_t time_t;
     /* toss prior result, get new result from the hash */
     Py_DECREF($result);
     $result = svn_swig_py_prophash_to_dict(*$1);
+}
+
+%typemap(perl5,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
+%typemap(perl5,argout) apr_hash_t **PROPHASH {
+    $result = svn_swig_pl_prophash_to_hash(*$1);
+    argvi++;
+}
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t ** <const char *>
+*/
+
+%typemap(in, numinputs=0) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
+(apr_array_header_t *temp) {
+    $1 = &temp;
+}
+%typemap(python, argout, fragment="t_output_helper")
+apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
+}
+%typemap(perl5, argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    $result = svn_swig_pl_array_to_list(*$1);
+    ++argvi;
 }
 
 /* -----------------------------------------------------------------------
@@ -184,11 +156,6 @@ typedef apr_int32_t time_t;
     svn_swig_java_add_to_list(jenv, $1, $input);
 }
 
-%typemap(perl5,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(perl5,argout) apr_hash_t **PROPHASH {
-    $result = svn_swig_pl_prophash_to_hash(*$1);
-    argvi++;
-}
 /* -----------------------------------------------------------------------
   handle apr_file_t *
 */

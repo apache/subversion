@@ -29,6 +29,10 @@ typedef struct svn_string_t svn_string_t;
    generic OUT param typemap for svn_string(buf)_t. we can share these
    because we only refer to the ->data and ->len values.
 */
+%typemap(in, numinputs=0) RET_STRING ($*1_ltype temp) {
+    $1 = &temp;
+}
+
 %typemap(python,argout,fragment="t_output_helper") RET_STRING {
     PyObject *s;
     if (*$1 == NULL) {
@@ -42,13 +46,6 @@ typedef struct svn_string_t svn_string_t;
     }
     $result = t_output_helper($result, s);
 }
-%typemap(java,out) RET_STRING {
-    /* FIXME: This is just a stub -- implement JNI code for returning a string! */
-    $output = NULL;
-}
-
-%typemap(jni) char *                                         "jstring"
-
 %typemap(perl5,argout) RET_STRING {
     if (*$1) {
 	$result = sv_newmortal();
@@ -58,6 +55,18 @@ typedef struct svn_string_t svn_string_t;
 	$result = &PL_sv_undef;
     argvi++;
 }
+
+%typemap(java,out) RET_STRING {
+    /* FIXME: This is just a stub -- implement JNI code for returning a string! */
+    $output = NULL;
+}
+%typemap(jni) char *                                         "jstring"
+
+%apply RET_STRING {
+  svn_string_t **,
+  svn_stringbuf_t **
+};
+
 /* -----------------------------------------------------------------------
    TYPE: svn_stringbuf_t
 */
@@ -100,16 +109,6 @@ typedef struct svn_string_t svn_string_t;
     $result = sv;
     argvi++;
 }
-
-/* svn_stringbuf_t ** is always an output parameter */
-%typemap(python,in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
-    $1 = &temp;
-}
-%typemap(perl5,in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
-    $1 = &temp;
-}
-%apply RET_STRING { svn_stringbuf_t ** };
-
 
 /* -----------------------------------------------------------------------
    TYPE: svn_string_t
@@ -155,14 +154,6 @@ typedef struct svn_string_t svn_string_t;
     $result = sv_2mortal(newSVpv($1->data, $1->len));
     ++argvi;
 }
-
-/* svn_string_t ** is always an output parameter */
-%typemap(in,numinputs=0) svn_string_t ** (svn_string_t *temp) {
-    $1 = &temp;
-}
-%apply RET_STRING { svn_string_t ** };
-
-
 
 /* -----------------------------------------------------------------------
    define a way to return a 'const char *'

@@ -64,7 +64,7 @@ fi
 # Send the status mail
 MAILFILE="/tmp/svntest.$$"
 NEXT_PART="NextPart-$$"
-TESTS_LOG_FILE="$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
+TESTS_LOG_FILE="$LOG_FILE_DIR/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
 $CAT <<EOF > "$MAILFILE"
 From: $FROM
 Subject: svn $REVPREFIX$REV: $BUILD_STAT ($TEST)

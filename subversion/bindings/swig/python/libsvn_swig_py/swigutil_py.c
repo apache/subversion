@@ -33,6 +33,8 @@
 #include "svn_delta.h"
 #include "svn_auth.h"
 
+#include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
+
 #include "swigutil_py.h"
 
 
@@ -473,6 +475,7 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *array)
     return NULL;
 }
 
+/* Formerly used by pre-1.0 APIs. Now unused
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
 {
     PyObject *list = PyList_New(array->nelts);
@@ -491,6 +494,7 @@ PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
     Py_DECREF(list);
     return NULL;
 }
+*/
 
 static PyObject *
 commit_item_array_to_list(const apr_array_header_t *array)
@@ -1096,6 +1100,81 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
 }
 
 
+static svn_error_t *
+read_handler_pyio (void *baton, char *buffer, apr_size_t *len)
+{
+  PyObject *result;
+  PyObject *py_io = baton;
+  apr_size_t bytes;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallMethod(py_io, (char *)"read",
+                                    (char *)"i", *len)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (PyString_Check(result))
+    {
+      bytes = PyString_GET_SIZE(result);
+      if (bytes > *len)
+        {
+          err = callback_bad_return_error("Too many bytes");
+        }
+      else
+        {
+          /* Writeback, in case this was a short read, indicating EOF */
+          *len = bytes;
+          memcpy(buffer, PyString_AS_STRING(result), *len);
+        }
+    }
+  else
+    {
+      err = callback_bad_return_error("Not a string");
+    }
+  Py_XDECREF(result);
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+static svn_error_t *
+write_handler_pyio (void *baton, const char *data, apr_size_t *len)
+{
+  PyObject *result;
+  PyObject *py_io = baton;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallMethod(py_io, (char *)"write",
+                                    (char *)"s#", data, *len)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  Py_XDECREF(result);
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+svn_stream_t *
+svn_swig_py_make_stream (PyObject *py_io, apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+
+  /* Borrow the caller's reference to py_io - this is safe only because the
+   * caller must have a reference in order to pass the object into the 
+   * bindings, and we will be finished with the py_io object before we return
+   * to python. I.e. DO NOT STORE AWAY THE RESULTING svn_stream_t * for use
+   * over multiple calls into the bindings. */
+  stream = svn_stream_create (py_io, pool);
+  svn_stream_set_read (stream, read_handler_pyio);
+  svn_stream_set_write (stream, write_handler_pyio);
+
+  return stream;
+}
+
+
 void svn_swig_py_notify_func(void *baton,
                              const char *path,
                              svn_wc_notify_action_t action,
@@ -1388,6 +1467,43 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
     }
 
   Py_DECREF(chpaths);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+
+svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
+                                                    apr_int64_t line_no,
+                                                    svn_revnum_t revision,
+                                                    const char *author,
+                                                    const char *date,
+                                                    const char *line,
+                                                    apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+ 
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver, 
+                                      (char *)
+                                      (SVN_APR_INT64_T_PYCFMT "lsssO&"), 
+                                      line_no, revision, author, date, line, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
   svn_swig_py_release_py_lock();
   return err;
 }

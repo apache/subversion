@@ -187,6 +187,8 @@ a <tt>file:</tt> URL?</a></li>
     calls". How do I fix this?</a></li>
 <li><a href="#hotcopy-large-repos">I can't hotbackup my repository, svnadmin
     fails on files larger than 2Gb!</a></li>
+<li><a href="#hidden-log">I cannot see the log entry for the file
+    I just committed.  Why?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -2329,9 +2331,48 @@ is included in APR 0.9.5+ and Apache 2.0.50+.  The fix doesn't work
 on all platforms, but works on Linux.
 </p>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="hidden-log">I cannot see the log entry for the file
+    I just committed.  Why?</a></h3>
+
+<p>Assume you run '<tt>svn&nbsp;checkout</tt>' on a repository and
+receive a working copy at revision 7 (aka, r7) with one file in it
+called <tt>foo.c</tt>.  You modify the file and commit it
+successfully.  Two things happen:
+
+<ul>
+<li>The repository moves to r8 on the server.</li>
+<li>In your working copy, only the file <tt>foo.c</tt> moves to r8.
+    The rest of your working copy remains at r7.</li>
+</ul>
+
+You now have what is known as a <i>mixed revision working copy</i>.
+One file is at r8, but all other files remain at r7 until they too are
+committed, or until '<tt>svn&nbsp;update</tt>' is run.</p>
+
+<pre>   $ svn -v status
+   7        7 nesscg       .
+   8        8 nesscg       foo.c
+   $</pre>
+
+<p>If you run the '<tt>svn&nbsp;log</tt>' command without any
+arguments, it prints the log information for the current directory
+(named '<tt>.</tt>' in the above listing).  Since the directory itself
+is still at r7, you do not see the log information for r8.</p>
+
+<p>To see the latest logs, do one of the following:
+
+<ol>
+<li>Run '<tt>svn&nbsp;log&nbsp;-rHEAD</tt>'.</li>
+<li>Run '<tt>svn&nbsp;log&nbsp;URL</tt>', where URL is the repository URL.</li>
+<li>Ask for just that file's log information, by running
+    '<tt>svn&nbsp;log&nbsp;foo.c</tt>'.</li>
+<li>Update your working copy so it's all at r8, then run
+    '<tt>svn&nbsp;log</tt>'.</li>
+</ol>
 
 <![CDATA[=========================================================]]>
-
 
 <p/>
 <hr/>

@@ -368,7 +368,20 @@ public class SVNClient implements SVNClientInterface
      * @param path  the path of the item
      * @return array of property objects
      */
-    public native PropertyData[] properties(String path) throws ClientException;
+    public PropertyData[] properties(String path) throws ClientException
+    {
+        return properties(path, null);
+    }
+
+    /**
+     * Retrieves the properties of an item
+     *
+     * @param path     the path of the item
+     * @param revision the revision of the item
+     * @return array of property objects
+     */
+    public native PropertyData[] properties(String path, Revision revision)
+            throws ClientException;
     /**
      * Sets one property of an item with a String value
      * @param path      path of the item
@@ -428,6 +441,30 @@ public class SVNClient implements SVNClientInterface
      */
     public native PropertyData revProperty(String path, String name,
                                            Revision rev) throws ClientException;
+
+    /**
+     * Retrieve all revsision properties of one item
+     * @param path      path of the item
+     * @param rev       revision to retrieve
+     * @return the Properties
+     * @throws ClientException
+     */
+    public native PropertyData[] revProperties(String path, Revision rev)
+            throws ClientException;
+
+    /**
+     * set one revsision property of one item
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param rev       revision to retrieve
+     * @param value     value of the property
+     * @param force
+     * @throws ClientException
+     */
+    public native void setRevProperty(String path, String name, Revision rev,
+                                      String value, boolean force)
+            throws ClientException;
+
     /**
      * Retrieve one property of one iten
      * @param path      path of the item
@@ -435,8 +472,26 @@ public class SVNClient implements SVNClientInterface
      * @return the Property
      * @throws ClientException
      */
-    public native PropertyData propertyGet(String path, String name)
+    public PropertyData propertyGet(String path, String name)
+            throws ClientException
+    {
+        return propertyGet(path, name, null);
+    }
+
+    /**
+     * Retrieve one property of one iten
+     *
+     * @param path     path of the item
+     * @param name     name of property
+     * @param revision revision of the item
+     * @return the Property
+     * @throws ClientException
+     *
+     */
+    public native PropertyData propertyGet(String path, String name,
+                                           Revision revision)
             throws ClientException;
+
     /**
      *  Retrieve the content of a file
      * @param path      the path of the file
@@ -486,7 +541,8 @@ public class SVNClient implements SVNClientInterface
      * @param configDir     path of the directory
      * @throws ClientException
      */
-    public native void setConfigDirectory(String configDir) throws ClientException;
+    public native void setConfigDirectory(String configDir)
+            throws ClientException;
     /**
      * Get the configuration directory
      * @return  the directory
@@ -506,6 +562,18 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      */
     public native Info info(String path) throws ClientException;
+
+    /**
+     *  Produce a compact "version number" for a working copy
+     * @param path          path of the working copy
+     * @param trailUrl      to detect switches of the whole working copy
+     * @param lastChanged   last changed rather than current revisions
+     * @return      the compact "version number"
+     * @throws ClientException
+     */
+    public native String getVersionInfo(String path, String trailUrl,
+                                        boolean lastChanged)
+            throws ClientException;
 
     /**
      * Enable logging in the JNI-code

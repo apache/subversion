@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2004 by Stefan Reichoer
+;; Copyright (C) 2002-2005 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer, <stefan@xsteve.at>
 ;; $Id$
@@ -29,8 +29,10 @@
 ;; psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
 ;; At the moment the following commands are implemented:
 ;; M-x svn-status: run 'svn -status -v'
-;; and show the result in the *svn-status* buffer.  This buffer uses
-;; svn-status mode in which the following keys are defined:
+;; and show the result in the *svn-status* buffer.
+;; If svn-status-verbose is set to nil, only "svn status" without "-v"
+;; is run. Currently you have to toggle this variable manually.
+;; This buffer uses svn-status mode in which the following keys are defined:
 ;; g     - svn-status-update:               run 'svn status -v'
 ;; C-u g - svn-status-update:               run 'svn status -vu'
 ;; =     - svn-status-show-svn-diff         run 'svn diff'
@@ -82,6 +84,19 @@
 ;; P x   - svn-status-property-set-executable
 ;; h     - svn-status-use-history
 ;; q     - svn-status-bury-buffer
+
+;; The output in the buffer contains this header to ease reading
+;; of svn output:
+;;   FPH locl chgd author   em file
+;; F = Filemark
+;; P = Property mark
+;; H = History mark
+;; locl = local base revision
+;; chgd = last changed revision
+;; author = author of change
+;; em = "**" if external modified
+;; file = path/filename
+;;
 
 ;; To use psvn.el put the following line in your .emacs:
 ;; (require 'psvn)
@@ -142,7 +157,10 @@
 
 ;;; Code:
 
+(require 'easymenu)
+
 ;;; user setable variables
+(defvar svn-status-verbose t "*Add '-v' to svn status call.")
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
 (defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
 (defvar svn-status-hide-unknown nil "*Hide unknown files in *svn-status* buffer.")
@@ -160,6 +178,8 @@ Possible values are: commit, revert.")
 (defvar svn-status-default-log-arguments ""
   "*Arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
+
+(defvar svn-trac-project-root nil "Path for an eventual existing trac issue tracker.")
 
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
@@ -362,15 +382,17 @@ If ARG then pass the -u argument to `svn status'."
       ;;(message "psvn: Saving initial window configuration")
       (setq svn-status-initial-window-configuration (current-window-configuration)))
     (let* ((status-buf (get-buffer-create "*svn-status*"))
-           (proc-buf (get-buffer-create "*svn-process*")))
+           (proc-buf (get-buffer-create "*svn-process*"))
+           (status-option (if svn-status-verbose
+                              (if arg "-uv" "-v")
+                            (if arg "-u" ""))))
       (save-excursion
         (set-buffer status-buf)
         (setq default-directory dir)
         (set-buffer proc-buf)
-        (setq default-directory dir)
-        (if arg
-            (svn-run-svn t t 'status "status" "-vu")
-          (svn-run-svn t t 'status "status" "-v"))))))
+        (setq default-directory dir
+              svn-status-remote (when arg t))
+        (svn-run-svn t t 'status "status" status-option)))))
 
 (defun svn-status-use-history ()
   (interactive)
@@ -546,6 +568,13 @@ for  example: '(\"revert\" \"file1\"\)"
     -1))
 
 
+(defun svn-status-make-dummy-dirs (dir-list)
+  (append (mapcar (lambda (dir)
+                    (list ui-status 32 nil dir -1 -1 "?" nil nil nil nil))
+                  dir-list)
+          svn-status-info))
+
+
 (defun svn-parse-status-result ()
   "Parse the *svn-process* buffer.
 The results are used to build the `svn-status-info' variable."
@@ -568,7 +597,10 @@ The results are used to build the `svn-status-info' variable."
           (user-elide nil)
           (ui-status '(nil nil))     ; contains (user-mark user-elide)
           (revision-width svn-status-default-revision-width)
-          (author-width svn-status-default-author-width))
+          (author-width svn-status-default-author-width)
+          (svn-marks-length (if (and svn-status-verbose svn-status-remote)
+                                8 5))
+          (dir-set '(".")))
       (set-buffer "*svn-process*")
       (setq svn-status-info nil)
       (goto-char (point-min))
@@ -588,27 +620,32 @@ The results are used to build the `svn-status-info' variable."
           (forward-line)
           )
          (t
-          (setq svn-marks (buffer-substring (point) (+ (point) 8))
+          (setq svn-marks (buffer-substring (point) (+ (point) svn-marks-length))
                 svn-file-mark (elt svn-marks 0)         ; 1st column - M,A,C,D,G,? etc
                 svn-property-mark (elt svn-marks 1)     ; 2nd column - M,C (properties)
                 svn-locked-mark (elt svn-marks 2)       ; 3rd column - L or blank
                 svn-with-history-mark (elt svn-marks 3) ; 4th column - + or blank
-                svn-switched-mark (elt svn-marks 4)     ; 5th column - S or blank
-                svn-update-mark (elt svn-marks 7))      ; 8th column - * or blank
-
+                svn-switched-mark (elt svn-marks 4))     ; 5th column - S or blank
+          (if (and svn-status-verbose svn-status-remote)
+              (setq svn-update-mark (elt svn-marks 7))) ; 8th column - * or blank
           (when (eq svn-property-mark ?\ )     (setq svn-property-mark nil))
           (when (eq svn-locked-mark ?\ )       (setq svn-locked-mark nil))
           (when (eq svn-with-history-mark ?\ ) (setq svn-with-history-mark nil))
           (when (eq svn-switched-mark ?\ )     (setq svn-switched-mark nil))
           (when (eq svn-update-mark ?\ )       (setq svn-update-mark nil))
-          (forward-char 8)
+          (forward-char svn-marks-length)
           (skip-chars-forward " ")
           (cond
-           ((looking-at "\\([-?]\\|[0-9]+\\) +\\([-?]\\|[0-9]+\\) +\\([^ ]+\\) *\\(.+\\)")
+           ((looking-at "\\([-?]\\|[0-9]+\\) +\\([-?]\\|[0-9]+\\) +\\([^ ]+\\) *\\(.+\\)$")
             (setq local-rev (svn-parse-rev-num (match-string 1))
                   last-change-rev (svn-parse-rev-num (match-string 2))
                   author (match-string 3)
                   path (match-string 4)))
+           ((looking-at "\\([-?]\\|[0-9]+\\) +\\([^ ]+\\)$")
+            (setq local-rev (svn-parse-rev-num (match-string 1))
+                  last-change-rev -1
+                  author "?"
+                  path (match-string 2)))
            ((looking-at "\\(.*\\)")
             (setq path (match-string 1)
                   local-rev -1
@@ -617,6 +654,11 @@ The results are used to build the `svn-status-info' variable."
            (t
             (error "Unknown status line format")))
           (unless path (setq path "."))
+          (setq dir (file-name-directory path))
+          (if (and (not svn-status-verbose) dir)
+              (let ((dirname (directory-file-name dir)))
+                (if (not (member dirname dir-set))
+                    (setq dir-set (cons dirname dir-set)))))
           (setq ui-status (or (gethash path old-ui-information) (list user-mark user-elide)))
           (setq svn-status-info (cons (list ui-status
                                             svn-file-mark
@@ -637,6 +679,8 @@ The results are used to build the `svn-status-info' variable."
         (forward-line 1))
       ;; With subversion 0.29.0 and above, `svn -u st' returns files in
       ;; a random order (especially if we have a mixed revision wc)
+      (unless svn-status-verbose
+        (setq svn-status-info (svn-status-make-dummy-dirs dir-set)))
       (setq svn-status-default-column
             (+ 6 revision-width revision-width author-width
                (if svn-status-short-mod-flag-p 3 0)))
@@ -685,6 +729,8 @@ A and B must be line-info's."
   "Subkeymap used in `svn-status-mode' for property commands.")
 (defvar svn-status-mode-options-map ()
   "Subkeymap used in `svn-status-mode' for option commands.")
+(defvar svn-status-mode-trac-map ()
+  "Subkeymap used in `svn-status-mode' for trac issue tracker commands.")
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -791,7 +837,12 @@ A and B must be line-info's."
   (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)
   (define-key svn-status-mode-options-map (kbd "l") 'svn-status-load-state)
   (define-key svn-status-mode-options-map (kbd "x") 'svn-status-toggle-sort-status-buffer)
+  (define-key svn-status-mode-options-map (kbd "t") 'svn-status-set-trac-project-root)
   (define-key svn-status-mode-map (kbd "O") svn-status-mode-options-map))
+(when (not svn-status-mode-trac-map)
+  (setq svn-status-mode-trac-map (make-sparse-keymap))
+  (define-key svn-status-mode-trac-map (kbd "t") 'svn-trac-browse-timeline)
+  (define-key svn-status-mode-map (kbd "T") svn-status-mode-trac-map))
 
 (easy-menu-define svn-status-mode-menu svn-status-mode-map
   "'svn-status-mode' menu"
@@ -836,8 +887,12 @@ A and B must be line-info's."
     ("Options"
      ["Save Options" svn-status-save-state t]
      ["Load Options" svn-status-load-state t]
+     ["Set Trac project root" svn-status-set-trac-project-root t]
      ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
       :style toggle :selected svn-status-sort-status-buffer]
+     )
+    ("Trac"
+     ["Browse timeline" svn-trac-browse-timeline t]
      )
     "---"
     ["Edit Next SVN Cmd Line" svn-status-toggle-edit-cmd-flag t]
@@ -1357,6 +1412,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
        (format "%d Unmodified files are hidden - press _ to toggle hiding\n"
                unmodified-count)))
     (insert (format "%d files marked\n" marked-count))
+    (insert "\n "
+            (format svn-status-line-format
+                    70 80 72 "locl" "chgd" "author")
+            "em file\n")
     (setq svn-start-of-file-list-line-number (+ (count-lines (point-min) (point)) 1))
     (if fname
         (progn
@@ -2715,6 +2774,7 @@ When called with a prefix argument, ask the user for the revision."
     (delete-region (point-min) (point-max))
     (setq svn-status-options
           (list
+           (list "svn-trac-project-root" svn-trac-project-root)
            (list "sort-status-buffer" svn-status-sort-status-buffer)
            (list "elide-list" svn-status-elided-list)))
     (insert (pp-to-string svn-status-options))
@@ -2730,6 +2790,8 @@ When called with a prefix argument, ask the user for the revision."
           (setq svn-status-options (read (current-buffer)))
           (setq svn-status-sort-status-buffer
                 (nth 1 (assoc "sort-status-buffer" svn-status-options)))
+          (setq svn-trac-project-root
+                (nth 1 (assoc "svn-trac-project-root" svn-status-options)))
           (setq svn-status-elided-list
                 (nth 1 (assoc "elide-list" svn-status-options)))
           (when svn-status-elided-list (svn-status-apply-elide-list)))
@@ -2746,6 +2808,25 @@ display routine for svn-status is available."
   (message (concat "The *svn-status* buffer will be"
                    (if svn-status-sort-status-buffer "" " not")
                    " sorted.")))
+
+(defun svn-status-set-trac-project-root ()
+  (interactive)
+  (setq svn-trac-project-root
+        (read-string "Trac project root (e.g.: http://projects.edgewall.com/trac/): "
+                     svn-trac-project-root))
+  (when (yes-or-no-p "Save the new setting for svn-trac-project-root to disk? ")
+    (svn-status-save-state)))
+
+;; --------------------------------------------------------------------------------
+;; svn status trac integration
+;; --------------------------------------------------------------------------------
+(defun svn-trac-browse-timeline ()
+  "Open the trac timeline view for the current svn repository."
+  (interactive)
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (browse-url (concat svn-trac-project-root "timeline")))
+
 
 ;;;------------------------------------------------------------
 ;;; resolve conflicts using ediff

@@ -571,17 +571,30 @@ fake_dirent (const svn_fs_dirent_t **entry, svn_fs_root_t *root,
 }
 
 
-/* Emit an appropriate edit to transform the entry E_PATH under
-   DIR_BATON with the changes between S_REV/S_PATH (with contents
-   S_ENTRY) and B->t_root/T_PATH (with contents T_ENTRY).
-   S_PATH/S_ENTRY or T_PATH/T_ENTRY may be NULL if the entry does not
-   exist in the source or target.  The source and to some extent the
-   target may be modified by INFO.  S_PATH may be set and S_ENTRY may
-   be NULL if the caller expects report information to modify the
-   source to an existing location.  If RECURSE is not set, avoid
-   operating on directories.  (Normally RECURSE is simply taken from
-   B->recurse, but drive() needs to force us to recurse into the
-   target even if that flag is not set.) */
+/* Emit a series of editing operations to transform a source entry to
+   a target entry.
+
+   S_REV and S_PATH specify the source entry.  S_ENTRY contains the
+   already-looked-up information about the node-revision existing at
+   that location.
+
+   B->t_root and T_PATH specify the target entry.  T_ENTRY contains
+   the already-looked-up information about the node-revision existing
+   at that location.
+
+   DIR_BATON and E_PATH contain the parameters which should be passed
+   to the editor calls--DIR_BATON for the parent directory baton and
+   E_PATH for the pathname.  (E_PATH is the anchor-relative working
+   copy pathname, which may differ from the source and target
+   pathnames if the report contains a link_path.)
+
+   INFO contains the report information for this working copy path.
+   This function will internally modify the source and target entries
+   as appropriate based on the report information.
+
+   If RECURSE is not set, avoid operating on directories.  (Normally
+   RECURSE is simply taken from B->recurse, but drive() needs to force
+   us to recurse into the target even if that flag is not set.) */
 static svn_error_t *
 update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
               const svn_fs_dirent_t *s_entry, const char *t_path,
@@ -736,6 +749,19 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (fetch_path_info (b, &name, &info, e_path, subpool));
       if (!name)
         break;
+
+      if (info && !SVN_IS_VALID_REVNUM (info->rev))
+        {
+          /* We want to perform deletes before non-replacement adds,
+             for graceful handling of case-only renames on
+             case-insensitive client filesystems.  So, if the report
+             item is a delete, remove the entry from the source hash,
+             but don't update the entry yet. */
+          if (s_entries)
+            apr_hash_set (s_entries, name, APR_HASH_KEY_STRING, NULL);
+          continue;
+        }
+
       e_fullpath = svn_path_join (e_path, name, subpool);
       t_fullpath = svn_path_join (t_path, name, subpool);
       t_entry = apr_hash_get (t_entries, name, APR_HASH_KEY_STRING);
@@ -758,7 +784,30 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         svn_pool_destroy (info->pool);
     }
 
-  /* Loop over the remaining dirents in the target. */
+  /* Remove any deleted entries.  Do this before processing the
+     target, for graceful handling of case-only renames. */
+  if (s_entries)
+    {
+      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
+        {
+          svn_pool_clear (subpool);
+          apr_hash_this (hi, NULL, NULL, &val);
+          s_entry = val;
+
+          if (apr_hash_get (t_entries, s_entry->name,
+                            APR_HASH_KEY_STRING) == NULL)
+            {
+              /* There is no corresponding target entry, so delete. */
+              e_fullpath = svn_path_join (e_path, s_entry->name, subpool);
+              if (b->recurse || s_entry->kind != svn_node_dir)
+                SVN_ERR (b->editor->delete_entry (e_fullpath,
+                                                  SVN_INVALID_REVNUM,
+                                                  dir_baton, subpool));
+            }
+        }
+    }
+
+  /* Loop over the dirents in the target. */
   for (hi = apr_hash_first (pool, t_entries); hi; hi = apr_hash_next (hi))
     {
       svn_pool_clear (subpool);
@@ -778,27 +827,6 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, t_fullpath,
                              t_entry, dir_baton, e_fullpath, NULL,
                              b->recurse, subpool));
-
-      /* Don't revisit this name in the source entries. */
-      if (s_entries)
-        apr_hash_set (s_entries, t_entry->name, APR_HASH_KEY_STRING, NULL);
-    }
-
-  /* Loop over the remaining dirents in the source. */
-  if (s_entries)
-    {
-      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
-        {
-          svn_pool_clear (subpool);
-          apr_hash_this (hi, NULL, NULL, &val);
-          s_entry = val;
-
-          /* We know there is no corresponding target entry, so just delete. */
-          e_fullpath = svn_path_join (e_path, s_entry->name, subpool);
-          if (b->recurse || s_entry->kind != svn_node_dir)
-            SVN_ERR (b->editor->delete_entry (e_fullpath, SVN_INVALID_REVNUM,
-                                              dir_baton, subpool));
-        }
     }
 
   /* Destroy iteration subpool. */

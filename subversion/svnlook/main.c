@@ -73,7 +73,9 @@ enum
   { 
     svnlook__version = SVN_OPT_FIRST_LONGOPT_ID,
     svnlook__show_ids,
-    svnlook__no_diff_deleted
+    svnlook__no_diff_deleted,
+    svnlook__no_diff_added,
+    svnlook__revprop_opt
   };
 
 /*
@@ -108,6 +110,12 @@ static const apr_getopt_option_t options_table[] =
     {"no-diff-deleted", svnlook__no_diff_deleted, 0,
      N_("do not print differences for deleted files")},
 
+    {"no-diff-added", svnlook__no_diff_added, 0,
+     N_("do not print differences for added files")},
+
+    {"revprop",       svnlook__revprop_opt, 0,
+                      N_("operate on a revision property (use with -r)")},
+
     {0,               0, 0, 0}
   };
 
@@ -141,7 +149,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"diff", subcommand_diff, {0},
      N_("usage: svnlook diff REPOS_PATH\n\n"
         "Print GNU-style diffs of changed files and properties.\n"),
-     {'r', 't', svnlook__no_diff_deleted} },
+     {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added} },
 
     {"dirs-changed", subcommand_dirschanged, {0},
      N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
@@ -176,15 +184,17 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'r', 't'} },
 
     {"propget", subcommand_pget, {"pget", "pg"},
-     N_("usage: svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n\n"
-        "Print the raw value of a property on a path in the repository.\n"),
-     {'r', 't'} },
+     N_("usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n\n"
+        "Print the raw value of a property on a path in the repository.\n"
+        "With --revprop, prints the raw value of a revision property.\n"),
+     {'r', 't', svnlook__revprop_opt} },
 
     {"proplist", subcommand_plist, {"plist", "pl"},
-     N_("usage: svnlook proplist REPOS_PATH PATH_IN_REPOS\n\n"
-        "List the properties of a path in the repository.\n"
+     N_("usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n\n"
+        "List the properties of a path in the repository, or\n"
+        "with the --revprop option, revision properties.\n"
         "With -v, show the property values too.\n"),
-     {'r', 't', 'v'} },
+     {'r', 't', 'v', svnlook__revprop_opt} },
 
     {"tree", subcommand_tree, {0},
      N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
@@ -218,7 +228,9 @@ struct svnlook_opt_state
   svn_boolean_t show_ids;         /* --show-ids */
   svn_boolean_t help;             /* --help */
   svn_boolean_t no_diff_deleted;  /* --no-diff-deleted */
+  svn_boolean_t no_diff_added;    /* --no-diff-added */
   svn_boolean_t verbose;          /* --verbose */
+  svn_boolean_t revprop;          /* --revprop */
 };
 
 
@@ -229,6 +241,7 @@ typedef struct svnlook_ctxt_t
   svn_boolean_t is_revision;
   svn_boolean_t show_ids;
   svn_boolean_t no_diff_deleted;
+  svn_boolean_t no_diff_added;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
@@ -792,6 +805,7 @@ print_diff_tree (svn_fs_root_t *root,
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
                  svn_boolean_t no_diff_deleted,
+                 svn_boolean_t no_diff_added,
                  const char *tmpdir,
                  apr_pool_t *pool)
 {
@@ -892,7 +906,8 @@ print_diff_tree (svn_fs_root_t *root,
                                         : _("Index")))),
                                      path));
 
-      if ((! no_diff_deleted) || (node->action != 'D'))
+      if (!(node->action == 'D' && no_diff_deleted)
+          && !(node->action == 'A' && no_diff_added))
         {
           svn_diff_t *diff;
 
@@ -971,6 +986,7 @@ print_diff_tree (svn_fs_root_t *root,
                             svn_path_join (path, node->name, subpool),
                             svn_path_join (base_path, node->name, subpool),
                             no_diff_deleted,
+                            no_diff_added,
                             tmpdir,
                             subpool));
   while (node->sibling)
@@ -981,6 +997,7 @@ print_diff_tree (svn_fs_root_t *root,
                                 svn_path_join (path, node->name, subpool),
                                 svn_path_join (base_path, node->name, subpool),
                                 no_diff_deleted,
+                                no_diff_added,
                                 tmpdir,
                                 subpool));
     }
@@ -1332,7 +1349,8 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (create_unique_tmpdir (&tmpdir, pool));
       err = print_diff_tree (root, base_root, tree, "", "",
-                             c->no_diff_deleted, tmpdir, pool);
+                             c->no_diff_deleted, c->no_diff_added,
+                             tmpdir, pool);
       if (err)
         {
           svn_error_clear (svn_io_remove_dir (tmpdir, pool));
@@ -1421,7 +1439,8 @@ do_history (svnlook_ctxt_t *c,
 
 /* Print the value of property PROPNAME on PATH in the repository.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
-   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH. */
+   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH.
+   If PATH is NULL, operate on a revision property. */
 static svn_error_t *
 do_pget (svnlook_ctxt_t *c,
          const char *propname,
@@ -1435,13 +1454,26 @@ do_pget (svnlook_ctxt_t *c,
   apr_size_t len;
   
   SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (verify_path (&kind, root, path, pool));
-  SVN_ERR (svn_fs_node_prop (&prop, root, path, propname, pool));
+  if (path != NULL)
+    {
+      SVN_ERR (verify_path (&kind, root, path, pool));
+      SVN_ERR (svn_fs_node_prop (&prop, root, path, propname, pool));
+    }
+  else
+      SVN_ERR (svn_fs_revision_prop (&prop, c->fs, c->rev_id, propname, pool));
 
   if (prop == NULL)
-    return svn_error_createf
-      (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-       _("Property '%s' not found on path '%s'"), propname, path);
+    {
+       if (path == NULL)
+         return svn_error_createf
+           (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
+            _("Property '%s' not found on revision %ld"), propname, c->rev_id);
+       else
+         return svn_error_createf
+           (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
+            _("Property '%s' not found on path '%s' in revision %ld"),
+            propname, path, c->rev_id);
+    }
 
   /* Else. */
 
@@ -1461,7 +1493,8 @@ do_pget (svnlook_ctxt_t *c,
 /* Print the property names of all properties on PATH in the repository.
    If VERBOSE, print their values too.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
-   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH. */
+   SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH.
+   If PATH is NULL, operate on a revision properties. */
 static svn_error_t *
 do_plist (svnlook_ctxt_t *c,
           const char *path,
@@ -1474,10 +1507,15 @@ do_plist (svnlook_ctxt_t *c,
   apr_hash_index_t *hi;
   svn_node_kind_t kind;
 
-  SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (verify_path (&kind, root, path, pool));
-  SVN_ERR (svn_fs_node_proplist (&props, root, path, pool));
   SVN_ERR (svn_stream_for_stdout (&stdout_stream, pool));
+  if (path != NULL)
+    {
+      SVN_ERR (get_root (&root, c, pool));
+      SVN_ERR (verify_path (&kind, root, path, pool));
+      SVN_ERR (svn_fs_node_proplist (&props, root, path, pool));
+    }
+  else
+      SVN_ERR (svn_fs_revision_proplist (&props, c->fs, c->rev_id, pool));
 
   for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
     {
@@ -1558,6 +1596,7 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
   svn_fs_set_warning_func (baton->fs, warning_func, NULL);
   baton->show_ids = opt_state->show_ids;
   baton->no_diff_deleted = opt_state->no_diff_deleted;
+  baton->no_diff_added = opt_state->no_diff_added;
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup (pool, opt_state->txn);
@@ -1776,17 +1815,19 @@ subcommand_pget (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       return svn_error_createf
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+         opt_state->revprop ?  _("Missing propname argument") :
          _("Missing propname and repository path arguments"));
     }
-  else if (opt_state->arg2 == NULL)
+  else if (!opt_state->revprop && opt_state->arg2 == NULL)
     {
-      return svn_error_createf
+      return svn_error_create
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
          _("Missing propname or repository path argument"));
     }
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
-  SVN_ERR (do_pget (c, opt_state->arg1, opt_state->arg2, pool));
+  SVN_ERR (do_pget (c, opt_state->arg1,
+                    opt_state->revprop ? NULL : opt_state->arg2, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1796,14 +1837,15 @@ subcommand_plist (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
-
-  if (opt_state->arg1 == NULL)
-    return svn_error_createf
+  
+  if (!opt_state->revprop && opt_state->arg1 == NULL)
+    return svn_error_create
       (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
        _("Missing repository path argument"));
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
-  SVN_ERR (do_plist (c, opt_state->arg1, opt_state->verbose, pool));
+  SVN_ERR (do_plist (c, opt_state->revprop ? NULL : opt_state->arg1, 
+                     opt_state->verbose, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1950,6 +1992,10 @@ main (int argc, const char * const *argv)
         case '?':
           opt_state.help = TRUE;
           break;
+          
+        case svnlook__revprop_opt:
+          opt_state.revprop = TRUE;
+          break;
 
         case svnlook__version:
           opt_state.version = TRUE;
@@ -1962,6 +2008,10 @@ main (int argc, const char * const *argv)
 
         case svnlook__no_diff_deleted:
           opt_state.no_diff_deleted = TRUE;
+          break;
+
+        case svnlook__no_diff_added:
+          opt_state.no_diff_added = TRUE;
           break;
 
         default:

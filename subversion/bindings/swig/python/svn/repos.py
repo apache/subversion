@@ -23,8 +23,8 @@ _unprefix_names(locals(), 'SVN_REPOS_')
 del _unprefix_names
 
 
-# Names that are not to be exported - del-ed at end
-import svn.core, svn.fs, svn.delta
+# Names that are not to be exported
+import core as _core, fs as _fs, delta as _delta
 
 
 class ChangedPath:
@@ -52,7 +52,7 @@ class ChangedPath:
     self.added = added
 
 
-class ChangeCollector(svn.delta.Editor):
+class ChangeCollector(_delta.Editor):
   """Available Since: 1.2.0
   """
   
@@ -68,17 +68,17 @@ class ChangeCollector(svn.delta.Editor):
     self.fs_root = root
 
     # Figger out the base revision and root properties.
-    subpool = svn.core.svn_pool_create(self.pool)
-    if svn.fs.is_revision_root(self.fs_root):
-      rev = svn.fs.revision_root_revision(self.fs_root)
+    subpool = _core.svn_pool_create(self.pool)
+    if _fs.is_revision_root(self.fs_root):
+      rev = _fs.revision_root_revision(self.fs_root)
       self.base_rev = rev - 1
-      self.props = svn.fs.revision_proplist(self.fs_ptr, rev, subpool).copy()
+      self.props = _fs.revision_proplist(self.fs_ptr, rev, subpool).copy()
     else:
-      txn_name = svn.fs.txn_root_name(self.fs_root, pool)
-      txn_t = svn.fs.open_txn(self.fs_ptr, txn_name, subpool)
-      self.base_rev = svn.fs.txn_base_revision(txn_t)
-      self.props = svn.fs.txn_proplist(txn_t, subpool).copy()
-    svn.core.svn_pool_destroy(subpool)
+      txn_name = _fs.txn_root_name(self.fs_root, pool)
+      txn_t = _fs.open_txn(self.fs_ptr, txn_name, subpool)
+      self.base_rev = _fs.txn_base_revision(txn_t)
+      self.props = _fs.txn_proplist(txn_t, subpool).copy()
+    _core.svn_pool_destroy(subpool)
 
   def get_root_props(self):
     return self.props
@@ -105,7 +105,7 @@ class ChangeCollector(svn.delta.Editor):
       return self.roots[rev]
     except KeyError:
       pass
-    root = self.roots[rev] = svn.fs.revision_root(self.fs_ptr, rev, self.pool)
+    root = self.roots[rev] = _fs.revision_root(self.fs_ptr, rev, self.pool)
     return root
     
   def open_root(self, base_revision, dir_pool):
@@ -113,10 +113,10 @@ class ChangeCollector(svn.delta.Editor):
 
   def delete_entry(self, path, revision, parent_baton, pool):
     base_path = self._make_base_path(parent_baton[1], path)
-    if svn.fs.is_dir(self._get_root(parent_baton[2]), base_path, pool):
-      item_type = svn.core.svn_node_dir
+    if _fs.is_dir(self._get_root(parent_baton[2]), base_path, pool):
+      item_type = _core.svn_node_dir
     else:
-      item_type = svn.core.svn_node_file
+      item_type = _core.svn_node_file
     self.changes[path] = ChangedPath(item_type,
                                      False,
                                      False,
@@ -129,7 +129,7 @@ class ChangeCollector(svn.delta.Editor):
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool):
-    self.changes[path] = ChangedPath(svn.core.svn_node_dir,
+    self.changes[path] = ChangedPath(_core.svn_node_dir,
                                      False,
                                      False,
                                      copyfrom_path,     # base_path
@@ -154,7 +154,7 @@ class ChangeCollector(svn.delta.Editor):
       self.changes[dir_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
-      self.changes[dir_path] = ChangedPath(svn.core.svn_node_dir,
+      self.changes[dir_path] = ChangedPath(_core.svn_node_dir,
                                            True,
                                            False,
                                            dir_baton[1], # base_path
@@ -165,7 +165,7 @@ class ChangeCollector(svn.delta.Editor):
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    self.changes[path] = ChangedPath(svn.core.svn_node_file,
+    self.changes[path] = ChangedPath(_core.svn_node_file,
                                      False,
                                      False,
                                      copyfrom_path,     # base_path
@@ -191,7 +191,7 @@ class ChangeCollector(svn.delta.Editor):
     else:
       # an add would have inserted a change record already, and it can't
       # be a delete with a text delta, so this must be a normal change.
-      self.changes[file_path] = ChangedPath(svn.core.svn_node_file,
+      self.changes[file_path] = ChangedPath(_core.svn_node_file,
                                             False,
                                             True,
                                             file_baton[1], # base_path
@@ -210,7 +210,7 @@ class ChangeCollector(svn.delta.Editor):
     else:
       # an add would have inserted a change record already, and it can't
       # be a delete with a prop change, so this must be a normal change.
-      self.changes[file_path] = ChangedPath(svn.core.svn_node_file,
+      self.changes[file_path] = ChangedPath(_core.svn_node_file,
                                             True,
                                             False,
                                             file_baton[1], # base_path
@@ -234,7 +234,7 @@ class RevisionChangeCollector(ChangeCollector):
   this interface."""
 
   def __init__(self, fs_ptr, root, pool, notify_cb=None):
-    root = svn.fs.revision_root(fs_ptr, root, pool)
+    root = _fs.revision_root(fs_ptr, root, pool)
     ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
 
   def _make_base_path(self, parent_path, path):
@@ -250,7 +250,3 @@ try:
 except NameError:
   True = 1
   False = 0
-
-
-# Do not export these names
-del svn

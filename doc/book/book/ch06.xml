@@ -32,10 +32,9 @@
       This means that a repository can be programmatically accessed by
       any sort of server process, and the client <quote>repository
       access</quote> API allows programmers to write plugins that
-      speak relevant network protocols.  In theory, Subversion can
-      sport an infinite number of network implementations.  In
-      practice, there are only two servers at the time of
-      writing.</para>
+      speak relevant network protocols.  In theory, Subversion can use
+      an infinite number of network implementations.  In practice,
+      there are only two servers at the time of writing.</para>
     
     <para>Apache is an extremely popular webserver; using the
       <command>mod_dav_svn</command> module, Apache can access a
@@ -48,14 +47,14 @@
     <para>Note that Subversion, as an open-source project, does not
       officially endorse any server as <quote>primary</quote> or
       <quote>official</quote>.  Neither network implementation is
-      treated as a second-class citizen; each server has distinct
-      advantages and disadvantages.  In fact, it's possible for
-      different servers to run in parallel, each accessing your
-      repositories in its own way, and each without hindering the
-      other (see <xref linkend="svn-ch-6-sect-5"/>).  Here's a brief
-      overview and comparison of the two available Subversion
-      servers&mdash;as an administrator, it's up to you to choose
-      whatever works best for you and your users.</para>
+      treated as a second-class citizen; each server has advantages
+      and disadvantages.  In fact, it's possible for different servers
+      to run in parallel, each accessing your repositories in its own
+      way, and each without hindering the other (see <xref
+      linkend="svn-ch-6-sect-5"/>).  Here's a brief overview and
+      comparison of the two available Subversion servers&mdash;as an
+      administrator, it's up to you to choose whatever works best for
+      you and your users.</para>
       
 
     <table id="svn-ch-6-table-1">
@@ -90,11 +89,11 @@
           <row>
             <entry>Authorization options</entry>
             
-            <entry>blanket read/write access, or per-directory access
-              control</entry>
+            <entry>blanket read/write access, or per-directory
+              read/write control</entry>
             
-            <entry>blanket read/write access, or per-directory write access
-              control using hook scripts</entry>
+            <entry>blanket read/write access, or per-directory write
+              (but not read) control using a pre-commit hook</entry>
           </row>
           
           <row>
@@ -435,6 +434,10 @@ svn stream tcp nowait svnowner /usr/local/bin/svnserve svnserve -i
         a client connection comes into your server on port 3690,
         <command>inetd</command> will spawn an
         <command>svnserve</command> process to service it.</para>
+
+      <para>On a Windows system, third-party tools exist to run
+      <command>svnserve</command> as a service.  Look on Subversion's
+      website for a list of these tools.</para>
 
       <para>A second option is to run <command>svnserve</command> as a
         standalone <quote>daemon</quote> process.  Use the

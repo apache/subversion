@@ -106,7 +106,9 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
 /* helper function to convert an array of 'svn_revnum_t' to a Python list
    of int objects */
+/* Formerly used by pre-1.0 APIs. Now unused
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
+*/
 
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the
@@ -128,6 +130,9 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 
 apr_file_t *svn_swig_py_make_file(PyObject *py_file,
                                   apr_pool_t *pool);
+
+svn_stream_t *svn_swig_py_make_stream(PyObject *py_io,
+                                      apr_pool_t *pool);
 
 /* a notify function that executes a Python function that is passed in
    via the baton argument */
@@ -178,6 +183,15 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       const char *date,
                                       const char *msg,
                                       apr_pool_t *pool);
+
+/* thunked blame receiver function */
+svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
+                                                    apr_int64_t line_no,
+                                                    svn_revnum_t revision,
+                                                    const char *author,
+                                                    const char *date,
+                                                    const char *line,
+                                                    apr_pool_t *pool);
 
 /* auth provider callbacks */
 svn_error_t *svn_swig_py_auth_simple_prompt_func(

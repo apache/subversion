@@ -119,9 +119,18 @@ ary_prefix_match (apr_array_header_t *pfxlist, const char *path)
 
 
 
-/* Note: the input stream parser calls us up with events.  Output of
-   filtered dump should take place at the close-events.  Before that
-   we just save supplied data in corresponding batons.
+/* Note: the input stream parser calls us with events.
+   Output of the filtered dump occurs for the most part streamily with the
+   event callbacks, to avoid caching large quantities of data in memory.
+   The exceptions this are:
+   - All revision data (headers and props) must be cached until a non-skipped
+     node within the revision is found, or the revision is closed.
+   - Node headers and props must be cached until all props have been received
+     (to allow the Prop-content-length to be found). This is signalled either
+     by the node text arriving, or the node being closed.
+   The writing_begun members of the associated object batons track the state.
+   output_revision() and output_node() are called to cause this flushing of
+   cached data to occur.
 */
 
 
@@ -159,6 +168,9 @@ struct revision_baton_t
   /* Did we drop any nodes? */
   svn_boolean_t had_dropped_nodes;
 
+  /* Written to output stream? */
+  svn_boolean_t writing_begun;
+
   /* The original and new (re-mapped) revision numbers. */
   svn_revnum_t rev_orig;
   svn_revnum_t rev_actual;
@@ -166,8 +178,6 @@ struct revision_baton_t
   /* Pointers to dumpfile data. */
   svn_stringbuf_t *header;
   apr_hash_t *props;
-  svn_stringbuf_t *body;
-  svn_stream_t *body_stream;
 };
 
 struct node_baton_t 
@@ -181,16 +191,18 @@ struct node_baton_t
   /* Have we been instructed to change or remove props on, or change
      the text of, this node? */
   svn_boolean_t has_props;
-  svn_boolean_t remove_props;
   svn_boolean_t has_text;
+
+  /* Written to output stream? */
+  svn_boolean_t writing_begun;
+
+  /* The text content length according to the dumpfile headers, because we
+     need the length before we have the actual text. */
+  svn_filesize_t tcl;
 
   /* Pointers to dumpfile data. */
   svn_stringbuf_t *header;
   svn_stringbuf_t *props;
-  svn_stringbuf_t *body;
-  svn_stringbuf_t *node_path;
-  svn_stringbuf_t *copyfrom_path;
-  svn_stream_t *body_stream;
 };
 
 
@@ -215,14 +227,13 @@ new_revision_record (void **revision_baton,
 
   *revision_baton = apr_palloc (pool, sizeof (struct revision_baton_t));
   rb = *revision_baton;
+  rb->pb = parse_baton;
   rb->has_nodes = FALSE;
   rb->has_props = FALSE;
   rb->had_dropped_nodes = FALSE;
-  rb->pb     = parse_baton;
+  rb->writing_begun = FALSE;
   rb->header = svn_stringbuf_create ("", pool);
-  rb->body   = svn_stringbuf_create ("", pool);
-  rb->props  = apr_hash_make (pool);
-  rb->body_stream = svn_stream_from_stringbuf (rb->body, pool);
+  rb->props = apr_hash_make (pool);
 
   header_stream = svn_stream_from_stringbuf (rb->header, pool);
 
@@ -276,293 +287,21 @@ new_revision_record (void **revision_baton,
 }
 
 
-/* UUID record here: dump it, as we do not filter them. */
+/* Output revision to dumpstream
+   This may be called by new_node_record(), iff rb->has_nodes has been set
+   to TRUE, or by close_revision() otherwise. This must only be called
+   if rb->writing_begun is FALSE. */
 static svn_error_t *
-uuid_record (const char *uuid, void *parse_baton, apr_pool_t *pool)
+output_revision (struct revision_baton_t *rb)
 {
-  struct parse_baton_t *pb = parse_baton;
-  SVN_ERR (svn_stream_printf (pb->out_stream, pool,
-                              SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
-  return SVN_NO_ERROR;
-}
-
-
-/* New node here. Set up node_baton by copying headers. */
-static svn_error_t *
-new_node_record (void **node_baton,
-                 apr_hash_t *headers,
-                 void *rev_baton,
-                 apr_pool_t *pool)
-{
-  struct parse_baton_t *pb;
-  struct node_baton_t *nb;
-  char *node_path, *copyfrom_path;
-  svn_revnum_t cf_orig_rev, *cf_renum_rev;
-  apr_hash_index_t *hi;
-  const void *key;
-  void *val;
-  svn_stream_t *header_stream;
-
-  *node_baton = apr_palloc (pool, sizeof (struct node_baton_t));
-  nb          = *node_baton;
-  nb->rb      = rev_baton;
-  pb          = nb->rb->pb;
-
-  node_path = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                            APR_HASH_KEY_STRING);
-  copyfrom_path = apr_hash_get (headers,
-                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                                APR_HASH_KEY_STRING);
-
-  /* Ensure that paths start with a leading '/'. */
-  node_path = svn_path_join ("/", node_path, pool);
-  if (copyfrom_path)
-    copyfrom_path = svn_path_join ("/", copyfrom_path, pool);
-
-  /* Shame, shame, shame ... this is NXOR. */
-  nb->do_skip = (ary_prefix_match (pb->prefixes, node_path)
-                 ? pb->do_exclude : (! pb->do_exclude));
-
-  /* See if this node was copied from dropped source.  If it was,
-     we have to drop this node, too.  
-
-     However, there is one special case we'll handle.  If the node is
-     a file, and this was a copy-and-modify operation, then the
-     dumpfile should contain the new contents of the file.  In this
-     scenario, we'll just do an add without history using the new
-     contents.  */
-   if ((copyfrom_path != NULL) && (! nb->do_skip))
-    {
-      const char *kind, *tcl;
-      kind = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
-                           APR_HASH_KEY_STRING);
-      tcl = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-                          APR_HASH_KEY_STRING);
-
-      /* If there is a Text-content-length header, and the kind is
-         "file", we just fallback to an add without history. */
-      if (tcl && (strcmp (kind, "file") == 0))
-        {
-          apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                        APR_HASH_KEY_STRING, NULL);
-          apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
-                        APR_HASH_KEY_STRING, NULL);
-          copyfrom_path = NULL;
-        }
-      /* Else, this is either a directory or a file whose contents we
-         don't have readily available.  */
-      else
-        {
-          /* If the copy source is excluded, we can't do the right
-             thing with this copy. */
-          if (ary_prefix_match (pb->prefixes, copyfrom_path) 
-              ? pb->do_exclude : (! pb->do_exclude))
-            return svn_error_createf 
-              (SVN_ERR_INCOMPLETE_DATA, 0,
-               _("Invalid copy source path '%s'"), copyfrom_path);
-        }
-    }
-
-  /* If we're skipping the node, take note of path, discarding the
-     rest.  */
-  if (nb->do_skip)
-    {
-      apr_hash_set (pb->dropped_nodes, 
-                    apr_pstrdup (apr_hash_pool_get (pb->dropped_nodes), 
-                                 node_path),
-                    APR_HASH_KEY_STRING, (void *)1);
-      nb->rb->had_dropped_nodes = TRUE;
-    }
-  else
-    {
-      nb->has_props = FALSE;
-      nb->has_text  = FALSE;
-      nb->remove_props = FALSE;
-      nb->header    = svn_stringbuf_create ("", pool);
-      nb->props     = svn_stringbuf_create ("", pool);
-      nb->body      = svn_stringbuf_create ("", pool);
-      nb->body_stream = svn_stream_from_stringbuf (nb->body, pool);
-      header_stream  = svn_stream_from_stringbuf (nb->header, pool);
-
-      for (hi = apr_hash_first (pool, headers); hi; hi = apr_hash_next (hi))
-        {
-          apr_hash_this (hi, (const void **) &key, NULL, &val);
-          if ((!strcmp (key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
-              || (!strcmp (key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
-              || (!strcmp (key, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH)))
-            continue;
-
-          /* Rewrite Node-Copyfrom-Rev if we are renumbering revisions.
-             The number points to some revision in the past. We keep track
-             of revision renumbering in an apr_hash, which maps original
-             revisions to new ones. Dropped revision are mapped to -1.
-             This should never happen here.
-          */
-          if (pb->do_renumber_revs
-              && (!strcmp (key, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV)))
-            {
-              cf_orig_rev = SVN_STR_TO_REV(val);
-              cf_renum_rev = apr_hash_get (pb->renumber_history,
-                                           &cf_orig_rev,
-                                           sizeof (svn_revnum_t));
-              if ((cf_renum_rev == NULL) || (*cf_renum_rev == -1))
-                {
-                  /* bail out with an error */
-                  return svn_error_createf
-                    (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                     _("Node with dropped parent sneaked in"));
-                }
-              SVN_ERR (svn_stream_printf
-                       (header_stream, pool,
-                        SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %ld\n",
-                        *cf_renum_rev));
-              continue;
-            }
-
-          /* passthru: put header into header stringbuf  */
-
-          SVN_ERR (svn_stream_printf (header_stream, pool, "%s: %s\n",
-                                      (const char *)key,
-                                      (const char *)val));
-        }
-
-      SVN_ERR (svn_stream_close (header_stream));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-set_revision_property (void *revision_baton,
-                       const char *name,
-                       const svn_string_t *value)
-{
-  struct revision_baton_t *rb = revision_baton;
-  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
-
-  rb->has_props = TRUE;
-  apr_hash_set (rb->props, apr_pstrdup (hash_pool, name),
-                APR_HASH_KEY_STRING, svn_string_dup (value, hash_pool));
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-set_node_property (void *node_baton,
-                   const char *name,
-                   const svn_string_t *value)
-{
-  struct node_baton_t *nb = node_baton;
-
-  if (!nb->do_skip)
-    {
-      write_prop_to_stringbuf (&(nb->props), name, value);
-      nb->has_props = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-remove_node_props (void *node_baton)
-{
-  struct node_baton_t *nb = node_baton;
-
-  nb->remove_props = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-set_fulltext (svn_stream_t **stream, void *node_baton)
-{
-  struct node_baton_t *nb = node_baton;
-
-  if (!nb->do_skip)
-    {
-      *stream = nb->body_stream;
-      nb->has_text = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Finalize node */
-static svn_error_t *
-close_node (void *node_baton)
-{
-  struct node_baton_t *nb = node_baton;
-  int bytes_used;
-  char buf[SVN_KEYLINE_MAXLEN];
-
-  /* Get out of here if we can. */
-  if (nb->do_skip)
-    {
-      return SVN_NO_ERROR;
-    }
-
-  /* when there are no props nb->props->len would be zero and won't mess up
-     Content-Length. */
-  if (nb->has_props)
-    svn_stringbuf_appendcstr (nb->props, "PROPS-END\n");
-
-  /* 1. recalculate & check text-md5 if present. Passed through right now. */
-
-  /* 2. recalculate and add content-lengths */
-
-  if (nb->has_props)
-    {
-      svn_stringbuf_appendcstr (nb->header,
-                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
-      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", nb->props->len, &bytes_used);
-      svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes (nb->header, "\n", 1);
-    }
-  if (nb->has_text)
-    {
-      svn_stringbuf_appendcstr (nb->header,
-                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
-      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", nb->body->len, &bytes_used);
-      svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes (nb->header, "\n", 1);
-    }
-  svn_stringbuf_appendcstr (nb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
-  sprintf (buf, ": %" APR_SIZE_T_FMT "%n", (nb->props->len + nb->body->len),
-           &bytes_used);
-  svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
-  svn_stringbuf_appendbytes (nb->header, "\n", 1);
-
-  /* put an end to headers */
-  svn_stringbuf_appendbytes (nb->header, "\n", 1);
-
-  /* put an end to node. */
-  svn_stringbuf_appendbytes (nb->body,   "\n\n", 2);
-
-  /* 3. add all stuff to the parent revision */
-
-  svn_stringbuf_appendstr (nb->rb->body, nb->header);
-  svn_stringbuf_appendstr (nb->rb->body, nb->props);
-  svn_stringbuf_appendstr (nb->rb->body, nb->body);
-  nb->rb->has_nodes = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-/* Finalize revision */
-static svn_error_t *
-close_revision (void *revision_baton)
-{
-  struct revision_baton_t *rb = revision_baton;
   int bytes_used;
   char buf[SVN_KEYLINE_MAXLEN];
   apr_hash_index_t *hi;
   apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
   svn_stringbuf_t *props = svn_stringbuf_create ("", hash_pool);
   apr_pool_t *subpool = svn_pool_create (hash_pool);
+
+  rb->writing_begun = TRUE;
 
   /* If this revision has no nodes left because the ones it had were
      dropped, and we are not dropping empty revisions, and we were not
@@ -633,8 +372,6 @@ close_revision (void *revision_baton)
                                  rb->header->data , &(rb->header->len)));
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
                                  props->data      , &(props->len)));
-      SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 rb->body->data   , &(rb->body->len)));
       if (! rb->pb->quiet)
         SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
                                       _("Revision %ld committed as %ld.\n"),
@@ -650,6 +387,326 @@ close_revision (void *revision_baton)
     }
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
+}
+
+
+/* UUID record here: dump it, as we do not filter them. */
+static svn_error_t *
+uuid_record (const char *uuid, void *parse_baton, apr_pool_t *pool)
+{
+  struct parse_baton_t *pb = parse_baton;
+  SVN_ERR (svn_stream_printf (pb->out_stream, pool,
+                              SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+  return SVN_NO_ERROR;
+}
+
+
+/* New node here. Set up node_baton by copying headers. */
+static svn_error_t *
+new_node_record (void **node_baton,
+                 apr_hash_t *headers,
+                 void *rev_baton,
+                 apr_pool_t *pool)
+{
+  struct parse_baton_t *pb;
+  struct node_baton_t *nb;
+  char *node_path, *copyfrom_path;
+  svn_revnum_t cf_orig_rev, *cf_renum_rev;
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  const char *tcl;
+
+  *node_baton = apr_palloc (pool, sizeof (struct node_baton_t));
+  nb          = *node_baton;
+  nb->rb      = rev_baton;
+  pb          = nb->rb->pb;
+
+  node_path = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
+                            APR_HASH_KEY_STRING);
+  copyfrom_path = apr_hash_get (headers,
+                                SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                                APR_HASH_KEY_STRING);
+
+  /* Ensure that paths start with a leading '/'. */
+  node_path = svn_path_join ("/", node_path, pool);
+  if (copyfrom_path)
+    copyfrom_path = svn_path_join ("/", copyfrom_path, pool);
+
+  /* Shame, shame, shame ... this is NXOR. */
+  nb->do_skip = (ary_prefix_match (pb->prefixes, node_path)
+                 ? pb->do_exclude : (! pb->do_exclude));
+
+  /* If we're skipping the node, take note of path, discarding the
+     rest.  */
+  if (nb->do_skip)
+    {
+      apr_hash_set (pb->dropped_nodes, 
+                    apr_pstrdup (apr_hash_pool_get (pb->dropped_nodes), 
+                                 node_path),
+                    APR_HASH_KEY_STRING, (void *)1);
+      nb->rb->had_dropped_nodes = TRUE;
+    }
+  else
+    {
+      tcl = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
+                          APR_HASH_KEY_STRING);
+
+      /* Test if this node was copied from dropped source. */
+      if (copyfrom_path &&
+          (ary_prefix_match (pb->prefixes, copyfrom_path) 
+           ? pb->do_exclude : (! pb->do_exclude)))
+        {
+          /* This node was copied from dropped source.
+             We have a problem, since we did not want to drop this node too.
+
+             However, there is one special case we'll handle.  If the node is
+             a file, and this was a copy-and-modify operation, then the
+             dumpfile should contain the new contents of the file.  In this
+             scenario, we'll just do an add without history using the new
+             contents.  */
+          const char *kind;
+          kind = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
+                               APR_HASH_KEY_STRING);
+
+          /* If there is a Text-content-length header, and the kind is
+             "file", we just fallback to an add without history. */
+          if (tcl && (strcmp (kind, "file") == 0))
+            {
+              apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                            APR_HASH_KEY_STRING, NULL);
+              apr_hash_set (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                            APR_HASH_KEY_STRING, NULL);
+              copyfrom_path = NULL;
+            }
+          /* Else, this is either a directory or a file whose contents we
+             don't have readily available.  */
+          else
+            {
+              return svn_error_createf 
+                (SVN_ERR_INCOMPLETE_DATA, 0,
+                 _("Invalid copy source path '%s'"), copyfrom_path);
+            }
+        }
+
+      nb->has_props = FALSE;
+      nb->has_text = FALSE;
+      nb->writing_begun = FALSE;
+      nb->tcl = tcl ? svn__atoui64 (tcl) : 0;
+      nb->header = svn_stringbuf_create ("", pool);
+      nb->props = svn_stringbuf_create ("", pool);
+
+      /* Now we know for sure that we have a node that will not be
+         skipped, flush the revision if it has not already been done. */
+      nb->rb->has_nodes = TRUE;
+      if (! nb->rb->writing_begun)
+        output_revision (nb->rb);
+
+      for (hi = apr_hash_first (pool, headers); hi; hi = apr_hash_next (hi))
+        {
+          apr_hash_this (hi, (const void **) &key, NULL, &val);
+          if ((!strcmp (key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
+              || (!strcmp (key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
+              || (!strcmp (key, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH)))
+            continue;
+
+          /* Rewrite Node-Copyfrom-Rev if we are renumbering revisions.
+             The number points to some revision in the past. We keep track
+             of revision renumbering in an apr_hash, which maps original
+             revisions to new ones. Dropped revision are mapped to -1.
+             This should never happen here.
+          */
+          if (pb->do_renumber_revs
+              && (!strcmp (key, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV)))
+            {
+              cf_orig_rev = SVN_STR_TO_REV(val);
+              cf_renum_rev = apr_hash_get (pb->renumber_history,
+                                           &cf_orig_rev,
+                                           sizeof (svn_revnum_t));
+              if ((cf_renum_rev == NULL) || (*cf_renum_rev == -1))
+                {
+                  /* bail out with an error */
+                  return svn_error_createf
+                    (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                     _("Node with dropped parent sneaked in"));
+                }
+              SVN_ERR (svn_stream_printf
+                       (nb->rb->pb->out_stream, pool,
+                        SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %ld\n",
+                        *cf_renum_rev));
+              continue;
+            }
+
+          /* passthru: put header straight to output */
+
+          SVN_ERR (svn_stream_printf (nb->rb->pb->out_stream,
+                                      pool, "%s: %s\n",
+                                      (const char *)key,
+                                      (const char *)val));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Output node header and props to dumpstream
+   This will be called by set_fulltext() after setting nb->has_text to TRUE,
+   if the node has any text, or by close_node() otherwise. This must only
+   be called if nb->writing_begun is FALSE. */
+static svn_error_t *
+output_node (struct node_baton_t *nb)
+{
+  int bytes_used;
+  char buf[SVN_KEYLINE_MAXLEN];
+
+  nb->writing_begun = TRUE;
+
+  /* when there are no props nb->props->len would be zero and won't mess up
+     Content-Length. */
+  if (nb->has_props)
+    svn_stringbuf_appendcstr (nb->props, "PROPS-END\n");
+
+  /* 1. recalculate & check text-md5 if present. Passed through right now. */
+
+  /* 2. recalculate and add content-lengths */
+
+  if (nb->has_props)
+    {
+      svn_stringbuf_appendcstr (nb->header,
+                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH);
+      sprintf (buf, ": %" APR_SIZE_T_FMT "%n", nb->props->len, &bytes_used);
+      svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
+      svn_stringbuf_appendbytes (nb->header, "\n", 1);
+    }
+  if (nb->has_text)
+    {
+      svn_stringbuf_appendcstr (nb->header,
+                                SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH);
+      sprintf (buf, ": %" SVN_FILESIZE_T_FMT "%n", nb->tcl, &bytes_used);
+      svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
+      svn_stringbuf_appendbytes (nb->header, "\n", 1);
+    }
+  svn_stringbuf_appendcstr (nb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
+  sprintf (buf, ": %" SVN_FILESIZE_T_FMT "%n",
+           (svn_filesize_t) (nb->props->len + nb->tcl), &bytes_used);
+  svn_stringbuf_appendbytes (nb->header, buf, bytes_used);
+  svn_stringbuf_appendbytes (nb->header, "\n", 1);
+
+  /* put an end to headers */
+  svn_stringbuf_appendbytes (nb->header, "\n", 1);
+
+  /* 3. output all the stuff */
+
+  SVN_ERR (svn_stream_write (nb->rb->pb->out_stream,
+                             nb->header->data , &(nb->header->len)));
+  SVN_ERR (svn_stream_write (nb->rb->pb->out_stream,
+                             nb->props->data , &(nb->props->len)));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_revision_property (void *revision_baton,
+                       const char *name,
+                       const svn_string_t *value)
+{
+  struct revision_baton_t *rb = revision_baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get (rb->props);
+
+  rb->has_props = TRUE;
+  apr_hash_set (rb->props, apr_pstrdup (hash_pool, name),
+                APR_HASH_KEY_STRING, svn_string_dup (value, hash_pool));
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_node_property (void *node_baton,
+                   const char *name,
+                   const svn_string_t *value)
+{
+  struct node_baton_t *nb = node_baton;
+
+  if (nb->do_skip)
+    return SVN_NO_ERROR;
+
+  if (!nb->has_props)
+    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Delta property block detected - "
+                               "not supported by svndumpfilter"));
+
+  write_prop_to_stringbuf (&(nb->props), name, value);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+remove_node_props (void *node_baton)
+{
+  struct node_baton_t *nb = node_baton;
+
+  /* In this case, not actually indicating that the node *has* props,
+     rather that we know about all the props that it has, since it now
+     has none. */
+  nb->has_props = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_fulltext (svn_stream_t **stream, void *node_baton)
+{
+  struct node_baton_t *nb = node_baton;
+
+  if (!nb->do_skip)
+    {
+      nb->has_text = TRUE;
+      if (! nb->writing_begun)
+        SVN_ERR(output_node (nb));
+      *stream = nb->rb->pb->out_stream;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Finalize node */
+static svn_error_t *
+close_node (void *node_baton)
+{
+  struct node_baton_t *nb = node_baton;
+  int len = 2;
+
+  /* Get out of here if we can. */
+  if (nb->do_skip)
+    return SVN_NO_ERROR;
+
+  /* If the node was not flushed already to output its text, do it now. */
+  if (! nb->writing_begun)
+    SVN_ERR (output_node (nb));
+  
+  /* put an end to node. */
+  SVN_ERR (svn_stream_write (nb->rb->pb->out_stream, "\n\n", &len));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Finalize revision */
+static svn_error_t *
+close_revision (void *revision_baton)
+{
+  struct revision_baton_t *rb = revision_baton;
+
+  /* If no node has yet flushed the revision, do it now. */
+  if (! rb->writing_begun)
+    return output_revision (rb);
+  else
+    return SVN_NO_ERROR;
 }
 
 

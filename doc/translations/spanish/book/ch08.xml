@@ -68,7 +68,7 @@
           </row>
           <row>
             <entry>libsvn_fs</entry>
-            <entry>Librería del sistema de archivos de
+            <entry>Librería del sistema de ficheros de
               Subversion</entry>
           </row>
           <row>
@@ -196,126 +196,138 @@
         También tiene características que no son tan comunes, como
         la habilidad de añadir, modificar o eliminar meta datos
         (<quote>propiedades</quote>) sobre cualquier fichero o
-        directorio.  Además, el sistema de archivos de Subversion
+        directorio.  Además, el sistema de ficheros de Subversion
         es versionado, lo que significa que a medida que realiza
         cambios a su árbol de directorios, Subversion recuerda el
         aspecto que tenía el árbol antes de esos cambios. Y antes
         que los cambios anteriores. Y que los anteriores a los
         anteriores. Y así todo el camino de vuelta por el tiempo
         de versionado hasta el momento inicial en el cual comenzó
-        a añadir cosas al sistema de archivos.</para>
+        a añadir cosas al sistema de ficheros.</para>
 
-      <para>All the modifications you make to your tree are done
-        within the context of a Subversion transaction.  The following
-        is a simplified general routine for modifying your
-        filesystem:</para>
+      <para>Todas las modificaciones que haga a su árbol se
+        realizarán en el contexto de una transacción de
+        Subversion. Lo siguiente es una rutina general simplificada
+        para modificar su sistema de ficheros:</para>
 
       <orderedlist>
         <listitem>
-          <para>Begin a Subversion transaction.</para>
+          <para>Comience una transacción de Subversion.</para>
         </listitem>
         <listitem>
-          <para>Make your changes (adds, deletes, property
-            modifications, etc.).</para>
+          <para>Realice sus cambios (adiciones, borrados,
+            modificación de propiedades, etc.).</para>
         </listitem>
         <listitem>
-          <para>Commit your transaction.</para>
+          <para>Finalice su transacción.</para>
         </listitem>
       </orderedlist>
 
-      <para>Once you have committed your transaction, your filesystem
-        modifications are permanently stored as historical artifacts.
-        Each of these cycles generates a single new revision of your
-        tree, and each revision is forever accessible as an immutable
-        snapshot of <quote>the way things were.</quote></para>
+      <para>Una vez ha finalizado su transacción, las modificaciones
+        a su sistema de ficheros se almacenan permanentemente como
+        artefactos históricos <!-- TODO historical artifacts? -->.
+        Cada uno de estos ciclos genera una nueva revisión de su
+        árbol, y cada revisión es accesible para siempre como
+        una instantánea inmutable de <quote>cómo estaban las
+        cosas.</quote></para>
 
       <sidebar>
-        <title>The Transaction Distraction</title>
+        <title>La distracción de la transacción</title>
 
-        <para>The notion of a Subversion transaction, especially given
-          its close proximity to the database code in libsvn_fs, can
-          become easily confused with the transaction support provided
-          by the underlying database itself.  Both types of
-          transaction exist to provide atomicity and isolation.  In
-          other words, transactions give you the ability to perform a
-          set of actions in an <quote>all or nothing</quote>
-          fashion&mdash;either all the actions in the set complete
-          with success, or they all get treated as if
-          <emphasis>none</emphasis> of them ever happened&mdash;and in
-          a way that does not interfere with other processes acting on
-          the data.</para>
+        <para>La noción de una transacción de Subversion puede
+          ser confundida fácilmente con el soporte de transacción
+          proporcionado por la base de datos subyacente,
+          especialmente dada su proximidad al código de base de
+          datos en libsvn_fs. Ambos tipos de transacción existen
+          para proporcionar atomicidad y aislamiento.  En otras
+          palabras, las transacciones le permiten realizar
+          un conjunto de acciones de una forma <quote>todo
+          o nada</quote>&mdash;o bien todas las acciones del
+          conjunto son completadas con éxito, o todas son tratadas
+          como si <emphasis>ninguna</emphasis> de ellas hubiese
+          ocurrido&mdash;y de un modo que no intefieran con otros
+          procesos que actúan sobre los datos.</para>
 
-        <para>Database transactions generally encompass small
-          operations related specifically to the modification of data
-          in the database itself (such as changing the contents of a
-          table row).  Subversion transactions are larger in scope,
-          encompassing higher-level operations like making
-          modifications to a set of files and directories which are
-          intended to be stored as the next revision of the filesystem
-          tree.  If that isn't confusing enough, consider this:
-          Subversion uses a database transaction during the creation
-          of a Subversion transaction (so that if the creation of
-          Subversion transaction fails, the database will look as if
-          we had never attempted that creation in the first
-          place)!</para>
+        <para>Las transacciones de base de datos generalmente
+          engloban pequeñas operaciones relacionadas con
+          la modificación específica de datos (como cambiar el
+          contenido de una fila en una tabla). Las transacciones de
+          Subversion son mayores en ámbito, englobando operaciones de
+          alto nivel como realizar modificaciones a un conjunto de
+          ficheros y directorios que pretenden ser almacenados como
+          la siguiente revisión del árbol del sistema de ficheros. Si
+          eso no es suficientemente confuso, considere lo siguiente:
+          ¡Subversion usa una transacción de base de datos durante
+          la creación de una transacción de Subversion (por lo que
+          si la creación de una transacción de Subversion falla,
+          la base de datos tendrá el mismo aspecto que antes, como
+          si nunca hubiésemos intentado crear nada)!</para>
 
-        <para>Fortunately for users of the filesystem API, the
-          transaction support provided by the database system itself
-          is hidden almost entirely from view (as should be expected
-          from a properly modularized library scheme).  It is only
-          when you start digging into the implementation of the
-          filesystem itself that such things become visible (or
-          interesting).</para>
+        <para>Afortunadamente para los usuarios de la API del
+          sistema de ficheros, el soporte de transacción
+          proporcionado por el propio sistema de base de datos está
+          oculto casi por completo (tal y como debería esperarse de
+          un esquema de librerías correctamente modularizadas). Sólo
+          cuando comienza a ahondar en la implementación del sistema
+          de ficheros este tipo de cosas se vuelven visibles (o
+          interesantes).</para>
 
       </sidebar>
 
-      <para>Most of the functionality provided by the filesystem
-        interface comes as an action that occurs on a filesystem path.
-        That is, from outside of the filesystem, the primary mechanism
-        for describing and accessing the individual revisions of files
-        and directories comes through the use of path strings like
-        <filename>/foo/bar</filename>, just as if you were addressing
-        files and directories through your favorite shell program.
-        You add new files and directories by passing their paths-to-be
-        to the right API functions.  You query for information about
-        them by the same mechanism.</para>
+      <para>La mayoría de la funcionalidad proporcionada por la
+        interfaz del sistema de ficheros se muestra como acciones
+        que trabajan sobre una ruta del sistema de ficheros.
+        Es decir, desde un punto de vista externo, el mecanismo
+        principal para describir y acceder a las revisiones
+        individuales de ficheros y directorios son las cadenas
+        con rutas como <filename>/foo/bar</filename>, igual que si
+        estuviese tratando con ficheros y directorios a través de
+        su programa favorito de línea de comando.  Añada nuevos
+        ficheros y directorios pasando sus futuras rutas a las
+        funciones correctas de la API. Obtenga información sobre
+        ellos usando el mismo mecanismo.</para>
 
-      <para>Unlike most filesystems, though, a path alone is not
-        enough information to identify a file or directory in
-        Subversion.  Think of a directory tree as a two-dimensional
-        system, where a node's siblings represent a sort of
-        left-and-right motion, and descending into subdirectories a
-        downward motion.  <xref linkend="svn-ch-8-dia-1"/> shows
-        a typical representation of a tree as exactly that.</para>
+      <para>No obstante, a diferencia de la mayoría de los
+        sistemas de ficheros, una ruta sola no es información
+        suficiente para identificar un fichero o directorio
+        en Subversion. Piense que el árbol de directorios
+        es un sistema bidimensional, donde los nodos hermanos
+        representan una especie de movimiento izquierda-derecha, y
+        descender en subdirectorios un movimiento hacia abajo. <xref
+        linkend="svn-ch-8-dia-1"/> muestra una representación típica
+        de un árbol justo de ese modo.</para>
 
       <figure id="svn-ch-8-dia-1">
-        <title>Files and directories in two dimensions</title>
+        <title>Ficheros y directorios en dos dimensiones</title>
         <graphic fileref="images/ch08dia1.png"/>
       </figure>
 
-      <para>Of course, the Subversion filesystem has a nifty third
-        dimension that most filesystems do not have&mdash;Time!
+      <para>Por supuesto, el sistema de ficheros de Subversion
+        tiene una genial tercera dimensión que muchos sistemas de
+        ficheros no tienen&mdash;¡El tiempo!
         <footnote>
-          <para>We understand that this may come as a shock to sci-fi
-            fans who have long been under the impression that Time was
-            actually the <emphasis>fourth</emphasis> dimension, and we
-            apologize for any emotional trauma induced by our
-            assertion of a different theory.</para>
+          <para>Entendemos que esto pueda ser un jarro de agua fría
+            a todos los fans de la ciencia ficción, quienes
+            durante mucho tiempo han considerado el tiempo como
+            la <emphasis>cuarta</emphasis> dimensión, y pedimos
+            disculpas si provocamos algún trauma emocional con
+            nuestra aserción de una teoría diferente.</para>
         </footnote>
-        In the filesystem interface, nearly every function that has a
-        <parameter>path</parameter> argument also expects a
-        <parameter>root</parameter> argument.  This
-        <structname>svn_fs_root_t</structname> argument describes
-        either a revision or a Subversion transaction (which is
-        usually just a revision-to-be), and provides that
-        third-dimensional context needed to understand the difference
-        between <filename>/foo/bar</filename> in revision 32, and the
-        same path as it exists in revision 98.  <xref
-        linkend="svn-ch-8-dia-2"/> shows revision history as an
-        added dimension to the Subversion filesystem universe.</para>
+        En la interfaz del sistema de ficheros, casi toda función
+        que tiene un parámetro de <parameter>ruta</parameter>
+        espera también un parámetro <parameter>raíz</parameter>.
+        Este parámetro <structname>svn_fs_root_t</structname>
+        describe una revisión o una transacción de Subversion (la
+        cual es normalmente una futura revisión), y proporciona
+        ese contexto tridimensional necesario para entender la
+        diferencia entre <filename>/foo/bar</filename> de la revisión
+        32, y la misma ruta tal y como existe en la revisión 98.
+        <xref linkend="svn-ch-8-dia-2"/> muestra la historia de
+        versiones como una dimensión añadida al universo del sistema
+        de ficheros de Subversion.</para>
 
       <figure id="svn-ch-8-dia-2">
-        <title>Versioning time&mdash;the third dimension!</title>
+        <title>Versionando el tiempo&mdash;¡la tercera dimensión!</title>
         <graphic fileref="images/ch08dia2.png"/>
       </figure>
 
@@ -324,52 +336,58 @@
            pleasures as cheap copies.  If "bubble-up" isn't covered
            twelve other times in the book, maybe give it a go here. -->
 
-      <para>As we mentioned earlier, the libsvn_fs API looks and feels
-        like any other filesystem, except that it has this wonderful
-        versioning capability.  It was designed to be usable by any
-        program interested in a versioning filesystem.  Not
-        coincidentally, Subversion itself is interested in that
-        functionality.  But while the filesystem API should be
-        sufficient for basic file and directory versioning support,
-        Subversion wants more&mdash;and that is where libsvn_repos
-        comes in.</para>
-
-      <para>The Subversion repository library (libsvn_repos) is
-        basically a wrapper library around the filesystem
-        functionality.  This library is responsible for creating the
-        repository layout, making sure that the underlying filesystem
-        is initialized, and so on.  Libsvn_repos also implements a set
-        of hooks&mdash;scripts that are executed by the repository
-        code when certain actions take place.  These scripts are
-        useful for notification, authorization, or whatever purposes
-        the repository administrator desires.  This type of
-        functionality, and other utility provided by the repository
-        library, is not strictly related to implementing a versioning
-        filesystem, which is why it was placed into its own
-        library.</para>
+      <para>Tal y como mencionamos anteriormente, la API de libsvn_fs
+        tiene el aspecto de cualquier otro sistema de ficheros,
+        excepto por el hecho de tener la maravillosa capacidad
+        de versionado. Fue diseñada para ser usada por cualquier
+        programa interesado en un sistema de ficheros versionado. A
+        su vez, Subversion está interesado en esa funcionalidad. Pero
+        mientras que la API del sistema de ficheros debería ser
+        suficiente para tener soporte básico de versionado de
+        ficheros y directorios, Subversion quiere más&mdash;y es
+        ahí donde entra en juego libsvn_repos.</para>
+        
+      <para>La librería de repositorio de Subversion (libsvn_repos)
+        es básicamente una librería envoltorio sobre la funcionalidad
+        del sistema de ficheros. Esta librería es responsable de
+        crear la estructura del repositorio, asegurarse de que
+        el sistema de ficheros subyacente está inicializado,
+        etc. Libsvn_repos también implementa un conjunto de
+        ganchos&mdash;scripts que son ejecutados por el código
+        de repositorio cuando se realizan ciertas tareas. Estos
+        scripts son útiles para notificar, autorizar, o cualquier
+        cosa deseada por el administrador del repositorio. Este tipo
+        de funcionalidad, y otras utilidades proporcionadas por la
+        librería de repositorio, no están estrictamente relacionadas
+        con la implementación de un sistema de ficheros versionados,
+        razón por la cual fue colocada en su propia librería.</para>
       
-      <para>Developers who wish to use the libsvn_repos API will find
-        that it is not a complete wrapper around the filesystem
-        interface.  That is, only certain major events in the general
-        cycle of filesystem activity are wrapped by the repository
-        interface.  Some of these include the creation and commit of
-        Subversion transactions, and the modification of revision
-        properties.  These particular events are wrapped by the
-        repository layer because they have hooks associated with them.
-        In the future, other events may be wrapped by the repository
-        API.  All of the remaining filesystem interaction will
-        continue to occur directly via the libsvn_fs API, though.</para>
+      <para>Los desarrolladores que deseen usar la API de
+        libsvn_repos se encontrarán con que no es un envoltorio
+        completo sobre la interfaz del sistema de ficheros.
+        Es decir, sólo ciertos eventos de categoría en el ciclo
+        general de la actividad del sistema de ficheros están
+        envueltos por la interfaz de repositorio.  Elgunos de éstos
+        incluyen la creación y enviado de transacciones Subversion,
+        y la modificación de propiedades de revisiones. Estos eventos
+        particulares están envueltos por la capa de repositorio
+        porque tienen enganches asociados con ellos. En el futuro,
+        puede que otros eventos sean envueltos por la API de
+        repositorio. Mientras tanto, el resto de la interacción con
+        el sistema de ficheros continuará ocurriendo directamente
+        via la API de libsvn_fs.</para>
 
-      <para>For example, here is a code segment that illustrates the
-        use of both the repository and filesystem interfaces to create
-        a new revision of the filesystem in which a directory is
-        added.  Note that in this example (and all others throughout
-        this book), the <function>SVN_ERR</function> macro simply
-        checks for a non-successful error return from the function it
-        wraps, and returns that error if it exists.</para>
+      <para>Por ejemplo, aquí tiene un segmento de código que
+        ilustra el uso de ambas interfaces (repositorio y sistema
+        de ficheros) para crear una nueva revisión del sistema de
+        ficheros en la cual se añade un directorio. Tenga en cuenta
+        que en este ejemplo (y todos los demás del libro), la macro
+        <function>SVN_ERR</function> simplemente verifica de forma
+        booleana el código de retorno de la función que envuelve,
+        y retorna si hay algún error.</para>
 
       <example id="svn-ch-8-sect-1.1-ex-1">
-        <title>Using the Repository Layer</title>
+        <title>Usando la capa de repositorio</title>
 
         <programlisting>
 /* Create a new directory at the path NEW_DIRECTORY in the Subversion
@@ -448,62 +466,66 @@ make_new_directory (const char *repos_path,
 </programlisting>
       </example>
 
-      <para>In the previous code segment, calls were made to both the
-        repository and filesystem interfaces.  We could just as easily
-        have committed the transaction using
-        <function>svn_fs_commit_txn</function>.  But the filesystem
-        API knows nothing about the repository library's hook
-        mechanism.  If you want your Subversion repository to
-        automatically perform some set of non-Subversion tasks every
-        time you commit a transaction (like, for example, sending an
-        email that describes all the changes made in that transaction
-        to your developer mailing list), you need to use the
-        libsvn_repos-wrapped version of that
-        function&mdash;<function>svn_repos_fs_commit_txn</function>.
-        This function will actually first run the
-        <literal>pre-commit</literal> hook script if one exists, then
-        commit the transaction, and finally will run a
-        <literal>post-commit</literal> hook script.  The hooks provide
-        a special kind of reporting mechanism that does not really
-        belong in the core filesystem library itself.  (For more
-        information regarding Subversion's repository hooks, see <xref
-        linkend="svn-ch-5-sect-2.1" />.)</para>
+      <para>En el segmento de código anterior, se hacen llamadas
+        tanto a las interfaces de repositorio como de sistema de
+        ficheros. Igualmente podríamos haber enviado la transacción
+        usando <function>svn_fs_commit_txn</function>. Pero la API
+        del sistema de ficheros no sabe nada sobre los mecanismos
+        de enganche de la librería del repositorio. Si quiere que
+        su repositorio de Subversion realice automáticamente un
+        conjunto de tareas no relacionadas con Subversion cada vez
+        que envía una transacción (como por ejemplo, enviar un email
+        que describe los cambios realizados en esa transacción
+        a su lista de correo de desarrolladores), necesita
+        usar la versión envoltorio de la función libsvn_repos
+        apropiada&mdash;<function>svn_repos_fs_commit_txn</function>.
+        Esta función en realidad ejecutará primero el script de
+        enganche <literal>pre-commit</literal> si existe, entonces
+        enviará la transacción, y finalmente ejecutará el script
+        de enganche <literal>post-commit</literal>.  Los ganchos
+        proporcionan un mecanismo especial de información que no
+        pertenece a la librería del núcleo del sistema de ficheros.
+        (Para más información sobre los ganchos de repositorio de
+        Subversion, lea <xref linkend="svn-ch-5-sect-2.1" />.)</para>
       
-      <para>The hook mechanism requirement is but one of the reasons
-        for the abstraction of a separate repository library from the
-        rest of the filesystem code.  The libsvn_repos API provides
-        several other important utilities to Subversion.  These
-        include the abilities to:</para>
+      <para>El requisito del mecanismo de enganches es una de las
+        razones para abstraer la librería de repositorio del código
+        del sistema de ficheros.  La API libsvn_repos proporciona
+        algunas otras utilidades importantes para Subversion. Entre
+        ellas está la capacidad para:</para>
 
       <orderedlist>
         <listitem>
-          <para>create, open, destroy, and perform recovery steps on a
-            Subversion repository and the filesystem included in that
-            repository.</para>
+          <para>crear, abrir, destruír y realizar los pasos de
+            recuperación sobre un repositorio Subversion y el sistema
+            de ficheros incluido en el mismo.</para>
         </listitem>
         <listitem>
-          <para>describe the differences between two filesystem
-            trees.</para>
+          <para>describir las diferencias entre dos árboles de
+            sistema de ficheros.</para>
         </listitem>
         <listitem>
-          <para>query for the commit log messages
-            associated with all (or some) of the revisions in which a
-            set of files was modified in the filesystem.</para>
+          <para>obtener el informe de cambios asociado con todas
+            (o algunas) las revisiones en las cuales un conjunto de
+            ficheros fue modificado en el sistema de ficheros.</para>
         </listitem>
         <listitem>
-          <para>generate a human-readable <quote>dump</quote> of the
-            filesystem, a complete representation of the revisions in
-            the filesystem.</para>
+          <para>generar un <quote>volcado</quote> legible por un
+            humano del sistema de ficheros, una representación
+            completa de las revisiones en el sistema de
+            ficheros.</para>
         </listitem>
         <listitem>
-          <para>parse that dump format, loading the dumped revisions
-            into a different Subversion repository.</para>
+          <para>procesar el formato de ese volcado, cargando
+            revisiones volcadas en un repositorio Subversion
+            diferente.</para>
         </listitem>
       </orderedlist>
 
-      <para>As Subversion continues to evolve, the repository library
-        will grow with the filesystem library to offer increased
-        functionality and configurable option support.</para>
+      <para>A medida que Subversion continúa evolucionando, la
+        librería de repositorio seguirá creciendo con la librería
+        del sistema de ficheros para ofrecer una mayor funcionalidad
+        y soporte configurable de opciones.</para>
 
     </sect2>
 
