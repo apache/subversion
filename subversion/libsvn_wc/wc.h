@@ -53,8 +53,8 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_xml.h"
 #include "svn_wc.h"
-
 
 
 
@@ -346,33 +346,41 @@ svn_error_t *svn_wc__entry_remove (svn_string_t *path,
 
 
 
-
-struct svn_wc__entries_index
+/* Contains info about an entry, used by our xml parser and by the crawler. */
+typedef struct svn_wc__entry_baton_t
 {
   apr_pool_t *pool;
-  svn_string_t *path;  /* Which `entries' file we're looping over */
-  int nth_item;        /* The Nth entry we're looking for on this
-                          pass. */
-};
+  svn_xml_parser_t *parser;
+
+  svn_boolean_t found_it;  /* Gets set to true iff we see a matching entry. */
+
+  svn_boolean_t removing;  /* Set iff the task is to remove an entry. */
+
+  apr_file_t *infile;      /* The entries file we're reading from. */
+  apr_file_t *outfile;     /* If this is NULL, then we're GETTING
+                              attributes; if this is non-NULL, then
+                              we're SETTING attributes by writing a
+                              new file.  */
+
+  svn_string_t *entryname; /* The name of the entry we're looking for. */
+  svn_vernum_t version;    /* The version we will get or set. */
+  enum svn_node_kind kind; /* The kind we will get or set. */
+
+  apr_hash_t *attributes;  /* The attribute list from XML, which will
+                              be read from and written to. */
+
+  /* Flag to indicate "looping" over an entries file.  Call this
+     callback on each entry found */
+  svn_boolean_t looping;
+  svn_error_t *(*looper_callback) (void *callback_baton,
+                                   struct svn_wc__entry_baton_t *entrybaton);
+  void *callback_baton;
+
+} svn_wc__entry_baton_t;
 
 
-/* Start a loop over PATH's entries file, returning an entries_index. */
-svn_error_t *svn_wc__entries_start (struct svn_wc__entries_index **idx,
-                                    svn_string_t *path,
-                                    apr_pool_t *pool);
-
-
-/* Loop over the entries file, returning the name of each entry, as
-   well as all the other information normally returned by
-   svn_wc__entry_get().  When there are no more entries, *ENTRYNAME
-   will be set to null. */
-svn_error_t *svn_wc__entries_next (struct svn_wc__entries_index *idx,
-                                   svn_string_t **entryname,
-                                   svn_vernum_t *version,
-                                   enum svn_node_kind *kind,
-                                   apr_hash_t **hash);
-
-
+/* Take an entry baton BATON and parse the relevant `entries' file */
+svn_error_t *do_parse (svn_wc__entry_baton_t *baton);
 
 
 /* Set *ANCESTOR_VER and *ANCESTOR_PATH appropriately for the

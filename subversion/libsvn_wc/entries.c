@@ -220,32 +220,6 @@ svn_wc__entry_get_ancestry (svn_string_t *path,
  */
 
 
-/* The userdata that will go to our expat callbacks */
-typedef struct svn_wc__entry_baton_t
-{
-  apr_pool_t *pool;
-  svn_xml_parser_t *parser;
-
-  svn_boolean_t found_it;  /* Gets set to true iff we see a matching entry. */
-
-  svn_boolean_t removing;  /* Set iff the task is to remove an entry. */
-
-  apr_file_t *infile;      /* The entries file we're reading from. */
-  apr_file_t *outfile;     /* If this is NULL, then we're GETTING
-                              attributes; if this is non-NULL, then
-                              we're SETTING attributes by writing a
-                              new file.  */
-
-  svn_string_t *entryname; /* The name of the entry we're looking for. */
-  svn_vernum_t version;    /* The version we will get or set. */
-  enum svn_node_kind kind; /* The kind we will get or set. */
-
-  apr_hash_t *attributes;  /* The attribute list from XML, which will
-                              be read from and written to. */
-
-} svn_wc__entry_baton_t;
-
-
 
 /* Search through ATTS and fill in DESIRED_ATTRS appropriately.
    DESIRED_ATTRS is a hash whose keys are char *'s and values are
@@ -366,47 +340,79 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
   /* We only care about the `entry' tag; all other tags, such as `xml'
      and `wc-entries', are simply written back out verbatim. */
 
+  /* Found an entry: */
   if ((strcmp (tagname, SVN_WC__ENTRIES_ENTRY)) == 0)
     {
+      /* Get the "name" of this entry */
       const char *entry
         = svn_xml_get_attr_value (SVN_WC__ENTRIES_ATTR_NAME, atts);
-      
-      /* Nulls count as a match, because null represents the dir itself. */
-      if (((entry == NULL) && (baton->entryname == NULL))
-          || ((entry != NULL)
-              && (baton->entryname != NULL)
-              && ((strcmp (entry, baton->entryname->data)) == 0)))
-        {
-          baton->found_it = 1;
 
-          if (baton->outfile) /* we're writing out a change */
+      /* Are we simply looping and returning each entry? */
+      if (baton->looping)
+        {
+          /* Store the entry's name in the entrybaton */
+          baton->entryname = svn_string_create (entry, baton->pool);
+
+          /* Fill in all the other fields in the entrybaton */
+          get_entry_attributes (atts,
+                                &(baton->version),
+                                &(baton->kind),
+                                baton->attributes,
+                                baton->pool);
+
+          /* And call the looper callback! */
+          err = baton->looper_callback (baton->callback_baton,
+                                        baton);
+          if (err)
+            svn_xml_signal_bailout (err, baton->parser);
+          
+          return;
+        }
+
+      /* We're not looping, but looking for a *particular* entry to
+         set or get: */
+      else
+        {
+          /* Nulls count as a match, because null represents the dir itself. */
+          if (((entry == NULL) && (baton->entryname == NULL))
+              || ((entry != NULL)
+                  && (baton->entryname != NULL)
+                  && ((strcmp (entry, baton->entryname->data)) == 0)))
             {
-              /* Rewrite the tag only if we're not removing it. */
-              if (! baton->removing)
+              baton->found_it = 1;
+              
+              if (baton->outfile) /* we're writing out a change */
                 {
-                  err = write_entry (baton->outfile,
-                                     baton->entryname,
-                                     baton->version,
-                                     baton->kind,
-                                     baton->attributes,
-                                     baton->pool);
-                  if (err)
+                  /* Rewrite the tag only if we're not removing it. */
+                  if (! baton->removing)
                     {
-                      svn_xml_signal_bailout (err, baton->parser);
-                      return;
+                      err = write_entry (baton->outfile,
+                                         baton->entryname,
+                                         baton->version,
+                                         baton->kind,
+                                         baton->attributes,
+                                         baton->pool);
+                      if (err)
+                        {
+                          svn_xml_signal_bailout (err, baton->parser);
+                          return;
+                        }
                     }
                 }
+
+              else  /* just reading attribute values, not writing a new tag */
+                get_entry_attributes (atts,
+                                      &(baton->version),
+                                      &(baton->kind),
+                                      baton->attributes,
+                                      baton->pool);
             }
-          else  /* just reading attribute values, not writing a new tag */
-            get_entry_attributes (atts,
-                                  &(baton->version),
-                                  &(baton->kind),
-                                  baton->attributes,
-                                  baton->pool);
+
+          else  /* An entry tag, but not the one we're looking for. */
+            goto write_it_back_out;
         }
-      else  /* An entry tag, but not the one we're looking for. */
-        goto write_it_back_out;
     }
+    
   else  /* This is some tag other than `entry', preserve it unchanged.  */
     {
     write_it_back_out:
@@ -494,7 +500,7 @@ handle_end_tag (void *userData, const char *tagname)
 /* Code chunk shared by svn_wc__{get,set}_entry()
    
    Parses xml in BATON->infile using BATON as userdata. */
-static svn_error_t *
+svn_error_t *
 do_parse (svn_wc__entry_baton_t *baton)
 {
   svn_error_t *err;
