@@ -130,7 +130,9 @@ svn_cl__checkout (apr_getopt_t *os,
          ### happen. */
       svn_client_ctx_set_auth_baton (ctx, 
                                      svn_cl__make_auth_baton (opt_state,
-                                                              subpool));
+                                                              subpool),
+                                     svn_cl__create_auth_baton (opt_state,
+                                                                pool));
 
       SVN_ERR (svn_client_checkout (notify_func,
                                     notify_baton,

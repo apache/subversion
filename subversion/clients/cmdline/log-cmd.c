@@ -450,7 +450,8 @@ svn_cl__log (apr_getopt_t *os,
 
   /* Build an authentication object to give to libsvn_client. */
   svn_client_ctx_set_auth_baton (ctx,
-                                 svn_cl__make_auth_baton (opt_state, pool));
+                                 svn_cl__make_auth_baton (opt_state, pool),
+                                 svn_cl__create_auth_baton (opt_state, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);

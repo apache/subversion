@@ -31,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_opt.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -243,6 +244,12 @@ svn_cl__prompt_user (const char **result,
 svn_client_auth_baton_t *
 svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
                          apr_pool_t *pool);
+
+/* Helper for subcommands: given parsed OPT_STATE arguments from the
+   command-line, put auth info into a structure to pass to libsvn_client. */
+svn_auth_baton_t *
+svn_cl__create_auth_baton (svn_cl__opt_state_t *opt_state,
+                           apr_pool_t *pool);
 
 
 /*** Notification functions to display results on the terminal. */
