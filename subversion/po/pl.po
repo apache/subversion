@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-10-03 23:03+0200\n"
-"PO-Revision-Date: 2004-10-04 23:38+0200\n"
+"POT-Creation-Date: 2004-10-05 09:38+0200\n"
+"PO-Revision-Date: 2004-10-05 09:51+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -385,8 +385,8 @@ msgid "specify a password ARG"
 msgstr "użyj ARG jako hasła"
 
 #: clients/cmdline/main.c:100
-msgid "pass ARG as bundled options to GNU diff"
-msgstr "przekaż ARG jako opcję GNU diff"
+msgid "pass ARG as bundled options to diff (default: '-u')"
+msgstr "przekaż ARG jako zbiór opcji GNU diff (domyślnie: '-u')"
 
 #: clients/cmdline/main.c:102
 msgid "pass contents of file ARG as additional args"
@@ -1697,12 +1697,12 @@ msgstr "Nazwa pliku certyfikatu klienta: "
 msgid "Passphrase for '%s': "
 msgstr "Hasło (passphrase) dla '%s': "
 
-#: clients/cmdline/propdel-cmd.c:85 clients/cmdline/propedit-cmd.c:92
+#: clients/cmdline/propdel-cmd.c:85 clients/cmdline/propedit-cmd.c:91
 #: clients/cmdline/proplist-cmd.c:79 clients/cmdline/propset-cmd.c:116
 msgid "No URL target available"
 msgstr "Brak docelowego URL"
 
-#: clients/cmdline/propdel-cmd.c:91 clients/cmdline/propedit-cmd.c:98
+#: clients/cmdline/propdel-cmd.c:91 clients/cmdline/propedit-cmd.c:97
 #: clients/cmdline/proplist-cmd.c:85 clients/cmdline/propset-cmd.c:121
 msgid "Either a URL or versioned item is required"
 msgstr "Wymagane podanie URL lub obiektu"
@@ -1727,46 +1727,46 @@ msgstr "atrybut '%s' rekursywnie usunięty z '%s'.\n"
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "atrybut '%s' usunięty z '%s'.\n"
 
-#: clients/cmdline/propedit-cmd.c:130 clients/cmdline/propedit-cmd.c:259
+#: clients/cmdline/propedit-cmd.c:123 clients/cmdline/propedit-cmd.c:244
 #: clients/cmdline/propset-cmd.c:87
 msgid "Bad encoding option: prop value not stored as UTF8"
 msgstr "Nieprawidłowe kodowanie: wartość atrybutu nie jest w UTF8"
 
-#: clients/cmdline/propedit-cmd.c:139
+#: clients/cmdline/propedit-cmd.c:132
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "Ustaw nową wartość dla atrybutu '%s' w wersji %ld\n"
 
-#: clients/cmdline/propedit-cmd.c:145
+#: clients/cmdline/propedit-cmd.c:138
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
 msgstr "Atrybut '%s' bez zmian w wersji %ld\n"
 
-#: clients/cmdline/propedit-cmd.c:153
+#: clients/cmdline/propedit-cmd.c:146
 #, c-format
 msgid "Cannot specify revision for editing versioned property '%s'"
 msgstr "Nie można określić wersji dla edycji atrybutu '%s'"
 
-#: clients/cmdline/propedit-cmd.c:179 clients/cmdline/propset-cmd.c:179
+#: clients/cmdline/propedit-cmd.c:172 clients/cmdline/propset-cmd.c:179
 msgid "Explicit target argument required"
 msgstr "Parametr podający obiekt docelowy jest wymagany"
 
-#: clients/cmdline/propedit-cmd.c:204
+#: clients/cmdline/propedit-cmd.c:196
 #, c-format
 msgid "Editing property on non-local target '%s' not yet supported"
 msgstr "Zmiana atrybutu na zdalnym obiekcie '%s' nie jest jeszcze obsługiwana"
 
-#: clients/cmdline/propedit-cmd.c:227
+#: clients/cmdline/propedit-cmd.c:219
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' nie wygląda na ścieżkę kopii roboczej"
 
-#: clients/cmdline/propedit-cmd.c:265
+#: clients/cmdline/propedit-cmd.c:250
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
 msgstr "Ustaw nową wartość atrybutu '%s' dla '%s'\n"
 
-#: clients/cmdline/propedit-cmd.c:272
+#: clients/cmdline/propedit-cmd.c:257
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
 msgstr "Bez zmian atrybutu %s dla '%s'\n"
@@ -1814,7 +1814,7 @@ msgstr ""
 "\n"
 "Zatwierdzona wersja %ld.\n"
 
-#: clients/cmdline/util.c:125
+#: clients/cmdline/util.c:128
 msgid ""
 "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and "
 "no 'editor-cmd' run-time configuration option was found"
@@ -1822,48 +1822,48 @@ msgstr ""
 "Nie zdefiniowano żadnej spośród zmiennych środowiskowych SVN_EDITOR, VISUAL "
 "ani EDITOR, nie zdefiniowano też opcji konfiguracyjnej 'editor-cmd'"
 
-#: clients/cmdline/util.c:135
+#: clients/cmdline/util.c:155
 msgid "Can't get working directory"
 msgstr "Nie można ustalić katalogu bieżącego"
 
-#: clients/cmdline/util.c:146
+#: clients/cmdline/util.c:166
 #, c-format
 msgid "Can't change working directory to '%s'"
 msgstr "Nie można zmienić katalogu bieżącego na '%s'"
 
-#: clients/cmdline/util.c:172
+#: clients/cmdline/util.c:192
 #, c-format
 msgid "Can't write to '%s'"
 msgstr "Nie można pisać do '%s'"
 
-#: clients/cmdline/util.c:187 clients/cmdline/util.c:211
+#: clients/cmdline/util.c:207 clients/cmdline/util.c:231
 #: libsvn_fs_fs/fs_fs.c:3334 libsvn_subr/io.c:2135
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Nie można pobrać informacji o '%s'"
 
-#: clients/cmdline/util.c:202
+#: clients/cmdline/util.c:222
 #, c-format
 msgid "system('%s') returned %d"
 msgstr "Polecenie system('%s') zwróciło %d"
 
-#: clients/cmdline/util.c:258
+#: clients/cmdline/util.c:287
 msgid "Can't restore working directory"
 msgstr "Nie można odtworzyć katalogu bieżącego"
 
-#: clients/cmdline/util.c:296
+#: clients/cmdline/util.c:325
 msgid "Log message contains a zero byte"
 msgstr "Opis zmian zawiera bajt zerowy"
 
-#: clients/cmdline/util.c:354
+#: clients/cmdline/util.c:383
 msgid "Your commit message was left in a temporary file:"
 msgstr "Opis zmian pozostawiono w pliku tymczasowym:"
 
-#: clients/cmdline/util.c:406
+#: clients/cmdline/util.c:435
 msgid "--This line, and those below, will be ignored--"
 msgstr "--Ta linia i następne zostaną zignorowane--"
 
-#: clients/cmdline/util.c:527
+#: clients/cmdline/util.c:547
 msgid ""
 "Could not use external editor to fetch log message; consider setting the "
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
@@ -1873,7 +1873,7 @@ msgstr ""
 "odpowiednio zmienną środowiskową SVN_EDITOR albo skorzystaj z odpowiedniej "
 "spośród opcji: --message (-m) bądź --file (-F)"
 
-#: clients/cmdline/util.c:562
+#: clients/cmdline/util.c:582
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -4048,9 +4048,9 @@ msgid "Can't open '%s'"
 msgstr "Nie mozna otworzyć '%s'"
 
 #: libsvn_subr/io.c:259 libsvn_subr/io.c:343
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to make name for '%s'"
-msgstr "Nie zdołano otworzyć repozytorium '%s'"
+msgstr "Nie zdołano przydzielić nazwy dla '%s'"
 
 #: libsvn_subr/io.c:346 libsvn_subr/io.c:373 libsvn_subr/io.c:401
 msgid "Symbolic links are not supported on this platform"
@@ -4080,7 +4080,6 @@ msgid "Can't flush stream"
 msgstr "Nie można opróżnić strumienia"
 
 #: libsvn_subr/io.c:1250 libsvn_subr/io.c:1267
-#, fuzzy
 msgid "Can't flush file to disk"
 msgstr "Nie można opróżnić pliku na dysk"
 
@@ -4265,14 +4264,14 @@ msgid "Can't hide directory '%s'"
 msgstr "Nie można ukryć katalogu '%s'"
 
 #: libsvn_subr/io.c:2218
-#, fuzzy, c-format
+#, c-format
 msgid "Can't stat directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można pobrać informacji o katalogu '%s'"
 
 #: libsvn_subr/io.c:2234
-#, fuzzy, c-format
+#, c-format
 msgid "Can't stat new directory '%s'"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można pobrać informacji o nowym katalogu '%s'"
 
 #: libsvn_subr/io.c:2294
 #, c-format
@@ -5561,24 +5560,20 @@ msgstr ""
 "Dostępne polecenia:\n"
 
 #: svndumpfilter/main.c:854
-#, fuzzy
 msgid "Excluding (and dropping empty revisions for) prefixes:\n"
-msgstr "Wyłączając ( i opuszczając puste wersje ) przedrostki:\n"
+msgstr "Wykluczając prefiksy (i opuszczając puste wersje):\n"
 
 #: svndumpfilter/main.c:856
-#, fuzzy
 msgid "Excluding prefixes:\n"
-msgstr "Wyłączając przedrostki:\n"
+msgstr "Wykluczając prefiksy:\n"
 
 #: svndumpfilter/main.c:858
-#, fuzzy
 msgid "Including (and dropping empty revisions for) prefixes:\n"
-msgstr "Włączając ( i opuszczając puste wersje ) przedrostki:\n"
+msgstr "Włączając prefiksy (i opuszczając puste wersje):\n"
 
 #: svndumpfilter/main.c:860
-#, fuzzy
 msgid "Including prefixes:\n"
-msgstr "Włączając przedrostki:\n"
+msgstr "Łącznie z prefiksami:\n"
 
 #: svndumpfilter/main.c:887
 #, c-format
