@@ -324,7 +324,7 @@ log_do_run_cmd (struct log_runner *loggy,
     *infile = NULL,
     *outfile = NULL,
     *errfile = NULL;
-  const char *args[9];
+  const char *args[10];
   
   args[0] = name;
   /* Grab the arguments.
