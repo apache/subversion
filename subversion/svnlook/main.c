@@ -1018,7 +1018,7 @@ main (int argc, const char * const *argv)
       if (! strcmp (argv[2], "txn")) /* transaction */
         {
           c.is_revision = FALSE;
-          txn_name = (char *)argv[3];
+          txn_name = argv[3];
         }
       else if (! strcmp (argv[2], "rev")) /* revision */
         {

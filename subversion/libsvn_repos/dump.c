@@ -66,7 +66,7 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
-      svn_stringbuf_appendbytes (*strbuf, (char *) key, keylen);
+      svn_stringbuf_appendbytes (*strbuf, (const char *) key, keylen);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
       /* Output value length, then value. */

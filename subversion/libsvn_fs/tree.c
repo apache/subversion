@@ -3405,7 +3405,7 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
       svn_revnum_t revision;
 
       apr_hash_this (hi, &key, NULL, NULL);
-      revision = *((svn_revnum_t *)key);
+      revision = *((const svn_revnum_t *)key);
       (*((svn_revnum_t *) apr_array_push (*revs))) = revision;
     }
 

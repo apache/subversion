@@ -714,11 +714,13 @@ svn_fs__rep_contents (svn_string_t *str,
                       trail_t *trail)
 {
   apr_size_t len;
+  char *data;
 
   SVN_ERR (svn_fs__rep_contents_size (&(str->len), fs, rep_key, trail));
-  str->data = apr_palloc (trail->pool, str->len);
+  data = apr_palloc (trail->pool, str->len);
+  str->data = data;
   len = str->len;
-  SVN_ERR (rep_read_range (fs, rep_key, (char *) str->data, 0, &len, trail));
+  SVN_ERR (rep_read_range (fs, rep_key, data, 0, &len, trail));
 
   /* Paranoia. */
   if (len != str->len)

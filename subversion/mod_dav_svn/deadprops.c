@@ -55,7 +55,7 @@ static const char *get_repos_path (struct dav_resource_private *info)
 
 /* construct the repos-local name for the given DAV property name */
 static void get_repos_propname(dav_db *db, const dav_prop_name *name,
-                               char **repos_propname)
+                               const char **repos_propname)
 {
   if (strcmp(name->ns, SVN_PROP_PREFIX) == 0)
     {
@@ -67,7 +67,7 @@ static void get_repos_propname(dav_db *db, const dav_prop_name *name,
   else if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
     {
       /* the name of a custom prop is just the name -- no ns URI */
-      *repos_propname = (char *)name->name;
+      *repos_propname = name->name;
     }
   else
     {
@@ -78,7 +78,7 @@ static void get_repos_propname(dav_db *db, const dav_prop_name *name,
 static dav_error *get_value(dav_db *db, const dav_prop_name *name,
                             svn_string_t **pvalue)
 {
-  char *propname;
+  const char *propname;
   svn_error_t *serr;
 
   /* get the repos-local name */
@@ -118,7 +118,7 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
 static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                              const svn_string_t *value)
 {
-  char *propname;
+  const char *propname;
   svn_error_t *serr;
 
   /* get the repos-local name */
@@ -293,7 +293,7 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
 static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
 {
   svn_error_t *serr;
-  char *propname;
+  const char *propname;
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
@@ -322,7 +322,7 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
 
 static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
 {
-  char *propname;
+  const char *propname;
   svn_string_t *propval;
   svn_error_t *serr;
 

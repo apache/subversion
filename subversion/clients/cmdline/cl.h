@@ -52,7 +52,7 @@ typedef enum {
   svn_cl__targets_opt,
   svn_cl__xml_opt,
   svn_cl__strict_opt,
-  svn_cl__no_ignore_opt,
+  svn_cl__no_ignore_opt
 } svn_cl__longopt_t;
 
 
