@@ -193,7 +193,7 @@ txn_body_open_txn_root (void *baton,
   SVN_ERR (svn_fs__txn_root_node (&root, args->txn->fs, args->txn->id, trail));
 
   *args->dir_p = root;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -210,7 +210,7 @@ svn_fs_open_txn_root (svn_fs_node_t **dir_p,
   SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_open_txn_root, &args, pool));
 
   *dir_p = dir;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
