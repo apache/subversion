@@ -61,6 +61,8 @@ extern "C" {
 
 /** Patch number.
  *
+ * @since New in 1.1.
+ *
  * Modify for every released patch.
  */
 #define SVN_VER_PATCH      0
