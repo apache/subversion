@@ -1,0 +1,43 @@
+head     1.1;
+branch   1.1.1;
+access   ;
+symbols
+	vendorbranch:1.1.1
+	vendortag:1.1.1.1;
+locks    ; strict;
+comment  @# @;
+
+
+1.1
+date     2003.07.28.15.00.00;  author jrandom;  state Exp;
+branches 1.1.1.1;
+next     ;
+
+1.1.1.1
+date     2003.07.28.15.00.00;  author jrandom;  state Exp;
+branches ;
+next     ;
+
+
+desc
+@@
+
+
+
+1.1
+log
+@The content of this revision is unimportant, what matters is that
+this log message contains a Ctrl-D right here, "", and cvs2svn.py
+should handle this.
+@
+text
+@Nothing to see here.
+@
+
+
+1.1.1.1
+log
+@imported
+@
+text
+@@

@@ -372,6 +372,11 @@ def space_fname():
     raise svntest.Failure
 
 
+def ctrl_char_in_log():
+  "handle a control char in a log message (issue #1106)"
+  repos, wc, logs = ensure_conversion('ctrl-char-in-log')
+
+
 def phoenix_branch():
   "convert a branch file rooted in a 'dead' revision"
   repos, wc, logs = ensure_conversion('phoenix')
@@ -719,6 +724,7 @@ test_list = [ None,
               phoenix_branch,
               attr_exec,
               space_fname,
+              ctrl_char_in_log,
               two_quick,
               prune_with_care,
               double_delete,
