@@ -5,7 +5,7 @@
 #
 TEST_ROOT="/home/brane/svn"
 
-# Installation path, everything under that is considered 
+# Installation path, everything under that is considered
 # to be temporary
 INST_DIR="$TEST_ROOT/inst"
 
@@ -36,6 +36,16 @@ MAKE_OPTS=
 # RAMDISK=<yes|no>
 RAMDISK=no
 
+#
+# Whether to test the BDB backend, TEST_FSFS=<yes|no>
+#
+TEST_BDB=yes
+
+#
+# Whether to test the FSFS backend, TEST_FSFS=<yes|no>
+#
+TEST_FSFS=yes
+
 # This should correspond with your httpd Listen directive
 RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:42024"
 
@@ -58,11 +68,6 @@ FROM="brane@xbc.nu"
 TO="svn-breakage@subversion.tigris.org"
 ERROR_TO="brane@hermes.si"
 REPLY_TO="dev@subversion.tigris.org"
-
-#
-# Revision number prefix for the e-mail subject
-#
-REVPREFIX="rev "
 
 #
 # Path to utilities
@@ -140,6 +145,11 @@ TAIL="$USRBIN/tail"
 TAIL_100="$TAIL -n 100"
 TOUCH="$USRBIN/touch"
 UMOUNT="$BIN/umount"
+
+#
+# Branch prefix for the e-mail subject
+#
+REVPREFIX=`$SVN info $SVN_REPO | $SED -ne 's@^URL .*/repos/svn/\(.*\)$@\1 r@p'`
 
 #
 # Helper functions
