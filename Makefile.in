@@ -135,7 +135,7 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 
 # these commands run SWIG to generate wrapper source files (*.c)
 RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@ $<
-RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o $@ $<
+RUN_SWIG_JAVA = cd ${abs_srcdir}/subversion/bindings/swig/java/org/tigris/subversion/swig && $(SWIG) -c -java -noproxy -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@ ${abs_builddir}/$<
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@ $<
