@@ -37,7 +37,7 @@
    functions invoked deep in the recursion can get access to this
    traversal's global parameters, without using global variables.  */
 struct context {
-  svn_delta_edit_fns_t *editor;
+  const svn_delta_edit_fns_t *editor;
   svn_fs_root_t *source_root;
   apr_hash_t *source_rev_diffs;
   svn_fs_root_t *target_root;
@@ -145,7 +145,7 @@ svn_fs_dir_delta (svn_fs_root_t *source_root,
                   apr_hash_t *source_rev_diffs,
                   svn_fs_root_t *target_root,
                   const char *target_path,
-                  svn_delta_edit_fns_t *editor,
+                  const svn_delta_edit_fns_t *editor,
                   void *edit_baton,
                   apr_pool_t *pool)
 {
@@ -305,12 +305,11 @@ get_revision_from_hash (apr_hash_t *hash, svn_string_t *path,
   while ((! SVN_IS_VALID_REVNUM(revision)) 
          && (! svn_path_is_empty (path_copy, svn_path_repos_style)))
     {
-      void *v;
       svn_path_remove_component (path_copy, svn_path_repos_style);
 
-      v = apr_hash_get (hash, path_copy->data, APR_HASH_KEY_STRING);
+      val = apr_hash_get (hash, path_copy->data, APR_HASH_KEY_STRING);
       if (val)
-        revision = *((svn_revnum_t *) v);
+        revision = *((svn_revnum_t *) val);
     }
   
   return revision;
