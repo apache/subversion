@@ -40,6 +40,7 @@ void svn_ruby_init_fs_node (void);
 void svn_ruby_init_fs_root (void);
 void svn_ruby_init_fs_txn (void);
 void svn_ruby_init_ra (void);
+void svn_ruby_init_repos (void);
 void svn_ruby_init_stream (void);
 void svn_ruby_init_txdelta (void);
 void svn_ruby_init_types (void);
