@@ -44,7 +44,7 @@ begin_trail (trail_t **trail_p,
 {
   trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
 
-  trail->pool = pool;
+  trail->pool = svn_pool_create (pool);
   trail->undo = 0;
   SVN_ERR (DB_WRAP (fs, "beginning Berkeley DB transaction",
                     txn_begin (fs->env, 0, &trail->db_txn, 0)));
