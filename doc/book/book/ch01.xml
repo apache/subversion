@@ -126,11 +126,11 @@
       chunk of the work (it pays the salaries of a few full-time
       Subversion developers), Subversion is run like most open-source
       projects, governed by a loose, transparent set of rules that
-      encourage <firstterm>meritocracy</firstterm>.  CollabNet's
-      copyright license is fully compliant with the Debian Free
-      Software Guidelines.  In other words, anyone is free to
-      download, modify, and redistribute Subversion as he pleases; no
-      permission from CollabNet or anyone else is required.</para>
+      encourage meritocracy.  CollabNet's copyright license is fully
+      compliant with the Debian Free Software Guidelines.  In other
+      words, anyone is free to download, modify, and redistribute
+      Subversion as he pleases; no permission from CollabNet or anyone
+      else is required.</para>
 
   </sect1>
 

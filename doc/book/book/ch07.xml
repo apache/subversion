@@ -1868,7 +1868,7 @@ Fetching external item into calc/third-party/skins
       <screen>
 &hellip;
 $ svn import /path/to/libcomplex-1.0 \
-             http://svn.example.com/repos/calc/vendor/libcomplex/current \
+             http://svn.example.com/repos/vendor/libcomplex/current \
              -m 'importing initial 1.0 vendor drop'
 &hellip;
 </screen>
@@ -1880,8 +1880,8 @@ $ svn import /path/to/libcomplex-1.0 \
         make our customizations to it.</para>
     
       <screen>
-$ svn copy http://svn.example.com/repos/calc/vendor/libcomplex/current  \
-           http://svn.example.com/repos/calc/vendor/libcomplex/1.0      \
+$ svn copy http://svn.example.com/repos/vendor/libcomplex/current  \
+           http://svn.example.com/repos/vendor/libcomplex/1.0      \
            -m 'tagging libcomplex-1.0'
 &hellip;
 $ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
@@ -2010,8 +2010,8 @@ $ svn commit -m 'merging libcomplex-1.1 into the main branch'
         might look like:</para>
 
       <screen>
-$ svn_load_dirs.pl http://svn.example.com/repos/calc/vendor/libcomplex \
-                   current                                             \
+$ svn_load_dirs.pl http://svn.example.com/repos/vendor/libcomplex \
+                   current                                        \
                    /path/to/libcomplex-1.1
 &hellip;
 </screen>
@@ -2023,9 +2023,9 @@ $ svn_load_dirs.pl http://svn.example.com/repos/calc/vendor/libcomplex \
         the first program argument.</para>
 
       <screen>
-$ svn_load_dirs.pl -t libcomplex-1.1                                   \
-                   http://svn.example.com/repos/calc/vendor/libcomplex \
-                   current                                             \
+$ svn_load_dirs.pl -t libcomplex-1.1                              \
+                   http://svn.example.com/repos/vendor/libcomplex \
+                   current                                        \
                    /path/to/libcomplex-1.1
 &hellip;
 </screen>
