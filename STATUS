@@ -35,13 +35,3 @@ Candidate changes:
 Approved changes (further review is welcome, but not required):
 
   
-  * r13222, r13223, r13232
-    Rewrite libsvn_fs_fs's auto-merge algorithm
-    Justification:
-      unacceptable performance (>50 minutes for a small commit) in
-      a repository with 300,000 revisions
-    Branch:
-      1.1.x-r13222@13517
-    Votes:
-      +1: epg, ghudson, jszakmeister
-
