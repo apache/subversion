@@ -31,24 +31,102 @@ tree delta format; the semantics require merely that working copies
 and repositories have some way to communicate their `state' to each
 other:
 
-  (A) Modifying a file's contents is a change to that file only.
+fooo everything above will need rewriting maybe
 
-  (B) Renames, adds, and deletes are considered changes to *both* the
-      target entity and its parent.
+As the trees change over time, the working copy and repository each
+track their respective changes.  There are two kinds of changes,
+"direct" and "indirect":
 
-  (C) A working copy's "state" is a snapshot (maybe a skelta?) that
+               Direct Change        Indirect Change
+          ._____________________._____________________.
+          |                     |                     |
+          |      Change to      |   [No indirect      |
+   file   |   file's contents   |   changes on        |
+          |                     |   files]            |
+          |_____________________|_____________________|
+          |                     |                     |
+   dir    |     Dir is added,   |  An immediate child |
+          | removed, or renamed |  of dir is added,   |
+          |                     |  removed, or        |
+          |                     |  renamed            |
+          |_____________________|_____________________|
+
+
+In order to do commits and updates, the client and server must compare
+changesets.  In the case of a commit, the comparison is part of the
+pre-commit up-to-date check; in an update, the comparison determines
+what changes will be sent from server to client.
+
+A pre-commit check is read-only in the working copy, and does not do
+intelligent conflict checking.  It is only concerned with whether the
+working copy's entities are up-to-date -- that is, whether there have
+been divergent changes on the same entities in both the working copy
+and the repository.  If so, then the working copy is out-of-date.
+
+An update, on the other hand, can affect the working copy.  Updates
+merge changes where possible (not only textual changes, but
+tree-structure changes), and signal conflicts where merging is not
+possible.
+
+Below, we describe
+
+  * How the wc describes its state to the server.
+
+  * In the case of a commit,
+       a) how the server uses this state to perform a pre-commit check.
+       b) how the client completes the commit.
+
+  * In the case of an update,
+       a) how the server uses this state to generate an update delta.
+       b) how the client applies an update delta.
+
+fooo working here
+
+
+
+ (i.e., what gets merged vs what is
+     flagged as a conflict, and especially what the verb "flag as a
+     conflict" *means* in different kinds of conflicts).
+
+WC State
+R State
+conflict
+
+Def: Modifying a file's contents is a "direct change" to that file.
+
+Def: A rename, add, or delete is considered a direct change to the
+      target(s), and an "indirect change" to the parent(s).
+
+Def: A working copy's "WC state" is a snapshot (maybe a skelta?) that
       shows the base versions, and any changes, for all entities in
-      the working copy.  (Thus, given a wc state, the repository could
-      theoretically reconstruct the entire working copy, modulo the
-      actual content of uncomitted local changes.)
 
-  (D) The repository's "relative state" is a list of all entities that
-      have changed in the repository relative to a given working copy
-      state.
+Def: given a WC state, the repository could
+      theoretically reconstruct the entire working copy, except for
+      the actual content of uncomitted local changes.)
+      [Define the black box way drawn on the board?]
 
-  (E) Two changes "conflict" if they change the same thing.
+Def: A "R state" is a list of all entities that have changed in the
+      repository *relative* to a given WC state.  The repository can
+      calculate the R state for a given a WC state.
 
-  (F) The server never accepts a delta based on a wc state that
+Def: A WC state and a R state "conflict" iff they have any
+      conflicting changes -- defined in (F) below.
+
+Def: Changes conflict according to the following rules:
+
+         - Two direct changes to the same entity always conflict.
+
+         - An indirect and a direct change to the same entity conflict
+           iff the direct change affects the entity's type (e.g., wc
+           modifies foo/bar.c, but in the repository foo has been
+           changed to a regular file).
+
+         - Two indirect changes to the same entity never conflict.
+           ??? or just if same name ???
+
+         - Changes to different entities never conflict.
+
+Def: The server never accepts a delta based on a WC state that
       conflicts with the repository.  The client is always responsible
       for sending non-conflicting deltas.
 
@@ -68,7 +146,7 @@ together here:
 
          - commit case:
              Server sends back a message telling the working
-             copy it must update.  By principle (F), the client can
+             copy it must update.  By principle (G), the client can
              only commit based on a non-conflicting state, therefore
              the client must not only update, but also resolve any
              conflicts, before it can successfully commit.
