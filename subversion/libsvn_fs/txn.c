@@ -214,6 +214,42 @@ svn_fs_open_txn_root (svn_fs_node_t **dir_p,
 }
 
 
+
+struct list_transactions_args
+{
+  char ***names_p;
+  svn_fs_t *fs;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+txn_body_list_transactions (void* baton,
+                            trail_t *trail)
+{
+  struct list_transactions_args *args = baton;
+  SVN_ERR (svn_fs__get_txn_list (args->names_p, args->fs, args->pool, trail));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_list_transactions (char ***names_p,
+                          svn_fs_t *fs,
+                          apr_pool_t *pool)
+{
+  char **names;
+  struct list_transactions_args args;
+
+  args.names_p = &names;
+  args.fs = fs;
+  args.pool = pool;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_list_transactions, &args, pool));
+
+  *names_p = names;
+  return SVN_NO_ERROR;
+}
+
+
 
 /* 
  * local variables:
