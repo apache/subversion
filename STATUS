@@ -88,14 +88,6 @@ Candidate changes:
       +1: sussman
       +0: dlr
 
-  * r8562
-    Allow 'svnadmin setlog' to use propchange hooks correctly.
-    Justification:  user reported that this command can't run the hook at all.
-    Notes:  one line change, use "svnadmin" as username instead of NULL.
-    Votes:
-      +1: sussman
-      +0: dlr
-
   * r8431
     Bugfix to commits: allow deletions below schedule-add-with-history dirs.
     Justification:  reported by a user, an unnecessary restriction.
@@ -125,3 +117,9 @@ Candidate changes:
     Votes:
       +1: kfogel
       +0: dlr
+
+  * r8577, r8584
+    Prevent a potential ra_dav commit race-condition.
+    Justification:  fixes a conflict between deltaV and svn semantics.
+    Notes:  this can be a problem under high commit concurrency.
+      +1: sussman
