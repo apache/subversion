@@ -443,6 +443,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
    the main workhorse routine. */
 static svn_error_t *
 diff_file_added (svn_wc_adm_access_t *adm_access,
+                 svn_wc_notify_state_t *state,
                  const char *path,
                  const char *tmpfile1,
                  const char *tmpfile2,
@@ -461,7 +462,7 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
      user see that *something* happened. */
   diff_cmd_baton->force_diff_output = TRUE;
 
-  SVN_ERR (diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
+  SVN_ERR (diff_file_changed (adm_access, state, path, tmpfile1, tmpfile2, 
                               rev1, rev2,
                               mimetype1, mimetype2, diff_baton));
   
@@ -514,6 +515,7 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
    propsets gets printed to stdout. */
 static svn_error_t *
 diff_dir_added (svn_wc_adm_access_t *adm_access,
+                svn_wc_notify_state_t *state,
                 const char *path,
                 svn_revnum_t rev,
                 void *diff_baton)
@@ -612,9 +614,32 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   /* Easy out:  no access baton means there ain't no merge target */
   if (adm_access == NULL)
     {
-      *state = svn_wc_notify_state_missing;
+      if (state)
+        *state = svn_wc_notify_state_missing;
       return SVN_NO_ERROR;
     }
+  
+  /* Other easy outs:  if the merge target isn't under version
+     control, or is just missing from disk, fogettaboutit.  There's no
+     way svn_wc_merge() can do the merge. */
+  {
+    const svn_wc_entry_t *entry;
+    svn_node_kind_t kind;
+
+    SVN_ERR (svn_wc_entry (&entry, mine, adm_access, FALSE, subpool));
+    SVN_ERR (svn_io_check_path (mine, &kind, subpool));
+
+    /* ### a future thought:  if the file is under version control,
+       but the working file is missing, maybe we can 'restore' the
+       working file from the text-base, and then allow the merge to run?  */
+
+    if ((! entry) || (kind != svn_node_file))
+      {
+        if (state)
+          *state = svn_wc_notify_state_missing;
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* This callback is essentially no more than a wrapper around
      svn_wc_merge().  Thank goodness that all the
@@ -742,6 +767,7 @@ fetch_file_helper (svn_stream_t *target_stream,
 
 static svn_error_t *
 merge_file_added (svn_wc_adm_access_t *adm_access,
+                  svn_wc_notify_state_t *state,
                   const char *mine,
                   const char *older,
                   const char *yours,
@@ -789,34 +815,41 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                                  merge_b->ctx->cancel_baton,
                                  NULL, NULL, /* don't pass notify func! */
                                  merge_b->pool));
+
+            if (state)
+              *state = svn_wc_notify_state_changed;
           }
         }
       break;
     case svn_node_dir:
-      /* ### create a .drej conflict or something someday? */
-      return svn_error_createf (SVN_ERR_WC_NOT_FILE, NULL,
-                                "Cannot create file '%s' for addition, "
-                                "because a directory by that name "
-                                "already exists.", mine);
+      {
+        /* this will make the repos_editor send a 'skipped' message */
+        if (state)
+          *state = svn_wc_notify_state_obstructed;
+      }
     case svn_node_file:
       {
         /* file already exists, is it under version control? */
         const svn_wc_entry_t *entry;
-        enum svn_wc_merge_outcome_t merge_outcome;
         SVN_ERR (svn_wc_entry (&entry, mine, adm_access, FALSE, subpool));
 
         /* If it's an unversioned file, don't touch it.  If its scheduled
            for deletion, then rm removed it from the working copy and the
            user must have recreated it, don't touch it */
         if (!entry || entry->schedule == svn_wc_schedule_delete)
-          return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                                    "Cannot create file '%s' for addition, "
-                                    "because an unversioned file by that name "
-                                    "already exists.", mine);
-        SVN_ERR (svn_wc_merge (older, yours, mine, adm_access,
-                               ".older", ".yours", ".working", /* ###? */
-                               merge_b->dry_run, &merge_outcome, 
-                               merge_b->diff3_cmd, subpool));
+          {
+            /* this will make the repos_editor send a 'skipped' message */
+            if (state)
+              *state = svn_wc_notify_state_obstructed;
+          }
+        else
+          {
+            SVN_ERR (merge_file_changed (adm_access, state,
+                                         mine, older, yours,
+                                         rev1, rev2,
+                                         mimetype1, mimetype2,
+                                         baton));            
+          }
         break;      
       }
     default:
@@ -842,6 +875,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
+  svn_error_t *err;
 
   SVN_ERR (svn_io_check_path (mine, &kind, subpool));
   switch (kind)
@@ -850,18 +884,22 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (mine, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client__wc_delete (mine, parent_access, merge_b->force,
-                                      merge_b->dry_run, merge_b->ctx, subpool));
-      if (state)
-        *state = svn_wc_notify_state_changed;
+      err = svn_client__wc_delete (mine, parent_access, merge_b->force,
+                                   merge_b->dry_run, merge_b->ctx, subpool);
+      if (err && state)
+        {
+          *state = svn_wc_notify_state_obstructed;
+          svn_error_clear (err);
+        }
+      else if (state)
+        {
+          *state = svn_wc_notify_state_changed;
+        }
       break;
     case svn_node_dir:
-      /* ### Create a .drej conflict or something someday?  If force is set
-         ### should we carry out the delete? */
-      return svn_error_createf (SVN_ERR_WC_NOT_FILE, NULL,
-                                "Cannot schedule file '%s' for deletion, "
-                                "because a directory by that name "
-                                "already exists.", mine);
+      if (state)
+        *state = svn_wc_notify_state_obstructed;
+      break;
     case svn_node_none:
       /* file is already non-existent, this is a no-op. */
       if (state)
@@ -877,6 +915,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
 
 static svn_error_t *
 merge_dir_added (svn_wc_adm_access_t *adm_access,
+                 svn_wc_notify_state_t *state,
                  const char *path,
                  svn_revnum_t rev,
                  void *baton)
@@ -905,6 +944,9 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                merge_b->ctx->cancel_baton,
                                NULL, NULL, /* don't pass notification func! */
                                merge_b->pool));
+
+          if (state)
+              *state = svn_wc_notify_state_changed;
         }
       break;
     case svn_node_dir:
@@ -920,14 +962,13 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                merge_b->ctx->cancel_baton,
                                NULL, NULL, /* don't pass notification func! */
                                merge_b->pool));
+          if (state)
+              *state = svn_wc_notify_state_changed;
         }
       break;
     case svn_node_file:
-      /* ### create a .drej conflict or something someday? */
-      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                                "Cannot create directory '%s' for addition, "
-                                "because a file by that name "
-                                "already exists.", path);
+      if (state)
+        *state = svn_wc_notify_state_obstructed;
       break;
     default:
       break;
@@ -948,6 +989,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
+      svn_error_t *err;
   
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
@@ -956,18 +998,22 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
       svn_path_split (path, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
-      SVN_ERR (svn_client__wc_delete (path, parent_access, merge_b->force,
-                                      merge_b->dry_run, merge_b->ctx, subpool));
-      if (state)
-        *state = svn_wc_notify_state_changed;
+      err = svn_client__wc_delete (path, parent_access, merge_b->force,
+                                   merge_b->dry_run, merge_b->ctx, subpool);
+      if (err && state)
+        {
+          *state = svn_wc_notify_state_obstructed;
+          svn_error_clear (err);
+        }
+      else if (state)
+        {
+          *state = svn_wc_notify_state_changed;
+        }
       break;
     case svn_node_file:
-      /* ### Create a .drej conflict or something someday?  If force is set
-         ### should we carry out the delete? */
-      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                                "Cannot schedule directory '%s' for deletion, "
-                                "because a file by that name "
-                                "already exists.", path);
+      if (state)
+        *state = svn_wc_notify_state_obstructed;
+      break;
     case svn_node_none:
       /* dir is already non-existent, this is a no-op. */
       if (state)

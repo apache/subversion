@@ -544,7 +544,8 @@ delete_entry (const char *path,
       break;
     }
 
-  if (state == svn_wc_notify_state_missing)
+  if ((state == svn_wc_notify_state_missing)
+      || (state == svn_wc_notify_state_obstructed))
     action = svn_wc_notify_skip;
   else
     action = svn_wc_notify_delete;
@@ -574,22 +575,32 @@ add_directory (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
   svn_wc_adm_access_t *adm_access;
+  svn_wc_notify_state_t state;
+  svn_wc_notify_action_t action;
 
   /* ### TODO: support copyfrom? */
 
   b = make_dir_baton (path, pb, TRUE, pool);
   *child_baton = b;
 
-  SVN_ERR (get_path_access (&adm_access, pb->edit_baton->adm_access, pb->wcpath,
+  SVN_ERR (get_path_access (&adm_access,
+                            pb->edit_baton->adm_access, pb->wcpath,
                             pb->edit_baton->dry_run, pool));
+
   SVN_ERR (pb->edit_baton->diff_callbacks->dir_added 
-           (adm_access, b->wcpath, eb->target_revision,
+           (adm_access, &state, b->wcpath, eb->target_revision,
             pb->edit_baton->diff_cmd_baton));
+
+  if ((state == svn_wc_notify_state_missing)
+      || (state == svn_wc_notify_state_obstructed))
+    action = svn_wc_notify_skip;
+  else
+    action = svn_wc_notify_update_add;
 
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
                                     b->wcpath,
-                                    svn_wc_notify_update_add,
+                                    action,
                                     svn_node_dir,
                                     NULL,
                                     svn_wc_notify_state_unknown,
@@ -774,7 +785,8 @@ close_file (void *file_baton,
 
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
-                 (adm_access, b->wcpath,
+                 (adm_access, &content_state,
+                  b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   0,
@@ -812,7 +824,8 @@ close_file (void *file_baton,
      outstanding.  But when we take a wc_path as an argument to
      merge, then we'll need to pass around a wc path somehow. */
 
-  if (content_state == svn_wc_notify_state_missing)
+  if ((content_state == svn_wc_notify_state_missing)
+      || (content_state == svn_wc_notify_state_obstructed))
     action = svn_wc_notify_skip;
   else if (b->added)
     action = svn_wc_notify_update_add;
