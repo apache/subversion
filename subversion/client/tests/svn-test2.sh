@@ -3,6 +3,7 @@
 # Testing merging and conflict resolution.
 
 SVN_PROG=../svn
+XML_DIR=$1
 TEST_DIR_1=t1
 TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit2
@@ -32,7 +33,7 @@ echo
 echo "Checking out ${TEST_DIR_1}."
 ${SVN_PROG} checkout                                      \
       --target-dir ${TEST_DIR_1}                          \
-      --xml-file ../../tests-common/xml/co1-inline.xml    \
+      --xml-file $XML_DIR/co1-inline.xml    \
       --revision 1                                        \
       --ancestor-path ${ANCESTOR_PATH}
 
@@ -40,13 +41,13 @@ check_status 1
 
 ### Give t1/iota some file-properties via update.
 echo "Updating t1/iota with properties.  (up2.xml)"
-${SVN_PROG} update --xml-file ../../tests-common/xml/up2.xml \
+${SVN_PROG} update --xml-file $XML_DIR/up2.xml \
                    --revision 17 ${TEST_DIR_1}
 check_status 2
 
 ### Give t1/A some dir-properties via update.
 echo "Updating t1/A/ with properties.  (up5.xml)"
-${SVN_PROG} update --xml-file ../../tests-common/xml/up5.xml \
+${SVN_PROG} update --xml-file $XML_DIR/up5.xml \
                    --revision 18 ${TEST_DIR_1}
 check_status 3
 
@@ -83,13 +84,13 @@ check_status 8
 
 ### Update again.  This update should create conflicting properties.
 echo "Updating with (conflicting) properties.  (up-props.xml)"
-${SVN_PROG} update --xml-file ../../tests-common/xml/up-props.xml \
+${SVN_PROG} update --xml-file $XML_DIR/up-props.xml \
                    --revision 20 ${TEST_DIR_1}
 check_status 9
 
 ### Update again.  This update should create conflicting text.
 echo "Updating with (conflicting) text.  (pipatch.xml)"
-${SVN_PROG} update --xml-file ../../tests-common/xml/pipatch.xml \
+${SVN_PROG} update --xml-file $XML_DIR/pipatch.xml \
                    --revision 21 ${TEST_DIR_1}
 check_status 10
 

@@ -6,26 +6,17 @@ ra_dav_test_SOURCES = ra-dav-test.c
 ra_commit_SOURCES = ra-commit.c
 
 ## Flags needed when compiling:
-INCLUDES = -I../../include -I../../../apr/include
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
 
 ## Libraries this binary depends upon:
-ra_dav_test_LDADD = ../libsvn_ra_dav.la                     \
-                    ../../libsvn_wc/libsvn_wc.la            \
-                    ../../libsvn_subr/libsvn_subr.la        \
-                    ../../libsvn_delta/libsvn_delta.la      \
-                    ../../../expat-lite/libexpat.la         \
-                    ../../../neon/libneon.la                \
-                    @SVN_APR_LIBS@
+ra_dav_test_LDADD = @SVN_LIBSVN_RA_DAV_LIBS@ @SVN_LIBSVN_WC_LIBS@ \
+                    @SVN_LIBSVN_SUBR_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
+                    @SVN_EXPAT_LIBS@ @SVN_NEON_LIBS@ @SVN_APR_LIBS@
 
 ## Libraries this binary depends upon:
-ra_commit_LDADD = ../libsvn_ra_dav.la                     \
-                    ../../libsvn_wc/libsvn_wc.la            \
-                    ../../libsvn_subr/libsvn_subr.la        \
-                    ../../libsvn_delta/libsvn_delta.la      \
-                    ../../../expat-lite/libexpat.la         \
-                    ../../../neon/libneon.la                \
-                    @SVN_APR_LIBS@
-
+ra_commit_LDADD = @SVN_LIBSVN_RA_DAV_LIBS@ @SVN_LIBSVN_WC_LIBS@ \
+                    @SVN_LIBSVN_SUBR_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
+                    @SVN_EXPAT_LIBS@ @SVN_NEON_LIBS@ @SVN_APR_LIBS@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

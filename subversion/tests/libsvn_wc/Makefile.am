@@ -5,27 +5,22 @@ noinst_PROGRAMS = checkout-test commit-test
 checkout_test_SOURCES = checkout-test.c
 commit_test_SOURCES = commit-test.c
 
-
 ## Flags needed when compiling:
-INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Libraries this binary depends upon:
-checkout_test_LDADD = ../libsvn_wc.la                          \
-                      ../../libsvn_delta/libsvn_delta.la       \
-                      ../../libsvn_subr/libsvn_subr.la         \
-                      @SVN_APR_LIBS@                           \
-                      ../../../expat-lite/libexpat.la
+checkout_test_LDADD = @SVN_LIBSVN_WC_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
+                      @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
-commit_test_LDADD = ../libsvn_wc.la                          \
-                    ../../libsvn_delta/libsvn_delta.la       \
-                    ../../tests-common/libsvn_test_editor.la \
-                    ../../libsvn_subr/libsvn_subr.la         \
-                    @SVN_APR_LIBS@                           \
-                    ../../../expat-lite/libexpat.la
+commit_test_LDADD = @SVN_LIBSVN_WC_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
+                    @SVN_TESTS_COMMON_EDITOR_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+                    @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
 ## Automatic test scripts to run for `make check`
-
 TESTS = checkout-test.sh
+
+## For some reason, we need to include this in the distribution
+EXTRA_DIST = checkout-test.sh

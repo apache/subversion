@@ -5,19 +5,18 @@ hashdump_test_SOURCES = hashdump-test.c
 stringtest_SOURCES = stringtest.c
 
 ## Flags needed when compiling:
-INCLUDES = -I../../include -I../../../apr/include
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
 
 ## Libraries this binary depends upon:
-hashdump_test_LDADD = ../../tests-common/libsvn_tests_main.la   \
-                      ../libsvn_subr.la                         \
-                      @SVN_APR_LIBS@                            \
-                      ../../../expat-lite/libexpat.la
+hashdump_test_LDADD = @SVN_TESTS_COMMON_MAIN_LIBS@ \
+                      @SVN_LIBSVN_SUBR_LIBS@ \
+                      @SVN_TESTS_COMMON_EDITOR_LIBS@ \
+                      @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
-stringtest_LDADD = ../../tests-common/libsvn_tests_main.la   \
-                   ../libsvn_subr.la                         \
-                   @SVN_APR_LIBS@                            \
-                   ../../../expat-lite/libexpat.la
-
+stringtest_LDADD = @SVN_TESTS_COMMON_MAIN_LIBS@ \
+                   @SVN_LIBSVN_SUBR_LIBS@ \
+                   @SVN_TESTS_COMMON_EDITOR_LIBS@ \
+                   @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent

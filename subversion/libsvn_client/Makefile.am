@@ -11,13 +11,11 @@ lib_LTLIBRARIES = libsvn_client.la
 libsvn_client_la_SOURCES = checkout.c update.c apply_edits.c \
                            add.c delete.c                    \
                            commit.c status.c                 \
-                           ra_loader.c
+                           ra_loader.c client.h
 
 ## Build flags ---------
 
-## These should be variables, no?  (from autoconf?)
-INCLUDES = -I../include -I../../apr/include -I../../expat-lite
-
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@ 
 
 ## Put `tests' after `.' when we have a tests directory.
 SUBDIRS = . 

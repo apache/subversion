@@ -9,35 +9,23 @@ xml_output_test_SOURCES = xml-output-test.c
 svndiff_test_SOURCES = svndiff-test.c
 
 ## Flags needed when compiling:
-INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Libraries this binary depends upon:
-deltaparse_test_LDADD = ../libsvn_delta.la \
-                        ../../tests-common/libsvn_test_editor.la \
-                        ../../libsvn_subr/libsvn_subr.la \
-                        @SVN_APR_LIBS@ \
-                        ../../../expat-lite/libexpat.la
+deltaparse_test_LDADD = @SVN_LIBSVN_DELTA_LIBS@ @SVN_TESTS_COMMON_EDITOR_LIBS@ \
+                        @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
-vdelta_test_LDADD = ../libsvn_delta.la \
-                    ../../libsvn_subr/libsvn_subr.la \
-                    @SVN_APR_LIBS@ \
-                    ../../../expat-lite/libexpat.la
+vdelta_test_LDADD = @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+                    @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
-random_test_LDADD = ../libsvn_delta.la \
-                    ../../libsvn_subr/libsvn_subr.la \
-                    @SVN_APR_LIBS@ \
-                    ../../../expat-lite/libexpat.la
+random_test_LDADD = @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+                    @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
-xml_output_test_LDADD = ../libsvn_delta.la \
-                        ../../libsvn_subr/libsvn_subr.la \
-                        @SVN_APR_LIBS@ \
-                        ../../../expat-lite/libexpat.la
+xml_output_test_LDADD = @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+                        @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
-svndiff_test_LDADD = ../libsvn_delta.la \
-                     ../../libsvn_subr/libsvn_subr.la \
-                     @SVN_APR_LIBS@ \
-                     ../../../expat-lite/libexpat.la
-
+svndiff_test_LDADD = @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+                     @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
