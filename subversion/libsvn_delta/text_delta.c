@@ -406,16 +406,11 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   if (window == NULL)
     {
       /* We're done; just clean up.  */
-      svn_error_t *err2 = NULL;
-
       if (ab->result_digest)
         apr_md5_final (ab->result_digest, &(ab->md5_context));
 
       err = svn_stream_close (ab->target);
       svn_pool_destroy (ab->pool);
-
-      if (err2)
-        return err2;
 
       return err;
     }
