@@ -191,12 +191,14 @@ typedef struct
 /** SSL server verification.
  *
  *  If @a trust_permanently is set to true by the provider, the
- *  certificate will be trusted permanently.
+ *  certificate will be trusted permanently. The member @a
+ *  accepted_failures is only valid if @a trust_permanently is true.
  */
 #define SVN_AUTH_CRED_SERVER_SSL "svn.ssl.server"
 typedef struct
 {
   svn_boolean_t trust_permanently;
+  int accepted_failures;
 } svn_auth_cred_server_ssl_t;
 
 
