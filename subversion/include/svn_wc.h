@@ -50,36 +50,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** Locking/Opening/Closing ***/
-
-/* Baton for access to working copy administrative area. One day all such
-   access will require a baton, we're not there yet. */
-typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
-
-/* Return an access baton in ADM_ACCESS for the working copy administrative
-   area associated with the directory PATH.  If WRITE_LOCK is set the baton
-   will include a write lock, otherwise the baton can only be used for read
-   access. POOL will be used to allocate the baton and any subsequently
-   cached items. */
-svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
-                              const char *path,
-                              svn_boolean_t write_lock,
-                              apr_pool_t *pool);
-
-/* Give up the access baton ADM_ACCESS, and its lock if any */
-svn_error_t *svn_wc_adm_close (svn_wc_adm_access_t *adm_access);
-
-/* Ensure ADM_ACCESS has a write lock, and that it still exists. Returns
-   SVN_ERR_WC_NOT_LOCKED if this is not the case. */
-svn_error_t *svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access);
-
-/* Set *LOCKED to non-zero if PATH is locked, else set it to zero. */
-svn_error_t *svn_wc_locked (svn_boolean_t *locked, 
-                            const char *path,
-                            apr_pool_t *pool);
-
-
-
 /*** Notification/callback handling. ***/
 
 /* In many cases, the WC library will scan a working copy and making
@@ -705,14 +675,13 @@ svn_error_t *svn_wc_add (const char *path,
                          apr_pool_t *pool);
 
 
-/* Remove entry NAME in ADM_ACCESS from revision control.  NAME must be
-   either a file or SVN_WC_ENTRY_THIS_DIR.  ADM_ACCESS must hold a write
-   lock.
+/* Remove entry NAME in PATH from revision control.  NAME must be
+   either a file or SVN_WC_ENTRY_THIS_DIR.
 
-   If NAME is a file, all its info will be removed from ADM_ACCESS's
+   If NAME is a file, all its info will be removed from PATH's
    administrative directory.  If NAME is SVN_WC_ENTRY_THIS_DIR, then
-   ADM_ACCESS's entire administrative area will be deleted, along with
-   *all* the administrative areas anywhere in the tree below ADM_ACCESS.
+   PATH's entire administrative area will be deleted, along with
+   *all* the administrative areas anywhere in the tree below PATH.
 
    Normally, only adminstrative data is removed.  However, if
    DESTROY_WF is set, then all working file(s) and dirs are deleted
@@ -724,11 +693,10 @@ svn_error_t *svn_wc_add (const char *path,
    WARNING:  This routine is exported for careful, measured use by
    libsvn_client.  Do *not* call this routine unless you really
    understand what the heck you're doing.  */
-svn_error_t *
-svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
-                                     const char *name,
-                                     svn_boolean_t destroy_wf,
-                                     apr_pool_t *pool);
+svn_error_t *svn_wc_remove_from_revision_control (const char *path, 
+                                                  const char *name,
+                                                  svn_boolean_t destroy_wf,
+                                                  apr_pool_t *pool);
 
 
 /* Assuming PATH is under version control and in a state of conflict, then
@@ -769,13 +737,11 @@ svn_error_t *svn_wc_resolve_conflict (const char *path,
 /* Bump a successfully committed absolute PATH to NEW_REVNUM after a
    commit succeeds.  REV_DATE and REV_AUTHOR are the (server-side)
    date and author of the new revision; one or both may be NULL.
-   ADM_ACCESS must hold a write lock appropriate for PATH.
 
    If RECURSE is set and PATH is a directory, then bump every
    versioned object at or under PATH.  This is usually done for
    copied trees.  */
 svn_error_t *svn_wc_process_committed (const char *path,
-                                       svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t recurse,
                                        svn_revnum_t new_revnum,
                                        const char *rev_date,
@@ -1330,9 +1296,7 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
 
 
 /* Recurse from PATH, cleaning up unfinished log business.  Perform
-   necessary allocations in POOL.  Any working copy locks under PATH will
-   be taken over and then cleared by this function.  WARNING: there is no
-   mechanism that will protect locks that are still being used. */
+   necessary allocations in POOL.  */
 svn_error_t *
 svn_wc_cleanup (const char *path, apr_pool_t *pool);
 
@@ -1502,6 +1466,28 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
 svn_error_t *svn_wc_translated_file (const char **xlated_p,
                                      const char *vfile,
                                      apr_pool_t *pool);
+
+
+
+/*** Locking. ***/
+
+/* Lock the working copy administrative area.
+   Wait for WAIT_FOR seconds if encounter another lock, trying again every
+   second, then return 0 if success or an SVN_ERR_WC_LOCKED error if
+   failed to obtain the lock. */
+svn_error_t *svn_wc_lock (const char *path, 
+                          int wait_for, 
+                          apr_pool_t *pool);
+
+
+/* Unlock PATH, or error if can't. */
+svn_error_t *svn_wc_unlock (const char *path, 
+                            apr_pool_t *pool);
+
+/* Set *LOCKED to non-zero if PATH is locked, else set it to zero. */
+svn_error_t *svn_wc_locked (svn_boolean_t *locked, 
+                            const char *path,
+                            apr_pool_t *pool);
 
 
 
