@@ -895,8 +895,8 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit));
 
-  /* if we got an unspecified number then the user didn't send us anything,
-     so we assume no limit.  if it's larger than UINT_MAX then someone is 
+  /* If we got an unspecified number then the user didn't send us anything,
+     so we assume no limit.  If it's larger than UINT_MAX then someone is 
      messing with us, since we know the svn client libraries will never send
      us anything that big, so play it safe and default to no limit. */
   if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER || limit > UINT_MAX)
