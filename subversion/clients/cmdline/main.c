@@ -878,21 +878,46 @@ main (int argc, const char * const *argv)
         }
     }
 
+  /* Authentication set-up. */
+  {
+    apr_array_header_t *providers
+      = apr_array_make (pool, 1, sizeof (svn_auth_provider_object_t *));
+
+    svn_auth_provider_object_t *wc_provider 
+      = apr_pcalloc (pool, sizeof(*wc_provider));
+    
+    svn_auth_provider_object_t *prompt_provider 
+      = apr_pcalloc (pool, sizeof(*prompt_provider));
+
+    /* Fetch our two existing authentication providers, and order them
+       in an array. */
+    svn_wc_get_simple_wc_provider (&(wc_provider->vtable),
+                                   &(wc_provider->provider_baton), pool);
+
+    svn_client_get_simple_prompt_provider (&(prompt_provider->vtable),
+                                           &(prompt_provider->provider_baton),
+                                           svn_cl__prompt_user, NULL,
+                                           2, /* retry limit */ pool);
+
+    *(svn_auth_provider_object_t **)apr_array_push (providers) = wc_provider;
+    *(svn_auth_provider_object_t **)apr_array_push (providers) = prompt_provider;
+
+    /* Build an authentication baton to give to libsvn_client. */
+    svn_auth_open (&ab, providers, pool);
+
+    /* Place any default --username or --password credentials into the
+       auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
+    if (opt_state.auth_username)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                             opt_state.auth_username);
+    if (opt_state.auth_password)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                             opt_state.auth_password);
+  }
+
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
   command_baton.ctx = &ctx;
-
-  /* Build an authentication baton to give to libsvn_client. */
-  svn_auth_open (&ab, pool);
-
-  /* Place any default --username or --password credentials into the
-     auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
-  if (opt_state.auth_username)
-    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                           opt_state.auth_username);
-  if (opt_state.auth_password)
-    svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                           opt_state.auth_password);
 
   ctx.old_auth_baton = svn_cl__make_auth_baton (&opt_state, pool);
   ctx.auth_baton = ab;

@@ -241,8 +241,6 @@ svn_client__open_ra_session (void **session_baton,
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
-  const svn_auth_provider_t *provider;
-  void *provider_baton;
   
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
@@ -252,40 +250,23 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
 
-  /* Only register a WC provider if we have a base directory.  But
-     register a prompt provider regardless. */
-  if (base_dir)
-    {
-      /* Get and register the WC provider. */
-      svn_wc_get_simple_wc_provider (&provider, &provider_baton, pool);
-
-      svn_auth_register_provider (cbtable->auth_baton, FALSE, /* prepend */
-                                  provider, provider_baton, pool);
-
-      /* And don't forget to set its runtime parameters! */
-      svn_auth_set_parameter(ctx->auth_baton,
-                             SVN_AUTH_PARAM_SIMPLE_WC_WCDIR, base_dir);
-      if (base_access)
-        svn_auth_set_parameter(ctx->auth_baton,
-                               SVN_AUTH_PARAM_SIMPLE_WC_ACCESS, base_access);
-    }
-
-  /* Get and register the prompt provider. */
-  if (ctx->prompt_func)
-    {
-      svn_client__get_simple_prompt_provider 
-        (&provider, &provider_baton, ctx->prompt_func, ctx->prompt_baton,
-         2, /* retry limit */ pool);
-
-      svn_auth_register_provider (cbtable->auth_baton, FALSE, /* prepend */
-                                  provider, provider_baton, pool);
-    }
   cb->auth_baton = ctx->old_auth_baton; /* old-style */
   cb->base_dir = base_dir;
   cb->base_access = base_access;
   cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;
+
+  /* If we have a base_dir, then we need to let the wc-auth-provider
+     know about it.  It needs it as a runtime parameter. */
+  if (base_dir)
+    {
+      svn_auth_set_parameter(ctx->auth_baton,
+                             SVN_AUTH_PARAM_SIMPLE_WC_WCDIR, base_dir);
+      if (base_access)
+        svn_auth_set_parameter(ctx->auth_baton,
+                               SVN_AUTH_PARAM_SIMPLE_WC_ACCESS, base_access);
+    }
 
   /* Decide if the user passed new auth info into the system by
      examining the auth_baton's runtime params. */

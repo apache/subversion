@@ -135,6 +135,17 @@ typedef struct
 } svn_auth_provider_t;
 
 
+/** A provider object, ready to be put into an array and given to
+    @c svn_auth_open. */
+typedef struct
+{
+  const svn_auth_provider_t *vtable;
+  void *provider_baton;
+
+} svn_auth_provider_object_t;
+
+
+
 /** Specific types of credentials **/
 
 /** A simple username/password pair. */
@@ -161,11 +172,15 @@ typedef struct
  *
  * Return an authentication object in @a *auth_baton (allocated in @a
  * pool) that represents a particular instance of the svn
- * authentication system.  @a *auth_baton will remember @a pool, and
- * use it to store registered providers.
+ * authentication system.  @a providers is an array of @c
+ * svn_auth_provider_object_t pointers, already allocated in @a pool
+ * and intentionally ordered.  These pointers will be stored within @a
+ * *auth_baton, grouped by credential type, and searched in this exact
+ * order.
  */
-svn_error_t * svn_auth_open(svn_auth_baton_t **auth_baton,
-                            apr_pool_t *pool);
+void svn_auth_open(svn_auth_baton_t **auth_baton,
+                   apr_array_header_t *providers,
+                   apr_pool_t *pool);
 
 /** Set an authentication run-time parameter.
  *
@@ -191,20 +206,6 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
 
-
-/** Register an authentication provider.
- *
- * Register an authentication provider (defined by @a vtable and @a
- * provider_baton) with @a auth_baton.  If @a prepend is true, the
- * provider will be registered before all other registered providers.
- * Otherwise, it will be registered after all other registered
- * providers. Use @a pool for any temporary allocation.
- */
-void svn_auth_register_provider(svn_auth_baton_t *auth_baton,
-                                svn_boolean_t prepend,
-                                const svn_auth_provider_t *vtable,
-                                void *provider_baton,
-                                apr_pool_t *pool);
 
 /** Get an initial set of credentials.
  *
