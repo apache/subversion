@@ -33,7 +33,7 @@ Candidate changes:
     Justification:  Allows malformed data into the repository.
     Notes:  sussman has actually tested these 5 merges, and they pass tests.
     Votes:
-      +1: sussman
+      +1: sussman, philip
     Old votes: (for r8839,r8932,r8950,r8952)
       +1: philip, sussman, cmpilato
       +0: julianfoad
@@ -72,7 +72,7 @@ Candidate changes:
     copy when the switch was interrupted.
     Justification: simple fix; very annoying when WC gets messed up.
     Votes:
-       +1: julianfoad
+       +1: julianfoad, philip
 
   * r8962
     Followup to r8842 ('svn st -v' shows unwanted status of externals).
