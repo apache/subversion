@@ -453,6 +453,15 @@ def log_where_nothing_changed(sbox):
   return 0
 
 
+def log_to_revision_zero(sbox):
+  "Make sure 'svn log -v -r 1:0 wc_root' doesn't seg fault the server."
+  sbox.build()
+  stdout_lines, stderr_lines = svntest.main.run_svn(0, 'log', '-v',
+                                                    '-r', '1:0', sbox.wc_dir)
+  if stderr_lines:
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -463,6 +472,7 @@ test_list = [ None,
               versioned_log_message,
               log_with_empty_repos,
               log_where_nothing_changed,
+              log_to_revision_zero,
              ]
 
 if __name__ == '__main__':
