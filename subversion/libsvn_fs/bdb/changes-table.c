@@ -45,17 +45,6 @@ svn_fs__open_changes_table (DB **changes_p,
      one-per-row.  Note: this must occur before ->open().  */
   DB_ERR (changes->set_flags (changes, DB_DUP));
 
-#if 0
-  /* ### Someday we might enable sorting of the items as they are
-     added to the table.  This will add cost to the addition of new
-     things to the table (a place where we might not want any more
-     cost), but would greatly enhance the efficiency of reading back
-     the changes (in that all the changes related to a given path, or
-     node-revision-id, would be grouped together).  */
-  DB_ERR (changes->set_flags (changes, DB_DUPSORT));
-  DB_ERR (changes->set_dup_sort (changes, not_yet_written_sort_function);
-#endif
-
   DB_ERR (changes->open (changes, "changes", 0, DB_BTREE,
                          create ? (DB_CREATE | DB_EXCL) : 0,
                          0666));
@@ -113,7 +102,8 @@ svn_fs__changes_delete (svn_fs_t *fs,
 }
 
 
-/* Return a deep copy of CHANGE alloced in POOL. */
+/* Make a public change structure from an internal one, allocating the
+   structure, and copies of necessary members, POOL. */
 static svn_fs_path_change_t *
 make_change (svn_fs__change_t *change, 
              apr_pool_t *pool)

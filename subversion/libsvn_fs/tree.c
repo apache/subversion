@@ -1294,6 +1294,55 @@ maybe_update_ancestry (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+
+/* Possibly */
+static svn_error_t *
+undelete_change (svn_fs_t *fs,
+                 const char *path,
+                 const char *txn_id,
+                 trail_t *trail)
+{
+  apr_hash_t *changes;
+  svn_fs_path_change_t *this_change;
+
+  /* Canonicalize PATH. */
+  path = svn_fs__canonicalize_abspath (path, trail->pool);
+
+  /* First, get the changes associated with TXN_ID. */
+  SVN_ERR (svn_fs__changes_fetch (&changes, fs, txn_id, trail));
+  
+  /* Now, do any of those changes apply to path and indicate deletion? */
+  this_change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
+  if (this_change
+      && ((this_change->change_kind == svn_fs_path_change_delete)
+          || (this_change->change_kind == svn_fs_path_change_replace)))
+    {
+      /* If so, reset the changes and re-add everything except the
+         deletion. */
+      SVN_ERR (add_change (fs, txn_id, path, NULL, 
+                           svn_fs_path_change_reset, 0, 0, trail));
+      if (this_change->change_kind == svn_fs_path_change_replace)
+        {
+          SVN_ERR (add_change (fs, txn_id, path, this_change->node_rev_id, 
+                               svn_fs_path_change_add, this_change->text_mod, 
+                               this_change->prop_mod, trail));
+        }
+    }
+  else
+    {
+      /* Else, this function was called in error, OR something is not
+         as we expected it to be in the changes table. */
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+         "undelete_change: no deletion changes for path `%s' "
+         "in transaction `%s' of filesystem `%s'",
+         path, txn_id, fs->path);
+    }
+
+  return SVN_NO_ERROR;
+}
+                       
+
 /* Merge changes between ANCESTOR and SOURCE into TARGET, as part of
  * TRAIL.  ANCESTOR and TARGET must be distinct node revisions.
  * TARGET_PATH should correspond to TARGET's full path in its
@@ -1408,14 +1457,21 @@ merge (svn_stringbuf_t *conflict_p,
    *           }
    *       }
    *     else if (E exists in source but not target)
-   *       add same entry to target, pointing to source entry's id;
+   *       { 
+   *         if (E changed between ancestor and source)
+   *           conflict;
+   *         else if (E did not change between ancestor and source)
+   *           // do nothing 
    *     else if (E exists in target but not source)
    *       {
    *         if (E points the same node rev in target and ancestor)
    *            delete E from target;
    *         else // E points to different node revs in target & ancestor
    *           {
-   *             conflict;
+   *             if (E in target is not related to E in ancestor)
+   *               conflict;
+   *             else
+   *               // do nothing
    *           }
    *       }
    *     else
@@ -1727,18 +1783,30 @@ merge (svn_stringbuf_t *conflict_p,
                 (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
                  "conflict at \"%s\"", conflict_p->data);
             }
+          else
+            {
+              /* It's a double delete (plus an add), so do nothing
+                 except un-record the deletion of E so that this
+                 transaction isn't given credit for that portion of
+                 this change. */
+              SVN_ERR (undelete_change (fs, svn_path_join (target_path, 
+                                                           t_entry->name, 
+                                                           trail->pool),
+                                        txn_id, trail));
+            }
         }
       /* E exists in neither target nor source */
       else
         {
-          /* It's a double delete, so do nothing except effectively
-             erase all the changes associated with E so that this
-             transaction isn't given credit for the deletion of E.
-             ### kff todo: what about the rename case? */
-          SVN_ERR (add_change 
-                   (fs, txn_id, 
-                    svn_path_join (target_path, a_entry->name, trail->pool), 
-                    NULL, svn_fs_path_change_reset, 0, 0, trail));
+          /* It's a double delete, so do nothing except un-record the
+             deletion of E so that this transaction isn't given credit
+             for that change. */
+          SVN_ERR (undelete_change (fs, svn_path_join (target_path, 
+                                                       t_entry->name, 
+                                                       trail->pool),
+                                    txn_id, trail));
+
+          /* ### kff todo: what about the rename case? */
         }
           
       /* We've taken care of any possible implications E could have.
