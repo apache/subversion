@@ -91,6 +91,10 @@ SOURCE=.\compose_editors.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\default_editor.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\svndiff.c
 # End Source File
 # Begin Source File
