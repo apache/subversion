@@ -43,7 +43,7 @@ Candidate changes:
     Justification:
       It's an irritating bug with a simple fix.
     Votes:
-      +1: jszakmeister, kfogel
+      +1: jszakmeister, kfogel, lundblad
 
   * r11364, r11410 (Issue 2076)
     fsfs does not check if the revision is valid for proplist/propedit/etc
