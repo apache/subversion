@@ -16,14 +16,14 @@
  * ====================================================================
  */
 
-%module client
+%module _client
 
 %import apr.i
 %import svn_types.i
 %import svn_string.i
-%import svn_error.i
 %import svn_delta.i
 
 %include svn_client.h
-
-// ### nothing to do right now
+%{
+#include "svn_client.h"
+%}

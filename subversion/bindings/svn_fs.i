@@ -16,64 +16,36 @@
  * ====================================================================
  */
 
-%module fs
+%module _fs
 %include typemaps.i
 
+%import apr.i
 %import svn_types.i
-%import svn_error.i
 %import svn_delta.i
 
-// -----------------------------------------------------------------------
-// tweak the argument handling for svn_fs_file_length()
+/* ----------------------------------------------------------------------- */
 
-// ### this only marks it as in/out. the "ignore" does the work.
-//%apply apr_off_t *OUTPUT { apr_off_t *length_p };
+/* 'int *' will always be an OUTPUT parameter */
+%typemap(in) int * = int *OUTPUT;
+%typemap(ignore) int * = int *OUTPUT;
+%typemap(argout) int * = int *OUTPUT;
 
-%typemap(ignore) apr_off_t *length_p (apr_off_t temp) {
-    $target = &temp;
-}
-
-// ### check the result of PyLong_FromLong() ?
-%typemap(python,argout) apr_off_t *length_p {
-    $target = t_output_helper($target, PyLong_FromLong(*$source));
-}
-
-// -----------------------------------------------------------------------
-// all "svn_revnum_t *" arguments are considered OUT arguments
-
-// ### this only marks it as in/out. the "ignore" does the work.
-//%apply svn_revnum_t *OUTPUT { svn_revnum_t * };
-
-%typemap(ignore) svn_revnum_t * (svn_revnum_t temp) {
-    $target = &temp;
-}
-
-// ### check the result of PyLong_FromLong() ?
-%typemap(python,argout) svn_revnum_t * {
-    $target = t_output_helper($target, PyLong_FromLong(*$source));
-}
-
-// -----------------------------------------------------------------------
-// tweak the argument handling for svn_fs_is_different
-
-%apply int *OUTPUT { int *is_different, int *is_file, int *is_dir };
-
-// -----------------------------------------------------------------------
-// tweak the argument handling for svn_fs_parse_id
+/* -----------------------------------------------------------------------
+   tweak the argument handling for svn_fs_parse_id
+*/
 
 %typemap(ignore) apr_size_t len { }
-%typemap(python, check) apr_size_t len {
+%typemap(check) apr_size_t len {
     $target = strlen(arg0);
 }
 
-// -----------------------------------------------------------------------
-// all uses of "const char **" are returning strings
+/* -----------------------------------------------------------------------
+   all uses of "const char **" are returning strings
+*/
 
-// ### dang. doesn't work
-//const char **OUTPUT;
-
+// ### stupid SWIG drops the 'const' in the arg declaration
 %typemap(ignore) const char ** (const char * temp) {
-    $target = &temp;
+    $target = (char **)&temp;
 }
 
 // ### check the result of PyString_FromString() ?
@@ -81,9 +53,9 @@
     $target = t_output_helper($target, PyString_FromString(*$source));
 }
 
-// -----------------------------------------------------------------------
+/* ----------------------------------------------------------------------- */
 
 %include svn_fs.h
-
-
-// ### nothing to do right now
+%{
+#include "svn_fs.h"
+%}

@@ -16,16 +16,29 @@
  * ====================================================================
  */
 
-// only used by others; we won't build an APR module
-//%module apr
+/* This is the interface for the APR headers. This is not built as a module
+   because we aren't going to wrap the APR functions. Thus, we only define
+   the various types in here, as necessary. */
+/* ### actually, we may need to wrap some things, such as apr_initialize() */
 
-// We can't include this because it uses "long long" which blows up SWIG
-//%include apr.h
+%include "typemaps.i"
 
-#define __attribute__(__x)
+/* ----------------------------------------------------------------------- */
 
-typedef int apr_status_t
-typedef long apr_size_t
-typedef struct apr_pool_t apr_pool_t
-typedef struct apr_array_header_t apr_array_header_t
-typedef long apr_off_t
+/* 'apr_off_t *' will always be an OUTPUT parameter */
+%typemap(in) apr_off_t * = long *OUTPUT;
+%typemap(ignore) apr_off_t * = long *OUTPUT;
+%typemap(argout) apr_off_t * = long *OUTPUT;
+
+/* ----------------------------------------------------------------------- */
+
+%include apr.h
+
+/* ### be nice to have all the error values and macros. there are some
+   ### problems including this file, tho. SWIG isn't smart enough with some
+   ##3 of the preprocessing and thinks there is a macro redefinition */
+//%include apr_errno.h
+typedef int apr_status_t;
+
+/* ### seems that SWIG isn't picking up the definition of size_t */
+typedef long size_t;

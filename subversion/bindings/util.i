@@ -1,5 +1,5 @@
 /*
- * svn_wc.i :  SWIG interface file for svn_wc.h
+ * util.i :  SWIG interface file for various SVN and APR utilities
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +16,16 @@
  * ====================================================================
  */
 
-%module _wc
+%module _util
 
+%import apr.i
 %import svn_types.i
-%import svn_delta.i
 
-%include svn_wc.h
+%include svn_io.h
+%include svn_pools.h
+%include svn_version.h
 %{
-#include "svn_wc.h"
+#include "svn_io.h"
+#include "svn_pools.h"
+#include "svn_version.h"
 %}

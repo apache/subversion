@@ -16,10 +16,34 @@
  * ====================================================================
  */
 
+%module _types
+
 %import apr.i
 
-//%include svn_types.h
+// -----------------------------------------------------------------------
 
-typedef long svn_revnum_t;
+%typemap(python,except) svn_error_t * {
+    $function
+    if ($source != NULL) {
+        PyExc_SetString(PyExc_RuntimeError,
+                        $source->message ? $source->message : "unknown error");
+        return NULL;
+    }
+}
+%typemap(python,out) svn_error_t * {
+    /* we checked for non-NULL with the 'except' typemap, so "result" will
+       always be NULL at this point. */
+    Py_INCREF(Py_None);
+    $target = Py_None;
+}
 
-// ### nothing to do right now
+// -----------------------------------------------------------------------
+
+/* 'svn_renum_t *' will always be an OUTPUT parameter */
+%typemap(in) svn_renum_t * = long *OUTPUT;
+%typemap(ignore) svn_revnum_t * = long *OUTPUT;
+%typemap(argout) svn_revnum_t * = long *OUTPUT;
+
+// -----------------------------------------------------------------------
+
+%include svn_types.h

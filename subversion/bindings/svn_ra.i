@@ -16,9 +16,9 @@
  * ====================================================================
  */
 
-%module ra
+%module _ra
 
 %include svn_ra.h
-
-
-// ### nothing to do right now
+%{
+#include "svn_ra.h"
+%}

@@ -9,28 +9,38 @@ declarations and constants. Below is the table which maps each header
 to its disposition:
 
 INCLUDE           SWIG MODULE NAME
-svn_base64.h	  n/a (1)
-svn_client.h	  client
-svn_delta.h	  delta
-svn_error.h	  error
-svn_fs.h	  fs
-svn_hash.h	  n/a (1)
-svn_io.h	  io
-svn_path.h	  n/a (1)
-svn_quoprint.h	  n/a (1)
-svn_ra.h	  ra
-svn_string.h	  n/a (3)
-svn_test.h	  n/a (2)
-svn_types.h	  n/a (3)
-svn_wc.h	  wc
-svn_xml.h	  n/a (1)
+svn_base64.h	  (1)
+svn_client.h	  _client
+svn_config.h	  ?
+svn_delta.h	  _delta
+svn_error.h	  (2)
+svn_error_codes.h (2)
+svn_fs.h	  _fs
+svn_hash.h	  (1)
+svn_io.h	  (4) (only stream functions)
+svn_path.h	  (1)
+svn_pools.h	  (4) (only pool manipulation)
+svn_quoprint.h	  (1)
+svn_ra.h	  _ra
+svn_repos.h	  _repos
+svn_sorts.h	  (1)
+svn_string.h	  (3)
+svn_test.h	  (2)
+svn_time.h	  (1)
+svn_types.h	  (3)
+svn_version.h	  (4) (some symbols)
+svn_wc.h	  _wc
+svn_xml.h	  (1)
 
-apr*.h		  n/a (3)
+apr*.h		  (3)
+
+n/a		  _util
 
 (1) it is assumed that the binding languages will provide this
     functionality separately.
 (2) no significant/interesting functionality to export
 (3) only the types are exported; a SWIG interface file is present
+(4) limited symbols/functionality exported via the _util module
 
 
 NOTE: the bindings code is being developed using SWIG 1.3a5 (it might
