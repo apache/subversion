@@ -266,6 +266,15 @@ svn_error_t *
 svn_client_cleanup (svn_stringbuf_t *dir,
                     apr_pool_t *pool);
 
+
+/* Restore the pristine version of a working copy PATH, effectively
+   undoing any local mods.  ### cmpilato todo: What about directories?
+   What about properties?  Eh?  */
+svn_error_t *
+svn_client_revert (svn_stringbuf_t *path,
+                   apr_pool_t *pool);
+
+
 #endif  /* SVN_CLIENT_H */
 
 #ifdef __cplusplus

@@ -669,6 +669,85 @@ svn_wc_undelete (svn_stringbuf_t *path,
 
 
 svn_error_t *
+svn_wc_revert (svn_stringbuf_t *path,
+               apr_pool_t *pool)
+{
+  /* Make sure PATH is a file, which is all that's currently
+     supported.  ### todo.  Make this work for dirs and props and
+     stuff.  */
+  enum svn_node_kind kind;
+  svn_stringbuf_t *pristine_path, *parent_dir, *basename;
+  apr_status_t apr_err;
+  svn_error_t *err;
+  svn_wc_entry_t *entry;
+  apr_time_t timestamp;
+
+  /* Safeguard 1:  can we handle this node type? */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf 
+      (SVN_ERR_WC_IS_NOT_FILE, 0, NULL, pool,
+       "Cannot revert '%s' -- unsupported node type", path->data);
+
+  /* Safeguard 2:  is this a versioned resource? */
+  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (! entry)
+    return svn_error_createf 
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "Cannot revert '%s' -- not a versioned resource", path->data);
+  if (entry->kind != svn_node_file)
+    return svn_error_createf 
+      (SVN_ERR_WC_IS_NOT_FILE, 0, NULL, pool,
+       "Cannot revert '%s' -- unsupported entry node kind", path->data);
+
+  /* Get the path to the pristine copy of this file.  */
+  pristine_path = svn_wc__text_base_path (path, FALSE, pool);
+  if (! pristine_path)
+    return svn_error_createf 
+      (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+       "svn_wc_revert:  Cannot find pristine copy for '%s'", 
+       path->data);
+
+  /* Remove the working copy file... */
+  apr_err = apr_file_remove (path->data, pool);
+  if (apr_err)
+    return svn_error_createf 
+      (apr_err, 0, NULL, pool,
+       "svn_wc_revert:  Error removing working copy file '%s'", 
+       path->data);
+
+  /* ...then copy the pristine version into the "live" working copy. */
+  err = svn_io_copy_file (pristine_path, path, pool);
+  if (err)
+    return svn_error_createf 
+      (err->apr_err, 0, NULL, pool,
+       "svn_wc_revert:  Error restoring pristine copy of '%s'", 
+       path->data);
+
+  /* Finally, change the timestamp of the entry to match the timestamp
+     of our freshly copied file.  */
+  svn_path_split (path, &parent_dir, &basename, svn_path_local_style, pool);
+  SVN_ERR (svn_io_file_affected_time (&timestamp, path, pool));
+  SVN_ERR (svn_wc__entry_modify
+           (parent_dir,
+            basename,
+            SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+            SVN_INVALID_REVNUM,
+            svn_node_none,
+            svn_wc_schedule_normal,
+            svn_wc_existence_normal,
+            TRUE,
+            timestamp,
+            0,
+            NULL,
+            pool,
+            NULL));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_get_pristine_copy_path (svn_stringbuf_t *path,
                                svn_stringbuf_t **pristine_path,
                                apr_pool_t *pool)

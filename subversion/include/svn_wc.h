@@ -639,6 +639,11 @@ svn_error_t *
 svn_wc_cleanup (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
+/* Revert changes to PATH.  Perform necessary allocations in POOL.  */
+svn_error_t *
+svn_wc_revert (svn_stringbuf_t *path, apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

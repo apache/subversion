@@ -602,6 +602,75 @@ def basic_cleanup():
 
   return svntest.actions.run_and_verify_status (wc_dir, expected_output_tree)
   
+#----------------------------------------------------------------------
+
+def basic_revert():
+  "basic revert command"
+
+  sbox = sandbox(basic_cleanup)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Modify some files.
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  iota_path = os.path.join(wc_dir, 'iota')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(beta_path, "Added some text to 'beta'.")
+  svntest.main.file_append(iota_path, "Added some text to 'iota'.")
+  svntest.main.file_append(rho_path, "Added some text to 'rho'.")
+  
+  # Verify modified status.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    if (item[0] == beta_path) or (item[0] == iota_path) or (item[0] == rho_path):
+      item[3]['status'] = 'M '
+
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    return 1
+  
+  # Run revert (### todo: revert doesn't currently print anything)
+  stdout_lines, stderr_lines = svntest.main.run_svn('revert', beta_path)
+  if len (stderr_lines) > 0:
+    print "Revert command printed the following to stderr:"
+    print stderr_lines
+    return 1
+  stdout_lines, stderr_lines = svntest.main.run_svn('revert', iota_path)
+  if len (stderr_lines) > 0:
+    print "Revert command printed the following to stderr:"
+    print stderr_lines
+    return 1
+  stdout_lines, stderr_lines = svntest.main.run_svn('revert', rho_path)
+  if len (stderr_lines) > 0:
+    print "Revert command printed the following to stderr:"
+    print stderr_lines
+    return 1
+  
+  # Verify unmodified status.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_status (wc_dir, expected_output_tree):
+    return 1
+
+  # Now, really make sure the contents are back to their original state.
+  fp = open(beta_path, 'r')
+  lines = fp.readlines()
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.")):
+    print "Revert failed to restore original text."
+    return 1
+  fp = open(iota_path, 'r')
+  lines = fp.readlines()
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.")):
+    print "Revert failed to restore original text."
+    return 1
+  fp = open(rho_path, 'r')
+  lines = fp.readlines()
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.")):
+    print "Revert failed to restore original text."
+    return 1
+    
 
 ########################################################################
 # Run the tests
@@ -618,7 +687,8 @@ test_list = [ None,
               basic_update,
               basic_merge,
               basic_conflict,
-              basic_cleanup
+              basic_cleanup,
+              basic_revert
              ]
 
 if __name__ == '__main__':

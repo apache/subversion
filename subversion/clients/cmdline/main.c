@@ -147,6 +147,10 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "unfinished operations, etc.\n"
     "usage: cleanup [TARGETS]\n" },
 
+  { "revert",     FALSE, svn_cl__revert,
+    "Restore pristine working copy file (undo all local edits)\n"
+    "usage: revert [TARGETS]\n" },
+
   { NULL,         FALSE, NULL, NULL }
 };
 
