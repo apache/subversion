@@ -221,6 +221,72 @@ class WinGeneratorBase(gen_base.GeneratorBase):
           libs.append(gen_base.ExternalLibrary(libname))
     return libs
 
+  def gen_proj_names(self, install_targets):
+    "Generate project file names for the targets"
+    # Generate project file names for the targets: replace dashes with
+    # underscores and replace *-test with test_* (so that the test
+    # programs are visually separare from the rest of the projects)
+    for target in install_targets:
+      name = target.name
+      pos = string.find(name, '-test')
+      if pos >= 0:
+        proj_name = 'test_' + string.replace(name[:pos], '-', '_')
+      elif isinstance(target, gen_base.SWIGLibrary):
+        proj_name = 'swig_' + string.replace(name, '-', '_')
+      else:
+        proj_name = string.replace(name, '-', '_')
+      target.proj_name = proj_name
+  
+  def adjust_win_depends(self, target, name):
+    "Handle special dependencies if needed"
+    
+    # For MSVC we need to hack around Apache modules &
+    # libsvn_ra because dependencies implies linking
+    # and there is no way around that
+    if name == '__CONFIG__':
+      depends = []
+    else:
+      depends = [self.targets['__CONFIG__']]
+
+    if target.is_apache_mod:
+      if target.name == 'mod_authz_svn':
+        depends.append(self.targets['mod_dav_svn'])
+      pass
+    elif name == 'depdelta':
+      depends.append(self.targets['libsvn_delta'])
+    elif name == 'libsvn_wc':
+      depends.append(self.targets['depdelta'])
+    elif name == 'depsubr':
+      depends.append(self.targets['libsvn_subr'])
+    elif name == 'libsvn_ra_svn':
+      depends.append(self.targets['depsubr'])
+    elif name == 'libsvn_ra_dav':
+      depends.append(self.targets['depsubr'])
+      depends.append(self.targets['neon'])
+    elif isinstance(target, gen_base.Target):
+      if isinstance(target, gen_base.TargetExe):
+        deps = { }
+        for obj in self.get_win_depends(target, 0):
+          deps[obj] = None
+        for obj in self.get_win_depends(target, 2):
+          if isinstance(obj, gen_base.TargetLib):
+            deps[obj] = None
+        deps = deps.keys()
+        deps.sort()
+        depends.extend(deps)
+      else:
+        depends.extend(self.get_unique_win_depends(target))
+    elif isinstance(target, gen_base.SWIGLibrary):
+      for lib in self.graph.get_sources(gen_base.DT_LINK, target):
+        if hasattr(lib, 'proj_name'):
+          depends.append(lib)
+          depends.extend(self.get_win_depends(lib, 0))          
+    else:
+      assert 0
+      
+    return depends
+    
+  
   def get_win_depends(self, target, recurse=0):
     """
     Return the list of dependencies for target not including external libraries
