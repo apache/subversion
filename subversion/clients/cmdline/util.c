@@ -205,9 +205,26 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       svn_stringbuf_t *edited_contents_s;
       err = svn_stringbuf_from_file (&edited_contents_s, tmpfile_name, pool);
       if (! err)
-        err = svn_utf_cstring_to_utf8 (edited_contents,
-                                       edited_contents_s->data, NULL, pool);
-      if (err)
+        {
+          /* Convert file contents to UTF8 and "repos normal" LF eol
+             endings */
+          const char *edited_utf8_contents;
+          err = svn_utf_cstring_to_utf8 (&edited_utf8_contents,
+                                         edited_contents_s->data, NULL, pool);
+          if (err)
+            goto cleanup;
+
+          err = svn_wc_translate_cstring (edited_utf8_contents,
+                                          edited_contents,
+                                          "\n",  /* translate to LF */
+                                          FALSE, /* no repair */
+                                          NULL,  /* no keywords */
+                                          FALSE, /* no expansion */
+                                          pool);
+          if (err)
+            goto cleanup;
+        }
+      else
         goto cleanup; /* In case more code gets added before cleanup... */
     }
   else
@@ -375,6 +392,8 @@ svn_cl__get_log_message (const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
+      const char *log_msg_utf8;
+
       /* Trim incoming messages the EOF marker text and the junk that
          follows it.  */
       truncate_buffer_at_prefix (NULL, lmb->message, EDITOR_EOF_PREFIX);
@@ -391,12 +410,23 @@ svn_cl__get_log_message (const char **log_msg,
             return svn_error_create (apr_err, 0, NULL,
                                      "failed to create a converter to UTF-8");
 
-          return svn_utf_cstring_to_utf8 (log_msg, lmb->message, xlator, pool);
+          SVN_ERR (svn_utf_cstring_to_utf8 (&log_msg_utf8, lmb->message,
+                                            xlator, pool));
         }
       /* otherwise, just convert the message to utf8 by assuming it's
          already in the 'default' locale of the environment. */
       else        
-        return svn_utf_cstring_to_utf8 (log_msg, lmb->message, NULL, pool);
+        SVN_ERR (svn_utf_cstring_to_utf8 (&log_msg_utf8, lmb->message,
+                                          NULL, pool));
+      
+      /* Convert the utf8 message to "repos normal" LF eol-style. */
+      SVN_ERR (svn_wc_translate_cstring (log_msg_utf8, log_msg,
+                                         "\n",  /* translate to LF */
+                                         FALSE, /* no repair */
+                                         NULL,  /* no keywords */
+                                         FALSE, /* no expansion */
+                                         pool));
+      return SVN_NO_ERROR;
     }
 
   if (! (commit_items || commit_items->nelts))
