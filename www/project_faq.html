@@ -77,6 +77,9 @@
 <li><a href="#revert">Why does the <tt>svn revert</tt> require an
     explicit target?  Why is it not recursive by default?  These
     behaviors differ from almost all the other subcommands.</a></li>
+<li><a href="#db3db4">When I start Apache, mod_dav_svn complains about
+    a "bad database version", that it found db-3.X, rather than
+    db-4.X.</a></li>
 <p>
 
 <strong>References:</strong>
@@ -856,16 +859,29 @@ once your files are reverted, your local modifications are gone
 forever.</p>
 
 
-<![CDATA[=========================================================]]>
+<![CDATA[-----------------------------------------------------------]]>
 
+<h3><a name="db3db4">When I start Apache, mod_dav_svn complains about
+    a "bad database version", that it found db-3.X, rather than
+    db-4.X.</a></h3>
+
+<p>Your apr-util linked against DB-3, and svn linked against DB-4.
+Unfortunately, the DB symbols aren't different.  When mod_dav_svn is
+loaded into Apache's process-space, it ends up resolving the
+symbol names against apr-util's DB-3 library.</p>
+
+<p>The solution is to make sure apr-util compiles against DB-4.  You
+can do this by passing specific switches to either apr-util's or
+apache's configure: "--with-dbm=db4 --with-berkeley-db=/the/db/prefix".</p>
+
+
+<![CDATA[=========================================================]]>
 
 <p>
 <hr>
 <p>
 <h2>References:</h2>
 <p>
-
-<![CDATA[-----------------------------------------------------------]]>
 
 <h3><a name="http-methods">What are all the HTTP methods Subversion
     uses?</a></h3>
