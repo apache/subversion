@@ -779,6 +779,22 @@ def resync_misgroups():
   repos, wc, logs = ensure_conversion('resync-misgroups')
   
 
+def tagged_branch_and_trunk():
+  "allow tags with mixed trunk and branch sources"
+  # See test-data/resync-misgroups-cvsrepos/README.
+  #
+  # The conversion will fail if the bug is present, and
+  # ensure_conversion would raise svntest.Failure.
+  repos, wc, logs = ensure_conversion('tagged-branch-n-trunk')
+  a_path = os.path.join(wc, 'tags', 'some-tag', 'a.txt')
+  b_path = os.path.join(wc, 'tags', 'some-tag', 'b.txt')
+  if not (os.path.exists(a_path) and os.path.exists(b_path)):
+    raise svntest.Failure
+  if (open(a_path, 'r').read().find('1.24') == -1) \
+     or (open(b_path, 'r').read().find('1.5') == -1):
+    raise svntest.Failure
+  
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -806,6 +822,7 @@ test_list = [ None,
               double_delete,
               split_branch,
               resync_misgroups,
+              tagged_branch_and_trunk,
              ]
 
 if __name__ == '__main__':
