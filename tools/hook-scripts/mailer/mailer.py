@@ -121,9 +121,9 @@ class MailedOutput:
     dirlist.sort()
     dirlist = string.join(dirlist)
     if commondir:
-      self.subject = 'rev %d - in %s: %s' % (repos.rev, commondir, dirlist)
+      self.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
-      self.subject = 'rev %d - %s' % (repos.rev, dirlist)
+      self.subject = 'r%d - %s' % (repos.rev, dirlist)
 
   def generate(self, groups, pool):
     "Generate email for the various groups and option-params."
@@ -365,7 +365,7 @@ def generate_list(output, header, changelist, selection):
           text = ', changed'
         else:
           text = ' unchanged'
-        output.write('      - copied%s from rev %d, %s%s\n'
+        output.write('      - copied%s from r%d, %s%s\n'
                      % (text, change.base_rev, change.base_path[1:], is_dir))
 
 
@@ -400,7 +400,7 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
         return
 
       # note that we strip the leading slash from the base (copyfrom) path
-      output.write('\nCopied: %s (from rev %d, %s)\n'
+      output.write('\nCopied: %s (from r%d, %s)\n'
                    % (change.path, change.base_rev, change.base_path[1:]))
       diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
                              change.base_path[1:],

@@ -381,11 +381,11 @@ foreach my $project (@project_settings_list)
 
     if ($commondir ne '')
       {
-        $subject = "rev $rev - in $commondir: $dirlist";
+        $subject = "r$rev - in $commondir: $dirlist";
       }
     else
       {
-        $subject = "rev $rev - $dirlist";
+        $subject = "r$rev - $dirlist";
       }
     if ($subject_prefix =~ /\w/)
       {
