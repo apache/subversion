@@ -396,6 +396,7 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                   int calltype,
                   dav_lock **locks)
 {
+  dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
   dav_error *derr;
   svn_lock_t *slock;
@@ -410,6 +411,16 @@ dav_svn_get_locks(dav_lockdb *lockdb,
   /* Sanity check:  if the resource has no associated path in the fs,
      then there's nothing to do.  */
   if (! resource->info->repos_path)
+    {
+      *locks = NULL;
+      return 0;
+    }
+
+  /* The Big Lie:  if an svn client passed a 'force' flag to 'svn
+     lock', then we want to pretend that there's no existing lock no
+     matter what.  Otherwise mod_dav will throw '403 Locked' without
+     even attempting to create a new lock.  */
+  if (info->force)
     {
       *locks = NULL;
       return 0;
@@ -518,6 +529,7 @@ dav_svn_has_locks(dav_lockdb *lockdb,
                   const dav_resource *resource,
                   int *locks_present)
 {
+  dav_lockdb_private *info = lockdb->info;
   svn_error_t *serr;
   dav_error *derr;
   svn_lock_t *slock;
@@ -526,6 +538,16 @@ dav_svn_has_locks(dav_lockdb *lockdb,
   /* Sanity check:  if the resource has no associated path in the fs,
      then there's nothing to do.  */
   if (! resource->info->repos_path)
+    {
+      *locks_present = 0;
+      return 0;
+    }
+
+  /* The Big Lie:  if an svn client passed a 'force' flag to 'svn
+     lock', then we want to pretend that there's no existing lock no
+     matter what.  Otherwise mod_dav will throw '403 Locked' without
+     even attempting to create a new lock.  */
+  if (info->force)
     {
       *locks_present = 0;
       return 0;

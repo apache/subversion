@@ -911,8 +911,12 @@ pre_send_hook(ne_request *req,
       || (strcmp(lrb->method, "UNLOCK") == 0))
     {
       if (lrb->force)
-        ne_add_request_header(req, SVN_DAV_OPTIONS_HEADER,
-                              SVN_DAV_OPTION_FORCE);
+        {
+          char *buf = apr_psprintf(lrb->pool, "%s: %s\r\n",
+                                   SVN_DAV_OPTIONS_HEADER,
+                                   SVN_DAV_OPTION_FORCE);
+          ne_buffer_zappend(header, buf);
+        }
     }
 
   if (strcmp(lrb->method, "LOCK") == 0)
@@ -920,9 +924,10 @@ pre_send_hook(ne_request *req,
       /* If possible, add custom 'current_rev' header to LOCK request. */
       if (SVN_IS_VALID_REVNUM(lrb->current_rev))
         {
-          const char *revstr = apr_psprintf(lrb->pool, "%ld",
-                                            lrb->current_rev);
-          ne_add_request_header(req, SVN_DAV_VERSION_NAME_HEADER, revstr);
+          char *buf = apr_psprintf(lrb->pool, "%s: %ld\r\n",
+                                   SVN_DAV_VERSION_NAME_HEADER,
+                                   lrb->current_rev);
+          ne_buffer_zappend(header, buf);
         }
 
       /* Register a callback for custom 'creationdate' response header. */
@@ -948,7 +953,7 @@ svn_ra_dav__lock(void *session_baton,
   const char *url;
   svn_string_t fs_path;
   struct lock_request_baton *lrb;
-  struct ne_lock *nlock;
+  struct ne_lock nlock = {{ 0 }};
   svn_lock_t *slock;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
@@ -964,15 +969,14 @@ svn_ra_dav__lock(void *session_baton,
   ne_hook_create_request(ras->sess, create_request_hook, lrb);
   ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
 
-  /* Build a neon lock structure. */
-  nlock = ne_lock_create();
-  nlock->owner = (char *) comment;
-  if ((rv = ne_uri_parse(url, &(nlock->uri))))
+  /* Fill the neon lock structure. */
+  nlock.owner = ne_strdup(comment);
+  if ((rv = ne_uri_parse(url, &(nlock.uri))))
     return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
                                      rv, pool);
 
   /* Issue LOCK request. */
-  rv = ne_lock(ras->sess, nlock);
+  rv = ne_lock(ras->sess, &nlock);
   if (rv)
     return svn_ra_dav__convert_error(ras->sess,
                                      "Lock request failed", rv, pool);
@@ -980,22 +984,19 @@ svn_ra_dav__lock(void *session_baton,
   /* Build an svn_lock_t based on the returned ne_lock. */
   slock = apr_pcalloc(pool, sizeof(*slock));
   slock->path = fs_path.data;
-  slock->token = apr_pstrdup(pool, nlock->token);
-  if (nlock->owner)
-    slock->comment = apr_pstrdup(pool, nlock->owner);
+  slock->token = apr_pstrdup(pool, nlock.token);
+  if (nlock.owner)
+    slock->comment = apr_pstrdup(pool, nlock.owner);
   if (ras->auth_username)
     slock->owner = apr_pstrdup(pool, ras->auth_username);
   if (lrb->creation_date)
     slock->creation_date = lrb->creation_date;
 
-  if (nlock->timeout == NE_TIMEOUT_INFINITE)
+  if (nlock.timeout == NE_TIMEOUT_INFINITE)
     slock->expiration_date = 0;
-  else if (nlock->timeout > 0)
+  else if (nlock.timeout > 0)
     slock->expiration_date = slock->creation_date + 
-                             apr_time_from_sec(nlock->timeout);
-
-  /* Free the neon lock struct. */
-  ne_lock_destroy(nlock);
+                             apr_time_from_sec(nlock.timeout);
   
   *lock = slock;
   return SVN_NO_ERROR;
