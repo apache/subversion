@@ -52,32 +52,115 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include "svn_wc.h"
+#include "svn_error.h"
 #include "svn_xml.h"
 #include "wc.h"
 
 
 
-/*** Setting up the XML parser for the log file. ***/
+/*** Userdata for the callbacks. ***/
+struct log_runner
+{
+  apr_pool_t *pool;
+  svn_string_t *path;  /* the dir in which this is all happening */
+  svn_error_t *error;
+};
+
+
+
+/*** The XML handlers. ***/
+
+static svn_error_t *
+merge_text (svn_string_t *path, const char *name, const char *saved_mods)
+{
+  printf ("   LOG MERGE_TEXT: %s/%s (%s)\n", path->data, name, saved_mods);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+replace_text_base (svn_string_t *path, const char *name)
+{
+  printf ("   LOG REPLACE_TEXT_BASE: %s/%s\n", path->data, name);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_version (svn_string_t *path, const char *name, svn_vernum_t version)
+{
+  printf ("   LOG SET_VERSION: %s/%s, %d\n", path->data, name, (int) version);
+  return SVN_NO_ERROR;
+}
+
+
+/* Set an error for later reference. */
+static void
+set_error (struct log_runner *loggy)
+{
+  loggy->error = svn_error_create (SVN_ERR_WC_BAD_ADM_LOG,
+                                   0,
+                                   NULL,
+                                   loggy->pool,
+                                   loggy->path->data);
+}
+
 
 static void
 start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
 {
-  const char *att;
+  struct log_runner *loggy = (struct log_runner *) userData;
 
-  printf ("\nLOG HANDLER: %s\n", name);
-  while ((att = *atts++))
-    printf ("   %s\n", att);
+  printf ("\n"); /* kff todo */
+
+  /* Here is a sample log file:
+   *
+   *    <merge-text
+   *       name="iota"
+   *       saved-mods="kff todo"/>
+   *    <replace-text-base
+   *       name="iota"/>
+   *    <set-version
+   *       name="iota"
+   *       version="1"/>
+   */
+
+  if (strcmp (name, "merge-text") == 0)
+    {
+      const char *name = svn_xml_get_attr_value ("name", atts);
+      const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
+
+      if (! name)  /* note that saved_mods is allowed to be NULL */
+        set_error (loggy);
+      else
+        loggy->error = merge_text (loggy->path, name, saved_mods);
+    }
+  else if (strcmp (name, "replace-text-base") == 0)
+    {
+      const char *name = svn_xml_get_attr_value ("name", atts);
+
+      if (! name)
+        set_error (loggy);
+      else
+        loggy->error = replace_text_base (loggy->path, name);
+    }
+  else if (strcmp (name, "set-version") == 0)
+    {
+      const char *name = svn_xml_get_attr_value ("name", atts);
+      const char *verstr = svn_xml_get_attr_value ("version", atts);
+
+      if ((! name) || (! verstr))
+        set_error (loggy);
+      else
+        loggy->error = set_version (loggy->path, name, atoi (verstr));
+    }
+  else
+      set_error (loggy);
 }
 
 
 
 /*** Using the parser to run the log file. ***/
-
-struct log_runner
-{
-  
-};
-
 
 svn_error_t *
 svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
@@ -95,7 +178,10 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   const char *log_end
     = "</svn-wc-log>\n";
 
-  parser = svn_xml_make_parser (&logress, start_handler, NULL, NULL);
+  logress->path = path;
+  logress->pool = pool;
+
+  parser = svn_xml_make_parser (logress, start_handler, NULL, NULL);
   
   /* Start the log off with a pointless opening element tag. */
   if (! XML_Parse (parser, log_start, strlen (log_start), 0))
@@ -121,6 +207,13 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
         apr_close (f);
         break;
       }
+
+    if (logress->error)
+      {
+        err = logress->error;
+        goto any_error;
+      }
+
   } while (apr_err == APR_SUCCESS);
 
 
