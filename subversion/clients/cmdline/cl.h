@@ -247,23 +247,54 @@ svn_cl__edit_externally (const char **edited_contents,
                          apr_pool_t *pool);
 
 
-/* Our implementation of the 'auth info callback' routine, 
-   as defined in svn_client.h.   This callback is passed to any
-   libsvn_client routine that needs to authenticate against a
-   repository. */
-
-/* This implements the `svn_client_prompt_t' interface.
-
-   Display PROMPT to the user, and read a reply back from stdin,
-   allocated in POOL and returned in *RESULT.  If HIDE is set, the
-   reply will not be echoed to the screen.  BATON is ignored (but
-   required by the definition of svn_client_prompt_t.)  */
+/* Display PROMPT_STR to the user on stderr, and set *RESULT to the
+   reply back from stdin, allocated in POOL. */
 svn_error_t *
 svn_cl__prompt_user (const char **result,
-                     const char *prompt,
-                     svn_boolean_t hide,
-                     void *baton,
+                     const char *prompt_str,
                      apr_pool_t *pool);
+
+
+
+/** Auth prompting. **/
+
+/* This implements 'svn_auth_simple_prompt_func_t'. */
+svn_error_t *svn_cl__auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
+                                         void *baton,
+                                         const char *realm,
+                                         const char *username,
+                                         apr_pool_t *pool);
+
+
+/* This implements 'svn_auth_username_prompt_func_t'. */
+svn_error_t *svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
+                                           void *baton,
+                                           const char *realm,
+                                           apr_pool_t *pool);
+
+
+/* This implements 'svn_auth_ssl_server_prompt_func_t'. */
+svn_error_t *
+svn_cl__auth_ssl_server_prompt (svn_auth_cred_server_ssl_t **cred_p,
+                                void *baton,
+                                int failures_in,
+                                apr_pool_t *pool);
+
+
+
+/* This implements 'svn_auth_ssl_client_prompt_func_t'. */
+svn_error_t *
+svn_cl__auth_ssl_client_prompt (svn_auth_cred_client_ssl_t **cred_p,
+                                void *baton,
+                                apr_pool_t *pool);
+
+
+/* This implements 'svn_auth_ssl_pw_prompt_func_t'. */
+svn_error_t *
+svn_cl__auth_ssl_pw_prompt (svn_auth_cred_client_ssl_pass_t **cred_p,
+                            void *baton,
+                            apr_pool_t *pool);
+
 
 
 /*** Notification functions to display results on the terminal. */

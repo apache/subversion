@@ -224,8 +224,93 @@ typedef struct
 
 } svn_auth_cred_server_ssl_t;
 
-
 
+
+/** Credential-constructing prompt functions. **/
+
+/** These exist so that different client applications can use
+ * different prompt mechanisms to supply the same credentials.  For
+ * example, if authentication requires a username and password, a
+ * command-line client's prompting function might prompt first for the
+ * username and then for the password, whereas a GUI client's would
+ * present a single dialog box asking for both, and a telepathic
+ * client's would read all the information directly from the user's
+ * mind.  All these prompting functions return the same type of
+ * credential, but the information used to construct the credential is
+ * gathered in an interface-specific way in each case.
+ */
+
+/** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
+ * @a baton is an implementation-specific closure.
+ *
+ * If @a realm is non-null, maybe use it in the prompt string.
+ *
+ * If @a username is non-null, then the user might be prompted only
+ * for a password, but @a *creds would still be filled with both
+ * username and password.  For example, a typical usage would be to
+ * pass @a username on the first call, but then leave it null for
+ * subsequent calls, on the theory that if credentials failed, it's
+ * as likely to be due to incorrect username as incorrect password. 
+ */
+typedef svn_error_t *
+(*svn_auth_simple_prompt_func_t) (svn_auth_cred_simple_t **cred,
+                                  void *baton,
+                                  const char *realm,
+                                  const char *username,
+                                  apr_pool_t *pool);
+
+
+/** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
+ * @a baton is an implementation-specific closure.
+ *
+ * If @a realm is non-null, maybe use it in the prompt string.
+ */
+typedef svn_error_t *
+(*svn_auth_username_prompt_func_t) (svn_auth_cred_username_t **cred,
+                                    void *baton,
+                                    const char *realm,
+                                    apr_pool_t *pool);
+
+
+/** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
+ * @a baton is an implementation-specific closure.
+ *
+ * @a failures_in is a failure bitmask, see (for example) 
+ * 
+ *      @c SVN_AUTH_SSL_NOTYETVALID
+ *      @c SVN_AUTH_SSL_EXPIRED
+ *      @c SVN_AUTH_SSL_CNMISMATCH
+ *      @c SVN_AUTH_SSL_UNKNOWNCA
+ *      @c SVN_AUTH_SSL_FAILMASK
+ * 
+ * for more information.
+ */
+typedef svn_error_t *
+(*svn_auth_ssl_server_prompt_func_t) (svn_auth_cred_server_ssl_t **cred,
+                                      void *baton,
+                                      int failures_in,
+                                      apr_pool_t *pool);
+
+
+/** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
+ * @a baton is an implementation-specific closure.
+ */
+typedef svn_error_t *
+(*svn_auth_ssl_client_prompt_func_t) (svn_auth_cred_client_ssl_t **cred,
+                                      void *baton,
+                                      apr_pool_t *pool);
+
+
+/** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
+ * @a baton is an implementation-specific closure.
+ */
+typedef svn_error_t *
+(*svn_auth_ssl_pw_prompt_func_t) (svn_auth_cred_client_ssl_pass_t **cred,
+                                  void *baton,
+                                  apr_pool_t *pool);
+
+
+
 /** Initialize an authentication system.
  *
  * Return an authentication object in @a *auth_baton (allocated in @a
