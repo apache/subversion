@@ -94,7 +94,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
   const char *slash;
 
   /* parse the input URI, in case it is more than just a path */
-  if (apr_uri_parse_components(pool, uri, &comp) != APR_SUCCESS)
+  if (apr_uri_parse(pool, uri, &comp) != APR_SUCCESS)
     goto malformed_uri;
 
   /* ### ignore all URI parts but the path (for now) */
