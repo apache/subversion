@@ -322,6 +322,9 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
 svn_error_t *
 svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
 {
+#if 0
+  /* ### Use this implementation if/when apr_dir_make_recursive is
+     available on all platforms, not just on Unix. --xbc */
   apr_status_t apr_err = apr_dir_make_recursive (path, APR_OS_DEFAULT, pool);
 
   if (apr_err)
@@ -330,6 +333,60 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
        "svn_io_make_dir_recursively: error making directory %s", path);
 
   return SVN_NO_ERROR;
+#else
+  apr_status_t apr_err = 0;
+  char *dir;
+
+  /* Try to make PATH right out */
+  apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
+
+  /* It's OK if PATH exists */
+  if (!apr_err || APR_STATUS_IS_EEXIST(apr_err))
+    return SVN_NO_ERROR;
+
+  if (APR_STATUS_IS_ENOENT(apr_err))
+    {
+      /* ### Unfortunately, this won't work on Win32 without the folliwing
+         patch to APR:
+
+Index: apr_errno.h
+===================================================================
+RCS file: /home/cvs/apr/include/apr_errno.h,v
+retrieving revision 1.91
+diff -u -p -r1.91 apr_errno.h
+--- apr_errno.h 20 May 2002 13:22:36 -0000      1.91
++++ apr_errno.h 8 Jun 2002 10:18:30 -0000
+@@ -923,6 +923,7 @@ APR_DECLARE(char *) apr_strerror(apr_sta
+                 || (s) == APR_OS_START_SYSERR + WSAENAMETOOLONG)
+ #define APR_STATUS_IS_ENOENT(s)         ((s) == APR_ENOENT \
+                 || (s) == APR_OS_START_SYSERR + ERROR_FILE_NOT_FOUND \
++                || (s) == APR_OS_START_SYSERR + ERROR_PATH_NOT_FOUND \
+                 || (s) == APR_OS_START_SYSERR + ERROR_OPEN_FAILED \
+                 || (s) == APR_OS_START_SYSERR + ERROR_NO_MORE_FILES)
+ #define APR_STATUS_IS_ENOTDIR(s)        ((s) == APR_ENOTDIR \
+
+
+         I had long discussions about this on the apr list with wrowe,
+         but nothing has come of it yet. --xbc */
+
+      /* Missing an intermediate dir */
+      svn_error_t *svn_err;
+
+      dir = svn_path_remove_component_nts (path, pool);
+      svn_err = svn_io_make_dir_recursively (dir, pool);
+
+      if (!svn_err)
+        {
+          apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
+          if (apr_err)
+            svn_err = svn_error_create (apr_err, 0, NULL, pool, path);
+        }
+
+      return svn_err;
+    }
+
+  return svn_error_create (apr_err, 0, NULL, pool, path);
+#endif
 }
 
 
