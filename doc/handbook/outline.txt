@@ -7,8 +7,8 @@ cover 95% of all topics that users run into.  It should explain
 expected behaviors, and give short sample 'recipes'.  
 
 Most importantly, it shouldn't be so detailed as to preclude a *real*
-book, like the one Karl and Fitz writing for O'Reilly.  (Someday that
-book will be included in our source tree too.)
+book, like the one Karl and Fitz are writing for O'Reilly.  (Someday 
+that book will be included in our source tree too.)
 
 
 --------------------------------------------------------
