@@ -43,6 +43,10 @@
 %typemap(python,argout,fragment="t_output_helper") apr_off_t *
     "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
 
+%typemap(perl5,argout) apr_off_t * {
+    /* ### FIXME-perl */
+}
+
 /* ----------------------------------------------------------------------- */
 
 %include apr.h
@@ -81,6 +85,9 @@ typedef apr_int32_t time_t;
 	/* FIXME: What goes here? */
 }
 
+%typemap(perl5,argout) apr_time_t * {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    create some INOUT typemaps for apr_size_t
 */
@@ -96,6 +103,9 @@ typedef apr_int32_t time_t;
     $1 = &temp;
 }
 
+%typemap(perl5,in) apr_size_t *INOUT (apr_size_t temp) {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **
 */
@@ -161,12 +171,18 @@ typedef apr_int32_t time_t;
     svn_swig_java_add_to_list(jenv, $1, $input);
 }
 
+%typemap(perl5,argout) apr_hash_t **PROPHASH {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
   handle apr_file_t *
 */
 
 %typemap(python, in) apr_file_t * {
   $1 = svn_swig_py_make_file($input, _global_pool);
+}
+%typemap(perl5, in) apr_file_t * {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------
@@ -181,4 +197,7 @@ typedef apr_int32_t time_t;
         $result,
         SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
 
+%typemap(perl5,argout) apr_file_t ** {
+    /* ### FIXME-perl */
+}
 /* ----------------------------------------------------------------------- */

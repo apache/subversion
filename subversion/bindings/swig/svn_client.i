@@ -95,6 +95,9 @@
   $1 = svn_swig_py_notify_func;
   $2 = $input; /* our function is the baton. */
 }
+%typemap(perl5,argout) apr_hash_t **statushash {
+    /* ### FIXME-perl */
+}
 
 %typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
 
@@ -110,6 +113,9 @@
     return $jnicall;
   }
 
+%typemap(perl5,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    handle svn_client_get_commit_log_t/baton pairs
 */
@@ -135,6 +141,11 @@
 %typemap(javaout) svn_client_get_commit_log_t {
     return $jnicall;
   }
+
+%typemap(perl5,in) (svn_client_get_commit_log_t log_msg_func, 
+                     void *log_msg_baton) {
+    /* ### FIXME-perl */
+}
 
 /* -----------------------------------------------------------------------
    handle svn_client_prompt_t/baton pairs
@@ -186,6 +197,9 @@
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
 }
 
+%typemap(perl5,argout) apr_hash_t **statushash {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    fix up the return hash for svn_client_ls() 
 */
@@ -195,6 +209,9 @@
 	$result = t_output_helper(
 		$result,
 		svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_dirent_t));
+}
+%typemap(perl5,argout) apr_hash_t **dirents {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------

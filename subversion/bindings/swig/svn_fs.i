@@ -84,6 +84,9 @@ apr_array_header_t **names_p {
     $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
 }
 
+%typemap(perl5, argout) apr_array_header_t **names_p {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    revisions_changed's "apr_array_header_t **" is returning a list of
    revs.  also, its input array is a list of strings.
@@ -92,6 +95,9 @@ apr_array_header_t **names_p {
 %typemap(python, argout, fragment="t_output_helper") 
 apr_array_header_t **revs {
     $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
+}
+%typemap(perl5, argout) apr_array_header_t **revs {
+    /* ### FIXME-perl */
 }
 %apply const apr_array_header_t *STRINGLIST { 
     const apr_array_header_t *paths 
@@ -112,6 +118,9 @@ apr_array_header_t **revs {
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
+}
+%typemap(perl5,argout) apr_hash_t **entries_p {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------
@@ -142,6 +151,9 @@ apr_array_header_t **revs {
     $result = Py_BuildValue("zi", *$1, (long)*$2);
 }
 
+%typemap(perl5, argout) apr_hash_t **changed_paths_p {
+    /* ### FIXME-perl */
+}
 /* ----------------------------------------------------------------------- */
 
 

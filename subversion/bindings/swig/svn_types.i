@@ -38,6 +38,9 @@
     $result = t_output_helper($result,
                               SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
+%typemap(perl5, argout) SWIGTYPE **OUTPARAM {
+    /* ### FIXME-perl */
+}
 
 /* -----------------------------------------------------------------------
    Create a typemap to handle enums.
@@ -59,6 +62,9 @@
 */
 %typemap(python, in, parse="z") const char *MAY_BE_NULL "";
 
+/* ### FIXME-perl: I need to figure out what is going on with the above typemap
+*/
+
 %typemap(java, in) const char *MAY_BE_NULL { 
   /* ### WHEN IS THIS USED? */
   $1 = 0;
@@ -66,6 +72,9 @@
     $1 = ($1_ltype)JCALL2(GetStringUTFChars, jenv, $input, 0);
     if (!$1) return $null;
   }
+}
+%typemap(perl5,out) svn_error_t * {
+    /* ### FIXME-perl */
 }
 
 /* -----------------------------------------------------------------------
@@ -169,6 +178,9 @@
     return $jnicall;
   }
 
+%typemap(perl5, in) (const char *PTR, apr_size_t LEN) {
+    /* ### FIXME-perl */
+}
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
 */
@@ -178,6 +190,9 @@
     SWIG_ConvertPtr(PyTuple_GET_ITEM(args, PyTuple_GET_SIZE(args) - 1),
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
+}
+%typemap(perl5, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
+    /* ### FIXME-perl */
 }
 
 %typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
