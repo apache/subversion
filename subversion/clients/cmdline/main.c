@@ -51,8 +51,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {
     {"force",         svn_cl__force_opt, 0, "force operation to run"},
     {"help",          'h', 0, "show help on a subcommand"},
-    /* ### APR is broken. we can't pass NULL for the name, as the doc says */
-    {"--eek--",       '?', 0, "show help on a subcommand"},
+    {NULL,            '?', 0, "show help on a subcommand"},
     {"message",       'm', 1, "specify commit message \"ARG\""},
     {"quiet",         'q', 0, "print as little as possible"},
     {"recursive",     'R', 0, "descend recursively"},
