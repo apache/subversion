@@ -936,6 +936,8 @@ do_item_commit (const char *url,
 /* Prototype for function below */
 static svn_error_t *get_test_editor (const svn_delta_editor_t **editor,
                                      void **edit_baton,
+                                     const svn_delta_editor_t *real_editor,
+                                     void *real_eb,
                                      const char *base_url,
                                      apr_pool_t *pool);
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
@@ -961,13 +963,9 @@ svn_client__do_commit (const char *base_url,
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   {
-    const svn_delta_editor_t *test_editor;
-    void *test_edit_baton;
-    SVN_ERR (get_test_editor (&test_editor, &test_edit_baton, 
+    SVN_ERR (get_test_editor (&editor, &edit_baton, 
+                              editor, edit_baton,
                               base_url, pool));
-    svn_delta_compose_editors (&editor, &edit_baton,
-                               editor, edit_baton,
-                               test_editor, test_edit_baton, pool);
   }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
 
@@ -1160,18 +1158,42 @@ svn_client__make_commit_info (svn_revnum_t revision,
 struct edit_baton
 {
   const char *path;
+
+  const svn_delta_editor_t *real_editor;
+  void *real_eb;
 };
 
-
-static void *
-make_baton (const char *path, apr_pool_t *pool)
+struct item_baton
 {
-  struct edit_baton *new_baton 
-    = apr_pcalloc (pool, sizeof (struct edit_baton *));
+  struct edit_baton *eb;
+  void *real_baton;
+
+  const char *path;
+};
+
+static struct item_baton *
+make_baton (struct edit_baton *eb,
+            void *real_baton,
+            const char *path,
+            apr_pool_t *pool)
+{
+  struct item_baton *new_baton = apr_pcalloc (pool, sizeof (*new_baton));
+  new_baton->eb = eb;
+  new_baton->real_baton = real_baton;
   new_baton->path = apr_pstrdup (pool, path);
-  return ((void *) new_baton);
+  return new_baton;
 }
 
+static svn_error_t *
+set_target_revision (void *edit_baton,
+                     svn_revnum_t target_revision,
+                     apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+  return (*eb->real_editor->set_target_revision) (eb->real_eb,
+                                                  target_revision,
+                                                  pool);
+}
 
 static svn_error_t *
 open_root (void *edit_baton,
@@ -1180,22 +1202,30 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
+  struct item_baton *new_baton = make_baton (eb, NULL, eb->path, dir_pool);
   printf ("TEST EDIT STARTED (base url=%s)\n", eb->path);
-  *root_baton = make_baton (eb->path, dir_pool);
-  return SVN_NO_ERROR;
+  *root_baton = new_baton;
+  return (*eb->real_editor->open_root) (eb->real_eb,
+                                        base_revision,
+                                        dir_pool,
+                                        &new_baton->real_baton);
 }
 
 static svn_error_t *
-add_item (const char *path,
+add_file (const char *path,
           void *parent_baton,
           const char *copyfrom_path,
           svn_revnum_t copyfrom_revision,
           apr_pool_t *pool,
           void **baton)
 {
+  struct item_baton *db = parent_baton;
+  struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
   printf ("   Adding  : %s\n", path);
-  *baton = make_baton (path, pool);
-  return SVN_NO_ERROR;
+  *baton = new_baton;
+  return (*db->eb->real_editor->add_file) (path, db->real_baton,
+                                           copyfrom_path, copyfrom_revision,
+                                           pool, &new_baton->real_baton);
 }
 
 static svn_error_t *
@@ -1204,61 +1234,138 @@ delete_entry (const char *path,
               void *parent_baton,
               apr_pool_t *pool)
 {
+  struct item_baton *db = parent_baton;
   printf ("   Deleting: %s\n", path);
-  return SVN_NO_ERROR;
+  return (*db->eb->real_editor->delete_entry) (path, revision,
+                                               db->real_baton, pool);
 }
 
 static svn_error_t *
-open_item (const char *path,
+open_file (const char *path,
            void *parent_baton,
            svn_revnum_t base_revision,
            apr_pool_t *pool,
            void **baton)
 {
+  struct item_baton *db = parent_baton;
+  struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
   printf ("   Opening : %s\n", path);
-  *baton = make_baton (path, pool);
-  return SVN_NO_ERROR;
+  *baton = new_baton;
+  return (*db->eb->real_editor->open_file) (path, db->real_baton,
+                                            base_revision, pool,
+                                            &new_baton->real_baton);
 }
 
 static svn_error_t *
-close_item (void *baton)
+close_file (void *baton, apr_pool_t *pool)
 {
-  struct edit_baton *this = baton;
-  printf ("   Closing : %s\n", this->path);
-  return SVN_NO_ERROR;
+  struct item_baton *fb = baton;
+  printf ("   Closing : %s\n", fb->path);
+  return (*fb->eb->real_editor->close_file) (fb->real_baton, pool);
 }
 
 
 static svn_error_t *
-change_prop (void *file_baton,
-             const char *name,
-             const svn_string_t *value,
-             apr_pool_t *pool)
+change_file_prop (void *file_baton,
+                  const char *name,
+                  const svn_string_t *value,
+                  apr_pool_t *pool)
 {
+  struct item_baton *fb = file_baton;
   printf ("      PropSet (%s=%s)\n", name, value ? value->data : "");
-  return SVN_NO_ERROR;
+  return (*fb->eb->real_editor->change_file_prop) (fb->real_baton,
+                                                   name, value, pool);
 }
 
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
+  struct item_baton *fb = file_baton;
   printf ("      Transmitting text...\n");
-  *handler = *handler_baton = NULL;
-  return SVN_NO_ERROR;
+  return (*fb->eb->real_editor->apply_textdelta) (fb->real_baton, pool,
+                                                  handler, handler_baton);
 }
 
 static svn_error_t *
-close_edit (void *edit_baton)
+close_edit (void *edit_baton, apr_pool_t *pool)
 {
+  struct edit_baton *eb = edit_baton;
   printf ("TEST EDIT COMPLETED\n");
-  return SVN_NO_ERROR;
+  return (*eb->real_editor->close_edit) (eb->real_eb, pool);
+}
+
+static svn_error_t *
+add_directory (const char *path,
+               void *parent_baton,
+               const char *copyfrom_path,
+               svn_revnum_t copyfrom_revision,
+               apr_pool_t *pool,
+               void **baton)
+{
+  struct item_baton *db = parent_baton;
+  struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
+  printf ("   Adding  : %s\n", path);
+  *baton = new_baton;
+  return (*db->eb->real_editor->add_directory) (path,
+                                                db->real_baton,
+                                                copyfrom_path,
+                                                copyfrom_revision,
+                                                pool,
+                                                &new_baton->real_baton);
+}
+
+static svn_error_t *
+open_directory (const char *path,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                apr_pool_t *pool,
+                void **baton)
+{
+  struct item_baton *db = parent_baton;
+  struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
+  printf ("   Opening : %s\n", path);
+  *baton = new_baton;
+  return (*db->eb->real_editor->open_directory) (path, db->real_baton,
+                                                 base_revision, pool,
+                                                 &new_baton->real_baton);
+}
+
+static svn_error_t *
+change_dir_prop (void *file_baton,
+                 const char *name,
+                 const svn_string_t *value,
+                 apr_pool_t *pool)
+{
+  struct item_baton *db = file_baton;
+  printf ("      PropSet (%s=%s)\n", name, value ? value->data : "");
+  return (*db->eb->real_editor->change_dir_prop) (db->real_baton,
+                                                  name, value, pool);
+}
+
+static svn_error_t *
+close_directory (void *baton, apr_pool_t *pool)
+{
+  struct item_baton *db = baton;
+  printf ("   Closing : %s\n", db->path);
+  return (*db->eb->real_editor->close_directory) (db->real_baton, pool);
+}
+
+static svn_error_t *
+abort_edit (void *edit_baton, apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+  printf ("TEST EDIT ABORTED\n");
+  return (*eb->real_editor->abort_edit) (eb->real_eb, pool);
 }
 
 static svn_error_t *
 get_test_editor (const svn_delta_editor_t **editor,
                  void **edit_baton,
+                 const svn_delta_editor_t *real_editor,
+                 void *real_eb,
                  const char *base_url,
                  apr_pool_t *pool)
 {
@@ -1266,19 +1373,23 @@ get_test_editor (const svn_delta_editor_t **editor,
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
 
   eb->path = apr_pstrdup (pool, base_url);
+  eb->real_editor = real_editor;
+  eb->real_eb = real_eb;
 
+  ed->set_target_revision = set_target_revision;
   ed->open_root = open_root;
-  ed->add_directory = add_item;
-  ed->open_directory = open_item;
-  ed->close_directory = close_item;
-  ed->add_file = add_item;
-  ed->open_file = open_item;
-  ed->close_file = close_item;
+  ed->add_directory = add_directory;
+  ed->open_directory = open_directory;
+  ed->close_directory = close_directory;
+  ed->add_file = add_file;
+  ed->open_file = open_file;
+  ed->close_file = close_file;
   ed->delete_entry = delete_entry;
   ed->apply_textdelta = apply_textdelta;
-  ed->change_dir_prop = change_prop;
-  ed->change_file_prop = change_prop;
+  ed->change_dir_prop = change_dir_prop;
+  ed->change_file_prop = change_file_prop;
   ed->close_edit = close_edit;
+  ed->abort_edit = abort_edit;
 
   *editor = ed;
   *edit_baton = eb;
