@@ -11,7 +11,7 @@ Does everyone call svn_fs__check_fs who should?
 
 Do transactions need an open_count field too?
 
-We don't store older node versions as deltas yet.
+We don't store older node revisions as deltas yet.
 
 Get rid of proplists; just give the user an APR hash table instead.
 
@@ -29,7 +29,7 @@ subdirectory, so the memory used is proportional to the depth of the
 tree.
 
 Probably file contents and delta contents should be stored in a
-separate table from the REPRESENTATION and NODE-VERSION skel, so we
+separate table from the REPRESENTATION and NODE-REVISION skel, so we
 can parse those skels without having to read the whole file's data.
 Perhaps a "strings" table, where a skel of the form ("strings" NUM)
 instead of an atom means that the text should actually come from that
@@ -51,12 +51,12 @@ svn_vernum_t and apr_size_t aren't the same size?
 Long term ideas:
 
 - directory entry cache:
-  Create a cache mapping a node version id X plus a filename component
-  N onto a new node version id Y, meaning that X is a directory in
+  Create a cache mapping a node revision id X plus a filename component
+  N onto a new node revision id Y, meaning that X is a directory in
   which the name N is bound to ID Y.  If everything were in the cache,
   this function could run with no I/O except for the final node.
 
-  Since node versions never change, we wouldn't have to worry about
+  Since node revisions never change, we wouldn't have to worry about
   invalidating the cache.  Mutable node objects will need special
   handling, of course.
 
@@ -65,7 +65,7 @@ Long term ideas:
   that around in case we need to compute one of its nearby ancestors'
   fulltext, too.  This could be a waste, though --- the access
   patterns are a mix of linear scan (backwards to reconstruct a given
-  version) and random (who knows what node we'll hit next), so it's
+  revision) and random (who knows what node we'll hit next), so it's
   not clear what cache policy would be effective.  Best to record some
   data on how many delta applications a given cache would avoid before
   implementing it.
@@ -77,10 +77,10 @@ Long term ideas:
 
 
 Keeping repositories alive in the long term: Berkeley DB is infamous
-for changing its file format from one version to the next.  If someone
+for changing its file format from one revision to the next.  If someone
 saves a Subversion 1.0 repository on a CD somewhere, and then tries to
 read it seven years later, their chance of being able to read it with
-the latest version of Subversion is nil.  The solution:
+the latest revision of Subversion is nil.  The solution:
 
 - Define a simply XML repository dump format for the complete
   repository data.  This should be the same format we use for CVS
@@ -90,7 +90,7 @@ the latest version of Subversion is nil.  The solution:
   Berkeley DB, no fancy XML tools, uses nothing but POSIX read and
   seek --- that can dump a Subversion repository in that format.
 
-- For each version of Subversion, make a sample repository, and
+- For each revision of Subversion, make a sample repository, and
   archive a copy of it away as test data.
 
 - Write a test suite that verifies that the repository dump program
@@ -104,4 +104,4 @@ more fundamental than the XML tree delta format.  Make sure to cover:
 - how you express deleting a file, and then adding a new file under the same
   name
 - how you express "copy existing file A to new file B; update,
-  receiving new version of A; rename B on top of A; now commit"
+  receiving new revision of A; rename B on top of A; now commit"
