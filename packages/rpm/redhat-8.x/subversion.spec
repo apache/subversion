@@ -91,6 +91,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Apr 13 2003 David Summers <david@summersoft.fay.ar.us> 0.20.1-5610
+- Added svndumpfilter.
+
 * Fri Apr 04 2003 David Summers <david@summersoft.fay.ar.us> 0.18.1-5549
 - Updated to Apache 2.0.45.
 - Took out libsvn_auth as it is no longer needed or used.
@@ -387,6 +390,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnadmin-%{version}-%{release}.static
+/usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
 /usr/bin/svnversion
