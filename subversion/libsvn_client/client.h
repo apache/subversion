@@ -13,6 +13,10 @@
  */
 
 
+#ifndef CLIENT_H
+#define CLIENT_H
+
+
 #include <apr_pools.h>
 #include <apr_dso.h>
 #include "svn_types.h"
@@ -22,6 +26,7 @@
 #include "svn_xml.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
+
 
 /* ---------------------------------------------------------------- */
 
@@ -39,16 +44,6 @@
 
 
 
-/* A logic table that maps repository URL types to the name of the
-   specific RA library that handles it.  Add new RA implentations
-   here. */
-const char *svn_client__ra_library_table [][2] =
-{
-  {"http",  "dav"   },  /* libsvn_ra_dav */
-  {"file",  "local" }   /* libsvn_ra_local */
-};
-
-
 /* Structure representing a loaded RA library. */
 typedef struct svn_client__ra_library_t
 {
@@ -62,9 +57,9 @@ typedef struct svn_client__ra_library_t
 /* Return a loaded RA library which can handle URL, alloc'd from
    POOL. */
 svn_error_t *
-svn_client_get_ra_library (const svn_client__ra_library_t **library,
-                           const char *URL,
-                           apr_pool_t *pool);
+svn_client__get_ra_library (const svn_client__ra_library_t **library,
+                            const char *URL,
+                            apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------- */
@@ -93,6 +88,9 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              svn_revnum_t ancestor_revision,
                              apr_pool_t *pool);
 
+
+
+#endif /* CLIENT_H */
 
 
 /* 
