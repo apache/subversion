@@ -1970,6 +1970,44 @@ umask 002
       We recommend you choose the server that best meets your needs
       and stick with it!</para>
 
+    <sidebar>
+      <title>The svn+ssh:// server checklist</title>
+
+      <para>It can be quite tricky to get a bunch of users with
+        existing SSH accounts to share a repository without
+        permissions problems.  If you're confused about all the things
+        that you (as an admininstrator) need to do on a Unix-like
+        system, here's a quick checklist that resummarizes some of
+        things discussed in this section:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>Put all the SSH users into a single group.</para>
+        </listitem>
+
+        <listitem>
+          <para>Make the repository wholly owned by that group, and
+            give complete read/write access to that group.</para>
+        </listitem>
+
+        <listitem>
+          <para>Make sure that <command>svnserve</command>
+            (<filename>/usr/local/bin/svnserve</filename>, or wherever
+            it lives in <literal>$PATH</literal>) is actually a
+            wrapper script which sets <command>umask 002</command> and
+            executes the real <command>svnserve</command>
+            binary.</para>
+        </listitem>
+
+        <listitem>
+          <para>Make sure you run <command>chmod g+s</command> on the
+            repository's <filename>db</filename> directory, so new
+            logfiles are created with the correct group owner.</para>
+        </listitem>
+      </itemizedlist>
+
+    </sidebar>
+
   </sect1>
 
 

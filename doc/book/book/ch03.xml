@@ -2041,12 +2041,12 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
 
       <screen>
 $ svn status
-  L    ./somedir
-M      ./somedir/foo.c 
+  L    somedir
+M      somedir/foo.c 
 
 $ svn cleanup
 $ svn status
-M      ./somedir/foo.c
+M      somedir/foo.c
 </screen>
 
     </sect2>
