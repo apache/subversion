@@ -95,7 +95,7 @@ open (void **session_baton,
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Allocate the session_baton itself in this subpool */ 
-  baton = apr_pcalloc (subpool, sizeof(*baton));
+  baton = apr_pcalloc (pool, sizeof(*baton));
 
   /* And let all other session_baton data use the same subpool */
   baton->pool = subpool;
@@ -141,9 +141,7 @@ close (void *session_baton)
   err = svn_fs_close_fs (baton->fs);
   if (err) return err;
 
-  /* When we free the session's pool, the entire session and
-     everything inside it is freed, which is good.  However, the
-     original pool passed to open() is NOT freed, which is also good. */
+  /* Free all memory allocated during this ra session.  */
   apr_pool_destroy (baton->pool);
 
   return SVN_NO_ERROR;
