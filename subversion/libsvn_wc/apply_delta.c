@@ -376,6 +376,20 @@ finish_file (void *child_baton)
 
 
 
+static const svn_delta_walk_t change_walker = {
+  delete,
+  add_directory,
+  replace_directory,
+  change_dir_prop,
+  change_dirent_prop,
+  finish_directory,
+  add_file,
+  replace_file,
+  apply_textdelta,
+  change_file_prop,
+  finish_file,
+};
+
 svn_error_t *
 svn_wc_apply_delta (void *delta_src,
                     svn_delta_read_fn_t *read_fn,
@@ -384,7 +398,6 @@ svn_wc_apply_delta (void *delta_src,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_delta_walk_t walker;
   struct w_baton w_baton;
   svn_string_t *telescoping_path;
 
@@ -411,20 +424,6 @@ svn_wc_apply_delta (void *delta_src,
 
   /* Else nothing in the way, so continue. */
 
-  /* Set up the walker callbacks... */
-  memset (&walker, 0, sizeof (walker));
-  walker.delete             = delete;
-  walker.add_directory      = add_directory;
-  walker.replace_directory  = replace_directory;
-  walker.change_dir_prop    = change_dir_prop;
-  walker.change_dirent_prop = change_dirent_prop;
-  walker.finish_directory   = finish_directory;
-  walker.add_file           = add_file;
-  walker.replace_file       = replace_file;
-  walker.apply_textdelta    = apply_textdelta;
-  walker.change_file_prop   = change_file_prop;
-  walker.finish_file        = finish_file;
-
   /* Set up the batons... */
   memset (&w_baton, 0, sizeof (w_baton));
   w_baton.dest_dir   = dest;      /* Remember, DEST might be null. */
@@ -434,12 +433,52 @@ svn_wc_apply_delta (void *delta_src,
 
   /* ... and walk! */
   err = svn_delta_parse (read_fn, delta_src,
-                         &walker, &w_baton, telescoping_path, pool);
+                         &change_walker, &w_baton, telescoping_path, pool);
 
   return err;
 }
 
+svn_error_t *svn_wc_get_change_walker(svn_string_t *dest,
+                                      const svn_delta_walk_t **walker,
+                                      void **walk_baton,
+                                      void **dir_baton,
+                                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  struct w_baton *w_baton;
 
+  /* ### this bit with creating the destination should be deferred */
+
+  if (dest)
+    {
+      int is_working_copy = 0;
+
+      err = svn_wc__ensure_directory (dest, pool);
+      if (err)
+        return err;
+
+      /* kff todo: actually, we can't always err out if dest turns out
+         to be a working copy; instead, we just need to note it
+         somewhere and be careful.  Right now, though, punt. */
+      svn_wc__working_copy_p (&is_working_copy, dest, pool);
+      if (is_working_copy)
+        return svn_create_error (SVN_ERR_OBSTRUCTED_UPDATE,
+                                 0, dest->data, NULL, pool);
+    }
+
+  /* Else nothing in the way, so continue. */
+
+  *walker = &change_walker;
+
+  w_baton = ap_pcalloc(pool, sizeof(*w_baton));
+  w_baton->dest_dir   = dest;   /* Remember, DEST might be null. */
+  w_baton->pool       = pool;
+  *walk_baton = w_baton;
+
+  *dir_baton = svn_string_create ("", pool);
+
+  return NULL;
+}
 
 
 /* 
