@@ -239,7 +239,12 @@ typedef struct svn_ra_callbacks_t
 
      If it quite legal to set this field to NULL if the RA user cannot
      support WC properties, or they are not defined/applicable for the
-     current session. */
+     current session.
+
+     ### we might have a problem if the RA layer ever wants a property
+     ### that corresponds to a different revision of the file than
+     ### what is in the WC. we'll cross that bridge one day...
+  */
   svn_ra_get_wc_prop_func_t get_wc_prop;
 
 } svn_ra_callbacks_t;

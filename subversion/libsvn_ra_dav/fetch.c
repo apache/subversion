@@ -61,16 +61,20 @@ typedef struct {
 typedef struct {
   apr_pool_t *pool;
 
-  svn_error_t *err;             /* propagate an error out of the reader */
-
   /* these two are the handler that the editor gave us */
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
 
+} file_read_ctx_t;
+
+typedef struct {
+  svn_error_t *err;             /* propagate an error out of the reader */
+
   int checked_type;             /* have we processed ctype yet? */
   ne_content_type ctype;        /* the Content-Type header */
 
-} file_read_ctx_t;
+  void *subctx;
+} custom_get_ctx_t;
 
 #define POP_SUBDIR(sds) (((subdir_t **)(sds)->elts)[--(sds)->nelts])
 #define PUSH_SUBDIR(sds,s) (*(subdir_t **)apr_array_push(sds) = (s))
@@ -403,14 +407,94 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *custom_get_request(ne_session *sess,
+                                       const char *url,
+                                       const char *relpath,
+                                       ne_block_reader reader,
+                                       void *subctx,
+                                       svn_ra_get_wc_prop_func_t get_wc_prop,
+                                       void *cb_baton,
+                                       apr_pool_t *pool)
+{
+  custom_get_ctx_t cgc = { 0 };
+  const char *delta_base;
+  ne_request *req;
+  int rv;
+  int code;
+
+  /* See if we can get a version URL for this resource. This will refer to
+     what we already have in the working copy, thus we can get a diff against
+     this particular resource. */
+  SVN_ERR( get_delta_base(&delta_base, relpath, get_wc_prop, cb_baton, pool) );
+
+  req = ne_request_create(sess, "GET", url);
+  if (req == NULL)
+    {
+      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL, pool,
+                               "Could not create a GET request for %s",
+                               url);
+    }
+
+  /* we want to get the Content-Type so that we can figure out whether
+     this is an svndiff or a fulltext */
+  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
+                                 &cgc.ctype);
+
+  if (delta_base)
+    {
+      /* The HTTP delta draft uses an If-None-Match header holding an
+         entity tag corresponding to the copy we have. It is much more
+         natural for us to use a version URL to specify what we have.
+         Thus, we want to use the If: header to specify the URL. But
+         mod_dav sees all "State-token" items as lock tokens. When we
+         get mod_dav updated and the backend APIs expanded, then we
+         can switch to using the If: header. For now, use a custom
+         header to specify the version resource to use as the base. */
+      ne_add_request_header(req, "X-SVN-VR-Base", delta_base);
+    }
+
+  /* add in a reader to capture the body of the response. */
+  ne_add_response_body_reader(req, ne_accept_2xx, reader, &cgc);
+
+  /* complete initialization of the body reading context */
+  cgc.subctx = subctx;
+
+  /* do the response now */
+  rv = ne_request_dispatch(req);
+  code = ne_get_status(req)->code;
+  ne_request_destroy(req);
+
+  /* we no longer need this */
+  if (cgc.ctype.value != NULL)
+    free(cgc.ctype.value);
+
+  /* if there was an error writing the contents, then return it rather
+     than Neon-related errors */
+  if (cgc.err)
+    return cgc.err;
+
+  if (rv != NE_OK)
+    {
+      return svn_ra_dav__convert_error(sess, "fetching a file", rv, pool);
+    }
+  if (code != 200 && code != 226)
+    {
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+                               "GET request failed for %s", url);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
-  file_read_ctx_t *frc = userdata;
+  custom_get_ctx_t *cgc = userdata;
+  file_read_ctx_t *frc = cgc->subctx;
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
   svn_stringbuf_t data;
 
-  if (frc->err)
+  if (cgc->err)
     {
       /* We must have gotten an error during the last read... 
 
@@ -428,13 +512,13 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
       return;
     }
 
-  if (!frc->checked_type)
+  if (!cgc->checked_type)
     {
 #if 0
       printf("Content-Type: %s/%s; charset=%s\n",
-             frc->ctype.type, frc->ctype.subtype, frc->ctype.charset);
+             cgc->ctype.type, cgc->ctype.subtype, cgc->ctype.charset);
 #endif
-      frc->checked_type = 1;
+      cgc->checked_type = 1;
     }
 
   data.data		= (char *)buf;
@@ -455,7 +539,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 
   /* We can't really do anything useful if we get an error here.  Pass
      it off to someone who can. */
-  frc->err = (*frc->handler)(&window, frc->handler_baton);
+  cgc->err = (*frc->handler)(&window, frc->handler_baton);
 }
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
@@ -470,13 +554,8 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 {
   file_read_ctx_t frc = { 0 };
   svn_error_t *err;
-  svn_error_t *err2;
-  int rv;
-  int code;
   svn_string_t my_url;
   svn_stringbuf_t *url_str;
-  ne_request *req;
-  const char *delta_base;
 
   my_url.data	= url;
   my_url.len	= strlen(url);
@@ -497,75 +576,16 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
       return SVN_NO_ERROR;
     }
 
-  frc.err = NULL;
   frc.pool = pool;
 
-  /* See if we can get a version URL for this resource. This will refer to
-     what we already have in the working copy, thus we can get a diff against
-     this particular resource. */
-  SVN_ERR( get_delta_base(&delta_base, relpath, get_wc_prop, cb_baton, pool) );
+  SVN_ERR( custom_get_request(sess, url_str->data, relpath,
+                              fetch_file_reader, &frc,
+                              get_wc_prop, cb_baton, pool) );
 
-  req = ne_request_create(sess, "GET", url_str->data);
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL, pool,
-                               "Could not create a GET request for %s",
-                               url_str->data);
-    }
+  /* close the handler, since the file reading completed successfully. */
+  SVN_ERR( (*frc.handler)(NULL, frc.handler_baton) );
 
-  /* we want to get the Content-Type so that we can figure out whether
-     this is an svndiff or a fulltext */
-  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
-                                 &frc.ctype);
-
-  if (delta_base)
-    {
-      /* The HTTP delta draft uses an If-None-Match header holding an
-         entity tag corresponding to the copy we have. It is much more
-         natural for us to use a version URL to specify what we have.
-         Thus, we want to use the If: header to specify the URL. But
-         mod_dav sees all "State-token" items as lock tokens. When we
-         get mod_dav updated and the backend APIs expanded, then we
-         can switch to using the If: header. For now, use a custom
-         header to specify the version resource to use as the base. */
-      ne_add_request_header(req, "X-SVN-VR-Base", delta_base);
-    }
-
-  /* add in a reader to capture the body of the response. */
-  ne_add_response_body_reader(req, ne_accept_2xx, fetch_file_reader, &frc);
-
-  /* do the response now */
-  rv = ne_request_dispatch(req);
-  code = ne_get_status(req)->code;
-  ne_request_destroy(req);
-
-  /* we no longer need this */
-  if (frc.ctype.value != NULL)
-    free(frc.ctype.value);
-
-  if (rv != NE_OK)
-    {
-      err = svn_ra_dav__convert_error(sess, "fetching a file", rv, pool);
-    }
-  else if (code != 200 && code != 226)
-    {
-      err = svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
-                               "GET request failed for %s",
-                               url_str->data);
-    }
-  /* else: err == NULL */
-
-  /* if there was an error reading the contents, then bail *before*
-     closing the handler. we don't want to tell the handler that the
-     file is "done". */
-  if (frc.err)
-    return frc.err;
-
-  /* close the handler, now that the file reading is complete. */
-  err2 = (*frc.handler)(NULL, frc.handler_baton);
-
-  /* return the primary error, other return the close error (if any) */
-  return err ? err : err2;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *fetch_file(ne_session *sess,
@@ -664,10 +684,11 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 /* Helper (neon callback) for svn_ra_dav__get_file. */
 static void get_file_reader(void *userdata, const char *buf, size_t len)
 {
+  custom_get_ctx_t *cgc = userdata;
   apr_size_t wlen;
 
   /* The stream we want to push data at. */
-  svn_stream_t *stream = (svn_stream_t *) userdata;
+  svn_stream_t *stream = cgc->subctx;
 
   /* Write however many bytes were passed in by neon. */
   wlen = len;
@@ -732,13 +753,11 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
         *fetched_rev = got_rev;
     }
 
-  /* Have neon fetch the file contents and 'push' them at
-     get_file_reader().  The caller's stream is passed along as
-     userdata. */
-  rv = ne_read_file(ras->sess, final_url, get_file_reader, stream);
-  if (rv != NE_OK)
-    return svn_ra_dav__convert_error(ras->sess, "fetching one file", rv,
-                                     ras->pool);
+  /* Fetch the file, shoving it at the provided stream. */
+  SVN_ERR( custom_get_request(ras->sess, final_url, path,
+                              get_file_reader, stream,
+                              ras->callbacks->get_wc_prop,
+                              ras->callback_baton, ras->pool) );
 
   return SVN_NO_ERROR;
 }
