@@ -1001,10 +1001,8 @@ svn_wc_add (const char *path,
              this model someday. */
 
           /* Figure out what the new url should be. */
-          const char *new_url 
-            = svn_path_join (parent_entry->url, 
-                             svn_path_uri_encode (base_name, pool),
-                             pool);
+          const char *new_url = 
+            svn_path_url_add_component (parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR (svn_wc__do_update_cleanup (path, adm_access, TRUE, new_url, 
