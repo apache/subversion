@@ -288,7 +288,7 @@ svn_wc_process_committed (const char *path,
                            SVN_WC__ENTRY_ATTR_CMT_DATE,
                            rev_date,
                            rev_author ? SVN_WC__ENTRY_ATTR_CMT_AUTHOR : NULL,
-                           rev_author ? rev_author : NULL,
+                           rev_author,
                            NULL);
   else if (rev_author)
     svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
