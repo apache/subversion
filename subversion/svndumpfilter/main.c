@@ -679,7 +679,7 @@ static svn_error_t *
 close_node (void *node_baton)
 {
   struct node_baton_t *nb = node_baton;
-  int len = 2;
+  apr_size_t len = 2;
 
   /* Get out of here if we can. */
   if (nb->do_skip)
