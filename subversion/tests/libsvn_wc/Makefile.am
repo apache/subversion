@@ -13,9 +13,15 @@ INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 checkout_test_LDADD = @SVN_LIBSVN_WC_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
                       @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
+if BUILD_FS_STUFF
+commit_test_LDADD = @SVN_TESTS_MAIN_LIBS@ @SVN_LIBSVN_FS_LIBS@ \
+                    @SVN_LIBSVN_WC_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
+                    @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+else
 commit_test_LDADD = @SVN_TESTS_MAIN_LIBS@ @SVN_LIBSVN_WC_LIBS@ \
                     @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
                     @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+endif
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
