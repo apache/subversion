@@ -20,9 +20,12 @@
 
 
 #include <string.h>
+
 #include "apr_pools.h"
 #include "apr_file_io.h"
 #include "apr_hash.h"
+#include "apr_fnmatch.h"
+
 #include "wc.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -32,6 +35,52 @@
 #include "svn_delta.h"
 
 #include <assert.h>
+
+
+/* Helper routine: try to read the contents of DIRPATH/.svnignore.  If
+   no such file exists, then set *PATTERNS to NULL.  Otherwise, set
+   *PATTERNS to a list of patterns to match;  *PATTERNS will contain
+   an array of (const char *) objects. */
+static svn_error_t *
+load_ignore_file (const char *dirpath,
+                  apr_array_header_t **patterns,
+                  apr_pool_t *pool)
+{
+  apr_file_t *fp;
+  apr_status_t status;
+  char buf[100];
+  apr_size_t sz = 100;
+
+  /* Try to load the .svnignore file. */
+  svn_stringbuf_t *path = svn_stringbuf_create (dirpath, pool);
+  svn_path_add_component_nts (path, SVN_WC_SVNIGNORE, svn_path_local_style);
+  status = apr_file_open (&fp, path->data, APR_READ, APR_OS_DEFAULT, pool);
+  if (status)
+    {
+      *patterns = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Now that it's open, read one line at a time into the array. */
+  *patterns = apr_array_make (pool, 1, sizeof(const char *));
+  while (1)
+    {
+      status = svn_io_read_length_line (fp, buf, &sz);
+      if (status == APR_EOF)
+        break;
+      else if (status)
+        return svn_error_createf(status, 0, NULL, pool,
+                                 "error reading %s", path->data);
+
+      (*((const char **) apr_array_push (*patterns))) = 
+        apr_pstrndup (pool, buf, sz);
+
+      sz = 100;
+    }
+
+  return SVN_NO_ERROR;
+}                  
+
 
 
 /* The values stored in `affected_targets' hashes are of this type.
@@ -1405,6 +1454,7 @@ report_revisions (svn_stringbuf_t *wc_path,
 {
   apr_hash_t *entries, *dirents;
   apr_hash_index_t *hi;
+  apr_array_header_t *patterns;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Construct the actual 'fullpath' = wc_path + dir_path */
@@ -1414,6 +1464,9 @@ report_revisions (svn_stringbuf_t *wc_path,
   /* Get both the SVN Entries and the actual on-disk entries. */
   SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
   SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
+
+  /* Try to load any '.svnignore' file that may be present. */
+  SVN_ERR (load_ignore_file (full_path->data, &patterns, subpool));
 
   /* Phase 1:  Print out every unrecognized (unversioned) object. */
 
@@ -1434,21 +1487,46 @@ report_revisions (svn_stringbuf_t *wc_path,
         /* and we're not looking at SVN... */
         if (strcmp (keystring, SVN_WC_ADM_DIR_NAME))
           {
+            svn_boolean_t print_item = TRUE;
             apr_status_t status;
 
             current_entry_name = svn_stringbuf_create (keystring, subpool);
-            printable_path = svn_stringbuf_dup (full_path, subpool);
-            svn_path_add_component (printable_path, current_entry_name,
-                                    svn_path_local_style);
+                        
+            if (patterns)
+              {    
+                int i;
+                for (i = 0; i < patterns->nelts; i++)
+                  {
+                    const char *pat = (((const char **) (patterns)->elts))[i];
+
+                    /* Try to match current_entry_name to pat. */
+                    status = apr_fnmatch (pat, current_entry_name->data,
+                                          FNM_PERIOD);
+
+                    if (status == APR_SUCCESS)
+                      {
+                        /* APR_SUCCESS means we found a match: */
+                        print_item = FALSE;
+                        break;
+                      }
+                  }
+              } 
             
-            status = fbtable->report_unversioned_item (printable_path->data);
-            if (status)
-              return 
-                svn_error_createf (status, 0, NULL, subpool,
-                                   "error while reporting unversioned '%s'",
-                                   printable_path->data);
+            if (print_item)
+              {
+                printable_path = svn_stringbuf_dup (full_path, subpool);
+                svn_path_add_component (printable_path, current_entry_name,
+                                        svn_path_local_style);
+                status = 
+                  fbtable->report_unversioned_item (printable_path->data);
+                if (status)
+                  return 
+                    svn_error_createf (status, 0, NULL, subpool,
+                                       "error reporting unversioned '%s'",
+                                       printable_path->data);
+              }
           }
-    }
+    }  /* end of dirents loop */
 
 
   /* Phase 2:  Do the real reporting and recursing. */

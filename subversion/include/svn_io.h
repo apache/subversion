@@ -117,6 +117,18 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
                                  apr_pool_t *pool);
 
 
+/* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
+ * Does not include newline, instead '\0' is put there.
+ * Length (as in strlen) is returned in *LIMIT.
+ * BUF should be pre-allocated.
+ * FILE should be already opened. 
+ *
+ * When the file is out of lines, APR_EOF will be returned.
+ */
+apr_status_t
+svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit);
+
+
 /* Set *APR_TIME to the later of PATH's (a regular file) mtime or ctime.
  *
  * Unix traditionally distinguishes between "mod time", which is when

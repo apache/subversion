@@ -173,8 +173,8 @@ svn_hash_write (apr_hash_t *hash,
  *
  * (This is meant for reading length lines from hashdump files.) 
  */
-static apr_status_t
-read_length_line (apr_file_t *file, char *buf, apr_size_t *limit)
+apr_status_t
+svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit)
 {
   apr_size_t i;
   apr_status_t err;
@@ -225,7 +225,7 @@ svn_hash_read (apr_hash_t *hash,
       /* Read a key length line.  Might be END, though. */
       apr_size_t len = sizeof(buf);
 
-      err = read_length_line (srcfile, buf, &len);
+      err = svn_io_read_length_line (srcfile, buf, &len);
       if ((err == APR_EOF) && first_time)
         /* We got an EOF on our very first attempt to read, which
            means it's a zero-byte file.  No problem, just go home. */        
@@ -261,7 +261,7 @@ svn_hash_read (apr_hash_t *hash,
 
           /* Read a val length line */
           len = sizeof(buf);
-          err = read_length_line (srcfile, buf, &len);
+          err = svn_io_read_length_line (srcfile, buf, &len);
           if (err) return err;
 
           if ((buf[0] == 'V') && (buf[1] == ' '))
