@@ -23,8 +23,9 @@ import shutil, string, sys, re, os.path, traceback
 try:
   import svntest
 except SyntaxError:
-  print "<<< Please make sure you have Python 2.1 or better! >>>"
-  traceback.print_exc()
+  sys.stderr.write('[SKIPPED] ')
+  print "<<< Please make sure you have Python 2 or better! >>>"
+  traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
 
