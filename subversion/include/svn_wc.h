@@ -102,7 +102,7 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
    choice.  What happens when I try to check out their tree?  Perhaps
    a centralized decision is called for after all. */
 
-#define SVN_WC_ADM_DIR_NAME   "SVN"
+#define SVN_WC_ADM_DIR_NAME   ".svn"
 
 
 
