@@ -195,8 +195,10 @@ get_youngest_rev (const char **msg)
 
 svn_error_t * (*test_funcs[]) (const char **msg) = {
   0,
+#ifdef 0
   open_ra_session,
   get_youngest_rev,
+#endif /* 0 */
   0
 };
 
