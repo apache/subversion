@@ -498,16 +498,12 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
 
       if (path[i] == '@')
         {
-          const char *native_rev;
           svn_opt_revision_t start_revision, end_revision;
-
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
-                                              pool));
 
           end_revision.kind = svn_opt_revision_unspecified;
           if (svn_opt_parse_revision (&start_revision,
                                       &end_revision,
-                                      native_rev, pool)
+                                      path + i + 1, pool)
               || end_revision.kind != svn_opt_revision_unspecified)
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("Syntax error parsing revision '%s'"),
