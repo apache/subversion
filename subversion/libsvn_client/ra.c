@@ -208,24 +208,28 @@ invalidate_wcprop_for_entry (const char *path,
 }
 
 
-/* This implements the `svn_ra_invalidate_wc_props_func_t' interface. */
+/* This implements the `svn_ra_invalidate_wc_props_func_t' interface.
+   ### This implementation only works for directory paths.  (Which is
+   better than working only for path == "", like before.) */
 static svn_error_t *
 invalidate_wc_props (void *baton,
-                    const char *path,
-                    const char *prop_name,
-                    apr_pool_t *pool)
+                     const char *path,
+                     const char *prop_name,
+                     apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
   svn_wc_entry_callbacks_t walk_callbacks;
   struct invalidate_wcprop_walk_baton wb;
+  svn_wc_adm_access_t *adm_access;
 
   wb.base_access = cb->base_access;
   wb.prop_name = prop_name;
   walk_callbacks.found_entry = invalidate_wcprop_for_entry;
 
-  SVN_ERR (svn_wc_walk_entries (svn_path_join (cb->base_dir, path, pool),
-                                cb->base_access,
-                                &walk_callbacks, &wb, FALSE, pool));
+  path = svn_path_join (cb->base_dir, path, pool);
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, cb->base_access, path, pool));
+  SVN_ERR (svn_wc_walk_entries (path, adm_access, &walk_callbacks, &wb,
+                                FALSE, pool));
 
   return SVN_NO_ERROR;
 }
