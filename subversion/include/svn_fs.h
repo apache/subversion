@@ -34,6 +34,20 @@ extern "C" {
 #include "svn_io.h"
 
 
+/* Data written to the filesystem through the svn_fs_apply_textdelta()
+   interface is cached in memory until the end of the data stream, or
+   until a size trigger is hit.  Define that trigger here (in bytes).
+   Setting the value to 0 will result in no filesystem buffering at
+   all.  The value only really matters when dealing with file contents
+   bigger than the value itself.  Above that point, large values here
+   allow the filesystem to buffer more data in memory before flushing
+   to the database, which increases memory usage but greatly decreases
+   the amount of disk access (and log-file generation) in database.
+   Smaller values will limit your overall memory consumption, but can
+   drastically hurt throughput by necessitating more write operations
+   to the database (which also generates more log-files).  */
+#define SVN_FS_WRITE_BUFFER_SIZE   4096000
+
 
 /* Opening and creating filesystems.  */
 
