@@ -30,7 +30,7 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
-#include "svn_private_config.h"
+#include "svn_version.h"
 
 #include "ra_dav.h"
 
