@@ -37,6 +37,10 @@ SVN::Core - Core module of the subversion perl bindings
 SVN::Core implements higher level functions of fundamental subversion
 functions.
 
+=head1 FUNCTIONS
+
+=over 4
+
 =cut
 
 BEGIN {
@@ -48,6 +52,44 @@ END {
     SVN::_Core::apr_terminate;
 }
 
+=item SVN::Core::auth_open([auth provider array]);
+
+Takes a reference to an array of authentication providers
+and returns an auth_baton.  If you use prompt providers
+you can not use this function, but need to use the 
+auth_open_helper.
+
+=item SVN::Core::auth_open_helper([auth provider array);
+
+Prompt providers return two values instead of one.  The
+2nd paramaeter is a reference to whatever was passed into
+them as the callback.  auth_open_helper splits up these
+arguments, passing the provider objects into auth_open
+which gives it an auth_baton and putting the other
+ones in an array.  The first return value of this
+function is the auth_baton, the second is a reference
+to an array containing the references to the callbacks.
+
+These callback arrays should be stored in the object
+the auth_baton is attached to.
+
+=cut
+
+sub auth_open_helper {
+    my $args = shift;
+    my (@auth_providers,@auth_callbacks);
+
+    foreach my $arg (@{$args}) {
+        if (ref($arg) eq '_p_svn_auth_provider_object_t') {
+            push @auth_providers, $arg;
+        } else {
+            push @auth_callbacks, $arg;
+        }
+    }
+    my $auth_baton = SVN::Core::auth_open(\@auth_providers);
+    return ($auth_baton,\@auth_callbacks);
+}
+
 package _p_svn_stream_t;
 use SVN::Base qw(Core svn_stream_);
 
@@ -55,12 +97,21 @@ package SVN::Stream;
 use IO::Handle;
 our @ISA = qw(IO::Handle);
 
+=head1 OTHER OBJECTS
+
+=over 4
+
 =head2 svn_stream_t - SVN::Stream
 
 You can use native perl io handles (including io globs) as
 svn_stream_t in subversion functions. Returned svn_stream_t are also
 translated into perl io handles, so you could access them with regular
 print, read, etc.
+
+Note that some functions takes a stream to read or write, while it
+does not close it but still hold the reference to the handle. In this case
+the handle won't be destroyed properly. You should always use correct
+default pool before calling such functions.
 
 =cut
 
@@ -216,8 +267,28 @@ sub DESTROY {
     $self->close;
 }
 
+package _p_apr_pool_t;
+
+my %WRAPPED;
+
+sub default {
+    my ($pool) = @_;
+    my $pobj = SVN::Pool->_wrap ($$pool);
+    $WRAPPED{$pool} = $pobj;
+    $pobj->default;
+}
+
+sub DESTROY {
+    my ($pool) = @_;
+    delete $WRAPPED{$pool};
+}
+
 package SVN::Pool;
 use SVN::Base qw/Core svn_pool_/;
+
+=back
+
+=over 4
 
 =head2 svn_pool_t - SVN::Pool
 
@@ -229,6 +300,9 @@ of the subversion functions), the pool is optionally. the default pool
 is used if it is omitted. If default pool is not set, a new root pool
 will be created and set as default automatically when the first
 function requiring a default pool is called.
+
+For callback functions providing pool to your subroutine, you could
+also use $pool->default to make it the default pool in the scope.
 
 =head3 Methods
 
@@ -306,13 +380,33 @@ END {
     $globaldestroy = 1;
 }
 
+my %WRAPPOOL;
+
+# Create a cloned _p_apr_pool_t pointing to the same apr_pool_t
+# but on different address. this allows pools that are from C
+# to have proper lifetime.
+sub _wrap {
+    my ($class, $rawpool) = @_;
+    my $pool = \$rawpool;
+    bless $pool, '_p_apr_pool_t';
+    my $npool = \$pool;
+    bless $npool, $class;
+    $WRAPPOOL{$npool} = 1;
+    $npool;
+}
+
 sub DESTROY {
     return if $globaldestroy;
     my $self = shift;
     if ($$self eq $SVN::_Core::current_pool) {
 	$SVN::_Core::current_pool = pop @POOLSTACK;
     }
-    apr_pool_destroy ($$self);
+    if (exists $WRAPPOOL{$self}) {
+        delete $WRAPPOOL{$self};
+    }
+    else {
+        apr_pool_destroy ($$self)
+    }
 }
 
 package _p_svn_log_changed_path_t;

@@ -38,6 +38,11 @@ bootstrap the requested module if it's not yet loaded, and iterate
 over the symbols provided in that module, it them puts the function
 with prefix trimmed in the namespace of the caller for this import.
 
+The 3rd through the last parameter is a list of symbol endings that
+you wish for SVN::Base not to import into your namespace.  This is useful
+for cases where you may want to import certaion symbols differently than
+normally.
+
 =head1 CAVEATS
 
 SVN::Base consider a function as structure member accessor if it is
@@ -47,7 +52,7 @@ will need extra handling.
 =cut
 
 sub import {
-    my (undef, $pkg, $prefix) = @_;
+    my (undef, $pkg, $prefix, @ignore) = @_;
     no warnings 'uninitialized';
     unless (${"SVN::_${pkg}::ISA"}[0] eq 'DynaLoader') {
 	@{"SVN::_${pkg}::ISA"} = qw(DynaLoader);
@@ -61,9 +66,12 @@ bootstrap SVN::_$pkg;
 
     my $caller = caller(0);
 
-    for (keys %{"SVN::_${pkg}::"}) {
+    SYMBOL: for (keys %{"SVN::_${pkg}::"}) {
 	my $name = $_;
 	next unless s/^$prefix//i;
+    foreach my $ignored_symbol (@ignore) {
+        next SYMBOL if ("$prefix$ignored_symbol" eq $name);
+    }
 
 	# insert the accessor
 	if (m/(.*)_get$/) {

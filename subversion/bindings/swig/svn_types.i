@@ -53,18 +53,25 @@
 %typemap(python, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
-%typemap(perl5, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
+%typemap(perl5, in, numinputs=0) enum SWIGTYPE *OUTENUM (long temp) {
     $1 = ($1_ltype)&temp;
 }
+
+%typemap(perl5, argout) enum SWIGTYPE *OUTENUM {
+    if (argvi >= items) {
+        EXTEND(sp,1);
+    }
+    $result = sv_newmortal();
+    sv_setiv($result,(IV) *($1));
+    argvi++;
+}
+
 %typemap(java, in) enum SWIGTYPE *OUTENUM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
 %typemap(python, argout, fragment="t_output_helper") enum SWIGTYPE *OUTENUM {
     $result = t_output_helper($result, PyInt_FromLong(*$1));
 }
-#ifdef SWIGPERL
-%apply long *OUTPUT { enum SWIGTYPE *OUTENUM };
-#endif
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -146,7 +153,8 @@
 /* -----------------------------------------------------------------------
    'svn_revnum_t *' and 'svn_boolean_t *' will always be an OUTPUT parameter
 */
-%apply long *OUTPUT { svn_revnum_t *, svn_boolean_t * };
+%apply long *OUTPUT { svn_revnum_t * };
+%apply int *OUTPUT { svn_boolean_t * };
 
 /* -----------------------------------------------------------------------
    Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
@@ -203,7 +211,14 @@
   }
 
 %typemap(perl5, in) (const char *PTR, apr_size_t LEN) {
-    /* ### FIXME-perl ptr/len */
+    if (SvPOK($input)) {
+        $1 = SvPV($input, $2);
+    } else {
+        /* set to 0 to avoid warning */
+        $1 = 0;
+        $2 = 0;
+        SWIG_croak("Expecting a string");
+    }
 }
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
@@ -299,26 +314,43 @@
 */
 %typemap(perl5, in) svn_opt_revision_t * (svn_opt_revision_t rev) {
     $1 = &rev;
-    if ($input == NULL || $input == &PL_sv_undef) {
-	rev.kind = svn_opt_revision_unspecified;
+    if ($input == NULL || $input == &PL_sv_undef || !SvOK($input)) {
+        rev.kind = svn_opt_revision_unspecified;
     }
     else if (sv_isobject($input) && sv_derived_from($input, "_p_svn_opt_revision_t")) {
-	SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
+        SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
     }
     else if (SvIOK($input)) {
-	rev.kind = svn_opt_revision_number;
-	rev.value.number = SvIV($input);
+        rev.kind = svn_opt_revision_number;
+        rev.value.number = SvIV($input);
     }
-    else {
-	char *input = SvPV_nolen($input);
-	if (strcasecmp(input, "BASE") == 0)
-	    rev.kind = svn_opt_revision_base;
-	else if (strcasecmp(input, "HEAD") == 0)
-	    rev.kind = svn_opt_revision_head;
-	else
-	    SWIG_croak("unknown opt_revison_t type");
-    }
-
+    else if (SvPOK($input)) {
+        char *input = SvPV_nolen($input);
+        if (strcasecmp(input, "BASE") == 0)
+            rev.kind = svn_opt_revision_base;
+        else if (strcasecmp(input, "HEAD") == 0)
+            rev.kind = svn_opt_revision_head;
+        else if (strcasecmp(input, "WORKING") == 0)
+            rev.kind = svn_opt_revision_working;
+        else if (strcasecmp(input, "COMMITTED") == 0)
+            rev.kind = svn_opt_revision_committed;
+        else if (strcasecmp(input, "PREV") == 0)
+            rev.kind = svn_opt_revision_previous;
+        else if (*input == '{') {
+            time_t tm;
+            char *end = strchr(input,'}');
+            if (!end)
+                SWIG_croak("unknown opt_revision_t type");
+            *end = '\0';
+            tm = svn_parse_date (input + 1, NULL);
+            if (tm == -1)
+                SWIG_croak("unknown opt_revision_t type");
+            rev.kind = svn_opt_revision_date;
+            apr_time_ansi_put(&(rev.value.date), tm);
+        } else
+            SWIG_croak("unknown opt_revison_t type");
+    } else
+        SWIG_croak("unknown opt_revision_t type");
 }
 
 /* -----------------------------------------------------------------------
@@ -373,6 +405,7 @@
 %include svn_types.h
 %{
 #include "svn_types.h"
+#include "svn_time.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"

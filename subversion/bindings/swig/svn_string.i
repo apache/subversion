@@ -112,15 +112,12 @@ typedef struct svn_string_t svn_string_t;
     }
 }
 %typemap(perl5,in) const svn_string_t * (svn_string_t value) {
-    if ($input == &PL_sv_undef) {
-	$1 = NULL;
-    }
-    else if (SvOK($input)) {
+    if (SvOK($input)) {
 	value.data = SvPV($input, value.len);
 	$1 = &value;
     }
     else {
-	SWIG_croak("not a string");
+        $1 = NULL;
     }
 }
 
