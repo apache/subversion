@@ -190,8 +190,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_SCHEDULE_CONFLICT,
               "Unmergeable scheduling requested on an entry")
 
+  SVN_ERRDEF (SVN_ERR_WC_CONFLICT,
+              "A conflict occurred in the working copy")
+
   SVN_ERRDEF (SVN_ERR_WC_FOUND_CONFLICT,
-              "Found a conflict in working copy")
+              "A conflict in working copy obstructs the current operation")
 
   SVN_ERRDEF (SVN_ERR_WC_CORRUPT,
               "Working copy is corrupt")

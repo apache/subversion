@@ -33,10 +33,43 @@ svn_wc_merge (const char *left,
               const char *target_label,
               apr_pool_t *pool)
 {
+  svn_stringbuf_t *target = svn_stringbuf_create (merge_target, pool);
+  svn_stringbuf_t *parent_dir, *basename;
+  svn_stringbuf_t *tmp_target;
+  apr_file_t *tmp_f;
+  apr_status_t apr_err;
 
-  /* reserve a unique file for the merged result */
+  abort ();  /* this is not ready yet, callers should blow up */
 
-  /* possibly make a contracted/LF-ified copy of merge_target */
+  /* The merge target must be under revision control. */
+  {
+    svn_wc_entry_t *ignored_ent;
+    SVN_ERR (svn_wc_entry (&ignored_ent, target, pool));
+    if (ignored_ent == NULL)
+      return svn_error_createf
+        (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+         "svn_wc_merge: `%s' not under revision control", merge_target);
+  }
+
+  /* Operate on a tmp file, with keywords and line endings contracted.
+     If any contraction happens, we get a tmp file automatically;
+     otherwise, we have to make the tmp file by hand.  */
+  SVN_ERR (svn_wc_translated_file (&tmp_target, target, pool));
+  if (tmp_target == target)  /* no contraction happened */
+    {
+      svn_path_split (target, &parent_dir, &basename, pool);
+      SVN_ERR (svn_io_open_unique_file (&tmp_f,
+                                        &tmp_target,
+                                        target,
+                                        SVN_WC__TMP_EXT,
+                                        FALSE,
+                                        pool));
+      apr_err = apr_file_close (tmp_f);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+           "svn_wc_merge: unable to close tmp file `%s'", tmp_target);
+    }
 
   /* run diff3 using all 6 arguments. */
 
