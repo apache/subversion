@@ -51,12 +51,15 @@
     $1 = copied;
 }
 
-/* ----------------------------------------------------------------------- */
+/* -----------------------------------------------------------------------
+   Specify how svn_error_t returns are turned into exceptions.
+*/
 
 %typemap(python,out) svn_error_t * {
     if ($1 != NULL) {
-        PyErr_SetString(PyExc_RuntimeError,
-                        $1->message ? $1->message : "unknown error");
+        if ($1->apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
+            PyErr_SetString(PyExc_RuntimeError,
+                            $1->message ? $1->message : "unknown error");
         return NULL;
     }
     Py_INCREF(Py_None);

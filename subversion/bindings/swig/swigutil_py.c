@@ -196,9 +196,7 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
 
 static svn_error_t * convert_python_error(apr_pool_t *pool)
 {
-  /* ### need to fetch the Python error and map it to an svn_error_t */
-
-  return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+  return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, 0, NULL, pool,
                           "the Python callback raised an exception");
 }
 
@@ -229,7 +227,7 @@ static svn_error_t * close_baton(void *baton, const char *method)
      the stack, but the format specified just won't reference it.  */
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)method,
-                                    ib->baton ? (char *)"O" : NULL,
+                                    ib->baton ? (char *)"(O)" : NULL,
                                     ib->baton)) == NULL)
     {
       return convert_python_error(ib->pool);
@@ -484,7 +482,7 @@ static svn_error_t * thunk_apply_textdelta(
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
-                                    (char *)"O", ib->baton)) == NULL)
+                                    (char *)"(O)", ib->baton)) == NULL)
     {
       return convert_python_error(ib->pool);
     }
