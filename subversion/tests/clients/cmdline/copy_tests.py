@@ -1266,6 +1266,52 @@ def copy_over_missing_file(sbox):
   
 
 
+#----------------------------------------------------------------------
+#  Regression test for issue 1634
+
+def repos_to_wc_1634(sbox):
+  "copy a deleted directory back from the repos"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # First delete a subdirectory and commit.
+  E_path = wc_dir + "/A/B/E"
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', E_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_status.tweak(repos_rev=2)
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Now copy the directory back.
+  E_url = svntest.main.current_repo_url + "/A/B/E"
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-r1', E_url, E_path)
+  expected_status.add({
+    'A/B/E'       :  Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
+    'A/B/E/alpha' :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/B/E/beta'  :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/B/E'       :  Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
+    'A/B/E/alpha' :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/B/E/beta'  :  Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1293,6 +1339,7 @@ test_list = [ None,
               repos_to_wc_copy_eol_keywords,
               revision_kinds_local_source,
               copy_over_missing_file,
+              repos_to_wc_1634,
              ]
 
 if __name__ == '__main__':
