@@ -159,7 +159,7 @@ typedef struct svn_delta__propdelta_t
 {
   enum {
     svn_propdelta_file,
-    svn_propdelta_dir,
+    svn_propdelta_dir
   } kind;                    /* what kind of object does this
                                 prop-delta affect? */
 
