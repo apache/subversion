@@ -133,7 +133,7 @@ static svn_error_t *send_response(mr_baton *baton,
                        NULL);
 
   if (status != APR_SUCCESS)
-    return svn_error_create(status, 0, NULL,
+    return svn_error_create(status, NULL,
                             "could not write response to output");
 
   return APR_SUCCESS;
