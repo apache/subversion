@@ -962,17 +962,20 @@ $ svn status
         o que recientemente ha obtenido una copia local fresca de
         <filename>/calc/trunk</filename>.</para>
 
-      <para>But which two trees should be compared?  At first glance,
-        the answer may seem obvious: just compare the latest trunk
-        tree with your latest branch tree.  But beware&mdash;this
-        assumption is <emphasis>wrong</emphasis>, and has burned many
-        a new user!  Since <command>svn merge</command> operates like
-        <command>svn diff</command>, comparing the latest trunk and 
-        branch trees will <emphasis>not</emphasis> merely describe
-        the set of changes you made to your branch.  Such a comparison
-        shows too many changes: it would not only show the addition of
-        your branch changes, but also the <emphasis>removal</emphasis>
-        of trunk changes that never happened on your branch.</para>
+      <para>¿Pero qué dos árboles deberían ser comparados? A primera
+        vista, la respuesta puede parecer obvia: simplemente
+        compare el último árbol del tronco con el último
+        árbol de su rama. ¡Pero cuidado&mdash;esta asunción
+        es <emphasis>incorrecta</emphasis>, y ha confundido
+        <!-- TODO burned != confundido --> a muchos usuarios
+        nuevos! Dado que <command>svn merge</command> funciona
+        como <command>svn diff</command>, comparar el tronco y
+        su rama <emphasis>no</emphasis> describirá meramente el
+        conjunto de cambios realizados en su rama. Tal comparación
+        muestra demasiados cambios: no solo mostraría la adición
+        de los cambios en su rama, sino también <emphasis>el
+        borrado</emphasis> de cambios en el tronco que nunca
+        ocurrieron en su rama.</para>.
 
       <para>To express only the changes that happened on your branch,
         you need to compare the initial state of your branch to its
