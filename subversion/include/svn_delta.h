@@ -170,6 +170,15 @@ typedef struct svn_txdelta_window_t {
 } svn_txdelta_window_t;
 
 
+/* A typedef for functions that consume a series of delta windows, for
+   use in caller-pushes interfaces.  Such functions will typically
+   apply the delta windows to produce some file, or save the windows
+   somewhere.  At the end of the delta window stream, you must call
+   this function passing zero for the WINDOW argument.  */
+typedef svn_error_t *(svn_txdelta_window_handler_t)
+                     (svn_txdelta_window_t *window, void *baton);
+
+
 /* A delta stream --- this is the hat from which we pull a series of
    svn_txdelta_window_t objects, which, taken in order, describe the
    entire target string.  This type is defined within libsvn_delta, and
@@ -209,38 +218,19 @@ svn_error_t *svn_txdelta (svn_txdelta_stream_t **stream,
 void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 
-
-/*** Applying a text delta.  **/
-
-/* A delta applicator -- an opaque structure passed to each invocation
- * of the window handler function.  Contains functions to read from the
- * source input stream and write to the output stream, and buffered
- * data from the input stream in case source views overlap between
- * windows.  */
-typedef struct svn_txdelta_applicator_t svn_txdelta_applicator_t;
-
-
-/* Set *APPLICATOR to a new delta applicator.
- * svn_txdelta_apply_window will invoke SOURCE_FN with SOURCE_BATON
- * when it requires input, and will invoke TARGET_FN with TARGET_BATON
- * when it has output to write.  Memory allocated for the applicator
- * will live in a sub-pool of POOL.  */
-svn_error_t *svn_txdelta_applicator_create (svn_txdelta_applicator_t **appl,
-                                            svn_read_fn_t *source_fn,
-                                            void *source_baton,
-                                            svn_write_fn_t *target_fn,
-                                            void *target_baton,
-                                            apr_pool_t *pool);
-
-
-/* Apply WINDOW to a source stream to produce a target stream, using
- * the functions from APPLICATOR.  */
-svn_error_t *svn_txdelta_apply_window (svn_txdelta_window_t *window,
-                                       svn_txdelta_applicator_t *appl);
-
-
-/* Free the text delta applicator APPLICATOR.  */
-void svn_txdelta_applicator_free (svn_txdelta_applicator_t *appl);
+/* Prepare to apply a text delta.  SOURCE_FN and SOURCE_BATON specify
+   how to read source data, TARGET_FN and TARGET_BATON specify how to
+   write target data, and allocation takes place in POOL.  On return,
+   *HANDLER is set to a window handler function and *HANDLER_BATON is
+   set to the baton argument to pass as the BATON argument to
+   *HANDLER.  */
+svn_error_t *svn_txdelta_apply (svn_read_fn_t *source_fn,
+                                void *source_baton,
+                                svn_write_fn_t *target_fn,
+                                void *target_baton,
+                                apr_pool_t *pool,
+                                svn_txdelta_window_handler_t **handler,
+                                void **handler_baton);
 
 
 
@@ -259,14 +249,6 @@ svn_error_t *svn_txdelta_to_vcdiff (svn_read_fn_t **read_fn,
      
 
 /* Definitions for converting VCDIFF -> text delta window streams.  */
-
-/* A typedef for functions that consume a series of delta windows, for
-   use in caller-pushes interfaces.  Such functions will typically
-   apply the delta windows to produce some file, or save the windows
-   somewhere.  At the end of the delta window stream, you must call
-   this function passing zero for the WINDOW argument.  */
-typedef svn_error_t *(svn_txdelta_window_handler_t)
-                     (svn_txdelta_window_t *window, void *baton);
 
 /* A vcdiff parser object.  */
 typedef struct svn_vcdiff_parser_t
