@@ -86,12 +86,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # parse (and save) the options that were passed to us
     self.parse_options(options)
 
-    data = {'zlib_path': self.zlib_path,
-            'openssl_path': self.openssl_path}
-    # Generate the build_neon.bat file
-    self.write_with_template('build/win32/build_neon.bat',
-                             'build_neon.ezt', data)
-
 ### GJS: don't do this right now
 #    self.movefile(os.path.join("subversion","mod_dav_svn","davlog.c"), os.path.join("subversion","mod_dav_svn","log.c"))
 #    self.movefile(os.path.join("subversion","mod_dav_svn","davrepos.c"), os.path.join("subversion","mod_dav_svn","repos.c"))
@@ -133,19 +127,26 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
         print 'Wrote %s' % svnissdeb
 
-    #Initialize parent
-    ### we don't want to munge the working copy since we might be
-    ### generating the Windows build files on a Unix box prior to
-    ### release. this copy already occurs in svn_config.dsp. (is that
-    ### broken or something?)
+    # Generate the build_neon.bat file
+    data = {'zlib_path': self.zlib_path,
+            'openssl_path': self.openssl_path}
+    self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
+                             'build_neon.ezt', data)
+
+    # gstein wrote:
+    # > we don't want to munge the working copy since we might be
+    # > generating the Windows build files on a Unix box prior to
+    # > release. this copy already occurs in svn_config.dsp. (is that
+    # > broken or something?)
     # No, but if getdate.c doesn't exist, it won't get pulled into the
     # libsvn_subr.dsp (or .vcproj or whatever), so it won't get built.
     getdate_c = os.path.join('subversion', 'libsvn_subr', 'getdate.c')
     if not os.path.exists(getdate_c):
       getdate_cw = getdate_c + 'w'
-      print 'Creating', getdate_c
-      print '    from', getdate_cw
+      print 'Copied', getdate_cw, 'to', getdate_c
       self.copyfile(getdate_c, getdate_cw)
+
+    #Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname)
 
     #Make the project files directory if it doesn't exist
