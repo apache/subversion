@@ -148,8 +148,8 @@ if (defined $opt_import_tag_location) {
     push(@load_tags, $load_tag);
   }
 
-  print "Please examine identified tags.  Are they acceptable? (y/n) ";
-  exit 0 unless &get_yes_or_no;
+  exit 0 unless &get_yes_or_no("Please examine identified tags.  Are they " .
+                               "acceptable? (Y/N) ");
 }
 
 # Check that the svn base URL works by running svn log on it.
@@ -252,8 +252,8 @@ my $wc_top_dir_cwd = cwd;
     foreach my $dir (@dirs_to_create) {
       print "  $dir\n";
     }
-    print "You must add them now to load the directories.  Continue (y/n)? ";
-    exit 0 unless &get_yes_or_no;
+    exit 0 unless &get_yes_or_no("You must add them now to load the " .
+                                 "directories.  Continue (Y/N)? ");
 
     my $message = "Create directories to load project into.\n\n";
 
@@ -266,7 +266,7 @@ my $wc_top_dir_cwd = cwd;
         $message .= "* $dir: New directory.\n";
       }
     }
-    $message = wrap('', '', $message);
+    $message = wrap('', '  ', $message);
 
     read_from_process('svn', 'add', @dirs_to_create);
     read_from_process('svn', 'commit', '-m', $message);
@@ -289,21 +289,26 @@ if ($repos_load_rel_path eq '.') {
 # Now go through each source directory and copy each file from the
 # source directory to the target directory.  For new target files, add
 # them to svn.  For files that no longer exist, delete them.
-my $wc_import_dir_cwd  = "$wc_top_dir_cwd/$repos_load_rel_path";
+my $wc_import_dir_cwd    = "$wc_top_dir_cwd/$repos_load_rel_path";
+my $print_rename_message = 1;
 while (@load_dirs) {
   my $load_dir = shift @load_dirs;
   my $load_tag = shift @load_tags;
   my $wc_tag_dir_cwd;
 
   if (defined $load_tag) {
-    print "Loading $load_dir and will save in tag $load_tag.\n";
+    print "\nLoading $load_dir and will save in tag $load_tag.\n";
     $wc_tag_dir_cwd = "$wc_top_dir_cwd/$load_tag";
   } else {
-    print "Loading $load_dir.\n";
+    print "\nLoading $load_dir.\n";
   }
 
-  # This hash is keyed by the old name in a rename.
-  my %rename_files;
+  # The first hash is keyed by the old name in a rename and the second
+  # by the new name.  The last variable contains a list of old and new
+  # filenames in a rename.
+  my %rename_from_files;
+  my %rename_to_files;
+  my @renamed_filenames;
 
   # Loop here until the user has performed all the file and directory
   # renames.
@@ -376,7 +381,7 @@ while (@load_dirs) {
     # Because the source code management system may keep the original
     # renamed file or directory in the working copy until a commit,
     # remove them from the list of deleted files or directories.
-    &filter_renamed_files(\@del_files, \%rename_files);
+    &filter_renamed_files(\@del_files, \%rename_from_files);
 
     # Now change into the working copy directory in case any renames
     # need to be performed.
@@ -401,20 +406,24 @@ while (@load_dirs) {
       ++$filename_width;
       my $printf_format = "%${line_number_width}d";
 
-      print "\n",
-            "The following are deleted files and directories on the left\n",
-            "added files and directories on the right that you have the\n",
-            "opportunity to match up as renames instead of deletes and\n",
-            "adds.  This is a Good Thing.  Match up a deleted item from\n",
-            "the left column with an added item from the right column.\n",
-            "Note the line numbers on the left which you type in to this\n",
-            "script to have a rename performed.\n",
-            "\n",
-            " " x $line_number_width,
-            " ",
-            "Deleted", " " x ($filename_width - length("Deleted")),
-            " ",
-            "Added\n";
+      if ($print_rename_message) {
+        $print_rename_message = 0;
+        print "\n",
+              "The following table lists files and directories that exist\n",
+              "in either the Subversion repository and the directory to be\n",
+              "imported but not both.  You now have the opportunity to\n",
+              "match them up as renames instead of deletes and adds.  This\n",
+              "is a Good Thing as it'll make the repository take less\n",
+              "space.  The left column lists files and directories that\n",
+              "exist in the Subversion repository and do not exist in the\n",
+              "directory being imported.  The right column lists files and\n",
+              "directories that exist in the directory being imported.\n",
+              "Match up a deleted item from the left column with an added\n",
+              "item from the right column.  Note the line numbers on the\n",
+              "the left which you type into this script to have a rename\n",
+              "performed.\n";
+      }
+
       for (my $i=0; $i<$max; ++$i) {
         my $add_filename = '';
         my $del_filename = '';
@@ -431,14 +440,22 @@ while (@load_dirs) {
           }
         }
 
+        if ($i % 22 == 0) {
+          print "\n",
+                " " x $line_number_width,
+                " ",
+                "Deleted", " " x ($filename_width - length("Deleted")),
+                " ",
+                "Added\n";
+        }
+
         printf $printf_format, $i;
         print  " ", $del_filename,
                " " x ($filename_width - length($del_filename)),
                " ", $add_filename, "\n";
 
-        if ($i and $i % 23 == 0) {
-          print "Continue printing (y/n)? ";
-          last unless &get_yes_or_no;
+        if (($i+1) % 22 == 0) {
+          last unless &get_yes_or_no("Continue printing (Y/N)? ");
         }
       }
 
@@ -450,10 +467,11 @@ while (@load_dirs) {
       my $del_index;
       my $got_line = 0;
       do {
-        print "Enter two indexes for each column to rename or n to continue: ";
-        $line = <>;
-        $line ||= '';
-        if ($line =~ /^n$/i) {
+        print "Enter two indexes for each column to rename or F when you are ",
+              "finished: ";
+        $line = <STDIN>;
+        $line = '' unless defined $line;
+        if ($line =~ /^F$/i) {
           $got_line = 1;
         } elsif ($line =~ /^(\d+)\s+(\d+)$/) {
           $del_index = $1;
@@ -484,8 +502,37 @@ while (@load_dirs) {
         }
       } until ($got_line);
 
-      if ($line !~ /^n$/i) {
+      if ($line !~ /^F$/i) {
         print "Renaming $del_filename to $add_filename.\n";
+
+        $repeat_loop = 1;
+
+        # Because subversion cannot rename the same file or directory
+        # twice, which includes doing a rename of a file in a
+        # directory that was previously renamed, a commit has to be
+        # performed.  Check if the file or directory being renamed now
+        # would cause such a problem and commit if so.
+        my $do_commit_now = 0;
+        foreach my $rename_to_filename (keys %rename_to_files) {
+          if (contained_in($del_filename,
+                           $rename_to_filename,
+                           $rename_to_files{$rename_to_filename}{type})) {
+            $do_commit_now = 1;
+            last;
+          }
+        }
+
+        if ($do_commit_now) {
+          print "Now committing previously run renames.\n";
+          &commit_renames($load_dir,
+                          \@renamed_filenames,
+                          \%rename_from_files,
+                          \%rename_to_files);
+        }
+
+        push(@renamed_filenames, $del_filename, $add_filename);
+        $rename_from_files{$del_filename} = $del_files{$del_filename};
+        $rename_to_files{$add_filename}   = $del_files{$del_filename};
 
         # Check that any required directories to do the rename exist.
         my @add_segments = split('/', $add_filename);
@@ -503,44 +550,20 @@ while (@load_dirs) {
           read_from_process('svn', 'mkdir', @add_dirs);
         }
 
-        $repeat_loop = 1;
-
-        $rename_files{$del_filename} = $del_files{$del_filename};
-
         read_from_process('svn', 'mv', $del_filename, $add_filename);
 
-        # Because subversion cannot rename the same file or directory
-        # twice, a commit has to be performed before any other
-        # operations.
-        my $full_add_filename  = "$repos_load_abs_path/$add_filename";
-        my $full_del_filename  = "$repos_load_abs_path/$del_filename";
-        my $message            = "To prepare to load $load_dir into " .
-                                 "$repos_load_abs_path, rename " .
-                                 "$full_del_filename to $full_add_filename.\n";
-        $message = wrap('', '', $message);
-
-        # Change to the top of the working copy so that any
-        # directories will also be updated.
-        my $cwd = cwd;
-        chdir($wc_top_dir_cwd) or
-          die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
-        read_from_process('svn', 'commit', '-m', $message);
-        read_from_process('svn', 'update');
-        chdir($cwd) or
-          die "$0: cannot chdir `$cwd': $!\n";
-
-        # Some versions of subversion have a bug where renamed files
-        # or directories are not deleted after a commit, so do that
-        # here.
-        my @del_files = sort {length($b) <=> length($a) || $a cmp $b }
-                        keys %rename_files;
-        rmtree(\@del_files, 1, 0);
-        foreach my $f (@del_files) {
-          delete $rename_files{$f};
-        }
       }
     }
   } while ($repeat_loop);
+
+  # If there are any renames that have not been committed, then do
+  # that now.
+  if (@renamed_filenames) {
+    &commit_renames($load_dir,
+                    \@renamed_filenames,
+                    \%rename_from_files,
+                    \%rename_to_files);
+  }
 
   # At this point all renames have been performed.  Now get the final
   # list of files and directories in the working copy directory.  The
@@ -627,7 +650,7 @@ while (@load_dirs) {
     $repeat_loop = 0;
     my @del_files = sort {length($a) <=> length($b) || $a cmp $b}
                     keys %del_files;
-    &filter_renamed_files(\@del_files, \%rename_files);
+    &filter_renamed_files(\@del_files, \%rename_from_files);
     foreach my $file (@del_files) {
       if ($del_files{$file}{type} eq 'd') {
         my $dir        = "$file/";
@@ -663,7 +686,7 @@ while (@load_dirs) {
   # path length and then alphabetically.
   my @del_files = sort {length($b) <=> length($a) || $a cmp $b }
                   keys %del_files;
-  &filter_renamed_files(\@del_files, \%rename_files);
+  &filter_renamed_files(\@del_files, \%rename_from_files);
   foreach my $file (@del_files) {
     print "D   $file\n";
   }
@@ -839,6 +862,84 @@ sub recusurive_ls_and_hash {
   %files;
 }
 
+# Given a list of files and directories which have been renamed but
+# not commtited, commit them with a proper log message.
+sub commit_renames {
+  unless (@_ == 4) {
+    croak "$0: commit_renames passed incorrect number of arguments.\n";
+  }
+
+  my $load_dir          = shift;
+  my $renamed_filenames = shift;
+  my $rename_from_files = shift;
+  my $rename_to_files   = shift;
+
+  my $number_renames    = @$renamed_filenames/2;
+
+  my $message = "To prepare to load $load_dir into $repos_load_abs_path, " .
+                "perform $number_renames rename" .
+                ($number_renames > 1 ? "s" : "") . ".\n";
+
+  # Text::Wrap::wrap appears to replace multiple consecutive \n's with
+  # one \n, so wrap the text and then append the second \n.
+  $message  = wrap("", "", $message) . "\n";
+  while (@$renamed_filenames) {
+    my $from  = "$repos_load_abs_path/" . shift @$renamed_filenames;
+    my $to    = "$repos_load_abs_path/" . shift @$renamed_filenames;
+    $message .= wrap("", "  ", "* $to: Renamed from $from.\n");
+  }
+
+  # Change to the top of the working copy so that any
+  # directories will also be updated.
+  my $cwd = cwd;
+  chdir($wc_top_dir_cwd) or
+    die "$0: cannot chdir `$wc_top_dir_cwd': $!\n";
+  read_from_process('svn', 'commit', '-m', $message);
+  read_from_process('svn', 'update');
+  chdir($cwd) or
+    die "$0: cannot chdir `$cwd': $!\n";
+
+  # Some versions of subversion have a bug where renamed files
+  # or directories are not deleted after a commit, so do that
+  # here.
+  my @del_files = sort {length($b) <=> length($a) || $a cmp $b }
+                  keys %$rename_from_files;
+  rmtree(\@del_files, 1, 0);
+
+  # Empty the list of old and new renamed names.
+  undef %$rename_from_files;
+  undef %$rename_to_files;
+}
+
+# Take a one file or directory and see if its name is equal to a
+# second or is contained in the second if the second file's file type
+# is a directory.
+sub contained_in {
+  unless (@_ == 3) {
+    croak "$0: contain_in passed incorrect number of arguments.\n";
+  }
+
+  my $contained      = shift;
+  my $container      = shift;
+  my $container_type = shift;
+
+  if ($container eq $contained) {
+    return 1;
+  }
+
+  if ($container_type eq 'd') {
+    my $dirname        = "$container/";
+    my $dirname_length = length($dirname);
+
+    if ($dirname_length <= length($contained) and
+        $dirname eq substr($contained, 0, $dirname_length)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 # Take an array reference containing a list of files and directories
 # and take a hash reference and remove from the array reference any
 # files and directories and the files the directory contains listed in
@@ -854,24 +955,12 @@ sub filter_renamed_files {
   foreach my $remove_filename (keys %$hash_ref) {
     my $remove_file_type = $hash_ref->{$remove_filename}{type};
     for (my $i=0; $i<@$array_ref;) {
-      my $array_filename = $array_ref->[$i];
-      if ($array_filename eq $remove_filename) {
+      if (contained_in($array_ref->[$i],
+                       $remove_filename,
+                       $remove_file_type)) {
         splice(@$array_ref, $i, 1);
         next;
       }
-
-      # If the file being removed is a directory, append the directory
-      # separator and see if there is a string submatch.
-      if ($remove_file_type eq 'd') {
-        my $f  = "$remove_filename/";
-        my $lf = length($f);
-        if ($lf <= length($array_filename) and
-            $f eq substr($array_filename, 0, $lf)) {
-          splice(@$array_ref, $i, 1);
-          next;
-        }
-      }
-
       ++$i;
     }
   }
@@ -897,10 +986,17 @@ sub digest_hash_file {
 # Read standard input until a line contains either a upper or
 # lowercase y or n.
 sub get_yes_or_no {
+  unless (@_ == 1) {
+    croak "$0: get_yes_or_no passed incorrect number of arguments.\n";
+  }
+
+  my $message = shift;
+
   my $line;
   do {
-    $line = <>;
-    $line ||= '';
+    print $message;
+    $line = <STDIN>;
+    $line = '' unless defined $line;
   } until $line =~ /[yn]/i;
   $line =~ /y/i;
 }
