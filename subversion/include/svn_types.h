@@ -130,6 +130,9 @@ enum svn_recurse_kind
 /* The line ending style for a given file. */
 #define SVN_PROP_EOL_STYLE  SVN_PROP_PREFIX "eol-style"
 
+/* The "activated" keywords (for keyword substitution) for a given file. */
+#define SVN_PROP_KEYWORDS  SVN_PROP_PREFIX "keywords"
+
 /* The character set of a given file. */
 #define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
 

@@ -115,7 +115,7 @@ print_version_info (apr_pool_t *pool)
   void *ra_baton;
   svn_stringbuf_t *descriptions;
   static const char info[] =
-    "Copyright (C) 2000-2001 CollabNet.\n"
+    "Copyright (C) 2000-2002 CollabNet.\n"
     "Subversion is open source software, see http://subversion.tigris.org/\n";
 
   printf ("Subversion Client, version %s\n", SVN_VERSION);
