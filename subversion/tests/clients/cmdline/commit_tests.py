@@ -489,12 +489,17 @@ def nested_dir_replacements(sbox):
   svntest.main.run_svn(None, 'add', os.path.join(wc_dir, 'A', 'D', 'bloo'))
   
   # Verify pre-commit status:
-  #    - A/D and A/D/H should both be scheduled as "R" at rev 0
+  #
+  #    - A/D and A/D/H should both be scheduled as "R" at rev 1
+  #         (rev 1 because they both existed before at rev 1)
+  #
   #    - A/D/bloo scheduled as "A" at rev 0
+  #         (rev 0 because it did not exist before)
+  #
   #    - ALL other children of A/D scheduled as "D" at rev 1
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/D', 'A/D/H', status='R ', wc_rev=0)
+  expected_status.tweak('A/D', 'A/D/H', status='R ', wc_rev=1)
   expected_status.add({
     'A/D/bloo' : Item(status='A ', wc_rev=0, repos_rev=1),
     })
