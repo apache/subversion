@@ -47,6 +47,7 @@ static svn_error_t *
 get_youngest_from_ra (svn_revnum_t *youngest,
                       svn_stringbuf_t *path,
                       const char *URL,
+                      svn_client_auth_t *auth_obj,
                       apr_pool_t *pool)
 { 
   svn_error_t *err;
@@ -54,7 +55,6 @@ get_youngest_from_ra (svn_revnum_t *youngest,
   svn_ra_plugin_t *ra_lib;
   svn_revnum_t latest_revnum;
   svn_boolean_t close_session = FALSE, rev_known = FALSE;
-  svn_client_auth_t *auth_obj;
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -158,6 +158,7 @@ svn_client_status (apr_hash_t **statushash,
     SVN_ERR (get_youngest_from_ra (&latest_revnum,
                                    parent ? parent : path,
                                    entry->ancestor->data,
+                                   auth_obj,
                                    pool));
 
   /* Write the latest revnum into each status structure. */
