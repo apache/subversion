@@ -406,15 +406,6 @@ wc_entry_schedule (VALUE self)
 }
 
 static VALUE
-wc_entry_existence (VALUE self)
-{
-  svn_ruby_wc_entry_t *entry;
-  Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
-
-  return LONG2FIX (entry->entry->existence);
-}
-
-static VALUE
 wc_entry_conflicted (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
@@ -815,12 +806,6 @@ void svn_ruby_init_wc (void)
                    INT2NUM (svn_wc_schedule_delete));
   rb_define_const (cSvnWcEntry, "SCHEDULE_REPLACE",
                    INT2NUM (svn_wc_schedule_replace));
-  rb_define_const (cSvnWcEntry, "EXISTENCE_NORMAL",
-                   INT2NUM (svn_wc_existence_normal));
-  rb_define_const (cSvnWcEntry, "EXISTENCE_ADDED",
-                   INT2NUM (svn_wc_existence_added));
-  rb_define_const (cSvnWcEntry, "EXISTENCE_DELETED",
-                   INT2NUM (svn_wc_existence_deleted));
   define_prop (cSvnWcEntry, "ATTR_NAME",  SVN_WC_ENTRY_ATTR_NAME);
   define_prop (cSvnWcEntry, "ATTR_REVISION",  SVN_WC_ENTRY_ATTR_REVISION);
   define_prop (cSvnWcEntry, "ATTR_KIND",  SVN_WC_ENTRY_ATTR_KIND);
@@ -828,7 +813,6 @@ void svn_ruby_init_wc (void)
   define_prop (cSvnWcEntry, "ATTR_PROP_TIME",  SVN_WC_ENTRY_ATTR_PROP_TIME);
   define_prop (cSvnWcEntry, "ATTR_CHECKSUM",  SVN_WC_ENTRY_ATTR_CHECKSUM);
   define_prop (cSvnWcEntry, "ATTR_SCHEDULE",  SVN_WC_ENTRY_ATTR_SCHEDULE);
-  define_prop (cSvnWcEntry, "ATTR_EXISTENCE",  SVN_WC_ENTRY_ATTR_EXISTENCE);
   define_prop (cSvnWcEntry, "ATTR_CONFLICTED",  SVN_WC_ENTRY_ATTR_CONFLICTED);
   define_prop (cSvnWcEntry, "ATTR_COPIED",  SVN_WC_ENTRY_ATTR_COPIED);
   define_prop (cSvnWcEntry, "ATTR_URL",  SVN_WC_ENTRY_ATTR_URL);
@@ -844,7 +828,6 @@ void svn_ruby_init_wc (void)
   rb_define_method (cSvnWcEntry, "url", wc_entry_url, 0);
   rb_define_method (cSvnWcEntry, "kind", wc_entry_node_kind, 0);
   rb_define_method (cSvnWcEntry, "schedule", wc_entry_schedule, 0);
-  rb_define_method (cSvnWcEntry, "existence", wc_entry_existence, 0);
   rb_define_method (cSvnWcEntry, "conflict?", wc_entry_conflicted, 0);
   rb_define_method (cSvnWcEntry, "copied?", wc_entry_copied, 0);
   rb_define_method (cSvnWcEntry, "textTime", wc_entry_text_time, 0);
