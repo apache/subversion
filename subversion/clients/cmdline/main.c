@@ -70,6 +70,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"password",      svn_cl__auth_password_opt, 1, "specify a password ARG"},
     {"extensions",    'x', 1, "pass \"ARG\" as bundled options to GNU diff"},
     {"targets",       svn_cl__targets_opt, 1, "pass contents of file \"ARG\" as additional args"},
+    {"xml",           svn_cl__xml_opt, 0, "output in xml"},
     {0,               0, 0}
   };
 
@@ -227,7 +228,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "\n"
     "    svn log http://www.example.com/repo/project foo.c bar.c\n",
     {'r', 'D', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
-     svn_cl__auth_password_opt} },
+     svn_cl__auth_password_opt, svn_cl__xml_opt} },
   
   { "merge", svn_cl__merge, {0},
     "merge:  apply the differences between two paths to a working copy path.\n"
@@ -978,6 +979,9 @@ main (int argc, const char * const *argv)
                                      opt_arg);
             svn_handle_error (err, stderr, FALSE);
           }
+        break;
+      case svn_cl__xml_opt:
+        opt_state.xml = TRUE;
         break;
       case 'x':
         opt_state.extensions = svn_stringbuf_create(opt_arg, pool);
