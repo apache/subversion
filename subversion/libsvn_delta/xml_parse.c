@@ -478,14 +478,14 @@ do_directory_callback (svn_xml__digger_t *digger,
 
   /* Call our editor's callback. */
   if (replace_p)
-    err = (* (digger->editor->replace_directory)) 
+    err = digger->editor->replace_directory
       (dir_name,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
        &(youngest_frame->baton));
   else
-    err = (* (digger->editor->add_directory)) 
+    err = digger->editor->add_directory
       (dir_name,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
@@ -525,7 +525,7 @@ do_delete_dirent (svn_xml__digger_t *digger,
        "do_delete_dirent: <delete> tag has no 'name' field.");
 
   /* Call our editor's callback */
-  err = (* (digger->editor->delete)) (dirent_name, youngest_frame->baton);
+  err = digger->editor->delete (dirent_name, youngest_frame->baton);
   if (err)
     return err;
 
@@ -572,14 +572,14 @@ do_file_callback (svn_xml__digger_t *digger,
 
   /* Call our editor's callback, and get back a window handler & baton. */
   if (replace_p)
-    err = (* (digger->editor->replace_file)) 
+    err = digger->editor->replace_file
       (filename,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
        &(youngest_frame->file_baton));
   else
-    err = (* (digger->editor->add_file)) 
+    err = digger->editor->add_file 
       (filename,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
@@ -609,11 +609,11 @@ do_close_directory (svn_xml__digger_t *digger)
   if (! (digger->editor->close_directory))
     return SVN_NO_ERROR;
 
-  /* Nothing to do but caller the editor's callback, methinks. */
-  err = (* (digger->editor->close_directory)) (digger->stack->baton);
+  /* Nothing to do but invoke the editor's callback, methinks. */
+  err = digger->editor->close_directory (digger->stack->baton);
   if (err)
     return err;
-
+  
   /* Drop the current directory baton */
   digger->dir_baton = NULL;
 
@@ -635,7 +635,7 @@ do_close_file (svn_xml__digger_t *digger)
      stored in a hashtable!! */
   if (! digger->stack->hashed)
     {
-      err = (* (digger->editor->close_file)) (digger->stack->file_baton);
+      err = digger->editor->close_file (digger->stack->file_baton);
       if (err)
         return err;
     }
@@ -736,9 +736,9 @@ do_begin_textdelta (svn_xml__digger_t *digger)
 
 
   /* Get a window consumer & baton! */
-  err = (* (digger->editor->apply_textdelta)) (file_baton,
-                                               &window_consumer,
-                                               &consumer_baton);
+  err = digger->editor->apply_textdelta (file_baton,
+                                         &window_consumer,
+                                         &consumer_baton);
   if (err)
     return err;
 
@@ -907,7 +907,7 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
     case svn_propdelta_file:
       {
         if (digger->editor->change_file_prop)
-          err = (*(digger->editor->change_file_prop)) 
+          err = digger->editor->change_file_prop
             (digger->file_baton,
              digger->current_propdelta->name,
              value_string);
@@ -916,7 +916,7 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
     case svn_propdelta_dir:
       {
         if (digger->editor->change_dir_prop)
-          err = (*(digger->editor->change_dir_prop)) 
+          err = digger->editor->change_dir_prop
             (digger->dir_baton,
              digger->current_propdelta->name,
              value_string);
@@ -1354,7 +1354,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   /* Fetch the rootdir_baton by calling into the editor */
   if (editor->replace_root) 
     {
-      err = (* (editor->replace_root)) (edit_baton, &rootdir_baton);
+      err = editor->replace_root (edit_baton, &rootdir_baton);
       if (err)
         return
           svn_error_quick_wrap 
@@ -1442,7 +1442,7 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
   /* Call `close_edit' callback if this is the final push */
   if (isFinal && delta_parser->digger->editor->close_edit)
     {
-      err = (* (delta_parser->digger->editor->close_edit))
+      err = delta_parser->digger->editor->close_edit
         (delta_parser->digger->edit_baton);
 
       if (err)
