@@ -381,9 +381,22 @@ doc-clean:
                    *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
 
-java-api:
-	@$(MAKE) -C $(abs_srcdir)/subversion/bindings/java "JAVAC=$(JAVAC)"
+### Migrate to build-outputs.mk when needed to build other pure Java
+### code.
+JAVA_API_DIR = $(abs_srcdir)/subversion/bindings/java
+JAVA_API_SOURCES = org/tigris/subversion/*.java \
+                   org/tigris/subversion/auth/*.java \
+                   org/tigris/subversion/client/*.java \
+                   org/tigris/subversion/opt/*.java \
+                   org/tigris/subversion/wc/*.java
 
+java-api:
+	@if [ ! -d $(JAVA_API_DIR)/build ]; then mkdir $(JAVA_API_DIR)/build; fi
+	cd $(JAVA_API_DIR) && \
+    $(JAVAC) -g -d $(JAVA_API_DIR)/build $(JAVA_API_SOURCES)
+
+java-api-clean:
+	@rm -rf $(JAVA_API_DIR)/build
 
 #
 # Implicit rules for creating outputs from input files
