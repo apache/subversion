@@ -1332,12 +1332,13 @@ fold_scheduling (apr_hash_t *entries,
 
         case svn_wc_schedule_add:
           /* You can't add something that's already been added to
-             revision control. */
-          return 
-            svn_error_createf 
-            (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
-             "fold_state_changes: Entry '%s' already under revision control",
-             name->data);
+             revision control... unless it's got a 'deleted' state */
+          if (! entry->deleted)
+            return 
+              svn_error_createf 
+              (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
+               "fold_state_changes: Entry '%s' already under revision control",
+               name->data);
         }
       break;
 
@@ -1447,7 +1448,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   assert (entry);
 
   /* Load PATH's whole entries file. */
-  SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, path, TRUE, pool));
 
   /* Ensure that NAME is valid. */
   if (name == NULL)
@@ -1539,13 +1540,13 @@ svn_wc__tweak_entry (apr_hash_t *entries,
     entry->revision = new_rev;
 
   /* As long as this function is only called as a helper to
-     svn_wc__do_update_cleanup, then it's okay to remove the 'deleted'
-     state on any entry.  The rationale is:  if the server didn't
+     svn_wc__do_update_cleanup, then it's okay to totally remove any
+     'deleted' entry.  The rationale is: if the server didn't
      overwrite the 'deleted' entry with something new during the
      update, then it *must* have meant for the the entry to be
      permanently gone in the parent dir's revision. */
   if (entry->deleted)
-    entry = NULL;
+    apr_hash_set (entries, name->data, APR_HASH_KEY_STRING, NULL);
 
   return SVN_NO_ERROR;
 }

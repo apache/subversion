@@ -718,7 +718,9 @@ log_do_committed (struct log_runner *loggy,
           tmpentry.revision = new_rev;
           tmpentry.kind = svn_node_dir;
           SVN_ERR (svn_wc__entry_modify (loggy->path, NULL, &tmpentry,
-                                         SVN_WC__ENTRY_MODIFY_REVISION, pool));
+                                         SVN_WC__ENTRY_MODIFY_REVISION
+                                         | SVN_WC__ENTRY_MODIFY_KIND,
+                                         pool));
 
           /* Drop the 'killme' file. */
           return svn_wc__make_adm_thing (loggy->path, SVN_WC__ADM_KILLME,
@@ -749,6 +751,7 @@ log_do_committed (struct log_runner *loggy,
               tmpentry->revision = new_rev;
               SVN_ERR (svn_wc__entry_modify (loggy->path, sname, tmpentry,
                                              SVN_WC__ENTRY_MODIFY_REVISION
+                                             | SVN_WC__ENTRY_MODIFY_KIND
                                              | SVN_WC__ENTRY_MODIFY_DELETED,
                                              pool));
             }
@@ -1028,6 +1031,7 @@ log_do_committed (struct log_runner *loggy,
       if ((err = svn_wc__entry_modify (pdir, basename, entry,
                                        (SVN_WC__ENTRY_MODIFY_SCHEDULE 
                                         | SVN_WC__ENTRY_MODIFY_COPIED
+                                        | SVN_WC__ENTRY_MODIFY_DELETED
                                         | SVN_WC__ENTRY_MODIFY_FORCE),
                                        pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
@@ -1213,6 +1217,7 @@ svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool)
             tmpentry->revision = thisdir_entry->revision;
             SVN_ERR (svn_wc__entry_modify (parent, bname, tmpentry,
                                            SVN_WC__ENTRY_MODIFY_REVISION
+                                           | SVN_WC__ENTRY_MODIFY_KIND
                                            | SVN_WC__ENTRY_MODIFY_DELETED,
                                            pool));            
           }

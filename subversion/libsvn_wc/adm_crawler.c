@@ -128,13 +128,14 @@ report_revisions (svn_stringbuf_t *wc_path,
   svn_stringbuf_t *full_path = svn_stringbuf_dup (wc_path, subpool);
   svn_path_add_component (full_path, dir_path);
 
-  /* Get both the SVN Entries and the actual on-disk entries. */
+  /* Get both the SVN Entries and the actual on-disk entries.   Also
+     notice that we're picking up 'deleted' entries too. */
   SVN_ERR (svn_wc_entries_read (&entries, full_path, TRUE, subpool));
   SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
   
   /* Do the real reporting and recursing. */
   
-  /* First, look at "this dir" to see what it's URL is. */
+  /* First, look at "this dir" to see what its URL is. */
   dot_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
                                  APR_HASH_KEY_STRING);
   this_url = svn_stringbuf_dup (dot_entry->url, pool);
@@ -173,6 +174,13 @@ report_revisions (svn_stringbuf_t *wc_path,
       svn_path_add_component_nts (this_url, key);
       
       /* The Big Tests: */
+
+      /* If the entry is 'deleted', make sure the server knows its missing. */
+      if (current_entry->deleted)
+        {
+          SVN_ERR (reporter->delete_path (report_baton, this_path->data));
+          continue;
+        }
       
       /* Is the entry on disk?  Set a flag if not. */
       dirent_kind = (enum svn_node_kind *) apr_hash_get (dirents, key, klen);
@@ -180,11 +188,10 @@ report_revisions (svn_stringbuf_t *wc_path,
         missing = TRUE;
       
       /* From here on out, ignore any entry scheduled for addition
-         or deletion */
+         or deletion. */
       if (current_entry->schedule != svn_wc_schedule_normal)
         continue;
-
-      /* The entry exists on disk, and isn't `deleted'. */
+      
       if (current_entry->kind == svn_node_file) 
         {
           if (dirent_kind && (*dirent_kind != svn_node_file))

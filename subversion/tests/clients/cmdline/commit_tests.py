@@ -657,13 +657,11 @@ def hudson_part_1(sbox):
     return 1
 
   # Now gamma should be marked as `deleted' under the hood.  When we
-  # update, we should see a no-op removal of gamma, and a perfect,
-  # virginal status list at revision 2.  (The `deleted' entry should
-  # be removed.)
+  # update, we should no output, and a perfect, virginal status list
+  # at revision 2.  (The `deleted' entry should be removed.)
   
   # Expected output of update:  nothing.
-  expected_output_tree = svntest.tree.build_generic_tree(\
-    [ [gamma_path, None, {}, {'status' : 'D ' }] ])
+  expected_output_tree = svntest.tree.build_generic_tree([])
 
   # Expected disk tree:  everything but gamma
   my_greek_tree = svntest.main.copy_greek_tree()
@@ -695,7 +693,7 @@ def hudson_part_1_variation_1(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove H from the working copy.
-  H_path = os.path.join(wc_dir, 'A', 'D', 'H') 
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   svntest.main.run_svn(None, 'rm', H_path)
 
   # Create expected commit output.
@@ -721,12 +719,11 @@ def hudson_part_1_variation_1(sbox):
     return 1
 
   # Now H should be marked as `deleted' under the hood.  When we
-  # update, we should see a no-op removal of H, and a perfect, virginal
-  # status list at revision 2.  (The `deleted' entry should be removed.)
+  # update, we should no see output, and a perfect, virginal status
+  # list at revision 2.  (The `deleted' entry should be removed.)
   
   # Expected output of update:  H gets a no-op deletion.
-  expected_output_tree = svntest.tree.build_generic_tree(\
-    [ [H_path, None, {}, {'status' : 'D ' }] ])
+  expected_output_tree = svntest.tree.build_generic_tree([])
 
   # Expected disk tree:  everything except files in H
   my_greek_tree = svntest.main.copy_greek_tree()
