@@ -56,7 +56,7 @@ main (int argc, char *argv[])
 
   /* Open a file full of XML, create "source baton" (the filehandle)
      that my_read_func() will slurp XML from. */
-  status = apr_open (&file, argv[1], APR_READ, APR_OS_DEFAULT, globalpool);
+  status = apr_file_open (&file, argv[1], APR_READ, APR_OS_DEFAULT, globalpool);
   if (status)
     {
       printf ("Error opening %s\n.", argv[1]);
@@ -80,15 +80,15 @@ main (int argc, char *argv[])
                                   base_revision,
                                   globalpool);
 
-  apr_close (file);
+  apr_file_close (file);
   
   if (err)
     {
       svn_handle_error (err, stderr, 0);
-      apr_destroy_pool (globalpool);
+      apr_pool_destroy (globalpool);
       exit (err->apr_err);
     }
 
-  apr_destroy_pool (globalpool);
+  apr_pool_destroy (globalpool);
   exit (0);
 }

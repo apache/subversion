@@ -60,7 +60,7 @@ svn_cl__print_file_diff (svn_string_t *path,
 
   /* Get an apr_file_t representing stdout, which is where we'll have
      the diff program print to. */
-  status = apr_open_stdout (&outhandle, pool);
+  status = apr_file_open_stdout (&outhandle, pool);
   if (status)
     return svn_error_create (status, 0, NULL, pool,
                              "error: can't open handle to stdout");

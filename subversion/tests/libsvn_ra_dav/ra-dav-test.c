@@ -91,7 +91,7 @@ main (int argc, char **argv)
 
   (*plugin->close)(session_baton);
 
-  apr_destroy_pool(pool);
+  apr_pool_destroy(pool);
   apr_terminate();
 
   return 0;

@@ -51,7 +51,7 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
       /* The dir doesn't exist, and it's our job to change that. */
 
       apr_status_t apr_err =
-        apr_make_dir (npath->data, APR_OS_DEFAULT, pool);
+        apr_dir_make (npath->data, APR_OS_DEFAULT, pool);
 
       if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
         {

@@ -60,7 +60,7 @@ abort_trail (trail_t *trail,
   SVN_ERR (DB_WRAP (fs, "aborting Berkeley DB transaction",
 		    txn_abort (trail->db_txn)));
  
-  apr_destroy_pool (trail->pool);
+  apr_pool_destroy (trail->pool);
 
   return 0;
 }

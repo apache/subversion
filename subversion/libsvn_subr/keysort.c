@@ -84,7 +84,7 @@ apr_hash_sorted_keys (apr_hash_t *ht,
   apr_array_header_t *ary;
 
   /* allocate an array with only one element to begin with. */
-  ary = apr_make_array (pool, 1, sizeof(svn_item_t *));
+  ary = apr_array_make (pool, 1, sizeof(svn_item_t *));
 
   /* loop over hash table and push all keys into the array */
   for (hi = apr_hash_first (ht); hi; hi = apr_hash_next (hi))
@@ -100,7 +100,7 @@ apr_hash_sorted_keys (apr_hash_t *ht,
       item->size = klen;
       item->data = value;
       
-      receiver = (svn_item_t **)apr_push_array (ary);
+      receiver = (svn_item_t **)apr_array_push (ary);
       *receiver = item;
     }
   

@@ -62,7 +62,7 @@ static svn_error_t * svn_ra_open (void **session_baton,
   sess = http_session_create();
 
   /* make sure we will eventually destroy the session */
-  apr_register_cleanup(pool, sess, cleanup_session, apr_null_cleanup);
+  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
 
   http_set_useragent(sess, "SVN/" SVN_VERSION);
 
@@ -107,7 +107,7 @@ static svn_error_t *svn_ra_close (void *session_baton)
 {
   svn_ra_session_t *ras = session_baton;
 
-  (void) apr_run_cleanup(ras->pool, ras->sess, cleanup_session);
+  (void) apr_pool_cleanup_run(ras->pool, ras->sess, cleanup_session);
   return NULL;
 }
 

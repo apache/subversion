@@ -86,7 +86,7 @@ main (int argc, char **argv)
   else
     src_file = argv[1];
 
-  apr_err = apr_open (&src, src_file,
+  apr_err = apr_file_open (&src, src_file,
                       (APR_READ | APR_CREATE),
                       APR_OS_DEFAULT,
                       pool);
@@ -113,7 +113,7 @@ main (int argc, char **argv)
       exit (1);
     }
 
-  apr_close (src);
+  apr_file_close (src);
 
   return 0;
 }

@@ -47,7 +47,7 @@ svn_client_delete (svn_string_t *file, svn_boolean_t force, apr_pool_t *pool)
   if (force)
     {
       /* Remove the file. */
-      apr_err = apr_remove_file (file->data, pool);
+      apr_err = apr_file_remove (file->data, pool);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "svn_client_delete: error deleting %s",

@@ -37,7 +37,7 @@ svn_client_add (svn_string_t *file, apr_pool_t *pool)
   apr_file_t *f = NULL;
 
   /* todo: write a wrapper for existence-checking */
-  apr_err = apr_open (&f, file->data, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&f, file->data, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "svn_client_add: existence check failed for %s",

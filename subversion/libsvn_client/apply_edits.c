@@ -117,7 +117,7 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
   assert (xml_src != NULL);
 
   /* Open the XML source file. */
-  apr_err = apr_open (&in, xml_src->data,
+  apr_err = apr_file_open (&in, xml_src->data,
                       (APR_READ | APR_CREATE),
                       APR_OS_DEFAULT,
                       pool);
@@ -139,11 +139,11 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
                      is_update);
   if (err)
     {
-      apr_close (in);
+      apr_file_close (in);
       return err;
     }
 
-  apr_close (in);
+  apr_file_close (in);
 
   return SVN_NO_ERROR;
 }

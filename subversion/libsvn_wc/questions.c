@@ -244,32 +244,32 @@ contents_identical_p (svn_boolean_t *identical_p,
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
 
-  status = apr_open (&file1_h, file1->data, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&file1_h, file1->data, APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_open failed on `%s'", file1->data);
+       "contents_identical_p: apr_file_open failed on `%s'", file1->data);
 
-  status = apr_open (&file2_h, file2->data, APR_READ, APR_OS_DEFAULT, pool);
+  status = apr_file_open (&file2_h, file2->data, APR_READ, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf
       (status, 0, NULL, pool,
-       "contents_identical_p: apr_open failed on `%s'", file2->data);
+       "contents_identical_p: apr_file_open failed on `%s'", file2->data);
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
   while (!APR_STATUS_IS_EOF(status))
     {
-      status = apr_full_read (file1_h, buf1, sizeof(buf1), &bytes_read1);
+      status = apr_file_read_file (file1_h, buf1, sizeof(buf1), &bytes_read1);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_full_read() failed on %s.", file1->data);
+           "contents_identical_p: apr_file_read_file() failed on %s.", file1->data);
 
-      status = apr_full_read (file2_h, buf2, sizeof(buf2), &bytes_read2);
+      status = apr_file_read_file (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
           (status, 0, NULL, pool,
-           "contents_identical_p: apr_full_read() failed on %s.", file2->data);
+           "contents_identical_p: apr_file_read_file() failed on %s.", file2->data);
       
       if ((bytes_read1 != bytes_read2)
           || (memcmp (buf1, buf2, bytes_read1)))
@@ -279,16 +279,16 @@ contents_identical_p (svn_boolean_t *identical_p,
         }
     }
 
-  status = apr_close (file1_h);
+  status = apr_file_close (file1_h);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
-                             "contents_identical_p: apr_close failed on %s.",
+                             "contents_identical_p: apr_file_close failed on %s.",
                               file1->data);
 
-  status = apr_close (file2_h);
+  status = apr_file_close (file2_h);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
-                             "contents_identical_p: apr_close failed on %s.",
+                             "contents_identical_p: apr_file_close failed on %s.",
                              file2->data);
 
   return SVN_NO_ERROR;
@@ -514,8 +514,8 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
      svn_wc__get_local_propchanges(). */
   {
     apr_array_header_t *local_propchanges;
-    apr_hash_t *localprops = apr_make_hash (pool);
-    apr_hash_t *baseprops = apr_make_hash (pool);
+    apr_hash_t *localprops = apr_hash_make (pool);
+    apr_hash_t *baseprops = apr_hash_make (pool);
 
     err = svn_wc__load_prop_file (prop_path, localprops, pool);
     if (err) return err;

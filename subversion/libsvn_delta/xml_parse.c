@@ -1013,7 +1013,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (new_frame->tag == svn_delta__XML_treedelta)
     {
       /* Always create frame's hashtable to hold dirent names. */
-      new_frame->namespace = apr_make_hash (my_digger->pool);
+      new_frame->namespace = apr_hash_make (my_digger->pool);
       
       /* If this is the FIRST tree-delta we've ever seen... */
       if (my_digger->stack->tag == svn_delta__XML_deltapkg)
@@ -1391,7 +1391,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->dir_baton        = NULL;
   digger->validation_error = SVN_NO_ERROR;
   digger->svndiff_parser   = NULL;
-  digger->postfix_hash     = apr_make_hash (main_subpool);
+  digger->postfix_hash     = apr_hash_make (main_subpool);
 
   /* Create an expat parser */
   svn_parser = svn_xml_make_parser (digger,
@@ -1421,7 +1421,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
 void 
 svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser)
 {
-  apr_destroy_pool (parser->my_pool);
+  apr_pool_destroy (parser->my_pool);
 }
 
 

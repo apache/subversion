@@ -110,7 +110,7 @@ main (int argc, const char * const *argv)
 
   /* Read options.  */
   pool = svn_pool_create (NULL);
-  apr_initopt (&opt, pool, argc, argv);
+  apr_getopt_init (&opt, pool, argc, argv);
   while ((status = apr_getopt (opt, "s:l:n:", &optch, &optarg)) == APR_SUCCESS)
     {
       switch (optch)
@@ -127,7 +127,7 @@ main (int argc, const char * const *argv)
           break;
         }
     }
-  apr_destroy_pool (pool);
+  apr_pool_destroy (pool);
   if (!APR_STATUS_IS_EOF(status))
     {
       fprintf (stderr, "Usage: %s [-s seed]\n", argv[0]);
@@ -137,7 +137,7 @@ main (int argc, const char * const *argv)
   /* Pick a seed if one wasn't given, and save it.  Print it out in
    * case we dump core or something.  */
   if (!seed_set)
-    seed = (unsigned int) apr_now ();
+    seed = (unsigned int) apr_time_now ();
   seed_save = seed;
   printf("%s using seed %lu\n", progname, seed_save);
 
@@ -188,7 +188,7 @@ main (int argc, const char * const *argv)
           exit (1);
         }
       svn_txdelta_free (txdelta_stream);
-      apr_destroy_pool (pool);
+      apr_pool_destroy (pool);
 
       /* Compare the two files.  */
       rewind (target);

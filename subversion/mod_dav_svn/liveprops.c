@@ -224,7 +224,7 @@ void dav_svn_gather_propsets(apr_array_header_t *uris)
   /* ### what should we use for a URL to describe the available prop set? */
   /* ### for now... nothing. we will *only* have DAV properties */
 #if 0
-    *(const char **)apr_push_array(uris) =
+    *(const char **)apr_array_push(uris) =
         "<http://subversion.tigris.org/dav/propset/svn/1>";
 #endif
 }

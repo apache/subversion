@@ -87,10 +87,10 @@ svn_wc__entries_init (svn_string_t *path,
                           pool,
                           SVN_WC__ENTRIES_TOPLEVEL);
 
-  apr_err = apr_full_write (f, accum->data, accum->len, NULL);
+  apr_err = apr_file_write_full (f, accum->data, accum->len, NULL);
   if (apr_err)
     {
-      apr_close (f);
+      apr_file_close (f);
       return svn_error_createf (apr_err, 0, NULL, pool,
                                 "svn_wc__entries_init: "
                                 "error writing %s's entries file",
@@ -133,7 +133,7 @@ alloc_entry (apr_pool_t *pool)
   svn_wc_entry_t *entry = apr_pcalloc (pool, sizeof (*entry));
   entry->revision   = SVN_INVALID_REVNUM;
   entry->kind       = svn_node_none;
-  entry->attributes = apr_make_hash (pool);
+  entry->attributes = apr_hash_make (pool);
   return entry;
 }
 
@@ -443,10 +443,10 @@ read_entries (apr_hash_t *entries, svn_string_t *path, apr_pool_t *pool)
 
   /* Parse. */
   do {
-    apr_err = apr_full_read (infile, buf, sizeof(buf), &bytes_read);
+    apr_err = apr_file_read_file (infile, buf, sizeof(buf), &bytes_read);
     if (apr_err && !APR_STATUS_IS_EOF(apr_err))
       return svn_error_create 
-        (apr_err, 0, NULL, pool, "read_entries: apr_full_read choked");
+        (apr_err, 0, NULL, pool, "read_entries: apr_file_read_file choked");
     
     err = svn_xml_parse (svn_parser, buf, bytes_read,
                          APR_STATUS_IS_EOF(apr_err));
@@ -480,7 +480,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
 {
   svn_error_t *err;
   enum svn_node_kind kind;
-  apr_hash_t *entries = apr_make_hash (pool);
+  apr_hash_t *entries = apr_hash_make (pool);
   svn_boolean_t is_wc;
 
   *entry = NULL;
@@ -558,7 +558,7 @@ svn_wc_entries_read (apr_hash_t **entries,
   svn_error_t *err;
   apr_hash_t *new_entries;
 
-  new_entries = apr_make_hash (pool);
+  new_entries = apr_hash_make (pool);
 
   err = read_entries (new_entries, path, pool);
   if (err)
@@ -616,7 +616,7 @@ svn_wc__entries_write (apr_hash_t *entries,
 
   svn_xml_make_close_tag (&bigstr, pool, SVN_WC__ENTRIES_TOPLEVEL);
 
-  apr_err = apr_full_write (outfile, bigstr->data, bigstr->len, NULL);
+  apr_err = apr_file_write_full (outfile, bigstr->data, bigstr->len, NULL);
   if (apr_err)
     err = svn_error_createf (apr_err, 0, NULL, pool,
                              "svn_wc__entries_write: %s",
@@ -1045,7 +1045,7 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
   dupentry->text_time  = entry->text_time;
   dupentry->prop_time  = entry->prop_time;
 
-  dupentry->attributes = apr_make_hash (pool);
+  dupentry->attributes = apr_hash_make (pool);
 
   /* Now the hard part:  copying one hash to another! */
 

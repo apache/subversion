@@ -72,7 +72,7 @@ main (int argc, char *argv[])
   if (use_xml)  /* xml output */
     {
       /* Open a stdout filehandle */
-      status = apr_open (&stdout_handle, "-", APR_WRITE,
+      status = apr_file_open (&stdout_handle, "-", APR_WRITE,
                          APR_OS_DEFAULT, globalpool);
       
       err = svn_delta_get_xml_editor (svn_stream_from_aprfile (stdout_handle,
@@ -82,7 +82,7 @@ main (int argc, char *argv[])
       if (err)
         {
           svn_handle_error (err, stderr, 0);
-          apr_destroy_pool (globalpool);
+          apr_pool_destroy (globalpool);
           exit (1);
         }
     }
@@ -94,7 +94,7 @@ main (int argc, char *argv[])
       if (err)
         {
           svn_handle_error (err, stderr, 0);
-          apr_destroy_pool (globalpool);
+          apr_pool_destroy (globalpool);
           exit (1);
         }
     }
@@ -105,10 +105,10 @@ main (int argc, char *argv[])
   if (err)
     {
       svn_handle_error (err, stderr, 0);
-      apr_destroy_pool (globalpool);
+      apr_pool_destroy (globalpool);
       exit (1);
     }
 
-  apr_destroy_pool (globalpool);
+  apr_pool_destroy (globalpool);
   exit (0);
 }
