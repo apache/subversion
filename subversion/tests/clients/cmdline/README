@@ -1,0 +1,13 @@
+            Test suite for the command line client.
+            =======================================
+
+Currently, the command line client lives in ../../../client/, for
+historical reasons, and is the only testable Subversion client.
+Eventually, though, it will live in ../../../clients/cmdline/, and be
+one of many clients; that's why the test dir is tests/clients/cmdline/
+instead of tests/client/.
+
+The cmdline client test suite doesn't use the C-level testing
+framework.  Instead, it drives the client just like a user would,
+examining the output and the on-disk results (i.e., the working copy)
+carefully as it goes.
