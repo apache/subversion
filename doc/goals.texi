@@ -67,7 +67,7 @@ Others are not so obvious, and are explained in greater detail below.
 * Text vs binary issues::
 * I18N/Multilingual support::
 * Branching and tagging::
-* Merging and ancestry::
+* Merging::
 * Miscellaneous new behaviors::
 @end menu
 
@@ -190,160 +190,13 @@ of development, one at least wants users to be aware of the change).
 in the Subversion filesystem namespace!)
 
 @c -----------------------------------------------------------------------
-@node Merging and ancestry
-@subsection Merging and ancestry
-
-(TODO: rewrite this a bit to emphasize that ancestor sets consist of
-*deltas*, not versions.  The notation below doesn't make this clear.)
-
-Subversion defines merges the same way CVS does: to merge means to take
-a set of previously committed changes and apply them as a patch to the
-working copy.
-
-In CVS, performing a merge is equivalent to hand-editing the working
-copy into the same state as it would have been after the merge.  But
-Once the merge is committed, CVS has no memory of the source of the
-changes; this can, and frequently does, lead to conflicts when users
-unintentionally merge in the same changes again.  (Experienced CVS users
-avoid this problem by using branch- and merge-point tags, but that
-itself involves a lot of unwieldy bookkeeping.)
-
-In Subversion, merges are remembered by storing @dfn{ancestry}
-information.  Think of an ancestry as a set -- the set of all commits
-(diffs) that went into a particular version of a particular file.  (Ben
-sez: don't you mean "set of all changes to a tree"?) By keeping these
-sets up-to-date, and consulting them when doing merges, Subversion can
-avoid applying the same patch twice and spare the user the necessity of
-remembering what's been merged and what hasn't.
-
-For example, in this history of the file A
-
-@example
- _____        _____        _____        _____        _____ 
-|     |      |     |      |     |      |     |      |     |
-| A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |
-|_____|      |_____|      |_____|      |_____|      |_____|
-             
-@end example
-
-the ancestor set of A:5 is
-
-@example
-  @{ A:1, A:2, A:3, A:4, A:5 @}
-@end example
-
-(If you're surprised to see A:5 itself in the ancestor set, try thinking
-of the set as "changes accounted for" in that version.  Naturally, the
-commit resulting in A:5 is accounted for in A:5, as is the commit
-resulting in A:4, and so on.)
-
-Now suppose there's a branch B rooted at A:2, and that we want to merge
-this branch with A:5 to produce A:6.
-
-But what does it mean to "merge this branch"?  Merging a branch is
-ambiguous; according to the definition of merging, we need to know
-exactly which commits (changes) are being merged.
-
-Thus, although a common shorthand merge diagram looks like this
-
-@example
- _____        _____        _____        _____        _____        _____
-|     |      |     |      |     |      |     |      |     |      |     |
-| A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |----->| A:6 |
-|_____|      |_____|      |_____|      |_____|      |_____|  ^   |_____|
-                \                                            |
-                 \                                           |
-                  \  _____        _____        _____        /
-                   \|     |      |     |      |     |      /
-                    | B:1 |----->| B:2 |----->| B:3 |--->-'
-                    |_____|      |_____|      |_____|
-@end example
-
-a more explicit diagram would be:
-
-@example
- _____        _____        _____        _____        _____        _____
-|     |      |     |      |     |      |     |      |     |      |     |
-| A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |----->| A:6 |
-|_____|      |_____|      |_____|      |_____|      |_____|  ^   |_____|
-                |                                            |
-                |                             _______________|
-                |               _____________/
-                |              /            /
-                \_____________/            /
-                 \           /            /
-                  \  _____   |    _____   |    _____ 
-                   \|     |  |   |     |  |   |     |
-                    | B:1 |----->| B:2 |----->| B:3 |
-                    |_____|      |_____|      |_____|
-@end example
-
-And A:6's ancestry set would look like this after the merge:
-
-@example
-  @{ A:1, A:2, A:3, A:4, A:5, B:1, B:2, B:3 @}
-@end example
-
-Although this merge happened to include all the changes on the branch,
-that needn't be the case for all merges.  For example:
-
-@example
- _____        _____        _____        _____        _____        _____
-|     |      |     |      |     |      |     |      |     |      |     |
-| A:1 |----->| A:2 |----->| A:3 |----->| A:4 |----->| A:5 |----->| A:6 |
-|_____|      |_____|      |_____|      |_____|      |_____|  ^   |_____|
-                |                                            |
-                |                           _________________|
-                |                          /
-                |                         /
-                \              __________/
-                 \            /          |
-                  \  _____   |    _____  |     _____        _____ 
-                   \|     |  |   |     | |    |     |      |     |
-                    | B:1 |----->| B:2 |----->| B:3 |----->| B:4 |----->
-                    |_____|      |_____|      |_____|      |_____|
-@end example
-
-which leaves A:6's ancestry set at
-
-@example
-  @{ A:1-6, B:2-3 @}
-@end example
-
-If a user now tells Subversion to "merge branch B into A", meaning merge
-all the "accounted for" in B:4 into A, then Subversion will
-automagically notice that B:2 and B:3 are already accounted for and
-apply only the patches for B:1 and B:4.  In the end, A:7's ancestry set
-would look like this:
-
-@example
-  @{ A:1-7, B:1-4 @}
-@end example
-
-There is no requirement that the merge source be a contiguous range of
-revisions.  One might apply the change for B:1 and B:3, but omit B:2 and
-B:4 (for example, if you knew that 1 and 3 were stable bugfix changes,
-but 2 and 4 were experimental code not ready for the trunk yet).
-
-Although every merge comes from a @emph{set} of changes, the client
-interface to merges may allow one or both sides to be specified
-implicitly.  When this is done, the full merge information is derived
-via clearly understandable rules.
-
-The above describes how merging and ancestry work both within a
-repository and across repositories.  However, inter-repository merging
-will probably not be implemented until a future release of Subversion.
-
-(Note that the repository stores ancestry sets efficiently, collapsing
-into ranges wherever possible, etc.)
-
-@c -----------------------------------------------------------------------
 @node Miscellaneous new behaviors
 @subsection Miscellaneous new behaviors
 
 @menu
 * Log messages
 * Client side diff plug-ins
+* Better merging
 * Conflict resolution
 * Multisite and local repository
 @end menu
@@ -372,6 +225,16 @@ Subversion supports client-side plug-in diff programs
 There is no need for Subversion to have every possible diff mechanism
 built in.  It can invoke a user-specified client-side diff program on
 the two versions of the file(s) locally.
+
+@c -----------------------------------------------------------------------
+@node Better merging
+@subsection Better merging
+
+Subversion remembers what has already been merged in and what hasn't,
+thereby avoiding the problem (familiar to CVS users) of spurious
+conflicts on repeated merges.
+
+See @xref{Merging and Ancestry} for details.
 
 @c -----------------------------------------------------------------------
 @node Conflicts resolution
