@@ -1048,8 +1048,10 @@ apply, and if the change is just one more increment in a continuous
 process such as translation, it's not even necessary to name every
 file.  Just briefly summarize the change, for example: "More work on
 Malagasy translation of the book."  When you finish a distinct stage
-of work, note it in the log message, for example: "Finish Chapter 3 of
-Malagasy book translation."
+of work, note it in the log message, for example: "Finish Chapter 3
+of Malagasy book translation.".  Please write your log messages in
+English so everybody involved in the project maintenance understands
+what type of changes were made and possibly suggest changes on them.
 
 
 
