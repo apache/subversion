@@ -90,6 +90,22 @@ svn_error_t *svn_wc_add    (apr_array_header_t *paths);
 svn_error_t *svn_wc_delete (apr_array_header_t *paths);
 
 
+
+
+/* Do a depth-first crawl of the local changes in a working copy,
+   beginning at ROOT_DIRECTORY.  Push synthesized xml (representing a
+   coherent tree-delta) at XML_PARSER.
+
+   Presumably, the client library will grab a "walker" from libsvn_ra,
+   build an svn_xml_parser_t around it, and then pass the parser to
+   this routine.  This is how local changes in the working copy are
+   ultimately translated into network requests.  */
+svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
+                                       svn_xml_parser_t *xml_parser,
+                                       apr_pool_t *pool)
+
+
+
 /*
  * Return a walker for effecting changes in a working copy, including
  * creating the working copy (i.e., update and checkout).
