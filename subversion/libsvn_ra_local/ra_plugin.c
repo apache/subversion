@@ -204,24 +204,37 @@ svn_ra_local__open (void **session_baton,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *session;
-  void *a, *auth_baton;
-  svn_ra_username_authenticator_t *authenticator;
-
+  svn_auth_cred_username_t *creds;
+  svn_auth_iterstate_t *iterstate;
+  
   /* Allocate and stash the session_baton args we have already. */
   session = apr_pcalloc (pool, sizeof(*session));
   session->pool = pool;
   session->repository_URL = repos_URL;
   
-  /* Get the username by "pulling" it from the callbacks. */
-  SVN_ERR (callbacks->get_authenticator (&a,
-                                         &auth_baton, 
-                                         svn_ra_auth_username, 
-                                         callback_baton, pool));
+  /* Get a username somehow, so we have some svn:author property to
+     attach to a commit. */
+  if (! callbacks->auth_baton)
+    {
+      session->username = "";
+    }
+  else
+    {
+      SVN_ERR (svn_auth_first_credentials ((void **) &creds, &iterstate, 
+                                           SVN_AUTH_CRED_USERNAME,
+                                           callbacks->auth_baton,
+                                           pool));
 
-  authenticator = (svn_ra_username_authenticator_t *) a;
-
-  SVN_ERR (authenticator->get_username (&(session->username),
-                                        auth_baton, FALSE, pool));
+      /* No point in calling next_creds(), since that assumes that the
+         first_creds() somehow failed to authenticate.  But there's no
+         challenge going on, so we use whatever creds we get back on
+         the first try. */
+      if (creds == NULL
+          || (creds->username == NULL))
+        session->username = "";
+      else
+        session->username = apr_pstrdup (pool, creds->username);
+    }
 
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
@@ -243,16 +256,6 @@ svn_ra_local__open (void **session_baton,
   /* Stuff the callbacks/baton here. */
   session->callbacks = callbacks;
   session->callback_baton = callback_baton;
-
-  /* ### ra_local is not going to bother to store the username in the
-     working copy.  This means that the username will always be
-     fetched from getuid() or from a commandline arg, which is fine.
-
-     The reason for this decision is that in ra_local, authentication
-     and authorization are blurred; we'd have to use authorization as
-     a *test* to decide if the authentication was valid.  And we
-     certainly don't want to track every subsequent svn_fs_* call's
-     error, just to decide if it's legitmate to store a username! */
 
   *session_baton = session;
   return SVN_NO_ERROR;
