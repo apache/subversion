@@ -123,7 +123,7 @@ svn_wc__string_to_time (svn_stringbuf_t *tstr)
 
   apr_implode_time (&when, &exploded_time);
 
-  /* FIXME:  (see issue XXX)
+  /* FIXME:  (see issue 404)
      apr_implode_time does not take the GMT offsett into account.
      I believe this is a bug in APR, but until that's resolved,
      we'll just have to adjust the time ourselves. */
