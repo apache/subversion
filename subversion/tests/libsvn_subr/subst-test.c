@@ -152,6 +152,30 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
 }
 
 
+/* Remove file FNAME if it exists; just return success if it doesn't. */
+static svn_error_t *
+remove_file (const char *fname, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_finfo_t finfo;
+
+  if (APR_STATUS_IS_SUCCESS (apr_stat (&finfo, fname, APR_FINFO_TYPE, pool)))
+    {
+      if (finfo.filetype == APR_REG)
+        {
+          apr_err = apr_file_remove (fname, pool);
+          if (! APR_STATUS_IS_SUCCESS (apr_err))
+            return svn_error_create (apr_err, 0, NULL, pool, fname);
+        }
+      else
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "non-file `%s' is in the way", fname);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Verify that file FNAME contains the test data `lines' (with
  * keywords expanded according to REV, AUTHOR, DATE, and URL), and
  * uses EOL_STR as its eol marker consistently.  If the test data
@@ -348,29 +372,16 @@ verify_substitution (const char *fname,
       idx += strlen (eol_str);
     }
 
-  return SVN_NO_ERROR;
-}
+  SVN_ERR (remove_file (fname, pool));
 
-
-/* Remove file FNAME if it exists; just return success if it doesn't. */
-static svn_error_t *
-remove_file (const char *fname, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  apr_finfo_t finfo;
-
-  if (APR_STATUS_IS_SUCCESS (apr_stat (&finfo, fname, APR_FINFO_TYPE, pool)))
-    {
-      if (finfo.filetype == APR_REG)
-        {
-          apr_err = apr_file_remove (fname, pool);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
-            return svn_error_create (apr_err, 0, NULL, pool, fname);
-        }
-      else
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-                                  "non-file `%s' is in the way", fname);
-    }
+  /* ### todo fooo working here:
+   *
+   * The next step is to take src file too, and src_eol, do the
+   * expansion here, then remove both src and dst here.  This function
+   * will both set up and verify the test, so that the test functions
+   * themselves can become really small, just wrapper calls to this.
+   * That would save a lot of redundant code.
+   */
 
   return SVN_NO_ERROR;
 }
