@@ -622,31 +622,42 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
                          apr_file_t *file,
                          apr_pool_t *pool)
 {
-  /* ### this function must be fixed to do an apr_stat() for SIZE,
-     ### alloc the buffer, then read the file into the buffer. Using
-     ### an svn_stringbuf_t means quadratic memory usage: start with
-     ### BUFSIZE, allocate 2*BUFSIZE, then alloc 4*BUFSIZE, etc.
-     ### The pools keep each of those allocs around. */
-  char buf[BUFSIZ];
   apr_size_t len;
+  apr_finfo_t finfo;
   apr_status_t apr_err;
   svn_stringbuf_t *res = svn_stringbuf_create("", pool);
+  const char *fname;
+  char dummy;
 
-  do 
-    {
-      apr_err = apr_file_read_full (file, buf, sizeof(buf), &len);
-      if (apr_err && !APR_STATUS_IS_EOF (apr_err))
-        {
-          const char * filename;
-          apr_file_name_get (&filename, file);
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "svn_string_from_aprfile: failed to read '%s'", filename);
-        }
-      
-      svn_stringbuf_appendbytes (res, buf, len);
-    } 
-  while (len != 0);
+  apr_err = apr_file_name_get (&fname, file);
+  if (!APR_STATUS_IS_SUCCESS(apr_err))
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "svn_string_from_aprfile: failed to get filename");
+
+  apr_err = apr_stat (&finfo, fname, APR_FINFO_SIZE, pool);
+  if (!APR_STATUS_IS_SUCCESS(apr_err))
+    return svn_error_createf 
+      (apr_err, 0, NULL, pool,
+       "svn_string_from_aprfile: failed to stat '%s'", fname);
+
+  /* Reserve space for the data, ensuring that the stringbuf's pool is
+     used. */
+  svn_stringbuf_ensure (res, finfo.size);
+  res->len = finfo.size;
+
+  apr_err = apr_file_read_full (file, res->data, res->len, &len);
+  if (!APR_STATUS_IS_SUCCESS(apr_err))
+    return svn_error_createf 
+      (apr_err, 0, NULL, pool,
+       "svn_string_from_aprfile: failed to read '%s'", fname);
+
+  /* Having read all the data we *expect* EOF */
+  apr_err = apr_file_read_full (file, &dummy, 1, &len);
+  if (!APR_STATUS_IS_EOF(apr_err))
+    return svn_error_createf 
+      (apr_err, 0, NULL, pool,
+       "svn_string_from_aprfile: EOF not seen for '%s'", fname);
 
   *result = res;
   return SVN_NO_ERROR;
