@@ -43,13 +43,45 @@ svn_fs__open_strings_table (DB **strings_p,
 
 /*** Storing and retrieving strings.  ***/
 
+struct string_baton
+{
+  const char *key;        /* Which string in the `strings' table? */
+  u_int32_t offset;       /* Where are we in the string? */
+  svn_boolean_t append;   /* True iff we should append to the string. */
+};
+
+
+static svn_error_t *
+string_read (void *baton, char *buffer, apr_size_t *len)
+{
+  abort ();
+}
+
+
+static svn_error_t *
+string_write (void *baton, const char *data, apr_size_t *len)
+{
+  abort ();
+}
+
+
+
 svn_error_t *
 svn_fs__read_string_stream (svn_stream_t **stream,
                             svn_fs_t *fs,
                             const char *key,
                             trail_t *trail)
 {
-  abort ();
+  struct string_baton *baton = apr_pcalloc (trail->pool, sizeof (*baton));
+  svn_stream_t *s = svn_stream_create (baton, trail->pool);
+
+  baton->key = key;
+  baton->offset = 0;
+  baton->append = 0;
+  
+  svn_stream_set_read (s, string_read);
+
+  *stream = s;
   return SVN_NO_ERROR;
 }
 
@@ -60,7 +92,16 @@ svn_fs__write_string_stream (svn_stream_t **stream,
                              const char *key,
                              trail_t *trail)
 {
-  abort ();
+  struct string_baton *baton = apr_pcalloc (trail->pool, sizeof (*baton));
+  svn_stream_t *s = svn_stream_create (baton, trail->pool);
+
+  baton->key = key;
+  baton->offset = 0;
+  baton->append = 0;
+  
+  svn_stream_set_write (s, string_write);
+
+  *stream = s;
   return SVN_NO_ERROR;
 }
 
@@ -71,7 +112,16 @@ svn_fs__append_string_stream (svn_stream_t **stream,
                               const char *key,
                               trail_t *trail)
 {
-  abort ();
+  struct string_baton *baton = apr_pcalloc (trail->pool, sizeof (*baton));
+  svn_stream_t *s = svn_stream_create (baton, trail->pool);
+
+  baton->key = key;
+  baton->offset = 0;
+  baton->append = 1;
+  
+  svn_stream_set_write (s, string_write);
+
+  *stream = s;
   return SVN_NO_ERROR;
 }
 
