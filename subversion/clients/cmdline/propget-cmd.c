@@ -117,7 +117,8 @@ svn_cl__propget (apr_getopt_t *os,
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
                                        opt_state->recursive, pool));
           
-          print_filenames = (targets->nelts > 1 || apr_hash_count (props) > 1);
+          print_filenames = (opt_state->recursive || targets->nelts > 1
+                             || apr_hash_count (props) > 1);
           
           for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
             {
