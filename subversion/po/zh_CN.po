@@ -1,7 +1,6 @@
 # Simplified Chinese translation for subversion package
 # Copyright (C) 2004 Collab Net.
 # This file is distributed under the same license as the subversion package.
-# YingNing Huang <h y n@ hynnet.com>, 2004.
 #
 msgid ""
 msgstr ""
