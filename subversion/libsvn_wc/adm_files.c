@@ -70,7 +70,7 @@
 
 
 
-/*** Names in the SVN/ directory. ***/
+/*** File names in the adm area. ***/
 
 /* No one outside this file should ever need to know this.  In fact,
    no one outside adm_subdir() should ever need to know this. */
@@ -79,6 +79,21 @@ static const char *
 adm_subdir (void)
 {
   return SVN_WC__ADM_DIR_DEFAULT;
+}
+
+
+/* Divide PATH into DIRPATH and BASENAME, return them by reference,
+   in their own storage in POOL.  The separator between DIRPATH and
+   BASENAME is not included in the returned value. */
+static void
+wc_split_path (svn_string_t *path, 
+               svn_string_t **dirpath,
+               svn_string_t **basename,
+               apr_pool_t *pool)
+{
+  *dirpath = svn_string_dup (path, pool);
+  *basename = svn_path_last_component (*dirpath, SVN_PATH_LOCAL_STYLE, pool);
+  svn_path_remove_component (*dirpath, SVN_PATH_LOCAL_STYLE);
 }
 
 
@@ -161,6 +176,10 @@ chop_admin_name (svn_string_t *path, int num_components)
   while (num_components-- > 0)
     svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 }
+
+
+
+/*** Making and using files in the adm area. ***/
 
 
 /* Create an empty THING in the adm area. 
@@ -367,7 +386,7 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 
 
 
-/*** opening all kinds of adm files ***/
+/*** Syncing files in the adm area. ***/
 
 static svn_error_t *
 sync_adm_file (svn_string_t *path,
@@ -384,8 +403,7 @@ sync_adm_file (svn_string_t *path,
   
   /* Extend real name. */
   va_start (ap, pool);
-  components_added
-    = v_extend_with_adm_name (path, 0, pool, ap);
+  components_added = v_extend_with_adm_name (path, 0, pool, ap);
   va_end (ap);
   
   /* Extend tmp name. */
@@ -400,15 +418,46 @@ sync_adm_file (svn_string_t *path,
   chop_admin_name (path, components_added);
       
   if (apr_err)
-    {
-      const char *msg = apr_psprintf (pool, "error renaming %s to %s",
-                                      tmp_path->data, path->data);
-      return svn_error_create (apr_err, 0, NULL, pool, msg);
-    }
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "error renaming %s to %s",
+                              tmp_path->data, path->data);
   else
     return SVN_NO_ERROR;
 }
 
+
+/* Rename a tmp text-base file to its real text-base name.
+   The file had better already be closed. */
+svn_error_t *
+svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
+{
+  svn_string_t *newpath, *basename;
+  wc_split_path (path, &newpath, &basename, pool);
+  return sync_adm_file (newpath,
+                        pool,
+                        SVN_WC__ADM_TEXT_BASE,
+                        basename->data,
+                        NULL);
+}
+
+
+svn_string_t *
+svn_wc__text_base_path (svn_string_t *path, apr_pool_t *pool)
+{
+  svn_string_t *newpath, *basename;
+  wc_split_path (path, &newpath, &basename, pool);
+  extend_with_adm_name (newpath,
+                        0,
+                        pool,
+                        SVN_WC__ADM_TEXT_BASE,
+                        basename->data,
+                        NULL);
+  return newpath;
+}
+
+
+
+/*** Opening and closing files in the adm area. ***/
 
 /* Open a file somewhere in the adm area for directory PATH.
  * First, the adm subdir is appended as a path component, then each of
@@ -548,11 +597,9 @@ close_adm_file (apr_file_t *fp,
       chop_admin_name (path, components_added);
       
       if (apr_err)
-        {
-          const char *msg = apr_psprintf (pool, "error renaming %s to %s",
-                                          tmp_path->data, path->data);
-          return svn_error_create (apr_err, 0, NULL, pool, msg);
-        }
+        return svn_error_createf (apr_err, 0, NULL, pool,
+                                  "error renaming %s to %s",
+                                  tmp_path->data, path->data);
       else
         return SVN_NO_ERROR;
     }
@@ -584,32 +631,16 @@ svn_wc__close_adm_file (apr_file_t *fp,
 }
 
 
-/* kff todo: svn_wc__*_text_base() are all essentially the same except
-   for one function call.  Abstracting their guts might be nice, but
-   then again it's not a lot of code and tossing void *'s and pointers
-   to vararg functions into the pot might just make things muddier... */
-
-
 svn_error_t *
 svn_wc__open_text_base (apr_file_t **handle,
                         svn_string_t *path,
                         apr_int32_t flags,
                         apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  svn_string_t *last_component
-    = svn_path_last_component (path, SVN_PATH_LOCAL_STYLE, pool);
-
-  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-
-  err = open_adm_file (handle, path, flags, pool,
-                       SVN_WC__ADM_TEXT_BASE, last_component->data, NULL);
-
-  /* Restore caller's path unconditionally. */
-  svn_path_add_component (path, last_component,
-                          SVN_PATH_LOCAL_STYLE, pool);
-
-  return err;
+  svn_string_t *newpath, *basename;
+  wc_split_path (path, &newpath, &basename, pool);
+  return open_adm_file (handle, newpath, flags, pool,
+                        SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
 }
 
 
@@ -619,64 +650,10 @@ svn_wc__close_text_base (apr_file_t *fp,
                          int write,
                          apr_pool_t *pool)
 {
-  svn_error_t *err = NULL;
-  svn_string_t *last_component
-    = svn_path_last_component (path, SVN_PATH_LOCAL_STYLE, pool);
-
-  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-
-  err = close_adm_file (fp, path, write, pool,
-                        SVN_WC__ADM_TEXT_BASE, last_component->data, NULL);
-  
-  /* Restore caller's path unconditionally. */
-  svn_path_add_component (path, last_component,
-                          SVN_PATH_LOCAL_STYLE, pool);
-
-  return err;
-}
-
-
-/* Rename a tmp text-base file to its real text-base name.
-   The file had better already be closed. */
-svn_error_t *
-svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
-{
-  svn_error_t *err = NULL;
-  svn_string_t *last_component
-    = svn_path_last_component (path, SVN_PATH_LOCAL_STYLE, pool);
-
-  svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
-
-  err = sync_adm_file (path,
-                       pool,
-                       SVN_WC__ADM_TEXT_BASE,
-                       last_component->data,
-                       NULL);
-  
-  /* Restore caller's path unconditionally. */
-  svn_path_add_component (path, last_component,
-                          SVN_PATH_LOCAL_STYLE, pool);
-
-  return err;
-}
-
-
-svn_string_t *
-svn_wc__text_base_path (svn_string_t *path, apr_pool_t *pool)
-{
-  svn_string_t *npath = svn_string_dup (path, pool);
-  svn_string_t *last_component
-    = svn_path_last_component (npath, SVN_PATH_LOCAL_STYLE, pool);
-  svn_path_remove_component (npath, SVN_PATH_LOCAL_STYLE);
-
-  extend_with_adm_name (npath,
-                        0,
-                        pool,
-                        SVN_WC__ADM_TEXT_BASE,
-                        last_component->data,
-                        NULL);
-
-  return npath;
+  svn_string_t *newpath, *basename;
+  wc_split_path (path, &newpath, &basename, pool);
+  return close_adm_file (fp, newpath, write, pool,
+                         SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
 }
 
 
