@@ -92,6 +92,64 @@ svn_io_check_path (svn_string_t *path,
 
 
 
+/* A posix-like read function of type svn_read_fn_t (see svn_io.h).
+
+   Given an already-open APR FILEHANDLE, read LEN bytes into BUFFER.  
+   
+   (notice that FILEHANDLE is still input as a void *).
+*/
+svn_error_t *
+svn_io_file_reader (void *filehandle,
+                    char *buffer,
+                    apr_size_t *len,
+                    apr_pool_t *pool)
+{
+  apr_status_t stat;
+
+  /* Recover our filehandle */
+  apr_file_t *the_file = (apr_file_t *) filehandle;
+
+  stat = apr_full_read (the_file, buffer,
+                        (apr_size_t) *len,
+                        (apr_size_t *) len);
+  
+  if (stat && (stat != APR_EOF)) 
+    return
+      svn_error_create (stat, 0, NULL, pool,
+                        "adm_crawler.c (posix_file_reader): file read error");
+  
+  return SVN_NO_ERROR;  
+}
+
+
+/* A posix-like write function of type svn_write_fn_t (see svn_io.h).
+
+   Given an already-open APR FILEHANDLE, write LEN bytes out of BUFFER.
+
+   (notice that FILEHANDLE is still input as a void *)
+*/
+svn_error_t *
+svn_io_file_writer (void *filehandle,
+                    const char *buffer,
+                    apr_size_t *len,
+                    apr_pool_t *pool)
+{
+  apr_file_t *dst = (apr_file_t *) filehandle;
+  apr_status_t stat;
+  
+  stat = apr_full_write (dst, buffer, (apr_size_t) *len, (apr_size_t *) len);
+  
+  if (stat && (stat != APR_EOF))
+    return
+      svn_error_create (stat, 0, NULL, pool,
+                        "error writing xml delta");
+  else 
+    return 0;  
+}
+
+
+
+
 
 /* 
  * local variables:

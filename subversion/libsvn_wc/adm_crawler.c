@@ -157,8 +157,8 @@ do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
             {
               char *message =
                 apr_psprintf (pool,
-                              "commit-crawler failed to lock %s;\n
-                               but couldn't unlock previously-locked %s",
+                              "commit-crawler failed to lock %s,\n
+                               and also couldn't unlock previously-locked %s",
                               path->data, unlock_path->data);
               return svn_error_quick_wrap (err, message);
             }          
@@ -167,8 +167,7 @@ do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
       /* Return a wrapped error */
       msg =
         apr_psprintf (pool,
-                      "commit-crawler failed to lock %s;\n
-                       removed all previous commit locks.", path->data);
+                      "commit-crawler failed to lock %s", path->data);
       return svn_error_quick_wrap (err, msg);
     }
   
@@ -180,35 +179,6 @@ do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
 }
 
 
-
-
-/* A posix-like read function of type svn_read_fn_t (see svn_io.h).
-
-   (Needed so we can pass file-streams to svn_txdelta().)
-
-   Given an already-open APR FILEHANDLE, read LEN bytes into BUFFER.  */
-static svn_error_t *
-posix_file_reader (void *filehandle,
-                   char *buffer,
-                   apr_size_t *len,
-                   apr_pool_t *pool)
-{
-  apr_status_t stat;
-
-  /* Recover our filehandle */
-  apr_file_t *the_file = (apr_file_t *) filehandle;
-
-  stat = apr_full_read (the_file, buffer,
-                        (apr_size_t) *len,
-                        (apr_size_t *) len);
-  
-  if (stat && (stat != APR_EOF)) 
-    return
-      svn_error_create (stat, 0, NULL, pool,
-                        "adm_crawler.c (posix_file_reader): file read error");
-  
-  return SVN_NO_ERROR;  
-}
 
 
 
@@ -364,8 +334,8 @@ do_apply_textdelta (svn_string_t *filename,
   /* Create a text-delta stream object that pulls data out of the two
      files. */
   svn_txdelta (&txdelta_stream, 
-               posix_file_reader, textbasefile,
-               posix_file_reader, localfile,
+               svn_io_file_reader, textbasefile,
+               svn_io_file_reader, localfile,
                pool);
   
   /* Grab a window from the stream, "push" it at the consumer routine,

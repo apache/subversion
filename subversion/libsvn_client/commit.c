@@ -61,28 +61,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
-
-
-
-/*** Helpers. ***/
-static svn_error_t *
-generic_write (void *baton,
-               const char *buffer,
-               apr_size_t *len,
-               apr_pool_t *pool)
-{
-  apr_file_t *dst = (apr_file_t *) baton;
-  apr_status_t stat;
-  
-  stat = apr_full_write (dst, buffer, (apr_size_t) *len, (apr_size_t *) len);
-  
-  if (stat && (stat != APR_EOF))
-    return
-      svn_error_create (stat, 0, NULL, pool,
-                        "error writing xml delta");
-  else 
-    return 0;  
-}
+#include "svn_io.h"
 
 
 
@@ -110,7 +89,7 @@ svn_client_commit (svn_string_t *path,
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "error opening %s", xml_dst->data);
 
-  err = svn_delta_get_xml_editor (generic_write,
+  err = svn_delta_get_xml_editor (svn_io_file_writer,
                                   dst,
                                   (const svn_delta_edit_fns_t **) &editor,
                                   &edit_baton,

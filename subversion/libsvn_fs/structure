@@ -45,7 +45,7 @@ of numbers separated by periods that look a lot like RCS revision
 numbers.
 
   node_id ::= number | node_version_id "." number
-  node_version_id ::= node_id "." number
+  node_version_id ::= node_id "." numberh
 
 So: 
 - "100" is a node id.
