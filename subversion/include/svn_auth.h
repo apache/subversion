@@ -201,10 +201,30 @@ void svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
 const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
                                     const char *name);
 
-/** Universal run-time parameters, made available to all providers. */
+/** Universal run-time parameters, made available to all providers.
+
+    If you are writing a new provider, then to be a "good citizen",
+    you should notice these global parameters!  Note that these
+    run-time params should be treated as read-only by providers; the
+    application is responsible for placing them into the auth_baton
+    hash. */
+
+/** The auth-hash prefix indicating that the parameter is global */
 #define SVN_AUTH_PARAM_PREFIX "svn:auth:"
+
+/** Any 'default' credentials that came in through the application
+    itself, (e.g. --username and --password options).  Property values
+    are const char *.  */
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
+
+/** The application doesn't want any providers to prompt users.
+    Property value is irrelevant; only property's existence matters. */
+#define SVN_AUTH_PARAM_NON_INTERACTIVE  SVN_AUTH_PARAM_PREFIX "non-interactive"
+
+/** The application doesn't want any providers to save credentials to disk.
+    Property value is irrelevant; only property's existence matters. */
+#define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
 
 
 /** Get an initial set of credentials.
