@@ -936,14 +936,6 @@ main (int argc, const char * const *argv)
      subcommands will populate the ctx.log_msg_baton */
   ctx.log_msg_func = svn_cl__get_log_message;
 
-  if (!opt_state.encoding || !*opt_state.encoding)
-    {
-      svn_config_get (cfg, &opt_state.encoding,
-                      SVN_CONFIG_SECTION_MISCELLANY,
-                      SVN_CONFIG_OPTION_LOG_ENCODING,
-                      NULL);
-    }
-
   /* Authentication set-up. */
   {
     const char *store_password_val = NULL;
