@@ -58,16 +58,6 @@
 #define DELTA_H
 
 
-/* Create a new window from PARSER->SUBPOOL, and send it off to the
-   caller's consumer routine, then create a new SUBPOOL in PARSER so
-   that it can continue buffering data.  */
-svn_error_t *svn_vcdiff__send_window (svn_vcdiff_parser_t *parser, 
-                                      apr_size_t len);
-
-/* Send a null window to parser's consumer, signifying the end of this
-   window stream. */
-svn_error_t *svn_vcdiff__send_terminal_window (svn_vcdiff_parser_t *parser);
-
 
 /* Private interface for text deltas. */
 
@@ -235,11 +225,12 @@ typedef struct svn_xml__digger_t
      this is done by svn_xml_signal_bailout(). */
   svn_xml_parser_t *svn_parser;  
 
-  /* A vcdiff parser, called whenever we receive binary data from
-     expat.  Specifically, this is the _current_ vcdiff parser that
-     we're using to handle the data within the _current_ file being
-     added or replaced.*/
-  svn_vcdiff_parser_t *vcdiff_parser;
+  /* An svndiff write handler, called whenever we receive binary data
+     from expat.  Specifically, this is the _current_ handler that
+     we're using for the data within the _current_ file being added or
+     replaced. */
+  svn_write_fn_t *svndiff_write;
+  void *svndiff_baton;
 
   /* A hashtable: text-delta-ref-IDs ==> file_batons.  
      Used for "postfix" text-deltas. */

@@ -157,7 +157,7 @@ main (int argc, char **argv)
   svn_txdelta_window_handler_t *handler;
   svn_write_fn_t *write_fn;
   void *handler_baton, *write_baton;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   progname = strrchr (argv[0], '/');
   progname = (progname == NULL) ? argv[0] : progname + 1;
@@ -214,24 +214,21 @@ main (int argc, char **argv)
       pool = svn_pool_create (NULL);
 
       /* Make stage 4: apply the text delta.  */
-      err = svn_txdelta_apply (read_from_file, source_copy,
-                               write_to_file, target_regen, pool,
-                               &handler, &handler_baton);
+      svn_txdelta_apply (read_from_file, source_copy,
+                         write_to_file, target_regen, pool,
+                         &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
-      if (err == SVN_NO_ERROR)
-        err = svn_txdelta_parse_svndiff (handler, handler_baton, pool,
-                                         &write_fn, &write_baton);
+      svn_txdelta_parse_svndiff (handler, handler_baton, pool,
+                                 &write_fn, &write_baton);
 
       /* Make stage 2: encode the text delta in svndiff format.  */
-      if (err == SVN_NO_ERROR)
-        err = svn_txdelta_to_svndiff (write_fn, write_baton, pool, &handler,
-                                      &handler_baton);
+      svn_txdelta_to_svndiff (write_fn, write_baton, pool, &handler,
+                              &handler_baton);
 
       /* Make stage 1: create the text delta.  */
-      if (err == SVN_NO_ERROR)
-        err = svn_txdelta (&stream, read_from_file, source, read_from_file,
-                           target, pool);
+      svn_txdelta (&stream, read_from_file, source, read_from_file, target,
+                   pool);
 
       while (err == SVN_NO_ERROR)
         {

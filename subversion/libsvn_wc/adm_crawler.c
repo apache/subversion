@@ -358,11 +358,10 @@ do_apply_textdelta (svn_string_t *filename,
                                 
   /* Create a text-delta stream object that pulls data out of the two
      files. */
-  err= svn_txdelta (&txdelta_stream, 
-                    posix_file_reader, localfile,
-                    posix_file_reader, textbasefile,
-                    pool);
-  if (err) return err;
+  svn_txdelta (&txdelta_stream, 
+               posix_file_reader, localfile,
+               posix_file_reader, textbasefile,
+               pool);
   
   /* Grab a window from the stream, "push" it at the consumer routine,
      then free it.  (When we run out of windows, TXDELTA_WINDOW will

@@ -206,12 +206,12 @@ void svn_txdelta_free_window (svn_txdelta_window_t *window);
    and TARGET_FN to gather as much data as it needs.
 
    Do any necessary allocation in a sub-pool of POOL.  */
-svn_error_t *svn_txdelta (svn_txdelta_stream_t **stream,
-                          svn_read_fn_t *source_fn,
-                          void *source_baton,
-                          svn_read_fn_t *target_fn,
-                          void *target_baton,
-                          apr_pool_t *pool);
+void svn_txdelta (svn_txdelta_stream_t **stream,
+                  svn_read_fn_t *source_fn,
+                  void *source_baton,
+                  svn_read_fn_t *target_fn,
+                  void *target_baton,
+                  apr_pool_t *pool);
 
 
 /* Free the delta stream STREAM.  */
@@ -224,13 +224,13 @@ void svn_txdelta_free (svn_txdelta_stream_t *stream);
    POOL.  On return, *HANDLER is set to a window handler function and
    *HANDLER_BATON is set to the value to pass as the BATON argument to
    *HANDLER.  */
-svn_error_t *svn_txdelta_apply (svn_read_fn_t *source_fn,
-                                void *source_baton,
-                                svn_write_fn_t *target_fn,
-                                void *target_baton,
-                                apr_pool_t *pool,
-                                svn_txdelta_window_handler_t **handler,
-                                void **handler_baton);
+void svn_txdelta_apply (svn_read_fn_t *source_fn,
+                        void *source_baton,
+                        svn_write_fn_t *target_fn,
+                        void *target_baton,
+                        apr_pool_t *pool,
+                        svn_txdelta_window_handler_t **handler,
+                        void **handler_baton);
 
 
 
@@ -243,74 +243,22 @@ svn_error_t *svn_txdelta_apply (svn_read_fn_t *source_fn,
    return, *HANDLER is set to a window handler function and
    *HANDLER_BATON is set to the value to pass as the BATON argument to
    *HANDLER.  */
-svn_error_t *svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
-                                     void *write_baton,
-                                     apr_pool_t *pool,
-                                     svn_txdelta_window_handler_t **handler,
-                                     void **handler_baton);
-
-
-/* Definitions for converting VCDIFF -> text delta window streams.  */
-
-/* A vcdiff parser object.  */
-typedef struct svn_vcdiff_parser_t
-{
-  /* Once the vcdiff parser has enough data buffered to create a
-     "window", it passes this window to the caller's consumer routine.  */
-  svn_txdelta_window_handler_t *consumer_func;
-  void *consumer_baton;
-
-  /* Pool to create subpools from; each developing window will be a
-     subpool */
-  apr_pool_t *pool;
-
-  /* The current subpool which contains our current window-buffer */
-  apr_pool_t *subpool;
-
-  /* The actual vcdiff data buffer, living within subpool. */
-  svn_string_t *buffer;
-
-} svn_vcdiff_parser_t;
-
-
-
-/* Parse a VCDIFF-format stream, and invoke a text delta window
-   handler function on each window we get from it.  This is a
-   caller-pushes interface.
-
-   Return a new VCDIFF parser object, PARSER.  Use `svn_vcdiff_parse',
-   described below, to send VCDIFF-format data through the parser.
-   PARSER will invoke HANDLER to handle each window it recognizes,
-   passing it HANDLER_BATON.  */
-svn_vcdiff_parser_t *svn_make_vcdiff_parser
-                     (svn_txdelta_window_handler_t *handler,
-                      void *handler_baton,
-                      apr_pool_t *pool);
-
-
-/* Parse the LEN bytes at BUFFER as the next block of data in the
-   VCDIFF-format stream being parsed by PARSER.  When we've
-   accumulated enough data for a complete window, call PARSER's
-   HANDLER function.
-
-   If LEN is zero, that indicates the end of the VCDIFF data stream.
-   You *must* call svn_vcdiff_parse with LEN == 0 at the end of your
-   data stream; otherwise, the parser may still have buffered data it
-   hasn't passed to HANDLER yet.  */
-svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
-                               const char *buffer,
-                               apr_size_t len);
+void svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
+                             void *write_baton,
+                             apr_pool_t *pool,
+                             svn_txdelta_window_handler_t **handler,
+                             void **handler_baton);
 
 /* Prepare to parse an SVNDIFF-format string into a text delta.  On
    return, WRITE_FN and WRITE_BATON are set to a function and baton
    which will parse the stream, invoking HANDLER with HANDLER_BATON
    whenever a new window is ready.  You must call write_fn with a
    *LEN of 0 at the end of your data stream.  */
-svn_error_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
-                                        void *handler_baton,
-                                        apr_pool_t *pool,
-                                        svn_write_fn_t **write_fn,
-                                        void **write_baton);
+void svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
+                                void *handler_baton,
+                                apr_pool_t *pool,
+                                svn_write_fn_t **write_fn,
+                                void **write_baton);
 
 
 
