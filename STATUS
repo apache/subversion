@@ -66,7 +66,7 @@ Candidate changes:
     Justification: Tarballs built with GNU tar will not extract on platforms
     without GNU tar due to filename length.
     Votes:
-      +1: jerenkrantz, kfogel
+      +1: jerenkrantz, kfogel, breser
       +0: dlr
 
   * r8969
@@ -74,7 +74,7 @@ Candidate changes:
     Justification: Don't waste space in the tarball by having duplictate
     images. 
     Votes:
-      +1: kfogel, cmpilato, sussman
+      +1: kfogel, cmpilato, sussman, breser
 
   * Issue #1775
     Allow reverting a replaced file with no properties.
@@ -84,7 +84,7 @@ Candidate changes:
     Notes: Attachment 312 is a backported version of this fix.  Which was
     applied to trunk in r8981. 
     Votes:
-      +1: sussman, cmpilato, kfogel
+      +1: sussman, cmpilato, kfogel, breser
 
   * r8985
     Added fedora-1 and wbel-3 RPM package directories.
