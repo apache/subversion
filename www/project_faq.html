@@ -78,6 +78,10 @@
 <li><a href="#ignore-commit">I have a file in my project that every
 developer must change, but I don't want those local mods to ever be
 committed.  How can I make 'svn commit' ignore the file?</a></li>
+<li><a href="#ssh-auth-cache">When I access a repository using
+svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
+I avoid having to type it so often?</a></li>
+</a></li>
 
 <p>
 <strong>Troubleshooting:</strong>
@@ -1275,6 +1279,41 @@ filename, and have users customize the copy.  The file is unversioned,
 so it will never be committed.  And if you wish, you can add the file
 to its parent directory's svn:ignore property, so it doesn't show up
 as '?'  in the 'svn status' command.</p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="ssh-auth-cache">When I access a repository using
+svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
+I avoid having to type it so often?</a></h3>
+
+<p>ssh has its own passphrases and its own authentication-caching
+scheme.  Its auth caching is external to Subversion, and must be set
+up independently of Subversion.</p>
+
+<p>OpenSSH includes <b><tt>ssh-keygen</tt></b> to create the keys,
+<b><tt>ssh-agent</tt></b> to cache passphrases, and
+<b><tt>ssh-add</tt></b> to add passphrases to the agent's cache.  A
+popular script to simplify usage of <tt>ssh-agent</tt> is
+<b><tt>keychain</tt></b>.  On Windows, <b><tt>PuTTY</tt></b> is a
+popular alternative ssh client; see <b><tt>PuTTYgen</tt></b> to import
+OpenSSH keys and <b><tt>pageant</tt></b> to cache passphrases.</p>
+
+<p>Setting up <tt>ssh-agent</tt> is outside the scope of this
+document, but a <a
+href="http://www.google.com/search?hl=en&lr=&ie=UTF-8&q=%22ssh-agent%22"
+>Google search for "ssh-agent"</a> will quickly get you answers.  Or
+if you're <i>really</i> impatient, try one of these:
+
+<pre>
+   <a href="http://www.csua.berkeley.edu/ssh-howto.html"
+            >http://www.csua.berkeley.edu/ssh-howto.html</a>
+   <a href="http://mah.everybody.org/docs/ssh"
+           >http://mah.everybody.org/docs/ssh</a>
+   <a href="http://kimmo.suominen.com/docs/ssh/"
+           >http://kimmo.suominen.com/docs/ssh/</a>
+</pre>
+
+</p>
 
 
 <![CDATA[=========================================================]]>
