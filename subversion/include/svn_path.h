@@ -46,6 +46,44 @@ void svn_path_internal_style (svn_stringbuf_t *path);
 void svn_path_local_style (svn_stringbuf_t *path);
 
 
+/* Join a base path (BASE) with a component (COMPONENT), allocated in POOL.
+
+   If either BASE or COMPONENT is the empty string, then the other argument
+   will be copied and returned.
+
+   If the COMPONENT is an absolute path, then it is copied and returned.
+   Exactly one slash character ('/') is used to joined the components,
+   accounting for any trailing slash in BASE. If BASE has multiple trailing
+   slashes, then the result will also have multiple slashes (svn_path_join
+   just won't add more).
+
+   Note that the contents of BASE are not examined, so it is possible to
+   use this function for constructing URLs, or for relative URLs or
+   repository paths.
+
+   This function is NOT appropriate for native (local) file paths. Only
+   for "internal" paths, since it uses '/' for the separator. Further,
+   an absolute path (for COMPONENT) is based on a leading '/' character.
+   Thus, an "absolute URI" for the COMPONENT won't be detected. An
+   absolute URI can only be used for the base.
+*/
+char *svn_path_join (const char *base,
+                     const char *component,
+                     apr_pool_t *pool);
+
+/* Join multiple components onto a BASE path, allocated in POOL. The
+   components are terminated by a NULL.
+
+   If any component is the empty string, it will be ignored.
+
+   If any component is an absolute path, then it resets the base and
+   further components will be appended to it.
+
+   See svn_path_join() for further notes about joining paths.
+*/
+char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
+
+
 /* Add a COMPONENT (a null-terminated C-string) to PATH.  COMPONENT is
    allowed to contain directory separators.
 
@@ -73,7 +111,7 @@ void svn_path_remove_component (svn_stringbuf_t *path);
  * last component is the empty string.
  */
 svn_stringbuf_t *svn_path_last_component (const svn_stringbuf_t *path,
-                                       apr_pool_t *pool);
+                                          apr_pool_t *pool);
 
 
 /* Return TRUE iff PATH is a single component. */

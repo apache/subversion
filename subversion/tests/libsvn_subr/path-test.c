@@ -30,7 +30,7 @@ test_path_is_child (const char **msg,
 {
   int i, j;
 
-  const char *paths[5] = { 
+  static const char * const paths[] = { 
     "/foo/bar",
     "/foo/baz",
     "/foo/bar/baz",
@@ -38,7 +38,7 @@ test_path_is_child (const char **msg,
     "/foo/bar/baz/bing/boom"
     };
   
-  const char *remainders[5][5] = {
+  static const char * const remainders[][5] = {
     { 0, 0, "baz", 0, "baz/bing/boom" },
     { 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, "bing/boom" },
@@ -84,7 +84,7 @@ test_path_split (const char **msg,
 {
   int i;
 
-  const char *paths[5][3] = { 
+  static const char * const paths[][3] = { 
     { "/foo/bar",        "/foo",     "bar" },
     { "/foo/bar/",       "/foo",     "bar" },
     { "/foo/bar/ ",      "/foo/bar", " " },
@@ -131,7 +131,7 @@ test_is_url (const char **msg,
   int i;
 
   /* Paths to test. */
-  const char *paths[5] = { 
+  static const char * const paths[] = { 
     "://blah/blah",
     "a:abb://boo/",
     "http://svn.collab.net/repos/svn",
@@ -140,7 +140,7 @@ test_is_url (const char **msg,
   };
 
   /* Expected results of the tests. */
-  svn_boolean_t retvals[5] = {
+  static const svn_boolean_t retvals[] = {
     FALSE,
     FALSE,
     TRUE,
@@ -232,6 +232,100 @@ test_uri_encode (const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_join (const char **msg,
+           svn_boolean_t msg_only,
+           apr_pool_t *pool)
+{
+  int i;
+  char *result;
+
+  static const char * const joins[][3] = {
+    { "abc", "def", "abc/def" },
+    { "a", "def", "a/def" },
+    { "a", "d", "a/d" },
+    { "/", "d", "/d" },
+    { "/abc", "d", "/abc/d" },
+    { "/abc", "def", "/abc/def" },
+    { "/abc", "/def", "/def" },
+    { "/abc", "/d", "/d" },
+    { "/abc", "/", "/" },
+    { "/abc/", "def", "/abc/def" },
+    { "/abc/", "/def", "/def" },
+    { "", "def", "def" },
+    { "abc", "", "abc" },
+    { "", "/def", "/def" },
+    { "/", "", "/" },
+    { "", "/", "/" },
+  };
+
+  *msg = "test svn_path_join(_many)";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = sizeof(joins) / sizeof(joins[0]); i--; )
+    {
+      const char *base = joins[i][0];
+      const char *comp = joins[i][1];
+      const char *expect = joins[i][2];
+
+      result = svn_path_join(base, comp, pool);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                 "svn_path_join(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);
+
+      result = svn_path_join_many(pool, base, comp, NULL);
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                 "svn_path_join_many(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);
+    }
+
+#define TEST_MANY(args, expect) \
+  result = svn_path_join_many args ; \
+  if (strcmp(result, expect) != 0) \
+    return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, pool, \
+                             "svn_path_join_many" #args " returns \"%s\". " \
+                             "expected \"%s\"", \
+                             result, expect); \
+  else
+
+  TEST_MANY((pool, "abc", NULL), "abc");
+  TEST_MANY((pool, "abc/", NULL), "abc");
+  TEST_MANY((pool, "/abc", NULL), "/abc");
+  TEST_MANY((pool, "/abc/", NULL), "/abc");
+  TEST_MANY((pool, "/", NULL), "/");
+
+  TEST_MANY((pool, "abc", "def", "ghi", NULL), "abc/def/ghi");
+  TEST_MANY((pool, "abc", "/def", "ghi", NULL), "/def/ghi");
+  TEST_MANY((pool, "/abc", "def", "ghi", NULL), "/abc/def/ghi");
+  TEST_MANY((pool, "abc", "def", "/ghi", NULL), "/ghi");
+  TEST_MANY((pool, "abc", "def/", "ghi", NULL), "abc/def/ghi");
+  TEST_MANY((pool, "abc/", "def", "ghi", NULL), "abc/def/ghi");
+  TEST_MANY((pool, "abc", "def", "ghi/", NULL), "abc/def/ghi");
+
+  TEST_MANY((pool, "", "def", "ghi", NULL), "def/ghi");
+  TEST_MANY((pool, "abc", "", "ghi", NULL), "abc/ghi");
+  TEST_MANY((pool, "abc", "def", "", NULL), "abc/def");
+  TEST_MANY((pool, "", "def", "", NULL), "def");
+  TEST_MANY((pool, "", "", "ghi", NULL), "ghi");
+  TEST_MANY((pool, "abc", "", "", NULL), "abc");
+  TEST_MANY((pool, "", "def", "", NULL), "def");
+
+  TEST_MANY((pool, "/", "def", "ghi", NULL), "/def/ghi");
+  TEST_MANY((pool, "abc", "/", "ghi", NULL), "/ghi");
+  TEST_MANY((pool, "abc", "def", "/", NULL), "/");
+  TEST_MANY((pool, "/", "/", "ghi", NULL), "/ghi");
+  TEST_MANY((pool, "/", "/", "/", NULL), "/");
+
+  /* ### probably need quite a few more tests... */
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -243,6 +337,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   test_path_split,
   test_is_url,
   test_uri_encode,
+  test_join,
   0
 };
 

@@ -100,7 +100,169 @@ svn_path_canonicalize (svn_stringbuf_t *path)
     }
 }
 
+
+char *svn_path_join (const char *base,
+                     const char *component,
+                     apr_pool_t *pool)
+{
+  apr_size_t blen = strlen (base);
+  apr_size_t clen = strlen (component);
+  char *path;
 
+  /* If either component is the empty string, copy and return the other.
+     If the component is absolute, then return it.  */
+  if (blen == 0 || *component == '/')
+    return apr_pmemdup (pool, component, clen + 1);
+  if (clen == 0)
+    return apr_pmemdup (pool, base, blen + 1);
+
+  /* If the base ends with a slash, then don't copy it.
+
+     Note: we don't account for multiple trailing slashes. Callers should
+     pass reasonably-normalized paths.  */
+  if (base[blen - 1] == '/')
+    --blen;
+
+  /* Construct the new, combined path. */
+  path = apr_palloc (pool, blen + 1 + clen + 1);
+  memcpy (path, base, blen);
+  path[blen] = '/';
+  memcpy (path + blen + 1, component, clen + 1);
+
+  return path;
+}
+
+char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
+{
+#define MAX_SAVED_LENGTHS 10
+  apr_size_t saved_lengths[MAX_SAVED_LENGTHS];
+  apr_size_t total_len;
+  int nargs;
+  va_list va;
+  const char *s;
+  apr_size_t len;
+  char *path;
+  char *p;
+  svn_boolean_t base_is_root = 0;
+  int base_arg = 0;
+
+  total_len = strlen (base);
+  if (base[total_len - 1] == '/')
+    {
+      if (total_len == 1)
+        base_is_root = 1;
+      else
+        --total_len;
+    }
+  else if (total_len == 0)
+    {
+      /* if the base is empty, then skip it */
+      base_arg = 1;
+    }
+  saved_lengths[0] = total_len;
+
+  /* Compute the length of the resulting string. */
+
+  nargs = 0;
+  va_start (va, base);
+  while ((s = va_arg (va, const char *)) != NULL)
+    {
+      len = strlen (s);
+
+      if (len > 1 && s[len - 1] == '/')
+        --len;
+      if (nargs++ < MAX_SAVED_LENGTHS)
+        saved_lengths[nargs] = len;
+
+      /* if this component isn't being added, then continue so we don't
+         count an additional separator. */
+      if (!len)
+        {
+          /* if we have not added anything yet, then skip this argument */
+          if (total_len == 0)
+            base_arg = nargs + 1;
+          continue;
+        }
+
+      if (*s == '/')
+        {
+          /* an absolute path. skip all components to this point and reset
+             the total length. */
+          total_len = len;
+          base_arg = nargs;
+          base_is_root = len == 1;
+        }
+      else if (nargs == base_arg || (nargs == base_arg + 1 && base_is_root))
+        {
+          /* if we have skipped everything up to this arg, then the base
+             and all prior components are empty. just set the length to
+             this component; do not add a separator.
+
+             if the base is the root ("/"), then do not add a separator.
+          */
+          total_len += len;
+        }
+      else
+        {
+          total_len += 1 + len;
+        }
+    }
+  va_end (va);
+
+  /* base == "/" and no further components. just return that. */
+  if (base_is_root && total_len == 1)
+    return apr_pmemdup (pool, "/", 2);
+
+  /* we got the total size. allocate it, with room for a NUL character. */
+  path = p = apr_palloc (pool, total_len + 1);
+
+  /* if we aren't supposed to skip forward to an absolute component, then
+     copy the base into the output. */
+  if (base_arg == 0)
+    {
+      memcpy(p, base, len = saved_lengths[0]);
+      p += len;
+    }
+
+  nargs = 0;
+  va_start (va, base);
+  while ((s = va_arg (va, const char *)) != NULL)
+    {
+      if (++nargs < base_arg)
+        continue;
+
+      if (nargs < MAX_SAVED_LENGTHS)
+        len = saved_lengths[nargs];
+      else
+        {
+          len = strlen (s);
+          if (len > 1 && s[len - 1] == '/')
+            --len;
+        }
+      if (!len)
+        continue;
+
+      /* insert a separator if we aren't copying in the first component
+         (which can happen when base_arg is set). also, don't put in a slash
+         if the prior character is a slash (occurs when prior component
+         is "/"). */
+      if (p != path && p[-1] != '/')
+        *p++ = '/';
+
+      /* copy the new component and advance the pointer */
+      memcpy (p, s, len);
+      p += len;
+    }
+  va_end (va);
+
+  *p = '\0';
+  assert ((apr_size_t)(p - path) == total_len);
+
+  return path;
+}
+
+
+
 static void
 add_component_internal (svn_stringbuf_t *path,
                         const char *component,
