@@ -81,6 +81,7 @@ AC_DEFUN(SVN_FIND_JDK,
     JAVA_BIN='$(JDK)/bin'
 
     dnl TODO: Test for Jikes, which should be preferred (for speed) if available
+    JAVA="$JAVA_BIN/java"
     JAVAC="$JAVA_BIN/javac"
     JAVAH="$JAVA_BIN/javah"
     JAR="$JAVA_BIN/jar"
@@ -95,6 +96,7 @@ AC_DEFUN(SVN_FIND_JDK,
 
   dnl We use JDK in both the swig.m4 macros and the Makefile
   AC_SUBST(JDK)
+  AC_SUBST(JAVA)
   AC_SUBST(JAVAC)
   AC_SUBST(JAVAH)
   AC_SUBST(JAR)
