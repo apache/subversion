@@ -576,7 +576,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                               auth_baton, pool)))
     goto cleanup;
 
-  /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
+  /* Fetch RA commit editor. */
   if ((cmt_err = ra_lib->get_commit_editor (session, &editor, &edit_baton, 
                                             &committed_rev, &committed_date, 
                                             &committed_author, message)))

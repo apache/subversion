@@ -37,6 +37,23 @@ extern "C" {
 
 /* Misc. declarations */
 
+/* This is a function type which allows the RA layer to fetch an
+   item's committed revision (i.e., the committed rev in the entry).
+
+   Set *REV to the committed revision in the entry for RELPATH,
+   relative to the "root" of the session, defined by the repos_url
+   passed to the RA->open() vtable call.  Use POOL for any temporary
+   allocation.
+
+   The BATON is provided along with the function pointer and should
+   be passed back in.  It's usually the CALLBACK_BATON or the
+   CLOSE_BATON as appropriate.
+*/
+typedef svn_error_t *(*svn_ra_get_committed_rev_func_t) (void *baton,
+                                                         const char *relpath,
+                                                         svn_revnum_t *rev,
+                                                         apr_pool_t *pool);
+
 /* This is a function type which allows the RA layer to fetch working
    copy (WC) properties.
 
@@ -221,6 +238,13 @@ typedef struct svn_ra_callbacks_t
        session, or perhaps the commit operation this RA session will
        perform is a server-side only one that shouldn't do post-commit
        processing on a working copy path.  ***/
+
+  /* Fetch the committed rev of a working copy item.
+     ### We could offer a more generic interface to retrieving entry
+     properties, and even regular properties, from the working copy.
+     But right now the only one we know we need is the entry committed
+     rev, so that's all we offer right now. */
+  svn_ra_get_committed_rev_func_t get_committed_rev;
 
   /* Fetch working copy properties.
      ### we might have a problem if the RA layer ever wants a property

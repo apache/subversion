@@ -125,6 +125,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_BAD_DATE,
               "Bogus date")
 
+  SVN_ERRDEF (SVN_ERR_BAD_REVISION,
+              "Bogus revision number")
+
   SVN_ERRDEF (SVN_ERR_UNSUPPORTED_FEATURE,
               "Trying to use an unsupported feature")
 
