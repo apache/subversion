@@ -1070,7 +1070,8 @@ txn_body_is_different (void *baton, trail_t *trail)
   SVN_ERR (get_dag (&node2, args->root2, args->path2, trail));
 
   /* If they have the same node-ID, they're the same! */
-  if (svn_fs__dag_get_id (node1) == svn_fs__dag_get_id (node2))
+  if (svn_fs_compare_ids (svn_fs__dag_get_id (node1), 
+                          svn_fs__dag_get_id (node2)) == 0)
     {
       args->is_different = 0;
       return SVN_NO_ERROR;
