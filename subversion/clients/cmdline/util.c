@@ -386,8 +386,8 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   if (! editor)
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, 0, NULL, pool,
-       "Could not find an editor in the usual environment variable "
-       "(SVN_EDITOR, EDITOR, VISUAL)");
+       "Could not find an external text editor in the usual environment "
+       "variables (searched SVN_EDITOR, EDITOR, VISUAL, in that order)");
 
   /* By now, we had better have an EDITOR to work with. */
   assert (editor);
@@ -613,6 +613,7 @@ svn_cl__get_log_message (svn_stringbuf_t **log_msg,
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_create (default_msg, pool);
       svn_string_t tmp_str;
+      svn_error_t *err = NULL;
 
       for (i = 0; i < commit_items->nelts; i++)
         {
@@ -646,8 +647,16 @@ svn_cl__get_log_message (svn_stringbuf_t **log_msg,
 
       tmp_str.data = tmp_message->data;
       tmp_str.len = tmp_message->len;
-      SVN_ERR (svn_cl__edit_externally (&message, lmb->base_dir, 
-                                        &tmp_str, pool));
+      err = svn_cl__edit_externally (&message, lmb->base_dir, &tmp_str, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR)
+            err = svn_error_quick_wrap 
+              (err, "Could not use external editor to fetch log message; "
+               "consider setting the $SVN_EDITOR environment variable "
+               "or using the --message (-m) or --file (-F) options.");
+          return err;
+        }
 
       /* Strip the prefix from the buffer. */
       if (message)
