@@ -90,3 +90,9 @@ Candidate changes:
     Justification: Perl bindings completeness.
     Votes:
       +1: clkao, breser
+
+  * r9814
+    Fix off-by-one error in working copy code.
+    Justification: Can't check out to root path.
+    Votes:
+      +1: breser
