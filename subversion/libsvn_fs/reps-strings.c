@@ -91,7 +91,7 @@ digest_to_cstring (unsigned char digest[], apr_pool_t *pool)
 static svn_boolean_t
 checksums_match (unsigned const char d1[], unsigned const char d2[])
 {
-  auto unsigned char zeros[MD5_DIGESTSIZE] = { 0 };
+  static const unsigned char zeros[MD5_DIGESTSIZE] = { 0 };
 
   return ((memcmp (d1, zeros, MD5_DIGESTSIZE) == 0)
           || (memcmp (d2, zeros, MD5_DIGESTSIZE) == 0)
