@@ -310,17 +310,6 @@ svn_fs__fs_youngest_revision (svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__fs_get_rev (svn_fs__revision_t **rev_p,
-                    svn_fs_t *fs,
-                    svn_revnum_t rev,
-                    apr_pool_t *pool)
-{
-  abort ();
-
-  return SVN_NO_ERROR;
-}
-
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
@@ -752,7 +741,7 @@ representation_string (svn_fs__representation_t *rep,
 
 /* Write the node-revision NODEREV into the file FILE.  Temporary
    allocations are from POOL. */
-svn_error_t *
+static svn_error_t *
 write_noderev_txn (apr_file_t *file,
                    svn_fs__node_revision_t *noderev,
                    apr_pool_t *pool)
@@ -1135,7 +1124,6 @@ build_rep_list (apr_array_header_t **list,
   struct rep_args_t *rep_args;
   apr_file_t *file;
   unsigned char buf[4];
-  apr_size_t len;
 
   *list = apr_array_make (pool, 1, sizeof (struct rep_state *));
   rep = *first_rep;
@@ -2600,7 +2588,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
       if (base_rep)
         {
           header = apr_psprintf (pool, SVN_FS_FS__DELTA " %" SVN_REVNUM_T_FMT
-                                 " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+                                 " %" APR_OFF_T_FMT " %" APR_SIZE_T_FMT "\n",
                                  base_rep->revision, base_rep->offset,
                                  base_rep->size);
         }

@@ -935,7 +935,7 @@ make_path_mutable (svn_fs_root_t *root,
       svn_revnum_t copyroot_rev;
       svn_boolean_t is_parent_copyroot = FALSE;
       svn_fs_root_t *copyroot_root;
-      dag_node_t *parent, *copyroot_node;
+      dag_node_t *copyroot_node;
   
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
@@ -3469,7 +3469,6 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
     {
       const char *remainder;
       const char *copy_dst, *copy_src;
-      svn_fs__copy_kind_t copy_kind;
       svn_fs_root_t *copyroot_root;
 
       SVN_ERR (svn_fs_revision_root (&copyroot_root, fs, copyroot_rev, pool));
