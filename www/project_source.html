@@ -28,7 +28,8 @@ To obtain Subversion now, you should:
    </li>
  <p>
    <li>Build and install it according to the instructions in the
-   INSTALL file in the top level of the distribution.
+   INSTALL file in the top level of the distribution.  You will end up
+   with a 'svn' binary in the subversion/clients/cmdline/ directory.
    </li>
  <p>
    <li>Use it to check out a working copy of Subversion:
@@ -42,12 +43,10 @@ To obtain Subversion now, you should:
    under `trunk/'.  For now, do the checkout command exactly as given
    above; there's a known path-correspondence bug that will cause you
    some inconvenience in your working copy if your initial checkout is
-   of a repository subdir; and another bug if it has a trailing slash.
-   These will be fixed as soon as possible; see issues 
-   <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=454">#454</a>
-   and
-   <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=471">#471</a>
-   for more information.
+   of a repository subdir.
+   These will be fixed as soon as possible; see issue
+   <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=454">
+   #454</a>.
    </li>
    <p>
    Some people reported DNS lookup errors for `svn.collab.net'.  The
