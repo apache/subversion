@@ -84,26 +84,27 @@ Step 3:  Install Specific Language Bindings
 
 *  Perl
 
-   The build process of the Perl bindings is not yet tightly
-   integrated with subversion's build system. It is using the standard
-   way for building and installing perl extentions. You will have to
-   install subversion before building and using it. Perl 5.8.0 is
-   required.
+   Perl 5.8.0 is required.  You can specify the perl binary by passing
+   PERL=/path/to/perl as part of the configure command in the top level
+   of the Subversion source tree.  Make sure that the perl version used
+   is the same one that you configured SWIG to run against during the
+   SWIG configure (see above).
 
-   1.  Run `make swig-pl-lib' from the top of the
+   By default now Perl bindings will be built and installed by the normal:
+       ./configure && make && make install 
+   process of installing Subversion.  If you'd like to make sure the Perl
+   bindings are not built or installed, be sure to pass 
+   --disable-swig-bindings to the configure script or 
+   --enable-swig-bindings=python,java (leaving perl out). However, if you want
+   to rebuild or reinstall you may want to follow the instructions below.
+
+   1.  Run `make swig-pl' from the top of the Subversion source tree.
+
+   2.  Run `make check-swig-pl' from the top of the Subversion source
+       tree, to test the bindings 
+
+   3.  to install run `make install-swig-pl' from the top of the
        Subversion source tree.
-
-   2.  Go to subversion/bindings/swig/perl/native and run
-       `env APR_CONFIG=/path/to/apr-config perl Makefile.PL'.
-
-       Be sure to use the same perl binary here that you configured
-       SWIG to run against during the SWIG configure (see above).
-
-   3.  run `make all test'.
-
-   4.  to install, run `make install-swig-pl-lib' from the top of the
-       Subversion source tree, and `make install' from the perl
-       directory.
 
 *  Java
 

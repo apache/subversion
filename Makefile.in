@@ -167,18 +167,15 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
 RUN_SWIG_PY = $(SWIG) $(SWIG_NORUNTIME_FLAG) -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
-RUN_SWIG_PL = $(SWIG) $(SWIG_NORUNTIME_FLAG) -perl $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -o $@
 RUN_SWIG_JAVA = cd ${SWIG_BUILD_DIR}/java/org/tigris/subversion/swig && $(SWIG) $(SWIG_NORUNTIME_FLAG) -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
 COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@
-COMPILE_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PL_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
-LINK_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PL_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pldir) -avoid-version -module
 
 LINK_JAVAHL_CXX = $(LIBTOOL) $(LTFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 
@@ -200,7 +197,6 @@ INSTALL_SWIG_PY = $(INSTALL_LIB)
 INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
-INSTALL_SWIG_PL = $(INSTALL_LIB)
 INSTALL_SWIG_PL_LIB = $(INSTALL_LIB)
 
 INSTALL_JAVAHL_LIB = $(INSTALL_LIB)
@@ -215,6 +211,7 @@ INSTALL_EXTRA_SWIG_PY=\
 
 # The path to generated and complementary source files for the SWIG
 # bindings.
+SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
 SWIG_JAVA_DIR = $(abs_builddir)/subversion/bindings/swig/java
 
 ### Enhance using Makefile generator to support JAR installation.
@@ -232,6 +229,7 @@ INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
 APXS = @APXS@ 
 
 PYTHON = @PYTHON@
+PERL = @PERL@
 
 JDK = @JDK@
 JAVA = @JAVA@
@@ -303,7 +301,7 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean
+local-clean: fast-clean check-clean @SWIG_CLEAN_RULES@ 
 
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
@@ -559,3 +557,19 @@ install-info: doc-all-info
           echo "$(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst";  \
           $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst;         \
         done
+
+$(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
+	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
+
+swig-pl_DEPS = libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_ra libsvn_repos libsvn_subr libsvn_wc libsvn_swig_perl $(SWIG_PL_DIR)/native/Makefile
+swig-pl: $(swig-pl_DEPS)
+	cd $(SWIG_PL_DIR)/native; $(MAKE)
+
+check-swig-pl: swig-pl swig-pl-lib
+	cd $(SWIG_PL_DIR)/native; $(MAKE) test
+
+install-swig-pl: swig-pl install-swig-pl-lib
+	cd $(SWIG_PL_DIR)/native; $(MAKE) install
+
+clean-swig-pl: $(SWIG_PL_DIR)/native/Makefile
+	cd $(SWIG_PL_DIR)/native; $(MAKE) clean
