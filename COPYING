@@ -1,5 +1,5 @@
 This license applies to all portions of Subversion which are not
-externally-maintained libraries (e.g. apr/, expat-lite/, and neon/).
+externally-maintained libraries (e.g. apr/, apr-util/, and neon/).
 Such libraries have their own licenses; we recommend you read them, as
 their terms may differ from the terms below.
 
