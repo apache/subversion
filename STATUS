@@ -140,7 +140,7 @@ Candidate changes:
     Fix Python bindings bug that manifested only with SWIG 1.3.24
     and threaded APR. Anything using a log_receiver callback would fail.
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
 
 Approved changes (further review is welcome, but not required):
