@@ -95,6 +95,21 @@ svn_client_delete (svn_string_t *file,
                    apr_pool_t *pool);
 
 
+/* Perform an commit, providing pre- and post-commit hook editors and
+   batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
+   AFTER_EDIT_BATON).  
+
+   PATH is where the commit will begin in the working copy.
+
+   If XML_DST is NULL, then the commit will write to a repository, and
+   the REVISION argument is ignored.
+
+   If XML_DST is non-NULL, it is a file path to commit to.  In this
+   case, if REVISION is valid, the working copy's revision numbers
+   will be updated appropriately.  If REVISION is invalid, the working
+   copy remains unchanged.
+
+   This operation will use the provided memory POOL. */
 svn_error_t *
 svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
