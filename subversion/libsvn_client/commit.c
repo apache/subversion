@@ -25,6 +25,7 @@
 #include <string.h>
 #include <assert.h>
 #include <apr_strings.h>
+#include <apr_hash.h>
 #include "svn_wc.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
@@ -163,6 +164,9 @@ import_file (apr_hash_t *files,
  * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
  * directory.
  *
+ * EXCLUDES is a hash whose keys are absolute paths to exclude from
+ * the import (values are unused).
+ * 
  * Use POOL for any temporary allocation.  */
 static svn_error_t *
 import_dir (apr_hash_t *files,
@@ -173,6 +177,7 @@ import_dir (apr_hash_t *files,
             const char *path,
             const char *edit_path,
             svn_boolean_t nonrecursive,
+            apr_hash_t *excludes,
             apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);  /* iteration pool */
@@ -189,7 +194,7 @@ import_dir (apr_hash_t *files,
        svn_pool_clear (subpool),
          err = svn_io_dir_read (&finfo, flags, dir, subpool))
     {
-      const char *this_path, *this_edit_path;
+      const char *this_path, *this_edit_path, *abs_path;
 
       if (finfo.filetype == APR_DIR)
         {
@@ -219,6 +224,11 @@ import_dir (apr_hash_t *files,
          and this_edit_path might become "blah", for example. */
       this_path = svn_path_join (path, finfo.name, subpool);
       this_edit_path = svn_path_join (edit_path, finfo.name, subpool);
+
+      /* If this is an excluded path, exclude it. */
+      SVN_ERR (svn_path_get_absolute (&abs_path, this_path, subpool));
+      if (apr_hash_get (excludes, abs_path, APR_HASH_KEY_STRING))
+        continue;
 
       /* We only import subdirectories when we're doing a regular
          recursive import. */
@@ -251,7 +261,7 @@ import_dir (apr_hash_t *files,
                                notify_func, notify_baton,
                                editor, this_dir_baton, 
                                this_path, this_edit_path, 
-                               FALSE, subpool));
+                               FALSE, excludes, subpool));
 
           /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton, subpool));
@@ -300,6 +310,9 @@ import_dir (apr_hash_t *files,
  * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
  * imported path, passing the actions svn_wc_notify_commit_added or
  * svn_wc_notify_commit_postfix_txdelta.
+ *
+ * EXCLUDES is a hash whose keys are absolute paths to exclude from
+ * the import (values are unused).
  * 
  * Use POOL for any temporary allocation.
  *
@@ -316,6 +329,7 @@ import (const char *path,
         const svn_delta_editor_t *editor,
         void *edit_baton,
         svn_boolean_t nonrecursive,
+        apr_hash_t *excludes,
         apr_pool_t *pool)
 {
   void *root_baton;
@@ -398,7 +412,7 @@ import (const char *path,
                 notify_func, notify_baton,
                 editor, new_dir_baton ? new_dir_baton : root_baton, 
                 path, new_entry ? new_entry : "",
-                nonrecursive, pool));
+                nonrecursive, excludes, pool));
 
       /* Close one baton or two. */
       if (new_dir_baton)
@@ -509,6 +523,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
+  apr_hash_t *excludes = apr_hash_make (pool);
 
   /* Sanity check: NEW_ENTRY can be null or non-empty, but it can't be
      empty. */
@@ -530,6 +545,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
          array is not used for the import itself. */
 
       svn_client_commit_item_t *item;
+      const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make (pool, 1, sizeof (item));
       
@@ -539,9 +555,16 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
         = item;
       
-      SVN_ERR ((*log_msg_func) (&log_msg, commit_items, log_msg_baton, pool));
+      SVN_ERR ((*log_msg_func) (&log_msg, &tmp_file, commit_items, 
+                                log_msg_baton, pool));
       if (! log_msg)
         return SVN_NO_ERROR;
+      if (tmp_file)
+        {
+          const char *abs_path;
+          SVN_ERR (svn_path_get_absolute (&abs_path, tmp_file, pool));
+          apr_hash_set (excludes, abs_path, APR_HASH_KEY_STRING, (void *)1);
+        }
     }
   else
     log_msg = "";
@@ -565,7 +588,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import (path, new_entry,
                      notify_func, notify_baton,
-                     editor, edit_baton, nonrecursive, pool)))
+                     editor, edit_baton, nonrecursive, excludes, pool)))
     {
       editor->abort_edit (edit_baton, pool);
       return err;
@@ -796,7 +819,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
      specified, abort the operation. */
   if (log_msg_func)
     {
-      cmt_err = (*log_msg_func)(&log_msg, commit_items, log_msg_baton, pool);
+      const char *tmp_file;
+      cmt_err = (*log_msg_func)(&log_msg, &tmp_file, commit_items, 
+                                log_msg_baton, pool);
       if (cmt_err || (! log_msg))
         goto cleanup;
     }

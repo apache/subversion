@@ -174,16 +174,21 @@ typedef struct svn_client_commit_item_t
    from the caller.
    
    Set *LOG_MSG to the log message for the commit, allocated in POOL,
-   or NULL if wish to abort the commit process.  COMMIT_ITEMS is an
-   array of svn_client_commit_item_t structures, which may be fully or
-   only partially filled-in, depending on the type of commit
-   operation.
+   or NULL if wish to abort the commit process.  Set *TMPFILE to the
+   path of any temporary file which might be holdind that log message,
+   or NULL if no such file exists (though, if *LOG_MSG is NULL, this
+   value is undefined).
+   
+   COMMIT_ITEMS is an array of svn_client_commit_item_t structures,
+   which may be fully or only partially filled-in, depending on the
+   type of commit operation.
 
    BATON is provided along with the callback for use by the handler.
 
    All allocations should be performed in POOL.  */
 typedef svn_error_t *
 (*svn_client_get_commit_log_t) (const char **log_msg,
+                                const char **tmp_file,
                                 apr_array_header_t *commit_items,
                                 void *baton,
                                 apr_pool_t *pool);

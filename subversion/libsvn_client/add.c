@@ -189,6 +189,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       if (log_msg_func)
         {
           svn_client_commit_item_t *item;
+          const char *tmp_file;
           apr_array_header_t *commit_items 
             = apr_array_make (pool, 1, sizeof (item));
           
@@ -198,7 +199,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
           (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
             = item;
           
-          SVN_ERR ((*log_msg_func) (&message, commit_items, 
+          SVN_ERR ((*log_msg_func) (&message, &tmp_file, commit_items, 
                                     log_msg_baton, pool));
           if (! message)
             return SVN_NO_ERROR;
