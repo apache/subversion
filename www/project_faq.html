@@ -104,6 +104,8 @@ I avoid having to type it so often?</a></li>
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
+<li><a href="#divining-bdb-version">How do I determine which version of
+Berkeley DB a repository is using?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -1471,7 +1473,33 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1974">issue
 1974</a>), though this feature is still being debated by developers,
 and isn't being worked on yet.</p>
 
+<![CDATA[=========================================================]]>
 
+<h3><a name="#divining-bdb-version">How do I determine which version of
+Berkeley DB a repository is using?</a></h3>
+
+<p>If it's a live repository, then the easy answer is "Whatever version
+of BDB you have installed".  If, however, it is a repository from a
+backup, or some unknown source, and you have no idea which version of
+BDB it was made with, here's how you find out:</p>
+
+<p>Run some command to view the two 4-byte integers at offsets 12 and 16
+(decimal) in the highest-numbered db/log.* file in the repository.  Here
+is an example using GNU od: "<tt>od -j12 -N8 -tx4
+  log.<i>&lt;number&gt;</i></tt>".  Here is an example using Mac OS X
+hexdump: "<tt>hexdump -s12 -n8 -x log.<i>&lt;number&gt;</i></tt>".  The
+first integer should be the magic number 0x00040988, which identifies
+the file as a BDB logfile.  The second number is the log format version
+- match it to a BDB program version
+using the table below:</p>
+
+<table>
+  <tr><th>Log format version</th><th>BDB program version</th></tr>
+  <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
+  <tr><td>7 (0x00000007)</td><td>4.1</td></tr>
+  <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
+  <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
+</table>
 
 <![CDATA[=========================================================]]>
 
