@@ -25,6 +25,15 @@ AC_ARG_WITH(apache,
 		LIBS="$extra_l"
 		INSTALL_IT="mkdir -p $TARGET; cp $BINNAME mod_dav.c mod_dav.exp Makefile.tmpl Makefile.libdir libdav.module dav_shared_stub.c $extra_copy $TARGET"
 		AC_MSG_RESULT(yes - Apache 2.0.x)
+
+                BINC="$CPPFLAGS"
+                CPPFLAGS="$APACHE_INCLUDES"
+                AC_CHECK_HEADERS(apr.h)
+                CPPFLAGS="$BINC"
+                if test "$ac_cv_header_apr_h" != "yes"; then
+                        AC_MSG_WARN(Apache 2.0.x is not configured)
+                fi
+
 	else
 		dnl if they pointed us at the wrong place, then just bail
 		AC_MSG_ERROR(no - Unable to locate $withval/src/modules/dav/main/mod_dav.h)
