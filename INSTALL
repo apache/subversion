@@ -132,7 +132,7 @@ I.    BUILD REQUIREMENTS
       Build.
 
 
-      5.  Neon library 0.19.[2-3]
+      5.  Neon library 0.19.4
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet. Although in theory you could have
@@ -144,10 +144,10 @@ I.    BUILD REQUIREMENTS
       want Subversion to build it. The source code is included with the
       latest Subversion tarball, and it can also be obtained from:
 
-          http://www.webdav.org/neon/neon-0.19.3.tar.gz
+          http://www.webdav.org/neon/neon-0.19.4.tar.gz
 
       Unpack the archive using tar/gunzip and rename the resulting
-      directory from "./neon-0.19.3/" to "./neon/".
+      directory from "./neon-0.19.4/" to "./neon/".
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
@@ -192,7 +192,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.31 or newer
+      7.  Apache Web Server 2.0.36 or newer
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
