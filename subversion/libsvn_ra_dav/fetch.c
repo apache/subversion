@@ -2508,9 +2508,12 @@ make_reporter (void *session_baton,
   /* Pre-0.36 servers don't like to see an empty target string.  */
   if (*target)
     {
-      s = apr_psprintf(pool, 
+      svn_stringbuf_t *escaped_target = NULL;
+      svn_xml_escape_cdata_cstring(&escaped_target, target, pool);
+
+      s = apr_psprintf(pool,
                        "<S:update-target>%s</S:update-target>",
-                       target);
+                       escaped_target->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
