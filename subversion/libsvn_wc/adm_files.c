@@ -21,7 +21,7 @@
  * 
  * 3. The end-user documentation included with the redistribution, if
  * any, must include the following acknowlegement: "This product includes
- * software developed by CollabNet (http://www.Collab.Net)."
+ * software developed by CollabNet (http://www.Collab.Net/)."
  * Alternately, this acknowlegement may appear in the software itself, if
  * and wherever such third-party acknowlegements normally appear.
  * 
