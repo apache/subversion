@@ -1201,7 +1201,7 @@ typedef struct merge_delete_notify_baton_t
 {
   svn_client_ctx_t *ctx;
 
-  /** path to skip */
+  /* path to skip */
   const char *path_skip;
 } merge_delete_notify_baton_t;
 
