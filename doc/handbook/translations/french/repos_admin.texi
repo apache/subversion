@@ -10,10 +10,11 @@ des dépôts.
 @menu
 * Créer un dépôt::
 * Examiner un dépôt::
-* Accroches d'un dépôt::
-* Maintenance d'un dépôt::
+* Accroches d un dépôt::
+* Maintenance d un dépôt::
 * Mettre un dépôt sur le réseau::
 * Migrer un dépôt::
+* WebDAV::
 @end menu
 
 
@@ -25,22 +26,29 @@ des dépôts.
 Créer un dépôt est incroyablement simple:
 
 @example
-$ svnadmin create myrepos
+$ svnadmin create path/to/myrepos
 @end example
 
 Ceci crée un nouveau dépôt dans le sous-répertoire @file{myrepos}.
 
-Un nouveau depôt commence toujours sa "vie" à la révision 0, qui est
+(Notez que les programmes @command{svnadmin} et @command{svnlook} opère
+@emph{directement} sur un dépôt car ils utilisent la librairie
+@file{libsvn_fs.so}. Ainsi, ces outils attendent un chemin local ordinaire
+vers le dépôt. Ceci est en opposition avec le programme client
+@command{svn}, qui accède toujours à un dépôt via une URL de type
+@url{http://} ou @url{file://}.)
+
+Un nouveau depôt commence toujours sa ``vie'' à la révision 0, qui est
 défini pour n'être rien saut le répertoire racine (@file{/}).
 
-Comme mentionné dans une section proche (### xref?), les révisions de
-dépôt peuvent avoir des propriétés non versionnées qui lui sont attachées.
-En particulier, chaque révision est créée avec une propriété "date de
-modification" @code{svn:date} (les autres propriétés communes incluent
-@code{svn:author} et @code{svn:log}).
+Comme mentionné précédament, les révisions de dépôt peuvent avoir des
+propriétés non versionnées qui lui sont attachées.  En particulier, chaque
+révision est créée avec une propriété ``date de modification''
+@samp{svn:date} (les autres propriétés communes incluent @samp{svn:author}
+et @samp{svn:log}).
 
 Pour un dépôt nouvellement créé, la révision 0 n'a rien sauf la propriété
-@code{svn:date} attachée.
+@samp{svn:date} attachée.
 
 Voici un arrêt rapide sur l'anatomie d'un dépôt:
 
@@ -61,14 +69,14 @@ arriveront un jour ici.
 Si le dépôt est accédé par Apache et mod_dav_svn, des bases de données
 privées de gestion sont stockées ici.
 @item db
-L'environnement principal de "Berkeley DB", c'est plein de tables DB qui
+L'environnement principal de ``Berkeley DB'', c'est plein de tables DB qui
 comprennent les données stokées par libsvn_fs. C'est ici que toutes vos
 données sont! En particulier, la plupart de vos contenus de fichiers
-arrivent dans la table 'strings'. Les fichiers log s'accumulent aussi ici,
+arrivent dans la table ``strings''. Les fichiers log s'accumulent aussi ici,
 ainsi les transactions peuvent être récupérées.
 @item hooks
-C'est ici que ce trouve les fichiers de pre- et post-accroche de remonté
-(et un jour, une accroche de lecture).
+C'est ici que ce trouve les fichiers d'accroche de pré-remontée et
+post-remontée (et un jour, une accroche de lecture).
 @item locks
 Un simple fichier se trouve ici; les lectures et écriveurs prennent un
 vérrou partagé sur ce fichier. Ne pas supprimer ce fichier.
@@ -76,7 +84,7 @@ vérrou partagé sur ce fichier. Ne pas supprimer ce fichier.
 
 Une fois que le dépôt a été créé, il est très probable que vous vouliez
 utiliser le client svn pour importer une arborescence initiale. (essayez
-@command{svn help import}, ou @xref{Autres commandes}.)
+@samp{svn help import}, ou @xref{Autres commandes}.)
 
 
 @c ------------------------------------------------------------------
@@ -97,7 +105,7 @@ transaction est effectivement promue en une nouvelle révision
 d'arborescence et un nouveau numéro de révision lui est assigné.
 
 Les mise à jour fonctionnent de façon similaire: le client contruit une
-transaction d'arborescence qui est un "mirroir" de sa copie de travail.
+transaction d'arborescence qui est un ``mirroir'' de sa copie de travail.
 Le dépôt alors compare la transaction d'arborescence avec une révision de
 l'arborescence, et envoie en retour un delta des arborescences. Lorsque
 la mise à jour est terminée, la transaction est terminée et supprimée du
@@ -122,17 +130,18 @@ Le fait est que si vous êtes en train d'administrer un dépôt Subversion,
 vous allez devoir examiner les révisions et les transactions. Celà fait
 partie du travail de suveillance de la bonne santé de votre dépôt.
 
-@subsection svnlook
+@subsection @command{svnlook}
 
 @command{svnlook} est un outil qui travail en lecture-seule@footnote{
 pourquoi en lecture-seule? parce que si un script d'accroche de
-pré-remonté modifie la transaction avant que la remonté soit faite, la
+pré-remontée modifie la transaction avant que la remontée soit faite, la
 copie de travail n'aura aucune moyen pour savoir ce qui c'est passé, et
 serait donc désynchronisé sans le savoir. Subversion n'a actuellement
 aucun moyen pour traiter cette situation, et peut-être ne l'aura jamais.}
 et qui peut-être utilisé pour examiner les révisions et les transactions
 d'arborescences d'un dépôt. Il est utile pour les administrateurs système,
-et peut aussi être utilisé par un script de pre- ou post-remonté.
+et peut également être utilisé par les scripts d'accroche de pré-remontée,
+(@file{pre-commit}), ou post-remontée, @file{post-commit}.
 
 L'utilisation la plus simple est:
 
@@ -141,7 +150,7 @@ $ svnlook repos
 @end example
 
 Celà imprime des informations sur la dernière révision dans le dépôt
-"repos". En particulier, elle montrera les descriptions de modification,
+``repos''. En particulier, elle montrera les descriptions de modification,
 l'auteur, la date, et un diagramme de l'arborescence.
 
 Pour regarder à une révision ou une transaction particulière:
@@ -162,30 +171,30 @@ $ svnlook repos rev 559 diff
 Les sous-commandes disponibles sont:
    
 @table @samp
-@item log
+@item @samp{log}
 Affiche la description des modifications de l'aborescence.
-@item author
+@item @samp{author}
 Affiche l'auteur de l'arborescence.
-@item date
+@item @samp{date}
 Affiche la date de l'arborescence.
-@item dirs-changed
+@item @samp{dirs-changed}
 Affiche la liste des répertoires qui ont changé dans l'arborescence.
-@item changed
+@item @samp{changed}
 Affiche la liste de tous les fichiers et répertoires qui ont changé dans
 l'arborescence.
-@item diff
-Affiche un "unified diff" des fichiers modifiés.
+@item @samp{diff}
+Affiche un ``unified diff'' des fichiers modifiés.
 @end table
 
 
 @subsection l'interpréteur de commande
 
 L'outil @command{svnadmin} a un mode avec un interpréteur de commande
-'jouet'. Il n'en fait pas beaucoup, mais il permet de "fourrager" dans le
-le dépôt comme s'il y avait une mountage de système de fichier imaginaire.
-Les commandes de base @command{cd}, @command{ls}, @command{exit}, et
-@command{help} sont disponibles, aussi bien que la très spéciale commande
-@command{cr} -- "changer de révision". La dernière commande vous permet de
+'jouet'. Il n'en fait pas beaucoup, mais il permet de ``fourrager'' dans
+le le dépôt comme s'il y avait une mountage de système de fichier
+imaginaire.  Les commandes de base @samp{cd}, @samp{ls}, @samp{exit}, et
+@samp{help} sont disponibles, aussi bien que la très spéciale commande
+@samp{cr} -- ``changer de révision''. La dernière commande vous permet de
 vous déplacer entre révisions d'arborescence.
 
 @example 
@@ -209,7 +218,7 @@ $ svnadmin shell repos
 <500: />$ exit
 @end example
 
-L'affichage de @command{ls} a seulement quelques colonnes:
+L'affichage de @samp{ls} a seulement quelques colonnes:
 
 @example
   NODE-ID  CREATED-REV HAS_PROPS?  SIZE  NAME
@@ -221,8 +230,8 @@ L'affichage de @command{ls} a seulement quelques colonnes:
 
 
 @c ------------------------------------------------------------------
-@node Accroches d'un dépôt
-@section Accroches d'un dépôt
+@node Accroches d un dépôt
+@section Accroches d un dépôt
 
 Une @dfn{accroche} est un programme déclenché par un accès en lecture ou
 écriture au dépôt. L'accoche reçoie suffisament d'information pour dire
@@ -232,7 +241,7 @@ d'accroche peut continuer l'action, la stopper, ou la suspendre
 d'une certaine manière.
 
 Les accroches de Subversion sont des programme qui résident dans le
-répertoire @file{hooks/} du dépôt:
+répertoire @file{hooks} du dépôt:
 
 @example
 $ ls repos/hooks/
@@ -240,20 +249,20 @@ post-commit.tmpl*  read-sentinels.tmpl  write-sentinels.tmpl
 pre-commit.tmpl*   start-commit.tmpl*
 @end example
 
-C'est ainsi que le répertoire 'hooks' apparait après la création d'un
+C'est ainsi que le répertoire @file{hooks} apparait après la création d'un
 dépôt. Il ne contient aucun programmes d'accroche -- ce ne sont que des
 modèles.
 
-Les accroches actuelles doivent être nommées `start-commit', `pre-commit'
-ou `post-commit'. Les fichiers modèles (.tmpl) sont des exemples de
+Les accroches actuelles doivent être nommées @file{start-commit},
+@file{pre-commit} ou @file{post-commit}. Les fichiers modèles (.tmpl) sont des exemples de
 script shell pour vous aider à commencer; lisez les pour connaitre les
 détails de fonctionnement de chaque accroche. Pour faire vos propre
-accroche, copié `foo.tmpl' en `foo' et éditez le.
+accroche, copié @file{foo.tmpl} en @file{foo} et éditez le.
 
-Les `read-sentinels' et `write-sentinels' ne sont pas encore implémentés.
-Leurs intentions est d'offrir un fonctionnement plus proche du démon que
-des accroches. Une sentinelle (Ndt: c'est la bonne traduction ?) est
-démarré au début d'une opération utilisateur. Le serveur Subversion
+Les @file{read-sentinels} et @file{write-sentinels} ne sont pas encore
+implémentés.  Leurs intentions est d'offrir un fonctionnement plus proche
+du démon que des accroches. Une sentinelle (Ndt: c'est la bonne traduction
+?) est démarré au début d'une opération utilisateur. Le serveur Subversion
 commnunique avec la sentinelle en utilisant un protocole encore a définir.
 En fonction de la réponse de la sentinelle, Subversion va peut-être
 stopper ou modifier l'opération.
@@ -262,14 +271,14 @@ Voici une description des programmes d'accroche:
 
 @table @samp
 
-@item start-commit
-Le programme est exécuté avant que la transaction de remonté soit créée.
+@item @file{start-commit}
+Le programme est exécuté avant que la transaction de remontée soit créée.
 C'est typiquement utilisé pour décider si l'utilisateur à les privilèges
 de remonter des modifications dans le dépôt. Le dépôt passe deux arguments
 à ce programme: le chemin vers le dépôt, et le nom de l'utilisateur qui
 tente la remontée. Si le programme retourne un code de sortie différent de
 zéro, la remontée est stoppée avant que la transaction ne soit créée.
-@item pre-commit
+@item @file{pre-commit}
 Ce programme est exécuter quand la transaction est complète, mais avant
 quelle soit validée. Typiquement, cette accroche est utilisée pour
 protéger contre des remontées qui ne sont pas authorisées à cause du
@@ -285,22 +294,36 @@ directement dans le système de fichier.} Le dépôt passe deux paramètres à
 ce programme: le chemin vers le dépôt et le nom de la transaction en
 attende de validation. Si le programme retourne un code de sortie
 différente de zéro, la remontée est annulée et la transaction supprimée.
-@item post-commit
+
+Subversion inclut le script @file{tools/hook-scripts/commit-access-control.pl} 
+qui peut être appelé depuis @file{pre-commit} pour implémenter un contrôle
+d'accès plus fin.
+
+@item @file{post-commit}
 Ce programme est exécuté après que la transation soit réalisée et que nous
 avons une nouvelle révision. La plupart des gens utilise cette accroche
-pour envoyer des emails decrivant la remonté ou pour réaliser une
+pour envoyer des emails decrivant la remontée ou pour réaliser une
 sauvegarde à chaud du dépôt. Le dépôt passe deux arguments à ce programme:
 le chemin vers le dépôt et le nouveau numéros de révision qui a été créé.
 Le code de sortie du programme est ignoré.
+
+Subversion inclut le script @file{tools/hook-scripts/commit-email.pl} qui
+peut être utilisé pour envoyer les modifications appliquées par la
+remontée à un nombre quelconque d'adresse de courrier électronique.
+Le script @file{tools/backup/hot-backup.py}, également inclut, permet de
+faire des sauvegardes à chaud de votre dépôt Subversion après chaque
+remontée.
+
 @end table
 
 Notez que les accroches doient être exécutable part l'utilisateur qui
 les lance (communément l'utilisateur qui exécute httpd) et que ce même
 utilisateur doit être capable d'accèder au dépôt.
 
-Les accroches pre- et post-remontée ont besoin de connaitre des choses
-a propos des modifications qui vont être remontées (ou qui viennent d'être
-remontée). La solution est un programme indépendant, @command{svnlook}
+Les accroches de pre-remontée (@file{pre-commit}) et de post-remontée
+(@file{post-commit}) ont besoin de connaitre des choses a propos des
+modifications qui vont être remontées (ou qui viennent d'être remontée).
+La solution est un programme indépendant, @command{svnlook}
 (@xref{Examiner un dépôt}.) qui est installé au même endroit que le
 binaire @command{svn}. Le script peut utiliser @command{svnlook} pour
 examiner une transaction ou une révision d'arborescence. Il produit une
@@ -311,8 +334,8 @@ modifier le dépôt.
 
 
 @c ------------------------------------------------------------------
-@node Maintenance d'un dépôt
-@section Maintenance d'un dépôt
+@node Maintenance d un dépôt
+@section Maintenance d un dépôt
 
 @subsection Gestion de Berkeley DB
 
@@ -335,7 +358,7 @@ la transaction pour récupérer les données dans le même état.
 
 Selon notre propre expérient, nous avons rencontré des situations ou un
 bug dans Subversion (qui produit un plantage) peut parfois avoir l'effet
-de bord de laisser d'environnement de DB dans un état 'vérouillé'. Les
+de bord de laisser d'environnement de DB dans un état ``vérouillé''. Les
 tentatives suivantes de lecture ou écriture reste bloquées, en attente sur
 le verrou.
 
@@ -370,7 +393,7 @@ est débuté, et l'ancien reste.
 Ainsi, après une longue periode, vous constaterez un nombre important de
 fichiers log. A ce moment là, vous avez deux choix : si vous laissez
 tous les fichiers log, vous avez la garantie que @command{db_recorer}
-pourra toujours "rejouer" chaques transactions de la base de donnée,
+pourra toujours ``rejouer'' chaques transactions de la base de donnée,
 depuis la première remontée (ceci est la méthose sûre et un peu
 paranoïaque). L'autre méthode, est de demander à Berkeley DB de vous dire
 quels fichiers log ne sont plus activement utilisés :
@@ -382,15 +405,20 @@ log.0000000024
 log.0000000029
 @end example
 
-Notre dépôt de Subversion utilise une script d'accroche de post-remontée,
-qui après avoir réalisé une sauvegarde à chaud du dépôt, supprime ces
-fichiers log excédentaire. Dans les sources de Subversion, regardez
-@url{tools/backup/hot-backup.py}.
+Notre dépôt de Subversion utilise une script d'accroche de post-remontée
+(@file{post-commit}), qui après avoir réalisé une sauvegarde à chaud du
+dépôt, supprime ces fichiers log excédentaire. Dans les sources de
+Subversion, regardez @file{tools/backup/hot-backup.py}.
 
 Ce script illustre également une méthode sûre de faire une sauvegarde du
 dépôt alors qu'il reste en cours d'utilisation: copier tout le repertoire
 du dépôt, puis recopier les fichiers log listé par la commande
-@command{db_recorer -l}.
+@samp{db_recorer -l}.
+
+Pour utiliser un dépôt de sauvegarde que vous venez de restaurer, assurez
+vous d'exécuter la commande @samp{db_recover -ve} dans l'espace @file{db}
+en premier. Ceci garanti que toutes transactions non-terminées soient
+complètement ``jouées'' avant que le dépôt ne soit utilisé à nouveau.
 
 Enfin, noté que Berkeley DB a un système de verrouillage complet; dans des
 cas d'opérations extémement intense de svn, nous avons constaté des
@@ -398,7 +426,7 @@ situations où l'envirennement de DB n'a plus suffisament de verroux. Le
 nombre maximum de verrou peut-être ajusté en changant les valeurs dans
 le fichier @file{repos/db/DB_CONFIG}. Ne changez pas les valeurs par
 défaut sans savoir exactement ce que vous faites; Voyez sûr d'avoir lu
-@url{http://www.sleepycat.com/docs/ref/lock/max.html} en premier.
+@uref{http://www.sleepycat.com/docs/ref/lock/max.html} en premier.
 
 @subsection Utilisation de svnadmin 
 
@@ -408,7 +436,7 @@ utilisez @command{svnadmin}! @command{svnadmin} contrairement à
 @command{svnlook}, qui ne fonctionne qu'en lecture seule, peut modifier
 le dépôt.
 
-La fonctionnalité la plus utilisée est probablement @command{svadmin
+La fonctionnalité la plus utilisée est probablement @samp{svadmin
 setlog}. Une description de modification est une propriété unversionnée
 directement attaché à la révision; Il n'y a qu'une seule description de
 modification par révision. Parfois l'utilisateur a remonté sa description
@@ -441,9 +469,9 @@ Created: 2002-07-14T12:57:22.748388Z
 $ svnadmin rmtxns myrepos 319 321
 @end example
 
-@c ### Hey guys, are going to continue to support 'svnadmin undeltify'??
+@c ### Hey guys, are going to continue to support @samp{svnadmin undeltify}??
 
-Une autre sous-commande très utilisée est @command{svnadmin undeltify}.
+Une autre sous-commande très utilisée est @samp{svnadmin undeltify}.
 Rappelez vous que la dernière version de chaque fichier est stockée en
 entier dans le dépôt, et les révisions précédentes des fichiers sont
 stockés comme différences par rapport à la révision suivant la plus
@@ -472,15 +500,15 @@ réseau.
 
 Le serveur réseau primaire de Subversion est httpd d'Apache parlant le
 protocole WebDav/deltaV, qui est un ensemble d'extension à http. Pour plus
-d'information sur DAV, voir @url{http://www.webdav.org}.
+d'information sur DAV, voir @uref{http://www.webdav.org}.
 
 Pour rendre votre dépôt accessible depuis le réseau, vous devez
 @itemize @bullet
 @item
-avoir httpd 2.0 fonctionnant avec le module @file{mod_dav}
+avoir httpd 2.0 fonctionnant avec le module mod_dav
 @item
-installer le greffon @file{mod_dav_svn} pour mod_dav, qui utilise la
-librairie d'accès au dépôt de Subversion
+installer le greffon mod_dav_svn pour mod_dav, qui utilise la librairie
+d'accès au dépôt de Subversion
 @item
 configurer votre fichier @file{httpd.conf} pour exporter le dépôt
 @end itemize
@@ -496,7 +524,7 @@ Dans cette section, nous nous concentrerons sur la configuration de votre
 fichier @file{httpd.conf}.
 
 Quelque part au début de votre fichier de configuration, définissez un
-nouveau bloque @command{Location}:
+nouveau bloque @samp{Location}:
 
 @example
 <Location /repos>
@@ -533,23 +561,18 @@ mary:kV4/mQbu0iq82
 @end example
 
 Vous pouvez générer les mots de passe cryptés en utilisant une commande
-@command{crypt(3)} standard.  Voici un petit programme perl qui le fait
-également:
+@samp{crypt(3)} standard ou en utilisant l'outil @command{htpasswd}
+présent dans le répertoire @file{bin} d'Apache.
 
 @example
-#!/usr/bin/perl
-srand (time());
-my $randletter = "(int (rand (26)) + (int (rand (1) + .5) % 2 ? 65 : 97))";
-my $salt = sprintf ("%c%c", eval $randletter, eval $randletter);
-my $plaintext = shift;
-my $crypttext = crypt ($plaintext, $salt);
+$ /usr/local/apache2/bin/htpasswd -n sussman
+New password: 
+Re-type new password: 
+sussman:kUqncD/TBbdC6
 @end example
 
-Ndt : Le programme @command{htpasswd} d'Apache doit aussi faire
-l'affaire.
-
-Puis ajoutez ces quelques lignes dans votre block <Location> qui pointent
-sur le fichier des utilisateurs:
+Puis ajoutez ces quelques lignes dans votre block @samp{<Location>} qui
+pointent sur le fichier des utilisateurs:
 
 @example
 AuthType Basic
@@ -596,16 +619,16 @@ AuthGroupFile /my/svn/group/file
 
 Ce ne sont que de simples exemples. Pour un tutorial complet sur les
 contrôle d'accès d'Apache, regarder 
-@url{http://httpd.apache.org/docs-2.0/misc/tutorials.html}.
+@uref{http://httpd.apache.org/docs-2.0/misc/tutorials.html}.
 
-Autre remarque: pour que 'svn cp' marche (ce qui est actuellement
+Autre remarque: pour que @samp{svn cp} marche (ce qui est actuellement
 implémenté comme une requête DAV COPY), mod_dav doit être capable de
 déterminer le hostname du serveur. Un moyen standard est d'utiliser la
 directive ServerName d'Apache pour fixer le hostname du serveur.
 
 Ndt: si UseCanonicalName d'apache est sur off il n'est pas forcément
 nécessaire de renseigner ServerName. Je vous conseile d'essayer en
-premier "UseCanonicalName Off" qui pose moins de problème lors des
+premier ``UseCanonicalName Off'' qui pose moins de problème lors des
 redirections par Apache.
 
 Editez votre @file{httpd.conf} pour inclure:
@@ -614,14 +637,14 @@ Editez votre @file{httpd.conf} pour inclure:
 ServerName svn.myserver.org
 @end example 
 
-Si vous utilisez le "virtual hosting" d'apache avec la directive
-NameVirtualHost, vous pourrez avoir besoin d'utiliser la directive
-ServerAlias pour spécifier des noms additionnels par lesquels votre
+Si vous utilisez le ``virtual hosting'' d'apache avec la directive
+@samp{NameVirtualHost}, vous pourrez avoir besoin d'utiliser la directive
+@samp{ServerAlias} pour spécifier des noms additionnels par lesquels votre
 serveur est connu.
 
 Si vous n'est pas familier avec une directive d'Apache, ou pas très sûr
 de ce qu'elle fait, n'hésitez pas à consulter la documentation:
-@url{http://httpd.apache.org/docs-2.0/mod/directives.html}.
+@uref{http://httpd.apache.org/docs-2.0/mod/directives.html}.
 
 Vous pouvez tester votre dépôt exporté en lançant httpd:
 
@@ -630,23 +653,23 @@ $ /usr/local/apache2/bin/apachectl stop
 $ /usr/local/apache2/bin/apachectl start
 @end example
 
-Contrôler /usr/local/apache2/logs/error_log pour être sûre que sont
+Contrôler @file{/usr/local/apache2/logs/error_log} pour être sûre que sont
 démarrage est OK. Essayez une sortie via le réseau de votre dépôt:
 
 @example
-$ svn co http://localhost/repos -d wc
+$ svn co http://localhost/repos wc
 @end example
 
 La raison la plus commune pour que celà ne marche pas est un problème de
 permission de lecture/écriture des fichiers db du dépôt. Assurez-vous que
-l'utilisateur 'nobody' (ou un autre UID utilisé par le processus httpd) a
-les permissions de lecture et écriture aux fichiers Berkeley DB! C'est le
-problème le plus courant.
+l'utilisateur ``nobody'' (ou un autre UID utilisé par le processus httpd)
+a les permissions de lecture et écriture aux fichiers Berkeley DB! C'est
+le problème le plus courant.
 
-Vous pouvez voire toute les "plaintes" de mod_dav_svn dans le fichier
+Vous pouvez voire toute les ``plaintes'' de mod_dav_svn dans le fichier
 d'erreur d'Apache, @file{/usr/local/apache2/logs/error_log} ou ailleur
 en fonction de votre installation d'Apache. Pour plus d'information sur le
-traçage des problèmes, regardez "Debugging the server" dans le fichier
+traçage des problèmes, regardez ``Debugging the server'' dans le fichier
 @file{HACKING}.
 
 
@@ -661,10 +684,10 @@ version de Subversion, ou peut-être vous voulez utiliser un moteur de base
 de donnée différent.
 
 Quoiqu'il en soit, vos données doivent être migrées vers un nouveau
-dépôt. Pour le faire, vous avez les commandes @command{svnadmin dump} et
-@command{svnadmin load}.
+dépôt. Pour le faire, vous avez les commandes @samp{svnadmin dump} et
+@samp{svnadmin load}.
 
-@command{svnadmin dump} écrit un flux de vos données de votre dépôt vers
+@samp{svnadmin dump} écrit un flux de vos données de votre dépôt vers
 la sortie standard (stdout):
 
 @example
@@ -692,7 +715,7 @@ données.
 $ svnadmin create newrepos
 @end example
 
-La commande @command{svnadmin load} est d'entreprendre de lire le dump
+La commande @samp{svnadmin load} est d'entreprendre de lire le dump
 depuis l'entrée standard (stdin) et de rejouer chaques remontées:
 
 @example
@@ -714,7 +737,7 @@ Voilà, vos révisions ont été remontées dans le nouveau dépôt.
 
 @subsection Stupide dump/load astuces
 
-Les personne que aime "copiner" avec Unix peuvent essayer des choses comme
+Les personne que aime ``copiner'' avec Unix peuvent essayer des choses comme
 celles ci:
 @example
 $ svnadmin create newrepos
@@ -722,7 +745,8 @@ $ svnadmin dump myrepos | svnadmin load newrepos
 @end example
 
 Il est aussi possible de créer une série de petits fichiers dump et de les
-charger en série. Mais celà demande un peu de boulot.
+charger en série (Dans le cas où un unique fichier dump est trop grop pour
+rentrer sur le media de sauvegarde). Mais celà demande un peu de boulot.
 
 @example
 $ svnadmin dump myrepos 0 2000 > dumpfile1
@@ -733,7 +757,7 @@ Donc maintenant vous avez deux fichiers de dump. Le premier contient les
 révision 0 à 2000, et le second contient les révisions 2000 à 4000.
 Pourquoi le recouvrement ?
 
-Voici le pourquoi. La première révision extraite par @command{svnadmin
+Voici le pourquoi. La première révision extraite par @samp{svnadmin
 dump} est toujours comparée à la révision 0 qui est juste le répertoire
 racine @file{/} vide. Ceci signifie que la première révision de tout dump
 resemble toujours à une gigantesque liste de noeuds ``ajoutés''. Ce choix
@@ -753,14 +777,14 @@ révision 2000:
 Ouvrire le @file{dumpfile2} dans un éditeur
 @item 
 ne @emph{pas} supprimer la ligne d'entête
-@code{SVN-fs-dump-format-version} au début du fichier.
+@samp{SVN-fs-dump-format-version} au début du fichier.
 @item
 @emph{supprimer} la première révision, qui commence avec un enregistrement
-@code{Revision-number:}, et qui va jusqu'au prochain bloque
-@code{Revision-number:}.
+@samp{Revision-number:}, et qui va jusqu'au prochain bloque
+@samp{Revision-number:}.
 @end itemize
 
-Une fois que vos fichiers de dump ont été proprement "ajustés", vous
+Une fois que vos fichiers de dump ont été proprement ``ajustés'', vous
 pouvez les charger avec la séquence:
 
 @example
@@ -768,3 +792,56 @@ $ svnadmin load newrepos < dumpfile1
 $ svnadmin load newrepos < dumpfile2
 @end example
 
+@c ------------------------------------------------------------------
+@node WebDAV
+@section WebDAV
+
+WebDAV est le protocole réseau utilisé par Subversion. DAV (Distributed
+Authoring and Versioning : publication et versionnement distribué). Nous
+discuterons ici de ce que celà signifie pour vous, actuellement et dans le
+futur.
+
+WebDAV a été conçu pour faire du web un medium en lecture/écriture,
+au-lieu d'un medium en lecture seule (comme c'est principalement le cas
+actuellement). La principe de base est que les répertoires et les fichiers
+peuvent être partagés à travers le web en utilisant une extension
+standardisée d'HTTP. La RFC 2518 décrit l'extension WebDAV d'HTTP, et est
+disponible (avec beaucoup d'autres informations utiles) à
+@uref{http://www.webdav.org/}.
+
+Actuellement, un grand nombre de gestionnaire de fichier de système
+d'exploitation sont capable de ``monter'' un répertoire réseau utilisant
+WebDAV. Sur Win32, l'Explorateur Windows peut naviguer dans ce qu'il
+appèle un ``Dossier Web'', comme avec d'autres répertoires partagés. Mac
+OS X a également cette capacité comme le navigateur Nautilus de GNOME.
+
+Cependant, la RFC 2518 n'implémente pas complètement l'aspet versionnement
+de WebDAV. Un commité séparé a créé la RFC 3253, connue comme l'extension
+@dfn{DeltaV}  de WebDAV, et disponible à @uref{http://www.webdav.org/deltav/}.
+Ces extensions ajoutent le concept de contrôle de version à HTTP et c'est
+ce qu'utilise Subversion.
+
+Il est important de comprendre que bien que Subversion utilise DeltaV pour
+communiquer, le client Subversion n'est @emph{pas} un client à usage
+général de DeltaV. En fait, il attend des fonctionnalitées personnalisées
+du serveur. De même, le serveur Subversion n'est pas un serveur à usage
+général de DeltaV. Il implémente un strict sous-ensemble des
+spécifications de DeltaV. Un client WebDAV ou DeltaV pourait très bien
+communiquer avec, mais uniquement si ce client opère à l'intérieur de ce
+faisceau étroit de fonctionnalité que le serveur implémente. Les futures
+versions de Subversion apporteront une intéropérabilité plus complète de
+WebDAV.
+
+Au moment de l'écriture de ce guide, la plupart des navigateurs DAV et des
+clients ne supporte pas encore DeltaV; ceci signifie qu'un dépôt
+Subversion peut uniquement être consulté ou monté uniquement comme une
+ressource en lecture-seule. (une requête ``PUT'' HTTP est valide
+lorsqu'elle est envoyée à un serveur uniquement WebDAV, mais un serveur
+DeltaV tel que mod_dav_svn ne le permet pas. Le client doit utiliser des
+méthodes spéciales de contrôle de version pour écrire sur le serveur.)
+Et, de l'autre côté, un client Subversion ne peut pas sortir une copie de
+travail d'un serveur WebDAV générique; il attend un sous-ensemble
+spécifique de fonctionnalités DeltaV.
+
+Pour une description détaillée de l'implémentation WebDAV de Subversion, voir
+@uref{http://svn.collab.net/repos/svn-repos/trunk/www/webdav-usage.html}.
