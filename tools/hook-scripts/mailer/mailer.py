@@ -40,7 +40,7 @@ def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action):
   repos = Repository(repos_dir, rev, pool)
 
   if cmd == 'commit':
-    cfg = Config(config_fp, repos, { 'author' : author or repos.author })
+    cfg = Config(config_fp, repos, { 'author' : repos.author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange':
     # Override the repos revision author with the author of the propchange
@@ -53,11 +53,55 @@ def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action):
   messenger.generate()
 
 
-class MailedOutput:
+class OutputBase:
+  "Abstract base class to formalize the inteface of output methods"
+
   def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg
     self.repos = repos
     self.prefix_param = prefix_param
+
+    # This is a public member variable. This must be assigned a suitable
+    # piece of descriptive text before make_subject() is called.
+    self.subject = ""
+
+  def make_subject(self, group, params):
+    prefix = self.cfg.get(self.prefix_param, group, params)
+    if prefix:
+      subject = prefix + ' ' + self.subject
+    else:
+      subject = self.subject
+    return subject
+
+  def start(self, group, params):
+    """Override this method.
+    Begin writing an output representation. GROUP is the name of the
+    configuration file group which is causing this output to be produced.
+    PARAMS is a dictionary of any named subexpressions of regular expressions
+    defined in the configuration file, plus the key 'author' contains the
+    author of the action being reported."""
+    raise NotImplementedError
+
+  def finish(self):
+    """Override this method.
+    Flush any cached information and finish writing the output
+    representation."""
+    raise NotImplementedError
+
+  def run(self, cmd):
+    """Override this method.
+    Execute CMD, writing the stdout produced to the output representation."""
+    raise NotImplementedError
+
+  def write(self, output):
+    """Override this method.
+    Append the literal text string OUTPUT to the output representation."""
+    raise NotImplementedError
+
+
+class MailedOutput(OutputBase):
+  def __init__(self, cfg, repos, prefix_param):
+    OutputBase.__init__(self, cfg, repos, prefix_param)
 
   def start(self, group, params):
     # whitespace-separated list of addresses; split into a clean list:
@@ -68,11 +112,7 @@ class MailedOutput:
     self.reply_to = self.cfg.get('reply_to', group, params)
 
   def mail_headers(self, group, params):
-    prefix = self.cfg.get(self.prefix_param, group, params)
-    if prefix:
-      subject = prefix + ' ' + self.subject
-    else:
-      subject = self.subject
+    subject = self.make_subject(group, params)
     hdrs = 'From: %s\n'    \
            'To: %s\n'      \
            'Subject: %s\n' \
@@ -87,8 +127,8 @@ class MailedOutput:
 class SMTPOutput(MailedOutput):
   "Deliver a mail message to an MTA using SMTP."
 
-  def start(self, group, params, **args):
-    MailedOutput.start(self, group, params, **args)
+  def start(self, group, params):
+    MailedOutput.start(self, group, params)
 
     self.buffer = cStringIO.StringIO()
     self.write = self.buffer.write
@@ -113,17 +153,15 @@ class SMTPOutput(MailedOutput):
     server.quit()
 
 
-class StandardOutput:
+class StandardOutput(OutputBase):
   "Print the commit message to stdout."
 
   def __init__(self, cfg, repos, prefix_param):
-    self.cfg = cfg
-    self.repos = repos
-
+    OutputBase.__init__(self, cfg, repos, prefix_param)
     self.write = sys.stdout.write
 
-  def start(self, group, params, **args):
-    pass
+  def start(self, group, params):
+    self.write("Subject: " + self.make_subject(group, params) + "\n\n")
 
   def finish(self):
     pass
@@ -160,8 +198,8 @@ class PipeOutput(MailedOutput):
     # we want a descriptor to /dev/null for hooking up to the diffs' stdin
     self.null = os.open('/dev/null', os.O_RDONLY)
 
-  def start(self, group, params, **args):
-    MailedOutput.start(self, group, params, **args)
+  def start(self, group, params):
+    MailedOutput.start(self, group, params)
 
     ### gotta fix this. this is pretty specific to sendmail and qmail's
     ### mailwrapper program. should be able to use option param substitution
@@ -223,9 +261,7 @@ class Messenger:
     self.pool = pool
     self.cfg = cfg
     self.repos = repos
-    self.determine_output(cfg, repos, prefix_param)
 
-  def determine_output(self, cfg, repos, prefix_param):
     if cfg.is_set('general.mail_command'):
       cls = PipeOutput
     elif cfg.is_set('general.smtp_hostname'):
@@ -248,7 +284,6 @@ class Commit(Messenger):
     self.changelist = editor.get_changes().items()
     self.changelist.sort()
 
-    ### hunh. this code isn't actually needed for StandardOutput. refactor?
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for path, change in self.changelist:
@@ -353,9 +388,7 @@ class PropChange(Messenger):
     self.author = author
     self.propname = propname
     self.action = action
-    self.cfg = cfg
 
-    ### hunh. this code isn't actually needed for StandardOutput. refactor?
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
     for (group, params) in self.cfg.which_groups(''):
@@ -663,7 +696,6 @@ class Config:
 
     The option is specified as a dotted symbol, such as 'general.mail_command'
     """
-    parts = string.split(option, '.')
     ob = self
     for part in string.split(option, '.'):
       if not hasattr(ob, part):
@@ -823,9 +855,11 @@ will be provided via standard input.
   repos_dir = sys.argv[2]
   revision = int(sys.argv[3])
   config_fname = None
+
+  # Used for propchange only
   author = None
   propname = None
-  action = 'M'
+  action = None
 
   if cmd == 'commit':
     if len(sys.argv) > 5:
@@ -867,26 +901,18 @@ will be provided via standard input.
 # TODO
 #
 # * add configuration options
-#   - default options  [DONE]
-#   - per-group overrides  [DONE]
-#   - group selection based on repos and on path  [DONE]
 #   - each group defines delivery info:
-#     o how to construct From:  [DONE]
-#     o how to construct To:  [DONE]
-#     o subject line prefixes  [DONE]
 #     o whether to set Reply-To and/or Mail-Followup-To
 #       (btw: it is legal do set Reply-To since this is the originator of the
 #        mail; i.e. different from MLMs that munge it)
 #   - each group defines content construction:
 #     o max size of diff before trimming
 #     o max size of entire commit message before truncation
-#     o flag to disable generation of add/delete diffs  [DONE]
 #   - per-repository configuration
 #     o extra config living in repos
 #     o how to construct a ViewCVS URL for the diff  [DONE (as patch)]
 #     o optional, non-mail log file
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
-#   - put the commit author into the params dict  [DONE]
 #   - if the subject line gets too long, then trim it. configurable?
 # * get rid of global functions that should properly be class methods
