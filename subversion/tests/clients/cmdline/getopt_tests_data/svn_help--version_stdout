@@ -1,5 +1,5 @@
 help (?, h): Display this usage message.
-usage: help [SUBCOMMAND [SUBCOMMAND ... ]]
+usage: help [SUBCOMMAND...]
 
 Valid options:
   --version                : print client version info

@@ -1,5 +1,5 @@
 log: Show the log messages for a set of revision(s) and/or file(s).
-usage: log [URL] [PATH [PATH ... ]]
+usage: log [URL] [PATH...]
   Print the log messages for local PATHs, or for PATHs under
   URL, if URL is given.  If URL is given by itself, then print log
   messages for everything under it.  With -v, also print all affected
@@ -36,7 +36,7 @@ Valid options:
 
 switch (sw): Update working copy to mirror a new URL
 usage: switch URL [PATH]   or
-       switch --relocate FROM TO [PATH ... ]
+       switch --relocate FROM TO [PATH...]
 
   Note:  this is the way to move a working copy to a new branch.
 

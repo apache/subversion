@@ -151,7 +151,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'r', 't'} },
     
     {"help", subcommand_help, {"?", "h"},
-     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "usage: svnlook help [SUBCOMMAND...]\n\n"
      "Display this usage message.\n",
      {svnlook__version} },
 
