@@ -603,6 +603,9 @@ Package=<4>
     Project_Dep_Name libsvn_delta
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name libsvn_diff
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name libsvn_subr
     End Project Dependency
     Begin Project Dependency
