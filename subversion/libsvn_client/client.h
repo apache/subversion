@@ -375,12 +375,17 @@ svn_client__get_diff_editor (const char *target,
    These will need to be unlocked again post-commit.
 
    If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications.  */
+   found in TARGETS will not be crawled for modifications. 
+
+   If CTX->CANCEL_FUNC is non-null, it will be called with 
+   CTX->CANCEL_BATON while harvesting to determine if the client has 
+   cancelled the operation.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 
 
@@ -389,12 +394,17 @@ svn_client__harvest_committables (apr_hash_t **committables,
    svn_client__harvest_committables for what that really means, and
    for the relevance of LOCKED_DIRS) as if every entry at or below
    TARGET was to be committed as a set of adds (mostly with history)
-   to a new repository URL (NEW_URL). */
+   to a new repository URL (NEW_URL).
+
+   If CTX->CANCEL_FUNC is non-null, it will be called with 
+   CTX->CANCEL_BATON while harvesting to determine if the client has 
+   cancelled the operation.  */
 svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
                                    const char *new_url,
                                    const char *target,
                                    svn_wc_adm_access_t *adm_access,
+                                   svn_client_ctx_t *ctx,
                                    apr_pool_t *pool);
                
 

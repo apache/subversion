@@ -614,6 +614,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                                     base_url,
                                                     base_path,
                                                     dir_access,
+                                                    ctx,
                                                     pool)))
     goto cleanup;
 
