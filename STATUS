@@ -111,3 +111,11 @@ Candidate changes:
       Saves at least 100 MB on large fsfs commits.
     Votes:
       +1: epg
+
+  * r11706
+    Fix pool usage in finalizng a transaction into a revision in the
+    fsfs back-end.
+    Justification:
+      Saves 35 MB on large fsfs commits.
+    Votes:
+      +1: epg
