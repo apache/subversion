@@ -36,9 +36,7 @@ main ()
   svn_string_appendstr (a, b, pglobal);
   svn_string_print (a);
 
-  /* Do it again.  (This is BAD, btw, since we can never free the
-     "xtra" string below!) */
-
+  /* Do it again, with an inline string creation for kicks. */
   svn_string_appendstr (a, svn_string_create(" xtra", pglobal), pglobal);
   svn_string_print (a);
 
@@ -64,12 +62,8 @@ main ()
   svn_string_fillchar (a, '#');
   svn_string_print (a);
 
-  /* Be free, my little stringies! */
-  svn_string_free (a);
-  svn_string_free (b);
-  svn_string_free (c);
 
-  /* Be free, my apache memory pool! */
+  /* Free our entire memory pool when done. */
   ap_destroy_pool (pglobal);
   ap_terminate();
 

@@ -8,13 +8,15 @@ APR_LIB = ../../apr               # where to find libapr.a
 all: libsvn_string.so stringtest
 
 clean:
-	rm *.o *.so stringtest
+	rm *.o *.so *~ stringtest
 
 # Build as position-independent code (PIC)
 
 svn_string.o:  svn_string.c $(SVN_INCLUDE)/svn_string.h
-	cc -c svn_string.c -g -shared -fPIC \
-                           -I$(SVN_INCLUDE) -I$(APR_INCLUDE) -Wall
+	cc -c svn_string.c -g -Wall \
+                           -shared -fPIC \
+	                   -D_THREAD_SAFE -D_REENTRANT -pthread \
+                           -I$(SVN_INCLUDE) -I$(APR_INCLUDE) 
 
 
 # Link libapr in statically
@@ -26,5 +28,6 @@ libsvn_string.so: svn_string.o
 # Test program dynamically links to libsvn_string
 
 stringtest: stringtest.c
-	cc -o stringtest stringtest.c -Wall \
-              -I$(SVN_INCLUDE) -I$(APR_INCLUDE) -L. -lsvn_string
+	cc -o stringtest stringtest.c -g -Wall -pthread \
+                                      -I$(SVN_INCLUDE) -I$(APR_INCLUDE) \
+                                       -L. -lsvn_string
