@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 
 # ====================================================================
 # commit-access-control.pl: check if the user that submitted the
@@ -26,6 +26,14 @@
 # individuals.  For exact contribution history, see the revision
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
+
+# The warning switch is set here and not in the shebang line above
+# with /usr/bin/env because env will try to find the binary named
+# 'perl -w', which won't work.
+BEGIN
+  {
+    $^W = 1;
+  }
 
 use strict;
 use Carp;
