@@ -44,6 +44,10 @@ svn_config__win_config_path (char *folder, int system_path)
 
 
 #include "config_impl.h"
+
+/* ### These constants are insanely large, but (a) we want to avoid
+   reallocating strings if possible, and (b) the realloc logic might
+   not actually work -- you never know with Win32 ... */
 #define SVN_REG_DEFAULT_NAME_SIZE  2048
 #define SVN_REG_DEFAULT_VALUE_SIZE 8192
 
