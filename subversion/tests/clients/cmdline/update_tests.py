@@ -32,7 +32,7 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Tests
 #
-#   Each test must return 0 on success or non-zero on failure.
+#   Each test must return on success or raise on failure.
 
 
 #----------------------------------------------------------------------
@@ -61,7 +61,7 @@ def detect_extra_files(node, extra_files):
       fp.close()
       if real_contents == contents:
         extra_files.pop(extra_files.index(pair)) # delete pattern from list
-        return 0
+        return
 
   print "Found unexpected disk object:", node.name
   raise svntest.main.SVNTreeUnequal

@@ -33,7 +33,7 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Tests
 #
-#   Each test must return 0 on success or non-zero on failure.
+#   Each test must return on success or raise on failure.
 
 #----------------------------------------------------------------------
 
