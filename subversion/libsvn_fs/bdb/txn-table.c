@@ -245,11 +245,14 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
       skel_t *txn_skel;
       svn_error_t *err;
 
-      svn_fs__track_dbt (&key, trail->pool);
-      svn_fs__track_dbt (&value, trail->pool);
-
       /* Clear the per-iteration subpool */
       svn_pool_clear (subpool);
+
+      /* Track the memory alloc'd for fetching the key and value here
+         so that when the containing pool is cleared, this memory is
+         freed. */
+      svn_fs__track_dbt (&key, subpool);
+      svn_fs__track_dbt (&value, subpool);
 
       /* Ignore the "next-id" key. */
       if (key.size == next_id_key_len
@@ -276,7 +279,7 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
       if (is_committed (txn))
         continue;
 
-      /* Add the transaction name to the NAMES array. */
+      /* Add the transaction name to the NAMES array, duping it into POOL. */
       (*((const char **) apr_array_push (names)))
         = apr_pstrmemdup (pool, key.data, key.size);
     }
