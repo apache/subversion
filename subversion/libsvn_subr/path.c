@@ -291,8 +291,11 @@ svn_path_remove_component (svn_stringbuf_t *path)
 {
   assert (is_canonical (path->data, path->len));
 
-  while (path->len > 0 && path->data[path->len - 1] != '/')
+  while (path->len > 0 && path->data[path->len] != '/')
     --path->len;
+
+  if (path->len == 0 && path->data[0] == '/')
+    path->len++;
 
   path->data[path->len] = '\0';
 

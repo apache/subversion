@@ -557,6 +557,47 @@ test_canonicalize (const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_remove_component (const char **msg,
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
+{
+  const char *paths[][2] = {
+    { "",                     "" },
+    { "/",                    "/" },
+    { "foo",                  "" },
+    { "foo/bar",              "foo" },
+    { "/foo/bar",             "/foo" },
+    { "/foo",                 "/" },
+    { NULL, NULL }
+  };
+  int i;
+  svn_stringbuf_t *buf;
+
+  *msg = "test svn_path_remove_component";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  buf = svn_stringbuf_create ("", pool);
+  
+  i = 0;
+  while (paths[i][0])
+    {
+      svn_stringbuf_set (buf, paths[i][0]);
+
+      svn_path_remove_component (buf);
+      
+      if (strcmp (buf->data, paths[i][1]))
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                  "svn_path_remove_component(\"%s\") returned "
+                                  "\"%s\" expected \"%s\"",
+                                  paths[i][0], buf->data, paths[i][1]);
+      ++i;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -572,5 +613,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test_basename),
     SVN_TEST_PASS (test_decompose),
     SVN_TEST_PASS (test_canonicalize),
+    SVN_TEST_PASS (test_remove_component),
     SVN_TEST_NULL
   };
