@@ -74,6 +74,8 @@
 #define SVN_ERR_NOT_AUTHORIZED                   (APR_OS_START_USEERR + 2)
 #define SVN_ERR_PLUGIN_LOAD_FAILURE              (APR_OS_START_USEERR + 3)
 #define SVN_ERR_UNKNOWN_FS_ACTION                (APR_OS_START_USEERR + 4)
+#define SVN_ERR_UNEXPECTED_EOF                   (APR_OS_START_USEERR + 5)
+#define SVN_ERR_MALFORMED_FILE                   (APR_OS_START_USEERR + 6)
 
 
 typedef struct svn_error
