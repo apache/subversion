@@ -5,10 +5,8 @@
 
 [general]
 
-# This is not passed to the shell, so do not use shell metacharacters.
-# The command is split around whitespace, so if you want to include
-# whitespace in the command, then ### something ###
-diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
+# The [general].diff option is now DEPRECATED.
+# Instead use [defaults].diff .
 
 #
 # One delivery method must be chosen. mailer.py will prefer using the
@@ -139,6 +137,11 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 
 [defaults]
 
+# This is not passed to the shell, so do not use shell metacharacters.
+# The command is split around whitespace, so if you want to include
+# whitespace in the command, then ### something ###
+diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
+
 # The default prefix for the Subject: header for commits
 commit_subject_prefix =
 
@@ -259,6 +262,8 @@ suppress_deletes = yes
 # to_addr = www-commits@example.com
 # # use the revision author as the from address
 # from_addr =
+# # use a custom diff program for this group
+# diff = /usr/bin/my-diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 #
 # [another-example]
 # # commits to personal repositories should go to that person
