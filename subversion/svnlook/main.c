@@ -12,6 +12,36 @@
  * ====================================================================
  */
 
+/* ### todo:
+
+   Not sure how to display changes in the txn case.  What is the diff
+   against?  My first guess would be the base-rev of the txn, but I
+   don't think I have access to that revision number.  Am I missing
+   some API call (svn_fs_txn_base_revision() or something)?  Not
+   likely, since we don't even store the base-revision in the txn
+   (either in the FS or in the data struct.  Is this something we'd
+   like to keep track of?  This would require:
+
+   - modifying svn_fs_txn_t to include `svn_revnum_t base_rev'
+
+   - modifying the transaction skel to include the base revision,
+     which would mean it no longer needs to store the base root ID
+     (since I think that can be derived from the base revision).
+     Perhaps the following:
+
+        TRANSACTION ::= ("transaction" ROOT-ID BASE-REV PROPLIST) ;
+
+   - modifying stuff in txn-table.* to use this new skel structure.
+
+   - adding a new API call to retrieve the base revision from a txn.
+     Again, I think this would do the trick:
+
+        svn_error_t *svn_fs_txn_base_revision (svn_revnum_t *rev,
+                                               svn_fs_t *fs,
+                                               svn_fs_txn_t *txn,
+                                               apr_pool_t *pool);
+*/
+
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
