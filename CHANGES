@@ -1,92 +1,87 @@
 Version 0.27.0 (released 12 August 2003, rev 6707, branches/release-0.27.0)
 
-User-visible changes:
+ User-visible changes:
+ * fixed ra_svn:
+    - (r6588) avoid hangs due to ra_svn tunnel creation errors
+    - (r6696, r6697, #1465) svnserve crash due to pre-commit hook failure
+ * fixed 'svn log':
+    - (r6642, #1423) log on a deleted path over ra-dav
+    - (r6684, #1438) log performance bug
+ * fixed 'svn diff' and 'svn merge':
+    - (r6604, #1311) diff URL URL on files now works
+    - (r6668, #1142) diff comparing wc to repos branch
+    - (r6687, #1297) diff/merge interaction in file adds
+    - (r6703, #1319) merge problem with adding subtrees
+    - (#6607) new default ancestry-following behavior for diff, merge
+ * fixed 'svn status':
+    - (r6688, r6691, r6692, #1289) status on nodes deleted in repos
+    - (r6637) status now always uses "I" for ignored directories
+ * fixed 'svn copy':
+    - (r6704, #1313) copy between 2 repositories errors cleanly now
+    - (r6649, #1444) seg fault when copying empty dir from repos to wc
+ * fixed 'svn export':
+    - (r6652, #1461) exporting an empty directory
+    - (r6664, #1296) path->path exports
+ * fixed - gracefully handle failure to get uid on Win98 (r6695, #1470)
+ * fixed - avoid spurious conflicts when merging binary files (r6621, #1319)
+ * fixed - merge of a single file into implicit '.' (r6630, #1150)
+ * fixed - various Win32 innosetup improvements/fixes (r6693, r6656, #1133)
+ * fixed - disallow ".." in svn:externals target paths (r6639, #1449)
+ * fixed - use 'env' instead of hard-coded paths in scripts (r6626, #1413)
+ * fixed - bug in loading incremental dumpfiles (r6595)
+ * fixed - performance issue in svn_load_dirs.pl tool fixed (r6623, r6627)
+ * fixed - handle IPv6 addresses in URLs (r6638, r6654, #1338)
+ * changed - 'svn resolve' renamed to 'svn resolved' (r6597)
+ * changed - 'svnlook tree' takes new optional path-in-repos argument (r6583)
+ * changed - renamed 'svnadmin archive' to 'svnadmin lsdblogs'; offer
+             either all logs, or just the unused ones (r6661)  
+ * changed - now offer full-text search in Windows documentation file (r6658)
+ * changed - much documentation updated, especially the book
+ * Many other fixes and changes, too numerous to mention individually.
 
-  * fixed ra_svn:
-     . (r6588) avoid hangs due to ra_svn tunnel creation errors
-     . (r6696, r6697, #1465) svnserve crash due to pre-commit hook failure
-  * fixed 'svn log':
-     . (r6642, #1423) log on a deleted path over ra-dav
-     . (r6684, #1438) log performance bug
-  * fixed 'svn diff' and 'svn merge':
-     . (r6604, #1311) diff URL URL on files now works
-     . (r6668, #1142) diff comparing wc to repos branch
-     . (r6687, #1297) diff/merge interaction in file adds
-     . (r6703, #1319) merge problem with adding subtrees
-     . (#6607) new default ancestry-following behavior for diff, merge
-  * fixed 'svn status':
-     . (r6688, r6691, r6692, #1289) status on nodes deleted in repos
-     . (r6637) status now always uses "I" for ignored directories
-  * fixed 'svn copy':
-     . (r6704, #1313) copy between 2 repositories errors cleanly now
-     . (r6649, #1444) seg fault when copying empty dir from repos to wc
-  * fixed 'svn export':
-     . (r6652, #1461) exporting an empty directory
-     . (r6664, #1296) path->path exports
-  * fixed - gracefully handle failure to get uid on Win98 (r6695, #1470)
-  * fixed - avoid spurious conflicts when merging binary files (r6621, #1319)
-  * fixed - merge of a single file into implicit '.' (r6630, #1150)
-  * fixed - various Win32 innosetup improvements/fixes (r6693, r6656, #1133)
-  * fixed - disallow ".." in svn:externals target paths (r6639, #1449)
-  * fixed - use 'env' instead of hard-coded paths in scripts (r6626, #1413)
-  * fixed - bug in loading incremental dumpfiles (r6595)
-  * fixed - performance issue in svn_load_dirs.pl tool fixed (r6623, r6627)
-  * fixed - handle IPv6 addresses in URLs (r6638, r6654, #1338)
-  * changed - 'svn resolve' renamed to 'svn resolved' (r6597)
-  * changed - 'svnlook tree' takes new optional path-in-repos argument (r6583)
-  * changed - renamed 'svnadmin archive' to 'svnadmin lsdblogs'; offer
-                either all logs, or just the unused ones (r6661)  
-  * changed - now offer full-text search in Windows documentation file (r6658)
-  * changed - much documentation updated, especially the book
-  * Many other fixes and changes, too numerous to mention individually.
-
-Developer-visible changes:
-
-  * fixed - many improvements to Perl and Python bindings, including some
-            Win32-specific improvements (r6619, r6686, r6590, r6580, r6579)
-  * All other important dev changes are implied by the user-visible changes.
+ Developer-visible changes:
+ * fixed - many improvements to Perl and Python bindings, including some
+           Win32-specific improvements (r6619, r6686, r6590, r6580, r6579)
+ * All other important dev changes are implied by the user-visible changes.
 
 
 Version 0.26.0 (released 24 July 2003, revision 6550, branches/release-0.26.0)
 
-User-visible changes:
+ User-visible changes:
+ * fixed - --parent-dir option to svnadmin load (r6436)
+ * fixed - 'svnlook diff' now properly displays diffs  (r6408, #1241)
+ * fixed - 'svn cat' no longer expands values from the wrong revision.
+ * fixed 'svn merge':
+    - (r6447,#1402) -r FOO:PREV works correctly
+    - (r6452,#1379) no longer prints confusing no-op lines
+    - (r6500/6503,#1399) warn user when a tree-delta chunk can't be applied
+ * turn compression off to work around to mod_deflate timeouts (r6509)
 
-  * fixed - --parent-dir option to svnadmin load (r6436)
-  * fixed - 'svnlook diff' now properly displays diffs  (r6408, #1241)
-  * fixed - 'svn cat' no longer expands values from the wrong revision.
-  * fixed 'svn merge':
-     . (r6447,#1402) -r FOO:PREV works correctly
-     . (r6452,#1379) no longer prints confusing no-op lines
-     . (r6500/6503,#1399) warn user when a tree-delta chunk can't be applied
-  * turn compression off to work around to mod_deflate timeouts (r6509)
-
-Developer-visible changes:
-  * cvs2svn.py:  lots of bugfixing related to branch/tag support
-  * diff code refactored to allow use by other tools (r6407)
-  * make 'svn export' set commit-timestamps (not ready yet) (r6420)
-  * fixed - memory leaks in libsvn_ra_dav commits (r6422)
-  * fixed - cvs2svn.py handles branch files rooted in dead revs (r6482,#1417)
-  * fixed - new lines now detected in svn:author property (r6497,#1401)
-  * fixed - svn_load_dirs works w/ absolute paths (r6507, Debian bug #187331)
-  * changed - build infrastructure now supports Perl SWIG bindings (r6441)
-  * removed - PORTING document no longer necessary (r6472)
+ Developer-visible changes:
+ * cvs2svn.py:  lots of bugfixing related to branch/tag support
+ * diff code refactored to allow use by other tools (r6407)
+ * make 'svn export' set commit-timestamps (not ready yet) (r6420)
+ * fixed - memory leaks in libsvn_ra_dav commits (r6422)
+ * fixed - cvs2svn.py handles branch files rooted in dead revs (r6482,#1417)
+ * fixed - new lines now detected in svn:author property (r6497,#1401)
+ * fixed - svn_load_dirs works w/ absolute paths (r6507, Debian bug #187331)
+ * changed - build infrastructure now supports Perl SWIG bindings (r6441)
+ * removed - PORTING document no longer necessary (r6472)
 
 
 Version 0.25.0 (released 11 July 2003, revision 6394, branches/release-0.25.0)
 
-User-visible changes:
+ User-visible changes:
  * command line options:
-   . new --force option for svn export (r6327,#1296)
-   . new --force-log for commit, copy, delete, import, mkdir, move (r6294)
-   . --force no longer needed for commit
-
+    - new --force option for svn export (r6327,#1296)
+    - new --force-log for commit, copy, delete, import, mkdir, move (r6294)
+    - no longer need --force for commit
  * commands
-   . new - svnadmin archive (r6310)
-   . changed - svn import syntax now 'svn import [PATH] URL' (r6288,#933,#735)
-   . fixed - Search PATH for external diff commands (r6373)
-   . fixed - 'svn switch' memory bug (r6296)
-   . fixed - 'svn mkdir' coredump (r6388,#1369)
-
+    - new - svnadmin archive (r6310)
+    - changed - svn import syntax now 'svn import [PATH] URL' (r6288,#933,#735)
+    - fixed - Search PATH for external diff commands (r6373)
+    - fixed - 'svn switch' memory bug (r6296)
+    - fixed - 'svn mkdir' coredump (r6388,#1369)
  * python bindings now in -tools rpm for Mandrake 9.1 (r6374)
  * allow parent-into-child copies, provided they are not WC->WC. (r6348,#1367)
  * fixed - Apache module installation order (r6382-6,#1381)	
@@ -94,21 +89,18 @@ User-visible changes:
  * fix 2 commit leaks
  * fix mod_dav_svn path-escaping bug
 
-Developer-visible changes:
-
+ Developer-visible changes:
  * Win32 build system
-   . new - .vcproj files for svn_config project and APR (r6311)
-   . fixed - SWIG bindings for Win32 (r6304)
-   . vcproj generator now works (r6316)
-   . swig's generated .c files now dependent on headers in .i files (r6379)
-   . refactored code common to dsp & vcproj into gen_win.py (r6328)
-
+    - new - .vcproj files for svn_config project and APR (r6311)
+    - fixed - SWIG bindings for Win32 (r6304)
+    - vcproj generator now works (r6316)
+    - swig's generated .c files now dependent on headers in .i files (r6379)
+    - refactored code common to dsp & vcproj into gen_win.py (r6328)
  * fixed
-   . SEGFAULTs in SWIG bindings (r6339)
-   . potential SEGFAULTs in 'REPORT vcc' backward-compatibility code (r6377)
-   . mod_dav_svn's autoversioning failure on PUT (r6312)
-   . 'svn switch' memory bug (r6296)
-
+    - SEGFAULTs in SWIG bindings (r6339)
+    - potential SEGFAULTs in 'REPORT vcc' backward-compatibility code (r6377)
+    - mod_dav_svn's autoversioning failure on PUT (r6312)
+    - 'svn switch' memory bug (r6296)
  * changed - mailer.py now uses svn_repos_replay()
 
 
@@ -702,11 +694,11 @@ Version 0.14.0 [Alpha] (released 23 July 2002, revision 2667)
 
  Developer-visible changes:
  * UTF-8 changes
-      - all libraries now assume UTF-8 input paths and log msgs
-      - many apr calls are now abstracted into new svn_io_* wrappers
+    - all libraries now assume UTF-8 input paths and log msgs
+    - many apr calls are now abstracted into new svn_io_* wrappers
  * fs schema change
-      - cache each revision's changed-paths in a new 'changes' table
-      - another repository dump/load is required
+    - cache each revision's changed-paths in a new 'changes' table
+    - another repository dump/load is required
  * a number of fs-dumper bugfixes and redesigns
  * test suite is now all python, so it can run on win32
  * reduce huge memory consumption of mod_dav_svn during checkouts
@@ -731,8 +723,8 @@ Version 0.13.2 [Pre-Alpha] (released 28 June 2002, revision 2376)
  Developer-visible changes:
  * finished notification callback system, no more buggy output
  * fs-changes:
-     - revisions table nothing but an index to txns table
-     - branch work-in-progress:  new 'changes' table to store changed paths
+    - revisions table nothing but an index to txns table
+    - branch work-in-progress:  new 'changes' table to store changed paths
  * more work on svn_time_* funcs and formats (moving towards ISO8601)
  * property reversion bugs fixed, dumper bug fixed
  * add version number to svndiff database storage
@@ -772,8 +764,8 @@ Version 0.13.0 [Pre-Alpha] (released 10 June 2002, revision 2140)
 
  User-visible changes:
  * repositories have a new database schema;  existing ones must be upgraded!
-      - new svnadmin 'dump'/'load' commands to migrate repositories
-      - read http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
+    - new svnadmin 'dump'/'load' commands to migrate repositories
+    - read http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
 
  Developer-visible changes:
  * complete rewrite of filesystem schema!
@@ -895,9 +887,9 @@ Version 0.10.0 (released 08 Mar 2002, revision 1467)
  User-visible changes:
  * fewer out-of-memory errors:  (see "memory consumption" below)
  * clearer user errors:  
-       - detailed marshalling of server errors to client
-       - better errors from ra_dav
-       - better commandline-client-specific error messages
+    - detailed marshalling of server errors to client
+    - better errors from ra_dav
+    - better commandline-client-specific error messages
  * 'svn log' now works on single paths correctly
  * show locked directories in 'svn status'
  * 'svnadmin lstxns' improvements, and new --long switch
@@ -908,25 +900,25 @@ Version 0.10.0 (released 08 Mar 2002, revision 1467)
 
  Developer-visible changes:
  * reduced memory consumption
-      - new Editor interface that manages pools automatically
-      - conversion of most existing editors to new system
-      - have libsvn_fs write data to DB streamily
-      - reduce DB logfile growth via 'duplicate keys'
-      - stop using one pool for post-commit processing
-      - stop using one pool for sending all textdeltas
-      - many, many other pool-usage improvements in libsvn_wc, ra_dav, etc.
+    - new Editor interface that manages pools automatically
+    - conversion of most existing editors to new system
+    - have libsvn_fs write data to DB streamily
+    - reduce DB logfile growth via 'duplicate keys'
+    - stop using one pool for post-commit processing
+    - stop using one pool for sending all textdeltas
+    - many, many other pool-usage improvements in libsvn_wc, ra_dav, etc.
  * start of work on 'svn merge": issue 504, and diff3 integration
  * start of work on disjoint-url detection:  issue 575
  * start removing stringbuf path library funcs; use new const char * funcs
  * better python 2.X detection in test suite
  * svnlook uses single tempdir
  * build system evolution
-     - upgrade to neon 0.19.[2-3]
-     - lots of work on FreeBSD port
+    - upgrade to neon 0.19.[2-3]
+    - lots of work on FreeBSD port
  * many small bugfixes: 
-      - propedit, file merges, revert, dir_delta, keywords
-      - memory leaks in 'svn add', 'svn import/commit', and svnlook
-      - date-parsing and readonly bugs
+    - propedit, file merges, revert, dir_delta, keywords
+    - memory leaks in 'svn add', 'svn import/commit', and svnlook
+    - date-parsing and readonly bugs
 
 
 Version 0.9 (released 15 Feb 2002, revision 1302)
@@ -948,26 +940,26 @@ Version 0.9 (released 15 Feb 2002, revision 1302)
  * continued development of ruby, java, and python (swig) bindings
  * new config-file parser
  * code reorganization and cleanup
-     - huge conversion of svn_stringbuf_t --> char *
-     - standardized on commit_info return structure
-     - no more 'path styles' in path library
-     - rewrite bootstrapping code for python test framework
-     - rewrite commandline app's help-system and alias-system
-     - feedback table replaced with notfication callback
-     - rewrite sorting of hashes
-     - svnadmin internal rewrite
-     - faster post-update processing
-     - using SVN_ERR macros where they weren't
-     - new svn_client_revision_t mechanism
-     - txdelta windows are readonly now
-     - pool debugging code moved to APR
-     - various pool-usage fixes
+    - huge conversion of svn_stringbuf_t --> char *
+    - standardized on commit_info return structure
+    - no more 'path styles' in path library
+    - rewrite bootstrapping code for python test framework
+    - rewrite commandline app's help-system and alias-system
+    - feedback table replaced with notfication callback
+    - rewrite sorting of hashes
+    - svnadmin internal rewrite
+    - faster post-update processing
+    - using SVN_ERR macros where they weren't
+    - new svn_client_revision_t mechanism
+    - txdelta windows are readonly now
+    - pool debugging code moved to APR
+    - various pool-usage fixes
  * build system evolution
-     - apr-util now required
-     - upgrade to neon 0.18.5
-     - much apr m4 macro churn
-     - win32 updates, no longer needs precompiled neon
-     - 'make check' when builddir != srcdir
+    - apr-util now required
+    - upgrade to neon 0.18.5
+    - much apr m4 macro churn
+    - win32 updates, no longer needs precompiled neon
+    - 'make check' when builddir != srcdir
  * fixes for many issues, including #624, 627, 580, 598, 591,
    607. 609, 590, 565
 
@@ -976,49 +968,49 @@ Version 0.9 (released 15 Feb 2002, revision 1302)
 
 Version 0.8  (released 15 Jan 2002, revision 909)
 
-  * newline conversion and keyword substitution (#524)
-  * rewrite ra_local commit system to commit against HEAD (#463)
-  * mod_dav_svn sends svndiffs now (#518)
-  * code migration from libsvn_fs to libsvn_repos (#428)
+ * newline conversion and keyword substitution (#524)
+ * rewrite ra_local commit system to commit against HEAD (#463)
+ * mod_dav_svn sends svndiffs now (#518)
+ * code migration from libsvn_fs to libsvn_repos (#428)
 
 
 Version 0.7  (released 03 Dec 2001, revision 587)
 
-  * 'svn cp/mv' completed:  
-       - can copy from wc/repos to wc/repos
-       - This how we create branches/tags
-  * 'svn mkdir' [WC_PATH|REPOS_URL]
-  * 'svn delete' [REPOS_URL]
+ * 'svn cp/mv' completed:  
+    - can copy from wc/repos to wc/repos
+    - This how we create branches/tags
+ * 'svn mkdir' [WC_PATH|REPOS_URL]
+ * 'svn delete' [REPOS_URL]
 
 
 Version 0.6  (released 12 Nov 2001, revision 444)
 
-  * 'svn log'
-  * 'svn cp/mv' from wc to wc
+ * 'svn log'
+ * 'svn cp/mv' from wc to wc
 
 
 Milestones M4/M5  (released 19 Oct 2001, revision 271)
 
-  * network layer bugfixes
-  * filesystem deltification
+ * network layer bugfixes
+ * filesystem deltification
 
 
 Milestone M3  (released 30 Aug 2001, revision 1)
 
-  * self-hosting begins, all history left behind in CVS repository.
+ * self-hosting begins, all history left behind in CVS repository.
 
 
 Milestone M2  (released 15 May 2001, from CVS, "milestone-2" tag)
 
-  * filesystem library (libsvn_fs)
-  * network layer (libsvn_ra_dav and mod_dav_svn)
+ * filesystem library (libsvn_fs)
+ * network layer (libsvn_ra_dav and mod_dav_svn)
 
 
 Milestone M1  (released 20 Oct 2000, from CVS, "milestone-1" tag)
 
-  * working-copy library (libsvn_wc), using XML files
+ * working-copy library (libsvn_wc), using XML files
 
 
 Birth  (05 June 2000)
 
-  * CVS repository created.
+ * CVS repository created.
