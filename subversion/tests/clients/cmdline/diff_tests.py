@@ -1051,14 +1051,21 @@ def diff_base_to_repos(sbox):
   if err_output:
     raise svntest.Failure
 
-  for line in diff_output:
-    print line,
-  print "*********************************"
-  for line in diff_output2:
-    print line,
+  # to do the comparison, remove all output lines starting with +++ or ---
+  re_infoline = re.compile('^(\+\+\+|---).*$')
+  list1 = []
+  list2 = []
 
-  ### now actually figure out a way to do the comparison, probably by
-  ### removing all lines that match (revision *) and (working copy)
+  for line in diff_output:
+    if not re_infoline.match(line):
+      list1.append(line)
+
+  for line in diff_output2:
+    if not re_infoline.match(line):
+      list2.append(line)
+
+  if list1 != list2:
+    raise svntest.Failure
   
 
 ########################################################################
@@ -1080,7 +1087,7 @@ test_list = [ None,
               dont_diff_binary_file,
               diff_nonextant_urls,
               diff_head_of_moved_file,
-              XFail(diff_base_to_repos),
+              diff_base_to_repos,
               ]
 
 if __name__ == '__main__':
