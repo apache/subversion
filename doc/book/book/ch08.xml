@@ -60,16 +60,6 @@ $ svn status -v myfile
         </varlistentry>
       
         <varlistentry>
-          <term><option>--file</option> (<option>-F</option>)
-            <replaceable>FILENAME</replaceable>
-              </term>
-          <listitem>
-            <para>Uses the contents of the file passed as an argument
-              to this switch for the specified subcommand.</para>
-          </listitem>
-        </varlistentry>
-
-        <varlistentry>
           <term><option>--encoding</option> <replaceable>ENC</replaceable></term>
           <listitem>
             <para>Tells Subversion that your commit message is encoded
@@ -97,6 +87,16 @@ $ svn status -v myfile
         </varlistentry>
       
         <varlistentry>
+          <term><option>--file</option> (<option>-F</option>)
+            <replaceable>FILENAME</replaceable>
+              </term>
+          <listitem>
+            <para>Uses the contents of the file passed as an argument
+              to this switch for the specified subcommand.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term><option>--force</option></term>
           <listitem>
             <para>Forces a particular command or operation to run.
@@ -108,6 +108,27 @@ $ svn status -v myfile
               programmatic equivalent of doing your own electrical
               work with the power on&mdash;if you don't know what
               you're doing, you're likely to get a nasty shock.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--force-log</option></term>
+          <listitem>
+            <para>Forces a suspicious parameter passed to the
+              <option>--message</option> (<option>-m</option>) or
+              <option>--file</option> (<option>-F</option>) options to
+              be accepted as valid.  By default, Subversion will
+              produce an error if parameters to these options look
+              like they might instead be targets of the subcommand.
+              For example, if you pass a versioned file's path to the
+              <option>--file</option> (<option>-F</option>) option,
+              Subversion will assume you've made a mistake, that the
+              path was instead intended as the target of the
+              operation, and that you simply failed to provide some
+              other&mdash;unversioned&mdash;file as the source of your log
+              message.  To assert your intent and override these types
+              of errors, pass the <option>--force-log</option> option 
+              to commands that accept log messages.</para>
           </listitem>
         </varlistentry>
         
@@ -694,7 +715,7 @@ $ svn cleanup /path/to/working-copy
 --quiet (-q)
 --non-recursive (-N)
 --targets FILENAME
---force
+--force-log
 --username USER
 --password PASS
 --no-auth-cache
@@ -732,15 +753,15 @@ Committed revision 5.
             <para>If you want to use a file that's under version
               control for your commit message with
               <option>--file</option>, you need to pass the
-              <option>--force</option> switch:</para>
+              <option>--force-log</option> switch:</para>
 
             <screen>
 $ svn commit --file file_under_vc.txt foo.c
 subversion/clients/cmdline/main.c:862: (apr_err=205004)
 svn: The log message file is under version control
-svn: Log message file is a versioned file; use `--force' to override.
+svn: Log message file is a versioned file; use `--force-log' to override.
 
-$ svn commit --force --file file_under_vc.txt foo.c
+$ svn commit --force-log --file file_under_vc.txt foo.c
 Sending        foo.c
 Transmitting file data .
 Committed revision 6.
@@ -840,6 +861,7 @@ Committed revision 7.
 --password PASS
 --no-auth-cache
 --non-interactive
+--force-log
 --encoding ENC
             </screen>
           </refsect1>
@@ -958,6 +980,7 @@ Committed revision 13.
 
             <screen>
 --force
+--force-log
 --message (-m) TEXT
 --file (-F) FILE
 --quiet (-q)
@@ -1344,6 +1367,7 @@ Exported revision 15.
 --password PASS
 --no-auth-cache
 --non-interactive
+--force-log
 --encoding ENC
             </screen>
           </refsect1>
@@ -1941,6 +1965,7 @@ U  thhgttg.txt
 --no-auth-cache
 --non-interactive
 --encoding ENC
+--force-log
             </screen>
           </refsect1>
 
@@ -2036,12 +2061,13 @@ Committed revision 26.
 --file (-F) FILE
 --revision (-r) REV
 --quiet (-q)
+--force
 --username USER
 --password PASS
 --no-auth-cache
 --non-interactive
---force
 --encoding ENC
+--force-log
             </screen>
           </refsect1>
 
