@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+## See the usage() function for operating instructions. ##
+
 import re
 import sys
 import operator
-
 
 _re_trail = re.compile('\((?P<txn_body>[a-z_]*), (?P<filename>[a-z_\-./]*), (?P<lineno>[0-9]*), (?P<txn>0|1)\): (?P<ops>.*)')
 _re_table_op = re.compile('\(([a-z]*), ([a-z]*)\)')
@@ -149,16 +150,33 @@ def output_txn_body_frequencies(trails, outfile):
                   % (f, p, txn_body, file, line))
 
 
+def usage(pgm):
+  w = sys.stderr.write
+  w("%s: a program for analyzing Subversion trail usage statistics.\n" % pgm)
+  w("\n")
+  w("Usage:\n")
+  w("\n")
+  w("   Compile Subversion with -DSVN_FS__TRAIL_DEBUG, which will cause it\n")
+  w("   it to print trail statistics to stderr.  Save the stats to a file,\n")
+  w("   invoke %s on the file, and ponder the output.\n" % pgm)
+  w("\n")
+
+
 if __name__ == '__main__':
   if len(sys.argv) > 2:
-    sys.stderr.write('USAGE: %s [LOG-FILE]\n'
-      % sys.argv[0])
+    sys.stderr.write("Error: too many arguments\n\n")
+    usage(sys.argv[0])
     sys.exit(1)
 
   if len(sys.argv) == 1:
     infile = sys.stdin
   else:
-    infile = open(sys.argv[1])
+    try:
+      infile = open(sys.argv[1])
+    except (IOError):
+      sys.stderr.write("Error: unable to open '%s'\n\n" % sys.argv[1])
+      usage(sys.argv[0])
+      sys.exit(1)
 
   trails = parse_trails_log(infile)
 
