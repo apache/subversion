@@ -12,6 +12,8 @@ http://svn.collab.net/repos/svn/tags/0.31.0
  * faster 'svn log' (see new fs-history algorithm) (#1499)
  * faster repos read-operations (caching gives ~20% speedup) (rXXXX, #1499)
  * faster updates (fewer entries-file writes gives ~20% speedup) (r7170, #1490)
+ * more work on psvn.el and svn_load_dirs.pl
+ * more cvs2svn bugfixes
  * other bugfixes:  no more revision keywords "FIRST" or "CHANGED" (r7250),
    fix 'svn cp URL URL' $EDITOR msg generation (r7264), fix regression
    bug in 'svnadmin load' (r7273), 'svnadmin setlog' now triggers
@@ -27,10 +29,8 @@ http://svn.collab.net/repos/svn/tags/0.31.0
  * ensure consistent wc 'dead entry' cleanup (r7197, r7204, #1075)
  * lots of work on gen_win.py, gen_make.py, gen_base.py tools
  * lots of work on making SWIG-java bindings build.
- * more work on psvn.el and svn_load_dirs.pl
  * updates/improvements to javahl bindings and SWIG-perl bindings
  * updates/improvements to Mandrake RPM builds
- * more cvs2svn bugfixes
  * other bugfixes:  python testsuite now uses local path separators (r7224),
    svn:externals no longer keeps connections open (r7312, #1448),
    UTF8-to-local date conversion (r7316, #1534), API consistification 
