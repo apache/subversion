@@ -830,9 +830,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             path = dav_xml_get_cdata(child, resource->pool, 1);
             
             if (! linkpath)
-              serr = svn_repos_set_path(rbaton, path, rev);
+              serr = svn_repos_set_path(rbaton, path, rev, resource->pool);
             else
-              serr = svn_repos_link_path(rbaton, path, linkpath, rev);
+              serr = svn_repos_link_path(rbaton, path, linkpath, rev,
+                                         resource->pool);
             if (serr != NULL)
               {
                 /* ### This removes the fs txn.  todo: check error. */
@@ -865,7 +866,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             /* get cdata, stipping whitespace */
             path = dav_xml_get_cdata(child, resource->pool, 1);
 
-            serr = svn_repos_delete_path(rbaton, path);
+            serr = svn_repos_delete_path(rbaton, path, resource->pool);
             if (serr != NULL)
               {
                 /* ### This removes the fs txn.  todo: check error. */

@@ -2223,15 +2223,16 @@ static int end_element(void *userdata,
 
 static svn_error_t * reporter_set_path(void *report_baton,
                                        const char *path,
-                                       svn_revnum_t revision)
+                                       svn_revnum_t revision,
+                                       apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_cstring (&qpath, path, rb->ras->pool);
-  entry = apr_psprintf(rb->ras->pool,
+  svn_xml_escape_cstring (&qpath, path, pool);
+  entry = apr_psprintf(pool,
                        "<S:entry rev=\"%"
                        SVN_REVNUM_T_FMT
                        "\">%s</S:entry>" DEBUG_CR,
@@ -2253,7 +2254,8 @@ static svn_error_t * reporter_set_path(void *report_baton,
 static svn_error_t * reporter_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
-                                        svn_revnum_t revision)
+                                        svn_revnum_t revision,
+                                        apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
@@ -2267,12 +2269,12 @@ static svn_error_t * reporter_link_path(void *report_baton,
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative, NULL,
                                          rb->ras->sess,
                                          url, revision,
-                                         rb->ras->pool));
+                                         pool));
   
   
-  svn_xml_escape_cstring (&qpath, path, rb->ras->pool);
-  svn_xml_escape_cstring (&qlinkpath, bc_relative.data, rb->ras->pool);
-  entry = apr_psprintf(rb->ras->pool,
+  svn_xml_escape_cstring (&qpath, path, pool);
+  svn_xml_escape_cstring (&qlinkpath, bc_relative.data, pool);
+  entry = apr_psprintf(pool,
                        "<S:entry rev=\"%" SVN_REVNUM_T_FMT
                        "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
                        revision, qlinkpath->data, qpath->data);
@@ -2291,15 +2293,16 @@ static svn_error_t * reporter_link_path(void *report_baton,
 
 
 static svn_error_t * reporter_delete_path(void *report_baton,
-                                          const char *path)
+                                          const char *path,
+                                          apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
   const char *s;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_cstring (&qpath, path, rb->ras->pool);
-  s = apr_psprintf(rb->ras->pool,
+  svn_xml_escape_cstring (&qpath, path, pool);
+  s = apr_psprintf(pool,
                    "<S:missing>%s</S:missing>" DEBUG_CR,
                    qpath->data);
 

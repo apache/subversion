@@ -75,7 +75,7 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cr", &path, &rev));
-  SVN_CMD_ERR(svn_repos_set_path(b->report_baton, path, rev));
+  SVN_CMD_ERR(svn_repos_set_path(b->report_baton, path, rev, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -87,7 +87,7 @@ static svn_error_t *delete_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
-  SVN_CMD_ERR(svn_repos_delete_path(b->report_baton, path));
+  SVN_CMD_ERR(svn_repos_delete_path(b->report_baton, path, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -113,7 +113,8 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       /* Wrap error so that it gets reported back to the client. */
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
     }
-  SVN_CMD_ERR(svn_repos_link_path(b->report_baton, path, url + len, rev));
+  SVN_CMD_ERR(svn_repos_link_path(b->report_baton, path, url + len, rev,
+                                  pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }

@@ -129,25 +129,35 @@ typedef struct svn_ra_reporter_t
    *
    * This will *override* any previous @c set_path() calls made on parent
    * paths.  @a path is relative to the URL specified in @c open().
+   *
+   * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*set_path) (void *report_baton,
                             const char *path,
-                            svn_revnum_t revision);
+                            svn_revnum_t revision,
+                            apr_pool_t *pool);
 
-  /** Describing a working copy @a path as missing. */
+  /** Describing a working copy @a path as missing.
+   *
+   * All temporary allocations are done in @a pool.
+   */
   svn_error_t *(*delete_path) (void *report_baton,
-                               const char *path);
+                               const char *path,
+                               apr_pool_t *pool);
     
   /** Like @c set_path(), but differs in that @a path in the working copy
    * (relative to the root of the report driver) isn't a reflection of
    * @a path in the repository (relative to the URL specified when
    * opening the RA layer), but is instead a reflection of a different
    * repository @a url at @a revision.
+   *
+   * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*link_path) (void *report_baton,
                              const char *path,
                              const char *url,
-                             svn_revnum_t revision);
+                             svn_revnum_t revision,
+                             apr_pool_t *pool);
 
   /** WC calls this when the state report is finished; any directories
    * or files not explicitly `set' above are assumed to be at the
