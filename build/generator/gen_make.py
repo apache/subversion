@@ -94,8 +94,8 @@ class Generator(gen_base.GeneratorBase):
       # .la files are handled by the standard 'clean' rule; clean all the
       # other targets
       if not isinstance(target, gen_base.TargetScript) \
+         and not isinstance(target, gen_base.TargetExternal) \
          and not isinstance(target, gen_base.TargetProject) \
-         and not isinstance(target, gen_base.TargetUtility) \
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
     cfiles.sort()

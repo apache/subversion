@@ -239,7 +239,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # First generate fake utility targets
     self.fake_projects = {}
     options = {'path': 'build/win32'}
-    utility = gen_base.TargetUtility
+    utility = gen_base.TargetProject
     
     for target in self.graph.get_all_sources(gen_base.DT_FAKE):
       # since get_all_sources may return duplicates
@@ -280,7 +280,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_proj_sources(self, quote_path, target, rootpath):
     "Get the list of source files for each project"
     sources = [ ]
-    if not isinstance(target, gen_base.TargetUtility):
+    if not isinstance(target, gen_base.TargetProject):
       for src, reldir in self.get_win_sources(target):
         rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
         if quote_path and '-' in rsrc:
@@ -377,7 +377,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     return depends
     
   
-  def get_win_depends(self, target, recurse=0, no_child_projects=0):
+  def get_win_depends(self, target, recurse=0, no_child_externals=0):
     """
     Return the list of dependencies for target
     If recurse is 0, return just target's dependencies
@@ -399,7 +399,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       deps = { }
       child_deps = { }
 
-    self.get_win_depends_impl(target, deps, child_deps, 0, no_child_projects)
+    self.get_win_depends_impl(target, deps, child_deps, 0, no_child_externals)
 
     if recurse == 2:
       deps = child_deps
@@ -413,7 +413,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     return deps
 
   def get_win_depends_impl(self, target, deps, child_deps, 
-    no_projects, no_child_projects):
+    no_externals, no_child_externals):
     """Find dependencies of target
 
     target (string) is the target to find dependencies for
@@ -426,14 +426,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     """
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, gen_base.Target):
-      if isinstance(obj, gen_base.TargetProject) and no_projects:
+      if isinstance(obj, gen_base.TargetExternal) and no_externals:
         continue
 
       if deps is not None:
         deps[obj] = None
 
       if child_deps is not None:
-        self.get_win_depends_impl(obj, child_deps, child_deps, no_child_projects, no_child_projects)
+        self.get_win_depends_impl(obj, child_deps, child_deps, no_child_externals, no_child_externals)
 
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"

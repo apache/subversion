@@ -40,7 +40,7 @@ class Generator(gen_win.WinGeneratorBase):
         #LIB
         config_type=4
         target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
-    elif isinstance(target, gen_base.TargetUtility):
+    elif isinstance(target, gen_base.TargetProject):
       config_type=1
       target.output_name = target.name + '.exe'
     else:
@@ -62,10 +62,10 @@ class Generator(gen_win.WinGeneratorBase):
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
-      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetUtility)
+      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetProject)
                                   and target.cmd),
       'is_utility' : ezt.boolean(isinstance(target,
-                                            gen_base.TargetUtility)),
+                                            gen_base.TargetProject)),
       'instrument_apr_pools' : self.instrument_apr_pools,
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       }
@@ -124,7 +124,7 @@ class Generator(gen_win.WinGeneratorBase):
     # each target we work with.
     for target in install_targets:
       # These aren't working yet
-      if isinstance(target, gen_base.TargetUtility) and target.cmd:
+      if isinstance(target, gen_base.TargetProject) and target.cmd:
         continue    
       guids[target.name] = self.makeguid(target.name)
 
@@ -134,10 +134,10 @@ class Generator(gen_win.WinGeneratorBase):
     for target in install_targets:
       name = target.name
       # These aren't working yet
-      if isinstance(target, gen_base.TargetUtility) and target.cmd:
+      if isinstance(target, gen_base.TargetProject) and target.cmd:
         continue
 
-      if isinstance(target, gen_base.TargetProject):
+      if isinstance(target, gen_base.TargetExternal):
         # Figure out where the external .vcproj is located.
         if target.project_name:
           project_path = os.path.join(target.path, target.project_name)
