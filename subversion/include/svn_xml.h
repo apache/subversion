@@ -173,4 +173,13 @@ svn_error_t *svn_xml_write_tag_v (apr_file_t *file,
                                   va_list ap);
 
 
+/* Like svn_xml_write_tag, but takes a list of char* pairs */
+svn_error_t *svn_xml_write_tag_list (apr_file_t *file,
+                                     apr_pool_t *pool,
+                                     const int tagtype,
+                                     const char *tagname,
+                                     const char **atts);
+
+
+
 #endif /* SVN_XML_H */
