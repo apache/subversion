@@ -146,7 +146,7 @@ static svn_error_t *abort_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_ra_svn_cmd_entry_t report_commands[] = {
+static const svn_ra_svn_cmd_entry_t report_commands[] = {
   { "set-path",      set_path },
   { "delete-path",   delete_path },
   { "link-path",     link_path },
@@ -827,7 +827,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-svn_ra_svn_cmd_entry_t main_commands[] = {
+static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-latest-rev",  get_latest_rev },
   { "get-dated-rev",   get_dated_rev },
   { "change-rev-prop", change_rev_prop },
