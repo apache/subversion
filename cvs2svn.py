@@ -665,7 +665,7 @@ def main():
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
-                               [ "create", "trunk", "branches", "tags" ])
+                               [ "create", "trunk=", "branches=", "tags=" ])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
