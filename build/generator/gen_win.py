@@ -357,8 +357,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       for dep in fake_deps:
         depends.append(self.fake_projects[dep])
     elif isinstance(target, gen_base.TargetExe):
-      depends.extend(self.get_win_depends(target, 1,
-                                          ccls=gen_base.TargetLib))
+      depends.extend(self.get_win_depends(target, 1, 1))
     elif isinstance(target, gen_base.TargetSWIG):
       for lib in self.graph.get_sources(gen_base.DT_LINK, target.name):
         if hasattr(lib, 'proj_name'):
@@ -374,8 +373,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     return depends
     
   
-  def get_win_depends(self, target, recurse=0, cls=gen_base.Target, 
-                      ccls=gen_base.Target):
+  def get_win_depends(self, target, recurse=0, no_child_projects=0):
     """
     Return the list of dependencies for target
     If recurse is 0, return just target's dependencies
@@ -397,13 +395,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       deps = { }
       child_deps = { }
 
-    for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, cls):
-      if deps is not None:
-        deps[obj] = None
-
-      if child_deps is not None:
-        for dep in self.get_win_depends(obj, 1, ccls, ccls):
-          child_deps[dep] = None
+    self.get_win_depends_impl(target, deps, child_deps, 0, no_child_projects)
 
     if recurse == 2:
       deps = child_deps
@@ -415,6 +407,29 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     deps = deps.keys()
     deps.sort()
     return deps
+
+  def get_win_depends_impl(self, target, deps, child_deps, 
+    no_projects, no_child_projects):
+    """Find dependencies of target
+
+    target (string) is the target to find dependencies for
+
+    deps (dictionary) if not None will have target's direct dependencies added
+      as keys
+
+    child_deps (dictionary) if not None will have dependencies of target's
+      direct dependencies added as keys    
+    """
+
+    for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, gen_base.Target):
+      if isinstance(obj, gen_base.TargetProject) and no_projects:
+        continue
+
+      if deps is not None:
+        deps[obj] = None
+
+      if child_deps is not None:
+        self.get_win_depends_impl(obj, child_deps, child_deps, no_child_projects, no_child_projects)
 
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
@@ -488,9 +503,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
+    dblib = self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib')
+
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
-        libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
+        libs = [ dblib,
                  'mod_dav.lib' ]
       else:
         libs = []
@@ -506,7 +523,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       return libs
 
     if isinstance(target, gen_base.TargetSWIG):
-      libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
+      libs = [ dblib,
                'mswsock.lib',
                'ws2_32.lib',
                'advapi32.lib',
@@ -526,8 +543,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if not isinstance(lib, gen_base.ExternalLibrary):
           continue
 
-        if cfg == 'Debug' and lib.filename == self.dblibname:
-          nondeplibs.append(lib.filename+'d.lib')
+        if lib.filename == self.dblibname:
+          nondeplibs.append(dblib)
         else:
           nondeplibs.append(lib.filename+'.lib')
 
