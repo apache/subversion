@@ -988,26 +988,37 @@ log_do_committed (struct log_runner *loggy,
           if (is_this_dir)
             {
               svn_stringbuf_t *pdir, *basename;
-              
+              apr_hash_t *entries;
+
               svn_path_split (loggy->path, &pdir, &basename,
                               svn_path_local_style, loggy->pool);
               if (! svn_path_is_empty (pdir, svn_path_local_style))
                 {
-                  err = svn_wc__entry_modify
-                    (pdir,
-                     basename,
-                     (SVN_WC__ENTRY_MODIFY_SCHEDULE 
-                      | SVN_WC__ENTRY_MODIFY_FORCE),
-                     SVN_INVALID_REVNUM,
-                     svn_node_dir,
-                     svn_wc_schedule_normal,
-                     svn_wc_existence_normal,
-                     FALSE,
-                     0,
-                     0,
-                     NULL,
-                     loggy->pool,
-                     NULL);
+                  /* Make sure our entry exists in the parent. */
+                  SVN_ERR (svn_wc_entries_read (&entries, pdir, loggy->pool));
+                  if (apr_hash_get (entries, basename->data,
+                                    APR_HASH_KEY_STRING))
+                    {
+                      err = svn_wc__entry_modify
+                        (pdir,
+                         basename,
+                         (SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                          | SVN_WC__ENTRY_MODIFY_FORCE),
+                         SVN_INVALID_REVNUM,
+                         svn_node_dir,
+                         svn_wc_schedule_normal,
+                         svn_wc_existence_normal,
+                         FALSE,
+                         0,
+                         0,
+                         NULL,
+                         loggy->pool,
+                         NULL);
+                      if (err)
+                        return svn_error_createf
+                          (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                           "error merge_syncing %s", name);
+                    }
                 }
             }
         }
