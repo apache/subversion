@@ -64,15 +64,16 @@ already know about.)
      Constructor for svn_client_ctx_t
      Justification: Constructor helps with backward compatibility.
      Votes:
-      +0: jerenkrantz
+      +0: jerenkrantz, gstein
       +1: rooneg, ghudson
 
 
    * r8057
      Constructor for svn_client_ctx_t used in javahl bindings.
      Justification: Implementation of above API change in javahl bindings.
+     Notes: this obviously assumes svn_client_ctx_t gets imp'd (see above)
      Votes:
-      +1: ghudson, rooneg
+      +1: ghudson, rooneg, gstein
 
 
    * Issue #999
@@ -82,6 +83,7 @@ already know about.)
             into trunk unless it goes into 1.0 too, see
             http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml.
      Votes:
+      -0: gstein
       +0: jerenkrantz
       +1: ghudson, dionisos
 
@@ -92,6 +94,7 @@ already know about.)
      Notes: svnserve -u (believe usernames) was deprecated in 0.34.
      Votes:
       +1: jerenkrantz, rooneg, ghudson
+      +0: gstein
 
 
    * Issue #1644
@@ -103,16 +106,19 @@ already know about.)
 
    * r8023, r8030, r8040
      Fixes to make 'svn blame' work with i18n and uri-escaped filenames.
-     Justification: Fixes a bug several people have independently noticed.
+     Justification: Fixes a bug several people have independently
+       noticed.
+     Notes: alternative is to simply remove this late-added feature
      Votes:
       +1: jerenkrantz, rooneg, jszakmeister, ghudson
+      -0: gstein
 
 
    * r8048
      Fix a handle leak that caused a test failure on Windows.
      Justification: Windows correctness, test failure, and went into 0.35.1.
      Votes:
-      +1: brane, jerenkrantz, ghudson, dionisos
+      +1: brane, jerenkrantz, ghudson, dionisos, gstein
 
 
    * r8052, r8062  (issue #1660)
@@ -120,6 +126,7 @@ already know about.)
      Justification: Correctness, and went into 0.35.1.
      Votes:
       +1: brane, jerenkrantz, ghudson
+      +0: gstein
 
 
    * r8021
@@ -127,13 +134,14 @@ already know about.)
      Justification: trivial; API change; makes error returns correct priority
      Votes:
       +1: jerenkrantz, rooneg, ghudson, dionisos
+      -0: gstein (revert of many files is uncommon)
 
 
    * r8031
      Implementing API change of r8021 in javahl bindings.
      Justification: with 8021 and without 8031 javahl breaks. Local change.
      Votes:
-      +1: ghudson
+      +1: ghudson, gstein (assuming above)
 
 
    * r8006
@@ -141,13 +149,14 @@ already know about.)
      Justification: API, consistency with other auth provider behavior
      Votes:
       +1: jerenkrantz, bliss, ghudson
+      +0: gstein
 
 
    * r8012
      Implementing API change of r8006 in javahl bindings.
      Justification: with 8006 and without 8012 javahl breaks. Local change.
      Votes:
-      +1: ghudson
+      +1: ghudson, gstein (assuming above)
 
 
    * r8013
@@ -160,6 +169,7 @@ already know about.)
        veto when that one has got approval.
      Votes:
       +1: jerenkrantz, bliss, ghudson
+      -0: gstein
       -1: kfogel
 
 
@@ -169,19 +179,20 @@ already know about.)
      Notes: See Concerns field of r8013 above.
      Votes:
       +1: bliss, ghudson
+      +0: gstein
 
 
    * r8015,r8020
      Implementing API change of r8013 in javahl bindings.
      Justification: with 8013 and without 8015,8020 javahl breaks. Local change
      Votes:
-
+      +1: gstein (assuming base change is imp'd)
 
    * r8065
      Update references to BDB version in documentation.
      Justification: very low risk, and accurate documentation is good
      Votes:
-      +1: jerenkrantz, rooneg, ghudson, dionisos
+      +1: jerenkrantz, rooneg, ghudson, dionisos, gstein
 
 
    * Issue #1652
@@ -190,13 +201,14 @@ already know about.)
      Votes:
       +1 (concept): jerenkrantz
       +1: ghudson, dionisos
+      -0: gstein (we seem to be doing fine with our current msgs so far)
 
 
    * r8082
      Fix for bindings build on Windows. Related to issue 1666.
      Justification: Python bindings will not build otherwise. Low risk.
      Votes:
-       +1: brane, jerenkrantz
+       +1: brane, jerenkrantz, gstein
 
 
    * Issue #1668
@@ -204,6 +216,7 @@ already know about.)
      Justification: API stability; and, old name was overly restrictive.
      Votes:
       +1: jerenkrantz, jszakmeister
+      -0: gstein
 
 
    * Issue #1671
@@ -211,6 +224,7 @@ already know about.)
      Justification: API stability; low risk
      Votes:
       +1: jerenkrantz, ghudson, bliss, jszakmeister
+      -0: gstein
 
 
    * r8096
@@ -218,6 +232,7 @@ already know about.)
      Justification: Conform to docstring; correctness; low risk
      Votes:
       +1: jerenkrantz, rooneg, jszakmeister
+      +0: gstein
 
 
    * r8098
@@ -233,18 +248,21 @@ already know about.)
      Justification: API stability; low risk
      Votes:
       +1: bliss
+      -0: gstein
 
 
    * r8022, r8024, r8038
      Improved interface for blame in javahl bindings.
      Justification: API stability; low risk because of bindings only change.
      Votes:
+      +0: gstein
 
 
    * r8039
      javahl bindings did not know status external.
      Justification: API stability; low risk because of bindings only change.
      Votes:
+      +0: gstein
 
 
    * Issue #1677
@@ -252,6 +270,7 @@ already know about.)
      Justification: API stability; essentially zero risk
      Votes:
       +1: ghudson, jszakmeister
+      +0: gstein
 
 
    * r8114
@@ -259,13 +278,14 @@ already know about.)
      Justification: Low risk, makes client robust in face of server changes.
      Votes:
       +1: ghudson, jszakmeister
+      +0: gstein
 
 
    * r8115
      Fix bugs in update with specified target
      Justification: Fixes embarassing #1676, makes client more robust.
      Votes:
-      +1: ghudson, jszakmeister
+      +1: ghudson, jszakmeister, gstein
 
 
    * Issue #1678
@@ -273,6 +293,7 @@ already know about.)
      Justification: API change; allow better report processing; no risk.
      Votes:
       +1: ghudson, jszakmeister
+      +0: gstein
 
 
    * Issue #408
@@ -281,13 +302,14 @@ already know about.)
      unpredictable date formats.
      Votes:
       +1: mbk, ghudson, dionisos
+      -1: gstein (why such a change now? sheesh)
 
 
    * r8080
      Fix a compiler warning.
      Justification: trivially fixes embarassing warning; zero risk.
      Votes:
-      +1: mbk, ghudson, dionisos, jszakmeister
+      +1: mbk, ghudson, dionisos, jszakmeister, gstein
 
 
    * r8035, r8036, r8037, r8128
@@ -295,6 +317,7 @@ already know about.)
      Justification: much nicer user experience; low risk.
      Votes:
       +1: mbk, jszakmeister
+      -0: gstein (alternative is to remove the late-added 'blame' feature)
 
 
    * r8129
@@ -302,6 +325,7 @@ already know about.)
      Justification: better UI, fixes latent tempfile leak; low risk.
      Votes:
       +1: mbk, rooneg, jszakmeister
+      -0: gstein (or remove the feature)
 
 
    * r8001, r8002
@@ -309,6 +333,7 @@ already know about.)
      Justification: useful features for 1.0, low risk.
      Votes:
       +1: mbk, bliss, ghudson, rooneg
+      +0: gstein
 
 
    * r8055, r8085, r8104, r8105
@@ -316,14 +341,19 @@ already know about.)
         pages.  Also require correct apr/apr-util, and apache RPM versions.
      Justification: Packaging fixes and additions.
      Votes:
+      +1: gstein
 
 
    * r8125
      Rename server directories from to "bin" from "i386".
      Justification: I changed my directory structure because I've now got
         non-i386 binaries.
+     Notes: this shouldn't be applicable -- this page from the website
+            shouldn't even be in the release. maybe move /trunk/www up
+            to a peer of trunk, tags, and branches?
      Votes:
       +1: jszakmeister
+      -0: gstein
 
 
    * r8140
@@ -331,6 +361,7 @@ already know about.)
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
       +1: bliss, mbk, rooneg, jszakmeister
+      +0: gstein
 
 
    * r8142
@@ -338,6 +369,7 @@ already know about.)
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
       +1: bliss, mbk, ghudson, rooneg, jszakmeister
+      -0: gstein
 
 
    * Issue #1681
@@ -345,3 +377,4 @@ already know about.)
      Justification: Make svnserve more user friendly, low risk.
      Votes:
       +1: bliss, ghudson
+      -0: gstein
