@@ -2596,7 +2596,7 @@ struct commit_args
 
 
 /* Commit ARGS->txn, setting ARGS->new_rev to the resulting new
- * revision, if ARGS->txn is up-to-date w.r.t. the repository.
+ * revision, if ARGS->txn is up-to-date with respect to the repository.
  *
  * Up-to-date means that ARGS->txn's base root is the same as the root
  * of the youngest revision.  If ARGS->txn is not up-to-date, the
@@ -2636,7 +2636,8 @@ txn_body_commit (void *baton, trail_t *trail)
       svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-         "txn '%s' out of date w.r.t. revision '%s'", txn_name, id_str->data);
+         "transaction '%s' out of date with respect to revision '%s'",
+         txn_name, id_str->data);
     }
   
   /* Else, commit the txn. */

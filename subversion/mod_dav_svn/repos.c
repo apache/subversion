@@ -671,7 +671,7 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not open the (txn) root of the "
+                                 "Could not open the (transaction) root of the "
                                  "repository");
     }
 

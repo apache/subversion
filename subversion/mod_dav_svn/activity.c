@@ -122,7 +122,7 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
           apr_dbm_freedatum(dbm, value);
           apr_dbm_close(dbm);
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not abort txn.");
+                                     "could not abort transaction.");
         }
     }
   else if (serr->apr_err == SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
@@ -134,7 +134,7 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
       apr_dbm_freedatum(dbm, value);
       apr_dbm_close(dbm);
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not open txn.");
+                                 "could not open transaction.");
     }
   
   /* Finally, we remove the activity from the activities database. */

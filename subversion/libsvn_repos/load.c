@@ -671,7 +671,8 @@ new_revision_record (void **revision_baton,
       
       if (pb->outstream)
         svn_stream_printf (pb->outstream, pool,
-                           "<<< Started new txn, based on original revision %"
+                           "<<< Started new transaction, based on "
+                           "original revision %"
                            SVN_REVNUM_T_FMT "\n", rb->rev);
     }
 

@@ -69,7 +69,7 @@ static dav_error *set_auto_log_message(dav_resource *resource)
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Error setting auto-log-message on "
-                               "auto-checked-out resource's txn.");
+                               "auto-checked-out resource's transaction.");
   return NULL;
 }
 
@@ -282,8 +282,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
                              resource->info->root.txn, resource->pool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not open the (txn) root of the "
-                                   "repository");
+                                   "Could not open the (transaction) root "
+                                   "of the repository");
         
       return NULL;
     }
@@ -441,7 +441,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
         {
           /* ### correct HTTP error? */
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not get created-rev of txn node.");
+                                     "Could not get created-rev of "
+                                     "transaction node.");
         }
 
       /* If txn_created_rev is invalid, that means it's already
