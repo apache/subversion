@@ -16,10 +16,46 @@ package org.tigris.subversion.auth;
  * ====================================================================
  */
 
+import java.util.Map;
+
+import org.tigris.subversion.SubversionException;
+
 /**
- * The methods of this interface correspond to the types and functions
- * described in the subversion C api located in 'svn_auth.h'.
+ * The methods of this interface correspond to the types
+ * (svn_auth_provider_object_t, svn_auth_provider_t, provider_baton)
+ * and functions described in the subversion C api located in
+ * 'svn_auth.h'.
  */
 public interface AuthProvider
 {
+    /**
+     * @return A description of this kind of authentication provider.
+     * This generally is prefixed with the namespace appropriate to
+     * your application.
+     */
+    String getKind();
+
+    /**
+     * @param parameters Any runtime data which the provider may need,
+     * or <code>null</code> if not needed.
+     * @return The first valid credentials.
+     */
+    Object firstCredentials(Map parameters)
+        throws SubversionException;
+
+    /**
+     * @param parameters Any runtime data which the provider may need,
+     * or <code>null</code> if not needed.
+     * @return The next valid credentials.
+     */
+    Object nextCredentials(Map parameters)
+        throws SubversionException;
+
+    /**
+     * @param parameters Any runtime data which the provider may need,
+     * or <code>null</code> if not needed.
+     * @return Whether the credentials were saved.
+     */
+    boolean saveCredentials(Object credentials, Map parameters)
+        throws SubversionException;
 }
