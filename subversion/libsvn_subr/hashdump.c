@@ -281,7 +281,7 @@ read_length_line (apr_file_t *file, char *buf, size_t *limit)
  */
 
 apr_status_t
-svn_hash_read (apr_hash_t **hash, 
+svn_hash_read (apr_hash_t *hash, 
                void * (*pack_func) (size_t len,
                                     const char *val,
                                     apr_pool_t *pool),
@@ -349,7 +349,7 @@ svn_hash_read (apr_hash_t **hash,
               package = (void *) (*pack_func) (vallen, valbuf, pool);
 
               /* The Grand Moment:  add a new hash entry! */
-              apr_hash_set (*hash, keybuf, keylen, package);
+              apr_hash_set (hash, keybuf, keylen, package);
             }
           else
             {
