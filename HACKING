@@ -311,8 +311,8 @@ invoked with improper values.
 
 String operations
 
-Use only the string functions provided in apr_strings.h.  These are
-replacements for standard C library string functions, except safer
+Use the string functions provided in apr_strings.h instead of standard
+C library functions that write to strings.  The APR functions are safer
 because they do bounds-checking and dest allocation automatically.
 Although there may be circumstances where it's theoretically safe to
 use plain C string functions (such as when you already know the
