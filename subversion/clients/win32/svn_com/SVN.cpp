@@ -298,7 +298,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 		goto Cleanup;
 	}
 
-	apr_hash_count(hash, &count);
+	count = apr_hash_count(hash);
 	rgsBound.cElements = count;
 	rgsBound.lLbound = 0;
 
