@@ -272,7 +272,7 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
  * pool (cleared after each command is handled), the parameters of the
  * command, and @a baton.  Commands will be accepted until a
  * terminating command is received (a command with "terminate" set in
- * the command table).  If a command handler returns an errors wrapped
+ * the command table).  If a command handler returns an error wrapped
  * in SVN_RA_SVN_CMD_ERR (see the @c SVN_CMD_ERR macro), the error
  * will be reported to the other side of the connection and the
  * command loop will continue; any other kind of error (typically a

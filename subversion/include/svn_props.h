@@ -157,7 +157,7 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  * LF line-endings.  It is the burden of svn library users to enforce
  * this.  Use @c svn_prop_needs_translation() to discover if a
  * certain property needs translation, and you can use
- * @c svn_subst_translate_string()/@c svn_subst_[de]translate_string() 
+ * @c svn_subst_translate_string()/@c svn_subst_detranslate_string() 
  * to do the translation.
  *
  * @defgroup svn_prop_visible_props Visible properties
