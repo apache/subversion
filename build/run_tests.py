@@ -84,11 +84,9 @@ class TestHarness:
       if self.cleanup is not None:
         cmdline.append('--cleanup')
       if self.base_url is not None:
-        cmdline.append('--url')
-        cmdline.append(quote(self.base_url))
+        cmdline.append(quote('--url=' + self.base_url))
       if self.fs_type is not None:
-        cmdline.append('--fs-type')
-        cmdline.append(quote(self.fs_type))
+        cmdline.append(quote('--fs-type=' + self.fs_type))
     elif progbase[-3:] == '.sh':
       progname = self.shell
       cmdline = [quote(progname),
@@ -103,6 +101,8 @@ class TestHarness:
         cmdline.append('--verbose')
       if self.cleanup is not None:
         cmdline.append('--cleanup')
+      if self.fs_type is not None:
+        cmdline.append(quote('--fs-type=' + self.fs_type))
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
@@ -150,7 +150,7 @@ class TestHarness:
 
 
 def main():
-  '''Usage: run_tests.py [--url <base-url>] [--fs-type <fs-type>]
+  '''Usage: run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
                       [--verbose] [--cleanup]
                       <abs_srcdir> <abs_builddir> <python> <shell>
                       <prog ...>
