@@ -506,6 +506,19 @@ SVN_POOL_FUNC_DEFINE(void, svn_pool_clear)
 
   if (subpool_of_p_p)
     {
+#if APR_HAS_THREADS
+      /* At this point, the mutex we set on our own allocator will have
+	 been destroyed.  Better create a new one.
+       */
+      apr_allocator_t *allocator;
+      apr_thread_mutex_t *mutex;
+
+      allocator = apr_pool_allocator_get (pool);
+      apr_allocator_mutex_set (allocator, NULL);
+      (void) apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
+      apr_allocator_mutex_set (allocator, mutex);
+#endif /* APR_HAS_THREADS */
+	
       /* Here we have a problematic situation.  We cleared the pool P,
          which invalidated all its userdata.  The problem is that as
          far as we can tell, the error pool on this pool isn't a copy
