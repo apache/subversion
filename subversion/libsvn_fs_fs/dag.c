@@ -268,6 +268,7 @@ svn_fs_fs__dag_walk_predecessors (dag_node_t *node,
 svn_error_t *
 svn_fs_fs__dag_init_fs (svn_fs_t *fs)
 {
+  apr_hash_t *proplist;
   svn_string_t date;
   
   /* Write out a rev file for revision 0. */
@@ -276,8 +277,9 @@ svn_fs_fs__dag_init_fs (svn_fs_t *fs)
   /* Set a date on revision 0. */
   date.data = svn_time_to_cstring (apr_time_now(), fs->pool);
   date.len = strlen (date.data);
-  return svn_fs_fs__set_rev_prop (fs, 0, SVN_PROP_REVISION_DATE, &date,
-                                  fs->pool);
+  proplist = apr_hash_make (fs->pool);
+  apr_hash_set (proplist, SVN_PROP_REVISION_DATE, APR_HASH_KEY_STRING, &date);
+  return svn_fs_fs__set_revision_proplist (fs, 0, proplist, fs->pool);
 }
 
 
