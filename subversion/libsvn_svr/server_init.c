@@ -51,9 +51,56 @@
 #include <svn_svr.h>
 #include <svn_parse.h>
 #include <apr_hash.h>
+#include <apr_dso.h>
 
 
-/* This routine does any necessary server setup, so it must be called first!
+
+
+
+/*  svr__load_plugins :  NOT EXPORTED
+
+    Loops through list of plugins, loads each using APR's DSO
+    routines.  Each plugin ultimately registers (appends) itself into
+    the policy structure.
+*/
+
+void
+svr__load_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
+{
+  ap_hash_index_t *hash_index;
+  void *key, *val;
+  size_t keylen;
+  
+
+  /* Initialize the APR DSO mechanism*/
+  ap_status_t result = ap_dso_init();
+
+  if (result != APR_SUCCESS)
+    {
+      svn_string_t *msg = 
+        svn_string_create 
+        ("svr__load_plugins(): fatal: can't ap_dso_init() ", pool);
+      svn_handle_error (svn_create_error (result, FALSE, msg, pool));
+    }
+
+  /* Loop through the hash of plugins from configdata */
+
+  for (hash_index = ap_hash_first (plugins);    /* get first hash entry */
+       hash_index;                              /* NULL if out of entries */
+       hash_index = ap_hash_next (hash_index))  /* get next hash entry */
+    {
+      
+    }
+}
+
+
+
+
+
+/* 
+   svn_svr_init()
+
+   This routine does any necessary server setup, so it must be called first!
 
    Input:  a hash of hashes, containing all server-policy data.
     
@@ -102,6 +149,11 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
       my_policies->pool = pool;
     }
 
+  /* Ben sez:  we need a debugging system here.  Let's get one quick. (TODO)
+     i.e.  
+            if (DEBUGLVL >= 2) {  printf...;  svn_uberhash_print(); }
+  */
+  svn_uberhash_print (configdata, stdout);
 
   /* Now walk through our Uberhash, just as we do in svn_uberhash_print(). */
   {
@@ -121,19 +173,36 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
         if (svn_string_compare_2cstring ((svn_string_t *) key,
                                          "repos_aliases"))
           {
-            printf ("neato!  found the repos_aliases section.\n");
-          }
+            /* The "val" is a pointer to a hash full of repository
+               aliases, alrady as we want them.  Just store this value
+               in our policy structure! */
 
-        else if (svn_string_compare_2cstring ((svn_string_t *) key,
-                                              "plugins"))
-          {
-            printf ("neato!  found the plugins section.\n");
+            printf ("svr_init(): got repository aliases.\n");
+            my_policies->repos_aliases = (svn_proplist_t *) val;
           }
 
         else if (svn_string_compare_2cstring ((svn_string_t *) key,
                                               "security"))
           {
-            printf ("neato!  found the security section.\n");
+            /* The "val" is a pointer to a hash full of security
+               commands; again, we just store a pointer to this hash
+               in our policy (the commands are interpreted elsewhere) */
+
+            printf ("svr_init(): got security restrictions.\n");
+            my_policies->global_restrictions = (svn_proplist_t *) val;
+          }
+
+        else if (svn_string_compare_2cstring ((svn_string_t *) key,
+                                              "plugins"))
+          {
+            /* The "val" is a pointer to a hash containing plugin
+               libraries to load up.  We'll definitely do that here
+               and now! */
+            
+            printf ("svr_init(): loading list of plugins...\n");
+            
+            svr__load_plugins ((ap_hash_t *) val, my_policies);
+
           }
 
         else
@@ -146,17 +215,9 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
                               (SVN_ERR_UNRECOGNIZED_SECTION, FALSE,
                                msg, pool));            
           }
-      }    
-    /* store any repository aliases, */
-    
-    /* store any  general security policies, */
-    
-    /* use apr's DSO routines to load each server plugin;
-       use dlsym to get a handle on the named init routine;
-       call init_routine (&my_policies, dso_filename, pool); */
+      }    /* for (hash_index...)  */
        
-   
-  }
+  } /* closing of Uberhash walk-through */
   
   return my_policies;
 }
@@ -168,14 +229,13 @@ svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool)
 
 void
 svn_svr_register_plugin (svn_svr_policies_t *policy,
-                         svn_string_t *dso_filename,
                          svn_svr_plugin_t *new_plugin)
 {
   /* just need to push the new plugin pointer onto the policy's
      array of plugin pointers.  */
 
   /* Store in policy->plugins hashtable : 
-     KEY = dso_filename, val = new_plugin */
+     KEY = new_plugin->name, val = new_plugin */
 
 }
 

@@ -1,5 +1,5 @@
 /*
- * server_fs.c :  wrappers around filesystem calls
+ * server_fs.c :  wrappers around filesystem calls, and other things
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.

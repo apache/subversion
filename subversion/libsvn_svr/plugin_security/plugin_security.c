@@ -105,7 +105,7 @@ svn_internal_authorization (svn_string_t *repos,
 
 void
 plugin_security_init (svn_svr_policies_t *policy,
-                      svn_string_t *dso_filename,
+                      ap_dso_handle_t *dso,
                       ap_pool_t *pool)
 {
   /* First:  create a plugin_security object */
@@ -116,12 +116,13 @@ plugin_security_init (svn_svr_policies_t *policy,
   newplugin->name = svn_string_create ("plugin_security", pool);
   newplugin->description = 
     svn_string_create ("Authorizes via ACLs in each repository's `svn_security' file.", pool);
+  newplugin->my_dso = dso;
 
   newplugin->authorization_hook = svn_internal_authorization;
   newplugin->conflict_resolve_hook = NULL;
 
   /* Finally, register the new plugin in the server's global policy struct */
-  svn_svr_register_plugin (policy, dso_filename, newplugin);
+  svn_svr_register_plugin (policy, newplugin);
 }
 
 
