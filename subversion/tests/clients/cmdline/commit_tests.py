@@ -1219,7 +1219,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   svntest.actions.run_and_verify_commit (wc_dir,
                                          None,
                                          None,
-                                         "not versioned",
+                                         "not under version control",
                                          None, None,
                                          None, None,
                                          bloo_path)
