@@ -83,7 +83,7 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
   const char *pathname;
   apr_datum_t key;
   apr_datum_t value;
-  const char *txn_name = NULL;
+  const char *txn_name;
   svn_fs_txn_t *txn;
   svn_error_t *serr;
 
@@ -102,13 +102,10 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
   /* Get the activity from the activity database. */
   key.dptr = (char *)activity_id;
   key.dsize = strlen(activity_id) + 1;  /* null-term'd */
-  if (apr_dbm_exists(dbm, key))
-    {
-      status = apr_dbm_fetch(dbm, key, &value);
-      if (status == APR_SUCCESS)
-        txn_name = value.dptr;
-    }
-  if (! txn_name)
+  status = apr_dbm_fetch(dbm, key, &value);
+  if (status == APR_SUCCESS)
+    txn_name = value.dptr;
+  else
     {
       apr_dbm_close(dbm);
       return dav_new_error(repos->pool, HTTP_NOT_FOUND, 0,
@@ -117,25 +114,23 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
 
   /* After this point, we have to cleanup the value and database. */
 
-  /* Now, we attempt to delete TXN_NAME from the Subversion
-     repository.  If we can't abort it because it was not mutable,
-     then that's not such a big deal.  Otherwise, it is. */
-  if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool)))
+  /* An empty txn_name indicates the transaction has been committed,
+     so don't try to clean it up. */
+  if (*txn_name)
     {
-      err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                "could not open transaction.", 
-                                repos->pool);
-      goto cleanup;
-    }
 
-  serr = svn_fs_abort_txn (txn, repos->pool);
-  if (serr)
-    {
-      if (serr->apr_err == SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
+      /* Now, we attempt to delete TXN_NAME from the Subversion
+         repository. */
+      if ((serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool)))
         {
-          svn_error_clear(serr);
+          err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "could not open transaction.", 
+                                    repos->pool);
+          goto cleanup;
         }
-      else
+
+      serr = svn_fs_abort_txn(txn, repos->pool);
+      if (serr)
         {
           err = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "could not abort transaction.", 

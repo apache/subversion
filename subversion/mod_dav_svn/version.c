@@ -1025,6 +1025,15 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   register_deltification_cleanup(source->info->repos->repos, new_rev,
                                  source->info->r->connection->pool);
 
+  /* Since the commit was successful, the txn ID is no longer valid.
+     Store an empty txn ID in the activity database so that when the
+     client deletes the activity, we don't try to open and abort the
+     transaction. */
+  err = dav_svn_store_activity(source->info->repos,
+                               source->info->root.activity_id, "");
+  if (err != NULL)
+    return err;
+
   /* Check the dav_resource->info area for information about the
      special X-SVN-Options: header that may have come in the http
      request.  If the header contains "no-merge-response", then pass
