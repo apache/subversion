@@ -108,7 +108,7 @@ static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
                                    dav_datum *pvalue)
 {
   svn_string_t propname = { key.dptr, key.dsize };
-  svn_stringbuf_t *propval;
+  svn_stringbuf_t *propval, *xmlsafe = NULL;
   svn_error_t *serr;
 
   if (strcmp(key.dptr, "METADATA") == 0)
@@ -149,13 +149,15 @@ static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
       return NULL;
     }
 
-  pvalue->dptr = propval->data;
-  pvalue->dsize = propval->len;
+  /* XML-escape our properties before sending them across the wire. */
+  svn_xml_escape_string (&xmlsafe, propval, db->p);
+  pvalue->dptr = xmlsafe->data;
+  pvalue->dsize = xmlsafe->len;
 
   /* ### temp hack. fix the return value */
   svn_stringbuf_setempty(db->work);
   svn_stringbuf_appendbytes(db->work, "", 1);
-  svn_stringbuf_appendbytes(db->work, propval->data, propval->len);
+  svn_stringbuf_appendbytes(db->work, xmlsafe->data, xmlsafe->len);
   pvalue->dptr = db->work->data;
   pvalue->dsize = db->work->len + 1;    /* include null term */
 
