@@ -147,6 +147,8 @@ svn_wc__do_update_cleanup (svn_stringbuf_t *path,
   svn_wc_entry_t *entry;
 
   SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (entry == NULL)
+    return SVN_NO_ERROR;
 
   if (entry->kind == svn_node_file)
     {
@@ -178,79 +180,6 @@ svn_wc__do_update_cleanup (svn_stringbuf_t *path,
   else
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
                               "Unrecognized node kind: '%s'\n", path->data);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-
-svn_error_t *
-svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
-                                 svn_revnum_t revision,
-                                 svn_boolean_t recurse,
-                                 apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  SVN_ERR (svn_wc_entries_read (&entries, dir_path, subpool));
-
-  /* Loop over this directory's entries: */
-  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      const char *keystring;
-      apr_ssize_t klen;
-      void *val;
-      svn_stringbuf_t *current_entry_name;
-      svn_wc_entry_t *current_entry; 
-      svn_stringbuf_t *full_entry_path;
-
-      /* Get the next entry */
-      apr_hash_this (hi, &key, &klen, &val);
-      keystring = (const char *) key;
-      current_entry = (svn_wc_entry_t *) val;
-
-      /* Compute the name of the entry */
-      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
-        current_entry_name = NULL;
-      else
-        current_entry_name = svn_stringbuf_create (keystring, subpool);
-
-      /* Compute the complete path of the entry */
-      full_entry_path = svn_stringbuf_dup (dir_path, subpool);
-      if (current_entry_name)
-        svn_path_add_component (full_entry_path, current_entry_name);
-
-      /* If the entry is a file or SVN_WC_ENTRY_THIS_DIR, and it has a
-         different rev than REVISION, fix it.  (But ignore the entry
-         if it's scheduled for addition or replacement.) */
-      if (((current_entry->kind == svn_node_file)
-           || (! current_entry_name))
-          && (current_entry->revision != revision)
-          && (current_entry->schedule != svn_wc_schedule_add)
-          && (current_entry->schedule != svn_wc_schedule_replace))
-        SVN_ERR (svn_wc__entry_modify (dir_path, current_entry_name,
-                                       SVN_WC__ENTRY_MODIFY_REVISION,
-                                       revision,
-                                       svn_node_none, svn_wc_schedule_normal,
-                                       FALSE, FALSE, 0, 0, NULL, NULL,
-                                       subpool, NULL));
-      
-      /* If entry is a dir (and not `.', and not scheduled for
-         addition), then recurse into it. */
-      else if (recurse && (current_entry->kind == svn_node_dir)
-               && current_entry_name
-               && (current_entry->schedule != svn_wc_schedule_add))
-        SVN_ERR (svn_wc__ensure_uniform_revision (full_entry_path,
-                                                  revision, recurse, subpool));
-    }
-
-  /* We're done examining this dir's entries, so free them. */
-  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -839,7 +768,13 @@ svn_wc_add (svn_stringbuf_t *path,
           /* If this new directory has ancestry, it's not enough to
              schedule it for addition with copyfrom args.  We also
              need to rewrite its ancestor-url, and rewrite the
-             ancestor-url of ALL its children! */
+             ancestor-url of ALL its children! 
+
+             We're doing this because our current commit model (for
+             hysterical raisins, presumably) assumes an entry's URL is
+             correct before commit -- i.e. the URL is not tweaked in
+             the post-commit bumping process.  We might want to change
+             this model someday. */
 
           /* Figure out what the new url should be. */
           svn_stringbuf_t *url;
@@ -847,8 +782,9 @@ svn_wc_add (svn_stringbuf_t *path,
           url = svn_stringbuf_dup (parent_entry->url, pool);
           svn_path_add_component (url, basename);
 
-          /* Change the entry urls recursively. */
-          SVN_ERR (svn_wc__recursively_rewrite_urls (path, url, pool));
+          /* Change the entry urls recursively (but not the working rev). */
+          SVN_ERR (svn_wc__do_update_cleanup (path, TRUE, /* recursive */
+                                              url, SVN_INVALID_REVNUM, pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,
