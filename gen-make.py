@@ -30,6 +30,7 @@ def main(fname, oname=None, skip_depends=0):
   groups = { }		# group name -> targets
   install = { }		# install area name -> targets
   test_progs = [ ]
+  test_deps = [ ]
   file_deps = [ ]
   target_dirs = { }
 
@@ -77,9 +78,10 @@ def main(fname, oname=None, skip_depends=0):
     tpath = target_ob.output
     tfile = os.path.basename(tpath)
 
-    if target_ob.install == 'test' and bldtype == 'exe' \
-       and parser.get(target, 'testing') != 'skip':
-      test_progs.append(tpath)
+    if target_ob.install == 'test' and bldtype == 'exe':
+      test_deps.append(tpath)
+      if parser.get(target, 'testing') != 'skip':
+        test_progs.append(tpath)
 
     pats = parser.get(target, 'sources')
     if not pats:
@@ -232,6 +234,7 @@ def main(fname, oname=None, skip_depends=0):
   scripts, s_errors = _collect_paths(parser.get('test-scripts', 'paths'))
   errors = errors or s_errors
 
+  ofile.write('TEST_DEPS = %s\n\n' % string.join(test_deps + scripts))
   ofile.write('TEST_PROGRAMS = %s\n\n' % string.join(test_progs + scripts))
 
   if not skip_depends:
