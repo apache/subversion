@@ -102,6 +102,8 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
       svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
                                          svntest.SVNAnyOutput, [],
                                          "update", "-r%s" % (rev+1),
+                                         '--username', svntest.main.wc_author,
+                                         '--password', svntest.main.wc_passwd,
                                          sbox.wc_dir)
 
       wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir)
@@ -133,11 +135,12 @@ def test_create(sbox):
   svntest.main.create_repos(repo_dir)
   svntest.main.set_repos_paths(repo_dir)
 
-  svntest.actions.run_and_verify_svn(
-    "Creating rev 0 checkout",
-    ["Checked out revision 0.\n"], [],
-    "--username", "jrandom", "--password", "rayjandom",
-    "checkout", svntest.main.current_repo_url, wc_dir)
+  svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
+                                     ["Checked out revision 0.\n"], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     "checkout",
+                                     svntest.main.current_repo_url, wc_dir)
 
 
   svntest.actions.run_and_verify_svn(
@@ -194,7 +197,7 @@ def extra_headers(sbox):
 
 #----------------------------------------------------------------------
 def extra_blockcontent(sbox):
-  "ensure loading of dumpstream with C-L > P-C-L + T-C-L"
+  "load success on oversized Content-length"
 
   ###FIXME: This test fails but should succeed in the light of
   # forward compatibility
@@ -212,7 +215,7 @@ def extra_blockcontent(sbox):
 
 #----------------------------------------------------------------------
 def inconsistent_headers(sbox):
-  "fail to load when C-L < P-C-L + T-C-L"
+  "load failure on undersized Content-length"
 
   test_create(sbox)
 
@@ -234,7 +237,10 @@ def dump_copied_dir(sbox):
   old_C_path = os.path.join(wc_dir, 'A', 'C')
   new_C_path = os.path.join(wc_dir, 'A', 'B', 'C')
   svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
+  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', 'log msg')
 
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   if svntest.actions.compare_and_display_lines(
@@ -257,8 +263,10 @@ def dump_move_dir_modify_child(sbox):
   Q_path = os.path.join(wc_dir, 'A', 'Q')
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
-
+  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', 
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', 'log msg')
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
