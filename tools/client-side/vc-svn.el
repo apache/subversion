@@ -367,12 +367,9 @@ This function returns a status of either 0 (no differences found), or
   (let* ((diff-switches-list
           ;; In Emacs 21.2, the `vc-diff-switches-list' macro started
           ;; requiring its symbol argument to be quoted.
-          (if (<= 21.2 (string-to-number
-                        (save-match-data
-                          (string-match "[0-9]+\\.[0-9]+" emacs-version)
-                          (match-string 0 emacs-version))))
-              (vc-diff-switches-list 'SVN)
-            (vc-diff-switches-list svn)))
+          (condition-case ignored
+              (vc-diff-switches-list svn)
+            ('void-variable (vc-diff-switches-list 'SVN))))
          (status (vc-svn-run-status file))
          (local (elt status 1))
          (changed (elt status 2))
