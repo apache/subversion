@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.15 $ of this document.)
+              ($Revision: 1.16 $ of this document.)
 
 * Introduction
 
@@ -220,14 +220,14 @@ Let's see what this looks like as an abstract data structure in the
 repository, and how that structure works in various operations (such
 as update, commit, and branch).
 
-In the diagrams that follow, lines with arrowheads represent time
-(that is, the progression of versions), and any other lines represent
-parent-to-child connections in a directory hierarchy.  Boxes are
-"nodes".  A node is either a file or a directory -- a letter in the
-upper left indicates which kind, and next to the letter is the node's
-name.  The name is printed just as a reminder in these diagrams; in
-actual implementation, a node's name would probably only be stored in
-its parent, not in the node itself.
+In the diagrams that follow, lines with arrowheads represent backward
+time-flow (that is, the regression of versions), and any other lines
+represent parent-to-child connections in a directory hierarchy.  Boxes
+are "nodes".  A node is either a file or a directory -- a letter in
+the upper left indicates which kind, and next to the letter is the
+node's name.  The name is printed just as a reminder in these
+diagrams; in actual implementation, a node's name would probably only
+be stored in its parent, not in the node itself.
 
 A file node has a byte-string for its content, whereas directory nodes
 have a list of dir_entries, eaching pointing to another node.
