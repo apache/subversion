@@ -286,34 +286,6 @@ svn_fs_fs__dag_init_fs (svn_fs_t *fs)
 
 /* Some of these are helpers for functions outside this section. */
 
-/* Given directory NODEREV in FS, set *ENTRIES_P to its entries list
-   hash, or to NULL if NODEREV has no entries.  The entries list will
-   be allocated in POOL, and the entries in that list will not have
-   interesting value in their 'kind' fields.  If NODEREV is not a
-   directory, return the error SVN_ERR_FS_NOT_DIRECTORY. */
-static svn_error_t *
-get_dir_entries (apr_hash_t **entries_p,
-                 svn_fs_t *fs,
-                 node_revision_t *noderev,
-                 apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-
-  if (noderev->kind != svn_node_dir )
-    return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to create entry in non-directory parent");
-
-  SVN_ERR (svn_fs_fs__rep_contents_dir (&entries, fs,
-                                        noderev, pool));
-
-  *entries_p = entries;
-
-  /* Return our findings. */
-  return SVN_NO_ERROR;
-}
-
-
 /* Set *ID_P to the node-id for entry NAME in PARENT.  If no such
    entry, set *ID_P to NULL but do not error.  The entry is allocated
    in POOL or in the same pool as PARENT; the caller should copy if it
@@ -440,8 +412,12 @@ svn_fs_fs__dag_dir_entries (apr_hash_t **entries,
   node_revision_t *noderev;
 
   SVN_ERR (get_node_revision (&noderev, node, pool));
-  return get_dir_entries (entries, svn_fs_fs__dag_get_fs (node), noderev,
-                          pool);
+
+  if (noderev->kind != svn_node_dir)
+    return svn_error_create (SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                             "Can't get entries of non-directory");
+
+  return svn_fs_fs__rep_contents_dir (entries, node->fs, noderev, pool);
 }
 
 
@@ -449,6 +425,7 @@ svn_error_t *
 svn_fs_fs__dag_set_entry (dag_node_t *node,
                           const char *entry_name,
                           const svn_fs_id_t *id,
+                          svn_node_kind_t kind,
                           const char *txn_id,
                           apr_pool_t *pool)
 {
@@ -464,7 +441,7 @@ svn_fs_fs__dag_set_entry (dag_node_t *node,
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to set entry in immutable node");
 
-  return set_entry (node, entry_name, id, node->kind, txn_id, pool);
+  return set_entry (node, entry_name, id, kind, txn_id, pool);
 }
 
 
@@ -782,6 +759,7 @@ svn_fs_fs__dag_delete_if_mutable (svn_fs_t *fs,
 
       /* Loop over hash entries */
       SVN_ERR (svn_fs_fs__dag_dir_entries (&entries, node, pool));
+      entries = svn_fs_fs__copy_dir_entries (entries, pool);
       if (entries)
         {
           for (hi = apr_hash_first (pool, entries);
@@ -1043,7 +1021,8 @@ svn_fs_fs__dag_copy (dag_node_t *to_node,
     }
       
   /* Set the entry in to_node to the new id. */
-  SVN_ERR (svn_fs_fs__dag_set_entry (to_node, entry, id, txn_id, pool));
+  SVN_ERR (svn_fs_fs__dag_set_entry (to_node, entry, id, from_node->kind,
+                                     txn_id, pool));
 
   return SVN_NO_ERROR;
 }
