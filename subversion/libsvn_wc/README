@@ -281,6 +281,10 @@ analogous to CVS/ sudirs:
    Probably the same routine will be used by finish_file() and in
    crash recovery.
 
+   NOTE: the above does not include the ref-counting behavior we need
+   to properly update directories.  Not going to document it further
+   until have as much code as the above written, though.
+
 `tmp'
 
    A shallow mirror of the working directory (i.e., the parent of the
