@@ -3,40 +3,12 @@ everything here will get done eventually, but volunteers will make it
 happen faster! :-)  Please email dev@subversion.tigris.org if you want
 to take something on.
 
-1. Binary diffing engine.
-
-   Produces a diff that will turn Source into Target, where the size
-   of the diff is proportional to the change (i.e., not a line-based
-   text diff, but a real binary diff).  The interface would be
-   something like this:
-
-      apr_status_t make_bdiff (apr_file_t **out,
-                               apr_file_t *seekable_src, 
-                               apr_file_t *streamy_target);
-
-   Josh MacDonald's xdelta might be a good place to start
-   (see http://www.xcf.berkeley.edu/~jmacd/xdelta.html), although it
-   would be even better to make it use the vcdiff format described in
-   http://www.ietf.org/internet-drafts/draft-korn-vcdiff-01.txt.
-   Or, just implementing the vdelta algorithm directly wouldn't be so
-   hard.  It's described in
-
-       "Delta Algorithms: An Empirical Analysis"
-
-       Hunt, J. J., Vo, K.-P., and Tichy, W. F.
-       An empirical study of delta algorithms.
-       Lecture Notes in Computer Science 1167 (July 1996), 49-66.
-
-   (We have this in PostScript format, mail jimb@redhat.com or
-   kfogel@collab.net if you want a copy).
-
-
-2. CVS->SVN repository conversion program (or script, whatever).
+1. CVS->SVN repository conversion program (or script, whatever).
    Bob Miller <kbob@jogger-egg.com> is working on this, see
    tools/cvs2svn/.
 
 
-3. Configuring in the presence / absence of Berkeley DB
+2. Configuring in the presence / absence of Berkeley DB
 
    At the moment, configure.in invokes SVN_CHECK_BERKELEY_DB, which
    compiles, links, and runs a program against the Berkeley DB
