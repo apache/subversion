@@ -145,11 +145,17 @@ create_temp_file (apr_file_t **f, const svn_string_t *value, apr_pool_t *pool)
 }
 
 
-/* Check if the HOOK program exists and is a file, using POOL for
-   temporary allocations. Returns the hook program if found,
-   otherwise NULL. */
+/* Check if the HOOK program exists and is a file or a symbolic link, using
+   POOL for temporary allocations. 
+
+   If the hook exists but is a broken symbolic link, set *BROKEN_LINK
+   to TRUE, else if the hook program exists set *BROKEN_LINK to FALSE.
+
+   Return the hook program if found, else return NULL and don't touch
+   *BROKEN_LINK.
+*/
 static const char*
-check_hook_cmd (const char *hook, apr_pool_t *pool)
+check_hook_cmd (const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
 {
   static const char* const check_extns[] = {
 #ifdef WIN32
@@ -163,6 +169,7 @@ check_hook_cmd (const char *hook, apr_pool_t *pool)
 
   const char *const *extn;
   svn_error_t *err = NULL;
+  svn_boolean_t is_special;
   for (extn = check_extns; *extn; ++extn)
     {
       const char *const hook_path =
@@ -171,14 +178,32 @@ check_hook_cmd (const char *hook, apr_pool_t *pool)
       svn_node_kind_t kind;
       if (!(err = svn_io_check_resolved_path (hook_path, &kind, pool))
           && kind == svn_node_file)
-        return hook_path;
-        
+        {
+          *broken_link = FALSE;
+          return hook_path;
+        }
+      svn_error_clear(err);
+      if (!(err = svn_io_check_special_path (hook_path, &kind, &is_special,
+                                             pool))
+          && is_special == TRUE)
+        {
+          *broken_link = TRUE;
+          return hook_path;
+        }
+      svn_error_clear(err);
     }
-
-  svn_error_clear(err);
   return NULL;
 }
 
+
+/* Return an error for the failure of HOOK due to a broken symlink. */
+static svn_error_t *
+hook_symlink_error (const char *hook)
+{
+  return svn_error_createf
+    (SVN_ERR_REPOS_HOOK_FAILURE, NULL,
+     "Failed to run '%s' hook; broken symlink", hook);
+}
 
 svn_error_t *
 svn_repos__hooks_start_commit (svn_repos_t *repos,
@@ -186,8 +211,13 @@ svn_repos__hooks_start_commit (svn_repos_t *repos,
                                apr_pool_t *pool)
 {
   const char *hook = svn_repos_start_commit_hook (repos, pool);
+  svn_boolean_t broken_link;
   
-  if ((hook = check_hook_cmd (hook, pool)))
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
     {
       const char *args[4];
 
@@ -209,8 +239,13 @@ svn_repos__hooks_pre_commit (svn_repos_t *repos,
                              apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_commit_hook (repos, pool);
+  svn_boolean_t broken_link;
 
-  if ((hook = check_hook_cmd (hook, pool)))
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
     {
       const char *args[4];
 
@@ -232,8 +267,13 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
                               apr_pool_t *pool)
 {
   const char *hook = svn_repos_post_commit_hook (repos, pool);
+  svn_boolean_t broken_link;
 
-  if ((hook = check_hook_cmd (hook, pool)))
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
     {
       const char *args[4];
 
@@ -258,8 +298,13 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
+  svn_boolean_t broken_link;
 
-  if ((hook = check_hook_cmd (hook, pool)))
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
     {
       const char *args[6];
       apr_file_t *stdin_handle = NULL;
@@ -307,8 +352,13 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       apr_pool_t *pool)
 {
   const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
+  svn_boolean_t broken_link;
   
-  if ((hook = check_hook_cmd (hook, pool)))
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
     {
       const char *args[6];
       apr_file_t *stdin_handle = NULL;
