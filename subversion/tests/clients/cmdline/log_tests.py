@@ -25,7 +25,8 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os, traceback
+import shutil, string, sys, re, os, traceback, exceptions
+
 
 # The `svntest' module
 try:
@@ -72,12 +73,16 @@ msg_separator = '------------------------------------' \
                 + '------------------------------------\n'
 
 
+# (abbreviation)
+path_index = svntest.actions.path_index
+
+
 ######################################################################
 # Utilities
 #
 
 def guarantee_repos_and_wc():
-  "Make a repository and working copy, commit max_revision revisions."
+  "Make a repos and wc, commit max_revision revs.  Return 0 on success."
   global wc_path, max_revision
 
   if (wc_path != None): return
@@ -161,14 +166,33 @@ def guarantee_repos_and_wc():
 
   max_revision = 9
 
-  ### todo: Here, Ben is going to insert some code to check status.
-  ### Thanks Ben!  We love Ben!  Yay Ben!  <thud>
-
   # Restore.
   os.chdir (was_cwd)
 
+  # Let's run 'svn status' and make sure the working copy looks
+  # exactly the way we think it should.  Start with a generic
+  # greek-tree-list, where every local and repos revision is at 9.
+  status_list = svntest.actions.get_virginal_status_list(wc_path, '9')
 
-import exceptions
+  # remove A/B/E/alpha, add A/C/epsilon
+  status_list.pop(path_index(status_list, os.path.join(wc_path, alpha_path)))
+  status_list.append([os.path.join(wc_path, epsilon_path), None, {},
+                      {'status' : '_ ',
+                       'locked' : ' ',
+                       'wc_rev' : '9',
+                       'repos_rev' : '9'}])
+
+  # props exist on A/B and A/mu
+  status_list[path_index(status_list, os.path.join(wc_path, B_path))][3]['status'] = "__"
+  status_list[path_index(status_list, os.path.join(wc_path, mu_path))][3]['status'] = "__"
+
+  # Convert the list into a real tree.
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Run 'svn st -uv' and compare the actual results with our tree.
+  return svntest.actions.run_and_verify_status(wc_path, expected_status_tree)
+
+
 
 
 # For errors seen while parsing log data.
@@ -322,8 +346,9 @@ def check_log_chain (chain, start, end):
 
 #----------------------------------------------------------------------
 def plain_log():
-  "Test svn log invoked with no arguments from the top of the wc."
-  guarantee_repos_and_wc()
+  "'svn log', no args, top of wc."
+  if guarantee_repos_and_wc():
+    return 1
 
   result = 0
 
