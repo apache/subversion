@@ -358,7 +358,7 @@ static int req_check_access(request_rec *r,
             ap_log_rerror(APLOG_MARK, APLOG_ERR, svn_err->apr_err, r,
                           "%s", svn_err->message);
 
-            return conf->authoritative ? HTTP_UNAUTHORIZED: DECLINED;
+            return DECLINED;
         }
 
         /* Cache the open repos for the next request on this connection */
