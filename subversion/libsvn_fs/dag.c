@@ -371,29 +371,24 @@ get_dir_entries (skel_t **entries,
       /* Make sure we're looking at a directory node here */
       if (svn_fs__matches_atom (SVN_FS__NR_HDR_KIND (header), "dir"))
         {
-          skel_t *rep_key = SVN_FS__NR_DATA_KEY (node_rev);
-          skel_t *rep;
-          const char *key = apr_pstrndup (trail->pool,
-                                          rep_key->data,
-                                          rep_key->len);
-          svn_string_t unparsed_entries;
+          skel_t *rep_key_skel = SVN_FS__NR_DATA_KEY (node_rev);
+          const char *rep_key = apr_pstrndup (trail->pool,
+                                              rep_key_skel->data,
+                                              rep_key_skel->len);
+          svn_string_t entries_raw;
           skel_t *entry;
 
           /* Empty rep key means no entries exist. */
-          if ((! key) || (key[0] == '\0'))
+          if ((! rep_key) || (rep_key[0] == '\0'))
             {
               *entries = svn_fs__make_empty_list (trail->pool);
               return SVN_NO_ERROR;
             }
 
-          /* Get the representation. */
-          SVN_ERR (svn_fs__read_rep (&rep, fs, key, trail));
-
           /* Now we have a rep, follow through to get the entries. */
-          SVN_ERR (svn_fs__string_from_rep (&unparsed_entries, 
-                                            fs, rep, trail));
-          *entries = svn_fs__parse_skel ((char *) unparsed_entries.data,
-                                         unparsed_entries.len,
+          SVN_ERR (svn_fs__rep_contents (&entries_raw, fs, rep_key, trail));
+          *entries = svn_fs__parse_skel ((char *) entries_raw.data,
+                                         entries_raw.len,
                                          trail->pool);
 
           /* Check entries are well-formed. */
@@ -549,14 +544,13 @@ set_entry (dag_node_t *parent,
   
   /* Change the entries list. */
   {
-    skel_t *rep, *entries;
+    skel_t *entries;
     skel_t *entry;
     svn_string_t str;
     svn_stringbuf_t *unparsed_entries;
     svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
 
-    SVN_ERR (svn_fs__read_rep (&rep, fs, mutable_rep_key, trail));
-    SVN_ERR (svn_fs__string_from_rep (&str, fs, rep, trail));
+    SVN_ERR (svn_fs__rep_contents (&str, fs, mutable_rep_key, trail));
     entries = svn_fs__parse_skel ((char *) str.data, str.len, trail->pool);
     SVN_ERR (find_dir_entry (&entry, NULL, entries, name, trail));
 
@@ -794,7 +788,7 @@ svn_fs__dag_get_proplist (skel_t **proplist_p,
                           trail_t *trail)
 {
   skel_t *node_rev;
-  skel_t *rep_key_skel, *rep;
+  skel_t *rep_key_skel;
   const char *rep_key;
   svn_string_t propstr;
   
@@ -813,8 +807,7 @@ svn_fs__dag_get_proplist (skel_t **proplist_p,
     }
 
   rep_key = apr_pstrndup (trail->pool, rep_key_skel->data, rep_key_skel->len);
-  SVN_ERR (svn_fs__read_rep (&rep, node->fs, rep_key, trail));
-  SVN_ERR (svn_fs__string_from_rep (&propstr, node->fs, rep, trail));
+  SVN_ERR (svn_fs__rep_contents (&propstr, node->fs, rep_key, trail));
   *proplist_p = svn_fs__parse_skel ((char *) propstr.data,
                                     propstr.len,
                                     trail->pool);
@@ -829,9 +822,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
                           trail_t *trail)
 {
   skel_t *node_rev;
-  skel_t *rep;
-  const char *orig_rep_key, *mutable_rep_key, *str_key;
-  svn_stringbuf_t *unparsed_props;
+  const char *orig_rep_key, *mutable_rep_key;
   
   /* Sanity check: this node better be mutable! */
   {
@@ -867,18 +858,6 @@ svn_fs__dag_set_proplist (dag_node_t *node,
   SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, orig_rep_key,
                                     node->fs, trail));
 
-  /* Now, get the key to the string our mutable rep points to. */
-  SVN_ERR (svn_fs__read_rep (&rep, node->fs, mutable_rep_key, trail));
-  str_key = svn_fs__string_key_from_rep (rep, trail->pool);
-
-  /* Clear the old string, write the new one. */
-  unparsed_props = svn_fs__unparse_skel (proplist, trail->pool);
-  SVN_ERR (svn_fs__string_clear (node->fs, str_key, trail));
-  SVN_ERR (svn_fs__string_append (node->fs, &str_key, 
-                                  unparsed_props->len, 
-                                  unparsed_props->data, 
-                                  trail));
-
   /* If we made a new rep, record it in the node revision. */
   if (strcmp (mutable_rep_key, orig_rep_key) != 0)
     {
@@ -887,6 +866,21 @@ svn_fs__dag_set_proplist (dag_node_t *node,
       SVN_ERR (svn_fs__put_node_revision (node->fs, node->id,
                                           node_rev, trail));
     }
+
+  /* Replace the old property list with the new one. */
+  {
+    svn_stream_t *wstream;
+    apr_size_t len;
+    svn_stringbuf_t *unparsed_props;
+
+    unparsed_props = svn_fs__unparse_skel (proplist, trail->pool);
+    wstream = svn_fs__rep_write_stream (node->fs, mutable_rep_key,
+                                        trail, trail->pool);
+    SVN_ERR (svn_fs__rep_clear (node->fs, mutable_rep_key, trail));
+    len = unparsed_props->len;
+    SVN_ERR (svn_stream_write (wstream, unparsed_props->data, &len));
+             
+  }
 
   return SVN_NO_ERROR;
 }
@@ -1085,10 +1079,8 @@ delete_entry (dag_node_t *parent,
   const char *rep_key, *mutable_rep_key;
   svn_fs_t *fs = parent->fs;
   skel_t *prev_entry, *entry;
-  skel_t *rep, *entries;
+  skel_t *entries;
   svn_string_t str;
-  svn_stringbuf_t *unparsed_entries;
-  const char *string_key;
   svn_fs_id_t *id;
   dag_node_t *node; 
 
@@ -1151,8 +1143,7 @@ delete_entry (dag_node_t *parent,
 
   /* Read the representation, then use it to get the string that holds
      the entries list.  Parse that list into a browsable skel. */
-  SVN_ERR (svn_fs__read_rep (&rep, fs, mutable_rep_key, trail));
-  SVN_ERR (svn_fs__string_from_rep (&str, fs, rep, trail));
+  SVN_ERR (svn_fs__rep_contents (&str, fs, mutable_rep_key, trail));
   entries = svn_fs__parse_skel ((char *) str.data, str.len, trail->pool);
 
   /* Find NAME in the ENTRIES skel.  */
@@ -1192,15 +1183,20 @@ delete_entry (dag_node_t *parent,
   else
     prev_entry->next = entry->next;
 
-  /* Write out the updated entries list. */
-  unparsed_entries = svn_fs__unparse_skel (entries, trail->pool);
-  string_key = svn_fs__string_key_from_rep (rep, trail->pool);
-  SVN_ERR (svn_fs__string_clear (fs, string_key, trail));
-  SVN_ERR (svn_fs__string_append (fs, &string_key,
-                                  unparsed_entries->len,
-                                  unparsed_entries->data,
-                                  trail));
+  /* Replace the old entries list with the new one. */
+  {
+    svn_stream_t *ws;
+    svn_stringbuf_t *unparsed_entries;
+    apr_size_t len;
 
+    unparsed_entries = svn_fs__unparse_skel (entries, trail->pool);
+
+    SVN_ERR (svn_fs__rep_clear (fs, mutable_rep_key, trail));
+    ws = svn_fs__rep_write_stream (fs, mutable_rep_key, trail, trail->pool);
+    len = unparsed_entries->len;
+    SVN_ERR (svn_stream_write (ws, unparsed_entries->data, &len));
+  }
+    
   return SVN_NO_ERROR;
 }
 
@@ -1426,7 +1422,6 @@ svn_fs__dag_file_length (apr_size_t *length,
                          trail_t *trail)
 { 
   skel_t *node_rev;
-  const char *str_key;
   
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
@@ -1441,19 +1436,14 @@ svn_fs__dag_file_length (apr_size_t *length,
   /* Seg-fault protection. */
   assert (svn_fs__list_length (node_rev) >= 3);
 
-  /* Get the string key from the rep. */
+  /* Get the rep key, get the size through that. */
   {
-    skel_t *rep;
     const char *rep_key = apr_pstrndup (trail->pool,
                                         (SVN_FS__NR_DATA_KEY (node_rev))->data,
                                         (SVN_FS__NR_DATA_KEY (node_rev))->len);
 
-    SVN_ERR (svn_fs__read_rep (&rep, file->fs, rep_key, trail));
-    str_key = svn_fs__string_key_from_rep (rep, trail->pool);
+    SVN_ERR (svn_fs__rep_size (length, file->fs, rep_key, trail));
   }
-
-  /* Use the string key to query the string record's size. */
-  SVN_ERR (svn_fs__string_size (length, file->fs, str_key, trail));
 
   return SVN_NO_ERROR;
 }
@@ -1468,8 +1458,10 @@ svn_fs__dag_set_contents (dag_node_t *file,
   /* ### todo: writing file contents needs to move to a streamy
      interface. */
 
+  svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   skel_t *node_rev_skel;
   svn_boolean_t is_mutable;
+  const char *rep_key, *mutable_rep_key;
 
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
@@ -1489,46 +1481,34 @@ svn_fs__dag_set_contents (dag_node_t *file,
   /* Get the node's current contents... */
   SVN_ERR (get_node_revision (&node_rev_skel, file, trail));
 
-  /* Get a mutable representation for the contents, write them. */
+  rep_key = apr_pstrndup (trail->pool,
+                          (SVN_FS__NR_DATA_KEY (node_rev_skel))->data,
+                          (SVN_FS__NR_DATA_KEY (node_rev_skel))->len);
+  
+  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key, fs, trail));
+  
+  /* If we got a new rep, make the node revision refer to it. */
+  if (strcmp (rep_key, mutable_rep_key) != 0)
+    {
+      /* We made a new rep, so update the node revision. */
+      (SVN_FS__NR_DATA_KEY (node_rev_skel))->data = mutable_rep_key;
+      (SVN_FS__NR_DATA_KEY (node_rev_skel))->len  = strlen (mutable_rep_key);
+      SVN_ERR (svn_fs__put_node_revision (fs, file->id,
+                                          node_rev_skel, trail));
+    }
+
+  /* This is so losing.  We need to move to a streamy, delta-aware
+     interface.  Thanks for listening. */
+
+  /* Replace the old contents with the new contents. */
   {
-    const char *old_rep_key, *new_rep_key, *new_string_key;
-    skel_t *mutable_rep;
+    svn_stream_t *ws;
+    apr_size_t len;
 
-    old_rep_key = apr_pstrndup (trail->pool,
-                            (SVN_FS__NR_DATA_KEY (node_rev_skel))->data,
-                            (SVN_FS__NR_DATA_KEY (node_rev_skel))->len);
-
-    SVN_ERR (svn_fs__get_mutable_rep (&new_rep_key, old_rep_key,
-                                      file->fs, trail));
-
-    /* This is so losing.  We need to move to a streamy, delta-aware
-       interface.  Thanks for listening. */
-
-    /* ### todo: we shouldn't even be writing string data directly
-       here, should be going *through* the representation.  I think
-       the same may be true for all calls to svn_fs__string_*() in
-       this file... */
-
-    /* fooo; */
-    SVN_ERR (svn_fs__read_rep (&mutable_rep, file->fs, new_rep_key, trail));
-    new_string_key = svn_fs__string_key_from_rep (mutable_rep, trail->pool);
-    SVN_ERR (svn_fs__string_clear (file->fs, new_string_key, trail));
-    SVN_ERR (svn_fs__string_append (file->fs, &new_string_key,
-                                    contents->len,
-                                    contents->data,
-                                    trail));
-
-    if (strcmp (old_rep_key, new_rep_key) != 0)
-      {
-        /* We made a new rep, so update the node revision. */
-        (SVN_FS__NR_DATA_KEY (node_rev_skel))->data = new_rep_key;
-        (SVN_FS__NR_DATA_KEY (node_rev_skel))->len  = strlen (new_rep_key);
-        SVN_ERR (svn_fs__put_node_revision (file->fs, file->id,
-                                            node_rev_skel, trail));
-      }
-    /* Else the node revision already pointed to a mutable rep, and so
-       doesn't need to be updated. */
-
+    ws = svn_fs__rep_write_stream (fs, mutable_rep_key, trail, trail->pool);
+    SVN_ERR (svn_fs__rep_clear (fs, mutable_rep_key, trail));
+    len = contents->len;
+    SVN_ERR (svn_stream_write (ws, contents->data, &len));
   }
 
   return SVN_NO_ERROR;
