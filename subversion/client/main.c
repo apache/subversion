@@ -51,30 +51,30 @@
 static const svn_cl__cmd_desc_t cmd_table[] = 
 {
   { "add",        FALSE,  svn_cl__add_command,      svn_cl__add,
-    "Add new files and directories to version control.\n\n"
+    "Add new files and directories to version control.\n"
     "usage: add [TARGETS]\n" },
   { "ad",         TRUE, 0, NULL, NULL },
   { "new",        TRUE, 0, NULL, NULL },
 
   { "checkout",   FALSE,  svn_cl__checkout_command, svn_cl__checkout,
-    "Check out a working directory from a repository.\n\n"
+    "Check out a working directory from a repository.\n"
     "usage: checkout REPOSPATH\n" },
   { "co",         TRUE, 0, NULL, NULL },
 
   { "commit",     FALSE,  svn_cl__commit_command,   svn_cl__commit,
-    "Commit changes from your working copy to the repository.\n\n"
+    "Commit changes from your working copy to the repository.\n"
     "usage: commit [TARGETS]\n" },
   { "ci",         TRUE, 0, NULL, NULL },
 
   { "delete",     FALSE,  svn_cl__delete_command,   svn_cl__delete,
-    "Remove files and directories from version control.\n\n"
+    "Remove files and directories from version control.\n"
     "usage: delete [TARGETS]\n" },
   { "del",        TRUE, 0, NULL, NULL },
   { "remove",     TRUE, 0, NULL, NULL },
   { "rm",         TRUE, 0, NULL, NULL },
 
   { "help",       FALSE,  svn_cl__help_command,   svn_cl__help,
-    "Display this usage message.\n\n"
+    "Display this usage message.\n"
     "usage: help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n" },
   { "?",          TRUE, 0, NULL, NULL },
   { "h",          TRUE, 0, NULL, NULL },
@@ -84,31 +84,31 @@ static const svn_cl__cmd_desc_t cmd_table[] =
      support them explicitly. */
 
   { "proplist",   FALSE,  svn_cl__proplist_command, svn_cl__proplist,
-    "List all properties for given files and directories.\n\n"
+    "List all properties for given files and directories.\n"
     "usage: proplist [TARGETS]\n" },
   { "plist",      TRUE, 0, NULL, NULL },
   { "pl",         TRUE, 0, NULL, NULL },
 
   { "propget",    FALSE,  svn_cl__propget_command,  svn_cl__propget,
-    "Get the value of property PROPNAME on files and directories.\n\n"
+    "Get the value of property PROPNAME on files and directories.\n"
     "usage: propget PROPNAME [TARGETS]\n" },
   { "pget",       TRUE,   svn_cl__propget_command,  svn_cl__propget, NULL },
   { "pg",         TRUE,   svn_cl__propget_command,  svn_cl__propget, NULL },
 
   { "propset",    FALSE,  svn_cl__propset_command,  svn_cl__propset,
-    "Set property PROPNAME to PROPVAL on the named files and directories.\n\n"
+    "Set property PROPNAME to PROPVAL on the named files and directories.\n"
     "usage: propset PROPNAME PROPVAL [TARGET1 [TARGET2] ...]\n" },
   { "pset",       TRUE, 0, NULL, NULL },
   { "ps",         TRUE, 0, NULL, NULL },
 
   { "status",     FALSE,  svn_cl__status_command,   svn_cl__status,
-    "Print the status of working copy files and directories.\n\n"
+    "Print the status of working copy files and directories.\n"
     "usage: status [TARGETS]\n" },
   { "stat",       TRUE, 0, NULL, NULL },
   { "st",         TRUE, 0, NULL, NULL },
 
   { "update",     FALSE,  svn_cl__update_command,   svn_cl__update,
-    "Bring changes from the repository into the working copy.\n\n"
+    "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n" },
   { "up",         TRUE, 0, NULL, NULL },
   { NULL,         FALSE,  0, NULL, NULL }
@@ -244,7 +244,7 @@ svn_cl__help (svn_cl__opt_state_t *opt_state,
         if (cmd)
           print_command_info (cmd, TRUE, pool);
         else
-          fprintf (stderr, "\"%s\": unknown command.\n", this->data);
+          fprintf (stderr, "\"%s\": unknown command.\n\n", this->data);
       }
   else
     print_generic_help (pool);
@@ -389,53 +389,104 @@ main (int argc, char **argv)
       }
     }
 
-  /* Else, handle the subcommand and regular arguments, adjusting if
-     the user asked for help on subcommands (as opposed to actually
-     invoking a subcommand). */
+  /* If the user asked for help, then the rest of the arguments are
+     the names of subcommands to get help on (if any), or else they're
+     just typos/mistakes.  Whatever the case, the subcommand to
+     actually run is svn_cl__help(). */
   if (opt_state.help)
     subcommand = get_canonical_command ("help");
   else
     subcommand = NULL;
 
-  /* Do the subcommand and arguments. */
-  for (; os->ind < os->argc; os->ind++)
+  /* If we're not running the `help' subcommand, then look for a
+     subcommand in the first argument. */
+  if (subcommand == NULL)
     {
-      const char *this_arg = os->argv[os->ind];
-
-      /* The first non-option we see is always the subcommand, unless
-         the subcommand is already set to `help'. */
-      if (subcommand == NULL)
+      if (os->ind >= os->argc)
         {
-          subcommand = get_canonical_command (this_arg);
-          if (subcommand == NULL)
-            {
-              fprintf (stderr, "unknown command: %s\n", this_arg);
-              subcommand = get_canonical_command ("help");
-            }
+          fprintf (stderr, "subcommand argument required\n");
+          svn_cl__help (NULL, targets, pool);
+          apr_destroy_pool (pool);
+          return EXIT_FAILURE;
         }
       else
         {
-          if ((subcommand->cmd_code == svn_cl__propset_command)
-              && (opt_state.name == NULL))
+          const char *first_arg = os->argv[os->ind++];
+          subcommand = get_canonical_command (first_arg);
+          if (subcommand == NULL)
             {
-              opt_state.name = svn_string_create (this_arg, pool);
-            }
-          else if ((subcommand->cmd_code == svn_cl__propset_command)
-                   && (opt_state.value == NULL))
-            {
-              opt_state.value = svn_string_create (this_arg, pool);
-            }
-          else if ((subcommand->cmd_code == svn_cl__propget_command)
-                   && (opt_state.name == NULL))
-            {
-              opt_state.name = svn_string_create (this_arg, pool);
-            }
-          else  /* treat it as a regular file/dir arg */
-            {
-              (*((svn_string_t **) apr_push_array (targets)))
-                = svn_string_create (this_arg, pool);
+              fprintf (stderr, "unknown command: %s\n", first_arg);
+              svn_cl__help (NULL, targets, pool);
+              apr_destroy_pool (pool);
+              return EXIT_FAILURE;
             }
         }
+    }
+  
+  /* If made it this far, then we definitely have the subcommand. */
+
+  /* Below, we greedily parse out some of the regular arguments,
+   * because certain subcommands consume them.  For example, both
+   * propget and propset need NAME, and propset needs VALUE in
+   * addition.
+   *
+   * This code will probably move into subcommand-specific domains,
+   * where it belongs.  As Greg Hudson points out:
+   *
+   * > A further, independent suggestion: instead of forcing main() to know
+   * > about the syntax of particular commands (which will only get uglier as
+   * > time goes on), make the command desc include a number of non-filename
+   * > arguments--2 for propset, 1 for propget, 0 for most other commands.
+   * > Bundle the non-option arguments into an array of strings and then
+   * > iterate over the filename arguments like you do now.  When we need it,
+   * > a -1 in that field can mean "just give me all of the arguments in a
+   * > string array and I'll decide what to do with them."  Get rid of
+   * > svn_cl__command_id so that you won't get back into the trap of main()
+   * > having to know about specific commands.
+   * 
+   * kff todo: do above. :-)
+   */
+  if ((subcommand->cmd_code == svn_cl__propset_command)
+      || (subcommand->cmd_code == svn_cl__propget_command))
+    {
+      if (os->ind >= os->argc)
+        {
+          fprintf (stderr, "property name argument required\n");
+          svn_cl__help (NULL, targets, pool);
+          apr_destroy_pool (pool);
+          return EXIT_FAILURE;
+        }
+      else
+        {
+          const char *this_arg = os->argv[os->ind++];
+          opt_state.name = svn_string_create (this_arg, pool);
+        }
+    }
+
+  /* Grab value for propset, unless got it already via --valfile. */
+  if ((subcommand->cmd_code == svn_cl__propset_command)
+      && (opt_state.value == NULL))
+    {
+      if (os->ind >= os->argc)
+        {
+          fprintf (stderr, "property value argument required\n");
+          svn_cl__help (NULL, targets, pool);
+          apr_destroy_pool (pool);
+          return EXIT_FAILURE;
+        }
+      else
+        {
+          const char *this_arg = os->argv[os->ind++];
+          opt_state.value = svn_string_create (this_arg, pool);
+        }
+    }
+
+  /* Do the regular arguments (target files and target dirs). */
+  for (; os->ind < os->argc; os->ind++)
+    {
+      const char *this_arg = os->argv[os->ind];
+      (*((svn_string_t **) apr_push_array (targets)))
+        = svn_string_create (this_arg, pool);
     }
 
   /* Certain commands have an implied `.' as argument, if nothing else
