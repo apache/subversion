@@ -550,6 +550,7 @@ delete_entry (const char *path,
   struct dir_baton *pb = parent_baton;
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
+  const char *basename;
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
   SVN_ERR (svn_wc__lock (pb->path, 0, pool));
@@ -558,12 +559,20 @@ delete_entry (const char *path,
                                   SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_CREATE), /* not excl */
                                   pool));
+
+  /* Here's the deal: in the new editor interface, PATH is a full path
+     below the editor's anchor, and pb->path is the parent directory.
+     That's all fine and well, but our log-system requires that all
+     log commands talk *only* about paths relative (and below)
+     pb->path, i.e. where the log is being executed.  */
+  basename = svn_path_basename (path, pool);
+
   svn_xml_make_open_tag (&log_item,
                          pool,
                          svn_xml_self_closing,
                          SVN_WC__LOG_DELETE_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
-                         svn_stringbuf_create (path, pool),
+                         svn_stringbuf_create (basename, pool),
                          NULL);
 
   apr_err = apr_file_write_full (log_fp, log_item->data, log_item->len, NULL);
