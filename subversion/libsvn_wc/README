@@ -84,13 +84,12 @@ analogous to CVS/ sudirs:
        format                   /* Contains wc adm format version. */
        repository               /* Where this stuff came from. */
        ancestor                 /* Path to this dir in the repository */
-       versions                 /* Version numbers for this directory */
+       entries                  /* Various adm info for each directory entry */
        properties               /* Properties for this directory */
        delta-here               /* Uncommitted changes logged here */
        lock                     /* Optional, tells others this dir is busy */
        log                      /* Ops log (for rollback/crash-recovery) */
        text-base/               /* Pristine repos versions of the files... */
-            qux/                    /* Subdirs are empty, though */
             foo.c
             bar.c
             baz.c
@@ -127,41 +126,38 @@ analogous to CVS/ sudirs:
 
    Where this dir came from (syntax TBD).
 
-`versions':
+`entries':
 
-   This file holds the version number of this directory and its
-   children -- that is to say, the version number for the root of the
-   repository tree from which this directory/file is derived.  It
+   This file holds the version number of this directory and its files,
+   and records the presence of subdirs (but does not record their
+   version numbers, as the child dirs do that themselves).
+
+   When a file or dir is added, that is recorded here too.  It
    contains a single XML expression:
 
-      <wc-versions xmlns="http://subversion.tigris.org/xmlns/blah">
-        <entry name="" version="5"/>     <!-- empty name means current dir -->
+      <wc-entries xmlns="http://subversion.tigris.org/xmlns/blah">
+        <entry version="5"/>     <!-- no name means current dir -->
         <entry name="foo.c" version="5"/>
-        <entry name="bar.c" version="5"/>
+        <entry name="bar.c" version="5" timestamp="blah..." checksum="blah"/>
         <entry name="baz.c" version="6"/>
-      </wc-versions>
+        <entry name="X" new="true" version="0"/>
+        <entry name="Y" new="true" ancestor="ancestor/path/Y" version="3"/>
+        <entry name="qux" type="dir" />
+      </wc-entries>
 
-   The directory's own VersionNumber is implicit for every child of
-   the directory, so only the exceptions need to be recorded.  If an
-   entry does not appear in the versions file, but is present in the
-   text-base/ tree, then it is assumed to have the same version as the
-   parent directory.
+   If `type' is omitted, it defaults to "file".  
 
-   Child directories do not get entries, because they will have their
-   own `SVN/versions' files, and recording the same information in two
-   places is the first step on the road to madness.
+   The timestamp and checksum are optional.
 
-   The `versions' file discusses only things that exist in the
-   repository.  For example, if the user does
+   Version number is not optional, even when it's the same as the
+   directory's.
 
-      svn rename foo.c qux.c
+   Added files are recorded with the "new='true'" flag; if they are
+   truly new, their initial version is 0, otherwise their ancestory is
+   recorded (see files X and Y in the example).
 
-   the versions file will still claim that foo.c is at version 17 (the
-   local rename is recorded in the `delta-here' file, described
-   later).  Only *after* the rename is committed does the `versions'
-   entry for foo.c change to something like:
-
-      <entry name="qux.c" version="21"/>
+   Added dirs get the "new='true'" flag too, but they record their own
+   ancestry, of course.
 
 `properties'
 
@@ -252,8 +248,8 @@ analogous to CVS/ sudirs:
 
    To do a fresh checkout of `iota' in directory `.'
 
-      1. add_file() produces the new ./SVN/tmp/SVN/versions, which
-         probably is the same as the original `versions' file since
+      1. add_file() produces the new ./SVN/tmp/SVN/entries, which
+         probably is the same as the original `entries' file since
          `iota' is likely to be the same version as its parent
          directory.  (But not necessarily...)
 
@@ -266,7 +262,7 @@ analogous to CVS/ sudirs:
          with the following items,
 
             <mv src="SVN/tmp/iota" dst="SVN/text-base/iota">
-            <mv src="SVN/tmp/SVN/versions" dst="SVN/versions">
+            <mv src="SVN/tmp/SVN/entries" dst="SVN/entries">
             <merge src="SVN/text-base/iota" dst="iota">
 
          Then it does the operations in the log file one by one.
@@ -307,7 +303,7 @@ analogous to CVS/ sudirs:
 `text-base/'
 
    Each file in text-base/ is a pristine repository version of that
-   file, corresponding to the version indicated in `versions'.  These
+   file, corresponding to the version indicated in `entries'.  These
    files are used for sending diffs back to the server, etc.
 
    Child directories of the current directory appear here, but are
@@ -332,7 +328,7 @@ analogous to CVS/ sudirs:
 ------------------------
 todo: some loose ends
 
-   1. filename escaping in SVN/versions
+   1. filename escaping in SVN/entries
    2. 
 
 

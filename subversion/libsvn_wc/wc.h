@@ -103,7 +103,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_README              "README"
 #define SVN_WC__ADM_REPOSITORY          "repository"
 #define SVN_WC__ADM_ANCESTOR            "ancestor"
-#define SVN_WC__ADM_VERSIONS            "versions"
+#define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_PROPERTIES          "properties"
 #define SVN_WC__ADM_DELTA_HERE          "delta-here"
 #define SVN_WC__ADM_LOCK                "lock"
@@ -160,18 +160,18 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
                                      int sync,
                                      apr_pool_t *pool);
 
-/* Append an entry ENTRY to administrative file FP.  Arguments
+/* Append an adm ITEM to administrative file FP.  Arguments
  * (attributes) follow in pairs: name, value, name, value, and so on,
  * terminated by a single null.  Each name is a char *, but values are
  * svn_string_t *.
  *
- * Since adm entries share a common format (XML), this abstracts the
+ * Since adm items share a common format (XML), this abstracts the
  * content from the format.
  */
-svn_error_t *svn_wc__write_adm_entry (apr_file_t *fp,
-                                      apr_pool_t *pool,
-                                      const char *entry,
-                                      ...);
+svn_error_t *svn_wc__write_adm_item (apr_file_t *fp,
+                                     apr_pool_t *pool,
+                                     const char *item,
+                                     ...);
 
 /* Remove `PATH/<adminstrative_subdir>/THING'. */
 svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
@@ -267,7 +267,7 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_REPLACE_TEXT_BASE   "replace-text-base"
 #define SVN_WC__LOG_MERGE_PROPS         "merge-props"
 #define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
-#define SVN_WC__LOG_SET_VERSION         "set-version"
+#define SVN_WC__LOG_SET_ENTRY           "set-entry"
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_VERSION        "version"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
@@ -277,59 +277,65 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 
 
 
-/*** Handling the `versions' file. ***/
+/*** Handling the `entries' file. ***/
 
-#define SVN_WC__VERSIONS_START   "wc-versions"
-#define SVN_WC__VERSIONS_ENTRY   "entry"
-#define SVN_WC__VERSIONS_END     "wc-versions"
+#define SVN_WC__ENTRIES_START   "wc-entries"
+#define SVN_WC__ENTRIES_ENTRY   "entry"
+#define SVN_WC__ENTRIES_END     "wc-entries"
 
+#define SVN_WC__ENTRIES_ATTR_NAME      "name"
+#define SVN_WC__ENTRIES_ATTR_VERSION   "version"
+#define SVN_WC__ENTRIES_ATTR_TYPE      "type"
+#define SVN_WC__ENTRIES_ATTR_TIMESTAMP "timestamp"
+#define SVN_WC__ENTRIES_ATTR_CHECKSUM  "checksum"
+#define SVN_WC__ENTRIES_ATTR_NEW       "new"
+#define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
-
-/* Initialize contents of `versions' for a new adm area. */
-svn_error_t *svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool);
+/* Initialize contents of `entries' for a new adm area. */
+svn_error_t *svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool);
 
 
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the
-   `versions' file.  Also set other XML attributes via varargs: key,
+   `entries' file.  Also set other XML attributes via varargs: key,
    value, key, value, etc. -- where names are char *'s and values are
    svn_string_t *'s.   Terminate list with NULL.
 
    ENTRYNAME is a string to match the value of the "name" attribute of
-   some entry.  (This attribute is special attribute on versions
-   entries, because no two entries can have the same name.  No other
-   attribute of a versions entry is guaranteed to be unique.)
+   some entry.  (This attribute is special attribute on entries,
+   because no two entries can have the same name.  No other attribute
+   of an entry is guaranteed to be unique.)
 
    If no such ENTRYNAME exists, create it.  If ENTRYNAME is NULL, then
    the entry for this dir will be set.
 
-   The versions file must not be open for writing by anyone else when
-   you call this, or badness will result.
+   The entries file must not be open for writing by anyone else when
+   you call this, or badness will result.  
 */
-svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
-                                         apr_pool_t *pool,
-                                         const char *entryname,
-                                         svn_vernum_t version,
-                                         ...);
+svn_error_t *svn_wc__entry_set (svn_string_t *path,
+                                apr_pool_t *pool,
+                                const char *entryname,
+                                svn_vernum_t version,
+                                ...);
 
 
-/* For a given ENTRYNAME in PATH's versions file, get its
+/* For a given ENTRYNAME in PATH's entries file, get its
    version into *VERSION, and get other XML attributes via varargs:
    key, *value, key, *value, etc. -- where names are char *'s and
    values are svn_string_t **'s.  
    
    Caller should terminate the vararg list with NULL.  
 */
-svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
-                                         apr_pool_t *pool,
-                                         const char *entryname,
-                                         svn_vernum_t *version,
-                                         ...);
+svn_error_t *svn_wc__entry_get (svn_string_t *path,
+                                apr_pool_t *pool,
+                                const char *entryname,
+                                svn_vernum_t *version,
+                                ...);
 
 
-/* Remove ENTRYNAME from PATH's `versions' file. */
-svn_error_t *svn_wc__remove_versions_entry (svn_string_t *path,
-                                            apr_pool_t *pool,
-                                            const char *entryname);
+/* Remove ENTRYNAME from PATH's `entries' file. */
+svn_error_t *svn_wc__entry_remove (svn_string_t *path,
+                                   apr_pool_t *pool,
+                                   const char *entryname);
 
 
 

@@ -722,27 +722,23 @@ svn_error_t *svn_wc__file_exists_p (svn_boolean_t *exists,
 /*** Writing administrative XML. ***/
 
 static svn_error_t *
-v_write_adm_entry (apr_file_t *fp,
-                   apr_pool_t *pool,
-                   const char *entry,
-                   va_list ap)
+v_write_adm_item (apr_file_t *fp,
+                  apr_pool_t *pool,
+                  const char *item,
+                  va_list ap)
 {
   apr_status_t apr_err;
   const char *attr_name;
-  const char *start_entry = "<";
-  const char *end_entry = "/>\n";
+  const char *start_item = "<";
+  const char *end_item = "/>\n";
 
-  /* kff todo: is it worth abstracting XML production even further?
-     The other place we have some is svn_wc__versions_init_contents,
-     right now. */
-
-  /* Open the entry. */
-  apr_err = apr_full_write (fp, start_entry, strlen (start_entry), NULL);
+  /* Open the item. */
+  apr_err = apr_full_write (fp, start_item, strlen (start_item), NULL);
   if (apr_err)
     goto error;
 
-  /* Write out the entry title. */
-  apr_err = apr_full_write (fp, entry, strlen (entry), NULL);
+  /* Write out the item title. */
+  apr_err = apr_full_write (fp, item, strlen (item), NULL);
   if (apr_err)
     goto error;
   
@@ -782,8 +778,8 @@ v_write_adm_entry (apr_file_t *fp,
         goto error;
     }
 
-  /* Write out the entry title. */
-  apr_err = apr_full_write (fp, end_entry, strlen (end_entry), NULL);
+  /* Close the item. */
+  apr_err = apr_full_write (fp, end_item, strlen (end_item), NULL);
   if (apr_err)
     goto error;
   
@@ -791,21 +787,21 @@ v_write_adm_entry (apr_file_t *fp,
 
  error:
   return svn_error_create (apr_err, 0, NULL, pool,
-                           "writing adm area log entry");
+                           "writing adm area item");
 }
 
 
 svn_error_t *
-svn_wc__write_adm_entry (apr_file_t *fp,
-                         apr_pool_t *pool,
-                         const char *entry,
-                         ...)
+svn_wc__write_adm_item (apr_file_t *fp,
+                        apr_pool_t *pool,
+                        const char *item,
+                        ...)
 {
   svn_error_t *err = NULL;
   va_list ap;
 
-  va_start (ap, entry);
-  err = v_write_adm_entry (fp, pool, entry, ap);
+  va_start (ap, item);
+  err = v_write_adm_item (fp, pool, item, ap);
   va_end (ap);
   
   return err;
@@ -1043,8 +1039,8 @@ init_adm (svn_string_t *path,
     return err;
 
 
-  /* SVN_WC__ADM_VERSIONS */
-  err = svn_wc__versions_init (path, pool);
+  /* SVN_WC__ADM_ENTRIES */
+  err = svn_wc__entries_init (path, pool);
   if (err)
     return err;
 
