@@ -66,15 +66,29 @@
 %apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
-   list_transaction's "apr_array_header_t **" is returning a list of strings
+   list_transaction's "apr_array_header_t **" is returning a list of strings.
 */
 
 %typemap(ignore) apr_array_header_t ** (apr_array_header_t *temp) {
     $1 = &temp;
 }
-%typemap(python, argout, fragment="t_output_helper") apr_array_header_t ** {
+%typemap(python, argout, fragment="t_output_helper") 
+apr_array_header_t **names_p {
     $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
 }
+
+/* -----------------------------------------------------------------------
+   revisions_changed's "apr_array_header_t **" is returning a list of
+   revs.  also, its input array is a list of strings.
+*/
+
+%typemap(python, argout, fragment="t_output_helper") 
+apr_array_header_t **revs {
+    $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
+}
+%apply const apr_array_header_t *STRINGLIST { 
+    const apr_array_header_t *paths 
+};
 
 /* -----------------------------------------------------------------------
    all uses of "apr_hash_t **" are returning property hashes

@@ -24,22 +24,12 @@
 
 #include "svn_string.h"
 #include "svn_delta.h"
+#include "svn_repos.h"
 
 #include "swigutil_py.h"
 
-
-/* this baton is used for the editor, directory, and file batons. */
-typedef struct {
-  PyObject *editor;     /* the editor handling the callbacks */
-  PyObject *baton;      /* the dir/file baton (or NULL for edit baton) */
-  apr_pool_t *pool;     /* pool to use for errors */
-} item_baton;
-
-typedef struct {
-  PyObject *handler;    /* the window handler (a callable) */
-  apr_pool_t *pool;     /* a pool for constructing errors */
-} handler_baton;
-
+
+/*** Helper/Conversion Routines ***/
 
 static PyObject *make_pointer(const char *typename, void *ptr)
 {
@@ -221,6 +211,21 @@ static svn_error_t * convert_python_error(apr_pool_t *pool)
   return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, 0, NULL, pool,
                           "the Python callback raised an exception");
 }
+
+
+/*** Editor Wrapping ***/
+
+/* this baton is used for the editor, directory, and file batons. */
+typedef struct {
+  PyObject *editor;     /* the editor handling the callbacks */
+  PyObject *baton;      /* the dir/file baton (or NULL for edit baton) */
+  apr_pool_t *pool;     /* pool to use for errors */
+} item_baton;
+
+typedef struct {
+  PyObject *handler;    /* the window handler (a callable) */
+  apr_pool_t *pool;     /* a pool for constructing errors */
+} handler_baton;
 
 static item_baton * make_baton(apr_pool_t *pool,
                                PyObject *editor, PyObject *baton)
@@ -593,6 +598,51 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 {
   *editor = &thunk_editor;
   *edit_baton = make_baton(pool, py_editor, NULL);
+}
+
+
+/*** Other Wrappers for SVN Functions ***/
+
+static svn_error_t * log_receiver(void *baton,
+                                  apr_hash_t *changed_paths,
+                                  svn_revnum_t rev,
+                                  const char *author,
+                                  const char *date,
+                                  const char *msg,
+                                  apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+
+  /* ### for now, we're leaving CHANGED_PATHS outta this. */
+
+  /* ### python doesn't have 'const' on the method name and format */
+  if ((result = PyObject_CallFunction(receiver, 
+                                      (char *)"lsssO&", 
+                                      rev, author, date, msg, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      return convert_python_error(pool);
+    }
+
+  /* there is no return value, so just toss this object (probably Py_None) */
+  Py_DECREF(result);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t * svn_swig_py_repos_get_logs(svn_repos_t *repos,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t start,
+                                         svn_revnum_t end,
+                                         svn_boolean_t discover_changed_paths,
+                                         svn_boolean_t strict_node_history,
+                                         PyObject *py_receiver,
+                                         apr_pool_t *pool)
+{
+  return svn_repos_get_logs(repos, paths, start, end, 
+                            FALSE /* discover_changed_paths */,
+                            strict_node_history, 
+                            log_receiver, py_receiver, pool);
 }
 
 /* ----------------------------------------------------------------

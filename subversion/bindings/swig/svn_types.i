@@ -84,6 +84,17 @@
     $2 = PyString_GET_SIZE($input);
 }
 
-/* ----------------------------------------------------------------------- */
+/* -----------------------------------------------------------------------
+   Define a generic arginit mapping for pools.
+*/
+
+%typemap(arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
+    /* Assume that the pool here is the last argument in the list */
+    SWIG_ConvertPtr(PyTuple_GET_ITEM(args, PyTuple_GET_SIZE(args) - 1),
+                    (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
+    _global_pool = $1;
+}
+%typemap(in) apr_pool_t *pool "";
+
 
 %include svn_types.h
