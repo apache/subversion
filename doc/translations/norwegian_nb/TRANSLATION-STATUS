@@ -22,6 +22,7 @@ documentation.
       doc/book/book/ch00.xml
       doc/book/book/ch01.xml
       doc/book/book/ch02.xml
+      doc/book/book/ch03.xml
       doc/book/book/foreword.xml
       doc/book/book/images/ch01dia1.png
       doc/book/book/images/ch02dia1.png
@@ -36,10 +37,6 @@ documentation.
     2.1.2. In progress
 
       doc/book/book/ch04.xml (51%) -- sunny256
-
-      Needs update after r11529:
-
-      doc/book/book/ch03.xml
 
     2.1.3. Untranslated
 
