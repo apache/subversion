@@ -1194,11 +1194,22 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
       if (serr != NULL)
         {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     apr_psprintf(r->pool,
-                                                  "Could not open the SVN "
-                                                  "filesystem at %s",
-                                                  fs_path));
+          /* The error returned by svn_repos_open might contain the
+             actual path to the failed repository.  We don't want to
+             leak that path back to the client, because that would be
+             a security risk, but we do want to log the real error on
+             the server side. */
+          const char *new_msg = "Could not open the requested SVN filesystem";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+
+          /* Return a slightly less informative error to dav. */
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      apr_psprintf(r->pool, new_msg));
         }
 
       /* Cache the open repos for the next request on this connection */
