@@ -2137,6 +2137,7 @@ def convert(ctx, start_pass=1):
 def usage(ctx):
   print 'USAGE: %s [-n] [-v] [-s svn-repos-path] [-p pass] cvs-repos-path' \
         % os.path.basename(sys.argv[0])
+  print '  --help, -h       print this usage message and exit with success'
   print '  -n               dry run; parse CVS repos, but do not construct SVN repos'
   print '  -v               verbose'
   print '  -s PATH          path for SVN repos'
@@ -2157,7 +2158,6 @@ def usage(ctx):
         % ctx.encoding
   print '  --username=NAME  default name when CVS repos has no name (default: %s)' \
         % ctx.username
-  sys.exit(1)
 
 
 def main():
@@ -2179,10 +2179,11 @@ def main():
   ctx.encoding = "ascii"
   ctx.svnadmin = "svnadmin"
   ctx.username = "unknown"
+  ctx.print_help = 0
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
-                               [ "create", "trunk=",
+    opts, args = getopt.getopt(sys.argv[1:], 'p:s:vnh',
+                               [ "help", "create", "trunk=",
                                  "username=",
                                  "branches=", "tags=", "encoding=",
                                  "trunk-only", "no-prune",
@@ -2190,16 +2191,7 @@ def main():
   except getopt.GetoptError, e:
     sys.stderr.write('Error: ' + str(e) + '\n\n')
     usage(ctx)
-
-  if len(args) == 0:
-    usage(ctx)
-
-  if len(args) > 1:
-    sys.stderr.write("Error: must pass only one CVS repository.\n")
-    usage(ctx)
-
-  ctx.cvsroot = args[0]
-  start_pass = 1
+    sys.exit(1)
 
   for opt, value in opts:
     if opt == '-p':
@@ -2208,6 +2200,8 @@ def main():
         print 'ERROR: illegal value (%d) for starting pass. ' \
               'must be 1 through %d.' % (start_pass, len(_passes))
         sys.exit(1)
+    elif (opt == '--help') or (opt == '-h'):
+      ctx.print_help = 1
     elif opt == '-v':
       ctx.verbose = 1
     elif opt == '-n':
@@ -2237,7 +2231,20 @@ def main():
     elif opt == '--username':
       ctx.username = value
 
-  # Consistency check for options.
+  if ctx.print_help:
+    usage(ctx)
+    sys.exit(0)
+
+  # Consistency check for options and arguments.
+  if len(args) == 0:
+    usage(ctx)
+    sys.exit(1)
+
+  if len(args) > 1:
+    sys.stderr.write("Error: must pass only one CVS repository.\n")
+    usage(ctx)
+    sys.exit(1)
+
   if (not ctx.target) and (not ctx.dump_only):
     sys.stderr.write("Error: must pass one of '-s' or '--dump-only'.\n")
     sys.exit(1)
@@ -2259,6 +2266,9 @@ def main():
     sys.stderr.write("id=1409 ")
     sys.stderr.write("for details.\n")
     sys.exit(1)
+
+  ctx.cvsroot = args[0]
+  start_pass = 1
 
   convert(ctx, start_pass=start_pass)
 
