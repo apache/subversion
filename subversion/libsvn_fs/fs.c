@@ -108,8 +108,9 @@ cleanup_fs (svn_fs_t *fs)
        will typically return EINVAL. Ignore this case.
 
        Note: we're passing awfully simple values to txn_checkpoint. Any
-             possible EINVAL routine is entirely internal to DB. We should
-             be safe to ignore EINVAL even if other causes generate it.
+             possible EINVAL result is caused entirely by issues internal
+             to the DB. We should be safe to ignore EINVAL even if
+             something other than open-failure causes the result code.
              (especially because we're just trying to close it down)
     */
     if (db_err != 0 && db_err != EINVAL)
