@@ -1,3 +1,8 @@
+Version 0.14.4 [Alpha Interim 4] (released DD MMMM 2002, revision RRRR)
+
+ Developer-visible changes:
+ * use neon 0.23.5, fix XML entity derefs, SSL server certs, HP-UX build, etc.
+
 Version 0.14.3 [Alpha Interim 3] (released 20 Sept 2002, revision 3200)
 
  User-visible changes:
