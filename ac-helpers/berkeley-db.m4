@@ -58,7 +58,8 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	   The Subversion server requires Berkeley DB 3.2.9 or newer.  If
 	   you specify \`--without-berkeley-db', the server will not be
 	   built.  Otherwise, the configure script builds the server if and
-	   only if it can find a new enough version installed.],
+	   only if it can find a new enough version installed, or if a copy
+	   of Berkeley DB exists in the subversion tree as subdir \`db'.],
   [
     if test "$withval" = "yes"; then
       status=required
@@ -71,11 +72,32 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     fi
   ],
   [
-    status=if-found
-    places=search
+    # No --with-berkeley-db option:
+    #
+    # Check to see if a db directory exists in the build directory.
+    # If it does then we will be using the berkeley DB version
+    # from the source tree. We can't test it since it is not built
+    # yet, so we have to assume it is the correct version.
+
+    AC_MSG_CHECKING([for built-in Berkeley DB])
+
+    if test -d db ; then
+      status=builtin
+      AC_MSG_RESULT([yes])
+    else
+      status=if-found
+      places=search
+      AC_MSG_RESULT([no])
+    fi
   ])
 
-  if test "$status" = "skip"; then
+  if test "$status" = "builtin"; then
+    # Use the include and lib files in the build dir.
+    dbdir=`cd db/dist ; pwd`
+    CPPFLAGS="$CPPFLAGS -I$dbdir"
+    LIBS="$LIBS -L$dbdir -ldb"
+    svn_lib_berkeley_db=yes
+  elif test "$status" = "skip"; then
     svn_lib_berkeley_db=no
   else
 
