@@ -65,3 +65,10 @@ Candidate changes:
     Justification: Fix prompting on Windows so it actually works right.
     Votes:
       +1: breser, sussman, cmpilato
+
+  * r10440
+    Fix pool usage for SVN::Ra in the Perl bindings.
+    Justification:
+      Bindings only, important fixes for long-life ra sessions.
+    Votes:
+      +1: clkao
