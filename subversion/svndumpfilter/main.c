@@ -883,7 +883,6 @@ check_lib_versions (void)
     {
       { "svn_subr",  svn_subr_version },
       { "svn_repos", svn_repos_version },
-      { "svn_fs",    svn_fs_version },
       { "svn_delta", svn_delta_version },
       { NULL, NULL }
     };
