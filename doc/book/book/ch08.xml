@@ -779,7 +779,7 @@ Committed revision 5.
               <option>--force</option> switch:</para>
 
             <screen>
-$ svn commit -F file_under_vc.txt foo.c
+$ svn commit --force -F file_under_vc.txt foo.c
 Sending        foo.c
 Transmitting file data .
 Committed revision 6.
