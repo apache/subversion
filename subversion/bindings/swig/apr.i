@@ -92,9 +92,7 @@ typedef apr_int32_t time_t;
     $1 = &temp;
 }
 %typemap(java,in) apr_size_t *INOUT (apr_size_t temp) {
-    jclass cls = JCALL1(FindClass, jenv, "java/lang/Long");
-    jmethodID mid = JCALL3(GetMethodID, jenv, cls, "longValue", "()J");
-    temp = (apr_size_t) JCALL2(CallLongMethod, jenv, $input, mid);
+    temp = (apr_size_t) JCALL2(CallLongMethod, jenv, $input, svn_swig_java_mid_long_longvalue);
     $1 = &temp;
 }
 

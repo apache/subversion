@@ -33,6 +33,7 @@
 #include "svn_delta.h"
 #include "svn_wc.h"
 
+#include "swigutil_java_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
