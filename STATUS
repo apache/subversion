@@ -130,7 +130,7 @@ Candidate changes:
     Justification:
       Regression from 1.0, move/copy can fail in some non-UTF-8 locales.
     Votes:
-      +1: philip
+      +1: philip, lundblad
 
 Approved changes (further review is welcome, but not required):
 
