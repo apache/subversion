@@ -63,8 +63,6 @@ svn_cl__propget (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
-  apr_status_t status;
-  apr_file_t *std_out;
   svn_stream_t *out;
   int i;
 
@@ -84,11 +82,8 @@ svn_cl__propget (apr_getopt_t *os,
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
-  /* Open a handle and stream to stdout. */
-  status = apr_file_open_stdout (&std_out, pool);
-  if (!APR_STATUS_IS_SUCCESS (status))
-    return svn_error_create (status, NULL, "Error opening stdout.");
-  out = svn_stream_from_aprfile (std_out, pool);
+  /* Open a stream to stdout. */
+  SVN_ERR (svn_stream_for_stdout (&out, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {

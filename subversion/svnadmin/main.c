@@ -33,16 +33,6 @@
 
 /* Helper to open stdio streams */
 
-/* NOTE: we used to call svn_stream_from_stdio(), which wraps a stream
-   around a standard stdio.h FILE pointer.  The problem is that these
-   pointers operate through C Run Time (CRT) on Win32, which does all
-   sorts of translation on them: LF's become CRLF's, and ctrl-Z's
-   embedded in Word documents are interpreted as premature EOF's.
-
-   So instead, we use apr_file_open_std*, which bypass the CRT and
-   directly wrap the OS's file-handles, which don't know or care about
-   translation.  Thus dump/load works correctly on Win32.
- */
 static svn_error_t *
 create_stdio_stream (svn_stream_t **stream,
                      APR_DECLARE(apr_status_t) open_fn (apr_file_t **, 
