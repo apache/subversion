@@ -26,29 +26,32 @@
 #include <apr_lib.h>
 #include "JNIUtil.h"
 #include "JNIMutex.h"
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
-
+/**
+ * Create the critical section and lock the mutex
+ * @param mutext    the underlying mutex
+ */
 JNICriticalSection::JNICriticalSection(JNIMutex &mutex)
 {
-	f_mutex = &mutex;
-	apr_status_t apr_err = apr_thread_mutex_lock (mutex.f_mutex);
-	if(apr_err)
-	{
-		JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_lock");
-		return;
-	}
+    m_mutex = &mutex;
+    apr_status_t apr_err = apr_thread_mutex_lock (mutex.m_mutex);
+    if(apr_err)
+    {
+        JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_lock");
+        return;
+    }
 
 }
 
+/**
+ * Release the mutex and the destroy the critical section
+ */
 JNICriticalSection::~JNICriticalSection()
 {
-	apr_status_t apr_err = apr_thread_mutex_unlock (f_mutex->f_mutex);
-	if(apr_err)
-	{
-		JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_unlock");
-		return;
-	}
+    apr_status_t apr_err = apr_thread_mutex_unlock (m_mutex->m_mutex);
+    if(apr_err)
+    {
+        JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_unlock");
+        return;
+    }
 
 }

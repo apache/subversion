@@ -28,15 +28,22 @@
 #include <jni.h>
 #include <svn_client.h>
 
-class BlameCallback  
+/**
+ * this class holds a java callback object, which will receive every line of 
+ * the file for which the callback information is requested.
+ */
+class BlameCallback
 {
 public:
-	BlameCallback(jobject jcallback);
-	virtual ~BlameCallback();
-	void callback(svn_revnum_t revision, const char *author,
+    BlameCallback(jobject jcallback);
+    ~BlameCallback();
+    void callback(svn_revnum_t revision, const char *author,
                       const char *date, const char *line, apr_pool_t *pool);
 private:
-	jobject m_callback;
+    /**
+     * this a local reference to the java object.
+     */
+    jobject m_callback;
 };
-
-#endif // !defined(AFX_BLAMECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
+// !defined(AFX_BLAMECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
+#endif
