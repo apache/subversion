@@ -199,8 +199,8 @@ static const dav_provider dav_svn_provider =
     &dav_svn_hooks_repos,
     &dav_svn_hooks_propdb,
     NULL,                       /* locks */
-    &dav_svn_hooks_liveprop,
-    &dav_svn_hooks_vsn
+    &dav_svn_hooks_vsn,
+    NULL                        /* binding */
 };
 
 static void register_hooks(void)
