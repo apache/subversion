@@ -62,12 +62,12 @@
     <pubdate>(TBA)</pubdate>
 
     <copyright>
-      <year>2000</year>
-      <year>2001</year>
       <year>2002</year>
       <year>2003</year>
       <year>2004</year>
-      <holder>CollabNet, Inc.</holder>
+      <holder>Ben Collins-Sussman</holder>
+      <holder>Brian W. Fitzpatrick</holder>
+      <holder>C. Michael Pilato</holder>
     </copyright>
 
   </bookinfo>
