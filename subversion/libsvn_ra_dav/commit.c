@@ -107,6 +107,14 @@ typedef struct
 static const int singleton_delete_prop;
 #define DELETE_THIS_PROP (&singleton_delete_prop)
 
+/* this property will be fetched from the server when we don't find it
+   cached in the WC property store. */
+static const dav_propname fetch_props[] =
+{
+  { "DAV:", "checked-in" },
+  { NULL }
+};
+
 
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     const char *url, int *code)
@@ -134,11 +142,84 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                ras->pool,
-                               "The server request failed (#%d) (%s %s)",
-                               rv, method, url);
+                               "The server request failed (neon:%d http:%d) "
+                               "(%s %s)",
+                               rv, *code, method, url);
     }
 
   return NULL;
+}
+
+static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc)
+{
+  svn_ra_dav_resource_t *propres;
+
+  if (cc->get_func != NULL)
+    {
+      svn_string_t *vsn_url_value;
+
+      SVN_ERR( (*cc->get_func)(cc->close_baton, rsrc->local_path,
+                               cc->vsn_url_name, &vsn_url_value) );
+      if (vsn_url_value != NULL)
+        {
+          rsrc->vsn_url = vsn_url_value->data;
+          return NULL;
+        }
+
+      /* whoops. it wasn't there. go grab it from the server. */
+    }
+  
+  SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras, rsrc->url,
+                                          NULL, fetch_props, cc->ras->pool) );
+  rsrc->vsn_url = apr_hash_get(propres->propset,
+                               SVN_RA_DAV__PROP_CHECKED_IN,
+                               APR_HASH_KEY_STRING);
+  if (rsrc->vsn_url == NULL)
+    {
+      /* ### need a proper SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, cc->ras->pool,
+                              "Could not fetch the Version Resource URL "
+                              "(needed during an import or when it is "
+                              "missing from the local, cached props).");
+    }
+
+  return NULL;
+}
+
+static svn_error_t * get_activity_url(commit_ctx_t *cc,
+                                      svn_string_t **activity_url)
+{
+
+  if (cc->get_func != NULL)
+    {
+      /* with a get_func, we can just ask for the activity URL from the
+         property store. */
+
+      /* ### damn, this is annoying to have to create strings */
+      svn_string_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
+                                                  cc->ras->pool);
+      svn_string_t * path = svn_string_create(".", cc->ras->pool);
+
+      /* get the URL where we should create activities */
+      SVN_ERR( (*cc->get_func)(cc->close_baton, path, propname,
+                               activity_url) );
+
+      if (*activity_url != NULL)
+        {
+          /* the property was there. return it. */
+
+          /* ### urk. copy the thing to get a proper pool in there */
+          *activity_url = svn_string_dup(*activity_url, cc->ras->pool);
+
+          return NULL;
+        }
+
+      /* property not found for some reason. get it from the server. */
+    }
+
+  /* use our utility function to fetch the activity URL */
+  return svn_ra_dav__get_activity_url(activity_url, cc->ras,
+                                      cc->ras->root.path, cc->ras->pool);
 }
 
 static svn_error_t * create_activity(commit_ctx_t *cc)
@@ -149,18 +230,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   svn_string_t uuid_str = { uuid_buf, sizeof(uuid_buf), 0, NULL };
   int code;
 
-  {
-    /* ### damn, this is annoying to have to create strings */
-    svn_string_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
-                                                cc->ras->pool);
-    svn_string_t * path = svn_string_create(".", cc->ras->pool);
-
-    /* get the URL where we should create activities */
-    SVN_ERR( (*cc->get_func)(cc->close_baton, path, propname, &activity_url) );
-
-    /* ### urk. copy the thing to get a proper pool in there */
-    activity_url = svn_string_dup(activity_url, cc->ras->pool);
-  }
+  /* get the URL where we'll create activities */
+  SVN_ERR( get_activity_url(cc, &activity_url) );
 
   /* the URL for our activity will be ACTIVITY_URL/UUID */
   apr_uuid_get(&uuid);
@@ -211,6 +282,17 @@ static svn_error_t * add_child(resource_t **child,
     {
       svn_string_t *vsn_url_value;
 
+      /* NOTE: we cannot use get_version_url() here. If we don't have the
+         right version url, then we certainly can't use the "head" (which
+         is the one fetched by get_version_url()).
+
+         Theoretically, we *do* have the base revision, so we could track
+         down through the Baseline Collection for that revision and grab
+         the version resource URL.
+
+         However, we don't need to do that now...
+      */
+
       SVN_ERR( (*cc->get_func)(cc->close_baton,
                                rsrc->local_path,
                                cc->vsn_url_name,
@@ -234,13 +316,13 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   const char *locn = NULL;
   struct uri parse;
 
-  printf("[checkout_resource] CHECKOUT: %s\n", res->url);
-
   if (res->wr_url != NULL)
     {
       /* already checked out! */
       return NULL;
     }
+
+  printf("[checkout_resource] CHECKOUT: %s\n", res->url);
 
   /* assert: res->vsn_url != NULL */
 
@@ -361,7 +443,6 @@ static svn_error_t * commit_replace_root(void *edit_baton,
   commit_ctx_t *cc = edit_baton;
   resource_baton_t *root;
   resource_t *rsrc;
-  svn_string_t *vsn_url_value;
 
   /* create the root resource. no wr_url (yet) */
   rsrc = apr_pcalloc(cc->ras->pool, sizeof(*rsrc));
@@ -370,12 +451,8 @@ static svn_error_t * commit_replace_root(void *edit_baton,
   /* ### should we use the WC symbol? (SVN_WC_ENTRY_THIS_DIR) */
   rsrc->local_path = svn_string_create("", cc->ras->pool);
 
-  SVN_ERR( (*cc->get_func)(cc->close_baton,
-                           rsrc->local_path,
-                           cc->vsn_url_name,
-                           &vsn_url_value) );
-  rsrc->vsn_url = vsn_url_value->data;
-  printf("[replace_root] vsn_url='%s'\n", vsn_url_value->data);
+  SVN_ERR( get_version_url(cc, rsrc) );
+  printf("[replace_root] vsn_url='%s'\n", rsrc->vsn_url);
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 

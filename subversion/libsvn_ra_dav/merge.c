@@ -108,6 +108,10 @@ static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
   svn_string_t path_str = { 0 };
   svn_string_t vsn_url_str = { 0 };
 
+  /* import case. just punt for now. */
+  if (mc->close_baton == NULL)
+    return NULL;
+
   /* ### damned callbacks take svn_string_t even though they don't plan
      ### to change the values whatsoever... */
   /* set up two svn_string_t values around the path and vsn_url. */
