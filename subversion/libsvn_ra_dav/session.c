@@ -424,7 +424,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                 _("Invalid URL: illegal character in proxy "
-                                "port number"));
+                                  "port number"));
       if (port < 0)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                 _("Invalid URL: negative proxy port number"));
@@ -462,7 +462,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
                                 _("Invalid config: illegal character in "
-                                "debug mask value"));
+                                  "debug mask value"));
 
       *neon_debug = debug;
     }
@@ -816,7 +816,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
         /* ### better error reporting... */
         return svn_error_create(APR_EGENERAL, NULL,
                                 _("The UUID property was not found on the "
-                                "resource or any of its parents."));
+                                  "resource or any of its parents."));
 
       if (uuid_propval && (uuid_propval->len > 0))
         ras->uuid = apr_pstrdup(ras->pool, uuid_propval->data); /* cache */
@@ -862,7 +862,7 @@ svn_error_t *svn_ra_dav_init(int abi_version,
   if (abi_version != 1)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
                               _("Unsupported RA plugin ABI version (%d) "
-                              "for ra_dav."), abi_version);
+                                "for ra_dav."), abi_version);
 
   apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
 

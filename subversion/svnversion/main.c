@@ -120,31 +120,32 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 static void
 usage(const apr_getopt_option_t *options, apr_pool_t *pool)
 {
-  fprintf(stderr, 
-          _("usage: svnversion [options] wc_path [trail_url]\n\n"
-          "  Produce a compact \"version number\" for the working copy path\n"
-          "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
-          "  determine if WC_PATH itself is switched (detection of switches\n"
-          "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
-          "  is written to standard output.  For example:\n"
-          "\n"
-          "    $ svnversion . /repos/svn/trunk \n"
-          "    4168\n"
-          "\n"
-          "  The version number will be a single number if the working\n"
-          "  copy is single revision, unmodified, not switched and with\n"
-          "  an URL that matches the TRAIL_URL argument.  If the working\n"
-          "  copy is unusual the version number will be more complex:\n"
-          "\n"
-          "   4123:4168     mixed revision working copy\n"
-          "   4168M         modified working copy\n"
-          "   4123S         switched working copy\n"
-          "   4123:4168MS   mixed revision, modified, switched working copy\n"
-          "\n"
-          "  If invoked on a directory that is not a working copy, an\n"
-          "  exported directory say, the program will output \"exported\".\n"
-          "\n"
-          "Valid options:\n"));
+  fprintf
+    (stderr, 
+     _("usage: svnversion [options] wc_path [trail_url]\n\n"
+       "  Produce a compact \"version number\" for the working copy path\n"
+       "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
+       "  determine if WC_PATH itself is switched (detection of switches\n"
+       "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
+       "  is written to standard output.  For example:\n"
+       "\n"
+       "    $ svnversion . /repos/svn/trunk \n"
+       "    4168\n"
+       "\n"
+            "  The version number will be a single number if the working\n"
+       "  copy is single revision, unmodified, not switched and with\n"
+       "  an URL that matches the TRAIL_URL argument.  If the working\n"
+       "  copy is unusual the version number will be more complex:\n"
+       "\n"
+       "   4123:4168     mixed revision working copy\n"
+       "   4168M         modified working copy\n"
+       "   4123S         switched working copy\n"
+       "   4123:4168MS   mixed revision, modified, switched working copy\n"
+            "\n"
+       "  If invoked on a directory that is not a working copy, an\n"
+       "  exported directory say, the program will output \"exported\".\n"
+       "\n"
+       "Valid options:\n"));
   while (options->description)
     {
       const char *optstr;

@@ -120,81 +120,82 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
   {
     {"author", subcommand_author, {0},
      N_("usage: svnlook author REPOS_PATH\n\n"
-     "Print the author.\n"),
+        "Print the author.\n"),
      {'r', 't'} },
     
     {"cat", subcommand_cat, {0},
      N_("usage: svnlook cat REPOS_PATH FILE_PATH\n\n"
-     "Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n"),
+        "Print the contents of a file.  Leading '/' on FILE_PATH is "
+        "optional.\n"),
      {'r', 't'} },
     
     {"changed", subcommand_changed, {0},
      N_("usage: svnlook changed REPOS_PATH\n\n"
-     "Print the paths that were changed.\n"),
+        "Print the paths that were changed.\n"),
      {'r', 't'} },
     
     {"date", subcommand_date, {0},
      N_("usage: svnlook date REPOS_PATH\n\n"
-     "Print the datestamp.\n"),
+        "Print the datestamp.\n"),
      {'r', 't'} },
 
     {"diff", subcommand_diff, {0},
      N_("usage: svnlook diff REPOS_PATH\n\n"
-     "Print GNU-style diffs of changed files and properties.\n"),
+        "Print GNU-style diffs of changed files and properties.\n"),
      {'r', 't', svnlook__no_diff_deleted} },
 
     {"dirs-changed", subcommand_dirschanged, {0},
      N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
-     "Print the directories that were themselves changed (property edits)\n"
-     "or whose file children were changed.\n"),
+        "Print the directories that were themselves changed (property edits)\n"
+        "or whose file children were changed.\n"),
      {'r', 't'} },
     
     {"help", subcommand_help, {"?", "h"},
      N_("usage: svnlook help [SUBCOMMAND...]\n\n"
-     "Describe the usage of this program or its subcommands.\n"),
+        "Describe the usage of this program or its subcommands.\n"),
      {svnlook__version} },
 
     {"history", subcommand_history, {0},
      N_("usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
-     "Print information about the history of a path in the repository (or\n"
-     "the root directory if no path is supplied).\n"),
+        "Print information about the history of a path in the repository (or\n"
+        "the root directory if no path is supplied).\n"),
      {'r', svnlook__show_ids} },
 
     {"info", subcommand_info, {0},
      N_("usage: svnlook info REPOS_PATH\n\n"
-     "Print the author, datestamp, log message size, and log message.\n"),
+        "Print the author, datestamp, log message size, and log message.\n"),
      {'r', 't'} },
 
     {"log", subcommand_log, {0},
      N_("usage: svnlook log REPOS_PATH\n\n"
-     "Print the log message.\n"),
+        "Print the log message.\n"),
      {'r', 't'} },
 
     {"propget", subcommand_pget, {"pget", "pg"},
      N_("usage: svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n\n"
-     "Print the raw value of a property on a path in the repository.\n"),
+        "Print the raw value of a property on a path in the repository.\n"),
      {'r', 't'} },
 
     {"proplist", subcommand_plist, {"plist", "pl"},
      N_("usage: svnlook proplist REPOS_PATH PATH_IN_REPOS\n\n"
-     "List the properties of a path in the repository.\n"
-     "With -v, show the property values too.\n"),
+        "List the properties of a path in the repository.\n"
+        "With -v, show the property values too.\n"),
      {'r', 't', 'v'} },
 
     {"tree", subcommand_tree, {0},
      N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
-     "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
-     "of the tree otherwise), optionally showing node revision ids.\n"),
+        "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
+        "of the tree otherwise), optionally showing node revision ids.\n"),
      {'r', 't', svnlook__show_ids} },
 
     {"uuid", subcommand_uuid, {0},
      N_("usage: svnlook uuid REPOS_PATH\n\n"
-     "Print the repository's UUID.\n"),
+        "Print the repository's UUID.\n"),
      {0} },
 
     {"youngest", subcommand_youngest, {0},
      N_("usage: svnlook youngest REPOS_PATH\n\n"
-     "Print the youngest revision number.\n"),
+        "Print the youngest revision number.\n"),
      {0} },
 
     { NULL, NULL, {0}, NULL, {0} }
@@ -1635,12 +1636,12 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
-    "Note: any subcommand which takes the '--revision' and '--transaction'\n"
-    "      options will, if invoked without one of those options, act on\n"
-    "      the repository's youngest revision.\n"
-    "Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
-    "\n"
-    "Available subcommands:\n");
+      "Note: any subcommand which takes the '--revision' and '--transaction'\n"
+      "      options will, if invoked without one of those options, act on\n"
+      "      the repository's youngest revision.\n"
+      "Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
+      "\n"
+      "Available subcommands:\n");
 
   SVN_ERR (svn_opt_print_help (os, "svnlook", 
                                opt_state ? opt_state->version : FALSE, 
@@ -1890,7 +1891,7 @@ main (int argc, const char * const *argv)
     SVN_INT_ERR (svn_error_create 
                  (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                   _("The '--transaction' (-t) and '--revision' (-r) arguments "
-                  "can not co-exist")));
+                    "can not co-exist")));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -2001,7 +2002,7 @@ main (int argc, const char * const *argv)
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           fprintf (stderr,
                    _("subcommand '%s' doesn't accept option '%s'\n"
-                   "Type 'svnlook help %s' for usage.\n"),
+                     "Type 'svnlook help %s' for usage.\n"),
                    subcommand->name, optstr, subcommand->name);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;

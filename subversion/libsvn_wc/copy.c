@@ -157,7 +157,7 @@ copy_file_administratively (const char *src_path,
       if (dst_entry->schedule == svn_wc_schedule_delete)
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("'%s' is scheduled for deletion; it must"
-                                  " be committed before being overwritten"),
+                                    " be committed before being overwritten"),
                                   dst_path);
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
@@ -180,7 +180,7 @@ copy_file_administratively (const char *src_path,
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it's not in the repository yet; "
-       "try committing first"),
+         "try committing first"),
        src_path);
 
   /* Now, make an actual copy of the working file. */
@@ -295,7 +295,7 @@ copy_dir_administratively (const char *src_path,
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Not allowed to copy or move '%s': it is not in the repository yet; "
-       "try committing first"),
+         "try committing first"),
        src_path);
 
   /* Recursively copy the whole directory over.  This gets us all

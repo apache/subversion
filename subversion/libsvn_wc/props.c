@@ -126,7 +126,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
       *description =
         svn_string_createf
         (pool, _("Property '%s' locally changed to '%s', "
-         "but update sets it to '%s'\n"),
+                 "but update sets it to '%s'\n"),
          local->name, local->value->data, update->value->data);
       return TRUE;  /* conflict */
     }
@@ -1546,7 +1546,7 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
           return svn_error_createf
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              _("Invalid %s property on '%s': "
-             "target involves '.' or '..' or is an absolute path"),
+               "target involves '.' or '..' or is an absolute path"),
              SVN_PROP_EXTERNALS, parent_directory);
       }
 

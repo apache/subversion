@@ -819,8 +819,8 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
                _("Checksum mismatch for '%s':\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n"),
+                 "   expected checksum:  %s\n"
+                 "   actual checksum:    %s\n"),
                path, expected_checksum->data, hex_digest);
         }
     }
@@ -1080,7 +1080,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                           revision, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, _("Server does not support date-based "
-                                "operations"));
+                                       "operations"));
   else if (err)
     return err;
 
@@ -1174,7 +1174,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
       svn_error_create
       (SVN_ERR_RA_DAV_REQUEST_FAILED, err,
        _("DAV request failed; it's possible that the repository's "
-       "pre-revprop-change hook either failed or is non-existent"));
+         "pre-revprop-change hook either failed or is non-existent"));
 
   return SVN_NO_ERROR;
 }
@@ -1914,9 +1914,10 @@ static int cdata_handler(void *userdata, int state,
         if (nlen != len)
           {
             /* Short write without associated error?  "Can't happen." */
-            CHKERR( svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                      _("Error writing to '%s': unexpected EOF"),
-                                      rb->namestr->data) );
+            CHKERR( svn_error_createf
+                    (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                     _("Error writing to '%s': unexpected EOF"),
+                     rb->namestr->data) );
           }
       }
       break;

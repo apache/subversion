@@ -76,7 +76,7 @@ svn_cl__export (apr_getopt_t *os,
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
     SVN_ERR_W (err,
                _("Destination directory exists; please remove "
-               "the directory or use --force to overwrite"));
+                 "the directory or use --force to overwrite"));
   else
     SVN_ERR (err);
 

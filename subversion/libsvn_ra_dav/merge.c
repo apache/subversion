@@ -214,8 +214,8 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,
                                _("Protocol error: we told the server to not "
-                               "auto-merge any resources, but it said that "
-                               "'%s' was merged"), mc->href->data);
+                                 "auto-merge any resources, but it said that "
+                                 "'%s' was merged"), mc->href->data);
     }
   if (mc->response_parent != ELEM_updated_set)
     {
@@ -223,8 +223,8 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,
                                _("Internal error: there is an unknown parent "
-                               "(%d) for the 'DAV:response' element within the"
-                               " MERGE response"), mc->response_parent);
+                                 "(%d) for the 'DAV:response' element within"
+                                 " the MERGE response"), mc->response_parent);
     }
 #if 0
   /* ### right now, the server isn't sending everything for all resources.
@@ -238,9 +238,9 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
          resource. */
       return svn_error_createf(APR_EGENERAL, NULL,
                                _("Protocol error: the MERGE response for the "
-                               "'%s' resource did not return all of the "
-                               "properties that we asked for (and need to "
-                               "complete the commit)."), mc->href->data);
+                                 "'%s' resource did not return all of the "
+                                 "properties that we asked for (and need to "
+                                 "complete the commit)."), mc->href->data);
     }
 #endif
 
@@ -257,7 +257,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,
                                _("A MERGE response for '%s' is not a child "
-                               "of the destination ('%s')"),
+                                 "of the destination ('%s')"),
                                mc->href->data, mc->base_href);
     }
 
@@ -478,7 +478,7 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
             /* ### fix this error value */
             mc->err = svn_error_create(APR_EGENERAL, NULL,
                                        _("The MERGE property response had an "
-                                       "error status"));
+                                         "error status"));
           }
       }
       break;

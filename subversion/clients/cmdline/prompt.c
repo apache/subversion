@@ -203,7 +203,7 @@ svn_cl__auth_ssl_server_trust_prompt (
       svn_stringbuf_appendcstr
         (buf,
          _(" - The certificate is not issued by a trusted authority. Use the\n"
-         "   fingerprint to validate the certificate manually!\n"));
+           "   fingerprint to validate the certificate manually!\n"));
     }
 
   if (failures & SVN_AUTH_SSL_CNMISMATCH)
@@ -233,10 +233,10 @@ svn_cl__auth_ssl_server_trust_prompt (
   msg = svn_stringbuf_createf
     (pool,
      _("Certificate information:\n"
-     " - Hostname: %s\n"
-     " - Valid: from %s until %s\n"
-     " - Issuer: %s\n"
-     " - Fingerprint: %s\n"),
+       " - Hostname: %s\n"
+       " - Valid: from %s until %s\n"
+       " - Issuer: %s\n"
+       " - Fingerprint: %s\n"),
      cert_info->hostname,
      cert_info->valid_from,
      cert_info->valid_until,

@@ -121,7 +121,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
        _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
-       "set, and no 'editor-cmd' run-time configuration option was found"));
+         "set, and no 'editor-cmd' run-time configuration option was found"));
 
   /* Convert file contents from UTF-8 */
   SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
@@ -517,8 +517,8 @@ svn_cl__get_log_message (const char **log_msg,
           if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR)
             err = svn_error_quick_wrap 
               (err, _("Could not use external editor to fetch log message; "
-               "consider setting the $SVN_EDITOR environment variable "
-               "or using the --message (-m) or --file (-F) options"));
+                      "consider setting the $SVN_EDITOR environment variable "
+                      "or using the --message (-m) or --file (-F) options"));
           return err;
         }
 
@@ -552,7 +552,7 @@ svn_cl__get_log_message (const char **log_msg,
           const char *reply;
           svn_cl__prompt_user (&reply,
                                _("\nLog message unchanged or not specified\n"
-                               "a)bort, c)ontinue, e)dit\n"), pool);
+                                 "a)bort, c)ontinue, e)dit\n"), pool);
           if (reply)
             {
               char letter = apr_tolower (reply[0]);

@@ -235,53 +235,55 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
       svnadmin__config_dir} },
 
-    {"deltify", subcommand_deltify, {0},
-     N_("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
-     "Run over the requested revision range, performing predecessor deltifi-\n"
-     "cation on the paths changed in those revisions.  Deltification in\n"
-     "essence compresses the repository by only storing the differences or\n"
-     "delta from the preceding revision.  If no revisions are specified,\n"
-     "this will simply deltify the HEAD revision.\n"),
+    {"deltify", subcommand_deltify, {0}, N_
+     ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
+      "Run over the requested revision range, performing predecessor delti-\n"
+      "fication on the paths changed in those revisions.  Deltification in\n"
+      "essence compresses the repository by only storing the differences or\n"
+      "delta from the preceding revision.  If no revisions are specified,\n"
+      "this will simply deltify the HEAD revision.\n"),
      {'r', 'q'} },
 
-    {"dump", subcommand_dump, {0},
-     N_("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
-     "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
-     "portable format, sending feedback to stderr.  Dump revisions\n"
-     "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
-     "revision trees.  If only LOWER is given, dump that one revision tree.\n"
-     "If --incremental is passed, then the first revision dumped will be\n"
-     "a diff against the previous revision, instead of the usual fulltext.\n"),
+    {"dump", subcommand_dump, {0}, N_
+     ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n"
+      "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
+      "portable format, sending feedback to stderr.  Dump revisions\n"
+      "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
+      "revision trees.  If only LOWER is given, dump that one revision tree.\n"
+      "If --incremental is passed, then the first revision dumped will be\n"
+      "a diff against the previous revision, instead of the usual"
+      " fulltext.\n"),
      {'r', svnadmin__incremental, svnadmin__deltas, 'q'} },
 
     {"help", subcommand_help, {"?", "h"},
      N_("usage: svnadmin help [SUBCOMMAND...]\n\n"
-     "Describe the usage of this program or its subcommands.\n"),
+        "Describe the usage of this program or its subcommands.\n"),
      {svnadmin__version} },
 
     {"hotcopy", subcommand_hotcopy, {0},
      N_("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
-     "Makes a hot copy of a repository.\n"),
+        "Makes a hot copy of a repository.\n"),
      {svnadmin__clean_logs} },
 
     {"list-dblogs", subcommand_list_dblogs, {0},
      N_("usage: svnadmin list-dblogs REPOS_PATH\n\n"
-     "List all Berkeley DB log files.\n\n"
-     "WARNING: Modifying or deleting logfiles which are still in use\n"
-     "will cause your repository to be corrupted.\n"),
+        "List all Berkeley DB log files.\n\n"
+        "WARNING: Modifying or deleting logfiles which are still in use\n"
+        "will cause your repository to be corrupted.\n"),
      {0} },
 
     {"list-unused-dblogs", subcommand_list_unused_dblogs, {0},
      N_("usage: svnadmin list-unused-dblogs REPOS_PATH\n\n"
-     "List unused Berkeley DB log files.\n\n"),
+        "List unused Berkeley DB log files.\n\n"),
      {0} },
 
     {"load", subcommand_load, {0},
      N_("usage: svnadmin load REPOS_PATH\n\n"
-     "Read a 'dumpfile'-formatted stream from stdin, committing\n"
-     "new revisions into the repository's filesystem.  If the repository\n"
-     "was previously empty, its UUID will, by default, be changed to the\n"
-     "one specified in the stream.  Progress feedback is sent to stdout.\n"),
+        "Read a 'dumpfile'-formatted stream from stdin, committing\n"
+        "new revisions into the repository's filesystem.  If the repository\n"
+        "was previously empty, its UUID will, by default, be changed to the\n"
+        "one specified in the stream.  Progress feedback is sent to"
+        " stdout.\n"),
      {'q', svnadmin__ignore_uuid, svnadmin__force_uuid, 
       svnadmin__parent_dir} },
 
@@ -292,33 +294,35 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
     {"recover", subcommand_recover, {0},
      N_("usage: svnadmin recover REPOS_PATH\n\n"
-     "Run the Berkeley DB recovery procedure on a repository.  Do\n"
-     "this if you've been getting errors indicating that recovery\n"
-     "ought to be run.\n\n"
-     "WARNING: only run this when you are SURE you're the only process\n"
-     "accessing the repository.  Requires exclusive access.\n\n"),
+        "Run the Berkeley DB recovery procedure on a repository.  Do\n"
+        "this if you've been getting errors indicating that recovery\n"
+        "ought to be run.\n\n"
+        "WARNING: only run this when you are SURE you're the only process\n"
+        "accessing the repository.  Requires exclusive access.\n\n"),
      {0} },
 
     {"rmtxns", subcommand_rmtxns, {0},
      N_("usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
-     "Delete the named transaction(s).\n"),
+        "Delete the named transaction(s).\n"),
      {'q'} },
 
     {"setlog", subcommand_setlog, {0},
      N_("usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
-     "Set the log-message on revision REVISION to the contents of FILE.  Use\n"
-     "--bypass-hooks to avoid triggering the revision-property-related hooks\n"
-     "(for example, if you do not want an email notification sent\n"
-     "from your post-revprop-change hook, or because the modification of\n"
-     "revision properties has not been enabled in the pre-revprop-change\n"
-     "hook).\n\n"
-     "NOTE: revision properties are not historied, so this command\n"
-     "will permanently overwrite the previous log message.\n"),
+        "Set the log-message on revision REVISION to the contents of FILE."
+        "  Use\n"
+        "--bypass-hooks to avoid triggering the revision-property-related"
+        " hooks\n"
+        "(for example, if you do not want an email notification sent\n"
+        "from your post-revprop-change hook, or because the modification of\n"
+        "revision properties has not been enabled in the pre-revprop-change\n"
+        "hook).\n\n"
+        "NOTE: revision properties are not historied, so this command\n"
+        "will permanently overwrite the previous log message.\n"),
      {'r', svnadmin__bypass_hooks} },
 
     {"verify", subcommand_verify, {0},
      N_("usage: svnadmin verify REPOS_PATH\n\n"
-     "Verifies the data stored in the repository.\n"),
+        "Verifies the data stored in the repository.\n"),
      {0} },
 
     { NULL, NULL, {0}, NULL, {0} }
@@ -514,9 +518,10 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-    "Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
-    "\n"
-    "Available subcommands:\n");
+      "Type \"svnadmin help <subcommand>\" for help on a specific"
+      " subcommand.\n"
+      "\n"
+      "Available subcommands:\n");
 
   SVN_ERR (svn_opt_print_help (os, "svnadmin", 
                                opt_state ? opt_state->version : FALSE,
@@ -887,7 +892,7 @@ main (int argc, const char * const *argv)
               err = svn_error_create
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Multiple revision arguments encountered; "
-                 "try '-r M:N' instead of '-r M -r N'"));
+                   "try '-r M:N' instead of '-r M -r N'"));
               svn_handle_error (err, stderr, FALSE);
               svn_error_clear (err);
               svn_pool_destroy (pool);
@@ -1064,7 +1069,7 @@ main (int argc, const char * const *argv)
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           fprintf (stderr,
                    _("subcommand '%s' doesn't accept option '%s'\n"
-                   "Type 'svnadmin help %s' for usage.\n"),
+                     "Type 'svnadmin help %s' for usage.\n"),
                    subcommand->name, optstr, subcommand->name);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;

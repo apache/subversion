@@ -356,7 +356,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
               return svn_error_createf
                 (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("The entry '%s' is no longer a directory; "
-                 "remove the entry before updating"),
+                   "remove the entry before updating"),
                  this_path);
             }
 
@@ -672,7 +672,7 @@ svn_wc_transmit_text_deltas (const char *path,
                   return svn_error_createf
                     (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                      _("Checksum mismatch for '%s': "
-                     "expected '%s', actual: '%s'"),
+                       "expected '%s', actual: '%s'"),
                      tb, ent->checksum, base_digest_hex);
                 }
             }
