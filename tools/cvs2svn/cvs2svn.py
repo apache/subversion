@@ -347,8 +347,8 @@ class RepositoryMirror:
     self.nodes_db = anydbm.open(self.nodes_db_file, 'n')
 
     # These keys could never be real directory entries.
-    self.mutable_flag = "//mutable"
-    self.symbolic_names = "//sym_names"
+    self.mutable_flag = "/mutable"
+    self.symbolic_names = "/sym_names"
     # This could represent a new mutable directory or file.
     self.empty_mutable_thang = { self.mutable_flag : 1 }
 
@@ -671,7 +671,7 @@ class RepositoryMirror:
   def close(self):
     # Just stabilize the last revision.  This may or may not affect
     # anything, but if we end up using the mirror for anything after
-    # this, it's nice to know the '/mutable/' entries are gone.
+    # this, it's nice to know the '/mutable' entries are gone.
     self.stabilize_youngest()
 
 
