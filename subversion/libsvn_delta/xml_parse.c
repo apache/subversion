@@ -333,13 +333,9 @@ do_stack_append (svn_xml__digger_t *digger,
         return xml_validation_error (digger->pool, tagname, FALSE);
     }
   
-  /* <prop-delta> must follow one of <add>, <replace> (if talking
-     about a directory entry's properties) or must follow one of
-     <file>, <dir> */
+  /* <prop-delta> must follow either <file> or <dir> */
   else if ((new_frame->tag == svn_delta__XML_propdelta)
-           && (youngest_frame->tag != svn_delta__XML_add)
-           && (youngest_frame->tag != svn_delta__XML_replace)
-               && (youngest_frame->tag != svn_delta__XML_file)
+           && (youngest_frame->tag != svn_delta__XML_file)
            && (youngest_frame->tag != svn_delta__XML_dir))
     return xml_validation_error (pool, tagname, FALSE);
   
