@@ -210,10 +210,18 @@ void svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn);
 void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 
 
+/* Convenience function to create a readable generic stream which is
+   empty.  */
+
+svn_stream_t *svn_stream_empty (apr_pool_t *pool);
+
+
 /* Convenience functions for creating streams which operate on APR
-   files or on stdio files.  For convenience, FILE or FP can be NULL
-   as long as the stream is not used for writing; in this case, the
-   stream acts as if it is operating on an empty file. */
+   files or on stdio files.  For convenience, if FILE or FP is NULL
+   then svn_stream_empty(pool) is returned.  ghudson todo: track down
+   callers relying on this convenience, fix them (now that it's
+   trivial to create an empty stream by hand), and then desupport
+   it.  */
 
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 

@@ -496,6 +496,29 @@ svn_stream_close (svn_stream_t *stream)
 
 
 
+/*** Generic readable empty stream ***/
+
+static svn_error_t *
+read_handler_empty (void *baton, char *buffer, apr_size_t *len,
+                    apr_pool_t *pool)
+{
+  *len = 0;
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_stream_empty (apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+
+  stream = svn_stream_create (NULL, pool);
+  svn_stream_set_read (stream, read_handler_empty);
+  return stream;
+}
+
+
+
 /*** Generic stream for APR files ***/
 struct baton_apr {
   apr_file_t *file;
@@ -509,15 +532,11 @@ read_handler_apr (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
   struct baton_apr *btn = baton;
   apr_status_t status;
 
-  if (btn->file == NULL)
-    *len = 0;
+  status = apr_full_read (btn->file, buffer, *len, len);
+  if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
+    return svn_error_create (status, 0, NULL, btn->pool, "reading file");
   else
-    {
-      status = apr_full_read (btn->file, buffer, *len, len);
-      if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
-        return svn_error_create (status, 0, NULL, btn->pool, "reading file");
-    }
-  return SVN_NO_ERROR;
+    return SVN_NO_ERROR;
 }
 
 
@@ -542,22 +561,23 @@ close_handler_apr (void *baton)
   struct baton_apr *btn = baton;
   apr_status_t status;
 
-  if (btn->file != NULL)
-    {
-      status = apr_close (btn->file);
-      if (!APR_STATUS_IS_SUCCESS(status))
-        return svn_error_create (status, 0, NULL, btn->pool, "closing file");
-    }
-  return SVN_NO_ERROR;
+  status = apr_close (btn->file);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return svn_error_create (status, 0, NULL, btn->pool, "closing file");
+  else
+    return SVN_NO_ERROR;
 }
 
 
 svn_stream_t *
 svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
 {
-  struct baton_apr *baton = apr_palloc (pool, sizeof (*baton));
+  struct baton_apr *baton;
   svn_stream_t *stream;
 
+  if (file == NULL)
+    return svn_stream_empty(pool);
+  baton = apr_palloc (pool, sizeof (*baton));
   baton->file = file;
   baton->pool = pool;
   stream = svn_stream_create (baton, pool);
@@ -584,15 +604,10 @@ read_handler_stdio (void *baton, char *buffer, apr_size_t *len,
   svn_error_t *err = SVN_NO_ERROR;
   apr_size_t count;
 
-  if (btn->fp == NULL)
-    *len = 0;
-  else
-    {
-      count = fread (buffer, 1, *len, btn->fp);
-      if (count < *len && ferror(btn->fp))
-        err = svn_error_create (0, errno, NULL, btn->pool, "reading file");
-      *len = count;
-    }
+  count = fread (buffer, 1, *len, btn->fp);
+  if (count < *len && ferror(btn->fp))
+    err = svn_error_create (0, errno, NULL, btn->pool, "reading file");
+  *len = count;
   return err;
 }
 
@@ -618,7 +633,7 @@ close_handler_stdio (void *baton)
 {
   struct baton_stdio *btn = baton;
 
-  if (btn->fp != NULL && fclose (btn->fp) != 0)
+  if (fclose (btn->fp) != 0)
     return svn_error_create (0, errno, NULL, btn->pool, "closing file");
   else
     return SVN_NO_ERROR;
@@ -627,9 +642,12 @@ close_handler_stdio (void *baton)
 
 svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
 {
-  struct baton_stdio *baton = apr_palloc (pool, sizeof (*baton));
+  struct baton_stdio *baton;
   svn_stream_t *stream;
 
+  if (fp == NULL)
+    return svn_stream_empty (pool);
+  baton = apr_palloc (pool, sizeof (*baton));
   baton->fp = fp;
   baton->pool = pool;
   stream = svn_stream_create (baton, pool);
